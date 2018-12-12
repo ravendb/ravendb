@@ -17,7 +17,7 @@
                 </div>
             </div>
             <div class="row flex-row margin-bottom" data-bind="validationElement: backupType">
-                <label class="control-label col-sm-4 col-lg-2">Backup type <i class="required"></i> <i id="backup-info" class="icon-info text-info"></i></label>
+                <label class="control-label col-sm-4 col-lg-2">Backup type <i class="required"></i> <small><i id="backup-info" class="icon-info text-info"></i></small></label>
                 <div class="col-sm-4 col-lg-4" data-bind="validationOptions: { insertMessages: false }">
                     <div class="dropdown btn-block">
                         <button class="btn btn-block dropdown-toggle text-left" type="button" data-toggle="dropdown">
@@ -138,7 +138,7 @@
                     <label for="toggle-local">Local</label>
                 </div>
                 <div class="text-warning js-option-disabled" data-bind="visible: !$root.isBackupOptionAvailable('Local')">
-                    <i class="icon-info"></i>
+                    <small><i class="icon-info"></i></small>
                 </div>
             </div>
             
@@ -165,7 +165,7 @@
                     <label for="toggle-amazons3">Amazon S3</label>
                 </div>
                 <div class="text-warning js-option-disabled" data-bind="visible: !$root.isBackupOptionAvailable('AmazonS3')">
-                    <i class="icon-info"></i>
+                    <small><i class="icon-info"></i></small>
                 </div>
             </div>
 
@@ -173,7 +173,7 @@
                 <div class="col-sm-8 col-lg-6 margin-top">
                     <div class="row flex-row margin-bottom" data-bind="validationElement: bucketName">
                         <label class="control-label col-xs-12 col-sm-6 col-lg-4">
-                            Bucket name <i class="required"></i> <i id="bucket-info" class="icon-info text-info"></i>
+                            Bucket name <i class="required"></i> <small><i id="bucket-info" class="icon-info text-info"></i></small>
                         </label>
                         <div class="col-xs-12 col-sm-6 col-lg-8" data-bind="validationElement: bucketName">
                             <input data-bind="textInput: bucketName" type="text" class="form-control" />
@@ -236,7 +236,7 @@
                     <label for="toggle-azure">Azure</label>
                 </div>
                 <div class="text-warning js-option-disabled" data-bind="visible: !$root.isBackupOptionAvailable('Azure')">
-                    <i class="icon-info"></i>
+                    <small><i class="icon-info"></i></small>
                 </div>
             </div>
 
@@ -244,7 +244,7 @@
                 <div class="col-sm-8 col-lg-6 margin-top">
                     <div class="row flex-row margin-bottom" data-bind="validationElement: storageContainer">
                         <label class="control-label col-xs-12 col-sm-6 col-lg-4">
-                            Storage container <i class="required"></i> <i id="storage-container-info" class="icon-info text-info"></i>
+                            Storage container <i class="required"></i> <small><i id="storage-container-info" class="icon-info text-info"></i></small>
                         </label>
                         <div class="col-xs-12 col-sm-6 col-lg-8">
                             <input data-bind="textInput: storageContainer" type="text" class="form-control" />
@@ -289,7 +289,7 @@
                     <label for="toggle-amazonglacier">Amazon Glacier</label>
                 </div>
                 <div class="text-warning js-option-disabled" data-bind="visible: !$root.isBackupOptionAvailable('AmazonGlacier')">
-                    <i class="icon-info"></i>
+                    <small><i class="icon-info"></i></small>
                 </div>
             </div>
             
@@ -297,7 +297,7 @@
                 <div class="col-sm-8 col-lg-6 margin-top">
                     <div class="row flex-row margin-bottom" data-bind="validationElement: vaultName">
                         <label class="control-label col-xs-12 col-sm-6 col-lg-4">
-                            Vault name <i class="required"></i> <i id="vault-info" class="icon-info text-info"></i>
+                            Vault name <i class="required"></i> <small><i id="vault-info" class="icon-info text-info"></i></small>
                         </label>
                         <div class="col-xs-12 col-sm-6 col-lg-8">
                             <input data-bind="textInput: vaultName" type="text" class="form-control" />
@@ -354,7 +354,7 @@
                     <label for="toggle-ftp">FTP</label>
                 </div>
                 <div class="text-warning js-option-disabled" data-bind="visible: !$root.isBackupOptionAvailable('FTP')">
-                    <i class="icon-info"></i>
+                    <small><i class="icon-info"></i></small>
                 </div>
             </div>
 
@@ -362,7 +362,7 @@
                 <div class="col-sm-8 col-lg-6 margin-top">
                     <div class="row flex-row margin-bottom" data-bind="validationElement: url">
                         <label class="control-label col-xs-12 col-sm-6 col-lg-4">
-                            Host <i class="required"></i> <i id="ftp-host-info" class="icon-info text-info"></i>
+                            Host <i class="required"></i> <small><i id="ftp-host-info" class="icon-info text-info"></i></small>
                         </label>
                         <div class="col-xs-12 col-sm-6 col-lg-8">
                             <input data-bind="textInput: url" type="text" class="form-control" />

@@ -69,6 +69,8 @@ class editDocument extends viewModelBase {
         userDocumentId: this.userSpecifiedId,
         userDocumentText: this.documentText
     });
+    
+    documentExpirationEnabled: KnockoutComputed<boolean>;
 
     private docEditor: AceAjax.Editor;
     entityName = ko.observable<string>("");
@@ -162,7 +164,7 @@ class editDocument extends viewModelBase {
         this.docEditor = aceEditorBindingHandler.getEditorBySelection(this.$docEditor);
 
         // preload json newline friendly mode to avoid issues with document save
-        (ace as any).config.loadModule("ace/mode/json_newline_friendly");
+        (ace as any).config.loadModule("ace/mode/raven_document_newline_friendly");
 
         this.connectedDocuments.compositionComplete();
 
@@ -279,6 +281,15 @@ class editDocument extends viewModelBase {
                 appUrl.forDocumentRevisionRawData(activeDb, revisionChangeVector) :
                 appUrl.forDocumentRawData(activeDb, docId);
         });
+        
+        this.documentExpirationEnabled = ko.pureComputed(() => {
+            const db = this.activeDatabase();
+            if (db) {
+                return db.hasExpirationConfiguration();
+            } else {
+                return false;
+            }
+        })
 
         this.isDeleteRevision = ko.pureComputed(() => {
             const doc = this.document();
@@ -415,10 +426,10 @@ class editDocument extends viewModelBase {
         const dirtyFlagValue = this.dirtyFlag().isDirty();
         if (unescapeNewline) {
             this.documentText(documentHelpers.unescapeNewlinesAndTabsInTextFields(this.documentText()));
-            this.docEditor.getSession().setMode('ace/mode/json_newline_friendly');
+            this.docEditor.getSession().setMode('ace/mode/raven_document_newline_friendly');
         } else {
             this.documentText(documentHelpers.escapeNewlinesAndTabsInTextFields(this.documentText()));
-            this.docEditor.getSession().setMode('ace/mode/json');
+            this.docEditor.getSession().setMode('ace/mode/raven_document');
             this.formatDocument();
         }
 

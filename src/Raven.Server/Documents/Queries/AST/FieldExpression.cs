@@ -1,5 +1,6 @@
 using System.Collections.Generic;
 using System.Text;
+using Microsoft.Extensions.Primitives;
 using Sparrow;
 
 namespace Raven.Server.Documents.Queries.AST
@@ -24,7 +25,7 @@ namespace Raven.Server.Documents.Queries.AST
             get
             {
                 if (Compound.Count == 1)
-                    return Compound[0];
+                    return Compound[0].Value;
                 if (_field == null)
                     _field = JoinCompoundFragments(0);
                 return _field;
@@ -36,7 +37,7 @@ namespace Raven.Server.Documents.Queries.AST
             var sb = new StringBuilder();
             for (int i = start; i < Compound.Count; i++)
             {
-                sb.Append(Compound[i]);
+                sb.Append(Compound[i].Value);
                 if (i + 1 < Compound.Count && Compound[i + 1] != "[]")
                 {
                     sb.Append(".");
@@ -66,6 +67,18 @@ namespace Raven.Server.Documents.Queries.AST
             return string.IsNullOrEmpty(FieldValueWithoutAlias) 
                 ? FieldValue 
                 : FieldValueWithoutAlias;
+        }
+
+        public override bool Equals(QueryExpression other)
+        {
+            if (!(other is FieldExpression of))
+                return false;
+
+
+            return string.IsNullOrEmpty(FieldValueWithoutAlias) ?
+                FieldValue == of.FieldValue :
+                FieldValueWithoutAlias == of.FieldValueWithoutAlias;
+
         }
     }
 }

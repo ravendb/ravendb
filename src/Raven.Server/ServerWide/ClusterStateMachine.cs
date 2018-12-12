@@ -11,6 +11,7 @@ using System.Security.Cryptography.X509Certificates;
 using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
+using Microsoft.Extensions.Primitives;
 using Raven.Client;
 using Raven.Client.Documents.Operations.Backups;
 using Raven.Client.Documents.Operations.Configuration;
@@ -37,6 +38,7 @@ using Raven.Server.ServerWide.Commands.ETL;
 using Raven.Server.ServerWide.Commands.Indexes;
 using Raven.Server.ServerWide.Commands.Monitoring.Snmp;
 using Raven.Server.ServerWide.Commands.PeriodicBackup;
+using Raven.Server.ServerWide.Commands.Sorters;
 using Raven.Server.ServerWide.Commands.Subscriptions;
 using Raven.Server.ServerWide.Context;
 using Raven.Server.Utils;
@@ -198,7 +200,10 @@ namespace Raven.Server.ServerWide
                         SetValueForTypedDatabaseCommand(context, type, cmd, index, leader, out result);
                         leader?.SetStateOf(index, result);
                         break;
+                    case nameof(PutSortersCommand):
+                    case nameof(DeleteSorterCommand):
                     case nameof(PutIndexCommand):
+                    case nameof(PutIndexesCommand):
                     case nameof(PutAutoIndexCommand):
                     case nameof(DeleteIndexCommand):
                     case nameof(SetIndexLockCommand):

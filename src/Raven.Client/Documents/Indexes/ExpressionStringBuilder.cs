@@ -36,6 +36,7 @@ namespace Raven.Client.Documents.Indexes
         private Dictionary<object, int> _ids;
         private readonly Dictionary<string, object> _duplicatedParams = new Dictionary<string, object>(StringComparer.OrdinalIgnoreCase);
         private bool _castLambdas;
+        private bool _isDictionary;
 
         // Methods
         private ExpressionStringBuilder(DocumentConventions conventions, bool translateIdentityProperty, Type queryRoot,
@@ -196,6 +197,10 @@ namespace Raven.Client.Documents.Indexes
 
             if (_conventions.GetIdentityProperty(member.DeclaringType) != member)
                 return false;
+
+            // types used in LoadDocument should be translated
+            if (_loadDocumentTypes.Contains(exprType))
+                return true;
 
             // only translate from the root type or derivatives
             if (_queryRoot != null && (exprType.IsAssignableFrom(_queryRoot) == false))
@@ -761,8 +766,8 @@ namespace Raven.Client.Documents.Indexes
                 var enumType = node.Value.GetType();
                 if (_insideWellKnownType || TypeExistsOnServer(enumType))
                 {
-                    var name = _insideWellKnownType 
-                        ? enumType.Name 
+                    var name = _insideWellKnownType
+                        ? enumType.Name
                         : enumType.FullName;
 
                     Out(name.Replace("+", "."));
@@ -1444,12 +1449,14 @@ namespace Raven.Client.Documents.Indexes
                 return node; // we don't do anything here on the server
             }
 
+            var isExtension = false;
             var num = 0;
             var expression = node.Object;
             if (IsExtensionMethod(node))
             {
                 num = 1;
                 expression = node.Arguments[0];
+                isExtension = true;
             }
             if (expression != null)
             {
@@ -1473,7 +1480,7 @@ namespace Raven.Client.Documents.Indexes
             {
                 Out("DynamicEnumerable.");
             }
-            else if (node.Method.IsStatic && IsExtensionMethod(node) == false)
+            else if (node.Method.IsStatic && isExtension == false)
             {
                 if (node.Method.DeclaringType == typeof(Enumerable) && node.Method.Name == "Cast")
                 {
@@ -1507,6 +1514,12 @@ namespace Raven.Client.Documents.Indexes
                         break;
                     // Convert OfType<Foo>() to Where(x => x["$type"] == typeof(Foo).AssemblyQualifiedName)
                     case "OfType":
+                        if (JavascriptConversionExtensions.LinqMethodsSupport
+                            .IsDictionary(node.Arguments[0].Type))
+                        {
+                            _isDictionary = true;
+                            goto default;
+                        }
                         Out("Where");
                         break;
                     case nameof(AbstractIndexCreationTask.LoadDocument):
@@ -1566,7 +1579,7 @@ namespace Raven.Client.Documents.Indexes
             }
 
             // Convert OfType<Foo>() to Where(x => x["$type"] == typeof(Foo).AssemblyQualifiedName)
-            if (node.Method.Name == "OfType")
+            if (node.Method.Name == "OfType" && _isDictionary == false)
             {
                 var type = node.Method.GetGenericArguments()[0];
                 var typeFullName = ReflectionUtil.GetFullNameWithoutVersionInformation(type);
@@ -1578,6 +1591,7 @@ namespace Raven.Client.Documents.Indexes
             if (node.Method.Name == nameof(AbstractIndexCreationTask.LoadDocument))
             {
                 var type = node.Method.GetGenericArguments()[0];
+                _loadDocumentTypes.Add(type);
                 var collection = _conventions.GetCollectionName(type);
                 Out($", \"{collection}\"");
             }
@@ -1611,11 +1625,15 @@ namespace Raven.Client.Documents.Indexes
             var genericArguments = method.GetGenericArguments();
             if (genericArguments.All(TypeExistsOnServer) == false)
                 return; // no point if the types aren't on the server
-            switch (method.DeclaringType.Name)
+
+            if (_isDictionary == false)
             {
-                case "Enumerable":
-                case "Queryable":
-                    return; // we don't need those, we have LinqOnDynamic for it
+                switch (method.DeclaringType.Name)
+                {
+                    case "Enumerable":
+                    case "Queryable":
+                        return; // we don't need those, we have LinqOnDynamic for it
+                }
             }
 
             Out("<");
@@ -1723,6 +1741,9 @@ namespace Raven.Client.Documents.Indexes
                 {
                     Out(", ");
                 }
+
+                var argument = node.Arguments[i];
+
                 if (node.Members?[i] != null)
                 {
                     string name = node.Members[i].Name;
@@ -1730,26 +1751,39 @@ namespace Raven.Client.Documents.Indexes
                     Out(name);
                     Out(" = ");
 
-                    var constantExpression = node.Arguments[i] as ConstantExpression;
-                    if (constantExpression != null && constantExpression.Value == null)
+                    if (argument is ConstantExpression constantExpression && constantExpression.Value == null)
                     {
                         Out("(");
                         VisitType(GetMemberType(node.Members[i]));
                         Out(")");
                     }
                 }
+                else if (TypeExistsOnServer(argument.Type) && IsEnum(argument.Type) == false)
+                {
+                    Out("(");
+                    VisitType(argument.Type);
+                    Out(")");
+                }
 
-                Visit(node.Arguments[i]);
+                Visit(argument);
             }
-            if (TypeExistsOnServer(node.Type))
-            {
-                Out(")");
-            }
-            else
-            {
-                Out("}");
-            }
+
+            Out(TypeExistsOnServer(node.Type) ? ")" : "}");
+
             return node;
+
+            bool IsEnum(Type type)
+            {
+                var isEnum = type.IsEnum;
+                if (isEnum == false)
+                {
+                    var nonNullableType = Nullable.GetUnderlyingType(type);
+                    if (nonNullableType != null)
+                        isEnum = nonNullableType.IsEnum;
+                }
+
+                return isEnum;
+            }
         }
 
         private void VisitType(Type type)
@@ -1941,6 +1975,7 @@ namespace Raven.Client.Documents.Indexes
         private bool _insideWellKnownType;
         private bool _avoidDuplicatedParameters;
         private bool _isSelectMany;
+        private readonly HashSet<Type> _loadDocumentTypes = new HashSet<Type>();
 
         /// <summary>
         ///   Visits the <see cref = "T:System.Linq.Expressions.ParameterExpression" />.

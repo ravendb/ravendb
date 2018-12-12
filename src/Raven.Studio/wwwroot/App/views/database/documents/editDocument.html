@@ -19,7 +19,7 @@
                             <!--<a class="reset-color btn-toggle markFavourite" data-bind="click: connectedDocuments.toggleStar">-->
                                 <!--<span data-bind="attr: { class: connectedDocuments.currentDocumentIsStarred()?'icon-star-filled favorite':'icon-star' }"></span>-->
                             <!--</a>-->
-                            <span class="obj-name" data-bind="text: userSpecifiedId"></span>
+                            <span class="obj-name on-base-background" data-bind="text: userSpecifiedId"></span>
                             
                             <span data-bind="visible: inReadOnlyMode() && !isDeleteRevision()" class="text-primary revision"> | REVISION</span>
                             <span data-bind="visible: inReadOnlyMode() && isDeleteRevision()" class="text-primary revision"> | DELETED REVISION</span>
@@ -29,7 +29,7 @@
                     </div>
                 </div>
                 <div class="col-md-6">
-                    <p class="pull-right-md text-right-md padding padding-xs" data-bind="if: displayLastModifiedDate()">
+                    <p class="pull-right-md text-right-md padding padding-xs on-base-background" data-bind="if: displayLastModifiedDate()">
                         <i class="icon-recent"></i>
                         <small>Last modified <span data-bind="text: $root.lastModifiedAsAgo"></span></small>
                     </p>
@@ -87,7 +87,7 @@
         </div>
         <div class="flex-window-scroll">
             <pre id="docEditor" class="form-control absolute-fill" 
-                 data-bind="aceEditor: { code: documentText, fontSize:'16px', lang: 'ace/mode/json', readOnly: inReadOnlyMode() }, disable: isBusy, validationOptions: { errorsAsTitle: false }, validationElement: documentText, visible: !isDeleteRevision()"></pre>
+                 data-bind="aceEditor: { code: documentText, fontSize:'16px', lang: 'ace/mode/raven_document', readOnly: inReadOnlyMode() }, disable: isBusy, validationOptions: { errorsAsTitle: false }, validationElement: documentText, visible: !isDeleteRevision()"></pre>
             <div class="absolute-fill" data-bind="visible: isDeleteRevision()">
                 <div class="absolute-center padding bg-info text-center">
                     <i class="icon-trash icon-xl"></i>
@@ -127,6 +127,18 @@
                                   data-bind="attr: { 'data-original-title': '<h4>Last Modified Time</h4>' + lastModifiedFullDate() }">
                                 <span data-bind="text: lastModifiedInterval"></span>
                             </span>
+                        </dd>
+                    </div>
+                    <div data-bind="if: expirationDateInterval">
+                        <dt>Expires:</dt>
+                        <dd>
+                             <span data-placement="bottom" data-toggle="tooltip" data-html="true" data-animation="true"
+                                   data-bind="attr: { 'data-original-title': '<h4>Expiration Date</h4>' + expirationDateFullDate() }">
+                                <span data-bind="text: expirationDateInterval"></span>
+                            </span>
+                            <i class="icon-danger text-warning" data-toggle="tooltip" data-animation="true" data-html="true" 
+                               data-bind="visible: !$root.documentExpirationEnabled()"
+                               data-original-title="Document expiration is turned off. <Br />This document won't be deleted on specified point in time."></i>
                         </dd>
                     </div>
                     <dt>Size:</dt>

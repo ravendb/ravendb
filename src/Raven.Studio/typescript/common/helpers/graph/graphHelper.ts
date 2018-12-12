@@ -1,14 +1,11 @@
 /// <reference path="../../../../typings/tsd.d.ts" />
 
+import colorsManager = require("common/colorsManager");
 
 class graphHelper {
 
-    private static readonly scrollConfig = {
-        width: 8,
-        trackColor: "#63728a",
-        scrollColor: "#98a7b7"
-    }
-
+    private static readonly scrollWidth = 8;
+    
     static prefixStyle(value: string) {
         const prefix = "-webkit-transform" in document.body.style ? "-webkit-"
             : "-moz-transform" in document.body.style ? "-moz-"
@@ -77,7 +74,23 @@ class graphHelper {
         };
     }
     
-    static drawScroll(ctx: CanvasRenderingContext2D, scrollLocation: { left: number, top: number }, topScrollOffset: number, visibleHeight: number, totalHeight: number) {
+    static readScrollConfig(): scrollColorConfig {
+        const config = {
+            scrollColor: undefined as string,
+            trackColor: undefined as string
+        } as scrollColorConfig;
+        
+        colorsManager.setup(".graph-helper", config);
+        
+        return config;
+    }
+    
+    static drawScroll(ctx: CanvasRenderingContext2D, scrollLocation: { left: number, top: number }, topScrollOffset: number, visibleHeight: number, 
+                      totalHeight: number, colors: scrollColorConfig) {
+        if (!colors) {
+            throw new Error("Missing color config.");
+        }
+        
         if (visibleHeight > totalHeight) {
             // don't draw scrollbar
             return;
@@ -86,15 +99,15 @@ class graphHelper {
         ctx.translate(scrollLocation.left, scrollLocation.top);
 
         try {
-            ctx.fillStyle = graphHelper.scrollConfig.trackColor;
-            ctx.fillRect(-graphHelper.scrollConfig.width, 0, graphHelper.scrollConfig.width, visibleHeight);
+            ctx.fillStyle = colors.trackColor;
+            ctx.fillRect(-graphHelper.scrollWidth, 0, graphHelper.scrollWidth, visibleHeight);
 
-            ctx.fillStyle = graphHelper.scrollConfig.scrollColor;
+            ctx.fillStyle = colors.scrollColor;
 
             const scrollOffset = topScrollOffset * visibleHeight / totalHeight;
             const scrollHeight = visibleHeight * visibleHeight / totalHeight;
 
-            ctx.fillRect(-graphHelper.scrollConfig.width, scrollOffset, graphHelper.scrollConfig.width, scrollHeight);
+            ctx.fillRect(-graphHelper.scrollWidth, scrollOffset, graphHelper.scrollWidth, scrollHeight);
 
         } finally {
             ctx.restore();

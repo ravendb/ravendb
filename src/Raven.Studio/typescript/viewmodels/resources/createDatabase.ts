@@ -19,6 +19,9 @@ import appUrl = require("common/appUrl");
 import router = require("plugins/router");
 import viewHelpers = require("common/helpers/view/viewHelpers");
 import clusterTopologyManager = require("common/shell/clusterTopologyManager");
+import lastUsedAutocomplete = require("common/storage/lastUsedAutocomplete");
+import viewModelBase = require("viewmodels/viewModelBase");
+import studioSettings = require("common/settings/studioSettings");
 
 class createDatabase extends dialogViewModelBase {
     
@@ -26,6 +29,8 @@ class createDatabase extends dialogViewModelBase {
     static readonly legacyEncryptionAlgorithms = ['DES', 'RC2', 'Rijndael', 'Triple DES'] as legacyEncryptionAlgorithms[];
 
     static readonly defaultSection = "replication";
+    
+    clientVersion = viewModelBase.clientVersion;
 
     spinners = {
         create: ko.observable<boolean>(false)
@@ -46,9 +51,13 @@ class createDatabase extends dialogViewModelBase {
     disableReplicationFactorInput: KnockoutComputed<boolean>;
     selectionState: KnockoutComputed<checkbox>;
     canUseDynamicOption: KnockoutComputed<boolean>; 
+    defaultReplicationFactor = ko.observable<number>();
 
     databaseLocationCalculated = ko.observable<string>();
     databaseLocationShowing: KnockoutComputed<string>;
+    
+    recentPathsAutocomplete: lastUsedAutocomplete;
+    dataExporterAutocomplete: lastUsedAutocomplete;
     
     getDatabaseByName(name: string): database {
         return databasesManager.default.getDatabaseByName(name);
@@ -68,6 +77,8 @@ class createDatabase extends dialogViewModelBase {
         this.operationNotSupported = mode === "legacyMigration" && clusterTopologyManager.default.nodeInfo().OsInfo.Type !== "Windows";
         
         this.databaseModel = new databaseCreationModel(mode);
+        this.recentPathsAutocomplete = new lastUsedAutocomplete("createDatabasePath", this.databaseModel.path.dataPath);
+        this.dataExporterAutocomplete = new lastUsedAutocomplete("dataExporterPath", this.databaseModel.legacyMigration.dataExporterFullPath);
         
         switch (mode) {
             case "newDatabase": 
@@ -87,12 +98,19 @@ class createDatabase extends dialogViewModelBase {
     }
 
     activate() {
-        const getTopologyTask = new getClusterTopologyCommand()
-            .execute()
-            .done(topology => {
-                this.onTopologyLoaded(topology);
-                this.initObservables();
+        const getStudioSettingsTask = studioSettings.default.globalSettings()
+            .then(settings => {
+                this.defaultReplicationFactor(settings.replicationFactor.getValue());
             });
+        
+        const getTopologyTask = getStudioSettingsTask.then(() => {
+            return new getClusterTopologyCommand()
+                .execute()
+                .done(topology => {
+                    this.setDefaultReplicationFactor(topology);
+                    this.initObservables();
+                });
+        });
 
         const getEncryptionKeyTask = this.encryptionSection.generateEncryptionKey();
 
@@ -101,8 +119,8 @@ class createDatabase extends dialogViewModelBase {
             .done((fullPath: string) => {
                 this.databaseLocationCalculated(fullPath);
             });
-
-        return $.when<any>(getTopologyTask, getEncryptionKeyTask, getDefaultDatabaseLocationTask)
+        
+        return $.when<any>(getTopologyTask, getEncryptionKeyTask, getDefaultDatabaseLocationTask, getStudioSettingsTask)
             .done(() => {
                 // setup validation after we fetch and populate form with data
                 this.databaseModel.setupValidation((name: string) => !this.getDatabaseByName(name), this.clusterNodes.length);
@@ -145,14 +163,14 @@ class createDatabase extends dialogViewModelBase {
         }
     }
 
-    private onTopologyLoaded(topology: clusterTopology) {
+    private setDefaultReplicationFactor(topology: clusterTopology) {
         this.clusterNodes = topology.nodes();
-        const defaultReplicationFactor = this.clusterNodes.length > 1 ? 2 : 1;
+        
+        const defaultReplicationFactor = this.defaultReplicationFactor() || this.clusterNodes.length;
         this.databaseModel.replication.replicationFactor(defaultReplicationFactor);
     }
 
     protected initObservables() {
-
         this.canUseDynamicOption = ko.pureComputed(() => {
             const fromBackup = this.databaseModel.isFromBackupOrFromOfflineMigration;
             const enforceManual = this.enforceManualNodeSelection();
@@ -160,7 +178,7 @@ class createDatabase extends dialogViewModelBase {
             return !fromBackup && !enforceManual && replicationFactor !== 1;
         });
 
-        // hide advanced if respononding bundle was unchecked
+        // hide advanced if corresponding bundle was unchecked
         this.databaseModel.configurationSections.forEach(section => {
             section.enabled.subscribe(enabled => {
                 if (!this.databaseModel.lockActiveTab()) {
@@ -279,6 +297,9 @@ class createDatabase extends dialogViewModelBase {
                 // disable validation for name as it might display error: database already exists
                 // since we get async notifications during db creation
                 this.databaseModel.name.extend({validatable: false});
+                
+                this.recentPathsAutocomplete.recordUsage();
+                this.dataExporterAutocomplete.recordUsage();
 
                 switch (this.databaseModel.creationMode) {
                     case "restore":

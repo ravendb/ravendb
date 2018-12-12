@@ -182,30 +182,30 @@ namespace Raven.Client.Documents.Session
         }
 
         /// <inheritdoc />
-        IAsyncDocumentQuery<T> IFilterDocumentQueryBase<T, IAsyncDocumentQuery<T>>.WhereStartsWith(string fieldName, object value)
+        IAsyncDocumentQuery<T> IFilterDocumentQueryBase<T, IAsyncDocumentQuery<T>>.WhereStartsWith(string fieldName, object value, bool exact)
         {
-            WhereStartsWith(fieldName, value);
+            WhereStartsWith(fieldName, value, exact);
             return this;
         }
 
         /// <inheritdoc />
-        IAsyncDocumentQuery<T> IFilterDocumentQueryBase<T, IAsyncDocumentQuery<T>>.WhereStartsWith<TValue>(Expression<Func<T, TValue>> propertySelector, TValue value)
+        IAsyncDocumentQuery<T> IFilterDocumentQueryBase<T, IAsyncDocumentQuery<T>>.WhereStartsWith<TValue>(Expression<Func<T, TValue>> propertySelector, TValue value, bool exact)
         {
-            WhereStartsWith(GetMemberQueryPath(propertySelector.Body), value);
+            WhereStartsWith(GetMemberQueryPath(propertySelector.Body), value, exact);
             return this;
         }
 
         /// <inheritdoc />
-        IAsyncDocumentQuery<T> IFilterDocumentQueryBase<T, IAsyncDocumentQuery<T>>.WhereEndsWith(string fieldName, object value)
+        IAsyncDocumentQuery<T> IFilterDocumentQueryBase<T, IAsyncDocumentQuery<T>>.WhereEndsWith(string fieldName, object value, bool exact)
         {
-            WhereEndsWith(fieldName, value);
+            WhereEndsWith(fieldName, value, exact);
             return this;
         }
 
         /// <inheritdoc />
-        IAsyncDocumentQuery<T> IFilterDocumentQueryBase<T, IAsyncDocumentQuery<T>>.WhereEndsWith<TValue>(Expression<Func<T, TValue>> propertySelector, TValue value)
+        IAsyncDocumentQuery<T> IFilterDocumentQueryBase<T, IAsyncDocumentQuery<T>>.WhereEndsWith<TValue>(Expression<Func<T, TValue>> propertySelector, TValue value, bool exact)
         {
-            WhereEndsWith(GetMemberQueryPath(propertySelector.Body), value);
+            WhereEndsWith(GetMemberQueryPath(propertySelector.Body), value, exact);
             return this;
         }
 
@@ -386,6 +386,13 @@ namespace Raven.Client.Documents.Session
         }
 
         /// <inheritdoc />
+        IAsyncDocumentQuery<T> IDocumentQueryBase<T, IAsyncDocumentQuery<T>>.OrderBy(string field, string sorterName)
+        {
+            OrderBy(field, sorterName);
+            return this;
+        }
+
+        /// <inheritdoc />
         IAsyncDocumentQuery<T> IDocumentQueryBase<T, IAsyncDocumentQuery<T>>.OrderBy(string field, OrderingType ordering)
         {
             OrderBy(field, ordering);
@@ -397,6 +404,13 @@ namespace Raven.Client.Documents.Session
         {
             var rangeType = Conventions.GetRangeType(propertySelector.ReturnType);
             OrderBy(GetMemberQueryPathForOrderBy(propertySelector), OrderingUtil.GetOrderingFromRangeType(rangeType));
+            return this;
+        }
+
+        /// <inheritdoc />
+        IAsyncDocumentQuery<T> IDocumentQueryBase<T, IAsyncDocumentQuery<T>>.OrderBy<TValue>(Expression<Func<T, TValue>> propertySelector, string sorterName)
+        {
+            OrderBy(GetMemberQueryPathForOrderBy(propertySelector), sorterName);
             return this;
         }
 
@@ -420,6 +434,13 @@ namespace Raven.Client.Documents.Session
         }
 
         /// <inheritdoc />
+        IAsyncDocumentQuery<T> IDocumentQueryBase<T, IAsyncDocumentQuery<T>>.OrderByDescending(string field, string sorterName)
+        {
+            OrderByDescending(field, sorterName);
+            return this;
+        }
+
+        /// <inheritdoc />
         IAsyncDocumentQuery<T> IDocumentQueryBase<T, IAsyncDocumentQuery<T>>.OrderByDescending(string field, OrderingType ordering)
         {
             OrderByDescending(field, ordering);
@@ -431,6 +452,13 @@ namespace Raven.Client.Documents.Session
         {
             var rangeType = Conventions.GetRangeType(propertySelector.ReturnType);
             OrderByDescending(GetMemberQueryPathForOrderBy(propertySelector), OrderingUtil.GetOrderingFromRangeType(rangeType));
+            return this;
+        }
+
+        /// <inheritdoc />
+        IAsyncDocumentQuery<T> IDocumentQueryBase<T, IAsyncDocumentQuery<T>>.OrderByDescending<TValue>(Expression<Func<T, TValue>> propertySelector, string sorterName)
+        {
+            OrderByDescending(GetMemberQueryPathForOrderBy(propertySelector), sorterName);
             return this;
         }
 

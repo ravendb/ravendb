@@ -236,6 +236,7 @@ namespace Raven.Server.Documents
                 options.MaxScratchBufferSize = DocumentDatabase.Configuration.Storage.MaxScratchBufferSize.Value.GetValue(SizeUnit.Bytes);
             options.PrefetchSegmentSize = DocumentDatabase.Configuration.Storage.PrefetchBatchSize.GetValue(SizeUnit.Bytes);
             options.PrefetchResetThreshold = DocumentDatabase.Configuration.Storage.PrefetchResetThreshold.GetValue(SizeUnit.Bytes);
+            options.JournalsSizeThreshold = DocumentDatabase.Configuration.Storage.JournalsSizeThreshold.GetValue(SizeUnit.Bytes);
 
             try
             {
@@ -901,7 +902,7 @@ namespace Raven.Server.Documents
 
                 tableName = collectionName.GetTableName(CollectionTableType.Tombstones);
             }
-            
+
             var table = context.Transaction.InnerTransaction.OpenTable(TombstonesSchema, tableName);
 
             if (table == null)
@@ -1426,12 +1427,14 @@ namespace Raven.Server.Documents
             return (newEtag, changeVector);
         }
 
-        private static void ThrowNotSupportedExceptionForCreatingTombstoneWhenItExistsForDifferentCollection(Slice lowerId, CollectionName collectionName,
+        private void ThrowNotSupportedExceptionForCreatingTombstoneWhenItExistsForDifferentCollection(Slice lowerId, CollectionName collectionName,
             CollectionName tombstoneCollectionName, VoronConcurrencyErrorException e)
         {
-            throw new NotSupportedException(
-                $"Could not delete document '{lowerId}' from collection '{collectionName.Name}' because tombstone for that document but different collection ('{tombstoneCollectionName.Name}') already exists. Did you change the documents collection recently? If yes, please give some time for other system components (e.g. Indexing, Replication, Backup) to process that change.",
-                e);
+            var tombstoneCleanerState = DocumentDatabase.TombstoneCleaner.GetState();
+            if (tombstoneCleanerState.TryGetValue(tombstoneCollectionName.Name, out var item) && item.Component != null)
+                throw new NotSupportedException($"Could not delete document '{lowerId}' from collection '{collectionName.Name}' because tombstone for that document already exists but in a different collection ('{tombstoneCollectionName.Name}'). Did you change the document's collection recently? If yes, please give some time for other system components (e.g. Indexing, Replication, Backup) and tombstone cleaner to process that change. At this point of time the component that holds the tombstone is '{item.Component}' with etag '{item.Value}' and tombstone cleaner is executed every '{DocumentDatabase.Configuration.Tombstones.CleanupInterval.AsTimeSpan.TotalMinutes}' minutes.", e);
+
+            throw new NotSupportedException($"Could not delete document '{lowerId}' from collection '{collectionName.Name}' because tombstone for that document already exists but in a different collection ('{tombstoneCollectionName.Name}'). Did you change the document's collection recently? If yes, please give some time for other system components (e.g. Indexing, Replication, Backup) and tombstone cleaner to process that change. Tombstone cleaner is executed every '{DocumentDatabase.Configuration.Tombstones.CleanupInterval.AsTimeSpan.TotalMinutes}' minutes.", e);
         }
 
         public struct PutOperationResults

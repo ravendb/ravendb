@@ -69,9 +69,6 @@ namespace Raven.Server.Documents.Handlers
 
                 if (command.IsClusterTransaction)
                 {
-                    if (Server.Configuration.Core.FeaturesAvailability == FeaturesAvailability.Stable)
-                        FeaturesAvailabilityException.Throw("Cluster Transactions");
-
                     using (Database.ClusterTransactionWaiter.CreateTask(out var taskId))
                     {
                         // Since this is a cluster transaction we are not going to wait for the write assurance of the replication.
@@ -469,8 +466,6 @@ namespace Raven.Server.Documents.Handlers
 
             protected override int ExecuteCmd(DocumentsOperationContext context)
             {
-                if (Database.ServerStore.Configuration.Core.FeaturesAvailability == FeaturesAvailability.Stable)
-                    FeaturesAvailabilityException.Throw("Cluster Transactions");
                 var global = context.LastDatabaseChangeVector ??
                              (context.LastDatabaseChangeVector = DocumentsStorage.GetDatabaseChangeVector(context));
                 var dbGrpId = Database.DatabaseGroupId;

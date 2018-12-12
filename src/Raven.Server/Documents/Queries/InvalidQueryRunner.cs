@@ -4,6 +4,7 @@ using Microsoft.AspNetCore.Http;
 using Raven.Client.Documents.Operations;
 using Raven.Client.Documents.Queries;
 using Raven.Server.Config.Categories;
+using Raven.Server.Documents.Queries.Suggestions;
 using Raven.Server.ServerWide;
 using Raven.Server.ServerWide.Context;
 using Sparrow.Json;
@@ -24,7 +25,7 @@ namespace Raven.Server.Documents.Queries
             throw new NotSupportedException(ErrorMessage);
         }
 
-        public override Task ExecuteStreamQuery(IndexQueryServerSide query, DocumentsOperationContext documentsContext, HttpResponse response, IStreamDocumentQueryResultWriter writer,
+        public override Task ExecuteStreamQuery(IndexQueryServerSide query, DocumentsOperationContext documentsContext, HttpResponse response, IStreamQueryResultWriter<Document> writer,
             OperationCancelToken token)
         {
             throw new NotSupportedException(ErrorMessage);
@@ -35,13 +36,24 @@ namespace Raven.Server.Documents.Queries
             throw new NotSupportedException(ErrorMessage);
         }
 
+        public override Task ExecuteStreamIndexEntriesQuery(IndexQueryServerSide query, DocumentsOperationContext documentsContext, HttpResponse response,
+            IStreamQueryResultWriter<BlittableJsonReaderObject> writer, OperationCancelToken token)
+        {
+            throw new NotSupportedException(ErrorMessage);
+        }
+        
         public override Task<IOperationResult> ExecuteDeleteQuery(IndexQueryServerSide query, QueryOperationOptions options, DocumentsOperationContext context, Action<IOperationProgress> onProgress, OperationCancelToken token)
         {
             throw new NotSupportedException(ErrorMessage);
         }
 
-        public override Task<IOperationResult> ExecutePatchQuery(IndexQueryServerSide query, QueryOperationOptions options, PatchRequest patch, BlittableJsonReaderObject patchArgs,
-            DocumentsOperationContext context, Action<IOperationProgress> onProgress, OperationCancelToken token)
+        public override Task<IOperationResult> ExecutePatchQuery(IndexQueryServerSide query, QueryOperationOptions options, PatchRequest patch,
+            BlittableJsonReaderObject patchArgs, DocumentsOperationContext context, Action<IOperationProgress> onProgress, OperationCancelToken token)
+        {
+            throw new NotSupportedException(ErrorMessage);
+        }
+
+        public override Task<SuggestionQueryResult> ExecuteSuggestionQuery(IndexQueryServerSide query, DocumentsOperationContext documentsContext, long? existingResultEtag, OperationCancelToken token)
         {
             throw new NotSupportedException(ErrorMessage);
         }

@@ -39,6 +39,7 @@ class indexes extends viewModelBase {
     indexProgressInterval: number;
     indexingProgresses = new Map<string, indexProgress>();  
     requestedIndexingInProgress = false;
+    indexesCount: KnockoutComputed<number>;
 
     spinners = {
         globalStartStop: ko.observable<boolean>(false),
@@ -90,6 +91,10 @@ class indexes extends viewModelBase {
 
             this.indexesProgressRefreshThrottle();
         }, 3000);
+        
+        this.indexesCount = ko.pureComputed(() => {
+            return _.sum(this.indexGroups().map(x => x.indexes().length));
+        });
     }
 
     private getAllIndexes(): index[] {
@@ -240,7 +245,7 @@ class indexes extends viewModelBase {
         if (group) {
             const oldIndex = group.indexes().find((cur: index) => cur.name === i.name);
             if (oldIndex) {
-                group.indexes.replace(oldIndex, i);
+                oldIndex.updateWith(i);
             } else {
                 group.indexes.push(i);
             }
@@ -271,7 +276,6 @@ class indexes extends viewModelBase {
     }
     
     private getIndexesProgress() {
-        
         if (shell.showConnectionLost()) {
             // looks like we don't have connection to server, skip index progress update 
             return $.Deferred().fail();
@@ -290,7 +294,12 @@ class indexes extends viewModelBase {
 
                 for (let i = 0; i < indexesProgressList.length; i++) {
                     const dto = indexesProgressList[i];
-                    this.indexingProgresses.set(dto.Name, new indexProgress(dto));
+                    if (this.indexingProgresses.has(dto.Name)) {
+                        this.indexingProgresses.get(dto.Name).updateProgress(new indexProgress(dto));
+                    } else {
+                        this.indexingProgresses.set(dto.Name, new indexProgress(dto));    
+                    }
+                    
                     _.pull(progressToProcess, dto.Name);
                 }
 
@@ -328,7 +337,7 @@ class indexes extends viewModelBase {
     }
 
     openFaultyIndex(i: index) {
-        this.confirmationMessage("Open index?", `You're openning a faulty index <strong>'${i.name}'</strong>`)
+        this.confirmationMessage("Open index?", `You're opening a faulty index <strong>'${i.name}'</strong>`)
             .done(result => {
                 if (result.can) {
 
@@ -537,7 +546,7 @@ class indexes extends viewModelBase {
                 if (can) {
                     eventsCollector.default.reportEvent("index", "set-lock-mode-selected", lockModeString);
            
-                    const indexes = this.getSelectedIndexes().filter(index => index.type !== "AutoMap" && index.type !== "AutoMapReduce");
+                    const indexes = this.getSelectedIndexes().filter(index => index.type() !== "AutoMap" && index.type() !== "AutoMapReduce");
                        
                     if (indexes.length) {
                         this.spinners.globalLockChanges(true);

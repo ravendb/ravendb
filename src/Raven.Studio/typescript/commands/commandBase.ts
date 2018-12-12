@@ -8,7 +8,7 @@ import protractedCommandsDetector = require("common/notifications/protractedComm
 /// Commands encapsulate a read or write operation to the database and support progress notifications and common AJAX related functionality.
 class commandBase {
 
-    static ravenClientVersion = '4.1.0.0';
+    static ravenClientVersion = '4.2.0.0';
 
     execute(): JQueryPromise<any> {
         throw new Error("Execute must be overridden.");

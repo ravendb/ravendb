@@ -22,5 +22,13 @@ namespace Raven.Server.Documents.Queries.AST
         {
             return $"not {Expression.GetText(parent)}";
         }
+
+        public override bool Equals(QueryExpression other)
+        {
+            if (!(other is NegatedExpression ne))
+                return false;
+
+            return ne.Expression.Equals(Expression);
+        }
     }
 }

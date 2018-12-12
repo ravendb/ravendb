@@ -18,6 +18,25 @@ interface queryResultDto<T> {
     Includes: any[];
 }
 
+interface debugGraphOutputNode {
+    Id: string;
+    Value: documentDto;
+}
+
+interface debugGraphEdge {
+    Name: string;
+    Results: Array<{
+        From: string;
+        To: string;
+        Edge: any;
+    }>
+}
+
+interface debugGraphOutputResponse {
+    Edges: Array<debugGraphEdge>,
+    Nodes: Array<debugGraphOutputNode>;
+}
+
 interface changesApiEventDto {
     Time: string; // ISO date string
     Type: string;
@@ -73,6 +92,7 @@ interface documentMetadataDto {
     '@change-vector'?: string;
     '@counters'?: Array<string>;
     '@counters-snapshot'?: dictionary<number>;
+    '@expires'?: string;
 }
 
 interface updateDatabaseConfigurationsResult {
@@ -435,7 +455,7 @@ interface sqlMigrationAdvancedSettingsDto {
     DetectManyToMany: boolean 
 }
 
-type virtualNotificationType = "CumulativeBulkInsert" | "AttachmentUpload";
+type virtualNotificationType = "CumulativeBulkInsert" | "AttachmentUpload" | "CumulativeUpdateByQuery" | "CumulativeDeleteByQuery";
 
 declare module Raven.Server.NotificationCenter.Notifications {
     interface Notification  {
@@ -449,11 +469,16 @@ interface explainQueryResponse extends resultsDto<Raven.Server.Documents.Queries
 }
 
 
-interface virtualBulkInsertItem {
+interface virtualBulkOperationItem {
     id: string;
     date: string;
     duration: number;
     items: number;
+}
+
+interface queryBasedVirtualBulkOperationItem extends virtualBulkOperationItem {
+    query: string;
+    indexOrCollectionUsed: string;
 }
 
 type adminLogsHeaderType = "Source" | "Logger";
@@ -513,3 +538,14 @@ interface editDocumentCrudActions {
     onDocumentSaved(saveResult: saveDocumentResponseDto, localDoc: any): void;
 }
 
+
+
+interface getIndexEntriesFieldsCommandResult {
+    Static: string[];
+    Dynamic: string[];
+}
+
+interface scrollColorConfig {
+    trackColor: string;
+    scrollColor: string;
+}

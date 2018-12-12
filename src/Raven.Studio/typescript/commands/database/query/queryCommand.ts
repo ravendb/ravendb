@@ -14,7 +14,7 @@ class queryCommand extends commandBase {
         const selector = (results: Raven.Client.Documents.Queries.QueryResult<Array<any>, any>) =>
             ({
                 items: results.Results.map(d => new document(d)), 
-                totalResultCount: results.TotalResults, 
+                totalResultCount: results.CappedMaxResults || results.TotalResults, 
                 additionalResultInfo: results, 
                 resultEtag: results.ResultEtag.toString(), 
                 highlightings: results.Highlightings,
@@ -37,7 +37,7 @@ class queryCommand extends commandBase {
             return [undefined, undefined];
         }
 
-        let [parameters, rql] = this.extractQueryParameters(queryText);
+        let [parameters, rql] = queryCommand.extractQueryParameters(queryText);
 
         if (this.criteria.showFields()) {
             rql = queryUtil.replaceSelectAndIncludeWithFetchAllStoredFields(rql);
@@ -46,8 +46,8 @@ class queryCommand extends commandBase {
         return [parameters, rql];
     }
 
-    private extractQueryParameters(queryText: string) {
-        const parametersEndRegex = /^\s*(from|declare)/mi;
+    static extractQueryParameters(queryText: string) {
+        const parametersEndRegex = /^\s*(with|match|from|declare)/mi;
         const match = parametersEndRegex.exec(queryText);
         if (!match) {
             return [undefined, queryText];

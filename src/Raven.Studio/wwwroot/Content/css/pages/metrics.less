@@ -9,8 +9,8 @@
 }
 .brush .extent {
     fill-opacity: .3;
-    stroke: #ca1c59;
-    fill: #ca1c59;
+    stroke: @brand-primary;
+    fill: @brand-primary;
     shape-rendering: crispEdges;
 }
 
@@ -19,24 +19,179 @@ rect.pane {
     pointer-events: all;
 }
 
-.metricsContainer { 
-    .tooltip {
-        box-shadow: 0 3px 10px -3px rgba(0, 0, 0, 0.45);
-        position: absolute;
-        text-align: left;
-        background: #2c3333;
-        color: #a9adad;
-        border: 0px;
-        padding:8px 16px;
-        border-radius: 2px;
-        pointer-events: none;
-        opacity:1;
+.replication-stats {
+    .color-definitions {
+        .axis {
+            color: #546175;
+        }
+        .gaps {
+            color: #ca1c59;
+        }
+        .brushChartColor {
+            color: #37404b;
+        }
+        .brushChartStrokeColor {
+            color: #008cc9;
+        }
+        .trackBackground {
+            color: #2c343a; 
+        }
+        .separatorLine {
+            color: rgba(44, 52, 58, 0.65);
+        }
+        .trackNameBg {
+            color: rgba(57, 67, 79, 0.95);
+        }
+        .trackNameFg {
+            color: #98a7b7;
+        }
+        .trackDirectionText {
+            color: #baa50b;
+        }
+        .openedTrackArrow {
+            color: #ca1c59;
+        }
+        .closedTrackArrow {
+            color: #98a7b7;
+        }
+        .collectionNameTextColor {
+            color: #2c343a;
+        }
+        .itemWithError {
+            color: #98041b;
+        }
+        .progressStripes {
+            color: rgba(255, 255, 255, 0.1);
+        }
+        
+        .tracks {
+            .replication {
+                color: @color-3;
+            }
+            .networkRead {
+                color: @color-4-2;
+            }
+            .networkWrite {
+                color: @color-4-2;
+            }
+            .storageRead {
+                color: @color-5;
+            }
+            .storageWrite {
+                color: @color-5;
+            }
+            .networkDocumentRead {
+                color: @color-4;
+            }
+            .storageDocumentRead {
+                color: @color-4;
+            }
+            .networkAttachmentRead {
+                color: @color-3-3;
+            }
+            .storageAttachmentRead {
+                color: @color-3-3;
+            }
+            .networkTombstoneRead {
+                color: @color-3-2;
+            }
+
+            .storageTombstoneRead {
+                color: @color-3-2;
+            }
+            
+            .storageCounterRead {
+                color: @color-3-1;
+            }
+        }
+    }   
+}
+
+.io-stats {
+    .main-colors {
+        .color-definitions {
+            .axis {
+                color: @layout-border;
+            }
+
+            .gaps {
+                color: @brand-primary;
+            }
+
+            .trackBackground {
+                color: @panel-bg;
+            }
+
+            .trackNameBg {
+                color: @panel-bg-2;
+            }
+
+            .trackNameFg {
+                color: @text-color;
+            }
+
+            .openedTrackArrow {
+                color: @brand-primary;
+            }
+
+            .closedTrackArrow {
+                color: @text-muted;
+            }
+
+            .text {
+                color: @text-color;
+            }
+        }
+    }
+
+    .event-colors {
+        .color-definitions {
+            .compression {
+                .low {
+                    color: darken(@color-5, 15%);
+                }
+
+                .high {
+                    color: lighten(@color-5-2, 15%);
+                }
+            }
+
+            .dataFlush {
+                .low {
+                    color: darken(@color-3-2, 15%);
+                }
+
+                .high {
+                    color: lighten(@color-3, 15%);
+                }
+            }
+
+            .dataSync {
+                .low {
+                    color: darken(@color-1, 15%);
+                }
+
+                .high {
+                    color: lighten(@color-1-2, 15%);
+                }
+            }
+
+            .journalWrite {
+                .low {
+                    color: darken(@color-4-2, 15%);
+                }
+
+                .high {
+                    color: lighten(@color-4, 15%);
+                }
+            }
+        }
     }
 }
 
 @legend-container-width: 200px;
 @legend-arrow-border: 6px;
-@legend-arrow-color: #f00;
+@legend-arrow-color: @color-1;
 
 .arrow-down {
   position: absolute;

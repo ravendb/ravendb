@@ -3,7 +3,7 @@
         <i class="icon-folder"></i><span class="small" data-bind="text: basePath"></span>
     </div>
     <div id="storage-report-container" data-bind="css: { 'processing': showLoader() }">
-        <div class="chart-tooltip" style="opacity: 0">
+        <div class="chart-tooltip tooltip tooltip-inner" style="opacity: 0">
         </div>
         <div class="chart"></div>
     </div>
@@ -17,7 +17,7 @@
             <i data-bind="visible: $index() < $root.currentPath().length - 1" class="icon-arrow-filled-right"></i>
         </span>
     </div>
-    <hr />
+    <div class="panel margin-top">
     <table class="table table-condensed table-striped" data-bind="if: node() && node().internalChildren">
         <thead>
             <tr>
@@ -48,4 +48,5 @@
             </tr>
         </tbody>
     </table>
+	</div>
 </div>

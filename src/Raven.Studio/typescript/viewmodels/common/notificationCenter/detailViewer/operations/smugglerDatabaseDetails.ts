@@ -4,7 +4,7 @@ import abstractNotification = require("common/notifications/models/abstractNotif
 import notificationCenter = require("common/notifications/notificationCenter");
 import abstractOperationDetails = require("viewmodels/common/notificationCenter/detailViewer/operations/abstractOperationDetails");
 import generalUtils = require("common/generalUtils");
-import progress = require("common/helpers/database/progress");
+import genericProgress = require("common/helpers/database/genericProgress");
 
 type smugglerListItemStatus = "processed" | "skipped" | "processing" | "pending";
 
@@ -24,7 +24,7 @@ type smugglerListItem = {
 
 type uploadListItem = {
     name: string;
-    uploadProgress: progress;
+    uploadProgress: genericProgress;
 }
 
 type attachmentsListItem = {
@@ -71,7 +71,7 @@ class smugglerDatabaseDetails extends abstractOperationDetails {
 
             const result = [] as Array<smugglerListItem>;
             if ("SnapshotBackup" in status) {
-                const backupCount = (status as Raven.Server.Documents.PeriodicBackup.BackupProgress).SnapshotBackup;
+                const backupCount = (status as Raven.Client.Documents.Operations.Backups.BackupProgress).SnapshotBackup;
 
                 // skip it this case means it is not backup progress object or it is backup of non-binary data
                 if (!backupCount.Skipped) {
@@ -80,7 +80,7 @@ class smugglerDatabaseDetails extends abstractOperationDetails {
             }
 
             if ("SnapshotRestore" in status) {
-                const restoreCounts = (status as Raven.Server.Documents.PeriodicBackup.Restore.RestoreProgress).SnapshotRestore;
+                const restoreCounts = (status as Raven.Client.ServerWide.Operations.RestoreProgress).SnapshotRestore;
                 
                 // skip it this case means it is not restore progress object or it is restore of non-binary data 
                 if (!restoreCounts.Skipped) {
@@ -151,25 +151,25 @@ class smugglerDatabaseDetails extends abstractOperationDetails {
 
             const result = [] as Array<uploadListItem>;
             if ("S3Backup" in status) {
-                const s3BackupStatus = (status as Raven.Server.Documents.PeriodicBackup.BackupProgress).S3Backup;
+                const s3BackupStatus = (status as Raven.Client.Documents.Operations.Backups.BackupProgress).S3Backup;
                 const backupStatus = s3BackupStatus as Raven.Client.Documents.Operations.Backups.CloudUploadStatus;
                 this.addToUploadItems("S3", result, backupStatus);
             }
 
             if ("AzureBackup" in status) {
-                const azureBackupStatus = (status as Raven.Server.Documents.PeriodicBackup.BackupProgress).AzureBackup;
+                const azureBackupStatus = (status as Raven.Client.Documents.Operations.Backups.BackupProgress).AzureBackup;
                 const backupStatus = azureBackupStatus as Raven.Client.Documents.Operations.Backups.CloudUploadStatus;
                 this.addToUploadItems("Azure", result, backupStatus);
             }
 
             if ("GlacierBackup" in status) {
-                const glacierBackupStatus = (status as Raven.Server.Documents.PeriodicBackup.BackupProgress).GlacierBackup;
+                const glacierBackupStatus = (status as Raven.Client.Documents.Operations.Backups.BackupProgress).GlacierBackup;
                 const backupStatus = glacierBackupStatus as Raven.Client.Documents.Operations.Backups.CloudUploadStatus;
                 this.addToUploadItems("Glacier", result, backupStatus);
             }
 
             if ("FtpBackup" in status) {
-                const ftpBackupStatus = (status as Raven.Server.Documents.PeriodicBackup.BackupProgress).FtpBackup;
+                const ftpBackupStatus = (status as Raven.Client.Documents.Operations.Backups.BackupProgress).FtpBackup;
                 const backupStatus = ftpBackupStatus as Raven.Client.Documents.Operations.Backups.CloudUploadStatus;
                 this.addToUploadItems("FTP", result, backupStatus);
             }
@@ -214,9 +214,8 @@ class smugglerDatabaseDetails extends abstractOperationDetails {
             return;
         }
 
-        const uploadedInBytes = backupStatus.UploadProgress.UploadedInBytes;
-        const uploadProgress = new progress(
-            uploadedInBytes,
+        const uploadProgress = new genericProgress(
+            backupStatus.UploadProgress.UploadedInBytes,
             backupStatus.UploadProgress.TotalInBytes,
             (number: number) => this.sizeFormatter(number),
             backupStatus.UploadProgress.BytesPutsPerSec);

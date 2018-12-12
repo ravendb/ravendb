@@ -10,7 +10,7 @@ function SetBuiltAtEnvironmentVariableInTeamCity($builtAt) {
     SetTeamCityEnvironmentVariable 'env.BUILT_AT' $($builtAt.ToString('o'))
 }
 
-$DEV_BUILD_NUMBER = 41
+$DEV_BUILD_NUMBER = 42
 function GetBuildNumber () {
     if ($env:BUILD_NUMBER) {
         $result = $env:BUILD_NUMBER
@@ -91,7 +91,7 @@ function BumpVersion ($projectDir, $versionPrefix, $buildType, $dryRun = $False)
     $repo = @{
         "Owner"  = "ravendb"
         "Name"   = "ravendb"
-        "Branch" = "v4.1"
+        "Branch" = "v4.2"
     }
 
     $remoteFilePath = 'src/CommonAssemblyInfo.cs'
@@ -207,7 +207,7 @@ function GetAssemblyInfoWithBumpedVersion ($projectDir, $newVersion, $srcFileCon
     $result = $assemblyVersionPattern.Replace($result, "[assembly: AssemblyVersion(""$newVersion"")]")
 
     $assemblyFileVersionPattern = [regex]'\[assembly: AssemblyFileVersion\(".*"\)\]'
-    $result = $assemblyFileVersionPattern.Replace($result, "[assembly: AssemblyFileVersion(""$newVersion.41"")]")
+    $result = $assemblyFileVersionPattern.Replace($result, "[assembly: AssemblyFileVersion(""$newVersion.42"")]")
 
     $assemblyInfoVersionPattern = [regex]'\[assembly: AssemblyInformationalVersion\(".*"\)\]';
     $result = $assemblyInfoVersionPattern.Replace($result, "[assembly: AssemblyInformationalVersion(""$newVersion"")]")
@@ -224,12 +224,12 @@ function GetVersionInfoWithBumpedVersion ($projectDir, $newVersion, $srcFileCont
 
     $result = [System.Text.Encoding]::UTF8.GetString([System.Convert]::FromBase64String($srcFileContent))
 
-    $pattern = [regex]'\[assembly: RavenVersion\(Build = "41", CommitHash = "([^"]*)", Version = "4.1", FullVersion = "[^"]*"\)\]'
+    $pattern = [regex]'\[assembly: RavenVersion\(Build = "42", CommitHash = "([^"]*)", Version = "4.2", FullVersion = "[^"]*"\)\]'
     $m = $pattern.Match($result)
     $commit = $m.Groups[1]
     $result = $pattern.Replace(
         $result,
-        "[assembly: RavenVersion(Build = ""41"", CommitHash = ""$commit"", Version = ""4.1"", FullVersion = ""$newVersion-custom-41"")]")
+        "[assembly: RavenVersion(Build = ""42"", CommitHash = ""$commit"", Version = ""4.2"", FullVersion = ""$newVersion-custom-42"")]")
 
     if (!$result) {
         throw "Could not get VersionInfo.cs file contents with bumped version."

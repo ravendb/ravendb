@@ -19,9 +19,11 @@ using Raven.Client.Documents.Indexes.Spatial;
 using Raven.Client.Documents.Operations;
 using Raven.Client.Documents.Queries;
 using Raven.Client.ServerWide;
+using Raven.Client.ServerWide.Operations;
 using Raven.Client.Util;
 using Raven.Server.Config.Categories;
 using Raven.Server.Config.Settings;
+using Raven.Server.Documents.Handlers;
 using Raven.Server.Documents.Includes;
 using Raven.Server.Documents.Indexes.Auto;
 using Raven.Server.Documents.Indexes.MapReduce.Auto;
@@ -62,6 +64,7 @@ using Voron.Exceptions;
 using Voron.Impl;
 using Voron.Impl.Compaction;
 using FacetQuery = Raven.Server.Documents.Queries.Facets.FacetQuery;
+using Raven.Server.Json;
 
 namespace Raven.Server.Documents.Indexes
 {
@@ -204,6 +207,8 @@ namespace Raven.Server.Documents.Indexes
                 GetSpatialFieldFactory = GetOrAddSpatialField,
                 GetRegexFactory = GetOrAddRegex
             };
+
+            _txAllocationsRatio = type.IsMapReduce() ? 2.5 : 2;
 
             _disposeOne = new DisposeOnce<SingleAttempt>(() =>
             {
@@ -365,6 +370,8 @@ namespace Raven.Server.Documents.Indexes
 
         public int MaxNumberOfOutputsPerDocument { get; private set; }
 
+        private readonly double _txAllocationsRatio;
+
         public virtual IndexRunningStatus Status
         {
             get
@@ -458,6 +465,7 @@ namespace Raven.Server.Documents.Indexes
                 options.MaxScratchBufferSize = documentDatabase.Configuration.Storage.MaxScratchBufferSize.Value.GetValue(SizeUnit.Bytes);
             options.PrefetchSegmentSize = documentDatabase.Configuration.Storage.PrefetchBatchSize.GetValue(SizeUnit.Bytes);
             options.PrefetchResetThreshold = documentDatabase.Configuration.Storage.PrefetchResetThreshold.GetValue(SizeUnit.Bytes);
+            options.JournalsSizeThreshold = documentDatabase.Configuration.Storage.JournalsSizeThreshold.GetValue(SizeUnit.Bytes);
 
             if (documentDatabase.ServerStore.GlobalIndexingScratchSpaceMonitor != null)
                 options.ScratchSpaceUsage.AddMonitor(documentDatabase.ServerStore.GlobalIndexingScratchSpaceMonitor);
@@ -1166,10 +1174,7 @@ namespace Raven.Server.Documents.Indexes
 
                                 if (_logsAppliedEvent.Wait(Configuration.MaxTimeToWaitAfterFlushAndSyncWhenExceedingScratchSpaceLimit.AsTimeSpan))
                                 {
-                                    // we've just flushed let's start the sync process
-                                    GlobalFlushingBehavior.GlobalFlusher.Value.ForceSyncEnvironment(storageEnvironment);
-
-                                    // and cleanup scratch space immediately
+                                    // we've just flushed let's cleanup scratch space immediately
                                     storageEnvironment.Cleanup();
                                 }
                             }
@@ -1514,7 +1519,7 @@ namespace Raven.Server.Documents.Indexes
 
                 using (var tx = indexContext.OpenWriteTransaction())
                 using (CurrentIndexingScope.Current =
-                    new CurrentIndexingScope(DocumentDatabase.DocumentsStorage, databaseContext, Definition, indexContext, GetOrAddSpatialField, _unmanagedBuffersPool))
+                    new CurrentIndexingScope(this, DocumentDatabase.DocumentsStorage, databaseContext, Definition, indexContext, GetOrAddSpatialField, _unmanagedBuffersPool))
                 {
                     var writeOperation = new Lazy<IndexWriteOperation>(() => IndexPersistence.OpenIndexWriter(indexContext.Transaction.InnerTransaction, indexContext));
 
@@ -2105,13 +2110,22 @@ namespace Raven.Server.Documents.Indexes
             return Definition.GetOrCreateIndexDefinitionInternal();
         }
 
-        public virtual async Task StreamQuery(HttpResponse response, IStreamDocumentQueryResultWriter writer,
+        public virtual async Task StreamQuery(HttpResponse response, IStreamQueryResultWriter<Document> writer,
             IndexQueryServerSide query, DocumentsOperationContext documentsContext, OperationCancelToken token)
         {
             var result = new StreamDocumentQueryResult(response, writer, token);
             await QueryInternal(result, query, documentsContext, token);
             result.Flush();
 
+            DocumentDatabase.QueryMetadataCache.MaybeAddToCache(query.Metadata, Name);
+        }
+
+        public virtual async Task StreamIndexEntriesQuery(HttpResponse response, IStreamQueryResultWriter<BlittableJsonReaderObject> writer,
+            IndexQueryServerSide query, DocumentsOperationContext documentsContext, OperationCancelToken token)
+        {
+            var result = new StreamDocumentIndexEntriesQueryResult(response, writer, token);
+            await IndexEntriesQueryInternal(result, query, documentsContext, token);
+            result.Flush();
             DocumentDatabase.QueryMetadataCache.MaybeAddToCache(query.Metadata, Name);
         }
 
@@ -2125,27 +2139,9 @@ namespace Raven.Server.Documents.Indexes
 
         private async Task QueryInternal<TQueryResult>(TQueryResult resultToFill, IndexQueryServerSide query,
             DocumentsOperationContext documentsContext, OperationCancelToken token)
-            where TQueryResult : QueryResultServerSide
+            where TQueryResult : QueryResultServerSide<Document>
         {
-            AssertIndexState();
-
-            if (State == IndexState.Idle)
-            {
-                try
-                {
-                    SetState(IndexState.Normal);
-                }
-                catch (Exception e)
-                {
-                    if (_logger.IsOperationsEnabled)
-                        _logger.Operations($"Failed to change state of '{Name}' index from {IndexState.Idle} to {IndexState.Normal}. Proceeding with running the query.",
-                            e);
-                }
-            }
-
-            MarkQueried(DocumentDatabase.Time.GetUtcNow());
-
-            AssertQueryDoesNotContainFieldsThatAreNotIndexed(query.Metadata);
+            QueryInternalPreparation(query);
 
             if (resultToFill.SupportsInclude == false
                 && (query.Metadata.Includes != null && query.Metadata.Includes.Length > 0))
@@ -2184,7 +2180,9 @@ namespace Raven.Server.Documents.Indexes
                     using (_contextPool.AllocateOperationContext(out TransactionOperationContext indexContext))
                     using (var indexTx = indexContext.OpenReadTransaction())
                     {
-                        documentsContext.OpenReadTransaction();
+                        if (documentsContext.Transaction == null || documentsContext.Transaction.Disposed)
+                            documentsContext.OpenReadTransaction();
+
                         // we have to open read tx for mapResults _after_ we open index tx
 
                         bool isStale;
@@ -2286,6 +2284,13 @@ namespace Raven.Server.Documents.Indexes
                                     foreach (var document in documents)
                                     {
                                         resultToFill.TotalResults = totalResults.Value;
+                                        if (query.Offset != null || query.Limit != null)
+                                        {
+                                            resultToFill.CappedMaxResults = Math.Min(
+                                                query.Limit ?? int.MaxValue, 
+                                                totalResults.Value - (query.Offset ?? 0)
+                                                );
+                                        }
                                         resultToFill.AddResult(document.Result);
 
                                         if (document.Highlightings != null)
@@ -2324,6 +2329,108 @@ namespace Raven.Server.Documents.Indexes
                     }
                 }
             }
+        }
+
+        private async Task IndexEntriesQueryInternal<TQueryResult>(TQueryResult resultToFill, IndexQueryServerSide query,
+          DocumentsOperationContext documentsContext, OperationCancelToken token)
+          where TQueryResult : QueryResultServerSide<BlittableJsonReaderObject>
+        {
+            QueryInternalPreparation(query);
+
+            if (resultToFill.SupportsInclude == false
+                && (query.Metadata.Includes != null && query.Metadata.Includes.Length > 0))
+                throw new NotSupportedException("Includes are not supported by this type of query.");
+
+            if (resultToFill.SupportsHighlighting == false && query.Metadata.HasHighlightings)
+                throw new NotSupportedException("Highlighting is not supported by this type of query.");
+
+            if (query.Metadata.HasHighlightings && (query.Metadata.HasIntersect || query.Metadata.HasMoreLikeThis))
+                throw new NotSupportedException("Highlighting is not supported by this type of query.");
+
+            if (resultToFill.SupportsExplanations == false && query.Metadata.HasExplanations)
+                throw new NotSupportedException("Explanations are not supported by this type of query.");
+
+            if (query.Metadata.HasExplanations && (query.Metadata.HasIntersect || query.Metadata.HasMoreLikeThis))
+                throw new NotSupportedException("Explanations are not supported by this type of query.");
+
+            using (var marker = MarkQueryAsRunning(query, token))
+            {
+                var queryDuration = Stopwatch.StartNew();
+                AsyncWaitForIndexing wait = null;
+                (long? DocEtag, long? ReferenceEtag)? cutoffEtag = null;
+
+                var stalenessScope = query.Timings?.For(nameof(QueryTimingsScope.Names.Staleness), start: false);
+
+                while (true)
+                {
+                    AssertIndexState();
+                    marker.HoldLock();
+                    var frozenAwaiter = GetIndexingBatchAwaiter();
+                    using (_contextPool.AllocateOperationContext(out TransactionOperationContext indexContext))
+                    using (var indexTx = indexContext.OpenReadTransaction())
+                    {
+                        documentsContext.OpenReadTransaction();
+                        bool isStale;
+                        using (stalenessScope?.Start())
+                        {
+                            if (query.WaitForNonStaleResults && cutoffEtag == null)
+                                cutoffEtag = GetCutoffEtag(documentsContext);
+
+                            isStale = IsStale(documentsContext, indexContext, cutoffEtag?.DocEtag, cutoffEtag?.ReferenceEtag);
+                            if (WillResultBeAcceptable(isStale, query, wait) == false)
+                            {
+                                documentsContext.CloseTransaction();
+
+                                Debug.Assert(query.WaitForNonStaleResultsTimeout != null);
+
+                                if (wait == null)
+                                    wait = new AsyncWaitForIndexing(queryDuration, query.WaitForNonStaleResultsTimeout.Value, this);
+
+                                marker.ReleaseLock();
+
+                                await wait.WaitForIndexingAsync(frozenAwaiter).ConfigureAwait(false);
+                                continue;
+                            }
+                        }
+
+                        FillQueryResult(resultToFill, isStale, query.Metadata, documentsContext, indexContext);
+
+                        using (var reader = IndexPersistence.OpenIndexReader(indexTx.InnerTransaction))
+                        {
+                            var totalResults = new Reference<int>();
+
+                            foreach (var indexEntry in reader.IndexEntries(documentsContext, query, totalResults, documentsContext, GetOrAddSpatialField, token.Token))
+                            {
+                                resultToFill.TotalResults = totalResults.Value;
+                                resultToFill.AddResult(indexEntry);
+                            }
+                        }
+                        return;
+                    }
+                }
+            }
+        }
+
+        private void QueryInternalPreparation(IndexQueryServerSide query)
+        {
+            AssertIndexState();
+
+            if (State == IndexState.Idle)
+            {
+                try
+                {
+                    SetState(IndexState.Normal);
+                }
+                catch (Exception e)
+                {
+                    if (_logger.IsOperationsEnabled)
+                        _logger.Operations($"Failed to change state of '{Name}' index from {IndexState.Idle} to {IndexState.Normal}. Proceeding with running the query.",
+                            e);
+                }
+            }
+
+            MarkQueried(DocumentDatabase.Time.GetUtcNow());
+            AssertQueryDoesNotContainFieldsThatAreNotIndexed(query.Metadata);
         }
 
         public virtual async Task<FacetedQueryResult> FacetedQuery(FacetQuery facetQuery, DocumentsOperationContext documentsContext, OperationCancelToken token)
@@ -2485,53 +2592,38 @@ namespace Raven.Server.Documents.Indexes
 
                             documentsContext.CloseTransaction();
 
-                            var suggestField = (SuggestionField)query.Metadata.SelectFields[0];
-                            using (var reader = IndexPersistence.OpenSuggestionIndexReader(indexTx.InnerTransaction, suggestField.Name))
+                            foreach (var selectField in query.Metadata.SelectFields)
                             {
-                                result.Results.Add(reader.Suggestions(query, suggestField, documentsContext, token.Token));
-                                result.TotalResults = result.Results.Count;
-                                return result;
+                                var suggestField = (SuggestionField)selectField;
+                                using (var reader = IndexPersistence.OpenSuggestionIndexReader(indexTx.InnerTransaction, suggestField.Name))
+                                    result.Results.Add(reader.Suggestions(query, suggestField, documentsContext, token.Token));
                             }
+
+                            result.TotalResults = result.Results.Count;
+                            return result;
                         }
                     }
                 }
             }
         }
-        public IndexEntriesQueryResult IndexEntries(IndexQueryServerSide query, DocumentsOperationContext documentsContext, OperationCancelToken token)
+
+        public virtual async Task<IndexEntriesQueryResult> IndexEntries(IndexQueryServerSide query,
+            DocumentsOperationContext documentsContext, OperationCancelToken token)
         {
-            AssertIndexState();
+            var result = new IndexEntriesQueryResult();
+            await IndexEntriesQueryInternal(result, query, documentsContext, token);
+            return result;
+        }
 
-            if (State == IndexState.Idle)
-                SetState(IndexState.Normal);
+        public abstract (ICollection<string> Static, ICollection<string> Dynamic) GetEntriesFields();
 
-            MarkQueried(DocumentDatabase.Time.GetUtcNow());
-            AssertQueryDoesNotContainFieldsThatAreNotIndexed(query.Metadata);
-
-            using (var marker = MarkQueryAsRunning(query, token))
+        protected List<string> GetDynamicEntriesFields(HashSet<string> staticFields)
+        {
             using (_contextPool.AllocateOperationContext(out TransactionOperationContext indexContext))
             using (var indexTx = indexContext.OpenReadTransaction())
             using (var reader = IndexPersistence.OpenIndexReader(indexTx.InnerTransaction))
             {
-                AssertIndexState();
-                marker.HoldLock();
-
-                var result = new IndexEntriesQueryResult();
-
-                using (documentsContext.OpenReadTransaction())
-                {
-                    var isStale = IsStale(documentsContext, indexContext);
-                    FillQueryResult(result, isStale, query.Metadata, documentsContext, indexContext);
-                }
-
-                var totalResults = new Reference<int>();
-                foreach (var indexEntry in reader.IndexEntries(documentsContext, query, totalResults, documentsContext, GetOrAddSpatialField, token.Token))
-                {
-                    result.AddResult(indexEntry);
-                }
-
-                result.TotalResults = totalResults.Value;
-
-                return result;
+                return reader.DynamicEntriesFields(staticFields).ToList();
             }
         }
 
@@ -2578,13 +2670,13 @@ namespace Raven.Server.Documents.Indexes
             if (referencedCollections != null)
             {
                 foreach (var referencedCollection in GetReferencedCollections())
-                foreach (var refCollection in referencedCollection.Value)
-                {
-                    var etag = GetLastEtagInCollection(context, refCollection.Name);
+                    foreach (var refCollection in referencedCollection.Value)
+                    {
+                        var etag = GetLastEtagInCollection(context, refCollection.Name);
 
-                    if (referenceCutoffEtag == null || etag > referenceCutoffEtag)
-                        referenceCutoffEtag = etag;
-                }
+                        if (referenceCutoffEtag == null || etag > referenceCutoffEtag)
+                            referenceCutoffEtag = etag;
+                    }
             }
 
             return (cutoffEtag, referenceCutoffEtag);
@@ -2831,6 +2923,8 @@ namespace Raven.Server.Documents.Indexes
                 }
             }
         }
+
+        public string TombstoneCleanerIdentifier => $"Index '{Name}'";
 
         public virtual Dictionary<string, long> GetLastProcessedTombstonesPerCollection()
         {
@@ -3166,9 +3260,9 @@ namespace Raven.Server.Documents.Indexes
             }
 
             var allocatedForProcessing = threadAllocations + indexWriterAllocations +
-                                         // we multiple it by two to take into account additional work
+                                         // we multiple it to take into account additional work
                                          // that will need to be done during the commit phase of the index
-                                         totalTxAllocations * 2;
+                                         (long)(totalTxAllocations * _txAllocationsRatio);
 
             _threadAllocations.CurrentlyAllocatedForProcessing = allocatedForProcessing;
 

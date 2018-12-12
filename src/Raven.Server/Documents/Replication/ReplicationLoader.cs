@@ -874,6 +874,8 @@ namespace Raven.Server.Documents.Replication
             ea.ThrowIfNeeded();
         }
 
+        public string TombstoneCleanerIdentifier => "Replication";
+
         public Dictionary<string, long> GetLastProcessedTombstonesPerCollection()
         {
             var minEtag = MinimalEtagForReplication;

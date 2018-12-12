@@ -5,6 +5,7 @@ import visualizerTreeExplorer = require("viewmodels/database/indexes/visualizer/
 import app = require("durandal/app");
 import d3 = require('d3');
 import rbush = require("rbush");
+import colorsManager = require("common/colorsManager");
 
 abstract class reduceValuesFormatter {
     static formatData(data: any) {
@@ -107,9 +108,22 @@ class entryItem extends layoutableItem {
         this.source = source;
         this.dataAsString = reduceValuesFormatter.formatData(data);
     }
+    
+    dataForUI(requestedPadding: number) {
+        const availableWidth = this.width - 2 * requestedPadding;
+        
+        const maxCharacters = Math.floor(availableWidth / entryItem.textWidthFactor) + 3 /* add space for '...' (triple dots) */;
+        if (maxCharacters > this.dataAsString.length) {
+            return this.dataAsString;
+        } else {
+            return this.dataAsString.substring(0, maxCharacters) + "...";
+        }
+    }
 
+    private static readonly textWidthFactor = 5.9;
+    
     static estimateTextWidth(textLength: number) {
-        return textLength * 5.7;
+        return textLength * entryItem.textWidthFactor;
     }
 
     getGlobalTargetConnectionPoint(): [number, number] {
@@ -145,7 +159,9 @@ abstract class pageItem extends layoutableItem {
             rightMargin: 7,
             topMargin: 42
         }
-    }
+    };
+    
+    static readonly pageItemWidthLimit = 600;
 
     parentPage?: branchPageItem;
     pageNumber: number;
@@ -153,6 +169,8 @@ abstract class pageItem extends layoutableItem {
 
     aggregationResult: any;
     aggregationResultAsMap: Map<string, string>;
+    
+    aggregationWidth: number;
 
     constructor(sourceObject: Raven.Server.Documents.Indexes.Debugging.ReduceTreePage, parentPage: branchPageItem, pageNumber: number, aggregationResult: any) {
         super();
@@ -169,10 +187,10 @@ abstract class pageItem extends layoutableItem {
             + pageItem.margins.aggregationItemHeight * this.aggregationResultAsMap.size
             + pageItem.margins.bottomPadding;
 
-        const longestTextWidth = pageItem.estimateAggregationTextWidth(this.findLongestAggregationTextLength());
         const pageNumberWidth = pageItem.estimatePageNumberTextWidth(this.pageNumber);
+        this.aggregationWidth = Math.min(pageItem.estimateAggregationTextWidth(this.findLongestAggregationTextLength()), pageItem.pageItemWidthLimit);
 
-        this.width = pageItem.margins.aggragationTextHorizontalPadding + longestTextWidth + pageItem.margins.aggragationTextHorizontalPadding + pageNumberWidth + pageItem.margins.aggragationTextHorizontalPadding;
+        this.width = pageItem.margins.aggragationTextHorizontalPadding + this.aggregationWidth + pageItem.margins.aggragationTextHorizontalPadding + pageNumberWidth + pageItem.margins.aggragationTextHorizontalPadding;
     }
 
     private findLongestAggregationTextLength(): number {
@@ -231,7 +249,7 @@ class leafPageItem extends pageItem {
         const longestTextWidth = longestTextLength ? entryItem.estimateTextWidth(longestTextLength) : entryPaddingItem.margins.minWidth;
 
         const entriesWidth = pageItem.margins.horizonalPadding + pageItem.margins.entryTextPadding + longestTextWidth + pageItem.margins.entryTextPadding + pageItem.margins.horizonalPadding;
-        this.width = Math.max(entriesWidth, this.width);
+        this.width = Math.max(Math.min(entriesWidth, pageItem.pageItemWidthLimit), this.width);
 
         this.height -= pageItem.margins.bottomPadding;
 
@@ -606,7 +624,7 @@ class visualizerGraphDetails {
         arrowHalfHeight: 6,
         arrowWidth: 8,
         betweenLinesOffset: 5
-    }
+    };
 
     private totalWidth: number;
     private totalHeight: number;
@@ -637,6 +655,23 @@ class visualizerGraphDetails {
 
     private canNavigateToNextTree: KnockoutComputed<boolean>;
     private canNavigateToPreviousTree: KnockoutComputed<boolean>;
+    
+    private colors = {
+        canvasBg: undefined as string,
+        interPageConnection: undefined as string,
+        pageBg: undefined as string,
+        pageNumber: undefined as string,
+        nestedSectionBg: undefined as string,
+        nestedSectionFg: undefined as string,
+        collapsedLeafsBg: undefined as string,
+        collapsedLeafsFg: undefined as string,
+        entriesBg: undefined as string,
+        entryBg: undefined as string,
+        entryFg: undefined as string,
+        aggregationLabel: undefined as string,
+        aggregationValue: undefined as string,
+        documentText: undefined as string
+    };
 
     constructor() {
         _.bindAll(this, ["goToMasterView", "goToNextTree", "goToPreviousTree"] as Array<keyof this>);
@@ -655,6 +690,8 @@ class visualizerGraphDetails {
         this.gotoMasterViewCallback = goToMasterViewCallback;
         this.trees = trees;
 
+        colorsManager.setup(".visualizer .details-colors", this.colors);
+        
         const container = d3.select("#visualizerContainer");
 
         [this.totalWidth, this.totalHeight] = viewHelpers.getPageHostDimenensions();
@@ -794,7 +831,7 @@ class visualizerGraphDetails {
 
         this.currentTree().itemsAtDepth.forEach(items => {
             items.forEach(item => {
-                if (item instanceof leafPageItem) {
+                if (item instanceof pageItem) {
                     this.hitTest.registerPageItem(item);
                 }
             });
@@ -813,7 +850,6 @@ class visualizerGraphDetails {
         for (let i = 0; i < visibleDocuments.length; i++) {
             const doc = visibleDocuments[i];
             doc.layout(yStart);
-
         }
 
         // if there are many documents to draw than we better start with a lower y coordinate
@@ -836,7 +872,7 @@ class visualizerGraphDetails {
         const canvas = this.canvas.node() as HTMLCanvasElement;
         const ctx = canvas.getContext("2d");
 
-        ctx.fillStyle = "#2c3333";
+        ctx.fillStyle = this.colors.canvasBg;
         ctx.fillRect(0, 0, this.totalWidth, this.totalHeight);
         ctx.save();
 
@@ -876,7 +912,7 @@ class visualizerGraphDetails {
                 }
 
                 if (page.parentPage) {
-                    ctx.strokeStyle = "#686f6f";
+                    ctx.strokeStyle = this.colors.interPageConnection;
                     ctx.lineWidth = 2;
 
                     const sourcePoint = page.getSourceConnectionPoint();
@@ -902,7 +938,7 @@ class visualizerGraphDetails {
     }
 
     private drawPage(ctx: CanvasRenderingContext2D, page: pageItem) {
-        ctx.fillStyle = "#3a4242";
+        ctx.fillStyle = this.colors.pageBg;
         ctx.fillRect(page.x, page.y, page.width, page.height);
 
         ctx.save();
@@ -910,7 +946,7 @@ class visualizerGraphDetails {
         try {
 
             // page number
-            ctx.fillStyle = "#008cc9";
+            ctx.fillStyle = this.colors.pageNumber;
             ctx.font = "bold 24px Lato";
             ctx.textAlign = "right";
             ctx.textBaseline = "top";
@@ -918,11 +954,11 @@ class visualizerGraphDetails {
 
             if (page instanceof leafPageItem && page.nestedSection) {
                 const nestedSectionMargins = pageItem.margins.nestedSection;
-                ctx.fillStyle = "#008cc9";
+                ctx.fillStyle = this.colors.nestedSectionBg;
                 ctx.fillRect(page.width - nestedSectionMargins.rightMargin - nestedSectionMargins.width, nestedSectionMargins.topMargin, nestedSectionMargins.width, nestedSectionMargins.height);
 
                 ctx.textAlign = "center";
-                ctx.fillStyle = "white";
+                ctx.fillStyle = this.colors.nestedSectionFg; 
                 ctx.font = "11px Lato";
                 ctx.fillText("NESTED", page.width - nestedSectionMargins.rightMargin - nestedSectionMargins.width / 2, nestedSectionMargins.topMargin + 3);
                 ctx.fillText("SECTION", page.width - nestedSectionMargins.rightMargin - nestedSectionMargins.width / 2, nestedSectionMargins.topMargin + 15);
@@ -940,7 +976,7 @@ class visualizerGraphDetails {
     }
 
     private drawCollapsedLeafs(ctx: CanvasRenderingContext2D, page: collapsedLeafsItem) {
-        ctx.fillStyle = "#3a4242";
+        ctx.fillStyle = this.colors.collapsedLeafsBg;
         ctx.fillRect(page.x, page.y, page.width, page.height);
 
         ctx.save();
@@ -948,7 +984,7 @@ class visualizerGraphDetails {
         try {
 
             ctx.font = "11px Lato";
-            ctx.fillStyle = "#a9adad";
+            ctx.fillStyle = this.colors.collapsedLeafsFg;
             ctx.textAlign = "center";
             ctx.textBaseline = "top";
             ctx.fillText(page.aggregationCount + " leafs collapsed", page.width / 2, pageItem.margins.pageNumberTopMargin);
@@ -961,17 +997,17 @@ class visualizerGraphDetails {
     private drawEntries(ctx: CanvasRenderingContext2D, leaf: leafPageItem) {
         const entries = leaf.entries;
         ctx.font = "11px Lato";
-        ctx.fillStyle = "#626969";
+        ctx.fillStyle = this.colors.entriesBg;
         ctx.textAlign = "left";
         ctx.textBaseline = "top";
         ctx.fillText("Entries:", pageItem.margins.aggragationTextHorizontalPadding, leaf.entriesTextY);
 
         for (let i = 0; i < entries.length; i++) {
             const entry = entries[i];
-            ctx.fillStyle = "#2c3333";
+            ctx.fillStyle = this.colors.entryBg;
             ctx.fillRect(entry.x, entry.y, entry.width, entry.height);
 
-            ctx.fillStyle = "#a9adad";
+            ctx.fillStyle = this.colors.entryFg;
             ctx.font = "12px Lato";
             if (entry instanceof entryPaddingItem) {
                 ctx.textAlign = "center";
@@ -979,19 +1015,19 @@ class visualizerGraphDetails {
             } else {
                 const castedEntry = entry as entryItem;
                 ctx.textAlign = "left";
-                ctx.fillText(castedEntry.dataAsString, castedEntry.x + pageItem.margins.entryTextPadding, castedEntry.y + 3);
+                ctx.fillText(castedEntry.dataForUI(pageItem.margins.entryTextPadding), castedEntry.x + pageItem.margins.entryTextPadding, castedEntry.y + 3, castedEntry.width - 2 * pageItem.margins.entryTextPadding);
             }
         }
     }
 
     private drawAggregation(ctx: CanvasRenderingContext2D, branch: branchPageItem) {
         ctx.font = "11px Lato";
-        ctx.fillStyle = "#626969";
+        ctx.fillStyle = this.colors.aggregationLabel;
         ctx.textAlign = "left";
         ctx.textBaseline = "top";
         ctx.fillText("Aggregation:", pageItem.margins.aggragationTextHorizontalPadding, pageItem.margins.pageNumberTopMargin);
 
-        ctx.fillStyle = "#a9adad";
+        ctx.fillStyle = this.colors.aggregationValue;
         ctx.font = "12px Lato";
         ctx.textAlign = "left";
 
@@ -999,11 +1035,22 @@ class visualizerGraphDetails {
         const yOffset = pageItem.margins.aggregationItemHeight;
 
         branch.aggregationResultAsMap.forEach((value, key) => {
-            ctx.fillText(key + ": " + value, pageItem.margins.aggragationTextHorizontalPadding, currentY);
+            let textToDraw = key + ": " + value;
+            
+            const measuredWidth = ctx.measureText(textToDraw).width;
+            
+            const availableWidth = branch.aggregationWidth;
+            let textTrimmed = graphHelper.truncText(textToDraw, measuredWidth, availableWidth + 20 /* extra space to avoid trimming */);
+            
+            if (textTrimmed !== textToDraw) {
+                textTrimmed += "...";
+            }
+            
+            ctx.fillText(textTrimmed, pageItem.margins.aggragationTextHorizontalPadding, currentY, availableWidth);
             currentY += yOffset;
         });
     }
-
+    
     private drawDocument(ctx: CanvasRenderingContext2D, docItem: documentItem) {
         if (docItem.visible) {
             //TODO: it is the same as in global - consider merging?
@@ -1012,7 +1059,7 @@ class visualizerGraphDetails {
             ctx.textAlign = "center";
             ctx.textBaseline = "middle";
             ctx.font = "18px Lato";
-            ctx.fillStyle = "black";
+            ctx.fillStyle = this.colors.documentText;
             ctx.fillText(docItem.name, docItem.x + docItem.width / 2, docItem.y + docItem.height / 2);
         }
     }
@@ -1084,7 +1131,6 @@ class visualizerGraphDetails {
     }
 
     private onPageItemClicked(item: pageItem) {
-
         app.showBootstrapDialog(new visualizerTreeExplorer(item.sourceObject));
 
         // cancel transition
@@ -1111,7 +1157,7 @@ class visualizerGraphDetails {
                 .transition()
                 .duration(200)
                 .style("opacity", 0.05);
-        }
+        };
 
         this.pageItemHighlightHandler();
     }

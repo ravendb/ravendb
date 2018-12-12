@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
 using System.Linq;
+using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
 using Raven.Client;
@@ -22,6 +23,7 @@ using Raven.Server.Documents.Indexes.IndexMerging;
 using Raven.Server.Documents.Indexes.MapReduce.Auto;
 using Raven.Server.Documents.Indexes.MapReduce.Static;
 using Raven.Server.Documents.Indexes.Persistence.Lucene;
+using Raven.Server.Documents.Indexes.Sorting;
 using Raven.Server.Documents.Indexes.Static;
 using Raven.Server.Documents.Queries.Dynamic;
 using Raven.Server.NotificationCenter.Notifications;
@@ -73,9 +75,24 @@ namespace Raven.Server.Documents.Indexes
             if (record == null)
                 return;
 
+            HandleSorters(record, index);
             HandleDeletes(record, index);
             HandleChangesForStaticIndexes(record, index);
             HandleChangesForAutoIndexes(record, index);
+        }
+
+        private void HandleSorters(DatabaseRecord record, long index)
+        {
+            try
+            {
+                SorterCompilationCache.AddSorters(record);
+            }
+            catch (Exception e)
+            {
+                _documentDatabase.RachisLogIndexNotifications.NotifyListenersAbout(index, e);
+                if (_logger.IsInfoEnabled)
+                    _logger.Info($"Could not update sorters", e);
+            }
         }
 
         private void HandleChangesForAutoIndexes(DatabaseRecord record, long index)
@@ -379,33 +396,30 @@ namespace Raven.Server.Documents.Indexes
             if (definition == null)
                 throw new ArgumentNullException(nameof(definition));
 
-            if (_serverStore.Server.Configuration.Core.FeaturesAvailability == FeaturesAvailability.Stable && definition.Type.IsJavaScript())
-                throw new IndexCreationException($"Could not create index '{definition.Name}'. The experimental 'JavaScript' indexes feature is not enabled in your current server configuration. " +
-                                                 $"In order to use, please enable experimental features by changing '{RavenConfiguration.GetKey(x => x.Core.FeaturesAvailability)}' configuration value to '{nameof(FeaturesAvailability.Experimental)}'.");
-
-            ValidateIndexName(definition.Name, isStatic: true);
-            definition.RemoveDefaultValues();
-            ValidateAnalyzers(definition);
-
-            var instance = IndexCompilationCache.GetIndexInstance(definition, _documentDatabase.Configuration); // pre-compile it and validate
-
-            if (definition.Type == IndexType.MapReduce)
-                MapReduceIndex.ValidateReduceResultsCollectionName(definition, instance, _documentDatabase, NeedToCheckIfCollectionEmpty(definition));
+            ValidateStaticIndex(definition);
 
             var command = new PutIndexCommand(definition, _documentDatabase.Name);
 
+            long index = 0;
             try
             {
-                var (etag, _) = await _serverStore.SendToLeaderAsync(command);
-                await _documentDatabase.RachisLogIndexNotifications.WaitForIndexNotification(etag, _serverStore.Engine.OperationTimeout);
+                index = (await _serverStore.SendToLeaderAsync(command)).Index;
+            }
+            catch (Exception e)
+            {
+                ThrowIndexCreationException("static", definition.Name, e, "the cluster is probably down");
+            }
 
-                return GetIndex(definition.Name);
+            try
+            {
+                await _documentDatabase.RachisLogIndexNotifications.WaitForIndexNotification(index, _serverStore.Engine.OperationTimeout);
             }
             catch (TimeoutException toe)
             {
-                throw new IndexCreationException($"Failed to create static index: {definition.Name}, the cluster is probably down. " +
-                                                 $"Node {_serverStore.NodeTag} state is {_serverStore.LastStateChangeReason()}", toe);
+                ThrowIndexCreationException("static", definition.Name, toe, $"the operation timed out after: {_serverStore.Engine.OperationTimeout}.");
             }
+
+            return GetIndex(definition.Name);
         }
 
         private bool NeedToCheckIfCollectionEmpty(IndexDefinition definition)
@@ -447,6 +461,16 @@ namespace Raven.Server.Documents.Indexes
                    creationOptions == IndexCreationOptions.Update;
         }
 
+        public bool CanUseIndexBatch()
+        {
+            return ClusterCommandsVersionManager.CanPutCommand(nameof(PutIndexesCommand));
+        }
+
+        public IndexBatchScope CreateIndexBatch()
+        {
+            return new IndexBatchScope(this);
+        }
+
         public async Task<Index> CreateIndex(IndexDefinitionBase definition)
         {
             if (definition == null)
@@ -455,25 +479,47 @@ namespace Raven.Server.Documents.Indexes
             if (definition is MapIndexDefinition)
                 return await CreateIndex(((MapIndexDefinition)definition).IndexDefinition);
 
-            ValidateIndexName(definition.Name, isStatic: false);
+            ValidateAutoIndex(definition);
+
+            var command = PutAutoIndexCommand.Create((AutoIndexDefinitionBase)definition, _documentDatabase.Name);
+
+            long index = 0;
+            try
+            {
+                index = (await _serverStore.SendToLeaderAsync(command)).Index;
+            }
+            catch (Exception e)
+            {
+                ThrowIndexCreationException("auto", definition.Name, e, "the cluster is probably down");
+            }
 
             try
             {
-                var command = PutAutoIndexCommand.Create((AutoIndexDefinitionBase)definition, _documentDatabase.Name);
-
-                var (etag, _) = await _serverStore.SendToLeaderAsync(command);
-
-                await _documentDatabase.RachisLogIndexNotifications.WaitForIndexNotification(etag, _serverStore.Engine.OperationTimeout);
-
-                var instance = GetIndex(definition.Name);
-
-                return instance;
+                await _documentDatabase.RachisLogIndexNotifications.WaitForIndexNotification(index, _serverStore.Engine.OperationTimeout);
             }
             catch (TimeoutException toe)
             {
-                throw new IndexCreationException($"Failed to create auto index: {definition.Name}, the cluster is probably down. " +
-                                                     $"Node {_serverStore.NodeTag} state is {_serverStore.LastStateChangeReason()}", toe);
+                ThrowIndexCreationException("static", definition.Name, toe, $"the operation timed out after: {_serverStore.Engine.OperationTimeout}.");
             }
+
+            return GetIndex(definition.Name);
+        }
+
+        private void ValidateAutoIndex(IndexDefinitionBase definition)
+        {
+            ValidateIndexName(definition.Name, isStatic: false);
+        }
+
+        private void ValidateStaticIndex(IndexDefinition definition)
+        {
+            ValidateIndexName(definition.Name, isStatic: true);
+            definition.RemoveDefaultValues();
+            ValidateAnalyzers(definition);
+
+            var instance = IndexCompilationCache.GetIndexInstance(definition, _documentDatabase.Configuration); // pre-compile it and validate
+
+            if (definition.Type == IndexType.MapReduce)
+                MapReduceIndex.ValidateReduceResultsCollectionName(definition, instance, _documentDatabase, NeedToCheckIfCollectionEmpty(definition));
         }
 
         public bool HasChanged(IndexDefinition definition)
@@ -1167,7 +1213,7 @@ namespace Raven.Server.Documents.Indexes
                     {
                         result = dynamicQueryToIndex.ConsiderUsageOfIndex(query, definitionToCheck, context);
                     }
-                    
+
                     if (result.MatchType == DynamicQueryMatchType.Complete || result.MatchType == DynamicQueryMatchType.CompleteButIdle)
                     {
                         indexesToRemove.Add(index.Name);
@@ -1442,10 +1488,107 @@ namespace Raven.Server.Documents.Indexes
 
             return indexMerger.ProposeIndexMergeSuggestions();
         }
-    }
 
-    public class CustomIndexPaths
-    {
-        public Dictionary<string, string> Paths;
+        private void ThrowIndexCreationException(string indexType, string indexName, Exception exception, string reason)
+        {
+            throw new IndexCreationException($"Failed to create {indexType} index '{indexName}', {reason}. Node {_serverStore.NodeTag} state is {_serverStore.LastStateChangeReason()}", exception);
+        }
+
+        public class IndexBatchScope
+        {
+            private readonly IndexStore _store;
+
+            private PutIndexesCommand _command;
+
+            public IndexBatchScope(IndexStore store)
+            {
+                _store = store;
+            }
+
+            public void AddIndex(IndexDefinitionBase definition)
+            {
+                if (_command == null)
+                    _command = new PutIndexesCommand(_store._documentDatabase.Name);
+
+                if (definition == null)
+                    throw new ArgumentNullException(nameof(definition));
+
+                if (definition is MapIndexDefinition indexDefinition)
+                {
+                    AddIndex(indexDefinition.IndexDefinition);
+                    return;
+                }
+
+                _store.ValidateAutoIndex(definition);
+
+                var autoDefinition = (AutoIndexDefinitionBase)definition;
+                var indexType = PutAutoIndexCommand.GetAutoIndexType(autoDefinition);
+
+                _command.Auto.Add(PutAutoIndexCommand.GetAutoIndexDefinition(autoDefinition, indexType));
+            }
+
+            public void AddIndex(IndexDefinition definition)
+            {
+                if (_command == null)
+                    _command = new PutIndexesCommand(_store._documentDatabase.Name);
+
+                _store.ValidateStaticIndex(definition);
+
+                _command.Static.Add(definition);
+            }
+
+            public async Task SaveAsync()
+            {
+                if (_command == null || _command.Static.Count == 0 && _command.Auto.Count == 0)
+                    return;
+
+                try
+                {
+                    long index = 0;
+                    try
+                    {
+                        index = (await _store._serverStore.SendToLeaderAsync(_command)).Index;
+                    }
+                    catch (Exception e)
+                    {
+                        ThrowIndexCreationException(e, "Cluster is probably down.");
+                    }
+
+                    var indexCount = _command.Static.Count + _command.Auto.Count;
+                    var operationTimeout = _store._serverStore.Engine.OperationTimeout;
+                    var timeout = TimeSpan.FromSeconds((indexCount / 50.0) * operationTimeout.TotalSeconds);
+                    if (operationTimeout > timeout)
+                        timeout = operationTimeout;
+
+                    try
+                    {
+                        await _store._documentDatabase.RachisLogIndexNotifications.WaitForIndexNotification(index, timeout);
+                    }
+                    catch (TimeoutException toe)
+                    {
+                        ThrowIndexCreationException(toe, $"Operation timed out after: {timeout}.");
+                    }
+                }
+                finally
+                {
+                    _command = null;
+                }
+            }
+
+            private void ThrowIndexCreationException(Exception exception, string reason)
+            {
+                var sb = new StringBuilder();
+                sb.AppendLine($"Failed to create indexes. {reason}");
+                if (_command.Static != null && _command.Static.Count > 0)
+                    sb.AppendLine("Static: " + string.Join(", ", _command.Static.Select(x => x.Name)));
+
+                if (_command.Auto != null && _command.Auto.Count > 0)
+                    sb.AppendLine("Auto: " + string.Join(", ", _command.Auto.Select(x => x.Name)));
+
+                sb.AppendLine($"Node {_store._serverStore.NodeTag} state is {_store._serverStore.LastStateChangeReason()}");
+
+                throw new IndexCreationException(sb.ToString(), exception);
+            }
+        }
     }
 }

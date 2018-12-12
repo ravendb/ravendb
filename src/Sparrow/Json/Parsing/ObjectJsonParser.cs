@@ -23,7 +23,8 @@ namespace Sparrow.Json.Parsing
         public int SourceIndex = -1;
         public int[] SourceProperties;
 
-        public readonly Queue<(string Name, object Value)> Properties = new Queue<(string Name, object Value)>();
+        public int ModificationsIndex = 0;
+        public readonly List<(string Name, object Value)> Properties = new List<(string Name, object Value)>();
         public HashSet<int> Removals;
         internal readonly BlittableJsonReaderObject _source;
 
@@ -43,7 +44,7 @@ namespace Sparrow.Json.Parsing
             if (_source != null)
             {
 #if DEBUG
-                if (_source.Modifications != null)
+                if (_source.Modifications != null && _source.Modifications.Properties.Count != _source.Modifications.ModificationsIndex)
                     throw new InvalidOperationException("The source already has modifications");
 #endif
                 _source.Modifications = this;
@@ -69,9 +70,16 @@ namespace Sparrow.Json.Parsing
         {
             set
             {
+#if DEBUG
+                if (value != null &&
+                    value.GetType().FullName == "Raven.Server.Documents.Document")
+                {
+                    throw new InvalidOperationException("Cannot add Document to DynamicJsonValue");
+                }
+#endif
                 if (_source != null)
                     Remove(name);
-                Properties.Enqueue((name, value));
+                Properties.Add((name, value));
             }
             get
             {
@@ -105,17 +113,18 @@ namespace Sparrow.Json.Parsing
     public class DynamicJsonArray : IEnumerable<object>
     {
         public int SourceIndex = -1;
-        public readonly Queue<object> Items;
+        public int ModificationsIndex;
+        public readonly List<object> Items;
         public List<int> Removals;
 
         public DynamicJsonArray()
         {
-            Items = new Queue<object>();
+            Items = new List<object>();
         }
 
         public DynamicJsonArray(IEnumerable<object> collection)
         {
-            Items = new Queue<object>(collection);
+            Items = new List<object>(collection);
         }
 
         public void RemoveAt(int index)
@@ -127,7 +136,14 @@ namespace Sparrow.Json.Parsing
 
         public void Add(object obj)
         {
-            Items.Enqueue(obj);
+#if DEBUG
+            if (obj != null &&
+                obj.GetType().FullName == "Raven.Server.Documents.Document")
+            {
+                throw new InvalidOperationException("Cannot add Document to DynamicJsonArray");
+            }
+#endif
+            Items.Add(obj);
         }
 
         public int Count => Items.Count;
@@ -216,22 +232,18 @@ namespace Sparrow.Json.Parsing
 #endif
                         value.SourceIndex = -1;
                         _state.CurrentTokenType = JsonParserToken.StartObject;
+                        value.ModificationsIndex = 0;
                         _elements.Push(value);
                         return true;
                     }
-                    if (value.Properties.Count == 0)
+                    if (value.ModificationsIndex >= value.Properties.Count)
                     {
-                        if (value?._source?.Modifications == value)
-                        {
-                            // reset modifications state so we can reuse the same
-                            // blittable object instance again
-                            value._source.Modifications = null;
-                        }
+                        _seenValues.Remove(value);
                         _state.CurrentTokenType = JsonParserToken.EndObject;
                         return true;
                     }
                     _elements.Push(value);
-                    current = value.Properties.Dequeue();
+                    current = value.Properties[value.ModificationsIndex++];
                     continue;
                 }
 
@@ -240,17 +252,19 @@ namespace Sparrow.Json.Parsing
                     if (_seenValues.Add(array))
                     {
                         array.SourceIndex = -1;
+                        array.ModificationsIndex = 0;
                         _state.CurrentTokenType = JsonParserToken.StartArray;
                         _elements.Push(array);
                         return true;
                     }
-                    if (array.Items.Count == 0)
+                    if (array.ModificationsIndex >= array.Items.Count)
                     {
+                        _seenValues.Remove(array);
                         _state.CurrentTokenType = JsonParserToken.EndArray;
                         return true;
                     }
                     _elements.Push(array);
-                    current = array.Items.Dequeue();
+                    current = array.Items[array.ModificationsIndex++];
                     continue;
                 }
 
@@ -269,6 +283,7 @@ namespace Sparrow.Json.Parsing
                     {
                         _elements.Push(bjro);
                         bjro.Modifications.SourceIndex = -1;
+                        bjro.Modifications.ModificationsIndex = 0;
                         bjro.Modifications.SourceProperties = bjro.GetPropertiesByInsertionOrder();
                         _state.CurrentTokenType = JsonParserToken.StartObject;
                         return true;
@@ -303,6 +318,7 @@ namespace Sparrow.Json.Parsing
                     {
                         _elements.Push(bjra);
                         bjra.Modifications.SourceIndex = -1;
+                        bjra.Modifications.ModificationsIndex = 0;
                         _state.CurrentTokenType = JsonParserToken.StartArray;
                         return true;
                     }

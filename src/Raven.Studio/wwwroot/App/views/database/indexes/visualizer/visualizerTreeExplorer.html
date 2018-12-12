@@ -7,9 +7,20 @@
             <h4 class="modal-title">MapReduce Page Entries</h4>
         </div>
         <div class="modal-body">
-            <div style="position: relative; height: 500px">
-                <virtual-grid style="height: 500px" class="resizable flex-window" params="controller: gridController"></virtual-grid>
+            <h3>Aggregation Result:</h3>
+
+            <pre id="aggregationResultPreview"
+                 data-bind="aceEditor: { code: aggregationResult, fontSize:'14px', lang: 'ace/mode/json', readOnly: true }"></pre>
+            
+            <div data-bind="if: hasEntries">
+                <hr />
+                <h3>Entries:</h3>
+
+                <div style="position: relative; height: 500px">
+                    <virtual-grid style="height: 500px" class="resizable flex-window" params="controller: gridController"></virtual-grid>
+                </div>
             </div>
+            
         </div>
         <div class="modal-footer">
             <div class="text-right">

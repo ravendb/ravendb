@@ -51,6 +51,7 @@ using Raven.Server.ServerWide.Commands.PeriodicBackup;
 using Raven.Server.ServerWide.Commands.Subscriptions;
 using Raven.Server.ServerWide.Context;
 using Raven.Server.ServerWide.Maintenance;
+using Raven.Server.Storage;
 using Raven.Server.Storage.Layout;
 using Raven.Server.Storage.Schema;
 using Raven.Server.Utils;
@@ -96,6 +97,7 @@ namespace Raven.Server.ServerWide
         public readonly ServerDashboardNotifications ServerDashboardNotifications;
         public readonly LicenseManager LicenseManager;
         public readonly FeedbackSender FeedbackSender;
+        public readonly StorageSpaceMonitor StorageSpaceMonitor;
         public readonly SecretProtection Secrets;
         public readonly AsyncManualResetEvent InitializationCompleted;
         public readonly GlobalIndexingScratchSpaceMonitor GlobalIndexingScratchSpaceMonitor;
@@ -131,6 +133,8 @@ namespace Raven.Server.ServerWide
             LicenseManager = new LicenseManager(this);
 
             FeedbackSender = new FeedbackSender();
+
+            StorageSpaceMonitor = new StorageSpaceMonitor(NotificationCenter);
 
             DatabaseInfoCache = new DatabaseInfoCache();
 
@@ -509,6 +513,7 @@ namespace Raven.Server.ServerWide
                 options.MaxScratchBufferSize = Configuration.Storage.MaxScratchBufferSize.Value.GetValue(SizeUnit.Bytes);
             options.PrefetchSegmentSize = Configuration.Storage.PrefetchBatchSize.GetValue(SizeUnit.Bytes);
             options.PrefetchResetThreshold = Configuration.Storage.PrefetchResetThreshold.GetValue(SizeUnit.Bytes);
+            options.JournalsSizeThreshold = Configuration.Storage.JournalsSizeThreshold.GetValue(SizeUnit.Bytes);
 
             DirectoryExecUtils.SubscribeToOnDirectoryInitializeExec(options, Configuration.Storage, nameof(DirectoryExecUtils.EnvironmentType.System), DirectoryExecUtils.EnvironmentType.System, Logger);
 
@@ -689,7 +694,7 @@ namespace Raven.Server.ServerWide
             var tasks = new Dictionary<string, Task<DocumentDatabase>>();
             foreach (var db in DatabasesLandlord.DatabasesCache)
             {
-                tasks.Add(db.Key, db.Value);
+                tasks.Add(db.Key.Value, db.Value);
             }
             while (tasks.Count != 0)
             {
@@ -1517,13 +1522,14 @@ namespace Raven.Server.ServerWide
                     var toDispose = new List<IDisposable>
                     {
                         _engine,
+                        StorageSpaceMonitor,
                         NotificationCenter,
                         LicenseManager,
                         DatabasesLandlord,
                         _env,
                         _clusterRequestExecutor,
                         ContextPool,
-                        ByteStringMemoryCache.Cleaner
+                        ByteStringMemoryCache.Cleaner,
                     };
 
                     var exceptionAggregator = new ExceptionAggregator(Logger, $"Could not dispose {nameof(ServerStore)}.");
@@ -2159,6 +2165,14 @@ namespace Raven.Server.ServerWide
             catch (IOException e)
             {
                 // expected exception on network failures. 
+                if (Logger.IsInfoEnabled)
+                {
+                    Logger.Info($"Failed to accept new RAFT connection via TCP from node {header.SourceNodeTag} ({remoteEndpoint}).", e);
+                }
+            }
+            catch (RachisException e)
+            {
+                // rachis exceptions are expected, so we will not raise an alert, but only log them.
                 if (Logger.IsInfoEnabled)
                 {
                     Logger.Info($"Failed to accept new RAFT connection via TCP from node {header.SourceNodeTag} ({remoteEndpoint}).", e);

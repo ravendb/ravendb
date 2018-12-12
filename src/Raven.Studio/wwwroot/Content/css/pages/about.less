@@ -64,7 +64,7 @@
     }
 
     .license-properties-container {
-        background-color: @gray-dark;
+        background-color: @panel-bg-2;
         flex-grow: 1;
         height: 250px;
         overflow-y: scroll;
@@ -96,7 +96,7 @@
 
     .license-id-container {
         margin-bottom: 1px;
-        background-color: @gray-dark;
+        background-color: @panel-bg-2;
     }
 
     .icon-logo {
@@ -127,7 +127,7 @@
     .license-properties, .support-properties {
         h4 {
             font-size: 16px;
-            color: @gray-lighter;
+            color: @text-emphasis;
             font-weight: 900;
         }
     }
@@ -188,7 +188,7 @@
         }
 
         strong {
-            color: @gray-light;
+            color: @text-emphasis;
         }
 
         & > div {
@@ -208,7 +208,7 @@
 
         &.community {
             .community {
-                background-color: @gray-dark;
+                background-color: @panel-bg-2;
 
                 &.top-row {
                     box-shadow: 0 -3px 0 @brand-success-light;
@@ -218,7 +218,7 @@
 
         &.professional {
             .professional {
-                background-color: @gray-dark;
+                background-color: @panel-bg-2;
 
                 &.top-row {
                     box-shadow: 0 -3px 0 @brand-success-light;
@@ -228,7 +228,7 @@
 
         &.production {
             .production {
-                background-color: @gray-dark;
+                background-color: @panel-bg-2;
 
                 &.top-row {
                     box-shadow: 0 -3px 0 @brand-success-light;
@@ -242,7 +242,7 @@
 
         a {
             padding: 0 @grid-gutter-width/4;
-            color: @text-color;
+            color: inherit;
 
             &:hover {
                 color: @brand-primary;
@@ -295,19 +295,19 @@
         }
 
         &.expired {
-            color: #f36523;
+            color: @color-1-2;
         }
 
         &.dev-only, &.no-support {
-            color: #f36523;
+            color: @color-1-2;
         }
 
         &.invalid i {
-            color: #df382c;
+            color: @color-1;
         }
 
         &.dev-only, &.no-support {
-            color: #eee;
+            color: @gray-lighter;
         }
 
 

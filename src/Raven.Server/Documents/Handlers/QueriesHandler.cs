@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Collections.Generic;
 using System.IO;
 using System.Net;
 using System.Net.Http;
@@ -57,7 +58,8 @@ namespace Raven.Server.Documents.Handlers
                             return;
                         }
 
-                        await Query(context, token, tracker, httpMethod);
+                        var diagnostics = GetBoolValueQueryString("diagnostics", required: false) ?? false;
+                        await Query(context, token, tracker, httpMethod, diagnostics);
                     }
                 }
                 catch (Exception e)
@@ -108,9 +110,10 @@ namespace Raven.Server.Documents.Handlers
             AddPagingPerformanceHint(PagingOperationType.Queries, $"{nameof(FacetedQuery)} ({result.IndexName})", indexQuery.Query, numberOfResults, indexQuery.PageSize, result.DurationInMs);
         }
 
-        private async Task Query(DocumentsOperationContext context, OperationCancelToken token, RequestTimeTracker tracker, HttpMethod method)
+        private async Task Query(DocumentsOperationContext context, OperationCancelToken token, RequestTimeTracker tracker, HttpMethod method, bool diagnostics)
         {
             var indexQuery = await GetIndexQuery(context, method, tracker);
+            indexQuery.Diagnostics = diagnostics ? new List<string>() : null;
 
             if (TrafficWatchManager.HasRegisteredClients)
                 TrafficWatchQuery(indexQuery);
@@ -130,6 +133,7 @@ namespace Raven.Server.Documents.Handlers
             }
 
             var metadataOnly = GetBoolValueQueryString("metadataOnly", required: false) ?? false;
+            var shouldReturnServerSideQuery = GetBoolValueQueryString("includeServerSideQuery", required: false) ?? false;
 
             DocumentQueryResult result;
             try
@@ -154,12 +158,34 @@ namespace Raven.Server.Documents.Handlers
             using (var writer = new AsyncBlittableJsonTextWriter(context, ResponseBodyStream(), Database.DatabaseShutdown))
             {
                 result.Timings = indexQuery.Timings?.ToTimings();
-                numberOfResults = await writer.WriteDocumentQueryResultAsync(context, result, metadataOnly);
+                numberOfResults = await writer.WriteDocumentQueryResultAsync(context, result, metadataOnly, WriteAdditionalData(indexQuery, shouldReturnServerSideQuery));
                 await writer.OuterFlushAsync();
             }
 
             Database.QueryMetadataCache.MaybeAddToCache(indexQuery.Metadata, result.IndexName);
             AddPagingPerformanceHint(PagingOperationType.Queries, $"{nameof(Query)} ({result.IndexName})", indexQuery.Query, numberOfResults, indexQuery.PageSize, result.DurationInMs);
+        }
+
+        private Action<AsyncBlittableJsonTextWriter> WriteAdditionalData(IndexQueryServerSide indexQuery, bool shouldReturnServerSideQuery)
+        {
+            if (indexQuery.Diagnostics == null && shouldReturnServerSideQuery == false)
+                return null;
+
+            return w =>
+            {
+                if (shouldReturnServerSideQuery)
+                {
+                    w.WriteComma();
+                    w.WritePropertyName(nameof(indexQuery.ServerSideQuery));
+                    w.WriteString(indexQuery.ServerSideQuery);
+                }
+
+                if (indexQuery.Diagnostics != null)
+                {
+                    w.WriteComma();
+                    w.WriteArray(nameof(indexQuery.Diagnostics), indexQuery.Diagnostics);
+                }
+            };
         }
 
         private async Task<IndexQueryServerSide> GetIndexQuery(JsonOperationContext context, HttpMethod method, RequestTimeTracker tracker)
@@ -194,6 +220,73 @@ namespace Raven.Server.Documents.Handlers
             AddPagingPerformanceHint(PagingOperationType.Queries, $"{nameof(SuggestQuery)} ({result.IndexName})", indexQuery.Query, numberOfResults, indexQuery.PageSize, result.DurationInMs);
         }
 
+        private  async Task Graph(DocumentsOperationContext context, RequestTimeTracker tracker, HttpMethod method)
+        {
+            var indexQuery = await GetIndexQuery(context, method, tracker);
+            var queryRunner = Database.QueryRunner.GetRunner(indexQuery);
+            if (!(queryRunner is GraphQueryRunner gqr))
+                throw new InvalidOperationException("The specified query is not a graph query.");
+
+            using (var token = CreateTimeLimitedQueryToken())
+            using (Database.DocumentsStorage.ContextPool.AllocateOperationContext(out DocumentsOperationContext ctx))
+            {
+                var results = await gqr.GetAnalyzedQueryResults(indexQuery, ctx, null, token);
+
+                var nodes = new DynamicJsonArray();
+                var edges = new DynamicJsonArray();
+                var output = new DynamicJsonValue
+                {
+                    ["Nodes"] = nodes,
+                    ["Edges"] = edges
+                };
+
+                foreach (var item in results.Nodes)
+                {
+                    var val = item.Value;
+                    if(val is Document d)
+                    {
+                        d.EnsureMetadata();
+                        val = d.Data;
+                    }
+                    nodes.Add(new DynamicJsonValue
+                    {
+                        ["Id"] = item.Key,
+                        ["Value"] = val
+                    });
+                }
+
+                foreach (var edge in results.Edges)
+                {
+                    var array = new DynamicJsonArray();
+                    var djv = new DynamicJsonValue
+                    {
+                        ["Name"] = edge.Key,
+                        ["Results"] = array
+                    };
+                    foreach(var item in edge.Value)
+                    {
+                        var edgeVal = item.Edge;
+                        if (edgeVal is Document d)
+                        {
+                            edgeVal = d.Id?.ToString() ?? "anonymous/" + Guid.NewGuid();
+                        }
+                        array.Add(new DynamicJsonValue
+                        {
+                            ["From"] = item.Source,
+                            ["To"] = item.Destination,
+                            ["Edge"] = edgeVal
+                        });
+                    }
+                    edges.Add(djv);
+                }
+
+                using (var writer = new BlittableJsonTextWriter(context, ResponseBodyStream()))
+                {
+                    context.Write(writer, output);
+                }
+            }
+        }
+
         private async Task Explain(DocumentsOperationContext context, RequestTimeTracker tracker, HttpMethod method)
         {
             var indexQuery = await GetIndexQuery(context, method, tracker);
@@ -210,6 +303,20 @@ namespace Raven.Server.Documents.Handlers
                 {
                     w.WriteExplanation(context, explanation);
                 });
+
+                writer.WriteEndObject();
+                await writer.OuterFlushAsync();
+            }
+        }
+
+        private async Task ServerSideQuery(DocumentsOperationContext context, RequestTimeTracker tracker, HttpMethod method)
+        {
+            var indexQuery = await GetIndexQuery(context, method, tracker);
+            using (var writer = new AsyncBlittableJsonTextWriter(context, ResponseBodyStream(), Database.DatabaseShutdown))
+            {
+                writer.WriteStartObject();
+                writer.WritePropertyName(nameof(indexQuery.ServerSideQuery));
+                writer.WriteString(indexQuery.ServerSideQuery);
 
                 writer.WriteEndObject();
                 await writer.OuterFlushAsync();
@@ -434,6 +541,18 @@ namespace Raven.Server.Documents.Handlers
             if (string.Equals(debug, "explain", StringComparison.OrdinalIgnoreCase))
             {
                 await Explain(context, tracker, method);
+                return;
+            }
+
+            if (string.Equals(debug, "serverSideQuery", StringComparison.OrdinalIgnoreCase))
+            {
+                await ServerSideQuery(context, tracker, method);
+                return;
+            }
+
+            if (string.Equals(debug, "graph", StringComparison.OrdinalIgnoreCase))
+            {
+                await Graph(context, tracker, method);
                 return;
             }
 

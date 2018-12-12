@@ -1,5 +1,6 @@
 using System.Collections.Generic;
 using System.Linq;
+using Microsoft.Extensions.Primitives;
 using Sparrow;
 
 namespace Raven.Server.Documents.Queries.AST
@@ -26,6 +27,26 @@ namespace Raven.Server.Documents.Queries.AST
         public override string GetText(IndexQueryServerSide parent)
         {
             return _text ?? (_text = $"{Name}({string.Join(", ", Arguments.Select(x => x.GetText(parent)))})");
+        }
+
+
+        public override bool Equals(QueryExpression other)
+        {
+            if (!(other is MethodExpression ie))
+                return false;
+
+            if (Name != ie.Name ||
+                Arguments.Count != ie.Arguments.Count)
+                return false;
+
+
+            for (int i = 0; i < Arguments.Count; i++)
+            {
+                if (Arguments[i].Equals(ie.Arguments.Count) == false)
+                    return false;
+            }
+
+            return true;
         }
     }
 }

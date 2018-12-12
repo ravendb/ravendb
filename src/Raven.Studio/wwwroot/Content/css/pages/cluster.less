@@ -1,18 +1,21 @@
-@cluster-member-color: #6dbe3b;
-@cluster-promotable-color: #488c5d;
-@cluster-watcher-color: #4b7a70;
-@cluster-leader-bg-color: #a4f012;
-@cluster-leader-fg-color: #3ea704;
+@cluster-leader-fg-color: lighten(@color-2-3, 10%);
+@cluster-member-color: @color-3;
+@cluster-leader-bg-color: @color-3;
+@cluster-watcher-color: @color-3-1;
+@cluster-promotable-color: @color-3-2;
 
-@cluster-voting-color: #266cb3;
-@cluster-voting-text-color: #74b4f7;
 
-@cluster-waiting-color: #63728a;
-@cluster-waiting-text-color: #98a7b7;
 
-@cluster-disconnected-color: #f93e3a;
 
-@leader-color: #ffc330;
+@cluster-voting-color: @color-4;
+@cluster-voting-text-color: lighten(@color-4, 15%);
+
+@cluster-waiting-color: @gray;
+@cluster-waiting-text-color: @gray-light;
+
+@cluster-disconnected-color: @color-1;
+
+@leader-color: @color-2-1;
 
 #clusterGraphContainer {
     min-height: 400px;
@@ -47,7 +50,7 @@
             .voting-stroke {
                 fill: none;
                 stroke-width: 2px;
-                stroke: #5886a8;
+                stroke: darken(@color-3-3, 10%);
                 stroke-dasharray: 30,17;
                 opacity: 0;
             }
@@ -55,7 +58,7 @@
             .node-icon {
                 text-anchor: middle;
                 font-size: 34px;
-                fill: white;
+                fill: @gray-lighter;
             }
 
             .node-bg {
@@ -111,7 +114,7 @@
             .node-icon {
                 display: none;
             }
-            
+
             .Member, .Promotable {
                 .node-bg {
                     fill: @cluster-voting-color;
@@ -149,20 +152,20 @@
 
             .node {
                 .node-tag {
-                    fill: white;
+                    fill: @gray-lighter;
                 }
 
                 &.disconnected {
                     .node-bg {
                         fill: @cluster-disconnected-color;
                     }
-                    
+
                     .voting-stroke {
                         opacity: 0;
                     }
-                    
+
                     .state {
-                        fill: white;
+                        fill: @gray-lighter;
                     }
                 }
             }
@@ -173,12 +176,12 @@
 
         .edge-line {
             stroke-opacity: 0;
-            stroke: #63728a;
+            stroke: @gray;
             stroke-width: 1;
 
             &.with-leader {
                 stroke-opacity: 1;
-                stroke: #6ebf3a;
+                stroke: @color-3;
                 stroke-width: 2;
 
                 &.with-watcher {
@@ -195,11 +198,11 @@
             .edge-line {
                 stroke-opacity: 1;
             }
-            
+
             .with-error {
                 stroke: @cluster-disconnected-color;
             }
-            
+
             .with-watcher {
                 stroke-opacity: 0;
             }

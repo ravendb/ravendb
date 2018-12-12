@@ -129,6 +129,8 @@ namespace SlowTests.Issues
             Assert.True(WaitForDocument(store2, id));
         }
 
+        public string TombstoneCleanerIdentifier => nameof(RavenDB_10656);
+
         public Dictionary<string, long> GetLastProcessedTombstonesPerCollection()
         {
             return new Dictionary<string, long>

@@ -87,6 +87,18 @@ namespace Raven.Server.Documents.Indexes.MapReduce.Auto
             Definition.State = state;
         }
 
+        public override (ICollection<string> Static, ICollection<string> Dynamic) GetEntriesFields()
+        {
+            var staticEntries = Definition
+                .IndexFields
+                .Keys
+                .ToHashSet();
+
+            var dynamicEntries = GetDynamicEntriesFields(staticEntries);
+
+            return (staticEntries, dynamicEntries);
+        }
+
         protected override void LoadValues()
         {
             base.LoadValues();

@@ -12,8 +12,7 @@
     height: 400px;
     max-width: calc(100vw ~"-" @grid-gutter-width/3*4);
     max-height: 55vh;
-    
-    display:flex;
+    display: flex;
     flex-direction: column;
 
     @media (min-width:@screen-sm) {
@@ -50,7 +49,7 @@
         list-style: none;
         margin: 0;
         padding: 0;
-        background-color: @gray-darker;
+        background-color: @well-bg;
 
 
         li {
@@ -64,57 +63,58 @@
 
             a {
                 padding: 5px 10px;
-                color: @gray-light;
+                color: @text-color;
                 transition: opacity .1s;
                 display: inline-block;
 
                 &:hover {
-                    background-color:@gray-dark;
-                    color:@gray-lighter;
+                    background-color: @gray-dark;
+                    color: @text-emphasis;
                 }
             }
 
             .column-remove {
-                color:@brand-danger;
+                color: @brand-danger;
+
                 &:hover:not(.disabled) {
-                    color:@brand-danger-light;
-                    background-color:@brand-danger-dark;
+                    color: @brand-danger-light;
+                    background-color: @brand-danger-dark;
                 }
             }
 
             .column-rearrange {
-                color:@gray;
-                cursor:move;
+                color: @text-muted;
+                cursor: move;
             }
 
             &:hover {
-                background-color: lighten(@gray-darker,3%);
+                background-color: lighten(@well-bg-2,3%);
             }
         }
     }
 
     .column-add-new {
-        
-        &:not(.active){
-            display:none;
+
+        &:not(.active) {
+            display: none;
         }
 
         .form {
-            display:flex;
+            display: flex;
 
             .binding, .alias {
-                flex-grow:1;
-                margin-right:@grid-gutter-width/4;                
-            } 
+                flex-grow: 1;
+                margin-right: @grid-gutter-width/4;
+            }
         }
 
         .error-message {
-            margin-top:@grid-gutter-width/4;
-            margin-bottom:@grid-gutter-width/4;
+            margin-top: @grid-gutter-width/4;
+            margin-bottom: @grid-gutter-width/4;
         }
 
         hr {
-            margin:@grid-gutter-width/4 0;
+            margin: @grid-gutter-width/4 0;
         }
     }
 }

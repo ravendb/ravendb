@@ -5,7 +5,9 @@ using Microsoft.AspNetCore.Http;
 using Raven.Client;
 using Raven.Client.Documents.Operations;
 using Raven.Client.Documents.Queries;
+using Raven.Server.Documents.Handlers;
 using Raven.Server.Documents.Includes;
+using Raven.Server.Documents.Queries.Suggestions;
 using Raven.Server.Documents.Queries.Timings;
 using Raven.Server.ServerWide;
 using Raven.Server.ServerWide.Context;
@@ -28,7 +30,8 @@ namespace Raven.Server.Documents.Queries.Dynamic
         {
             var result = new DocumentQueryResult();
 
-            documentsContext.OpenReadTransaction();
+            if (documentsContext.Transaction == null || documentsContext.Transaction.Disposed)
+                documentsContext.OpenReadTransaction();
 
             FillCountOfResultsAndIndexEtag(result, query.Metadata, documentsContext);
 
@@ -43,7 +46,7 @@ namespace Raven.Server.Documents.Queries.Dynamic
             return Task.FromResult(result);
         }
 
-        public override Task ExecuteStreamQuery(IndexQueryServerSide query, DocumentsOperationContext documentsContext, HttpResponse response, IStreamDocumentQueryResultWriter writer,
+        public override Task ExecuteStreamQuery(IndexQueryServerSide query, DocumentsOperationContext documentsContext, HttpResponse response, IStreamQueryResultWriter<Document> writer,
             OperationCancelToken token)
         {
             var result = new StreamDocumentQueryResult(response, writer, token);
@@ -59,6 +62,12 @@ namespace Raven.Server.Documents.Queries.Dynamic
         }
 
         public override Task<IndexEntriesQueryResult> ExecuteIndexEntriesQuery(IndexQueryServerSide query, DocumentsOperationContext context, long? existingResultEtag, OperationCancelToken token)
+        {
+            throw new NotSupportedException("Collection query is handled directly by documents storage so index entries aren't created underneath");
+        }
+
+        public override Task ExecuteStreamIndexEntriesQuery(IndexQueryServerSide query, DocumentsOperationContext documentsContext, HttpResponse response,
+            IStreamQueryResultWriter<BlittableJsonReaderObject> writer, OperationCancelToken token)
         {
             throw new NotSupportedException("Collection query is handled directly by documents storage so index entries aren't created underneath");
         }
@@ -83,7 +92,12 @@ namespace Raven.Server.Documents.Queries.Dynamic
             }, patch, patchArgs, onProgress, token);
         }
 
-        private void ExecuteCollectionQuery(QueryResultServerSide resultToFill, IndexQueryServerSide query, string collection, DocumentsOperationContext context, CancellationToken cancellationToken)
+        public override Task<SuggestionQueryResult> ExecuteSuggestionQuery(IndexQueryServerSide query, DocumentsOperationContext documentsContext, long? existingResultEtag, OperationCancelToken token)
+        {
+            throw new NotSupportedException("Collection query is handled directly by documents storage so suggestions aren't supported");
+        }
+
+        private void ExecuteCollectionQuery(QueryResultServerSide<Document> resultToFill, IndexQueryServerSide query, string collection, DocumentsOperationContext context, CancellationToken cancellationToken)
         {
             using (var queryScope = query.Timings?.For(nameof(QueryTimingsScope.Names.Query)))
             {
@@ -96,6 +110,9 @@ namespace Raven.Server.Documents.Queries.Dynamic
                     gatherScope = includesScope.For(nameof(QueryTimingsScope.Names.Gather), start: false);
                     fillScope = includesScope.For(nameof(QueryTimingsScope.Names.Fill), start: false);
                 }
+
+                if (string.IsNullOrEmpty(collection))
+                    collection = Constants.Documents.Collections.AllDocumentsCollection;
 
                 var isAllDocsCollection = collection == Constants.Documents.Collections.AllDocumentsCollection;
 
@@ -148,10 +165,25 @@ namespace Raven.Server.Documents.Queries.Dynamic
                     resultToFill.AddCounterIncludes(includeCountersCommand);
 
                 resultToFill.TotalResults = (totalResults.Value == 0 && resultToFill.Results.Count != 0) ? -1 : totalResults.Value;
+
+                if (query.Offset != null || query.Limit != null)
+                {
+                    if (resultToFill.TotalResults == -1)
+                    {
+                        resultToFill.CappedMaxResults = query.Limit ?? -1;
+                    }
+                    else
+                    {
+                        resultToFill.CappedMaxResults = Math.Min(
+                            query.Limit ?? int.MaxValue,
+                            resultToFill.TotalResults - (query.Offset ?? 0)
+                        );    
+                    }
+                }
             }
         }
 
-        private unsafe void FillCountOfResultsAndIndexEtag(QueryResultServerSide resultToFill, QueryMetadata query, DocumentsOperationContext context)
+        private unsafe void FillCountOfResultsAndIndexEtag(QueryResultServerSide<Document> resultToFill, QueryMetadata query, DocumentsOperationContext context)
         {
             var collection = query.CollectionName;
             var buffer = stackalloc long[3];

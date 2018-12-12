@@ -1157,18 +1157,25 @@ The recommended method is to use full text search (mark the field as Analyzed an
                     VisitExpression(expression.Arguments[0]);
 
                     LinqPathProvider.GetValueFromExpressionWithoutConversion(expression.Arguments[1], out var orderByPath);
-                    LinqPathProvider.GetValueFromExpressionWithoutConversion(expression.Arguments[2], out var orderByOrderingType);
+                    LinqPathProvider.GetValueFromExpressionWithoutConversion(expression.Arguments[2], out var orderByOrderingTypeOrSorterName);
 
-                    _documentQuery.OrderBy((string)orderByPath, (OrderingType)orderByOrderingType);
+                    if (orderByOrderingTypeOrSorterName is string orderBySorterName)
+                        _documentQuery.OrderBy((string)orderByPath, orderBySorterName);
+                    else
+                        _documentQuery.OrderBy((string)orderByPath, (OrderingType)orderByOrderingTypeOrSorterName);
                     break;
                 case nameof(LinqExtensions.OrderByDescending):
                 case nameof(LinqExtensions.ThenByDescending):
                     VisitExpression(expression.Arguments[0]);
 
                     LinqPathProvider.GetValueFromExpressionWithoutConversion(expression.Arguments[1], out var orderByDescendingPath);
-                    LinqPathProvider.GetValueFromExpressionWithoutConversion(expression.Arguments[2], out var orderByDescendingOrderingType);
+                    LinqPathProvider.GetValueFromExpressionWithoutConversion(expression.Arguments[2], out var orderByDescendingOrderingTypeOrSorterName);
 
-                    _documentQuery.OrderByDescending((string)orderByDescendingPath, (OrderingType)orderByDescendingOrderingType);
+                    if (orderByDescendingOrderingTypeOrSorterName is string orderByDescendingSorterName)
+                        _documentQuery.OrderByDescending((string)orderByDescendingPath, orderByDescendingSorterName);
+                    else
+                        _documentQuery.OrderByDescending((string)orderByDescendingPath, (OrderingType)orderByDescendingOrderingTypeOrSorterName);
+
                     break;
                 case nameof(LinqExtensions.MoreLikeThis):
                     VisitExpression(expression.Arguments[0]);
@@ -2617,19 +2624,17 @@ The recommended method is to use full text search (mark the field as Analyzed an
 
         private string ToJs(Expression expression, bool loadArg = false, JavascriptConversionExtensions.LoadSupport loadSupport = null)
         {
-            var dateTimeSupport = new JavascriptConversionExtensions.DateTimeSupport();
-
             var extensions = new JavascriptConversionExtension[]
             {
                 new JavascriptConversionExtensions.DictionarySupport(),
                 JavascriptConversionExtensions.LinqMethodsSupport.Instance,
-                new JavascriptConversionExtensions.WrappedConstantSupport<T>(_documentQuery, _projectionParameters, dateTimeSupport),
+                new JavascriptConversionExtensions.WrappedConstantSupport<T>(_documentQuery, _projectionParameters),
                 JavascriptConversionExtensions.MathSupport.Instance,
                 new JavascriptConversionExtensions.TransparentIdentifierSupport(),
                 JavascriptConversionExtensions.ReservedWordsSupport.Instance,
                 JavascriptConversionExtensions.InvokeSupport.Instance,
                 JavascriptConversionExtensions.ToStringSupport.Instance,
-                dateTimeSupport,
+                JavascriptConversionExtensions.DateTimeSupport.Instance,
                 JavascriptConversionExtensions.NullCoalescingSupport.Instance,
                 JavascriptConversionExtensions.NestedConditionalSupport.Instance,
                 JavascriptConversionExtensions.StringSupport.Instance,
@@ -2647,7 +2652,7 @@ The recommended method is to use full text search (mark the field as Analyzed an
                 MemberInitAsJson.ForAllTypes
             };
 
-            if (loadArg == false)
+            if (loadArg == false && _isMapReduce == false)
             {
                 Array.Resize(ref extensions, extensions.Length + 1);
 
@@ -2940,7 +2945,7 @@ The recommended method is to use full text search (mark the field as Analyzed an
             HandleKeywordsIfNeeded(ref field, ref alias);
 
             var identityProperty = _documentQuery.Conventions.GetIdentityProperty(_ofType ?? _originalQueryType);
-            if (identityProperty != null && identityProperty.Name == field)
+            if (identityProperty != null && identityProperty.Name == field && _isMapReduce == false)
             {
                 FieldsToFetch.Add(new FieldToFetch(Constants.Documents.Indexing.Fields.DocumentIdFieldName, alias));
                 return;
@@ -3145,7 +3150,7 @@ The recommended method is to use full text search (mark the field as Analyzed an
 
             var (fields, projections) = GetProjections();
 
-            return documentQuery.SelectFields<T>(new QueryData(fields, projections, _fromAlias, null, _loadTokens));
+            return documentQuery.SelectFields<T>(new QueryData(fields, projections, _fromAlias, null, _loadTokens, isMapReduce: _isMapReduce));
         }
 
         /// <summary>
@@ -3232,7 +3237,7 @@ The recommended method is to use full text search (mark the field as Analyzed an
         {
             var (fields, projections) = GetProjections();
 
-            var finalQuery = ((IDocumentQuery<T>)_documentQuery).SelectFields<TProjection>(new QueryData(fields, projections, _fromAlias, _declareToken, _loadTokens, _declareToken != null || _jsSelectBody != null));
+            var finalQuery = ((IDocumentQuery<T>)_documentQuery).SelectFields<TProjection>(new QueryData(fields, projections, _fromAlias, _declareToken, _loadTokens, _declareToken != null || _jsSelectBody != null, isMapReduce: _isMapReduce));
 
             var executeQuery = GetQueryResult(finalQuery);
 

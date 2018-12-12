@@ -1,13 +1,15 @@
 ﻿
 @resource-usage-primary-color: @brand-primary-light;
 @resource-usage-secondary-color: @brand-primary-dark;
-@dashboard-requests-color: #27c5da;
-@dashboard-writes-color: #7051ad;
-@dashboard-written-color: #d08f27;
+@dashboard-requests-color: @color-3-3;
+@dashboard-writes-color: @color-4-3;
+@dashboard-written-color: @color-1-3;
 
-@dashboard-indexing-color: #0873a3;
-@dashboard-map-color: #d08f27;
-@dashboard-reduce-color: #d83731;
+@dashboard-indexing-color: @color-4-2;
+@dashboard-map-color: @color-1-3;
+@dashboard-reduce-color: @color-5-3;
+
+@dashboard-used-space-color: #009de0;
 
 #dashboard-container {
 
@@ -21,11 +23,10 @@
     .tooltip-inner {
         max-width: 255px;
         white-space: nowrap;
+        padding: 10px;
     }
 
     .tooltip {
-        padding: 10px;
-        background-color: rgba(27, 30, 34, 0.8);
     }
 
     display: flex;
@@ -37,15 +38,98 @@
         left: 0;
     }
 
+    .disk-usage {
+        font-size: 14px;
+        .usage {
+            margin-right: @grid-gutter-width / 4;
+        }
+        .usage-rect {
+            width: 10px;
+            height: 10px;
+            margin-right: 4px;
+            display: inline-block;;
+        }
+        .server-usage {
+            .usage-rect {
+                background-color: @brand-primary;
+            }
+            strong {
+                color: @brand-primary;
+            }
+        }
+        .total-usage {
+            .usage-rect {
+                background-color: @dashboard-used-space-color;
+            }
+            strong {
+                color: @dashboard-used-space-color;
+            }
+        }
+        .free-space {
+            .usage-rect {
+                background-color: @brand-success;
+            }
+            strong {
+                color: @brand-success;
+            }
+            
+            .icon-warning {
+                display: none;
+            }
+            
+            &.free-space-warning {
+                color: @brand-warning;
+                
+                strong {
+                    color: @brand-warning;
+                }
+                
+                .usage-rect {
+                    display: none;
+                }
+                
+                .icon-warning {
+                    display: inline-block;
+                }
+            }
+        }
+        small {
+            font-size: 70%;
+        }
+    }
+    
+    .drive-usage-container {
+        overflow: auto;
+        padding-right: 5px;
+    }
+    
+    .usage-bars {
+        background-color: @brand-success;
+        height: 18px;
+        
+        .used {
+            height: 18px;
+            line-height: 0;
+            background-color: @dashboard-used-space-color;
+            padding: 2px;
+            
+            .ravendb {
+                height: 14px;
+                background-color: @brand-primary;
+                line-height: 0;
+                min-width: 2px;
+            }
+        }
+    }
 
     .graph-container {
         height: 100%;
         min-height: 90px;
         width: auto;
         min-width: 200px;
-        background-color: @gray-base;
-        border-bottom: 1px solid @gray-dark;
-        border-right: 1px solid @gray-dark;
+        background-color: @well-bg;
+        border-bottom: 1px solid @hr-border;
+        border-right: 1px solid @hr-border;
         background-position: bottom right;
         background-size: auto 100%;
         position: relative;
@@ -83,11 +167,11 @@
 
     svg {
         .bg {
-            fill: @gray-base;
+            fill: @well-bg;
         }
 
         .grid-line {
-            stroke: #2c343c;
+            stroke: @hr-border;
             stroke-width: 1px;
         }
     }
@@ -243,7 +327,32 @@
             }
         }
     }
+    
+    .storage-chart-color(@colorClass, @colorHex) {
+        .legend-rect {
+            &.@{colorClass} {
+                background-color: @colorHex;
+            }
+        }
+        
+        #storageChart .arc path {
+            &.@{colorClass} {
+                fill: @colorHex;
+            }
+        }
+    }
 
+    .storage-chart-color(color-1, #f75e71);
+    .storage-chart-color(color-2, #f38861);
+    .storage-chart-color(color-3, #f0ae5e);
+    .storage-chart-color(color-4, #edcd51);
+    .storage-chart-color(color-5, #7bd85d);
+    .storage-chart-color(color-6, #37c4ac);
+    .storage-chart-color(color-7, #2f9ef3);
+    .storage-chart-color(color-8, #6972ee);
+    .storage-chart-color(color-9, #9457b5);
+    .storage-chart-color(color-10, #d45598);
+    
     #storageChart {
         .arc {
             path {
@@ -270,7 +379,7 @@
     }
 
     .token {
-        color: @gray-light;
+        color: @text-color;
 
         &.has-alerts {
             color: @brand-warning-dark;
@@ -356,9 +465,6 @@
         }
     }
 
-    .dashboard-traffic, .dashboard-databases, .dashboard-indexing, .dashboard-storage {
-    }
-
     .dashboard-cpu-memory {
         .dashboard-memory {
             padding: 0;
@@ -368,9 +474,9 @@
 
 .infogrid {
     .infogrid-label {
-        background-color: #22262b;
+        background-color: @well-bg;
         padding: @grid-gutter-width/2;
-        border-right: 1px dashed #3a4450;
+        border-right: 1px dashed @hr-border;
         display: flex;
         flex-direction: column;
         align-items: center;

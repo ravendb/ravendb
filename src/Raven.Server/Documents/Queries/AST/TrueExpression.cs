@@ -16,5 +16,10 @@ namespace Raven.Server.Documents.Queries.AST
         {
             return ToString();
         }
+
+        public override bool Equals(QueryExpression other)
+        {
+            return other is TrueExpression;
+        }
     }
 }

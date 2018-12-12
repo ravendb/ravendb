@@ -31,6 +31,11 @@ function escapeHtml(string: string) {
     return String(string).replace(/[&<>"'`=\/]/g, s => entityMap[s]);
 }
 
+
+function nl2br(str: string) {
+    return str = str.replace(/(?:\r\n|\r|\n)/g, '<br>');
+}
+
 function widthToPixels(column: virtualColumn) {
     if (!column.width.endsWith("px")) {
         throw new Error("Excepted column width in pixels (px)");
@@ -40,6 +45,7 @@ function widthToPixels(column: virtualColumn) {
 
 export = {
     escape: escapeHtml,
-    widthToPixels: widthToPixels,
-    deselect: deselect
+    widthToPixels,
+    deselect,
+    nl2br
 };

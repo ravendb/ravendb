@@ -104,6 +104,13 @@ namespace Raven.Server.Config.Categories
         [ConfigurationEntry("Indexing.MapTimeoutInSec", ConfigurationEntryScope.ServerWideOrPerDatabase)]
         public TimeSetting MapTimeout { get; protected set; }
 
+        [Description("Maximum number of mapped documents. Cannot be less than 128. By default 'null' - no limit.")]
+        [DefaultValue(null)]
+        [MinValue(128)]
+        [IndexUpdateType(IndexUpdateType.Refresh)]
+        [ConfigurationEntry("Indexing.MapBatchSize", ConfigurationEntryScope.ServerWideOrPerDatabase)]
+        public int? MapBatchSize { get; protected set; }
+
         [Description("Number of minutes after which mapping will end even if there is more to map. This will only be applied if we pass the last etag in collection that we saw when batch was started.")]
         [DefaultValue(15)]
         [TimeUnit(TimeUnit.Minutes)]
@@ -123,6 +130,18 @@ namespace Raven.Server.Config.Categories
         [IndexUpdateType(IndexUpdateType.None)]
         [ConfigurationEntry("Indexing.CleanupIntervalInMin", ConfigurationEntryScope.ServerWideOnly)]
         public TimeSetting CleanupInterval { get; set; }
+
+        [Description("Smallest n-gram to generate when NGram analyzer is used")]
+        [DefaultValue(2)]
+        [IndexUpdateType(IndexUpdateType.Reset)]
+        [ConfigurationEntry("Indexing.Analyzers.NGram.MinGram", ConfigurationEntryScope.ServerWideOrPerDatabase)]
+        public int MinGram { get; set; }
+
+        [Description("Largest n-gram to generate when NGram analyzer is used")]
+        [DefaultValue(6)]
+        [IndexUpdateType(IndexUpdateType.Reset)]
+        [ConfigurationEntry("Indexing.Analyzers.NGram.MaxGram", ConfigurationEntryScope.ServerWideOrPerDatabase)]
+        public int MaxGram { get; set; }
 
         [Description("Transaction size limit after which an index will stop and complete the current batch")]
         [DefaultValue(null)]

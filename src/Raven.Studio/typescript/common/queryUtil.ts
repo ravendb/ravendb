@@ -15,15 +15,22 @@ class queryUtil {
     static readonly DynamicPrefix = "collection/";
     static readonly AllDocs = "AllDocs";
 
-    static formatIndexQuery(indexName: string, ...predicates: { name?: string, value?: string }[]) {
-        let query = `from index '${indexName}'`;
-        if (predicates && predicates.length) {
-            query = predicates.reduce((result, field) => {
-                return `${result} where ${field.name} = '${field.value}'`;
-            }, query);
+    static formatIndexQuery(indexName: string, fieldName: string, value: string) {
+        const escapedFieldName = queryUtil.escapeCollectionOrFieldName(fieldName);
+        return `from index '${indexName}' where ${escapedFieldName} = '${value}' `;
+    }
+
+    static escapeCollectionOrFieldName(name: string) : string {
+        // wrap collection name in 'collection name' if it has spaces.
+        if (/^[0-9a-zA-Z_@]+$/.test(name)){
+            return name;
         }
 
-        return query;
+        // escape ' char
+        if (name.includes("'")){
+            name = name.replace("'", "''")
+        }
+        return "'" + name + "'";
     }
 
     private static readonly RQL_TOKEN_REGEX = /(?=([^{]*{[^}{]*})*[^}]*$)(?=([^']*'[^']*')*[^']*$)(?=([^"]*"[^"]*")*[^"]*$)(SELECT|WHERE|ORDER BY|LOAD|UPDATE|INCLUDE)(\s+|{)/gi;
@@ -75,7 +82,7 @@ class queryUtil {
             .split(" ");
     }
     
-    static getCollectionOrIndexName(query: string): [string, "index" | "collection"] {
+    static getCollectionOrIndexName(query: string): [string, "index" | "collection" | "unknown"] {
         const words = queryUtil.tokenizeQuery(query);
 
         for (let i = 0; i < words.length; i++) {
@@ -87,6 +94,8 @@ class queryUtil {
                 }
             }
         }
+        
+        return [undefined, "unknown"];
     }
 
     static isDynamicQuery(query: string): boolean {

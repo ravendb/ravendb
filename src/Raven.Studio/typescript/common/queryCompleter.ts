@@ -4,6 +4,7 @@ import collectionsTracker = require("common/helpers/database/collectionsTracker"
 import getIndexTermsCommand = require("commands/database/index/getIndexTermsCommand");
 import database = require("models/resources/database");
 import getIndexEntriesFieldsCommand = require("commands/database/index/getIndexEntriesFieldsCommand");
+import queryUtil = require("common/queryUtil");
 
 class queryCompleter {
     private rules: AceAjax.RqlHighlightRules;
@@ -203,7 +204,7 @@ class queryCompleter {
         if (index) {
             this.providers.indexFields(index, fields => {
                 fields.map(field => {
-                    wordList.push({caption: field, value: queryCompleter.escapeCollectionOrFieldName(field) + " ", score: 101, meta: "field"});
+                    wordList.push({caption: field, value: queryUtil.escapeCollectionOrFieldName(field) + " ", score: 101, meta: "field"});
                 });
 
                 return taskResult();
@@ -220,7 +221,7 @@ class queryCompleter {
 
                     wordList.push({
                         caption: key,
-                        value: queryCompleter.escapeCollectionOrFieldName(key) + " ",
+                        value: queryUtil.escapeCollectionOrFieldName(key) + " ",
                         score: 101,
                         meta: formattedFieldType + " field"
                     });
@@ -508,7 +509,7 @@ class queryCompleter {
                     return this.providers.indexNames(names => {
                         return this.completeWords(names.map(name => ({
                             caption: name,
-                            value: queryCompleter.escapeCollectionOrFieldName(name) + " ",
+                            value: queryUtil.escapeCollectionOrFieldName(name) + " ",
                             score: 101,
                             meta: "index"
                         })));
@@ -677,19 +678,6 @@ class queryCompleter {
         this.callback(null, keywords);
     }
 
-    private static escapeCollectionOrFieldName(name: string) : string {
-        // wrap collection name in 'collection name' if it has spaces.
-        if (/^[0-9a-zA-Z_@]+$/.test(name)){
-            return name;
-        }
-
-        // escape ' char
-        if (name.includes("'")){
-            name = name.replace("'", "''")
-        }
-        return "'" + name + "'";
-    }
-
     private completeEmpty() {
         const keywords: autoCompleteWordList[] = [
             {caption: "from", value: "from ", score: 3, meta: "clause", snippet: "from ${1:Collection} as ${2:alias}\r\n"},
@@ -713,7 +701,7 @@ class queryCompleter {
             const wordList: autoCompleteWordList[] = collections.map(name => {
                 return {
                     caption: name, 
-                    value: queryCompleter.escapeCollectionOrFieldName(name) + " ",
+                    value: queryUtil.escapeCollectionOrFieldName(name) + " ",
                     score: 2,
                     meta: "collection"
                 };
@@ -798,7 +786,7 @@ class queryCompleter {
                     if (terms && terms.length) {
                         return this.completeWords(terms.map(term => ({
                             caption: term,
-                            value: queryCompleter.escapeCollectionOrFieldName(term) + " ",
+                            value: queryUtil.escapeCollectionOrFieldName(term) + " ",
                             score: 1,
                             meta: "term"
                         })));
@@ -825,7 +813,7 @@ class queryCompleter {
                 new getIndexEntriesFieldsCommand(indexName, activeDatabase(), false)
                     .execute()
                     .done(result => {
-                        callback(result.Results);
+                        callback(result.Static);
                     })
             },
             collectionFields: (collectionName, prefix, callback) => {

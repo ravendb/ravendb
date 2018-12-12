@@ -24,8 +24,8 @@ using Raven.Server.Commercial;
 using Sparrow.Collections;
 using Sparrow.Threading;
 using Sparrow.Utils;
-using StringSegment = Sparrow.StringSegment;
 using Raven.Client.Extensions;
+using Microsoft.Extensions.Primitives;
 
 namespace Raven.Server.Web.System
 {
@@ -184,8 +184,11 @@ namespace Raven.Server.Web.System
                 HttpContext.Response.StatusCode = (int)HttpStatusCode.Moved;
                 return Task.CompletedTask;
             }
-            string serverRelativeFileName = new StringSegment(
-                RouteMatch.Url, RouteMatch.MatchLength, RouteMatch.Url.Length - RouteMatch.MatchLength);
+            string serverRelativeFileName = 
+                RouteMatch.Url.Substring(
+                    RouteMatch.MatchLength, 
+                    RouteMatch.Url.Length - RouteMatch.MatchLength
+            );
             return GetStudioFileInternal(serverRelativeFileName);
         }
 
@@ -215,8 +218,10 @@ namespace Raven.Server.Web.System
         [RavenAction("/wizard/$", "GET", AuthorizationStatus.UnauthenticatedClients)]
         public Task GetSetupFile()
         {
-            string serverRelativeFileName = new StringSegment(
-                RouteMatch.Url, RouteMatch.MatchLength, RouteMatch.Url.Length - RouteMatch.MatchLength);
+            var serverRelativeFileName = RouteMatch.Url.Substring(
+                    RouteMatch.MatchLength, 
+                    RouteMatch.Url.Length - RouteMatch.MatchLength
+                );
             // if user asks for entry point but we are already configured redirect to studio
             if (ServerStore.Configuration.Core.SetupMode != SetupMode.Initial)
             {
@@ -251,10 +256,10 @@ namespace Raven.Server.Web.System
         [RavenAction("/studio/$", "GET", AuthorizationStatus.UnauthenticatedClients)]
         public Task GetStudioFile()
         {
-            // This is casted to string on purpose here. Everything else works
-            // with strings, so reifying this now is good.
-            string serverRelativeFileName = new StringSegment(
-                RouteMatch.Url, RouteMatch.MatchLength, RouteMatch.Url.Length - RouteMatch.MatchLength);
+            string serverRelativeFileName = RouteMatch.Url.Substring(
+                    RouteMatch.MatchLength, 
+                    RouteMatch.Url.Length - RouteMatch.MatchLength
+                );
             return GetStudioFileInternal(serverRelativeFileName);
         }
 

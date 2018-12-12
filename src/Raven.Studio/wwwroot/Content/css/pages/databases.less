@@ -58,9 +58,26 @@
             background-color: #43495e;
         }
 
+        .info-grow {
+            .info-resize {
+                display: none;
+            }
+        }
+        
         @media (min-width: @screen-lg) {
             .info-grow {
                 width: 350px;
+                position: relative;
+                
+                .info-resize {
+                    display: block;
+                    position: absolute;
+                    right: -3px;
+                    width: 6px;
+                    cursor: ew-resize;
+                    height: 100%;
+                    z-index: @zindex-tooltip;
+                }
             }
         }
 
@@ -96,11 +113,6 @@
             }
         }
 
-        &:hover {
-            background-color: lighten(@gray-darker, 3%);
-            transition: background-color 0.15s ease;
-        }
-
         .database-encryption-status {
             text-align: center;
             width: 21px;
@@ -113,10 +125,10 @@
             flex-wrap: wrap;
 
             a {
-                color: @gray-light;
+                color: @text-color;
 
                 &:hover {
-                    color: @gray-lighter;
+                    color: @text-emphasis;
                 }
             }
         }
@@ -147,7 +159,6 @@
             font-size: 19px;
             display: flex;
             align-items: center;
-            max-width: 380px;
             flex-shrink: 0;
 
             .checkbox {
@@ -226,11 +237,11 @@
             height: 22px;
         }
 
-        .text-disabled {
-            color: @gray-light;
+        a {
+            color: @text-color;
 
             &:hover {
-                color: lighten(@gray-light, 25%);
+                color: @text-emphasis;
                 transition: color .15s ease;
             }
         }

@@ -123,12 +123,14 @@ class expiration extends viewModelBase {
             eventsCollector.default.reportEvent("expiration-configuration", "save");
 
             const dto = this.toDto();
+            const db = this.activeDatabase();
 
-            new saveExpirationConfigurationCommand(this.activeDatabase(), dto)
+            new saveExpirationConfigurationCommand(db, dto)
                 .execute()
                 .done(() => {
                     this.dirtyFlag().reset();
                     messagePublisher.reportSuccess(`Expiration configuration has been saved`);
+                    db.hasExpirationConfiguration(!dto.Disabled);
                 })
                 .always(() => {
                     this.spinners.save(false);

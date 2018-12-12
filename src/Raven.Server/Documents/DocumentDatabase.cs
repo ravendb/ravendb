@@ -36,6 +36,7 @@ using Raven.Server.ServerWide.Commands;
 using Raven.Server.ServerWide.Context;
 using Raven.Server.Smuggler.Documents;
 using Raven.Server.Smuggler.Documents.Data;
+using Raven.Server.Storage;
 using Raven.Server.Utils;
 using Sparrow;
 using Sparrow.Collections;
@@ -288,6 +289,8 @@ namespace Raven.Server.Documents
 
                 SubscriptionStorage.Initialize();
                 _addToInitLog("Initializing SubscriptionStorage completed");
+
+                _serverStore.StorageSpaceMonitor.Subscribe(this);
 
                 TaskExecutor.Execute((state) =>
                 {
@@ -601,6 +604,11 @@ namespace Raven.Server.Documents
                 if (lockTaken == false && _logger.IsOperationsEnabled)
                     _logger.Operations("Failed to acquire lock during database dispose for cluster notifications. Will dispose rudely...");
 
+                exceptionAggregator.Execute(() =>
+                {
+                    _serverStore.StorageSpaceMonitor.Unsubscribe(this);
+                });
+
                 foreach (var connection in RunningTcpConnections)
                 {
                     exceptionAggregator.Execute(() =>
@@ -608,7 +616,7 @@ namespace Raven.Server.Documents
                         connection.Dispose();
                     });
                 }
-
+                
                 exceptionAggregator.Execute(() =>
                 {
                     TxMerger?.Dispose();
@@ -754,6 +762,7 @@ namespace Raven.Server.Documents
                 },
                 [nameof(DatabaseInfo.IndexingErrors)] = IndexStore.GetIndexes().Sum(index => index.GetErrorCount()),
                 [nameof(DatabaseInfo.Alerts)] = NotificationCenter.GetAlertCount(),
+                [nameof(DatabaseInfo.PerformanceHints)] = NotificationCenter.GetPerformanceHintCount(),
                 [nameof(DatabaseInfo.UpTime)] = null, //it is shutting down
                 [nameof(DatabaseInfo.BackupInfo)] = PeriodicBackupRunner?.GetBackupInfo(),
                 [nameof(DatabaseInfo.MountPointsUsage)] = new DynamicJsonArray(GetMountPointsUsage().Select(x => x.ToJson())),
@@ -801,8 +810,9 @@ namespace Raven.Server.Documents
                 _lastIdleTicks = DateTime.UtcNow.Ticks;
                 IndexStore?.RunIdleOperations();
                 Operations?.CleanupOperations();
-                DocumentsStorage.Environment.Journal.TryReduceSizeOfCompressionBufferIfNeeded();
-                DocumentsStorage.Environment.ScratchBufferPool.Cleanup();
+
+                DocumentsStorage.Environment.Cleanup();
+                ConfigurationStorage.Environment.Cleanup();
             }
             finally
             {

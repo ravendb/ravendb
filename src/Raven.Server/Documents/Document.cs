@@ -68,8 +68,8 @@ namespace Raven.Server.Documents
                 mutatedMetadata[Constants.Documents.Metadata.ChangeVector] = ChangeVector;
             if (Flags != DocumentFlags.None)
                 mutatedMetadata[Constants.Documents.Metadata.Flags] = Flags.ToString();
-            Debug.Assert(LastModified != DateTime.MinValue, $"LastModified cannot be DateTime.MinValue. {Id}");
-            mutatedMetadata[Constants.Documents.Metadata.LastModified] = LastModified;
+            if(LastModified != DateTime.MinValue)
+                mutatedMetadata[Constants.Documents.Metadata.LastModified] = LastModified;
             if (IndexScore.HasValue)
                 mutatedMetadata[Constants.Documents.Metadata.IndexScore] = IndexScore;
 

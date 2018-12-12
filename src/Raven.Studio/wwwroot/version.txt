@@ -1,1 +1,1 @@
-﻿{ "Version": "4.1.0-custom-41" }
+﻿{ "Version": "4.2.0-custom-42" }

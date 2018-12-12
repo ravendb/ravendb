@@ -1,5 +1,6 @@
 /// <reference path="../../../../typings/tsd.d.ts" />
 import database = require("models/resources/database");
+import utils = require("widgets/virtualGrid/virtualGridUtils");
 
 abstract class abstractNotification {
 
@@ -74,7 +75,14 @@ abstract class abstractNotification {
     updateWith(incomingChanges: Raven.Server.NotificationCenter.Notifications.Notification) {
         this.createdAt(incomingChanges.CreatedAt ? moment.utc(incomingChanges.CreatedAt) : null);
         this.isPersistent(incomingChanges.IsPersistent);
-        this.message(incomingChanges.Message);
+
+        if (incomingChanges.Message) {
+            const escapedMessage = utils.escape(incomingChanges.Message);
+            this.message(utils.nl2br(escapedMessage));    
+        } else {
+            this.message("");
+        }
+        
         this.title(incomingChanges.Title);
         this.severity(incomingChanges.Severity);
     }

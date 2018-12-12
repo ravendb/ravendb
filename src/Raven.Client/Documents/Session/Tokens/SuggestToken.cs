@@ -5,27 +5,29 @@ namespace Raven.Client.Documents.Session.Tokens
 {
     public class SuggestToken : QueryToken
     {
-        private readonly string _fieldName;
+        public readonly string FieldName;
+        private readonly string _alias;
         private readonly string _termParameterName;
         private readonly string _optionsParameterName;
 
-        private SuggestToken(string fieldName, string termParameterName, string optionsParameterName)
+        private SuggestToken(string fieldName, string alias, string termParameterName, string optionsParameterName)
         {
-            _fieldName = fieldName ?? throw new ArgumentNullException(nameof(fieldName));
+            FieldName = fieldName ?? throw new ArgumentNullException(nameof(fieldName));
+            _alias = alias;
             _termParameterName = termParameterName ?? throw new ArgumentNullException(nameof(termParameterName));
             _optionsParameterName = optionsParameterName;
         }
 
-        public static SuggestToken Create(string fieldName, string termParameterName, string optionsParameterName)
+        public static SuggestToken Create(string fieldName, string alias, string termParameterName, string optionsParameterName)
         {
-            return new SuggestToken(fieldName, termParameterName, optionsParameterName);
+            return new SuggestToken(fieldName, alias, termParameterName, optionsParameterName);
         }
 
         public override void WriteTo(StringBuilder writer)
         {
             writer
                 .Append("suggest(")
-                .Append(_fieldName)
+                .Append(FieldName)
                 .Append(", $")
                 .Append(_termParameterName);
 
@@ -37,6 +39,13 @@ namespace Raven.Client.Documents.Session.Tokens
             }
 
             writer.Append(")");
+
+            if (string.IsNullOrWhiteSpace(_alias) || string.Equals(FieldName, _alias))
+                return;
+
+            writer
+                .Append(" as ")
+                .Append(_alias);
         }
     }
 }

@@ -2,6 +2,7 @@
 using System.Text;
 using Raven.Server.Documents.Queries.AST;
 using Sparrow;
+using Microsoft.Extensions.Primitives;
 
 namespace Raven.Server.Documents.Queries.Parser
 {
@@ -10,11 +11,13 @@ namespace Raven.Server.Documents.Queries.Parser
         private int _pos;
         private string _q;
         public int Column, Line;
-        public int TokenStart, TokenLength;
+        private int _tokenStart, _tokenLength;
         public string Input => _q;
 
+        public StringSegment Token => new StringSegment(_q, _tokenStart, _tokenLength);
+
         public int Position => _pos;
-        public string CurrentToken => _q.Substring(TokenStart, TokenLength);
+        public string CurrentToken => _q.Substring(_tokenStart, _tokenLength);
 
         public override string ToString()
         {
@@ -29,8 +32,8 @@ namespace Raven.Server.Documents.Queries.Parser
             _pos = 0;
             Column = 1;
             Line = 1;
-            TokenStart = 0;
-            TokenLength = 0;
+            _tokenStart = 0;
+            _tokenLength = 0;
         }
 
         public bool AtEndOfInput()
@@ -40,16 +43,36 @@ namespace Raven.Server.Documents.Queries.Parser
             return _pos == _q.Length;
         }
 
+        public bool NextPathSegment()
+        {
+            if (SkipWhitespace() == false)
+                return false;
+            for (; _pos < _q.Length; _pos++)
+                if (char.IsLetter(_q[_pos]))
+                    break;
+            return true;
+        }
+
+        public bool SkipUntil(char match)
+        {
+            if (SkipWhitespace() == false)
+                return false;
+            for (; _pos < _q.Length; _pos++)
+                if (match == _q[_pos])
+                    break;
+            return true;
+        }
+
         public bool NextToken()
         {
             if (SkipWhitespace() == false)
                 return false;
-            TokenStart = _pos;
+            _tokenStart = _pos;
 
             for (; _pos < _q.Length; _pos++)
                 if (char.IsWhiteSpace(_q[_pos]))
                     break;
-            TokenLength = _pos - TokenStart;
+            _tokenLength = _pos - _tokenStart;
             return true;
         }
 
@@ -62,7 +85,7 @@ namespace Raven.Server.Documents.Queries.Parser
                 return null;
 
             var result = NumberToken.Long;
-            TokenStart = _pos;
+            _tokenStart = _pos;
             var i = _pos + 1;
             for (; i < _q.Length; i++)
             {
@@ -88,7 +111,7 @@ namespace Raven.Server.Documents.Queries.Parser
             Column += i - _pos;
             _pos = i;
 
-            TokenLength = _pos - TokenStart;
+            _tokenLength = _pos - _tokenStart;
             return result;
         }
 
@@ -100,17 +123,17 @@ namespace Raven.Server.Documents.Queries.Parser
             if ((beginning ? char.IsLetter(_q[_pos]) == false : char.IsLetterOrDigit(_q[_pos]) == false) && _q[_pos] != '_' && _q[_pos] != '@')
                 return false;
 
-            TokenStart = _pos;
+            _tokenStart = _pos;
             _pos++;
 
             for (; _pos < _q.Length; _pos++)
                 if (char.IsLetterOrDigit(_q[_pos]) == false && _q[_pos] != '_' && _q[_pos] != '-')
                     break;
-            TokenLength = _pos - TokenStart;
+            _tokenLength = _pos - _tokenStart;
             //This covers the cases where the identifier starts with either @@ or _@ but not _
-            if(TokenLength == 1 && (_q[TokenStart] == '@' || TokenStart+1<_q.Length && _q[TokenStart] == '_' && _q[TokenStart+1] == '@'))
-                throw new QueryParser.ParseException(Column + ":" + Line + " Illegal identifier detected starting with "+ _q[TokenStart] + "@ in query: '" + Input + "'");
-            Column += TokenLength;
+            if(_tokenLength == 1 && (_q[_tokenStart] == '@' || _tokenStart+1<_q.Length && _q[_tokenStart] == '_' && _q[_tokenStart+1] == '@'))
+                throw new QueryParser.ParseException(Column + ":" + Line + " Illegal identifier detected starting with "+ _q[_tokenStart] + "@ in query: '" + Input + "'");
+            Column += _tokenLength;
             return true;
         }
 
@@ -181,7 +204,7 @@ namespace Raven.Server.Documents.Queries.Parser
             return _q[_pos] == match;
         }
 
-        public bool TryScan(string match, bool skipWhitespace = true)
+        public bool TryPeek(string match, bool skipWhitespace = true)
         {
             if (SkipWhitespace(skipWhitespace) == false)
                 return false;
@@ -198,6 +221,14 @@ namespace Raven.Server.Documents.Queries.Parser
                    char.IsLetterOrDigit(_q[_pos + match.Length]))
                     return false;
             }
+
+            return true;
+        }
+
+        public bool TryScan(string match, bool skipWhitespace = true)
+        {
+            if (TryPeek(match, skipWhitespace) == false)
+                return false;
 
             _pos += match.Length;
             Column += match.Length;
@@ -241,10 +272,10 @@ namespace Raven.Server.Documents.Queries.Parser
         {
             foreach (var match in options)
             {
-                if (match.Length != TokenLength)
+                if (match.Length != _tokenLength)
                     continue;
 
-                if (string.Compare(_q, TokenStart, match, 0, match.Length, StringComparison.OrdinalIgnoreCase) != 0)
+                if (string.Compare(_q, _tokenStart, match, 0, match.Length, StringComparison.OrdinalIgnoreCase) != 0)
                     continue;
               
                 return true;
@@ -269,7 +300,7 @@ namespace Raven.Server.Documents.Queries.Parser
                 return false;
             }
 
-            TokenStart = _pos;
+            _tokenStart = _pos;
             var i = _pos + 1;
             bool hasEscape = false;
             for (; i < _q.Length; i++)
@@ -293,11 +324,11 @@ namespace Raven.Server.Documents.Queries.Parser
                 Column += i + 1 - _pos;
 
                 _pos = i + 1;
-                TokenLength = _pos - TokenStart;
+                _tokenLength = _pos - _tokenStart;
 
                 str = hasEscape ? 
                     GetEscapedString(quoteChar) :
-                    new StringSegment(Input, TokenStart + 1, TokenLength - 2);
+                    new StringSegment(Input, _tokenStart + 1, _tokenLength - 2);
 
                 return true;
             }
@@ -307,7 +338,7 @@ namespace Raven.Server.Documents.Queries.Parser
 
         private StringSegment GetEscapedString(char quoteChar)
         {
-            var sb = new StringBuilder(Input, TokenStart + 1, TokenLength - 2, TokenLength - 2);
+            var sb = new StringBuilder(Input, _tokenStart + 1, _tokenLength - 2, _tokenLength - 2);
             for (int i = 0; i < sb.Length; i++)
             {
                 if (sb[i] == quoteChar)
@@ -431,8 +462,8 @@ namespace Raven.Server.Documents.Queries.Parser
                         if (--nested == 0)
                         {
                             _pos += 1;
-                            TokenStart = original;
-                            TokenLength = _pos - original;
+                            _tokenStart = original;
+                            _tokenLength = _pos - original;
                             return true;
                         }
                         break;
@@ -449,6 +480,11 @@ namespace Raven.Server.Documents.Queries.Parser
             _pos -= matchLength;
             Column -= matchLength;
 
+        }
+
+        public void GoBack()
+        {
+            GoBack(_tokenLength);
         }
     }
 }

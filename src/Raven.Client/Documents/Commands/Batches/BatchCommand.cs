@@ -20,7 +20,7 @@ namespace Raven.Client.Documents.Commands.Batches
         private readonly BatchOptions _options;
         private readonly TransactionMode _mode;
 
-        public BatchCommand(DocumentConventions conventions, JsonOperationContext context, List<ICommandData> commands, BatchOptions options = null, TransactionMode mode = TransactionMode.SingleNode)
+        public BatchCommand(DocumentConventions conventions, JsonOperationContext context, IList<ICommandData> commands, BatchOptions options = null, TransactionMode mode = TransactionMode.SingleNode)
         {
             if (conventions == null)
                 throw new ArgumentNullException(nameof(conventions));

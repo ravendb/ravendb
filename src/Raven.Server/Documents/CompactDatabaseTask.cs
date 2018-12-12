@@ -6,6 +6,7 @@ using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 using Raven.Client.Documents.Operations;
+using Raven.Client.ServerWide.Operations;
 using Raven.Server.Config;
 using Raven.Server.Config.Settings;
 using Raven.Server.ServerWide;
@@ -147,6 +148,7 @@ namespace Raven.Server.Documents
                 options.MaxScratchBufferSize = configuration.Storage.MaxScratchBufferSize.Value.GetValue(SizeUnit.Bytes);
             options.PrefetchSegmentSize = configuration.Storage.PrefetchBatchSize.GetValue(SizeUnit.Bytes);
             options.PrefetchResetThreshold = configuration.Storage.PrefetchResetThreshold.GetValue(SizeUnit.Bytes);
+            options.JournalsSizeThreshold = documentDatabase.Configuration.Storage.JournalsSizeThreshold.GetValue(SizeUnit.Bytes);
         }
 
         private static void SwitchDatabaseDirectories(string basePath, string backupDirectory, string compactDirectory)

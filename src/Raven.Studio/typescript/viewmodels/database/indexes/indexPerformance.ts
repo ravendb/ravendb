@@ -10,6 +10,7 @@ import liveIndexPerformanceWebSocketClient = require("common/liveIndexPerformanc
 import inProgressAnimator = require("common/helpers/graph/inProgressAnimator");
 import messagePublisher = require("common/messagePublisher");
 import getIndexesStatsCommand = require("commands/database/index/getIndexesStatsCommand");
+import colorsManager = require("common/colorsManager");
 
 type rTreeLeaf = {
     minX: number;
@@ -150,55 +151,6 @@ class indexPerformance extends viewModelBase {
 
     /* static */
 
-    static readonly colors = {
-        axis: "#546175",
-        gaps: "#ca1c59",
-        brushChartColor: "#37404b",
-        brushChartStrokeColor: "#008cc9",
-        trackBackground: "#2c343a",
-        trackNameBg: "rgba(57, 67, 79, 0.8)",
-        faulty:  "#e02424",
-        trackNameFg: "#98a7b7",
-        openedTrackArrow: "#ca1c59",
-        closedTrackArrow: "#98a7b7",
-        collectionNameTextColor: "#2c343a",
-
-        tracks: {
-            "Collection": "#046293",
-            "Indexing": "#607d8b",
-            "Cleanup": "#1a858e",
-            "References": "#ac2258",
-            "Map": "#0b4971",
-            "Storage/DocumentRead": "#0077b5",
-            "Linq": "#008cc9",
-            "Jint": "#008cc9",
-            "LoadDocument": "#008cc9",
-            "Bloom": "#34b3e4",
-            "Lucene/Delete": "#66418c",
-            "Lucene/Suggestion": "#553570",
-            "Lucene/AddDocument": "#8d6cab",
-            "Lucene/Convert": "#7b539d",
-            "CreateBlittableJson": "#313fa0",
-            "Aggregation/BlittableJson": "#ec407a",
-            "GetMapEntriesTree": "#689f39",
-            "GetMapEntries": "#8cc34b",
-            "Storage/RemoveMapResult": "#ff7000",
-            "Storage/PutMapResult": "#fe8f01",
-            "Reduce": "#98041b",
-            "Tree": "#af1923",
-            "Aggregation/Leafs": "#890e4f",
-            "Aggregation/Branches": "#ad1457",
-            "Storage/ReduceResults": "#e65100",
-            "NestedValues": "#795549",
-            "Storage/Read": "#faa926",
-            "Aggregation/NestedValues": "#d81a60",
-            "Lucene/FlushToDisk": "#a487ba",
-            "Storage/Commit": "#5b912d",
-            "Lucene/RecreateSearcher": "#b79ec7",
-            "SaveOutputDocuments": "#fed101"
-        }
-    };
-
     static readonly brushSectionHeight = 40;
     private static readonly brushSectionIndexesWorkHeight = 22;
     private static readonly brushSectionLineWidth = 1;
@@ -278,6 +230,56 @@ class indexPerformance extends viewModelBase {
     private yScale: d3.scale.Ordinal<string, number>;
     private tooltip: d3.Selection<Raven.Client.Documents.Indexes.IndexingPerformanceOperation | timeGapInfo>;
     private currentTrackTooltipPosition: { x: number, y: number} = null;
+    private scrollConfig: scrollColorConfig;
+    
+    private colors = {
+        axis: undefined as string,
+        gaps: undefined as string,
+        brushChartColor: undefined as string,
+        brushChartStrokeColor: undefined as string,
+        trackBackground: undefined as string,
+        trackNameBg: undefined as string,
+        faulty: undefined as string,
+        trackNameFg: undefined as string,
+        openedTrackArrow: undefined as string,
+        closedTrackArrow: undefined as string,
+        stripeTextColor: undefined as string,
+        progressStripes: undefined as string,
+        tracks: {
+            "Collection": undefined as string,
+            "Indexing": undefined as string,
+            "Cleanup": undefined as string,
+            "References": undefined as string,
+            "Map": undefined as string,
+            "Storage/DocumentRead": undefined as string,
+            "Linq": undefined as string,
+            "Jint": undefined as string,
+            "LoadDocument": undefined as string,
+            "Bloom": undefined as string,
+            "Lucene/Delete": undefined as string,
+            "Lucene/Suggestion": undefined as string,
+            "Lucene/AddDocument": undefined as string,
+            "Lucene/Convert": undefined as string,
+            "CreateBlittableJson": undefined as string,
+            "Aggregation/BlittableJson": undefined as string,
+            "GetMapEntriesTree": undefined as string,
+            "GetMapEntries": undefined as string,
+            "Storage/RemoveMapResult": undefined as string,
+            "Storage/PutMapResult": undefined as string,
+            "Reduce": undefined as string,
+            "Tree": undefined as string,
+            "Aggregation/Leafs": undefined as string,
+            "Aggregation/Branches": undefined as string,
+            "Storage/ReduceResults": undefined as string,
+            "NestedValues": undefined as string,
+            "Storage/Read": undefined as string,
+            "Aggregation/NestedValues": undefined as string,
+            "Lucene/FlushToDisk": undefined as string,
+            "Storage/Commit": undefined as string,
+            "Lucene/RecreateSearcher": undefined as string,
+            "SaveOutputDocuments": undefined as string
+        }
+    };
     
     constructor() {
         super();
@@ -337,6 +339,10 @@ class indexPerformance extends viewModelBase {
     compositionComplete() {
         super.compositionComplete();
 
+        colorsManager.setup("#indexingPerformance", this.colors);
+        
+        this.scrollConfig = graphHelper.readScrollConfig();
+        
         this.tooltip = d3.select(".tooltip");
 
         [this.totalWidth, this.totalHeight] = this.getPageHostDimenensions();
@@ -352,7 +358,7 @@ class indexPerformance extends viewModelBase {
 
         this.enableLiveView();
     }
-
+    
     private initCanvases() {
         const metricsContainer = d3.select("#indexPerfMetricsContainer");
         this.canvas = metricsContainer
@@ -611,11 +617,11 @@ class indexPerformance extends viewModelBase {
         this.drawXaxisTimeLines(context, ticks, 0, indexPerformance.brushSectionHeight);
         this.drawXaxisTimeLabels(context, ticks, 5, 5);
 
-        context.strokeStyle = indexPerformance.colors.axis;
+        context.strokeStyle = this.colors.axis;
         context.strokeRect(0.5, 0.5, this.totalWidth, indexPerformance.brushSectionHeight - 1);
 
-        context.fillStyle = indexPerformance.colors.brushChartColor;  
-        context.strokeStyle = indexPerformance.colors.brushChartStrokeColor; 
+        context.fillStyle = this.colors.brushChartColor;  
+        context.strokeStyle = this.colors.brushChartStrokeColor; 
         context.lineWidth = indexPerformance.brushSectionLineWidth;
 
         // Draw area chart showing indexes work
@@ -655,7 +661,7 @@ class indexPerformance extends viewModelBase {
         for (let i = 0; i < this.gapFinder.gapsPositions.length; i++) {
             const gap = this.gapFinder.gapsPositions[i];
 
-            context.strokeStyle = indexPerformance.colors.gaps;
+            context.strokeStyle = this.colors.gaps;
 
             const gapX = this.xBrushTimeScale(gap.start);
             context.moveTo(gapX, 1);
@@ -749,7 +755,7 @@ class indexPerformance extends viewModelBase {
             context.beginPath();
 
             context.setLineDash([4, 2]);
-            context.strokeStyle = indexPerformance.colors.axis;
+            context.strokeStyle = this.colors.axis;
            
             ticks.forEach((x, i) => {
                 context.moveTo(indexPerformance.initialOffset + (i * indexPerformance.step) + 0.5, yStart);
@@ -771,7 +777,7 @@ class indexPerformance extends viewModelBase {
             context.textAlign = "left";
             context.textBaseline = "top";
             context.font = "10px Lato";
-            context.fillStyle = indexPerformance.colors.axis;
+            context.fillStyle = this.colors.axis;
            
             ticks.forEach((x, i) => {
                 context.fillText(this.xTickFormat(x), indexPerformance.initialOffset + (i * indexPerformance.step) + timePaddingLeft, timePaddingTop);
@@ -877,7 +883,8 @@ class indexPerformance extends viewModelBase {
                     { left: this.totalWidth, top: indexPerformance.axisHeight },
                     this.currentYOffset,
                     this.totalHeight - indexPerformance.brushSectionHeight - indexPerformance.axisHeight,
-                    this.maxYOffset ? this.maxYOffset + this.totalHeight - indexPerformance.brushSectionHeight - indexPerformance.axisHeight: 0);
+                    this.maxYOffset ? this.maxYOffset + this.totalHeight - indexPerformance.brushSectionHeight - indexPerformance.axisHeight: 0,
+                    this.scrollConfig);
 
             } finally {
                 context.restore();
@@ -886,7 +893,7 @@ class indexPerformance extends viewModelBase {
             context.restore();
         }
 
-        this.inProgressAnimator.animate();
+        this.inProgressAnimator.animate(this.colors.progressStripes);
     }
 
     private drawTracksBackground(context: CanvasRenderingContext2D, xScale: d3.time.Scale<number, number>) {
@@ -902,7 +909,7 @@ class indexPerformance extends viewModelBase {
             const isOpened = _.includes(this.expandedTracks(), perfStat.Name);
 
             context.beginPath();
-            context.fillStyle = indexPerformance.colors.trackBackground;
+            context.fillStyle = this.colors.trackBackground;
             context.fillRect(0, yStart, this.totalWidth, isOpened ? indexPerformance.openedTrackHeight : indexPerformance.closedTrackHeight);
         });
 
@@ -986,7 +993,7 @@ class indexPerformance extends viewModelBase {
     }
 
     private getColorForOperation(operationName: string): string {
-        const { tracks } = indexPerformance.colors;
+        const { tracks } = this.colors;
         if (operationName in tracks) {
             return (tracks as dictionary<string>)[operationName];
         }
@@ -1015,9 +1022,19 @@ class indexPerformance extends viewModelBase {
                 if (dx >= 0.8) { // don't show tooltip for very small items
                     this.hitTest.registerTrackItem(currentX, yStart, dx, indexPerformance.trackHeight, op);
                 }
+       
                 if (dx >= 5 && op.Name.startsWith("Collection_")) {
-                    context.fillStyle = indexPerformance.colors.collectionNameTextColor;
+                    context.fillStyle = this.colors.stripeTextColor;
                     const text = op.Name.substr("Collection_".length);
+                    const textWidth = context.measureText(text).width;
+                    const truncatedText = graphHelper.truncText(text, textWidth, dx - 4);
+                    if (truncatedText) {
+                        context.font = "12px Lato";
+                        context.fillText(truncatedText, currentX + 2, yStart + 13, dx - 4);
+                    }
+                } else if ((op.Name === "Map" || op.Name === "Reduce") && dx >= 6) {
+                    context.fillStyle = this.colors.stripeTextColor;
+                    const text = op.Name;
                     const textWidth = context.measureText(text).width;
                     const truncatedText = graphHelper.truncText(text, textWidth, dx - 4);
                     if (truncatedText) {
@@ -1037,7 +1054,7 @@ class indexPerformance extends viewModelBase {
             currentX += dx;
         }
     }
-
+    
     private drawIndexNames(context: CanvasRenderingContext2D) {
         const yScale = this.yScale;
         const textShift = 14.5;
@@ -1053,19 +1070,19 @@ class indexPerformance extends viewModelBase {
             
             const rectWidth = context.measureText(indexName).width + 2 * 3 /* left right padding */ + 8 /* arrow space */ + 4 /* padding between arrow and text */ + faultyExtraWidth; 
 
-            context.fillStyle = indexPerformance.colors.trackNameBg;
+            context.fillStyle = this.colors.trackNameBg;
             context.fillRect(2, yScale(indexName) + indexPerformance.closedTrackPadding, rectWidth, indexPerformance.trackHeight);
             this.hitTest.registerIndexToggle(2, yScale(indexName), rectWidth, indexPerformance.trackHeight, indexName);
-            context.fillStyle = indexPerformance.colors.trackNameFg;
+            context.fillStyle = this.colors.trackNameFg;
             context.fillText(indexName, textStart + 0.5, yScale(indexName) + textShift);
 
             const isOpened = _.includes(this.expandedTracks(), indexName);
-            context.fillStyle = isOpened ? indexPerformance.colors.openedTrackArrow : indexPerformance.colors.closedTrackArrow;
+            context.fillStyle = isOpened ? this.colors.openedTrackArrow : this.colors.closedTrackArrow;
             graphHelper.drawArrow(context, 5, yScale(indexName) + 6, !isOpened);
             
             if (isFaulty) {
                 context.font = "12px Lato";
-                context.fillStyle = indexPerformance.colors.faulty;
+                context.fillStyle = this.colors.faulty;
                 context.fillText("(Faulty)", rectWidth - faultyWidth, yScale(indexName) + textShift);
             }
         });
@@ -1078,7 +1095,7 @@ class indexPerformance extends viewModelBase {
         const range = xScale.range();
 
         context.beginPath();
-        context.strokeStyle = indexPerformance.colors.gaps;       
+        context.strokeStyle = this.colors.gaps;       
 
         for (let i = 1; i < range.length - 1; i += 2) { 
             const gapX = Math.floor(range[i]) + 0.5;

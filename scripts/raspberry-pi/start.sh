@@ -5,14 +5,14 @@ then
 	exit 1
 fi
 
-if [ -f ravendb.4.1/Server/Raven.Server.dll ]
+if [ -f ravendb.4.2/Server/Raven.Server.dll ]
 then
-	dotnet/corerun ravendb.4.1/Server/Raven.Server.dll \
+	dotnet/corerun ravendb.4.2/Server/Raven.Server.dll \
 		 --Raven/RunAsService=true \
 		 --Raven/ServerUrl=http://0.0.0.0:8080 \
 		 --Raven/LogsDirectory=Logs \
 		 --Raven/DataDir=Databases \
-	 	 --Raven/StudioDirectory=ravendb.4.1/Server
+	 	 --Raven/StudioDirectory=ravendb.4.2/Server
 
 else
 	printf "\nRun setup.sh to install RavenDB first\n\n"

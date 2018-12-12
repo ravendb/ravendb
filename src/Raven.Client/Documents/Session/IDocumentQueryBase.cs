@@ -220,16 +220,12 @@ namespace Raven.Client.Documents.Session
         /// <summary>
         ///     Matches fields which ends with the specified value.
         /// </summary>
-        /// <param name="fieldName">Name of the field.</param>
-        /// <param name="value">The value.</param>
-        TSelf WhereEndsWith(string fieldName, object value);
+        TSelf WhereEndsWith(string fieldName, object value, bool exact = false);
 
         /// <summary>
         ///     Matches fields which ends with the specified value.
         /// </summary>
-        /// <param name="propertySelector">Property selector for the field.</param>
-        /// <param name="value">The value.</param>
-        TSelf WhereEndsWith<TValue>(Expression<Func<T, TValue>> propertySelector, TValue value);
+        TSelf WhereEndsWith<TValue>(Expression<Func<T, TValue>> propertySelector, TValue value, bool exact = false);
 
         /// <summary>
         ///     Matches value
@@ -350,16 +346,12 @@ namespace Raven.Client.Documents.Session
         /// <summary>
         ///     Matches fields which starts with the specified value.
         /// </summary>
-        /// <param name="fieldName">Name of the field.</param>
-        /// <param name="value">The value.</param>
-        TSelf WhereStartsWith(string fieldName, object value);
+        TSelf WhereStartsWith(string fieldName, object value, bool exact = false);
 
         /// <summary>
         ///     Matches fields which starts with the specified value.
         /// </summary>
-        /// <param name="propertySelector">Property selector for the field.</param>
-        /// <param name="value">The value.</param>
-        TSelf WhereStartsWith<TValue>(Expression<Func<T, TValue>> propertySelector, TValue value);
+        TSelf WhereStartsWith<TValue>(Expression<Func<T, TValue>> propertySelector, TValue value, bool exact = false);
 
         /// <summary>
         ///     Check if the given field exists
@@ -594,6 +586,8 @@ If you really want to do in memory filtering on the data returned from the query
         /// </summary>
         TSelf Intersect();
 
+        TSelf OrderBy(string field, string sorterName);
+
         /// <summary>
         ///     Order the results by the specified fields
         ///     The field is the name of the field to sort, defaulting to sorting by ascending.
@@ -605,6 +599,8 @@ If you really want to do in memory filtering on the data returned from the query
         ///     The field is the name of the field to sort, defaulting to sorting by ascending.
         /// </summary>
         TSelf OrderBy<TValue>(Expression<Func<T, TValue>> propertySelector);
+
+        TSelf OrderBy<TValue>(Expression<Func<T, TValue>> propertySelector, string sorterName);
 
         /// <summary>
         ///     Order the results by the specified fields
@@ -619,6 +615,8 @@ If you really want to do in memory filtering on the data returned from the query
         /// <param name="propertySelectors">Property selectors for the fields.</param>
         TSelf OrderBy<TValue>(params Expression<Func<T, TValue>>[] propertySelectors);
 
+        TSelf OrderByDescending(string field, string sorterName);
+
         /// <summary>
         ///     Order the results by the specified fields
         ///     The field is the name of the field to sort, defaulting to sorting by descending.
@@ -630,6 +628,8 @@ If you really want to do in memory filtering on the data returned from the query
         ///     The field is the name of the field to sort, defaulting to sorting by ascending.
         /// </summary>
         TSelf OrderByDescending<TValue>(Expression<Func<T, TValue>> propertySelector);
+
+        TSelf OrderByDescending<TValue>(Expression<Func<T, TValue>> propertySelector, string sorterName);
 
         /// <summary>
         ///     Order the results by the specified fields

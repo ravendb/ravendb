@@ -3,6 +3,7 @@ using System.Collections;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq;
+using Microsoft.Extensions.Primitives;
 using Raven.Client;
 using Raven.Client.Exceptions;
 using Raven.Server.Documents.Includes;
@@ -100,9 +101,6 @@ namespace Raven.Server.Documents.Queries
 
             private (List<Slice>, string) ExtractIdsFromQuery(IndexQueryServerSide query, DocumentsOperationContext context)
             {
-                if (string.IsNullOrWhiteSpace(query.Query))
-                    return (null, null);
-
                 if (query.Metadata.Query.Where == null)
                     return (null, null);
 
@@ -342,7 +340,7 @@ namespace Raven.Server.Documents.Queries
                 {
                     if (fieldName is MethodExpression me)
                     {
-                        var methodType = QueryMethod.GetMethodType(me.Name);
+                        var methodType = QueryMethod.GetMethodType(me.Name.Value);
                         switch (methodType)
                         {
                             case MethodType.Id:
@@ -358,7 +356,7 @@ namespace Raven.Server.Documents.Queries
                                 {
                                     var id = QueryBuilder.EvaluateMethod(_query, _metadata, _serverContext, _context, right, ref parameters);
                                     if (id is ValueExpression v)
-                                        AddId(v.Token);
+                                        AddId(v.Token.Value);
                                 }
                                 break;
                         }
@@ -367,7 +365,7 @@ namespace Raven.Server.Documents.Queries
 
                 public override void VisitBetween(QueryExpression fieldName, QueryExpression firstValue, QueryExpression secondValue, BlittableJsonReaderObject parameters)
                 {
-                    if (fieldName is MethodExpression me && string.Equals("id", me.Name, StringComparison.OrdinalIgnoreCase) && firstValue is ValueExpression fv && secondValue is ValueExpression sv)
+                    if (fieldName is MethodExpression me && string.Equals("id", me.Name.Value, StringComparison.OrdinalIgnoreCase) && firstValue is ValueExpression fv && secondValue is ValueExpression sv)
                     {
                         throw new InvalidQueryException("Collection query does not support filtering by id() using Between operator. Supported operators are: =, IN",
                             QueryText, parameters);
@@ -379,7 +377,7 @@ namespace Raven.Server.Documents.Queries
                     if (Ids == null)
                         Ids = new HashSet<Slice>(SliceComparer.Instance); // this handles a case where IN is used with empty list
 
-                    if (fieldName is MethodExpression me && string.Equals("id", me.Name, StringComparison.OrdinalIgnoreCase))
+                    if (fieldName is MethodExpression me && string.Equals("id", me.Name.Value, StringComparison.OrdinalIgnoreCase))
                     {
                         foreach (var item in values)
                         {
@@ -410,7 +408,7 @@ namespace Raven.Server.Documents.Queries
                     {
                         VisitIn(new MethodExpression("id", new List<QueryExpression>()), ie.Values, parameters);
                     }
-                    else if (string.Equals(name, "startsWith", StringComparison.OrdinalIgnoreCase))
+                    else if (string.Equals(name.Value, "startsWith", StringComparison.OrdinalIgnoreCase))
                     {
                         if (expression is ValueExpression iv)
                         {

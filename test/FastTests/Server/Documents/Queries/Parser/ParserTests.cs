@@ -106,8 +106,8 @@ UPDATE {
             var parser = new QueryParser();
             parser.Init(q);
 
-            Assert.True(parser.Parameter(out var start, out var length));
-            Assert.Equal(len, length);
+            Assert.True(parser.Parameter(out var token));
+            Assert.Equal(len, token.Length);
         }
 
         [Theory]

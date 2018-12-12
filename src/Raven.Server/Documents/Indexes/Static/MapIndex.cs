@@ -99,6 +99,15 @@ namespace Raven.Server.Documents.Indexes.Static
             _mre.Set();
         }
 
+        public override (ICollection<string> Static, ICollection<string> Dynamic) GetEntriesFields()
+        {
+            var staticEntries = _compiled.OutputFields.ToHashSet();
+
+            var dynamicEntries = GetDynamicEntriesFields(staticEntries);
+
+            return (staticEntries, dynamicEntries);
+        }
+
         protected override unsafe long CalculateIndexEtag(DocumentsOperationContext documentsContext, TransactionOperationContext indexContext,
             QueryMetadata query, bool isStale)
         {

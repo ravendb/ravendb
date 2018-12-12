@@ -11,7 +11,6 @@ using System.Threading;
 using Jint;
 using Jint.Native;
 using Jint.Native.Array;
-using Jint.Native.Date;
 using Jint.Native.Function;
 using Jint.Native.Object;
 using Jint.Runtime.Interop;
@@ -23,6 +22,7 @@ using Raven.Client.Extensions;
 using Raven.Server.Config;
 using Raven.Server.Config.Categories;
 using Raven.Server.Documents.Indexes;
+using Raven.Server.Documents.Queries;
 using Raven.Server.Exceptions;
 using Raven.Server.Extensions;
 using Raven.Server.ServerWide.Commands;
@@ -176,9 +176,9 @@ namespace Raven.Server.Documents.Patch
                 ScriptEngine.SetValue("Raven_Max", new ClrFunctionInstance(ScriptEngine, Raven_Max));
 
                 ScriptEngine.SetValue("convertJsTimeToTimeSpanString", new ClrFunctionInstance(ScriptEngine, ConvertJsTimeToTimeSpanString));
+                ScriptEngine.SetValue("compareDates", new ClrFunctionInstance(ScriptEngine, CompareDates));
 
                 ScriptEngine.SetValue("toStringWithFormat", new ClrFunctionInstance(ScriptEngine, ToStringWithFormat));
-
 
                 ScriptEngine.SetValue("scalarToRawString", new ClrFunctionInstance(ScriptEngine, ScalarToRawString));
 
@@ -641,9 +641,6 @@ namespace Raven.Server.Documents.Patch
 
             private JsValue GetCounterInternal(JsValue[] args, bool raw = false)
             {
-                if (_database.ServerStore.Configuration.Core.FeaturesAvailability == FeaturesAvailability.Stable)
-                    FeaturesAvailabilityException.Throw("Counters");
-
                 AssertValidDatabaseContext();
                 var signature = raw ? "counterRaw(doc, name)" : "counter(doc, name)";
                 if (args.Length != 2)
@@ -690,9 +687,6 @@ namespace Raven.Server.Documents.Patch
 
             private JsValue IncrementCounter(JsValue self, JsValue[] args)
             {
-                if (_database.ServerStore.Configuration.Core.FeaturesAvailability == FeaturesAvailability.Stable)
-                    FeaturesAvailabilityException.Throw("Counters");
-
                 AssertValidDatabaseContext();
 
                 if (args.Length < 2 || args.Length > 3)
@@ -746,7 +740,7 @@ namespace Raven.Server.Documents.Patch
                     value = args[2].AsNumber();
                 }
 
-                _database.DocumentsStorage.CountersStorage.IncrementCounter(_docsCtx, id, CollectionName.GetCollectionName(docBlittable), name, (long)value);
+                _database.DocumentsStorage.CountersStorage.IncrementCounter(_docsCtx, id, CollectionName.GetCollectionName(docBlittable), name, (long)value, out _);
 
                 if (metadata.TryGet(Constants.Documents.Metadata.Counters, out BlittableJsonReaderArray counters) == false ||
                     counters.BinarySearch(name, StringComparison.OrdinalIgnoreCase) < 0)
@@ -788,9 +782,6 @@ namespace Raven.Server.Documents.Patch
 
             private JsValue DeleteCounter(JsValue self, JsValue[] args)
             {
-                if (_database.ServerStore.Configuration.Core.FeaturesAvailability == FeaturesAvailability.Stable)
-                    FeaturesAvailabilityException.Throw("Counters");
-
                 AssertValidDatabaseContext();
 
                 if (args.Length != 2)
@@ -881,6 +872,93 @@ namespace Raven.Server.Documents.Patch
                 var asTimeSpan = new TimeSpan(ticks);
 
                 return asTimeSpan.ToString();
+            }
+
+            private static JsValue CompareDates(JsValue self, JsValue[] args)
+            {
+                if (args.Length < 1 || args.Length > 3)
+                {
+                    throw new InvalidOperationException($"No overload for method 'compareDates' takes {args.Length} arguments. " +
+                                                        "Supported overloads are : compareDates(date1, date2), compareDates(date1, date2, operationType)");
+                }
+
+                ExpressionType binaryOperationType;
+                if (args.Length == 2)
+                {
+                    binaryOperationType = ExpressionType.Subtract;
+                }
+                else if (args[2].IsString() == false ||
+                    Enum.TryParse(args[2].AsString(), out binaryOperationType) == false)
+                {
+                    throw new InvalidOperationException("compareDates(date1, date2, operationType) : 'operationType' must be a string argument representing a valid 'ExpressionType'");
+                }
+
+                dynamic date1, date2;
+                if ((binaryOperationType == ExpressionType.Equal || 
+                     binaryOperationType == ExpressionType.NotEqual) &&
+                    args[0].IsString() && args[1].IsString())
+                {
+                    date1 = args[0].AsString();
+                    date2 = args[1].AsString();
+                }
+                else
+                {
+                    date1 = GetDateArg(args[0]);
+                    date2 = GetDateArg(args[1]);
+                }
+
+                switch (binaryOperationType)
+                {
+                    case ExpressionType.Subtract:
+                        return (date1 - date2).ToString();
+                    case ExpressionType.GreaterThan:
+                        return date1 > date2;
+                    case ExpressionType.GreaterThanOrEqual:
+                        return date1 >= date2;
+                    case ExpressionType.LessThan:
+                        return date1 < date2;
+                    case ExpressionType.LessThanOrEqual:
+                        return date1 <= date2;
+                    case ExpressionType.Equal:
+                        return date1 == date2;
+                    case ExpressionType.NotEqual:
+                        return date1 != date2;
+                    default:
+                        throw new InvalidOperationException($"compareDates(date1, date2, binaryOp) : unsupported binary operation '{binaryOperationType}'");
+
+                }
+            }
+
+            private static unsafe DateTime GetDateArg(JsValue arg)
+            {
+                if (arg.IsDate())
+                {
+                    return arg.AsDate().ToDateTime();
+                }
+
+                if (arg.IsString() == false)
+                {
+                    ThrowInvalidArgumentForCompareDates();
+                }
+
+                var s = arg.AsString();
+                fixed (char* pValue = s)
+                {
+                    var result = LazyStringParser.TryParseDateTime(pValue, s.Length, out DateTime dt, out _);
+                    switch (result)
+                    {
+                        case LazyStringParser.Result.DateTime:
+                            return dt;
+                        default:
+                            ThrowInvalidArgumentForCompareDates();
+                            return DateTime.MinValue; // never hit
+                    }
+                }
+            }
+
+            private static void ThrowInvalidArgumentForCompareDates()
+            {
+                throw new InvalidOperationException("compareDates(date1, date2, binaryOp) : 'date1', 'date2' must be of type 'DateInstance' or a DateTime string");
             }
 
             private static unsafe JsValue ToStringWithFormat(JsValue self, JsValue[] args)
@@ -1100,10 +1178,8 @@ namespace Raven.Server.Documents.Patch
                 Reset();
                 OriginalDocumentId = documentId;
 
-                if (_args.Length != args.Length)
-                    _args = new JsValue[args.Length];
-                for (var i = 0; i < args.Length; i++)
-                    _args[i] = TranslateToJs(ScriptEngine, jsonCtx, args[i]);
+                SetArgs(jsonCtx, method, args);
+
                 try
                 {
                     var call = ScriptEngine.GetValue(method).TryCast<ICallable>();
@@ -1119,6 +1195,22 @@ namespace Raven.Server.Documents.Patch
                     _refResolver.ExplodeArgsOn(null, null);
                     _docsCtx = null;
                     _jsonCtx = null;
+                }
+            }
+
+            private void SetArgs(JsonOperationContext jsonCtx, string method, object[] args)
+            {
+                if (_args.Length != args.Length)
+                    _args = new JsValue[args.Length];
+                for (var i = 0; i < args.Length; i++)
+                    _args[i] = TranslateToJs(ScriptEngine, jsonCtx, args[i]);
+
+                if (method != QueryMetadata.SelectOutput &&
+                    _args.Length == 2 &&
+                    _args[1].IsObject() &&
+                    _args[1].AsObject() is BlittableObjectInstance boi)
+                {
+                    _refResolver.ExplodeArgsOn(null, boi);
                 }
             }
 
@@ -1236,6 +1328,17 @@ namespace Raven.Server.Documents.Patch
                     for (var i = 0; i < list.Count; i++)
                     {
                         args[0] = TranslateToJs(engine, context, list[i]);
+                        engine.Array.PrototypeObject.Push(jsArray, args);
+                    }
+                    return jsArray;
+                }
+                if (o is List<Document> docList)
+                {
+                    var jsArray = engine.Array.Construct(Array.Empty<JsValue>());
+                    var args = new JsValue[1];
+                    for (var i = 0; i < docList.Count; i++)
+                    {
+                        args[0] = new BlittableObjectInstance(engine, null, Clone(docList[i].Data, context), docList[i].Id, docList[i].LastModified);
                         engine.Array.PrototypeObject.Push(jsArray, args);
                     }
                     return jsArray;

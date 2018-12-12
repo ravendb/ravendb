@@ -43,7 +43,10 @@ class trafficWatch extends viewModelBase {
         count: ko.observable<string>(),
         min: ko.observable<string>(),
         avg: ko.observable<string>(),
-        max: ko.observable<string>()
+        max: ko.observable<string>(),
+        percentile_90: ko.observable<string>(),
+        percentile_99: ko.observable<string>(),
+        percentile_99_9: ko.observable<string>()
     };
     
     filter = ko.observable<string>();
@@ -82,7 +85,7 @@ class trafficWatch extends viewModelBase {
             this.liveClient().dispose();
         }
     }
-
+    
     attached() {
         super.attached();
         awesomeMultiselect.build($("#visibleTypesSelector"), opts => {
@@ -120,10 +123,7 @@ class trafficWatch extends viewModelBase {
 
     private updateStats() {
         if (!this.filteredData.length) {
-            this.stats.avg("n/a");
-            this.stats.min("n/a");
-            this.stats.max("n/a");
-            this.stats.count("0");
+           this.statsNotAvailable();
         } else {
             let sum = 0;
             let min = this.filteredData[0].ElapsedMilliseconds;
@@ -153,10 +153,48 @@ class trafficWatch extends viewModelBase {
             this.stats.count(this.filteredData.length.toLocaleString());
             if (this.filteredData.length) {
                 this.stats.avg(generalUtils.formatTimeSpan(sum / this.filteredData.length));
+                this.updatePercentiles();
             } else {
-                this.stats.avg("n/a");
+                this.statsNotAvailable();
             }
         }
+    }
+    
+    private statsNotAvailable() {
+        this.stats.avg("n/a");
+        this.stats.min("n/a");
+        this.stats.max("n/a");
+        this.stats.count("0");
+
+        this.stats.percentile_90("n/a");
+        this.stats.percentile_99("n/a");
+        this.stats.percentile_99_9("n/a");
+    }
+    
+    private updatePercentiles() {
+        const timings = [] as number[];
+
+        for (let i = this.filteredData.length - 1; i >= 0; i--) {
+            const item = this.filteredData[i];
+
+            if (item.ResponseStatusCode === 101) {
+                // it is websocket - don't include in stats
+                continue;
+            }
+
+            if (timings.length === 2048) {
+                // compute using max 2048 latest values
+                break;
+            }
+
+            timings.push(item.ElapsedMilliseconds);
+        }
+
+        timings.sort((a, b) => a - b);
+        
+        this.stats.percentile_90(generalUtils.formatTimeSpan(timings[Math.ceil(90 / 100 * timings.length) - 1]));
+        this.stats.percentile_99(generalUtils.formatTimeSpan(timings[Math.ceil(99 / 100 * timings.length) - 1]));
+        this.stats.percentile_99_9(generalUtils.formatTimeSpan(timings[Math.ceil(99.9 / 100 * timings.length) - 1]));
     }
 
     compositionComplete() {

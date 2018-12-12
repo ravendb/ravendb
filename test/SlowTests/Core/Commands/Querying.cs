@@ -93,9 +93,9 @@ namespace SlowTests.Core.Commands
                 {
                     stringBuilder.Append(@" (Name = 'Async Company #1') OR");
                 }
-                stringBuilder.Append(@" (Name = 'Async Company #2')");
+                stringBuilder.Append(@" (Name = 'Async Company #2') LIMIT 50 OFFSET 0");
 
-                var indexQuery = new IndexQuery { Start = 0, PageSize = 50, Query = stringBuilder.ToString() };
+                var indexQuery = new IndexQuery { Query = stringBuilder.ToString() };
 
                 using (var commands = store.Commands())
                 {

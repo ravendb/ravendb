@@ -242,8 +242,6 @@ namespace Raven.Client.Documents.Changes
         public string DatabaseName { get; set; }
         public string CustomInfo { get; set; }
         public TrafficWatchChangeType Type { get; set; }
-        public int InnerRequestsCount { get; set; }
-        public object QueryTimings { get; set; }
     }
 
     public enum TrafficWatchChangeType

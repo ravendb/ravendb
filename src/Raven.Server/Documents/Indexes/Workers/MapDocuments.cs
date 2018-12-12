@@ -106,7 +106,9 @@ namespace Raven.Server.Documents.Indexes.Workers
                                     {
                                         var numberOfResults = _index.HandleMap(current.LowerId, current.Id, mapResults,
                                             indexWriter, indexContext, collectionStats);
-                                        _index.MapsPerSec.Mark(numberOfResults);
+
+                                        _index.MapsPerSec.MarkSingleThreaded(numberOfResults);
+
                                         resultsCount += numberOfResults;
                                         collectionStats.RecordMapSuccess();
                                     }
@@ -222,6 +224,12 @@ namespace Raven.Server.Documents.Indexes.Workers
             if (stats.Duration >= _configuration.MapTimeout.AsTimeSpan)
             {
                 stats.RecordMapCompletedReason($"Exceeded maximum configured map duration ({_configuration.MapTimeout.AsTimeSpan}). Was {stats.Duration}");
+                return false;
+            }
+
+            if (_configuration.MapBatchSize.HasValue && count >= _configuration.MapBatchSize.Value)
+            {
+                stats.RecordMapCompletedReason($"Reached maximum configured map batch size ({_configuration.MapBatchSize.Value}).");
                 return false;
             }
 

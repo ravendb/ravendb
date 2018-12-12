@@ -100,7 +100,7 @@ mark,
 
 // Contextual colors
 .text-muted {
-  color: @text-muted;
+  color: @text-muted !important;
 }
 .text-black {
     .text-emphasis-variant(@gray-base);
@@ -136,18 +136,23 @@ mark,
   background-image:none;
 }
 .bg-success {
-  .bg-variant(@state-success-bg, @brand-success-light);
+    .bg-variant(@state-success-bg, @bg-success-color);
 }
 .bg-info {
-  .bg-variant(@state-info-bg, @brand-info-light);
+    .bg-variant(@state-info-bg, @bg-info-color);
 }
 .bg-warning {
-  .bg-variant(@state-warning-bg, @brand-warning-light);
+    .bg-variant(@state-warning-bg, @bg-warning-color);
 }
 .bg-danger {
-  .bg-variant(@state-danger-bg, @brand-danger-light);
+    .bg-variant(@state-danger-bg, @bg-danger-color);
 }
-
+.bg-danger {
+    .bg-variant(@state-danger-bg, @bg-danger-color);
+}
+.bg-experimental {
+    .bg-variant(@state-experimental-bg, @state-experimental-text);
+}
 
 // Page header
 // -------------------------

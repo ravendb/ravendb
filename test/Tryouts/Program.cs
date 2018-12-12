@@ -1,36 +1,59 @@
 using System;
+using System.Collections.Generic;
+using System.Linq;
 using System.Threading.Tasks;
-using FastTests;
-using FastTests.Server.Documents.Queries.Parser;
-using FastTests.Voron.Backups;
-using FastTests.Voron.Compaction;
-using RachisTests.DatabaseCluster;
-using Raven.Client.Documents.Queries;
-using Raven.Tests.Core.Utils.Entities;
-using SlowTests.Authentication;
-using SlowTests.Bugs.MapRedue;
-using SlowTests.Client;
-using SlowTests.Client.Attachments;
-using SlowTests.Issues;
-using SlowTests.MailingList;
-using Sparrow.Logging;
-using StressTests.Client.Attachments;
-using Xunit;
+using BenchmarkDotNet.Attributes;
+using BenchmarkDotNet.Running;
+using FastTests.Graph;
+using Raven.Server.Documents;
+using Raven.Server.Documents.Queries.AST;
+using Raven.Server.Documents.Queries.Parser;
+using Sparrow;
+using Xunit.Sdk;
 
 namespace Tryouts
 {
+   
     public static class Program
     {
+       
         public static void Main(string[] args)
         {
-            for (int i = 0; i < 1000; i++)
+            using (var test = new BasicGraphQueries())
             {
-                Console.WriteLine(i);
-                using (var test = new RDBC_128())
-                {
-                    test.IndexingOfLoadDocumentWhileChanged();
-                }
+                test.CanProjectSameDocumentTwice();
             }
+            return;
+            /*
+                The AST for 
+
+                with { from Movies where Name = “Star Wars Episode 1” } as lovedMovie
+                with { from Movies } as recommendedMovie
+                with edges(HasGenre) { order by Weight desc limit 1 } as dominantGenre
+                match (lovedMovie)-[dominantGenre]->(Genre)<-[HasGenre(Weight > 0.8)]-(recommendedMovie)<-(u)
+                select recommendedMovie           
+             */
+
+            //Console.WriteLine(graphQuery.ToString());
+
+            using(var parsing = new FastTests.Graph.Parsing())
+            {
+                 parsing.CanRoundTripQueries(@"with { from Movies where Genre = $genre } as m
+match (u:Users)<-[r:Rated]-(m)->(a:Actor)", @"WITH {
+    FROM Movies WHERE Genre = $genre
+} AS m
+WITH {
+    FROM Users
+} AS u
+WITH {
+    FROM Actor
+} AS a
+WITH EDGES(Rated) AS r
+MATCH ((m)-[r]->(u) AND (m)->(a))");
+            }
+
         }
+
+        
     }
 }

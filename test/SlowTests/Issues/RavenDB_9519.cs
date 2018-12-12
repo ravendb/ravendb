@@ -17,8 +17,10 @@ namespace SlowTests.Issues
 {
     public class RavenDB_9519 : RavenTestBase
     {
-        [Fact]
-        public async Task NestedObjectShouldBeExportedAndImportedProperly()
+        [Theory]
+        [InlineData("From%20companies")]
+        [InlineData("match%20(Companies)")]
+        public async Task NestedObjectShouldBeExportedAndImportedProperly(string query)
         {
             const string id = "companies/1";
 
@@ -33,7 +35,7 @@ namespace SlowTests.Issues
                 }
 
                 var client = new HttpClient();
-                var stream = await client.GetStreamAsync($"{store.Urls[0]}/databases/{store.Database}/streams/queries?query=From%20companies&format=csv");
+                var stream = await client.GetStreamAsync($"{store.Urls[0]}/databases/{store.Database}/streams/queries?query={query}&format=csv");
 
                 using (var commands = store.Commands())
                 {
@@ -79,15 +81,17 @@ namespace SlowTests.Issues
             }
         }
 
-        [Fact]
-        public async Task ExportingAndImportingCsvUsingQueryFromDocumentShouldWork()
+        [Theory]
+        [InlineData("From%20companies")]
+        [InlineData("match%20(Companies)")]
+        public async Task ExportingAndImportingCsvUsingQueryFromDocumentShouldWork(string query)
         {
             using (var store = GetDocumentStore())
             {
                 using (var session = store.OpenSession())
                 {
                     session.Store(_testCompany, "companies/1");
-                    session.Store(new { Query = "From%20companies" }, "queries/1");
+                    session.Store(new { Query = query }, "queries/1");
                     session.SaveChanges();
                 }
 

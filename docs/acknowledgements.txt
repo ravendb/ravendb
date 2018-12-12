@@ -15,5 +15,5 @@ RavenDB is making use of the following OSS projects:
 * Oocx.ACME (https://github.com/oocx/acme.net) under the MIT license (https://github.com/oocx/acme.net/blob/master/LICENSE)
 
 The full list of libraries used by the Studio can be found under:
-* https://github.com/ravendb/ravendb/blob/v4.1/src/Raven.Studio/bower.json
-* https://github.com/ravendb/ravendb/blob/v4.1/src/Raven.Studio/package.json
+* https://github.com/ravendb/ravendb/blob/v4.2/src/Raven.Studio/bower.json
+* https://github.com/ravendb/ravendb/blob/v4.2/src/Raven.Studio/package.json

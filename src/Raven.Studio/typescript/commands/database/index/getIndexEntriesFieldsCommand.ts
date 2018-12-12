@@ -8,24 +8,24 @@ class getIndexEntriesFieldsCommand extends commandBase {
         super();
     }
 
-    execute(): JQueryPromise<resultsDto<string>> {
+    execute(): JQueryPromise<getIndexEntriesFieldsCommandResult> {
         const task = this.getIndexEntries();
-        
+
         if (this.reportFailure) {
             task.fail((response: JQueryXHR) => {
                 this.reportError("Failed to get index entries", response.responseText, response.statusText);
             });
         }
-        
+
         return task;
     }
-    
-    private getIndexEntries(): JQueryPromise<resultsDto<string>> {
+
+    private getIndexEntries(): JQueryPromise<getIndexEntriesFieldsCommandResult> {
         const args = {
             name: this.indexName,
             op: "entries-fields"
         };
-        
+
         const url = endpoints.databases.index.indexesDebug;
 
         return this.query(url, args, this.db);

@@ -6,10 +6,15 @@ import app = require("durandal/app");
 import indexStalenessReasons = require("viewmodels/database/indexes/indexStalenessReasons");
 import getStorageReportCommand = require("commands/database/debug/getStorageReportCommand");
 import statsModel = require("models/database/stats/statistics");
+import popoverUtils = require("common/popoverUtils");
+import getIdentitiesCommand = require("commands/database/debug/getIdentitiesCommand");
+
+type identityItem = { Prefix: string, Value: number };
 
 class statistics extends viewModelBase {
 
     stats = ko.observable<statsModel>();
+    identities = ko.observableArray<identityItem>([]);
     rawJsonUrl: KnockoutComputed<string>;
 
     private refreshStatsObservable = ko.observable<number>();
@@ -49,6 +54,11 @@ class statistics extends viewModelBase {
                 `
             }
         });
+
+        popoverUtils.longWithHover($(".js-identities-header"),
+            {
+                content: "<div>Identities allows you to have consecutive IDs across the cluster.</div>"
+            });
     }
 
     detached() {
@@ -71,12 +81,25 @@ class statistics extends viewModelBase {
         const dbDataLocationTask = new getStorageReportCommand(db)
             .execute();
         
-        return $.when<any>(dbStatsTask, indexesStatsTask, dbDataLocationTask)
+        const identitiesTask = new getIdentitiesCommand(db)
+            .execute();
+        
+        return $.when<any>(dbStatsTask, indexesStatsTask, dbDataLocationTask, identitiesTask)
             .done(([dbStats]: [Raven.Client.Documents.Operations.DetailedDatabaseStatistics],
                    [indexesStats]: [Raven.Client.Documents.Indexes.IndexStats[]],
-                   [dbLocation]: [storageReportDto]) => {
+                   [dbLocation]: [storageReportDto],
+                   [identities]: [dictionary<number>]) => {
                 this.processStatsResults(dbStats, indexesStats);
-                this.dataLocation(dbLocation.BasePath)
+                this.dataLocation(dbLocation.BasePath);
+                
+                const mappedIdentities = _.map(identities, (value, key) => {
+                    return {
+                        Prefix: key,
+                        Value: value
+                    } as identityItem;
+                });
+                
+                this.identities(_.sortBy(mappedIdentities, x => x.Prefix.toLocaleLowerCase()));
             });
     }
 

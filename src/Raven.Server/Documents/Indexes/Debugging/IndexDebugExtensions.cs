@@ -435,26 +435,5 @@ namespace Raven.Server.Documents.Indexes.Debugging
                 return result[0].Result.Data;
             }
         }
-
-        public static string[] GetEntriesFields(this Index self)
-        {
-            switch (self.Type)
-            {
-                case IndexType.Map:
-                case IndexType.JavaScriptMap:
-                    return ((MapIndex)self)._compiled.OutputFields;
-                case IndexType.MapReduce:
-                case IndexType.JavaScriptMapReduce:
-                    return ((MapReduceIndex)self)._compiled.OutputFields;
-                case IndexType.AutoMap:
-                    return ((AutoMapIndex)self).Definition.IndexFields.Keys.ToArray();
-                case IndexType.AutoMapReduce:
-                    return ((AutoMapReduceIndex)self).Definition.IndexFields.Keys.ToArray();
-                case IndexType.Faulty:
-                    throw new InvalidOperationException($"Index '{self.Name}' is Faulty. Can't return index entries for a faulty index.");
-                default:
-                    throw new ArgumentException("Unknown index type: " + self.Type);
-            }
-        }
     }
 }

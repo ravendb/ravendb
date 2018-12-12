@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
+using Microsoft.Extensions.Primitives;
 using Sparrow;
 
 namespace Raven.Server.Documents.Queries.AST
@@ -20,12 +21,12 @@ namespace Raven.Server.Documents.Queries.AST
 
             _knownAliases.Add("this");
             if (q.From.Alias != null)
-                _knownAliases.Add(q.From.Alias.Value);
+                _knownAliases.Add(q.From.Alias.Value.Value);
             if (q.Load != null)
             {
                 foreach (var t in q.Load)
                 {
-                    _knownAliases.Add(t.Alias.Value);
+                    _knownAliases.Add(t.Alias.Value.Value);
                 }
             }
 
@@ -238,12 +239,12 @@ namespace Raven.Server.Documents.Queries.AST
 
         public override void VisitField(FieldExpression field)
         {
-            if(_knownAliases.Contains(field.Compound[0]) == false)
+            if(_knownAliases.Contains(field.Compound[0].Value) == false)
                 _sb.Append("this.");
 
             for (int i = 0; i < field.Compound.Count; i++)
             {
-                _sb.Append(field.Compound[i]);
+                _sb.Append(field.Compound[i].Value);
                 if (i + 1 != field.Compound.Count)
                     _sb.Append(".");
             }

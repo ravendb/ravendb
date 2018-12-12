@@ -1,0 +1,17 @@
+.traffic-watch {
+    .percentiles-container {
+        border-top: 1px solid @gray-dark;
+        position: relative;
+
+        &:before {
+            color: @gray;
+            position: absolute;
+            left: 0;
+            top: -14px;
+            line-height: 10px;
+            font-size: 10px;
+            text-transform: uppercase;
+            content: attr(data-label);
+        }
+    }
+}

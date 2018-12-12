@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections;
 using System.Collections.Generic;
+using Microsoft.Extensions.Primitives;
 using Sparrow;
 using Sparrow.Json;
 
@@ -198,6 +199,8 @@ namespace Raven.Server.Json
             }
 
             consumed = path.IndexOfAny(_separators, 0);
+            if(consumed == -1)
+                return path;
             return path.Subsegment(0, consumed);
         }
 

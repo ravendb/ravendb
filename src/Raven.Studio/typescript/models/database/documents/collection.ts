@@ -54,6 +54,10 @@ class collection {
     get database() {
         return this.db;
     }
+    
+    get collectionNameForQuery() {
+        return this.isAllDocuments ? "@all_docs" : this.name;
+    }
 
     fetchDocuments(skip: number, take: number, previewColumns?: string[], fullColumns?: string[]): JQueryPromise<pagedResultWithAvailableColumns<document>> {
         const collection = this.isAllDocuments ? undefined : this.name;

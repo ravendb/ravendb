@@ -6,7 +6,7 @@ using Raven.Server.Documents.Queries.Explanation;
 
 namespace Raven.Server.Documents.Queries
 {
-    public class DocumentQueryResult : QueryResultServerSide
+    public class DocumentQueryResult : QueryResultServerSide<Document>
     {
         public static readonly DocumentQueryResult NotModifiedResult = new DocumentQueryResult { NotModified = true };
 

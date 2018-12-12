@@ -21,6 +21,7 @@ using Raven.Server.Documents.Queries.Timings;
 using Raven.Server.ServerWide.Context;
 using Raven.Server.Utils;
 using Sparrow;
+using Microsoft.Extensions.Primitives;
 
 namespace Raven.Server.Documents.Queries.Results
 {
@@ -171,58 +172,71 @@ namespace Raven.Server.Documents.Queries.Results
             {
                 if (TryGetValue(fieldToFetch, doc, luceneDoc, state, out var key, out var fieldVal))
                 {
-                    if (fieldsToFetch.SingleBodyOrMethodWithNoAlias)
-                    {
-                        Document newDoc = null;
-                        if (fieldVal is BlittableJsonReaderObject nested)
-                        {
-                            newDoc = new Document
-                            {
-                                Id = doc.Id,
-                                ChangeVector = doc.ChangeVector,
-                                Data = nested,
-                                Etag = doc.Etag,
-                                Flags = doc.Flags,
-                                IndexScore = score,
-                                LastModified = doc.LastModified,
-                                LowerId = doc.LowerId,
-                                NonPersistentFlags = doc.NonPersistentFlags,
-                                StorageId = doc.StorageId,
-                                TransactionMarker = doc.TransactionMarker
-                            };
-                        }
-                        else if (fieldVal is Document d)
-                        {
-                            newDoc = d;
-                            newDoc.IndexScore = score;
-                        }
-
-                        else
-                            ThrowInvalidQueryBodyResponse(fieldVal);
-
-                        return newDoc;
-                    }
-
-                    if (fieldVal is List<object> list)
-                    {
-                        var array = new DynamicJsonArray();
-                        for (int i = 0; i < list.Count; i++)
-                        {
-                            if (list[i] is Document d3)
-                                array.Add(d3.Data);
-                            else
-                                array.Add(list[i]);
-                        }
-                        fieldVal = array;
-                    }
-                    if (fieldVal is Document d2)
-                        fieldVal = d2.Data;
-
-                    result[key] = fieldVal;
+                    var immediateResult = AddProjectionToResult(doc, score, fieldsToFetch, result, key, fieldVal);
+                    if (immediateResult != null)
+                        return immediateResult;
                 }
             }
 
             return ReturnProjection(result, doc, score, context);
+        }
+
+        protected static Document AddProjectionToResult(Document doc, float score, FieldsToFetch fieldsToFetch, DynamicJsonValue result, string key, object fieldVal)
+        {
+            if (fieldsToFetch.SingleBodyOrMethodWithNoAlias)
+            {
+                Document newDoc = null;
+                if (fieldVal is BlittableJsonReaderObject nested)
+                {
+                    newDoc = new Document
+                    {
+                        Id = doc.Id,
+                        ChangeVector = doc.ChangeVector,
+                        Data = nested,
+                        Etag = doc.Etag,
+                        Flags = doc.Flags,
+                        IndexScore = score,
+                        LastModified = doc.LastModified,
+                        LowerId = doc.LowerId,
+                        NonPersistentFlags = doc.NonPersistentFlags,
+                        StorageId = doc.StorageId,
+                        TransactionMarker = doc.TransactionMarker
+                    };
+                }
+                else if (fieldVal is Document d)
+                {
+                    newDoc = d;
+                    newDoc.IndexScore = score;
+                }
+
+                else
+                    ThrowInvalidQueryBodyResponse(fieldVal);
+
+                return newDoc;
+            }
+
+            AddProjectionToResult(result, key, fieldVal);
+            return null;
+        }
+
+        protected static void AddProjectionToResult(DynamicJsonValue result, string key, object fieldVal)
+        {
+            if (fieldVal is List<object> list)
+            {
+                var array = new DynamicJsonArray();
+                for (int i = 0; i < list.Count; i++)
+                {
+                    if (list[i] is Document d3)
+                        array.Add(d3.Data);
+                    else
+                        array.Add(list[i]);
+                }
+                fieldVal = array;
+            }
+            if (fieldVal is Document d2)
+                fieldVal = d2.Data;
+
+            result[key] = fieldVal;
         }
 
         private static void ThrowInvalidQueryBodyResponse(object fieldVal)
@@ -230,7 +244,7 @@ namespace Raven.Server.Documents.Queries.Results
             throw new InvalidOperationException("Query returning a single function call result must return an object, but got: " + (fieldVal ?? "null"));
         }
 
-        private static Document ReturnProjection(DynamicJsonValue result, Document doc, float score, JsonOperationContext context)
+        protected static Document ReturnProjection(DynamicJsonValue result, Document doc, float score, JsonOperationContext context)
         {
             result[Constants.Documents.Metadata.Key] = new DynamicJsonValue
             {
@@ -266,7 +280,7 @@ namespace Raven.Server.Documents.Queries.Results
             DynamicJsonArray array = null;
             FieldType fieldType = null;
             var anyExtracted = false;
-            foreach (var field in indexDocument.GetFields(fieldToFetch.Name))
+            foreach (var field in indexDocument.GetFields(fieldToFetch.Name.Value))
             {
                 if (fieldType == null)
                     fieldType = GetFieldType(field.Name, indexDocument);
@@ -330,7 +344,7 @@ namespace Raven.Server.Documents.Queries.Results
             throw new NotSupportedException("Cannot convert binary values");
         }
 
-        private bool TryGetValue(FieldsToFetch.FieldToFetch fieldToFetch, Document document, Lucene.Net.Documents.Document luceneDoc, IState state, out string key, out object value)
+        protected bool TryGetValue(FieldsToFetch.FieldToFetch fieldToFetch, Document document, Lucene.Net.Documents.Document luceneDoc, IState state, out string key, out object value)
         {
             key = fieldToFetch.ProjectedName ?? fieldToFetch.Name.Value;
 
@@ -341,27 +355,17 @@ namespace Raven.Server.Documents.Queries.Results
 
             if (fieldToFetch.QueryField.Function != null)
             {
-                using (_functionScope = _functionScope?.Start() ?? _projectionScope?.For(nameof(QueryTimingsScope.Names.JavaScript)))
+                var args = new object[fieldToFetch.QueryField.FunctionArgs.Length + 1];
+                for (int i = 0; i < fieldToFetch.FunctionArgs.Length; i++)
                 {
-                    var args = new object[fieldToFetch.QueryField.FunctionArgs.Length + 1];
-                    for (int i = 0; i < fieldToFetch.FunctionArgs.Length; i++)
+                    TryGetValue(fieldToFetch.FunctionArgs[i], document, luceneDoc, state, out key, out args[i]);
+                    if (ReferenceEquals(args[i], document))
                     {
-                        TryGetValue(fieldToFetch.FunctionArgs[i], document, luceneDoc, state, out key, out args[i]);
-                        if (ReferenceEquals(args[i], document))
-                        {
-                            args[i] = Tuple.Create(document, luceneDoc, state);
-                        }
+                        args[i] = Tuple.Create(document, luceneDoc, state);
                     }
-
-                    args[args.Length - 1] = _query.QueryParameters;
-
-                    value = InvokeFunction(
-                        fieldToFetch.QueryField.Name,
-                        _query.Metadata.Query,
-                        args);
-
-                    return true;
                 }
+                value = GetFunctionValue(fieldToFetch, args);
+                return true;
             }
 
             if (fieldToFetch.QueryField.IsCounter)
@@ -381,7 +385,7 @@ namespace Raven.Server.Documents.Queries.Results
                 }
                 else
                 {
-                    name = fieldToFetch.Name;
+                    name = fieldToFetch.Name.Value;
                 }
 
                 if (fieldToFetch.QueryField.SourceAlias != null
@@ -461,11 +465,14 @@ namespace Raven.Server.Documents.Queries.Results
 
                 else if (fieldToFetch.CanExtractFromIndex)
                 {
-                    var field = luceneDoc.GetField(fieldToFetch.QueryField.SourceAlias);
-                    if (field != null)
+                    if(luceneDoc != null)
                     {
-                        var fieldValue = ConvertType(_context, field, GetFieldType(field.Name, luceneDoc), state);
-                        _loadedDocumentIds.Add(fieldValue.ToString());
+                        var field = luceneDoc.GetField(fieldToFetch.QueryField.SourceAlias);
+                        if (field != null)
+                        {
+                            var fieldValue = ConvertType(_context, field, GetFieldType(field.Name, luceneDoc), state);
+                            _loadedDocumentIds.Add(fieldValue.ToString());
+                        }
                     }
                 }
 
@@ -511,7 +518,7 @@ namespace Raven.Server.Documents.Queries.Results
                     _loadedDocumentsByAliasName[fieldToFetch.QueryField.Alias] = doc;
                 }
 
-                if (string.IsNullOrEmpty(fieldToFetch.Name)) // we need the whole document here
+                if (string.IsNullOrEmpty(fieldToFetch.Name.Value)) // we need the whole document here
                 {
                     buffer.Add(doc);
                     continue;
@@ -551,6 +558,21 @@ namespace Raven.Server.Documents.Queries.Results
             }
             value = null;
             return false;
+        }
+
+        protected object GetFunctionValue(FieldsToFetch.FieldToFetch fieldToFetch, object[] args)
+        {
+            using (_functionScope = _functionScope?.Start() ?? _projectionScope?.For(nameof(QueryTimingsScope.Names.JavaScript)))
+            {
+                args[args.Length - 1] = _query.QueryParameters;
+
+                var value = InvokeFunction(
+                    fieldToFetch.QueryField.Name,
+                    _query.Metadata.Query,
+                    args);
+
+                return value;
+            }
         }
 
         private class QueryKey : ScriptRunnerCache.Key
@@ -634,7 +656,12 @@ namespace Raven.Server.Documents.Queries.Results
             else if (field.IsCompositeField == false)
             {
                 if (BlittableJsonTraverserHelper.TryRead(_blittableTraverser, document, field.Name, out value) == false)
-                    return false;
+                {
+                    if (field.ProjectedName == null)
+                        return false;
+                    if(BlittableJsonTraverserHelper.TryRead(_blittableTraverser, document, field.ProjectedName, out value) == false)
+                        return false;
+                }
             }
             else
             {

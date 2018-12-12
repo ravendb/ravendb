@@ -807,6 +807,8 @@ namespace Raven.Server.Documents.PeriodicBackup
             };
         }
 
+        public string TombstoneCleanerIdentifier => "Periodic Backup";
+
         public Dictionary<string, long> GetLastProcessedTombstonesPerCollection()
         {
             if (_periodicBackups.Count == 0)

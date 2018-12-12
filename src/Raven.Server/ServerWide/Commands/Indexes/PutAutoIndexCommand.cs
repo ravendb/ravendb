@@ -40,26 +40,31 @@ namespace Raven.Server.ServerWide.Commands.Indexes
 
         public static PutAutoIndexCommand Create(AutoIndexDefinitionBase definition, string databaseName)
         {
+            var indexType = GetAutoIndexType(definition);
+
+            return new PutAutoIndexCommand(GetAutoIndexDefinition(definition, indexType), databaseName);
+        }
+
+        public static IndexType GetAutoIndexType(AutoIndexDefinitionBase definition)
+        {
             var indexType = IndexType.None;
-            var map = definition as AutoMapIndexDefinition;
-            if (map != null)
+            if (definition is AutoMapIndexDefinition)
                 indexType = IndexType.AutoMap;
 
-            var reduce = definition as AutoMapReduceIndexDefinition;
-            if (reduce != null)
+            if (definition is AutoMapReduceIndexDefinition)
                 indexType = IndexType.AutoMapReduce;
 
             if (indexType == IndexType.None)
                 throw new NotSupportedException("Invalid definition type: " + definition.GetType());
 
-            return new PutAutoIndexCommand(GetAutoIndexDefinition(definition, indexType), databaseName);
+            return indexType;
         }
 
         public static AutoIndexDefinition GetAutoIndexDefinition(AutoIndexDefinitionBase definition, IndexType indexType)
         {
             Debug.Assert(indexType == IndexType.AutoMap || indexType == IndexType.AutoMapReduce);
 
-            return new AutoIndexDefinition()
+            return new AutoIndexDefinition
             {
                 Collection = definition.Collections.First(),
                 MapFields = CreateFields(definition.MapFields.ToDictionary(x => x.Key, x => x.Value.As<AutoIndexField>())),
@@ -88,7 +93,8 @@ namespace Raven.Server.ServerWide.Commands.Indexes
                     Aggregation = autoField.Aggregation,
                     Spatial = autoField.Spatial,
                     IsNameQuoted = autoField.HasQuotedName,
-                    GroupByArrayBehavior = autoField.GroupByArrayBehavior
+                    GroupByArrayBehavior = autoField.GroupByArrayBehavior,
+                    Suggestions = autoField.HasSuggestions
                 };
             }
 

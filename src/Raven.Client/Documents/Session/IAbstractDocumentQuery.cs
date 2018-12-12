@@ -149,16 +149,12 @@ namespace Raven.Client.Documents.Session
         /// <summary>
         ///   Matches fields which starts with the specified value.
         /// </summary>
-        /// <param name = "fieldName">Name of the field.</param>
-        /// <param name = "value">The value.</param>
-        void WhereStartsWith(string fieldName, object value);
+        void WhereStartsWith(string fieldName, object value, bool exact = false);
 
         /// <summary>
         ///   Matches fields which ends with the specified value.
         /// </summary>
-        /// <param name = "fieldName">Name of the field.</param>
-        /// <param name = "value">The value.</param>
-        void WhereEndsWith(string fieldName, object value);
+        void WhereEndsWith(string fieldName, object value, bool exact = false);
 
         /// <summary>
         ///   Matches fields where the value is between the specified start and end, inclusive
@@ -233,12 +229,16 @@ namespace Raven.Client.Documents.Session
         /// </remarks>
         void Proximity(int proximity);
 
+        void OrderBy(string field, string sorterName);
+
         /// <summary>
         ///   Order the results by the specified fields
         ///   The field is the name of the field to sort, defaulting to sorting by ascending.
         /// </summary>
         /// <param name = "field">The fields.</param>
         void OrderBy(string field, OrderingType ordering = OrderingType.String);
+
+        void OrderByDescending(string field, string sorterName);
 
         void OrderByDescending(string field, OrderingType ordering = OrderingType.String);
 

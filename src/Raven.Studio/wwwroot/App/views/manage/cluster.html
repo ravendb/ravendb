@@ -119,7 +119,7 @@
                                 </div>
                                 <div class="memory" data-bind="if: installedMemoryInGb">
                                     <h5><i class="icon-memory"></i> &nbsp; MEMORY</h5>
-                                    <strong class="text-lighter" data-toggle="tooltip" title="Assigned memory limit" data-animation="true">
+                                    <strong class="text-emphasis" data-toggle="tooltip" title="Assigned memory limit" data-animation="true">
                                         <span data-bind="text: utilizedMemoryInGb"></span>GB
                                     </strong>
                                     <span data-bind="if: installedMemoryInGb() && installedMemoryInGb() != -1">
@@ -128,11 +128,11 @@
                                 </div>
                                 <div class="serverVersion" data-bind="if: nodeServerVersion">
                                     <h5><i class="icon-server"></i> &nbsp; VERSION</h5>
-                                    <strong class="text-lighter" data-toggle="tooltip" data-bind="text: nodeServerVersion, attr: { title: 'Server version installed on this node: ' + nodeServerVersion() }" data-animation="true"></strong>
+                                    <strong class="text-emphasis" data-toggle="tooltip" data-bind="text: nodeServerVersion, attr: { title: 'Server version installed on this node: ' + nodeServerVersion() }" data-animation="true"></strong>
                                 </div>
                                 <div class="os text-center" data-bind="if: osFullName">
                                     <h5>OS</h5>
-                                    <strong class="text-lighter" data-toggle="tooltip" data-html="true" data-bind="attr: { 'title': osTitle }" data-animation="true">
+                                    <strong class="text-emphasis" data-toggle="tooltip" data-html="true" data-bind="attr: { 'title': osTitle }" data-animation="true">
                                         <i data-bind="attr: { class: osIcon }"></i>
                                     </strong>
                                 </div>

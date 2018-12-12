@@ -1,4 +1,35 @@
-<div class="content-margin">
+<div class="content-margin replication-stats">
+    <div class="color-definitions">
+        <div class="axis"></div>
+        <div class="gaps"></div>
+        <div class="brushChartColor"></div>
+        <div class="brushChartStrokeColor"></div>
+        <div class="trackBackground"></div>
+        <div class="separatorLine"></div>
+        <div class="trackNameBg"></div>
+        <div class="trackNameFg"></div>
+        <div class="trackDirectionText"></div>
+        <div class="openedTrackArrow"></div>
+        <div class="closedTrackArrow"></div>
+        <div class="collectionNameTextColor"></div>
+        <div class="itemWithError"></div>
+        <div class="progressStripes"></div>
+        
+        <div class="tracks">
+            <div class="replication" data-property="Replication"></div>
+            <div class="networkRead" data-property="Network/Read"></div>
+            <div class="networkWrite" data-property="Network/Write"></div>
+            <div class="storageRead" data-property="Storage/Read"></div>
+            <div class="storageWrite" data-property="Storage/Write"></div>
+            <div class="networkDocumentRead" data-property="Network/DocumentRead"></div>
+            <div class="networkAttachmentRead" data-property="Network/AttachmentRead"></div>
+            <div class="networkTombstoneRead" data-property="Network/TombstoneRead"></div>
+            <div class="storageDocumentRead" data-property="Storage/DocumentRead"></div>
+            <div class="storageTombstoneRead" data-property="Storage/TombstoneRead"></div>
+            <div class="storageAttachmentRead" data-property="Storage/AttachmentRead"></div>
+            <div class="storageCounterRead" data-property="Storage/CounterRead"></div>
+        </div>
+    </div>
     <div class="flex-vertical absolute-fill">
         <div class="flex-horizontal margin-bottom margin-bottom-sm">
             <div class="form-inline">
@@ -19,10 +50,10 @@
         </div>
         <div class="flex-horizontal flex-noshrink">
             <div data-bind="visible: liveViewClient() && !bufferIsFull()">
-                <i class="global-spinner spinner-xs"></i> <small>Collecting replication statistics... (buffer usage: <span data-bind="text: bufferUsage() + '%'"></span>)</small>
+                <small>Data buffer usage: <span data-bind="text: bufferUsage() + '%'"></span></small>
             </div>
             <div data-bind="visible: bufferIsFull">
-                <small>Buffer is full, clear graph data to continue</small>
+                <small>Data buffer is full, clear graph data to continue</small>
             </div>
             <div class="flex-separator"></div>
 

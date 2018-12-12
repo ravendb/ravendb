@@ -80,7 +80,7 @@
             flex-shrink: 0;
             padding: @grid-gutter-width/4;
             position: relative;
-            background-color: @gray-dark;
+            background-color: @panel-bg;
         }
 
         .patch-list-container {
@@ -107,13 +107,13 @@
 
             .pre-container {
                 flex-grow: 1;
-                background-color: @gray-darker;
+                background-color: @well-bg;
                 overflow: auto;
             }
 
             pre {
                 overflow: auto;
-                background-color: @gray-darker !important;
+                background-color: @well-bg !important;
             }
         }
 
@@ -130,18 +130,21 @@
             margin: 0;
             padding: 0;
             list-style: none;
-            background-color: @gray-darker;
+            background-color: @well-bg;
 
             li {
                 display: flex;
                 align-items: center;
 
                 &:hover {
-                    background-color: lighten(@gray-darker,3%);
+                    background-color: lighten(@well-bg,3%);
                 }
 
                 &.selected {
-                    background-color: lighten(@gray-darker,10%);
+                    background-color: @brand-primary;
+                    a, a .modified {
+                        color: @gray-lighter !important;
+                    }
                 }
             }
 
@@ -164,7 +167,7 @@
                     font-size: 11px;
                     position: relative;
                     top: -1px;
-                    color: @gray-light;
+                    .text-muted;
                 }
             }
         }

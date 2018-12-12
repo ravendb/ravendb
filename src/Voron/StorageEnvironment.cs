@@ -45,9 +45,9 @@ namespace Voron
 
         internal IndirectReference SelfReference = new IndirectReference();
 
-        public void QueueForSyncDataFile()
+        public void SuggestSyncDataFileSyncDataFile()
         {
-            GlobalFlushingBehavior.GlobalFlusher.Value.MaybeSyncEnvironment(this);
+            GlobalFlushingBehavior.GlobalFlusher.Value.SuggestSyncEnvironment(this);
         }
 
         public void ForceSyncDataFile()
@@ -96,9 +96,6 @@ namespace Voron
         private readonly ScratchBufferPool _scratchBufferPool;
         private EndOfDiskSpaceEvent _endOfDiskSpace;
         internal int SizeOfUnflushedTransactionsInJournalFile;
-
-        public long LastSyncCounter;
-        public long LastSyncTimeInTicks = DateTime.MinValue.Ticks;
 
         internal DateTime LastFlushTime;
 
@@ -251,7 +248,7 @@ namespace Voron
                             GlobalFlushingBehavior.GlobalFlusher.Value.MaybeFlushEnvironment(this);
 
                         else if (Journal.Applicator.TotalWrittenButUnsyncedBytes != 0)
-                            QueueForSyncDataFile();
+                            SuggestSyncDataFileSyncDataFile();
                     }
                     else
                     {
@@ -775,6 +772,7 @@ namespace Voron
 
         public long CurrentReadTransactionId => Interlocked.Read(ref _transactionsCounter);
         public long NextWriteTransactionId => Interlocked.Read(ref _transactionsCounter) + 1;
+        public CancellationToken Token => _cancellationTokenSource.Token;
 
         public long PossibleOldestReadTransaction(LowLevelTransaction tx)
         {
@@ -922,7 +920,7 @@ namespace Voron
             });
         }
 
-        public unsafe DetailedStorageReport GenerateDetailedReport(Transaction tx, bool calculateExactSizes = false)
+        public unsafe DetailedStorageReport GenerateDetailedReport(Transaction tx, bool includeDetails = false)
         {
             var numberOfAllocatedPages = Math.Max(_dataPager.NumberOfAllocatedPages, NextPageNumber - 1); // async apply to data file task
             var numberOfFreePages = _freeSpaceHandling.AllPages(tx.LowLevelTransaction).Count;
@@ -981,7 +979,7 @@ namespace Voron
                 Trees = trees,
                 FixedSizeTrees = fixedSizeTrees,
                 Tables = tables,
-                CalculateExactSizes = calculateExactSizes,
+                IncludeDetails = includeDetails,
                 ScratchBufferPoolInfo = _scratchBufferPool.InfoForDebug(PossibleOldestReadTransaction(tx.LowLevelTransaction)),
                 TempPath = Options.TempPath,
                 JournalPath = (Options as StorageEnvironmentOptions.DirectoryStorageEnvironmentOptions)?.JournalPath
@@ -1226,11 +1224,16 @@ namespace Voron
             }
         }
 
-        public void Cleanup()
+        public void Cleanup(bool deleteRecyclableJournals = false)
         {
             Journal.TryReduceSizeOfCompressionBufferIfNeeded();
             ScratchBufferPool.Cleanup();
             DecompressionBuffers.Cleanup();
+
+            if (deleteRecyclableJournals && Options is StorageEnvironmentOptions.DirectoryStorageEnvironmentOptions dirOptions)
+            {
+                dirOptions.DeleteRecyclableJournals();
+            }
         }
 
         public override string ToString()

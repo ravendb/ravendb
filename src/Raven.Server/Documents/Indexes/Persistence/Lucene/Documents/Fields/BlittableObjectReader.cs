@@ -14,6 +14,17 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene.Documents.Fields
         private StringBuilder _sb;
         private char[] _readBuffer;
 
+        public int Capacity
+        {
+            get
+            {
+                if (_sb == null)
+                    return _ms.Capacity;
+
+                return _ms.Capacity + _sb.Capacity;
+            }
+        }
+
         public BlittableObjectReader()
         {
             _ms = new MemoryStream();
@@ -59,6 +70,20 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene.Documents.Fields
             } while (read == _readBuffer.Length);
 
             return _sb.ToString();
+        }
+
+        public void ResetCapacity()
+        {
+            _reader.DiscardBufferedData();
+
+            if (_sb != null)
+            {
+                _sb.Clear();
+                _sb.Capacity = 16;
+            }
+
+            _ms.SetLength(0);
+            _ms.Capacity = 64;
         }
 
         public void Dispose()

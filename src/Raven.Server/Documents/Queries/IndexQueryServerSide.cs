@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Collections.Generic;
 using System.IO;
 using System.Text;
 using Microsoft.AspNetCore.Http;
@@ -17,10 +18,31 @@ namespace Raven.Server.Documents.Queries
     public class IndexQueryServerSide : IndexQuery<BlittableJsonReaderObject>
     {
         [JsonDeserializationIgnore]
+        public int? Offset;
+        [JsonDeserializationIgnore]
+        public int? Limit;
+
+        [JsonDeserializationIgnore]
         public QueryMetadata Metadata { get; private set; }
 
         [JsonDeserializationIgnore]
         public QueryTimingsScope Timings { get; private set; }
+
+        public new int Start
+        {
+#pragma warning disable 618
+            get => base.Start;
+            set => base.Start = value;
+#pragma warning restore 618
+        }
+
+        public new int PageSize
+        {
+#pragma warning disable 618
+            get => base.PageSize;
+            set => base.PageSize = value;
+#pragma warning restore 618
+        }
 
         /// <summary>
         /// puts the given string in TrafficWatch property of HttpContext.Items
@@ -40,6 +62,10 @@ namespace Raven.Server.Documents.Queries
         {
             Metadata = metadata;
         }
+
+        public string ServerSideQuery => Metadata.Query.ToString();
+
+        public List<string> Diagnostics;
 
         public IndexQueryServerSide(string query, BlittableJsonReaderObject queryParameters = null)
         {
@@ -64,9 +90,7 @@ namespace Raven.Server.Documents.Queries
                     result.PageSize = int.MaxValue;
 
                 if (string.IsNullOrWhiteSpace(result.Query))
-                {
                     throw new InvalidOperationException($"Index query does not contain '{nameof(Query)}' field.");
-                }
 
                 if (cache.TryGetMetadata(result, out var metadataHash, out var metadata))
                 {
@@ -75,27 +99,41 @@ namespace Raven.Server.Documents.Queries
                 }
 
                 result.Metadata = new QueryMetadata(result.Query, result.QueryParameters, metadataHash, queryType);
-
                 if (result.Metadata.HasTimings)
                     result.Timings = new QueryTimingsScope(start: false);
+
+                if (result.Metadata.Query.Offset != null)
+                {
+                    var start = (int)QueryBuilder.GetLongValue(result.Metadata.Query, result.Metadata, result.QueryParameters, result.Metadata.Query.Offset, 0);
+                    result.Offset = start;
+                    result.Start = result.Start != 0 || json.TryGet(nameof(Start), out int _)
+                        ? Math.Min(start, result.Start)
+                        : start;
+                }
+
+                if (result.Metadata.Query.Limit != null)
+                {
+                    var limit = (int)QueryBuilder.GetLongValue(result.Metadata.Query, result.Metadata, result.QueryParameters, result.Metadata.Query.Limit, int.MaxValue);
+                    result.Limit = limit;   
+                    result.PageSize = Math.Min(limit, result.PageSize);
+                }
 
                 if (tracker != null)
                     tracker.Query = result.Query;
 
                 return result;
             }
-            catch(Exception e)
+            catch (Exception e)
             {
-                string errorMessage;
-                if (e is InvalidOperationException)
-                    errorMessage = e.Message;
-                else
-                    errorMessage = (result == null ? $"Failed to parse index query : {json}" : $"Failed to parse query: {result.Query}");
-                
+                var errorMessage = e is InvalidOperationException
+                    ? e.Message : result == null ? $"Failed to parse index query : {json}" : $"Failed to parse query: {result.Query}";
+
                 if (tracker != null)
                     tracker.Query = errorMessage;
+
                 if (TrafficWatchManager.HasRegisteredClients)
                     AddStringToHttpContext(httpContext, errorMessage, TrafficWatchChangeType.Queries);
+
                 throw;
             }
         }
@@ -106,11 +144,8 @@ namespace Raven.Server.Documents.Queries
             try
             {
                 var isQueryOverwritten = !string.IsNullOrEmpty(overrideQuery);
-                if ((httpContext.Request.Query.TryGetValue("query", out var query) == false || query.Count == 0 || string.IsNullOrWhiteSpace(query[0])) &&
-                    isQueryOverwritten == false)
-                {
-                    throw new InvalidOperationException("Missing mandatory query string parameter 'query'");
-                }
+                if ((httpContext.Request.Query.TryGetValue("query", out var query) == false || query.Count == 0 || string.IsNullOrWhiteSpace(query[0])) && isQueryOverwritten == false)
+                    throw new InvalidOperationException("Missing mandatory query string parameter 'query'.");
 
                 var actualQuery = isQueryOverwritten ? overrideQuery : query[0];
                 result = new IndexQueryServerSide
@@ -134,11 +169,7 @@ namespace Raven.Server.Documents.Queries
                                 {
                                     result.QueryParameters = context.Read(stream, "query parameters");
                                 }
-
                                 continue;
-                            case RequestHandler.StartParameter:
-                            case RequestHandler.PageSizeParameter:
-                                break;
                             case "waitForNonStaleResults":
                                 result.WaitForNonStaleResults = bool.Parse(item.Value[0]);
                                 break;
@@ -156,24 +187,41 @@ namespace Raven.Server.Documents.Queries
                     }
                 }
 
-                result.Metadata = new QueryMetadata(result.Query, null, 0);
+                result.Metadata = new QueryMetadata(result.Query, result.QueryParameters, 0);
                 if (result.Metadata.HasTimings)
                     result.Timings = new QueryTimingsScope(start: false);
 
-                tracker.Query = result.Query;
+                if (result.Metadata.Query.Offset != null)
+                {
+                    var offset = (int)QueryBuilder.GetLongValue(result.Metadata.Query, result.Metadata, result.QueryParameters, result.Metadata.Query.Offset, 0);
+                    result.Offset = offset;
+                    result.Start = start + offset;
+                }
+
+                if (result.Metadata.Query.Limit != null)
+                {
+                    pageSize = (int)QueryBuilder.GetLongValue(result.Metadata.Query, result.Metadata, result.QueryParameters, result.Metadata.Query.Limit, int.MaxValue);
+                    result.Limit = pageSize;
+                    result.PageSize = Math.Min(result.PageSize, pageSize);
+                }
+
+                if (tracker != null)
+                    tracker.Query = result.Query;
+
                 return result;
             }
-            catch(Exception e)
+            catch (Exception e)
             {
-                string errorMessage;
-                if (e is InvalidOperationException || e is ArgumentException)
-                    errorMessage = e.Message;
-                else
-                    errorMessage = $"Failed to parse query: {result.Query}";
+                var errorMessage = e is InvalidOperationException || e is ArgumentException
+                    ? e.Message
+                    : $"Failed to parse query: {result.Query}";
 
-                tracker.Query = errorMessage;
+                if (tracker != null)
+                    tracker.Query = errorMessage;
+
                 if (TrafficWatchManager.HasRegisteredClients)
                     AddStringToHttpContext(httpContext, errorMessage, TrafficWatchChangeType.Queries);
+
                 throw;
             }
         }

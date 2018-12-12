@@ -1,8 +1,13 @@
 <div class="content-container">
-    <div class="content-margin">
-        <div class="row flex-row absolute-fill">
-            <div class="col-xs-12 col-lg-6 flex-vertical">
-                <form class="flex-form">
+    <form class="flex-form" data-bind="submit: saveConfiguration" novalidate>
+        <div class="content-margin">
+            <div class="toolbar">
+                <button type="submit" class="btn btn-primary" data-bind="disable: spinners.save, css: { 'btn-spinner': spinners.save }">
+                    <i class="icon-save"></i> <span>Save</span>
+                </button>
+            </div>
+            <div class="row flex-row">
+                <div class="col-xs-12 col-lg-6 flex-vertical">
                     <div class="panel">
                         <div class="panel-body">
                             <h3>Studio Configuration</h3>
@@ -22,6 +27,16 @@
                                 </div>
                             </div>
                             
+                            <div class="form-group">
+                                <div>
+                                    <label class="control-label">
+                                        Default replication factor
+                                    </label>
+                                </div>
+                                <input class="form-control" type="number" min="0"
+                                       data-bind="numericInput: model.replicationFactor" placeholder="Cluster size (default)" />
+                            </div>
+                            
                             <div class="form-group" data-bind="with: model">
                                 <label class="control-label">&nbsp; </label>
                                 <div class="toggle">
@@ -31,8 +46,8 @@
                             </div>
                         </div>
                     </div>
-                </form>
+                </div>
             </div>
         </div>
-    </div>
+    </form>
 </div>

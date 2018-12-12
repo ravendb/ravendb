@@ -99,24 +99,44 @@ namespace Raven.Server.Smuggler.Documents
         private class DatabaseIndexActions : IIndexActions
         {
             private readonly DocumentDatabase _database;
+            private readonly IndexStore.IndexBatchScope _batch;
 
             public DatabaseIndexActions(DocumentDatabase database)
             {
                 _database = database;
+
+                if (_database.IndexStore.CanUseIndexBatch())
+                    _batch = _database.IndexStore.CreateIndexBatch();
             }
 
             public void WriteIndex(IndexDefinitionBase indexDefinition, IndexType indexType)
             {
+                if (_batch != null)
+                {
+                    _batch.AddIndex(indexDefinition);
+                    return;
+                }
+
                 AsyncHelpers.RunSync(() => _database.IndexStore.CreateIndex(indexDefinition));
             }
 
             public void WriteIndex(IndexDefinition indexDefinition)
             {
+                if (_batch != null)
+                {
+                    _batch.AddIndex(indexDefinition);
+                    return;
+                }
+
                 AsyncHelpers.RunSync(() => _database.IndexStore.CreateIndex(indexDefinition));
             }
 
             public void Dispose()
             {
+                if (_batch == null)
+                    return;
+
+                AsyncHelpers.RunSync(() => _batch.SaveAsync());
             }
         }
 
@@ -673,13 +693,15 @@ namespace Raven.Server.Smuggler.Documents
             private CountersHandler.ExecuteCounterBatchCommand _cmd;
             private CountersHandler.ExecuteCounterBatchCommand _prevCommand;
             private Task _prevCommandTask = Task.CompletedTask;
-            private int _batchSize;
-            private const int _maxBatchSize = 10000;
+            private int _docCount;
+            private int _countersPerDoc;
+            private const int MaxDocumentCount = 1_024;
+            private const int MaxCountersPerDocument = 32 * 1_024;
 
             public CounterActions(DocumentDatabase database)
             {
                 _database = database;
-                _batchSize = 0;
+                _docCount = 0;
                 _cmd = new CountersHandler.ExecuteCounterBatchCommand(_database)
                 {
                     HasWrites = true
@@ -696,8 +718,14 @@ namespace Raven.Server.Smuggler.Documents
                     ChangeVector = counter.ChangeVector
                 };
 
-                _cmd.Add(counter.DocumentId, counterOp);
-                _batchSize++;
+                var countersCount = _cmd.Add(counter.DocumentId, counterOp, out var isNew);
+                if (isNew)
+                    _docCount++;
+
+                if (countersCount > _countersPerDoc)
+                {
+                    _countersPerDoc = countersCount;
+                }
             }
 
             public void WriteCounter(CounterDetail counterDetail)
@@ -713,7 +741,7 @@ namespace Raven.Server.Smuggler.Documents
 
             private void HandleBatchOfCountersIfNecessary()
             {
-                if (_batchSize < _maxBatchSize)
+                if (_docCount < MaxDocumentCount && _countersPerDoc < MaxCountersPerDocument)
                     return;
 
                 var prevCommand = _prevCommand;
@@ -734,7 +762,8 @@ namespace Raven.Server.Smuggler.Documents
                     HasWrites = true
                 };
 
-                _batchSize = 0;
+                _docCount = 0;
+                _countersPerDoc = 0;
             }
 
             private void FinishBatchOfCounters()
@@ -745,7 +774,7 @@ namespace Raven.Server.Smuggler.Documents
                     _prevCommand = null;
                 }
 
-                if (_batchSize > 0)
+                if (_docCount > 0)
                 {
                     AsyncHelpers.RunSync(() => _database.TxMerger.Enqueue(_cmd));
                 }

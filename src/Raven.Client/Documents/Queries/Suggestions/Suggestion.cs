@@ -30,6 +30,8 @@
 
         public string Field { get; set; }
 
+        public string DisplayField { get; set; }
+
         public SuggestionOptions Options { get; set; }
     }
 }

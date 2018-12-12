@@ -17,16 +17,16 @@ Request [your license](https://ravendb.net/free).
 Download [the latest version of RavenDB](https://ravendb.net/downloads).
 
 ## Getting Started
-Install and [set up your database](https://ravendb.net/docs/article-page/4.1/csharp/start/getting-started).
+Install and [set up your database](https://ravendb.net/docs/article-page/4.2/csharp/start/getting-started).
 
 ## Learn RavenDB Quickly
 [RavenDB Bootcamp](https://ravendb.net/learn/bootcamp) is a free, self-directed learning course. In just three units you will learn how to use RavenDB to create fully-functional, real-world programs with NoSQL Databases. If you are unfamiliar with NoSQL, it’s okay. We will provide you with all the information you need.
 
 ## Stay Updated on New Developments
-We keep adding new features to improve your RavenDB experience. Check out [our latest improvements](https://ravendb.net/docs/article-page/4.1/csharp/start/whats-new), updated weekly.
+We keep adding new features to improve your RavenDB experience. Check out [our latest improvements](https://ravendb.net/docs/article-page/4.2/csharp/start/whats-new), updated weekly.
 
 ## Documentation
-Access [full documentation](https://ravendb.net/docs/article-page/4.1/csharp) for RavenDB. Like our database, it is easy to use.
+Access [full documentation](https://ravendb.net/docs/article-page/4.2/csharp) for RavenDB. Like our database, it is easy to use.
 
 ## Where to Ask for Help
 If you have any questions, or need further assistance, you can [contact us directly](https://ravendb.net/contact).
@@ -42,7 +42,7 @@ Please check out our [contribution guidelines](./CONTRIBUTING.md).
 
 ## Setup & Run
 
-First please [review and set up prerequisites](https://ravendb.net/docs/article-page/4.1/csharp/start/getting-started#prerequisites).
+First please [review and set up prerequisites](https://ravendb.net/docs/article-page/4.2/csharp/start/getting-started#prerequisites).
 
 ### Launch RavenDB:
 Running locally:
@@ -85,7 +85,7 @@ dotnet new console
 - Add the RavenDB Client package:
 
 ```powershell
-   dotnet add package RavenDB.Client --version 4.1.0-*
+   dotnet add package RavenDB.Client --version 4.2.0-*
 ```
 
 - Replace the content of Program.cs with the following:

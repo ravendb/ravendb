@@ -4,11 +4,14 @@ using System.Linq;
 using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.CSharp;
 using Microsoft.CodeAnalysis.CSharp.Syntax;
+using Raven.Server.Documents.Indexes.Static.Extensions;
 
 namespace Raven.Server.Documents.Indexes.Static.Roslyn.Rewriters
 {
     internal class CaptureSelectNewFieldNamesVisitor : CSharpSyntaxRewriter
     {
+        private bool? _isQueryExpression;
+
         public HashSet<CompiledIndexField> Fields;
 
         public static HashSet<string> KnownMethodsToInspect = new HashSet<string>
@@ -21,7 +24,18 @@ namespace Raven.Server.Documents.Indexes.Static.Roslyn.Rewriters
             "Distinct",
             "Where"
         };
-        
+
+        public override SyntaxNode Visit(SyntaxNode node)
+        {
+            // if we have query expression then we can only look for fields in query body
+            // if we have invocation expression then we can only look for fields in invocation
+            // LINQ syntax would be invalid otherwise
+            if (_isQueryExpression.HasValue == false)
+                _isQueryExpression = node is QueryExpressionSyntax;
+
+            return base.Visit(node);
+        }
+
         public override SyntaxNode VisitInvocationExpression(InvocationExpressionSyntax node)
         {
             if (Fields != null)
@@ -31,17 +45,21 @@ namespace Raven.Server.Documents.Indexes.Static.Roslyn.Rewriters
             if (mae == null)
                 return Visit(node.Expression);
 
-            if (KnownMethodsToInspect.Contains(mae.Name.Identifier.Text) == false)
+            var methodName = mae.Name.Identifier.Text;
+
+            if (KnownMethodsToInspect.Contains(methodName) == false)
                 return Visit(node.Expression);
 
-            CaptureFieldNames(node, x => x.VisitInvocationExpression(node));
+            // even when using query expression we can wrap everything in a Boost method
+            if (_isQueryExpression == null || _isQueryExpression == false || methodName == nameof(DynamicExtensionMethods.Boost))
+                CaptureFieldNames(node, x => x.VisitInvocationExpression(node));
 
             return node;
         }
 
         public override SyntaxNode VisitQueryBody(QueryBodySyntax node)
         {
-            if (Fields != null)
+            if (Fields != null || (_isQueryExpression.HasValue && _isQueryExpression == false))
                 return node;
 
             CaptureFieldNames(node, x => x.VisitQueryBody(node));
@@ -80,7 +98,9 @@ namespace Raven.Server.Documents.Indexes.Static.Roslyn.Rewriters
             }
             else
             {
-                ThrowIndexingFunctionMustReturnAnonymousObjectOrDictionary();
+                var selectClause = nodes.LastOrDefault(x => x.IsKind(SyntaxKind.SelectClause));
+
+                ThrowIndexingFunctionMustReturnAnonymousObjectOrDictionary(maybeNew: selectClause != null);
             }
         }
 
@@ -109,9 +129,13 @@ namespace Raven.Server.Documents.Indexes.Static.Roslyn.Rewriters
             return node;
         }
 
-        private static void ThrowIndexingFunctionMustReturnAnonymousObjectOrDictionary()
+        private static void ThrowIndexingFunctionMustReturnAnonymousObjectOrDictionary(bool maybeNew)
         {
-            throw new InvalidOperationException($"Indexing function must return an anonymous object or {CaptureDictionaryFieldsNamesVisitor.SupportedGenericDictionaryType}");
+            var message = $"Indexing function must return an anonymous object or {CaptureDictionaryFieldsNamesVisitor.SupportedGenericDictionaryType}.";
+            if (maybeNew)
+                message += " Did you forget to add 'new' in last select clause?";
+
+            throw new InvalidOperationException(message);
         }
     }
 }

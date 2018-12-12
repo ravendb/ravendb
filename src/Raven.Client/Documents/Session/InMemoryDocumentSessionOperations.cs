@@ -597,7 +597,7 @@ more responsive application.
             var hasId = GenerateEntityIdOnTheClient.TryGetIdFromInstance(entity, out string _);
             StoreInternal(entity, null, null, hasId == false ? ConcurrencyCheckMode.Forced : ConcurrencyCheckMode.Auto);
         }
-
+      
         /// <summary>
         /// Stores the specified entity in the session, explicitly specifying its Id. The entity will be saved when SaveChanges is called.
         /// </summary>
@@ -622,8 +622,7 @@ more responsive application.
             if (entity == null)
                 throw new ArgumentNullException(nameof(entity));
 
-            DocumentInfo value;
-            if (DocumentsByEntity.TryGetValue(entity, out value))
+            if (DocumentsByEntity.TryGetValue(entity, out var value))
             {
                 value.ChangeVector = changeVector ?? value.ChangeVector;
                 value.ConcurrencyCheckMode = forceConcurrencyCheck;
@@ -661,7 +660,7 @@ more responsive application.
             var collectionName = _requestExecutor.Conventions.GetCollectionName(entity);
             var metadata = new DynamicJsonValue();
             if (collectionName != null)
-                metadata[Constants.Documents.Metadata.Collection] = collectionName;
+                metadata[Constants.Documents.Metadata.Collection] = collectionName;           
 
             var clrType = _requestExecutor.Conventions.GetClrTypeName(entity.GetType());
             if (clrType != null)
@@ -876,17 +875,23 @@ more responsive application.
 
         private static bool UpdateMetadataModifications(DocumentInfo documentInfo)
         {
-            if (documentInfo.MetadataInstance == null || ((MetadataAsDictionary)documentInfo.MetadataInstance).Changed == false)
-                return false;
+            if ((documentInfo.MetadataInstance == null || 
+                ((MetadataAsDictionary)documentInfo.MetadataInstance).Changed == false) &&
+                (documentInfo.Metadata.Modifications == null || 
+                documentInfo.Metadata.Modifications.Properties.Count == 0))
+                    return false;
 
             if (documentInfo.Metadata.Modifications == null || documentInfo.Metadata.Modifications.Properties.Count == 0)
             {
                 documentInfo.Metadata.Modifications = new DynamicJsonValue();
             }
 
-            foreach (var prop in documentInfo.MetadataInstance.Keys)
+            if (documentInfo.MetadataInstance != null)
             {
-                documentInfo.Metadata.Modifications[prop] = documentInfo.MetadataInstance[prop];
+                foreach (var prop in documentInfo.MetadataInstance.Keys)
+                {
+                    documentInfo.Metadata.Modifications[prop] = documentInfo.MetadataInstance[prop];
+                }
             }
 
             return true;
@@ -955,6 +960,7 @@ more responsive application.
                     continue;
 
                 var metadataUpdated = UpdateMetadataModifications(entity.Value);
+           
                 var document = EntityToBlittable.ConvertEntityToBlittable(entity.Key, entity.Value);
                 if (EntityChanged(document, entity.Value, null) == false)
                     continue;
@@ -981,6 +987,7 @@ more responsive application.
                     DocumentsById.Remove(entity.Value.Id);
 
                 entity.Value.Document = document;
+
                 if (metadataUpdated)
                 {
                     // we need to preserve the metadata after the changes, otherwise we'll consume the changes
@@ -989,6 +996,7 @@ more responsive application.
                     {
                         ThrowMissingDocumentMetadata(document);
                     }
+
                     entity.Value.Metadata = Context.ReadObject(metadata, entity.Value.Id, BlittableJsonDocumentBuilder.UsageMode.None);
                 }
 

@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using Microsoft.Extensions.Primitives;
 using Sparrow;
 
 namespace Raven.Server.Documents.Queries.AST
@@ -14,7 +15,11 @@ namespace Raven.Server.Documents.Queries.AST
                 VisitDeclaredFunctions(q.DeclaredFunctions);
             }
 
-            VisitFromClause(q.From.From, q.From.Alias, q.From.Filter, q.From.Index);
+            if(q.From.From != null)
+                VisitFromClause(q.From.From, q.From.Alias, q.From.Filter, q.From.Index);
+
+            if (q.GraphQuery != null)
+                VisitGraph(q.GraphQuery);
 
             if (q.GroupBy != null)
             {
@@ -55,6 +60,60 @@ namespace Raven.Server.Documents.Queries.AST
             {
                 VisitInclude(q.Include);
             }
+        }
+
+        public virtual void VisitMatchExpression(QueryExpression expr)
+        {
+            VisitExpression(expr);
+        }
+
+        public void VisitGraph(GraphQuery q)
+        {
+            VisitWithClauses(q.WithDocumentQueries);
+
+            VisitWithEdgePredicates(q.WithEdgePredicates);
+
+            if (q.MatchClause != null)
+                VisitMatchExpression(q.MatchClause);
+
+            if (q.Where != null)
+                VisitExpression(q.Where);
+
+            if (q.Include != null)
+                VisitInclude(q.Include);
+
+            if (q.OrderBy != null)
+                VisitOrderBy(q.OrderBy);
+
+            if (q.DeclaredFunctions != null)
+                VisitDeclaredFunctions(q.DeclaredFunctions);
+
+            if (q.SelectFunctionBody.FunctionText != null)
+                VisitSelectFunctionBody(q.SelectFunctionBody.FunctionText);
+        }
+
+        public virtual void VisitWithClauses(Dictionary<StringSegment, Query> expression)
+        {
+            foreach (var withClause in expression)
+                Visit(withClause.Value);
+        }
+        public virtual void VisitWithEdgePredicates(Dictionary<StringSegment, WithEdgesExpression> expression)
+        {
+            foreach (var withEdgesClause in expression)
+                VisitWithEdgesExpression(withEdgesClause.Key.Value, withEdgesClause.Value);
+        }
+
+        public virtual void VisitWithEdgesExpression(string alias, WithEdgesExpression expression)
+        {
+            if (expression.Where != null)
+                VisitWhereClause(expression.Where);
+
+            if (expression.OrderBy != null)
+                VisitOrderBy(expression.OrderBy);
+        }
+
+        public virtual void VisitPatternMatchElementExpression(PatternMatchElementExpression elementExpression)
+        {
         }
 
         public virtual void VisitInclude(List<QueryExpression> includes)
@@ -117,7 +176,7 @@ namespace Raven.Server.Documents.Queries.AST
             VisitExpression(where);
         }
 
-        private void VisitBinaryExpression(BinaryExpression @where)
+        protected virtual void VisitBinaryExpression(BinaryExpression @where)
         {
             switch (@where.Operator)
             {
@@ -173,6 +232,9 @@ namespace Raven.Server.Documents.Queries.AST
                 case ExpressionType.Negated:
                     VisitNegatedExpression((NegatedExpression)expr);
                     break;
+                case ExpressionType.Pattern:
+                    VisitPatternMatchElementExpression((PatternMatchElementExpression)expr);
+                    break;
                 default:
                     GetValueThrowInvalidExprType(expr);
                     break;
@@ -222,7 +284,7 @@ namespace Raven.Server.Documents.Queries.AST
             throw new ArgumentOutOfRangeException(expr.Type.ToString());
         }
 
-        private static void ThrowInvalidOperationType(BinaryExpression @where)
+        protected static void ThrowInvalidOperationType(BinaryExpression @where)
         {
             throw new ArgumentOutOfRangeException(@where.Operator.ToString());
         }

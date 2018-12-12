@@ -7,7 +7,7 @@ import abstractOperationDetails = require("viewmodels/common/notificationCenter/
 
 class generateClientCertificateDetails extends abstractOperationDetails {
 
-    result: KnockoutObservable<Raven.Server.Documents.ClientCertificateGenerationResult>;
+    result: KnockoutObservable<Raven.Client.ServerWide.Operations.Certificates.ClientCertificateGenerationResult>;
 
     constructor(op: operation, notificationCenter: notificationCenter) {
         super(op, notificationCenter);
@@ -19,7 +19,7 @@ class generateClientCertificateDetails extends abstractOperationDetails {
         super.initObservables();
 
         this.result = ko.pureComputed(() => {
-            return this.op.status() === "Completed" ? this.op.result() as Raven.Server.Documents.ClientCertificateGenerationResult : null;
+            return this.op.status() === "Completed" ? this.op.result() as Raven.Client.ServerWide.Operations.Certificates.ClientCertificateGenerationResult : null;
         });
     }
 

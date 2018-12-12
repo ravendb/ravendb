@@ -8,6 +8,7 @@ using Raven.Server.ServerWide.Commands.ETL;
 using Raven.Server.ServerWide.Commands.Indexes;
 using Raven.Server.ServerWide.Commands.Monitoring.Snmp;
 using Raven.Server.ServerWide.Commands.PeriodicBackup;
+using Raven.Server.ServerWide.Commands.Sorters;
 using Raven.Server.ServerWide.Commands.Subscriptions;
 using Sparrow.Logging;
 
@@ -18,6 +19,8 @@ namespace Raven.Server.ServerWide
         public const int Base40CommandsVersion = 40_000;
 
         public const int Base41CommandsVersion = 41_000;
+
+        public const int Base42CommandsVersion = 42_000;
 
         public static readonly int MyCommandsVersion;
 
@@ -88,7 +91,11 @@ namespace Raven.Server.ServerWide
             [nameof(CleanUpClusterStateCommand)] = Base41CommandsVersion,
             [nameof(ClusterTransactionCommand)] = Base41CommandsVersion,
             [nameof(SetIndexStateCommand)] = Base41CommandsVersion,
-            [nameof(PutServerWideStudioConfigurationCommand)] = Base41CommandsVersion
+            [nameof(PutServerWideStudioConfigurationCommand)] = Base41CommandsVersion,
+
+            [nameof(PutIndexesCommand)] = Base42CommandsVersion,
+            [nameof(PutSortersCommand)] = Base42CommandsVersion,
+            [nameof(DeleteSorterCommand)] = Base42CommandsVersion
         };
 
         public static bool CanPutCommand(string command)

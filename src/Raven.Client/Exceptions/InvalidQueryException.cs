@@ -10,12 +10,12 @@ namespace Raven.Client.Exceptions
         {
         }
 
-        private InvalidQueryException(string message)
+        public InvalidQueryException(string message)
             : base(message)
         {
         }
 
-        private InvalidQueryException(string message, Exception inner)
+        public InvalidQueryException(string message, Exception inner)
             : base(message, inner)
         {
         }
@@ -25,7 +25,7 @@ namespace Raven.Client.Exceptions
         {
         }
 
-        public InvalidQueryException(string message, string queryText, BlittableJsonReaderObject parameters)
+        public InvalidQueryException(string message, string queryText, BlittableJsonReaderObject parameters = null)
             : base(BuildMessage(message, queryText, parameters))
         {
 
@@ -33,7 +33,7 @@ namespace Raven.Client.Exceptions
 
         private static string BuildMessage(string message, string queryText, BlittableJsonReaderObject parameters)
         {
-            var result = new StringBuilder(message.Length + queryText.Length);
+            var result = new StringBuilder(message?.Length ?? 0 + queryText?.Length ?? 0);
 
             result.Append(message)
                 .Append(Environment.NewLine)

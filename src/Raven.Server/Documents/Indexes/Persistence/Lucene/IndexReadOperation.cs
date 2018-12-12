@@ -16,6 +16,7 @@ using Raven.Client.Documents.Queries.MoreLikeThis;
 using Raven.Client.Exceptions;
 using Raven.Server.Documents.Indexes.Persistence.Lucene.Analyzers;
 using Raven.Server.Documents.Indexes.Persistence.Lucene.Collectors;
+using Raven.Server.Documents.Indexes.Persistence.Lucene.Documents;
 using Raven.Server.Documents.Indexes.Persistence.Lucene.Highlightings;
 using Raven.Server.Documents.Indexes.Static.Spatial;
 using Raven.Server.Documents.Queries;
@@ -24,6 +25,7 @@ using Raven.Server.Documents.Queries.Explanation;
 using Raven.Server.Documents.Queries.MoreLikeThis;
 using Raven.Server.Documents.Queries.Results;
 using Raven.Server.Documents.Queries.Sorting.AlphaNumeric;
+using Raven.Server.Documents.Queries.Sorting.Custom;
 using Raven.Server.Documents.Queries.Timings;
 using Raven.Server.Exceptions;
 using Raven.Server.Indexing;
@@ -302,7 +304,7 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene
 
             var methodName = method.Name;
 
-            if (string.Equals("intersect", methodName) == false)
+            if (string.Equals("intersect", methodName.Value, StringComparison.OrdinalIgnoreCase) == false)
                 throw new InvalidQueryException($"Invalid intersect query. WHERE clause must contains just a single intersect() method call while it got '{methodName}' method", query.Metadata.QueryText, query.QueryParameters);
 
             if (method.Arguments.Count <= 1)
@@ -461,7 +463,7 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene
             return false;
         }
 
-        private static Sort GetSort(IndexQueryServerSide query, Index index, Func<string, SpatialField> getSpatialField, DocumentsOperationContext documentsContext)
+        private Sort GetSort(IndexQueryServerSide query, Index index, Func<string, SpatialField> getSpatialField, DocumentsOperationContext documentsContext)
         {
             if (query.PageSize == 0) // no need to sort when counting only
                 return null;
@@ -495,7 +497,7 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene
                     if (field.Ascending)
                         sort.Add(SortField.FIELD_SCORE);
                     else
-                        sort.Add(new SortField((string)null, 0, true));
+                        sort.Add(new SortField(null, 0, true));
                     continue;
                 }
 
@@ -540,6 +542,11 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene
 
                 switch (field.OrderingType)
                 {
+                    case OrderByFieldType.Custom:
+                        var cName = field.Arguments[0].NameOrValue;
+                        var cSort = new CustomComparatorSource(cName, _index.DocumentDatabase.Name, query);
+                        sort.Add(new SortField(fieldName, cSort, field.Ascending == false));
+                        continue;
                     case OrderByFieldType.AlphaNumeric:
                         var anSort = new AlphaNumericComparatorSource(documentsContext);
                         sort.Add(new SortField(fieldName, anSort, field.Ascending == false));
@@ -735,6 +742,29 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene
                 var document = termsDocs[scoreDoc.Doc];
 
                 yield return document;
+            }
+        }
+
+        public IEnumerable<string> DynamicEntriesFields(HashSet<string> staticFields)
+        {
+            foreach (var fieldName in _searcher
+                .IndexReader
+                .GetFieldNames(IndexReader.FieldOption.ALL))
+            {
+                if (staticFields.Contains(fieldName))
+                    continue;
+
+                if (fieldName == Constants.Documents.Indexing.Fields.ReduceKeyHashFieldName
+                    || fieldName == Constants.Documents.Indexing.Fields.ReduceKeyValueFieldName
+                    || fieldName == Constants.Documents.Indexing.Fields.DocumentIdFieldName)
+                    continue;
+
+                if (fieldName.EndsWith(LuceneDocumentConverterBase.ConvertToJsonSuffix) ||
+                    fieldName.EndsWith(LuceneDocumentConverterBase.IsArrayFieldSuffix) ||
+                    fieldName.EndsWith(Constants.Documents.Indexing.Fields.RangeFieldSuffix))
+                    continue;
+
+                yield return fieldName;
             }
         }
 

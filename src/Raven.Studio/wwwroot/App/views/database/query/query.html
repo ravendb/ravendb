@@ -4,8 +4,8 @@
         </div>
         <div class="row margin-bottom">
             <div class="col-sm-2">
-                <h2 class="query-title">Query </h2>
-                <div><a href="#" data-bind="click: syntaxHelp"><small>Syntax help</small></a></div>
+                <h2 class="query-title on-base-background">Query </h2>
+                <div><a href="#" data-bind="click: syntaxHelp"><small>Syntax <i class="icon-help"></i></small></a></div>
             </div>
             <div class="col-sm-10">
                 <div class="query-container">
@@ -58,13 +58,13 @@
     </div>
     <div class="flex-window-scroll flex-window stretch query-results-container">
         <div class="flex-window-head">
-            <h2>
+            <h2 class="on-base-background">
                 Results
                 <a target="_blank" href="#" title="Show raw output" data-bind="attr: { href: rawJsonUrl }"><i class="icon-link"></i></a>
             </h2>
             <div class="clearfix">
-                <div class="results-info pull-left">
-                    <div  data-bind="visible: queryStats() && hasEditableIndex(), if: queryStats() && hasEditableIndex()"  class="dropdown" >
+                <div class="results-info pull-left btn-group">
+                    <div data-bind="visible: queryStats() && hasEditableIndex() && !isGraphQuery(), if: queryStats() && hasEditableIndex() && !isGraphQuery()" class="dropdown btn-group" >
                         <button class="btn btn-info btn-sm dropdown-toggle" type="button" id="dropdownMenu" data-toggle="dropdown" aria-haspopup="true" aria-expanded="true">
                             <span>
                                 <i class="icon-index"></i> <span>Index '</span><span data-bind="text: queriedIndexLabel"></span>'
@@ -105,13 +105,27 @@
                             </li>
                         </ul>
                     </div>
-                    <small data-bind="if: queryStats, visible: queryStats">
-                        <strong data-bind="if: !hasEditableIndex(), visible: !hasEditableIndex()">
-                            <i class="icon-documents"></i><span data-bind="text: queriedIndexDescription"></span>
-                        </strong>
-                        <span data-bind="visible: queriedIndex() && queriedIndex().indexOf('collection') === 0">&nbsp;collection</span>
-                        &nbsp;was used to get the results in
-                        <strong data-bind="text: queryStats().DurationInMs.toLocaleString() + ' ms'"></strong>
+                    <small data-bind="if: queryStats(), visible: queryStats()">
+                        <span data-bind="if: !isGraphQuery()">
+                            <strong data-bind="if: !hasEditableIndex(), visible: !hasEditableIndex()">
+                                <i class="icon-documents"></i><span data-bind="text: queriedIndexDescription"></span>
+                            </strong>
+                            <span data-bind="visible: queriedIndex() && queriedIndex().indexOf('collection') === 0">&nbsp;collection</span>
+                            &nbsp;was used to get <span data-bind="text: fromCache() ? 'cached' : 'the'"></span> results in
+                            <strong data-bind="text: queryStats().DurationInMs.toLocaleString() + ' ms'"></strong>
+                            <span data-bind="visible: originalRequestTime, if: originalRequestTime">(original request took: <strong data-bind="text: originalRequestTime().toLocaleString() + ' ms'"></strong>)</span>
+                            <span data-bind="visible: queriedFieldsOnly">
+                                . Showing <strong>stored index fields</strong> only. 
+                            </span>
+                            <span data-bind="visible: queriedIndexEntries">. Showing <strong>raw index entries</strong>.</span>
+                        </span>
+                        <span data-bind="if: isGraphQuery">
+                            <strong>
+                                <i class="icon-indexing"></i><span>Graph</span>
+                            </strong>
+                            query took: 
+                            <strong data-bind="text: queryStats().DurationInMs.toLocaleString() + ' ms'"></strong>
+                        </span>
                     </small>
                 </div>
                 <div class="btn-group btn-group-sm pull-right" role="group">
@@ -119,7 +133,7 @@
                         <button type="button" class="btn btn-danger btn-sm" data-bind="enable: canDeleteDocumentsMatchingQuery, click: deleteDocsMatchingQuery"><i class="icon-trash"></i> <span>Delete documents</span></button>
                     </div>
                     <button type="button" class="btn btn-default" title="Export query results as CSV"
-                        data-bind="click: exportCsv, enable: totalResults()">
+                        data-bind="click: exportCsv, enable: totalResultsForUi()">
                         <i class="icon-csv-export"></i> <span>Export CSV</span>
                     </button>
                     <button class="btn btn-default statistics" data-bind="click: openQueryStats, enable: queryStats">
@@ -137,7 +151,7 @@
                 </div>
             </div>
         </div>
-        <div class="panel flex-window-scroll">
+        <div class="panel flex-window-scroll no-margin">
             <div class="has-error results-error" data-bind="visible: staleResult()">
                 <div class="help-block">
                     <i class="icon-danger"></i><span>Your index is stale. It's possible that not all the results are displayed. <a href="#" data-bind="click: refresh">Refresh.</a></span>
@@ -148,13 +162,21 @@
                     <i class="icon-danger"></i><span>Your data has changed. The results may contain duplicates or non-current entries. <a href="#" data-bind="click: refresh">Refresh.</a></span>
                 </div>
             </div>
+            <div class="has-warning results-error" data-bind="visible: showFanOutWarning()">
+                <div class="help-block">
+                    <i class="icon-warning"></i>
+                    <span>Using <code>offset</code> or <code>limit</code> in RQL for fanout indexes may produce unpredictable paging. 
+                        <a href="#" target="_blank" data-bind="attr: { href: 'https://ravendb.net/l/LT8GZF/' +  $root.clientVersion() }">See details.</a>
+                    </span>
+                </div>
+            </div>
             <div class="scroll-stretch">
-                <div class="panel-body" data-bind="visible: currentTab() !== 'timings'">
+                <div class="panel-body" data-bind="visible: currentTab() !== 'timings' && currentTab() !== 'graph'">
                     <virtual-grid class="resizable" params="controller: gridController, emptyTemplate: 'empty-query-template'"></virtual-grid>
                 </div>
-                <div class="panel-body js-timings-container absolute-fill" data-bind="visible: currentTab() === 'timings'">
+                <div class="panel-body js-timings-container timings absolute-fill" data-bind="visible: currentTab() === 'timings'">
                     <div class="toggle toggle-right">
-                        <input id="log-scale" class="styled" type="checkbox" data-bind="checked: graph.useLogScale">
+                        <input id="log-scale" class="styled" type="checkbox" data-bind="checked: timingsGraph.useLogScale">
                         <label for="log-scale" class="properties-label">
                             Use logarithmic scale
                         </label>
@@ -162,17 +184,20 @@
                     <div class="from-cache bg-info padding padding-sm" data-bind="visible: $root.fromCache">
                         <i class="icon-info"></i> <span>Using cached timinigs</span>
                     </div>
-                    <div class="legend" data-bind="with: graph.rootNode">
+                    <div class="legend" data-bind="with: timingsGraph.rootNode">
                         <div class="legend-item" data-bind="template: { name: 'timing-item-template' }">
                         </div>
                     </div>
+                </div>
+                <div class="panel-body js-graph-container graph-container absolute-fill" data-bind="visible: currentTab() === 'graph'">
+                    
                 </div>
             </div>
         </div>
         <div class="flex-window-head">
             <button type="button" class="btn btn-sm" 
                     data-bind="css: { active: currentTab() === 'results'}, click: goToResultsTab">
-                Results &nbsp; <span class="label" data-bind="text: totalResults().toLocaleString() + (hasMoreUnboundedResults() ? '+' : ''), css: { 'label-primary': totalResults(), 'label-default': !totalResults() }"></span>
+                Results &nbsp; <span class="label" data-bind="text: totalResultsForUi().toLocaleString() + (hasMoreUnboundedResults() ? '+' : ''), css: { 'label-primary': totalResultsForUi(), 'label-default': !totalResultsForUi() }"></span>
             </button>
             <!-- ko foreach: includesCache -->
                 <button type="button" class="btn btn-sm" data-bind="click: $root.goToIncludesTab, css: { active: $parent.currentTab() === $data }">
@@ -190,6 +215,9 @@
             <button type="button" class="btn btn-sm" data-bind="click: $root.goToTimingsTab, css: { active: currentTab() === 'timings' }, visible: timings()">
                 Timings
             </button> 
+            <button type="button" class="btn btn-sm" data-bind="click: $root.goToGraphTab, css: { active: currentTab() === 'graph' }, visible: isGraphQuery">
+                Graph
+            </button>
         </div>
     </div>
     <div class="hidden">
@@ -200,7 +228,7 @@
 </div>
 
 <script type="text/html" id="timing-item-template">
-    <i class="item-rect" data-bind="style: { 'background-color': $root.graph.getColor(name) }"></i>
+    <i data-bind="attr: { 'class': 'item-rect ' +  $root.timingsGraph.getColorClass(name) }"></i>
     <span class="name" data-bind="text: name"></span>
     <span class="duration" data-bind="text: duration.toLocaleString() + ' ms'"></span>
     <div data-bind="foreach: children">
@@ -240,7 +268,7 @@
         </div>
         <div class="col-xs-5">
             <div class="toggle">
-                <input type="checkbox" class="styled" data-bind="checked: criteria().showFields, disable: isCollectionQuery">
+                <input type="checkbox" class="styled" data-bind="checked: criteria().showFields, disable: isCollectionQuery() || isGraphQuery()">
                 <label></label>
             </div>
         </div>
@@ -251,7 +279,7 @@
         </div>
         <div class="col-xs-5">
             <div class="toggle">
-                <input type="checkbox" class="styled" data-bind="checked: criteria().indexEntries, disable: isCollectionQuery">
+                <input type="checkbox" class="styled" data-bind="checked: criteria().indexEntries, disable: isCollectionQuery() || isGraphQuery()">
                 <label></label>
             </div>
         </div>

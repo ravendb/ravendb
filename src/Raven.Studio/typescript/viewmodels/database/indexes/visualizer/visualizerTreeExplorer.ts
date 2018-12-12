@@ -6,6 +6,7 @@ import columnPreviewPlugin = require("widgets/virtualGrid/columnPreviewPlugin");
 
 
 import dialogViewModelBase = require("viewmodels/dialogViewModelBase");
+import aceEditorBindingHandler = require("common/bindingHelpers/aceEditorBindingHandler");
 
 class visualizerTreeExplorer extends dialogViewModelBase {
 
@@ -14,31 +15,38 @@ class visualizerTreeExplorer extends dialogViewModelBase {
     private columnPreview = new columnPreviewPlugin<Raven.Server.Documents.Indexes.Debugging.MapResultInLeaf>();
 
     private dto: Raven.Server.Documents.Indexes.Debugging.ReduceTreePage;
+    private aggregationResult = ko.observable<string>();
+    private hasEntries: boolean;
 
     constructor(dto: Raven.Server.Documents.Indexes.Debugging.ReduceTreePage) {
         super();
         this.tableItems = dto.Entries;
-    }
+        this.aggregationResult(JSON.stringify(dto.AggregationResult, null, 4));
+        this.hasEntries = !!dto.Entries;
 
+        aceEditorBindingHandler.install();
+    }
 
     compositionComplete() {
         super.compositionComplete();
 
-        const grid = this.gridController();
-        grid.headerVisible(true);
-       
-        grid.init((s, t) => this.fetcher(s, t), () => this.findColumns());
+        if (this.hasEntries) {
+            const grid = this.gridController();
+            grid.headerVisible(true);
 
-        this.columnPreview.install(".visualiserTreeExplorer", ".js-visualizer-tree-tooltip",
-            (details: Raven.Server.Documents.Indexes.Debugging.MapResultInLeaf, column: textColumn<Raven.Server.Documents.Indexes.Debugging.MapResultInLeaf>,
-             e: JQueryEventObject, onValue: (context: any, valueToCopy: string) => void) => {
-            const value = column.getCellValue(details);
-            if (!_.isUndefined(value)) {
-                const json = JSON.stringify(value, null, 4);
-                const html = Prism.highlight(json, (Prism.languages as any).javascript);
-                onValue(html, json);
-            }
-        });
+            grid.init((s, t) => this.fetcher(s, t), () => this.findColumns());
+
+            this.columnPreview.install(".visualiserTreeExplorer", ".js-visualizer-tree-tooltip",
+                (details: Raven.Server.Documents.Indexes.Debugging.MapResultInLeaf, column: textColumn<Raven.Server.Documents.Indexes.Debugging.MapResultInLeaf>,
+                 e: JQueryEventObject, onValue: (context: any, valueToCopy: string) => void) => {
+                    const value = column.getCellValue(details);
+                    if (!_.isUndefined(value)) {
+                        const json = JSON.stringify(value, null, 4);
+                        const html = Prism.highlight(json, (Prism.languages as any).javascript);
+                        onValue(html, json);
+                    }
+                });
+        }
     }
 
     private findColumns() {

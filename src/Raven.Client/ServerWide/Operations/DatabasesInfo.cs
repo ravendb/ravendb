@@ -43,6 +43,7 @@ namespace Raven.Client.ServerWide.Operations
         public List<MountPointUsage> MountPointsUsage { get; set; }
 
         public long? Alerts { get; set; }
+        public long? PerformanceHints { get; set; }
         public bool RejectClients { get; set; }
         public string LoadError { get; set; }
         public long? IndexingErrors { get; set; }
@@ -82,6 +83,7 @@ namespace Raven.Client.ServerWide.Operations
                 [nameof(BackupInfo)] = BackupInfo?.ToJson(),
 
                 [nameof(Alerts)] = Alerts,
+                [nameof(PerformanceHints)] = PerformanceHints,
                 [nameof(RejectClients)] = false,
                 [nameof(IndexingErrors)] = IndexingErrors,
 

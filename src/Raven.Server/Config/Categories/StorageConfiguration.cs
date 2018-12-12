@@ -2,7 +2,6 @@ using System.ComponentModel;
 using Raven.Server.Config.Attributes;
 using Raven.Server.Config.Settings;
 using Sparrow;
-using Sparrow.Global;
 
 namespace Raven.Server.Config.Categories
 {
@@ -63,6 +62,23 @@ namespace Raven.Server.Config.Categories
         [SizeUnit(SizeUnit.Gigabytes)]
         [ConfigurationEntry("Storage.PrefetchResetThresholdInGb", ConfigurationEntryScope.ServerWideOrPerDatabase)]
         public Size PrefetchResetThreshold { get; set; }
+
+        [Description("Minimal available free space in percentages on any disk used by a database before creating an alert. Set to null to disable.")]
+        [DefaultValue(15)]
+        [ConfigurationEntry("Storage.FreeSpaceAlertThresholdInPercentages", ConfigurationEntryScope.ServerWideOrPerDatabase)]
+        public int? FreeSpaceAlertThresholdInPercentages { get; set; }
+
+        [Description("Minimal available free space in megabytes on any disk used by a database before creating an alert. Set to null to disable.")]
+        [DefaultValue(1024)]
+        [SizeUnit(SizeUnit.Megabytes)]
+        [ConfigurationEntry("Storage.FreeSpaceAlertThresholdInMb", ConfigurationEntryScope.ServerWideOrPerDatabase)]
+        public Size? FreeSpaceAlertThresholdInMb { get; set; }
+
+        [Description("Size of journal files in megabytes for each storage, before forcing a sync and removing the journal files.")]
+        [DefaultValue(1024)]
+        [SizeUnit(SizeUnit.Megabytes)]
+        [ConfigurationEntry("Storage.JournalsSizeThresholdInMb", ConfigurationEntryScope.ServerWideOrPerDatabase)]
+        public Size JournalsSizeThreshold { get; set; }
 
         [Description("EXPERT: A command or executable to run when creating/opening a directory (storage environment). RavenDB will execute: command [user-arg-1] ... [user-arg-n] <environment-type> <database-name> <data-dir-path> <temp-dir-path> <journal-dir-path>")]
         [DefaultValue(null)]

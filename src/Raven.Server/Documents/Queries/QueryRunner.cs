@@ -4,10 +4,10 @@ using System.Diagnostics;
 using System.Runtime.CompilerServices;
 using System.Threading.Tasks;
 using Microsoft.AspNetCore.Http;
-using Raven.Client.Documents.Indexes;
 using Raven.Client.Documents.Operations;
 using Raven.Client.Documents.Queries;
 using Raven.Client.Exceptions;
+using Raven.Server.Documents.Handlers;
 using Raven.Server.Documents.Indexes;
 using Raven.Server.Documents.Queries.Dynamic;
 using Raven.Server.Documents.Queries.Facets;
@@ -24,6 +24,7 @@ namespace Raven.Server.Documents.Queries
     {
         private const int NumberOfRetries = 3;
 
+        private readonly GraphQueryRunner _graph;
         private readonly StaticIndexQueryRunner _static;
         private readonly AbstractQueryRunner _dynamic;
         private readonly CollectionQueryRunner _collection;
@@ -35,10 +36,11 @@ namespace Raven.Server.Documents.Queries
                 ? (AbstractQueryRunner)new InvalidQueryRunner(database)
                 : new DynamicQueryRunner(database);
             _collection = new CollectionQueryRunner(database);
+            _graph = new GraphQueryRunner(database);
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        private AbstractQueryRunner GetRunner(IndexQueryServerSide query)
+        public AbstractQueryRunner GetRunner(IndexQueryServerSide query)
         {
             if (query.Metadata.IsDynamic)
             {
@@ -47,6 +49,8 @@ namespace Raven.Server.Documents.Queries
 
                 return _collection;
             }
+            if (query.Metadata.IsGraph)
+                return _graph;
 
             return _static;
         }
@@ -58,7 +62,6 @@ namespace Raven.Server.Documents.Queries
             {
                 try
                 {
-                    documentsContext.CloseTransaction();
                     Stopwatch sw = null;
                     QueryTimingsScope scope;
                     DocumentQueryResult result;
@@ -86,14 +89,13 @@ namespace Raven.Server.Documents.Queries
             throw CreateRetriesFailedException(lastException);
         }
 
-        public override async Task ExecuteStreamQuery(IndexQueryServerSide query, DocumentsOperationContext documentsContext, HttpResponse response, IStreamDocumentQueryResultWriter writer, OperationCancelToken token)
+        public override async Task ExecuteStreamQuery(IndexQueryServerSide query, DocumentsOperationContext documentsContext, HttpResponse response, IStreamQueryResultWriter<Document> writer, OperationCancelToken token)
         {
             ObjectDisposedException lastException = null;
             for (var i = 0; i < NumberOfRetries; i++)
             {
                 try
                 {
-                    documentsContext.CloseTransaction();
                     await GetRunner(query).ExecuteStreamQuery(query, documentsContext, response, writer, token);
                     return;
                 }
@@ -109,6 +111,29 @@ namespace Raven.Server.Documents.Queries
             throw CreateRetriesFailedException(lastException);
         }
 
+        public override async Task ExecuteStreamIndexEntriesQuery(IndexQueryServerSide query, DocumentsOperationContext documentsContext, HttpResponse response,
+            IStreamQueryResultWriter<BlittableJsonReaderObject> writer, OperationCancelToken token)
+        {
+            ObjectDisposedException lastException = null;
+            for (var i = 0; i < NumberOfRetries; i++)
+            {
+                try
+                {
+                    documentsContext.CloseTransaction();
+                    await GetRunner(query).ExecuteStreamIndexEntriesQuery(query, documentsContext, response, writer, token);
+                    return;
+                }
+                catch (ObjectDisposedException e)
+                {
+                    if (Database.DatabaseShutdown.IsCancellationRequested)
+                        throw;
+
+                    lastException = e;
+                }
+            }
+
+            throw CreateRetriesFailedException(lastException);
+        }
         public async Task<FacetedQueryResult> ExecuteFacetedQuery(IndexQueryServerSide query, long? existingResultEtag, DocumentsOperationContext documentsContext, OperationCancelToken token)
         {
             if (query.Metadata.IsDynamic)
@@ -119,7 +144,6 @@ namespace Raven.Server.Documents.Queries
             {
                 try
                 {
-                    documentsContext.CloseTransaction();
                     var sw = Stopwatch.StartNew();
 
                     var result = await _static.ExecuteFacetedQuery(query, existingResultEtag, documentsContext, token);
@@ -168,46 +192,26 @@ namespace Raven.Server.Documents.Queries
             throw CreateRetriesFailedException(lastException);
         }
 
-        public async Task<SuggestionQueryResult> ExecuteSuggestionQuery(IndexQueryServerSide query, DocumentsOperationContext context, long? existingResultEtag, OperationCancelToken token)
+        public override async Task<SuggestionQueryResult> ExecuteSuggestionQuery(IndexQueryServerSide query, DocumentsOperationContext context, long? existingResultEtag, OperationCancelToken token)
         {
-            if (query.Metadata.IsDynamic)
-                throw new InvalidQueryException("Suggestion query must be executed against static index.", query.Metadata.QueryText, query.QueryParameters);
-
             ObjectDisposedException lastException = null;
             for (var i = 0; i < NumberOfRetries; i++)
             {
                 try
                 {
-                    context.CloseTransaction();
-                    var sw = Stopwatch.StartNew();
-
-                    if (query.Metadata.SelectFields.Length != 1 || query.Metadata.SelectFields[0].IsSuggest == false)
-                        throw new InvalidQueryException("Suggestion query must have one suggest token in SELECT.", query.Metadata.QueryText, query.QueryParameters);
-
-                    var selectField = (SuggestionField)query.Metadata.SelectFields[0];
-
-                    var index = GetIndex(query.Metadata.IndexName);
-
-                    var indexDefinition = index.GetIndexDefinition();
-
-                    if (indexDefinition.Fields.TryGetValue(selectField.Name, out IndexFieldOptions field) == false)
-                        throw new InvalidOperationException($"Index '{query.Metadata.IndexName}' does not have a field '{selectField.Name}'.");
-
-                    if (field.Suggestions == null)
-                        throw new InvalidOperationException($"Index '{query.Metadata.IndexName}' does not have suggestions configured for field '{selectField.Name}'.");
-
-                    if (field.Suggestions.Value == false)
-                        throw new InvalidOperationException($"Index '{query.Metadata.IndexName}' have suggestions explicitly disabled for field '{selectField.Name}'.");
-
-                    if (existingResultEtag.HasValue)
+                    Stopwatch sw = null;
+                    QueryTimingsScope scope;
+                    SuggestionQueryResult result;
+                    using (scope = query.Timings?.Start())
                     {
-                        var etag = index.GetIndexEtag(query.Metadata);
-                        if (etag == existingResultEtag.Value)
-                            return SuggestionQueryResult.NotModifiedResult;
+                        if (scope == null)
+                            sw = Stopwatch.StartNew();
+
+                        result = await GetRunner(query).ExecuteSuggestionQuery(query, context, existingResultEtag, token);
                     }
 
-                    var result = await index.SuggestionQuery(query, context, token);
-                    result.DurationInMs = (int)sw.Elapsed.TotalMilliseconds;
+                    result.DurationInMs = sw != null ? (long)sw.Elapsed.TotalMilliseconds : (long)scope.Duration.TotalMilliseconds;
+
                     return result;
                 }
                 catch (ObjectDisposedException e)
@@ -229,7 +233,6 @@ namespace Raven.Server.Documents.Queries
             {
                 try
                 {
-                    context.CloseTransaction();
                     return await GetRunner(query).ExecuteIndexEntriesQuery(query, context, existingResultEtag, token);
                 }
                 catch (ObjectDisposedException e)
@@ -251,7 +254,6 @@ namespace Raven.Server.Documents.Queries
             {
                 try
                 {
-                    context.CloseTransaction();
                     return await GetRunner(query).ExecuteDeleteQuery(query, options, context, onProgress, token);
                 }
                 catch (ObjectDisposedException e)
@@ -273,7 +275,6 @@ namespace Raven.Server.Documents.Queries
             {
                 try
                 {
-                    context.CloseTransaction();
                     return await GetRunner(query).ExecutePatchQuery(query, options, patch, patchArgs, context, onProgress, token);
                 }
                 catch (ObjectDisposedException e)

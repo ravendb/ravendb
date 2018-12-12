@@ -11,7 +11,7 @@
                 
                 <div class="flex-header">
                     <div class="flex-row">
-                        <h3>Collection-specific conflict resolution scripts:</h3>
+                        <h3 class="on-base-background">Collection-specific conflict resolution scripts:</h3>
                         <button type="button" id="addNewScript" data-bind="click: addNewScript" title="Add a per-collection conflict resolution script" class="btn btn-info pull-right">
                             <i class="icon-plus"></i><span>Add</span>
                         </button>
@@ -45,7 +45,7 @@
                     </div>
                 </div>
                 <div class="form-group">
-                    <div class="toggle">
+                    <div class="toggle on-base-background">
                         <input id="resolveToLatest" type="checkbox" data-bind="checked: model().resolveToLatest">
                         <label for="resolveToLatest">If no script was defined for a collection, resolve the conflict using the latest version.</label>
                     </div>
@@ -78,7 +78,7 @@
                         </div>
 
                         <label><strong>Script:</strong></label>
-                        <span class="pull-right"><a href="#" data-bind="click: $root.syntaxHelp"><small>Syntax help</small></a></span>
+                        <span class="pull-right"><a href="#" data-bind="click: $root.syntaxHelp"><small>Syntax <i class="icon-help"></i></small></a></span>
                         <div data-bind="validationElement: script">
                         <pre class="form-control editor margin-bottom"
                              data-bind="aceEditor: { code: script, fontSize: '14px', lang: 'ace/mode/javascript' }, validationOptions: { errorsAsTitle: false }, validationElement: script"

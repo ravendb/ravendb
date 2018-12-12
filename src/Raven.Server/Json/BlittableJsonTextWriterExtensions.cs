@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Threading.Tasks;
+using Microsoft.Extensions.Primitives;
 using Raven.Client;
 using Raven.Client.Documents.Indexes;
 using Raven.Client.Documents.Operations;
@@ -68,6 +69,12 @@ namespace Raven.Server.Json
             writer.WriteInteger(result.TotalResults);
             writer.WriteComma();
 
+            if (result.CappedMaxResults != null) {
+                writer.WritePropertyName(nameof(result.CappedMaxResults));
+                writer.WriteInteger(result.CappedMaxResults.Value);
+                writer.WriteComma();
+            }
+
             writer.WritePropertyName(nameof(result.DurationInMs));
             writer.WriteInteger(result.DurationInMs);
             writer.WriteComma();
@@ -84,6 +91,12 @@ namespace Raven.Server.Json
             writer.WritePropertyName(nameof(result.TotalResults));
             writer.WriteInteger(result.TotalResults);
             writer.WriteComma();
+
+            if (result.CappedMaxResults != null) {
+                writer.WritePropertyName(nameof(result.CappedMaxResults));
+                writer.WriteInteger(result.CappedMaxResults.Value);
+                writer.WriteComma();
+            }
 
             writer.WritePropertyName(nameof(result.DurationInMs));
             writer.WriteInteger(result.DurationInMs);
@@ -212,6 +225,12 @@ namespace Raven.Server.Json
             writer.WriteInteger(result.TotalResults);
             writer.WriteComma();
 
+            if (result.CappedMaxResults != null) {
+                writer.WritePropertyName(nameof(result.CappedMaxResults));
+                writer.WriteInteger(result.CappedMaxResults.Value);
+                writer.WriteComma();
+            }
+
             writer.WritePropertyName(nameof(result.SkippedResults));
             writer.WriteInteger(result.SkippedResults);
             writer.WriteComma();
@@ -225,13 +244,19 @@ namespace Raven.Server.Json
             writer.WriteEndObject();
         }
 
-        public static async Task<int> WriteDocumentQueryResultAsync(this AsyncBlittableJsonTextWriter writer, JsonOperationContext context, DocumentQueryResult result, bool metadataOnly)
+        public static async Task<int> WriteDocumentQueryResultAsync(this AsyncBlittableJsonTextWriter writer, JsonOperationContext context, DocumentQueryResult result, bool metadataOnly, Action<AsyncBlittableJsonTextWriter> writeAdditionalData = null)
         {
             writer.WriteStartObject();
 
             writer.WritePropertyName(nameof(result.TotalResults));
             writer.WriteInteger(result.TotalResults);
             writer.WriteComma();
+
+            if (result.CappedMaxResults != null) {
+                writer.WritePropertyName(nameof(result.CappedMaxResults));
+                writer.WriteInteger(result.CappedMaxResults.Value);
+                writer.WriteComma();
+            }
 
             writer.WritePropertyName(nameof(result.SkippedResults));
             writer.WriteInteger(result.SkippedResults);
@@ -307,6 +332,8 @@ namespace Raven.Server.Json
                 writer.WritePropertyName(nameof(result.IncludedCounterNames));
                 WriteIncludedCounterNames(writer, result);
             }
+
+            writeAdditionalData?.Invoke(writer);
 
             writer.WriteEndObject();
             return numberOfResults;
@@ -591,12 +618,6 @@ namespace Raven.Server.Json
             else
                 writer.WriteNull();
             writer.WriteComma();
-
-#if FEATURE_SHOW_TIMINGS
-            writer.WritePropertyName(nameof(query.ShowTimings));
-            writer.WriteBool(query.ShowTimings);
-            writer.WriteComma();
-#endif
 
             writer.WritePropertyName(nameof(query.SkipDuplicateChecking));
             writer.WriteBool(query.SkipDuplicateChecking);

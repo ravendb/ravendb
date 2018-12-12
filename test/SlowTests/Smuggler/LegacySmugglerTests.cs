@@ -9,6 +9,7 @@ using Raven.Client;
 using Raven.Client.Documents.Operations;
 using Raven.Client.Documents.Operations.Indexes;
 using Raven.Client.Documents.Smuggler;
+using Raven.Client.ServerWide.Operations;
 using Raven.Server.Documents;
 using Sparrow;
 using Xunit;
@@ -81,6 +82,9 @@ namespace SlowTests.Smuggler
 
                 Assert.True(progresses.Count > 0);
 
+                var record = await store.Maintenance.Server.SendAsync(new GetDatabaseRecordOperation(store.Database));
+                Assert.True(record.Indexes.Count > 0);
+
                 var stats = await store.Maintenance.SendAsync(new GetStatisticsOperation());
 
                 Assert.Equal(0, stats.CountOfDocuments);
@@ -128,7 +132,7 @@ namespace SlowTests.Smuggler
                     unexpectedErrors.Add(errorMessage);
                 }
 
-                Assert.True(stats.CountOfIndexes >= 463, $"{stats.CountOfIndexes} >= 584. Errors: {string.Join($", {Environment.NewLine}", unexpectedErrors)}");
+                Assert.True(stats.CountOfIndexes >= 463, $"{stats.CountOfIndexes} >= 463. Errors: {string.Join($", {Environment.NewLine}", unexpectedErrors)}");
                 Assert.True(stats.CountOfIndexes <= 658, $"{stats.CountOfIndexes} <= 658");
 
                 // not everything can be imported

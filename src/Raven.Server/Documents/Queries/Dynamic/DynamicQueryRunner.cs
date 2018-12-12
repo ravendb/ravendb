@@ -6,8 +6,10 @@ using Microsoft.AspNetCore.Http;
 using Raven.Client.Documents.Operations;
 using Raven.Client.Documents.Queries;
 using Raven.Client.Exceptions.Documents.Indexes;
+using Raven.Server.Documents.Handlers;
 using Raven.Server.Documents.Indexes;
 using Raven.Server.Documents.Indexes.Auto;
+using Raven.Server.Documents.Queries.Suggestions;
 using Raven.Server.Documents.Queries.Timings;
 using Raven.Server.ServerWide;
 using Raven.Server.ServerWide.Context;
@@ -27,7 +29,7 @@ namespace Raven.Server.Documents.Queries.Dynamic
             _indexStore = database.IndexStore;
         }
 
-        public override async Task ExecuteStreamQuery(IndexQueryServerSide query, DocumentsOperationContext documentsContext, HttpResponse response, IStreamDocumentQueryResultWriter writer,
+        public override async Task ExecuteStreamQuery(IndexQueryServerSide query, DocumentsOperationContext documentsContext, HttpResponse response, IStreamQueryResultWriter<Document> writer,
             OperationCancelToken token)
         {
             var index = await MatchIndex(query, true, customStalenessWaitTimeout: TimeSpan.FromSeconds(60), documentsContext, token.Token);
@@ -65,7 +67,13 @@ namespace Raven.Server.Documents.Queries.Dynamic
                     return IndexEntriesQueryResult.NotModifiedResult;
             }
 
-            return index.IndexEntries(query, context, token);
+            return await index.IndexEntries(query, context, token);
+        }
+
+        public override Task ExecuteStreamIndexEntriesQuery(IndexQueryServerSide query, DocumentsOperationContext documentsContext, HttpResponse response,
+            IStreamQueryResultWriter<BlittableJsonReaderObject> writer, OperationCancelToken token)
+        {
+            throw new NotSupportedException("Collection query is handled directly by documents storage so index entries aren't created underneath");
         }
 
         public override async Task<IOperationResult> ExecuteDeleteQuery(IndexQueryServerSide query, QueryOperationOptions options, DocumentsOperationContext context, Action<IOperationProgress> onProgress, OperationCancelToken token)
@@ -80,6 +88,13 @@ namespace Raven.Server.Documents.Queries.Dynamic
             var index = await MatchIndex(query, true, null, context, token.Token);
 
             return await ExecutePatch(query, index, options, patch, patchArgs, context, onProgress, token);
+        }
+
+        public override async Task<SuggestionQueryResult> ExecuteSuggestionQuery(IndexQueryServerSide query, DocumentsOperationContext documentsContext, long? existingResultEtag, OperationCancelToken token)
+        {
+            var index = await MatchIndex(query, true, null, documentsContext, token.Token);
+
+            return await ExecuteSuggestion(query, index, documentsContext, existingResultEtag, token);
         }
 
         private async Task<Index> MatchIndex(IndexQueryServerSide query, bool createAutoIndexIfNoMatchIsFound, TimeSpan? customStalenessWaitTimeout, DocumentsOperationContext docsContext,

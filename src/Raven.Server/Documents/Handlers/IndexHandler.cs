@@ -184,7 +184,12 @@ namespace Raven.Server.Documents.Handlers
                     var fields = index.GetEntriesFields();
 
                     writer.WriteStartObject();
-                    writer.WriteArray("Results", fields);
+
+                    writer.WriteArray(nameof(fields.Static), fields.Static);
+                    writer.WriteComma();
+
+                    writer.WriteArray(nameof(fields.Dynamic), fields.Dynamic);
+
                     writer.WriteEndObject();
 
                     return Task.CompletedTask;
@@ -873,7 +878,7 @@ namespace Raven.Server.Documents.Handlers
                                     listOfDocs = docsPerCollection[collectionStr] = new List<DynamicBlittableJson>();
                                 }
                                 listOfDocs.Add(new DynamicBlittableJson(doc));
-                            }                            
+                            }
                         }
                     }
 
@@ -890,30 +895,30 @@ namespace Raven.Server.Documents.Handlers
                                 {
                                     mapRes.Add((ObjectInstance)res);
                                 }
-                            }                                                                                 
+                            }
                         }
                     }
                     var first = true;
                     using (var writer = new BlittableJsonTextWriter(context, ResponseBodyStream()))
                     {
 
-                            writer.WriteStartObject();
-                            writer.WritePropertyName("MapResults");
-                            writer.WriteStartArray();
-                            foreach (var mapResult in mapRes)
+                        writer.WriteStartObject();
+                        writer.WritePropertyName("MapResults");
+                        writer.WriteStartArray();
+                        foreach (var mapResult in mapRes)
+                        {
+                            if (JavaScriptIndexUtils.StringifyObject(mapResult) is JsString jsStr)
                             {
-                                if (JavaScriptIndexUtils.StringifyObject(mapResult) is JsString jsStr)
+                                if (first == false)
                                 {
-                                    if (first == false)
-                                    {
-                                        writer.WriteComma();
-                                    }
-                                    writer.WriteString(jsStr.ToString());
-                                    first = false;
+                                    writer.WriteComma();
                                 }
-                                
+                                writer.WriteString(jsStr.ToString());
+                                first = false;
                             }
-                            writer.WriteEndArray();
+
+                        }
+                        writer.WriteEndArray();
                         if (indexDefinition.Reduce != null)
                         {
                             using (var bufferPool = new UnmanagedBuffersPoolWithLowMemoryHandling("JavaScriptIndexTest", Database.Name))
@@ -923,9 +928,9 @@ namespace Raven.Server.Documents.Handlers
                                 first = true;
                                 writer.WritePropertyName("ReduceResults");
                                 writer.WriteStartArray();
-                                
-                                var reduceResults = compiledIndex.Reduce(mapRes.Select(mr => new DynamicBlittableJson(JsBlittableBridge.Translate(context, mr.Engine,mr))));
-                                
+
+                                var reduceResults = compiledIndex.Reduce(mapRes.Select(mr => new DynamicBlittableJson(JsBlittableBridge.Translate(context, mr.Engine, mr))));
+
                                 foreach (JsValue reduceResult in reduceResults)
                                 {
                                     if (JavaScriptIndexUtils.StringifyObject(reduceResult) is JsString jsStr)
@@ -945,7 +950,7 @@ namespace Raven.Server.Documents.Handlers
                             writer.WriteEndArray();
                         }
                         writer.WriteEndObject();
-                    }                    
+                    }
 
                 }
             }

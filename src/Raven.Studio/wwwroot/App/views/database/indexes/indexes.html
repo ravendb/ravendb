@@ -1,4 +1,4 @@
-<div class="indexes content-margin">
+<div class="indexes content-margin no-transition" data-bind="css: { 'no-transition': indexesCount() > 50 }">
     <div data-bind="visible: sortedGroups().length === 0">
         <div class="row">
             <div class="col-sm-8 col-sm-offset-2 col-lg-6 col-lg-offset-3">
@@ -111,10 +111,10 @@
         </div>
         <div class="flex-grow scroll">
             <div data-bind="foreach: sortedGroups">
-                <h2 data-bind="text: entityName, visible: !groupHidden(), attr: { title: 'Collection: ' + entityName }"></h2>
+                <h2 class="on-base-background" data-bind="text: entityName, visible: !groupHidden(), attr: { title: 'Collection: ' + entityName }"></h2>
                 <div data-bind="foreach: indexes, visible: !groupHidden()">
                     <div data-bind="css: { 'sidebyside-indexes': replacement }, visible: !filteredOut()">
-                        <div class="panel panel-state index" data-bind="template: { name: 'index-template' }, css: { 'has-replacement': replacement }">
+                        <div class="panel panel-state panel-hover index" data-bind="template: { name: 'index-template' }, css: { 'has-replacement': replacement }">
                         </div>
                         <div class="sidebyside-actions" data-bind="with: replacement, visible: replacement">
                             <div class="panel panel-state panel-warning">
@@ -129,7 +129,7 @@
                             </div>
                         </div>
                         <div data-bind="with: replacement">
-                            <div class="panel panel-state index" data-bind="template: { name: 'index-template' }">
+                            <div class="panel panel-state panel-hover index" data-bind="template: { name: 'index-template' }">
                             </div>
                         </div>
                     </div>
@@ -152,7 +152,7 @@
                     <a href="#" data-bind="text: name, attr: { href: editUrl(), title: 'Index: ' + name }"></a>
                 </h3>
                 <div class="index-type">
-                    <span data-bind="text: getTypeForUI()"></span>
+                    <span data-bind="text: typeForUI"></span>
                     <!--<span data-bind="visible: isTestIndex">&nbsp; <span class="label label-warning">TEST INDEX</span></span>-->
                     <span data-bind="visible: replacement">&nbsp; <span class="label label-warning">OLD</span></span>
                     <span data-bind="visible: parent">&nbsp; <span class="label label-warning">NEW</span></span>
@@ -291,7 +291,7 @@
                 <div class="properties-item entriesCount">
                     <div class="properties-value value-only">
                         <div class="set-size">
-                            <i class="icon-list"></i><span data-bind="text: $root.pluralize(entriesCount, 'entry', 'entries')"></span>
+                            <i class="icon-list"></i><span data-bind="text: $root.pluralize(entriesCount(), 'entry', 'entries')"></span>
                         </div>
                     </div>
                 </div>
@@ -311,7 +311,7 @@
                         </div>
                     </div>
                 </div>
-                <div class="properties-item errors" data-bind="visible: errorsCount">
+                <div class="properties-item errors" data-bind="visible: errorsCount()">
                     <div class="properties-value value-only">
                         <a title="View indexing errors" data-bind="attr: { href: $root.indexErrorsUrl() }">
                             <div class="set-size text-danger">
@@ -363,7 +363,7 @@
                         <div class="percentage" data-bind="text: percentageFormatted,  css: { 'text-success': completed }, attr: { title: textualProgress }"></div>
                     </div>
                     <div class="progress" data-bind="with: globalProgress">
-                        <div data-bind="css: { 'progress-bar-striped': !completed, 'progress-bar-primary': !completed, 'active': !completed, 'progress-bar-success': completed }, style: { width: percentageFormatted }, attr: { 'aria-valuenow': percentage, title: textualProgress } "
+                        <div data-bind="css: { 'progress-bar-striped': !completed && !isDisabled, 'progress-bar-primary': !completed, 'active': !completed && !isDisabled, 'progress-bar-success': completed }, style: { width: percentageFormatted }, attr: { 'aria-valuenow': percentage, title: textualProgress } "
                              class="progress-bar" role="progressbar" aria-valuemin="0" aria-valuemax="100">
                             <span class="sr-only" data-bind="text: percentageFormatted + '% Completed'"></span>
                         </div>
@@ -379,7 +379,7 @@
                                 <small class="percentage" data-bind="text: percentageFormatted, css: { 'text-success': completed }, attr: { title: textualProgress}"></small>
                             </div>
                             <div class="progress" data-bind="with: documentsProgress">
-                                <div data-bind="css: { 'progress-bar-striped': !completed, 'progress-bar-primary': !completed, 'active': !completed, 'progress-bar-success': completed }, style: { width: percentageFormatted }, attr: { 'aria-valuenow': percentage, title: textualProgress } "
+                                <div data-bind="css: { 'progress-bar-striped': !completed && !isDisabled, 'progress-bar-primary': !completed, 'active': !completed && !isDisabled, 'progress-bar-success': completed }, style: { width: percentageFormatted }, attr: { 'aria-valuenow': percentage, title: textualProgress } "
                                      class="progress-bar" role="progressbar" aria-valuemin="0" aria-valuemax="100">
                                     <span class="sr-only" data-bind="text: percentageFormatted + '% Completed'"></span>
                                 </div>
@@ -391,7 +391,7 @@
                                 <small class="percentage" data-bind="text: percentageFormatted, css: { 'text-success': completed }, attr: { title: textualProgress }"></small>
                             </div>
                             <div class="progress" data-bind="with: tombstonesProgress">
-                                <div data-bind="css: { 'progress-bar-striped': !completed, 'progress-bar-primary': !completed, 'active': !completed, 'progress-bar-success': completed }, style: { width: percentageFormatted }, attr: { 'aria-valuenow': percentage, title: textualProgress } "
+                                <div data-bind="css: { 'progress-bar-striped': !completed && !isDisabled, 'progress-bar-primary': !completed, 'active': !completed && !isDisabled, 'progress-bar-success': completed }, style: { width: percentageFormatted }, attr: { 'aria-valuenow': percentage, title: textualProgress } "
                                      class="progress-bar" role="progressbar" aria-valuemin="0" aria-valuemax="100">
                                     <span class="sr-only" data-bind="text: percentageFormatted + '% Completed'"></span>
                                 </div>

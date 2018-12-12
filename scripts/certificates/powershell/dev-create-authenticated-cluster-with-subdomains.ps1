@@ -13,7 +13,7 @@
 param(
     [Parameter(Mandatory=$true)]
     $CertificatePassword = "test",
-    $serverDir = "C:\work\ravendb-v4.1",
+    $serverDir = "C:\work\ravendb-v4.2",
     $nodeCount = 5,
     $licensePath = "C:\work\license.json"
 )

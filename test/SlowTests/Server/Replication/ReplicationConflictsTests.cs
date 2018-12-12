@@ -953,6 +953,109 @@ namespace SlowTests.Server.Replication
         }
 
         [Fact]
+        public async Task ConflictOnEmptyCollection()
+        {
+            using (var store1 = GetDocumentStore(options: new Options
+            {
+                ModifyDatabaseRecord = record =>
+                {
+                    record.ConflictSolverConfig = new ConflictSolver
+                    {
+                        ResolveToLatest = false,
+                        ResolveByCollection = new Dictionary<string, ScriptResolver>()
+                    };
+                },
+            }))
+            using (var store2 = GetDocumentStore())
+            {
+                
+                using (var session = store1.OpenSession())
+                {
+                    var user = new User
+                    {
+                        Name = "Karmel"
+                    };
+                    session.Store(user, "test");
+                    var metadata = session.Advanced.GetMetadataFor(user);
+                    metadata["@collection"] = null;
+                    session.SaveChanges();
+                }
+
+                using (var session = store2.OpenSession())
+                {
+                    var user = new User
+                    {
+                        Name = "Oren"
+                    };
+                    session.Store(user, "test");
+                    var metadata = session.Advanced.GetMetadataFor(user);
+                    metadata["@collection"] = null;
+                    session.SaveChanges();
+                }
+                await SetupReplicationAsync(store2, store1);
+                var db1 = Server.ServerStore.DatabasesLandlord.TryGetOrCreateResourceStore(store1.Database).Result.DocumentsStorage.ConflictsStorage;
+
+                Assert.Equal(2, WaitForValue(() => db1.ConflictsCount, 2));
+            }
+        }
+
+        [Fact]
+        public async Task ExistingConflictShouldNotReflectOnOtherDocuments()
+        {
+            using (var store1 = GetDocumentStore(options: new Options
+            {
+                ModifyDatabaseRecord = record =>
+                {
+                    record.ConflictSolverConfig = new ConflictSolver
+                    {
+                        ResolveToLatest = false,
+                        ResolveByCollection = new Dictionary<string, ScriptResolver>()
+                    };
+                },
+            }))
+            using (var store2 = GetDocumentStore())
+            {
+
+                using (var session = store1.OpenSession())
+                {
+                    var user = new User
+                    {
+                        Name = "Karmel"
+                    };
+                    session.Store(user, "foo/bar");
+                    session.SaveChanges();
+                }
+
+                using (var session = store2.OpenSession())
+                {
+                    var user = new User
+                    {
+                        Name = "Oren"
+                    };
+                    session.Store(user, "foo/bar");
+                    session.SaveChanges();
+                }
+                await SetupReplicationAsync(store2, store1);
+                var db1 = Server.ServerStore.DatabasesLandlord.TryGetOrCreateResourceStore(store1.Database).Result.DocumentsStorage.ConflictsStorage;
+                Assert.Equal(2, WaitForValue(() => db1.ConflictsCount, 2));
+
+
+                using (var session = store1.OpenSession())
+                {
+                    var user = new User
+                    {
+                        Name = "John"
+                    };
+                    session.Store(user, "test");
+                    session.SaveChanges();
+
+                    var metadata = session.Advanced.GetMetadataFor(user);
+                    Assert.False(metadata.Keys.Contains(Constants.Documents.Metadata.Flags));
+                }
+            }
+        }
+
+        [Fact]
         public void LocalIsLongerThanRemote()
         {
             var dbIds = new List<string> { new string('1', 22), new string('2', 22), new string('3', 22) };

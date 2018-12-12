@@ -28,19 +28,19 @@
 <aside class="top-alert" data-bind="visible: developerLicense">
     Developer License - Not for Production Use
  </aside>
-<nav class="navbar navbar-inverse">
+<nav class="navbar">
     <div class="navbar-header">
         <a class="navbar-brand hidden-xs" data-bind="attr: { href: appUrls.serverDashboard }"><i class="icon-logo"></i></a>
     </div>
     <div id="navbar">
         <div class="server-environment" data-bind="if: serverEnvironment, visible: serverEnvironment">
-            <small>Server environment</small>
+            <small class="on-base-background">Server environment</small>
             <div><strong data-bind="text: serverEnvironment, attr: { class: 'text-uppercase ' + serverEnvironmentClass() }"></strong></div>
         </div>
         <div class="inputs-container hidden-xs hidden-sm">
             <div class="database-switcher-container" data-bind="with: databaseSwitcher">
                 <div class="form-control btn-toggle database-switcher">
-                    <span class="database" data-bind="text: $root.activeDatabase() ? $root.activeDatabase().name:''"></span>
+                    <span class="database on-base-background" data-bind="text: $root.activeDatabase() ? $root.activeDatabase().name:''"></span>
                     <span data-bind="visible: $root.activeDatabase() ? $root.activeDatabase().environment() : false, text: $root.activeDatabase() ? $root.activeDatabase().environment(): '', attr: { class: 'label text-uppercase ' + ($root.activeDatabase() ? $root.activeDatabase().environmentClass() : '') }"></span>
                 </div>
                 <a data-bind="attr: { href: $root.appUrls.databases }" title="View all databases" class="resources-link"><i class="icon-resources"></i></a>
@@ -87,14 +87,19 @@
             </div>
             
             <div class="search-container" data-bind="visible: $root.activeDatabase">
-                <input type="search" class="form-control omnisearch" placeholder="go to document" data-bind="textInput: $root.searchBox.searchQuery" />
+                <input type="search" class="form-control omnisearch on-base-background" placeholder="go to document" data-bind="textInput: $root.searchBox.searchQuery" />
                 <div class="icon-search"></div>
                 <div class="autocomplete-list box-container" data-bind="with: $root.searchBox, visible: $root.searchBox.showMatchedDocumentsSection() || $root.searchBox.recentDocumentsList().length">
                     <div class="scroller">
                         <section data-bind="visible: showMatchedDocumentsSection">
                             <h4>Matched documents</h4>
                             <ul data-bind="foreach: matchedDocumentIds">
-                                <li><a href="#" data-bind="click: _.partial($parent.goToDocument, $data)"><span class="icon-document" style="color:#93278f;"></span> <span data-bind="text: $data"></span></a></li>
+                                <li>
+                                    <a href="#" data-bind="click: _.partial($parent.goToDocument, $data)">
+                                        <span class="icon-document"></span> 
+                                        <span data-bind="text: $data"></span>
+                                    </a>
+                                </li>
                             </ul>
                             <div class="text-center" data-bind="visible: spinners.startsWith">
                                 <div class="global-spinner"></div>
@@ -103,7 +108,12 @@
                         <section data-bind="visible: recentDocumentsList().length">
                             <h4>Recent documents</h4>
                             <ul data-bind="foreach: recentDocumentsList">
-                                <li><a href="#" data-bind="click: _.partial($parent.goToDocument, $data)"><span class="icon-document" style="color:#93278f;"></span> <span data-bind="text: $data"></span></a></li>
+                                <li>
+                                    <a href="#" data-bind="click: _.partial($parent.goToDocument, $data)">
+                                        <span class="icon-document"></span> 
+                                        <span data-bind="text: $data"></span>
+                                    </a>
+                                </li>
                             </ul>
                         </section>
                     </div>
@@ -154,6 +164,11 @@
             
         </div>
         <ul class="nav navbar-nav navbar-right">
+            <li>
+                <a href="#" title="Change theme" class="theme-change" data-bind="click: $data.constructor.chooseTheme">
+                    <i class="icon-theme"></i>
+                </a>
+            </li>
             <li><a href="#" title="Send feedback" class="feedback-link" data-bind="click: $data.constructor.openFeedbackForm"><i class="icon-feedback"></i></a></li>
             <li><a target="_blank" title="Help" data-bind="attr: { href: currentHelpLink }" class="icon-help" style="display:none"></a></li>
             <li><a href="#" class="icon-search btn-toggle visible-xs-inline-block visible-sm-inline-block" data-target=".inputs-container" data-class="show-inputs"></a></li>
@@ -338,7 +353,7 @@
                 </button>
                 <ul class="dropdown-menu dropup" data-bind="foreach: $root.clusterManager.topology().nodes">
                     <li>
-                        <a target="_blank" title="Go to another cluster node" data-bind="attr: { href: serverUrl() }">
+                        <a target="_blank" title="Go to another cluster node" data-bind="attr: { href: $root.createUrlWithHashComputed(serverUrl) }">
                             <i data-bind="attr: { class: cssIcon() }"></i>
                             <span data-bind="text: 'Node ' + tag()"></span>
                         </a>
@@ -382,3 +397,4 @@
 <div data-bind="if: displayUsageStatsInfo()">
     <div data-bind="compose: 'usageStats.html'"></div>
 </div>
+<div class="graph-helper" data-bind="compose: 'common/graphHelper.html'"></div>

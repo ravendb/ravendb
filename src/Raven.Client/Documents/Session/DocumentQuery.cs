@@ -448,30 +448,30 @@ namespace Raven.Client.Documents.Session
         }
 
         /// <inheritdoc />
-        IDocumentQuery<T> IFilterDocumentQueryBase<T, IDocumentQuery<T>>.WhereStartsWith(string fieldName, object value)
+        IDocumentQuery<T> IFilterDocumentQueryBase<T, IDocumentQuery<T>>.WhereStartsWith(string fieldName, object value, bool exact)
         {
-            WhereStartsWith(fieldName, value);
+            WhereStartsWith(fieldName, value, exact);
             return this;
         }
 
         /// <inheritdoc />
-        IDocumentQuery<T> IFilterDocumentQueryBase<T, IDocumentQuery<T>>.WhereStartsWith<TValue>(Expression<Func<T, TValue>> propertySelector, TValue value)
+        IDocumentQuery<T> IFilterDocumentQueryBase<T, IDocumentQuery<T>>.WhereStartsWith<TValue>(Expression<Func<T, TValue>> propertySelector, TValue value, bool exact)
         {
-            WhereStartsWith(GetMemberQueryPath(propertySelector.Body), value);
+            WhereStartsWith(GetMemberQueryPath(propertySelector.Body), value, exact);
             return this;
         }
 
         /// <inheritdoc />
-        IDocumentQuery<T> IFilterDocumentQueryBase<T, IDocumentQuery<T>>.WhereEndsWith(string fieldName, object value)
+        IDocumentQuery<T> IFilterDocumentQueryBase<T, IDocumentQuery<T>>.WhereEndsWith(string fieldName, object value, bool exact)
         {
-            WhereEndsWith(fieldName, value);
+            WhereEndsWith(fieldName, value, exact);
             return this;
         }
 
         /// <inheritdoc />
-        IDocumentQuery<T> IFilterDocumentQueryBase<T, IDocumentQuery<T>>.WhereEndsWith<TValue>(Expression<Func<T, TValue>> propertySelector, TValue value)
+        IDocumentQuery<T> IFilterDocumentQueryBase<T, IDocumentQuery<T>>.WhereEndsWith<TValue>(Expression<Func<T, TValue>> propertySelector, TValue value, bool exact)
         {
-            WhereEndsWith(GetMemberQueryPath(propertySelector.Body), value);
+            WhereEndsWith(GetMemberQueryPath(propertySelector.Body), value, exact);
             return this;
         }
 
@@ -652,6 +652,13 @@ namespace Raven.Client.Documents.Session
         }
 
         /// <inheritdoc />
+        IDocumentQuery<T> IDocumentQueryBase<T, IDocumentQuery<T>>.OrderBy(string field, string sorterName)
+        {
+            OrderBy(field, sorterName);
+            return this;
+        }
+
+        /// <inheritdoc />
         IDocumentQuery<T> IDocumentQueryBase<T, IDocumentQuery<T>>.OrderBy(string field, OrderingType ordering)
         {
             OrderBy(field, ordering);
@@ -663,6 +670,13 @@ namespace Raven.Client.Documents.Session
         {
             var rangeType = Conventions.GetRangeType(propertySelector.ReturnType);
             OrderBy(GetMemberQueryPathForOrderBy(propertySelector), OrderingUtil.GetOrderingFromRangeType(rangeType));
+            return this;
+        }
+
+        /// <inheritdoc />
+        IDocumentQuery<T> IDocumentQueryBase<T, IDocumentQuery<T>>.OrderBy<TValue>(Expression<Func<T, TValue>> propertySelector, string sorterName)
+        {
+            OrderBy(GetMemberQueryPathForOrderBy(propertySelector), sorterName);
             return this;
         }
 
@@ -685,6 +699,13 @@ namespace Raven.Client.Documents.Session
         }
 
         /// <inheritdoc />
+        IDocumentQuery<T> IDocumentQueryBase<T, IDocumentQuery<T>>.OrderByDescending(string field, string sorterName)
+        {
+            OrderByDescending(field, sorterName);
+            return this;
+        }
+
+        /// <inheritdoc />
         IDocumentQuery<T> IDocumentQueryBase<T, IDocumentQuery<T>>.OrderByDescending(string field, OrderingType ordering)
         {
             OrderByDescending(field, ordering);
@@ -696,6 +717,13 @@ namespace Raven.Client.Documents.Session
         {
             var rangeType = Conventions.GetRangeType(propertySelector.ReturnType);
             OrderByDescending(GetMemberQueryPathForOrderBy(propertySelector), OrderingUtil.GetOrderingFromRangeType(rangeType));
+            return this;
+        }
+
+        /// <inheritdoc />
+        IDocumentQuery<T> IDocumentQueryBase<T, IDocumentQuery<T>>.OrderByDescending<TValue>(Expression<Func<T, TValue>> propertySelector, string sorterName)
+        {
+            OrderByDescending(GetMemberQueryPathForOrderBy(propertySelector), sorterName);
             return this;
         }
 
@@ -860,7 +888,7 @@ namespace Raven.Client.Documents.Session
                 var identityProperty = Conventions.GetIdentityProperty(typeof(TResult));
                 if (identityProperty != null)
                     fields = queryData.Fields
-                        .Select(x => x == identityProperty.Name ? Constants.Documents.Indexing.Fields.DocumentIdFieldName : x)
+                        .Select(x => x == identityProperty.Name && queryData.IsMapReduce == false ? Constants.Documents.Indexing.Fields.DocumentIdFieldName : x)
                         .ToArray();
 
                 GetSourceAliasIfExists(queryData, fields, out var sourceAlias);

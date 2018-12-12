@@ -37,6 +37,7 @@ import eventsCollector = require("common/eventsCollector");
 import collectionsTracker = require("common/helpers/database/collectionsTracker");
 import footer = require("common/shell/footer");
 import feedback = require("viewmodels/shell/feedback");
+import chooseTheme = require("viewmodels/shell/chooseTheme");
 import continueTest = require("common/shell/continueTest");
 import globalSettings = require("common/settings/globalSettings");
 
@@ -71,6 +72,7 @@ class shell extends viewModelBase {
     showSplash = viewModelBase.showSplash;
     browserAlert = ko.observable<boolean>(false);
     dontShowBrowserAlertAgain = ko.observable<boolean>(false);
+    currentUrlHash = ko.observable<string>(window.location.hash);
 
     licenseStatus = license.licenseCssClass;
     supportStatus = license.supportCssClass;
@@ -92,7 +94,7 @@ class shell extends viewModelBase {
     
     serverEnvironment = ko.observable<Raven.Client.Documents.Operations.Configuration.StudioConfiguration.StudioEnvironment>();
     serverEnvironmentClass = database.createEnvironmentColorComputed("text", this.serverEnvironment);
-
+    
     private onBootstrapFinishedTask = $.Deferred<void>();
     
     static showConnectionLost = ko.pureComputed(() => {
@@ -134,6 +136,10 @@ class shell extends viewModelBase {
         );
         
         this.detectBrowser();
+        
+        window.addEventListener("hashchange", e => {
+            this.currentUrlHash(location.hash);
+        });
     }
     
     // Override canActivate: we can always load this page, regardless of any system db prompt.
@@ -418,12 +424,17 @@ class shell extends viewModelBase {
         app.showBootstrapDialog(dialog);
     }
     
+    static chooseTheme() {
+        const dialog = new chooseTheme();
+        app.showBootstrapDialog(dialog);
+    }
+    
     ignoreWebSocketError() {
         changesContext.default.serverNotifications().ignoreWebSocketConnectionError(true);
     }
     
     detectBrowser() {
-        const isChrome = !!(window as any).chrome && !!(window as any).chrome.webstore;
+        const isChrome = /Chrome/.test(navigator.userAgent) && /Google Inc/.test(navigator.vendor);
         const isFirefox = navigator.userAgent.toLowerCase().indexOf('firefox') > -1;
 
         if (!isChrome && !isFirefox) {
@@ -449,6 +460,19 @@ class shell extends viewModelBase {
         }
         
         this.browserAlert(false);
+    }
+    
+    createUrlWithHashComputed(serverUrlProvider: KnockoutComputed<string>) {
+        return ko.pureComputed(() => {
+            const serverUrl = serverUrlProvider();
+            const hash = this.currentUrlHash();
+            
+            if (!serverUrl) {
+                return "#";
+            }
+            
+            return serverUrl + "/studio/index.html" + hash;
+        })
     }
 }
 

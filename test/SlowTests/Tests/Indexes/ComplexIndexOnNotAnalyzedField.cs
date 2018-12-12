@@ -43,8 +43,7 @@ namespace SlowTests.Tests.Indexes
                     {
                         queryResult = commands.Query(new IndexQuery()
                         {
-                            Query = "FROM INDEX 'CompaniesByPartners' WHERE Partner = 'companies/49'",
-                            PageSize = 10
+                            Query = "FROM INDEX 'CompaniesByPartners' WHERE Partner = 'companies/49' LIMIT 10"
                         });
                     } while (queryResult.IsStale);
 

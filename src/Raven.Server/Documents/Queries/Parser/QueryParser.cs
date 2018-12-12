@@ -1,7 +1,9 @@
 using System;
 using System.Collections.Generic;
+using System.Linq;
 using System.Text;
 using Esprima;
+using Microsoft.Extensions.Primitives;
 using Raven.Client.Exceptions;
 using Raven.Server.Documents.Queries.AST;
 using Sparrow;
@@ -17,12 +19,32 @@ namespace Raven.Server.Documents.Queries.Parser
         private static readonly string[] OrderByAsOptions = { "string", "long", "double", "alphaNumeric" };
 
 
+        private int _counter;
         private int _depth;
         private NextTokenOptions _state = NextTokenOptions.Parenthesis;
 
         private int _statePos;
 
         public QueryScanner Scanner = new QueryScanner();
+        private Dictionary<StringSegment, SynteticWithQuery> _synteticWithQueries;
+
+        private struct SynteticWithQuery
+        {
+            public FieldExpression Path;
+            public QueryExpression Filter;
+            public FieldExpression Project;
+            public bool IsEdge;
+            public bool ImplicitAlias;
+
+            public SynteticWithQuery(FieldExpression path, QueryExpression filter, FieldExpression project, bool isEdge, bool implicitAlias)
+            {
+                Path = path;
+                Filter = filter;
+                Project = project;
+                IsEdge = isEdge;
+                ImplicitAlias = implicitAlias;
+            }
+        }
 
         public void Init(string q)
         {
@@ -30,7 +52,7 @@ namespace Raven.Server.Documents.Queries.Parser
             Scanner.Init(q);
         }
 
-        public Query Parse(QueryType queryType = QueryType.Select)
+        public Query Parse(QueryType queryType = QueryType.Select, bool recursive = false)
         {
             var q = new Query
             {
@@ -45,13 +67,63 @@ namespace Raven.Server.Documents.Queries.Parser
                     ThrowParseException(name + " function was declared multiple times");
             }
 
-            q.From = FromClause();
+            while (Scanner.TryScan("WITH"))
+            {
+                if (recursive)
+                    ThrowParseException("With clause is not allow inside inner query");
 
-            if (Scanner.TryScan("GROUP BY"))
-                q.GroupBy = GroupBy();
+                WithClause(q);
+            }
 
-            if (Scanner.TryScan("WHERE") && Expression(out q.Where) == false)
-                ThrowParseException("Unable to parse WHERE clause");
+            if (Scanner.TryScan("MATCH") == false)
+            {
+                if (q.GraphQuery != null)
+                    ThrowParseException("Missing a 'match' clause after 'with' clause");
+
+                q.From = FromClause();
+
+                if (Scanner.TryScan("GROUP BY"))
+                    q.GroupBy = GroupBy();
+
+                if (Scanner.TryScan("WHERE") && Expression(out q.Where) == false)
+                    ThrowParseException("Unable to parse WHERE clause");
+            }
+            else
+            {
+                if (q.GraphQuery == null)
+                    q.GraphQuery = new GraphQuery();
+
+                if (BinaryGraph(q.GraphQuery, out var op) == false)
+                    ThrowParseException("Unexpected input when trying to parse the MATCH clause");
+                q.GraphQuery.MatchClause = op;
+
+                if (_synteticWithQueries != null)
+                {
+                    foreach (var (alias, sq) in _synteticWithQueries)
+                    {
+                        if (sq.IsEdge)
+                        {
+                            var with = new WithEdgesExpression(sq.Filter, sq.Path, sq.Project, null);
+                            q.TryAddWithEdgePredicates(with, alias);
+                        }
+                        else
+                        {
+                            q.TryAddWithClause(new Query
+                            {
+                                From = new FromClause
+                                {
+                                    From = sq.Path,
+                                },
+                                Where = sq.Filter
+                            }, alias);
+                        }
+                    }
+                    _synteticWithQueries.Clear();
+                }
+
+                if (Scanner.TryScan("WHERE") && Expression(out q.GraphQuery.Where) == false)
+                    ThrowParseException("Unable to parse MATCH's WHERE clause");
+            }
 
             if (Scanner.TryScan("ORDER BY"))
                 q.OrderBy = OrderBy();
@@ -68,6 +140,10 @@ namespace Raven.Server.Documents.Queries.Parser
                         q.Include = IncludeClause();
                     break;
                 case QueryType.Update:
+
+                    if(q.GraphQuery != null)
+                        ThrowParseException("Update operations cannot use graph queries");
+
                     if (Scanner.TryScan("UPDATE") == false)
                         ThrowParseException("Update operations must end with UPDATE clause");
 
@@ -83,7 +159,8 @@ namespace Raven.Server.Documents.Queries.Parser
                     }
                     catch (Exception e)
                     {
-                        throw new InvalidQueryException("Update clause contains invalid script", Scanner.Input, null, e);
+                        var msg = AddLineAndColumnNumberToErrorMessage(e, "Update clause contains invalid script");
+                        throw new InvalidQueryException(msg, Scanner.Input, null, e);
                     }
                     break;
                 default:
@@ -91,10 +168,703 @@ namespace Raven.Server.Documents.Queries.Parser
                     break;
             }
 
-            if (Scanner.AtEndOfInput() == false)
+            Paging(out q.Offset, out q.Limit);
+
+            if (recursive == false && Scanner.AtEndOfInput() == false)
                 ThrowParseException("Expected end of query");
 
             return q;
+        }
+
+        private void Paging(out ValueExpression offset, out ValueExpression limit)
+        {
+            offset = null;
+            limit = null;
+
+            if (Scanner.TryScan("LIMIT"))
+            {
+                if (Value(out var first) == false)
+                    throw new InvalidQueryException("Limit must contain a value", Scanner.Input, null);
+
+                if (Scanner.TryScan(","))
+                {
+                    if (Value(out var second) == false)
+                        throw new InvalidQueryException("Limit must contain a second value", Scanner.Input, null);
+
+                    offset = first;
+                    limit = second;
+                }
+                else
+                {
+                    limit = first;
+                }
+            }
+
+            if (Scanner.TryScan("OFFSET"))
+            {
+                if (offset != null)
+                    throw new InvalidQueryException("Cannot use 'offset' after 'limit $skip,$take'", Scanner.Input, null);
+
+                if (Value(out var second) == false)
+                    throw new InvalidQueryException("Offset must contain a value", Scanner.Input, null);
+
+                offset = second;
+            }
+        }
+
+        private void WithClause(Query q)
+        {
+            if (Scanner.TryScan("EDGES"))
+            {
+                Scanner.Identifier();
+
+                var (with, alias) = WithEdges();
+                q.TryAddWithEdgePredicates(with, alias);
+            }
+            else
+            {
+                var (expr, alias) = With();
+                q.TryAddWithClause(expr, alias);
+            }
+        }
+
+        private FieldExpression GetEdgePath()
+        {
+            FieldExpression f = null;
+            if (Scanner.TryScan('('))
+            {
+                Field(out f); // okay if false
+
+                if (Scanner.TryScan(')') == false)
+                    ThrowParseException("With edges(<identifier>) was not closed with ')'");
+            }
+
+            return f;
+        }
+
+        private (WithEdgesExpression Expression, StringSegment Allias) WithEdges()
+        {
+            var edgeField = GetEdgePath();
+
+            if (Scanner.TryScan('{') == false)
+            {
+                if (Alias(true, out var shortAlias) && shortAlias.HasValue)
+                {
+                    var shortWithEdges = new WithEdgesExpression(null, edgeField, null, null);
+                    return (shortWithEdges, shortAlias.Value);
+                }
+
+                throw new InvalidQueryException("With edges should be followed with '{' ", Scanner.Input, null);
+            }
+
+            QueryExpression qe = null;
+            if (Scanner.TryScan("WHERE") && (Expression(out qe) == false || qe == null))
+                ThrowParseException("Unable to parse WHERE clause of an 'With Edges' clause");
+
+            List<(QueryExpression Expression, OrderByFieldType OrderingType, bool Ascending)> orderBy = null;
+            if (Scanner.TryScan("ORDER BY"))
+            {
+                orderBy = OrderBy();
+            }
+
+            FieldExpression project = null;
+            if (Scanner.TryScan("SELECT"))
+            {
+                var selectClause = SelectClauseExpressions("SELECT", false);
+                if(selectClause.Count != 1 || selectClause[0].Item2 != null)
+                    ThrowParseException("Unable to parse SELECT clause of an 'With Edges' clause, must contain only a singel field and no aliases");
+                project = selectClause[0].Item1 as FieldExpression;
+                if (project == null)
+                    ThrowParseException("Unable to parse SELECT clause of an 'With Edges' clause, projection must be field reference");
+            }
+
+
+            if (Scanner.TryScan('}') == false)
+                throw new InvalidQueryException("With clause contains invalid body", Scanner.Input, null);
+
+            if (Alias(true, out var alias) == false || alias.HasValue == false)
+                throw new InvalidQueryException("With clause must contain alias but none was provided", Scanner.Input, null);
+
+            var wee = new WithEdgesExpression(qe, edgeField, project, orderBy);
+            return (wee, alias.Value);
+        }
+
+        public static readonly string[] EdgeOps = new[] { "<-", ">", "[", "-", "<", "(", "recursive" };
+
+        private bool GraphAlias(GraphQuery gq,bool isEdge, StringSegment implicitPrefix, out StringSegment alias)
+        {
+            // Orders as o where id() 'orders/1-A'
+            // Lines where Name = 'Chang' select Product
+
+            SynteticWithQuery prev = default;
+            var start = Scanner.Position;
+            if (Field(out var collection) == false)
+            {
+                if (isEdge)
+                {
+                    ThrowParseException("Unable to read edge alias");
+                }
+                if (Scanner.TryPeek(')'))// anonymous alias () accepts everything
+                {
+                    alias = "__alias" + (++_counter);
+                    AddWithQuery(new FieldExpression(new List<StringSegment>()), null, alias, null, false, start, false);
+                    return true;
+                }
+                alias = default;
+                return false;
+            }
+            else 
+            {
+                if (Scanner.TryPeek(')'))
+                {
+                    alias = implicitPrefix.Length == 0 ? collection.FieldValue :
+                        implicitPrefix + "_" + collection.FieldValue;
+
+                    if (gq.HasAlias(alias))
+                        return true;
+
+                    if (_synteticWithQueries?.TryGetValue(collection.FieldValue, out prev) == true)
+                    {
+                        if(prev.ImplicitAlias)
+                            ThrowRedefineSameAnonymousAlias(collection.FieldValue, start);
+                        return true;
+                    }
+
+                    AddWithQuery(collection, null, alias, null, isEdge, start, true);
+                    return true;
+                }
+            }
+
+            if (collection.FieldValue == "_") // (_ as e) anonymous alias
+                collection = new FieldExpression(new List<StringSegment>());
+
+            if (Alias(true, out var maybeAlias) == false)
+            {
+                if(gq.HasAlias(collection.FieldValue) ||
+                    isEdge == false && _synteticWithQueries?.ContainsKey(collection.FieldValue) == true
+                    )
+                {
+                    alias = collection.FieldValue;
+                }
+                else
+                {
+                    alias = implicitPrefix.Length == 0 ? collection.FieldValue :
+                         implicitPrefix + "_" + collection.FieldValue;
+                }
+            }
+            else if(maybeAlias.Value == "_")
+            {
+                alias = "__alias" + (++_counter);
+            }
+            else
+            {
+                alias = maybeAlias.Value;
+            }
+
+            QueryExpression filter = null;
+            if (Scanner.TryScan("WHERE"))
+            {
+                if (Expression(out filter) == false)
+                    throw new InvalidQueryException("Failed to parse filter expression for: " + alias, Scanner.Input, null);
+            }
+
+            FieldExpression project = null;
+            if (Scanner.TryScan("SELECT"))
+            {
+                var fields = SelectClauseExpressions("SELECT", false);
+                if (fields.Count != 1)
+                    throw new InvalidQueryException("Select expression inside graph query for '" + alias + "' must have excatly one projected field", Scanner.Input, null);
+
+                if (fields[0].Item2 != null)
+                    throw new InvalidQueryException("Select expression inside graph query for '" + alias + "' cannot define alias for projected field", Scanner.Input, null);
+
+                project = (FieldExpression)fields[0].Item1;
+            }
+
+            if (gq.HasAlias(alias))
+                return true;
+
+            if (_synteticWithQueries?.TryGetValue(alias, out prev) == true && prev.ImplicitAlias)
+                ThrowRedefineSameAnonymousAlias(collection.FieldValue, start);
+
+            AddWithQuery(collection, project, alias, filter, isEdge, start, maybeAlias == null);
+
+            return true;
+        }
+
+        private void AddWithQuery(FieldExpression path, FieldExpression project, StringSegment alias, QueryExpression filter, bool isEdge, int start, bool implicitAlias)
+        {
+            if (_synteticWithQueries == null)
+                _synteticWithQueries = new Dictionary<StringSegment, SynteticWithQuery>(StringSegmentComparer.Ordinal);
+
+            if (_synteticWithQueries.TryGetValue(alias, out var existing))
+            {
+                if (existing.IsEdge != isEdge)
+                    ThrowDuplicateAliasWithoutSameBody(start);
+
+                if (path.Equals(existing.Path) == false)
+                {
+                    if(path.Compound.Count != 0)
+                    {
+                        ThrowDuplicateAliasWithoutSameBody(start);
+                    }
+                    if(existing.Path.Compound.Count == 0)
+                    {
+                        existing.Path = path;
+                    }
+                }
+
+                if ((filter != null) != (existing.Filter != null) || 
+                    (project != null) != (existing.Project != null))
+                    ThrowDuplicateAliasWithoutSameBody(start);
+
+                if (filter != null && filter.Equals(existing.Filter) == false ||
+                    project != null && project.Equals(existing.Project) == false)
+                    ThrowDuplicateAliasWithoutSameBody(start);
+
+                return;
+            }
+
+            _synteticWithQueries.Add(alias, new SynteticWithQuery(path, filter, project, isEdge, implicitAlias));
+        }
+
+        private void ThrowDuplicateAliasWithoutSameBody(int start)
+        {
+            throw new InvalidQueryException("Duplicated alias  was found with a different definition than previous defined: " +
+                new StringSegment(Scanner.Input, start, Scanner.Position - start),
+                 Scanner.Input, null);
+        }
+
+        private void ThrowRedefineSameAnonymousAlias(string alias, int start)
+        {
+            throw new InvalidQueryException("Implicit alias '" + alias +"' was redefined in the same query, use an explicit '" + alias + " as e', instead. " + 
+                new StringSegment(Scanner.Input, start, Scanner.Position - start),
+                 Scanner.Input, null);
+        }
+
+
+        private bool BinaryGraph(GraphQuery gq, out QueryExpression op)
+        {
+            if (GraphOperation(gq, out op) == false)
+                return false;
+
+            if (Scanner.TryScan(BinaryOperators, out var found) == false)
+                return true; // found simple
+
+            var negate = Scanner.TryScan("NOT");
+            var type = found == "OR"
+                ? OperatorType.Or
+                : OperatorType.And;
+
+            _state = NextTokenOptions.Parenthesis;
+
+            var parenthesis = Scanner.TryPeek('(');
+
+            if (BinaryGraph(gq, out var right) == false)
+                ThrowParseException($"Failed to find second part of {type} expression");
+
+            return TrySimplifyBinaryExpression(right, type, negate, parenthesis, ref op);
+        }
+
+        private bool GraphOperation(GraphQuery gq, out QueryExpression op)
+        {
+            if (Scanner.TryScan('(') == false)
+                throw new InvalidQueryException("MATCH operator expected a '(', but didn't get it.", Scanner.Input, null);
+
+            if (GraphAlias(gq, false, default, out var alias) == false)
+            {
+                if (BinaryGraph(gq, out op) == false)
+                {
+                    throw new InvalidQueryException("Invalid expression in MATCH", Scanner.Input, null);
+                }
+
+                if (Scanner.TryScan(')') == false)
+                    throw new InvalidQueryException("Missing ')' in MATCH", Scanner.Input, null);
+                return true;
+            }
+
+            if (Scanner.TryScan(')') == false)
+                throw new InvalidQueryException("MATCH operator expected a ')' after reading: " + alias, Scanner.Input, null);
+
+            var list = new List<MatchPath>();
+
+            list.Add(new MatchPath
+            {
+                Alias = alias,
+                EdgeType = EdgeType.Right
+            });
+
+            return ProcessEdges(gq, out op, alias, list, allowRecursive: true, foundDash: false);
+        }
+
+
+        private bool ProcessEdges(GraphQuery gq, out QueryExpression op, StringSegment alias, List<MatchPath> list, bool allowRecursive, bool foundDash)
+        {
+            var expectNode = false;
+            MatchPath last;
+            while (true)
+
+            {
+                if (Scanner.TryScan(EdgeOps, out var found))
+                {
+                    switch (found)
+                    {
+                        case "-":
+                            foundDash = true;
+                            
+                            continue;
+                        case "[":
+                            if (foundDash == false)
+                                throw new InvalidQueryException("Got '[' when expected '-', did you forget to add '-[' ?", Scanner.Input, null);
+
+                            var startingPos = Scanner.Position - 1;
+
+                            if (GraphAlias(gq, true, alias, out alias) == false)
+                                throw new InvalidQueryException("MATCH identifier after '-['", Scanner.Input, null);
+
+                            var endingPos = Scanner.Position + 1;
+
+                            if (expectNode)
+                            {
+                                ThrowExpectedNodeButFoundEdge(alias, Scanner.Input.Substring(startingPos, endingPos - startingPos),Scanner.Input);
+                            }
+
+                            if (Scanner.TryScan(']') == false)
+                                throw new InvalidQueryException("MATCH operator expected a ']' after reading: " + alias, Scanner.Input, null);                            
+                            list.Add(new MatchPath
+                            {
+                                Alias = alias,
+                                EdgeType = list[list.Count - 1].EdgeType,
+                                IsEdge = true
+                            });
+
+                            expectNode = true; //after each edge we expect a node
+                            break;
+                        case "<-":
+
+                            last = list[list.Count - 1];
+                            list[list.Count - 1] = new MatchPath
+                            {
+                                Alias = last.Alias,
+                                IsEdge = last.IsEdge,
+                                EdgeType = EdgeType.Left,
+                                Recursive = last.Recursive
+                            };
+
+                            foundDash = true;
+
+                            continue;
+                        case "<":
+                            throw new InvalidQueryException("Got unexpected '<', did you forget to add '->' ?", Scanner.Input, null);
+                        case ">":
+                            if (foundDash == false)
+                                throw new InvalidQueryException("Got '>' when expected '-', did you forget to add '->' ?", Scanner.Input, null);
+                            last = list[list.Count - 1];
+                            list[list.Count - 1] = new MatchPath
+                            {
+                                Alias = last.Alias,
+                                IsEdge = last.IsEdge,
+                                EdgeType = EdgeType.Right,
+                                Recursive = last.Recursive
+                            };
+
+                            if (expectNode && Scanner.TryPeek('['))
+                            {
+                                ThrowExpectedNodeButFoundEdge(last.Alias,last.ToString(), Scanner.Input);
+                            }
+                            
+                            if (Scanner.TryScan('(') == false)
+                            {
+                                var msg = $"({last.Alias})-> is not allowed, you should use ({last.Alias})-[...] instead.";
+                                throw new InvalidQueryException("MATCH operator expected a '(', but didn't get it. " + msg, Scanner.Input, null);
+                            }
+                            expectNode = true;
+
+                            goto case "(";
+
+                        case "(":
+
+                            var start = Scanner.Position - 1;
+                            if (GraphAlias(gq, false, default, out alias) == false)
+                                throw new InvalidQueryException("Couldn't get node's alias", Scanner.Input, null);
+                            var end = Scanner.Position + 1;
+
+                            if (expectNode == false)
+                                ThrowExpectedEdgeButFoundNode(alias,Scanner.Input.Substring(start, end - start),Scanner.Input);
+
+                            if (Scanner.TryScan(')') == false)
+                                throw new InvalidQueryException("MATCH operator expected a ')' after reading: " + alias, Scanner.Input, null);
+
+                            list.Add(new MatchPath
+                            {
+                                Alias = alias,
+                                EdgeType = list[list.Count - 1].EdgeType
+                            });
+                            expectNode = false; //the next should be an edge
+                            break;
+                        case "recursive":
+                            if (allowRecursive == false)
+                                throw new InvalidQueryException("Cannot call 'recusrive' inside another 'recursive', only one level is allowed", Scanner.Input, null);
+
+                            if (expectNode)
+                                throw new InvalidQueryException("'recursive' must appear only after a node, not after an edge", Scanner.Input, null);
+
+                            if (foundDash == false)
+                                throw new InvalidQueryException("Got 'recursive' when expected '-', recursive must be preceded by a '-'.", Scanner.Input, null);
+
+                            StringSegment recursiveAlias;
+
+                            if (Scanner.TryScan("as"))
+                            {
+                                if (Scanner.Identifier() == false)
+                                    throw new InvalidQueryException("Missing alias for 'recursive' after 'as'", Scanner.Input, null);
+                                recursiveAlias = Scanner.Token;
+                            }
+                            else
+                            {
+                                recursiveAlias = "__alias" + (++_counter);
+                            }
+
+                            gq.RecursiveMatches.Add(recursiveAlias);
+                            var options = new List<ValueExpression>();
+                            if (Scanner.TryScan('('))
+                            {
+                                while (Value(out var val))
+                                {
+                                    switch (val.Value)
+                                    {
+                                        case ValueTokenType.Parameter:
+                                        case ValueTokenType.Long:
+                                        case ValueTokenType.String:
+                                            options.Add(val);
+                                            break;
+                                        case ValueTokenType.Double:
+                                        case ValueTokenType.True:
+                                        case ValueTokenType.False:
+                                        case ValueTokenType.Null:
+                                            throw new InvalidQueryException("'recursive' options must be an integer or a recursive type (all, shortest, longest)", Scanner.Input, null);
+                                        default:
+                                            break;
+                                    }
+
+                                    if (Scanner.TryScan(',') == false)
+                                        break;
+                                }
+
+                                if (Scanner.Identifier()) // , longest) , etc.
+                                {
+                                    options.Add(new ValueExpression(Scanner.Token, ValueTokenType.String));
+                                }
+
+                                if (Scanner.TryScan(")") == false)
+                                    throw new InvalidQueryException("'recursive' missing closing paranthesis for length specification, but one was expected", Scanner.Input, null);
+                            }
+
+                            if (Scanner.TryScan("{") == false)
+                                throw new InvalidQueryException("'recursive' must be followed by a '{', but wasn't", Scanner.Input, null);
+
+                            var repeated = new List<MatchPath>();
+                            repeated.Add(new MatchPath
+                            {
+                                Alias = alias,
+                                EdgeType = list[list.Count - 1].EdgeType,
+                                IsEdge = true
+                            });
+
+                            var result = ProcessEdges(gq, out var repeatedPattern, alias, repeated, allowRecursive: false, foundDash: true);
+                            if(repeatedPattern is PatternMatchElementExpression pmee)
+                            {
+                                if (pmee.Reversed)
+                                    repeated.RemoveAt(repeated.Count - 1);
+                                else
+                                    repeated.RemoveAt(0);
+                            }
+                            else
+                            {
+                                throw new InvalidQueryException("'recursive' must contain only a single pattern match, but contained " + repeatedPattern, Scanner.Input, null);
+                            }
+
+                            if (Scanner.TryScan("}") == false)
+                                throw new InvalidQueryException("'recursive' must be closed by '}', but wasn't", Scanner.Input, null);
+
+                            if (repeated.Count == 0)
+                            {
+                                throw new InvalidQueryException("empty recursive {} block is not allowed ", Scanner.Input, null);
+                            }
+
+                            if (repeated.Last().IsEdge)
+                            {
+                                throw new InvalidQueryException("'recursive' block cannot end with an end and must close with a node ( recursive { [edge]->(node) } )", Scanner.Input, null);
+                            }
+
+
+                            list.Add(new MatchPath
+                            {
+                                Alias = "recursive",
+                                EdgeType = list[list.Count-1].EdgeType,
+                                Recursive = new RecursiveMatch
+                                {
+                                    Alias = recursiveAlias,
+                                    Pattern = repeated,
+                                    Options = options,
+                                    Aliases = new HashSet<StringSegment>(repeated.Select(x => x.Alias), StringSegmentComparer.Ordinal)
+                                },
+                                IsEdge = true
+                            });
+                            alias = recursiveAlias;
+                            expectNode = false;
+                            foundDash = false;
+                            break;
+                        default:
+                            throw new ArgumentOutOfRangeException("Unknown edge type: " + found);
+                    }
+
+                    foundDash = false;
+                }
+                else
+                {
+                    op = FinalProcessingOfMatchExpression(list);
+
+                    return true;
+                }
+            }
+        }
+
+        private void ThrowExpectedEdgeButFoundNode(StringSegment alias, string invalidQueryElement, string query)
+        {
+            throw new InvalidQueryException(
+                $@"Expected the alias '{alias}' to refer an edge, but it refers to an node.{Environment.NewLine}This is likely a mistake in the query as the expression '{invalidQueryElement}' should probably be an edge.", query);
+        }
+
+        private void ThrowExpectedNodeButFoundEdge(StringSegment alias, string invalidQueryElement, string query)
+        {
+            throw new InvalidQueryException(
+                $@"Expected the alias '{alias}' to refer a node, but it refers to an edge.{Environment.NewLine}This is likely a mistake in the query as the expression '{invalidQueryElement}' should probably be a node.", query);
+        }
+
+        private static QueryExpression FinalProcessingOfMatchExpression(List<MatchPath> list)
+        {
+            bool hasIncoming = false, hasOutgoing = false;
+
+            for (int i = 0; i < list.Count; i++)
+            {
+                hasIncoming |= list[i].EdgeType == EdgeType.Left;
+                hasOutgoing |= list[i].EdgeType == EdgeType.Right;
+            }
+
+            bool reversed = false;
+            QueryExpression op;
+            if (hasIncoming)
+            {
+                if (hasOutgoing == false)
+                {
+                    reversed = true;
+                    ReverseIncomingChain(list);
+                }
+                else
+                {
+                    return BreakPatternChainToAndClauses(list, out op);
+                }
+            }
+
+            op = new PatternMatchElementExpression
+            {
+                Path = list.ToArray(),
+                Type = ExpressionType.Pattern,
+                Reversed = reversed
+            };
+            return op;
+        }
+
+        private static QueryExpression BreakPatternChainToAndClauses(List<MatchPath> list, out QueryExpression op)
+        {
+            // need to split the expression based on the direction of the arrows
+            var clauses = new List<PatternMatchElementExpression>();
+            bool reversed = false;
+            for (int i = list.Count - 1; i >= 1; i--)
+            {
+                if (list[i].EdgeType != list[i - 1].EdgeType)
+                {
+                    var part = list.Skip(i).ToList();
+                    if (part.Last().EdgeType == EdgeType.Left)
+                    {
+                        reversed = true;
+                        ReverseIncomingChain(part);
+                    }
+                    else
+                    {
+                        part[0] = new MatchPath
+                        {
+                            Alias = part[0].Alias,
+                            EdgeType = EdgeType.Left,
+                            IsEdge = part[0].IsEdge
+                        };
+                    }
+                    list[i] = new MatchPath
+                    {
+                        Alias = list[i].Alias,
+                        EdgeType = list[i - 1].EdgeType,
+                        IsEdge = list[i].IsEdge
+                    };
+                    clauses.Add(new PatternMatchElementExpression
+                    {
+                        Path = part.ToArray(),
+                        Type = ExpressionType.Pattern
+                    });
+                    list.RemoveRange(i + 1, list.Count - i - 1);
+                }
+            }
+
+            if (list[0].EdgeType == EdgeType.Left)
+            {
+                ReverseIncomingChain(list);
+            }
+            clauses.Add(new PatternMatchElementExpression
+            {
+                Path = list.ToArray(),
+                Type = ExpressionType.Pattern,
+                Reversed = reversed,
+            });
+
+            op = clauses.Last();
+            for (int i = clauses.Count - 2; i >= 0; i--)
+            {
+                op = new BinaryExpression(op, clauses[i], OperatorType.And);
+            }
+            return op;
+        }
+
+        private static void ReverseIncomingChain(List<MatchPath> list)
+        {
+            // reverse the path so it is always rightward skips
+            list.Reverse();
+            for (int i = 0; i < list.Count; i++)
+            {
+                var cur = list[i];
+                list[i] = new MatchPath
+                {
+                    Alias = cur.Alias,
+                    EdgeType = EdgeType.Right,
+                    IsEdge = cur.IsEdge,
+                    Recursive = cur.Recursive
+                };
+            }
+        }
+
+        private (Query Query, StringSegment Allias) With()
+        {
+            if (Scanner.TryScan('{') == false)
+                throw new InvalidQueryException("With keyword should be followed with either 'edges' or '{' ", Scanner.Input, null);
+
+            var query = Parse(recursive: true);
+
+            if (Scanner.TryScan('}') == false)
+                throw new InvalidQueryException("With clause contains invalid body", Scanner.Input, null);
+
+            if (Alias(true, out var alias) == false || alias.HasValue == false)
+                throw new InvalidQueryException("With clause must contain alias but none was provided", Scanner.Input, null);
+
+            return (query, alias.Value);
         }
 
         private static Esprima.Ast.Program ValidateScript(string script)
@@ -106,6 +876,14 @@ namespace Raven.Server.Documents.Queries.Parser
         private static void ThrowUnknownQueryType(QueryType queryType)
         {
             throw new ArgumentOutOfRangeException(nameof(queryType), queryType, "Unknown query type");
+        }
+
+        internal static string AddLineAndColumnNumberToErrorMessage(Exception e, string msg)
+        {
+            if (!(e is ParserException pe))
+                return msg;
+
+            return $"{msg}{Environment.NewLine}At Line : {pe.LineNumber}, Column : {pe.Column}";
         }
 
         private List<QueryExpression> IncludeClause()
@@ -157,7 +935,7 @@ namespace Raven.Server.Documents.Queries.Parser
             if (Scanner.Identifier() == false)
                 ThrowParseException("DECLARE functions require a name and cannot be anonymous");
 
-            var name = new StringSegment(Scanner.Input, Scanner.TokenStart, Scanner.TokenLength);
+            var name = Scanner.Token;
 
             // this reads the signature of the method: (a,b,c), etc.
             // we are technically allow more complex stuff there that isn't
@@ -181,7 +959,8 @@ namespace Raven.Server.Documents.Queries.Parser
             }
             catch (Exception e)
             {
-                throw new InvalidQueryException("Invalid script inside function " + name, Scanner.Input, null, e);
+                var msg = AddLineAndColumnNumberToErrorMessage(e, $"Invalid script inside function {name}");
+                throw new InvalidQueryException(msg, Scanner.Input, null, e);
             }
         }
 
@@ -334,16 +1113,16 @@ namespace Raven.Server.Documents.Queries.Parser
                     alias = ve.Token;
                 }
 
-                @select.Add((expr, alias));
+                select.Add((expr, alias));
 
                 if (Scanner.TryScan(",") == false)
                     break;
             } while (true);
-            return @select;
+            return select;
         }
 
 
-        private (FieldExpression From, StringSegment? Alias, QueryExpression Filter, bool Index) FromClause()
+        private FromClause FromClause()
         {
             if (Scanner.TryScan("FROM") == false)
                 ThrowParseException("Expected FROM clause");
@@ -377,7 +1156,13 @@ namespace Raven.Server.Documents.Queries.Parser
 
             Alias(false, out var alias);
 
-            return (field, alias, filter, index);
+            return new FromClause
+            {
+                From = field,
+                Alias = alias,
+                Filter = filter,
+                Index = index
+            };
         }
 
         private static readonly string[] AliasKeywords =
@@ -389,7 +1174,9 @@ namespace Raven.Server.Documents.Queries.Parser
             "GROUP",
             "ORDER",
             "INCLUDE",
-            "UPDATE"
+            "UPDATE",
+            "OFFSET",
+            "LIMIT"
         };
 
         private bool Alias(bool aliasAsRequired, out StringSegment? alias)
@@ -425,23 +1212,18 @@ namespace Raven.Server.Documents.Queries.Parser
             return false;
         }
 
-        internal bool Parameter(out int tokenStart, out int tokenLength)
+        internal bool Parameter(out StringSegment p)
         {
             if (Scanner.TryScan('$') == false)
             {
-                tokenStart = 0;
-                tokenLength = 0;
+                p = default;
                 return false;
             }
-
-            Scanner.TokenStart = Scanner.Position;
-
-            tokenStart = Scanner.TokenStart;
 
             if (Scanner.Identifier(false) == false)
                 ThrowParseException("Expected parameter name");
 
-            tokenLength = Scanner.TokenLength;
+            p = Scanner.Token;
             return true;
         }
 
@@ -493,6 +1275,16 @@ namespace Raven.Server.Documents.Queries.Parser
             if (Binary(out var right) == false)
                 ThrowParseException($"Failed to find second part of {type} expression");
 
+            return TrySimplifyBinaryExpression(right, type, negate, parenthesis, ref op);
+        }
+
+        private bool TrySimplifyBinaryExpression(
+            QueryExpression right,
+            OperatorType type,
+            bool negate,
+            bool parenthesis,
+            ref QueryExpression op)
+        {
             if (parenthesis == false)
             {
                 if (negate)
@@ -823,8 +1615,7 @@ namespace Raven.Server.Documents.Queries.Parser
             var numberToken = Scanner.TryNumber();
             if (numberToken != null)
             {
-                val = new ValueExpression(
-                    new StringSegment(Scanner.Input, Scanner.TokenStart, Scanner.TokenLength),
+                val = new ValueExpression(Scanner.Token,
                     numberToken.Value == NumberToken.Long ? ValueTokenType.Long : ValueTokenType.Double
                 );
                 return true;
@@ -857,15 +1648,15 @@ namespace Raven.Server.Documents.Queries.Parser
                 }
 
                 val = new ValueExpression(
-                    new StringSegment(Scanner.Input, Scanner.TokenStart, Scanner.TokenLength),
+                    Scanner.Token,
                     type);
                 return true;
             }
 
-            if (Parameter(out int tokenStart, out int tokenLength))
+            if (Parameter(out _))
             {
                 val = new ValueExpression(
-                    new StringSegment(Scanner.Input, Scanner.TokenStart, Scanner.TokenLength),
+                    Scanner.Token,
                     ValueTokenType.Parameter
                 );
                 return true;
@@ -898,14 +1689,14 @@ namespace Raven.Server.Documents.Queries.Parser
                 }
                 else
                 {
-                    parts.Add(new StringSegment(Scanner.Input, Scanner.TokenStart, Scanner.TokenLength));
+                    parts.Add(Scanner.Token);
                 }
                 if (part == 1)
                 {
                     // need to ensure that this isn't a keyword
                     if (Scanner.CurrentTokenMatchesAnyOf(AliasKeywords))
                     {
-                        Scanner.GoBack(Scanner.TokenLength);
+                        Scanner.GoBack();
                         token = null;
                         return false;
                     }
@@ -920,7 +1711,7 @@ namespace Raven.Server.Documents.Queries.Parser
                         case NumberToken.Long:
                             if (Scanner.TryScan(']') == false)
                                 ThrowParseException("Expected to find closing ]");
-                            parts.Add(new StringSegment(Scanner.Input, Scanner.TokenStart, Scanner.TokenLength));
+                            parts.Add(Scanner.Token);
                             break;
 
                         case null:

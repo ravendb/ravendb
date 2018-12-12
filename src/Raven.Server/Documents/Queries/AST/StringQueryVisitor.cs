@@ -1,13 +1,15 @@
 using System;
 using System.Collections.Generic;
 using System.Text;
+using Microsoft.Extensions.Primitives;
 using Sparrow;
 
 namespace Raven.Server.Documents.Queries.AST
 {
     public class StringQueryVisitor : QueryVisitor
     {
-        private readonly StringBuilder _sb;
+        protected readonly StringBuilder _sb;
+        private int _indent;
 
         public StringQueryVisitor(StringBuilder sb)
         {
@@ -66,7 +68,7 @@ namespace Raven.Server.Documents.Queries.AST
                 if (expressions[i].Alias != null)
                 {
                     _sb.Append(" AS ");
-                    _sb.Append(expressions[i].Alias.Value);
+                    _sb.Append(expressions[i].Alias.Value.Value);
                 }
             }
         }
@@ -112,7 +114,7 @@ namespace Raven.Server.Documents.Queries.AST
         public override void VisitDeclaredFunction(StringSegment name, string func)
         {
             EnsureLine();
-            _sb.Append("DECLARE function ").Append(name).AppendLine(func).AppendLine();
+            _sb.Append("DECLARE function ").Append(name.Value).AppendLine(func).AppendLine();
         }
 
         public override void VisitWhereClause(QueryExpression where)
@@ -234,12 +236,14 @@ namespace Raven.Server.Documents.Queries.AST
 
         private void EnsureLine()
         {
-            if (_sb.Length == 0)
-                return;
-            if (_sb[_sb.Length - 1] == '\n')
-                return;
-            
-            _sb.AppendLine();
+            if (_sb.Length != 0 && _sb[_sb.Length - 1] != '\n')
+            {
+                _sb.AppendLine();
+            }
+            for (int i = 0; i < _indent; i++)
+            {
+                _sb.Append("    ");
+            }
         }
 
         public override void VisitField(FieldExpression field)
@@ -346,6 +350,83 @@ namespace Raven.Server.Documents.Queries.AST
                 
                 _sb.Append(")");
             }
+        }
+
+        public override void VisitWithClauses(Dictionary<StringSegment, Query> expression)
+        {
+            foreach (var withClause in expression)
+            {
+                EnsureLine();
+                _sb.Append("WITH {");
+                _indent++;
+                Visit(withClause.Value);
+                _indent--;
+                EnsureLine();
+                _sb.Append("} AS ").Append(withClause.Key.Value);
+                _sb.AppendLine();
+            }
+        }
+
+        public override void VisitWithEdgePredicates(Dictionary<StringSegment, WithEdgesExpression> expression)
+        {
+            foreach (var withEdgesClause in expression)
+            {
+                EnsureLine();
+                
+                VisitWithEdgesExpression(withEdgesClause.Key.Value, withEdgesClause.Value);
+                
+            }
+        }
+
+        public override void VisitWithEdgesExpression(string alias, WithEdgesExpression withEdgesClause)
+        {
+            if ((withEdgesClause.Path == null || withEdgesClause.Path.Compound.Count == 0) &&
+                withEdgesClause.Where == null && withEdgesClause.OrderBy == null)
+                return;
+
+            EnsureSpace();
+
+            _sb.Append("WITH EDGES ");
+            if (withEdgesClause.Path != null)
+            {
+                _sb.Append("(");
+                VisitExpression(withEdgesClause.Path);
+                _sb.Append(")");
+            }
+
+            if (withEdgesClause.Where != null ||
+                (withEdgesClause.OrderBy != null && withEdgesClause.OrderBy.Count != 0))
+            {
+                _sb.Append(" {");
+                _indent++;
+                EnsureLine();
+
+                base.VisitWithEdgesExpression(alias, withEdgesClause);
+
+                _indent--;
+                _sb.Append("}");
+
+            }
+            if (string.IsNullOrEmpty(alias) == false)
+                _sb.Append(" AS ").Append(alias);
+
+            _sb.AppendLine();
+        }
+
+        public override void VisitPatternMatchElementExpression(PatternMatchElementExpression elementExpression)
+        {
+            EnsureSpace();
+            _sb.Append(elementExpression.GetText());
+        }
+
+        public override void VisitMatchExpression(QueryExpression expr)
+        {
+            EnsureLine();
+            _sb.Append("MATCH ");
+
+            base.VisitMatchExpression(expr);
+
+            _sb.AppendLine();
         }
     }
 }

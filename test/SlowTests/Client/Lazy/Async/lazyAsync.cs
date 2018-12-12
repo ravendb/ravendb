@@ -180,10 +180,12 @@ select {
                         .LazilyAsync();
 
                 var contactDto = (await contactViewModel.Value).First();
+                var oldRequestCount = session.Advanced.NumberOfRequests;
                 foreach (var detail in contactDto.ContactDetails)
                 {
                     Assert.NotNull(detail.Id);
                 }
+                Assert.Equal(oldRequestCount, session.Advanced.NumberOfRequests);
             }
         }
 
@@ -243,15 +245,16 @@ select {
 
                 using (var session = store.OpenAsyncSession())
                 {
-                    var items = await session.Advanced.AsyncRawQuery<Item>(@"
+                    var lazyItems = session.Advanced.AsyncRawQuery<Item>(@"
 declare function triple(pos) { return pos *3; }
 from Items
 where id() in ($ids)
 select triple(Position) as Position
 ")
                         .AddParameter("ids", new[] { "items/1", "items/2" })
-                        .ToListAsync();
+                        .LazilyAsync();
 
+                    var items = (await lazyItems.Value).ToList();
 
                     Assert.Equal(1 * 3, items[0].Position);
                     Assert.Equal(2 * 3, items[1].Position);

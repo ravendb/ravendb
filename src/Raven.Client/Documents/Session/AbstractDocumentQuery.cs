@@ -722,7 +722,7 @@ Use session.Query<T>() instead of session.Advanced.DocumentQuery<T>. The session
         /// </summary>
         /// <param name = "fieldName">Name of the field.</param>
         /// <param name = "value">The value.</param>
-        public void WhereStartsWith(string fieldName, object value)
+        public void WhereStartsWith(string fieldName, object value, bool exact = false)
         {
             var whereParams = new WhereParams
             {
@@ -738,7 +738,7 @@ Use session.Query<T>() instead of session.Advanced.DocumentQuery<T>. The session
 
             whereParams.FieldName = EnsureValidFieldName(whereParams.FieldName, whereParams.IsNestedPath);
             NegateIfNeeded(tokens, whereParams.FieldName);
-            var whereToken = WhereToken.Create(WhereOperator.StartsWith, whereParams.FieldName, AddQueryParameter(transformToEqualValue));
+            var whereToken = WhereToken.Create(WhereOperator.StartsWith, whereParams.FieldName, AddQueryParameter(transformToEqualValue), new WhereToken.WhereOptions(exact));
             tokens.AddLast(whereToken);
         }
 
@@ -747,7 +747,7 @@ Use session.Query<T>() instead of session.Advanced.DocumentQuery<T>. The session
         /// </summary>
         /// <param name = "fieldName">Name of the field.</param>
         /// <param name = "value">The value.</param>
-        public void WhereEndsWith(string fieldName, object value)
+        public void WhereEndsWith(string fieldName, object value, bool exact = false)
         {
             var whereParams = new WhereParams
             {
@@ -763,7 +763,7 @@ Use session.Query<T>() instead of session.Advanced.DocumentQuery<T>. The session
 
             whereParams.FieldName = EnsureValidFieldName(whereParams.FieldName, whereParams.IsNestedPath);
             NegateIfNeeded(tokens, whereParams.FieldName);
-            var whereToken = WhereToken.Create(WhereOperator.EndsWith, whereParams.FieldName, AddQueryParameter(transformToEqualValue));
+            var whereToken = WhereToken.Create(WhereOperator.EndsWith, whereParams.FieldName, AddQueryParameter(transformToEqualValue), new WhereToken.WhereOptions(exact));
             tokens.AddLast(whereToken);
         }
 
@@ -1001,6 +1001,16 @@ Use session.Query<T>() instead of session.Advanced.DocumentQuery<T>. The session
             whereToken.Options.Proximity = proximity;
         }
 
+        public void OrderBy(string field, string sorterName)
+        {
+            if (string.IsNullOrWhiteSpace(sorterName)) 
+                throw new ArgumentException("Value cannot be null or whitespace.", nameof(sorterName));
+
+            AssertNoRawQuery();
+            var f = EnsureValidFieldName(field, isNestedPath: false);
+            OrderByTokens.AddLast(OrderByToken.CreateAscending(f, sorterName));
+        }
+
         /// <summary>
         ///   Order the results by the specified fields
         ///   The fields are the names of the fields to sort, defaulting to sorting by ascending.
@@ -1011,6 +1021,16 @@ Use session.Query<T>() instead of session.Advanced.DocumentQuery<T>. The session
             AssertNoRawQuery();
             var f = EnsureValidFieldName(field, isNestedPath: false);
             OrderByTokens.AddLast(OrderByToken.CreateAscending(f, ordering));
+        }
+
+        public void OrderByDescending(string field, string sorterName)
+        {
+            if (string.IsNullOrWhiteSpace(sorterName)) 
+                throw new ArgumentException("Value cannot be null or whitespace.", nameof(sorterName));
+
+            AssertNoRawQuery();
+            var f = EnsureValidFieldName(field, isNestedPath: false);
+            OrderByTokens.AddLast(OrderByToken.CreateDescending(f, sorterName));
         }
 
         /// <summary>
@@ -1074,15 +1094,17 @@ Use session.Query<T>() instead of session.Advanced.DocumentQuery<T>. The session
             var indexQuery = new IndexQuery
             {
                 Query = query,
-                Start = Start,
                 WaitForNonStaleResults = TheWaitForNonStaleResults,
                 WaitForNonStaleResultsTimeout = Timeout,
                 QueryParameters = QueryParameters,
                 DisableCaching = DisableCaching
             };
 
+#pragma warning disable 618
+            indexQuery.Start = Start;
             if (PageSize != null)
                 indexQuery.PageSize = PageSize.Value;
+#pragma warning restore 618
 
             return indexQuery;
         }
@@ -1121,8 +1143,21 @@ Use session.Query<T>() instead of session.Advanced.DocumentQuery<T>. The session
             BuildLoad(queryText);
             BuildSelect(queryText);
             BuildInclude(queryText);
+            BuildPagination(queryText);
 
             return queryText.ToString();
+        }
+
+        private void BuildPagination(StringBuilder queryText)
+        {
+            if (Start > 0 || PageSize.HasValue)
+            {
+                queryText
+                    .Append(" limit $")
+                    .Append(AddQueryParameter(Start))
+                    .Append(", $")
+                    .Append(AddQueryParameter(PageSize));
+            }
         }
 
         private void BuildInclude(StringBuilder queryText)
@@ -1689,7 +1724,7 @@ Use session.Query<T>() instead of session.Advanced.DocumentQuery<T>. The session
 
             var tokens = GetCurrentWhereTokens();
             var current = tokens.First;
-            while(current != null)
+            while (current != null)
             {
                 if (current.Value is WhereToken w)
                     current.Value = w.AddAlias(fromAlias);

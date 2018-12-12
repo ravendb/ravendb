@@ -3,7 +3,7 @@ using System.Linq;
 using FastTests;
 using Raven.Client.Documents;
 using Raven.Client.Documents.Indexes;
-using SlowTests.Utils.Analyzers;
+using Raven.Server.Documents.Indexes.Persistence.Lucene.Analyzers;
 using Xunit;
 using Enumerable = System.Linq.Enumerable;
 

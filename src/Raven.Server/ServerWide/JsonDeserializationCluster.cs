@@ -16,6 +16,7 @@ using Raven.Server.ServerWide.Commands.ETL;
 using Raven.Server.ServerWide.Commands.Indexes;
 using Raven.Server.ServerWide.Commands.Monitoring.Snmp;
 using Raven.Server.ServerWide.Commands.PeriodicBackup;
+using Raven.Server.ServerWide.Commands.Sorters;
 using Raven.Server.ServerWide.Commands.Subscriptions;
 using Sparrow.Json;
 
@@ -96,6 +97,7 @@ namespace Raven.Server.ServerWide
             [nameof(IncrementClusterIdentitiesBatchCommand)] = GenerateJsonDeserializationRoutine<IncrementClusterIdentitiesBatchCommand>(),
             [nameof(UpdateClusterIdentityCommand)] = GenerateJsonDeserializationRoutine<UpdateClusterIdentityCommand>(),
             [nameof(PutIndexCommand)] = GenerateJsonDeserializationRoutine<PutIndexCommand>(),
+            [nameof(PutIndexesCommand)] = GenerateJsonDeserializationRoutine<PutIndexesCommand>(),
             [nameof(PutAutoIndexCommand)] = GenerateJsonDeserializationRoutine<PutAutoIndexCommand>(),
             [nameof(DeleteIndexCommand)] = GenerateJsonDeserializationRoutine<DeleteIndexCommand>(),
             [nameof(SetIndexLockCommand)] = GenerateJsonDeserializationRoutine<SetIndexLockCommand>(),
@@ -138,7 +140,9 @@ namespace Raven.Server.ServerWide
             [nameof(UpdateSubscriptionClientConnectionTime)] = GenerateJsonDeserializationRoutine<UpdateSubscriptionClientConnectionTime>(),
             [nameof(UpdateSnmpDatabasesMappingCommand)] = GenerateJsonDeserializationRoutine<UpdateSnmpDatabasesMappingCommand>(),
             [nameof(UpdateSnmpDatabaseIndexesMappingCommand)] = GenerateJsonDeserializationRoutine<UpdateSnmpDatabaseIndexesMappingCommand>(),
-            [nameof(RemoveEtlProcessStateCommand)] = GenerateJsonDeserializationRoutine<RemoveEtlProcessStateCommand>()
+            [nameof(RemoveEtlProcessStateCommand)] = GenerateJsonDeserializationRoutine<RemoveEtlProcessStateCommand>(),
+            [nameof(PutSortersCommand)] = GenerateJsonDeserializationRoutine<PutSortersCommand>(),
+            [nameof(DeleteSorterCommand)] = GenerateJsonDeserializationRoutine<DeleteSorterCommand>()
         };
     }
 }

@@ -38,6 +38,8 @@ namespace Raven.Server.Documents.Indexes.Static
             ThreadLocalCleanup.ReleaseThreadLocalState += () => Current = null;
         }
 
+        public readonly Index Index;
+
         public DynamicBlittableJson Source;
 
         public string SourceCollection;
@@ -48,10 +50,11 @@ namespace Raven.Server.Documents.Indexes.Static
 
         public LuceneDocumentConverter CreateFieldConverter;
 
-        public CurrentIndexingScope(DocumentsStorage documentsStorage, DocumentsOperationContext documentsContext, IndexDefinitionBase indexDefinition, TransactionOperationContext indexContext, Func<string, SpatialField> getSpatialField, UnmanagedBuffersPoolWithLowMemoryHandling _unmanagedBuffersPool)
+        public CurrentIndexingScope(Index index, DocumentsStorage documentsStorage, DocumentsOperationContext documentsContext, IndexDefinitionBase indexDefinition, TransactionOperationContext indexContext, Func<string, SpatialField> getSpatialField, UnmanagedBuffersPoolWithLowMemoryHandling _unmanagedBuffersPool)
         {
             _documentsStorage = documentsStorage;
             _documentsContext = documentsContext;
+            Index = index;
             UnmanagedBuffersPool = _unmanagedBuffersPool;
             IndexDefinition = indexDefinition;
             IndexContext = indexContext;

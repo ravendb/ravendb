@@ -21,12 +21,10 @@ class studioConfiguration extends viewModelBase {
             .execute()
             .done((settings: Raven.Client.Documents.Operations.Configuration.StudioConfiguration) => {
                 this.model = settings ? new databaseStudioConfigurationModel(settings) : databaseStudioConfigurationModel.empty();
-                
-                this.model.environment.subscribe(() => this.saveConfiguration());
             });
     }
 
-    private saveConfiguration() {
+    saveConfiguration() {
         if (!this.isValid(this.model.validationGroup)) {
             return;
         }

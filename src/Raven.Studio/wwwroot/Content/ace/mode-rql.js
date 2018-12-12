@@ -782,258 +782,249 @@ oop.inherits(Mode, TextMode);
 exports.Mode = Mode;
 });
 
-// End of JavaScript rules
-
 ace.define("ace/mode/rql_highlight_rules",["require","exports","module","ace/lib/oop","ace/mode/text_highlight_rules","ace/mode/javascript_highlight_rules"], function(require, exports, module) {
-"use strict";
+    "use strict";
 
-var oop = require("../lib/oop");
-var TextHighlightRules = require("./text_highlight_rules").TextHighlightRules;
-var JavaScriptHighlightRules = require("./javascript_highlight_rules").JavaScriptHighlightRules;
+    var oop = require("../lib/oop");
+    var TextHighlightRules = require("./text_highlight_rules").TextHighlightRules;
+    var JavaScriptHighlightRules = require("./javascript_highlight_rules").JavaScriptHighlightRules;
 
-var RqlHighlightRules = function() {
+    var RqlHighlightRules = function() {
 
-    var keywordRegex = /[a-zA-Z_$@\u00a1-\uffff][a-zA-Z0-9_$@\u00a1-\uffff]*\b/;
+        var keywordRegex = /[a-zA-Z_$@\u00a1-\uffff][a-zA-Z0-9_$@\u00a1-\uffff]*\b/;
 
-    var clausesKeywords = (
-        "declare|from|group|where|order|load|select|include|update"
-    );
-    this.clausesKeywords = clausesKeywords.split("|");
+        var clausesKeywords = (
+            "declare|from|group|where|order|load|select|include|update|match|with|limit|offset"
+        );
+        this.clausesKeywords = clausesKeywords.split("|");
 
-    var clauseAppendKeywords = (
-        "function|index|by"
-    );
-    this.clauseAppendKeywords = clauseAppendKeywords.split("|");
+        var clauseAppendKeywords = (
+            "function|index|by"
+        );
+        this.clauseAppendKeywords = clauseAppendKeywords.split("|");
 
-    var functions = (
-        "count|sum|id|key"
-    );
+        var functions = (
+            "count|sum|id|key"
+        );
 
-    var whereOperators = (
-        "all|in|between"
-    );
+        var whereOperators = (
+            "all|in|between"
+        );
 
-    var whereFunctions = (
-        "search|boost|startsWith|endsWith|lucene|exact|within|exists|contains|disjoint|intersects"
-    );
-    this.whereFunctions = whereFunctions.split("|");
+        var whereFunctions = (
+            "search|boost|startsWith|endsWith|lucene|exact|within|exists|contains|disjoint|intersects"
+        );
+        this.whereFunctions = whereFunctions.split("|");
 
-    var withinFunctions = (
-        "circle"
-    );
-    this.withinFunctions = withinFunctions.split("|");
+        var withinFunctions = (
+            "circle"
+        );
+        this.withinFunctions = withinFunctions.split("|");
 
-    var orderByFunctions = (
-        "random|score"
-    );
+        var orderByFunctions = (
+            "random|score"
+        );
 
-    var orderByOptions = (
-        "desc|asc|descending|ascending"
-    );
-    var orderByAsOptions = (
-        "string|long|double|alphaNumeric"
-    );
+        var orderByOptions = (
+            "desc|asc|descending|ascending"
+        );
+        var orderByAsOptions = (
+            "string|long|double|alphaNumeric"
+        );
 
-    var constants = (
-        "null"
-    );
-    var constantsBoolean = (
-        "true|false"
-    );
-    var binaryOperations = (
-        "and|or"
-    );
-    this.binaryOperations = binaryOperations.split("|");
+        var constants = (
+            "null"
+        );
+        var constantsBoolean = (
+            "true|false"
+        );
+        var binaryOperations = (
+            "and|or"
+        );
+        this.binaryOperations = binaryOperations.split("|");
 
-    var operations = (
-        ">=|<=|<|>|=|==|!="
-    );
+        var operations = (
+            ">=|<=|<|>|=|==|!="
+        );
 
-    var keywordMapper = this.createKeywordMapper({
-        "keyword.clause": clausesKeywords,
-        "keyword.clause.clauseAppend": clauseAppendKeywords,
-        "keyword.asKeyword": "as",
-        "keyword.notKeyword": "not",
-        "keyword.orderByOptions": orderByOptions,
-        "keyword.orderByAsOptions": orderByAsOptions,
-        "keyword.whereOperators": whereOperators,
-        "function": functions,
-        "function.where.within": withinFunctions,
-        "function.orderBy": orderByFunctions,
-        "constant.language": constants,
-        "constant.language.boolean": constantsBoolean,
-        "operations.type.binary": binaryOperations,
-        "operations.type": operations
-    }, "identifier", true);
+        var keywordMapper = this.createKeywordMapper({
+            "keyword.clause": clausesKeywords,
+            "keyword.clause.clauseAppend": clauseAppendKeywords,
+            "keyword.asKeyword": "as",
+            "keyword.notKeyword": "not",
+            "keyword.orderByOptions": orderByOptions,
+            "keyword.orderByAsOptions": orderByAsOptions,
+            "keyword.whereOperators": whereOperators,
+            "function": functions,
+            "function.where.within": withinFunctions,
+            "function.orderBy": orderByFunctions,
+            "constant.language": constants,
+            "constant.language.boolean": constantsBoolean,
+            "operations.type.binary": binaryOperations,
+            "operations.type": operations
+        }, "identifier", true);
 
-    var curelyBracesCount = 0;
+        var curelyBracesCount = 0;
 
-    var commonRules = [ {
-        token : "comment",
-        regex : "//.*$"
-    },  {
-        token : "comment",
-        start : "/\\*",
-        end : "\\*/"
-    }, {
-        token : "string",           // " string
-        regex : '"[^"]*"?'
-    }, {
-        token : "string",           // ' string
-        regex : "'[^']*'?"
-    }, {
-        token : "string",           // ` string (apache drill)
-        regex : "`[^`]*`?"
-    }, {
-        token : "constant.numeric", // float
-        regex : "[+-]?\\d+(?:(?:\\.\\d*)?(?:[eE][+-]?\\d+)?)?\\b"
-    }, {
-        token : "paren.lparen",
-        regex : /{/,
-        next: function (currentState, stack) {
-            curelyBracesCount++;
-            return "js-start";
-        }
-    }, {
-        token : "paren.lparen",
-        regex : /[\[({]/
-    }, {
-        token : "comma",
-        regex : /,/
-    }, {
-        token : "space",
-        regex : /\s+/
-    } ];
-    
-    var startRule = [ {
-        token :  "field",
-        regex : /[a-zA-Z_$@\u00a1-\uffff][a-zA-Z0-9_$@\u00a1-\uffff]*(?:\[\])?\.[a-zA-Z0-9_$@\u00a1-\uffff.]*/
-    }, {
-        token :  "function.where",
-        regex : whereFunctions,
-        next: "whereFunction"
-    }, {
-        token : keywordMapper,
-        regex : keywordRegex
-    }, {
-        token : "operator.where",
-        regex : /(?:==|!=|>=|<=|=|<>|>|<)(?=\s)/
-    }, {
-        token : "paren.rparen",
-        regex : /[\])}]/
-    } ];
-    
-    var whereFunctionsRules = [ {
-        token : "identifier",
-        regex : keywordRegex
-    }, {
-        token : "paren.rparen",
-        regex : /[)]/,
-        next: "start"
-    } ];
-    
-    this.$rules = {
-        "start" : commonRules.concat(startRule),
-        "whereFunction" : commonRules.concat(whereFunctionsRules).map(function (rule) {
-            return {
-                token: rule.token + ".whereFunction",
-                regex: rule.regex,
-                start: rule.start,
-                end: rule.end,
-                next: rule.next
-            };
-        })
+        var commonRules = [ {
+            token : "comment",
+            regex : "//.*$"
+        },  {
+            token : "comment",
+            start : "/\\*",
+            end : "\\*/"
+        }, {
+            token : "string",           // " string
+            regex : '"[^"]*"?'
+        }, {
+            token : "string",           // ' string
+            regex : "'[^']*'?"
+        }, {
+            token : "string",           // ` string (apache drill)
+            regex : "`[^`]*`?"
+        }, {
+            token : "constant.numeric", // float
+            regex : "[+-]?\\d+(?:(?:\\.\\d*)?(?:[eE][+-]?\\d+)?)?\\b"
+        }, {
+            token : "paren.lparen",
+            regex : /{/,
+            next: function (currentState, stack) {
+                curelyBracesCount++;
+                return "js-start";
+            }
+        }, {
+            token : "paren.lparen",
+            regex : /[\[({]/
+        }, {
+            token : "comma",
+            regex : /,/
+        }, {
+            token : "space",
+            regex : /\s+/
+        } ];
+
+        var startRule = [ {
+            token :  "field",
+            regex : /[a-zA-Z_$@\u00a1-\uffff][a-zA-Z0-9_$@\u00a1-\uffff]*(?:\[\])?\.[a-zA-Z0-9_$@\u00a1-\uffff.]*/
+        }, {
+            token :  "function.where",
+            regex : whereFunctions,
+            next: "whereFunction"
+        }, {
+            token : keywordMapper,
+            regex : keywordRegex
+        }, {
+            token : "operator.where",
+            regex : /(?:==|!=|>=|<=|=|<>|>|<)(?=\s)/
+        }, {
+            token : "paren.rparen",
+            regex : /[\])}]/
+        } ];
+
+        var whereFunctionsRules = [ {
+            token : "identifier",
+            regex : keywordRegex
+        }, {
+            token : "paren.rparen",
+            regex : /[)]/,
+            next: "start"
+        } ];
+
+        this.$rules = {
+            "start" : commonRules.concat(startRule),
+            "whereFunction" : commonRules.concat(whereFunctionsRules).map(function (rule) {
+                return {
+                    token: rule.token + ".whereFunction",
+                    regex: rule.regex,
+                    start: rule.start,
+                    end: rule.end,
+                    next: rule.next
+                };
+            })
+        };
+
+        this.embedRules(JavaScriptHighlightRules, "js-", [ {
+            token : function (value, currentState, stack) {
+                if (currentState === "js-string.quasi.start") {
+                    return "string.quasi.start";
+                }
+                if (currentState === "js-qqstring" || currentState === "js-qstring") {
+                    return "string";
+                }
+                curelyBracesCount++;
+                return "paren.lparen";
+            },
+            regex: /{/
+        }, {
+            token : function (value, currentState, stack) {
+                if (currentState !== "js-start" && currentState !== "js-no_regex") {
+                    return "string";
+                }
+                return "paren.rparen";
+            },
+            regex : /}/,
+            next : function (currentState, stack) {
+                if (currentState !== "js-start" && currentState !== "js-no_regex") {
+                    return currentState;
+                }
+                if (--curelyBracesCount > 0) {
+                    return currentState;
+                }
+                return "start";
+            }
+        }]);
+
+        this.normalizeRules();
     };
 
-    this.embedRules(JavaScriptHighlightRules, "js-", [ {
-        token : function (value, currentState, stack) {
-            if (currentState === "js-string.quasi.start") {
-                return "string.quasi.start";
-            }
-            if (currentState === "js-qqstring" || currentState === "js-qstring") {
-                return "string";
-            }
-            curelyBracesCount++;
-            return "paren.lparen";
-        },
-        regex: /{/
-    }, {
-        token : function (value, currentState, stack) {
-            if (currentState !== "js-start" && currentState !== "js-no_regex") {
-                return "string";
-            }
-            return "paren.rparen";
-        },
-        regex : /}/,
-        next : function (currentState, stack) {
-            if (currentState !== "js-start" && currentState !== "js-no_regex") {
-                return currentState;
-            }
-            if (--curelyBracesCount > 0) {
-                return currentState;
-            }
-            return "start";
-        }
-    }]);
-    
-    this.normalizeRules();
-};
+    oop.inherits(RqlHighlightRules, TextHighlightRules);
 
-oop.inherits(RqlHighlightRules, TextHighlightRules);
-
-exports.RqlHighlightRules = RqlHighlightRules;
+    exports.RqlHighlightRules = RqlHighlightRules;
 });
 
-ace.define("ace/mode/rql",["require","exports","module","ace/lib/oop","ace/mode/text","ace/mode/javascript","ace/mode/rql_highlight_rules"/*,"ace/tokenizer"*/], function(require, exports, module) {
-"use strict";
+ace.define("ace/mode/rql",["require","exports","module","ace/lib/oop","ace/mode/text","ace/mode/javascript","ace/mode/rql_highlight_rules","ace/worker/worker_client"], function(require, exports, module) {
+    "use strict";
 
-var oop = require("../lib/oop");
-var TextMode = require("./text").Mode;
-var JsMode = require("./javascript").Mode;
-var RqlHighlightRules = require("./rql_highlight_rules").RqlHighlightRules;
-var WorkerClient = require("../worker/worker_client").WorkerClient;
-// var Tokenizer = require("../tokenizer").Tokenizer;
+    var oop = require("../lib/oop");
+    var TextMode = require("./text").Mode;
+    var JsMode = require("./javascript").Mode;
+    var RqlHighlightRules = require("./rql_highlight_rules").RqlHighlightRules;
+    var WorkerClient = require("../worker/worker_client").WorkerClient;
 
-var Mode = function() {
-    this.HighlightRules = RqlHighlightRules;
-    this.$behaviour = this.$defaultBehaviour;
+    var Mode = function() {
+        this.HighlightRules = RqlHighlightRules;
+        this.$behaviour = this.$defaultBehaviour;
 
-    /*var highlighter = new this.HighlightRules();
-    this.$tokenizer = new Tokenizer(highlighter.getRules());
-    this.$embeds = highlighter.getEmbeds();*/
-
-    this.createModeDelegates({
-        "js-": JsMode
-    });
-    this.prefixRegexps = [/[a-zA-Z_0-9@'"\\\/\$\-\u00A2-\uFFFF=!<>]/];
-
-    this.createWorker = function(session) {
-        var worker = new WorkerClient(["ace"], "ace/mode/rql_worker", "RqlWorker");
-        // var worker = new WorkerClient(["ace"], "ace/mode/javascript_worker", "JavaScriptWorker");
-        worker.attachToDocument(session.getDocument());
-
-        worker.on("annotate", function(results) {
-            session.setAnnotations(results.data);
+        this.createModeDelegates({
+            "js-": JsMode
         });
+        this.prefixRegexps = [/[a-zA-Z_0-9@'"\\\/\$\-\u00A2-\uFFFF=!<>]/];
 
-        worker.on("terminate", function() {
-            session.clearAnnotations();
-        });
+        this.createWorker = function(session) {
+            var worker = new WorkerClient(["ace"], "ace/mode/rql_worker", "RqlWorker");
+            worker.attachToDocument(session.getDocument());
 
-        return worker;
+            worker.on("annotate", function(results) {
+                session.setAnnotations(results.data);
+            });
+
+            worker.on("terminate", function() {
+                session.clearAnnotations();
+            });
+
+            return worker;
+        };
     };
-};
-oop.inherits(Mode, TextMode);
+    oop.inherits(Mode, TextMode);
 
-(function() {
+    (function() {
 
-    this.lineCommentStart = "//";
-    this.blockComment = {start: "/*", end: "*/"};
-    this.$quotes = {'"': '"', "'": "'", "`": "`"};
+        this.lineCommentStart = "//";
+        this.blockComment = {start: "/*", end: "*/"};
+        this.$quotes = {'"': '"', "'": "'", "`": "`"};
 
-    this.$id = "ace/mode/rql";
-}).call(Mode.prototype);
+        this.$id = "ace/mode/rql";
+    }).call(Mode.prototype);
 
-exports.Mode = Mode;
-
+    exports.Mode = Mode;
 });
