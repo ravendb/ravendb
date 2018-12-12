@@ -200,6 +200,9 @@ namespace Raven.Server.Utils.Cpu
                 return false;
             }
 
+            if (cpuUsage > 100)
+                cpuUsage = 100;
+
             return true;
         }
 
