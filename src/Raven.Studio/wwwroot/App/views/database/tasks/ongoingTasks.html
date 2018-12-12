@@ -442,7 +442,10 @@
 </script>
 
 <script type="text/html" id="etl-progress-template">
-    <div data-bind="if: showDetails">
+    <div data-bind="if: showProgress">
+        <div data-bind="visible: !scriptProgress().length">
+            <i class="global-spinner spinner-xs"></i> Loading progress ...
+        </div>
         <div data-bind="foreach: scriptProgress">
             <div data-bind="text: name"></div>
 
