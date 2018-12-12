@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq;
+using Raven.Client.Util;
 using Raven.Server.Utils;
 using Raven.Server.Utils.Stats;
 
@@ -141,6 +142,11 @@ namespace Raven.Server.Documents.ETL.Stats
         public void RecordLoadFailure()
         {
             _stats.SuccessfullyLoaded = false;
+        }
+
+        public void RecordCurrentlyAllocated(long allocatedInBytes)
+        {
+            _stats.CurrentlyAllocated = new Size(allocatedInBytes);
         }
     }
 }

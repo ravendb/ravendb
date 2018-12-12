@@ -475,6 +475,9 @@ namespace Raven.Server.Documents.ETL
             var totalAllocated = _threadAllocations.TotalAllocated;
             _threadAllocations.CurrentlyAllocatedForProcessing = totalAllocated;
             var currentlyInUse = new Size(totalAllocated, SizeUnit.Bytes);
+
+            stats.RecordCurrentlyAllocated(totalAllocated + GC.GetAllocatedBytesForCurrentThread());
+
             if (currentlyInUse > _currentMaximumAllowedMemory)
             {
                 if (MemoryUsageGuard.TryIncreasingMemoryUsageForThread(_threadAllocations, ref _currentMaximumAllowedMemory,

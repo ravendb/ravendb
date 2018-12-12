@@ -1,4 +1,5 @@
 ﻿using System.Collections.Generic;
+using Raven.Client.Util;
 
 namespace Raven.Server.Documents.ETL.Stats
 {
@@ -40,6 +41,8 @@ namespace Raven.Server.Documents.ETL.Stats
             {EtlItemType.Counter, 0}
         };
 
+        public Size CurrentlyAllocated { get; set; } = new Size();
+
         public long LastLoadedEtag;
 
         public int NumberOfLoadedItems;
@@ -51,5 +54,6 @@ namespace Raven.Server.Documents.ETL.Stats
         public string ChangeVector;
 
         public bool? SuccessfullyLoaded;
+        
     }
 }

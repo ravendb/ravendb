@@ -1,6 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.Linq;
+using Raven.Client.Util;
 
 namespace Raven.Server.Documents.ETL.Stats
 {
@@ -36,6 +36,8 @@ namespace Raven.Server.Documents.ETL.Stats
         public Dictionary<EtlItemType, int> NumberOfTransformedItems { get; set; }
 
         public Dictionary<EtlItemType, int> NumberOfTransformedTombstones { get; set; }
+
+        public Size CurrentlyAllocated { get; set; }
 
         public string BatchCompleteReason { get; set; }
 
