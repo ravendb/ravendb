@@ -422,12 +422,12 @@ namespace TypingsGenerator
             // version info
             scripter.AddType(typeof(LatestVersionCheck.VersionInfo));
             
-            
             // studio configuration
             scripter.AddType(typeof(ServerWideStudioConfiguration));
             scripter.AddType(typeof(StudioConfiguration));
 
             scripter.AddType(typeof(StudioTasksHandler.OfflineMigrationValidation));
+            scripter.AddType(typeof(DataDirectoryResult));
 
             return scripter;
         }

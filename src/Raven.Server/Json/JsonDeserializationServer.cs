@@ -36,6 +36,7 @@ using Raven.Server.NotificationCenter.Notifications.Server;
 using Raven.Server.ServerWide.Commands;
 using Raven.Server.Smuggler.Migration;
 using Raven.Server.SqlMigration.Model;
+using Raven.Server.Web.Studio;
 using Raven.Server.Web.System;
 
 namespace Raven.Server.Json
@@ -156,6 +157,8 @@ namespace Raven.Server.Json
         public static readonly Func<BlittableJsonReaderObject, ClusterTransactionCommand.ClusterTransactionOptions> ClusterTransactionOptions = GenerateJsonDeserializationRoutine<ClusterTransactionCommand.ClusterTransactionOptions>();
 
         public static readonly Func<BlittableJsonReaderObject, NodeConnectionTestResult> NodeConnectionTestResult = GenerateJsonDeserializationRoutine<NodeConnectionTestResult>();
+
+        public static readonly Func<BlittableJsonReaderObject, SingleNodeDataDirectoryResult> SingleNodeDataDirectoryResult = GenerateJsonDeserializationRoutine<SingleNodeDataDirectoryResult>();
 
         public class Parameters
         {
