@@ -14,7 +14,7 @@ namespace FastTests.Graph
 {
     public class BasicGraphQueries : RavenTestBase
     {
-        public List<T> Query<T>(string q, Action<IDocumentStore> mutate = null)
+        public List<T> Query<T>(string q, Action<IDocumentStore> mutate = null,Dictionary<string,object> parameters = null)
         {
             using (var store = GetDocumentStore())
             {
@@ -26,7 +26,16 @@ namespace FastTests.Graph
 
                 using (var s = store.OpenSession())
                 {
-                    return s.Advanced.RawQuery<T>(q).ToList();
+                    var query = s.Advanced.RawQuery<T>(q);
+                    if(parameters != null)
+                    {
+                        foreach (var param in parameters)
+                        {
+                            query.AddParameter(param.Key, param.Value);
+                        }
+                    }
+
+                    return query.ToList();
                 }
             }
         }
@@ -339,12 +348,12 @@ include Lines.Product
         public void CanUseExactOnEdge()
         {
             var results = Query<Employee>(@"
-match (Orders as o)-[Lines where exact(ProductName = ""Tofu"") select Product]->(Products as p)
-");
+match (Orders as o)-[Lines where exact(ProductName = $p1) select Product]->(Products as p)
+", parameters:new Dictionary<string, object>{{"$p1", "Tofu"} });
             Assert.NotEmpty(results);
             results = Query<Employee>(@"
-match (Orders as o)-[Lines where exact(ProductName = ""tofu"") select Product]->(Products as p)
-");
+match (Orders as o)-[Lines where exact(ProductName = $p1) select Product]->(Products as p)
+", parameters: new Dictionary<string, object> { { "$p1", "tofu" } });
             Assert.Empty(results);
         }
         [Fact]
