@@ -15,14 +15,11 @@ namespace Raven.Server.Documents.ETL.Stats
     {
         public string TransformationName { get; set; }
 
-        public bool Completed => (NumberOfDocumentsToProcess > 0 || NumberOfDocumentTombstonesToProcess > 0 ||
-                                 NumberOfCountersToProcess > 0 || NumberOfCounterTombstonesToProcess > 0) == false;
+        public bool Completed { get; set; }
 
         public bool Disabled { get; set; }
 
         public double AverageProcessedPerSecond { get; set; }
-
-        public long LastProcessedEtag { get; set; }
 
         public long NumberOfDocumentsToProcess { get; set; }
 

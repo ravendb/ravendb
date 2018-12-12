@@ -35,15 +35,12 @@ namespace Raven.Server.Documents.ETL.Stats
 
         public Dictionary<EtlItemType, int> NumberOfTransformedItems { get; set; }
 
+        public Dictionary<EtlItemType, int> NumberOfTransformedTombstones { get; set; }
+
         public string BatchCompleteReason { get; set; }
 
         public int TransformationErrorCount { get; set; }
 
         public bool? SuccessfullyLoaded { get; set; }
-
-        public long GetHighestEtag()
-        {
-            return Math.Max(LastLoadedEtag, Math.Max(LastFilteredOutEtags.Max(x => x.Value), LastTransformedEtags.Max(x => x.Value)));
-        }
     }
 }
