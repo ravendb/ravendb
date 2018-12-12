@@ -545,7 +545,7 @@ namespace Raven.Server.Documents.PeriodicBackup
 
         private Stream GetOutputStream(Stream fileStream)
         {
-            if (_configuration.EncryptionSettings == null)
+            if (_configuration?.EncryptionSettings == null || _configuration.EncryptionSettings.EncryptionMode == EncryptionMode.None)
                 return fileStream;
 
             var key = _configuration.EncryptionSettings.Key;
