@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Data;
 using System.Diagnostics;
 using System.Threading;
 using System.Threading.Tasks;
@@ -6,6 +7,8 @@ using FastTests.Voron;
 using Voron;
 using Voron.Impl.Journal;
 using Xunit;
+using TimeoutException = System.TimeoutException;
+using LockTaskResponsible = Voron.Impl.Journal.WriteAheadJournal.JournalApplicator.LockTaskResponsible;
 
 namespace SlowTests.Voron.Storage
 {
@@ -91,168 +94,370 @@ namespace SlowTests.Voron.Storage
                 var totalWrittenButUnsyncedBytes = Env.Journal.Applicator.TotalWrittenButUnsyncedBytes;
                 Assert.Equal(0, totalWrittenButUnsyncedBytes);
             }
-
         }
 
         [Fact]
         public void LockTaskResponsible_WhenLockTakenAndNoOneRunTaskIfNotAlreadyRan_ShouldKeepWaiting()
         {
-            var job = new Job();
-
-            var @lock = new object();
-            Monitor.Enter(@lock);
-
             var tokenSource = new CancellationTokenSource();
-            var lockTaskResponsible =
-              new WriteAheadJournal.JournalApplicator.LockTaskResponsible(@lock, tokenSource.Token);
+            var worker = new Worker("worker");
+            try
+            {
+                var @lock = new object();
+                var lockTaskResponsible = new LockTaskResponsible(@lock, tokenSource.Token);
+                Monitor.Enter(@lock);
 
-            Task.Run(() => lockTaskResponsible.WaitForTaskToBeDone(job.Do));
+                worker.TaskRun(j => lockTaskResponsible.WaitForTaskToBeDone(j));
 
-            job.Wait(TimeSpan.FromSeconds(5));
-            Assert.Equal(0, job.TimesJobDone);
+                Assert.Throws<TimeoutException>(() => worker.WaitThrow(TimeSpan.FromSeconds(5)));
+
+                Assert.Equal(0, worker.Job.TimesJobDone);
+                Assert.Equal(null, worker.Exception);
+            }
+            finally
+            {
+                tokenSource.Cancel();
+            }
         }
 
         [Fact]
         public void LockTaskResponsible_WhenLockTakenAndNoOneRunTaskIfNotAlreadyRanAndCancelToken_ShouldContinueWithoutDoJob()
         {
-            var job = new Job();
-            var resetEvent = new ManualResetEvent(false);
+            var tokenSource = new CancellationTokenSource();
+            var worker = new Worker("worker");
 
             var @lock = new object();
+            var lockTaskResponsible = new LockTaskResponsible(@lock, tokenSource.Token);
             Monitor.Enter(@lock);
 
-            var tokenSource = new CancellationTokenSource();
-            var lockTaskResponsible =
-              new WriteAheadJournal.JournalApplicator.LockTaskResponsible(@lock, tokenSource.Token);
-
-            Task.Run(() =>
-            {
-                lockTaskResponsible.WaitForTaskToBeDone(job.Do);
-                resetEvent.Set();
-            });
-
+            worker.TaskRun(j => lockTaskResponsible.WaitForTaskToBeDone(j));
             tokenSource.Cancel();
 
-            var isContinue = resetEvent.WaitOne(TimeSpan.FromSeconds(10));
-            Assert.True(isContinue);
-            Assert.Equal(0, job.TimesJobDone);
+            worker.WaitThrow(TimeSpan.FromSeconds(10));
+            Assert.Equal(0, worker.Job.TimesJobDone);
+            Assert.Equal(null, worker.Exception);
         }
 
         [Fact]
         public void LockTaskResponsible_WhenLockTakenAndRelease_JobShouldBeDone()
         {
-            var job = new Job();
-
-            var @lock = new object();
-            Monitor.Enter(@lock);
-
             var tokenSource = new CancellationTokenSource();
-            var lockTaskResponsible =
-              new WriteAheadJournal.JournalApplicator.LockTaskResponsible(@lock, tokenSource.Token);
+            try
+            {
+                var worker = new Worker("worker");
 
-            Task.Run(() => lockTaskResponsible.WaitForTaskToBeDone(job.Do));
+                var @lock = new object();
+                var lockTaskResponsible = new LockTaskResponsible(@lock, tokenSource.Token);
+                Monitor.Enter(@lock);
 
-            Thread.Sleep(TimeSpan.FromSeconds(1));
-            Monitor.Exit(@lock);
+                worker.TaskRun((j) => lockTaskResponsible.WaitForTaskToBeDone(j));
 
-            job.Wait(TimeSpan.FromSeconds(10));
-            Assert.Equal(1, job.TimesJobDone);
+                Thread.Sleep(TimeSpan.FromSeconds(1));
+                Monitor.Exit(@lock);
+
+                worker.WaitThrow(TimeSpan.FromSeconds(10));
+                Assert.Equal(1, worker.Job.TimesJobDone);
+                Assert.Equal(null, worker.Exception);
+            }
+            catch (Exception)
+            {
+                tokenSource.Cancel();
+                throw;
+            }
         }
 
         [Fact]
         public void LockTaskResponsible_WhenLockTaken_ShouldBeDoneByRunTaskIfNotAlreadyRan()
         {
-            var job = new Job();
-
-            var @lock = new object();
-            Monitor.Enter(@lock);
-
             var tokenSource = new CancellationTokenSource();
-            var lockTaskResponsible =
-              new WriteAheadJournal.JournalApplicator.LockTaskResponsible(@lock, tokenSource.Token);
-
-            Task.Run(() => lockTaskResponsible.WaitForTaskToBeDone(job.Do));
-
-            var stop = Stopwatch.StartNew();
-            while (job.TimesJobDone == 0 && stop.Elapsed < TimeSpan.FromSeconds(10))
+            try
             {
-                lockTaskResponsible.RunTaskIfNotAlreadyRan();
-                Thread.Sleep(100);
-            }
+                var worker = new Worker("worker");
 
-            Assert.Equal(1, job.TimesJobDone);
+                var @lock = new object();
+                var lockTaskResponsible = new LockTaskResponsible(@lock, tokenSource.Token);
+                Monitor.Enter(@lock);
+
+                worker.TaskRun((j) => lockTaskResponsible.WaitForTaskToBeDone(j));
+
+                var stop = Stopwatch.StartNew();
+                while (worker.Job.TimesJobDone == 0 && stop.Elapsed < TimeSpan.FromSeconds(10))
+                {
+                    lockTaskResponsible.RunTaskIfNotAlreadyRan();
+                    Thread.Sleep(100);
+                }
+
+                Assert.Equal(1, worker.Job.TimesJobDone);
+                Assert.Equal(null, worker.Exception);
+            }
+            catch (Exception)
+            {
+                tokenSource.Cancel();
+                throw;
+            }
         }
 
         [Fact]
         public void LockTaskResponsible_WhenLockTakenAndDoneByRunTaskIfNotAlreadyRan_ShouldBeWaitUntilTheJobDone()
         {
-            var job = new Job();
-
-            var @lock = new object();
-            Monitor.Enter(@lock);
-
             var tokenSource = new CancellationTokenSource();
-            var lockTaskResponsible =
-                new WriteAheadJournal.JournalApplicator.LockTaskResponsible(@lock, tokenSource.Token);
-
-            void LongJob()
+            try
             {
-                Thread.Sleep(TimeSpan.FromSeconds(1));
-                job.Do();
+                var worker = new Worker("worker")
+                {
+                    Job = new LongJob()
+                };
+
+                var @lock = new object();
+                var lockTaskResponsible = new LockTaskResponsible(@lock, tokenSource.Token);
+                Monitor.Enter(@lock);
+
+                var isContinueBeforeJobFinished = true;
+                worker.TaskRun(j =>
+                {
+                    lockTaskResponsible.WaitForTaskToBeDone(j);
+                    isContinueBeforeJobFinished = worker.Job.TimesJobDone == 0;
+                });
+
+                var stop = Stopwatch.StartNew();
+                while (worker.Job.TimesJobDone == 0)
+                {
+                    if (stop.Elapsed > TimeSpan.FromSeconds(10))
+                        throw new TimeoutException();
+
+                    lockTaskResponsible.RunTaskIfNotAlreadyRan();
+                    Thread.Sleep(100);
+                }
+
+                worker.WaitThrow(TimeSpan.FromSeconds(10));
+
+                Assert.Equal(1, worker.Job.TimesJobDone);
+                Assert.False(isContinueBeforeJobFinished);
+                Assert.Equal(null, worker.Exception);
             }
-
-            var isContinueBeforeJobDone = true;
-            Task.Run(() =>
+            catch (Exception)
             {
-                lockTaskResponsible.WaitForTaskToBeDone(LongJob);
-                isContinueBeforeJobDone = job.TimesJobDone == 0;
-            });
-
-            var stop = Stopwatch.StartNew();
-            while (job.TimesJobDone == 0 && stop.Elapsed < TimeSpan.FromSeconds(10))
-            {
-                lockTaskResponsible.RunTaskIfNotAlreadyRan();
-                Thread.Sleep(100);
+                tokenSource.Cancel();
+                throw;
             }
+        }
 
-            Assert.Equal(1, job.TimesJobDone);
-            Assert.False(isContinueBeforeJobDone);
+        [Fact]
+        public void LockTaskResponsible_WhenTwoThreadsAreWaitingToToTaskToBeDone_TheRunThreadShouldRunOnlyOneForCallAndEventuallyCompleteAll()
+        {
+            var tokenSource = new CancellationTokenSource();
+            try
+            {
+                var worker1 = new Worker("worker1");
+                var worker2 = new Worker("worker2");
+
+                var @lock = new object();
+                var lockTaskResponsible = new LockTaskResponsible(@lock, tokenSource.Token);
+                Monitor.Enter(@lock);
+
+                worker1.TaskRun(j => lockTaskResponsible.WaitForTaskToBeDone(j));
+                worker2.TaskRun(j => lockTaskResponsible.WaitForTaskToBeDone(j));
+                Thread.Sleep(1000);
+
+                var stop = Stopwatch.StartNew();
+                while (worker1.Job.TimesJobDone == 0 || worker2.Job.TimesJobDone == 0)
+                {
+                    if (stop.Elapsed > TimeSpan.FromSeconds(10))
+                        throw new TimeoutException();
+
+                    lockTaskResponsible.RunTaskIfNotAlreadyRan();
+                    lockTaskResponsible.RunTaskIfNotAlreadyRan();
+                    Thread.Sleep(100);
+                }
+
+                worker1.WaitThrow(TimeSpan.FromSeconds(10));
+                worker2.WaitThrow(TimeSpan.FromSeconds(0));
+
+                Assert.Equal(1, worker1.Job.TimesJobDone);
+                Assert.Equal(1, worker2.Job.TimesJobDone);
+                Assert.Equal(null, worker1.Exception);
+                Assert.Equal(null, worker2.Exception);
+            }
+            catch (Exception)
+            {
+                tokenSource.Cancel();
+                throw;
+            }
         }
 
         [Fact]
         public void LockTaskResponsible_WhenLockNotTaken_WorkShouldBeDone()
         {
-            var job = new Job();
-
-            var @lock = new object();
-
             var tokenSource = new CancellationTokenSource();
-            var lockTaskResponsible =
-              new WriteAheadJournal.JournalApplicator.LockTaskResponsible(@lock, tokenSource.Token);
+            try
+            {
+                var worker = new Worker("worker");
 
-            Task.Run(() => lockTaskResponsible.WaitForTaskToBeDone(job.Do));
+                var @lock = new object();
+                var lockTaskResponsible = new LockTaskResponsible(@lock, tokenSource.Token);
 
-            job.Wait(TimeSpan.FromSeconds(10));
+                worker.TaskRun(j => lockTaskResponsible.WaitForTaskToBeDone(j));
 
-            Assert.Equal(1, job.TimesJobDone);
+                worker.WaitThrow(TimeSpan.FromSeconds(10));
+
+                Assert.Equal(1, worker.Job.TimesJobDone);
+                Assert.Equal(null, worker.Exception);
+            }
+            catch (Exception)
+            {
+                tokenSource.Cancel();
+                throw;
+            }
+        }
+
+        [Fact]
+        public void LockTaskResponsible_WhenLockTakenAndJobThrow_ShouldThrowToTheWaiter()
+        {
+            var tokenSource = new CancellationTokenSource();
+            try
+            {
+                var worker = new Worker("worker")
+                {
+                    Job = new ThrowJob<DataException>()
+                };
+
+                var @lock = new object();
+                var lockTaskResponsible = new LockTaskResponsible(@lock, tokenSource.Token);
+                Monitor.Enter(@lock);
+
+                worker.TaskRun(j => lockTaskResponsible.WaitForTaskToBeDone(j));
+
+                var stop = Stopwatch.StartNew();
+                while (worker.Exception == null)
+                {
+                    if (stop.Elapsed > TimeSpan.FromSeconds(10))
+                        throw new TimeoutException();
+
+                    lockTaskResponsible.RunTaskIfNotAlreadyRan();
+                    Thread.Sleep(100);
+                }
+
+                worker.WaitThrow(TimeSpan.FromSeconds(10));
+                Assert.Equal(typeof(DataException), worker.Exception.GetType());
+            }
+            catch (Exception)
+            {
+                tokenSource.Cancel();
+                throw;
+            }
+        }
+
+        [Fact]
+        public void LockTaskResponsible_WhenTwoThreadsAreWaitingOneOfThemToThrowJob_ShouldCompleteTheSecondJob()
+        {
+            var tokenSource = new CancellationTokenSource();
+            try
+            {
+                var throwWorker = new Worker("throwWorker")
+                {
+                    Job = new ThrowJob<DataException>()
+                };
+                var worker = new Worker("worker");
+
+                var @lock = new object();
+                var lockTaskResponsible = new LockTaskResponsible(@lock, tokenSource.Token);
+                Monitor.Enter(@lock);
+
+                throwWorker.TaskRun(j => lockTaskResponsible.WaitForTaskToBeDone(j));
+                Thread.Sleep(100);
+                worker.TaskRun(j => lockTaskResponsible.WaitForTaskToBeDone(j));
+                Thread.Sleep(100);
+
+                var stop = Stopwatch.StartNew();
+                while (throwWorker.Exception == null || worker.Job.TimesJobDone == 0)
+                {
+                    if (stop.Elapsed > TimeSpan.FromSeconds(10))
+                        throw new TimeoutException();
+
+                    lockTaskResponsible.RunTaskIfNotAlreadyRan();
+                    lockTaskResponsible.RunTaskIfNotAlreadyRan();
+                    Thread.Sleep(100);
+                }
+
+                throwWorker.WaitThrow(TimeSpan.FromSeconds(10));
+                worker.WaitThrow(TimeSpan.FromSeconds(0));
+
+                Assert.Equal(0, throwWorker.Job.TimesJobDone);
+                Assert.Equal(1, worker.Job.TimesJobDone);
+                Assert.Equal(typeof(DataException), throwWorker.Exception.GetType());
+                Assert.Equal(null, worker.Exception);
+            }
+            catch (Exception)
+            {
+                tokenSource.Cancel();
+                throw;
+            }
         }
 
         private class Job
         {
-            private readonly AutoResetEvent _autoResetEvent = new AutoResetEvent(false);
             private int _timesJobDone;
 
             public int TimesJobDone => _timesJobDone;
 
-            public void Do()
+            public virtual void Do()
             {
                 Interlocked.Add(ref _timesJobDone, 1);
-                _autoResetEvent.Set();
+            }
+        }
+
+        private class LongJob : Job
+        {
+            public override void Do()
+            {
+                Thread.Sleep(TimeSpan.FromSeconds(1));
+                base.Do();
+            }
+        }
+
+        private class ThrowJob<T> : Job where T : Exception
+        {
+            public override void Do()
+            {
+                throw new DataException();
+            }
+        }
+
+        private class Worker
+        {
+            private readonly AutoResetEvent _finishedWaiting = new AutoResetEvent(false);
+            public string Name { get; }
+            public Exception Exception { get; private set; }
+
+            public Worker(string name)
+            {
+                Name = name;
             }
 
-            public void Wait(TimeSpan time)
+            public Job Job { get; set; } = new Job();
+
+            public void TaskRun(Action<Action> action)
             {
-                _autoResetEvent.WaitOne(time);
+                Task.Run(() =>
+                {
+                    try
+                    {
+                        action(Job.Do);
+                    }
+                    catch (Exception e)
+                    {
+                        Exception = e;
+                    }
+                    _finishedWaiting.Set();
+                });
+            }
+
+            public void WaitThrow(TimeSpan time)
+            {
+                if (_finishedWaiting.WaitOne(time) == false)
+                {
+                    throw new TimeoutException();
+                }
             }
         }
     }
