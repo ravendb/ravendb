@@ -86,16 +86,35 @@ namespace Raven.Server.Documents.Queries.Graph
         private bool EdgeMatchExact(BlittableJsonReaderObject blittableJsonReaderObject, MethodExpression methodExpression)
         {
             if (string.Equals(methodExpression.Name.Value, "exact", StringComparison.OrdinalIgnoreCase) == false)
-                return false;
+                throw new NotSupportedException($"Where clause on edge doesn't support {methodExpression} method expression");
             var arg = methodExpression.Arguments[0] as BinaryExpression;
             var left = arg.Left as FieldExpression;
             var right = arg.Right as ValueExpression;
             if (left == null || right == null)
                 return false;
+            string rightStringValue = null;
+            switch (right.Value)
+            {
+                case ValueTokenType.Parameter:
+                    if (QueryParameters.TryGet(right.Token.Value, out rightStringValue) == false)
+                    {
+                        throw new NotSupportedException($"Where clause with method expression {methodExpression} has parameter {right.Token.Value} which is not of string type.");
+                    }
+                    break;
+                case ValueTokenType.String:
+                    rightStringValue = right.Token.Value;
+                    break;
+                case ValueTokenType.Null:
+                    rightStringValue = null;
+                    break;
+                default:
+                    throw new NotSupportedException($"Where clause with method expression {methodExpression} has parameter {right.Token.Value} which is not of string type.");
+            }
             var value = BlittableJsonTraverser.Default.Read(blittableJsonReaderObject, left.FieldValue);
-            if (value is LazyStringValue lsv && lsv.CompareTo(right.Token.Value) == 0)
+            if (value is LazyStringValue lsv && lsv.CompareTo(rightStringValue) == 0)
                 return true;
-
+            if (value is LazyCompressedStringValue lcsv && String.Compare(lcsv, rightStringValue, StringComparison.Ordinal) == 0)
+                return true;
             return false;
         }
 
