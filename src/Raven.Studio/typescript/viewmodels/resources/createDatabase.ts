@@ -53,9 +53,10 @@ class createDatabase extends dialogViewModelBase {
     canUseDynamicOption: KnockoutComputed<boolean>; 
     defaultReplicationFactor = ko.observable<number>();
 
-    databaseLocationCalculated = ko.observable<string>();
-    databaseLocationShowing: KnockoutComputed<string>;
-    
+    databaseLocationInfo = ko.observableArray<Raven.Server.Web.Studio.SingleNodeDataDirectoryResult>([]);
+    databaseLocationInfoToDisplay: KnockoutComputed<Raven.Server.Web.Studio.SingleNodeDataDirectoryResult[]>;
+    databaseLocationInfoMessage: KnockoutComputed<string>;
+
     recentPathsAutocomplete: lastUsedAutocomplete;
     dataExporterAutocomplete: lastUsedAutocomplete;
     
@@ -113,12 +114,9 @@ class createDatabase extends dialogViewModelBase {
         });
 
         const getEncryptionKeyTask = this.encryptionSection.generateEncryptionKey();
-
         const getDefaultDatabaseLocationTask = new getDatabaseLocationCommand(this.databaseModel.name(), this.databaseModel.path.dataPath())
             .execute()
-            .done((fullPath: string) => {
-                this.databaseLocationCalculated(fullPath);
-            });
+            .done((result: Raven.Server.Web.Studio.DataDirectoryResult) => this.updateDataDirectoryInfo(result));
         
         return $.when<any>(getTopologyTask, getEncryptionKeyTask, getDefaultDatabaseLocationTask, getStudioSettingsTask)
             .done(() => {
@@ -161,6 +159,10 @@ class createDatabase extends dialogViewModelBase {
         if (this.clusterNodes.length === 1) {
             this.databaseModel.replication.nodes([this.clusterNodes[0]]);
         }
+    }
+
+    private updateDataDirectoryInfo(dataDirectoryResult: Raven.Server.Web.Studio.DataDirectoryResult) {
+        this.databaseLocationInfo(dataDirectoryResult.List);
     }
 
     private setDefaultReplicationFactor(topology: clusterTopology) {
@@ -242,19 +244,55 @@ class createDatabase extends dialogViewModelBase {
             return "unchecked";
         });
 
-
-        this.databaseLocationShowing = ko.pureComputed(() => {
-            return this.databaseLocationCalculated();
-        });
-
         this.databaseModel.path.dataPath.throttle(300).subscribe((newPathValue) => {
             if (this.databaseModel.path.dataPath.isValid()) {
                 new getDatabaseLocationCommand(this.databaseModel.name(), newPathValue)
                     .execute()
-                    .done((fullPath: string) => this.databaseLocationCalculated(fullPath))
+                    .done((result: Raven.Server.Web.Studio.DataDirectoryResult) => this.updateDataDirectoryInfo(result));
             } else {
-                this.databaseLocationCalculated("Invalid path");
+                this.databaseLocationInfo([]);
             }
+        });
+
+        this.databaseLocationInfoToDisplay = ko.pureComputed(() => {
+            const databaseLocationInfo = this.databaseLocationInfo();
+            const selectedNodes = this.databaseModel.replication.nodes().map(x => x.tag());
+            const replicationFactor = this.databaseModel.replication.replicationFactor();
+            if (this.databaseModel.replication.manualMode()) {
+                if (selectedNodes.length === 0) {
+                    return [];
+                }
+            }
+            else if (replicationFactor === 0) {
+                return [];
+            }
+
+            return databaseLocationInfo.filter(x => selectedNodes.indexOf(x.NodeTag) > -1);
+        });
+
+        this.databaseLocationInfoMessage = ko.pureComputed(() => {
+            const message = "The data files will be created in";
+            const selectedNodes = this.databaseModel.replication.nodes().map(x => x.tag());
+            if (this.databaseModel.replication.manualMode()) {
+                if (selectedNodes.length === 0) {
+                    return null;
+                }
+
+                return `${message}:`;
+            }
+
+            const numberOfClusterNodes = this.clusterNodes.slice().length;
+            const replicationFactor = Math.min(this.databaseModel.replication.replicationFactor(), numberOfClusterNodes);
+            if (replicationFactor === 0) {
+                return null;
+            }
+
+            if (replicationFactor === 1 ||
+                replicationFactor === numberOfClusterNodes) {
+                return `${message}:`;
+            }
+
+            return `${message} ${replicationFactor} of the following nodes:`;
         });
     }
 

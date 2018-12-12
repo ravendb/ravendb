@@ -1,6 +1,5 @@
 ﻿using System;
 using System.IO;
-using System.Net;
 using System.Threading.Tasks;
 using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.CSharp;
@@ -16,6 +15,8 @@ using Sparrow.Json.Parsing;
 using Raven.Server.Config;
 using Voron.Util.Settings;
 using Raven.Server.Documents.Indexes;
+using Sparrow.Platform;
+using Sparrow.Utils;
 
 namespace Raven.Server.Web.Studio
 {
@@ -23,7 +24,7 @@ namespace Raven.Server.Web.Studio
     {
         // return the calculated full data directory for the database before it is created according to the name & path supplied
         [RavenAction("/admin/studio-tasks/full-data-directory", "GET", AuthorizationStatus.Operator)]
-        public Task FullDataDirectory()
+        public async Task FullDataDirectory()
         {
             var path = GetStringQueryString("path", required: false);
             var name = GetStringQueryString("name", required: false);
@@ -50,19 +51,43 @@ namespace Raven.Server.Web.Studio
             {
                 if (PathUtil.IsSubDirectory(result, ServerStore.Configuration.Core.DataDirectory.FullPath) == false)
                 {
-                    result = $"The administrator has restricted databases to be created only under the {RavenConfiguration.GetKey(x => x.Core.DataDirectory)} directory: '{ServerStore.Configuration.Core.DataDirectory.FullPath}'.";
+                    result =
+                        $"The administrator has restricted databases to be created only under the {RavenConfiguration.GetKey(x => x.Core.DataDirectory)} directory: '{ServerStore.Configuration.Core.DataDirectory.FullPath}'.";
                 }
             }
-            using (ServerStore.ContextPool.AllocateOperationContext(out JsonOperationContext context))
-            using (var writer = new BlittableJsonTextWriter(context, ResponseBodyStream()))
+
+            var drivesInfo = PlatformDetails.RunningOnPosix ? DriveInfo.GetDrives() : null;
+            var driveInfo = DiskSpaceChecker.GetDriveInfo(result, drivesInfo);
+            var diskSpaceInfo = DiskSpaceChecker.GetDiskSpaceInfo(driveInfo.DriveName);
+
+            var currentNodeInfo = new SingleNodeDataDirectoryResult
             {
-                writer.WriteStartObject();
-                writer.WritePropertyName("FullPath");
-                writer.WriteString(result);
-                writer.WriteEndObject();
+                NodeTag = Server.ServerStore.NodeTag,
+                FullPath = result,
+                TotalFreeSpaceHumane = diskSpaceInfo?.TotalFreeSpace.ToString()
+            };
+            var getNodesInfo = GetBoolValueQueryString("getNodesInfo", required: false) ?? false;
+            if (getNodesInfo == false)
+            {
+                using (ServerStore.ContextPool.AllocateOperationContext(out JsonOperationContext context))
+                using (var writer = new BlittableJsonTextWriter(context, ResponseBodyStream()))
+                {
+                    context.Write(writer, currentNodeInfo.ToJson());
+                }
+
+                return;
             }
 
-            return Task.CompletedTask;
+            using (ServerStore.ContextPool.AllocateOperationContext(out JsonOperationContext context))
+            {
+                var info = new DataDirectoryInfo(ServerStore, context);
+                var dataDirectoryResult = await info.GetDatabaseDirectoryResult(currentNodeInfo, path, name);
+
+                using (var writer = new BlittableJsonTextWriter(context, ResponseBodyStream()))
+                {
+                    context.Write(writer, dataDirectoryResult.ToJson());
+                }
+            }
         }
 
         [RavenAction("/admin/studio-tasks/offline-migration-test", "GET", AuthorizationStatus.Operator)]

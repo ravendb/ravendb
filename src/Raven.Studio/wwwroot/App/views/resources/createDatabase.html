@@ -364,10 +364,21 @@
             </div>
         </div>
         <div class="form-group row">
-            <div class="col-sm-12">
+            <div class="col-sm-12" data-bind="if: $root.databaseLocationInfoMessage">
                 <p class="text-info bg-info padding padding-sm">
-                    The data files will be created in:<br/>
-                    <strong><small data-bind="text: $root.databaseLocationShowing"></small></strong>
+                    <span data-bind="text: $root.databaseLocationInfoMessage"></span><br />
+                    <ul data-bind="foreach: $root.databaseLocationInfoToDisplay" class="text-info bg-info">
+                        <li>
+                            <small>
+                                Node Tag: <strong data-bind="text: NodeTag"></strong>
+                                <br />
+                                Path: <strong data-bind="text: FullPath"></strong>
+                                <span data-bind="if: TotalFreeSpaceHumane">
+                                    <br/>Free Disk Space: <strong data-bind="text: TotalFreeSpaceHumane"></strong>
+                                </span>
+                            </small>
+                        </li>
+                    </ul>
                 </p>
             </div>
         </div>
