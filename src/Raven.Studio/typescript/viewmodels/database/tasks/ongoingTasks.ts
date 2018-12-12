@@ -206,7 +206,8 @@ class ongoingTasks extends viewModelBase {
     toggleDetails(item: ongoingTaskListModel) {
         item.toggleDetails();
         
-        if (item.showDetails()) {
+        const isEtl = item.taskType() === "RavenEtl" || item.taskType() === "SqlEtl";
+        if (item.showDetails() && isEtl) {
             this.watchEtlProgress();
         }
     }

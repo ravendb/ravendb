@@ -73,12 +73,14 @@ class progressItem {
 abstract class abstractOngoingTaskEtlListModel extends ongoingTaskListModel {
     editUrl: KnockoutComputed<string>;
     showDetails = ko.observable(false);
+    showProgress = ko.observable(false); // we use separate property for progress and details to smooth toggle animation, first we show progress then expand details 
 
     connectionStringsUrl: string;
     
     scriptProgress = ko.observableArray<progressItem>([]);
 
     toggleDetails() {
+        this.showProgress(!this.showDetails());
         this.showDetails.toggle();
     }
 
