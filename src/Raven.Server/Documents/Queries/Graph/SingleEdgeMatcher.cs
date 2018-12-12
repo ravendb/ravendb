@@ -48,18 +48,14 @@ namespace Raven.Server.Documents.Queries.Graph
                     case BlittableJsonReaderArray array:
                         foreach (var item in array)
                         {
-                            if (item is BlittableJsonReaderObject json &&
-                                Edge.Where?.IsMatchedBy(json, QueryParameters) != false)
+                            if (item is BlittableJsonReaderObject json )
                             {
-                                AddEdgeAfterFiltering(left, json, Edge.Project.FieldValue);
+                                EdgeMatch(left, json);
                             }
                         }
                         break;
                     case BlittableJsonReaderObject json:
-                        if (Edge.Where?.IsMatchedBy(json, QueryParameters) != false)
-                        {
-                            AddEdgeAfterFiltering(left, json, Edge.Project.FieldValue);
-                        }
+                        EdgeMatch(left, json);
                         break;
                 }
             }
@@ -67,6 +63,40 @@ namespace Raven.Server.Documents.Queries.Graph
             {
                 AddEdgeAfterFiltering(left, leftDoc, Edge.Path.FieldValue);
             }
+        }
+
+        private void EdgeMatch(Match match, BlittableJsonReaderObject blittableJsonReaderObject)
+        {
+            if(Edge.Where == null)
+                return;
+            if (Edge.Where is MethodExpression method)
+            {
+                if (EdgeMatchExact(blittableJsonReaderObject, method))
+                {
+                    AddEdgeAfterFiltering(match, blittableJsonReaderObject, Edge.Project.FieldValue);
+                }
+                return;
+            }
+            if (Edge.Where.IsMatchedBy(blittableJsonReaderObject, QueryParameters) != false)
+            {
+                AddEdgeAfterFiltering(match, blittableJsonReaderObject, Edge.Project.FieldValue);
+            }
+        }
+
+        private bool EdgeMatchExact(BlittableJsonReaderObject blittableJsonReaderObject, MethodExpression methodExpression)
+        {
+            if (string.Equals(methodExpression.Name.Value, "exact", StringComparison.OrdinalIgnoreCase) == false)
+                return false;
+            var arg = methodExpression.Arguments[0] as BinaryExpression;
+            var left = arg.Left as FieldExpression;
+            var right = arg.Right as ValueExpression;
+            if (left == null || right == null)
+                return false;
+            var value = BlittableJsonTraverser.Default.Read(blittableJsonReaderObject, left.FieldValue);
+            if (value is LazyStringValue lsv && lsv.CompareTo(right.Token.Value) == 0)
+                return true;
+
+            return false;
         }
 
 

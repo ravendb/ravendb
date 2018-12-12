@@ -309,6 +309,18 @@ include Lines.Product
         }
 
         [Fact]
+        public void CanUseExactOnEdge()
+        {
+            var results = Query<Employee>(@"
+match (Orders as o)-[Lines where exact(ProductName = ""Tofu"") select Product]->(Products as p)
+");
+            Assert.NotEmpty(results);
+            results = Query<Employee>(@"
+match (Orders as o)-[Lines where exact(ProductName = ""tofu"") select Product]->(Products as p)
+");
+            Assert.Empty(results);
+        }
+        [Fact]
         public void CanUseEmptyDocumentAlias()
         {
             var results = Query<Employee>(@"
