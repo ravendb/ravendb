@@ -56,7 +56,7 @@ while($TRUE){{
 
                 var startTime = DateTime.Now;
                 var value = new ExtensionPointData { ProcessCpuUsage = 0, MachineCpuUsage = 0 };
-                while (Math.Abs(value.MachineCpuUsage) < 0.1)
+                while (Math.Abs(value.MachineCpuUsage) < 0.1 || Math.Abs(value.ProcessCpuUsage) < 0.1)
                 {
                     if ((DateTime.Now - startTime).Seconds > 10)
                     {
@@ -67,6 +67,61 @@ while($TRUE){{
 
                 Assert.Equal(57, value.MachineCpuUsage);
                 Assert.Equal(2.5, value.ProcessCpuUsage);
+            }
+        }
+
+        [Fact(Skip = SkipMsg)]
+        public void GetCpuUsage_WhenExtensionPointProcessSendMoreThen100_ShouldReturn100()
+        {
+            var tempFileName = Path.Combine(Path.GetTempPath(), Path.ChangeExtension(Guid.NewGuid().ToString(), ".ps1"));
+            string exec;
+            string args;
+            var jsonCpuUsage = "{\"MachineCpuUsage\":130, \"ProcessCpuUsage\":130}";
+            if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
+            {
+                exec = "PowerShell";
+                jsonCpuUsage = $"\"{jsonCpuUsage.Replace("\"", "`\"")}\"";
+
+                var pshScript = string.Format(@"
+while($TRUE){{
+	Write-Host {0}
+	Start-Sleep 1
+}}", jsonCpuUsage);
+
+                args = "-NoProfile " + tempFileName;
+                File.WriteAllText(tempFileName, pshScript);
+            }
+            else
+            {
+                var bashScript = "#!/bin/bash \nfor i in {1..100} \ndo \n 	echo " + jsonCpuUsage.Replace("\"", "\\\"") + " \n	sleep 1 \ndone";
+
+                exec = "bash";
+                args = tempFileName;
+                File.WriteAllText(tempFileName, bashScript);
+                Process.Start("chmod", $"755 {tempFileName}");
+            }
+
+            using (var extensionPoint = new CpuUsageExtensionPoint(
+                new JsonContextPool(),
+                exec,
+                args,
+                Server.ServerStore.NotificationCenter))
+            {
+                extensionPoint.Start();
+
+                var startTime = DateTime.Now;
+                var value = new ExtensionPointData { ProcessCpuUsage = 0, MachineCpuUsage = 0 };
+                while (Math.Abs(value.MachineCpuUsage) < 0.1 || Math.Abs(value.ProcessCpuUsage) < 0.1)
+                {
+                    if ((DateTime.Now - startTime).Seconds > 10)
+                    {
+                        throw new TimeoutException();
+                    }
+                    value = extensionPoint.Data;
+                }
+
+                Assert.Equal(100, value.MachineCpuUsage);
+                Assert.Equal(100, value.ProcessCpuUsage);
             }
         }
 
