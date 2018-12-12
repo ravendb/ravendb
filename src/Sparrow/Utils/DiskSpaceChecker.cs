@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Buffers;
 using System.IO;
 using System.Runtime.InteropServices;
 using System.Text;
@@ -121,18 +122,26 @@ namespace Sparrow.Utils
 
         private static unsafe string GetPosixRealPath(string path)
         {
-            var byteArray = new byte[LinuxMaxPath];
-            fixed (byte* buffer = byteArray)
-            {
-                var result = Syscall.readlink(path, buffer, LinuxMaxPath);
-                if (result == -1)
-                {
-                    // not a symbolic link
-                    return path;
-                }
+            var byteArray = ArrayPool<byte>.Shared.Rent(LinuxMaxPath);
 
-                var realPath = Encoding.UTF8.GetString(byteArray, 0, result);
-                return realPath;
+            try
+            {
+                fixed (byte* buffer = byteArray)
+                {
+                    var result = Syscall.readlink(path, buffer, LinuxMaxPath);
+                    if (result == -1)
+                    {
+                        // not a symbolic link
+                        return path;
+                    }
+
+                    var realPath = Encoding.UTF8.GetString(byteArray, 0, result);
+                    return realPath;
+                }
+            }
+            finally
+            {
+                ArrayPool<byte>.Shared.Return(byteArray);
             }
         }
 
@@ -192,31 +201,39 @@ namespace Sparrow.Utils
         {
             bool GetPath(uint bufferSize, out string outputPath)
             {
-                var charArray = new char[bufferSize];
-                fixed (char* buffer = charArray)
+                var charArray = ArrayPool<char>.Shared.Rent((int)bufferSize);
+
+                try
                 {
-                    var result = GetFinalPathNameByHandle(handle, buffer, bufferSize, 0);
-                    if (result == 0)
+                    fixed (char* buffer = charArray)
                     {
-                        if (Logger.IsInfoEnabled)
+                        var result = GetFinalPathNameByHandle(handle, buffer, bufferSize, 0);
+                        if (result == 0)
                         {
-                            var error = Marshal.GetLastWin32Error();
-                            Logger.Info($"Failed to get the final path name by handle, error: {error}");
+                            if (Logger.IsInfoEnabled)
+                            {
+                                var error = Marshal.GetLastWin32Error();
+                                Logger.Info($"Failed to get the final path name by handle, error: {error}");
+                            }
+
+                            outputPath = null;
+                            return false;
                         }
 
-                        outputPath = null;
-                        return false;
-                    }
+                        // return value is the size of the path
+                        if (result > bufferSize)
+                        {
+                            outputPath = null;
+                            return false;
+                        }
 
-                    // return value is the size of the path
-                    if (result > bufferSize)
-                    {
-                        outputPath = null;
-                        return false;
+                        outputPath = new string(charArray, 0, (int)result);
+                        return true;
                     }
-
-                    outputPath = new string(charArray, 0, (int)result);
-                    return true;
+                }
+                finally
+                {
+                    ArrayPool<char>.Shared.Return(charArray);
                 }
             }
 
