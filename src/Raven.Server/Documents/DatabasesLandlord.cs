@@ -737,6 +737,8 @@ namespace Raven.Server.Documents
                 }
             });
 
+            var t = tcs.IgnoreUnobservedExceptions();
+
             try
             {
                 var existing = DatabasesCache.Replace(dbName, tcs);
