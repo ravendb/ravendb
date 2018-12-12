@@ -80,7 +80,7 @@ abstract class abstractOngoingTaskEtlListModel extends ongoingTaskListModel {
     scriptProgress = ko.observableArray<progressItem>([]);
 
     toggleDetails() {
-        this.showProgress(!this.showDetails());
+        this.showProgress(!this.showDetails() && (this.taskConnectionStatus() === "Active" || this.taskConnectionStatus() === "NotActive"));
         this.showDetails.toggle();
     }
 
