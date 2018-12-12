@@ -32,6 +32,8 @@ namespace Raven.Client.Documents.Smuggler
 
         public bool SkipRevisionCreation { get; set; }
 
+        public bool Encrypted { get; set; }
+
         [Obsolete("Not used. Will be removed in next major version of the product.")]
         public bool ReadLegacyEtag { get; set; }
     }

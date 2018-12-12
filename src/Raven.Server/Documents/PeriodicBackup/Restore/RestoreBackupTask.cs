@@ -10,7 +10,9 @@ using Raven.Client.Documents.Indexes;
 using Raven.Client.Documents.Operations;
 using Raven.Client.Documents.Operations.Backups;
 using Raven.Client.Documents.Smuggler;
+using Raven.Client.Extensions.Streams;
 using Raven.Client.ServerWide;
+using Raven.Client.Util;
 using Raven.Client.ServerWide.Operations;
 using Raven.Server.Config;
 using Raven.Server.Config.Settings;
@@ -26,6 +28,7 @@ using Raven.Server.Smuggler.Documents;
 using Raven.Server.Smuggler.Documents.Data;
 using Raven.Server.Utils;
 using Raven.Server.Web.System;
+using Sparrow;
 using Sparrow.Logging;
 using Sparrow.Platform;
 using Voron.Impl.Backup;
@@ -521,8 +524,9 @@ namespace Raven.Server.Documents.PeriodicBackup.Restore
             Action<DatabaseRecord> onDatabaseRecordAction = null)
         {
             using (var fileStream = File.Open(filePath, FileMode.Open))
-            using (var stream = new GZipStream(new BufferedStream(fileStream, 128 * Voron.Global.Constants.Size.Kilobyte), CompressionMode.Decompress))
-            using (var source = new StreamSource(stream, context, database))
+            using (var inputStream = GetInputStream(fileStream))
+            using (var gzipStream = new GZipStream(inputStream, CompressionMode.Decompress))
+            using (var source = new StreamSource(gzipStream, context, database))
             {
                 var smuggler = new Smuggler.Documents.DatabaseSmuggler(database, source, destination,
                     database.Time, options, result: restoreResult, onProgress: onProgress, token: _operationCancelToken.Token)
@@ -530,9 +534,17 @@ namespace Raven.Server.Documents.PeriodicBackup.Restore
                     OnIndexAction = onIndexAction,
                     OnDatabaseRecordAction = onDatabaseRecordAction
                 };
-
                 smuggler.Execute(ensureStepsProcessed: false);
             }
+        }
+
+        private Stream GetInputStream(FileStream fileStream)
+        {
+            if (_restoreConfiguration.EncryptionSettings == null)
+                return fileStream;
+
+            var keyAsString = _restoreConfiguration.EncryptionSettings.Key;
+            return new DecryptingXChaCha20Oly1305Stream(fileStream, Convert.FromBase64String(keyAsString));
         }
 
         private RestoreSettings SnapshotRestore(
