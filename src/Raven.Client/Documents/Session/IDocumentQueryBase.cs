@@ -134,6 +134,11 @@ namespace Raven.Client.Documents.Session
         TSelf ContainsAll<TValue>(Expression<Func<T, TValue>> propertySelector, IEnumerable<TValue> values);
 
         /// <summary>
+        ///     Performs a query matching ALL of the provided values against the given field (AND)
+        /// </summary>
+        TSelf ContainsAll<TValue>(Expression<Func<T, IEnumerable<TValue>>> propertySelector, IEnumerable<TValue> values);
+
+        /// <summary>
         ///     Performs a query matching ANY of the provided values against the given field (OR)
         /// </summary>
         TSelf ContainsAny(string fieldName, IEnumerable<object> values);
@@ -142,6 +147,11 @@ namespace Raven.Client.Documents.Session
         ///     Performs a query matching ANY of the provided values against the given field (OR)
         /// </summary>
         TSelf ContainsAny<TValue>(Expression<Func<T, TValue>> propertySelector, IEnumerable<TValue> values);
+
+        /// <summary>
+        ///     Performs a query matching ANY of the provided values against the given field (OR)
+        /// </summary>
+        TSelf ContainsAny<TValue>(Expression<Func<T, IEnumerable<TValue>>> propertySelector, IEnumerable<TValue> values);
 
         /// <summary>
         ///     Negate the next operation
