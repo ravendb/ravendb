@@ -44,14 +44,14 @@ namespace Raven.Server.Documents.Queries.Graph
                 if (BlittableJsonTraverser.Default.TryRead(leftDoc, Edge.Path.FieldValue, out var value, out _) == false)
                     return;
 
+                if (Edge.Project == null)
+                {
+                    ThrowMissingEdgeProjection();
+                }
+
                 switch (value)
                 {
                     case BlittableJsonReaderArray array:
-                        if (Edge.Project == null)
-                        {
-                            ThrowMissingEdgeProjection();
-                        }
-
                         foreach (var item in array)
                         {
                             if (item is BlittableJsonReaderObject json &&
@@ -64,7 +64,7 @@ namespace Raven.Server.Documents.Queries.Graph
                     case BlittableJsonReaderObject json:
                         if (Edge.Where?.IsMatchedBy(json, QueryParameters) != false)
                         {
-                            AddEdgeAfterFiltering(left, json, Edge.Project.FieldValue);
+                            AddEdgeAfterFiltering(left, json, Edge.Project?.FieldValue);
                         }
                         break;
                 }
