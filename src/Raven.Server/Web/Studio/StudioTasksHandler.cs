@@ -189,7 +189,7 @@ namespace Raven.Server.Web.Studio
                 if (json == null)
                     throw new BadRequestException("No JSON was posted.");
 
-                if (json.TryGet("Expression", out string expressionAsString) == false)
+                if (json.TryGet(nameof(FormattedExpression.Expression), out string expressionAsString) == false)
                     throw new BadRequestException("'Expression' property was not found.");
 
                 if (string.IsNullOrWhiteSpace(expressionAsString))
