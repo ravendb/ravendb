@@ -311,6 +311,35 @@ namespace SlowTests.Voron.Storage
         }
 
         [Fact]
+        public void LockTaskResponsible_WhenLockNotTakenAndWaitTwice_WorkShouldBeDone()
+        {
+            var tokenSource = new CancellationTokenSource();
+            try
+            {
+                var worker = new Worker("worker");
+
+                var @lock = new object();
+                var lockTaskResponsible = new LockTaskResponsible(@lock, tokenSource.Token);
+
+                worker.TaskRun(j =>
+                {
+                    lockTaskResponsible.WaitForTaskToBeDone(j);
+                    lockTaskResponsible.WaitForTaskToBeDone(j);
+                });
+
+                worker.WaitThrow(TimeSpan.FromSeconds(10));
+
+                Assert.Equal(2, worker.Job.TimesJobDone);
+                Assert.Equal(null, worker.Exception);
+            }
+            catch (Exception)
+            {
+                tokenSource.Cancel();
+                throw;
+            }
+        }
+
+        [Fact]
         public void LockTaskResponsible_WhenLockTakenAndJobThrow_ShouldThrowToTheWaiter()
         {
             var tokenSource = new CancellationTokenSource();

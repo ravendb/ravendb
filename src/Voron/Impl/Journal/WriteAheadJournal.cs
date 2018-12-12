@@ -967,7 +967,7 @@ namespace Voron.Impl.Journal
                             {
                                 try
                                 {
-                                    task();
+                                    RunTaskIfNotAlreadyRan();
                                     return true;
                                 }
                                 finally
