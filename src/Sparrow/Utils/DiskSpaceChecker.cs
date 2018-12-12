@@ -87,9 +87,9 @@ namespace Sparrow.Utils
             }
         }
 
-        public static DriveInfoBase GetDriveInfo(string path, DriveInfo[] drivesInfo)
+        public static DriveInfoBase GetDriveInfo(string path, DriveInfo[] drivesInfo, out string realPath)
         {
-            var driveName = GetDriveName(path, drivesInfo);
+            var driveName = GetDriveName(path, drivesInfo, out realPath);
 
             return new DriveInfoBase
             {
@@ -97,18 +97,18 @@ namespace Sparrow.Utils
             };
         }
 
-        private static string GetDriveName(string path, DriveInfo[] drivesInfo)
+        private static string GetDriveName(string path, DriveInfo[] drivesInfo, out string realPath)
         {
             try
             {
                 if (PlatformDetails.RunningOnPosix == false)
                 {
-                    var windowsRealPath = GetWindowsRealPathByPath(path);
-                    return Path.GetPathRoot(windowsRealPath);
+                    realPath = GetWindowsRealPathByPath(path);
+                    return Path.GetPathRoot(realPath);
                 }
 
-                var posixRealPath = GetPosixRealPath(path);
-                return GetRootMountString(drivesInfo, posixRealPath) ?? posixRealPath;
+                realPath = GetPosixRealPath(path);
+                return GetRootMountString(drivesInfo, realPath) ?? realPath;
             }
             catch (Exception e)
             {
@@ -116,6 +116,7 @@ namespace Sparrow.Utils
                 if (Logger.IsInfoEnabled)
                     Logger.Info($"Failed to get the real path for: {path}", e);
 
+                realPath = path;
                 return path;
             }
         }

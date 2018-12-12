@@ -57,13 +57,13 @@ namespace Raven.Server.Web.Studio
             }
 
             var drivesInfo = PlatformDetails.RunningOnPosix ? DriveInfo.GetDrives() : null;
-            var driveInfo = DiskSpaceChecker.GetDriveInfo(result, drivesInfo);
+            var driveInfo = DiskSpaceChecker.GetDriveInfo(result, drivesInfo, out var realPath);
             var diskSpaceInfo = DiskSpaceChecker.GetDiskSpaceInfo(driveInfo.DriveName);
 
             var currentNodeInfo = new SingleNodeDataDirectoryResult
             {
                 NodeTag = Server.ServerStore.NodeTag,
-                FullPath = result,
+                FullPath = realPath,
                 TotalFreeSpaceHumane = diskSpaceInfo?.TotalFreeSpace.ToString()
             };
             var getNodesInfo = GetBoolValueQueryString("getNodesInfo", required: false) ?? false;
