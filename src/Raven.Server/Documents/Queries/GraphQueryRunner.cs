@@ -119,7 +119,8 @@ namespace Raven.Server.Documents.Queries
                 var q = query.Metadata.Query;
 
                 //TODO: handle order by, load,  clauses
-
+                var idc = new IncludeDocumentsCommand(Database.DocumentsStorage, documentsContext, query.Metadata.Includes);
+                
                 if (q.Select == null && q.SelectFunctionBody.FunctionText == null)
                 {
                     HandleResultsWithoutSelect(documentsContext, qr.Matches, final);
@@ -134,7 +135,8 @@ namespace Raven.Server.Documents.Queries
                         timingScope,
                         Database.DocumentsStorage,
                         documentsContext,
-                        fieldsToFetch, null);
+                        fieldsToFetch, 
+                        idc);
 
 
                     foreach (var match in qr.Matches)
@@ -149,15 +151,17 @@ namespace Raven.Server.Documents.Queries
 
                 }
 
-                if (query.Metadata.Includes?.Length > 0)
+                if (query.Metadata.Includes?.Length > 0 )
                 {
-                    var idc = new IncludeDocumentsCommand(Database.DocumentsStorage,documentsContext, query.Metadata.Includes);
+
                     foreach (var result in final.Results)
                     {
                         idc.Gather(result);
-                    }
-                    idc.Fill(final.Includes);
+                    }                    
                 }
+
+                idc.Fill(final.Includes);
+
                 final.TotalResults = final.Results.Count;
                 return final;
             }
