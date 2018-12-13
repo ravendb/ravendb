@@ -581,13 +581,13 @@ namespace Raven.Server.Documents.Queries.Results
 
             private bool Equals(QueryKey other)
             {
-                if (_functions.Count != other._functions.Count)
+                if (_functions?.Count != other._functions?.Count)
                     return false;
 
-                foreach (var function in _functions)
+                foreach (var function in _functions ?? Enumerable.Empty<KeyValuePair<StringSegment, (string FunctionText, Esprima.Ast.Program Program)>>())
                 {
-                    if (other._functions.TryGetValue(function.Key, out var otherVal) == false
-                        || function.Value.FunctionText != otherVal.FunctionText)
+                    if (other._functions != null && (other._functions.TryGetValue(function.Key, out var otherVal) == false
+                                                     || function.Value.FunctionText != otherVal.FunctionText))
                         return false;
                 }
 
@@ -610,7 +610,7 @@ namespace Raven.Server.Documents.Queries.Results
                 unchecked
                 {
                     int hashCode = 0;
-                    foreach (var function in _functions)
+                    foreach (var function in _functions ?? Enumerable.Empty<KeyValuePair<StringSegment, (string FunctionText, Esprima.Ast.Program Program)>>())
                     {
                         hashCode = (hashCode * 397) ^ (function.Value.GetHashCode());
                     }
@@ -625,7 +625,7 @@ namespace Raven.Server.Documents.Queries.Results
 
             public override void GenerateScript(ScriptRunner runner)
             {
-                foreach (var kvp in _functions)
+                foreach (var kvp in _functions ?? Enumerable.Empty<KeyValuePair<StringSegment, (string FunctionText, Esprima.Ast.Program Program)>>())
                 {
                     runner.AddScript(kvp.Value.FunctionText);
                 }
