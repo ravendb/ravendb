@@ -186,31 +186,32 @@ namespace Raven.Server.Documents.Queries.Results
             if (fieldsToFetch.SingleBodyOrMethodWithNoAlias)
             {
                 Document newDoc = null;
-                if (fieldVal is BlittableJsonReaderObject nested)
+                switch (fieldVal)
                 {
-                    newDoc = new Document
-                    {
-                        Id = doc.Id,
-                        ChangeVector = doc.ChangeVector,
-                        Data = nested,
-                        Etag = doc.Etag,
-                        Flags = doc.Flags,
-                        IndexScore = score,
-                        LastModified = doc.LastModified,
-                        LowerId = doc.LowerId,
-                        NonPersistentFlags = doc.NonPersistentFlags,
-                        StorageId = doc.StorageId,
-                        TransactionMarker = doc.TransactionMarker
-                    };
+                    case BlittableJsonReaderObject nested:
+                        newDoc = new Document
+                        {
+                            Id = doc.Id,
+                            ChangeVector = doc.ChangeVector,
+                            Data = nested,
+                            Etag = doc.Etag,
+                            Flags = doc.Flags,
+                            IndexScore = score,
+                            LastModified = doc.LastModified,
+                            LowerId = doc.LowerId,
+                            NonPersistentFlags = doc.NonPersistentFlags,
+                            StorageId = doc.StorageId,
+                            TransactionMarker = doc.TransactionMarker
+                        };
+                        break;
+                    case Document d:
+                        newDoc = d;
+                        newDoc.IndexScore = score;
+                        break;
+                    default:
+                        ThrowInvalidQueryBodyResponse(fieldVal);
+                        break;
                 }
-                else if (fieldVal is Document d)
-                {
-                    newDoc = d;
-                    newDoc.IndexScore = score;
-                }
-
-                else
-                    ThrowInvalidQueryBodyResponse(fieldVal);
 
                 return newDoc;
             }

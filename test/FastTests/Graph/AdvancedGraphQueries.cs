@@ -7,6 +7,7 @@ using Order = FastTests.Server.Basic.Entities.Order;
 using Product = FastTests.Server.Basic.Entities.Product;
 using OrderLine = FastTests.Server.Basic.Entities.OrderLine;
 using System.Collections.Generic;
+using FastTests.Blittable;
 using Raven.Client.Documents.Session;
 
 namespace FastTests.Graph
@@ -381,28 +382,21 @@ namespace FastTests.Graph
         }
 
         [Fact]
-        public void Can_filter_in_graph_queries_with_array_edges()
+        public void Should_include_ids_when_fetching_documents_in_projection()
         {
             using (var store = GetDocumentStore())
             {
                 CreateDataWithMultipleEdgesOfTheSameType(store);
-
                 using (var session = store.OpenSession())
                 {
                     var friends = session.Advanced.RawQuery<JObject>(@"
-                        match (Dogs as d1)-[Likes as l]->(Dogs as d2) 
-                        where l in ('dogs/3-A')
-                        select d1.Name as d1, d2.Name as d2, l as likes
-                    ").ToList();
+                        match (Dogs as d1)-[Likes as l]->(Dogs as d2)-[Likes as l2]->(Dogs as d3) 
+                        select d1, d2, d3
+                    ").ToList()[0];
 
-                    var resultPairs = friends.Select(x => new
-                    {
-                        From = x["d1"].Value<string>(),
-                        To = x["d2"].Value<string>()
-                    }).ToArray();
-
-                    Assert.Equal(1, resultPairs.Length);
-                    Assert.Contains(resultPairs, item => item.From == "Oscar" && item.To == "Pheobe");
+                    Assert.True(friends["d1"].ToJsonString().Contains("@id"));
+                    Assert.True(friends["d2"].ToJsonString().Contains("@id"));
+                    Assert.True(friends["d3"].ToJsonString().Contains("@id")); //fails at the last?
                 }
             }
         }

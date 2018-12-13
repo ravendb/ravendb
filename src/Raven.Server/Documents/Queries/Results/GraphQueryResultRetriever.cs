@@ -122,12 +122,25 @@ namespace Raven.Server.Documents.Queries.Results
                 else
                 {
                     var val = match.GetResult(fieldToFetch.QueryField.ExpressionField.Compound[0].Value);
-
                     switch (val)
                     {
-                        case Document d:
+                        case Document doc:
                         {
-                            if (TryGetValue(fieldToFetch, d, null, null, out key, out fieldVal) == false)
+                            doc.EnsureMetadata();
+                            if (TryGetValue(fieldToFetch, doc, null, null, out key, out fieldVal) == false)
+                                continue;
+
+                            var immediateResult = AddProjectionToResult(doc, 1f, FieldsToFetch, result, key, fieldVal);
+                            if (immediateResult != null)
+                                return immediateResult;
+                            break;
+                        }
+                        case BlittableJsonReaderObject bjro:
+                        {
+                            var doc = new Document { Data = bjro };
+                            doc.EnsureMetadata();
+
+                            if (TryGetValue(fieldToFetch, doc, null, null, out key, out fieldVal) == false)
                                 continue;
                        
                             var immediateResult = AddProjectionToResult(d, 1f, FieldsToFetch, result, key, fieldVal);
@@ -159,7 +172,7 @@ namespace Raven.Server.Documents.Queries.Results
                                 var matchJson = _context.ReadObject(djv, "graph/arg");
 
                                 var doc = new Document { Data = matchJson };
-
+                                doc.EnsureMetadata();
                                 if (TryGetValue(fieldToFetch, doc, null, null, out key, out fieldVal) == false)
                                     continue;
 
@@ -175,7 +188,7 @@ namespace Raven.Server.Documents.Queries.Results
                             break;
                         default:
                             result[fieldToFetch.ProjectedName ?? fieldToFetch.Name.Value] = null;
-                            continue;
+                            break;
                     }
                 }
 
