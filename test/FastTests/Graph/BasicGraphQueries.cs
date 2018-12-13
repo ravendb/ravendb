@@ -320,15 +320,37 @@ include Lines.Product
         [Fact]
         public void CanUseExactOnEdge()
         {
-            var results = Query<Employee>(@"
+            var results = Query<Order>(@"
 match (Orders as o)-[Lines where exact(ProductName = $p1) select Product]->(Products as p)
+select o
 ", parameters:new Dictionary<string, object>{{"$p1", "Tofu"} });
             Assert.NotEmpty(results);
-            results = Query<Employee>(@"
+            results = Query<Order>(@"
 match (Orders as o)-[Lines where exact(ProductName = $p1) select Product]->(Products as p)
+select o
 ", parameters: new Dictionary<string, object> { { "$p1", "tofu" } });
             Assert.Empty(results);
         }
+
+        [Fact]
+        public void CanUseExactOnEdgeWithNullArgs()
+        {
+            var results = Query<Order>(@"
+match (Orders as o)-[Lines where exact(ProductName = $p1) select Product]->(Products as p)
+select o
+", store =>
+            {
+                using (var session = store.OpenSession())
+                {
+                    var order = session.Load<Order>("orders/2-A");
+                    order.Lines[0].ProductName = null;
+                    session.SaveChanges();
+                }
+            }, parameters: new Dictionary<string, object> { { "$p1", null } });
+            var res = results.Single();
+            Assert.Equal("orders/2-A", res.Id);
+        }
+
         [Fact]
         public void CanUseEmptyDocumentAlias()
         {

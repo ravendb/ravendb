@@ -48,6 +48,7 @@ namespace Raven.Server.Documents.Queries.Graph
                     case BlittableJsonReaderArray array:
                         foreach (var item in array)
                         {
+
                             if (item is BlittableJsonReaderObject json )
                             {
                                 EdgeMatch(left, json);
@@ -67,8 +68,12 @@ namespace Raven.Server.Documents.Queries.Graph
 
         private void EdgeMatch(Match match, BlittableJsonReaderObject blittableJsonReaderObject)
         {
-            if(Edge.Where == null)
+            //projection
+            if (Edge.Where == null)
+            {
+                AddEdgeAfterFiltering(match, blittableJsonReaderObject, Edge.Project.FieldValue);
                 return;
+            }
             if (Edge.Where is MethodExpression method)
             {
                 if (EdgeMatchExact(blittableJsonReaderObject, method))
@@ -90,8 +95,10 @@ namespace Raven.Server.Documents.Queries.Graph
             var arg = methodExpression.Arguments[0] as BinaryExpression;
             var left = arg.Left as FieldExpression;
             var right = arg.Right as ValueExpression;
-            if (left == null || right == null)
-                return false;
+            if (arg == null || (arg.Operator != OperatorType.Equal && arg.Operator != OperatorType.NotEqual) || left == null || right == null)
+            {
+                return arg.IsMatchedBy(blittableJsonReaderObject, QueryParameters);
+            }
             string rightStringValue = null;
             switch (right.Value)
             {
@@ -110,11 +117,38 @@ namespace Raven.Server.Documents.Queries.Graph
                 default:
                     throw new NotSupportedException($"Where clause with method expression {methodExpression} has parameter {right.Token.Value} which is not of string type.");
             }
+
             var value = BlittableJsonTraverser.Default.Read(blittableJsonReaderObject, left.FieldValue);
-            if (value is LazyStringValue lsv && lsv.CompareTo(rightStringValue) == 0)
+            if (value == null && rightStringValue == null)
                 return true;
-            if (value is LazyCompressedStringValue lcsv && String.Compare(lcsv, rightStringValue, StringComparison.Ordinal) == 0)
-                return true;
+            if (value is LazyStringValue lsv)
+            {
+                switch (arg.Operator)
+                {
+                    case OperatorType.Equal:
+                        if (rightStringValue == null)
+                            return false;
+                        return lsv.CompareTo(rightStringValue) == 0;
+                    case OperatorType.NotEqual:
+                        if (rightStringValue == null)
+                            return true;
+                        return lsv.CompareTo(rightStringValue) != 0;
+                    default:
+                        throw new NotSupportedException($"Where clause with method expression {methodExpression} uses unexpected operator {arg.Operator} this is a bug and should not happen");
+                }
+            }
+            if (value is LazyCompressedStringValue lcsv )
+            {
+                switch (arg.Operator)
+                {
+                    case OperatorType.Equal:
+                        return String.Compare(lcsv, rightStringValue, StringComparison.Ordinal) == 0;
+                    case OperatorType.NotEqual:
+                        return String.Compare(lcsv, rightStringValue, StringComparison.Ordinal) != 0;
+                    default:
+                        throw new NotSupportedException($"Where clause with method expression {methodExpression} uses unexpected operator {arg.Operator} this is a bug and should not happen");
+                }
+            }
             return false;
         }
 
