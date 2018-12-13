@@ -81,9 +81,9 @@ namespace Raven.Server.Documents.Indexes.MapReduce.Auto
             SetPriority(definition.Priority);
         }
 
-        public override void SetState(IndexState state, bool inMemoryOnly = false)
+        public override void SetState(IndexState state, bool inMemoryOnly = false, bool ignoreWriteError = false)
         {
-            base.SetState(state, inMemoryOnly);
+            base.SetState(state, inMemoryOnly, ignoreWriteError);
             Definition.State = state;
         }
 
