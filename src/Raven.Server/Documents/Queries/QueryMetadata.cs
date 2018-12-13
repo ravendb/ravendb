@@ -1053,8 +1053,19 @@ namespace Raven.Server.Documents.Queries
                         if (IsGroupBy)
                             ThrowInvalidIdInGroupByQuery(parameters);
 
-                        if (me.Arguments.Count != 0)
-                            ThrowInvalidArgumentToId(parameters);
+                        if (me.Arguments.Count > 0)
+                        {
+                            if (!(me.Arguments[0] is FieldExpression argumentExpression) || me.Arguments.Count != 1)
+                            {
+                                ThrowInvalidArgumentToId(parameters);
+                            }
+                            else
+                            {
+                                if (!RootAliasPaths.ContainsKey(argumentExpression.FieldValue))
+                                    ThrowUnknownAlias(argumentExpression.FieldValue, parameters);
+                                return SelectField.CreateMethodCall("id", alias, new []{ SelectField.Create(QueryFieldName.DocumentId, argumentExpression.FieldValue)  });
+                            }
+                        }
 
                         return SelectField.Create(QueryFieldName.DocumentId, alias);
                     }
