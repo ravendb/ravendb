@@ -4,6 +4,7 @@ using Microsoft.AspNetCore.Http;
 using Raven.Client.Documents.Operations;
 using Raven.Client.Documents.Queries;
 using Raven.Client.Exceptions;
+using Raven.Server.Documents.Handlers;
 using Raven.Server.Documents.Queries.Facets;
 using Raven.Server.ServerWide;
 using Raven.Server.ServerWide.Context;
@@ -33,11 +34,18 @@ namespace Raven.Server.Documents.Queries
             return index.Query(query, documentsContext, token);
         }
 
-        public override Task ExecuteStreamQuery(IndexQueryServerSide query, DocumentsOperationContext documentsContext, HttpResponse response, IStreamDocumentQueryResultWriter writer, OperationCancelToken token)
+        public override Task ExecuteStreamQuery(IndexQueryServerSide query, DocumentsOperationContext documentsContext, HttpResponse response, IStreamQueryResultWriter<Document> writer, OperationCancelToken token)
         {
             var index = GetIndex(query.Metadata.IndexName);
 
             return index.StreamQuery(response, writer, query, documentsContext, token);
+        }
+
+        public override Task ExecuteStreamIndexEntriesQuery(IndexQueryServerSide query, DocumentsOperationContext documentsContext, HttpResponse response, IStreamQueryResultWriter<BlittableJsonReaderObject> writer, OperationCancelToken token)
+        {
+            var index = GetIndex(query.Metadata.IndexName);
+
+            return index.StreamIndexEntriesQuery(response, writer, query, documentsContext, token);
         }
 
         public override Task<IndexEntriesQueryResult> ExecuteIndexEntriesQuery(IndexQueryServerSide query, DocumentsOperationContext context, long? existingResultEtag, OperationCancelToken token)
@@ -51,7 +59,7 @@ namespace Raven.Server.Documents.Queries
                     return Task.FromResult(IndexEntriesQueryResult.NotModifiedResult);
             }
 
-            return Task.FromResult(index.IndexEntries(query, context, token));
+            return index.IndexEntries(query, context, token);
         }
 
         public async Task<FacetedQueryResult> ExecuteFacetedQuery(IndexQueryServerSide query, long? existingResultEtag, DocumentsOperationContext documentsContext, OperationCancelToken token)

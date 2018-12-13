@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Diagnostics;
 using System.IO;
+using Sparrow.Platform;
 using Voron.Data;
 using Voron.Data.BTrees;
 using Voron.Data.Fixed;
@@ -188,18 +189,33 @@ namespace Voron.Debugging
                 sw.WriteLine("</body></html>");
                 sw.Flush();
             }
-            var process = new Process
+
+            if (PlatformDetails.RunningOnPosix == false)
             {
-                StartInfo =
+                var process = new Process
                 {
-                    FileName = @"C:\Program Files (x86)\Google\Chrome\Application\chrome.exe",
-                    Arguments = output,
-                    UseShellExecute = false,
-                    CreateNoWindow = true,
-                    RedirectStandardError = true,
-                }
-            };
-            process.Start();
+                    StartInfo =
+                    {
+                        FileName = @"C:\Program Files (x86)\Google\Chrome\Application\chrome.exe",
+                        Arguments = output,
+                        UseShellExecute = false,
+                        CreateNoWindow = true,
+                        RedirectStandardError = true,
+                    }
+                };
+                process.Start();
+                return;
+            }
+
+            if (PlatformDetails.RunningOnMacOsx)
+            {
+                Process.Start("open", output);
+            }
+            else
+            {
+                Process.Start("xdg-open", output);
+            }
+
         }
 
         private unsafe static void RenderFixedSizeTreePage(LowLevelTransaction tx, FixedSizeTreePage page, TextWriter sw, FixedSizeTreeHeader.Large* header, string text, bool open)

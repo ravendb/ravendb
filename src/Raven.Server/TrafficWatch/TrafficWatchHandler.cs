@@ -30,8 +30,8 @@ namespace Raven.Server.TrafficWatch
                     try
                     {
                         var resourceName = GetStringQueryString("resourceName", required: false);
-                        var connection = new TrafficWatchConnection(webSocket, ServerStore.ServerShutdown,
-                            resourceName != null ? "db/" + resourceName : null);
+                        resourceName = resourceName != null ? "db/" + resourceName : null;
+                        var connection = new TrafficWatchConnection(webSocket, resourceName, context, ServerStore.ServerShutdown);
                         TrafficWatchManager.AddConnection(connection);
                         await connection.StartSendingNotifications();
                     }
