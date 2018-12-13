@@ -429,7 +429,6 @@ namespace Voron.Impl.Journal
             private bool _ignoreLockAlreadyTaken;
             private long _totalWrittenButUnsyncedBytes;
             private Action<LowLevelTransaction> _updateJournalStateAfterFlush;
-            private Task _pendingSync = Task.CompletedTask;
 
             public void OnTransactionCommitted(LowLevelTransaction tx)
             {
@@ -1133,18 +1132,6 @@ namespace Voron.Impl.Journal
                     // because we didn't synced the data file yet
                     // and we will need them on a next database recovery
                     journalFile.Value.Release();
-                }
-
-                try
-                {
-                    _pendingSync.Wait();
-                }
-                catch (AggregateException)
-                {
-                    if (_waj._env.Disposed)
-                        return;
-
-                    throw;
                 }
             }
 
