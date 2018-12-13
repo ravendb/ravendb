@@ -8,14 +8,16 @@ class getOngoingTaskInfoCommand<T extends Raven.Client.Documents.Operations.Ongo
                                           Raven.Client.Documents.Operations.OngoingTasks.OngoingTaskRavenEtlDetails |
                                           Raven.Client.Documents.Operations.OngoingTasks.OngoingTaskSqlEtlDetails> extends commandBase {
 
-      private constructor(private db: database, private taskType: Raven.Client.Documents.Operations.OngoingTasks.OngoingTaskType, private taskId: number, private taskName?: string) {
+      private constructor(private db: database, private taskType: Raven.Client.Documents.Operations.OngoingTasks.OngoingTaskType, private taskId: number, private taskName?: string, private reportFailure: boolean = true) {
           super();
     }
 
     execute(): JQueryPromise<T> {
         return this.getTaskInfo()
             .fail((response: JQueryXHR) => {
-                this.reportError(`Failed to get info for ${this.taskType} task with id: ${this.taskId}. `, response.responseText, response.statusText);
+                if (this.reportFailure) {
+                    this.reportError(`Failed to get info for ${this.taskType} task with id: ${this.taskId}. `, response.responseText, response.statusText);    
+                }
             });
     }
 
@@ -35,8 +37,8 @@ class getOngoingTaskInfoCommand<T extends Raven.Client.Documents.Operations.Ongo
         return new getOngoingTaskInfoCommand<Raven.Client.Documents.Subscriptions.SubscriptionStateWithNodeDetails>(db, "Subscription", taskId, taskName);
     }
 
-    static forBackup(db: database, taskId: number) { 
-        return new getOngoingTaskInfoCommand<Raven.Client.Documents.Operations.OngoingTasks.OngoingTaskBackup>(db, "Backup", taskId);
+    static forBackup(db: database, taskId: number, reportFailure: boolean = true) { 
+        return new getOngoingTaskInfoCommand<Raven.Client.Documents.Operations.OngoingTasks.OngoingTaskBackup>(db, "Backup", taskId, undefined, reportFailure);
     }
 
     static forRavenEtl(db: database, taskId: number) {

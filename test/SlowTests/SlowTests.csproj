@@ -22,6 +22,14 @@
     <Content Include="..\xunit.runner.json" Link="xunit.runner.json">
       <CopyToOutputDirectory>Always</CopyToOutputDirectory>
     </Content>
+    <EmbeddedResource Include="Data\npgsql.basic.create.sql" />
+    <EmbeddedResource Include="Data\npgsql.basic.insert.sql" />
+    <EmbeddedResource Include="Data\npgsql.northwind.create.sql" />
+    <EmbeddedResource Include="Data\npgsql.northwind.insert.sql" />
+    <EmbeddedResource Include="Data\oraclesql.basic.create.sql" />
+    <EmbeddedResource Include="Data\oraclesql.basic.insert.sql" />
+    <EmbeddedResource Include="Data\oraclesql.northwind.create.sql" />
+    <EmbeddedResource Include="Data\oraclesql.northwind.insert.sql" />
     <EmbeddedResource Include="Data\RavenDB_10958.txt" />
     <EmbeddedResource Include="Data\RavenDB_10958.json" />
     <EmbeddedResource Include="Data\mssql.northwind.create.sql" />

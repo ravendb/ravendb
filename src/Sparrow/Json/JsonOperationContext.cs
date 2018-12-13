@@ -109,7 +109,7 @@ namespace Sparrow.Json
             }
 
             var allocateStringValue = new LazyStringValue(str, ptr, size, this);
-            if (_numberOfAllocatedStringsValues < 25 * 1000)
+            if (_numberOfAllocatedStringsValues < 32 * 1_024)
             {
                 _allocateStringValues.Add(allocateStringValue);
                 _numberOfAllocatedStringsValues++;

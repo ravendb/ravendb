@@ -93,6 +93,9 @@ namespace Raven.Server.Utils
                 return IsSupportedType(dictionary.Values);
             }
 
+            if (value is char[])
+                return true;
+
             if (value is IEnumerable<char>)
                 return true;
 
@@ -103,10 +106,15 @@ namespace Raven.Server.Utils
             {
                 if (ShouldTreatAsEnumerable(enumerable))
                 {
-                    var objectEnumerable = value as IEnumerable<object>;
-                    var supportedEnumerable = objectEnumerable?.Select(IsSupportedType) ?? enumerable.Cast<object>().Select(IsSupportedType);
+                    var isSupportedEnumerable = true;
+                    var objectEnumerable = (IEnumerable)value;
 
-                    return supportedEnumerable.All(v => v);
+                    foreach (var x in objectEnumerable)
+                    {
+                        isSupportedEnumerable &= IsSupportedType(x);
+                    }
+
+                    return isSupportedEnumerable;
                 }
             }
 
@@ -124,7 +132,12 @@ namespace Raven.Server.Utils
                 var propertyValue = property.Value;
                 if (propertyValue is IEnumerable<object> propertyValueAsEnumerable && ShouldTreatAsEnumerable(propertyValue))
                 {
-                    isSupported &= propertyValueAsEnumerable.Select(IsSupportedType).All(v => v);
+                    var isSupportedInternal = true;
+                    foreach (var x in propertyValueAsEnumerable)
+                    {
+                        isSupportedInternal &= IsSupportedType(x);
+                    }
+                    isSupported &= isSupportedInternal;
                     continue;
                 }
 
@@ -227,6 +240,9 @@ namespace Raven.Server.Utils
                 return @object;
             }
 
+            if (value is char[] chars)
+                return new string(chars);
+
             if (value is IEnumerable<char> charEnumerable)
                 return new string(charEnumerable.ToArray());
 
@@ -236,16 +252,7 @@ namespace Raven.Server.Utils
             if (value is IEnumerable enumerable)
             {
                 if (ShouldTreatAsEnumerable(enumerable))
-                {
-                    IEnumerable<object> items;
-
-                    if (value is IEnumerable<object> objectEnumerable)
-                        items = Enumerable.Select(objectEnumerable, x => ToBlittableSupportedType(root, x, flattenArrays, recursiveLevel + 1, engine, context));
-                    else
-                        items = Enumerable.Select(enumerable.Cast<object>(), x => ToBlittableSupportedType(root, x, flattenArrays, recursiveLevel + 1, engine, context));
-
-                    return new DynamicJsonArray(flattenArrays ? Flatten(items) : items);
-                }
+                    return EnumerableToJsonArray(flattenArrays ? Flatten(enumerable) : enumerable, root, flattenArrays, recursiveLevel, engine, context);
             }
 
             var inner = new DynamicJsonValue();
@@ -256,7 +263,7 @@ namespace Raven.Server.Utils
                 var propertyValue = property.Value;
                 if (propertyValue is IEnumerable<object> propertyValueAsEnumerable && ShouldTreatAsEnumerable(propertyValue))
                 {
-                    inner[property.Key] = new DynamicJsonArray(Enumerable.Select(propertyValueAsEnumerable, x => ToBlittableSupportedType(root, x, flattenArrays, recursiveLevel + 1, engine, context)));
+                    inner[property.Key] = EnumerableToJsonArray(propertyValueAsEnumerable, root, flattenArrays, recursiveLevel, engine, context);
                     continue;
                 }
 
@@ -280,6 +287,18 @@ namespace Raven.Server.Utils
 
                 yield return ToBlittableSupportedType(val.Value);
             }
+        }
+
+        private static DynamicJsonArray EnumerableToJsonArray(IEnumerable propertyEnumerable, object root, bool flattenArrays, int recursiveLevel, Engine engine, JsonOperationContext context)
+        {
+            var dja = new DynamicJsonArray();
+
+            foreach (var x in propertyEnumerable)
+            {
+                dja.Add(ToBlittableSupportedType(root, x, flattenArrays, recursiveLevel + 1, engine, context));
+            }
+
+            return dja;
         }
 
         private static void NestingLevelTooDeep(object value)

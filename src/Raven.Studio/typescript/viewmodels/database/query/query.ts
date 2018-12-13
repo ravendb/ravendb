@@ -1041,14 +1041,27 @@ class query extends viewModelBase {
     exportCsv() {
         eventsCollector.default.reportEvent("query", "export-csv");
 
-        const args = {
-            format: "csv",
-        };
-
-        const payload = {
-            Query: this.criteria().queryText()
-        };
-
+        let args: { format: string, debug?: string };
+        if (this.criteria().indexEntries()) {
+            args = {
+                format: "csv",
+                debug: "entries"
+            };
+        } else {
+            args = {
+                format: "csv"
+            };
+        }
+        let payload: { Query: string };
+        if (this.criteria().showFields()) {
+            payload = {
+                Query: queryUtil.replaceSelectAndIncludeWithFetchAllStoredFields(this.criteria().queryText())
+            };
+        } else {
+            payload = {
+                Query: this.criteria().queryText()
+            };
+        }
         $("input[name=ExportOptions]").val(JSON.stringify(payload));
 
         const url = appUrl.forDatabaseQuery(this.activeDatabase()) + endpoints.databases.streaming.streamsQueries + appUrl.urlEncodeArgs(args);

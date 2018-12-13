@@ -85,7 +85,7 @@ namespace Raven.Server.Documents.ETL.Providers.Raven
             return Transformation.IsEmptyScript;
         }
 
-        protected override bool ShouldTrackCounters()
+        public override bool ShouldTrackCounters()
         {
             // we track counters only if script is empty (then we send all counters together with documents) or
             // when load counter behavior functions are defined, otherwise counters are send on document updates

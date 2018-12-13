@@ -20,20 +20,34 @@ abstract class abstractSettings {
     protected constructor(onSettingChanged: (key: string, value: any) => void) {
         this.onSettingChanged = onSettingChanged;
     }
-
-    protected saveSetting(item: studioSetting<any>): JQueryPromise<void> {
+    
+    private serializeSettings(location: studio.settings.saveLocation) {
         const settings = {} as any;
-        let settingName: string;
-
+        
         _.forIn(this, (value, name) => {
-            if (value instanceof studioSetting && value.saveLocation === item.saveLocation) {
-                settings[item.propertyNameInStorage(name)] = value.prepareValueForSave();
-
-                if (value === item) {
-                    settingName = name;
-                }
+            if (value instanceof studioSetting && value.saveLocation === location) {
+                settings[studioSetting.propertyNameInStorage(name, location)] = value.prepareValueForSave();
             }
         });
+        
+        return settings;
+    }
+    
+    protected findPropertyName(item: studioSetting<any>): string {
+        let settingName: string = null;
+
+        _.forIn(this, (value, name) => {
+            if (value instanceof studioSetting && value.saveLocation === item.saveLocation && value === item) {
+                settingName = name;
+            }
+        });
+        
+        return settingName;
+    }
+
+    protected saveSetting(item: studioSetting<any>): JQueryPromise<void> {
+        const settings = this.serializeSettings(item.saveLocation);
+        const settingName = this.findPropertyName(item);
 
         this.onSettingChanged(settingName, item);
 
@@ -77,6 +91,26 @@ abstract class abstractSettings {
             .fail(() => loadTask.reject());
 
         return loadTask;
+    }
+
+    /**
+     * Force saving local & remote settings
+     */
+    save(): JQueryPromise<void> {
+        const remoteSettings = this.serializeSettings("remote");
+        const remoteTask = this.saveConfigDocument(remoteSettings);
+        
+        const localSettings = this.serializeSettings("local");
+        const localTask = this.saveLocalSettings(localSettings);
+
+        // notify handlers that settings may change
+        _.forIn(this, (value, name) => {
+            if (value instanceof studioSetting) {
+                this.onSettingChanged(name, value);
+            }
+        });
+        
+        return $.when<void>(remoteTask, localTask);
     }
 }
 

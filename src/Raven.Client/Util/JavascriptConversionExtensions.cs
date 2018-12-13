@@ -280,14 +280,22 @@ namespace Raven.Client.Util
         public class LinqMethodsSupport : JavascriptConversionExtension
         {
             public static readonly LinqMethodsSupport Instance = new LinqMethodsSupport();
-
+            private static HashSet<Type> _numericTypes = new HashSet<Type>
+            {
+                typeof(decimal), typeof(byte), typeof(sbyte),
+                typeof(short), typeof(ushort), typeof(uint),
+                typeof(int), typeof(long), typeof(ulong),
+                typeof(double), typeof(float)
+            };
             private LinqMethodsSupport()
             {
             }
 
             public override void ConvertToJavascript(JavascriptConversionContext context)
             {
-                if (context.Node is MemberExpression node && node.Member.Name == "Count" && IsCollection(node.Member.DeclaringType))
+                if (context.Node is MemberExpression node && 
+                    node.Member.Name == "Count" && 
+                    IsCollection(node.Member.DeclaringType))
                 {
                     HandleCount(context, node.Expression);
                     return;
@@ -299,7 +307,7 @@ namespace Raven.Client.Util
                     return;
 
                 var methodName = method.Name;
-                if (methodName == null || IsCollection(methodCallExpression.Method.DeclaringType) == false)
+                if (IsCollection(methodCallExpression.Method.DeclaringType) == false)
                     return;
 
                 string newName;
@@ -622,6 +630,20 @@ namespace Raven.Client.Util
                             return;
                         }
                     }
+                    case "OrderBy":
+                    {
+                        OrderByToSort(context, methodCallExpression);
+                        return;
+                    }
+                    case "OrderByDescending":
+                    {
+                        OrderByToSort(context, methodCallExpression, true);
+                        return;
+                    }
+                    case "ContainsKey":
+                    {
+                        return;
+                    }
                     default:
                         throw new NotSupportedException($"Unable to translate '{methodName}' to RQL operation because this method is not familiar to the RavenDB query provider.")
                         {
@@ -667,6 +689,57 @@ namespace Raven.Client.Util
                 if (methodName == "Contains")
                 {
                     javascriptWriter.Write(">=0");
+                }
+            }
+
+            private static void OrderByToSort(JavascriptConversionContext context, MethodCallExpression methodCallExpression, bool desc = false)
+            {
+                context.PreventDefault();
+                context.Visitor.Visit(methodCallExpression.Arguments[0]);
+                var writer = context.GetWriter();
+                using (writer.Operation(methodCallExpression))
+                {
+                    string path = null;
+                    var isNumber = false;
+                    if (methodCallExpression.Arguments.Count == 2 &&
+                        methodCallExpression.Arguments[1] is LambdaExpression lambda &&
+                        lambda.Body is MemberExpression memberExpression)
+                    {
+                        path = memberExpression.Member.Name;
+
+                        if (memberExpression.Expression is ParameterExpression == false)
+                        {
+                            GetInnermostExpression(memberExpression, out var nestedPath);
+                            if (nestedPath != string.Empty)
+                            {
+                                path = $"{nestedPath}.{path}";
+                            }
+                        }
+
+                        isNumber = _numericTypes.Contains(memberExpression.Type);
+                    }
+
+                    writer.Write(".sort(");
+                    if (path != null)
+                    {
+                        writer.Write("function (a, b){ return ");
+
+                        if (isNumber)
+                        {
+                            writer.Write(desc
+                                ? $"b.{path} - a.{path}"
+                                : $"a.{path} - b.{path}");
+                        }
+                        else
+                        {
+                            writer.Write(desc
+                                ? $"((a.{path} < b.{path}) ? 1 : (a.{path} > b.{path})? -1 : 0)"
+                                : $"((a.{path} < b.{path}) ? -1 : (a.{path} > b.{path})? 1 : 0)");
+                        }
+                        writer.Write(";}");
+
+                    }
+                    writer.Write(")");
                 }
             }
 
@@ -747,6 +820,27 @@ namespace Raven.Client.Util
 
             public override void ConvertToJavascript(JavascriptConversionContext context)
             {
+                if (context.Node is BinaryExpression binaryExpression &&
+                    (binaryExpression.NodeType == ExpressionType.GreaterThanOrEqual ||
+                     binaryExpression.NodeType == ExpressionType.LessThanOrEqual) &&
+                    (binaryExpression.Left.Type.IsNullableType() ||
+                     binaryExpression.Right.Type.IsNullableType()))
+                {
+                    // RavenDB-12359
+                    // In order to avoid null >= 0  (and null<=0)
+                    // we translate x>=y  to x>y||x===y 
+                    //https://blog.campvanilla.com/javascript-the-curious-case-of-null-0-7b131644e274
+
+                    var expr = Expression.OrElse(binaryExpression.NodeType == ExpressionType.GreaterThanOrEqual
+                            ? Expression.GreaterThan(binaryExpression.Left, binaryExpression.Right)
+                            : Expression.LessThan(binaryExpression.Left, binaryExpression.Right), 
+                        Expression.Equal(binaryExpression.Left, binaryExpression.Right));
+                    context.PreventDefault();
+                    context.Visitor.Visit(expr);
+                    return;
+                }   
+
+
                 if (!(context.Node is MemberExpression memberExpression) || 
                     memberExpression.Expression.Type.IsNullableType() == false)
                     return;

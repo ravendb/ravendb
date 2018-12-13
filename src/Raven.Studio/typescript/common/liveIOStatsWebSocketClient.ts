@@ -8,15 +8,19 @@ class liveIOStatsWebSocketClient extends abstractWebSocketClient<Raven.Server.Do
 
     private readonly onData: (data: Raven.Server.Documents.Handlers.IOMetricsResponse) => void;
     private static isoParser = d3.time.format.iso;
-    private mergedData: Raven.Server.Documents.Handlers.IOMetricsResponse;    
+    private readonly dateCutOff: Date;
+    private readonly mergedData: Raven.Server.Documents.Handlers.IOMetricsResponse;    
     private pendingDataToApply: Raven.Server.Documents.Handlers.IOMetricsResponse[] = []; // Used to hold data when pauseUpdates
     private updatesPaused = false;
     loading = ko.observable<boolean>(true);
 
-    constructor(db: database, onData: (data: Raven.Server.Documents.Handlers.IOMetricsResponse) => void) {
+    constructor(db: database, 
+                onData: (data: Raven.Server.Documents.Handlers.IOMetricsResponse) => void,
+                dateCutOff?: Date) {
         super(db);
         this.onData = onData;
         this.mergedData = { Environments: [], Performances: [] };
+        this.dateCutOff = dateCutOff;
     }
 
     get connectionDescription() {
@@ -51,23 +55,39 @@ class liveIOStatsWebSocketClient extends abstractWebSocketClient<Raven.Server.Do
     }
 
     protected onMessage(e: Raven.Server.Documents.Handlers.IOMetricsResponse) {
-        this.loading(false);
-
         if (this.updatesPaused) {
             this.pendingDataToApply.push(e);
         } else {
-            this.mergeIncomingData(e);
-            this.onData(this.mergedData);
+            const hasAnyChange = this.mergeIncomingData(e);
+            if (hasAnyChange) {
+                this.onData(this.mergedData);
+            }
         }
+        
+        this.loading(false);
     }
 
-    private mergeIncomingData(e: Raven.Server.Documents.Handlers.IOMetricsResponse) { 
+    private mergeIncomingData(e: Raven.Server.Documents.Handlers.IOMetricsResponse) {
+        let hasAnyChange = false;
         e.Environments.forEach(env => {
 
             env.Files.forEach(file => {
                 file.Recent.forEach(x => liveIOStatsWebSocketClient.fillCache(x));
+               
+                if (this.dateCutOff) {
+                    file.Recent = file.Recent.filter((x: IOMetricsRecentStatsWithCache) => x.StartedAsDate.getTime() > this.dateCutOff.getTime());
+                }
             });
-
+            
+            if (this.dateCutOff) {
+                env.Files = env.Files.filter(x => x.Recent.length);
+                if (env.Files.length) {
+                    hasAnyChange = true;
+                }
+            } else {
+                hasAnyChange = true;
+            }
+            
             const existingEnv = this.mergedData.Environments.find(x => x.Path === env.Path);
 
             if (!existingEnv) {
@@ -78,6 +98,7 @@ class liveIOStatsWebSocketClient extends abstractWebSocketClient<Raven.Server.Do
                 env.Files.forEach(x => existingEnv.Files.push(x));
             }
         });
+        return hasAnyChange;
     }
 
     static fillCache(stat: Raven.Server.Documents.Handlers.IOMetricsRecentStats) {

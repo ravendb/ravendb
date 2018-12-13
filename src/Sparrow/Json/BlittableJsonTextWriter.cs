@@ -24,6 +24,8 @@ namespace Sparrow.Json
         public ValueTask<int> MaybeOuterFlushAsync()
         {
             var innerStream = _stream as MemoryStream;
+            if (innerStream == null)
+                ThrowInvalidTypeException(_stream?.GetType());
             if (innerStream.Length * 2 <= innerStream.Capacity)
                 return new ValueTask<int>(0);
 
@@ -34,6 +36,8 @@ namespace Sparrow.Json
         public async Task<int> OuterFlushAsync()
         {
             var innerStream = _stream as MemoryStream;
+            if (innerStream == null)
+                ThrowInvalidTypeException(_stream?.GetType());
             Flush();
             innerStream.TryGetBuffer(out var bytes);
             var bytesCount = bytes.Count;
@@ -47,6 +51,8 @@ namespace Sparrow.Json
         public int OuterFlush()
         {
             var innerStream = _stream as MemoryStream;
+            if (innerStream == null)
+                ThrowInvalidTypeException(_stream?.GetType());
             Flush();
             innerStream.TryGetBuffer(out var bytes);
             var bytesCount = bytes.Count;
@@ -62,6 +68,11 @@ namespace Sparrow.Json
             base.Dispose();
             OuterFlush();
             _context.ReturnMemoryStream((MemoryStream)_stream);
+        }
+
+        private void ThrowInvalidTypeException(Type typeOfStream)
+        {
+            throw new ArgumentException($"Expected stream to be MemoryStream, but got {(typeOfStream == null ? "null" : typeOfStream.ToString())}.");
         }
     }
 

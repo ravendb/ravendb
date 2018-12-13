@@ -10,15 +10,19 @@ class liveReplicationStatsWebSocketClient extends abstractWebSocketClient<result
     private static readonly isoParser = d3.time.format.iso;
     private readonly onData: (data: Raven.Server.Documents.Replication.LiveReplicationPerformanceCollector.ReplicationPerformanceStatsBase<Raven.Client.Documents.Replication.ReplicationPerformanceBase>[]) => void;
 
+    private readonly dateCutOff: Date;
     private mergedData: Raven.Server.Documents.Replication.LiveReplicationPerformanceCollector.ReplicationPerformanceStatsBase<Raven.Client.Documents.Replication.ReplicationPerformanceBase>[] = [];
     private pendingDataToApply: Raven.Server.Documents.Replication.LiveReplicationPerformanceCollector.ReplicationPerformanceStatsBase<Raven.Client.Documents.Replication.ReplicationPerformanceBase>[] = [];
 
     private updatesPaused = false;
     loading = ko.observable<boolean>(true);
 
-    constructor(db: database, onData: (data: Raven.Server.Documents.Replication.LiveReplicationPerformanceCollector.ReplicationPerformanceStatsBase<Raven.Client.Documents.Replication.ReplicationPerformanceBase>[]) => void) {
+    constructor(db: database, 
+                onData: (data: Raven.Server.Documents.Replication.LiveReplicationPerformanceCollector.ReplicationPerformanceStatsBase<Raven.Client.Documents.Replication.ReplicationPerformanceBase>[]) => void,
+                dateCutOff?: Date) {
         super(db);
         this.onData = onData;
+        this.dateCutOff = dateCutOff;
     }
 
     get connectionDescription() {
@@ -57,26 +61,30 @@ class liveReplicationStatsWebSocketClient extends abstractWebSocketClient<result
         if (this.updatesPaused) {
             this.pendingDataToApply.push(...e.Results);
         } else {
-            this.mergeIncomingData(e.Results);
-            this.onData(this.mergedData);
+            const hasAnyChange = this.mergeIncomingData(e.Results);
+            if (hasAnyChange) {
+                this.onData(this.mergedData);    
+            }
         }
     }
 
     private mergeIncomingData(e: Raven.Server.Documents.Replication.LiveReplicationPerformanceCollector.ReplicationPerformanceStatsBase<Raven.Client.Documents.Replication.ReplicationPerformanceBase>[]) {
-        e.forEach(replicationStatsFromEndpoing => {
-            const replicationDesc = replicationStatsFromEndpoing.Description;
-            const replicationType = replicationStatsFromEndpoing.Type;
+        let hasAnyChange = false;
+        e.forEach(replicationStatsFromEndpoint => {
+            const replicationDesc = replicationStatsFromEndpoint.Description;
+            const replicationType = replicationStatsFromEndpoint.Type;
 
             let existingReplicationStats = this.mergedData.find(x => x.Type === replicationType && x.Description === replicationDesc);
 
             if (!existingReplicationStats) {
                 existingReplicationStats = {
                     Description: replicationDesc,
-                    Id: replicationStatsFromEndpoing.Id,
-                    Type: replicationStatsFromEndpoing.Type,
+                    Id: replicationStatsFromEndpoint.Id,
+                    Type: replicationStatsFromEndpoint.Type,
                     Performance: []
                 };
                 this.mergedData.push(existingReplicationStats);
+                hasAnyChange = true;
             }
 
             const idToIndexCache = new Map<number, number>();
@@ -84,8 +92,14 @@ class liveReplicationStatsWebSocketClient extends abstractWebSocketClient<result
                 idToIndexCache.set(v.Id, idx);
             });
 
-            replicationStatsFromEndpoing.Performance.forEach(perf => {  // each obj in Performance can be either outgoing or incoming..
-                liveReplicationStatsWebSocketClient.fillCache(perf, replicationStatsFromEndpoing.Type, replicationStatsFromEndpoing.Description);
+            replicationStatsFromEndpoint.Performance.forEach(perf => {  // each obj in Performance can be either outgoing or incoming..
+                liveReplicationStatsWebSocketClient.fillCache(perf, replicationStatsFromEndpoint.Type, replicationStatsFromEndpoint.Description);
+                
+                if (this.dateCutOff && this.dateCutOff.getTime() >= (perf as ReplicationPerformanceBaseWithCache).StartedAsDate.getTime()) {
+                    return;
+                }
+                
+                hasAnyChange = true;
 
                 if (idToIndexCache.has(perf.Id)) { 
                     // update 
@@ -97,6 +111,8 @@ class liveReplicationStatsWebSocketClient extends abstractWebSocketClient<result
                 }
             });
         });
+        
+        return hasAnyChange;
     }
 
     static fillCache(perf: Raven.Client.Documents.Replication.ReplicationPerformanceBase,
