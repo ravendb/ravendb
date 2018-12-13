@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Collections.Generic;
 using System.Threading;
 using FastTests;
 using Raven.Client.Documents.Indexes;
@@ -41,6 +42,7 @@ namespace SlowTests.Server.Documents.Indexing.MapReduce
                 index._threadAllocations = NativeMemory.CurrentThreadStats;
 
                 var mapReduceContext = new MapReduceIndexingContext();
+                var sharedFreedPages = new HashSet<long>();
                 using (var contextPool = new TransactionContextPool(database.DocumentsStorage.Environment))
                 {
                     var indexStorage = new IndexStorage(index, contextPool, database);
@@ -53,8 +55,8 @@ namespace SlowTests.Server.Documents.Indexing.MapReduce
                             mapReduceContext.MapPhaseTree = tx.InnerTransaction.CreateTree(MapReduceIndexBase<MapIndexDefinition, IndexField>.MapPhaseTreeName);
                             mapReduceContext.ReducePhaseTree = tx.InnerTransaction.CreateTree(MapReduceIndexBase<MapIndexDefinition, IndexField>.ReducePhaseTreeName);
 
-                            var store1 = new MapReduceResultsStore(1, MapResultsStorageType.Tree, indexContext, mapReduceContext, true);
-                            var store2 = new MapReduceResultsStore(2, MapResultsStorageType.Tree, indexContext, mapReduceContext, true);
+                            var store1 = new MapReduceResultsStore(1, MapResultsStorageType.Tree, indexContext, mapReduceContext, true, sharedFreedPages);
+                            var store2 = new MapReduceResultsStore(2, MapResultsStorageType.Tree, indexContext, mapReduceContext, true, sharedFreedPages);
 
                             mapReduceContext.StoreByReduceKeyHash.Add(1, store1);
                             mapReduceContext.StoreByReduceKeyHash.Add(2, store2);
@@ -83,8 +85,7 @@ namespace SlowTests.Server.Documents.Indexing.MapReduce
                                 }
                             }
                             
-                            var writeOperation =
-                                new Lazy<IndexWriteOperation>(() => index.IndexPersistence.OpenIndexWriter(tx.InnerTransaction, null));
+                            var writeOperation = new Lazy<IndexWriteOperation>(() => index.IndexPersistence.OpenIndexWriter(tx.InnerTransaction, null));
 
                             var stats = new IndexingStatsScope(new IndexingRunStats());
                             reducer.Execute(null, indexContext,

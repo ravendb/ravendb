@@ -31,7 +31,7 @@ namespace Raven.Server.Documents.Indexes.MapReduce
         public readonly HashSet<long> ModifiedPages;
         public readonly HashSet<long> FreedPages;
 
-        public MapReduceResultsStore(ulong reduceKeyHash, MapResultsStorageType type, TransactionOperationContext indexContext, MapReduceIndexingContext mapReduceContext, bool create)
+        public MapReduceResultsStore(ulong reduceKeyHash, MapResultsStorageType type, TransactionOperationContext indexContext, MapReduceIndexingContext mapReduceContext, bool create, HashSet<long> sharedFreedPages = null)
         {
             _reduceKeyHash = reduceKeyHash;
             Type = type;
@@ -40,7 +40,7 @@ namespace Raven.Server.Documents.Indexes.MapReduce
             _tx = indexContext.Transaction.InnerTransaction;
 
             ModifiedPages = new HashSet<long>();
-            FreedPages = new HashSet<long>();
+            FreedPages = sharedFreedPages ?? new HashSet<long>();
 
             switch (Type)
             {
