@@ -509,7 +509,7 @@ namespace Raven.Server.ServerWide
                 options.MaxScratchBufferSize = Configuration.Storage.MaxScratchBufferSize.Value.GetValue(SizeUnit.Bytes);
             options.PrefetchSegmentSize = Configuration.Storage.PrefetchBatchSize.GetValue(SizeUnit.Bytes);
             options.PrefetchResetThreshold = Configuration.Storage.PrefetchResetThreshold.GetValue(SizeUnit.Bytes);
-            options.JournalsFilesAmountThreshold = Configuration.Storage.JournalsFilesAmountThreshold;
+            options.SyncJournalsCountThreshold = Configuration.Storage.SyncJournalsCountThreshold;
 
             DirectoryExecUtils.SubscribeToOnDirectoryInitializeExec(options, Configuration.Storage, nameof(DirectoryExecUtils.EnvironmentType.System), DirectoryExecUtils.EnvironmentType.System, Logger);
 

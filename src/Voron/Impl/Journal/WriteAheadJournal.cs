@@ -438,7 +438,7 @@ namespace Voron.Impl.Journal
             }
 
             public long TotalWrittenButUnsyncedBytes => Interlocked.Read(ref _totalWrittenButUnsyncedBytes);
-            public int JournalsToDeleteAmount => _journalsToDelete.Count;
+            public int JournalsToDeleteCount => _journalsToDelete.Count;
 
             public JournalApplicator(WriteAheadJournal waj)
             {

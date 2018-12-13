@@ -148,7 +148,7 @@ namespace Raven.Server.Documents
                 options.MaxScratchBufferSize = configuration.Storage.MaxScratchBufferSize.Value.GetValue(SizeUnit.Bytes);
             options.PrefetchSegmentSize = configuration.Storage.PrefetchBatchSize.GetValue(SizeUnit.Bytes);
             options.PrefetchResetThreshold = configuration.Storage.PrefetchResetThreshold.GetValue(SizeUnit.Bytes);
-            options.JournalsFilesAmountThreshold = documentDatabase.Configuration.Storage.JournalsFilesAmountThreshold;
+            options.SyncJournalsCountThreshold = documentDatabase.Configuration.Storage.SyncJournalsCountThreshold;
         }
 
         private static void SwitchDatabaseDirectories(string basePath, string backupDirectory, string compactDirectory)
