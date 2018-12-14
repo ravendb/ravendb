@@ -1331,6 +1331,10 @@ class ongoingTasksStats extends viewModelBase {
                         if (elementWithData.BatchCompleteReason) {
                             tooltipHtml += `Batch complete reason: ${elementWithData.BatchCompleteReason}<br/>`;
                         }
+                        
+                        if (elementWithData.CurrentlyAllocated && elementWithData.CurrentlyAllocated.SizeInBytes) {
+                            tooltipHtml += `Currently allocated: ${generalUtils.formatBytesToSize(elementWithData.CurrentlyAllocated.SizeInBytes)} <br/>`;
+                        }
                         break;
                 }
                 
@@ -1362,9 +1366,20 @@ class ongoingTasksStats extends viewModelBase {
                             _.forIn(baseElement.NumberOfTransformedItems, (value: number, key: Raven.Server.Documents.ETL.EtlItemType) => {
                                 if (value) {
                                     tooltipHtml += `Transformed ${ongoingTasksStats.etlItemTypeToUi(key)}: ${value.toLocaleString()}<br/>`;
+                                    
+                                    if (baseElement.DurationInMs) {
+                                        const durationInSec = context.item.DurationInMs / 1000;
+                                        tooltipHtml += `${ongoingTasksStats.etlItemTypeToUi(key)} Processing Speed: ${Math.floor(value / durationInSec).toLocaleString()} docs/sec<br/>`;
+                                    }
                                 }
                             });
 
+                            _.forIn(baseElement.NumberOfTransformedTombstones, (value: number, key: Raven.Server.Documents.ETL.EtlItemType) => {
+                                if (value) {
+                                    tooltipHtml += `Transformed ${ongoingTasksStats.etlItemTypeToUi(key)} tombstones: ${value.toLocaleString()}<br/>`;
+                                }
+                            });
+                            
                             if (baseElement.TransformationErrorCount) {
                                 tooltipHtml += `Transformation error count: ${baseElement.TransformationErrorCount.toLocaleString()}<br/>`;
                             }
@@ -1455,7 +1470,7 @@ class ongoingTasksStats extends viewModelBase {
         const file = fileInput.files[0];
         const reader = new FileReader();
         reader.onload = function () {
-            self.dataImported(this.result);
+            self.dataImported(this.result as string);
         };
         reader.onerror = (error: any) => {
             alert(error);

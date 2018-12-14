@@ -62,13 +62,11 @@ class progress extends genericProgress {
 
     protected getDefaultTimeLeftMessage() {
         if (this.total() === this.processed() && this.isStale()) {
-            // applies only to indexes
             return "Processed all documents and tombstones, finalizing";
         }
 
         let message: string;
         if (this.isDisabled()) {
-            // applies only to indexes
             message = `Index is ${this.indexRunningStatus()}`;
         } else {
             message = "Overall progress";
