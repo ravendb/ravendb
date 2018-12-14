@@ -42,7 +42,6 @@ namespace SlowTests.Server.Documents.Indexing.MapReduce
                 index._threadAllocations = NativeMemory.CurrentThreadStats;
 
                 var mapReduceContext = new MapReduceIndexingContext();
-                var sharedFreedPages = new HashSet<long>();
                 using (var contextPool = new TransactionContextPool(database.DocumentsStorage.Environment))
                 {
                     var indexStorage = new IndexStorage(index, contextPool, database);
@@ -55,8 +54,8 @@ namespace SlowTests.Server.Documents.Indexing.MapReduce
                             mapReduceContext.MapPhaseTree = tx.InnerTransaction.CreateTree(MapReduceIndexBase<MapIndexDefinition, IndexField>.MapPhaseTreeName);
                             mapReduceContext.ReducePhaseTree = tx.InnerTransaction.CreateTree(MapReduceIndexBase<MapIndexDefinition, IndexField>.ReducePhaseTreeName);
 
-                            var store1 = new MapReduceResultsStore(1, MapResultsStorageType.Tree, indexContext, mapReduceContext, true, sharedFreedPages);
-                            var store2 = new MapReduceResultsStore(2, MapResultsStorageType.Tree, indexContext, mapReduceContext, true, sharedFreedPages);
+                            var store1 = new MapReduceResultsStore(1, MapResultsStorageType.Tree, indexContext, mapReduceContext, true);
+                            var store2 = new MapReduceResultsStore(2, MapResultsStorageType.Tree, indexContext, mapReduceContext, true);
 
                             mapReduceContext.StoreByReduceKeyHash.Add(1, store1);
                             mapReduceContext.StoreByReduceKeyHash.Add(2, store2);
@@ -71,7 +70,7 @@ namespace SlowTests.Server.Documents.Indexing.MapReduce
 
                             long pageNumber = 541;
 
-                            store2.FreedPages.Add(pageNumber);
+                            mapReduceContext.FreedPages.Add(pageNumber);
 
                             for (int i = 0; i < 200; i++)
                             {
@@ -92,7 +91,7 @@ namespace SlowTests.Server.Documents.Indexing.MapReduce
                                 writeOperation,
                                 stats, CancellationToken.None);
 
-                            Assert.DoesNotContain(pageNumber, store2.FreedPages);
+                            Assert.DoesNotContain(pageNumber, mapReduceContext.FreedPages);
 
                             var table = indexContext.Transaction.InnerTransaction.OpenTable(ReduceMapResultsBase<MapReduceIndexDefinition>.ReduceResultsSchema,
                                 ReduceMapResultsBase<MapReduceIndexDefinition>.PageNumberToReduceResultTableName);
