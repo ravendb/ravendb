@@ -29,7 +29,6 @@ namespace Raven.Server.Documents.Indexes.MapReduce
 
         private IndexingStatsScope _statsInstance;
         private readonly MapPhaseStats _stats = new MapPhaseStats();
-        private readonly HashSet<long> _sharedFreedPages = new HashSet<long>();
 
 
         protected MapReduceIndexBase(IndexType type, T definition) : base(type, definition)
@@ -258,7 +257,7 @@ namespace Raven.Server.Documents.Indexes.MapReduce
                     type = MapResultsStorageType.Nested;
             }
 
-            return new MapReduceResultsStore(reduceKeyHash, type, indexContext, MapReduceWorkContext, create, _sharedFreedPages);
+            return new MapReduceResultsStore(reduceKeyHash, type, indexContext, MapReduceWorkContext, create);
         }
 
         protected override void LoadValues()

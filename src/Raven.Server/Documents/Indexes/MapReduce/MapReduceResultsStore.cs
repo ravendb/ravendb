@@ -29,9 +29,9 @@ namespace Raven.Server.Documents.Indexes.MapReduce
 
         public Tree Tree;
         public readonly HashSet<long> ModifiedPages;
-        public readonly HashSet<long> FreedPages;
+        
 
-        public MapReduceResultsStore(ulong reduceKeyHash, MapResultsStorageType type, TransactionOperationContext indexContext, MapReduceIndexingContext mapReduceContext, bool create, HashSet<long> sharedFreedPages = null)
+        public MapReduceResultsStore(ulong reduceKeyHash, MapResultsStorageType type, TransactionOperationContext indexContext, MapReduceIndexingContext mapReduceContext, bool create)
         {
             _reduceKeyHash = reduceKeyHash;
             Type = type;
@@ -40,7 +40,6 @@ namespace Raven.Server.Documents.Indexes.MapReduce
             _tx = indexContext.Transaction.InnerTransaction;
 
             ModifiedPages = new HashSet<long>();
-            FreedPages = sharedFreedPages ?? new HashSet<long>();
 
             switch (Type)
             {
@@ -71,7 +70,7 @@ namespace Raven.Server.Documents.Indexes.MapReduce
                         return;
 
                     ModifiedPages.Add(page);
-                    FreedPages.Remove(page);
+                    _mapReduceContext.FreedPages.Remove(page);
                 };
 
                 Tree.PageFreed += (page, flags) =>
@@ -79,14 +78,12 @@ namespace Raven.Server.Documents.Indexes.MapReduce
                     if ((flags & PageFlags.Overflow) == PageFlags.Overflow)
                         return;
 
-                    FreedPages.Add(page);
+                    _mapReduceContext.FreedPages.Add(page);
                     ModifiedPages.Remove(page);
                 };
 
                 _alreadyInitializedTrees.Add(treeName);
             }
-
-            
         }
 
         public void Delete(long id)
