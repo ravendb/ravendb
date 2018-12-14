@@ -518,8 +518,7 @@ class appUrl {
 
             messagePublisher.reportWarning("Unknown route", "The route " + instruction.fragment + queryString + " doesn't exist, redirecting...");
 
-            const appUrls = appUrl.currentDbComputeds;
-            location.href = appUrls.databasesManagement();
+            instruction.config.moduleId = "viewmodels/resources/databases";
         });
     }
 
