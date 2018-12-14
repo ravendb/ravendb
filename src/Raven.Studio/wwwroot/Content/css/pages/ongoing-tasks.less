@@ -45,6 +45,49 @@
     .backup-now {
         pointer-events: all;
     }
+
+    .etl-progress {
+        margin-top: @gutter-sm;
+        padding-top: @gutter-sm;
+        border-top: 1px solid @hr-border;
+        display: flex;
+
+        .overall-container {
+            flex-grow: 1;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .etl-progress-details {
+            margin-left: @gutter-sm;
+            display: grid;
+            grid-template-columns: 120px 120px;
+            grid-gap: @gutter-xxs 0;
+            flex-shrink: 0;
+            align-self: flex-end;
+
+
+
+            .etl-progress-item {
+                background-color: @panel-bg-2;
+                display: flex;
+                flex-direction: column;
+                justify-content: flex-end;
+                padding: 2px @gutter-xs 0;
+
+                .etl-label {
+                    font-size: 12px;
+                    line-height: 13px;
+                    display: flex;
+                    align-items: flex-end;
+
+                    .name {
+                        flex-grow: 1;
+                    }
+                }
+            }
+        }
+    }
 }
 
 .tasks-list-item {
@@ -73,6 +116,3 @@
         text-transform: none;
     }
 }
-
-
-
