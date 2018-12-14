@@ -857,11 +857,14 @@ namespace Raven.Client.Documents.Session
             {
                 var fields = queryData.Fields;
 
-                var identityProperty = Conventions.GetIdentityProperty(typeof(TResult));
-                if (identityProperty != null)
-                    fields = queryData.Fields
-                        .Select(x => x == identityProperty.Name && queryData.IsMapReduce == false ? Constants.Documents.Indexing.Fields.DocumentIdFieldName : x)
-                        .ToArray();
+                if (IsGroupBy == false)
+                {
+                    var identityProperty = Conventions.GetIdentityProperty(typeof(TResult));
+                    if (identityProperty != null)
+                        fields = queryData.Fields
+                            .Select(x => x == identityProperty.Name ? Constants.Documents.Indexing.Fields.DocumentIdFieldName : x)
+                            .ToArray();
+                }
 
                 GetSourceAliasIfExists(queryData, fields, out var sourceAlias);
 
