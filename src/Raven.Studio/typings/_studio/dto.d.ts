@@ -513,6 +513,7 @@ interface periodicBackupServerLimitsResponse {
     LocalRootPath: string;
     AllowedAwsRegions: Array<string>;
     AllowedDestinations: Array<backupOptions>;
+    EnableUnencryptedBackupForEncryptedDatabase: boolean;
 }
 
 interface serializedColumnDto {

@@ -10,6 +10,7 @@ import popoverUtils = require("common/popoverUtils");
 import eventsCollector = require("common/eventsCollector");
 import backupSettings = require("models/database/tasks/periodicBackup/backupSettings");
 import getPossibleMentorsCommand = require("commands/database/tasks/getPossibleMentorsCommand");
+import setupEncryptionKey = require("viewmodels/resources/setupEncryptionKey");
 
 class editPeriodicBackupTask extends viewModelBase {
 
@@ -17,6 +18,8 @@ class editPeriodicBackupTask extends viewModelBase {
     isAddingNewBackupTask = ko.observable<boolean>(true);
     possibleMentors = ko.observableArray<string>([]);
     serverConfiguration = ko.observable<periodicBackupServerLimitsResponse>();
+
+    encryptionSection: setupEncryptionKey;
 
     constructor() {
         super();
@@ -41,7 +44,7 @@ class editPeriodicBackupTask extends viewModelBase {
                             configuration.LocalSettings.FolderPath = configuration.LocalSettings.FolderPath.substr(this.serverConfiguration().LocalRootPath.length);
                         }
                         
-                        this.configuration(new periodicBackupConfiguration(configuration, this.serverConfiguration()));
+                        this.configuration(new periodicBackupConfiguration(configuration, this.serverConfiguration(), this.activeDatabase().isEncrypted()));
                         deferred.resolve();
                     })
                     .fail(() => {
@@ -53,16 +56,24 @@ class editPeriodicBackupTask extends viewModelBase {
                 // 2. Creating a new task
                 this.isAddingNewBackupTask(true);
 
-                this.configuration(periodicBackupConfiguration.empty(this.serverConfiguration()));
+                this.configuration(periodicBackupConfiguration.empty(this.serverConfiguration(), this.activeDatabase().isEncrypted()));
                 deferred.resolve();
             }
 
-            deferred
-                .done(() => {
+            return deferred
+                .then(() => {
+                    const dbName = ko.pureComputed(() => {
+                        const db = this.activeDatabase();
+                        return db ? db.name : null;
+                    });
+                    const encryptionSettings = this.configuration().encryptionSettings();
+                    this.encryptionSection = setupEncryptionKey.forBackup(encryptionSettings.key, encryptionSettings.keyConfirmation, dbName);
                     this.dirtyFlag = this.configuration().dirtyFlag;
+                    
+                    if (!encryptionSettings.key()) {
+                        return this.encryptionSection.generateEncryptionKey();
+                    }
                 });
-            
-            return deferred;
         };
 
         return $.when<any>(this.loadPossibleMentors(), this.loadServerSideConfiguration())
@@ -93,6 +104,10 @@ class editPeriodicBackupTask extends viewModelBase {
     
     compositionComplete() {
         super.compositionComplete();
+
+        this.encryptionSection.syncQrCode(); 
+        
+        this.configuration().encryptionSettings().key.subscribe(() => this.encryptionSection.syncQrCode());
         
         $('.edit-backup [data-toggle="tooltip"]').tooltip();
         
@@ -241,6 +256,9 @@ class editPeriodicBackupTask extends viewModelBase {
         let valid = true;
 
         if (!this.isValid(this.configuration().validationGroup))
+            valid = false;
+        
+        if (!this.isValid(this.configuration().encryptionSettings().validationGroup))
             valid = false;
 
         if (!this.isValid(this.configuration().localSettings().validationGroup))

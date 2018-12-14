@@ -35,7 +35,7 @@ class addNewNodeToDatabaseGroup extends dialogViewModelBase {
         this.databaseInfo = databaseInfo;
         this.isEncrypted = isEncrypted;
         if (isEncrypted) {
-            this.encryptionSection(new setupEncryptionKey(this.key, this.confirmation, ko.observable(databaseInfo.name)));
+            this.encryptionSection(setupEncryptionKey.forDatabase(this.key, this.confirmation, ko.observable(databaseInfo.name)));
         }
         
         this.bindToCurrentInstance("selectedClusterNode", "selectedMentor");
@@ -70,21 +70,9 @@ class addNewNodeToDatabaseGroup extends dialogViewModelBase {
         });
         
         if (this.isEncrypted) {
-            this.key.extend({
-                required: true,
-                base64: true
-            });
-
-            this.confirmation.extend({
-                validation: [
-                    {
-                        validator: (v: boolean) => v,
-                        message: "Please confirm that you have saved the encryption key"
-                    }
-                ]
-            });
+            setupEncryptionKey.setupKeyValidation(this.key);
+            setupEncryptionKey.setupConfirmationValidation(this.confirmation);
         }
-       
 
         this.validationGroup = ko.validatedObservable({
             key: this.key,

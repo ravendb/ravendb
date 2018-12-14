@@ -128,6 +128,48 @@
             </div>
         </div>
     </div>
+    
+    <h3>Encryption</h3>
+    
+    <div class="panel" data-bind="with: encryptionSettings">
+        <div class="padding">
+            <div class="flex-horizontal" data-bind="validationElement: enabled">
+                <div class="toggle margin-right" data-bind="validationOptions: { insertMessages: false }">
+                    <input id="toggle-encryption" type="checkbox" data-bind="checked: enabled">
+                    <label for="toggle-encryption">Encrypt backup</label>
+                </div>
+                <span class="help-block" data-bind="validationMessage: enabled"></span>
+            </div>
+            <div data-bind="collapse: showKeySourceDropdown()">
+                <div class="row flex-row margin-bottom" data-bind="validationElement: mode">
+                    <label class="control-label col-sm-4 col-lg-2">Encryption Mode<i class="required"></i></label>
+                    <div class="col-sm-4 col-lg-4" data-bind="validationOptions: { insertMessages: false }">
+                        <div class="dropdown btn-block">
+                            <button class="btn btn-block dropdown-toggle text-left" type="button" data-toggle="dropdown"
+                            data-bind="disable: !enableKeySourceDropdown()">
+                                <span data-bind="text: labelFor(mode()) || 'Select encryption type..'"></span>
+                                <span class="caret"></span>
+                            </button>
+                            <ul class="dropdown-menu max-height" data-bind="foreach: encryptionModes">
+                                <li><a href="#" data-bind="text: label, click: _.partial($parent.useEncryptionType, value)"></a></li>
+                            </ul>
+                        </div>
+                        <span class="help-block" data-bind="validationMessage: mode"></span>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="panel-addon padding" data-bind="collapse: showProvidedKeySection">
+            <div class="row">
+                <div class="col-sm-12 col-lg-6" data-bind="with: $root.encryptionSection">
+                    <h3>Encryption Key Configuration</h3>
+                    <hr />
+                    <div data-bind="compose: 'resources/setupEncryptionKey.html'"></div>
+                </div>
+            </div>
+        </div>
+    </div>
+    
     <h3>Destination</h3>
 
     <div class="panel" data-bind="with: localSettings">

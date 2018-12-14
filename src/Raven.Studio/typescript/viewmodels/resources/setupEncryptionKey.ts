@@ -3,16 +3,16 @@ import distributeSecretCommand = require("commands/database/secrets/distributeSe
 import copyToClipboard = require("common/copyToClipboard");
 import fileDownloader = require("common/fileDownloader")
 
-class setupEncryptionKey {
+abstract class setupEncryptionKey {
     
-    private key: KnockoutObservable<string>;
-    private keyConfirmation: KnockoutObservable<boolean>;
-    private databaseName: KnockoutObservable<string>;
+    protected readonly key: KnockoutObservable<string>;
+    private readonly keyConfirmation: KnockoutObservable<boolean>;
+    protected readonly databaseName: KnockoutObservable<string>;
 
     disableSavingKeyData: KnockoutComputed<boolean>;
     saveKeyValidationGroup: KnockoutValidationGroup;
     
-    constructor(key: KnockoutObservable<string>, keyConfirmation: KnockoutObservable<boolean>, databaseName: KnockoutObservable<string>) {
+    protected constructor(key: KnockoutObservable<string>, keyConfirmation: KnockoutObservable<boolean>, databaseName: KnockoutObservable<string>) {
         this.key = key;
         this.keyConfirmation = keyConfirmation;
         this.databaseName = databaseName;
@@ -43,6 +43,10 @@ class setupEncryptionKey {
             });
     }
     
+    abstract getContainer(): HTMLElement;
+    
+    abstract getFileName(): string;
+    
     syncQrCode() {
         const key = this.key();
         const qrContainer = document.getElementById("encryption_qrcode");
@@ -70,27 +74,24 @@ class setupEncryptionKey {
         }
     }
 
-    private keyDataText() : string {
-        const encryptionKey = this.key();
-        const databaseName = this.databaseName();
-        return `Encryption Key for database '${databaseName}': ${encryptionKey}\r\n\r\nThis key is used to encrypt the RavenDB database, it is required for restoring the database.\r\nMake sure you keep it in a private, safe place as it will Not be available again !`;
-    }
-
+    abstract keyDataText(): string;
+    
     copyEncryptionKeyToClipboard() {
-        const container = document.getElementById("newDatabase");
+        const container = this.getContainer();
         copyToClipboard.copy(this.keyDataText(), "Encryption key data was copied to clipboard", container);
     }
 
     downloadEncryptionKey() {
+        //TODO: content based on context
         const text = this.keyDataText();
-        const textFileName = `Key-of-${this.databaseName()}-${moment().format("YYYY-MM-DD-HH-mm")}.txt`;
+        const textFileName = this.getFileName();
         fileDownloader.downloadAsTxt(text, textFileName);
     }
 
     printEncryptionKey() {
         const text = this.keyDataText().replace(/\r\n/g, "<br/>");
         const qrCodeHtml = document.getElementById("encryption_qrcode").innerHTML;
-        const docTitle = `Key-of-${this.databaseName()}-${moment().format("YYYY-MM-DD-HH-mm")}.txt`;
+        const docTitle = this.getFileName();
 
         const html = `
             <html>
@@ -142,6 +143,64 @@ class setupEncryptionKey {
             printWindow.print();
             printWindow.close();
         }, 50);
+    }
+    
+    static setupKeyValidation(key: KnockoutObservable<string>) {
+        key.extend({
+            required: true,
+            base64: true
+        });
+    }
+    
+    static setupConfirmationValidation(confirmation: KnockoutObservable<boolean>) {
+        confirmation.extend({
+            validation: [
+                {
+                    validator: (v: boolean) => v,
+                    message: "Please confirm that you have saved the encryption key"
+                }
+            ]
+        });
+    }
+    
+    static forDatabase(key: KnockoutObservable<string>, keyConfirmation: KnockoutObservable<boolean>, databaseName: KnockoutObservable<string>) {
+        return new databaseSetupEncryptionKey(key, keyConfirmation, databaseName);
+    }
+    
+    static forBackup(key: KnockoutObservable<string>, keyConfirmation: KnockoutObservable<boolean>, databaseName: KnockoutObservable<string>) {
+        return new backupSetupEncryptionKey(key, keyConfirmation, databaseName);
+    }
+}
+
+class databaseSetupEncryptionKey extends setupEncryptionKey {
+    getContainer() {
+        return document.getElementById("encryption_qrcode");
+    }
+    
+    getFileName() {
+        return `Key-of-${this.databaseName()}-${moment().format("YYYY-MM-DD-HH-mm")}.txt`;
+    }
+
+    keyDataText(): string {
+        const encryptionKey = this.key();
+        const databaseName = this.databaseName();
+        return `Encryption Key for database '${databaseName}': ${encryptionKey}\r\n\r\nThis key is used to encrypt the RavenDB database, it is required for restoring the database.\r\nMake sure you keep it in a private, safe place as it will Not be available again !`;
+    }
+}
+
+class backupSetupEncryptionKey extends setupEncryptionKey {
+    getContainer() {
+        return document.getElementsByTagName("body")[0];
+    }
+
+    getFileName() {
+        return `Backup-key-of-${this.databaseName()}-${moment().format("YYYY-MM-DD-HH-mm")}.txt`;
+    }
+
+    keyDataText(): string {
+        const encryptionKey = this.key();
+        const databaseName = this.databaseName();
+        return `Backup Encryption Key for database '${databaseName}': ${encryptionKey}\r\n\r\nThis key is used to encrypt backup, it is required for restoring the database.\r\nMake sure you keep it in a private, safe place.`;
     }
 }
 
