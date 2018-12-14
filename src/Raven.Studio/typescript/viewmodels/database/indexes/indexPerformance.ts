@@ -240,6 +240,7 @@ class indexPerformance extends viewModelBase {
         trackBackground: undefined as string,
         trackNameBg: undefined as string,
         faulty: undefined as string,
+        itemWithError: undefined as string,
         trackNameFg: undefined as string,
         openedTrackArrow: undefined as string,
         closedTrackArrow: undefined as string,
@@ -960,7 +961,7 @@ class indexPerformance extends viewModelBase {
                     
                     const x1 = xScale(startDate);
                     
-                    this.drawStripes(0, context, [perf.Details], x1, stripesYStart, yOffset, extentFunc, perfStat.Name);
+                    this.drawStripes(0, perf, context, [perf.Details], x1, stripesYStart, yOffset, extentFunc, perfStat.Name);
 
                     if (!perf.Completed) {
                         this.findInProgressAction(context, perf, extentFunc, x1, stripesYStart, yOffset);
@@ -1005,8 +1006,9 @@ class indexPerformance extends viewModelBase {
         throw new Error("Unable to find color for: " + operationName);
     }
 
-    private drawStripes(level: number, context: CanvasRenderingContext2D, operations: Array<Raven.Client.Documents.Indexes.IndexingPerformanceOperation>, xStart: number, yStart: number,
-        yOffset: number, extentFunc: (duration: number) => number, indexName?: string) {
+    private drawStripes(level: number, rootPerf:Raven.Client.Documents.Indexes.IndexingPerformanceStats, 
+                        context: CanvasRenderingContext2D, operations: Array<Raven.Client.Documents.Indexes.IndexingPerformanceOperation>, 
+                        xStart: number, yStart: number, yOffset: number, extentFunc: (duration: number) => number, indexName?: string) {
 
         let currentX = xStart;
         const length = operations.length;
@@ -1049,8 +1051,20 @@ class indexPerformance extends viewModelBase {
             }
             
             if ((level > 0 || dx > 1) && op.Operations.length > 0) {
-                this.drawStripes(level + 1, context, op.Operations, currentX, yStart + yOffset, yOffset, extentFunc);
+                this.drawStripes(level + 1, rootPerf, context, op.Operations, currentX, yStart + yOffset, yOffset, extentFunc);
             }
+            
+            // check if item has errors - draw error marks *after* inner stripes to overlap
+            if (level === 1) {
+                if (op.Name === "Map" && rootPerf.FailedCount > 0) {
+                    context.fillStyle = this.colors.itemWithError;
+                    graphHelper.drawErrorMark(context, currentX, yStart, dx);
+                } else if (op.Name === "Reduce" && op.ReduceDetails && op.ReduceDetails.ReduceErrors > 0) {
+                    context.fillStyle = this.colors.itemWithError;
+                    graphHelper.drawErrorMark(context, currentX, yStart, dx);
+                }
+            }
+            
             currentX += dx;
         }
     }
