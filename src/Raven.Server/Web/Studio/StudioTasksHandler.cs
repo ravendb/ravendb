@@ -1,5 +1,4 @@
 ﻿using System;
-using System.IO;
 using System.Threading.Tasks;
 using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.CSharp;
@@ -15,8 +14,6 @@ using Sparrow.Json.Parsing;
 using Raven.Server.Config;
 using Voron.Util.Settings;
 using Raven.Server.Documents.Indexes;
-using Sparrow.Platform;
-using Sparrow.Utils;
 
 namespace Raven.Server.Web.Studio
 {
@@ -56,38 +53,10 @@ namespace Raven.Server.Web.Studio
                 }
             }
 
-            var drivesInfo = PlatformDetails.RunningOnPosix ? DriveInfo.GetDrives() : null;
-            var driveInfo = DiskSpaceChecker.GetDriveInfo(result, drivesInfo, out var realPath);
-            var diskSpaceInfo = DiskSpaceChecker.GetDiskSpaceInfo(driveInfo.DriveName);
-
-            var currentNodeInfo = new SingleNodeDataDirectoryResult
-            {
-                NodeTag = Server.ServerStore.NodeTag,
-                FullPath = realPath,
-                TotalFreeSpaceHumane = diskSpaceInfo?.TotalFreeSpace.ToString()
-            };
             var getNodesInfo = GetBoolValueQueryString("getNodesInfo", required: false) ?? false;
-            if (getNodesInfo == false)
-            {
-                using (ServerStore.ContextPool.AllocateOperationContext(out JsonOperationContext context))
-                using (var writer = new BlittableJsonTextWriter(context, ResponseBodyStream()))
-                {
-                    context.Write(writer, currentNodeInfo.ToJson());
-                }
-
-                return;
-            }
-
-            using (ServerStore.ContextPool.AllocateOperationContext(out JsonOperationContext context))
-            {
-                var info = new DataDirectoryInfo(ServerStore, context);
-                var dataDirectoryResult = await info.GetDatabaseDirectoryResult(currentNodeInfo, path, name);
-
-                using (var writer = new BlittableJsonTextWriter(context, ResponseBodyStream()))
-                {
-                    context.Write(writer, dataDirectoryResult.ToJson());
-                }
-            }
+            var info = new DataDirectoryInfo(ServerStore, result, getNodesInfo, ResponseBodyStream());
+            var urlPath = $"admin/studio-tasks/full-data-directory?path={path}&name={name}";
+            await info.UpdateDirectoryResult(urlPath, databaseName: null);
         }
 
         [RavenAction("/admin/studio-tasks/offline-migration-test", "GET", AuthorizationStatus.Operator)]
