@@ -107,6 +107,12 @@ namespace Voron.Impl.FileHeaders
                     _env.Options.InvokeRecoveryError(this, message, null);
                 }
 
+                if (IsEmptyHeader(_theHeader))
+                {
+                    // db was not initialized - new db
+                    return true;
+                }
+
                 return false;
             }
             finally
@@ -190,6 +196,23 @@ namespace Voron.Impl.FileHeaders
             header->IncrementalBackup.LastBackedUpJournalPage = -1;
             header->IncrementalBackup.LastCreatedJournal = -1;
             header->PageSize = _env.Options.PageSize;
+        }
+
+        private bool IsEmptyHeader(FileHeader* header)
+        {
+            return header->MagicMarker == Constants.MagicMarker &&
+                   header->Version == Constants.CurrentVersion &&
+                   header->HeaderRevision == -1 &&
+                   header->TransactionId == 0 &&
+                   header->LastPageNumber == 1 &&
+                   header->Root.RootPageNumber == -1 &&
+                   header->Journal.CurrentJournal == -1 &&
+                   header->Journal.JournalFilesCount == 0 &&
+                   header->Journal.LastSyncedJournal == -1 &&
+                   header->Journal.LastSyncedTransactionId == -1 &&
+                   header->IncrementalBackup.LastBackedUpJournal == -1 &&
+                   header->IncrementalBackup.LastBackedUpJournalPage == -1 &&
+                   header->IncrementalBackup.LastCreatedJournal == -1;
         }
 
         public static ulong CalculateFileHeaderHash(FileHeader* header)
