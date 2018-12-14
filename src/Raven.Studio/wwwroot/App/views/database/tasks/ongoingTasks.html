@@ -82,7 +82,7 @@
                                         <input type="checkbox" class="styled">
                                         <label></label>
                                     </div>
-                                    <div class="panel-name flex-grow" data-bind="template: { name: 'name-template' }"></div>  
+                                    <div class="panel-name flex-grow" data-bind="template: { name: 'name-template' }"></div>
                                     <div class="node" data-bind="template: { name: 'responsible-node-template' }"></div>
                                     <div class="status" data-bind="template: { name: 'state-template' }"></div>
                                     <div data-bind="template: { name: 'actions-template' }"></div>
@@ -92,12 +92,13 @@
                                 <div class="padding padding-sm flex-horizontal">
                                     <div class="flex-grow">
                                         <ul class="properties">
-                                            <li><span>Task Status:</span>
+                                            <li>
+                                                <span>Task Status:</span>
                                                 <span class="text-details" data-bind="text: badgeText"></span>
                                             </li>
                                             <li data-bind="visible: showDelayReplication">
                                                 <span>Replication Delay Time:</span>
-                                                <span class="text-details" data-bind="text: delayHumane" title="Replication Delay Time"></span>                                           
+                                                <span class="text-details" data-bind="text: delayHumane" title="Replication Delay Time"></span>
                                             </li>
                                             <li>
                                                 <span>Connection String:</span>
@@ -107,18 +108,18 @@
                                             </li>
                                             <li>
                                                 <span>Destination Database:</span>
-                                                <span class="text-details" data-bind="text:  destinationDB" title="Destination database"></span>                                           
+                                                <span class="text-details" data-bind="text:  destinationDB" title="Destination database"></span>
                                             </li>
                                             <li>
                                                 <span>Actual Destination URL:</span>
                                                 <span title="Actual Destination Url">
-                                                    <a target="_blank" data-bind="attr: { href: destinationURL() === 'N/A' ? null : destinationURL }, text: destinationURL()"></a> 
+                                                    <a target="_blank" data-bind="attr: { href: destinationURL() === 'N/A' ? null : destinationURL }, text: destinationURL()"></a>
                                                 </span>
-                                            </li>                                           
+                                            </li>
                                             <!-- ko foreach: topologyDiscoveryUrls -->
-                                            <li>                                        
-                                                <span data-bind="text: $data === $parent.topologyDiscoveryUrls()[0] ? 'Topology Discovery URLs:' : ''"></span>                                                
-                                                <span class="text-details" data-bind="text: $data" title="Discovery Url"></span>                                                
+                                            <li>
+                                                <span data-bind="text: $data === $parent.topologyDiscoveryUrls()[0] ? 'Topology Discovery URLs:' : ''"></span>
+                                                <span class="text-details" data-bind="text: $data" title="Discovery Url"></span>
                                             </li>
                                             <!-- /ko -->
                                         </ul>
@@ -130,10 +131,10 @@
                 </div>
 
                 <!-- Ravan Etl -->
-                
+
                 <div data-bind="if: showEtlSection">
                     <div class="hr-title">
-                        <h5 class="tasks-list-item ravendb-etl no-text-transform"><i class="icon-etl"></i><span>RavenDB ETL</span></h5><hr> 
+                        <h5 class="tasks-list-item ravendb-etl no-text-transform"><i class="icon-etl"></i><span>RavenDB ETL</span></h5><hr>
                     </div>
                     <div data-bind="foreach: etlTasks">
                         <div class="panel destination-item ravendb-etl" data-bind="if: responsibleNode().NodeTag === $parent.selectedNode() || $parent.selectedNode() === 'All nodes'">
@@ -144,7 +145,7 @@
                                         <input type="checkbox" class="styled">
                                         <label></label>
                                     </div>
-                                    <div class="panel-name flex-grow" data-bind="template: { name: 'name-template' }"></div>                                    
+                                    <div class="panel-name flex-grow" data-bind="template: { name: 'name-template' }"></div>
                                     <div class="node" data-bind="template: { name: 'responsible-node-template' }"></div>
                                     <div class="status" data-bind="template: { name: 'state-template' }"></div>
                                     <div data-bind="template: { name: 'actions-template' }"></div>
@@ -154,7 +155,8 @@
                                 <div class="padding padding-sm flex-horizontal">
                                     <div class="flex-grow">
                                         <ul class="properties">
-                                            <li><span>Task Status:</span>
+                                            <li>
+                                                <span>Task Status:</span>
                                                 <span class="text-details" data-bind="text: badgeText"></span>
                                             </li>
                                             <li>
@@ -170,7 +172,7 @@
                                             <li>
                                                 <span>Actual Destination URL:</span>
                                                 <span title="Actual Destination Url">
-                                                    <a target="_blank" data-bind="attr: { href: destinationURL() === 'N/A' ? null : destinationURL }, text: destinationURL()"></a> 
+                                                    <a target="_blank" data-bind="attr: { href: destinationURL() === 'N/A' ? null : destinationURL }, text: destinationURL()"></a>
                                                 </span>
                                             </li>
                                             <!-- ko foreach: topologyDiscoveryUrls -->
@@ -187,9 +189,9 @@
                         </div>
                     </div>
                 </div>
-               
+
                 <!-- Sql Etl -->
-                
+
                 <div data-bind="if: showSqlSection">
                     <div class="hr-title">
                         <h5 class="tasks-list-item sql-etl no-text-transform"><i class="icon-sql-etl"></i><span>SQL ETL</span></h5><hr>
@@ -203,7 +205,7 @@
                                         <input type="checkbox" class="styled">
                                         <label></label>
                                     </div>
-                                    <div class="panel-name flex-grow" data-bind="template: { name: 'name-template' }"></div>                                    
+                                    <div class="panel-name flex-grow" data-bind="template: { name: 'name-template' }"></div>
                                     <div class="node" data-bind="template: { name: 'responsible-node-template' }"></div>
                                     <div class="status" data-bind="template: { name: 'state-template' }"></div>
                                     <div data-bind="template: { name: 'actions-template' }"></div>
@@ -213,7 +215,8 @@
                                 <div class="padding padding-sm flex-horizontal">
                                     <div class="flex-grow">
                                         <ul class="properties">
-                                            <li><span>Task Status:</span>
+                                            <li>
+                                                <span>Task Status:</span>
                                                 <span class="text-details" data-bind="text: badgeText"></span>
                                             </li>
                                             <li>
@@ -235,10 +238,10 @@
                             </div>
                         </div>
                     </div>
-                </div>                               
-               
+                </div>
+
                 <!-- Backup -->
-            
+
                 <div data-bind="if: showBackupSection">
                     <div class="hr-title">
                         <h5 class="tasks-list-item periodic-backup no-text-transform"><i class="icon-backup"></i><span>Backup</span></h5><hr>
@@ -252,7 +255,7 @@
                                         <input type="checkbox" class="styled">
                                         <label></label>
                                     </div>
-                                    <div class="panel-name flex-grow" data-bind="template: { name: 'name-template' }"></div>                                    
+                                    <div class="panel-name flex-grow" data-bind="template: { name: 'name-template' }"></div>
                                     <div class="node" data-bind="template: { name: 'responsible-node-template' }"></div>
                                     <div class="status" data-bind="template: { name: 'state-template' }"></div>
                                     <div data-bind="template: { name: 'actions-template' }"></div>
@@ -267,14 +270,14 @@
                                             <li data-bind="visible: lastFullBackupHumanized">
                                                 <span data-bind="text: 'Last ' + fullBackupTypeName() + (fullBackupTypeName() === 'Snapshot' ? ':' : ' Backup:')"></span><span class="text-details" data-bind="text: lastFullBackupHumanized"></span>
                                             </li>
-                                            <li data-bind="visible: lastIncrementalBackupHumanized"><span>Last Incremental Backup:</span><span  class="text-details" data-bind="text: lastIncrementalBackupHumanized"></span></li>
+                                            <li data-bind="visible: lastIncrementalBackupHumanized"><span>Last Incremental Backup:</span><span class="text-details" data-bind="text: lastIncrementalBackupHumanized"></span></li>
                                             <li data-bind="visible: nextBackup() && !onGoingBackup()"><span>Next Estimated Backup:</span><span data-bind="text: nextBackupHumanized, attr: { class: textClass() }"></span></li>
                                             <li data-bind="visible: onGoingBackup"><span>Backup Started:</span><span data-bind="text: onGoingBackupHumanized, attr: { class: textClass() }"></span></li>
                                         </ul>
                                     </div>
                                     <div>
                                         <button class="btn backup-now" data-bind="click: backupNow, enable: isBackupNowEnabled(),
-                                             css: { 'btn-default': !neverBackedUp(), 'btn-info': backupNowInProgress, 'btn-spinner': backupNowInProgress, 'btn-warning': !backupNowInProgress() && neverBackedUp() }, 
+                                             css: { 'btn-default': !neverBackedUp(), 'btn-info': backupNowInProgress, 'btn-spinner': backupNowInProgress, 'btn-warning': !backupNowInProgress() && neverBackedUp() },
                                              attr: { 'title':  disabledBackupNowReason() || 'Click to backup the database now' }">
                                             <i class="icon-backup"></i><span data-bind="text: backupNowInProgress() ? 'Show backup progress' : 'Backup now'"></span>
                                         </button>
@@ -285,7 +288,7 @@
                         </div>
                     </div>
                 </div>
-            
+
                 <!-- Subscription -->
 
                 <div data-bind="if: showSubscriptionsSection">
@@ -301,7 +304,7 @@
                                         <input type="checkbox" class="styled">
                                         <label></label>
                                     </div>
-                                    <div class="panel-name flex-grow" data-bind="template: { name: 'name-template' }"></div>                                    
+                                    <div class="panel-name flex-grow" data-bind="template: { name: 'name-template' }"></div>
                                     <div class="node" data-bind="template: { name: 'responsible-node-template' }"></div>
                                     <div class="status" data-bind="template: { name: 'state-template' }"></div>
                                     <div data-bind="template: { name: 'actions-template' }"></div>
@@ -390,7 +393,7 @@
                     <div class="col-sm-4">
                         <h5>CONNECTION STATUS</h5>
                         <div><i class="icon-arrow"></i><span>Connection</span></div>
-                        <div><i class="icon-arrow-dashed"></i><span>Partial Connection (ETL)</span></div> 
+                        <div><i class="icon-arrow-dashed"></i><span>Partial Connection (ETL)</span></div>
                         <div><i class="icon-arrow-dashed text-warning"></i><span>Disabled Connection</span></div>
                         <div><i class="icon-arrow-dashed text-danger"></i><span>Broken Connection</span></div>
                     </div>
@@ -422,13 +425,13 @@
 </script>
 
 <script type="text/html" id="responsible-node-template">
-  <div data-bind="with: responsibleNode().NodeTag" title="Cluster node that is responsible for this task"> 
-     <i class="icon-cluster-node"></i>
-     <span data-bind="text: $data"></span>
-  </div>
-  <div data-bind="if: !responsibleNode().NodeTag" title="No node is currently handling this task">
-      <i class="icon-cluster-node"></i> N/A
-  </div>
+    <div data-bind="with: responsibleNode().NodeTag" title="Cluster node that is responsible for this task">
+        <i class="icon-cluster-node"></i>
+        <span data-bind="text: $data"></span>
+    </div>
+    <div data-bind="if: !responsibleNode().NodeTag" title="No node is currently handling this task">
+        <i class="icon-cluster-node"></i> N/A
+    </div>
 </script>
 
 <script type="text/html" id="actions-template">
@@ -449,35 +452,39 @@
         <div data-bind="visible: !scriptProgress().length">
             <i class="global-spinner spinner-xs"></i> Loading progress ...
         </div>
-        <div data-bind="foreach: scriptProgress">
-            <div data-bind="text: name"></div>
-
-            <div class="progress-overall">
-                <div class="flex-horizontal" data-bind="with: globalProgress">
-                    <h3 class="flex-grow"><span data-bind="text: formattedTimeLeftToProcess"></span></h3>
-                    <div class="percentage" data-bind="text: percentageFormatted,  css: { 'text-success': completed }, attr: { title: textualProgress }"></div>
-                </div>
-                <div class="progress" data-bind="with: globalProgress">
-                    <div data-bind="css: { 'progress-bar-striped': !completed() && !disabled(), 'progress-bar-primary': !completed(), 'active': !completed() && !disabled(), 'progress-bar-success': completed }, style: { width: percentageFormatted }, attr: { 'aria-valuenow': percentage, title: textualProgress } "
-                         class="progress-bar" role="progressbar" aria-valuemin="0" aria-valuemax="100">
-                        <span class="sr-only" data-bind="text: percentageFormatted() + ' Completed'"></span>
+        <!-- ko foreach: scriptProgress -->
+        <div class="etl-progress">
+            <div class="overall-container">
+                <div class="text-info" data-bind="text: name"></div>
+                <div class="flex-grow"></div>
+                <div class="progress-overall">
+                    <div class="flex-horizontal" data-bind="with: globalProgress">
+                        <div class="flex-grow"><span data-bind="text: formattedTimeLeftToProcess"></span></div>
+                        <div class="percentage" data-bind="text: percentageFormatted,  css: { 'text-success': completed }, attr: { title: textualProgress }"></div>
+                    </div>
+                    <div class="progress" data-bind="with: globalProgress">
+                        <div data-bind="css: { 'progress-bar-striped': !completed() && !disabled(), 'progress-bar-primary': !completed(), 'active': !completed() && !disabled(), 'progress-bar-success': completed }, style: { width: percentageFormatted }, attr: { 'aria-valuenow': percentage, title: textualProgress } "
+                             class="progress-bar" role="progressbar" aria-valuemin="0" aria-valuemax="100">
+                            <span class="sr-only" data-bind="text: percentageFormatted() + ' Completed'"></span>
+                        </div>
                     </div>
                 </div>
-                <div class="panel">
-                    <div data-bind="foreach: innerProgresses">
-                        <div class="clearfix" data-bind="with: progress, visible: visible">
-                            <small class="name" data-bind="text: $parent.name"></small>
-                            <small class="percentage" data-bind="text: percentageFormatted(), css: { 'text-success': completed }, attr: { title: textualProgress }"></small>
-                        </div>
-                        <div class="progress" data-bind="with: progress, visible: visible">
-                            <div data-bind="css: { 'progress-bar-striped': !completed() && !$parents[1].globalProgress.disabled(), 'progress-bar-primary': !completed(), 'active': !completed() && !$parents[1].globalProgress.disabled(), 'progress-bar-success': completed() }, style: { width: percentageFormatted }, attr: { 'aria-valuenow': percentage, title: textualProgress } "
-                                 class="progress-bar" role="progressbar" aria-valuemin="0" aria-valuemax="100">
-                                <span class="sr-only" data-bind="text: percentageFormatted() + ' Completed'"></span>
-                            </div>
+            </div>
+            <div data-bind="foreach: innerProgresses" class="etl-progress-details">
+                <div class="etl-progress-item" data-bind="with: progress, visible: visible">
+                    <div class="etl-label">
+                        <small class="name" data-bind="text: $parent.name"></small>
+                        <small class="percentage" data-bind="text: percentageFormatted(), css: { 'text-success': completed }, attr: { title: textualProgress }"></small>
+                    </div>
+                    <div class="progress">
+                        <div data-bind="css: { 'progress-bar-striped': !completed() && !$parents[1].globalProgress.disabled(), 'progress-bar-primary': !completed(), 'active': !completed() && !$parents[1].globalProgress.disabled(), 'progress-bar-success': completed() }, style: { width: percentageFormatted }, attr: { 'aria-valuenow': percentage, title: textualProgress } "
+                             class="progress-bar" role="progressbar" aria-valuemin="0" aria-valuemax="100">
+                            <span class="sr-only" data-bind="text: percentageFormatted() + ' Completed'"></span>
                         </div>
                     </div>
                 </div>
             </div>
         </div>
+        <!-- /ko -->
     </div>
 </script>
