@@ -11,8 +11,11 @@ import jsonUtil = require("common/jsonUtil");
 import backupSettings = require("backupSettings");
 import generalUtils = require("common/generalUtils");
 import activeDatabaseTracker = require("common/shell/activeDatabaseTracker");
+import setupEncryptionKey = require("viewmodels/resources/setupEncryptionKey");
+import encryptionSettings = require("models/database/tasks/periodicBackup/encryptionSettings");
 
 class periodicBackupConfiguration {
+    
     taskId = ko.observable<number>();
     disabled = ko.observable<boolean>();
     name = ko.observable<string>();
@@ -24,7 +27,7 @@ class periodicBackupConfiguration {
     glacierSettings = ko.observable<glacierSettings>();
     azureSettings = ko.observable<azureSettings>();
     ftpSettings = ko.observable<ftpSettings>();
-
+    encryptionSettings = ko.observable<encryptionSettings>();
     fullBackupHumanReadable: KnockoutComputed<string>;
     fullBackupParsingError = ko.observable<string>();
     nextFullBackupOccurrenceServerTime = ko.observable<string>("N/A");
@@ -65,7 +68,7 @@ class periodicBackupConfiguration {
         { label: "At 15 minutes past the hour, every 3 hours", value: "15 */3 * * *", full: false, incremental: true }
     ];
 
-    constructor(dto: Raven.Client.Documents.Operations.Backups.PeriodicBackupConfiguration, serverLimits: periodicBackupServerLimitsResponse) {
+    constructor(dto: Raven.Client.Documents.Operations.Backups.PeriodicBackupConfiguration, serverLimits: periodicBackupServerLimitsResponse, encryptedDatabase: boolean) {
         this.taskId(dto.TaskId);
         this.disabled(dto.Disabled);
         this.name(dto.Name);
@@ -91,6 +94,8 @@ class periodicBackupConfiguration {
     }
 
     private initObservables() {
+        this.encryptionSettings(new encryptionSettings(encryptedDatabase, serverLimits.EnableUnencryptedBackupForEncryptedDatabase, this.backupType, dto.EncryptionSettings));
+        
         this.fullBackupHumanReadable = ko.pureComputed(() => {
             return periodicBackupConfiguration.getHumanReadable(
                 this.fullBackupFrequency,
@@ -148,10 +153,14 @@ class periodicBackupConfiguration {
                     anyDirty = true;
                 }
             });
-
+            
+            if (this.encryptionSettings().dirtyFlag().isDirty()) {
+                anyDirty = true;
+            }
+            
             return anyDirty;
         });
-
+        
         this.canDisplayNextFullBackupOccurrenceLocalTime = ko.pureComputed(() =>
             this.nextFullBackupOccurrenceLocalTime() !== this.nextFullBackupOccurrenceServerTime());
 
@@ -262,7 +271,7 @@ class periodicBackupConfiguration {
                     message: "Full and incremental backup cannot be both empty"
                 },
                 {
-                    validator: (_: string) => !this.fullBackupParsingError(),
+                    validator: () => !this.fullBackupParsingError(),
                     message: `{0}`,
                     params: this.fullBackupParsingError
                 }
@@ -277,7 +286,7 @@ class periodicBackupConfiguration {
                     message: "Full and incremental backup cannot be both empty"
                 },
                 {
-                    validator: (_: string) => !this.incrementalBackupParsingError(),
+                    validator: () => !this.incrementalBackupParsingError(),
                     message: `{0}`,
                     params: this.incrementalBackupParsingError
                 }
@@ -303,11 +312,7 @@ class periodicBackupConfiguration {
             return true;
         }
 
-        if (!str.trim()) {
-            return true;
-        }
-
-        return false;
+        return !str.trim();
     }
 
     useBackupType(backupType: Raven.Client.Documents.Operations.Backups.BackupType) {
@@ -393,11 +398,11 @@ class periodicBackupConfiguration {
             AzureSettings: this.azureSettings().toDto(),
             FtpSettings: this.ftpSettings().toDto(),
             MentorNode: this.manualChooseMentor() ? this.preferredMentor() : undefined,
-            EncryptionSettings: null
+            EncryptionSettings: this.encryptionSettings().toDto()
         };
     }
 
-    static empty(serverLimits: periodicBackupServerLimitsResponse): periodicBackupConfiguration {
+    static empty(serverLimits: periodicBackupServerLimitsResponse, encryptedDatabase: boolean): periodicBackupConfiguration {
         return new periodicBackupConfiguration({
             TaskId: 0,
             Disabled: false,
@@ -411,8 +416,11 @@ class periodicBackupConfiguration {
             AzureSettings: null,
             FtpSettings: null,
             MentorNode: null,
-            EncryptionSettings: null
-        }, serverLimits);
+            EncryptionSettings: {
+                Key: "",
+                EncryptionMode: null
+            }
+        }, serverLimits, encryptedDatabase);
     }
 }
 

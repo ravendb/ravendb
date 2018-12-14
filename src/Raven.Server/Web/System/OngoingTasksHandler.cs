@@ -363,7 +363,8 @@ namespace Raven.Server.Web.System
             {
                 [nameof(ServerStore.Configuration.Backup.LocalRootPath)] = localRootFullPath,
                 [nameof(ServerStore.Configuration.Backup.AllowedAwsRegions)] = ServerStore.Configuration.Backup.AllowedAwsRegions,
-                [nameof(ServerStore.Configuration.Backup.AllowedDestinations)] = ServerStore.Configuration.Backup.AllowedDestinations
+                [nameof(ServerStore.Configuration.Backup.AllowedDestinations)] = ServerStore.Configuration.Backup.AllowedDestinations,
+                [nameof(ServerStore.Configuration.Backup.EnableUnencryptedBackupForEncryptedDatabase)] = ServerStore.Configuration.Backup.EnableUnencryptedBackupForEncryptedDatabase
             };
 
             using (ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext context))

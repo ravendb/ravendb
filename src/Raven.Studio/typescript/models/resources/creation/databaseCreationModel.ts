@@ -8,6 +8,7 @@ import recentError = require("common/notifications/models/recentError");
 import validateNameCommand = require("commands/resources/validateNameCommand");
 import validateOfflineMigration = require("commands/resources/validateOfflineMigration");
 import storageKeyProvider = require("common/storage/storageKeyProvider");
+import setupEncryptionKey = require("viewmodels/resources/setupEncryptionKey");
 
 class databaseCreationModel {
     static unknownDatabaseName = "Unknown Database";
@@ -412,19 +413,8 @@ class databaseCreationModel {
     }
     
     private setupEncryptionValidation() {
-        this.encryption.key.extend({
-            required: true,
-            base64: true //TODO: any other validaton ?
-        });
-
-        this.encryption.confirmation.extend({
-            validation: [
-                {
-                    validator: (v: boolean) => v,
-                    message: "Please confirm that you have saved the encryption key"
-                }
-            ]
-        });
+        setupEncryptionKey.setupKeyValidation(this.encryption.key);
+        setupEncryptionKey.setupConfirmationValidation(this.encryption.confirmation);
     }
     
     private getSavedDataExporterPath() {
