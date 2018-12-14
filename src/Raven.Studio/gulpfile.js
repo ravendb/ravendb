@@ -60,8 +60,8 @@ gulp.task('less', function() {
 
 gulp.task('z_generate-typings', function (cb) {
     var possibleTypingsGenPaths = [
-        '../../tools/TypingsGenerator/bin/Debug/netcoreapp2.1/TypingsGenerator.dll',
-        '../../tools/TypingsGenerator/bin/Release/netcoreapp2.1/TypingsGenerator.dll' ];
+        '../../tools/TypingsGenerator/bin/Debug/netcoreapp2.2/TypingsGenerator.dll',
+        '../../tools/TypingsGenerator/bin/Release/netcoreapp2.2/TypingsGenerator.dll' ];
 
     var dllPath = fsUtils.getLastRecentlyModifiedFile(possibleTypingsGenPaths);
     if (!dllPath) {

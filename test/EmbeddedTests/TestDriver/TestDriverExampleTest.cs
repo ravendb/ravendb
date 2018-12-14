@@ -23,13 +23,13 @@ namespace EmbeddedTests.TestDriver
             var testDllFile = new FileInfo(testAssemblyLocation);
 
 #if DEBUG
-            var serverDirectory = @"../../../../../src/Raven.Server/bin/x64/Debug/netcoreapp2.1";
+            var serverDirectory = @"../../../../../src/Raven.Server/bin/x64/Debug/netcoreapp2.2";
             if (Directory.Exists(serverDirectory) == false) // this can happen when running directly from CLI e.g. dotnet xunit
-                serverDirectory = @"../../../../../src/Raven.Server/bin/Debug/netcoreapp2.1";
+                serverDirectory = @"../../../../../src/Raven.Server/bin/Debug/netcoreapp2.2";
 #else
-            var serverDirectory = @"../../../../../src/Raven.Server/bin/x64/Release/netcoreapp2.1";
+            var serverDirectory = @"../../../../../src/Raven.Server/bin/x64/Release/netcoreapp2.2";
             if (Directory.Exists(serverDirectory) == false) // this can happen when running directly from CLI e.g. dotnet xunit
-                serverDirectory = @"../../../../../src/Raven.Server/bin/Release/netcoreapp2.1";
+                serverDirectory = @"../../../../../src/Raven.Server/bin/Release/netcoreapp2.2";
 #endif
 
             return Path.Combine(testDllFile.DirectoryName, serverDirectory);
