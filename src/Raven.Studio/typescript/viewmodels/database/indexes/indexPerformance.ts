@@ -1286,7 +1286,7 @@ class indexPerformance extends viewModelBase {
         const reader = new FileReader();
         reader.onload = function() {
 // ReSharper disable once SuspiciousThisUsage
-            self.dataImported(this.result);
+            self.dataImported(this.result as string);
         };
         reader.onerror = function(error: any) {
             alert(error);

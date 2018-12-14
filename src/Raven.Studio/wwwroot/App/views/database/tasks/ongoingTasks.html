@@ -458,7 +458,7 @@
                     <div class="percentage" data-bind="text: percentageFormatted,  css: { 'text-success': completed }, attr: { title: textualProgress }"></div>
                 </div>
                 <div class="progress" data-bind="with: globalProgress">
-                    <div data-bind="css: { 'progress-bar-striped': !completed() && !$parent.disabled(), 'progress-bar-primary': !completed(), 'active': !completed() && !$parent.disabled(), 'progress-bar-success': completed }, style: { width: percentageFormatted }, attr: { 'aria-valuenow': percentage, title: textualProgress } "
+                    <div data-bind="css: { 'progress-bar-striped': !completed() && !disabled(), 'progress-bar-primary': !completed(), 'active': !completed() && !disabled(), 'progress-bar-success': completed }, style: { width: percentageFormatted }, attr: { 'aria-valuenow': percentage, title: textualProgress } "
                          class="progress-bar" role="progressbar" aria-valuemin="0" aria-valuemax="100">
                         <span class="sr-only" data-bind="text: percentageFormatted() + ' Completed'"></span>
                     </div>
@@ -470,7 +470,7 @@
                             <small class="percentage" data-bind="text: percentageFormatted(), css: { 'text-success': completed }, attr: { title: textualProgress }"></small>
                         </div>
                         <div class="progress" data-bind="with: progress, visible: visible">
-                            <div data-bind="css: { 'progress-bar-striped': !completed() && !$parents[1].disabled(), 'progress-bar-primary': !completed(), 'active': !completed() && !$parents[1].disabled(), 'progress-bar-success': completed() }, style: { width: percentageFormatted }, attr: { 'aria-valuenow': percentage, title: textualProgress } "
+                            <div data-bind="css: { 'progress-bar-striped': !completed() && !$parents[1].globalProgress.disabled(), 'progress-bar-primary': !completed(), 'active': !completed() && !$parents[1].globalProgress.disabled(), 'progress-bar-success': completed() }, style: { width: percentageFormatted }, attr: { 'aria-valuenow': percentage, title: textualProgress } "
                                  class="progress-bar" role="progressbar" aria-valuemin="0" aria-valuemax="100">
                                 <span class="sr-only" data-bind="text: percentageFormatted() + ' Completed'"></span>
                             </div>

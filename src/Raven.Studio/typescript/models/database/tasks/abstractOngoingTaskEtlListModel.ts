@@ -2,15 +2,12 @@
 import ongoingTaskListModel = require("models/database/tasks/ongoingTaskListModel");
 import router = require("plugins/router");
 import genericProgress = require("common/helpers/database/genericProgress");
+import etlProgress = require("models/database/tasks/etlProgress");
 
 class progressItem {
     name = ko.observable<string>();
-    completed = ko.observable<boolean>(true);
-    disabled = ko.observable<boolean>(false); 
 
-    lastProcessedEtag = ko.observable<number>();
-    
-    globalProgress: genericProgress = new genericProgress(0, 0, x => x.toLocaleString());
+    globalProgress: etlProgress = new etlProgress(0, 0, x => x.toLocaleString());
 
     documents = new genericProgress(0, 0, x => x.toLocaleString());
     documentTombstones = new genericProgress(0, 0, x => x.toLocaleString());
@@ -36,7 +33,6 @@ class progressItem {
     
     update(dto: Raven.Server.Documents.ETL.Stats.EtlProcessProgress) {
         this.name(dto.TransformationName);
-        this.lastProcessedEtag(dto.LastProcessedEtag);
         
         this.documents.total(dto.TotalNumberOfDocuments);
         this.documents.processed(dto.TotalNumberOfDocuments - dto.NumberOfDocumentsToProcess);
@@ -58,15 +54,15 @@ class progressItem {
             this.countersTombstones.total()
         );
         
+        this.globalProgress.completed(dto.Completed);
+        this.globalProgress.disabled(dto.Disabled);
+        
         this.globalProgress.processed(
             this.documents.processed() +
             this.documentTombstones.processed() +
             this.counters.processed() +
             this.countersTombstones.processed()
         );
-        
-        this.completed(dto.Completed);
-        this.disabled(dto.Disabled);
     }
 }
 

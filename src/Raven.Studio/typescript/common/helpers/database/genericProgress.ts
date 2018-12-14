@@ -9,7 +9,7 @@ class genericProgress {
     
     percentage: KnockoutComputed<number>;
     percentageFormatted: KnockoutComputed<string>;
-    completed: KnockoutComputed<boolean>;
+    completed: KnockoutObservable<boolean>;
     formattedTimeLeftToProcess: KnockoutComputed<string>;
     textualProgress: KnockoutComputed<string>;
 
