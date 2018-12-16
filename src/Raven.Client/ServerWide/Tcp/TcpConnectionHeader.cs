@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
+using Sparrow.Json.Parsing;
 
 namespace Raven.Client.ServerWide.Tcp
 {
@@ -18,6 +19,28 @@ namespace Raven.Client.ServerWide.Tcp
             TestConnection
         }
 
+        public class AuthorizationInfo : IDynamicJson
+        {
+            public enum AuthorizeMethod
+            {
+                Server,
+                PullReplication
+            }
+
+            public AuthorizeMethod AuthorizeAs;
+
+            public string AuthorizationFor;
+
+            public DynamicJsonValue ToJson()
+            {
+                return new DynamicJsonValue
+                {
+                    [nameof(AuthorizeAs)] = AuthorizeAs,
+                    [nameof(AuthorizationFor)] = AuthorizationFor
+                };
+            }
+        }
+
         public string DatabaseName { get; set; }
 
         public string SourceNodeTag { get; set; }
@@ -28,6 +51,8 @@ namespace Raven.Client.ServerWide.Tcp
 
         public string Info { get; set; }
 
+        public AuthorizationInfo AuthorizeInfo { get; set; }
+
         public static readonly int PingBaseLine = -1;
         public static readonly int NoneBaseLine = -1;
         public static readonly int DropBaseLine = -2;
@@ -37,13 +62,14 @@ namespace Raven.Client.ServerWide.Tcp
         public static readonly int ReplicationBaseLine = 31;
         public static readonly int ReplicationAttachmentMissing = 40_300;
         public static readonly int ReplicationAttachmentMissingVersion41 = 41_300;
+        public static readonly int ReplicationWithPullOption = 42_300;
         public static readonly int SubscriptionBaseLine = 40;
         public static readonly int SubscriptionIncludes = 41_400;
         public static readonly int TestConnectionBaseLine = 50;
 
         public static readonly int ClusterTcpVersion = ClusterBaseLine;
         public static readonly int HeartbeatsTcpVersion = Heartbeats41200;
-        public static readonly int ReplicationTcpVersion = ReplicationAttachmentMissingVersion41;
+        public static readonly int ReplicationTcpVersion = ReplicationWithPullOption;
         public static readonly int SubscriptionTcpVersion = SubscriptionIncludes;
         public static readonly int TestConnectionTcpVersion = TestConnectionBaseLine;
 
@@ -183,6 +209,7 @@ namespace Raven.Client.ServerWide.Tcp
                 public bool MissingAttachments;
                 public bool Counters;
                 public bool ClusterTransaction;
+                public bool PullReplication;
             }
         }
 
@@ -208,6 +235,7 @@ namespace Raven.Client.ServerWide.Tcp
                 },
                 [OperationTypes.Replication] = new List<int>
                 {
+                    ReplicationWithPullOption,
                     ReplicationAttachmentMissingVersion41,
                     ReplicationAttachmentMissing,
                     ReplicationBaseLine
@@ -267,6 +295,16 @@ namespace Raven.Client.ServerWide.Tcp
                 },
                 [OperationTypes.Replication] = new Dictionary<int, SupportedFeatures>
                 {
+                    [ReplicationWithPullOption] = new SupportedFeatures(ReplicationWithPullOption)
+                    {
+                        Replication = new SupportedFeatures.ReplicationFeatures
+                        {
+                            Counters = true,
+                            ClusterTransaction = true,
+                            MissingAttachments = true,
+                            PullReplication = true
+                        }
+                    },
                     [ReplicationAttachmentMissingVersion41] = new SupportedFeatures(ReplicationAttachmentMissingVersion41)
                     {
                         Replication = new SupportedFeatures.ReplicationFeatures

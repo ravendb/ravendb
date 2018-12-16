@@ -75,7 +75,8 @@ namespace Raven.Client.ServerWide.Tcp
                 [nameof(TcpConnectionHeaderMessage.DatabaseName)] = parameters.Database,
                 [nameof(TcpConnectionHeaderMessage.Operation)] = parameters.Operation.ToString(),
                 [nameof(TcpConnectionHeaderMessage.SourceNodeTag)] = parameters.SourceNodeTag,
-                [nameof(TcpConnectionHeaderMessage.OperationVersion)] = currentVersion
+                [nameof(TcpConnectionHeaderMessage.OperationVersion)] = currentVersion,
+                [nameof(TcpConnectionHeaderMessage.AuthorizeInfo)] = parameters.AuthorizeInfo?.ToJson()
             });
             writer.Flush();
         }
@@ -84,6 +85,7 @@ namespace Raven.Client.ServerWide.Tcp
     public class TcpNegotiateParameters
     {
         public TcpConnectionHeaderMessage.OperationTypes Operation { get; set; }
+        public TcpConnectionHeaderMessage.AuthorizationInfo AuthorizeInfo { get; set; }
         public int Version { get; set; }
         public string Database { get; set; }
         public string SourceNodeTag { get; set; }

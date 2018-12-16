@@ -60,6 +60,7 @@ namespace Raven.Server.ServerWide
             [nameof(ToggleTaskStateCommand)] = Base40CommandsVersion,
             [nameof(UpdateClusterIdentityCommand)] = Base40CommandsVersion,
             [nameof(UpdateExternalReplicationCommand)] = Base40CommandsVersion,
+            [nameof(UpdatePullReplicationAsSinkCommand)] = Base42CommandsVersion,
             [nameof(UpdateExternalReplicationStateCommand)] = Base40CommandsVersion,
             [nameof(UpdateTopologyCommand)] = Base40CommandsVersion,
             [nameof(AcknowledgeSubscriptionBatchCommand)] = Base40CommandsVersion,
@@ -95,7 +96,8 @@ namespace Raven.Server.ServerWide
 
             [nameof(PutIndexesCommand)] = Base42CommandsVersion,
             [nameof(PutSortersCommand)] = Base42CommandsVersion,
-            [nameof(DeleteSorterCommand)] = Base42CommandsVersion
+            [nameof(DeleteSorterCommand)] = Base42CommandsVersion,
+            [nameof(UpdatePullReplicationAsHubCommand)] = Base42CommandsVersion
         };
 
         public static bool CanPutCommand(string command)

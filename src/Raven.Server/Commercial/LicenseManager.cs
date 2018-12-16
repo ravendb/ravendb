@@ -1320,6 +1320,19 @@ namespace Raven.Server.Commercial
             throw GenerateLicenseLimit(LimitType.ExternalReplication, details);
         }
 
+        public void AssertCanAddPullReplication()
+        {
+            //TODO: add this feature to the license
+//            if (IsValid(out var licenseLimit) == false)
+//                throw licenseLimit;
+//
+//            if (_licenseStatus.HasPullReplication)
+//                return;
+//
+//            var details = $"Your current license ({_licenseStatus.Type}) does not allow adding pull replication";
+//            throw GenerateLicenseLimit(LimitType.ExternalReplication, details);
+        }
+
         public void AssertCanAddRavenEtl()
         {
             if (IsValid(out var licenseLimit) == false)
