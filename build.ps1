@@ -191,7 +191,7 @@ Foreach ($target in $targets) {
         "Client" = $CLIENT_OUT_DIR;
         "Server" = $([io.path]::combine($specOutDir, "Server"));
         "Rvn" = $([io.path]::combine($specOutDir, "rvn"));
-        "Debug" = $([io.path]::combine($specOutDir, "Debug"));
+        "Debug" = $([io.path]::combine($specOutDir, "debug"));
         "Studio" = $STUDIO_OUT_DIR;
         "Sparrow" = $SPARROW_OUT_DIR;
         "Drtools" = $([io.path]::combine($specOutDir, "drtools"));

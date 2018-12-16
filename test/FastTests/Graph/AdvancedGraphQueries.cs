@@ -381,6 +381,33 @@ namespace FastTests.Graph
         }
 
         [Fact]
+        public void Can_filter_in_graph_queries_with_array_edges()
+        {
+            using (var store = GetDocumentStore())
+            {
+                CreateDataWithMultipleEdgesOfTheSameType(store);
+
+                using (var session = store.OpenSession())
+                {
+                    var friends = session.Advanced.RawQuery<JObject>(@"
+                        match (Dogs as d1)-[Likes as l]->(Dogs as d2) 
+                        where l in ('dogs/3-A')
+                        select d1.Name as d1, d2.Name as d2, l as likes
+                    ").ToList();
+
+                    var resultPairs = friends.Select(x => new
+                    {
+                        From = x["d1"].Value<string>(),
+                        To = x["d2"].Value<string>()
+                    }).ToArray();
+
+                    Assert.Equal(1, resultPairs.Length);
+                    Assert.Contains(resultPairs, item => item.From == "Oscar" && item.To == "Pheobe");
+                }
+            }
+        }
+
+        [Fact]
         public void FindFriendlies()
         {
             using (var store = GetDocumentStore())

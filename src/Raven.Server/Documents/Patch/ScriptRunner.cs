@@ -503,7 +503,7 @@ namespace Raven.Server.Documents.Patch
 
             private JsValue GetDocumentId(JsValue self, JsValue[] args)
             {
-                if (args.Length != 1)
+                if (args.Length != 1 && args.Length != 2) //length == 2 takes into account Query Arguments that can be added to args
                     throw new InvalidOperationException("id(doc) must be called with a single argument");
 
                 if (args[0].IsNull() || args[0].IsUndefined())
