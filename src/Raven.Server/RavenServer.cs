@@ -25,6 +25,7 @@ using Microsoft.Extensions.DependencyInjection;
 using Newtonsoft.Json;
 using Org.BouncyCastle.Pkcs;
 using Raven.Client;
+using Raven.Client.Documents.Operations.Replication;
 using Raven.Client.Exceptions.Database;
 using Raven.Client.Exceptions.Security;
 using Raven.Client.Extensions;
@@ -987,7 +988,7 @@ namespace Raven.Server
 
         public string WebUrl { get; private set; }
 
-        private readonly JsonContextPool _tcpContextPool = new JsonContextPool();
+        internal readonly JsonContextPool _tcpContextPool = new JsonContextPool();
 
         internal CertificateHolder Certificate;
 
@@ -1209,112 +1210,7 @@ namespace Raven.Server
 
                         try
                         {
-                            TcpConnectionHeaderMessage header;
-                            int count = 0, maxRetries = 100;
-                            using (_tcpContextPool.AllocateOperationContext(out JsonOperationContext context))
-                            {
-                                int supported;
-                                while (true)
-                                {
-                                    using (var headerJson = await context.ParseToMemoryAsync(
-                                        stream,
-                                        "tcp-header",
-                                        BlittableJsonDocumentBuilder.UsageMode.None,
-                                        buffer,
-                                        ServerStore.ServerShutdown,
-                                        // we don't want to allow external (and anonymous) users to send us unlimited data
-                                        // a maximum of 2 KB for the header is big enough to include any valid header that
-                                        // we can currently think of
-                                        maxSize: 1024 * 2
-                                    ))
-                                    {
-                                        if (count++ > maxRetries)
-                                        {
-                                            throw new InvalidOperationException($"TCP negotiation dropped after reaching {maxRetries} retries, header:{headerJson}, this is probably a bug.");
-                                        }
-                                        header = JsonDeserializationClient.TcpConnectionHeaderMessage(headerJson);
-
-                                        if (Logger.IsInfoEnabled)
-                                        {
-                                            Logger.Info($"New {header.Operation} TCP connection to {header.DatabaseName ?? "the cluster node"} from {tcpClient.Client.RemoteEndPoint}");
-                                        }
-
-                                        //In the case where we have mismatched version but the other side doesn't know how to handle it.
-                                        if (header.Operation == TcpConnectionHeaderMessage.OperationTypes.Drop)
-                                        {
-                                            if (tcpAuditLog != null)
-                                                tcpAuditLog.Info($"Got connection from {tcpClient.Client.RemoteEndPoint} with certificate '{cert?.Subject} ({cert?.Thumbprint})'. Dropping connection because: {header.Info}");
-
-                                            if (Logger.IsInfoEnabled)
-                                            {
-                                                Logger.Info($"Got a request to drop TCP connection to {header.DatabaseName ?? "the cluster node"} " +
-                                                            $"from {tcpClient.Client.RemoteEndPoint} reason: {header.Info}");
-                                            }
-                                            return;
-                                        }
-                                    }
-
-                                    var status = TcpConnectionHeaderMessage.OperationVersionSupported(header.Operation, header.OperationVersion, out supported);
-                                    if (status == TcpConnectionHeaderMessage.SupportedStatus.Supported)
-                                        break;
-
-                                    if (status == TcpConnectionHeaderMessage.SupportedStatus.OutOfRange)
-                                    {
-                                        var msg = $"Protocol '{header.OperationVersion}' for '{header.Operation}' was not found.";
-                                        if (tcpAuditLog != null)
-                                            tcpAuditLog.Info($"Got connection from {tcpClient.Client.RemoteEndPoint} with certificate '{cert?.Subject} ({cert?.Thumbprint})'. {msg}");
-
-                                        if (Logger.IsInfoEnabled)
-                                        {
-                                            Logger.Info(
-                                                $"Got a request to drop TCP connection to {header.DatabaseName ?? "the cluster node"} from {tcpClient.Client.RemoteEndPoint} " +
-                                                $"reason: {msg}");
-                                        }
-
-                                        throw new ArgumentException(msg);
-                                    }
-
-                                    if (Logger.IsInfoEnabled)
-                                    {
-                                        Logger.Info(
-                                            $"Got a request to establish TCP connection to {header.DatabaseName ?? "the cluster node"} from {tcpClient.Client.RemoteEndPoint} " +
-                                            $"Didn't agree on {header.Operation} protocol version: {header.OperationVersion} will request to use version: {supported}.");
-                                    }
-
-                                    RespondToTcpConnection(stream, context, $"Not supporting version {header.OperationVersion} for {header.Operation}", TcpConnectionStatus.TcpVersionMismatch, supported);
-                                }
-
-                                bool authSuccessful = TryAuthorize(Configuration, tcp.Stream, header, out var err);
-                                //At this stage the error is not relevant.
-                                RespondToTcpConnection(stream, context, null,
-                                    authSuccessful ? TcpConnectionStatus.Ok : TcpConnectionStatus.AuthorizationFailed,
-                                    supported);
-                                tcp.ProtocolVersion = supported;
-
-                                if (authSuccessful == false)
-                                {
-                                    if (tcpAuditLog != null)
-                                        tcpAuditLog.Info($"Got connection from {tcpClient.Client.RemoteEndPoint} with certificate '{cert?.Subject} ({cert?.Thumbprint})'. Rejecting connection because {err} for {header.Operation} on {header.DatabaseName}.");
-
-                                    if (Logger.IsInfoEnabled)
-                                    {
-                                        Logger.Info(
-                                            $"New {header.Operation} TCP connection to {header.DatabaseName ?? "the cluster node"} from {tcpClient.Client.RemoteEndPoint}" +
-                                            $" is not authorized to access {header.DatabaseName ?? "the cluster node"} because {err}");
-                                    }
-
-                                    return; // cannot proceed
-                                }
-
-                                if (Logger.IsInfoEnabled)
-                                {
-                                    Logger.Info($"TCP connection from {header.SourceNodeTag ?? tcpClient.Client.RemoteEndPoint.ToString()} " +
-                                                $"for '{header.Operation}' is accepted with version {supported}");
-                                }
-                            }
-
-                            if (tcpAuditLog != null)
-                                tcpAuditLog.Info($"Got connection from {tcpClient.Client.RemoteEndPoint} with certificate '{cert?.Subject} ({cert?.Thumbprint})'. Accepted for {header.Operation} on {header.DatabaseName}.");
+                            var header = await NegotiateOperationVersion(stream, buffer, tcpClient, tcpAuditLog, cert, tcp);
 
                             if (await DispatchServerWideTcpConnection(tcp, header, buffer))
                             {
@@ -1348,6 +1244,130 @@ namespace Raven.Server
                 }
             });
         }
+
+        private async Task<TcpConnectionHeaderMessage> NegotiateOperationVersion(
+            Stream stream, 
+            JsonOperationContext.ManagedPinnedBuffer buffer, 
+            TcpClient tcpClient, 
+            Logger tcpAuditLog, 
+            X509Certificate2 cert,
+            TcpConnectionOptions tcp)
+        {
+            TcpConnectionHeaderMessage header;
+            int count = 0, maxRetries = 100;
+            using (_tcpContextPool.AllocateOperationContext(out JsonOperationContext context))
+            {
+                int supported;
+                while (true)
+                {
+                    using (var headerJson = await context.ParseToMemoryAsync(
+                        stream,
+                        "tcp-header",
+                        BlittableJsonDocumentBuilder.UsageMode.None,
+                        buffer,
+                        ServerStore.ServerShutdown,
+                        // we don't want to allow external (and anonymous) users to send us unlimited data
+                        // a maximum of 2 KB for the header is big enough to include any valid header that
+                        // we can currently think of
+                        maxSize: 1024 * 2
+                    ))
+                    {
+                        if (count++ > maxRetries)
+                        {
+                            throw new InvalidOperationException($"TCP negotiation dropped after reaching {maxRetries} retries, header:{headerJson}, this is probably a bug.");
+                        }
+
+                        header = JsonDeserializationClient.TcpConnectionHeaderMessage(headerJson);
+
+                        if (Logger.IsInfoEnabled)
+                        {
+                            Logger.Info($"New {header.Operation} TCP connection to {header.DatabaseName ?? "the cluster node"} from {tcpClient.Client.RemoteEndPoint}");
+                        }
+
+                        //In the case where we have mismatched version but the other side doesn't know how to handle it.
+                        if (header.Operation == TcpConnectionHeaderMessage.OperationTypes.Drop)
+                        {
+                            if (tcpAuditLog != null)
+                                tcpAuditLog.Info(
+                                    $"Got connection from {tcpClient.Client.RemoteEndPoint} with certificate '{cert?.Subject} ({cert?.Thumbprint})'. Dropping connection because: {header.Info}");
+
+                            if (Logger.IsInfoEnabled)
+                            {
+                                Logger.Info($"Got a request to drop TCP connection to {header.DatabaseName ?? "the cluster node"} " +
+                                            $"from {tcpClient.Client.RemoteEndPoint} reason: {header.Info}");
+                            }
+
+                            return header;
+                        }
+                    }
+
+                    var status = TcpConnectionHeaderMessage.OperationVersionSupported(header.Operation, header.OperationVersion, out supported);
+                    if (status == TcpConnectionHeaderMessage.SupportedStatus.Supported)
+                        break;
+
+                    if (status == TcpConnectionHeaderMessage.SupportedStatus.OutOfRange)
+                    {
+                        var msg = $"Protocol '{header.OperationVersion}' for '{header.Operation}' was not found.";
+                        if (tcpAuditLog != null)
+                            tcpAuditLog.Info($"Got connection from {tcpClient.Client.RemoteEndPoint} with certificate '{cert?.Subject} ({cert?.Thumbprint})'. {msg}");
+
+                        if (Logger.IsInfoEnabled)
+                        {
+                            Logger.Info(
+                                $"Got a request to drop TCP connection to {header.DatabaseName ?? "the cluster node"} from {tcpClient.Client.RemoteEndPoint} " +
+                                $"reason: {msg}");
+                        }
+
+                        throw new ArgumentException(msg);
+                    }
+
+                    if (Logger.IsInfoEnabled)
+                    {
+                        Logger.Info(
+                            $"Got a request to establish TCP connection to {header.DatabaseName ?? "the cluster node"} from {tcpClient.Client.RemoteEndPoint} " +
+                            $"Didn't agree on {header.Operation} protocol version: {header.OperationVersion} will request to use version: {supported}.");
+                    }
+
+                    RespondToTcpConnection(stream, context, $"Not supporting version {header.OperationVersion} for {header.Operation}", TcpConnectionStatus.TcpVersionMismatch,
+                        supported);
+                }
+
+                bool authSuccessful = TryAuthorize(Configuration, tcp.Stream, header, out var err);
+                //At this stage the error is not relevant.
+                RespondToTcpConnection(stream, context, null,
+                    authSuccessful ? TcpConnectionStatus.Ok : TcpConnectionStatus.AuthorizationFailed,
+                    supported);
+                tcp.ProtocolVersion = supported;
+
+                if (authSuccessful == false)
+                {
+                    if (tcpAuditLog != null)
+                        tcpAuditLog.Info(
+                            $"Got connection from {tcpClient.Client.RemoteEndPoint} with certificate '{cert?.Subject} ({cert?.Thumbprint})'. Rejecting connection because {err} for {header.Operation} on {header.DatabaseName}.");
+
+                    if (Logger.IsInfoEnabled)
+                    {
+                        Logger.Info(
+                            $"New {header.Operation} TCP connection to {header.DatabaseName ?? "the cluster node"} from {tcpClient.Client.RemoteEndPoint}" +
+                            $" is not authorized to access {header.DatabaseName ?? "the cluster node"} because {err}");
+                    }
+
+                    return header;
+                }
+
+                if (Logger.IsInfoEnabled)
+                {
+                    Logger.Info($"TCP connection from {header.SourceNodeTag ?? tcpClient.Client.RemoteEndPoint.ToString()} " +
+                                $"for '{header.Operation}' is accepted with version {supported}");
+                }
+            }
+
+            if (tcpAuditLog != null)
+                tcpAuditLog.Info(
+                    $"Got connection from {tcpClient.Client.RemoteEndPoint} with certificate '{cert?.Subject} ({cert?.Thumbprint})'. Accepted for {header.Operation} on {header.DatabaseName}.");
+            return header;
+        }
+
         private static void RespondToTcpConnection(Stream stream, JsonOperationContext context, string error, TcpConnectionStatus status, int version)
         {
             var message = new DynamicJsonValue
@@ -1507,7 +1527,7 @@ namespace Raven.Server
                     break;
                 case TcpConnectionHeaderMessage.OperationTypes.Replication:
                     var documentReplicationLoader = tcp.DocumentDatabase.ReplicationLoader;
-                    documentReplicationLoader.AcceptIncomingConnection(tcp, bufferToCopy);
+                    documentReplicationLoader.AcceptIncomingConnection(tcp, header.Operation, bufferToCopy);
                     break;
                 default:
                     throw new InvalidOperationException("Unknown operation for TCP " + header.Operation);
@@ -1594,6 +1614,22 @@ namespace Raven.Server
                         default:
                             throw new InvalidOperationException("Unknown operation " + header.Operation);
                     }
+                case AuthenticationStatus.UnfamiliarCertificate:
+                    var info = header.AuthorizeInfo;
+                    if (info != null && info.AuthorizeAs == TcpConnectionHeaderMessage.AuthorizationInfo.AuthorizeMethod.PullReplication)
+                    {
+                        using (ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext ctx))
+                        using (ctx.OpenReadTransaction())
+                        {
+                            if (ServerStore.Cluster.TryReadPullReplicationDefinition(header.DatabaseName, info.AuthorizationFor, ctx, out var pullReplication)
+                                && pullReplication.CanAccess(certificate.Thumbprint))
+                                return true;
+
+                            msg = "The certificate " + certificate.FriendlyName + " does not allow access to " + header.DatabaseName;
+                            return false;
+                        }
+                    }
+                    goto default;
                 default:
                     msg = "Cannot allow access to a certificate with status: " + auth.Status;
                     return false;

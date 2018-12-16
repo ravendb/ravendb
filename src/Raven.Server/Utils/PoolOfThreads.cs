@@ -346,7 +346,7 @@ namespace Raven.Server.Utils
             }
 
 
-            private static void ResetCurrentThreadName()
+            public static void ResetCurrentThreadName()
             {
                 var t = Thread.CurrentThread;
                 var runtimeThread = RuntimeThreadField.GetValue(t);

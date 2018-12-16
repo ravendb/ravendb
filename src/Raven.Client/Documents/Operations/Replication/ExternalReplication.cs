@@ -33,13 +33,13 @@ namespace Raven.Client.Documents.Operations.Replication
             ConnectionStringName = connectionStringName;
         }
 
-        public static void RemoveWatcher(List<ExternalReplication> watchers, long taskId)
+        public static void RemoveExternalReplication<T>(List<T> replicationTasks, long taskId) where T : ExternalReplication
         {
-            foreach (var watcher in watchers)
+            foreach (var task in replicationTasks)
             {
-                if (watcher.TaskId != taskId)
+                if (task.TaskId != taskId)
                     continue;
-                watchers.Remove(watcher);
+                replicationTasks.Remove(task);
                 return;
             }
         }
@@ -60,7 +60,7 @@ namespace Raven.Client.Documents.Operations.Replication
             return $"[{Database} @ {Url}]";
         }
 
-        public ulong GetTaskKey()
+        public virtual ulong GetTaskKey()
         {
             var hashCode = CalculateStringHash(Database);
             hashCode = (hashCode * 397) ^ CalculateStringHash(ConnectionStringName);
@@ -95,7 +95,7 @@ namespace Raven.Client.Documents.Operations.Replication
             return MentorNode;
         }
 
-        public string GetDefaultTaskName()
+        public virtual string GetDefaultTaskName()
         {
             return $"External Replication to {ConnectionStringName}";
         }

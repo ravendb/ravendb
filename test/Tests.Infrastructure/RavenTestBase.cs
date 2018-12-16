@@ -13,6 +13,7 @@ using System.Threading.Tasks;
 using FastTests.Graph;
 using Raven.Client;
 using Raven.Client.Documents;
+using Raven.Client.Documents.Conventions;
 using Raven.Client.Documents.Indexes;
 using Raven.Client.Documents.Operations;
 using Raven.Client.Documents.Operations.Backups;
@@ -555,9 +556,14 @@ namespace FastTests
 
             using (var store = GetDocumentStore(new Options
             {
+                CreateDatabase = false,
                 Server = server,
                 ClientCertificate = serverCertificate,
-                AdminCertificate = serverCertificate
+                AdminCertificate = serverCertificate,
+                ModifyDocumentStore = s=>s.Conventions = new DocumentConventions
+                {
+                    DisableTopologyUpdates = true
+                }
             }))
             {
                 var requestExecutor = store.GetRequestExecutor();
@@ -611,9 +617,9 @@ namespace FastTests
 
         protected string SetupServerAuthentication(
             IDictionary<string, string> customSettings = null,
-            string serverUrl = null)
+            string serverUrl = null, bool createNew = false)
         {
-            var serverCertPath = GenerateAndSaveSelfSignedCertificate();
+            var serverCertPath = GenerateAndSaveSelfSignedCertificate(createNew);
 
             if (customSettings == null)
                 customSettings = new ConcurrentDictionary<string, string>();
@@ -744,6 +750,10 @@ namespace FastTests
                 {
                     AssertNotFrozen();
                     _createDatabase = value;
+                    if (value == false)
+                    {
+                        ModifyDocumentStore = s => s.Conventions.DisableTopologyUpdates = true;
+                    }
                 }
             }
 

@@ -17,7 +17,6 @@ using System.Net;
 using System.Threading.Tasks;
 using Raven.Client.Documents.Replication;
 using Raven.Client.Documents.Replication.Messages;
-using Raven.Client.Extensions;
 using Raven.Client.Util;
 using Raven.Server.Documents.TcpHandlers;
 using Raven.Server.Exceptions;
@@ -27,6 +26,7 @@ using Voron;
 using Raven.Client.Documents.Operations.Attachments;
 using Raven.Client.ServerWide.Tcp;
 using Raven.Server.NotificationCenter.Notifications;
+using Raven.Client.Extensions;
 
 namespace Raven.Server.Documents.Replication
 {
@@ -43,6 +43,33 @@ namespace Raven.Server.Documents.Replication
         public event Action<IncomingReplicationHandler> DocumentsReceived;
         public event Action<LiveReplicationPulsesCollector.ReplicationPulse> HandleReplicationPulse;
 
+        public void ClearEvents()
+        {
+            if (Failed != null)
+            {
+                foreach (var del in Failed.GetInvocationList())
+                {
+                    Failed -= (Action<IncomingReplicationHandler, Exception>)del;
+                }
+            }
+
+            if (DocumentsReceived != null)
+            {
+                foreach (var del in DocumentsReceived.GetInvocationList())
+                {
+                    DocumentsReceived -= (Action<IncomingReplicationHandler>)del;
+                }
+            }
+
+            if (HandleReplicationPulse != null)
+            {
+                foreach (var del in HandleReplicationPulse.GetInvocationList())
+                {
+                    HandleReplicationPulse -= (Action<LiveReplicationPulsesCollector.ReplicationPulse>)del;
+                }
+            }
+        }
+
         public long LastDocumentEtag;
         public long LastHeartbeatTicks;
 
@@ -50,10 +77,14 @@ namespace Raven.Server.Documents.Replication
 
         private IncomingReplicationStatsAggregator _lastStats;
 
-        public IncomingReplicationHandler(TcpConnectionOptions options,
+        public readonly string PullReplicationName;
+
+        public IncomingReplicationHandler(
+            TcpConnectionOptions options,
             ReplicationLatestEtagRequest replicatedLastEtag,
             ReplicationLoader parent,
-            JsonOperationContext.ManagedPinnedBuffer bufferToCopy)
+            JsonOperationContext.ManagedPinnedBuffer bufferToCopy,
+            string pullReplicationName)
         {
             _connectionOptions = options;
             ConnectionInfo = IncomingConnectionInfo.FromGetLatestEtag(replicatedLastEtag);
@@ -61,9 +92,10 @@ namespace Raven.Server.Documents.Replication
             _database = options.DocumentDatabase;
             _tcpClient = options.TcpClient;
             _stream = options.Stream;
-            SupportedFeatures = TcpConnectionHeaderMessage.GetSupportedFeaturesFor(TcpConnectionHeaderMessage.OperationTypes.Replication, options.ProtocolVersion);
+            SupportedFeatures = TcpConnectionHeaderMessage.GetSupportedFeaturesFor(options.Operation, options.ProtocolVersion);
             ConnectionInfo.RemoteIp = ((IPEndPoint)_tcpClient.Client.RemoteEndPoint).Address.ToString();
             _parent = parent;
+            PullReplicationName = pullReplicationName;
 
             _log = LoggingSource.Instance.GetLogger<IncomingReplicationHandler>(_database.Name);
             _cts = CancellationTokenSource.CreateLinkedTokenSource(_database.DatabaseShutdown);
@@ -71,7 +103,6 @@ namespace Raven.Server.Documents.Replication
             _conflictManager = new ConflictManager(_database, _parent.ConflictResolver);
 
             _attachmentStreamsTempFile = _database.DocumentsStorage.AttachmentsStorage.GetTempFile("replication");
-
             _copiedBuffer = bufferToCopy.Clone(_connectionOptions.ContextPool);
         }
 
@@ -121,22 +152,24 @@ namespace Raven.Server.Documents.Replication
                 if (_incomingWork != null)
                     return; // already set by someone else, they can start it
 
-                _incomingWork = PoolOfThreads.GlobalRavenThreadPool.LongRunning(x =>
-                {
-                    try
-                    {
-                        ReceiveReplicationBatches();
-                    }
-                    catch (Exception e)
-                    {
-                        if (_log.IsInfoEnabled)
-                            _log.Info($"Error in accepting replication request ({FromToString})", e);
-                    }
-                }, null, IncomingReplicationThreadName);
+                _incomingWork = PoolOfThreads.GlobalRavenThreadPool.LongRunning(x => { DoIncomingReplication(); }, null, IncomingReplicationThreadName);
             }
 
             if (_log.IsInfoEnabled)
                 _log.Info($"Incoming replication thread started ({FromToString})");
+        }
+
+        public void DoIncomingReplication()
+        {
+            try
+            {
+                ReceiveReplicationBatches();
+            }
+            catch (Exception e)
+            {
+                if (_log.IsInfoEnabled)
+                    _log.Info($"Error in accepting replication request ({FromToString})", e);
+            }
         }
 
         [ThreadStatic]

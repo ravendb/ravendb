@@ -36,6 +36,7 @@ namespace Raven.Server.Routing
         Operator,
         DatabaseAdmin,
         ValidUser,
-        UnauthenticatedClients
+        UnauthenticatedClients,
+        RestrictedAccess
     }
 }

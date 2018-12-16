@@ -61,7 +61,11 @@ namespace Raven.Client.ServerWide
 
         public List<PeriodicBackupConfiguration> PeriodicBackups;
 
-        public List<ExternalReplication> ExternalReplications = new List<ExternalReplication>(); // Watcher only receives (slave)
+        public List<ExternalReplication> ExternalReplications = new List<ExternalReplication>();
+
+        public List<PullReplicationAsSink> SinkPullReplications = new List<PullReplicationAsSink>();
+
+        public Dictionary<string, PullReplicationDefinition> HubPullReplications = new Dictionary<string, PullReplicationDefinition>(); 
 
         public Dictionary<string, RavenConnectionString> RavenConnectionStrings = new Dictionary<string, RavenConnectionString>();
 
@@ -168,6 +172,8 @@ namespace Raven.Client.ServerWide
 
             if (ExternalReplications.Any(x => x.Name.Equals(taskName, StringComparison.OrdinalIgnoreCase)))
                 throw new InvalidOperationException($"Can't use task name '{taskName}', there is already an External Replications task with that name");
+            if (SinkPullReplications.Any(x => x.Name.Equals(taskName, StringComparison.OrdinalIgnoreCase)))
+                throw new InvalidOperationException($"Can't use task name '{taskName}', there is already a Sink Pull Replications task with that name");
             if (RavenEtls.Any(x => x.Name.Equals(taskName, StringComparison.OrdinalIgnoreCase)))
                 throw new InvalidOperationException($"Can't use task name '{taskName}', there is already an ETL task with that name");
             if (SqlEtls.Any(x => x.Name.Equals(taskName, StringComparison.OrdinalIgnoreCase)))
