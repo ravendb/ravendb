@@ -45,29 +45,9 @@ namespace Raven.Server.Documents.Replication
 
         public void ClearEvents()
         {
-            if (Failed != null)
-            {
-                foreach (var del in Failed.GetInvocationList())
-                {
-                    Failed -= (Action<IncomingReplicationHandler, Exception>)del;
-                }
-            }
-
-            if (DocumentsReceived != null)
-            {
-                foreach (var del in DocumentsReceived.GetInvocationList())
-                {
-                    DocumentsReceived -= (Action<IncomingReplicationHandler>)del;
-                }
-            }
-
-            if (HandleReplicationPulse != null)
-            {
-                foreach (var del in HandleReplicationPulse.GetInvocationList())
-                {
-                    HandleReplicationPulse -= (Action<LiveReplicationPulsesCollector.ReplicationPulse>)del;
-                }
-            }
+            Failed = null;
+            DocumentsReceived = null;
+            HandleReplicationPulse = null;
         }
 
         public long LastDocumentEtag;
@@ -690,7 +670,8 @@ namespace Raven.Server.Documents.Replication
         public string SourceFormatted => $"{ConnectionInfo.SourceUrl}/databases/{ConnectionInfo.SourceDatabaseName} ({ConnectionInfo.SourceDatabaseId})";
 
         public string FromToString => $"In database {_database.ServerStore.NodeTag}-{_database.Name} @ {_database.ServerStore.GetNodeTcpServerUrl()} " +
-                                      $"from {ConnectionInfo.SourceTag}-{ConnectionInfo.SourceDatabaseName} @ {ConnectionInfo.SourceUrl}";
+                                      $"from {ConnectionInfo.SourceTag}-{ConnectionInfo.SourceDatabaseName} @ {ConnectionInfo.SourceUrl}" +
+                                      $"{(PullReplicationName == null ? null : $"(pull definition: {PullReplicationName})")}";
 
         public IncomingConnectionInfo ConnectionInfo { get; }
 

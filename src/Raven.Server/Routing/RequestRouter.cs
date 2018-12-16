@@ -277,7 +277,7 @@ namespace Raven.Server.Routing
             throw new ArgumentOutOfRangeException("Unknown route auth status: " + route.AuthorizationStatus);
         }
 
-        public void UnlikelyFailAuthorization(HttpContext context, string database,
+        public static void UnlikelyFailAuthorization(HttpContext context, string database,
             RavenServer.AuthenticateConnection feature,
             AuthorizationStatus authorizationStatus)
         {

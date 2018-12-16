@@ -20,7 +20,9 @@ namespace Raven.Client.Documents.Commands
 
         public override HttpRequestMessage CreateRequest(JsonOperationContext ctx, ServerNode node, out string url)
         {
-            url = $"{node.Url}/info/remote-task/tcp?database={_remoteDatabase}&remote-task={_remoteTask}";
+            url = $"{node.Url}/info/remote-task/tcp?" +
+                  $"database={Uri.EscapeDataString(_remoteDatabase)}" +
+                  $"&remote-task={Uri.EscapeDataString(_remoteTask)}";
 
             RequestedNode = node;
             var request = new HttpRequestMessage

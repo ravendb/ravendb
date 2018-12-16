@@ -191,10 +191,10 @@ namespace Raven.Server.Documents.Replication
                     var supportedFeatures = NegotiateReplicationVersion(authorizationInfo);
                     if (supportedFeatures.Replication.PullReplication)
                     {
-                        var isPullReplication = SendPreliminaryData();
-                        if (isPullReplication)
+                        SendPreliminaryData();
+                        if (Destination is PullReplicationAsSink)
                         {
-                            InitiatePullReplicationAsEdge(supportedFeatures);
+                            InitiatePullReplicationAsSink(supportedFeatures);
                             return;
                         }
                     }
@@ -213,16 +213,14 @@ namespace Raven.Server.Documents.Replication
             }
         }
 
-        private bool SendPreliminaryData()
+        private void SendPreliminaryData()
         {
-            var destination = Destination as PullReplicationAsSink;
-
             var request = new DynamicJsonValue
             {
                 ["Type"] = nameof(ReplicationInitialRequest),
             };
 
-            if (destination != null)
+            if (Destination is PullReplicationAsSink destination)
             {
                 request[nameof(ReplicationInitialRequest.Database)] = _parent.Database.Name; // my database
                 request[nameof(ReplicationInitialRequest.DatabaseGroupId)] = _parent.Database.DatabaseGroupId; // my database id
@@ -237,11 +235,9 @@ namespace Raven.Server.Documents.Replication
                 documentsContext.Write(writer, request);
                 writer.Flush();
             }
-
-            return destination != null;
         }
 
-        private void InitiatePullReplicationAsEdge(TcpConnectionHeaderMessage.SupportedFeatures supportedFeatures)
+        private void InitiatePullReplicationAsSink(TcpConnectionHeaderMessage.SupportedFeatures supportedFeatures)
         {
             var tcpOptions = new TcpConnectionOptions
             {
@@ -256,7 +252,7 @@ namespace Raven.Server.Documents.Replication
             using (_parent._server.Server._tcpContextPool.AllocateOperationContext(out var ctx))
             using (ctx.GetManagedBuffer(out _buffer))
             {
-                _parent.RunPullReplicationAsEdge(tcpOptions, _buffer, Destination as PullReplicationAsSink);
+                _parent.RunPullReplicationAsSink(tcpOptions, _buffer, Destination as PullReplicationAsSink);
             }
         }
 
@@ -851,7 +847,8 @@ namespace Raven.Server.Documents.Replication
 
         private long _lastDestinationEtag;
 
-        public string FromToString => $"from {_database.Name} at {_parent._server.NodeTag} to {Destination.FromString()}";
+        public string FromToString => $"from {_database.Name} at {_parent._server.NodeTag} to {Destination.FromString()}" +
+                                      $"{(PullReplicationDefinitionName == null ? null : $"(pull definition: {PullReplicationDefinitionName})")}";
 
         public ReplicationNode Node => Destination;
         public string DestinationFormatted => $"{Destination.Url}/databases/{Destination.Database}";
