@@ -33,59 +33,6 @@ namespace Voron.Platform.Posix
                 Syscall.ThrowLastError(result, $"posix_fallocate(\"{file}\", {size})");
         }
 
-        public static unsafe void WriteFileHeader(FileHeader* header, VoronPathSetting path)
-        {
-            bool syncIsNeeded = false;
-            var fd = Syscall.open(path.FullPath, OpenFlags.O_WRONLY | PerPlatformValues.OpenFlags.O_CREAT,
-                FilePermissions.S_IWUSR | FilePermissions.S_IRUSR);
-
-            try
-            {
-                if (fd == -1)
-                {
-                    var err = Marshal.GetLastWin32Error();
-                    Syscall.ThrowLastError(err, "when opening " + path);
-                }
-
-                int remaining = sizeof(FileHeader);
-                
-                FileInfo fi = new FileInfo(path.FullPath);
-                if (fi.Length != remaining)
-                    syncIsNeeded = true;
-                
-                var ptr = ((byte*) header);
-                while (remaining > 0)
-                {
-                    var written = Syscall.write(fd, ptr, (ulong) remaining);
-                    if (written == -1)
-                    {
-                        var err = Marshal.GetLastWin32Error();
-                        Syscall.ThrowLastError(err, "writing to " + path);
-                    }
-
-                    remaining -= (int) written;
-                    ptr += written;
-                }
-                if (Syscall.FSync(fd) == -1)
-                {
-                    var err = Marshal.GetLastWin32Error();
-                    Syscall.ThrowLastError(err, "FSync " + path);
-                }
-
-                if (syncIsNeeded)
-                    Syscall.FsyncDirectoryFor(path.FullPath);
-            }
-            finally
-            {
-                if (fd != -1)
-                {
-                    Syscall.close(fd);
-                    fd = -1;
-                }
-            }
-        }
-
-
         public static string GetFileSystemOfPath(string path)
         {
             var allMounts = DriveInfo.GetDrives();
