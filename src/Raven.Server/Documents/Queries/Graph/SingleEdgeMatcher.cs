@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using Microsoft.Extensions.Primitives;
+using Raven.Client.Exceptions;
 using Raven.Server.Documents.Queries.AST;
 using Raven.Server.Json;
 using Raven.Server.Utils;
@@ -43,6 +44,11 @@ namespace Raven.Server.Documents.Queries.Graph
                 if (BlittableJsonTraverser.Default.TryRead(leftDoc, Edge.Path.FieldValue, out var value, out _) == false)
                     return;
 
+                if (Edge.Project == null)
+                {
+                    ThrowMissingEdgeProjection();
+                }
+
                 switch (value)
                 {
                     case BlittableJsonReaderArray array:
@@ -66,6 +72,12 @@ namespace Raven.Server.Documents.Queries.Graph
             }
         }
 
+        private void ThrowMissingEdgeProjection()
+        {
+            throw new InvalidQueryException("An expression that selects an edge must have a projection with exactly one field.", Edge.ToString());
+        }
+
+
         private void EdgeMatch(Match match, BlittableJsonReaderObject blittableJsonReaderObject)
         {
             //projection
@@ -78,13 +90,13 @@ namespace Raven.Server.Documents.Queries.Graph
             {
                 if (EdgeMatchExact(blittableJsonReaderObject, method))
                 {
-                    AddEdgeAfterFiltering(match, blittableJsonReaderObject, Edge.Project.FieldValue);
+                    AddEdgeAfterFiltering(match, blittableJsonReaderObject, Edge.Project?.FieldValue);
                 }
                 return;
             }
             if (Edge.Where.IsMatchedBy(blittableJsonReaderObject, QueryParameters) != false)
             {
-                AddEdgeAfterFiltering(match, blittableJsonReaderObject, Edge.Project.FieldValue);
+                AddEdgeAfterFiltering(match, blittableJsonReaderObject, Edge.Project?.FieldValue);
             }
         }
 
