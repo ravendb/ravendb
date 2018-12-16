@@ -41,7 +41,8 @@ namespace FastTests.Issues
                 Operations.OperationType.CollectionImportFromCsv,
                 Operations.OperationType.DatabaseBackup,
                 Operations.OperationType.MigrationFromSql,
-                Operations.OperationType.ReplayTransactionCommands
+                Operations.OperationType.ReplayTransactionCommands,
+                Operations.OperationType.DatabaseRevert
             };
 
             var operationWithoutDetails = new HashSet<Operations.OperationType>

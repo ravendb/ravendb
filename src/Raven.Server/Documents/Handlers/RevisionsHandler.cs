@@ -85,26 +85,19 @@ namespace Raven.Server.Documents.Handlers
         [RavenAction("/databases/*/revisions/revert", "GET", AuthorizationStatus.ValidUser)]
         public async Task Revert()
         {
+            var operationId = GetLongQueryString("operationId");
             var time = GetDateTimeQueryString("point-in-time");
             var window = GetTimeSpanQueryString("window", required: false) ?? TimeSpan.FromHours(48);
 
-            var operationId = GetLongQueryString("operationId", required: false) ?? Database.Operations.GetNextOperationId();
             var token = CreateOperationToken();
 
-            try
-            {
-                await Database.Operations.AddOperation(
-                    Database,
-                    $"Revert database '{Database.Name}' to {time}.",
-                    Operations.Operations.OperationType.DatabaseRevert,
-                    onProgress => Task.Run(() => Database.DocumentsStorage.RevisionsStorage.RevertRevisions(time.Value, window, onProgress), token.Token), 
-                    operationId, 
-                    token: token);
-            }
-            catch (Exception)
-            {
-                HttpContext.Abort();
-            }
+            await Database.Operations.AddOperation(
+                Database,
+                $"Revert database '{Database.Name}' to {time}.",
+                Operations.Operations.OperationType.DatabaseRevert,
+                onProgress => Task.Run(async () => await Database.DocumentsStorage.RevisionsStorage.RevertRevisions(time.Value, window, onProgress), token.Token),
+                operationId,
+                token: token);
         }
 
         private void GetRevisionByChangeVector(DocumentsOperationContext context, StringValues changeVectors, bool metadataOnly)
