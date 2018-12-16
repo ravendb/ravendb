@@ -16,7 +16,7 @@ namespace Raven.Server.Documents.Indexes.Static.Roslyn
 
         public bool Validate(string indexingFunction, ExpressionSyntax expression, bool throwOnError = true)
         {
-            _visitor.Fields = null;
+            _visitor.Reset();
             _visitor.Visit(expression);
 
             if (_visitor.Fields == null || _visitor.Fields.Count == 0)
