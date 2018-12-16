@@ -85,6 +85,7 @@ namespace Raven.Server.Documents.Queries.Results
                         switch (val)
                         {
                             case Document doc:
+                                doc.EnsureMetadata();
                                 args[i] = doc;
                                 break;
                             case BlittableJsonReaderObject bjro:
@@ -129,7 +130,7 @@ namespace Raven.Server.Documents.Queries.Results
                         {
                             if (TryGetValue(fieldToFetch, d, null, null, out key, out fieldVal) == false)
                                 continue;
-                       
+                            d.EnsureMetadata();
                             var immediateResult = AddProjectionToResult(d, 1f, FieldsToFetch, result, key, fieldVal);
                             if (immediateResult != null)
                                 return immediateResult;
@@ -140,7 +141,7 @@ namespace Raven.Server.Documents.Queries.Results
                             var doc = new Document { Data = bjro };
                             if (TryGetValue(fieldToFetch, doc, null, null, out key, out fieldVal) == false)
                                 continue;
-
+                            doc.EnsureMetadata();
                             var immediateResult = AddProjectionToResult(doc, 1f, FieldsToFetch, result, key, fieldVal);
                             if (immediateResult != null)
                                 return immediateResult;
@@ -162,7 +163,7 @@ namespace Raven.Server.Documents.Queries.Results
 
                                 if (TryGetValue(fieldToFetch, doc, null, null, out key, out fieldVal) == false)
                                     continue;
-
+                                doc.EnsureMetadata();
                                 if (ReferenceEquals(doc, fieldVal))
                                     fieldVal = doc.Data;
 
