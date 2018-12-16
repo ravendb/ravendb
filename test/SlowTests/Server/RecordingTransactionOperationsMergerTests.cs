@@ -1292,6 +1292,65 @@ namespace SlowTests.Server
         }
 
         [Fact]
+        public async Task RecordingRevertDocumentsCommand()
+        {
+            var filePath = NewDataPath();
+
+            const string newName = "Balilo";
+            var user = new User { Name = "Baruch" };
+
+
+            //Recording
+            using (var store = GetDocumentStore())
+            {
+                await RevisionsHelper.SetupRevisions(store, Server.ServerStore, new RevisionsConfiguration
+                {
+                    Default = new RevisionsCollectionConfiguration()
+                });
+
+                store.Maintenance.Send(new StartTransactionsRecordingOperation(filePath));
+                DateTime last;
+                using (var session = store.OpenSession())
+                {
+                    session.Store(user);
+                    session.SaveChanges();
+
+                    last = DateTime.UtcNow;
+
+                    user.Name = "Bla";
+                    session.Store(user);
+                    session.SaveChanges();
+                }
+
+                var db = await GetDocumentDatabaseInstanceFor(store);
+                var result = await db.DocumentsStorage.RevisionsStorage.RevertRevisions(last, TimeSpan.FromMinutes(60));
+
+                store.Maintenance.Send(new StopTransactionsRecordingOperation());
+            }
+
+            //Replay
+            using (var store = GetDocumentStore())
+            using (var replayStream = new FileStream(filePath, FileMode.Open))
+            {
+                await RevisionsHelper.SetupRevisions(store, Server.ServerStore, new RevisionsConfiguration
+                {
+                    Default = new RevisionsCollectionConfiguration()
+                });
+
+                var command = new GetNextOperationIdCommand();
+                store.Commands().Execute(command);
+                store.Maintenance.Send(new ReplayTransactionsRecordingOperation(replayStream, command.Result));
+
+                using (var session = store.OpenSession())
+                {
+                    var revisions = session.Advanced.Revisions.GetFor<User>(user.Id);
+                    //Assert
+                    Assert.Equal(3, revisions.Count);
+                }
+            }
+        }
+
+        [Fact]
         public void RecordingPatchAsBatch()
         {
             var filePath = NewDataPath();
