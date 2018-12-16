@@ -143,17 +143,6 @@ namespace Raven.Server.Documents.Queries.Results
                             if (TryGetValue(fieldToFetch, doc, null, null, out key, out fieldVal) == false)
                                 continue;
                        
-                            var immediateResult = AddProjectionToResult(d, 1f, FieldsToFetch, result, key, fieldVal);
-                            if (immediateResult != null)
-                                return immediateResult;
-                            break;
-                        }
-                        case BlittableJsonReaderObject bjro:
-                        {
-                            var doc = new Document { Data = bjro };
-                            if (TryGetValue(fieldToFetch, doc, null, null, out key, out fieldVal) == false)
-                                continue;
-
                             var immediateResult = AddProjectionToResult(doc, 1f, FieldsToFetch, result, key, fieldVal);
                             if (immediateResult != null)
                                 return immediateResult;
