@@ -17,6 +17,7 @@ using System.Threading;
 using System.Threading.Tasks;
 using Sparrow.Compression;
 using Sparrow.Logging;
+using Sparrow.LowMemory;
 using Sparrow.Threading;
 using Sparrow.Utils;
 using Voron.Data;
@@ -459,6 +460,7 @@ namespace Voron.Impl.Journal
                 if (Monitor.IsEntered(_flushingLock) && _ignoreLockAlreadyTaken == false)
                     throw new InvalidJournalFlushRequestException("Applying journals to the data file has been already requested on the same thread");
 
+                ByteStringContext byteStringContext = null;
                 bool lockTaken = false;
                 try
                 {
@@ -548,9 +550,10 @@ namespace Voron.Impl.Journal
 
                     try
                     {
+                        byteStringContext = new ByteStringContext(SharedMultipleUseFlag.None);
                         ApplyPagesToDataFileFromScratch(pagesToWrite);
                     }
-                    catch (OutOfMemoryException e)
+                    catch (Exception e) when (e is OutOfMemoryException || e is EarlyOutOfMemoryException)
                     {
                         if (_waj._logger.IsOperationsEnabled)
                         {
@@ -572,12 +575,13 @@ namespace Voron.Impl.Journal
 
                     var unusedJournals = GetUnusedJournalFiles(jrnls, lastProcessedJournal, lastFlushedTransactionId);
 
-                    ApplyJournalStateAfterFlush(token, lastProcessedJournal, lastFlushedTransactionId, unusedJournals);
+                    ApplyJournalStateAfterFlush(token, lastProcessedJournal, lastFlushedTransactionId, unusedJournals, byteStringContext);
 
                     _waj._env.SuggestSyncDataFileSyncDataFile();
                 }
                 finally
                 {
+                    byteStringContext?.Dispose();
                     if (lockTaken)
                         Monitor.Exit(_flushingLock);
                 }
@@ -585,7 +589,8 @@ namespace Voron.Impl.Journal
                 _waj._env.LogsApplied();
             }
 
-            private void ApplyJournalStateAfterFlush(CancellationToken token, long lastProcessedJournal, long lastFlushedTransactionId, List<JournalFile> unusedJournals)
+            private void ApplyJournalStateAfterFlush(CancellationToken token, long lastProcessedJournal, long lastFlushedTransactionId, List<JournalFile> unusedJournals,
+                ByteStringContext byteStringContext)
             {
                 // the idea here is that even though we need to run the journal through its state update under the transaction lock
                 // we don't actually have to do that in our own transaction, what we'll do is to setup things so if there is a running
@@ -620,7 +625,7 @@ namespace Voron.Impl.Journal
                     };
                     Interlocked.Exchange(ref _updateJournalStateAfterFlush, currentAction);
 
-                    WaitForJournalStateToBeUpdated(token, transactionPersistentContext, currentAction);
+                    WaitForJournalStateToBeUpdated(token, transactionPersistentContext, currentAction, byteStringContext);
 
                     edi?.Throw();
                 }
@@ -631,7 +636,8 @@ namespace Voron.Impl.Journal
                 }
             }
 
-            private void WaitForJournalStateToBeUpdated(CancellationToken token, TransactionPersistentContext transactionPersistentContext, Action<LowLevelTransaction> currentAction)
+            private void WaitForJournalStateToBeUpdated(CancellationToken token, TransactionPersistentContext transactionPersistentContext,
+                Action<LowLevelTransaction> currentAction, ByteStringContext byteStringContext)
             {
                 do
                 {
@@ -641,7 +647,7 @@ namespace Voron.Impl.Journal
                         try
                         {
                             txw = _waj._env.NewLowLevelTransaction(transactionPersistentContext,
-                                TransactionFlags.ReadWrite, timeout: TimeSpan.Zero);
+                                TransactionFlags.ReadWrite, timeout: TimeSpan.Zero, context: byteStringContext);
                         }
                         catch (OperationCanceledException)
                         {
