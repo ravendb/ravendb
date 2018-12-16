@@ -24,10 +24,6 @@
 	#define CIFS_MAGIC_NUMBER     0xff534d42
 #endif
 
-typedef int bool;
-#define true 1
-#define false 0
-
 #define SUCCESS 			0
 #define FAIL_OPEN_FILE 		1
 #define FAIL_SEEK_FILE 		2
@@ -78,8 +74,13 @@ static int32_t sync_directory_for_internal(char *dir_path, uint32_t* detailed_er
 	}
 
 	rc = sync_directory_allowed(fd);
-	if(rc == SYNC_DIR_ALLOWED || 
-	   rc == SYNC_DIR_NOT_ALLOWED) {
+	
+	if (rc == SYNC_DIR_FAILED)
+	{
+		goto error_cleanup;
+	}
+	
+	if(rc == SYNC_DIR_NOT_ALLOWED) {
 		rc = SUCCESS;
 		goto error_cleanup;
 	}

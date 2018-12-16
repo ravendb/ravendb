@@ -667,8 +667,7 @@ namespace Voron
             public override unsafe void WriteHeader(string filename, FileHeader* header)
             {
                 var path = _basePath.Combine(filename);
-                var errorCode = PalFlags.Errno.NONE;
-                var rc = Pal.rvn_write_header(path.FullPath, header, (uint)sizeof(FileHeader), ref errorCode);
+                var rc = Pal.rvn_write_header(path.FullPath, header, sizeof(FileHeader), out var errorCode);
                 if (rc != 0)
                     PalHelper.ThrowLastError(errorCode, $"Failed to rvn_write_header '{filename}', reason : {((PalFlags.FAIL_CODES)rc).ToString()}");
             }

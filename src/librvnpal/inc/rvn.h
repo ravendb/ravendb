@@ -3,10 +3,10 @@
 
 #include <stdint.h>
 
-#if _WIN32
-_declspec(dllexport)
-#endif
-int32_t rvn_memcmp(const void *s1, const void *s2, int32_t n);
+
+typedef int bool;
+#define true 1
+#define false 0
 
 #if _WIN32
 _declspec(dllexport)

@@ -2,6 +2,7 @@ using System;
 using System.Diagnostics.CodeAnalysis;
 using System.IO;
 using System.Runtime.InteropServices;
+using Sparrow.Platform;
 
 // ReSharper disable SwitchStatementMissingSomeCases
 // ReSharper disable InconsistentNaming
@@ -13,11 +14,21 @@ namespace Voron.Platform
         static Pal()
         {
             var toFilename = LIBRVNPAL;
-            var fromFilename = $"{toFilename}.win.x64.dll";
+            string fromFilename;
             if (RuntimeInformation.IsOSPlatform(OSPlatform.Linux))
             {
-                fromFilename = Environment.Is64BitProcess ? $"{toFilename}.linux.x64.so" : $"{toFilename}.linux.x86.so";
-                toFilename += ".so";
+                var arch = "linux";
+                if (RuntimeInformation.ProcessArchitecture != Architecture.Arm && 
+                    RuntimeInformation.ProcessArchitecture != Architecture.Arm64)
+                {
+                    fromFilename = Environment.Is64BitProcess ? $"{toFilename}.linux.x64.so" : $"{toFilename}.linux.x86.so";
+                    toFilename += ".so";
+                }
+                else
+                {
+                    fromFilename = Environment.Is64BitProcess ? $"{toFilename}.arm.64.so" : $"{toFilename}.arm.32.so";
+                    toFilename += ".so";
+                }
             }
             else if (RuntimeInformation.IsOSPlatform(OSPlatform.OSX))
             {
@@ -56,7 +67,7 @@ namespace Voron.Platform
         public static extern int rvn_write_header(
             [MarshalAs(UnmanagedType.LPStr)] string filename,
             void* header,
-            [MarshalAs(UnmanagedType.U4)] uint size,
-            ref PalFlags.Errno failCodes);
+            [MarshalAs(UnmanagedType.I4)] int size,
+            out PalFlags.Errno failCodes);
     }
 }
