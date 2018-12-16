@@ -425,9 +425,9 @@ namespace Voron.Impl.Journal
 
             private long _lastFlushedTransactionId;
             private long _lastFlushedJournalId;
+            private long _totalWrittenButUnsyncedBytes;
             private JournalFile _lastFlushedJournal;
             private bool _ignoreLockAlreadyTaken;
-            private long _totalWrittenButUnsyncedBytes;
             private Action<LowLevelTransaction> _updateJournalStateAfterFlush;
 
             public void OnTransactionCommitted(LowLevelTransaction tx)
@@ -436,6 +436,8 @@ namespace Voron.Impl.Journal
                 action?.Invoke(tx);
             }
 
+            public long LastFlushedTransactionId => Interlocked.Read(ref _lastFlushedTransactionId);
+            public long LastFlushedJournalId => Interlocked.Read(ref _lastFlushedJournalId);
             public long TotalWrittenButUnsyncedBytes => Interlocked.Read(ref _totalWrittenButUnsyncedBytes);
             public int JournalsToDeleteCount => _journalsToDelete.Count;
 
