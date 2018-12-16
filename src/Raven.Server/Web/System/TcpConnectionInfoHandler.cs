@@ -39,7 +39,8 @@ namespace Raven.Server.Web.System
             var databaseGroupId = GetStringQueryString("groupId");
             var remoteTask = GetStringQueryString("remote-task");
 
-            Authenticate(HttpContext, ServerStore, database, remoteTask);
+            if (Authenticate(HttpContext, ServerStore, database, remoteTask) == false)
+                return Task.CompletedTask;
 
             List<string> nodes;
             using (ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
@@ -76,7 +77,8 @@ namespace Raven.Server.Web.System
             var remoteTask = GetStringQueryString("remote-task");
             var database = GetStringQueryString("database");
 
-            Authenticate(HttpContext, ServerStore, database, remoteTask);
+            if (Authenticate(HttpContext, ServerStore, database, remoteTask) == false)
+                return Task.CompletedTask;
 
             using (ServerStore.ContextPool.AllocateOperationContext(out JsonOperationContext context))
             using (var writer = new BlittableJsonTextWriter(context, ResponseBodyStream()))
@@ -88,26 +90,27 @@ namespace Raven.Server.Web.System
             return Task.CompletedTask;
         }
 
-        public static void Authenticate(HttpContext httpContext, ServerStore serverStore, string database, string remoteTask)
+        public static bool Authenticate(HttpContext httpContext, ServerStore serverStore, string database, string remoteTask)
         {
             var feature = httpContext.Features.Get<IHttpAuthenticationFeature>() as RavenServer.AuthenticateConnection;
 
             if (feature == null) // we are not using HTTPS 
-                return;
+                return true;
 
             switch (feature.Status)
             {
                 case RavenServer.AuthenticationStatus.Operator:
                 case RavenServer.AuthenticationStatus.ClusterAdmin:
                     // we can trust this certificate
-                    return;
+                    return true;
 
                 case RavenServer.AuthenticationStatus.Allowed:
                     // check that the certificate is allowed for this database.
                     if (feature.CanAccess(database, requireAdmin: false))
-                        return;
+                        return true;
 
-                    throw new AuthorizationException(PullReplicationAuthorizationExceptionMessage(database, remoteTask));
+                    RequestRouter.UnlikelyFailAuthorization(httpContext, database, feature, AuthorizationStatus.RestrictedAccess);
+                    return false;
 
                 case RavenServer.AuthenticationStatus.UnfamiliarCertificate:
                     using (serverStore.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
@@ -117,9 +120,11 @@ namespace Raven.Server.Web.System
                         {
                             var cert = httpContext.Connection.ClientCertificate;
                             if (pullReplication.CanAccess(cert?.Thumbprint))
-                                return;
+                                return true;
                         }
-                        throw new AuthorizationException(PullReplicationAuthorizationExceptionMessage(database, remoteTask));
+
+                        RequestRouter.UnlikelyFailAuthorization(httpContext, database, feature, AuthorizationStatus.RestrictedAccess);
+                        return false;
                     }
 
                 default:
@@ -127,16 +132,11 @@ namespace Raven.Server.Web.System
             }
         }
 
-        private static string PullReplicationAuthorizationExceptionMessage(string database, string remoteTask)
-        {
-            return $"Cannot connect to '{remoteTask}' on '{database}'. The database or task may not exists or you don't have the credentials to access it.";
-        }
-
         private List<string> GetResponsibleNodes(DatabaseTopology topology, string databaseGroupId, PullReplicationDefinition pullReplication)
         {
             var list = new List<string>();
-            // we distribute connections to have load balancing when many edges are connected.
-            // this is the central cluster, so we make the decision which node will do the pull replication only once and only here,
+            // we distribute connections to have load balancing when many sinks are connected.
+            // this is the hub cluster, so we make the decision which node will do the pull replication only once and only here,
             // for that we create a dummy IDatabaseTask.
             var mentorNodeTask = new PullNodeTask
             {

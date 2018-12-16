@@ -45,7 +45,7 @@ namespace Raven.Server.Documents.Handlers
             using (ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
             {
                 PullReplicationAsSink pullReplication = null;
-                await DatabaseConfigurations((_, databaseName, blittableJson) => ServerStore.UpdatePullReplicationAsSink(databaseName, blittableJson, out pullReplication), "update-edge-pull-replication",
+                await DatabaseConfigurations((_, databaseName, blittableJson) => ServerStore.UpdatePullReplicationAsSink(databaseName, blittableJson, out pullReplication), "update-sink-pull-replication",
                     fillJson: (json, _, index) =>
                     {
                         using (context.OpenReadTransaction())

@@ -9,11 +9,11 @@ using Sparrow.Json;
 
 namespace Raven.Client.Documents.Operations.Replication
 {
-    public class PutPullReplicationDefinitionOperation : IMaintenanceOperation<ModifyOngoingTaskResult>
+    public class PutPullReplicationAsHubOperation : IMaintenanceOperation<ModifyOngoingTaskResult>
     {
         private readonly FeatureTaskDefinition _pullReplicationDefinition;
 
-        public PutPullReplicationDefinitionOperation(string name)
+        public PutPullReplicationAsHubOperation(string name)
         {
             if (string.IsNullOrEmpty(name))
             {
@@ -22,7 +22,7 @@ namespace Raven.Client.Documents.Operations.Replication
             _pullReplicationDefinition = new PullReplicationDefinition(name);
         }
 
-        public PutPullReplicationDefinitionOperation(PullReplicationDefinition pullReplicationDefinition)
+        public PutPullReplicationAsHubOperation(PullReplicationDefinition pullReplicationDefinition)
         {
             if (string.IsNullOrEmpty(pullReplicationDefinition.Name))
             {

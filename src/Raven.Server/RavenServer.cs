@@ -1625,7 +1625,7 @@ namespace Raven.Server
                                 && pullReplication.CanAccess(certificate.Thumbprint))
                                 return true;
 
-                            msg = "The certificate " + certificate.FriendlyName + " does not allow access to " + header.DatabaseName;
+                            msg = $"The certificate {certificate.FriendlyName} does not allow access to {header.DatabaseName} for {info.AuthorizationFor}";
                             return false;
                         }
                     }

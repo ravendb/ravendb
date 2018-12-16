@@ -24,7 +24,7 @@ namespace SlowTests.Server.Replication
         {
             using (var store = GetDocumentStore())
             {
-                await store.Maintenance.ForDatabase(store.Database).SendAsync(new PutPullReplicationDefinitionOperation("test"));
+                await store.Maintenance.ForDatabase(store.Database).SendAsync(new PutPullReplicationAsHubOperation("test"));
             }
         }
 
@@ -35,7 +35,7 @@ namespace SlowTests.Server.Replication
             using (var sink = GetDocumentStore())
             using (var hub = GetDocumentStore())
             {
-                await hub.Maintenance.ForDatabase(hub.Database).SendAsync(new PutPullReplicationDefinitionOperation(name));
+                await hub.Maintenance.ForDatabase(hub.Database).SendAsync(new PutPullReplicationAsHubOperation(name));
                 using (var s2 = hub.OpenSession())
                 {
                     s2.Store(new User(), "foo/bar");
@@ -57,7 +57,7 @@ namespace SlowTests.Server.Replication
             using (var sink = GetDocumentStore())
             using (var hub = GetDocumentStore())
             {
-                var hubTask = await hub.Maintenance.ForDatabase(hub.Database).SendAsync(new PutPullReplicationDefinitionOperation(name));
+                var hubTask = await hub.Maintenance.ForDatabase(hub.Database).SendAsync(new PutPullReplicationAsHubOperation(name));
                 using (var s2 = hub.OpenSession())
                 {
                     s2.Store(new User(), "foo/bar");
@@ -95,8 +95,8 @@ namespace SlowTests.Server.Replication
             using (var hub = GetDocumentStore())
             using (var hub2 = GetDocumentStore())
             {
-                await hub.Maintenance.ForDatabase(hub.Database).SendAsync(new PutPullReplicationDefinitionOperation(definitionName1));
-                await hub2.Maintenance.ForDatabase(hub2.Database).SendAsync(new PutPullReplicationDefinitionOperation(definitionName2));
+                await hub.Maintenance.ForDatabase(hub.Database).SendAsync(new PutPullReplicationAsHubOperation(definitionName1));
+                await hub2.Maintenance.ForDatabase(hub2.Database).SendAsync(new PutPullReplicationAsHubOperation(definitionName2));
 
                 using (var main = hub.OpenSession())
                 {
@@ -140,7 +140,7 @@ namespace SlowTests.Server.Replication
             using (var sink = GetDocumentStore())
             using (var hub = GetDocumentStore())
             {
-                await hub.Maintenance.ForDatabase(hub.Database).SendAsync(new PutPullReplicationDefinitionOperation(definitionName));
+                await hub.Maintenance.ForDatabase(hub.Database).SendAsync(new PutPullReplicationAsHubOperation(definitionName));
 
                 using (var main = hub.OpenSession())
                 {
@@ -150,7 +150,7 @@ namespace SlowTests.Server.Replication
                 await SetupPullReplicationAsync(definitionName, sink, hub);
                 Assert.True(WaitForDocument(sink, "users/1", timeout), sink.Identifier);
 
-                await hub.Maintenance.ForDatabase(hub.Database).SendAsync(new PutPullReplicationDefinitionOperation(new PullReplicationDefinition(definitionName)
+                await hub.Maintenance.ForDatabase(hub.Database).SendAsync(new PutPullReplicationAsHubOperation(new PullReplicationDefinition(definitionName)
                 {
                     DelayReplicationFor = TimeSpan.FromDays(1)
                 }));
@@ -162,7 +162,7 @@ namespace SlowTests.Server.Replication
                 }
                 Assert.False(WaitForDocument(sink, "users/2", timeout), sink.Identifier);
 
-                await hub.Maintenance.ForDatabase(hub.Database).SendAsync(new PutPullReplicationDefinitionOperation(definitionName));
+                await hub.Maintenance.ForDatabase(hub.Database).SendAsync(new PutPullReplicationAsHubOperation(definitionName));
                 Assert.True(WaitForDocument(sink, "users/2", timeout), sink.Identifier);
             }
         }
@@ -176,7 +176,7 @@ namespace SlowTests.Server.Replication
             using (var sink = GetDocumentStore())
             using (var hub = GetDocumentStore())
             {
-                await hub.Maintenance.ForDatabase(hub.Database).SendAsync(new PutPullReplicationDefinitionOperation(definitionName));
+                await hub.Maintenance.ForDatabase(hub.Database).SendAsync(new PutPullReplicationAsHubOperation(definitionName));
 
                 using (var main = hub.OpenSession())
                 {
@@ -226,7 +226,7 @@ namespace SlowTests.Server.Replication
             using (var hub = GetDocumentStore())
             {
                 var pullDefinition = new PullReplicationDefinition(definitionName);
-                await hub.Maintenance.ForDatabase(hub.Database).SendAsync(new PutPullReplicationDefinitionOperation(pullDefinition));
+                await hub.Maintenance.ForDatabase(hub.Database).SendAsync(new PutPullReplicationAsHubOperation(pullDefinition));
 
                 using (var main = hub.OpenSession())
                 {
@@ -237,7 +237,7 @@ namespace SlowTests.Server.Replication
                 Assert.True(WaitForDocument(sink, "users/1", timeout), sink.Identifier);
 
                 pullDefinition.Disabled = true;
-                await hub.Maintenance.ForDatabase(hub.Database).SendAsync(new PutPullReplicationDefinitionOperation(pullDefinition));
+                await hub.Maintenance.ForDatabase(hub.Database).SendAsync(new PutPullReplicationAsHubOperation(pullDefinition));
 
                 using (var main = hub.OpenSession())
                 {
@@ -247,7 +247,7 @@ namespace SlowTests.Server.Replication
                 Assert.False(WaitForDocument(sink, "users/2", timeout), sink.Identifier);
 
                 pullDefinition.Disabled = false;
-                await hub.Maintenance.ForDatabase(hub.Database).SendAsync(new PutPullReplicationDefinitionOperation(pullDefinition));
+                await hub.Maintenance.ForDatabase(hub.Database).SendAsync(new PutPullReplicationAsHubOperation(pullDefinition));
 
                 Assert.True(WaitForDocument(sink, "users/2", timeout), sink.Identifier);
             }
@@ -261,7 +261,7 @@ namespace SlowTests.Server.Replication
             using (var sink1 = GetDocumentStore())
             using (var sink2 = GetDocumentStore())
             {
-                await hub.Maintenance.ForDatabase(hub.Database).SendAsync(new PutPullReplicationDefinitionOperation(name));
+                await hub.Maintenance.ForDatabase(hub.Database).SendAsync(new PutPullReplicationAsHubOperation(name));
                 using (var session = hub.OpenSession())
                 {
                     session.Store(new User(), "foo/bar");
@@ -338,7 +338,7 @@ namespace SlowTests.Server.Replication
                 ModifyDatabaseName = _=> hubDB
             }))
             {
-                await store.Maintenance.ForDatabase(store.Database).SendAsync(new PutPullReplicationDefinitionOperation(new PullReplicationDefinition(pullReplicationName)
+                await store.Maintenance.ForDatabase(store.Database).SendAsync(new PutPullReplicationAsHubOperation(new PullReplicationDefinition(pullReplicationName)
                 {
                     Certificates = new Dictionary<string, string>
                     {
@@ -383,7 +383,7 @@ namespace SlowTests.Server.Replication
                 }
 
                 var name = $"pull-replication {GetDatabaseName()}";
-                await hubStore.Maintenance.ForDatabase(hubStore.Database).SendAsync(new PutPullReplicationDefinitionOperation(name));
+                await hubStore.Maintenance.ForDatabase(hubStore.Database).SendAsync(new PutPullReplicationAsHubOperation(name));
 
                 // add pull replication with invalid discovery url to test the failover on database topology discovery
                 var pullReplication = new PullReplicationAsSink(hubDB, $"ConnectionString-{hubDB}", name)
@@ -478,7 +478,7 @@ namespace SlowTests.Server.Replication
                 }
 
                 var name = $"pull-replication {GetDatabaseName()}";
-                await hubStore.Maintenance.ForDatabase(hubStore.Database).SendAsync(new PutPullReplicationDefinitionOperation(name));
+                await hubStore.Maintenance.ForDatabase(hubStore.Database).SendAsync(new PutPullReplicationAsHubOperation(name));
 
 
                 // add pull replication with invalid discovery url to test the failover on database topology discovery
