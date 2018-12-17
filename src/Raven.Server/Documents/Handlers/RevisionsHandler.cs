@@ -86,7 +86,7 @@ namespace Raven.Server.Documents.Handlers
         public async Task Revert()
         {
             var operationId = GetLongQueryString("operationId");
-            var time = GetDateTimeQueryString("point-in-time");
+            var time = GetDateTimeQueryString("time");
             var window = GetTimeSpanQueryString("window", required: false) ?? TimeSpan.FromHours(48);
 
             var token = CreateOperationToken();
