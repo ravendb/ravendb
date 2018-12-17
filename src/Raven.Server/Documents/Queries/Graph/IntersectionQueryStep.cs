@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.Linq;
 using System.Threading.Tasks;
 using System.Threading.Tasks.Sources;
@@ -129,21 +130,21 @@ namespace Raven.Server.Documents.Queries.Graph
             return key;
         }
 
-        public ValueTask Initialize()
+        public ValueTask Initialize(long? cutoffEtag, Stopwatch queryDuration, TimeSpan? queryWaitDuration)
         {
             if (_index != -1)
                 return default;
 
-            var leftTask = _left.Initialize();
+            var leftTask = _left.Initialize(cutoffEtag, queryDuration, queryWaitDuration);
             if (leftTask.IsCompleted == false)
             {
-                return new ValueTask(CompleteLeftInitializationAsync(leftTask));
+                return new ValueTask(CompleteLeftInitializationAsync(leftTask, cutoffEtag, queryDuration, queryWaitDuration));
             }
 
-            return CompleteInitializationAfterLeft();
+            return CompleteInitializationAfterLeft(cutoffEtag, queryDuration, queryWaitDuration);
         }
 
-        private ValueTask CompleteInitializationAfterLeft()
+        private ValueTask CompleteInitializationAfterLeft(long? cutoffEtag, Stopwatch queryDuration, TimeSpan? queryWaitDuration)
         {
             //At this point we know we are not going to yield results we can skip running right hand side
             if (_returnEmptyIfLeftEmpty && _left.IsEmpty())
@@ -152,25 +153,25 @@ namespace Raven.Server.Documents.Queries.Graph
                 return default;
             }
 
-            var rightTask = _right.Initialize();
+            var rightTask = _right.Initialize(cutoffEtag, queryDuration, queryWaitDuration);
             if (rightTask.IsCompleted == false)
             {
-                return new ValueTask(CompleteRightInitializationAsync(rightTask));
+                return new ValueTask(CompleteRightInitializationAsync(rightTask, cutoffEtag, queryDuration));
             }
             IntersectExpressions();
             return default;
         }
 
-        private async Task CompleteRightInitializationAsync(ValueTask rightTask)
+        private async Task CompleteRightInitializationAsync(ValueTask rightTask, long? cutoffEtag, Stopwatch queryDuration)
         {
             await rightTask;
             IntersectExpressions();
         }
 
-        private async Task  CompleteLeftInitializationAsync(ValueTask leftTask)
+        private async Task  CompleteLeftInitializationAsync(ValueTask leftTask, long? cutoffEtag, Stopwatch queryDuration, TimeSpan? queryWaitDuration)
         {
             await leftTask;
-            await CompleteInitializationAfterLeft();
+            await CompleteInitializationAfterLeft(cutoffEtag, queryDuration, queryWaitDuration);
         }
 
         public HashSet<string> GetAllAliases()

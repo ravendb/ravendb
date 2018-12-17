@@ -1,12 +1,13 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.Threading.Tasks;
 
 namespace Raven.Server.Documents.Queries.Graph
 {
     public interface IGraphQueryStep
     {
-        ValueTask Initialize();
+        ValueTask Initialize(long? cutoffEtag, Stopwatch queryDuration, TimeSpan? queryWaitDuration);
 
         HashSet<string> GetAllAliases();
 
@@ -28,7 +29,7 @@ namespace Raven.Server.Documents.Queries.Graph
 
     public interface ISingleGraphStep
     {
-        ValueTask Initialize();
+        ValueTask Initialize(long? cutoffEtag, Stopwatch queryDuration, TimeSpan? queryWaitDuration);
 
         bool GetAndClearResults(List<GraphQueryRunner.Match> matches);
 
