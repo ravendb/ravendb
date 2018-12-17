@@ -49,7 +49,6 @@ namespace Raven.Server.Documents.Indexes.MapReduce
             }
             finally
             {
-                StoreNextMapResultId();
                 DocumentMapEntries?.Dispose();
                 DocumentMapEntries = null;
                 MapPhaseTree = null;
