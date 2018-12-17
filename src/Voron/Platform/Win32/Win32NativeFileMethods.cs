@@ -110,30 +110,19 @@ namespace Voron.Platform.Win32
 
         public static extern bool FlushFileBuffers(SafeFileHandle hFile);
 
-        [DllImport("kernel32.dll", EntryPoint = "GetFinalPathNameByHandleW", CharSet = CharSet.Unicode,
-             SetLastError = true)]
-        public static extern int GetFinalPathNameByHandle(SafeFileHandle handle, [In, Out] StringBuilder path,
-            int bufLen, int flags);
-
-        
-
         public static void SetFileLength(SafeFileHandle fileHandle, long length)
         {
             if (SetFilePointerEx(fileHandle, length, IntPtr.Zero, Win32NativeFileMoveMethod.Begin) == false)
             {
-                var exception = new Win32Exception(Marshal.GetLastWin32Error());
-
                 var filePath = GetFilePath();
-
+                var exception = new Win32Exception(Marshal.GetLastWin32Error());
                 throw new IOException($"Could not move the pointer of file {filePath}", exception);
             }
 
             if (SetEndOfFile(fileHandle) == false)
             {
-                var lastError = Marshal.GetLastWin32Error();
-
                 var filePath = GetFilePath();
-
+                var lastError = Marshal.GetLastWin32Error();
                 if (lastError == (int) Win32NativeFileErrors.ERROR_DISK_FULL)
                 {
                     var driveInfo = DiskSpaceChecker.GetDiskSpaceInfo(filePath);
@@ -151,15 +140,14 @@ namespace Voron.Platform.Win32
 
             string GetFilePath()
             {
-                var filePath = new StringBuilder(256);
-
-                while (GetFinalPathNameByHandle(fileHandle, filePath, filePath.Capacity, 0) > filePath.Capacity &&
-                       filePath.Capacity < 32767) // max unicode path length
+                try
                 {
-                    filePath.EnsureCapacity(filePath.Capacity * 2);
+                    return DiskSpaceChecker.GetWindowsRealPathByHandle(fileHandle.DangerousGetHandle());
                 }
-
-                return filePath.ToString();
+                catch
+                {
+                    return null;
+                }
             }
         }
     }
