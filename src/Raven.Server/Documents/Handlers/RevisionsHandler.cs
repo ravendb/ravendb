@@ -83,21 +83,29 @@ namespace Raven.Server.Documents.Handlers
         }
 
         [RavenAction("/databases/*/revisions/revert", "GET", AuthorizationStatus.ValidUser)]
-        public async Task Revert()
+        public Task Revert()
         {
-            var operationId = GetLongQueryString("operationId");
             var time = GetDateTimeQueryString("time");
             var window = GetTimeSpanQueryString("window", required: false) ?? TimeSpan.FromHours(48);
 
             var token = CreateOperationToken();
+            var operationId = ServerStore.Operations.GetNextOperationId();
 
-            await Database.Operations.AddOperation(
+            var t = Database.Operations.AddOperation(
                 Database,
                 $"Revert database '{Database.Name}' to {time}.",
                 Operations.Operations.OperationType.DatabaseRevert,
                 onProgress => Task.Run(async () => await Database.DocumentsStorage.RevisionsStorage.RevertRevisions(time.Value, window, onProgress), token.Token),
                 operationId,
                 token: token);
+
+            using (ServerStore.ContextPool.AllocateOperationContext(out JsonOperationContext context))
+            using (var writer = new BlittableJsonTextWriter(context, ResponseBodyStream()))
+            {
+                writer.WriteOperationId(context, operationId);
+            }
+
+            return Task.CompletedTask;
         }
 
         private void GetRevisionByChangeVector(DocumentsOperationContext context, StringValues changeVectors, bool metadataOnly)
