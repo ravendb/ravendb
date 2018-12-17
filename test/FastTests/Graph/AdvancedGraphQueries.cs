@@ -8,6 +8,7 @@ using Product = FastTests.Server.Basic.Entities.Product;
 using OrderLine = FastTests.Server.Basic.Entities.OrderLine;
 using System.Collections.Generic;
 using FastTests.Blittable;
+using System.Diagnostics;
 using Raven.Client.Documents.Session;
 
 namespace FastTests.Graph
@@ -642,7 +643,7 @@ namespace FastTests.Graph
             }
         }
 
-        [Fact(Skip = "Should work after RavenDB-12089 is resolved")]
+        [Fact]
         public void Matching_with_edge_defined_in_embedded_collection_and_select_should_work()
         {
             using (var store = GetDocumentStore())
@@ -657,8 +658,7 @@ namespace FastTests.Graph
 
                     var orderFromMatchQuery = matchQueryResultsAsJson.First()["o"].ToObject<Order>();
                     var productNamesFromMatchQuery = matchQueryResultsAsJson.Select(x => x["p"].ToObject<Product>().Name).ToArray();
-                    var test = matchQueryResultsAsJson.Select(x => x["l"]).ToArray();
-                    var orderLinesFromMatchQuery = matchQueryResultsAsJson.Select(x => x["l"].Select(ix => ix.ToObject<OrderLine>())).ToArray();
+                    var orderLinesFromMatchQuery = matchQueryResultsAsJson.Select(x => x["l"].ToObject<OrderLine>()).ToArray();
 
                     var orderFromDocumentQuery = session.Load<Order>("orders/825-A");
                     var linesQuery = session.Advanced.RawQuery<JObject>(@"from Orders where id() = 'orders/825-A' select Lines").ToArray();
@@ -671,7 +671,6 @@ namespace FastTests.Graph
                     var orderLinesFromDocumentQuery = linesQuery.Select(r => r["Lines"])
                         .Select(x => x.ToObject<OrderLine[]>()).ToArray();
 
-
                     //compare orders
                     Assert.Equal(orderFromDocumentQuery.Lines.Count, orderFromMatchQuery.Lines.Count);
                     Assert.Equal(orderFromDocumentQuery.Employee, orderFromMatchQuery.Employee);
@@ -681,7 +680,8 @@ namespace FastTests.Graph
                     Assert.Equal(productNamesFromDocumentQuery.OrderBy(x => x), productNamesFromMatchQuery.OrderBy(x => x));
 
                     //compare order lines
-                    Assert.True(orderLinesFromMatchQuery.All(item => item.Count() == orderLinesFromDocumentQuery.First().Length));
+                    var documentQueryLength = orderLinesFromDocumentQuery.First().Length;
+                    Assert.True(orderLinesFromMatchQuery.Length == documentQueryLength);
                 }
             }
         }
@@ -808,12 +808,12 @@ namespace FastTests.Graph
                     });
                     session.SaveChanges();
                 }
-                WaitForUserToContinueTheTest(store);
+
                 using (var session = store.OpenSession())
                 {
                     var results = session.Advanced.RawQuery<JObject>(@"
-                       match (Dogs as d1)-recursive { [Likes as l] } ->(Dogs as d2) 
-                       where d1 <> d2
+                       match (Dogs as d1)-recursive { [Likes as l] ->(Dogs as d2) }
+                       where d1 != d2
                        select d1.Name as d1,l.Name as l, d2.Name as d2").ToList();
                     Assert.NotEmpty(results); //sanity check
                     var interpretedResults = results.Select(x => new
@@ -923,7 +923,7 @@ namespace FastTests.Graph
         }
 
         [Fact]
-        public void Projection_of_simple_edge_should_work()
+        public void Projection_of_edge_array_should_work()
         {
             using (var store = GetDocumentStore())
             {
@@ -973,8 +973,8 @@ namespace FastTests.Graph
         }   
         
 
-        [Fact(Skip = "Should not work until RavenDB-12206 is fixed")]
-        public void Projection_of_simple_edge_with_filter_should_work()
+        [Fact(DisplayName = "Relevant for RavenDB-12206")]
+        public void Edge_array_with_filter_should_work()
         {
             using (var store = GetDocumentStore())
             {
@@ -1006,6 +1006,58 @@ namespace FastTests.Graph
 
                     Assert.Equal(1, results.Length);
                     Assert.Contains(results, x => x == "dogs/2-A");
+                }
+            }
+        }        
+
+        [Fact(DisplayName = "Relevant for RavenDB-12206")]
+        public void Projection_with_edge_array_with_filter_should_work()
+        {
+            using (var store = GetDocumentStore())
+            {
+                using (var session = store.OpenSession())
+                {
+                    session.Store(new Dog
+                    {
+                        Name = "Arava",
+                        Likes = new[] {"dogs/2-A"}
+                    });
+                    session.Store(new Dog
+                    {
+                        Name = "Oscar",
+                        Likes = new[] {"dogs/3-A"}
+                    });
+                    session.Store(new Dog
+                    {
+                        Name = "Pheobe",
+                        Likes = new[] {"dogs/1-A"}
+                    });
+                    session.SaveChanges();
+                }
+                
+                using (var session = store.OpenSession())
+                {
+                    //simple projection
+                    var results = session.Advanced.RawQuery<JObject>(@"match (Dogs as d1)-[Likes as l where Likes = 'dogs/2-A' select Likes]->(Dogs) select l")
+                        .ToList().Select(x => x["l"].Value<string>()).ToArray();
+
+                    Assert.Equal(1, results.Length);
+                    Assert.Contains(results, x => x == "dogs/2-A");
+
+                    //simple projection with alias in select
+                    results = session.Advanced.RawQuery<JObject>(@"match (Dogs as d1)-[Likes as l where Likes = 'dogs/2-A' select l]->(Dogs) select l")
+                        .ToList().Select(x => x["l"].Value<string>()).ToArray();
+
+                    Assert.Equal(1, results.Length);
+                    Assert.Contains(results, x => x == "dogs/2-A");
+
+                    //simple projection with alias in where
+                    results = session.Advanced.RawQuery<JObject>(@"match (Dogs as d1)-[Likes as l where l = 'dogs/2-A']->(Dogs) select l")
+                        .ToList().Select(x => x["l"].Value<string>()).ToArray();
+
+                    Assert.Equal(1, results.Length);
+                    Assert.Contains(results, x => x == "dogs/2-A");
+
                 }
             }
         }        
