@@ -2161,9 +2161,9 @@ namespace Raven.Server.Documents.Indexes
 
             using (var marker = MarkQueryAsRunning(query, token))
             {
-                var queryDuration = Stopwatch.StartNew();
+                var queryDuration = query.QueryDuration??Stopwatch.StartNew();
                 AsyncWaitForIndexing wait = null;
-                (long? DocEtag, long? ReferenceEtag)? cutoffEtag = null;
+                (long? DocEtag, long? ReferenceEtag)? cutoffEtag = query.CutoffEtag;
 
                 var stalenessScope = query.Timings?.For(nameof(QueryTimingsScope.Names.Staleness), start: false);
 

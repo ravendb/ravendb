@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.Linq;
 using System.Threading.Tasks;
 using Microsoft.Extensions.Primitives;
@@ -84,14 +85,17 @@ namespace Raven.Server.Documents.Queries.Graph
             return true;
         }
 
-        public ValueTask Initialize()
+        public ValueTask Initialize(long? cutoffEtag, Stopwatch queryDuration, TimeSpan? queryWaitDuration)
         {
             if (_index != -1)
                 return default;
 
             var results = _queryRunner.ExecuteQuery(new IndexQueryServerSide(_queryMetadata)
             {
-                QueryParameters = _queryParameters
+                QueryParameters = _queryParameters,
+                WaitForNonStaleResultsTimeout = queryWaitDuration,
+                CutoffEtag = (cutoffEtag, null),
+                QueryDuration = queryDuration
             },
                   _context, _resultEtag, _token);
 
@@ -199,9 +203,9 @@ namespace Raven.Server.Documents.Queries.Graph
                 return true;
             }
 
-            public ValueTask Initialize()
+            public ValueTask Initialize(long? cutoffEtag, Stopwatch queryDuration, TimeSpan? queryWaitDuration)
             {
-                return _parent.Initialize();
+                return _parent.Initialize(cutoffEtag, queryDuration, queryWaitDuration);
             }
 
             public void Run(Match src, string alias)
