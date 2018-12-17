@@ -34,6 +34,8 @@ namespace Raven.Server.Documents.ETL
         protected override async Task StartCollectingStats()
         {
             Database.EtlLoader.BatchCompleted  += BatchCompleted;
+            Database.EtlLoader.ProcessAdded += ProcessAdded;
+            Database.EtlLoader.ProcessRemoved += EtlProcessRemoved;
 
             try
             {
@@ -73,7 +75,25 @@ namespace Raven.Server.Documents.ETL
             finally
             {
                 Database.EtlLoader.BatchCompleted -= BatchCompleted;
+                Database.EtlLoader.ProcessAdded -= ProcessAdded;
+                Database.EtlLoader.ProcessRemoved -= EtlProcessRemoved;
             }
+        }
+
+        private void EtlProcessRemoved(EtlProcess etl)
+        {
+            if (_perEtlProcessStats.TryGetValue(etl.ConfigurationName, out var processes) == false)
+                return;
+
+            processes.TryRemove(etl.TransformationName, out _);
+        }
+
+        private void ProcessAdded(EtlProcess etl)
+        {
+            if (_perEtlProcessStats.TryGetValue(etl.ConfigurationName, out var processes) == false)
+                return;
+
+            processes.TryAdd(etl.TransformationName, new EtlProcessAndPerformanceStatsList(etl));
         }
 
         private void BatchCompleted((string ConfigurationName, string TransformationName, EtlProcessStatistics Statistics) change)
