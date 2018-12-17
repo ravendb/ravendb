@@ -1,6 +1,7 @@
 ﻿using System;
 using FastTests.Voron;
 using Voron;
+using Voron.Exceptions;
 using Xunit;
 
 namespace SlowTests.Voron.Issues
@@ -31,6 +32,25 @@ namespace SlowTests.Voron.Issues
                 {
 
                 }
+            }
+        }
+
+        [Fact]
+        public void Page_locator_must_not_return_true_on_negative_page_number()
+        {
+            using (var tx = Env.WriteTransaction())
+            {
+                var context = new TransactionPersistentContext();
+
+                var pageLocator = context.AllocatePageLocator(tx.LowLevelTransaction);
+
+                Assert.Throws<VoronUnrecoverableErrorException>(() => pageLocator.TryGetReadOnlyPage(-1, out _));
+
+                Assert.Throws<VoronUnrecoverableErrorException>(() => pageLocator.TryGetWritablePage(-1, out _));
+
+                Assert.Throws<VoronUnrecoverableErrorException>(() => pageLocator.SetReadable(-1, default(Page)));
+
+                Assert.Throws<VoronUnrecoverableErrorException>(() => pageLocator.SetWritable(-1, default(Page)));
             }
         }
     }
