@@ -4,6 +4,7 @@ using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
 using Sparrow;
 using Sparrow.Binary;
+using Voron.Exceptions;
 using Voron.Impl;
 
 namespace Voron
@@ -72,6 +73,9 @@ namespace Voron
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public bool TryGetReadOnlyPage(long pageNumber, out Page page)
         {
+            if (pageNumber < 0)
+                ThrowNegativePageNumber(pageNumber);
+
             var position = pageNumber & _andMask;
 
             PageData* node = &_cache[position];
@@ -86,43 +90,11 @@ namespace Voron
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public Page GetReadOnlyPage(long pageNumber)
-        {
-            var position = pageNumber & _andMask;
-
-            PageData* node = &_cache[position];
-            if (node->PageNumber == pageNumber)
-                return node->Page;
-
-            var page = _tx.GetPage(pageNumber);
-            node->PageNumber = pageNumber;
-            node->Page = page;
-            node->IsWritable = false;
-
-            return page;
-        }
-
-        [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public Page GetWritablePage(long pageNumber)
-        {
-            var position = pageNumber & _andMask;
-
-            PageData* node = &_cache[position];
-
-            if (node->IsWritable && node->PageNumber == pageNumber)
-                return node->Page;
-
-            var page = _tx.ModifyPage(pageNumber);
-            node->PageNumber = pageNumber;
-            node->Page = page;
-            node->IsWritable = true;
-
-            return page;
-        }
-
-        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public bool TryGetWritablePage(long pageNumber, out Page page)
         {
+            if (pageNumber < 0)
+                ThrowNegativePageNumber(pageNumber);
+
             var position = pageNumber & _andMask;
 
             PageData* node = &_cache[position];
@@ -151,6 +123,9 @@ namespace Voron
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public void SetReadable(long pageNumber, Page page)
         {
+            if (pageNumber < 0)
+                ThrowNegativePageNumber(pageNumber);
+
             var position = pageNumber & _andMask;
 
             PageData* node = &_cache[position];
@@ -166,6 +141,9 @@ namespace Voron
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public void SetWritable(long pageNumber, Page page)
         {
+            if (pageNumber < 0)
+                ThrowNegativePageNumber(pageNumber);
+
             var position = pageNumber & _andMask;
 
             PageData* node = &_cache[position];
@@ -176,6 +154,12 @@ namespace Voron
                 node->Page = page;
                 node->IsWritable = true;
             }
+        }
+
+        private void ThrowNegativePageNumber(long pageNumber)
+        {
+            VoronUnrecoverableErrorException.Raise(_tx.Environment.Options,
+                $"The page number cannot be a negative number. Requested page number: {pageNumber}");
         }
     }
 }
