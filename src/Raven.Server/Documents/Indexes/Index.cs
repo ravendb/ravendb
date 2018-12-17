@@ -1316,7 +1316,7 @@ namespace Raven.Server.Documents.Indexes
                 return;
 
             _errorStateReason = $"State was changed due to excessive number of analyzer errors ({analyzerErrors}).";
-            SetState(IndexState.Error);
+            SetState(IndexState.Error, ignoreWriteError: true);
         }
 
         internal void HandleUnexpectedErrors(IndexingStatsScope stats, Exception e)
@@ -1332,7 +1332,7 @@ namespace Raven.Server.Documents.Indexes
                 return;
 
             _errorStateReason = $"State was changed due to excessive number of unexpected errors ({unexpectedErrors}).";
-            SetState(IndexState.Error);
+            SetState(IndexState.Error, ignoreWriteError: true);
         }
 
         internal void HandleCriticalErrors(IndexingStatsScope stats, CriticalIndexingException e)
@@ -1344,7 +1344,7 @@ namespace Raven.Server.Documents.Indexes
                 return;
 
             _errorStateReason = $"State was changed due to a critical error. Error message: {e.Message}";
-            SetState(IndexState.Error);
+            SetState(IndexState.Error, ignoreWriteError: true);
         }
 
         internal void HandleWriteErrors(IndexingStatsScope stats, IndexWriteException iwe)
@@ -1363,7 +1363,7 @@ namespace Raven.Server.Documents.Indexes
                 return;
 
             _errorStateReason = $"State was changed due to excessive number of write errors ({writeErrors}).";
-            SetState(IndexState.Error);
+            SetState(IndexState.Error, ignoreWriteError: true);
         }
 
         internal void HandleExcessiveNumberOfReduceErrors(IndexingStatsScope stats, ExcessiveNumberOfReduceErrorsException e)
@@ -1377,7 +1377,7 @@ namespace Raven.Server.Documents.Indexes
                 return;
 
             _errorStateReason = e.Message;
-            SetState(IndexState.Error);
+            SetState(IndexState.Error, ignoreWriteError: true);
         }
 
         private void HandleOutOfMemoryException(Exception oome, IndexingStatsScope scope)
@@ -1706,7 +1706,7 @@ namespace Raven.Server.Documents.Indexes
             }
         }
 
-        public virtual void SetState(IndexState state, bool inMemoryOnly = false)
+        public virtual void SetState(IndexState state, bool inMemoryOnly = false, bool ignoreWriteError = false)
         {
             if (State == state)
                 return;
@@ -1734,6 +1734,14 @@ namespace Raven.Server.Documents.Indexes
                 {
                     // this might fail if we can't write, so we first update the in memory state
                     _indexStorage.WriteState(state);
+                }
+                catch (Exception e)
+                {
+                    if (_logger.IsOperationsEnabled)
+                        _logger.Operations($"Failed to write {state} state of '{Name}' index to the storage", e);
+
+                    if (ignoreWriteError == false)
+                        throw;
                 }
                 finally
                 {

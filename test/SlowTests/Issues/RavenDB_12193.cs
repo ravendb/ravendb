@@ -12,8 +12,8 @@ namespace SlowTests.Issues
     public class RavenDB_12193 : RavenTestBase
     {
         // RavenDB-12481
-        [Fact]
-        public async Task Should_Throw_On_UnobservedTaskException()
+        [Fact(Skip = "TaskScheduler.UnobservedTaskException registers globally so running the full test suite causes unexpected failures here")]
+        public void Should_Throw_On_UnobservedTaskException()
         {
             var count = 0;
 

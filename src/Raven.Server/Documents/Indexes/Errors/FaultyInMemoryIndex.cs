@@ -125,7 +125,7 @@ namespace Raven.Server.Documents.Indexes.Errors
             throw new NotSupportedException($"Index {Name} is in-memory implementation of a faulty index", _e);
         }
 
-        public override void SetState(IndexState state, bool inMemoryOnly = false)
+        public override void SetState(IndexState state, bool inMemoryOnly = false, bool ignoreWriteError = false)
         {
             throw new NotSupportedException($"Index {Name} is in-memory implementation of a faulty index", _e);
         }

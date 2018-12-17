@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Collections.Generic;
 using System.Threading;
 using FastTests;
 using Raven.Client.Documents.Indexes;
@@ -69,7 +70,7 @@ namespace SlowTests.Server.Documents.Indexing.MapReduce
 
                             long pageNumber = 541;
 
-                            store2.FreedPages.Add(pageNumber);
+                            mapReduceContext.FreedPages.Add(pageNumber);
 
                             for (int i = 0; i < 200; i++)
                             {
@@ -83,15 +84,14 @@ namespace SlowTests.Server.Documents.Indexing.MapReduce
                                 }
                             }
                             
-                            var writeOperation =
-                                new Lazy<IndexWriteOperation>(() => index.IndexPersistence.OpenIndexWriter(tx.InnerTransaction, null));
+                            var writeOperation = new Lazy<IndexWriteOperation>(() => index.IndexPersistence.OpenIndexWriter(tx.InnerTransaction, null));
 
                             var stats = new IndexingStatsScope(new IndexingRunStats());
                             reducer.Execute(null, indexContext,
                                 writeOperation,
                                 stats, CancellationToken.None);
 
-                            Assert.DoesNotContain(pageNumber, store2.FreedPages);
+                            Assert.DoesNotContain(pageNumber, mapReduceContext.FreedPages);
 
                             var table = indexContext.Transaction.InnerTransaction.OpenTable(ReduceMapResultsBase<MapReduceIndexDefinition>.ReduceResultsSchema,
                                 ReduceMapResultsBase<MapReduceIndexDefinition>.PageNumberToReduceResultTableName);

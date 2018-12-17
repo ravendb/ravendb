@@ -28,8 +28,8 @@ namespace Raven.Server.Documents.Indexes.MapReduce
         public MapResultsStorageType Type { get; private set; }
 
         public Tree Tree;
-        public HashSet<long> ModifiedPages;
-        public HashSet<long> FreedPages;
+        public readonly HashSet<long> ModifiedPages;
+        
 
         public MapReduceResultsStore(ulong reduceKeyHash, MapResultsStorageType type, TransactionOperationContext indexContext, MapReduceIndexingContext mapReduceContext, bool create)
         {
@@ -38,6 +38,8 @@ namespace Raven.Server.Documents.Indexes.MapReduce
             _indexContext = indexContext;
             _mapReduceContext = mapReduceContext;
             _tx = indexContext.Transaction.InnerTransaction;
+
+            ModifiedPages = new HashSet<long>();
 
             switch (Type)
             {
@@ -52,34 +54,36 @@ namespace Raven.Server.Documents.Indexes.MapReduce
             }
         }
 
+        private readonly HashSet<string> _alreadyInitializedTrees = new HashSet<string>();
+
         private void InitializeTree(bool create)
         {
             var treeName = ReduceTreePrefix + _reduceKeyHash;
             var options = _tx.LowLevelTransaction.Environment.Options.RunningOn32Bits ? TreeFlags.None : TreeFlags.LeafsCompressed;
             Tree = create ? _tx.CreateTree(treeName, flags: options) : _tx.ReadTree(treeName);
 
-            ModifiedPages = new HashSet<long>();
-            FreedPages = new HashSet<long>();
-
-            _mapReduceContext.PageModifiedInReduceTree += page => FreedPages.Remove(page);
-
-            Tree.PageModified += (page, flags) =>
+            if (!_alreadyInitializedTrees.Contains(treeName))
             {
-                if ((flags & PageFlags.Overflow) == PageFlags.Overflow)
-                    return;
+                Tree.PageModified += (page, flags) =>
+                {
+                    if ((flags & PageFlags.Overflow) == PageFlags.Overflow)
+                        return;
 
-                ModifiedPages.Add(page);
-                _mapReduceContext.OnPageModifiedInReduceTree(page);
-            };
+                    ModifiedPages.Add(page);
+                    _mapReduceContext.FreedPages.Remove(page);
+                };
 
-            Tree.PageFreed += (page, flags) =>
-            {
-                if ((flags & PageFlags.Overflow) == PageFlags.Overflow)
-                    return;
+                Tree.PageFreed += (page, flags) =>
+                {
+                    if ((flags & PageFlags.Overflow) == PageFlags.Overflow)
+                        return;
 
-                FreedPages.Add(page);
-                ModifiedPages.Remove(page);
-            };
+                    _mapReduceContext.FreedPages.Add(page);
+                    ModifiedPages.Remove(page);
+                };
+
+                _alreadyInitializedTrees.Add(treeName);
+            }
         }
 
         public void Delete(long id)

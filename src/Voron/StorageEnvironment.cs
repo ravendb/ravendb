@@ -435,6 +435,9 @@ namespace Voron
                 Options = Options
             };
 
+            if (Options.SimulateFailureOnDbCreation)
+                ThrowSimulateFailureOnDbCreation();
+
             var transactionPersistentContext = new TransactionPersistentContext();
             using (var tx = NewLowLevelTransaction(transactionPersistentContext, TransactionFlags.ReadWrite))
             using (var root = Tree.Create(tx, null, Constants.RootTreeNameSlice))
@@ -1251,6 +1254,11 @@ namespace Voron
             Debug.Assert(tx.Flags == TransactionFlags.Read);
             _envDispose.Signal();
             tx.AlreadyAllowedDisposeWithLazyTransactionRunning = true;
+        }
+
+        private static void ThrowSimulateFailureOnDbCreation()
+        {
+            throw new InvalidOperationException("Simulation of db creation failure");
         }
     }
 }
