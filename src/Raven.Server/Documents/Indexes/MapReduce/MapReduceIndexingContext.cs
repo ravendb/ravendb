@@ -37,16 +37,21 @@ namespace Raven.Server.Documents.Indexes.MapReduce
 
         public void Dispose()
         {
-            DocumentMapEntries?.Dispose();
-            DocumentMapEntries = null;
-            MapPhaseTree = null;
-            ReducePhaseTree = null;
-            ProcessedDocEtags.Clear();
-            ProcessedTombstoneEtags.Clear();
-            StoreByReduceKeyHash.Clear();
-            FreedPages.Clear();
-
-            StoreNextMapResultId();
+            try
+            {
+                StoreNextMapResultId();
+            }
+            finally
+            {
+                DocumentMapEntries?.Dispose();
+                DocumentMapEntries = null;
+                MapPhaseTree = null;
+                ReducePhaseTree = null;
+                ProcessedDocEtags.Clear();
+                ProcessedTombstoneEtags.Clear();
+                StoreByReduceKeyHash.Clear();
+                FreedPages.Clear();
+            }
         }
 
         public unsafe void StoreNextMapResultId()
