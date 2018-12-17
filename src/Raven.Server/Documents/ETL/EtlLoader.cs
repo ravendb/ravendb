@@ -62,6 +62,19 @@ namespace Raven.Server.Documents.ETL
             LoadProcesses(record, record.RavenEtls, record.SqlEtls, toRemove: null);
         }
 
+        public event Action<EtlProcess> ProcessAdded;
+        public event Action<EtlProcess> ProcessRemoved;
+
+        private void OnProcessAdded(EtlProcess process)
+        {
+            ProcessAdded?.Invoke(process);
+        }
+
+        private void OnProcessRemoved(EtlProcess process)
+        {
+            ProcessRemoved?.Invoke(process);
+        }
+
         private void LoadProcesses(DatabaseRecord record,
             List<RavenEtlConfiguration> newRavenDestinations,
             List<SqlEtlConfiguration> newSqlDestinations,
@@ -81,6 +94,8 @@ namespace Raven.Server.Documents.ETL
                     {
                         processes.Remove(process);
                         _uniqueNames.Remove(process.ConfigurationName);
+
+                        OnProcessRemoved(process);
                     }
                 }
 
@@ -100,6 +115,8 @@ namespace Raven.Server.Documents.ETL
                 {
                     _database.TombstoneCleaner.Subscribe(process);
                     process.Start();
+
+                    OnProcessAdded(process);
                 }
             }
         }
