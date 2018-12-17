@@ -127,6 +127,7 @@ namespace Raven.Server.Documents.Indexes.MapReduce
                 if (_mapReduceContext.FreedPages.Count > 0)
                 {
                     long tmp = 0;
+                    using (treeScopeStats.Start())
                     using (Slice.External(indexContext.Allocator, (byte*)&tmp, sizeof(long), out Slice pageNumberSlice))
                     {
                         foreach (var freedPage in _mapReduceContext.FreedPages)
