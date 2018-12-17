@@ -1,4 +1,5 @@
-﻿using System.Linq;
+﻿using System;
+using System.Linq;
 using Newtonsoft.Json.Linq;
 using Raven.Client.Documents.Operations;
 using Raven.Client.Exceptions;
@@ -970,97 +971,7 @@ namespace FastTests.Graph
                     Assert.Contains(results, x => x == "dogs/3-A");                   
                 }
             }
-        }   
-        
-
-        [Fact(DisplayName = "Relevant for RavenDB-12206")]
-        public void Edge_array_with_filter_should_work()
-        {
-            using (var store = GetDocumentStore())
-            {
-                using (var session = store.OpenSession())
-                {
-                    session.Store(new Dog
-                    {
-                        Name = "Arava",
-                        Likes = new[] {"dogs/2-A"}
-                    });
-                    session.Store(new Dog
-                    {
-                        Name = "Oscar",
-                        Likes = new[] {"dogs/3-A"}
-                    });
-                    session.Store(new Dog
-                    {
-                        Name = "Pheobe",
-                        Likes = new[] {"dogs/1-A"}
-                    });
-                    session.SaveChanges();
-                }
-                
-                using (var session = store.OpenSession())
-                {
-                    //simple projection
-                    var results = session.Advanced.RawQuery<JObject>(@"match (Dogs as d1)-[Likes as l where Likes = 'dogs/2-A']->(Dogs) select l")
-                                                    .ToList().Select(x => x["l"].Value<string>()).ToArray();
-
-                    Assert.Equal(1, results.Length);
-                    Assert.Contains(results, x => x == "dogs/2-A");
-                }
-            }
-        }        
-
-        [Fact(DisplayName = "Relevant for RavenDB-12206")]
-        public void Projection_with_edge_array_with_filter_should_work()
-        {
-            using (var store = GetDocumentStore())
-            {
-                using (var session = store.OpenSession())
-                {
-                    session.Store(new Dog
-                    {
-                        Name = "Arava",
-                        Likes = new[] {"dogs/2-A"}
-                    });
-                    session.Store(new Dog
-                    {
-                        Name = "Oscar",
-                        Likes = new[] {"dogs/3-A"}
-                    });
-                    session.Store(new Dog
-                    {
-                        Name = "Pheobe",
-                        Likes = new[] {"dogs/1-A"}
-                    });
-                    session.SaveChanges();
-                }
-                
-                using (var session = store.OpenSession())
-                {
-                    //simple projection
-                    var results = session.Advanced.RawQuery<JObject>(@"match (Dogs as d1)-[Likes as l where Likes = 'dogs/2-A' select Likes]->(Dogs) select l")
-                        .ToList().Select(x => x["l"].Value<string>()).ToArray();
-
-                    Assert.Equal(1, results.Length);
-                    Assert.Contains(results, x => x == "dogs/2-A");
-
-                    //simple projection with alias in select
-                    results = session.Advanced.RawQuery<JObject>(@"match (Dogs as d1)-[Likes as l where Likes = 'dogs/2-A' select l]->(Dogs) select l")
-                        .ToList().Select(x => x["l"].Value<string>()).ToArray();
-
-                    Assert.Equal(1, results.Length);
-                    Assert.Contains(results, x => x == "dogs/2-A");
-
-                    //simple projection with alias in where
-                    results = session.Advanced.RawQuery<JObject>(@"match (Dogs as d1)-[Likes as l where l = 'dogs/2-A']->(Dogs) select l")
-                        .ToList().Select(x => x["l"].Value<string>()).ToArray();
-
-                    Assert.Equal(1, results.Length);
-                    Assert.Contains(results, x => x == "dogs/2-A");
-
-                }
-            }
-        }        
+        }                
 
         [Fact(Skip = "Should not work until RavenDB-12205 is fixed")]
         public void Queries_with_non_existing_fields_in_vertex_filter_should_fail()
@@ -1136,6 +1047,7 @@ namespace FastTests.Graph
 
                 using (var session = store.OpenSession())
                 {
+                    var resultsX = session.Advanced.RawQuery<OrderLine>(@"match (Orders as o)-[Lines]->(Products)").ToArray();
                     //simple projection
                     var results = session.Advanced.RawQuery<OrderLine>(@"match (Orders as o)-[Lines.Product as l]->(Products) select l").ToArray();
                     var ordersLines = session.Query<Order>().ToList().SelectMany(x => x.Lines).ToArray();

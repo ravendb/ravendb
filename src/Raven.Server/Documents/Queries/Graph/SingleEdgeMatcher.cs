@@ -5,7 +5,6 @@ using Raven.Client.Exceptions;
 using Raven.Server.Documents.Queries.AST;
 using Raven.Server.Json;
 using Raven.Server.Utils;
-using Sparrow;
 using Sparrow.Json;
 using Sparrow.Json.Parsing;
 using static Raven.Server.Documents.Queries.GraphQueryRunner;
@@ -42,7 +41,7 @@ namespace Raven.Server.Documents.Queries.Graph
 
             if (Edge.Where != null || Edge.Project != null)
             {
-                if (BlittableJsonTraverser.Default.TryRead(leftDoc, Edge.Path.FieldValue, out var value, out _) == false)
+                if (BlittableJsonTraverser.Default.TryRead(leftDoc, Edge.Path.FieldValue, out var value, out _) == false || value == null)
                     return;
 
                 //allow array of primitives
@@ -51,7 +50,8 @@ namespace Raven.Server.Documents.Queries.Graph
                     ThrowMissingEdgeProjection();
                 }
 
-                var projectFieldValue = Edge.Project?.FieldValue;
+                var projectFieldValue = Edge.Project?.FieldValue;              
+
                 switch (value)
                 {
                     case BlittableJsonReaderArray array:
@@ -59,42 +59,32 @@ namespace Raven.Server.Documents.Queries.Graph
                         {
                             switch (item)
                             {
-                                case BlittableJsonReaderObject json when Edge.Where?.IsMatchedBy(json, QueryParameters) != false:
+                                case BlittableJsonReaderObject json:
                                     if (projectFieldValue == null)
                                         ThrowMissingEdgeProjection();
-                                    AddEdgeAfterFiltering(left, json, projectFieldValue);
+
+                                    if (Edge.Where?.IsMatchedBy(json, QueryParameters) != false)
+                                    {
+                                        AddEdgeAfterFiltering(left, json, projectFieldValue);
+                                    }
+
+                                    break;
+                                case LazyCompressedStringValue compressedLazyString:
+                                    HandleStringAsArrayItem(left, compressedLazyString.ToLazyStringValue());
                                     break;
                                 case LazyStringValue lazyString:
-                                    var jsonStringForWhere = new DynamicJsonValue
-                                    {
-                                        [Edge.Path.FieldValue] = lazyString
-                                    };
-
-                                    if (!string.IsNullOrWhiteSpace(Edge.EdgeAlias.Value))
-                                    {
-                                        jsonStringForWhere.Properties.Add((Edge.EdgeAlias.Value, lazyString));
-                                    }
-
-                                    using (var blittableString = lazyString._context.ReadObject(jsonStringForWhere, "SingleEdgeMatcher/ReadStringAsBlittable"))                                
-                                    {
-                                        if (!(Edge.Where?.IsMatchedBy(blittableString, QueryParameters) ?? true))
-                                        {
-                                            continue;
-                                        }
-                                    }
-                                    
-                                    var jsonStringForProjection = new DynamicJsonValue
-                                    {
-                                        [Edge.Path.FieldValue] = lazyString
-                                    };
-
-                                    var edgeJsonString = lazyString._context.ReadObject(jsonStringForProjection, "SingleEdgeMatcher/ReadStringAsBlittable");
-                                    AddEdgeAfterFiltering(left, edgeJsonString, Edge.Path.FieldValue);
+                                    HandleStringAsArrayItem(left, lazyString);
+                                    break;
+                                default:
+                                    ThrowMissingEdgeProjection();
                                     break;
                             }
                         }
                         break;
                     case BlittableJsonReaderObject json:
+                        if (projectFieldValue == null)
+                            ThrowMissingEdgeProjection();
+
                         if (Edge.Where?.IsMatchedBy(json, QueryParameters) != false)
                         {
                             AddEdgeAfterFiltering(left, json, projectFieldValue);
@@ -103,18 +93,43 @@ namespace Raven.Server.Documents.Queries.Graph
                 }
             }
             else
-            {
+            {              
                 AddEdgeAfterFiltering(left, leftDoc, Edge.Path.FieldValue);
             }
         }
 
+        private void HandleStringAsArrayItem(Match left, LazyStringValue lazyStringValue)
+        {
+            var jsonStringForWhere = new DynamicJsonValue
+                {[Edge.Path.FieldValue] = lazyStringValue};
+
+            if (!string.IsNullOrWhiteSpace(Edge.EdgeAlias.Value))
+            {
+                jsonStringForWhere.Properties.Add((Edge.EdgeAlias.Value, lazyStringValue));
+            }
+
+            using (var blittableString = lazyStringValue._context.ReadObject(jsonStringForWhere, "SingleEdgeMatcher/ReadStringAsBlittable"))
+            {
+                if (!(Edge.Where?.IsMatchedBy(blittableString, QueryParameters) ?? true))
+                    return;
+            }
+
+            var jsonStringForProjection = new DynamicJsonValue
+            {
+                [Edge.Path.FieldValue] = lazyStringValue
+            };
+
+            var edgeJsonString = lazyStringValue._context.ReadObject(jsonStringForProjection, "SingleEdgeMatcher/ReadStringAsBlittable");
+            AddEdgeAfterFiltering(left, edgeJsonString, Edge.Path.FieldValue);
+        }
+
         private void ThrowMissingEdgeProjection()
         {
-            throw new InvalidQueryException("An expression that selects an edge must have a projection with exactly one field.", Edge.ToString());
+            throw new InvalidQueryException("An expression that selects an edge must have a projection with exactly one field which is of type string.", Edge.ToString());
         }
 
 
-        private static unsafe bool ShouldUseFullObjectForEdge(BlittableJsonReaderObject src, BlittableJsonReaderObject json)
+        private static bool ShouldUseFullObjectForEdge(BlittableJsonReaderObject src, BlittableJsonReaderObject json)
         {
             return json != null && (json != src || src.HasParent);
         }
