@@ -1,4 +1,5 @@
-﻿using Sparrow.Json.Parsing;
+﻿using System.Collections.Generic;
+using Sparrow.Json.Parsing;
 
 namespace Raven.Client.Documents.Operations
 {
@@ -82,6 +83,30 @@ namespace Raven.Client.Documents.Operations
             return new DynamicJsonValue(GetType())
             {
                 ["Progress"] = Progress
+            };
+        }
+    }
+
+    public class RevertProgress : IOperationProgress
+    {
+        public int ScannedRevisions;
+        public int RevertedDocuments;
+        public int ScannedDocuments;
+        public Dictionary<string, string> Warnings = new Dictionary<string, string>();
+
+        public void Warn(string id, string message)
+        {
+            Warnings[id] = message;
+        }
+
+        public DynamicJsonValue ToJson()
+        {
+            return new DynamicJsonValue
+            {
+                [nameof(ScannedRevisions)] = ScannedRevisions,
+                [nameof(ScannedDocuments)] = ScannedDocuments,
+                [nameof(RevertedDocuments)] = RevertedDocuments,
+                [nameof(Warnings)] = DynamicJsonValue.Convert(Warnings)
             };
         }
     }
