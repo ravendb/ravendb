@@ -271,7 +271,7 @@ namespace SlowTests.Voron.Storage
                 }
 
                 worker1.WaitThrow(TimeSpan.FromSeconds(10));
-                worker2.WaitThrow(TimeSpan.FromSeconds(0));
+                worker2.WaitThrow(TimeSpan.FromSeconds(10));
 
                 Assert.Equal(1, worker1.Job.TimesJobDone);
                 Assert.Equal(1, worker2.Job.TimesJobDone);
@@ -377,7 +377,7 @@ namespace SlowTests.Voron.Storage
         }
 
         [Fact]
-        public void LockTaskResponsible_WhenTwoThreadsAreWaitingOneOfThemToThrowJob_ShouldCompleteTheSecondJob()
+        public void LockTaskResponsible_WhenTwoThreadsAreWaitingOneOfThemDoThrowJob_ShouldCompleteTheSecondJob()
         {
             var tokenSource = new CancellationTokenSource();
             try
@@ -409,7 +409,7 @@ namespace SlowTests.Voron.Storage
                 }
 
                 throwWorker.WaitThrow(TimeSpan.FromSeconds(10));
-                worker.WaitThrow(TimeSpan.FromSeconds(0));
+                worker.WaitThrow(TimeSpan.FromSeconds(10));
 
                 Assert.Equal(0, throwWorker.Job.TimesJobDone);
                 Assert.Equal(1, worker.Job.TimesJobDone);
