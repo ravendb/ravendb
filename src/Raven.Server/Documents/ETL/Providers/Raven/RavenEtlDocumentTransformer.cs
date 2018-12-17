@@ -48,10 +48,10 @@ namespace Raven.Server.Documents.ETL.Providers.Raven
                 return;
 
             if (_transformation.IsAddingAttachments)
-                _addAttachmentMethod = new PropertyDescriptor(new ClrFunctionInstance(DocumentScript.ScriptEngine, AddAttachment), null, null, null);
+                _addAttachmentMethod = new PropertyDescriptor(new ClrFunctionInstance(DocumentScript.ScriptEngine, "addAttachment", AddAttachment), null, null, null);
 
             if (_transformation.IsAddingCounters)
-                _addCounterMethod = new PropertyDescriptor(new ClrFunctionInstance(DocumentScript.ScriptEngine, AddCounter), null, null, null);
+                _addCounterMethod = new PropertyDescriptor(new ClrFunctionInstance(DocumentScript.ScriptEngine, "addCounter", AddCounter), null, null, null);
         }
 
         protected override string[] LoadToDestinations { get; }

@@ -61,7 +61,7 @@ namespace SlowTests.Issues
                                   update
                                   {
                                     var countByDay = doc.CountByDay;
-                                    for(i in countByDay) {
+                                    for(var i in countByDay) {
                                         incrementCounter(this, i, countByDay[i])
                                     }
                                   }"
@@ -108,7 +108,7 @@ namespace SlowTests.Issues
                                   update
                                   {
                                     var countByDay = doc.CountByDay;
-                                    for(i in countByDay) {
+                                    for(var i in countByDay) {
                                         incrementCounter(this, i, countByDay[i])
                                     };
                                     this.Name = 'Grisha';

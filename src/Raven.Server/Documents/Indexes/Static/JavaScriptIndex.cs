@@ -38,7 +38,7 @@ namespace Raven.Server.Documents.Indexes.Static
                 options.LimitRecursion(64)
                     .SetReferencesResolver(resolver)
                     .MaxStatements(configuration.Indexing.MaxStepsForScript)
-                    .Strict()
+                    .Strict(configuration.Patching.StrictMode)
                     .AddObjectConverter(new JintGuidConverter())
                     .AddObjectConverter(new JintStringConverter())
                     .AddObjectConverter(new JintEnumConverter())
@@ -183,7 +183,7 @@ namespace Raven.Server.Documents.Indexes.Static
 
         private void InitializeEngine(IndexDefinition definition, out List<string> maps)
         {
-            _engine.SetValue("load", new ClrFunctionInstance(_engine, LoadDocument));
+            _engine.SetValue("load", new ClrFunctionInstance(_engine, "load", LoadDocument));
 
             _engine.Execute(Code);
 
