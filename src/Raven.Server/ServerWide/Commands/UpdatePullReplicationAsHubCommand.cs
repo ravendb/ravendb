@@ -18,6 +18,7 @@ namespace Raven.Server.ServerWide.Commands
         public override string UpdateDatabaseRecord(DatabaseRecord record, long etag)
         {
             Definition.TaskId = etag;
+            record.EnsureTaskNameIsNotUsed(Definition.Name);
             record.HubPullReplications[Definition.Name] = Definition;
             return null;
         }
