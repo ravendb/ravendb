@@ -3,11 +3,14 @@ using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq;
 using System.Runtime.CompilerServices;
+using System.Threading.Tasks;
 using Raven.Client;
+using Raven.Client.Documents.Operations;
 using Raven.Client.Documents.Operations.Revisions;
 using Raven.Client.Exceptions.Documents;
 using Raven.Client.Extensions;
 using Raven.Client.ServerWide;
+using Raven.Server.Documents.Handlers;
 using Raven.Server.NotificationCenter.Notifications;
 using Raven.Server.ServerWide.Context;
 using Raven.Server.Utils;
@@ -24,7 +27,7 @@ using static Raven.Server.Documents.DocumentsStorage;
 
 namespace Raven.Server.Documents.Revisions
 {
-    public unsafe class RevisionsStorage
+    public class RevisionsStorage
     {
         private static readonly Slice IdAndEtagSlice;
         public static readonly Slice DeleteRevisionEtagSlice;
@@ -255,44 +258,67 @@ namespace Raven.Server.Documents.Revisions
             out RevisionsCollectionConfiguration configuration)
         {
             configuration = GetRevisionsConfiguration(collectionName.Name);
-            if (configuration.Disabled)
+
+            if (nonPersistentFlags.Contain(NonPersistentDocumentFlags.FromReplication))
+                return false; // no need, since we put the revision directly from replication
+
+            if (nonPersistentFlags.Contain(NonPersistentDocumentFlags.FromSmuggler))
             {
+                if (nonPersistentFlags.Contain(NonPersistentDocumentFlags.ByCountersUpdate))
+                    return false;
+
+                if (configuration == ConflictConfiguration.Default || configuration.Disabled)
+                    return false;
+            }
+
+            if (documentFlags.Contain(DocumentFlags.Resolved))
+                return true;
+
+            if (Configuration == null)
+            {
+                documentFlags = documentFlags.Strip(DocumentFlags.HasRevisions);
                 return false;
             }
 
-            try
+            if (configuration.Disabled)
             {
-                if ((nonPersistentFlags & NonPersistentDocumentFlags.FromSmuggler) != NonPersistentDocumentFlags.FromSmuggler)
-                    return true;
-                if (existingDocument == null)
-                {
-                    if ((nonPersistentFlags & NonPersistentDocumentFlags.SkipRevisionCreation) == NonPersistentDocumentFlags.SkipRevisionCreation)
-                    {
-                        // Smuggler is configured to avoid creating new revisions during import
-                        return false;
-                    }
+                documentFlags = documentFlags.Strip(DocumentFlags.HasRevisions);
+                return false;
+            }
 
-                    // we are not going to create a revision if it's an import from v3
-                    // (since this import is going to import revisions as well)
-                    return (nonPersistentFlags & NonPersistentDocumentFlags.LegacyHasRevisions) != NonPersistentDocumentFlags.LegacyHasRevisions;
+            if (existingDocument == null)
+            {
+                if (nonPersistentFlags.Contain(NonPersistentDocumentFlags.SkipRevisionCreation))
+                {
+                    // Smuggler is configured to avoid creating new revisions during import
+                    return false;
                 }
 
-                // compare the contents of the existing and the new document
-                if (DocumentCompare.IsEqualTo(existingDocument, document, false) != DocumentCompareResult.NotEqual)
+                // we are not going to create a revision if it's an import from v3
+                // (since this import is going to import revisions as well)
+                if (nonPersistentFlags.Contain(NonPersistentDocumentFlags.LegacyHasRevisions))
                 {
-                    // no need to create a new revision, both documents have identical content
+                    documentFlags |= DocumentFlags.HasRevisions;
                     return false;
                 }
 
                 return true;
             }
-            finally
+
+            if (documentFlags.Contain(DocumentFlags.Reverted))
+                return true; // we always want to create a new version for a reverted document
+
+            // compare the contents of the existing and the new document
+            if (DocumentCompare.IsEqualTo(existingDocument, document, false) != DocumentCompareResult.NotEqual)
             {
-                documentFlags |= DocumentFlags.HasRevisions;
+                // no need to create a new revision, both documents have identical content
+                return false;
             }
+
+            return true;
         }
 
-        public void Put(DocumentsOperationContext context, string id, BlittableJsonReaderObject document,
+        public unsafe void Put(DocumentsOperationContext context, string id, BlittableJsonReaderObject document,
             DocumentFlags flags, NonPersistentDocumentFlags nonPersistentFlags, string changeVector, long lastModifiedTicks,
             RevisionsCollectionConfiguration configuration = null, CollectionName collectionName = null)
         {
@@ -308,8 +334,6 @@ namespace Raven.Server.Documents.Revisions
 
             using (DocumentIdWorker.GetLowerIdSliceAndStorageKey(context, id, out Slice lowerId, out Slice idPtr))
             {
-                var fromReplication = (nonPersistentFlags & NonPersistentDocumentFlags.FromReplication) == NonPersistentDocumentFlags.FromReplication;
-
                 var table = EnsureRevisionTableCreated(context.Transaction.InnerTransaction, collectionName);
 
                 // We want the revision's attachments to have a lower etag than the revision itself
@@ -353,7 +377,7 @@ namespace Raven.Server.Documents.Revisions
                     document = context.ReadObject(document, id, BlittableJsonDocumentBuilder.UsageMode.ToDisk);
                 }
 
-                if (fromReplication)
+                if (nonPersistentFlags.Contain(NonPersistentDocumentFlags.FromReplication))
                 {
                     void PutFromRevisionIfChangeVectorIsGreater()
                     {
@@ -504,7 +528,7 @@ namespace Raven.Server.Documents.Revisions
             });
         }
 
-        private CollectionName GetCollectionFor(DocumentsOperationContext context, Slice prefixSlice)
+        private unsafe CollectionName GetCollectionFor(DocumentsOperationContext context, Slice prefixSlice)
         {
             var table = new Table(RevisionsSchema, context.Transaction.InnerTransaction);
             var tvr = table.SeekOneForwardFromPrefix(RevisionsSchema.Indexes[IdAndEtagSlice], prefixSlice);
@@ -602,7 +626,7 @@ namespace Raven.Server.Documents.Revisions
             CreateTombstone(context, key, revisionEtag, collectionName, changeVector, lastModifiedTicks);
         }
 
-        private void CreateTombstone(DocumentsOperationContext context, Slice keySlice, long revisionEtag,
+        private unsafe void CreateTombstone(DocumentsOperationContext context, Slice keySlice, long revisionEtag,
             CollectionName collectionName, string changeVector, long lastModifiedTicks)
         {
             var newEtag = _documentsStorage.GenerateNextEtag();
@@ -668,16 +692,14 @@ namespace Raven.Server.Documents.Revisions
             }
         }
 
-        private void Delete(DocumentsOperationContext context, Slice lowerId, Slice idSlice, string id, CollectionName collectionName,
+        private unsafe void Delete(DocumentsOperationContext context, Slice lowerId, Slice idSlice, string id, CollectionName collectionName,
             BlittableJsonReaderObject deleteRevisionDocument, string changeVector,
             long lastModifiedTicks, NonPersistentDocumentFlags nonPersistentFlags, DocumentFlags flags)
         {
             Debug.Assert(changeVector != null, "Change vector must be set");
 
-            if (flags.Contain(DocumentFlags.HasAttachments))
-            {
-                flags &= ~DocumentFlags.HasAttachments;
-            }
+            flags.Strip(DocumentFlags.HasAttachments);
+            flags |= DocumentFlags.HasRevisions;
 
             var fromReplication = nonPersistentFlags.Contain(NonPersistentDocumentFlags.FromReplication);
 
@@ -761,13 +783,13 @@ namespace Raven.Server.Documents.Revisions
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        private ByteStringContext.InternalScope GetKeyPrefix(DocumentsOperationContext context, Slice lowerId, out Slice prefixSlice)
+        private unsafe ByteStringContext.InternalScope GetKeyPrefix(DocumentsOperationContext context, Slice lowerId, out Slice prefixSlice)
         {
             return GetKeyPrefix(context, lowerId.Content.Ptr, lowerId.Size, out prefixSlice);
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        private static ByteStringContext.InternalScope GetKeyPrefix(DocumentsOperationContext context, byte* lowerId, int lowerIdSize, out Slice prefixSlice)
+        private static unsafe ByteStringContext.InternalScope GetKeyPrefix(DocumentsOperationContext context, byte* lowerId, int lowerIdSize, out Slice prefixSlice)
         {
             var scope = context.Allocator.Allocate(lowerIdSize + 1, out ByteString keyMem);
 
@@ -784,7 +806,7 @@ namespace Raven.Server.Documents.Revisions
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        private static ByteStringContext<ByteStringMemoryCache>.InternalScope GetKeyWithEtag(DocumentsOperationContext context, Slice lowerId, long etag, out Slice prefixSlice)
+        private static unsafe ByteStringContext<ByteStringMemoryCache>.InternalScope GetKeyWithEtag(DocumentsOperationContext context, Slice lowerId, long etag, out Slice prefixSlice)
         {
             var scope = context.Allocator.Allocate(lowerId.Size + 1 + sizeof(long), out ByteString keyMem);
 
@@ -799,7 +821,7 @@ namespace Raven.Server.Documents.Revisions
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        private static ByteStringContext.InternalScope GetEtagAsSlice(DocumentsOperationContext context, long etag, out Slice slice)
+        private static unsafe ByteStringContext.InternalScope GetEtagAsSlice(DocumentsOperationContext context, long etag, out Slice slice)
         {
             var scope = context.Allocator.Allocate(sizeof(long), out var keyMem);
             var swapped = Bits.SwapBytes(etag);
@@ -827,18 +849,276 @@ namespace Raven.Server.Documents.Revisions
                 var table = new Table(RevisionsSchema, context.Transaction.InnerTransaction);
                 foreach (var tvr in table.SeekBackwardFrom(RevisionsSchema.Indexes[IdAndEtagSlice], prefixSlice, lastKey, 0))
                 {
-                    var document = TableValueToRevision(context, ref tvr.Result.Reader);
-                    if (document.LastModified > max)
+                    var lastModified = TableValueToDateTime((int)RevisionsTable.LastModified, ref tvr.Result.Reader);
+                    if (lastModified > max)
                         continue;
+
                     if (result == null ||
-                        result.LastModified < document.LastModified)
+                        result.LastModified < lastModified)
                     {
-                        result = document;
+                        result = TableValueToRevision(context, ref tvr.Result.Reader);
                     }
                 }
                 return result;
             }
+        }
 
+        private Document GetRevisionBefore(DocumentsOperationContext context,
+            RevertParameters parameters,
+            string id,
+            RevertResult progressResult)
+        {
+            var foundAfter = false;
+
+            using (DocumentIdWorker.GetSliceFromId(context, id, out Slice lowerId))
+            using (GetKeyPrefix(context, lowerId, out Slice prefixSlice))
+            using (GetLastKey(context, lowerId, out Slice lastKey))
+            {
+                // Here we assume a reasonable number of revisions and scan the entire history
+                // This is because we want to handle out of order revisions from multiple nodes so the local etag
+                // order is different than the last modified order
+                Document result = null;
+                Document prev = null;
+
+                var table = new Table(RevisionsSchema, context.Transaction.InnerTransaction);
+                foreach (var tvr in table.SeekBackwardFrom(RevisionsSchema.Indexes[IdAndEtagSlice], prefixSlice, lastKey, 0))
+                {
+                    var etag = TableValueToEtag((int)RevisionsTable.Etag, ref tvr.Result.Reader);
+                    if (etag > parameters.EtagBarrier)
+                    {
+                        progressResult.Progress.Warn(id, "This document wouldn't be reverted, because it changed after the revert progress started.");
+                        return null;
+                    }
+
+                    var lastModified = TableValueToDateTime((int)RevisionsTable.LastModified, ref tvr.Result.Reader);
+                    if (lastModified > parameters.Before)
+                    {
+                        foundAfter = true;
+                        continue;
+                    }
+
+                    if (lastModified < parameters.MinimalDate)
+                    {
+                        // this is a very old revision, and we should stop here
+                        break;
+                    }
+
+                    if (result == null)
+                    {
+                        result = TableValueToRevision(context, ref tvr.Result.Reader);
+                        prev = result;
+                        continue;
+                    }
+
+                    if (result.LastModified < lastModified)
+                    {
+                        prev = result;
+                        result = TableValueToRevision(context, ref tvr.Result.Reader);
+                        continue;
+                    }
+
+                    if (prev.LastModified < lastModified)
+                    {
+                        prev = TableValueToRevision(context, ref tvr.Result.Reader);
+                    }
+                }
+
+                if (prev != result)
+                {
+                    // put at 8:50
+                    // conflict at 9:10
+                    // resolved at 9:30
+
+                    // revert to 9:00 should work
+                    // revert to 9:20 should fail
+
+                    if (prev.Flags.Contain(DocumentFlags.Conflicted) && result.Flags.Contain(DocumentFlags.Conflicted))
+                    {
+                        // found two successive conflicted revisions, which means we were in a conflicted state.
+                        progressResult.Progress.Warn(id, $"Skip revert, since the document was conflicted during '{parameters.Before}'.");
+                        return null;
+                    }
+                }
+
+                if (foundAfter == false)
+                    return null; // nothing do to, no changes were found
+
+                if (result == null)
+                {
+                    progressResult.Progress.Warn(id, $"The oldest revision is after the '{parameters.Before}'.");
+                }
+
+                return result;
+            }
+        }
+
+        private const long SizeLimit = 32 * 1_024 * 1_024;
+
+        private class RevertParameters
+        {
+            public DateTime Before;
+            public DateTime MinimalDate;
+            public long EtagBarrier;
+            public long LastScannedEtag;
+            public readonly HashSet<string> ScannedIds = new HashSet<string>();
+        }
+
+        public async Task<IOperationResult> RevertRevisions(DateTime before, TimeSpan window, Action<IOperationProgress> onProgressAction = null)
+        {
+            var list = new List<Document>();
+            var result = new RevertResult();
+
+            var parameters = new RevertParameters
+            {
+                Before = before,
+                MinimalDate = before.Add(-window), // since the documents/revisions are not sorted by date, stop searching if we reached this date.
+                EtagBarrier = _documentsStorage.GenerateNextEtag() // every change after this etag, will _not_ be reverted.
+            };
+            parameters.LastScannedEtag = parameters.EtagBarrier;
+
+            var hasMore = true;
+            while (hasMore)
+            {
+                using (_database.DocumentsStorage.ContextPool.AllocateOperationContext(out DocumentsOperationContext writeCtx))
+                {
+                    hasMore = PrepareRevertedRevisions(writeCtx, parameters, result, list);
+                    await WriteRevertedRevisions(list);
+                    onProgressAction?.Invoke(result.Progress);
+                    result.Progress.Warnings.Clear();
+                }
+            }
+
+            return result;
+        }
+
+        private async Task WriteRevertedRevisions(List<Document> list)
+        {
+            if (list.Count == 0)
+                return;
+
+            await _database.TxMerger.Enqueue(new RevertDocumentsCommand(list));
+
+            list.Clear();
+        }
+
+        private bool PrepareRevertedRevisions(DocumentsOperationContext writeCtx, RevertParameters parameters, RevertResult result, List<Document> list)
+        {
+            using (_database.DocumentsStorage.ContextPool.AllocateOperationContext(out DocumentsOperationContext readCtx))
+            using (readCtx.OpenReadTransaction())
+            {
+                var revisions = new Table(RevisionsSchema, readCtx.Transaction.InnerTransaction);
+                foreach (var tvr in revisions.SeekBackwardFrom(RevisionsSchema.FixedSizeIndexes[AllRevisionsEtagsSlice],
+                    parameters.LastScannedEtag))
+                {
+                    result.Progress.ScannedRevisions++;
+
+                    var id = TableValueToString(readCtx, (int)RevisionsTable.LowerId, ref tvr.Reader);
+                    var etag = TableValueToEtag((int)RevisionsTable.Etag, ref tvr.Reader);
+                    parameters.LastScannedEtag = etag;
+
+                    if (parameters.ScannedIds.Add(id) == false)
+                        continue;
+
+                    result.Progress.ScannedDocuments++;
+
+                    if (etag > parameters.EtagBarrier)
+                    {
+                        result.Progress.Warn(id, "This document wouldn't be reverted, because it changed after the revert progress started.");
+                        continue;
+                    }
+
+                    if (_documentsStorage.ConflictsStorage.HasConflictsFor(readCtx, id))
+                    {
+                        result.Progress.Warn(id, "The document is conflicted and wouldn't be reverted.");
+                        continue;
+                    } 
+
+                    var date = TableValueToDateTime((int)RevisionsTable.LastModified, ref tvr.Reader);
+                    if (date < parameters.MinimalDate)
+                        break;
+
+                    RestoreRevision(readCtx, writeCtx, parameters, id, result, list);
+                    if (readCtx.AllocatedMemory + writeCtx.AllocatedMemory > SizeLimit)
+                    {
+                        return true;
+                    }
+                }
+
+                return false;
+            }
+        }
+
+        private void RestoreRevision(DocumentsOperationContext readCtx,
+            DocumentsOperationContext writeCtx,
+            RevertParameters parameters,
+            LazyStringValue id,
+            RevertResult result,
+            List<Document> list)
+        {
+            var revision = GetRevisionBefore(readCtx, parameters, id, result);
+            if (revision == null)
+                return;
+         
+            result.Progress.RevertedDocuments++;
+
+            revision.Data = revision.Flags.Contain(DocumentFlags.DeleteRevision) ? null : revision.Data?.Clone(writeCtx);
+            revision.LowerId = writeCtx.GetLazyString(revision.LowerId);
+            revision.Id = writeCtx.GetLazyString(revision.Id);
+
+            list.Add(revision);
+        }
+
+        internal class RevertDocumentsCommand : TransactionOperationsMerger.MergedTransactionCommand
+        {
+            private readonly List<Document> _list;
+
+            public RevertDocumentsCommand(List<Document> list)
+            {
+                _list = list;
+            }
+
+            protected override int ExecuteCmd(DocumentsOperationContext context)
+            {
+                var documentsStorage = context.DocumentDatabase.DocumentsStorage;
+                foreach (var document in _list)
+                {
+                    if (document.Data != null)
+                    {
+                        documentsStorage.Put(context, document.Id, null, document.Data, flags: DocumentFlags.Reverted);
+                    }
+                    else
+                    {
+                        using (DocumentIdWorker.GetSliceFromId(context, document.Id, out Slice lowerId))
+                        {
+                            var etag = documentsStorage.GenerateNextEtag();
+                            var changeVector = documentsStorage.ConflictsStorage.GetMergedConflictChangeVectorsAndDeleteConflicts(context, lowerId, etag);
+                            documentsStorage.Delete(context, lowerId, document.Id, null, changeVector: changeVector, documentFlags: DocumentFlags.Reverted);
+                        }
+                    }
+                }
+
+                return _list.Count;
+            }
+
+            public override TransactionOperationsMerger.IReplayableCommandDto<TransactionOperationsMerger.MergedTransactionCommand> ToDto(JsonOperationContext context)
+            {
+                return new RevertDocumentsCommandDto(_list);
+            }
+        }
+
+        internal class RevertDocumentsCommandDto : TransactionOperationsMerger.IReplayableCommandDto<RevertDocumentsCommand>
+        {
+            public readonly List<Document> List;
+
+            public RevertDocumentsCommandDto(List<Document> list)
+            {
+                List = list;
+            }
+
+            public RevertDocumentsCommand ToCommand(DocumentsOperationContext context, DocumentDatabase database)
+            {
+                return new RevertDocumentsCommand(List);
+            }
         }
 
         public (Document[] Revisions, long Count) GetRevisions(DocumentsOperationContext context, string id, int start, int take)
@@ -975,7 +1255,7 @@ namespace Raven.Server.Documents.Revisions
             }
         }
 
-        private static Document TableValueToRevision(JsonOperationContext context, ref TableValueReader tvr)
+        private static unsafe Document TableValueToRevision(JsonOperationContext context, ref TableValueReader tvr)
         {
             var result = new Document
             {
@@ -995,7 +1275,7 @@ namespace Raven.Server.Documents.Revisions
             return result;
         }
 
-        public static Document ParseRawDataSectionRevisionWithValidation(JsonOperationContext context, ref TableValueReader tvr, int expectedSize, out long etag)
+        public static unsafe Document ParseRawDataSectionRevisionWithValidation(JsonOperationContext context, ref TableValueReader tvr, int expectedSize, out long etag)
         {
             var ptr = tvr.Read((int)RevisionsTable.Document, out var size);
             if (size > expectedSize || size <= 0)
@@ -1021,7 +1301,7 @@ namespace Raven.Server.Documents.Revisions
         }
 
 
-        private ByteStringContext.ExternalScope GetResolvedSlice(DocumentsOperationContext context, DateTime date, out Slice slice)
+        private unsafe ByteStringContext.ExternalScope GetResolvedSlice(DocumentsOperationContext context, DateTime date, out Slice slice)
         {
             var size = sizeof(int) + sizeof(long);
             var mem = context.GetMemory(size);

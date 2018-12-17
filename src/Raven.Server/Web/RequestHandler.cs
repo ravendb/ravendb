@@ -356,9 +356,9 @@ namespace Raven.Server.Web
             throw new ArgumentException($"Could not parse query string '{name}' as bool, val {val}");
         }
 
-        protected DateTime? GetDateTimeQueryString(string name)
+        protected DateTime? GetDateTimeQueryString(string name, bool required = true)
         {
-            var dataAsString = GetStringQueryString(name, required: false);
+            var dataAsString = GetStringQueryString(name, required);
             if (dataAsString == null)
                 return null;
 

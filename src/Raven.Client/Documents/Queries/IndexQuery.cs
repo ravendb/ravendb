@@ -5,6 +5,7 @@
 //-----------------------------------------------------------------------
 
 using System;
+using System.Diagnostics;
 using Raven.Client.Documents.Queries.Timings;
 using Sparrow.Json;
 
@@ -150,6 +151,10 @@ namespace Raven.Client.Documents.Queries
         public bool WaitForNonStaleResults { get; set; }
 
         public TimeSpan? WaitForNonStaleResultsTimeout { get; set; }
+
+        public (long? DocEtag, long? RefEtag)? CutoffEtag { get; set; }
+
+        public Stopwatch QueryDuration { get; set; }
 
         public override string ToString()
         {

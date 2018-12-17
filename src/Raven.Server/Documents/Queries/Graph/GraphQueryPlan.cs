@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.Linq;
 using System.Threading.Tasks;
 using Microsoft.Extensions.Primitives;
@@ -57,9 +58,9 @@ namespace Raven.Server.Documents.Queries.Graph
             }
         }
 
-        public async Task Initialize()
+        public async Task Initialize(long? cutoffEtag, Stopwatch queryDuration, TimeSpan? queryWaitDuration)
         {
-            await _rootQueryStep.Initialize();
+            await _rootQueryStep.Initialize(cutoffEtag, queryDuration, queryWaitDuration);
         }
 
         private IGraphQueryStep BuildQueryPlanForBinaryExpression(BinaryExpression be)

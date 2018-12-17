@@ -49,7 +49,6 @@ namespace Raven.Server.Documents.PeriodicBackup
         private readonly PathSetting _tempBackupPath;
         private readonly Logger _logger;
         private readonly CancellationToken _databaseShutdownCancellationToken;
-
         public readonly OperationCancelToken TaskCancelToken;
         private readonly BackupResult _backupResult;
 
@@ -488,11 +487,12 @@ namespace Raven.Server.Documents.PeriodicBackup
             // the last etag is already included in the last backup
             startDocumentEtag = startDocumentEtag == null ? 0 : ++startDocumentEtag;
 
-            using (var file = File.Open(backupFilePath, FileMode.CreateNew))
+            using (Stream fileStream = File.Open(backupFilePath, FileMode.CreateNew))
+            using (var outputStream = GetOutputStream(fileStream))
             using (_database.DocumentsStorage.ContextPool.AllocateOperationContext(out DocumentsOperationContext context))
             {
                 var smugglerSource = new DatabaseSource(_database, startDocumentEtag.Value);
-                var smugglerDestination = new StreamDestination(file, context, smugglerSource);
+                var smugglerDestination = new StreamDestination(outputStream, context, smugglerSource);
                 var smuggler = new DatabaseSmuggler(_database,
                     smugglerSource,
                     smugglerDestination,
@@ -503,10 +503,29 @@ namespace Raven.Server.Documents.PeriodicBackup
                     token: TaskCancelToken.Token);
 
                 smuggler.Execute();
-                file.Flush(flushToDisk: true);
+
+                switch (outputStream)
+                {
+                    case EncryptingXChaCha20Poly1305Stream encryptedStream:
+                        encryptedStream.Flush(flushToDisk: true);
+                        break;
+                    case FileStream file:
+                        file.Flush(flushToDisk: true);
+                        break;
+                }
 
                 return smugglerSource.LastEtag;
             }
+        }
+
+        private Stream GetOutputStream(Stream fileStream)
+        {
+            if (_configuration.EncryptionSettings == null)
+                return fileStream;
+
+            var key = _configuration.EncryptionSettings.Key;
+            return new EncryptingXChaCha20Poly1305Stream(fileStream,
+                Convert.FromBase64String(key), _configuration);
         }
 
         private async Task UploadToServer(string backupPath, string folderName, string fileName, Action<IOperationProgress> onProgress)

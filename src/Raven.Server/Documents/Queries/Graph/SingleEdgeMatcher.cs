@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using Microsoft.Extensions.Primitives;
+using Raven.Client.Exceptions;
 using Raven.Server.Documents.Queries.AST;
 using Raven.Server.Json;
 using Raven.Server.Utils;
@@ -43,6 +44,11 @@ namespace Raven.Server.Documents.Queries.Graph
                 if (BlittableJsonTraverser.Default.TryRead(leftDoc, Edge.Path.FieldValue, out var value, out _) == false)
                     return;
 
+                if (Edge.Project == null)
+                {
+                    ThrowMissingEdgeProjection();
+                }
+
                 switch (value)
                 {
                     case BlittableJsonReaderArray array:
@@ -51,14 +57,14 @@ namespace Raven.Server.Documents.Queries.Graph
                             if (item is BlittableJsonReaderObject json &&
                                 Edge.Where?.IsMatchedBy(json, QueryParameters) != false)
                             {
-                                AddEdgeAfterFiltering(left, json, Edge.Project.FieldValue);
+                                AddEdgeAfterFiltering(left, json, Edge.Project?.FieldValue);
                             }
                         }
                         break;
                     case BlittableJsonReaderObject json:
                         if (Edge.Where?.IsMatchedBy(json, QueryParameters) != false)
                         {
-                            AddEdgeAfterFiltering(left, json, Edge.Project.FieldValue);
+                            AddEdgeAfterFiltering(left, json, Edge.Project?.FieldValue);
                         }
                         break;
                 }
@@ -67,6 +73,11 @@ namespace Raven.Server.Documents.Queries.Graph
             {
                 AddEdgeAfterFiltering(left, leftDoc, Edge.Path.FieldValue);
             }
+        }
+
+        private void ThrowMissingEdgeProjection()
+        {
+            throw new InvalidQueryException("An expression that selects an edge must have a projection with exactly one field.", Edge.ToString());
         }
 
 

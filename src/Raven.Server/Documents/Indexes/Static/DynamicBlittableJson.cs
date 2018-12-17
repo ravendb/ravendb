@@ -199,9 +199,54 @@ namespace Raven.Server.Documents.Indexes.Static
             return new DynamicArray(Enumerable.Select(this, func));
         }
 
+        public IEnumerable<object> Where(Func<object, bool> predicate)
+        {
+            return new DynamicArray(Enumerable.Where(this, predicate));
+        }
+
         public IEnumerable<object> OrderBy(Func<object, object> func)
         {
             return new DynamicArray(Enumerable.OrderBy(this, func));
+        }
+
+        public IEnumerable<object> OrderByDescending(Func<object, object> func)
+        {
+            return new DynamicArray(Enumerable.OrderByDescending(this, func));
+        }
+
+        public IEnumerable<object> Take(int count)
+        {
+            return new DynamicArray(Enumerable.Take(this, count));
+        }
+
+        public IEnumerable<object> Skip(int count)
+        {
+            return new DynamicArray(Enumerable.Skip(this, count));
+        }
+
+        public IEnumerable<object> Reverse()
+        {
+            return new DynamicArray(Enumerable.Reverse(this));
+        }
+
+        public dynamic DefaultIfEmpty(object defaultValue = null)
+        {
+            return Enumerable.DefaultIfEmpty(this, defaultValue ?? DynamicNullObject.Null);
+        }
+
+        public dynamic GroupBy(Func<dynamic, dynamic> keySelector)
+        {
+            return new DynamicArray(Enumerable.GroupBy(this, keySelector).Select(x => new DynamicArray.DynamicGrouping(x)));
+        }
+
+        public dynamic GroupBy(Func<dynamic, dynamic> keySelector, Func<dynamic, dynamic> selector)
+        {
+            return new DynamicArray(Enumerable.GroupBy(this, keySelector, selector).Select(x => new DynamicArray.DynamicGrouping(x)));
+        }
+
+        public IEnumerable<object> OfType<T>()
+        {
+            return new DynamicArray(Enumerable.OfType<T>(this));
         }
 
         public override string ToString()

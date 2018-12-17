@@ -38,6 +38,7 @@ namespace Raven.Server.Documents.Handlers
             private readonly DocumentDatabase _database;
             private readonly bool _replyWithAllNodesValues;
             private readonly bool _fromEtl;
+            private readonly bool _fromSmuggler;
             private readonly Dictionary<string, List<CounterOperation>> _dictionary;
 
             public ExecuteCounterBatchCommand(DocumentDatabase database, CounterBatch counterBatch)
@@ -79,6 +80,7 @@ namespace Raven.Server.Documents.Handlers
             // used only from smuggler import
             public ExecuteCounterBatchCommand(DocumentDatabase database)
             {
+                _fromSmuggler = true;
                 _database = database;
                 _dictionary = new Dictionary<string, List<CounterOperation>>();
             }
@@ -181,7 +183,11 @@ namespace Raven.Server.Documents.Handlers
 
                     if (doc != null)
                     {
-                        _database.DocumentsStorage.CountersStorage.UpdateDocumentCounters(context, doc.Data, docId, countersToAdd, countersToRemove);
+                        var nonPersistentFlags = NonPersistentDocumentFlags.ByCountersUpdate;
+                        if (_fromSmuggler)
+                            nonPersistentFlags |= NonPersistentDocumentFlags.FromSmuggler;
+
+                        _database.DocumentsStorage.CountersStorage.UpdateDocumentCounters(context, doc, docId, countersToAdd, countersToRemove, nonPersistentFlags);
                         doc.Data?.Dispose(); // we cloned the data, so we can dispose it.
                     }
 

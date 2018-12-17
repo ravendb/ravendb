@@ -201,6 +201,8 @@ namespace Raven.Server.Documents
                     return jsonSerializer.Deserialize<MergedUpdateDatabaseChangeVectorCommandDto>(reader);
                 case nameof(AdminRevisionsHandler.DeleteRevisionsCommand):
                     return jsonSerializer.Deserialize<DeleteRevisionsCommandDto>(reader);
+                case nameof(RevisionsStorage.RevertDocumentsCommand):
+                    return jsonSerializer.Deserialize<RevisionsStorage.RevertDocumentsCommandDto>(reader);
                 case nameof(RevisionsOperations.DeleteRevisionsBeforeCommand):
                     throw new ReplayTransactionsException(
                         "Because this command is deleting according to revisions' date & the revisions that created by replaying have different date an in place decision needed to be made",

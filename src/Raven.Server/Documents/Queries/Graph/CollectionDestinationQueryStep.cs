@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.Threading.Tasks;
 using Microsoft.Extensions.Primitives;
 using Raven.Client;
@@ -69,7 +70,7 @@ namespace Raven.Server.Documents.Queries.Graph
             return _alias.Value;
         }
 
-        public ValueTask Initialize()
+        public ValueTask Initialize(long? cutoffEtag, Stopwatch queryDuration, TimeSpan? queryWaitDuration)
         {
             return default;
         }

@@ -79,9 +79,6 @@ namespace Raven.Server.Documents.ETL.Providers.Raven
             if (loadedToDifferentCollection || metadata.HasProperty(Constants.Documents.Metadata.Collection) == false)
                 metadata.Put(Constants.Documents.Metadata.Collection, collectionName, throwOnError: true);
 
-            if (metadata.HasProperty(Constants.Documents.Metadata.Id) == false)
-                metadata.Put(Constants.Documents.Metadata.Id, id, throwOnError: true);
-
             if (metadata.HasProperty(Constants.Documents.Metadata.Attachments))
                 metadata.Delete(Constants.Documents.Metadata.Attachments, throwOnError: true);
 

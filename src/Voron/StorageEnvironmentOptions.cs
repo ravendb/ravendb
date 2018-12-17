@@ -230,6 +230,7 @@ namespace Voron
 
             PrefetchSegmentSize = 4 * Constants.Size.Megabyte;
             PrefetchResetThreshold = 8 * (long)Constants.Size.Gigabyte;
+            JournalsSizeThreshold = 1 * (long)Constants.Size.Gigabyte;
 
             ScratchSpaceUsage = new ScratchSpaceUsageMonitor();
         }
@@ -1161,7 +1162,7 @@ namespace Voron
 
         public long PrefetchSegmentSize { get; set; }
         public long PrefetchResetThreshold { get; set; }
-
+        public long JournalsSizeThreshold { get; set; }
         public byte[] MasterKey;
 
         public const Win32NativeFileAttributes SafeWin32OpenFlags = Win32NativeFileAttributes.Write_Through | Win32NativeFileAttributes.NoBuffering;

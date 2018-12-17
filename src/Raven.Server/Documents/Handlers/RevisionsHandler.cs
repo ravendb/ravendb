@@ -13,6 +13,7 @@ using Microsoft.Extensions.Primitives;
 using Raven.Client;
 using Raven.Client.Documents.Commands;
 using Raven.Client.Exceptions.Documents.Revisions;
+using Raven.Server.Documents.Revisions;
 using Raven.Server.Json;
 using Raven.Server.NotificationCenter.Notifications.Details;
 using Raven.Server.Routing;
@@ -79,6 +80,32 @@ namespace Raven.Server.Documents.Handlers
 
                 return Task.CompletedTask;
             }
+        }
+
+        [RavenAction("/databases/*/revisions/revert", "GET", AuthorizationStatus.ValidUser)]
+        public Task Revert()
+        {
+            var time = GetDateTimeQueryString("time");
+            var window = GetTimeSpanQueryString("window", required: false) ?? TimeSpan.FromHours(48);
+
+            var token = CreateOperationToken();
+            var operationId = ServerStore.Operations.GetNextOperationId();
+
+            var t = Database.Operations.AddOperation(
+                Database,
+                $"Revert database '{Database.Name}' to {time}.",
+                Operations.Operations.OperationType.DatabaseRevert,
+                onProgress => Task.Run(async () => await Database.DocumentsStorage.RevisionsStorage.RevertRevisions(time.Value, window, onProgress), token.Token),
+                operationId,
+                token: token);
+
+            using (ServerStore.ContextPool.AllocateOperationContext(out JsonOperationContext context))
+            using (var writer = new BlittableJsonTextWriter(context, ResponseBodyStream()))
+            {
+                writer.WriteOperationId(context, operationId);
+            }
+
+            return Task.CompletedTask;
         }
 
         private void GetRevisionByChangeVector(DocumentsOperationContext context, StringValues changeVectors, bool metadataOnly)
@@ -168,7 +195,7 @@ namespace Raven.Server.Documents.Handlers
             var sw = Stopwatch.StartNew();
 
             var id = GetQueryStringValueAndAssertIfSingleAndNotEmpty("id");
-            var before = GetDateTimeQueryString("before");
+            var before = GetDateTimeQueryString("before", required: false);
             var start = GetStart();
             var pageSize = GetPageSize();
 

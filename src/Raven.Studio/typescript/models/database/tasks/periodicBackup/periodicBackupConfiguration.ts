@@ -328,7 +328,8 @@ class periodicBackupConfiguration {
             GlacierSettings: this.glacierSettings().toDto(),
             AzureSettings: this.azureSettings().toDto(),
             FtpSettings: this.ftpSettings().toDto(),
-            MentorNode: this.manualChooseMentor() ? this.preferredMentor() : undefined
+            MentorNode: this.manualChooseMentor() ? this.preferredMentor() : undefined,
+            EncryptionSettings: null
         };
     }
 
@@ -345,7 +346,8 @@ class periodicBackupConfiguration {
             GlacierSettings: null,
             AzureSettings: null,
             FtpSettings: null,
-            MentorNode: null
+            MentorNode: null,
+            EncryptionSettings: null
         }, serverLimits);
     }
 }

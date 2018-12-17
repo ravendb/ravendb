@@ -137,5 +137,11 @@ namespace Raven.Server.Documents.Indexes.Static.Roslyn.Rewriters
 
             throw new InvalidOperationException(message);
         }
+
+        public void Reset()
+        {
+            Fields = null;
+            _isQueryExpression = new bool?();
+        }
     }
 }

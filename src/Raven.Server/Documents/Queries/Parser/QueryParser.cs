@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.Linq;
 using System.Text;
 using Esprima;
@@ -27,7 +28,6 @@ namespace Raven.Server.Documents.Queries.Parser
 
         public QueryScanner Scanner = new QueryScanner();
         private Dictionary<StringSegment, SynteticWithQuery> _synteticWithQueries;
-
         private struct SynteticWithQuery
         {
             public FieldExpression Path;
@@ -291,6 +291,14 @@ namespace Raven.Server.Documents.Queries.Parser
 
         public static readonly string[] EdgeOps = new[] { "<-", ">", "[", "-", "<", "(", "recursive" };
 
+        private readonly Dictionary<StringSegment, int> _duplicateImplicitAliasCount = new Dictionary<StringSegment, int>();
+
+        private static void EnsureKey(Dictionary<StringSegment, int> dict, StringSegment key)
+        {
+            if(!dict.TryGetValue(key,out _))
+                dict.Add(key,0);
+        }
+
         private bool GraphAlias(GraphQuery gq,bool isEdge, StringSegment implicitPrefix, out StringSegment alias)
         {
             // Orders as o where id() 'orders/1-A'
@@ -313,26 +321,19 @@ namespace Raven.Server.Documents.Queries.Parser
                 alias = default;
                 return false;
             }
-            else 
+
+            if (Scanner.TryPeek(')'))
             {
-                if (Scanner.TryPeek(')'))
-                {
-                    alias = implicitPrefix.Length == 0 ? collection.FieldValue :
-                        implicitPrefix + "_" + collection.FieldValue;
+                alias = GenerateAlias(implicitPrefix, collection);
 
-                    if (gq.HasAlias(alias))
-                        return true;
-
-                    if (_synteticWithQueries?.TryGetValue(collection.FieldValue, out prev) == true)
-                    {
-                        if(prev.ImplicitAlias)
-                            ThrowRedefineSameAnonymousAlias(collection.FieldValue, start);
-                        return true;
-                    }
-
-                    AddWithQuery(collection, null, alias, null, isEdge, start, true);
+                if (gq.HasAlias(alias))
                     return true;
-                }
+
+                if (_synteticWithQueries?.TryGetValue(collection.FieldValue, out prev) == true && !prev.IsEdge)
+                    return true;
+
+                AddWithQuery(collection, null, alias, null, isEdge, start, true);
+                return true;
             }
 
             if (collection.FieldValue == "_") // (_ as e) anonymous alias
@@ -348,8 +349,7 @@ namespace Raven.Server.Documents.Queries.Parser
                 }
                 else
                 {
-                    alias = implicitPrefix.Length == 0 ? collection.FieldValue :
-                         implicitPrefix + "_" + collection.FieldValue;
+                    alias = GenerateAlias(implicitPrefix, collection);
                 }
             }
             else if(maybeAlias.Value == "_")
@@ -383,13 +383,27 @@ namespace Raven.Server.Documents.Queries.Parser
 
             if (gq.HasAlias(alias))
                 return true;
-
-            if (_synteticWithQueries?.TryGetValue(alias, out prev) == true && prev.ImplicitAlias)
-                ThrowRedefineSameAnonymousAlias(collection.FieldValue, start);
-
+        
             AddWithQuery(collection, project, alias, filter, isEdge, start, maybeAlias == null);
 
             return true;
+        }
+
+        private StringSegment GenerateAlias(StringSegment implicitPrefix, FieldExpression collection)
+        {
+            StringSegment alias;
+            if (implicitPrefix.Length > 0)
+            {
+                EnsureKey(_duplicateImplicitAliasCount, implicitPrefix);
+                var duplicateCount = ++_duplicateImplicitAliasCount[implicitPrefix];
+                alias = implicitPrefix + "_" + collection.FieldValue + (duplicateCount >= 2 ? "_" + duplicateCount : string.Empty);
+            }
+            else
+            {
+                alias = collection.FieldValue;
+            }
+
+            return alias;
         }
 
         private void AddWithQuery(FieldExpression path, FieldExpression project, StringSegment alias, QueryExpression filter, bool isEdge, int start, bool implicitAlias)

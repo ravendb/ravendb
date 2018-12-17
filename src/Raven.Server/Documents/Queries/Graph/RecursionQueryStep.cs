@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.Linq;
 using System.Threading.Tasks;
 using Microsoft.Extensions.Primitives;
@@ -22,6 +23,7 @@ namespace Raven.Server.Documents.Queries.Graph
         private readonly List<Match> _results = new List<Match>();
         private List<Match> _temp = new List<Match>();
         private readonly HashSet<string> _allLliases = new HashSet<string>();
+        
         private readonly HashSet<long> _visited = new HashSet<long>();
         private readonly Stack<RecursionState> _path = new Stack<RecursionState>();
         public int _index = -1;
@@ -150,23 +152,23 @@ namespace Raven.Server.Documents.Queries.Graph
             return _outputAlias;
         }
 
-        public ValueTask Initialize()
+        public ValueTask Initialize(long? cutoffEtag, Stopwatch queryDuration, TimeSpan? queryWaitDuration)
         {
             if (_index != -1)
                 return default;
 
             _index = 0;
 
-            var leftTask = _left.Initialize();
+            var leftTask = _left.Initialize(cutoffEtag, queryDuration, queryWaitDuration);
             if (leftTask.IsCompleted == false)
             {
-                return new ValueTask(CompleteLeftInitializationAsync(leftTask));
+                return new ValueTask(CompleteLeftInitializationAsync(leftTask, cutoffEtag, queryDuration, queryWaitDuration));
             }
 
-            return CompleteInitializationAfterLeft(0);
+            return CompleteInitializationAfterLeft(0, cutoffEtag, queryDuration, queryWaitDuration);
         }
 
-        private ValueTask CompleteInitializationAfterLeft(int position)
+        private ValueTask CompleteInitializationAfterLeft(int position, long? cutoffEtag, Stopwatch queryDuration, TimeSpan? queryWaitDuration)
         {
             for (var i = position; i < _steps.Count; i++)
             {
@@ -174,15 +176,15 @@ namespace Raven.Server.Documents.Queries.Graph
                 if (item.Right == null)
                     continue;
 
-                var stepTask = item.Right.Initialize();
+                var stepTask = item.Right.Initialize(cutoffEtag, queryDuration, queryWaitDuration);
                 if (stepTask.IsCompleted == false)
                 {
-                    return new ValueTask(CompleteInitializationForStepAsync(position, stepTask));
+                    return new ValueTask(CompleteInitializationForStepAsync(position, stepTask, cutoffEtag, queryDuration, queryWaitDuration));
                 }
             }
             if(_next != null)
             {
-                var nextTask = _next.Initialize();
+                var nextTask = _next.Initialize(cutoffEtag, queryDuration, queryWaitDuration);
                 if(nextTask.IsCompleted == false)
                 {
                     return CompleteNextStepTaskAsync(nextTask);
@@ -243,10 +245,10 @@ namespace Raven.Server.Documents.Queries.Graph
                 return true;
             }
 
-            public ValueTask Initialize()
+            public ValueTask Initialize(long? cutoffEtag, Stopwatch queryDuration, TimeSpan? queryWaitDuration)
             {
                 _parent._skipMaterialization = true;
-                var task = _parent.Initialize();
+                var task = _parent.Initialize(cutoffEtag, queryDuration, queryWaitDuration);
                 if (task.IsCompleted)
                 {
                     _parent._skipMaterialization = false;
@@ -277,16 +279,16 @@ namespace Raven.Server.Documents.Queries.Graph
             }
         }
 
-        private async Task CompleteInitializationForStepAsync(int position, ValueTask stepTask)
+        private async Task CompleteInitializationForStepAsync(int position, ValueTask stepTask, long? cutoffEtag, Stopwatch queryDuration, TimeSpan? queryWaitDuration)
         {
             await stepTask;
-            await CompleteInitializationAfterLeft(position + 1);
+            await CompleteInitializationAfterLeft(position + 1, cutoffEtag, queryDuration, queryWaitDuration);
         }
 
-        private async Task CompleteLeftInitializationAsync(ValueTask leftTask)
+        private async Task CompleteLeftInitializationAsync(ValueTask leftTask, long? cutoffEtag, Stopwatch queryDuration, TimeSpan? queryWaitDuration)
         {
             await leftTask;
-            await CompleteInitializationAfterLeft(0);
+            await CompleteInitializationAfterLeft(0, cutoffEtag, queryDuration, queryWaitDuration);
         }
 
         private void ProcessSingleResultRecursive(Match currentMatch, List<Match> matches)
@@ -304,29 +306,42 @@ namespace Raven.Server.Documents.Queries.Graph
             _path.Push(new RecursionState { Src = startingPoint.Data, Match = currentMatch });
 
             int aliasBaseIndex = 0;
-
             Document cur = startingPoint;
+
+            //this function is needed for "documentation" purposes
+            bool AddMatchToResultsAndCheckIfNeedToStop(Document current)
+            {
+                if (AddMatchToResults(current))
+                    return true;
+
+                _path.Pop();
+                return false;
+            }
+
             while (true)
             {
                 // the first item is always the root
                 if (_path.Count - 1 == _options.Max)
                 {
-                    if (AddMatch(cur))
+                    if (AddMatchToResultsAndCheckIfNeedToStop(cur))
                         return;
-                    _path.Pop();
                 }
                 else
                 {
-                    if (ProcessSingleResult(currentMatch, aliasBaseIndex, out var currentMatches) == false)
+                    //get relevant nodes to continue traversal over them
+                    //so if 'dogs/1' likes 'dogs/2' and 'dogs/1' likes 'dogs/3', _currentMatches_ will contain 'dogs/2' and 'dogs/3'
+                    if (TryGetNextNodesForTraversal(currentMatch, aliasBaseIndex, out var currentMatches) == false)
                     {
-                        if (AddMatch(cur))
-                        {
+                        //if we don't have any nodes to continue traversal, and we have "lazy" recursive strategy stop
+                        //recursive traversal because we found at least one matching path and it is enough.
+                        //(AddMatch returns 'true' if we have "lazy" strategy selected)
+                        //otherwise, just start back-tracking so we can add to results all permutations of a path - that is what _path.Pop() is doing
+                        if (AddMatchToResultsAndCheckIfNeedToStop(cur))
                             return;
-                        }
-                        _path.Pop();
                     }
                     else
                     {
+                        //store next traversal nodes in the last node of the path
                         _path.Peek().Matches = currentMatches;
                     }
                 }
@@ -340,13 +355,15 @@ namespace Raven.Server.Documents.Queries.Graph
                         return;
 
                     if (_options.Type == RecursiveMatchType.Lazy &&
-
-                        AddMatch(cur))
+                        AddMatchToResults(cur))
                     {
                         return;
                     }
 
                     var top = _path.Peek();
+
+                    //we have reached the end of traversal, so we backtrack.
+                    //this is needed if there are multiple possible paths that need to be traversed
                     if (top.Matches == null || top.Matches.Count == 0)
                     {
                         var current = top.Match.GetSingleDocumentResult(_outputAlias);
@@ -354,28 +371,44 @@ namespace Raven.Server.Documents.Queries.Graph
                         {
                             current = top.Match.GetSingleDocumentResult(_left.GetOutputAlias());
                         }
-                        if (current != null && AddMatch(current))
+                        if (current != null && AddMatchToResults(current))
                         {
                             return;
                         }
 
                         _path.Pop();
+
+                        //since we are backtracking, remove the node from the top of the path stack
                         _visited.Remove(top.Src.Location);
+
+                        //also, make sure to remove the last node in the iteration
+                        //if we don't do this, we will miss path permutation that includes the last node
+                        //this will happen IF and only IF there are multiple possible paths, since _visited values carry over
+                        //to next "branching" path traversal
+                        _visited.Remove(cur.Data.Location); 
                         continue;
                     }
+
+                    //currentMatch - next step in recursive traversal.
+                    //if we have "branching" path, start from last of them and remove it so we won't evaluate 
+                    //certain path twice
                     currentMatch = top.Matches[top.Matches.Count - 1];
                     cur = currentMatch.GetSingleDocumentResult(_outputAlias);
                     top.Matches.RemoveAt(top.Matches.Count - 1);
+                   
                     if (_visited.Add(cur.Data.Location) == false)
                     {
                         continue;
                     }
+
+                    //now, we add the currentMatch to "discovered" path and "jump" to resolution of the next step.
+                    //resolving next step of traversal is this line:  if (ProcessSingleResult(currentMatch, aliasBaseIndex, out var currentMatches) == false)
                     _path.Push(new RecursionState { Src = cur.Data, Match = currentMatch });
                     break;
                 }
             }
 
-            bool AddMatch(Document current)
+            bool AddMatchToResults(Document current)
             {
                 var top = _path.Peek();
                 if (top.AlreadyAdded)
@@ -449,7 +482,7 @@ namespace Raven.Server.Documents.Queries.Graph
         }
 
 
-        private bool ProcessSingleResult(Match match, int aliasBaseIndex, out List<Match> results)
+        private bool TryGetNextNodesForTraversal(Match match, int aliasBaseIndex, out List<Match> results)
         {
             _steps[0].Results.Clear();
             _steps[0].SingleMatch(match, _stepAliases[aliasBaseIndex]);

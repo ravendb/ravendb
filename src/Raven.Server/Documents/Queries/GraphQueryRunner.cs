@@ -102,7 +102,13 @@ namespace Raven.Server.Documents.Queries
             return await ExecuteQuery(res, query, documentsContext, existingResultEtag, token);
         }
 
-        private async Task<TResult> ExecuteQuery<TResult>(TResult final,IndexQueryServerSide query, DocumentsOperationContext documentsContext, long? existingResultEtag, OperationCancelToken token) where TResult : QueryResultServerSide
+        public override Task ExecuteStreamIndexEntriesQuery(IndexQueryServerSide query, DocumentsOperationContext documentsContext, HttpResponse response, IStreamQueryResultWriter<BlittableJsonReaderObject> writer,
+            OperationCancelToken token)
+        {
+            throw new NotImplementedException();
+        }
+
+        private async Task<TResult> ExecuteQuery<TResult>(TResult final,IndexQueryServerSide query, DocumentsOperationContext documentsContext, long? existingResultEtag, OperationCancelToken token) where TResult : QueryResultServerSide<Document>
         {
             if (Database.ServerStore.Configuration.Core.FeaturesAvailability == FeaturesAvailability.Stable)
                 FeaturesAvailabilityException.Throw("Graph Queries");
@@ -113,7 +119,8 @@ namespace Raven.Server.Documents.Queries
                 var q = query.Metadata.Query;
 
                 //TODO: handle order by, load,  clauses
-
+                var idc = new IncludeDocumentsCommand(Database.DocumentsStorage, documentsContext, query.Metadata.Includes);
+                
                 if (q.Select == null && q.SelectFunctionBody.FunctionText == null)
                 {
                     HandleResultsWithoutSelect(documentsContext, qr.Matches, final);
@@ -128,7 +135,8 @@ namespace Raven.Server.Documents.Queries
                         timingScope,
                         Database.DocumentsStorage,
                         documentsContext,
-                        fieldsToFetch, null);
+                        fieldsToFetch, 
+                        idc);
 
 
                     foreach (var match in qr.Matches)
@@ -143,15 +151,17 @@ namespace Raven.Server.Documents.Queries
 
                 }
 
-                if (query.Metadata.Includes?.Length > 0)
+                if (query.Metadata.Includes?.Length > 0 )
                 {
-                    var idc = new IncludeDocumentsCommand(Database.DocumentsStorage,documentsContext, query.Metadata.Includes);
+
                     foreach (var result in final.Results)
                     {
                         idc.Gather(result);
-                    }
-                    idc.Fill(final.Includes);
+                    }                    
                 }
+
+                idc.Fill(final.Includes);
+
                 final.TotalResults = final.Results.Count;
                 return final;
             }
@@ -177,7 +187,14 @@ namespace Raven.Server.Documents.Queries
             var qp = new GraphQueryPlan(query, documentsContext, existingResultEtag, token, Database);
             qp.BuildQueryPlan();
             qp.OptimizeQueryPlan(); //TODO: audit optimization
-            await qp.Initialize();            
+            long? cutoffEtag = null;
+            Stopwatch queryDuration = null;
+            if (query.WaitForNonStaleResults)
+            {
+                cutoffEtag = Database.ReadLastEtag();
+                queryDuration = Stopwatch.StartNew();
+            }
+            await qp.Initialize(cutoffEtag, queryDuration, query.WaitForNonStaleResultsTimeout);            
             var matchResults = qp.Execute();
 
             if (query.Metadata.OrderBy != null)
@@ -215,7 +232,7 @@ namespace Raven.Server.Documents.Queries
 
         private static void HandleResultsWithoutSelect<TResult>(
             DocumentsOperationContext documentsContext,
-            List<Match> matchResults, TResult final) where TResult : QueryResultServerSide
+            List<Match> matchResults, TResult final) where TResult : QueryResultServerSide<Document>
         {
             foreach (var match in matchResults)
             {
@@ -239,8 +256,8 @@ namespace Raven.Server.Documents.Queries
                 final.AddResult(result);
             }
         }
-
-        public override async Task ExecuteStreamQuery(IndexQueryServerSide query, DocumentsOperationContext documentsContext, HttpResponse response, IStreamDocumentQueryResultWriter writer, OperationCancelToken token)
+                
+        public override async Task ExecuteStreamQuery(IndexQueryServerSide query, DocumentsOperationContext documentsContext, HttpResponse response, IStreamQueryResultWriter<Document> writer, OperationCancelToken token)
         {
             var result = new StreamDocumentQueryResult(response, writer, token)
             {

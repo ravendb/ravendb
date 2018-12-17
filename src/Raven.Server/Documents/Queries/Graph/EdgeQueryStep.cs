@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.Text;
 using System.Threading.Tasks;
 using Microsoft.Extensions.Primitives;
@@ -69,12 +70,12 @@ namespace Raven.Server.Documents.Queries.Graph
             return new EdgeQueryStep(_left.Clone(), _right.Clone(), _edgesExpression, _edgePath, _queryParameters);
         }
 
-        public ValueTask Initialize()
+        public ValueTask Initialize(long? cutoffEtag, Stopwatch queryDuration, TimeSpan? queryWaitDuration)
         {
             if (_index != -1)
                 return default;
 
-            var leftTask = _left.Initialize();
+            var leftTask = _left.Initialize(cutoffEtag, queryDuration, queryWaitDuration);
             if (leftTask.IsCompleted)
             {
                 //At this point we know we are not going to yield results we can skip running right hand side
@@ -84,25 +85,25 @@ namespace Raven.Server.Documents.Queries.Graph
                     return default;
                 }
 
-                var rightTask = _right.Initialize();
+                var rightTask = _right.Initialize(cutoffEtag, queryDuration, queryWaitDuration);
                 if (rightTask.IsCompleted)
                 {
                     CompleteInitialization();
                     return default;
                 }
-                return new ValueTask(InitializeRightAsync(rightTask));
+                return new ValueTask(InitializeRightAsync(rightTask,cutoffEtag, queryDuration));
             }
 
-            return new ValueTask(InitializeLeftAsync(leftTask));
+            return new ValueTask(InitializeLeftAsync(leftTask, cutoffEtag, queryDuration, queryWaitDuration));
         }
 
-        private async Task InitializeRightAsync(ValueTask rightTask)
+        private async Task InitializeRightAsync(ValueTask rightTask,long? cutoffEtag, Stopwatch queryDuration)
         {
             await rightTask;
             CompleteInitialization();
         }
 
-        private async Task InitializeLeftAsync(ValueTask leftTask)
+        private async Task InitializeLeftAsync(ValueTask leftTask, long? cutoffEtag, Stopwatch queryDuration, TimeSpan? queryWaitDuration)
         {
             await leftTask;
             //At this point we know we are not going to yield results we can skip running right hand side
@@ -111,7 +112,7 @@ namespace Raven.Server.Documents.Queries.Graph
                 _index = 0;
                 return;
             }
-            var rightTask = _right.Initialize();
+            var rightTask = _right.Initialize(cutoffEtag, queryDuration, queryWaitDuration);
             if (rightTask.IsCompleted == false)
             {
                 await rightTask;
@@ -185,23 +186,23 @@ namespace Raven.Server.Documents.Queries.Graph
                 _parent._left = prev;
             }
 
-            public ValueTask Initialize()
+            public ValueTask Initialize(long? cutoffEtag, Stopwatch queryDuration, TimeSpan? queryWaitDuration)
             {
                 if (_parent._left != null)
                 {
-                    var leftTask = _parent._left.GetSingleGraphStepExecution().Initialize();
+                    var leftTask = _parent._left.GetSingleGraphStepExecution().Initialize(cutoffEtag, queryDuration, queryWaitDuration);
                     if (leftTask.IsCompleted == false)
                     {
-                        return CompleteRightInitAsync(leftTask);
+                        return CompleteRightInitAsync(leftTask, cutoffEtag, queryDuration, queryWaitDuration);
                     }
                 }
-                return _parent._right.GetSingleGraphStepExecution().Initialize();
+                return _parent._right.GetSingleGraphStepExecution().Initialize(cutoffEtag, queryDuration, queryWaitDuration);
             }
 
-            private async ValueTask CompleteRightInitAsync(ValueTask leftTask)
+            private async ValueTask CompleteRightInitAsync(ValueTask leftTask, long? cutoffEtag, Stopwatch queryDuration, TimeSpan? queryWaitDuration)
             {
                 await leftTask;
-                await _parent._right.Initialize();
+                await _parent._right.Initialize(cutoffEtag, queryDuration, queryWaitDuration);
             }
 
             public void Run(Match src, string alias)

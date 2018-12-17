@@ -93,18 +93,47 @@ namespace Raven.Server.Documents.Handlers
                 }
                 var query = IndexQueryServerSide.Create(HttpContext, GetStart(), GetPageSize(), context, tracker, overrideQuery);
                 var format = GetStringQueryString("format", false);
+                var debug = GetStringQueryString("debug", false);
                 var properties = GetStringValuesQueryString("field", false);
                 var propertiesArray = properties.Count == 0 ? null : properties.ToArray();
-                using (var writer = GetQueryResultWriter(format, HttpContext.Response, context, ResponseBodyStream(), propertiesArray))
+                // set the exported file name prefix
+                var fileNamePrefix = query.Metadata.IsCollectionQuery ? query.Metadata.CollectionName + "_collection" : "query_result";
+                fileNamePrefix = $"{Database.Name}_{fileNamePrefix}";
+                if (string.IsNullOrWhiteSpace(debug) == false)
                 {
-                    try
+                    if (string.Equals(debug, "entries", StringComparison.OrdinalIgnoreCase))
                     {
-                        await Database.QueryRunner.ExecuteStreamQuery(query, context, HttpContext.Response, writer, token).ConfigureAwait(false);
+                        using (var writer = GetIndexEntriesQueryResultWriter(format, HttpContext.Response, context, ResponseBodyStream(), propertiesArray, fileNamePrefix))
+                        {
+                            try
+                            {
+                                await Database.QueryRunner.ExecuteStreamIndexEntriesQuery(query, context, HttpContext.Response, writer, token).ConfigureAwait(false);
+                            }
+                            catch (IndexDoesNotExistException)
+                            {
+                                HttpContext.Response.StatusCode = (int)HttpStatusCode.NotFound;
+                                writer.WriteError($"Index {query.Metadata.IndexName} does not exist");
+                            }
+                        }
                     }
-                    catch (IndexDoesNotExistException)
+                    else
                     {
-                        HttpContext.Response.StatusCode = (int)HttpStatusCode.NotFound;
-                        writer.WriteError("Index " + query.Metadata.IndexName + " does not exists");
+                        ThrowUnsupportedException($"You have selected {debug} debug mode, which is not supported.");
+                    }
+                }
+                else
+                {
+                    using (var writer = GetQueryResultWriter(format, HttpContext.Response, context, ResponseBodyStream(), propertiesArray, fileNamePrefix))
+                    {
+                        try
+                        {
+                            await Database.QueryRunner.ExecuteStreamQuery(query, context, HttpContext.Response, writer, token).ConfigureAwait(false);
+                        }
+                        catch (IndexDoesNotExistException)
+                        {
+                            HttpContext.Response.StatusCode = (int)HttpStatusCode.NotFound;
+                            writer.WriteError($"Index {query.Metadata.IndexName} does not exist");
+                        }
                     }
                 }
             }
@@ -134,41 +163,81 @@ namespace Raven.Server.Documents.Handlers
                 }
 
                 var format = GetStringQueryString("format", false);
+                var debug = GetStringQueryString("debug", false);
                 var properties = GetStringValuesQueryString("field", false);
                 var propertiesArray = properties.Count == 0 ? null : properties.ToArray();
                 
-                // set the exported file name
-                string fileName = query.Metadata.IsCollectionQuery ? query.Metadata.CollectionName + "_collection" : "query_result";
-                fileName = $"{Database.Name}_{fileName}"; 
-
-                using (var writer = GetQueryResultWriter(format, HttpContext.Response, context, ResponseBodyStream(), propertiesArray, fileName))
+                // set the exported file name prefix
+                var fileNamePrefix = query.Metadata.IsCollectionQuery ? query.Metadata.CollectionName + "_collection" : "query_result";
+                fileNamePrefix = $"{Database.Name}_{fileNamePrefix}";
+                if (string.IsNullOrWhiteSpace(debug) == false)
                 {
-                    try
+                    if (string.Equals(debug, "entries", StringComparison.OrdinalIgnoreCase))
                     {
-                        await Database.QueryRunner.ExecuteStreamQuery(query, context, HttpContext.Response, writer, token).ConfigureAwait(false);
+                        using (var writer = GetIndexEntriesQueryResultWriter(format, HttpContext.Response, context, ResponseBodyStream(), propertiesArray, fileNamePrefix))
+                        {
+                            try
+                            {
+                                await Database.QueryRunner.ExecuteStreamIndexEntriesQuery(query, context, HttpContext.Response, writer, token).ConfigureAwait(false);
+                            }
+                            catch (IndexDoesNotExistException)
+                            {
+                                HttpContext.Response.StatusCode = (int)HttpStatusCode.NotFound;
+                                writer.WriteError($"Index {query.Metadata.IndexName} does not exist");
+                            }
+                        }
                     }
-                    catch (IndexDoesNotExistException)
+                    else
                     {
-                        HttpContext.Response.StatusCode = (int)HttpStatusCode.NotFound;
-                        writer.WriteError("Index " + query.Metadata.IndexName + " does not exists");
+                        ThrowUnsupportedException($"You have selected {debug} debug mode, which is not supported.");
+                    }
+                }
+                else
+                {
+                    using (var writer = GetQueryResultWriter(format, HttpContext.Response, context, ResponseBodyStream(), propertiesArray, fileNamePrefix))
+                    {
+                        try
+                        {
+                            await Database.QueryRunner.ExecuteStreamQuery(query, context, HttpContext.Response, writer, token).ConfigureAwait(false);
+                        }
+                        catch (IndexDoesNotExistException)
+                        {
+                            HttpContext.Response.StatusCode = (int)HttpStatusCode.NotFound;
+                            writer.WriteError($"Index {query.Metadata.IndexName} does not exist");
+                        }
                     }
                 }
             }
         }
 
-        private IStreamDocumentQueryResultWriter GetQueryResultWriter(string format, HttpResponse response, DocumentsOperationContext context, Stream responseBodyStream,
-            string[] propertiesArray, string fileName = null)
+        private StreamCsvBlittableQueryResultWriter GetIndexEntriesQueryResultWriter(string format, HttpResponse response, DocumentsOperationContext context, Stream responseBodyStream,
+            string[] propertiesArray, string fileNamePrefix = null)
         {
-            if (string.IsNullOrEmpty(format) == false && format.StartsWith("csv"))
+            if (string.IsNullOrEmpty(format) || string.Equals(format, "csv", StringComparison.OrdinalIgnoreCase) == false)
+                ThrowUnsupportedException($"You have selected \"{format}\" file format, which is not supported.");
+
+            return new StreamCsvBlittableQueryResultWriter(response, responseBodyStream, context, propertiesArray, fileNamePrefix);
+        }
+
+        private IStreamQueryResultWriter<Document> GetQueryResultWriter(string format, HttpResponse response, DocumentsOperationContext context, Stream responseBodyStream,
+            string[] propertiesArray, string fileNamePrefix = null)
+        {
+            if (string.IsNullOrEmpty(format) == false && string.Equals(format, "csv", StringComparison.OrdinalIgnoreCase))
             {
-                return new StreamCsvDocumentQueryResultWriter(response, responseBodyStream, context, propertiesArray, fileName);
+                return new StreamCsvDocumentQueryResultWriter(response, responseBodyStream, context, propertiesArray, fileNamePrefix);
             }
 
             if (propertiesArray != null)
             {
-                throw new NotSupportedException("Using json output format with custom fields is not supported");
+                ThrowUnsupportedException("Using json output format with custom fields is not supported.");
             }
+
             return new StreamJsonDocumentQueryResultWriter(response, responseBodyStream, context);
+        }
+
+        private void ThrowUnsupportedException(string message)
+        {
+            throw new NotSupportedException(message);
         }
     }
 }

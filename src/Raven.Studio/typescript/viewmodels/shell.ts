@@ -434,7 +434,7 @@ class shell extends viewModelBase {
     }
     
     detectBrowser() {
-        const isChrome = !!(window as any).chrome && !!(window as any).chrome.webstore;
+        const isChrome = /Chrome/.test(navigator.userAgent) && /Google Inc/.test(navigator.vendor);
         const isFirefox = navigator.userAgent.toLowerCase().indexOf('firefox') > -1;
 
         if (!isChrome && !isFirefox) {
