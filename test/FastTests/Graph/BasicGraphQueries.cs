@@ -346,7 +346,7 @@ declare function includeProducts(doc)
 {
     var lines = doc.Lines; // avoid eval
     var length = lines.length; // avoid eval
-    for (let i=0; i< length; i++)
+    for (var i=0; i< length; i++)
     {
         include(lines[i].Product);
     }

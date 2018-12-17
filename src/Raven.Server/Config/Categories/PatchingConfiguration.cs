@@ -20,5 +20,10 @@ namespace Raven.Server.Config.Categories
         [DefaultValue(2048)]
         [ConfigurationEntry("Patching.MaxNumberOfCachedScripts", ConfigurationEntryScope.ServerWideOrPerDatabase)]
         public int MaxNumberOfCachedScripts { get; set; }
+
+        [Description("Enables Strict Mode in JavaScript engine. Default: true")]
+        [DefaultValue(true)]
+        [ConfigurationEntry("Patching.StrictMode", ConfigurationEntryScope.ServerWideOrPerDatabase)]
+        public bool StrictMode { get; set; }
     }
 }

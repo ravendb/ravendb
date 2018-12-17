@@ -49,28 +49,28 @@ namespace Raven.Server.Documents.Patch
                     switch (name)
                     {
                         case "reduce":
-                            value = new ClrFunctionInstance(engine, (thisObj, values) => values.Length > 1 ? values[1] : JsValue.Null);
+                            value = new ClrFunctionInstance(engine, "reduce", (thisObj, values) => values.Length > 1 ? values[1] : JsValue.Null);
                             return true;
                         case "concat":
-                            value = new ClrFunctionInstance(engine, (thisObj, values) => values[0]);
+                            value = new ClrFunctionInstance(engine, "concat", (thisObj, values) => values[0]);
                             return true;
                         case "some":
                         case "includes":
-                            value = new ClrFunctionInstance(engine, (thisObj, values) => false);
+                            value = new ClrFunctionInstance(engine, "some", (thisObj, values) => false);
                             return true;
                         case "every":
-                            value = new ClrFunctionInstance(engine, (thisObj, values) => true);
+                            value = new ClrFunctionInstance(engine, "every", (thisObj, values) => true);
                             return true;
                         case "map":
                         case "filter":
                         case "reverse":
-                            value = new ClrFunctionInstance(engine, (thisObj, values) => engine.Array.Construct(Array.Empty<JsValue>()));
+                            value = new ClrFunctionInstance(engine, "map", (thisObj, values) => engine.Array.Construct(Array.Empty<JsValue>()));
                             return true;
                     }
                 }
             }
 
-            value = new ClrFunctionInstance(engine, (thisObj, values) => thisObj);
+            value = new ClrFunctionInstance(engine, "function", (thisObj, values) => thisObj);
             return true;
         }
 

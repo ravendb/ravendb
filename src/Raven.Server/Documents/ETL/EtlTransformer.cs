@@ -53,26 +53,27 @@ namespace Raven.Server.Documents.ETL
             if (debugMode)
                 DocumentScript.DebugMode = true;
 
-            DocumentScript.ScriptEngine.SetValue(Transformation.LoadTo, new ClrFunctionInstance(DocumentScript.ScriptEngine, LoadToFunctionTranslator));
+            DocumentScript.ScriptEngine.SetValue(Transformation.LoadTo, new ClrFunctionInstance(DocumentScript.ScriptEngine, Transformation.LoadTo, LoadToFunctionTranslator));
 
             for (var i = 0; i < LoadToDestinations.Length; i++)
             {
                 var collection = LoadToDestinations[i];
-                var clrFunctionInstance = new ClrFunctionInstance(DocumentScript.ScriptEngine, (value, values) => LoadToFunctionTranslator(collection, value, values));
-                DocumentScript.ScriptEngine.SetValue(Transformation.LoadTo + collection, clrFunctionInstance);
+                var name = Transformation.LoadTo + collection;
+                var clrFunctionInstance = new ClrFunctionInstance(DocumentScript.ScriptEngine, name, (value, values) => LoadToFunctionTranslator(collection, value, values));
+                DocumentScript.ScriptEngine.SetValue(name, clrFunctionInstance);
             }
 
-            DocumentScript.ScriptEngine.SetValue(Transformation.LoadAttachment, new ClrFunctionInstance(DocumentScript.ScriptEngine, LoadAttachment));
+            DocumentScript.ScriptEngine.SetValue(Transformation.LoadAttachment, new ClrFunctionInstance(DocumentScript.ScriptEngine, Transformation.LoadAttachment, LoadAttachment));
 
-            DocumentScript.ScriptEngine.SetValue(Transformation.LoadCounter, new ClrFunctionInstance(DocumentScript.ScriptEngine, LoadCounter));
+            DocumentScript.ScriptEngine.SetValue(Transformation.LoadCounter, new ClrFunctionInstance(DocumentScript.ScriptEngine, Transformation.LoadCounter, LoadCounter));
 
-            DocumentScript.ScriptEngine.SetValue("getAttachments", new ClrFunctionInstance(DocumentScript.ScriptEngine, GetAttachments));
+            DocumentScript.ScriptEngine.SetValue("getAttachments", new ClrFunctionInstance(DocumentScript.ScriptEngine, "getAttachments", GetAttachments));
 
-            DocumentScript.ScriptEngine.SetValue("hasAttachment", new ClrFunctionInstance(DocumentScript.ScriptEngine, HasAttachment));
+            DocumentScript.ScriptEngine.SetValue("hasAttachment", new ClrFunctionInstance(DocumentScript.ScriptEngine, "hasAttachment", HasAttachment));
 
-            DocumentScript.ScriptEngine.SetValue("getCounters", new ClrFunctionInstance(DocumentScript.ScriptEngine, GetCounters));
+            DocumentScript.ScriptEngine.SetValue("getCounters", new ClrFunctionInstance(DocumentScript.ScriptEngine, "getCounters", GetCounters));
 
-            DocumentScript.ScriptEngine.SetValue("hasCounter", new ClrFunctionInstance(DocumentScript.ScriptEngine, HasCounter));
+            DocumentScript.ScriptEngine.SetValue("hasCounter", new ClrFunctionInstance(DocumentScript.ScriptEngine, "hasCounter", HasCounter));
         }
 
         private JsValue LoadToFunctionTranslator(JsValue self, JsValue[] args)
