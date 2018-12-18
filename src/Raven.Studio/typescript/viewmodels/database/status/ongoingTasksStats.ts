@@ -12,13 +12,14 @@ import messagePublisher = require("common/messagePublisher");
 import inProgressAnimator = require("common/helpers/graph/inProgressAnimator");
 
 import colorsManager = require("common/colorsManager");
+import etlScriptDefinitionCache = require("models/database/stats/etlScriptDefinitionCache");
 
 type rTreeLeaf = {
     minX: number;
     minY: number;
     maxX: number;
     maxY: number;
-    actionType: "toggleTrack" | "trackItem" | "gapItem";
+    actionType: "toggleTrack" | "trackItem" | "gapItem" | "previewScript";
     arg: any;
 }
 
@@ -41,11 +42,18 @@ type trackItemContext = {
     item: taskOperation;
 }
 
+type previewEtlScriptItemContext = {
+    transformationName: string;
+    taskId: number;
+    etlType: Raven.Client.Documents.Operations.ETL.EtlType;
+}
+
 class hitTest {
     cursor = ko.observable<string>("auto");
     private rTree = rbush<rTreeLeaf>();
     private container: d3.Selection<any>;
     private onToggleTrack: (trackName: string) => void;
+    private onPreviewScript: (context: previewEtlScriptItemContext) => void;
     private handleTrackTooltip: (context: trackItemContext, x: number, y: number) => void; 
     private handleGapTooltip: (item: timeGapInfo, x: number, y: number) => void;
     private removeTooltip: () => void;
@@ -56,11 +64,13 @@ class hitTest {
 
     init(container: d3.Selection<any>,
         onToggleTrack: (trackName: string) => void,
+        onPreviewScript: (context: previewEtlScriptItemContext) => void,
         handleTrackTooltip: (context: trackItemContext, x: number, y: number) => void,
         handleGapTooltip: (item: timeGapInfo, x: number, y: number) => void,
         removeTooltip: () => void) {
         this.container = container;
         this.onToggleTrack = onToggleTrack;
+        this.onPreviewScript = onPreviewScript;
         this.handleTrackTooltip = handleTrackTooltip;
         this.handleGapTooltip = handleGapTooltip;
         this.removeTooltip = removeTooltip;
@@ -76,6 +86,18 @@ class hitTest {
             arg: {
                 rootStats, item
             } as trackItemContext
+        } as rTreeLeaf;
+        this.rTree.insert(data);
+    }
+
+    registerPreviewScript(x: number, y: number, width: number, height: number, taskInfo: previewEtlScriptItemContext) {
+        const data = {
+            minX: x,
+            minY: y,
+            maxX: x + width,
+            maxY: y + height,
+            actionType: "previewScript",
+            arg: taskInfo
         } as rTreeLeaf;
         this.rTree.insert(data);
     }
@@ -113,12 +135,13 @@ class hitTest {
 
         const items = this.findItems(clickLocation[0], clickLocation[1]);
 
-        for (let i = 0; i < items.length; i++) {
-            const item = items[i];
-
-            if (item.actionType === "toggleTrack") {
-                this.onToggleTrack(item.arg as string);
-                break;
+        const previewScript = items.find(x => x.actionType === "previewScript");
+        if (previewScript) {
+            this.onPreviewScript(previewScript.arg as previewEtlScriptItemContext);
+        } else {
+            const toggleTrack = items.find(x => x.actionType === "toggleTrack");
+            if (toggleTrack) {
+                this.onToggleTrack(toggleTrack.arg as string);
             }
         }
     }
@@ -137,18 +160,23 @@ class hitTest {
 
         const overToggleTrack = items.filter(x => x.actionType === "toggleTrack").length > 0;
         
-        const currentItem = items.filter(x => x.actionType === "trackItem").map(x => x.arg as trackItemContext)[0];
-        if (currentItem) {
-            this.handleTrackTooltip(currentItem, clickLocation[0], clickLocation[1]);
-            this.cursor("auto");
+        const currentPreviewItem = items.filter(x => x.actionType === "previewScript").map(x => x.arg as previewEtlScriptItemContext)[0];
+        if (currentPreviewItem) {
+            this.cursor("pointer");
         } else {
-            const currentGapItem = items.filter(x => x.actionType === "gapItem").map(x => x.arg as timeGapInfo)[0];
-            if (currentGapItem) {
-                this.handleGapTooltip(currentGapItem, clickLocation[0], clickLocation[1]);
+            const currentItem = items.filter(x => x.actionType === "trackItem").map(x => x.arg as trackItemContext)[0];
+            if (currentItem) {
+                this.handleTrackTooltip(currentItem, clickLocation[0], clickLocation[1]);
                 this.cursor("auto");
             } else {
-                this.removeTooltip();
-                this.cursor(overToggleTrack ? "pointer" : graphHelper.prefixStyle("grab"));
+                const currentGapItem = items.filter(x => x.actionType === "gapItem").map(x => x.arg as timeGapInfo)[0];
+                if (currentGapItem) {
+                    this.handleGapTooltip(currentGapItem, clickLocation[0], clickLocation[1]);
+                    this.cursor("auto");
+                } else {
+                    this.removeTooltip();
+                    this.cursor(overToggleTrack ? "pointer" : graphHelper.prefixStyle("grab"));
+                }
             }
         }
     }
@@ -177,6 +205,7 @@ class ongoingTasksStats extends viewModelBase {
     private static readonly openedTrackPadding = 4;
     private static readonly axisHeight = 35;
     private static readonly scriptNameLeftPadding = 14;
+    private static readonly scriptPreviewIconWidth = 16;
 
     private static readonly maxReplicationRecursion = 3;
     private static readonly maxEtlRecursion = 2;
@@ -222,6 +251,8 @@ class ongoingTasksStats extends viewModelBase {
     // The live data from endpoint
     private replicationData: Raven.Server.Documents.Replication.LiveReplicationPerformanceCollector.ReplicationPerformanceStatsBase<Raven.Client.Documents.Replication.ReplicationPerformanceBase>[] = [];
     private etlData: Raven.Server.Documents.ETL.Stats.EtlTaskPerformanceStats[] = [];
+    
+    private definitionsCache: etlScriptDefinitionCache;
 
     private bufferIsFull = ko.observable<boolean>(false);
     private bufferUsage = ko.observable<string>("0.0");
@@ -361,8 +392,11 @@ class ongoingTasksStats extends viewModelBase {
 
         this.initCanvases();
 
+        this.definitionsCache = new etlScriptDefinitionCache(this.activeDatabase());
+
         this.hitTest.init(this.svg,
             (replicationName) => this.onToggleTrack(replicationName),
+            (context) => this.handlePreviewScript(context),
             (context, x, y) => this.handleTrackTooltip(context, x, y),
             (gapItem, x, y) => this.handleGapTooltip(gapItem, x, y),
             () => this.hideTooltip());
@@ -1077,8 +1111,7 @@ class ongoingTasksStats extends viewModelBase {
             if (_.includes(this.filteredTrackNames(), trackName)) {
                 const yStartBase = this.yScale(trackName);
                 const isOpened = _.includes(this.expandedTracks(), trackName);
-                const extraPadding = isOpened 
-                    ? ongoingTasksStats.trackHeight + ongoingTasksStats.stackPadding + ongoingTasksStats.openedTrackPadding 
+                const extraPadding = isOpened ? ongoingTasksStats.trackHeight + ongoingTasksStats.stackPadding + ongoingTasksStats.openedTrackPadding 
                     : ongoingTasksStats.closedTrackPadding;
                 
                 etlItem.Stats.forEach((etlStat, idx) => {
@@ -1087,22 +1120,33 @@ class ongoingTasksStats extends viewModelBase {
                     const closedTrackItemOffset = ongoingTasksStats.betweenScriptsPadding + ongoingTasksStats.trackHeight;
                     const offset = isOpened ? idx * openedTrackItemOffset : (idx + 1) * closedTrackItemOffset;
                     drawTrack(trackName, yStartBase + offset, isOpened, etlStat.Performance as performanceBaseWithCache[]);
-                    this.drawScriptName(context, etlStat.TransformationName, yStartBase + offset + extraPadding);
+                    this.drawScriptName(context, yStartBase + offset + extraPadding, {
+                        transformationName: etlStat.TransformationName,
+                        etlType: etlItem.EtlType,
+                        taskId: etlItem.TaskId
+                    });
                 });
             }
         })
     }
     
-    private drawScriptName(context: CanvasRenderingContext2D, transformationName: string, yStart: number) {
+    private drawScriptName(context: CanvasRenderingContext2D, yStart: number, taskInfo: previewEtlScriptItemContext) {
         const textShift = 12.5;
         context.font = "bold 12px Lato";
-        const transformationNameWidth = context.measureText(transformationName).width + 8;
+        const transformationNameWidth = context.measureText(taskInfo.transformationName).width + 8;
 
+        const areaWidth = transformationNameWidth + ongoingTasksStats.scriptNameLeftPadding * 2 + ongoingTasksStats.scriptPreviewIconWidth;
+        
         context.fillStyle = this.colors.trackNameBg;
-        context.fillRect(2, yStart, transformationNameWidth + ongoingTasksStats.scriptNameLeftPadding * 2, ongoingTasksStats.trackHeight);
+        context.fillRect(2, yStart, areaWidth, ongoingTasksStats.trackHeight);
 
         context.fillStyle = this.colors.trackNameFg;
-        context.fillText(transformationName, ongoingTasksStats.scriptNameLeftPadding + 4, yStart + textShift);
+        context.fillText(taskInfo.transformationName, ongoingTasksStats.scriptNameLeftPadding + 4, yStart + textShift);
+        
+        context.font = "16px icomoon";
+        context.fillText('\ue9a3',ongoingTasksStats.scriptNameLeftPadding + transformationNameWidth + ongoingTasksStats.scriptPreviewIconWidth / 2, yStart + 16);
+        
+        this.hitTest.registerPreviewScript(2, yStart, areaWidth, ongoingTasksStats.trackHeight, taskInfo);
     }
 
     private findInProgressAction(perf: performanceBaseWithCache, extentFunc: (duration: number) => number,
@@ -1214,6 +1258,7 @@ class ongoingTasksStats extends viewModelBase {
 
             context.fillStyle = this.colors.trackNameBg;
             context.fillRect(2, yScale(trackName) + ongoingTasksStats.closedTrackPadding, rectWidth, ongoingTasksStats.trackHeight);
+            
             this.hitTest.registerToggleTrack(2, yScale(trackName), rectWidth, ongoingTasksStats.trackHeight, trackName);
             
             context.fillStyle = this.colors.trackDirectionText; 
@@ -1254,6 +1299,10 @@ class ongoingTasksStats extends viewModelBase {
         }
 
         context.stroke();
+    }
+    
+    private handlePreviewScript(context: previewEtlScriptItemContext) {
+        this.definitionsCache.showDefinitionFor(context.etlType, context.taskId, context.transformationName);
     }
 
     private onToggleTrack(trackName: string) {

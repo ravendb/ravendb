@@ -85,6 +85,7 @@ namespace Raven.Server.Documents.ETL.Handlers
             var stats = GetProcessesToReportOn().Select(x => new EtlTaskPerformanceStats
             {
                 TaskName = x.Key,
+                TaskId = x.Value.First().TaskId, // since we grouped by task name it implies each task id inside group is the same
                 EtlType = x.Value.First().EtlType,
                 Stats = x.Value.Select(y => new EtlProcessPerformanceStats
                 {

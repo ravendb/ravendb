@@ -18,6 +18,7 @@ import etlProgressCommand = require("commands/database/tasks/etlProgressCommand"
 import databaseGroupGraph = require("models/database/dbGroup/databaseGroupGraph");
 import getDatabaseCommand = require("commands/resources/getDatabaseCommand");
 import ongoingTaskListModel = require("models/database/tasks/ongoingTaskListModel");
+import etlScriptDefinitionCache = require("models/database/stats/etlScriptDefinitionCache");
 
 type TasksNamesInUI = "External Replication" | "RavenDB ETL" | "SQL ETL" | "Backup" | "Subscription";
 
@@ -32,6 +33,8 @@ class ongoingTasks extends viewModelBase {
     
     private watchedBackups = new Map<number, number>();
     private etlProgressWatch: number;
+
+    private definitionsCache: etlScriptDefinitionCache;
 
     // The Ongoing Tasks Lists:
     replicationTasks = ko.observableArray<ongoingTaskReplicationListModel>(); 
@@ -54,7 +57,7 @@ class ongoingTasks extends viewModelBase {
     
     constructor() {
         super();
-        this.bindToCurrentInstance("confirmRemoveOngoingTask", "confirmEnableOngoingTask", "confirmDisableOngoingTask", "toggleDetails");
+        this.bindToCurrentInstance("confirmRemoveOngoingTask", "confirmEnableOngoingTask", "confirmDisableOngoingTask", "toggleDetails", "showItemPreview");
 
         this.initObservables();
     }
@@ -92,6 +95,8 @@ class ongoingTasks extends viewModelBase {
             $("body").toggleClass("fullscreen", $(document).fullScreen());
             this.graph.onResize();
         });
+
+        this.definitionsCache = new etlScriptDefinitionCache(this.activeDatabase());
         
         this.graph.init($("#databaseGroupGraphContainer"));
     }
@@ -368,6 +373,10 @@ class ongoingTasks extends viewModelBase {
         this.selectedNode(node);
     }
 
+    showItemPreview(item: ongoingTaskListModel, scriptName: string) {
+        const type: Raven.Client.Documents.Operations.ETL.EtlType = item.taskType() === "RavenEtl" ? "Raven" : "Sql";
+        this.definitionsCache.showDefinitionFor(type, item.taskId, scriptName);
+    }
 }
 
 export = ongoingTasks;

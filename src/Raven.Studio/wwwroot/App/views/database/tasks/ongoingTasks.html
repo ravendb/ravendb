@@ -455,7 +455,10 @@
         <!-- ko foreach: scriptProgress -->
         <div class="etl-progress">
             <div class="overall-container">
-                <div class="text-info" data-bind="text: name"></div>
+                <div class="text-info">
+                    <span data-bind="text: name"></span>
+                    <a title="Show script preview" href="#" data-bind="click: _.partial($root.showItemPreview, $parent, name())"><i class="icon-preview"></i></a>
+                </div>
                 <div class="flex-grow"></div>
                 <div class="progress-overall">
                     <div class="flex-horizontal" data-bind="with: globalProgress">

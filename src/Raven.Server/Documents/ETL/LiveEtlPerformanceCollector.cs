@@ -42,9 +42,9 @@ namespace Raven.Server.Documents.ETL
                 var stats = Client.Extensions.EnumerableExtension.ForceEnumerateInThreadSafeManner(_perEtlProcessStats)
                     .Select(x =>
                     {
-                        var result = new EtlTaskPerformanceStats()
+                        var result = new EtlTaskPerformanceStats
                         {
-                            TaskName = x.Key,
+                            TaskName = x.Key
                         };
 
                         var perfStats = new List<EtlProcessPerformanceStats>();
@@ -60,6 +60,7 @@ namespace Raven.Server.Documents.ETL
                             });
 
                             result.EtlType = process.EtlType;
+                            result.TaskId = process.TaskId;
                         }
 
                         result.Stats = perfStats.ToArray();
@@ -132,6 +133,7 @@ namespace Raven.Server.Documents.ETL
                 List<EtlProcessPerformanceStats> processesStats = null;
 
                 var type = EtlType.Raven;
+                long taskId = -1;
 
                 foreach (var etlItem in taskProcesses.Value)
                 {
@@ -164,6 +166,7 @@ namespace Raven.Server.Documents.ETL
                         });
 
                         type = etl.EtlType;
+                        taskId = etl.TaskId;
                     }
                 }
 
@@ -172,6 +175,7 @@ namespace Raven.Server.Documents.ETL
                     preparedStats.Add(new EtlTaskPerformanceStats
                     {
                         TaskName = taskProcesses.Key,
+                        TaskId = taskId,
                         EtlType = type,
                         Stats = processesStats.ToArray()
                     });
@@ -189,7 +193,10 @@ namespace Raven.Server.Documents.ETL
         {
             public EtlProcessAndPerformanceStatsList(EtlProcess etl) : base(etl)
             {
+                TaskId = etl.TaskId;
             }
+            
+            public long TaskId { get; }
         }
     }
 }

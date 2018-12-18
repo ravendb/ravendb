@@ -54,6 +54,10 @@ namespace Raven.Server.Json
             writer.WriteArray(context, "Results", stats, (w, c, taskStats) =>
             {
                 w.WriteStartObject();
+                
+                w.WritePropertyName(nameof(taskStats.TaskId));
+                w.WriteInteger(taskStats.TaskId);
+                w.WriteComma();
 
                 w.WritePropertyName(nameof(taskStats.TaskName));
                 w.WriteString(taskStats.TaskName);
