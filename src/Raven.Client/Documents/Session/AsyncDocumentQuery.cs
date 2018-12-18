@@ -624,6 +624,13 @@ namespace Raven.Client.Documents.Session
         }
 
         /// <inheritdoc />
+        IAsyncDocumentQuery<T> IFilterDocumentQueryBase<T, IAsyncDocumentQuery<T>>.ContainsAll<TValue>(Expression<Func<T, IEnumerable<TValue>>> propertySelector, IEnumerable<TValue> values)
+        {
+            ContainsAll(GetMemberQueryPath(propertySelector.Body), values.Cast<object>());
+            return this;
+        }
+
+        /// <inheritdoc />
         IAsyncDocumentQuery<T> IFilterDocumentQueryBase<T, IAsyncDocumentQuery<T>>.ContainsAny(string fieldName, IEnumerable<object> values)
         {
             ContainsAny(fieldName, values);
@@ -632,6 +639,13 @@ namespace Raven.Client.Documents.Session
 
         /// <inheritdoc />
         IAsyncDocumentQuery<T> IFilterDocumentQueryBase<T, IAsyncDocumentQuery<T>>.ContainsAny<TValue>(Expression<Func<T, TValue>> propertySelector, IEnumerable<TValue> values)
+        {
+            ContainsAny(GetMemberQueryPath(propertySelector.Body), values.Cast<object>());
+            return this;
+        }
+
+        /// <inheritdoc />
+        IAsyncDocumentQuery<T> IFilterDocumentQueryBase<T, IAsyncDocumentQuery<T>>.ContainsAny<TValue>(Expression<Func<T, IEnumerable<TValue>>> propertySelector, IEnumerable<TValue> values)
         {
             ContainsAny(GetMemberQueryPath(propertySelector.Body), values.Cast<object>());
             return this;
@@ -968,19 +982,6 @@ namespace Raven.Client.Documents.Session
                     $"AsyncDocumentQuery source has (index name: {IndexName}, collection: {CollectionName}), but got request for (index name: {indexName}, collection: {collectionName}), you cannot change the index name / collection when using AsyncDocumentQuery as the source");
 
             return CreateDocumentQueryInternal<TResult>();
-        }
-
-        public new IAsyncDocumentQuery<T> ContainsAll<TValue>(Expression<Func<T, IEnumerable<TValue>>> propertySelector, IEnumerable<TValue> values)
-        {
-            ContainsAll(GetMemberQueryPath(propertySelector.Body), values.Cast<object>());
-            return this;
-         
-        }
-
-        public new IAsyncDocumentQuery<T> ContainsAny<TValue>(Expression<Func<T, IEnumerable<TValue>>> propertySelector, IEnumerable<TValue> values)
-        {
-            ContainsAny(GetMemberQueryPath(propertySelector.Body), values.Cast<object>());
-            return this;
         }
     }
 }
