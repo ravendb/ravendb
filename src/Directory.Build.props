@@ -24,7 +24,7 @@
     <AssemblyOriginatorKeyFile>..\..\RavenDB.snk</AssemblyOriginatorKeyFile>
 
   </PropertyGroup>
-  <PropertyGroup Condition="'$(TargetFramework)' == 'netcoreapp2.2'">
+  <PropertyGroup Condition="'$(TargetFramework)' == 'netcoreapp2.1' OR '$(TargetFramework)' == 'netcoreapp2.2'">
     <DefineConstants>$(DefineConstants);NETCOREAPP</DefineConstants>
   </PropertyGroup>
   <ItemGroup>
