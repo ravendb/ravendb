@@ -38,7 +38,12 @@ else
 	endif
 	ifneq ($(filter arm%,$(UNAME_M)),)
 		OSDIR=posix
-		OSFLAG=.arm.so 
+		BASH32BIT := $(shell file /bin/bash | grep 32-bit | wc -l)
+		ifeq ($(BASH32BIT),1)
+			OSFLAG=.arm.32.so 
+		else
+			OSFLAG=.arm.64.so
+		endif
 	endif
 endif
 
@@ -66,5 +71,4 @@ include $(SRCS:.c=.d)
 .PHONY: clean
 clean:
 	-${RM} ${TARGET_LIB} ${OBJS} $(SRCS:.c=.d)
-
 
