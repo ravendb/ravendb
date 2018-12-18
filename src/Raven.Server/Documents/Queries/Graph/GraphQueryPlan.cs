@@ -4,9 +4,11 @@ using System.Diagnostics;
 using System.Linq;
 using System.Threading.Tasks;
 using Microsoft.Extensions.Primitives;
+using Raven.Server.Documents.Indexes;
 using Raven.Server.Documents.Queries.AST;
 using Raven.Server.ServerWide;
 using Raven.Server.ServerWide.Context;
+using Sparrow;
 using static Raven.Server.Documents.Queries.GraphQueryRunner;
 
 namespace Raven.Server.Documents.Queries.Graph
@@ -19,6 +21,7 @@ namespace Raven.Server.Documents.Queries.Graph
         private long? _resultEtag;
         private OperationCancelToken _token;
         private DocumentDatabase _database;
+        public bool IsStale { get; set; }
         public GraphQuery GraphQuery => _query.Metadata.Query.GraphQuery;
 
         public GraphQueryPlan(IndexQueryServerSide query, DocumentsOperationContext context, long? resultEtag,
@@ -178,7 +181,7 @@ namespace Raven.Server.Documents.Queries.Graph
             // TODO: we can tell at this point if it is a collection query or not,
             // TODO: in the future, we want to build a diffrent step for collection queries in the future.        
             var queryMetadata = new QueryMetadata(query, _query.QueryParameters, 0);
-            return new QueryQueryStep(_database.QueryRunner, alias, query, queryMetadata, _query.QueryParameters, _context, _resultEtag, _token);
+            return new QueryQueryStep(_database.QueryRunner, alias, query, queryMetadata, _query.QueryParameters, _context, _resultEtag, this, _token);
         }
 
         public void OptimizeQueryPlan()
@@ -196,5 +199,87 @@ namespace Raven.Server.Documents.Queries.Graph
             }
             return list;
         }
+
+        public async Task<bool> WaitForNonStaleResults()
+        {
+            if (_context.Transaction == null || _context.Transaction.Disposed)
+                _context.OpenReadTransaction();
+
+            var etag = DocumentsStorage.ReadLastEtag(_context.Transaction.InnerTransaction);
+            var queryDuration = Stopwatch.StartNew();
+            var indexNamesGatherer = new GraphQueryIndexNamesGatherer();
+            indexNamesGatherer.Visit(_rootQueryStep);
+            var indexes = new List<Index>();
+            Dictionary<Index, AsyncWaitForIndexing> indexWaiters = new Dictionary<Index, AsyncWaitForIndexing>();
+            var queryTimeout = _query.WaitForNonStaleResultsTimeout ?? Index.DefaultWaitForNonStaleResultsTimeout;
+            foreach (var indexName in indexNamesGatherer.Indexes)
+            {
+                var index = _database.IndexStore.GetIndex(indexName);
+                indexes.Add(index);
+                indexWaiters.Add(index, new AsyncWaitForIndexing(queryDuration, queryTimeout, index));
+            }
+
+            var staleIndexes = indexes;
+            while (true)
+            {
+                //If we found a stale index we already disposed of the old transaction
+                if (_context.Transaction == null || _context.Transaction.Disposed)
+                    _context.OpenReadTransaction();
+
+                //see http://issues.hibernatingrhinos.com/issue/RavenDB-5576
+                var frozenAwaiters = new Dictionary<Index, AsyncManualResetEvent.FrozenAwaiter>();
+                foreach (var index in staleIndexes)
+                {
+                    frozenAwaiters.Add(index, index.GetIndexingBatchAwaiter());
+                }
+                staleIndexes = GetStaleIndexes(staleIndexes, etag);
+                //All indexes are not stale we can continue without waiting
+                if (staleIndexes.Count == 0)
+                {
+                    //false means we are not stale
+                    return false;
+                }
+
+                bool foundStaleIndex = false;
+                bool indexTimedout = false;
+                //here we will just wait for the first stale index we find
+                foreach (var index in staleIndexes)
+                {
+                    var indexAwaiter = indexWaiters[index];
+                    //if any index timedout we are stale
+                    indexTimedout |= indexAwaiter.TimeoutExceeded;
+
+                    if (Index.WillResultBeAcceptable(true, _query, indexWaiters[index]) == false)
+                    {
+                        _context.CloseTransaction();                        
+                        await indexAwaiter.WaitForIndexingAsync(frozenAwaiters[index]).ConfigureAwait(false);
+                        foundStaleIndex = true;                        
+                        break;
+                    }
+                }
+
+                //We are done waiting for all stale indexes
+                if (foundStaleIndex == false)
+                {
+                    //we might get here if all indexes have timedout 
+                    return indexTimedout;
+                }
+            }
+        }
+
+        private List<Index> GetStaleIndexes(List<Index> indexes, long etag)
+        {
+            var staleList = new List<Index>();
+            foreach (var index in indexes)
+            {
+                if (index.IsStale(_context, etag))
+                {
+                    staleList.Add(index);
+                }
+            }
+
+            return staleList;
+        }
+
     }
 }

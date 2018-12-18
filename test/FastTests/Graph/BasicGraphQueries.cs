@@ -14,19 +14,45 @@ namespace FastTests.Graph
 {
     public class BasicGraphQueries : RavenTestBase
     {
-        public List<T> Query<T>(string q, Action<IDocumentStore> mutate = null)
+        public class StalenessParameters
         {
+            public bool WaitForIndexing { get; set; }
+            public bool WaitForNonStaleResults { get; set; }
+            public TimeSpan? WaitForNonStaleResultsDuration { get; set; }
+
+            public static StalenessParameters Defualt = new StalenessParameters
+            {
+                WaitForIndexing = true,
+                WaitForNonStaleResults = false,
+                WaitForNonStaleResultsDuration = TimeSpan.FromSeconds(15)
+            };
+        }
+        public List<T> Query<T>(string q, Action<IDocumentStore> mutate = null, StalenessParameters parameters = null) 
+        {
+            if (parameters == null)
+            {
+                parameters = StalenessParameters.Defualt;
+            }
+
             using (var store = GetDocumentStore())
             {
                 store.Maintenance.Send(new CreateSampleDataOperation());
 
                 mutate?.Invoke(store);
-
-                WaitForIndexing(store);
+                if (parameters.WaitForIndexing)
+                {
+                    WaitForIndexing(store);
+                }
 
                 using (var s = store.OpenSession())
                 {
-                    return s.Advanced.RawQuery<T>(q).ToList();
+                    var query = s.Advanced.RawQuery<T>(q);
+                    if (parameters.WaitForNonStaleResults)
+                    {
+                        query = query.WaitForNonStaleResults(parameters.WaitForNonStaleResultsDuration);
+                    }
+
+                    return query.ToList();
                 }
             }
         }
@@ -366,6 +392,27 @@ match (Employees where id() ='employees/7-A')-[ReportsTo]->(Employees as Boss)
             Assert.Equal("employees/5-A", results[0].Employees_ReportsTo);
             Assert.Equal("Robert", results[0].Employees.FirstName);
             Assert.Equal("Steven", results[0].Boss.FirstName);
+        }
+
+        [Fact]
+        public void CanWaitForNonStaleResults()
+        {
+            var results = Query<Product>(@"
+with {from index 'Orders/Totals'} as o
+with {from index 'Product/Search'} as p
+match (o)-[Lines where PricePerUnit > 200 select Product]->(p)
+select p", parameters:new StalenessParameters{WaitForIndexing = false, WaitForNonStaleResults = true, WaitForNonStaleResultsDuration = TimeSpan.FromSeconds(15)});
+            Assert.Equal(24, results.Count);
+        }
+
+        [Fact]
+        public void NotWaitingForNonStaleResultsShouldThrow()
+        {
+            Assert.Throws<TimeoutException>(()=>Query<Product>(@"
+with {from index 'Orders/Totals'} as o
+with {from index 'Product/Search'} as p
+match (o)-[Lines where PricePerUnit > 200 select Product]->(p)
+select p", parameters: new StalenessParameters { WaitForIndexing = false, WaitForNonStaleResults = true, WaitForNonStaleResultsDuration = TimeSpan.FromSeconds(0) }));
         }
 
         [Fact]
