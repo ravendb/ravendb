@@ -1122,15 +1122,13 @@ namespace Sparrow.Json
             if (ReferenceEquals(this, obj))
                 return true;
 
-            var blittableJson = obj as BlittableJsonReaderObject;
-
-            if (blittableJson != null)
+            if (obj is BlittableJsonReaderObject blittableJson)
                 return Equals(blittableJson);
 
             return false;
         }
 
-        protected bool Equals(BlittableJsonReaderObject other)
+        public bool Equals(BlittableJsonReaderObject other, bool ignoreRavenProperties = false)
         {
             if (_propCount != other._propCount)
                 return false;
@@ -1148,6 +1146,8 @@ namespace Sparrow.Json
                 GetPropertyTypeAndPosition(i, metadataSize, out var token, out var position, out var id);
 
                 var propertyName = GetPropertyName(id);
+                if(ignoreRavenProperties && propertyName.StartsWith('@'))
+                    continue;
 
                 var otherId = other.GetPropertyIndex(propertyName);
 

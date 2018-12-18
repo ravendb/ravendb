@@ -856,7 +856,7 @@ namespace FastTests
                 arava.Likes = new[] { oscar.Id };
                 arava.Dislikes = new[] { pheobe.Id };
 
-                //dogs/2 => dogs/1,dogs/3 (cycle!)
+                //dogs/2 => dogs/2,dogs/3 (cycle!)
                 oscar.Likes = new[] { oscar.Id, pheobe.Id };
                 oscar.Dislikes = new string[0];
 
