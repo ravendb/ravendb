@@ -7,14 +7,11 @@
 #include <stdlib.h>
 
 #include "rvn.h"
-#include "posixenums.h"
+#include "status_codes.h"
 
-int32_t rvn_get_error_string(int32_t error, char* buf, int32_t buf_size, int32_t* special_errno_flags)
-{
+int32_t rvn_get_error_string(int32_t error, char* buf, int32_t buf_size, int32_t* special_errno_flags) {
 	char* tmp_buf = NULL;
-	/* strerror_r returns (in GNU-specific) the string either to buf (with max buf_size) OR to the char* rc. */
-	switch (error)
-	{
+	switch (error) {
 		case ENOMEM:
 			*special_errno_flags = ERRNO_SPECIAL_CODES_ENOMEM;
 			break;
