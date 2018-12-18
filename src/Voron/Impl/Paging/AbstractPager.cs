@@ -1,4 +1,5 @@
 using System;
+using System.Collections;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Diagnostics;
@@ -472,6 +473,48 @@ namespace Voron.Impl.Paging
         }
 
         protected internal abstract unsafe void PrefetchRanges(Win32MemoryMapNativeMethods.WIN32_MEMORY_RANGE_ENTRY* list, int count);
+
+        private struct PageIterator : IEnumerator<long>
+        {
+            private readonly long _startPage;
+            private readonly long _endPage;
+            private long _currentPage;
+
+            public PageIterator(long pageNumber, int pagesToPrefetch)
+            {
+                this._startPage = pageNumber;
+                this._endPage = pageNumber + pagesToPrefetch;
+                this._currentPage = pageNumber;
+            }
+
+            [MethodImpl(MethodImplOptions.AggressiveInlining)]
+            public bool MoveNext()
+            {
+                this._currentPage++;
+                return _currentPage < _endPage;
+            }
+
+            public void Reset()
+            {
+                this._currentPage = this._startPage;
+            }
+
+            public long Current
+            {
+                [MethodImpl(MethodImplOptions.AggressiveInlining)]
+                get => _currentPage;
+            }
+
+            object IEnumerator.Current => Current;
+
+            public void Dispose() {}
+        }
+
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public void MaybePrefetchMemory(long pageNumber, int pagesToPrefetch)
+        {
+            MaybePrefetchMemory(new PageIterator(pageNumber, pagesToPrefetch));
+        }
 
         public void MaybePrefetchMemory<T>(T pagesToPrefetch) where T : struct, IEnumerator<long>
         {
