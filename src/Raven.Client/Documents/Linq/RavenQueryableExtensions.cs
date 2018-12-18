@@ -135,8 +135,5 @@ namespace Raven.Client.Documents.Linq
             throw new InvalidOperationException(
                 "This method isn't meant to be called directly, it just exists as a place holder for the LINQ provider");
         }
-
-
-
     }
 }

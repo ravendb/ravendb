@@ -1,7 +1,5 @@
-﻿using System;
-using System.Collections.Generic;
+﻿using System.Collections.Generic;
 using System.Linq;
-using System.Text;
 using FastTests;
 using Raven.Client.Documents.Linq;
 using Xunit;
@@ -10,13 +8,13 @@ namespace SlowTests.Issues
 {
     public class RavenDB_12490 : RavenTestBase
     {
-        public class EntityWithArray
+        private class EntityWithArray
         {
             public string Name;
             public List<int> Numbers;
             public string[] Strings;
         }
-        
+
         [Fact]
         public void ContainsAllWorks()
         {
@@ -39,8 +37,8 @@ namespace SlowTests.Issues
 
                 using (var session = store.OpenSession())
                 {
-                    var docQuery1 = session.Query<EntityWithArray>().Customize(x=>x.WaitForNonStaleResults()).Where(x => x.Strings.ContainsAll(
-                        new string[] { "1", "2", "3" }));
+                    var docQuery1 = session.Query<EntityWithArray>().Customize(x => x.WaitForNonStaleResults()).Where(x => x.Strings.ContainsAll(
+                          new string[] { "1", "2", "3" }));
                     var res = docQuery1.ToList();
                     Assert.Equal(7, res.Count());
 
@@ -86,9 +84,9 @@ namespace SlowTests.Issues
                     Assert.Equal(0, docQuery4.Count());
                 }
 
-                
+
             }
         }
     }
-    
+
 }
