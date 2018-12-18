@@ -465,7 +465,7 @@ namespace Raven.Server.Documents.Indexes
                 options.MaxScratchBufferSize = documentDatabase.Configuration.Storage.MaxScratchBufferSize.Value.GetValue(SizeUnit.Bytes);
             options.PrefetchSegmentSize = documentDatabase.Configuration.Storage.PrefetchBatchSize.GetValue(SizeUnit.Bytes);
             options.PrefetchResetThreshold = documentDatabase.Configuration.Storage.PrefetchResetThreshold.GetValue(SizeUnit.Bytes);
-            options.JournalsSizeThreshold = documentDatabase.Configuration.Storage.JournalsSizeThreshold.GetValue(SizeUnit.Bytes);
+            options.SyncJournalsCountThreshold = documentDatabase.Configuration.Storage.SyncJournalsCountThreshold;
 
             if (documentDatabase.ServerStore.GlobalIndexingScratchSpaceMonitor != null)
                 options.ScratchSpaceUsage.AddMonitor(documentDatabase.ServerStore.GlobalIndexingScratchSpaceMonitor);
@@ -1316,7 +1316,7 @@ namespace Raven.Server.Documents.Indexes
                 return;
 
             _errorStateReason = $"State was changed due to excessive number of analyzer errors ({analyzerErrors}).";
-            SetState(IndexState.Error);
+            SetState(IndexState.Error, ignoreWriteError: true);
         }
 
         internal void HandleUnexpectedErrors(IndexingStatsScope stats, Exception e)
@@ -1332,7 +1332,7 @@ namespace Raven.Server.Documents.Indexes
                 return;
 
             _errorStateReason = $"State was changed due to excessive number of unexpected errors ({unexpectedErrors}).";
-            SetState(IndexState.Error);
+            SetState(IndexState.Error, ignoreWriteError: true);
         }
 
         internal void HandleCriticalErrors(IndexingStatsScope stats, CriticalIndexingException e)
@@ -1344,7 +1344,7 @@ namespace Raven.Server.Documents.Indexes
                 return;
 
             _errorStateReason = $"State was changed due to a critical error. Error message: {e.Message}";
-            SetState(IndexState.Error);
+            SetState(IndexState.Error, ignoreWriteError: true);
         }
 
         internal void HandleWriteErrors(IndexingStatsScope stats, IndexWriteException iwe)
@@ -1363,7 +1363,7 @@ namespace Raven.Server.Documents.Indexes
                 return;
 
             _errorStateReason = $"State was changed due to excessive number of write errors ({writeErrors}).";
-            SetState(IndexState.Error);
+            SetState(IndexState.Error, ignoreWriteError: true);
         }
 
         internal void HandleExcessiveNumberOfReduceErrors(IndexingStatsScope stats, ExcessiveNumberOfReduceErrorsException e)
@@ -1377,7 +1377,7 @@ namespace Raven.Server.Documents.Indexes
                 return;
 
             _errorStateReason = e.Message;
-            SetState(IndexState.Error);
+            SetState(IndexState.Error, ignoreWriteError: true);
         }
 
         private void HandleOutOfMemoryException(Exception oome, IndexingStatsScope scope)
@@ -1706,7 +1706,7 @@ namespace Raven.Server.Documents.Indexes
             }
         }
 
-        public virtual void SetState(IndexState state, bool inMemoryOnly = false)
+        public virtual void SetState(IndexState state, bool inMemoryOnly = false, bool ignoreWriteError = false)
         {
             if (State == state)
                 return;
@@ -1734,6 +1734,14 @@ namespace Raven.Server.Documents.Indexes
                 {
                     // this might fail if we can't write, so we first update the in memory state
                     _indexStorage.WriteState(state);
+                }
+                catch (Exception e)
+                {
+                    if (_logger.IsOperationsEnabled)
+                        _logger.Operations($"Failed to write {state} state of '{Name}' index to the storage", e);
+
+                    if (ignoreWriteError == false)
+                        throw;
                 }
                 finally
                 {
@@ -3339,6 +3347,8 @@ namespace Raven.Server.Documents.Indexes
 
                 _isCompactionInProgress = true;
                 PathSetting compactPath = null;
+                PathSetting tempPath = null;
+
 
                 try
                 {
@@ -3348,15 +3358,16 @@ namespace Raven.Server.Documents.Indexes
                     {
                         var environmentOptions =
                                                 (StorageEnvironmentOptions.DirectoryStorageEnvironmentOptions)storageEnvironmentOptions;
-                        var srcOptions = StorageEnvironmentOptions.ForPath(environmentOptions.BasePath.FullPath, null, null, DocumentDatabase.IoChanges,
+                        var srcOptions = StorageEnvironmentOptions.ForPath(environmentOptions.BasePath.FullPath, environmentOptions.TempPath?.FullPath, null, DocumentDatabase.IoChanges,
                             DocumentDatabase.CatastrophicFailureNotification);
 
                         InitializeOptions(srcOptions, DocumentDatabase, Name, schemaUpgrader: false);
 
                         compactPath = Configuration.StoragePath.Combine(IndexDefinitionBase.GetIndexNameSafeForFileSystem(Name) + "_Compact");
+                        tempPath = Configuration.TempPath?.Combine(IndexDefinitionBase.GetIndexNameSafeForFileSystem(Name) + "_Temp_Compact");
 
                         using (var compactOptions = (StorageEnvironmentOptions.DirectoryStorageEnvironmentOptions)
-                            StorageEnvironmentOptions.ForPath(compactPath.FullPath, null, null, DocumentDatabase.IoChanges,
+                            StorageEnvironmentOptions.ForPath(compactPath.FullPath, tempPath?.FullPath, null, DocumentDatabase.IoChanges,
                                 DocumentDatabase.CatastrophicFailureNotification))
                         {
                             InitializeOptions(compactOptions, DocumentDatabase, Name, schemaUpgrader: false);
@@ -3378,6 +3389,9 @@ namespace Raven.Server.Documents.Indexes
 
                         IOExtensions.DeleteDirectory(environmentOptions.BasePath.FullPath);
                         IOExtensions.MoveDirectory(compactPath.FullPath, environmentOptions.BasePath.FullPath);
+
+                        if (tempPath != null)
+                            IOExtensions.DeleteDirectory(tempPath.FullPath);
                     }
 
                     result.SizeAfterCompactionInMb = CalculateIndexStorageSize().GetValue(SizeUnit.Megabytes);

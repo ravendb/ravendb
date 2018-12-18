@@ -75,7 +75,7 @@ namespace Voron
             var position = pageNumber & _andMask;
 
             PageData* node = &_cache[position];
-            if (node->PageNumber == pageNumber)
+            if (node->PageNumber == pageNumber && node->PageNumber != Invalid)
             {
                 page = node->Page;
                 return true;
@@ -86,48 +86,13 @@ namespace Voron
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public Page GetReadOnlyPage(long pageNumber)
-        {
-            var position = pageNumber & _andMask;
-
-            PageData* node = &_cache[position];
-            if (node->PageNumber == pageNumber)
-                return node->Page;
-
-            var page = _tx.GetPage(pageNumber);
-            node->PageNumber = pageNumber;
-            node->Page = page;
-            node->IsWritable = false;
-
-            return page;
-        }
-
-        [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public Page GetWritablePage(long pageNumber)
-        {
-            var position = pageNumber & _andMask;
-
-            PageData* node = &_cache[position];
-
-            if (node->IsWritable && node->PageNumber == pageNumber)
-                return node->Page;
-
-            var page = _tx.ModifyPage(pageNumber);
-            node->PageNumber = pageNumber;
-            node->Page = page;
-            node->IsWritable = true;
-
-            return page;
-        }
-
-        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public bool TryGetWritablePage(long pageNumber, out Page page)
         {
             var position = pageNumber & _andMask;
 
             PageData* node = &_cache[position];
 
-            if (node->IsWritable && node->PageNumber == pageNumber)
+            if (node->IsWritable && node->PageNumber == pageNumber && node->PageNumber != Invalid)
             {
                 page = node->Page;
                 return true;

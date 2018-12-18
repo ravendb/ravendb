@@ -592,6 +592,8 @@ namespace Raven.Server.Documents
                     _logger.Info(msg);
             }
 
+            DocumentDatabase documentDatabase = null;
+
             try
             {
                 // force this to have a new value if one already exists
@@ -599,11 +601,10 @@ namespace Raven.Server.Documents
                     s => new ConcurrentQueue<string>(),
                     (s, existing) => new ConcurrentQueue<string>());
 
-
                 AddToInitLog("Starting database initialization");
 
                 var sp = Stopwatch.StartNew();
-                var documentDatabase = new DocumentDatabase(config.ResourceName, config, _serverStore, AddToInitLog);
+                documentDatabase = new DocumentDatabase(config.ResourceName, config, _serverStore, AddToInitLog);
                 documentDatabase.Initialize();
 
                 AddToInitLog("Finish database initialization");
@@ -616,11 +617,12 @@ namespace Raven.Server.Documents
                 // if we have a very long init process, make sure that we reset the last idle time for this db.
                 LastRecentlyUsed.AddOrUpdate(databaseName, SystemTime.UtcNow, (_, time) => SystemTime.UtcNow);
 
-
                 return documentDatabase;
             }
             catch (Exception e)
             {
+                documentDatabase?.Dispose();
+
                 if (_logger.IsInfoEnabled)
                     _logger.Info($"Failed to start database {config.ResourceName}", e);
 
@@ -737,6 +739,8 @@ namespace Raven.Server.Documents
                     [DoNotRemove] = true
                 }
             });
+
+            var t = tcs.IgnoreUnobservedExceptions();
 
             try
             {

@@ -123,6 +123,20 @@ namespace Raven.Server.Documents.Indexes.MapReduce
                             throw new ArgumentOutOfRangeException(modifiedStore.Type.ToString());
                     }
                 }
+
+                if (_mapReduceContext.FreedPages.Count > 0)
+                {
+                    long tmp = 0;
+                    using (treeScopeStats.Start())
+                    using (Slice.External(indexContext.Allocator, (byte*)&tmp, sizeof(long), out Slice pageNumberSlice))
+                    {
+                        foreach (var freedPage in _mapReduceContext.FreedPages)
+                        {
+                            tmp = Bits.SwapBytes(freedPage);
+                            table.DeleteByKey(pageNumberSlice);
+                        }
+                    }
+                }
             }
 
             if (stats.Duration >= MinReduceDurationToCalculateProcessMemoryUsage)
@@ -212,7 +226,7 @@ namespace Raven.Server.Documents.Indexes.MapReduce
              MapReduceResultsStore modifiedStore, LowLevelTransaction lowLevelTransaction,
             IndexWriteOperation writer, LazyStringValue reduceKeyHash, Table table, CancellationToken token)
         {
-            if (modifiedStore.ModifiedPages.Count == 0 && modifiedStore.FreedPages.Count == 0)
+            if (modifiedStore.ModifiedPages.Count == 0)
                 return;
 
             EnsureValidTreeReductionStats(stats);
@@ -326,16 +340,6 @@ namespace Raven.Server.Documents.Indexes.MapReduce
                 }
             }
 
-            long tmp = 0;
-            using (Slice.External(indexContext.Allocator, (byte*)&tmp, sizeof(long), out Slice pageNumberSlice))
-            {
-                foreach (var freedPage in modifiedStore.FreedPages)
-                {
-                    tmp = Bits.SwapBytes(freedPage);
-                    table.DeleteByKey(pageNumberSlice);
-                }
-            }
-
             while (parentPagesToAggregate.Count > 0 || branchesToAggregate.Count > 0)
             {
                 token.ThrowIfCancellationRequested();
@@ -409,7 +413,6 @@ namespace Raven.Server.Documents.Indexes.MapReduce
                 // let's remove them and reduce the tree once again
 
                 modifiedStore.ModifiedPages.Clear();
-                modifiedStore.FreedPages.Clear();
 
                 foreach (var pageNumber in compressedEmptyLeafs)
                 {
