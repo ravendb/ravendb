@@ -84,7 +84,7 @@ namespace Raven.Server.Documents.Queries.Graph
 
             var steps = new List<SingleEdgeMatcher>();
 
-            foreach (var step in steps)
+            foreach (var step in rqs.Steps)
             {
                 var right = Visit(step.Right);
                 if (ReferenceEquals(right, step.Right) == false)

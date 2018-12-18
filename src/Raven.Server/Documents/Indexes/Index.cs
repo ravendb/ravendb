@@ -2813,11 +2813,11 @@ namespace Raven.Server.Documents.Indexes
             return queryDoneRunning;
         }
 
-        private static readonly TimeSpan DefaultWaitForNonStaleResultsTimeout = TimeSpan.FromSeconds(15); // this matches default timeout from client
+        internal static readonly TimeSpan DefaultWaitForNonStaleResultsTimeout = TimeSpan.FromSeconds(15); // this matches default timeout from client
 
         private readonly ConcurrentLruRegexCache _regexCache = new ConcurrentLruRegexCache(1024);
 
-        private static bool WillResultBeAcceptable(bool isStale, IndexQueryBase<BlittableJsonReaderObject> query, AsyncWaitForIndexing wait)
+        internal static bool WillResultBeAcceptable(bool isStale, IndexQueryBase<BlittableJsonReaderObject> query, AsyncWaitForIndexing wait)
         {
             if (isStale == false)
                 return true;
