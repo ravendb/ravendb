@@ -81,6 +81,7 @@ class liveEtlStatsWebSocketClient extends abstractWebSocketClient<resultsDto<Rav
                 existingEtlStats = {
                     TaskName: etlTaskName,
                     EtlType: etlType,
+                    TaskId: etlStatsFromEndpoint.TaskId,
                     Stats: []
                 };
                 

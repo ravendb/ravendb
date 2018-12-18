@@ -44,6 +44,8 @@ namespace Raven.Server.Documents.ETL
         public string Tag { get; protected set; }
 
         public abstract EtlType EtlType { get; }
+        
+        public abstract long TaskId { get; }
 
         public EtlProcessStatistics Statistics { get; protected set; }
 
@@ -158,6 +160,8 @@ namespace Raven.Server.Documents.ETL
         protected abstract IEnumerator<TExtracted> ConvertCountersEnumerator(IEnumerator<CounterDetail> counters, string collection);
 
         protected abstract bool ShouldTrackAttachmentTombstones();
+        
+        public override long TaskId => Configuration.TaskId;
 
         public virtual IEnumerable<TExtracted> Extract(DocumentsOperationContext context, long fromEtag, EtlItemType type, EtlStatsScope stats)
         {

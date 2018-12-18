@@ -4,6 +4,8 @@ namespace Raven.Server.Documents.ETL.Stats
 {
     public class EtlTaskPerformanceStats
     {
+        public long TaskId { get; set;  }
+        
         public string TaskName { get; set; }
 
         public EtlType EtlType { get; set; }
