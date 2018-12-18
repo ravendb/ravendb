@@ -188,7 +188,8 @@ namespace Raven.Server.Utils
                 else if (js.IsArray())
                 {
                     var arr = js.AsArray();
-                    return new DynamicJsonArray(flattenArrays ? Flatten(EnumerateArray(arr)) : EnumerateArray(arr));
+                    var convertedArray = EnumerateArray(root, arr, flattenArrays, recursiveLevel + 1, engine, context);
+                    return new DynamicJsonArray(flattenArrays ? Flatten(convertedArray) : convertedArray);
                 }
                 else if (js.IsObject())
                 {
@@ -278,14 +279,14 @@ namespace Raven.Server.Utils
             throw new InvalidOperationException("Invalid type " + jsValue);
         }
 
-        private static IEnumerable<object> EnumerateArray(ArrayInstance arr)
+        private static IEnumerable<object> EnumerateArray(object root, ArrayInstance arr, bool flattenArrays, int recursiveLevel, Engine engine, JsonOperationContext context)
         {
             foreach (var (key, val) in arr.GetOwnProperties())
             {
                 if (key == "length")
                     continue;
 
-                yield return ToBlittableSupportedType(val.Value);
+                yield return ToBlittableSupportedType(root, val.Value, flattenArrays, recursiveLevel, engine, context);
             }
         }
 
@@ -508,7 +509,7 @@ namespace Raven.Server.Utils
         public static IPropertyAccessor GetPropertyAccessorForMapReduceOutput(object value, HashSet<CompiledIndexField> groupByFields)
         {
             var type = value.GetType();
-            
+
             if (type == typeof(ObjectInstance)) // We don't cache JS types
                 return PropertyAccessor.CreateMapReduceOutputAccessor(type, value, groupByFields, true);
 
