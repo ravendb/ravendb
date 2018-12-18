@@ -87,11 +87,15 @@ namespace Raven.Server.Documents.Indexes
 
         private long _analyzerErrors;
 
+        private long _diskFullErrors;
+
         private const long WriteErrorsLimit = 10;
 
         private const long UnexpectedErrorsLimit = 3;
 
         private const long AnalyzerErrorLimit = 0;
+
+        private const long DiskFullErrorLimit = 10;
 
         protected Logger _logger;
 
@@ -1053,6 +1057,10 @@ namespace Raven.Server.Documents.Indexes
                                 {
                                     HandleExcessiveNumberOfReduceErrors(scope, enre);
                                 }
+                                catch (DiskFullException dfe)
+                                {
+                                    HandleDiskFullErrors(scope, dfe);
+                                }
                                 catch (OperationCanceledException)
                                 {
                                     // We are here only in the case of indexing process cancellation.
@@ -1301,6 +1309,7 @@ namespace Raven.Server.Documents.Indexes
             Interlocked.Exchange(ref _writeErrors, 0);
             Interlocked.Exchange(ref _unexpectedErrors, 0);
             Interlocked.Exchange(ref _analyzerErrors, 0);
+            Interlocked.Exchange(ref _diskFullErrors, 0);
         }
 
         internal void HandleAnalyzerErrors(IndexingStatsScope stats, IndexAnalyzerException iae)
@@ -1377,6 +1386,22 @@ namespace Raven.Server.Documents.Indexes
                 return;
 
             _errorStateReason = e.Message;
+            SetState(IndexState.Error, ignoreWriteError: true);
+        }
+
+        internal void HandleDiskFullErrors(IndexingStatsScope stats, DiskFullException dfe)
+        {
+            if (_logger.IsOperationsEnabled)
+                _logger.Operations($"Disk full error occurred for '{Name}'.", dfe);
+
+            stats.AddDiskFullError(dfe);
+
+            var diskFullErrors = Interlocked.Increment(ref _diskFullErrors);
+
+            if (State == IndexState.Error || diskFullErrors < DiskFullErrorLimit)
+                return;
+
+            _errorStateReason = $"State was changed due to excessive number of disk full errors ({diskFullErrors}).";
             SetState(IndexState.Error, ignoreWriteError: true);
         }
 
@@ -1573,12 +1598,15 @@ namespace Raven.Server.Documents.Indexes
 
                             tx.Commit();
                             SlowWriteNotification.Notify(commitStats, DocumentDatabase);
-
                             stats.RecordCommitStats(commitStats.NumberOfModifiedPages, commitStats.NumberOf4KbsWrittenToDisk);
                         }
                     }
                     catch
                     {
+                        // need to call it here to the let the index continue running
+                        // we'll stop when we reach the index error threshold 
+                        _mre.Set();
+
                         DisposeIndexWriterOnError(writeOperation);
                         throw;
                     }

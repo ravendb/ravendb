@@ -11,7 +11,6 @@ using Raven.Server.Documents.Indexes.MapReduce.Exceptions;
 using Raven.Server.Documents.Indexes.Persistence.Lucene;
 using Raven.Server.Documents.Indexes.Workers;
 using Raven.Server.ServerWide.Context;
-using Raven.Server.ServerWide.Memory;
 using Raven.Server.Utils;
 using Sparrow;
 using Sparrow.Binary;
@@ -214,7 +213,7 @@ namespace Raven.Server.Documents.Indexes.MapReduce
                 _index.UpdateThreadAllocations(indexContext, writer, stats, updateReduceStats: true);
                 
             }
-            catch (Exception e) when (e.IsOperationCanceled() == false && e.IsOutOfMemory() == false)
+            catch (Exception e) when (e.IsIndexError())
             {
                 _index.ErrorIndexIfCriticalException(e);
 
@@ -326,7 +325,7 @@ namespace Raven.Server.Documents.Indexes.MapReduce
                             stats.RecordReduceSuccesses(leafPage.NumberOfEntries);
                         }
                     }
-                    catch (Exception e) when (e.IsOperationCanceled() == false && e.IsOutOfMemory() == false)
+                    catch (Exception e) when (e.IsIndexError())
                     {
                         if (failedAggregatedLeafs == null)
                             failedAggregatedLeafs = new Dictionary<long, Exception>();
@@ -386,7 +385,7 @@ namespace Raven.Server.Documents.Indexes.MapReduce
                             stats.RecordReduceSuccesses(page.NumberOfEntries);
                         }
                     }
-                    catch (Exception e) when (e.IsOperationCanceled() == false && e.IsOutOfMemory() == false)
+                    catch (Exception e) when (e.IsIndexError())
                     {
                         _index.ErrorIndexIfCriticalException(e);
 

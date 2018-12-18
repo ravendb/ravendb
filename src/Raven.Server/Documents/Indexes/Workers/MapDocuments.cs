@@ -112,7 +112,7 @@ namespace Raven.Server.Documents.Indexes.Workers
                                         resultsCount += numberOfResults;
                                         collectionStats.RecordMapSuccess();
                                     }
-                                    catch (Exception e) when (e.IsOutOfMemory() == false)
+                                    catch (Exception e) when (e.IsIndexError())
                                     {
                                         docsEnumerator.OnError();
                                         _index.ErrorIndexIfCriticalException(e);
