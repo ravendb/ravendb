@@ -3,7 +3,6 @@
 
 #include <stdint.h>
 
-
 typedef int bool;
 #define true 1
 #define false 0
@@ -11,12 +10,27 @@ typedef int bool;
 #if _WIN32
 _declspec(dllexport)
 #endif
-uint64_t rvn_get_current_thread_id(void);
+uint64_t
+rvn_get_current_thread_id(void);
 
 #if _WIN32
 _declspec(dllexport)
 #endif
-int32_t rvn_write_header(const char *path, void *header, int32_t size, uint32_t *detailed_error_code);
+int32_t
+rvn_write_header(const char *path, void *header, int32_t size, uint32_t *detailed_error_code);
+
+
+#if _WIN32
+_declspec(dllexport)
+#endif
+int32_t
+sync_directory_for (const char *file_path, uint32_t * detailed_error_code);
+
+#if _WIN32
+_declspec(dllexport)
+#endif
+int32_t
+flush_file (int32_t fd);
 
 
 #endif

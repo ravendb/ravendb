@@ -1,25 +1,41 @@
 using System;
 using System.IO;
-using static Voron.Platform.PalFlags;
+using System.Text;
 // ReSharper disable StringLiteralTypo
 
 namespace Voron.Platform
 {
     public static class PalHelper
     {
-        public static void ThrowLastError(PalFlags.Errno lastError, string msg)
+        public static unsafe void ThrowLastError(int lastError, string msg)
         {
-            if (Enum.IsDefined(typeof(Errno), lastError) == false)
-                throw new InvalidOperationException($"Unknown error ='{lastError}'. Message: {msg}");            
-            switch (lastError)
+            string txt;
+            try
             {
-                case Errno.ENOMEM:
-                    throw new OutOfMemoryException("ENOMEM on " + msg);
-                case Errno.ENOENT:
-                    throw new FileNotFoundException("ENOENT on " + msg);
-                default:
-                    throw new InvalidOperationException($"{lastError.ToString()}/{lastError} : {msg}");
+                const int MaxNativeErrorStr = 256;
+                var buf = stackalloc byte[MaxNativeErrorStr];
+                var size = Pal.rvn_get_error_string(lastError, buf, MaxNativeErrorStr, out int specialErrnoCodes);
+
+                var nativeMsg = size >= 0 ? Encoding.UTF8.GetString(buf, size) : lastError.ToString();
+
+                txt = $"Errno: {lastError}='{nativeMsg}' (rc={specialErrnoCodes}) - '{msg}'";
+
+                if ((specialErrnoCodes & (int)PalFlags.ERRNO_SPECIAL_CODES.ENOMEM) != 0)
+                    throw new OutOfMemoryException(txt);
+
+                if ((specialErrnoCodes & (int)PalFlags.ERRNO_SPECIAL_CODES.ENOENT) != 0)
+                    throw new FileNotFoundException(txt);
             }
+            catch (OutOfMemoryException)
+            {
+                throw; // we can't assume anything is safe here, just re-throw
+            }
+            catch (Exception ex)
+            {
+                txt = $"{lastError}:=(Failed to rvn_get_error_string - {ex.Message}): {msg}";
+            }
+
+            throw new InvalidOperationException(txt);
         }
     }
 }
