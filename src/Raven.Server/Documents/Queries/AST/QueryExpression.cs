@@ -132,7 +132,7 @@ namespace Raven.Server.Documents.Queries.AST
             {
                 case BlittableJsonReaderObject leftBlittableJson:
                     if (right is BlittableJsonReaderObject rightBlittableJson)
-                        return leftBlittableJson.Equals(rightBlittableJson, true);
+                        return leftBlittableJson.Equals(rightBlittableJson, ignoreRavenProperties: true);
 
                     throw new NotSupportedException("Cannot compare objects with non-objects.");
                 case long l:

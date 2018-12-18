@@ -1263,7 +1263,7 @@ namespace Raven.Server.Documents.Queries.Parser
                     break;
                 case NextTokenOptions.BinaryOp:
                     _state = NextTokenOptions.Parenthesis;
-                    if (Operator(true, out op) == false)
+                    if (Operator(OperatorField.Required, out op) == false)
                         return false;
                     break;
                 default:
@@ -1379,7 +1379,14 @@ namespace Raven.Server.Documents.Queries.Parser
             return true;
         }
 
-        private bool Operator(bool fieldRequired, out QueryExpression op)
+        private enum OperatorField
+        {
+            Required,
+            Optional,
+            Desired
+        }
+
+        private bool Operator(OperatorField fieldOption, out QueryExpression op)
         {
             OperatorType type;
             FieldExpression field = null;
@@ -1390,7 +1397,7 @@ namespace Raven.Server.Documents.Queries.Parser
                 return true;
             }
 
-            if (fieldRequired && Field(out field) == false)
+            if (fieldOption != OperatorField.Optional && Field(out field) == false)
             {
                 op = null;
                 return false;
@@ -1398,10 +1405,10 @@ namespace Raven.Server.Documents.Queries.Parser
 
             if (Scanner.TryScan(OperatorStartMatches, out var match) == false)
             {
-                if (fieldRequired == false)
+                if (fieldOption != OperatorField.Required)
                 {
-                    op = null;
-                    return false;
+                    op = field;
+                    return fieldOption == OperatorField.Desired;
                 }
                 ThrowParseException("Invalid operator expected any of (In, Between, =, <, >, <=, >=, !=)");
             }
@@ -1475,7 +1482,7 @@ namespace Raven.Server.Documents.Queries.Parser
                     var isMethod = Method(field, out var method);
                     op = method;
 
-                    if (isMethod && Operator(false, out var methodOperator))
+                    if (isMethod && Operator(OperatorField.Optional, out var methodOperator))
                     {
                         if (methodOperator is BinaryExpression be)
                         {
@@ -1516,13 +1523,7 @@ namespace Raven.Server.Documents.Queries.Parser
                 return true;
             }
 
-            if (Field(out var rightExpression))
-            {
-                op = new BinaryExpression(field, rightExpression, type);
-                return true;
-            }
-
-            if (Operator(true, out var op2))
+            if (Operator(OperatorField.Desired, out var op2))
             {
                 op = new BinaryExpression(field, op2, type);
                 return true;
