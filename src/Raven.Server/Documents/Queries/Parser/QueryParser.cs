@@ -1,13 +1,11 @@
 using System;
 using System.Collections.Generic;
-using System.Diagnostics;
 using System.Linq;
 using System.Text;
 using Esprima;
 using Microsoft.Extensions.Primitives;
 using Raven.Client.Exceptions;
 using Raven.Server.Documents.Queries.AST;
-using Sparrow;
 
 namespace Raven.Server.Documents.Queries.Parser
 {
@@ -1391,127 +1389,125 @@ namespace Raven.Server.Documents.Queries.Parser
                 op = new TrueExpression();
                 return true;
             }
-            else
+
+            if (fieldRequired && Field(out field) == false)
             {
-                if (fieldRequired && Field(out field) == false)
+                op = null;
+                return false;
+            }
+
+            if (Scanner.TryScan(OperatorStartMatches, out var match) == false)
+            {
+                if (fieldRequired == false)
                 {
                     op = null;
                     return false;
                 }
+                ThrowParseException("Invalid operator expected any of (In, Between, =, <, >, <=, >=, !=)");
+            }
 
-                if (Scanner.TryScan(OperatorStartMatches, out var match) == false)
-                {
-                    if (fieldRequired == false)
+
+            switch (match)
+            {
+                case "<":
+                    type = OperatorType.LessThan;
+                    break;
+                case ">":
+                    type = OperatorType.GreaterThan;
+                    break;
+                case "<=":
+                    type = OperatorType.LessThanEqual;
+                    break;
+                case ">=":
+                    type = OperatorType.GreaterThanEqual;
+                    break;
+                case "=":
+                case "==":
+                    type = OperatorType.Equal;
+                    break;
+                case "!=":
+                case "<>":
+                    type = OperatorType.NotEqual;
+                    break;
+                case "BETWEEN":
+                    if (Value(out var fst) == false)
+                        ThrowParseException("parsing Between, expected value (1st)");
+                    if (Scanner.TryScan("AND") == false)
+                        ThrowParseException("parsing Between, expected AND");
+                    if (Value(out var snd) == false)
+                        ThrowParseException("parsing Between, expected value (2nd)");
+
+                    if (fst.Type != snd.Type)
+                        ThrowQueryException(
+                            $"Invalid Between expression, values must have the same type but got {fst.Type} and {snd.Type}");
+
+                    op = new BetweenExpression(field, fst, snd);
+                    return true;
+                case "IN":
+                case "ALL IN":
+                    if (Scanner.TryScan('(') == false)
+                        ThrowParseException("parsing In, expected '('");
+
+                    var list = new List<QueryExpression>();
+                    do
                     {
-                        op = null;
-                        return false;
-                    }
-                    ThrowParseException("Invalid operator expected any of (In, Between, =, <, >, <=, >=)");
-                }
+                        if (Scanner.TryScan(')'))
+                            break;
 
+                        if (list.Count != 0)
+                            if (Scanner.TryScan(',') == false)
+                                ThrowParseException("parsing In expression, expected ','");
 
-                switch (match)
-                {
-                    case "<":
-                        type = OperatorType.LessThan;
-                        break;
-                    case ">":
-                        type = OperatorType.GreaterThan;
-                        break;
-                    case "<=":
-                        type = OperatorType.LessThanEqual;
-                        break;
-                    case ">=":
-                        type = OperatorType.GreaterThanEqual;
-                        break;
-                    case "=":
-                    case "==":
-                        type = OperatorType.Equal;
-                        break;
-                    case "!=":
-                    case "<>":
-                        type = OperatorType.NotEqual;
-                        break;
-                    case "BETWEEN":
-                        if (Value(out var fst) == false)
-                            ThrowParseException("parsing Between, expected value (1st)");
-                        if (Scanner.TryScan("AND") == false)
-                            ThrowParseException("parsing Between, expected AND");
-                        if (Value(out var snd) == false)
-                            ThrowParseException("parsing Between, expected value (2nd)");
+                        if (Value(out var inVal) == false)
+                            ThrowParseException("parsing In, expected a value");
 
-                        if (fst.Type != snd.Type)
-                            ThrowQueryException(
-                                $"Invalid Between expression, values must have the same type but got {fst.Type} and {snd.Type}");
+                        if (list.Count > 0)
+                            if (list[0].Type != inVal.Type)
+                                ThrowQueryException(
+                                    $"Invalid In expression, all values must have the same type, expected {list[0].Type} but got {inVal.Type}");
+                        list.Add(inVal);
+                    } while (true);
 
-                        op = new BetweenExpression(field, fst, snd);
-                        return true;
-                    case "IN":
-                    case "ALL IN":
-                        if (Scanner.TryScan('(') == false)
-                            ThrowParseException("parsing In, expected '('");
+                    op = new InExpression(field, list, match == "ALL IN");
 
-                        var list = new List<QueryExpression>();
-                        do
+                    return true;
+                case "(":
+                    var isMethod = Method(field, out var method);
+                    op = method;
+
+                    if (isMethod && Operator(false, out var methodOperator))
+                    {
+                        if (methodOperator is BinaryExpression be)
                         {
-                            if (Scanner.TryScan(')'))
-                                break;
-
-                            if (list.Count != 0)
-                                if (Scanner.TryScan(',') == false)
-                                    ThrowParseException("parsing In expression, expected ','");
-
-                            if (Value(out var inVal) == false)
-                                ThrowParseException("parsing In, expected a value");
-
-                            if (list.Count > 0)
-                                if (list[0].Type != inVal.Type)
-                                    ThrowQueryException(
-                                        $"Invalid In expression, all values must have the same type, expected {list[0].Type} but got {inVal.Type}");
-                            list.Add(inVal);
-                        } while (true);
-
-                        op = new InExpression(field, list, match == "ALL IN");
-
-                        return true;
-                    case "(":
-                        var isMethod = Method(field, out var method);
-                        op = method;
-
-                        if (isMethod && Operator(false, out var methodOperator))
-                        {
-                            if (methodOperator is BinaryExpression be)
-                            {
-                                be.Left = method;
-                                op = be;
-                                return true;
-                            }
-
-                            if (methodOperator is InExpression ie)
-                            {
-                                ie.Source = method;
-                                op = ie;
-                                return true;
-                            }
-                            if (methodOperator is BetweenExpression between)
-                            {
-                                between.Source = method;
-                                op = between;
-                                return true;
-                            }
-                            if (methodOperator is MethodExpression me)
-                            {
-                                op = me;
-                                return true;
-                            }
-                            ThrowParseException("Unexpected operator after method call: " + methodOperator);
+                            be.Left = method;
+                            op = be;
+                            return true;
                         }
 
-                        return isMethod;
-                    default:
-                        op = null;
-                        return false;
-                }
+                        if (methodOperator is InExpression ie)
+                        {
+                            ie.Source = method;
+                            op = ie;
+                            return true;
+                        }
+                        if (methodOperator is BetweenExpression between)
+                        {
+                            between.Source = method;
+                            op = between;
+                            return true;
+                        }
+                        if (methodOperator is MethodExpression me)
+                        {
+                            op = me;
+                            return true;
+                        }
+                        ThrowParseException("Unexpected operator after method call: " + methodOperator);
+                    }
+
+                    return isMethod;
+                default:
+                    op = null;
+                    return false;
             }
 
             if (Value(out var val))
@@ -1519,11 +1515,19 @@ namespace Raven.Server.Documents.Queries.Parser
                 op = new BinaryExpression(field, val, type);
                 return true;
             }
+
+            if (Field(out var rightExpression))
+            {
+                op = new BinaryExpression(field, rightExpression, type);
+                return true;
+            }
+
             if (Operator(true, out var op2))
             {
                 op = new BinaryExpression(field, op2, type);
                 return true;
             }
+
             op = null;
             return false;
         }
