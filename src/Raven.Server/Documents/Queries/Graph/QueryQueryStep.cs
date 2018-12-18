@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.Linq;
 using System.Threading.Tasks;
 using Microsoft.Extensions.Primitives;
@@ -91,7 +92,7 @@ namespace Raven.Server.Documents.Queries.Graph
 
             var results = _queryRunner.ExecuteQuery(new IndexQueryServerSide(_queryMetadata)
             {
-                QueryParameters = _queryParameters
+                QueryParameters = _queryParameters,
             },
                   _context, _resultEtag, _token);
 

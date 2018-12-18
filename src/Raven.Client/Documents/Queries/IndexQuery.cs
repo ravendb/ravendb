@@ -5,6 +5,7 @@
 //-----------------------------------------------------------------------
 
 using System;
+using System.Diagnostics;
 using Raven.Client.Documents.Queries.Timings;
 using Sparrow.Json;
 

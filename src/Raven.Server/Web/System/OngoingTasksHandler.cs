@@ -86,6 +86,8 @@ namespace Raven.Server.Web.System
 
                 foreach (var tasks in new[]
                 {
+                    CollectPullReplicationAsHubTasks(clusterTopology),
+                    CollectPullReplicationAsSinkTasks(databaseRecord.SinkPullReplications, dbTopology,clusterTopology,databaseRecord.RavenConnectionStrings),
                     CollectExternalReplicationTasks(databaseRecord.ExternalReplications, dbTopology,clusterTopology,databaseRecord.RavenConnectionStrings),
                     CollectEtlTasks(databaseRecord, dbTopology, clusterTopology),
                     CollectBackupTasks(databaseRecord, dbTopology, clusterTopology)
@@ -98,6 +100,93 @@ namespace Raven.Server.Web.System
 
                 return ongoingTasksResult;
             }
+        }
+
+        private IEnumerable<OngoingTask> CollectPullReplicationAsSinkTasks(List<PullReplicationAsSink> edgePullReplications, DatabaseTopology dbTopology, ClusterTopology clusterTopology, Dictionary<string, RavenConnectionString> connectionStrings)
+        {
+            if (dbTopology == null)
+                yield break;
+
+            var handlers = Database.ReplicationLoader.IncomingHandlers.ToList();
+            foreach (var edgeReplication in edgePullReplications)
+            {
+                yield return GetSinkTaskInfo(dbTopology, clusterTopology, connectionStrings, edgeReplication, handlers);
+            }
+        }
+
+        private OngoingTaskPullReplicationAsSink GetSinkTaskInfo(
+            DatabaseTopology dbTopology, 
+            ClusterTopology clusterTopology, 
+            Dictionary<string, RavenConnectionString> connectionStrings,
+            PullReplicationAsSink sinkReplication, 
+            List<IncomingReplicationHandler> handlers)
+        {
+            var tag = Database.WhoseTaskIsIt(dbTopology, sinkReplication, null);
+
+            (string Url, OngoingTaskConnectionStatus Status) res = (null, OngoingTaskConnectionStatus.NotActive);
+            IncomingReplicationHandler handler = null;
+            if (tag == ServerStore.NodeTag)
+            {
+                foreach (var incoming in handlers)
+                {
+                    if (incoming.PullReplicationName == sinkReplication.HubDefinitionName)
+                    {
+                        handler = incoming;
+                        res = (incoming.ConnectionInfo.SourceUrl, OngoingTaskConnectionStatus.Active);
+                        break;
+                    }
+                }
+            }
+            else
+            {
+                res.Status = OngoingTaskConnectionStatus.NotOnThisNode;
+            }
+
+            return new OngoingTaskPullReplicationAsSink
+            {
+                TaskId = sinkReplication.TaskId,
+                TaskName = sinkReplication.Name,
+                ResponsibleNode = new NodeId {NodeTag = tag, NodeUrl = clusterTopology.GetUrlFromTag(tag)},
+                ConnectionStringName = sinkReplication.ConnectionStringName,
+                TaskState = sinkReplication.Disabled ? OngoingTaskState.Disabled : OngoingTaskState.Enabled,
+                DestinationDatabase = handler?.ConnectionInfo.SourceDatabaseName,
+                DestinationUrl = res.Url,
+                TopologyDiscoveryUrls = connectionStrings[sinkReplication.ConnectionStringName].TopologyDiscoveryUrls,
+                MentorNode = sinkReplication.MentorNode,
+                TaskConnectionStatus = res.Status,
+            };
+        }
+
+        private IEnumerable<OngoingTask> CollectPullReplicationAsHubTasks(ClusterTopology clusterTopology)
+        {
+            var pullReplicationHandlers = Database.ReplicationLoader.OutgoingHandlers.Where(n => n.IsPullReplicationAsHub).ToList();
+            foreach (var handler in pullReplicationHandlers)
+            {
+                var ex = handler.Destination as ExternalReplication;
+                if (ex == null) // should not happened
+                    continue;
+
+                yield return GetPullReplicationAsHubTaskInfo(clusterTopology, ex);
+            }
+        }
+
+        private OngoingTaskPullReplicationAsHub GetPullReplicationAsHubTaskInfo(ClusterTopology clusterTopology, ExternalReplication ex)
+        {
+            var connectionResult = Database.ReplicationLoader.GetExternalReplicationDestination(ex.TaskId);
+            var tag = Server.ServerStore.NodeTag; // we can't know about pull replication tasks on other nodes.
+
+            return new OngoingTaskPullReplicationAsHub
+            {
+                TaskId = ex.TaskId,
+                TaskName = ex.Name,
+                ResponsibleNode = new NodeId {NodeTag = tag, NodeUrl = clusterTopology.GetUrlFromTag(tag)},
+                TaskState = ex.Disabled ? OngoingTaskState.Disabled : OngoingTaskState.Enabled,
+                DestinationDatabase = ex.Database,
+                DestinationUrl = connectionResult.Url,
+                MentorNode = ex.MentorNode,
+                TaskConnectionStatus = connectionResult.Status,
+                DelayReplicationFor = ex.DelayReplicationFor
+            };
         }
 
         private IEnumerable<OngoingTask> CollectSubscriptionTasks(TransactionOperationContext context, DatabaseRecord databaseRecord, ClusterTopology clusterTopology)
@@ -137,14 +226,14 @@ namespace Raven.Server.Web.System
             }
         }
 
-        private IEnumerable<OngoingTask> CollectExternalReplicationTasks(List<ExternalReplication> watchers, DatabaseTopology dbTopology, ClusterTopology clusterTopology, Dictionary<string, RavenConnectionString> connectionStrings)
+        private IEnumerable<OngoingTask> CollectExternalReplicationTasks(List<ExternalReplication> externalReplications, DatabaseTopology dbTopology, ClusterTopology clusterTopology, Dictionary<string, RavenConnectionString> connectionStrings)
         {
             if (dbTopology == null)
                 yield break;
 
-            foreach (var watcher in watchers)
+            foreach (var externalReplication in externalReplications)
             {
-                var taskInfo = GetExternalReplicationInfo(dbTopology, clusterTopology, watcher, connectionStrings);
+                var taskInfo = GetExternalReplicationInfo(dbTopology, clusterTopology, externalReplication, connectionStrings);
                 yield return taskInfo;
             }
         }
@@ -152,7 +241,7 @@ namespace Raven.Server.Web.System
         private OngoingTaskReplication GetExternalReplicationInfo(DatabaseTopology databaseTopology, ClusterTopology clusterTopology,
             ExternalReplication watcher, Dictionary<string, RavenConnectionString> connectionStrings)
         {
-            var taskStatus = ReplicationLoader.GetExternalReplicationState(Database, watcher.TaskId);
+            var taskStatus = ReplicationLoader.GetExternalReplicationState(ServerStore, Database.Name, watcher.TaskId);
             var tag = Database.WhoseTaskIsIt(databaseTopology, watcher, taskStatus);
 
             (string Url, OngoingTaskConnectionStatus Status) res = (null, OngoingTaskConnectionStatus.None);
@@ -862,6 +951,31 @@ namespace Raven.Server.Web.System
                             WriteResult(context, taskInfo);
 
                             break;
+                        case OngoingTaskType.PullReplicationAsHub:
+                            watcher =
+                                Database.ReplicationLoader.OutgoingHandlers.SingleOrDefault(o => o.Destination is ExternalReplication ex && ex.TaskId == key)
+                                    ?.Destination as ExternalReplication;
+                            if (watcher == null)
+                            {
+                                HttpContext.Response.StatusCode = (int)HttpStatusCode.NotFound;
+                                break;
+                            }
+                            var pullAsHubTaskInfo = GetPullReplicationAsHubTaskInfo(clusterTopology, watcher);
+
+                            WriteResult(context, pullAsHubTaskInfo);
+                            break;
+
+                        case OngoingTaskType.PullReplicationAsSink:
+                            var edge = record.SinkPullReplications.Find(x => x.TaskId == key);
+                            if (edge == null)
+                            {
+                                HttpContext.Response.StatusCode = (int)HttpStatusCode.NotFound;
+                                break;
+                            }
+                            var sinkTaskInfo = GetSinkTaskInfo(dbTopology, clusterTopology, record.RavenConnectionStrings, edge, Database.ReplicationLoader.IncomingHandlers.ToList());
+
+                            WriteResult(context, sinkTaskInfo);
+                            break;
 
                         case OngoingTaskType.Backup:
 
@@ -965,7 +1079,7 @@ namespace Raven.Server.Web.System
 
                             WriteResult(context, subscriptionStateInfo.ToJson());
                             break;
-
+                       
                         default:
                             HttpContext.Response.StatusCode = (int)HttpStatusCode.NotFound;
                             break;
@@ -1045,11 +1159,15 @@ namespace Raven.Server.Web.System
             }
         }
 
+        
+
         [RavenAction("/databases/*/admin/tasks/external-replication", "POST", AuthorizationStatus.Operator)]
         public async Task UpdateExternalReplication()
         {
             if (ResourceNameValidator.IsValidResourceName(Database.Name, ServerStore.Configuration.Core.DataDirectory.FullPath, out string errorMessage) == false)
                 throw new BadRequestException(errorMessage);
+
+            var isPullReplication = GetBoolValueQueryString("pull", required: false) ?? false;
 
             using (ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
             {
@@ -1062,7 +1180,7 @@ namespace Raven.Server.Web.System
                         using (context.OpenReadTransaction())
                         {
                             var databaseRecord = ServerStore.Cluster.ReadDatabase(context, Database.Name);
-                            var taskStatus = ReplicationLoader.GetExternalReplicationState(Database, watcher.TaskId);
+                            var taskStatus = ReplicationLoader.GetExternalReplicationState(ServerStore, Database.Name, watcher.TaskId);
                             json[nameof(OngoingTask.ResponsibleNode)] = Database.WhoseTaskIsIt(databaseRecord.Topology, watcher, taskStatus);
                         }
 

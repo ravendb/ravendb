@@ -187,7 +187,14 @@ namespace Raven.Server.Documents.Queries
             var qp = new GraphQueryPlan(query, documentsContext, existingResultEtag, token, Database);
             qp.BuildQueryPlan();
             qp.OptimizeQueryPlan(); //TODO: audit optimization
-            await qp.Initialize();            
+            long? cutoffEtag = null;
+            Stopwatch queryDuration = null;
+            if (query.WaitForNonStaleResults)
+            {
+                cutoffEtag = Database.ReadLastEtag();
+                queryDuration = Stopwatch.StartNew();
+            }
+            await qp.Initialize();
             var matchResults = qp.Execute();
 
             if (query.Metadata.OrderBy != null)

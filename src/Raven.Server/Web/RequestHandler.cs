@@ -356,9 +356,9 @@ namespace Raven.Server.Web
             throw new ArgumentException($"Could not parse query string '{name}' as bool, val {val}");
         }
 
-        protected DateTime? GetDateTimeQueryString(string name)
+        protected DateTime? GetDateTimeQueryString(string name, bool required = true)
         {
-            var dataAsString = GetStringQueryString(name, required: false);
+            var dataAsString = GetStringQueryString(name, required);
             if (dataAsString == null)
                 return null;
 
@@ -471,7 +471,7 @@ namespace Raven.Server.Web
                     if (Server.Configuration.Security.AuthenticationEnabled == false)
                         return true;
 
-                    Server.Router.UnlikelyFailAuthorization(HttpContext, null, feature,
+                    RequestRouter.UnlikelyFailAuthorization(HttpContext, null, feature,
                         AuthorizationStatus.Operator);
                     return false;
                 case RavenServer.AuthenticationStatus.Operator:
@@ -499,7 +499,7 @@ namespace Raven.Server.Web
                     if (Server.Configuration.Security.AuthenticationEnabled == false)
                         return true;
 
-                    Server.Router.UnlikelyFailAuthorization(HttpContext, dbName, null, requireAdmin ? AuthorizationStatus.DatabaseAdmin : AuthorizationStatus.ValidUser);
+                    RequestRouter.UnlikelyFailAuthorization(HttpContext, dbName, null, requireAdmin ? AuthorizationStatus.DatabaseAdmin : AuthorizationStatus.ValidUser);
                     return false;
                 case RavenServer.AuthenticationStatus.ClusterAdmin:
                 case RavenServer.AuthenticationStatus.Operator:
@@ -507,7 +507,7 @@ namespace Raven.Server.Web
                 case RavenServer.AuthenticationStatus.Allowed:
                     if (dbName != null && feature.CanAccess(dbName, requireAdmin) == false)
                     {
-                        Server.Router.UnlikelyFailAuthorization(HttpContext, dbName, null, requireAdmin ? AuthorizationStatus.DatabaseAdmin : AuthorizationStatus.ValidUser);
+                        RequestRouter.UnlikelyFailAuthorization(HttpContext, dbName, null, requireAdmin ? AuthorizationStatus.DatabaseAdmin : AuthorizationStatus.ValidUser);
                         return false;
                     }
 

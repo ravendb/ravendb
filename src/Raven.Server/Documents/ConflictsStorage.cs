@@ -448,6 +448,23 @@ namespace Raven.Server.Documents
             return null;
         }
 
+        public bool HasConflictsFor(DocumentsOperationContext context, LazyStringValue id)
+        {
+            if (ConflictsCount == 0)
+                return false;
+
+            using (DocumentIdWorker.GetSliceFromId(context, id, out Slice lowerId))
+            using (GetConflictsIdPrefix(context, lowerId, out Slice prefixSlice))
+            {
+                var conflictsTable = context.Transaction.InnerTransaction.OpenTable(ConflictsSchema, ConflictsSlice);
+                foreach (var _ in conflictsTable.SeekForwardFrom(ConflictsSchema.Indexes[IdAndChangeVectorSlice], prefixSlice, 0, true))
+                {
+                    return true;
+                }
+                return false;
+            }
+        }
+
         public IReadOnlyList<DocumentConflict> GetConflictsFor(DocumentsOperationContext context, string id)
         {
             if (ConflictsCount == 0)
