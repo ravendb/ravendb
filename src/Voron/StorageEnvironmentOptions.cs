@@ -230,7 +230,7 @@ namespace Voron
 
             PrefetchSegmentSize = 4 * Constants.Size.Megabyte;
             PrefetchResetThreshold = 8 * (long)Constants.Size.Gigabyte;
-            JournalsSizeThreshold = 1 * (long)Constants.Size.Gigabyte;
+            SyncJournalsCountThreshold = 2;
 
             ScratchSpaceUsage = new ScratchSpaceUsageMonitor();
         }
@@ -1162,8 +1162,10 @@ namespace Voron
 
         public long PrefetchSegmentSize { get; set; }
         public long PrefetchResetThreshold { get; set; }
-        public long JournalsSizeThreshold { get; set; }
+        public long SyncJournalsCountThreshold { get; set; }
         public byte[] MasterKey;
+
+        internal bool SimulateFailureOnDbCreation { get; set; }
 
         public const Win32NativeFileAttributes SafeWin32OpenFlags = Win32NativeFileAttributes.Write_Through | Win32NativeFileAttributes.NoBuffering;
         public OpenFlags DefaultPosixFlags = PlatformDetails.Is32Bits ? PerPlatformValues.OpenFlags.O_LARGEFILE : 0;

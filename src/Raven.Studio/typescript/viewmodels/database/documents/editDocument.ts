@@ -241,7 +241,20 @@ class editDocument extends viewModelBase {
 
         this.documentText.extend({
             required: true,
-            aceValidation: true
+            aceValidation: true,
+            validation: [
+                {
+                    validator: (val: string) => {
+                        try {
+                            const parsedJson = JSON.parse(val);
+                            return _.isPlainObject(parsedJson);
+                        } catch {
+                            return false;
+                        }
+                    },
+                    message: "Document must be valid JSON object"
+                }
+            ]
         });
     }
 

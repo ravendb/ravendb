@@ -3150,7 +3150,7 @@ The recommended method is to use full text search (mark the field as Analyzed an
 
             var (fields, projections) = GetProjections();
 
-            return documentQuery.SelectFields<T>(new QueryData(fields, projections, _fromAlias, null, _loadTokens, isMapReduce: _isMapReduce));
+            return documentQuery.SelectFields<T>(new QueryData(fields, projections, _fromAlias, null, _loadTokens));
         }
 
         /// <summary>
@@ -3237,7 +3237,7 @@ The recommended method is to use full text search (mark the field as Analyzed an
         {
             var (fields, projections) = GetProjections();
 
-            var finalQuery = ((IDocumentQuery<T>)_documentQuery).SelectFields<TProjection>(new QueryData(fields, projections, _fromAlias, _declareToken, _loadTokens, _declareToken != null || _jsSelectBody != null, isMapReduce: _isMapReduce));
+            var finalQuery = ((IDocumentQuery<T>)_documentQuery).SelectFields<TProjection>(new QueryData(fields, projections, _fromAlias, _declareToken, _loadTokens, _declareToken != null || _jsSelectBody != null));
 
             var executeQuery = GetQueryResult(finalQuery);
 

@@ -278,26 +278,40 @@ namespace Raven.Server.Documents.Handlers
                                     if (Logger.IsOperationsEnabled)
                                         Logger.Operations($"Failed to get stats of '{x.Name}' index", e);
 
-                                    Database.NotificationCenter.Add(AlertRaised.Create(Database.Name, $"Failed to get stats of '{x.Name}' index",
-                                        $"Exception was thrown on getting stats of '{x.Name}' index",
-                                        AlertType.Indexing_CouldNotGetStats, NotificationSeverity.Error, key: x.Name, details: new ExceptionDetails(e)));
-                                    
                                     try
                                     {
-                                        x.SetState(IndexState.Error, inMemoryOnly: true);
+                                        Database.NotificationCenter.Add(AlertRaised.Create(Database.Name, $"Failed to get stats of '{x.Name}' index",
+                                            $"Exception was thrown on getting stats of '{x.Name}' index",
+                                            AlertType.Indexing_CouldNotGetStats, NotificationSeverity.Error, key: x.Name, details: new ExceptionDetails(e)));
                                     }
-                                    catch (Exception ex)
+                                    catch (Exception addAlertException)
                                     {
-                                        if (Logger.IsOperationsEnabled)
-                                            Logger.Operations($"Failed to change state of '{x.Name}' index to error after encountering exception when getting its stats.",
-                                                ex);
+                                        if (Logger.IsOperationsEnabled && addAlertException.IsOutOfMemory() == false)
+                                            Logger.Operations($"Failed to add alert when getting error on retrieving stats of '{x.Name}' index", addAlertException);
+                                    }
+
+                                    var state = x.State;
+
+                                    if (e.IsOutOfMemory() == false)
+                                    {
+                                        try
+                                        {
+                                            state = IndexState.Error;
+                                            x.SetState(state, inMemoryOnly: true);
+                                        }
+                                        catch (Exception ex)
+                                        {
+                                            if (Logger.IsOperationsEnabled)
+                                                Logger.Operations($"Failed to change state of '{x.Name}' index to error after encountering exception when getting its stats.",
+                                                    ex);
+                                        }
                                     }
                                     
                                     return new IndexStats
                                     {
                                         Name = x.Name,
                                         Type = x.Type,
-                                        State = IndexState.Error,
+                                        State = state,
                                         Status = x.Status,
                                         LockMode = x.Definition.LockMode,
                                         Priority = x.Definition.Priority,

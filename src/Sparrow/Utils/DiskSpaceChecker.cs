@@ -102,7 +102,7 @@ namespace Sparrow.Utils
             {
                 if (PlatformDetails.RunningOnPosix == false)
                 {
-                    var windowsRealPath = GetWindowsRealPath(path);
+                    var windowsRealPath = GetWindowsRealPathByPath(path);
                     return Path.GetPathRoot(windowsRealPath);
                 }
 
@@ -157,7 +157,7 @@ namespace Sparrow.Utils
             return root;
         }
 
-        private static unsafe string GetWindowsRealPath(string path)
+        private static string GetWindowsRealPathByPath(string path)
         {
             var handle = CreateFile(path,
                 FILE_READ_EA,
@@ -180,63 +180,68 @@ namespace Sparrow.Utils
 
             try
             {
-                bool GetPath(uint bufferSize, out string outputPath)
-                {
-                    var charArray = new char[bufferSize];
-                    fixed (char* buffer = charArray)
-                    {
-                        var result = GetFinalPathNameByHandle(handle, buffer, bufferSize, 0);
-                        if (result == 0)
-                        {
-                            if (Logger.IsInfoEnabled)
-                            {
-                                var error = Marshal.GetLastWin32Error();
-                                Logger.Info($"Failed to get the final path name by handle, path: {path}, error: {error}");
-                            }
-
-                            outputPath = null;
-                            return false;
-                        }
-
-                        // return value is the size of the path
-                        if (result > bufferSize)
-                        {
-                            outputPath = null;
-                            return false;
-                        }
-
-                        outputPath = new string(charArray, 0, (int)result);
-                        return true;
-                    }
-                }
-
-                // this is called for each storage environment for the Data, Journals and Temp paths
-                // WindowsMaxPath is 32K and although this is called only once we can have a lot of storage environments
-                if (GetPath(256, out var realPath) == false)
-                {
-                    if (GetPath((uint)WindowsMaxPath, out realPath) == false)
-                        return path;
-                }
-
-                //The string that is returned by this function uses the \?\ syntax
-                if (realPath.Length >= 8 && realPath.StartsWith("\\\\?\\UNC\\", StringComparison.OrdinalIgnoreCase))
-                {
-                    realPath = "\\" + realPath.Substring(7);
-                    // network path, replace `\\?\UNC\` with `\\`
-                }
-
-                if (realPath.Length >= 4 && realPath.StartsWith("\\\\?\\", StringComparison.OrdinalIgnoreCase))
-                {
-                    // local path, remove `\\?\`
-                    realPath = realPath.Substring(4);
-                }
-
-                return realPath;
+                return GetWindowsRealPathByHandle(handle) ?? path;
             }
             finally
             {
                 CloseHandle(handle);
             }
+        }
+
+        public static unsafe string GetWindowsRealPathByHandle(IntPtr handle)
+        {
+            bool GetPath(uint bufferSize, out string outputPath)
+            {
+                var charArray = new char[bufferSize];
+                fixed (char* buffer = charArray)
+                {
+                    var result = GetFinalPathNameByHandle(handle, buffer, bufferSize, 0);
+                    if (result == 0)
+                    {
+                        if (Logger.IsInfoEnabled)
+                        {
+                            var error = Marshal.GetLastWin32Error();
+                            Logger.Info($"Failed to get the final path name by handle, error: {error}");
+                        }
+
+                        outputPath = null;
+                        return false;
+                    }
+
+                    // return value is the size of the path
+                    if (result > bufferSize)
+                    {
+                        outputPath = null;
+                        return false;
+                    }
+
+                    outputPath = new string(charArray, 0, (int)result);
+                    return true;
+                }
+            }
+
+            // this is called for each storage environment for the Data, Journals and Temp paths
+            // WindowsMaxPath is 32K and although this is called only once we can have a lot of storage environments
+            if (GetPath(256, out var realPath) == false)
+            {
+                if (GetPath((uint)WindowsMaxPath, out realPath) == false)
+                    return null;
+            }
+
+            //The string that is returned by this function uses the \?\ syntax
+            if (realPath.Length >= 8 && realPath.StartsWith("\\\\?\\UNC\\", StringComparison.OrdinalIgnoreCase))
+            {
+                // network path, replace `\\?\UNC\` with `\\`
+                realPath = "\\" + realPath.Substring(7);
+            }
+
+            if (realPath.Length >= 4 && realPath.StartsWith("\\\\?\\", StringComparison.OrdinalIgnoreCase))
+            {
+                // local path, remove `\\?\`
+                realPath = realPath.Substring(4);
+            }
+
+            return realPath;
         }
 
         [DllImport("kernel32.dll", SetLastError = true, CharSet = CharSet.Unicode)]
@@ -268,7 +273,7 @@ namespace Sparrow.Utils
         private static extern unsafe uint GetFinalPathNameByHandle(
             IntPtr hFile,
             char* buffer,
-            uint cchFilePath,
+            uint bufferLength,
             uint dwFlags);
     }
 

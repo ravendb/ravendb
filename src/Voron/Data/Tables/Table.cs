@@ -3,7 +3,6 @@ using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
 using Sparrow;
-using Sparrow.Collections;
 using Voron.Data.BTrees;
 using Voron.Data.Fixed;
 using Voron.Data.RawData;
@@ -37,9 +36,9 @@ namespace Voron.Data.Tables
         private readonly NewPageAllocator _tablePageAllocator;
         private readonly NewPageAllocator _globalPageAllocator;
 
-        public FixedSizeTree InactiveSections => _inactiveSections ?? (_inactiveSections = GetFixedSizeTree(_tableTree, TableSchema.InactiveSectionSlice, 0, isIndexTree: true));
+        public FixedSizeTree InactiveSections => _inactiveSections ?? (_inactiveSections = GetFixedSizeTree(_tableTree, TableSchema.InactiveSectionSlice, 0, isGlobal: false, isIndexTree: true));
 
-        public FixedSizeTree ActiveCandidateSection => _activeCandidateSection ?? (_activeCandidateSection = GetFixedSizeTree(_tableTree, TableSchema.ActiveCandidateSectionSlice, 0, isIndexTree: true));
+        public FixedSizeTree ActiveCandidateSection => _activeCandidateSection ?? (_activeCandidateSection = GetFixedSizeTree(_tableTree, TableSchema.ActiveCandidateSectionSlice, 0, isGlobal: false, isIndexTree: true));
 
         public ActiveRawDataSmallSection ActiveDataSmallSection
         {
@@ -418,7 +417,7 @@ namespace Voron.Data.Tables
                 var indexTree = GetTree(indexDef);
                 using (indexDef.GetSlice(_tx.Allocator, ref value, out Slice val))
                 {
-                    var fst = GetFixedSizeTree(indexTree, val.Clone(_tx.Allocator), 0);
+                    var fst = GetFixedSizeTree(indexTree, val.Clone(_tx.Allocator), 0, indexDef.IsGlobal);
                     if (fst.Delete(id).NumberOfEntriesDeleted == 0)
                     {
                         ThrowInvalidAttemptToRemoveValueFromIndexAndNotFindingIt(id, indexDef.Name);
@@ -543,9 +542,9 @@ namespace Voron.Data.Tables
                             forceUpdate)
                         {
                             var indexTree = GetTree(indexDef);
-                            var fst = GetFixedSizeTree(indexTree, oldVal.Clone(_tx.Allocator), 0);
+                            var fst = GetFixedSizeTree(indexTree, oldVal.Clone(_tx.Allocator), 0, indexDef.IsGlobal);
                             fst.Delete(id);
-                            fst = GetFixedSizeTree(indexTree, newVal.Clone(_tx.Allocator), 0);
+                            fst = GetFixedSizeTree(indexTree, newVal.Clone(_tx.Allocator), 0, indexDef.IsGlobal);
                             fst.Add(id);
                         }
                     }
@@ -648,7 +647,7 @@ namespace Voron.Data.Tables
                     using (indexDef.GetSlice(_tx.Allocator, ref value, out Slice val))
                     {
                         var indexTree = GetTree(indexDef);
-                        var index = GetFixedSizeTree(indexTree, val, 0);
+                        var index = GetFixedSizeTree(indexTree, val, 0, indexDef.IsGlobal);
                         index.Add(id);
                     }
                 }
@@ -670,15 +669,14 @@ namespace Voron.Data.Tables
 
         public FixedSizeTree GetFixedSizeTree(TableSchema.FixedSizeSchemaIndexDef indexDef)
         {
-
             if (indexDef.IsGlobal)
                 return _tx.GetGlobalFixedSizeTree(indexDef.Name, sizeof(long), isIndexTree: true, newPageAllocator: _globalPageAllocator);
-
+            
             var tableTree = _tx.ReadTree(Name);
-            return GetFixedSizeTree(tableTree, indexDef.Name, sizeof(long), isIndexTree: true);
+            return GetFixedSizeTree(tableTree, indexDef.Name, sizeof(long), isGlobal: false, isIndexTree: true);
         }
 
-        private FixedSizeTree GetFixedSizeTree(Tree parent, Slice name, ushort valSize, bool isIndexTree = false)
+        private FixedSizeTree GetFixedSizeTree(Tree parent, Slice name, ushort valSize, bool isGlobal, bool isIndexTree = false)
         {
             if (_fixedSizeTreeCache.TryGetValue(parent.Name, out Dictionary<Slice, FixedSizeTree> cache) == false)
             {
@@ -688,7 +686,8 @@ namespace Voron.Data.Tables
 
             if (cache.TryGetValue(name, out FixedSizeTree tree) == false)
             {
-                var fixedSizeTree = new FixedSizeTree(_tx.LowLevelTransaction, parent, name, valSize, isIndexTree: isIndexTree | parent.IsIndexTree, newPageAllocator: _tablePageAllocator);
+                var allocator = isGlobal ? _globalPageAllocator : _tablePageAllocator;
+                var fixedSizeTree = new FixedSizeTree(_tx.LowLevelTransaction, parent, name, valSize, isIndexTree: isIndexTree | parent.IsIndexTree, newPageAllocator: allocator);
                 return cache[fixedSizeTree.Name] = fixedSizeTree;
             }
 
@@ -786,11 +785,11 @@ namespace Voron.Data.Tables
             return true;
         }
 
-        private IEnumerable<TableValueHolder> GetSecondaryIndexForValue(Tree tree, Slice value)
+        private IEnumerable<TableValueHolder> GetSecondaryIndexForValue(Tree tree, Slice value, TableSchema.SchemaIndexDef index)
         {
             try
             {
-                var fstIndex = GetFixedSizeTree(tree, value, 0);
+                var fstIndex = GetFixedSizeTree(tree, value, 0, index.IsGlobal);
                 using (var it = fstIndex.Iterate())
                 {
                     if (it.Seek(long.MinValue) == false)
@@ -810,11 +809,11 @@ namespace Voron.Data.Tables
             }
         }
 
-        private IEnumerable<TableValueHolder> GetBackwardSecondaryIndexForValue(Tree tree, Slice value)
+        private IEnumerable<TableValueHolder> GetBackwardSecondaryIndexForValue(Tree tree, Slice value, TableSchema.SchemaIndexDef index)
         {
             try
             {
-                var fstIndex = GetFixedSizeTree(tree, value, 0);
+                var fstIndex = GetFixedSizeTree(tree, value, 0, index.IsGlobal);
                 using (var it = fstIndex.Iterate())
                 {
                     if (it is FixedSizeTree.LargeIterator)
@@ -873,7 +872,7 @@ namespace Voron.Data.Tables
 
                 do
                 {
-                    foreach (var result in GetSecondaryIndexForValue(tree, it.CurrentKey.Clone(_tx.Allocator)))
+                    foreach (var result in GetSecondaryIndexForValue(tree, it.CurrentKey.Clone(_tx.Allocator), index))
                     {
                         if (skip > 0)
                         {
@@ -903,7 +902,7 @@ namespace Voron.Data.Tables
 
                 do
                 {
-                    foreach (var result in GetSecondaryIndexForValue(tree, it.CurrentKey.Clone(_tx.Allocator)))
+                    foreach (var result in GetSecondaryIndexForValue(tree, it.CurrentKey.Clone(_tx.Allocator), index))
                     {
                         return result;
                     }
@@ -933,7 +932,7 @@ namespace Voron.Data.Tables
 
                 do
                 {
-                    foreach (var result in GetBackwardSecondaryIndexForValue(tree, it.CurrentKey.Clone(_tx.Allocator)))
+                    foreach (var result in GetBackwardSecondaryIndexForValue(tree, it.CurrentKey.Clone(_tx.Allocator), index))
                     {
                         if (skip > 0)
                         {
@@ -972,7 +971,7 @@ namespace Voron.Data.Tables
 
                 do
                 {
-                    foreach (var result in GetBackwardSecondaryIndexForValue(tree, it.CurrentKey.Clone(_tx.Allocator)))
+                    foreach (var result in GetBackwardSecondaryIndexForValue(tree, it.CurrentKey.Clone(_tx.Allocator), index))
                     {
                         yield return new SeekResult
                         {
@@ -998,7 +997,7 @@ namespace Voron.Data.Tables
 
                 do
                 {
-                    foreach (var result in GetBackwardSecondaryIndexForValue(tree, it.CurrentKey.Clone(_tx.Allocator)))
+                    foreach (var result in GetBackwardSecondaryIndexForValue(tree, it.CurrentKey.Clone(_tx.Allocator), index))
                     {
                         yield return new SeekResult
                         {
@@ -1030,7 +1029,7 @@ namespace Voron.Data.Tables
 
                 do
                 {
-                    foreach (var result in GetBackwardSecondaryIndexForValue(tree, it.CurrentKey.Clone(_tx.Allocator)))
+                    foreach (var result in GetBackwardSecondaryIndexForValue(tree, it.CurrentKey.Clone(_tx.Allocator), index))
                     {
                         return result;
                     }
@@ -1044,7 +1043,7 @@ namespace Voron.Data.Tables
         {
             var tree = GetTree(index);
 
-            var fstIndex = GetFixedSizeTree(tree, value, 0);
+            var fstIndex = GetFixedSizeTree(tree, value, 0, index.IsGlobal);
 
             return fstIndex.NumberOfEntries;
         }
@@ -1132,12 +1131,9 @@ namespace Voron.Data.Tables
                                 Delete(id);
                                 break;
                             }
-                            else
-                            {
-                                if (it.MoveNext() == false)
-                                    return;
-                                continue;
-                            }
+
+                            if (it.MoveNext() == false)
+                                return;
                         }
                     }
                 }
@@ -1410,7 +1406,7 @@ namespace Voron.Data.Tables
                     if (it.Seek(value) == false)
                         return deleted;
 
-                    var fst = GetFixedSizeTree(tree, it.CurrentKey.Clone(_tx.Allocator), 0);
+                    var fst = GetFixedSizeTree(tree, it.CurrentKey.Clone(_tx.Allocator), 0, index.IsGlobal);
                     using (var fstIt = fst.Iterate())
                     {
                         if (fstIt.Seek(long.MinValue) == false)
@@ -1459,7 +1455,7 @@ namespace Voron.Data.Tables
                     if (it.Seek(value) == false)
                         return deleted;
 
-                    var fst = GetFixedSizeTree(tree, it.CurrentKey.Clone(_tx.Allocator), 0);
+                    var fst = GetFixedSizeTree(tree, it.CurrentKey.Clone(_tx.Allocator), 0, index.IsGlobal);
                     using (var fstIt = fst.Iterate())
                     {
                         if (fstIt.Seek(long.MinValue) == false)
