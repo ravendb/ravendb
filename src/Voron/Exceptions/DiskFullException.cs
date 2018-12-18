@@ -29,5 +29,10 @@ namespace Voron.Exceptions
             DirectoryPath = Path.GetDirectoryName(filePath);
             CurrentFreeSpace = freeSpace ?? requestedFileSize - 1;
         }
+
+        public DiskFullException(string message) : base (message)
+        {
+
+        }
     }
 }
