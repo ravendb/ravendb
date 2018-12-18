@@ -13,52 +13,46 @@
 
 int32_t
 rvn_write_header (const char *path, void *header, int32_t size,
-		  uint32_t * detailed_error_code)
-{
+		  uint32_t * detailed_error_code) {
   int32_t rc;
   bool syncIsNeeded = false;
   int32_t fd = open (path, O_WRONLY | O_CREAT, S_IWUSR | S_IRUSR);
 
-  if (fd == -1)
-    {
-      rc = FAIL_OPEN_FILE;
-      goto error_cleanup;
-    }
+  if (fd == -1) {
+    rc = FAIL_OPEN_FILE;
+    goto error_cleanup;
+  }
 
   int32_t remaining = size;
 
   int64_t sz = lseek (fd, 0L, SEEK_END);
-  if (sz == -1)
-    {
-      rc = FAIL_SEEK_FILE;
-      goto error_cleanup;
-    }
+  if (sz == -1) {
+    rc = FAIL_SEEK_FILE;
+    goto error_cleanup;
+  }
 
-  if (lseek (fd, 0L, SEEK_SET) == -1)
-    {
-      rc = FAIL_SEEK_FILE;
-      goto error_cleanup;
-    }
+  if (lseek (fd, 0L, SEEK_SET) == -1) {
+    rc = FAIL_SEEK_FILE;
+    goto error_cleanup;
+  }
+
   if (sz != remaining)
     syncIsNeeded = true;
 
-  while (remaining > 0)
-    {
+  while (remaining > 0) {
       uint64_t written = write (fd, header, (uint64_t) remaining);
-      if (written == -1)
-	{
-	  rc = FAIL_WRITE_FILE;
-	  goto error_cleanup;
-	}
+      if (written == -1) {
+    	  rc = FAIL_WRITE_FILE;
+    	  goto error_cleanup;
+    	}
 
       remaining -= (int) written;
       header += written;
-    }
-  if (flush_file (fd) == -1)
-    {
-      rc = FAIL_FLUSH_FILE;
-      goto error_cleanup;
-    }
+  }
+  if (flush_file (fd) == -1) {
+    rc = FAIL_FLUSH_FILE;
+    goto error_cleanup;
+  }
 
   close (fd);
   fd = -1;
