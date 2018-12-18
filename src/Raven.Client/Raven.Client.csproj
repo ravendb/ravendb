@@ -3,7 +3,7 @@
     <Version></Version>
     <Description>RavenDB Client is the client library for accessing RavenDB</Description>
     <Authors>Hibernating Rhinos</Authors>
-    <TargetFrameworks>netcoreapp2.2;netcoreapp2.1;netstandard2.0</TargetFrameworks>
+    <TargetFrameworks>netcoreapp2.1;netstandard2.0</TargetFrameworks>
     <DefineConstants>$(DefineConstants);PORTABLE</DefineConstants>
     <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
     <AssemblyName>Raven.Client</AssemblyName>
@@ -37,11 +37,6 @@
     <!-- this is required for the nuget build to properly include the right files -->
     <Content Include="..\Sparrow\bin\Release\netcoreapp2.1\Sparrow.dll">
       <PackagePath>lib/netcoreapp2.1/</PackagePath>
-      <Pack>true</Pack>
-    </Content>
-    <!-- this is required for the nuget build to properly include the right files -->
-    <Content Include="..\Sparrow\bin\Release\netcoreapp2.2\Sparrow.dll">
-      <PackagePath>lib/netcoreapp2.2/</PackagePath>
       <Pack>true</Pack>
     </Content>
   </ItemGroup>
