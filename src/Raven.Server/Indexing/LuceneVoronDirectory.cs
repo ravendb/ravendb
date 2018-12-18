@@ -1,6 +1,5 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.Diagnostics;
 using System.IO;
 using Lucene.Net.Store;
 using Raven.Client.Util;
@@ -127,6 +126,12 @@ namespace Raven.Server.Indexing
             if (readResult == null)
                 throw new FileNotFoundException("Could not find file", name);
 
+            if (_indexOutputFilesSummary.HasVoronWriteErrors)
+            {
+                // we cannot modify the tx anymore 
+                return;
+            }
+                
             filesTree.DeleteStream(name);
         }
 
