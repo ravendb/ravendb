@@ -85,7 +85,7 @@ namespace Raven.Server.Documents.Queries.Graph
             return true;
         }
 
-        public ValueTask Initialize(long? cutoffEtag, Stopwatch queryDuration, TimeSpan? queryWaitDuration)
+        public ValueTask Initialize()
         {
             if (_index != -1)
                 return default;
@@ -93,9 +93,6 @@ namespace Raven.Server.Documents.Queries.Graph
             var results = _queryRunner.ExecuteQuery(new IndexQueryServerSide(_queryMetadata)
             {
                 QueryParameters = _queryParameters,
-                WaitForNonStaleResultsTimeout = queryWaitDuration,
-                CutoffEtag = (cutoffEtag, null),
-                QueryDuration = queryDuration
             },
                   _context, _resultEtag, _token);
 
@@ -203,9 +200,9 @@ namespace Raven.Server.Documents.Queries.Graph
                 return true;
             }
 
-            public ValueTask Initialize(long? cutoffEtag, Stopwatch queryDuration, TimeSpan? queryWaitDuration)
+            public ValueTask Initialize()
             {
-                return _parent.Initialize(cutoffEtag, queryDuration, queryWaitDuration);
+                return _parent.Initialize();
             }
 
             public void Run(Match src, string alias)

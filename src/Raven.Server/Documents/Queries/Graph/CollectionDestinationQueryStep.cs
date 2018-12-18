@@ -70,7 +70,7 @@ namespace Raven.Server.Documents.Queries.Graph
             return _alias.Value;
         }
 
-        public ValueTask Initialize(long? cutoffEtag, Stopwatch queryDuration, TimeSpan? queryWaitDuration)
+        public ValueTask Initialize()
         {
             return default;
         }

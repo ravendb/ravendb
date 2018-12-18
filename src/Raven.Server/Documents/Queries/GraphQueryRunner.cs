@@ -194,7 +194,7 @@ namespace Raven.Server.Documents.Queries
                 cutoffEtag = Database.ReadLastEtag();
                 queryDuration = Stopwatch.StartNew();
             }
-            await qp.Initialize(cutoffEtag, queryDuration, query.WaitForNonStaleResultsTimeout);            
+            await qp.Initialize();
             var matchResults = qp.Execute();
 
             if (query.Metadata.OrderBy != null)

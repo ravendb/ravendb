@@ -58,9 +58,9 @@ namespace Raven.Server.Documents.Queries.Graph
             }
         }
 
-        public async Task Initialize(long? cutoffEtag, Stopwatch queryDuration, TimeSpan? queryWaitDuration)
+        public async Task Initialize()
         {
-            await _rootQueryStep.Initialize(cutoffEtag, queryDuration, queryWaitDuration);
+            await _rootQueryStep.Initialize();
         }
 
         private IGraphQueryStep BuildQueryPlanForBinaryExpression(BinaryExpression be)
