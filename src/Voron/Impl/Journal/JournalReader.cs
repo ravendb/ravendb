@@ -145,8 +145,10 @@ namespace Voron.Impl.Journal
                 _dataPager.EnsureContinuous(pageInfoPtr[i].PageNumber, numberOfPagesOnDestination);
                 _dataPager.EnsureMapped(this, pageInfoPtr[i].PageNumber, numberOfPagesOnDestination);
 
+
                 // We are going to overwrite the page, so we don't care about its current content
                 var pagePtr = _dataPager.AcquirePagePointerForNewPage(this, pageInfoPtr[i].PageNumber, numberOfPagesOnDestination);
+                _dataPager.MaybePrefetchMemory(pageInfoPtr[i].PageNumber, numberOfPagesOnDestination);
                 
                 var pageNumber = *(long*)(outputPage + totalRead);
                 if (pageInfoPtr[i].PageNumber != pageNumber)
@@ -398,8 +400,7 @@ namespace Voron.Impl.Journal
                 options.InvokeRecoveryError(this, $"Compresses size {current->CompressedSize} is negative", null);
                 return false;
             }
-            if (size >
-                (_journalPagerNumberOfAllocated4Kb - _readAt4Kb) * 4 * Constants.Size.Kilobyte)
+            if (size > (_journalPagerNumberOfAllocated4Kb - _readAt4Kb) * 4 * Constants.Size.Kilobyte)
             {
                 // we can't read past the end of the journal
                 RequireHeaderUpdate = true;
