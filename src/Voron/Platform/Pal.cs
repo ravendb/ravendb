@@ -2,6 +2,7 @@ using System;
 using System.Diagnostics.CodeAnalysis;
 using System.IO;
 using System.Runtime.InteropServices;
+using System.Text;
 using Sparrow.Platform;
 
 // ReSharper disable SwitchStatementMissingSomeCases
@@ -17,7 +18,6 @@ namespace Voron.Platform
             string fromFilename;
             if (RuntimeInformation.IsOSPlatform(OSPlatform.Linux))
             {
-                var arch = "linux";
                 if (RuntimeInformation.ProcessArchitecture != Architecture.Arm && 
                     RuntimeInformation.ProcessArchitecture != Architecture.Arm64)
                 {
@@ -64,10 +64,18 @@ namespace Voron.Platform
         private const string LIBRVNPAL = "librvnpal";
 
         [DllImport(LIBRVNPAL, SetLastError = true)]
-        public static extern int rvn_write_header(
-            [MarshalAs(UnmanagedType.LPStr)] string filename,
+        public static extern Int32 rvn_write_header(
+            string filename,
             void* header,
-            [MarshalAs(UnmanagedType.I4)] int size,
-            out PalFlags.Errno failCodes);
+            Int32 size,
+            out Int32 errorCode);
+
+        [DllImport(LIBRVNPAL, SetLastError = true)]
+        public static extern Int32 rvn_get_error_string(
+            Int32 errorCode,
+            void* sb,
+            Int32 capacity,
+            out Int32 specialErrnoCodes
+            );
     }
 }
