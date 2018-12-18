@@ -70,12 +70,12 @@ namespace Raven.Server.Documents.Queries.Graph
             return new EdgeQueryStep(_left.Clone(), _right.Clone(), _edgesExpression, _edgePath, _queryParameters);
         }
 
-        public ValueTask Initialize(long? cutoffEtag, Stopwatch queryDuration, TimeSpan? queryWaitDuration)
+        public ValueTask Initialize()
         {
             if (_index != -1)
                 return default;
 
-            var leftTask = _left.Initialize(cutoffEtag, queryDuration, queryWaitDuration);
+            var leftTask = _left.Initialize();
             if (leftTask.IsCompleted)
             {
                 //At this point we know we are not going to yield results we can skip running right hand side
@@ -85,25 +85,25 @@ namespace Raven.Server.Documents.Queries.Graph
                     return default;
                 }
 
-                var rightTask = _right.Initialize(cutoffEtag, queryDuration, queryWaitDuration);
+                var rightTask = _right.Initialize();
                 if (rightTask.IsCompleted)
                 {
                     CompleteInitialization();
                     return default;
                 }
-                return new ValueTask(InitializeRightAsync(rightTask,cutoffEtag, queryDuration));
+                return new ValueTask(InitializeRightAsync(rightTask));
             }
 
-            return new ValueTask(InitializeLeftAsync(leftTask, cutoffEtag, queryDuration, queryWaitDuration));
+            return new ValueTask(InitializeLeftAsync(leftTask));
         }
 
-        private async Task InitializeRightAsync(ValueTask rightTask,long? cutoffEtag, Stopwatch queryDuration)
+        private async Task InitializeRightAsync(ValueTask rightTask)
         {
             await rightTask;
             CompleteInitialization();
         }
 
-        private async Task InitializeLeftAsync(ValueTask leftTask, long? cutoffEtag, Stopwatch queryDuration, TimeSpan? queryWaitDuration)
+        private async Task InitializeLeftAsync(ValueTask leftTask)
         {
             await leftTask;
             //At this point we know we are not going to yield results we can skip running right hand side
@@ -112,7 +112,7 @@ namespace Raven.Server.Documents.Queries.Graph
                 _index = 0;
                 return;
             }
-            var rightTask = _right.Initialize(cutoffEtag, queryDuration, queryWaitDuration);
+            var rightTask = _right.Initialize();
             if (rightTask.IsCompleted == false)
             {
                 await rightTask;
@@ -186,23 +186,23 @@ namespace Raven.Server.Documents.Queries.Graph
                 _parent._left = prev;
             }
 
-            public ValueTask Initialize(long? cutoffEtag, Stopwatch queryDuration, TimeSpan? queryWaitDuration)
+            public ValueTask Initialize()
             {
                 if (_parent._left != null)
                 {
-                    var leftTask = _parent._left.GetSingleGraphStepExecution().Initialize(cutoffEtag, queryDuration, queryWaitDuration);
+                    var leftTask = _parent._left.GetSingleGraphStepExecution().Initialize();
                     if (leftTask.IsCompleted == false)
                     {
-                        return CompleteRightInitAsync(leftTask, cutoffEtag, queryDuration, queryWaitDuration);
+                        return CompleteRightInitAsync(leftTask);
                     }
                 }
-                return _parent._right.GetSingleGraphStepExecution().Initialize(cutoffEtag, queryDuration, queryWaitDuration);
+                return _parent._right.GetSingleGraphStepExecution().Initialize();
             }
 
-            private async ValueTask CompleteRightInitAsync(ValueTask leftTask, long? cutoffEtag, Stopwatch queryDuration, TimeSpan? queryWaitDuration)
+            private async ValueTask CompleteRightInitAsync(ValueTask leftTask)
             {
                 await leftTask;
-                await _parent._right.Initialize(cutoffEtag, queryDuration, queryWaitDuration);
+                await _parent._right.Initialize();
             }
 
             public void Run(Match src, string alias)

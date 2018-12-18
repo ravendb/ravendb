@@ -152,10 +152,6 @@ namespace Raven.Client.Documents.Queries
 
         public TimeSpan? WaitForNonStaleResultsTimeout { get; set; }
 
-        public (long? DocEtag, long? RefEtag)? CutoffEtag { get; set; }
-
-        public Stopwatch QueryDuration { get; set; }
-
         public override string ToString()
         {
             return Query;

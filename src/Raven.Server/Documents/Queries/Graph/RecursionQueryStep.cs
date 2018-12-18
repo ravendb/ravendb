@@ -152,23 +152,23 @@ namespace Raven.Server.Documents.Queries.Graph
             return _outputAlias;
         }
 
-        public ValueTask Initialize(long? cutoffEtag, Stopwatch queryDuration, TimeSpan? queryWaitDuration)
+        public ValueTask Initialize()
         {
             if (_index != -1)
                 return default;
 
             _index = 0;
 
-            var leftTask = _left.Initialize(cutoffEtag, queryDuration, queryWaitDuration);
+            var leftTask = _left.Initialize();
             if (leftTask.IsCompleted == false)
             {
-                return new ValueTask(CompleteLeftInitializationAsync(leftTask, cutoffEtag, queryDuration, queryWaitDuration));
+                return new ValueTask(CompleteLeftInitializationAsync(leftTask));
             }
 
-            return CompleteInitializationAfterLeft(0, cutoffEtag, queryDuration, queryWaitDuration);
+            return CompleteInitializationAfterLeft(0);
         }
 
-        private ValueTask CompleteInitializationAfterLeft(int position, long? cutoffEtag, Stopwatch queryDuration, TimeSpan? queryWaitDuration)
+        private ValueTask CompleteInitializationAfterLeft(int position)
         {
             for (var i = position; i < _steps.Count; i++)
             {
@@ -176,15 +176,15 @@ namespace Raven.Server.Documents.Queries.Graph
                 if (item.Right == null)
                     continue;
 
-                var stepTask = item.Right.Initialize(cutoffEtag, queryDuration, queryWaitDuration);
+                var stepTask = item.Right.Initialize();
                 if (stepTask.IsCompleted == false)
                 {
-                    return new ValueTask(CompleteInitializationForStepAsync(position, stepTask, cutoffEtag, queryDuration, queryWaitDuration));
+                    return new ValueTask(CompleteInitializationForStepAsync(position, stepTask));
                 }
             }
             if(_next != null)
             {
-                var nextTask = _next.Initialize(cutoffEtag, queryDuration, queryWaitDuration);
+                var nextTask = _next.Initialize();
                 if(nextTask.IsCompleted == false)
                 {
                     return CompleteNextStepTaskAsync(nextTask);
@@ -245,10 +245,10 @@ namespace Raven.Server.Documents.Queries.Graph
                 return true;
             }
 
-            public ValueTask Initialize(long? cutoffEtag, Stopwatch queryDuration, TimeSpan? queryWaitDuration)
+            public ValueTask Initialize()
             {
                 _parent._skipMaterialization = true;
-                var task = _parent.Initialize(cutoffEtag, queryDuration, queryWaitDuration);
+                var task = _parent.Initialize();
                 if (task.IsCompleted)
                 {
                     _parent._skipMaterialization = false;
@@ -279,16 +279,16 @@ namespace Raven.Server.Documents.Queries.Graph
             }
         }
 
-        private async Task CompleteInitializationForStepAsync(int position, ValueTask stepTask, long? cutoffEtag, Stopwatch queryDuration, TimeSpan? queryWaitDuration)
+        private async Task CompleteInitializationForStepAsync(int position, ValueTask stepTask)
         {
             await stepTask;
-            await CompleteInitializationAfterLeft(position + 1, cutoffEtag, queryDuration, queryWaitDuration);
+            await CompleteInitializationAfterLeft(position + 1);
         }
 
-        private async Task CompleteLeftInitializationAsync(ValueTask leftTask, long? cutoffEtag, Stopwatch queryDuration, TimeSpan? queryWaitDuration)
+        private async Task CompleteLeftInitializationAsync(ValueTask leftTask)
         {
             await leftTask;
-            await CompleteInitializationAfterLeft(0, cutoffEtag, queryDuration, queryWaitDuration);
+            await CompleteInitializationAfterLeft(0);
         }
 
         private void ProcessSingleResultRecursive(Match currentMatch, List<Match> matches)
