@@ -6,6 +6,7 @@ using System.Runtime.InteropServices;
 using Sparrow;
 using Sparrow.Utils;
 using Voron.Data.Fixed;
+using Voron.Exceptions;
 using Voron.Global;
 using Voron.Impl;
 using Voron.Impl.Paging;
@@ -350,9 +351,13 @@ namespace Voron.Data.BTrees
                 if (it.Seek(0) == false)
                     return pages;
 
+                var totalSize = 0;
+
                 do
                 {
                     var chunk = (ChunkDetails*)it.CreateReaderForCurrent().Base;
+
+                    totalSize += chunk->ChunkSize;
 
                     var size = chunk->ChunkSize;
 
@@ -373,6 +378,9 @@ namespace Voron.Data.BTrees
                     chunkIndex++;
 
                 } while (it.MoveNext());
+
+                if (totalSize != info->TotalSize)
+                    ThrowStreamSizeMismatch(chunksTree.Name, totalSize, info);
 
                 return pages;
             }
@@ -395,6 +403,12 @@ namespace Voron.Data.BTrees
         {
             using (Slice.From(_tx.Allocator, key, out Slice str))
                 return GetStreamTag(str);
+        }
+
+        private void ThrowStreamSizeMismatch(Slice name, int chunksSize, StreamInfo* info)
+        {
+            VoronUnrecoverableErrorException.Raise(_tx.LowLevelTransaction.Environment,
+                $"Stream size mismatch of '{name}' stream. Sum of chunks size is {chunksSize} while stream info has {info->TotalSize}");
         }
     }
 
