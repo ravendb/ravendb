@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Buffers;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
@@ -84,11 +85,10 @@ namespace Voron.Data.BTrees
 
             public void Write(Stream stream)
             {
-                if (_localBuffer == null)
-                    _localBuffer = new byte[4 * Constants.Storage.PageSize];
-                
+                _localBuffer = ArrayPool<byte>.Shared.Rent(512 * Constants.Size.Kilobyte);
+
                 AllocateNextPage();
-                var firstPage = _currentPage;
+              
                 ((StreamPageHeader*)_currentPage.Pointer)->StreamPageFlags |= StreamPageFlags.First;
                 
                 fixed (byte* pBuffer = _localBuffer)
@@ -133,6 +133,8 @@ namespace Voron.Data.BTrees
 
                     _parent._tx.LowLevelTransaction.ShrinkOverflowPage(_currentPage.PageNumber, chunkSize + infoSize, _parent.State); 
                 }
+
+                ArrayPool<byte>.Shared.Return(_localBuffer);
             }
 
             private long WriteBufferToPage(byte* pBuffer, long size)
