@@ -6,8 +6,6 @@ using System.Runtime.CompilerServices;
 using System.Runtime.ExceptionServices;
 using System.Threading.Tasks;
 using Sparrow;
-using Sparrow.Collections;
-using Sparrow.LowMemory;
 using Sparrow.Threading;
 using Sparrow.Utils;
 using Voron.Data;
@@ -106,6 +104,7 @@ namespace Voron.Impl
         private readonly StorageEnvironmentState _state;
 
         private CommitStats _requestedCommitStats;
+        private JournalFile.UpdatePageTranslationTableAction? _updatePageTranslationTable;
 
         public TransactionPersistentContext PersistentContext { get; }
         public TransactionFlags Flags { get; }
@@ -290,6 +289,11 @@ namespace Voron.Impl
 
         [Conditional("DEBUG")]
         private void EnsureNoDuplicateTransactionId(long id)
+        {
+            EnsureNoDuplicateTransactionId_Forced(id);
+        }
+
+        internal void EnsureNoDuplicateTransactionId_Forced(long id)
         {
             foreach (var journalFile in _journal.Files)
             {
@@ -931,14 +935,20 @@ namespace Voron.Impl
             {
                 sp = Stopwatch.StartNew();
             }
-            var numberOfWrittenPages = _journal.WriteToJournal(this, out var journalFilePath);
+            var result = _journal.WriteToJournal(this, out var journalFilePath);
+
+            _updatePageTranslationTable = result.UpdatePageTranslationTable;
+
             FlushedToJournal = true;
+
+            if (SimulateThrowingOnCommitStage2)
+                ThrowSimulateErrorOnCommitStage2();
 
             if (_requestedCommitStats != null)
             {
                 _requestedCommitStats.WriteToJournalDuration = sp.Elapsed;
-                _requestedCommitStats.NumberOfModifiedPages = numberOfWrittenPages.NumberOfUncompressedPages;
-                _requestedCommitStats.NumberOf4KbsWrittenToDisk = numberOfWrittenPages.NumberOf4Kbs;
+                _requestedCommitStats.NumberOfModifiedPages = result.NumberOfUncompressedPages;
+                _requestedCommitStats.NumberOf4KbsWrittenToDisk = result.NumberOf4Kbs;
                 _requestedCommitStats.JournalFilePath = journalFilePath;
             }
         }
@@ -985,6 +995,9 @@ namespace Voron.Impl
                 Allocator.Release(ref _txHeaderMemory);
 
                 Committed = true;
+
+                _updatePageTranslationTable?.ExecuteAfterCommit();
+
                 _env.TransactionAfterCommit(this);
 
                 if (_asyncCommitNextTransaction != null)
@@ -1205,6 +1218,13 @@ namespace Voron.Impl
         internal TransactionHeader* GetTransactionHeader()
         {
             return _txHeader;
+        }
+
+        internal bool SimulateThrowingOnCommitStage2 = false;
+
+        private static void ThrowSimulateErrorOnCommitStage2()
+        {
+            throw new InvalidOperationException("Simulation error");
         }
     }
 }
