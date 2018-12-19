@@ -560,19 +560,6 @@ namespace Voron
                 }
             }
 
-            private void TryDelete(string file)
-            {
-                try
-                {
-                    File.Delete(file);
-                }
-                catch (Exception ex)
-                {
-                    if (_log.IsInfoEnabled)
-                        _log.Info("Failed to delete " + file, ex);
-                }
-            }
-
             protected override void Disposing()
             {
                 if (Disposed)
@@ -591,14 +578,7 @@ namespace Voron
                 {
                     foreach (var reusableFile in _journalsForReuse.Values)
                     {
-                        try
-                        {
-                            File.Delete(reusableFile);
-                        }
-                        catch (Exception)
-                        {
-                            // ignored
-                        }
+                        TryDelete(reusableFile);
                     }
                 }
             }
@@ -1148,8 +1128,7 @@ namespace Voron
         public OpenFlags SafePosixOpenFlags = PerPlatformValues.OpenFlags.O_DSYNC | PerPlatformValues.OpenFlags.O_DIRECT;
         private readonly Logger _log;
 
-        private readonly SortedList<long, string> _journalsForReuse =
-            new SortedList<long, string>();
+        private readonly SortedList<long, string> _journalsForReuse = new SortedList<long, string>();
 
         private int _numOfConcurrentSyncsPerPhysDrive;
         private int _timeToSyncAfterFlashInSec;
@@ -1191,7 +1170,7 @@ namespace Voron
                 {
                     reusedCount = _journalsForReuse.Count;
                     
-                    if ( reusedCount > _lastReusedJournalCountOnSync)
+                    if (reusedCount > _lastReusedJournalCountOnSync)
                     {
                         if (File.Exists(newName))
                             File.Delete(newName);
@@ -1219,6 +1198,37 @@ namespace Voron
                 {
                     // nothing we can do about it
                 }
+            }
+        }
+
+        private void TryDelete(string file)
+        {
+            try
+            {
+                File.Delete(file);
+            }
+            catch (Exception ex)
+            {
+                if (_log.IsInfoEnabled)
+                    _log.Info("Failed to delete " + file, ex);
+            }
+        }
+
+        public void TryCleanupRecycledJournals()
+        {
+            if (Monitor.TryEnter(_journalsForReuse, 10) == false)
+                return;
+
+            try
+            {
+                foreach (var journalForReuse in _journalsForReuse.Values)
+                {
+                    TryDelete(journalForReuse);
+                }
+            }
+            finally
+            {
+                Monitor.Exit(_journalsForReuse);
             }
         }
 
