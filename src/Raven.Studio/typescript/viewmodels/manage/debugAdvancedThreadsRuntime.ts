@@ -93,12 +93,12 @@ class debugAdvancedThreadsRuntime extends viewModelBase {
         grid.init(fetcher, () =>
             [
                 new textColumn<Raven.Server.Dashboard.ThreadInfo>(grid, x => x.Name, "Name", "25%"),
-                new textColumn<Raven.Server.Dashboard.ThreadInfo>(grid, x => `${(x.CpuUsage === 0 ? "0" : generalUtils.formatNumberToStringFixed(x.CpuUsage, 2))}%`, "CPU Usage", "10%"),
+                new textColumn<Raven.Server.Dashboard.ThreadInfo>(grid, x => `${(x.CpuUsage === 0 ? "0" : generalUtils.formatNumberToStringFixed(x.CpuUsage, 2))}%`, "Current CPU %", "10%"),
+                new textColumn<Raven.Server.Dashboard.ThreadInfo>(grid, x => generalUtils.formatTimeSpan(x.Duration, false), "Overall CPU Time", "10%"),
                 new textColumn<Raven.Server.Dashboard.ThreadInfo>(grid, x => x.Id + " (" + (x.ManagedThreadId || "n/a") + ")", "Thread Id", "10%"),
                 new textColumn<Raven.Server.Dashboard.ThreadInfo>(grid, x => generalUtils.formatUtcDateAsLocal(x.StartingTime), "Start Time", "20%"),
-                new textColumn<Raven.Server.Dashboard.ThreadInfo>(grid, x => generalUtils.formatTimeSpan(x.Duration, false), "Duration", "10%"),
                 new textColumn<Raven.Server.Dashboard.ThreadInfo>(grid, x => x.State, "State", "10%"),
-                new textColumn<Raven.Server.Dashboard.ThreadInfo>(grid, x => x.WaitReason, "Wait reason", "20%"),
+                new textColumn<Raven.Server.Dashboard.ThreadInfo>(grid, x => x.WaitReason, "Wait reason", "15%")
             ]
         );
 
@@ -106,7 +106,7 @@ class debugAdvancedThreadsRuntime extends viewModelBase {
             (entry: Raven.Server.Dashboard.ThreadInfo,
                 column: textColumn<Raven.Server.Dashboard.ThreadInfo>,
              e: JQueryEventObject, onValue: (context: any, valueToCopy?: string) => void) => {
-                if (column.header === "Duration") {
+                if (column.header === "Overall CPU Time") {
                     const timings = {
                         StartTime: entry.StartingTime,
                         TotalProcessorTime: entry.TotalProcessorTime,
