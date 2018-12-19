@@ -49,46 +49,54 @@ namespace Voron.Platform.Win32
             Win32NativeFileAccess access = Win32NativeFileAccess.GenericWrite,
             Win32NativeFileShare shareMode = Win32NativeFileShare.Read)
         {
-            _options = options;
-            _filename = filename;
-            _handle = Win32NativeFileMethods.CreateFile(filename.FullPath,
-                access, shareMode, IntPtr.Zero,
-                Win32NativeFileCreationDisposition.OpenAlways,
-                options.WinOpenFlags, IntPtr.Zero);
-
-            if (_handle.IsInvalid)
-                throw new IOException("When opening file " + filename, new Win32Exception(Marshal.GetLastWin32Error()));
-
-            var length = new FileInfo(filename.FullPath).Length;
-            if (length < journalSize)
+            try
             {
-                try
-                {
-                    Win32NativeFileMethods.SetFileLength(_handle, journalSize);
-                }
-                catch (Exception ex)
+                _options = options;
+                _filename = filename;
+                _handle = Win32NativeFileMethods.CreateFile(filename.FullPath,
+                    access, shareMode, IntPtr.Zero,
+                    Win32NativeFileCreationDisposition.OpenAlways,
+                    options.WinOpenFlags, IntPtr.Zero);
+
+                if (_handle.IsInvalid)
+                    throw new IOException("When opening file " + filename, new Win32Exception(Marshal.GetLastWin32Error()));
+
+                var length = new FileInfo(filename.FullPath).Length;
+                if (length < journalSize)
                 {
                     try
                     {
-                        _handle?.Dispose();
-                        _handle = null;
-                        File.Delete(_filename.FullPath);
+                        Win32NativeFileMethods.SetFileLength(_handle, journalSize);
                     }
-                    catch (Exception)
+                    catch (Exception ex)
                     {
-                        // there's nothing we can do about it
+                        try
+                        {
+                            _handle?.Dispose();
+                            _handle = null;
+                            File.Delete(_filename.FullPath);
+                        }
+                        catch (Exception)
+                        {
+                            // there's nothing we can do about it
+                        }
+                        throw new IOException("When SetFileLength file " + filename + " to " + journalSize, ex);
                     }
-                    throw new IOException("When SetFileLength file " + filename + " to " + journalSize, ex);
+                    length = journalSize;
                 }
-                length = journalSize;
+
+                NumberOfAllocated4Kb = (int)(length / (4 * Constants.Size.Kilobyte));
+
+                _nativeOverlapped = (NativeOverlapped*)NativeMemory.AllocateMemory(sizeof(NativeOverlapped));
+
+                _nativeOverlapped->InternalLow = IntPtr.Zero;
+                _nativeOverlapped->InternalHigh = IntPtr.Zero;
             }
-
-            NumberOfAllocated4Kb = (int)(length / (4 * Constants.Size.Kilobyte));
-
-            _nativeOverlapped = (NativeOverlapped*)NativeMemory.AllocateMemory(sizeof(NativeOverlapped));
-
-            _nativeOverlapped->InternalLow = IntPtr.Zero;
-            _nativeOverlapped->InternalHigh = IntPtr.Zero;
+            catch
+            {
+                Dispose();
+                throw;
+            }
         }
 
         public void Write(long posBy4Kb, byte* p, int numberOf4Kb)
