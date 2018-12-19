@@ -43,11 +43,19 @@ namespace Raven.Server.Dashboard
 
         public DateTime? StartingTime { get; set; }
 
+        public double Duration { get; set; }
+
+        public TimeSpan TotalProcessorTime { get; set; }
+
+        public TimeSpan PrivilegedProcessorTime { get; set; }
+
+        public TimeSpan UserProcessorTime { get; set; }
+
         public ThreadState? State { get; set; }
 
         public ThreadPriorityLevel? Priority { get; set; }
 
-        public ThreadWaitReason? ThreadWaitReason { get; set; }
+        public ThreadWaitReason? WaitReason { get; set; }
 
         public DynamicJsonValue ToJson()
         {
@@ -58,15 +66,23 @@ namespace Raven.Server.Dashboard
                 [nameof(Name)] = Name,
                 [nameof(ManagedThreadId)] = ManagedThreadId,
                 [nameof(StartingTime)] = StartingTime,
+                [nameof(Duration)] = Duration,
+                [nameof(TotalProcessorTime)] = TotalProcessorTime,
+                [nameof(PrivilegedProcessorTime)] = PrivilegedProcessorTime,
+                [nameof(UserProcessorTime)] = UserProcessorTime,
                 [nameof(State)] = State,
                 [nameof(Priority)] = Priority,
-                [nameof(ThreadWaitReason)] = ThreadWaitReason
+                [nameof(WaitReason)] = WaitReason
             };
         }
 
         public int CompareTo(ThreadInfo other)
         {
-            return other.CpuUsage.CompareTo(CpuUsage);
+            var compareByCpu = other.CpuUsage.CompareTo(CpuUsage);
+            if (compareByCpu != 0)
+                return compareByCpu;
+
+            return other.TotalProcessorTime.CompareTo(TotalProcessorTime);
         }
     }
 }
