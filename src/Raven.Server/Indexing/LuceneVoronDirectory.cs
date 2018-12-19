@@ -117,6 +117,12 @@ namespace Raven.Server.Indexing
 
         public override void DeleteFile(string name, IState s)
         {
+            if (_indexOutputFilesSummary.HasVoronWriteErrors)
+            {
+                // we cannot modify the tx anymore 
+                return;
+            }
+
             var state = s as VoronState;
             if (state == null)
                 throw new ArgumentNullException(nameof(s));
@@ -126,12 +132,6 @@ namespace Raven.Server.Indexing
             if (readResult == null)
                 throw new FileNotFoundException("Could not find file", name);
 
-            if (_indexOutputFilesSummary.HasVoronWriteErrors)
-            {
-                // we cannot modify the tx anymore 
-                return;
-            }
-                
             filesTree.DeleteStream(name);
         }
 
