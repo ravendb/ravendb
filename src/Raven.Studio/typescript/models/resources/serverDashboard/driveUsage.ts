@@ -133,9 +133,12 @@ class driveUsage {
                     return [ 
                         new legendColumn<driveUsageDetails>(grid, x => this.colorProvider(x.database()), "", "26px"),
                         new hyperlinkColumn<driveUsageDetails>(grid, x => x.database(), x => appUrl.forStatusStorageReport(x.database()), "Database", "60%", {
-                            extraClass: d => isDisabled(d.database()) ? "disabled" : ""
+                            extraClass: d => isDisabled(d.database()) ? "disabled" : "",
+                            sortable: "string"
                         }),
-                        new textColumn<driveUsageDetails>(grid, x => this.sizeFormatter(x.size()), "Data", "30%") 
+                        new textColumn<driveUsageDetails>(grid, x => this.sizeFormatter(x.size()), "Data", "30%", {
+                            sortable: x => x.size()
+                        }) 
                     ]
                 }
             });

@@ -72,8 +72,12 @@ class clusterObserverLog extends viewModelBase {
         grid.headerVisible(true);
         grid.init(fetcher, () =>
             [
-                new textColumn<Raven.Server.ServerWide.Maintenance.ClusterObserverLogEntry>(grid, x => generalUtils.formatUtcDateAsLocal(x.Date), "Date", "20%"),
-                new textColumn<Raven.Server.ServerWide.Maintenance.ClusterObserverLogEntry>(grid, x => x.Database, "Database", "20%"),
+                new textColumn<Raven.Server.ServerWide.Maintenance.ClusterObserverLogEntry>(grid, x => generalUtils.formatUtcDateAsLocal(x.Date), "Date", "20%", {
+                    sortable: x => x.Date
+                }),
+                new textColumn<Raven.Server.ServerWide.Maintenance.ClusterObserverLogEntry>(grid, x => x.Database, "Database", "20%", {
+                    sortable: "string"
+                }),
                 new textColumn<Raven.Server.ServerWide.Maintenance.ClusterObserverLogEntry>(grid, x => x.Message, "Message", "60%")
             ]
         );
@@ -101,7 +105,7 @@ class clusterObserverLog extends viewModelBase {
         }
         
         if (this.gridController()) {
-            this.gridController().reset();    
+            this.gridController().reset(true, true);    
         }
     }
 
@@ -109,7 +113,7 @@ class clusterObserverLog extends viewModelBase {
         const loadTask = $.Deferred<void>();
         
         new getClusterObserverDecisionsCommand()
-            .execute()
+            .execute() 
             .done(response => {
                 response.ObserverLog.reverse();
                 this.decisions(response);

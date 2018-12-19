@@ -179,13 +179,16 @@ class trafficWatch extends viewModelBase {
         grid.init((s, t) => this.fetchTraffic(s, t), () =>
             [
                 new textColumn<Raven.Client.Documents.Changes.TrafficWatchChange>(grid, x => generalUtils.formatUtcDateAsLocal(x.TimeStamp), "Timestamp", "20%", {
-                    extraClass: rowHighlightRules
+                    extraClass: rowHighlightRules,
+                    sortable: "string"
                 }),
                 new textColumn<Raven.Client.Documents.Changes.TrafficWatchChange>(grid, x => x.ResponseStatusCode, "Status", "8%", {
-                    extraClass: rowHighlightRules
+                    extraClass: rowHighlightRules,
+                    sortable: "number"
                 }),
                 new textColumn<Raven.Client.Documents.Changes.TrafficWatchChange>(grid, x => x.DatabaseName, "Database Name", "8%", {
-                    extraClass: rowHighlightRules
+                    extraClass: rowHighlightRules,
+                    sortable: "string"
                 }),
                 new textColumn<Raven.Client.Documents.Changes.TrafficWatchChange>(grid, x => x.ElapsedMilliseconds, "Duration", "8%", {
                     extraClass: rowHighlightRules,
@@ -196,13 +199,15 @@ class trafficWatch extends viewModelBase {
                     sortable: "string"
                 }),
                 new textColumn<Raven.Client.Documents.Changes.TrafficWatchChange>(grid, x => x.Type, "Type", "6%", {
-                    extraClass: rowHighlightRules
+                    extraClass: rowHighlightRules,
+                    sortable: "string"
                 }),
                 new textColumn<Raven.Client.Documents.Changes.TrafficWatchChange>(grid, x => x.CustomInfo, "CustomInfo", "8%", {
                     extraClass: rowHighlightRules
                 }),
                 new textColumn<Raven.Client.Documents.Changes.TrafficWatchChange>(grid, x => x.RequestUri, "URI", "35%", {
-                    extraClass: rowHighlightRules
+                    extraClass: rowHighlightRules,
+                    sortable: "string"
                 })
             ]
         );
