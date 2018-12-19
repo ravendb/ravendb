@@ -303,14 +303,14 @@ namespace Voron
 
                 var metadataTree = writeTx.ReadTree(Constants.MetadataTreeNameSlice);
                 if (metadataTree == null)
-                    VoronUnrecoverableErrorException.Raise(this,
+                    VoronUnrecoverableErrorException.Raise(tx,
                         "Could not find metadata tree in database, possible mismatch / corruption?");
 
                 Debug.Assert(metadataTree != null);
                 // ReSharper disable once PossibleNullReferenceException
                 var dbId = metadataTree.Read("db-id");
                 if (dbId == null)
-                    VoronUnrecoverableErrorException.Raise(this,
+                    VoronUnrecoverableErrorException.Raise(tx,
                         "Could not find db id in metadata tree, possible mismatch / corruption?");
 
                 var buffer = new byte[16];
@@ -318,7 +318,7 @@ namespace Voron
                 // ReSharper disable once PossibleNullReferenceException
                 var dbIdBytes = dbId.Reader.Read(buffer, 0, 16);
                 if (dbIdBytes != 16)
-                    VoronUnrecoverableErrorException.Raise(this,
+                    VoronUnrecoverableErrorException.Raise(tx,
                         "The db id value in metadata tree wasn't 16 bytes in size, possible mismatch / corruption?");
 
                 var databaseGuidId = _options.GenerateNewDatabaseId == false ? new Guid(buffer) : Guid.NewGuid();

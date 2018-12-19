@@ -367,7 +367,7 @@ namespace Voron.Debugging
                                     break;
                                 }
                             default:
-                                VoronUnrecoverableErrorException.Raise(tree.Llt.Environment, "currentNode->FixedTreeFlags has value of " + currentNode->Flags);
+                                VoronUnrecoverableErrorException.Raise(tree.Llt, "currentNode->FixedTreeFlags has value of " + currentNode->Flags);
                                 break;
                         }
                     } while (multiTreeIterator.MoveNext());
