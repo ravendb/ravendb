@@ -16,7 +16,9 @@ namespace SlowTests.Issues
         private class WithHasValue
         {
             public bool? HasValue;
+#pragma warning disable 649
             public object SomeProp;
+#pragma warning restore 649
         }
 
         private void Setup(IDocumentStore store)
@@ -56,11 +58,11 @@ namespace SlowTests.Issues
                 using (var s = store.OpenSession())
                 {
                     var query = from d in s.Query<MyDoc>()
-                        orderby d.Id
-                        select new
-                        {
-                            HasValue = d.NullableInt.HasValue
-                        };
+                                orderby d.Id
+                                select new
+                                {
+                                    HasValue = d.NullableInt.HasValue
+                                };
 
                     Assert.Equal("from MyDocs as d order by id() select { HasValue : d.NullableInt != null }"
                         , query.ToString());
@@ -82,11 +84,11 @@ namespace SlowTests.Issues
                 using (var s = store.OpenSession())
                 {
                     var query = from d in s.Query<MyDoc>()
-                        orderby d.Id
-                        select new WithHasValue
-                        {
-                            HasValue = d.NullableInt.HasValue
-                        };
+                                orderby d.Id
+                                select new WithHasValue
+                                {
+                                    HasValue = d.NullableInt.HasValue
+                                };
 
                     Assert.Equal("from MyDocs as d order by id() select { HasValue : d.NullableInt != null }"
                         , query.ToString());
