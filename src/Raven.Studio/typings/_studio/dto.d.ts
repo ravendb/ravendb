@@ -491,6 +491,20 @@ interface serializedColumnDto {
     column: virtualColumnDto;
 }
 
+type valueProvider<T> = (arg: T) => any;
+type sortMode = "asc" | "desc";
+
+interface textColumnOpts<T> {
+    extraClass?: (item: T) => string;
+    useRawValue?: (item: T) => boolean;
+    title?: (item:T) => string;
+    sortable?: "number" | "string" | valueProvider<T>;
+    defaultSortOrder?: sortMode;
+}
+
+interface hypertextColumnOpts<T> extends textColumnOpts<T> {
+    handler?: (item: T, event: JQueryEventObject) => void;
+}
 
 interface virtualColumnDto {
     type: "flags" | "checkbox" | "text" | "hyperlink" | "custom"

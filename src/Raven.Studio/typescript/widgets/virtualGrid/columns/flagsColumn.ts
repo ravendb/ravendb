@@ -8,6 +8,10 @@ class flagsColumn implements virtualColumn {
     constructor(protected gridController: virtualGridController<any>) {
     }
 
+    get sortable() {
+        return false;
+    }
+
     width = "65px";
     
     header = `<div style="padding-left: 8px;"><i class="icon-flag"></i></div>`;
@@ -16,7 +20,7 @@ class flagsColumn implements virtualColumn {
         return "Document Flags";
     }
 
-    renderCell(item: document, isSelected: boolean): string {
+    renderCell(item: document, isSelected: boolean, isSorted: boolean): string {
         const metadata = item.__metadata;
         
         const extraClasses = [] as Array<string>;

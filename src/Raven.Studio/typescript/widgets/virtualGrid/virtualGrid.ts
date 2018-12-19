@@ -3,6 +3,7 @@
 import virtualRow = require("widgets/virtualGrid/virtualRow");
 import itemFetch = require("widgets/virtualGrid/itemFetch");
 import virtualColumn = require("widgets/virtualGrid/columns/virtualColumn");
+import sortableVirtualColumn = require("widgets/virtualGrid/columns/sortableVirtualColumn");
 import virtualGridConfig = require("widgets/virtualGrid/virtualGridConfig");
 import actionColumn = require("widgets/virtualGrid/columns/actionColumn");
 import hyperlinkColumn = require("widgets/virtualGrid/columns/hyperlinkColumn");
@@ -32,6 +33,12 @@ class virtualGrid<T> {
     private isGridVisible = false;
     private selectionDiff: number[] = [];
     private inIncludeSelectionMode: boolean = true;
+    
+    private sortByColumn = ko.observable<sortableVirtualColumn>();
+    private sortMode = ko.observable<sortMode>("asc");
+    
+    private defaultSortByColumn = ko.observable<number>(-1);
+    private defaultSortMode = ko.observable<sortMode>("asc");
 
     private dirtyResults = ko.observable<boolean>(false);
     private previousResultsEtag = ko.observable<string>();
@@ -87,7 +94,8 @@ class virtualGrid<T> {
             setSelectedItems: (selection: Array<T>) => this.setSelectedItems(selection),
             dirtyResults: this.dirtyResults,
             resultEtag: () => this.previousResultsEtag(),
-            scrollDown: () => this.scrollDown()
+            scrollDown: () => this.scrollDown(),
+            setDefaultSortBy: (columnIndex, mode) => this.setDefaultSortBy(columnIndex, mode)
         }
     }
 
@@ -103,7 +111,7 @@ class virtualGrid<T> {
     }
 
     // Called by Knockout once the grid has been rendered.
-    private afterRender() {
+    afterRender() {
         this.initializeUIElements();
     }
 
@@ -116,14 +124,10 @@ class virtualGrid<T> {
         this.initializeVirtualRows();
         this.$viewportElement.on("scroll", () => this.gridScrolled());
 
-        //TODO: bind only if resizable form
-        this.$gridElement.on("mousedown.columnResize", ".column", (e) => {
-            this.handleResize(e);
-        });
-
-        this.$gridElement.on("mousedown.columnResize", ".cell", (e) => {
-            this.handleResize(e);
-        });
+        this.$gridElement.on("mousedown.columnResize", ".column", e => this.handleResize(e));
+        this.$gridElement.on("mousedown.columnResize", ".cell", e => this.handleResize(e));
+        
+        this.$gridElement.on("click.sort", ".column.sortable", e => this.handleSort(e));
 
         this.shiftSelection = new shiftSelectionPreview(this.gridId, () => this.virtualRows, (s, e) => this.checkIfAllRecordsInRangeAreLoaded(s, e));
         this.shiftSelection.init();
@@ -139,6 +143,59 @@ class virtualGrid<T> {
                 return false;
         }
         return true;
+    }
+
+    private setDefaultSortBy(columnIndex: number, mode: sortMode = null) {
+        this.defaultSortByColumn(columnIndex);
+        this.defaultSortMode(mode || "asc");
+    }
+    
+    private handleSort(e: JQueryEventObject) {
+        const columnIndex = $(e.currentTarget).index();
+        if (columnIndex < 0) {
+            return;
+        }
+        const columnToUse = this.columns()[columnIndex] as sortableVirtualColumn;
+        if (!columnToUse.sortProvider) {
+            return;
+        }
+        
+        if (this.sortByColumn() !== columnToUse) {
+            this.sortByColumn(columnToUse);
+            this.sortMode(columnToUse.defaultSortOrder);
+        } else {
+            this.sortMode(this.sortMode() === "asc" ? "desc" : "asc");
+        }
+        
+        this.sortItems();
+        this.render();
+    }
+    
+    private sortItems() {
+        if (!this.sortByColumn()) {
+            // try to use default
+            const defaultColumnIndex = this.defaultSortByColumn();
+            if (defaultColumnIndex > -1) {
+                const columnToUse = this.columns()[defaultColumnIndex];
+                this.sortByColumn(columnToUse);
+                this.sortMode(this.defaultSortMode());
+            }
+        }
+        
+        let columnToUse = this.sortByColumn();
+        
+        if (columnToUse) {
+            let itemsToSort = Array.from(this.items.values());
+            const sortProvider = columnToUse.sortProvider(this.sortMode());
+            if (sortProvider) {
+                itemsToSort = sortProvider(itemsToSort);
+
+                this.items.clear();
+                itemsToSort.forEach((v, idx) => {
+                    this.items.set(idx, v);
+                });
+            }
+        }
     }
 
     private handleResize(e: JQueryEventObject) {
@@ -391,7 +448,7 @@ class virtualGrid<T> {
                 // Populate it with data.
                 const rowIndex = Math.floor(positionCheck / this.rowHeight);
                 const isChecked = this.isSelected(rowIndex);
-                rowAtPosition.populate(this.items.get(rowIndex), rowIndex, isChecked, columns);
+                rowAtPosition.populate(this.items.get(rowIndex), rowIndex, isChecked, columns, columns.indexOf(this.sortByColumn()));
             }
 
             const newPositionCheck = rowAtPosition.top + this.rowHeight;
@@ -419,7 +476,7 @@ class virtualGrid<T> {
 
                 // Fill it with the data we've got loaded. If there's no data, it will display the loading indicator.
                 const isRowChecked = this.isSelected(row.index);
-                row.populate(this.items.get(row.index), row.index, isRowChecked, columns);
+                row.populate(this.items.get(row.index), row.index, isRowChecked, columns, columns.indexOf(this.sortByColumn()));
             }
         }
 
@@ -523,6 +580,8 @@ class virtualGrid<T> {
                 this.items.set(rowIndex, results.items[i]);
             }
         }
+        
+        this.sortItems();
 
         if (oldTotalCount !== results.totalResultCount) {
             this.refreshSelection();
@@ -845,7 +904,7 @@ class virtualGrid<T> {
                 template: `
 <div class="virtual-grid flex-window stretch" data-bind="attr: { id: gridId }, css: { condensed : condensed }">
     <div class="absolute-center loading" data-bind="visible: isLoading"><div class="global-spinner"></div></div>
-    <div class="column-container flex-window-head" data-bind="foreach: columns, visible: settings.showHeader"><div class="column" data-bind="style: { width: $data.width }, attr: { title: $data.headerTitle }"><strong data-bind="html: $data.header"></strong></div></div>    
+    <div class="column-container flex-window-head" data-bind="foreach: columns, visible: settings.showHeader"><div class="column" data-bind="style: { width: $data.width }, attr: { title: $data.headerTitle }, css: { sortable: sortable, asc: $data === $parent.sortByColumn() && $parent.sortMode() === 'asc', desc: $data === $parent.sortByColumn() && $parent.sortMode() === 'desc' }"><div class="sortable-controls"></div><strong data-bind="html: $data.header"></strong></div></div>    
     <div class="viewport flex-window-scroll" data-bind="css: { 'header-visible': settings.showHeader }">
         <div class="viewport-scroller" data-bind="style: { height: virtualHeight() + 'px', width: virtualWidth() + 'px' }, template: { afterRender: afterRender.bind($data) }">
         </div>
