@@ -1124,17 +1124,7 @@ namespace Voron.Impl
 
         public string GetTxState()
         {
-            switch (_disposed)
-            {
-                case TxState.None:
-                    return "None";
-                case TxState.Errored:
-                    return "Error";
-                case TxState.Disposed:
-                    return "Disposed";
-                default:
-                    return "N/A";
-            }
+            return _disposed.ToString();
         }
 
         private PagerState _lastState;
