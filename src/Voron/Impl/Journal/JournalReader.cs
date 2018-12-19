@@ -16,7 +16,7 @@ namespace Voron.Impl.Journal
         private readonly AbstractPager _journalPager;
         private readonly AbstractPager _dataPager;
         private readonly AbstractPager _recoveryPager;
-
+        private readonly HashSet<long> _modifiedPages;
         private readonly long _lastSyncedTransactionId;
         private long _readAt4Kb;
         private readonly DiffApplier _diffApplier = new DiffApplier();
@@ -27,13 +27,13 @@ namespace Voron.Impl.Journal
 
         public long Next4Kb => _readAt4Kb;
 
-        public JournalReader(AbstractPager journalPager, AbstractPager dataPager, AbstractPager recoveryPager,
-            long lastSyncedTransactionId, TransactionHeader* previous)
+        public JournalReader(AbstractPager journalPager, AbstractPager dataPager, AbstractPager recoveryPager, HashSet<long> modifiedPages, long lastSyncedTransactionId, TransactionHeader* previous)
         {
             RequireHeaderUpdate = false;
             _journalPager = journalPager;
             _dataPager = dataPager;
             _recoveryPager = recoveryPager;
+            _modifiedPages = modifiedPages;
             _lastSyncedTransactionId = lastSyncedTransactionId;
             _readAt4Kb = 0;
             LastTransactionHeader = previous;
@@ -154,6 +154,8 @@ namespace Voron.Impl.Journal
                 if (pageInfoPtr[i].PageNumber != pageNumber)
                     throw new InvalidDataException($"Expected a diff for page {pageInfoPtr[i].PageNumber} but got one for {pageNumber}");
                 totalRead += sizeof(long);
+
+                _modifiedPages.Add(pageNumber);
 
                 _dataPager.UnprotectPageRange(pagePtr, (ulong)pageInfoPtr[i].Size);
  
