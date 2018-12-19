@@ -169,10 +169,7 @@ namespace Raven.Server.Indexing
         public override IndexInput OpenInput(string name, IState s)
         {
             if (_indexOutputFilesSummary.HasVoronWriteErrors)
-            {
-                // we cannot modify the tx anymore 
-                return null;
-            }
+                throw new InvalidOperationException($"Tried to create an index input for: '{name}' while we have Voron write errors");
 
             var state = s as VoronState;
             if (state == null)
@@ -184,10 +181,7 @@ namespace Raven.Server.Indexing
         public override IndexOutput CreateOutput(string name, IState s)
         {
             if (_indexOutputFilesSummary.HasVoronWriteErrors)
-            {
-                // we cannot modify the tx anymore 
-                return null;
-            }
+                throw new InvalidOperationException($"Tried to create an index output for: '{name}' while we have Voron write errors");
 
             var state = s as VoronState;
             if (state == null)
