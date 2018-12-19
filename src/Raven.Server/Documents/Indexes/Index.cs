@@ -1403,22 +1403,25 @@ namespace Raven.Server.Documents.Indexes
             var diskFullErrors = Interlocked.Increment(ref _diskFullErrors);
             if (diskFullErrors < DiskFullErrorLimit)
             {
-                var timeToWaitInSeconds = (int)Math.Min(Math.Pow(2, diskFullErrors), 30);
+                var timeToWaitInMilliseconds = (int)Math.Min(Math.Pow(2, diskFullErrors), 30) * 1000;
 
                 if (_logger.IsOperationsEnabled)
                     _logger.Operations($"After disk full error in index : '{Name}', " +
                                        $"going to try flushing and syncing the environment to cleanup the storage. " +
-                                       $"Will wait for flush for: {timeToWaitInSeconds} seconds", dfe);
+                                       $"Will wait for flush for: {timeToWaitInMilliseconds}ms", dfe);
 
                 // force flush and sync
+                var sp = Stopwatch.StartNew();
                 GlobalFlushingBehavior.GlobalFlusher.Value.MaybeFlushEnvironment(storageEnvironment);
-                if (_logsAppliedEvent.Wait(timeToWaitInSeconds))
+                if (_logsAppliedEvent.Wait(timeToWaitInMilliseconds, _indexingProcessCancellationTokenSource.Token))
                 {
                     storageEnvironment.ForceSyncDataFile();
                 }
 
+                var timeLeft = timeToWaitInMilliseconds - sp.ElapsedMilliseconds;
                 // wait for sync
-                Task.Delay(1000 * timeToWaitInSeconds, _indexingProcessCancellationTokenSource.Token).Wait();
+                if (timeLeft > 0)
+                    Task.Delay((int)timeLeft, _indexingProcessCancellationTokenSource.Token).Wait();
 
                 storageEnvironment.Cleanup();
                 storageEnvironment.Options.TryCleanupRecycledJournals();
