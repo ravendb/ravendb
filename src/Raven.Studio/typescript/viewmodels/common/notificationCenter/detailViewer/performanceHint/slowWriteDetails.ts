@@ -37,10 +37,16 @@ class slowWriteDetails extends abstractPerformanceHintDetails {
 
         grid.init((s, t) => this.fetcher(s, t), () =>
             [
-                new textColumn<Raven.Server.NotificationCenter.Notifications.Details.SlowWritesDetails.SlowWriteInfo>(grid, x => x.Path, "Path", "45%"),
-                new textColumn<Raven.Server.NotificationCenter.Notifications.Details.SlowWritesDetails.SlowWriteInfo>(grid, x => generalUtils.formatUtcDateAsLocal(x.Date), "Date", "20%"),
+                new textColumn<Raven.Server.NotificationCenter.Notifications.Details.SlowWritesDetails.SlowWriteInfo>(grid, x => x.Path, "Path", "45%", {
+                    sortable: "string"
+                }),
+                new textColumn<Raven.Server.NotificationCenter.Notifications.Details.SlowWritesDetails.SlowWriteInfo>(grid, x => generalUtils.formatUtcDateAsLocal(x.Date), "Date", "20%", {
+                    sortable: x => x.Date
+                }),
                 new textColumn<Raven.Server.NotificationCenter.Notifications.Details.SlowWritesDetails.SlowWriteInfo>(grid,
-                    x => this.formatSpeed(x), "Speed", "20%")
+                    x => this.formatSpeed(x), "Speed", "20%", {
+                        sortable: x => x.SpeedInMbPerSec
+                    })
             ]);
         
         this.columnPreview.install(".slowWriteDetails", ".js-slow-write-details-tooltip",

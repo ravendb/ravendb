@@ -87,7 +87,7 @@ class virtualGrid<T> {
             findRowForCell: cell => this.findRowForCell(cell),
             headerVisible: v => this.settings.showHeader(v),
             init: (fetcher, columnsProvider) => this.init(fetcher, columnsProvider),
-            reset: (hard: boolean = true) => this.resetItems(hard),
+            reset: (hard: boolean = true, retainSort: boolean = true) => this.resetItems(hard, retainSort),
             selection: this.selection,
             findItem: (predicate) => this.findItem(predicate),
             getSelectedItems: () => this.getSelectedItems(),
@@ -672,18 +672,29 @@ class virtualGrid<T> {
     }
 
     /**
-     * Clears the items from the grid and refetches the first chunk of items.
+     * Clears the items from the grid and fetches again the first chunk of items.
      */
-    private resetItems(hard: boolean) {
+    private resetItems(hard: boolean, retainSort: boolean) {
         if (!this.settings.fetcher) {
             throw new Error("No fetcher defined, call init() method on virtualGridController");
         }
-
+        
         this.items.clear();
         this.totalItemCount = null;
         this.queuedFetch = null;
         this.isLoading(false);
         if (hard) {
+            if (retainSort) {
+                const sortColumn = this.sortByColumn();
+                if (sortColumn) {
+                    this.defaultSortByColumn(this.columns().indexOf(sortColumn));
+                    this.defaultSortMode(this.sortMode());    
+                }
+            }
+
+            this.sortMode("asc");
+            this.sortByColumn(undefined);
+            
             this.$viewportElement.scrollTop(0);
             this.columns([]);
         }

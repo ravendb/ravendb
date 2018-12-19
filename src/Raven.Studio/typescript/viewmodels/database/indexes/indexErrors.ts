@@ -114,11 +114,21 @@ class indexErrors extends viewModelBase {
                     {
                         title: () => 'Show indexing error details'
                     }),
-                new hyperlinkColumn<IndexErrorPerDocument>(grid, x => x.IndexName, x => appUrl.forEditIndex(x.IndexName, this.activeDatabase()), "Index name", "25%"),
-                new hyperlinkColumn<IndexErrorPerDocument>(grid, x => x.Document, x => appUrl.forEditDoc(x.Document, this.activeDatabase()), "Document Id", "20%"),
-                new textColumn<IndexErrorPerDocument>(grid, x => generalUtils.formatUtcDateAsLocal(x.Timestamp), "Date", "20%"),
-                new textColumn<IndexErrorPerDocument>(grid, x => x.Action, "Action", "10%"),
-                new textColumn<IndexErrorPerDocument>(grid, x => x.Error, "Error", "15%")
+                new hyperlinkColumn<IndexErrorPerDocument>(grid, x => x.IndexName, x => appUrl.forEditIndex(x.IndexName, this.activeDatabase()), "Index name", "25%", {
+                    sortable: "string"
+                }),
+                new hyperlinkColumn<IndexErrorPerDocument>(grid, x => x.Document, x => appUrl.forEditDoc(x.Document, this.activeDatabase()), "Document Id", "20%", {
+                    sortable: "string"
+                }),
+                new textColumn<IndexErrorPerDocument>(grid, x => generalUtils.formatUtcDateAsLocal(x.Timestamp), "Date", "20%", {
+                    sortable: "string"
+                }),
+                new textColumn<IndexErrorPerDocument>(grid, x => x.Action, "Action", "10%", {
+                    sortable: "string"
+                }),
+                new textColumn<IndexErrorPerDocument>(grid, x => x.Error, "Error", "15%", {
+                    sortable: "string"
+                })
             ]
         );
 
