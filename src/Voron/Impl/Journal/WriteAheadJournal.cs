@@ -174,7 +174,7 @@ namespace Voron.Impl.Journal
             }
 
             var lastSyncedTransactionId = logInfo.LastSyncedTransactionId;
-
+            var modifiedPages = new HashSet<long>();
             var journalFiles = new List<JournalFile>();
             long lastSyncedTxId = -1;
             long lastSyncedJournal = logInfo.LastSyncedJournal;
@@ -190,7 +190,7 @@ namespace Voron.Impl.Journal
 
                     var transactionHeader = txHeader->TransactionId == 0 ? null : txHeader;
                     using (
-                        var journalReader = new JournalReader(pager, _dataPager, recoveryPager, lastSyncedTransactionId,
+                        var journalReader = new JournalReader(pager, _dataPager, recoveryPager, modifiedPages, lastSyncedTransactionId,
                             transactionHeader))
                     {
                         var transactionHeaders = ArrayPool<TransactionHeader>.Shared.Rent((int)journalReader.NumberOfAllocated4Kb);
@@ -235,7 +235,35 @@ namespace Voron.Impl.Journal
                 }
             }
 
-            _files = _files.AppendRange(journalFiles);
+
+            if (_env.Options.EncryptionEnabled == false) // for encryption, we already use AEAD, so no need
+            {
+                // here we want to check that the checksum on all the modified pages is valid
+                // we can't do that during the journal application process because we may have modifications
+                // to pages that overwrite one another. So we have to do this at the end, this will detect
+                // corruption when applying journals at recovery time rather than at usage.
+                var tempTx = new TempPagerTransaction();
+
+                var sortedPages = modifiedPages.ToArray();
+                Array.Sort(sortedPages);
+
+                long minPageChecked = -1;
+
+                foreach (var modifedPage in modifiedPages)
+                {
+                    if (minPageChecked >= modifedPage)
+                        continue;
+
+                    var ptr = (PageHeader*)_dataPager.AcquirePagePointerWithOverflowHandling(tempTx, modifedPage, null);
+                    _env.ValidatePageChecksum(modifedPage, ptr);
+
+                    minPageChecked = modifedPage + VirtualPagerLegacyExtensions.GetNumberOfPages(ptr);
+
+                    tempTx.Dispose(); // release any resources, we just wanted to validate things
+                }
+            }
+
+                    _files = _files.AppendRange(journalFiles);
 
             if (lastSyncedTxId < 0)
                 VoronUnrecoverableErrorException.Raise(_env,
