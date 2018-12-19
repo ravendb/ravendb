@@ -5,6 +5,7 @@ using FastTests.Server.Basic.Entities;
 using Newtonsoft.Json.Linq;
 using Raven.Client.Documents;
 using Raven.Client.Documents.Queries;
+using Raven.Client.Documents.Session;
 using Raven.Client.Exceptions;
 using Raven.Tests.Core.Utils.Entities;
 using Tests.Infrastructure;
@@ -248,6 +249,36 @@ namespace FastTests.Graph
                                 item["e2"].Value<string>("Name") == "A");
 
                 }
+            }
+        }
+
+        [Fact]
+        public void CanCacheGraphQueries()
+        {
+            void IssueQuery(IDocumentSession session)
+            {
+                var results = session.Advanced.RawQuery<JObject>(@"
+                        with {from Users where id() = 'users/2'} as u
+                        match (u) select u.Name").ToList().Select(x => x["Name"].Value<string>()).ToArray();
+
+                Assert.Equal(1, results.Length);
+                results[0] = "Jill";
+            }
+
+            using (var store = GetDocumentStore())
+            {
+                CreateMoviesData(store);
+                using (var session = store.OpenSession())
+                {
+                    IssueQuery(session);
+                    Assert.Equal(1, session.Advanced.RequestExecutor.Cache.NumberOfItems);
+                    Assert.Equal(1, session.Advanced.NumberOfRequests);
+                    IssueQuery(session);
+                    Assert.Equal(1, session.Advanced.RequestExecutor.Cache.NumberOfItems);
+                    Assert.Equal(2, session.Advanced.NumberOfRequests);
+
+                }
+               
             }
         }
 

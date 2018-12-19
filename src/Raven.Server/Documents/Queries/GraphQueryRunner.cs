@@ -86,7 +86,7 @@ namespace Raven.Server.Documents.Queries
         public async Task<GraphDebugInfo> GetAnalyzedQueryResults(IndexQueryServerSide query, DocumentsOperationContext documentsContext, long? existingResultEtag,
            OperationCancelToken token)
         {
-            var qr = await GetQueryResults(query, documentsContext, existingResultEtag, token);
+            var qr = await GetQueryResults(query, documentsContext, null, token);
             var result = new GraphDebugInfo(Database, documentsContext);
             qr.QueryPlan.Analyze(qr.Matches, result);
             return result;
@@ -116,6 +116,11 @@ namespace Raven.Server.Documents.Queries
             using (var timingScope = new QueryTimingsScope())
             {
                 var qr = await GetQueryResults(query, documentsContext, existingResultEtag, token);
+                if (qr.NotModified )
+                {
+                    final.NotModified = true;
+                    return final;
+                }
                 var q = query.Metadata.Query;
 
                 //TODO: handle order by, load,  clauses
@@ -164,6 +169,7 @@ namespace Raven.Server.Documents.Queries
 
                 final.TotalResults = final.Results.Count;
                 final.IsStale = qr.QueryPlan.IsStale;
+                final.ResultEtag = qr.QueryPlan.ResultEtag;
                 return final;
             }
         }
@@ -182,7 +188,7 @@ namespace Raven.Server.Documents.Queries
         }
 
 
-        private async Task<(List<Match> Matches, GraphQueryPlan QueryPlan)> GetQueryResults(IndexQueryServerSide query, DocumentsOperationContext documentsContext, long? existingResultEtag, OperationCancelToken token)
+        private async Task<(List<Match> Matches, GraphQueryPlan QueryPlan, bool NotModified)> GetQueryResults(IndexQueryServerSide query, DocumentsOperationContext documentsContext, long? existingResultEtag, OperationCancelToken token)
         {
             var q = query.Metadata.Query;
             var qp = new GraphQueryPlan(query, documentsContext, existingResultEtag, token, Database);
@@ -196,6 +202,15 @@ namespace Raven.Server.Documents.Queries
             }
             //for the case where we don't wait for non stale results we will override IsStale in the QueryQueryStep steps
 
+            if (documentsContext.Transaction == null || documentsContext.Transaction.Disposed)
+                documentsContext.OpenReadTransaction();
+
+            qp.ResultEtag = DocumentsStorage.ReadLastEtag(documentsContext.Transaction.InnerTransaction);
+            if (existingResultEtag.HasValue)
+            {
+                if (qp.ResultEtag == existingResultEtag)
+                    return (null, null, true);
+            }
             await qp.Initialize();
             var matchResults = qp.Execute();
 
@@ -229,7 +244,7 @@ namespace Raven.Server.Documents.Queries
             {
                 matchResults.RemoveRange(query.PageSize, matchResults.Count - query.PageSize);
             }
-            return (matchResults, qp);
+            return (matchResults, qp, false);
         }
 
         private static void HandleResultsWithoutSelect<TResult>(
