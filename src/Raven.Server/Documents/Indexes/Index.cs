@@ -992,6 +992,10 @@ namespace Raven.Server.Documents.Indexes
                                         var lastAllocatedBytes = GC.GetAllocatedBytesForCurrentThread();
 
                                         didWork = DoIndexingWork(scope, _indexingProcessCancellationTokenSource.Token);
+
+                                        if (_lowMemoryPressure > 0)
+                                            LowMemoryOver();
+
                                         batchCompleted = true;
                                         lastAllocatedBytes = GC.GetAllocatedBytesForCurrentThread() - lastAllocatedBytes;
                                         scope.AddAllocatedBytes(lastAllocatedBytes);
@@ -1407,7 +1411,7 @@ namespace Raven.Server.Documents.Indexes
 
                 DocumentDatabase.NotificationCenter.Add(alert);
             }
-            catch (OutOfMemoryException)
+            catch (Exception e) when (e.IsOutOfMemory())
             {
                 // nothing to do here
             }
@@ -3514,7 +3518,7 @@ namespace Raven.Server.Documents.Indexes
 
         internal void SimulateLowMemory()
         {
-            _lowMemoryPressure = long.MaxValue;
+            _lowMemoryPressure = 10;
             LowMemory();
         }
 
