@@ -316,29 +316,56 @@ namespace Sparrow.Json
         public JsonOperationContext(int initialSize, int longLivedSize, SharedMultipleUseFlag lowMemoryFlag)
         {
             Debug.Assert(lowMemoryFlag != null);
-            _disposeOnceRunner = new DisposeOnce<ExceptionRetry>(() =>
+            _disposeOnceRunner = new DisposeOnce<SingleAttempt>(() =>
             {
 #if MEM_GUARD_STACK
                 ElectricFencedMemory.DecrementConext();
                 ElectricFencedMemory.UnRegisterContextAllocation(this);
 #endif
 
-                Reset(true);
+                List<Exception> exceptions = null;
 
-                _documentBuilder.Dispose();
-                _arenaAllocator.Dispose();
-                _arenaAllocatorForLongLivedValues?.Dispose();
+
+                TryExecute(() => Reset(true));
+
+                TryDispose(_documentBuilder);
+                TryDispose(_arenaAllocator);
+                TryDispose(_arenaAllocatorForLongLivedValues);
 
                 if (_managedBuffers != null)
                 {
                     foreach (var managedPinnedBuffer in _managedBuffers)
                     {
-                        if (managedPinnedBuffer is IDisposable s)
-                            s.Dispose();
+                        TryDispose(managedPinnedBuffer as IDisposable);
                     }
 
                     _managedBuffers = null;
                 }
+
+                if (exceptions != null)
+                    throw new AggregateException("Failed to dispose context", exceptions);
+
+                void TryDispose(IDisposable d)
+                {
+                    if (d == null)
+                        return;
+                    TryExecute(d.Dispose);
+                }
+
+                void TryExecute(Action a)
+                {
+                    try
+                    {
+                        a();
+                    }
+                    catch (Exception e)
+                    {
+                        if (exceptions == null)
+                            exceptions = new List<Exception>();
+                        exceptions.Add(e);
+                    }
+                }
+
             });
 
             _initialSize = initialSize;
@@ -461,7 +488,7 @@ namespace Sparrow.Json
             return new UnmanagedWriteBuffer(this, bufferMemory);
         }
 
-        private readonly DisposeOnce<ExceptionRetry> _disposeOnceRunner;
+        private readonly DisposeOnce<SingleAttempt> _disposeOnceRunner;
         private bool Disposed => _disposeOnceRunner.Disposed;
         public override void Dispose()
         {
