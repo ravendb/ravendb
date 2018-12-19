@@ -36,6 +36,12 @@ namespace Raven.Server.Indexing
 
         public override bool FileExists(string name, IState s)
         {
+            if (_indexOutputFilesSummary.HasVoronWriteErrors)
+            {
+                // we cannot modify the tx anymore 
+                return false;
+            }
+
             var state = s as VoronState;
             if (state == null)
                 throw new ArgumentNullException(nameof(s));
@@ -46,6 +52,12 @@ namespace Raven.Server.Indexing
 
         public override string[] ListAll(IState s)
         {
+            if (_indexOutputFilesSummary.HasVoronWriteErrors)
+            {
+                // we cannot modify the tx anymore 
+                return new string[]{};
+            }
+
             var state = s as VoronState;
             if (state == null)
                 throw new ArgumentNullException(nameof(s));
@@ -67,6 +79,12 @@ namespace Raven.Server.Indexing
 
         public override long FileModified(string name, IState s)
         {
+            if (_indexOutputFilesSummary.HasVoronWriteErrors)
+            {
+                // we cannot modify the tx anymore 
+                return -1;
+            }
+
             var state = s as VoronState;
             if (state == null)
                 throw new ArgumentNullException(nameof(s));
@@ -77,12 +95,19 @@ namespace Raven.Server.Indexing
                 var info = filesTree.GetStreamInfo(str, writable: false);
                 if (info == null)
                     throw new FileNotFoundException(name);
+
                 return info->Version;
             }
         }
 
         public override void TouchFile(string name, IState s)
         {
+            if (_indexOutputFilesSummary.HasVoronWriteErrors)
+            {
+                // we cannot modify the tx anymore 
+                return;
+            }
+
             var state = s as VoronState;
             if (state == null)
                 throw new ArgumentNullException(nameof(s));
@@ -101,6 +126,12 @@ namespace Raven.Server.Indexing
 
         public override long FileLength(string name, IState s)
         {
+            if (_indexOutputFilesSummary.HasVoronWriteErrors)
+            {
+                // we cannot modify the tx anymore 
+                return -1;
+            }
+
             var state = s as VoronState;
             if (state == null)
                 throw new ArgumentNullException(nameof(s));
@@ -137,6 +168,12 @@ namespace Raven.Server.Indexing
 
         public override IndexInput OpenInput(string name, IState s)
         {
+            if (_indexOutputFilesSummary.HasVoronWriteErrors)
+            {
+                // we cannot modify the tx anymore 
+                return null;
+            }
+
             var state = s as VoronState;
             if (state == null)
                 throw new ArgumentNullException(nameof(s));
@@ -146,6 +183,12 @@ namespace Raven.Server.Indexing
 
         public override IndexOutput CreateOutput(string name, IState s)
         {
+            if (_indexOutputFilesSummary.HasVoronWriteErrors)
+            {
+                // we cannot modify the tx anymore 
+                return null;
+            }
+
             var state = s as VoronState;
             if (state == null)
                 throw new ArgumentNullException(nameof(s));
