@@ -13,43 +13,17 @@ namespace Sparrow.Platform.Posix
     {
         internal const string LIBC_6 = "libc";
 
-        [DllImport(LIBC_6, EntryPoint = "memcmp", CallingConvention = CallingConvention.Cdecl, SetLastError = false)]
-        [SecurityCritical]
-        public static extern int Compare(byte* b1, byte* b2, long count);
-        
-        [DllImport(LIBC_6, EntryPoint = "memmove", CallingConvention = CallingConvention.Cdecl, SetLastError = false)]
-        [SecurityCritical]
-        public static extern int Move(byte* dest, byte* src, long count);
-        
         [DllImport(LIBC_6, EntryPoint = "syscall", SetLastError = true)]
         public static extern long syscall0(long number);
 
         [DllImport(LIBC_6, SetLastError = true)]
-        public static extern int sched_getaffinity(int pid, IntPtr cpusetsize, ref ulong cpuset);
-
-        [DllImport(LIBC_6, SetLastError = true)]
         public static extern int sched_setaffinity(int pid, IntPtr cpusetsize, ref ulong cpuset);
-
-        [DllImport(LIBC_6, SetLastError = true)]
-        public static extern int setpriority(int which, int who, int prio);
-
-        [DllImport(LIBC_6, SetLastError = true)]
-        public static extern int getpriority(int which, int who);
-
-        [DllImport(LIBC_6, SetLastError = true)]
-        public static extern int sysinfo(ref sysinfo_t info);
-        
-        [DllImport(LIBC_6, SetLastError = true)]
-        public static extern int sysinfo(ref sysinfo_t_32bit info);
 
         [DllImport(LIBC_6, SetLastError = true)]
         public static extern long times(ref TimeSample info);
         
         [DllImport(LIBC_6, SetLastError = true)]
         public static extern long times(ref TimeSample_32bit info);
-
-        [DllImport(LIBC_6, SetLastError = true)]
-        public static extern int sprintf(char* str, char* format);
 
         [DllImport(LIBC_6, SetLastError = true)]
         public static extern int readlink(
@@ -110,11 +84,6 @@ namespace Sparrow.Platform.Posix
         [DllImport(LIBC_6, SetLastError = true)]
         public static extern void free(IntPtr ptr);
 
-        // getpid(2)
-        //    pid_t getpid(void);
-        [DllImport(LIBC_6, SetLastError = true)]
-        public static extern int getpid();
-
         [DllImport(LIBC_6, SetLastError = true)]
         public static extern int unlink(
             [MarshalAs(UnmanagedType.LPStr)] string filename);
@@ -167,9 +136,6 @@ namespace Sparrow.Platform.Posix
         [DllImport(LIBC_6, SetLastError = true)]
         private static extern int readlink(string path, byte* buf, UIntPtr bufsiz);
 
-        [DllImport(LIBC_6, SetLastError = true)]
-        public static extern int access(string pathFullPath, int mode);
-
         // read(2)
         //    ssize_t read(int fd, void *buf, size_t count);
         [DllImport(LIBC_6, SetLastError = true)]
@@ -190,9 +156,6 @@ namespace Sparrow.Platform.Posix
         //    ssize_t pwrite(int fd, const void *buf, size_t count, off_t offset);
         [DllImport(LIBC_6, SetLastError = true)]
         private static extern IntPtr pwrite(int fd, IntPtr buf, UIntPtr count, IntPtr offset);
-
-        [DllImport(LIBC_6, SetLastError = true)]
-        private static extern IntPtr pwrite(int fd, IntPtr buf, UIntPtr count, long offset);
 
         public static long pwrite(int fd, void* buf, ulong count, long offset)
         {
@@ -502,14 +465,5 @@ namespace Sparrow.Platform.Posix
         public ulong f_flag;     /* mount flags */
         public ulong f_namemax;  /* maximum filename length */
         public fixed int f_spare[6];
-    }
-
-    [Flags]
-    public enum AccessMode
-    {
-        F_OK = 0,
-        X_OK = 1,
-        W_OK = 2,
-        R_OK = 4
     }
 }

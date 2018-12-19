@@ -23,6 +23,15 @@
 @color-related: @color-4-3;
 
 @text-emphasis: @gray-lighter;
+
+@gutter: @grid-gutter-width;
+@ratio: 1.61803;
+@gutter-xl: @gutter-lg * @ratio;
+@gutter-lg: @gutter * @ratio;
+@gutter-sm: @gutter / @ratio;
+@gutter-xs: @gutter-sm / @ratio;
+@gutter-xxs: @gutter-xs / @ratio;
+
 //== Scaffolding
 //
 //## Settings for some of the most global styles.

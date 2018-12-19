@@ -34,12 +34,12 @@ function getStatsMenuItem(appUrls: computedAppUrls) {
             dynamicHash: appUrls.statusStorageReport
         }),
         new leafMenuItem({
-            route: 'databases/status/replicationStats',
-            moduleId: 'viewmodels/database/status/replicationStats',
-            title: 'Replication Stats',
+            route: 'databases/status/ongoingTasksStats',
+            moduleId: 'viewmodels/database/status/ongoingTasksStats',
+            title: 'Ongoing Tasks Stats',
             nav: true,
             css: 'icon-replication-stats',
-            dynamicHash: appUrls.replicationStats
+            dynamicHash: appUrls.ongoingTasksStats
         }),
         new leafMenuItem({
             route: 'databases/status/debug*details',

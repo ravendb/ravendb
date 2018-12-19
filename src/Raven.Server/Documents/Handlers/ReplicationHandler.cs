@@ -188,53 +188,18 @@ namespace Raven.Server.Documents.Handlers
                 using (var collector = new LiveReplicationPerformanceCollector(Database))
                 {
                     // 1. Send data to webSocket without making UI wait upon opening webSocket
-                    await SendPerformanceStatsOrHeartbeatToWebSocket(receive, webSocket, collector, ms, 100);
+                    await collector.SendStatsOrHeartbeatToWebSocket(receive, webSocket, ContextPool, ms, 100);
 
                     // 2. Send data to webSocket when available
                     while (Database.DatabaseShutdown.IsCancellationRequested == false)
                     {
-                        if (await SendPerformanceStatsOrHeartbeatToWebSocket(receive, webSocket, collector, ms, 4000) == false)
+                        if (await collector.SendStatsOrHeartbeatToWebSocket(receive, webSocket, ContextPool, ms, 4000) == false)
                         {
                             break;
                         }
                     }
                 }
             }
-        }
-
-        private async Task<bool> SendPerformanceStatsOrHeartbeatToWebSocket(Task<WebSocketReceiveResult> receive, WebSocket webSocket, 
-            LiveReplicationPerformanceCollector collector, MemoryStream ms, int timeToWait)
-        {
-            if (receive.IsCompleted || webSocket.State != WebSocketState.Open)
-                return false; 
-
-            var tuple = await collector.Stats.TryDequeueAsync(TimeSpan.FromMilliseconds(timeToWait));
-            if (tuple.Item1 == false)
-            {
-                await webSocket.SendAsync(WebSocketHelper.Heartbeat, WebSocketMessageType.Text, true, Database.DatabaseShutdown);
-                return true ; 
-            }
-
-            ms.SetLength(0);
-
-            using (ContextPool.AllocateOperationContext(out JsonOperationContext context))
-            using (var writer = new AsyncBlittableJsonTextWriter(context, ms, Database.DatabaseShutdown))
-            {
-                writer.WriteStartObject();
-
-                writer.WriteArray(context, "Results", tuple.Item2, (w, c, p) =>
-                {
-                    p.Write(c, w);
-                });
-
-                writer.WriteEndObject();
-                await writer.OuterFlushAsync();
-            }
-
-            ms.TryGetBuffer(out ArraySegment<byte> bytes);
-            await webSocket.SendAsync(bytes, WebSocketMessageType.Text, true, Database.DatabaseShutdown);
-
-            return true;
         }
 
         [RavenAction("/databases/*/replication/pulses/live", "GET", AuthorizationStatus.ValidUser, SkipUsagesCount = true)]

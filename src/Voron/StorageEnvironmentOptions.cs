@@ -16,6 +16,7 @@ using Voron.Impl.FileHeaders;
 using Voron.Impl.Journal;
 using Voron.Impl.Paging;
 using Voron.Impl.Scratch;
+using Voron.Platform;
 using Voron.Platform.Posix;
 using Voron.Platform.Win32;
 using Voron.Util;
@@ -666,10 +667,9 @@ namespace Voron
             public override unsafe void WriteHeader(string filename, FileHeader* header)
             {
                 var path = _basePath.Combine(filename);
-                if (RunningOnPosix)
-                    PosixHelper.WriteFileHeader(header, path);
-                else
-                    Win32Helper.WriteFileHeader(header, path);
+                var rc = Pal.rvn_write_header(path.FullPath, header, sizeof(FileHeader), out var errorCode);
+                if (rc != 0)
+                    PalHelper.ThrowLastError(errorCode, $"Failed to rvn_write_header '{filename}', reason : {((PalFlags.FAIL_CODES)rc).ToString()}");
             }
 
             public void DeleteAllTempBuffers()
