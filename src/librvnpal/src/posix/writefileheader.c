@@ -8,7 +8,7 @@
 #include <errno.h>
 
 #include "rvn.h"
-#include "posixenums.h"
+#include "status_codes.h"
 
 
 int32_t
