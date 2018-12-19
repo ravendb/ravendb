@@ -104,6 +104,12 @@ namespace Raven.Server.Indexing
 
         private void CopyFileStream()
         {
+            if (_indexOutputFilesSummary.HasVoronWriteErrors)
+            {
+                // we cannot modify the tx anymore 
+                return;
+            }
+
             try
             {
                 var files = _tx.ReadTree(_tree);
@@ -153,8 +159,9 @@ namespace Raven.Server.Indexing
         {
             var directory = Path.GetDirectoryName(_fileTempPath);
             var driveInfo = DiskSpaceChecker.GetDiskSpaceInfo(directory);
+            var freeSpace = driveInfo != null ? driveInfo.TotalFreeSpace.ToString() : "N/A";
             throw new DiskFullException($"There isn't enough space to flush the buffer of the file: {_fileTempPath}. " +
-                                        $"Currently available space: {driveInfo?.TotalFreeSpace}");
+                                        $"Currently available space: {freeSpace}");
         }
 
         private static bool IsOutOfDiskSpaceException(IOException ioe)
