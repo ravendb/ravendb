@@ -123,6 +123,7 @@ namespace Raven.Server.Documents.Indexes.MapReduce
             }
 
             WriteLastEtags(indexContext);
+            _mapReduceContext.StoreNextMapResultId();
 
             return false;
         }
