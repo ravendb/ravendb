@@ -28,6 +28,7 @@ interface virtualGridController<T> {
     
     scrollDown: () => void;
 
+    setDefaultSortBy(columnIndex: number, mode?: sortMode): void;
 }
 
 export = virtualGridController;

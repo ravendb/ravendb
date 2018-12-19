@@ -384,10 +384,34 @@ class trafficSection {
             items: this.table
         }), () => {
             return [
-                new hyperlinkColumn<trafficItem>(grid, x => x.database(), x => appUrl.forTrafficWatch(x.database()), "Database", "30%"),
-                new textColumn<trafficItem>(grid, x => x.requestsPerSecond(), "Requests / s", "20%"),
-                new textColumn<trafficItem>(grid, x => x.writesPerSecond(), "Writes / s", "25%"),
-                new textColumn<trafficItem>(grid, x => this.sizeFormatter(x.dataWritesPerSecond()), "Data written / s", "25%")
+                new hyperlinkColumn<trafficItem>(grid, x => x.database(), 
+                    x => appUrl.forTrafficWatch(x.database()), 
+                    "Database", 
+                    "30%", 
+                    {
+                        sortable: "string"
+                    }),
+                new textColumn<trafficItem>(grid, 
+                    x => x.requestsPerSecond(), 
+                    "Requests / s", 
+                    "20%", {
+                        sortable: "number",
+                        defaultSortOrder: "desc"
+                    }),
+                new textColumn<trafficItem>(grid, 
+                    x => x.writesPerSecond(), 
+                    "Writes / s", 
+                    "25%", {
+                        sortable: "number",
+                        defaultSortOrder: "desc"
+                    }),
+                new textColumn<trafficItem>(grid, 
+                    x => this.sizeFormatter(x.dataWritesPerSecond()), 
+                    "Data written / s", 
+                    "25%", {
+                        sortable: x => x.dataWritesPerSecond(),
+                        defaultSortOrder: "desc"
+                    })
             ];
         });
         

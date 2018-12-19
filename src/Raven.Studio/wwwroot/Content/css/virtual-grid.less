@@ -42,6 +42,65 @@
             flex-grow: 1;
         }
     }
+    
+    .sortable {
+        position: relative;
+        cursor: pointer;
+        
+        .sortable-controls {
+            position: absolute;
+            right: 0;
+            top: 0;
+            line-height: 15px;
+            
+            &:before {
+                opacity: 0.2;
+                content: 'A'; //TODO: use icons!
+                position: absolute;
+                right: 3px;
+                top: 0;
+                font-size: 9px;
+            }
+
+            //TODO: add support for .condensed class
+
+            &:after {
+                opacity: 0.2;
+                content: 'D'; //TODO: use icons!
+                position: absolute;
+                right: 3px;
+                top: 10px;
+                font-size: 9px;
+            }
+        }
+        
+        &:hover {
+            .sortable-controls {
+                &:before {
+                    opacity: 0.8;
+                }
+                &:after {
+                    opacity: 0.8;
+                }       
+            }
+        }
+        
+        &.asc, &.desc {
+            background-color: @gray-dark; 
+        }
+        
+        &.asc {
+            .sortable-controls:before {
+                opacity: 1;
+            }
+        }
+        
+        &.desc {
+            .sortable-controls:after {
+                opacity: 1;
+            }
+        }
+    }
 
     .checked-column-header {
         text-align: center;
@@ -68,6 +127,7 @@
     @row-bg: @gray-base;
     @row-bg-selection-preview: @gray-darker;
     @row-bg-selected: @gray-dark;
+    @row-bg-sorted: lighten(@gray-base, 6%); 
 
     .virtual-row {
         position: absolute;
@@ -158,6 +218,30 @@
 
             .btn.btn-link {
                 text-align: left;
+            }
+        }
+    }
+    
+    .virtual-row {
+        .cell.sorted {
+            background-color: @row-bg-sorted;
+        }
+        
+        &:hover {
+            .sorted {
+                background-color: lighten(@row-bg-sorted, 5%);    
+            }
+        }
+
+        &.even {
+            .sorted {
+                background-color: lighten(@row-bg-sorted, 2%);    
+            }
+
+            &:hover {
+                .sorted {
+                    background-color: lighten(@row-bg-sorted, 6%);    
+                }
             }
         }
     }
