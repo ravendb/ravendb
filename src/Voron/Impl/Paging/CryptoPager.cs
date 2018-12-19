@@ -104,15 +104,7 @@ namespace Voron.Impl.Paging
             Inner.UnprotectPageRange(start, size, force);
         }
 
-        private static int GetNumberOfPages(PageHeader* header)
-        {
-            if ((header->Flags & PageFlags.Overflow) != PageFlags.Overflow)
-                return 1;
-
-            var overflowSize = header->OverflowSize + Constants.Tree.PageHeaderSize;
-            return checked((overflowSize / Constants.Storage.PageSize) + (overflowSize % Constants.Storage.PageSize == 0 ? 0 : 1));
-        }
-
+        
         public override byte* AcquirePagePointerForNewPage(IPagerLevelTransactionState tx, long pageNumber, int numberOfPages, PagerState pagerState = null)
         {
             var state = GetTransactionState(tx);
@@ -149,7 +141,7 @@ namespace Voron.Impl.Paging
 
             var pageHeader = (PageHeader*)pagePointer;
 
-            var size = GetNumberOfPages(pageHeader) * Constants.Storage.PageSize;
+            var size = VirtualPagerLegacyExtensions.GetNumberOfPages(pageHeader) * Constants.Storage.PageSize;
 
             buffer = GetBufferAndAddToTxState(pageNumber, state, size);
 
@@ -343,7 +335,7 @@ namespace Voron.Impl.Paging
                 if (Sodium.crypto_kdf_derive_from_key(subKey, subKeyLen, (ulong)num, ctx, mk) != 0)
                     throw new InvalidOperationException("Unable to generate derived key");
 
-                var dataSize = GetNumberOfPages(page) * Constants.Storage.PageSize;
+                var dataSize = VirtualPagerLegacyExtensions.GetNumberOfPages(page) * Constants.Storage.PageSize;
 
                 var npub = (byte*)page + PageHeader.NonceOffset;
                 // here we generate 128(!) bits of random data, but xchacha20poly1305 needs
@@ -389,7 +381,7 @@ namespace Voron.Impl.Paging
                 if (Sodium.crypto_kdf_derive_from_key(subKey, subKeyLen , (ulong)num, ctx, mk) != 0)
                     throw new InvalidOperationException("Unable to generate derived key");
 
-                var dataSize = (ulong)GetNumberOfPages(page) * Constants.Storage.PageSize;
+                var dataSize = (ulong)VirtualPagerLegacyExtensions.GetNumberOfPages(page) * Constants.Storage.PageSize;
                 var rc = Sodium.crypto_aead_xchacha20poly1305_ietf_decrypt_detached(
                     destination + PageHeader.SizeOf,
                     null,
