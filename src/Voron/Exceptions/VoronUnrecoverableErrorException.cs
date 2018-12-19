@@ -16,8 +16,9 @@ namespace Voron.Exceptions
         {
             try
             {
+                var lastTxState = tx.GetTxState();
                 tx.MarkTransactionAsFailed();
-                throw new VoronUnrecoverableErrorException($"txState:{tx.GetTxState()}, message: {message}");
+                throw new VoronUnrecoverableErrorException($"txState: {lastTxState}, message: {message}");
             }
             catch (Exception e)
             {
