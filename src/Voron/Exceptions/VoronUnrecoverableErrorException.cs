@@ -6,11 +6,25 @@
 
 using System;
 using System.Runtime.ExceptionServices;
+using Voron.Impl;
 
 namespace Voron.Exceptions
 {
     public class VoronUnrecoverableErrorException : Exception
     {
+        public static void Raise(LowLevelTransaction tx, string message)
+        {
+            try
+            {
+                tx.MarkTransactionAsFailed();
+                throw new VoronUnrecoverableErrorException(message);
+            }
+            catch (Exception e)
+            {
+                tx.Environment.Options.SetCatastrophicFailure(ExceptionDispatchInfo.Capture(e));
+                throw;
+            }
+        }
         public static void Raise(StorageEnvironment env, string message)
         {
             try

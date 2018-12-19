@@ -157,6 +157,7 @@ namespace Voron.Impl
 
             _allocator = new ByteStringContext(SharedMultipleUseFlag.None);
             _disposeAllocator = true;
+            _allocator.AllocationFailed += MarkTransactionAsFailed;
 
             Flags = TransactionFlags.ReadWrite;
 
@@ -234,6 +235,9 @@ namespace Voron.Impl
             _id = id;
             _freeSpaceHandling = freeSpaceHandling;
             _allocator = context ?? new ByteStringContext(SharedMultipleUseFlag.None);
+
+            _allocator.AllocationFailed += MarkTransactionAsFailed;
+
             _disposeAllocator = context == null;
             _pagerStates = new HashSet<PagerState>(ReferenceEqualityComparer<PagerState>.Default);
 
@@ -300,7 +304,7 @@ namespace Voron.Impl
                 var lastSeenTxIdByJournal = journalFile.PageTranslationTable.GetLastSeenTransactionId();
 
                 if (id <= lastSeenTxIdByJournal)
-                    VoronUnrecoverableErrorException.Raise(_env,
+                    VoronUnrecoverableErrorException.Raise(this,
                         $"PTT of journal {journalFile.Number} already contains records for a new write tx. " +
                         $"Tx id = {id}, last seen by journal = {lastSeenTxIdByJournal}");
 
@@ -310,7 +314,7 @@ namespace Voron.Impl
                 var maxTxIdInJournal = journalFile.PageTranslationTable.MaxTransactionId();
 
                 if (id <= maxTxIdInJournal)
-                    VoronUnrecoverableErrorException.Raise(_env,
+                    VoronUnrecoverableErrorException.Raise(this,
                         $"PTT of journal {journalFile.Number} already contains records for a new write tx. " +
                         $"Tx id = {id}, max id in journal = {maxTxIdInJournal}");
             }
@@ -758,11 +762,17 @@ namespace Voron.Impl
                 _root?.Dispose();
                 _freeSpaceTree?.Dispose();
 
+                _allocator.AllocationFailed -= MarkTransactionAsFailed;
                 if (_disposeAllocator)
                     _allocator.Dispose();
 
                 OnDispose?.Invoke(this);
             }
+        }
+
+        public void MarkTransactionAsFailed()
+        {
+            _disposed |= TxState.Errored;
         }
 
         internal void FreePageOnCommit(long pageNumber)

@@ -299,7 +299,7 @@ namespace Voron.Data.BTrees
             {
                 if (SliceComparer.Equals(fetchedNodeKey, key) == false)
                 {
-                    VoronUnrecoverableErrorException.Raise(_llt.Environment, "Was unable to retrieve the correct node. Data corruption possible");
+                    VoronUnrecoverableErrorException.Raise(_llt, "Was unable to retrieve the correct node. Data corruption possible");
                 }
             }
 
@@ -329,7 +329,7 @@ namespace Voron.Data.BTrees
             {
                 if (SliceComparer.Equals(fetchedNodeKey, key) == false)
                 {
-                    VoronUnrecoverableErrorException.Raise(_llt.Environment, "Was unable to retrieve the correct node. Data corruption possible");
+                    VoronUnrecoverableErrorException.Raise(_llt, "Was unable to retrieve the correct node. Data corruption possible");
                 }
             }
 
