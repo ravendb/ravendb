@@ -44,17 +44,11 @@ namespace Raven.Server.Documents.Queries.Graph
                 if (BlittableJsonTraverser.Default.TryRead(leftDoc, Edge.Path.FieldValue, out var value, out _) == false || value == null)
                     return;
 
-                //allow array of primitives
-                if (Edge.Project == null && !(value is BlittableJsonReaderArray))
-                {
-                    ThrowMissingEdgeProjection();
-                }
-
                 var projectFieldValue = Edge.Project?.FieldValue;              
 
                 switch (value)
                 {
-                    case BlittableJsonReaderArray array:
+                    case BlittableJsonReaderArray array when (Edge.Project != null || value is BlittableJsonReaderArray):
                         foreach (var item in array)
                         {
                             switch (item)
@@ -81,7 +75,7 @@ namespace Raven.Server.Documents.Queries.Graph
                             }
                         }
                         break;
-                    case BlittableJsonReaderObject json:
+                    case BlittableJsonReaderObject json when (Edge.Project != null || value is BlittableJsonReaderArray):
                         if (projectFieldValue == null)
                             ThrowMissingEdgeProjection();
 
@@ -89,6 +83,9 @@ namespace Raven.Server.Documents.Queries.Graph
                         {
                             AddEdgeAfterFiltering(left, json, projectFieldValue);
                         }
+                        break;
+                    default:
+                        ThrowMissingEdgeProjection();
                         break;
                 }
             }
@@ -101,7 +98,9 @@ namespace Raven.Server.Documents.Queries.Graph
         private void HandleStringAsArrayItem(Match left, LazyStringValue lazyStringValue)
         {
             var jsonStringForWhere = new DynamicJsonValue
-                {[Edge.Path.FieldValue] = lazyStringValue};
+            {
+                [Edge.Path.FieldValue] = lazyStringValue
+            };
 
             if (!string.IsNullOrWhiteSpace(Edge.EdgeAlias.Value))
             {
