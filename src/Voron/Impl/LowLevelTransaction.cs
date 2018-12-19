@@ -1122,6 +1122,21 @@ namespace Voron.Impl
             _requestedCommitStats = stats = new CommitStats();
         }
 
+        public string GetTxState()
+        {
+            switch (_disposed)
+            {
+                case TxState.None:
+                    return "None";
+                case TxState.Errored:
+                    return "Error";
+                case TxState.Disposed:
+                    return "Disposed";
+                default:
+                    return "N/A";
+            }
+        }
+
         private PagerState _lastState;
         private bool _isLazyTransaction;
 
