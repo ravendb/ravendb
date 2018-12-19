@@ -165,9 +165,9 @@ namespace SlowTests.Voron.Storage
             {
                 var report = Env.GenerateDetailedReport(tx);
 
-                Assert.NotEmpty(report.Journals);
+                Assert.NotEmpty(report.Journals.Journals);
 
-                foreach (var journalReport in report.Journals)
+                foreach (var journalReport in report.Journals.Journals)
                 {
                     Assert.True(journalReport.Number >= 0);
                     Assert.True(journalReport.AllocatedSpaceInBytes > 0);

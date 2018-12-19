@@ -1,5 +1,7 @@
 using System;
 using System.Runtime.CompilerServices;
+using System.Runtime.InteropServices;
+using System.Security;
 using Sparrow.Binary;
 using Sparrow.Platform;
 using Sparrow.Platform.Posix;
@@ -8,6 +10,15 @@ namespace Sparrow
 {
     public static unsafe class Memory
     {
+        [DllImport("libc", EntryPoint = "memcmp", CallingConvention = CallingConvention.Cdecl, SetLastError = false)]
+        [SecurityCritical]
+        public static extern int Compare_posix(byte* b1, byte* b2, long count);
+
+        [DllImport("msvcrt.dll", EntryPoint = "memcmp", CallingConvention = CallingConvention.Cdecl, SetLastError = false)]
+        [SecurityCritical]
+        public static extern int Compare_windows(byte* b1, byte* b2, long count);
+
+        
         private const int CompareInlineVsCallThreshold = 256;
 
         public static int Compare(byte* p1, byte* p2, int size)
@@ -108,9 +119,11 @@ namespace Sparrow
             return *bpx - *(bpx + offset);
 
 UnmanagedCompare:
-            return PlatformDetails.RunningOnPosix
-                ? Syscall.Compare((byte *)p1, (byte *)p2, size)
-                : Win32UnmanagedMemory.Compare((byte *)p1, (byte *)p2, size); 
+            // This is the only place where sparrow calls direct pInvoke (replace when Unsafe.Compare/Buffer.Compare will be available)            
+            if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
+                return Compare_windows((byte *)p1, (byte *)p2, size);
+            return Compare_posix((byte *)p1, (byte *)p2, size);
+
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
@@ -231,17 +244,15 @@ UnmanagedCompare:
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public static void Move(byte* dest, byte* src, int n)
         {
-            // if dest and src overlaps, we need to call specifically to memmove pinvoke supporting overlapping
+            // if dest and src overlaps, we need to call specifically to memmove (Buffer.MemoryCopy supports overlapping)
             if (dest + n >= src &&
                 src + n >= dest)
             {
-                var _ = PlatformDetails.RunningOnPosix
-                    ? Syscall.Move(dest, src, n)
-                    : Win32UnmanagedMemory.Move(dest, src, n);
+                Buffer.MemoryCopy(src, dest, n, n);
                 return;
             }
 
-            Copy(dest, src, n);
+            Copy(dest, src, n); // much faster if no overlapping
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]

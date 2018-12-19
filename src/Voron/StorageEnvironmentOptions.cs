@@ -16,6 +16,7 @@ using Voron.Impl.FileHeaders;
 using Voron.Impl.Journal;
 using Voron.Impl.Paging;
 using Voron.Impl.Scratch;
+using Voron.Platform;
 using Voron.Platform.Posix;
 using Voron.Platform.Win32;
 using Voron.Util;
@@ -230,7 +231,7 @@ namespace Voron
 
             PrefetchSegmentSize = 4 * Constants.Size.Megabyte;
             PrefetchResetThreshold = 8 * (long)Constants.Size.Gigabyte;
-            JournalsSizeThreshold = 1 * (long)Constants.Size.Gigabyte;
+            SyncJournalsCountThreshold = 2;
 
             ScratchSpaceUsage = new ScratchSpaceUsageMonitor();
         }
@@ -666,10 +667,9 @@ namespace Voron
             public override unsafe void WriteHeader(string filename, FileHeader* header)
             {
                 var path = _basePath.Combine(filename);
-                if (RunningOnPosix)
-                    PosixHelper.WriteFileHeader(header, path);
-                else
-                    Win32Helper.WriteFileHeader(header, path);
+                var rc = Pal.rvn_write_header(path.FullPath, header, sizeof(FileHeader), out var errorCode);
+                if (rc != 0)
+                    PalHelper.ThrowLastError(errorCode, $"Failed to rvn_write_header '{filename}', reason : {((PalFlags.FAIL_CODES)rc).ToString()}");
             }
 
             public void DeleteAllTempBuffers()
@@ -1162,8 +1162,10 @@ namespace Voron
 
         public long PrefetchSegmentSize { get; set; }
         public long PrefetchResetThreshold { get; set; }
-        public long JournalsSizeThreshold { get; set; }
+        public long SyncJournalsCountThreshold { get; set; }
         public byte[] MasterKey;
+
+        internal bool SimulateFailureOnDbCreation { get; set; }
 
         public const Win32NativeFileAttributes SafeWin32OpenFlags = Win32NativeFileAttributes.Write_Through | Win32NativeFileAttributes.NoBuffering;
         public OpenFlags DefaultPosixFlags = PlatformDetails.Is32Bits ? PerPlatformValues.OpenFlags.O_LARGEFILE : 0;

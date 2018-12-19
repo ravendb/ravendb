@@ -4,8 +4,10 @@ using System.Diagnostics;
 using System.Net.Http;
 using System.Threading;
 using System.Threading.Tasks;
+using Microsoft.AspNetCore.Http;
 using Raven.Client.Documents;
 using Raven.Client.Documents.Commands;
+using Raven.Client.Documents.Operations;
 using Raven.Client.Documents.Operations.ConnectionStrings;
 using Raven.Client.Documents.Operations.ETL;
 using Raven.Client.Documents.Operations.OngoingTasks;
@@ -15,6 +17,9 @@ using Raven.Client.Exceptions;
 using Raven.Client.Http;
 using Raven.Client.ServerWide;
 using Raven.Client.ServerWide.Operations;
+using Raven.Server;
+using Raven.Server.Web;
+using Raven.Server.Web.System;
 using Sparrow.Json;
 using Tests.Infrastructure;
 using Xunit;
@@ -189,10 +194,10 @@ namespace FastTests.Server.Replication
             }
         }
 
-        protected static async Task<ModifyOngoingTaskResult> AddWatcherToReplicationTopology(
+        protected static async Task<ModifyOngoingTaskResult> AddWatcherToReplicationTopology<T>(
             DocumentStore store,
-            ExternalReplication watcher,
-            string[] urls = null)
+            T watcher,
+            string[] urls = null) where T : ExternalReplication
         {
             await store.Maintenance.SendAsync(new PutConnectionStringOperation<RavenConnectionString>(new RavenConnectionString
             {
@@ -201,7 +206,15 @@ namespace FastTests.Server.Replication
                 TopologyDiscoveryUrls = urls ?? store.Urls
             }));
 
-            var op = new UpdateExternalReplicationOperation(watcher);
+            IMaintenanceOperation<ModifyOngoingTaskResult> op;
+            if (watcher is PullReplicationAsSink pull)
+            {
+                op = new UpdatePullReplicationAsSinkOperation(pull);
+            }
+            else
+            {
+                op = new UpdateExternalReplicationOperation(watcher);
+            }
             return await store.Maintenance.SendAsync(op);
         }
 
@@ -236,7 +249,7 @@ namespace FastTests.Server.Replication
             {
                 var databaseWatcher = new ExternalReplication(store.Database, $"ConnectionString-{store.Identifier}");
                 ModifyReplicationDestination(databaseWatcher);
-                tasks.Add(AddWatcherToReplicationTopology(fromStore, databaseWatcher));
+                tasks.Add(AddWatcherToReplicationTopology(fromStore, databaseWatcher, store.Urls));
             }
             await Task.WhenAll(tasks);
             foreach (var task in tasks)
@@ -282,6 +295,21 @@ namespace FastTests.Server.Replication
                 var databaseWatcher = new ExternalReplication(node.Database, "connectin");
                 await AddWatcherToReplicationTopology(fromStore, databaseWatcher, new[] { node.Url });
             }
+        }
+
+        protected static async Task<OngoingTasksHandler> InstantiateOutgoingTaskHandler(string name, RavenServer server)
+        {
+            Assert.True(server.ServerStore.DatabasesLandlord.DatabasesCache.TryGetValue(name, out var db));
+            var database = await db;
+            var handler = new OngoingTasksHandler();
+            var ctx = new RequestHandlerContext
+            {
+                RavenServer = server,
+                Database = database,
+                HttpContext = new DefaultHttpContext()
+            };
+            handler.Init(ctx);
+            return handler;
         }
 
         private class GetConnectionFailuresCommand : RavenCommand<Dictionary<string, string[]>>

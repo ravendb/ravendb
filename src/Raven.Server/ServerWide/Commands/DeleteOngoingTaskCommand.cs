@@ -33,9 +33,15 @@ namespace Raven.Server.ServerWide.Commands
                     if (replicationTask != null)
                     {
                         record.ExternalReplications.Remove(replicationTask);
-                    }              
+                    }
                     break;
-
+                case OngoingTaskType.PullReplicationAsSink:
+                    var pullTask = record.SinkPullReplications?.Find(x => x.TaskId == TaskId);
+                    if (pullTask != null)
+                    {
+                        record.SinkPullReplications.Remove(pullTask);
+                    }
+                    break;
                 case OngoingTaskType.Backup:
                     record.DeletePeriodicBackupConfiguration(TaskId);
                     return TaskId.ToString();
@@ -55,6 +61,7 @@ namespace Raven.Server.ServerWide.Commands
                         record.RavenEtls.Remove(ravenEtl);
                     }
                     break;
+                
             }
 
             return null;

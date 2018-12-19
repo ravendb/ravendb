@@ -885,11 +885,14 @@ namespace Raven.Client.Documents.Session
             {
                 var fields = queryData.Fields;
 
-                var identityProperty = Conventions.GetIdentityProperty(typeof(TResult));
-                if (identityProperty != null)
-                    fields = queryData.Fields
-                        .Select(x => x == identityProperty.Name && queryData.IsMapReduce == false ? Constants.Documents.Indexing.Fields.DocumentIdFieldName : x)
-                        .ToArray();
+                if (IsGroupBy == false)
+                {
+                    var identityProperty = Conventions.GetIdentityProperty(typeof(TResult));
+                    if (identityProperty != null)
+                        fields = queryData.Fields
+                            .Select(x => x == identityProperty.Name ? Constants.Documents.Indexing.Fields.DocumentIdFieldName : x)
+                            .ToArray();
+                }
 
                 GetSourceAliasIfExists(queryData, fields, out var sourceAlias);
 
@@ -992,6 +995,18 @@ namespace Raven.Client.Documents.Session
         public IAsyncDocumentQuery<TResult> AsyncQuery<TResult>(string indexName, string collectionName, bool isMapReduce)
         {
             throw new NotSupportedException("Cannot create an async LINQ query from DocumentQuery, you need to use AsyncDocumentQuery for that");
+        }
+
+        public IDocumentQuery<T> ContainsAll<TValue>(Expression<Func<T, IEnumerable<TValue>>> propertySelector, IEnumerable<TValue> values)
+        {
+            ContainsAll(GetMemberQueryPath(propertySelector.Body), values.Cast<object>());
+            return this;
+        }
+
+        public IDocumentQuery<T> ContainsAny<TValue>(Expression<Func<T, IEnumerable<TValue>>> propertySelector, IEnumerable<TValue> values)
+        {
+            ContainsAny(GetMemberQueryPath(propertySelector.Body), values.Cast<object>());
+            return this;
         }
     }
 }

@@ -29,10 +29,12 @@ namespace Raven.Server.Documents.Queries.Graph
         private int _index = -1;
         private List<Match> _results = new List<Match>();
         private Dictionary<string, Match> _resultsById = new Dictionary<string, Match>(StringComparer.OrdinalIgnoreCase);
+        private GraphQueryPlan _graphQueryPlan;
 
         public QueryQueryStep(QueryRunner queryRunner, StringSegment alias, Query query, QueryMetadata queryMetadata, Sparrow.Json.BlittableJsonReaderObject queryParameters, DocumentsOperationContext documentsContext, long? existingResultEtag,
-            OperationCancelToken token)
+            GraphQueryPlan gqp, OperationCancelToken token)
         {
+            _graphQueryPlan = gqp;
             _query = query;
             _alias = alias;
             _aliases = new HashSet<string> { _alias.Value };
@@ -71,7 +73,7 @@ namespace Raven.Server.Documents.Queries.Graph
 
         public IGraphQueryStep Clone()
         {
-            return new QueryQueryStep(_queryRunner, _alias, _query, _queryMetadata, _queryParameters, _context, _resultEtag, _token);
+            return new QueryQueryStep(_queryRunner, _alias, _query, _queryMetadata, _queryParameters, _context, _resultEtag, _graphQueryPlan, _token);
         }
 
         public bool GetNext(out Match match)
@@ -85,7 +87,7 @@ namespace Raven.Server.Documents.Queries.Graph
             return true;
         }
 
-        public ValueTask Initialize(long? cutoffEtag, Stopwatch queryDuration, TimeSpan? queryWaitDuration)
+        public ValueTask Initialize()
         {
             if (_index != -1)
                 return default;
@@ -93,9 +95,6 @@ namespace Raven.Server.Documents.Queries.Graph
             var results = _queryRunner.ExecuteQuery(new IndexQueryServerSide(_queryMetadata)
             {
                 QueryParameters = _queryParameters,
-                WaitForNonStaleResultsTimeout = queryWaitDuration,
-                CutoffEtag = (cutoffEtag, null),
-                QueryDuration = queryDuration
             },
                   _context, _resultEtag, _token);
 
@@ -116,6 +115,7 @@ namespace Raven.Server.Documents.Queries.Graph
 
         private void CompleteInitialization(DocumentQueryResult results)
         {
+            _graphQueryPlan.IsStale |= results.IsStale;
             _index = 0;
             foreach (var result in results.Results)
             {
@@ -144,6 +144,8 @@ namespace Raven.Server.Documents.Queries.Graph
         {
             return _alias.Value;
         }
+
+        public string GetIndexName => _queryMetadata.IndexName;
 
         public HashSet<string> GetAllAliases()
         {
@@ -203,9 +205,9 @@ namespace Raven.Server.Documents.Queries.Graph
                 return true;
             }
 
-            public ValueTask Initialize(long? cutoffEtag, Stopwatch queryDuration, TimeSpan? queryWaitDuration)
+            public ValueTask Initialize()
             {
-                return _parent.Initialize(cutoffEtag, queryDuration, queryWaitDuration);
+                return _parent.Initialize();
             }
 
             public void Run(Match src, string alias)

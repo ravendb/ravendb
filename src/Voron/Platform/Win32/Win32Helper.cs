@@ -18,25 +18,6 @@ namespace Voron.Platform.Win32
     {
         public static IntPtr CurrentProcess = Win32NativeMethods.GetCurrentProcess();
 
-        public static unsafe void WriteFileHeader(FileHeader* header, VoronPathSetting path)
-        {
-            using (var fs = SafeFileStream.Create(path.FullPath, FileMode.Create, FileAccess.ReadWrite, FileShare.Read, 4096, FileOptions.None))
-            {
-                var ptr = (byte*)header;
-                int remaining = sizeof(FileHeader);
-                while (remaining > 0)
-                {
-                    int written;
-                    if (Win32NativeFileMethods.WriteFile(fs.SafeFileHandle, ptr, remaining, out written, null) == false)
-                        throw new Win32Exception(Marshal.GetLastWin32Error(), "Failed to write to file " + path);
-                    ptr += written;
-                    remaining -= written;
-                }
-                if(Win32NativeFileMethods.FlushFileBuffers(fs.SafeFileHandle)==false)
-                    throw new Win32Exception(Marshal.GetLastWin32Error(), "Failed to Flush File Buffers (sync) of file " + path);
-            }
-        }
-
         public static unsafe bool TryReadFileHeader(FileHeader* header, VoronPathSetting path)
         {
             using (var fs = SafeFileStream.Create(path.FullPath, FileMode.Open, FileAccess.ReadWrite, FileShare.Read, 4096, FileOptions.None))

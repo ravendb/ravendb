@@ -70,6 +70,10 @@ namespace Raven.Client.Json.Converters
 
         public static readonly Func<BlittableJsonReaderObject, OngoingTaskSubscription> GetOngoingTaskSubscriptionResult = GenerateJsonDeserializationRoutine<OngoingTaskSubscription>();
 
+        public static readonly Func<BlittableJsonReaderObject, OngoingTaskPullReplicationAsSink> OngoingTaskPullReplicationAsSinkResult = GenerateJsonDeserializationRoutine<OngoingTaskPullReplicationAsSink>();
+
+        public static readonly Func<BlittableJsonReaderObject, OngoingTaskPullReplicationAsHub> OngoingTaskPullReplicationAsHubResult = GenerateJsonDeserializationRoutine<OngoingTaskPullReplicationAsHub>();
+
         public static readonly Func<BlittableJsonReaderObject, OngoingTaskReplication> GetOngoingTaskReplicationResult = GenerateJsonDeserializationRoutine<OngoingTaskReplication>();
 
         public static readonly Func<BlittableJsonReaderObject, OngoingTaskRavenEtlDetails> GetOngoingTaskRavenEtlResult = GenerateJsonDeserializationRoutine<OngoingTaskRavenEtlDetails>();
@@ -147,6 +151,10 @@ namespace Raven.Client.Json.Converters
         internal static readonly Func<BlittableJsonReaderObject, ConfigureRevisionsOperationResult> ConfigureRevisionsOperationResult = GenerateJsonDeserializationRoutine<ConfigureRevisionsOperationResult>();
 
         internal static readonly Func<BlittableJsonReaderObject, ExternalReplication> ExternalReplication = GenerateJsonDeserializationRoutine<ExternalReplication>();
+
+        internal static readonly Func<BlittableJsonReaderObject, PullReplicationAsSink> PullReplicationAsSink = GenerateJsonDeserializationRoutine<PullReplicationAsSink>();
+
+        internal static readonly Func<BlittableJsonReaderObject, PullReplicationDefinition> PullReplicationDefinition = GenerateJsonDeserializationRoutine<PullReplicationDefinition>();
 
         internal static readonly Func<BlittableJsonReaderObject, AddEtlOperationResult> AddEtlOperationResult = GenerateJsonDeserializationRoutine<AddEtlOperationResult>();
 

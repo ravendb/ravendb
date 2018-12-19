@@ -1,7 +1,6 @@
 ﻿using System;
 using System.Collections;
 using System.Collections.Generic;
-using System.Linq;
 using System.Reflection;
 using Raven.Client.Documents.Conventions;
 using Sparrow.Json;
@@ -65,11 +64,14 @@ namespace Raven.Client.Json
 
             if (value is IEnumerable enumerable)
             {
-                var items = value is IEnumerable<object> objectEnumerable
-                    ? objectEnumerable.Select(x => ToBlittableSupportedType(x, conventions, context))
-                    : enumerable.Cast<object>().Select(x => ToBlittableSupportedType(x, conventions, context));
+                var dja = new DynamicJsonArray();
 
-                return new DynamicJsonArray(items);
+                foreach (var x in enumerable)
+                {
+                    dja.Add(ToBlittableSupportedType(x, conventions, context));
+                }
+
+                return dja;
             }
 
             using (var writer = new BlittableJsonWriter(context))

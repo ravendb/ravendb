@@ -203,10 +203,14 @@ namespace Raven.Server
                             }
                             else if (e is SocketException && PlatformDetails.RunningOnPosix)
                             {
+                                var ravenPath = typeof(RavenServer).Assembly.Location;
+                                if (ravenPath.EndsWith(".dll", StringComparison.OrdinalIgnoreCase))
+                                    ravenPath = ravenPath.Substring(ravenPath.Length - 4);
+
                                 message =
                                     $"{Environment.NewLine}In Linux low-level port (below 1024) will need a special permission, " +
                                     $"if this is your case please run{Environment.NewLine}" +
-                                    $"sudo setcap CAP_NET_BIND_SERVICE=+eip Raven.Server";
+                                    $"sudo setcap CAP_NET_BIND_SERVICE=+eip {ravenPath}";
                             }
 
                             if (Logger.IsOperationsEnabled)

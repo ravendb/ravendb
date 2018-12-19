@@ -1296,9 +1296,7 @@ namespace SlowTests.Server
         {
             var filePath = NewDataPath();
 
-            const string newName = "Balilo";
             var user = new User { Name = "Baruch" };
-
 
             //Recording
             using (var store = GetDocumentStore())

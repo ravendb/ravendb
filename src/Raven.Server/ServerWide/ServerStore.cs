@@ -513,7 +513,7 @@ namespace Raven.Server.ServerWide
                 options.MaxScratchBufferSize = Configuration.Storage.MaxScratchBufferSize.Value.GetValue(SizeUnit.Bytes);
             options.PrefetchSegmentSize = Configuration.Storage.PrefetchBatchSize.GetValue(SizeUnit.Bytes);
             options.PrefetchResetThreshold = Configuration.Storage.PrefetchResetThreshold.GetValue(SizeUnit.Bytes);
-            options.JournalsSizeThreshold = Configuration.Storage.JournalsSizeThreshold.GetValue(SizeUnit.Bytes);
+            options.SyncJournalsCountThreshold = Configuration.Storage.SyncJournalsCountThreshold;
 
             DirectoryExecUtils.SubscribeToOnDirectoryInitializeExec(options, Configuration.Storage, nameof(DirectoryExecUtils.EnvironmentType.System), DirectoryExecUtils.EnvironmentType.System, Logger);
 
@@ -1260,6 +1260,21 @@ namespace Raven.Server.ServerWide
                 Watcher = watcher
             };
             return SendToLeaderAsync(addWatcherCommand);
+        }
+
+        public Task<(long Index, object Result)> UpdatePullReplicationAsSink(string dbName, BlittableJsonReaderObject blittableJson, out PullReplicationAsSink pullReplicationAsSink)
+        {
+            if (blittableJson.TryGet(nameof(UpdatePullReplicationAsSinkCommand.PullReplicationAsSink), out BlittableJsonReaderObject pullReplicationBlittable) == false)
+            {
+                throw new InvalidDataException($"{nameof(UpdatePullReplicationAsSinkCommand.PullReplicationAsSink)} was not found.");
+            }
+
+            pullReplicationAsSink = JsonDeserializationClient.PullReplicationAsSink(pullReplicationBlittable);
+            var replicationAsSinkCommand = new UpdatePullReplicationAsSinkCommand(dbName)
+            {
+                PullReplicationAsSink = pullReplicationAsSink
+            };
+            return SendToLeaderAsync(replicationAsSinkCommand);
         }
 
         public Task<(long Index, object Result)> DeleteOngoingTask(long taskId, string taskName, OngoingTaskType taskType, string dbName)

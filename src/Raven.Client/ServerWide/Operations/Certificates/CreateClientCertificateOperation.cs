@@ -87,7 +87,7 @@ namespace Raven.Client.ServerWide.Operations.Certificates
 
                             writer.WriteString(kvp.Key);
                             writer.WriteComma();
-                            writer.WriteString(kvp.Value == DatabaseAccess.ReadWrite ? nameof(DatabaseAccess.ReadWrite) : nameof(DatabaseAccess.Admin));
+                            writer.WriteString(kvp.Value.ToString());
                         }
                         writer.WriteEndObject();
 

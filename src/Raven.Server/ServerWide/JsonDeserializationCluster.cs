@@ -5,6 +5,7 @@ using Raven.Client.Documents.Operations.Configuration;
 using Raven.Client.Documents.Operations.ETL;
 using Raven.Client.Documents.Operations.ETL.SQL;
 using Raven.Client.Documents.Operations.Expiration;
+using Raven.Client.Documents.Operations.Replication;
 using Raven.Client.Documents.Operations.Revisions;
 using Raven.Client.Documents.Subscriptions;
 using Raven.Client.ServerWide;
@@ -41,6 +42,8 @@ namespace Raven.Server.ServerWide
         public static readonly Func<BlittableJsonReaderObject, DatabaseRecord> DatabaseRecord = GenerateJsonDeserializationRoutine<DatabaseRecord>();
 
         public static readonly Func<BlittableJsonReaderObject, DatabaseTopology> DatabaseTopology = GenerateJsonDeserializationRoutine<DatabaseTopology>();
+
+        public static readonly Func<BlittableJsonReaderObject, PullReplicationDefinition> PullReplicationDefinition = GenerateJsonDeserializationRoutine<PullReplicationDefinition>();
 
         public static readonly Func<BlittableJsonReaderObject, RemoveNodeFromDatabaseCommand> RemoveNodeFromDatabaseCommand = GenerateJsonDeserializationRoutine<RemoveNodeFromDatabaseCommand>();
 
@@ -106,6 +109,8 @@ namespace Raven.Server.ServerWide
             [nameof(ModifyConflictSolverCommand)] = GenerateJsonDeserializationRoutine<ModifyConflictSolverCommand>(),
             [nameof(UpdateTopologyCommand)] = GenerateJsonDeserializationRoutine<UpdateTopologyCommand>(),
             [nameof(UpdateExternalReplicationCommand)] = GenerateJsonDeserializationRoutine<UpdateExternalReplicationCommand>(),
+            [nameof(UpdatePullReplicationAsSinkCommand)] = GenerateJsonDeserializationRoutine<UpdatePullReplicationAsSinkCommand>(),
+            [nameof(UpdatePullReplicationAsHubCommand)] = GenerateJsonDeserializationRoutine<UpdatePullReplicationAsHubCommand>(),
             [nameof(PromoteDatabaseNodeCommand)] = GenerateJsonDeserializationRoutine<PromoteDatabaseNodeCommand>(),
             [nameof(ToggleTaskStateCommand)] = GenerateJsonDeserializationRoutine<ToggleTaskStateCommand>(),
             [nameof(AddDatabaseCommand)] = GenerateJsonDeserializationRoutine<AddDatabaseCommand>(),

@@ -163,6 +163,7 @@ namespace Raven.Server.Documents.Queries
                 idc.Fill(final.Includes);
 
                 final.TotalResults = final.Results.Count;
+                final.IsStale = qr.QueryPlan.IsStale;
                 return final;
             }
         }
@@ -187,14 +188,15 @@ namespace Raven.Server.Documents.Queries
             var qp = new GraphQueryPlan(query, documentsContext, existingResultEtag, token, Database);
             qp.BuildQueryPlan();
             qp.OptimizeQueryPlan(); //TODO: audit optimization
-            long? cutoffEtag = null;
-            Stopwatch queryDuration = null;
+
+
             if (query.WaitForNonStaleResults)
             {
-                cutoffEtag = Database.ReadLastEtag();
-                queryDuration = Stopwatch.StartNew();
+                qp.IsStale = await qp.WaitForNonStaleResults();
             }
-            await qp.Initialize(cutoffEtag, queryDuration, query.WaitForNonStaleResultsTimeout);            
+            //for the case where we don't wait for non stale results we will override IsStale in the QueryQueryStep steps
+
+            await qp.Initialize();
             var matchResults = qp.Execute();
 
             if (query.Metadata.OrderBy != null)

@@ -696,7 +696,6 @@ namespace Raven.Server.Documents.Patch
 
                 var signature = args.Length == 2 ? "incrementCounter(doc, name)" : "incrementCounter(doc, name, value)";
 
-                BlittableJsonReaderObject metadata = null;
                 BlittableJsonReaderObject docBlittable = null;
                 string id = null;
 
@@ -704,7 +703,6 @@ namespace Raven.Server.Documents.Patch
                 {
                     id = doc.DocumentId;
                     docBlittable = doc.Blittable;
-                    metadata = docBlittable.GetMetadata();
                 }
                 else if (args[0].IsString())
                 {
@@ -717,14 +715,13 @@ namespace Raven.Server.Documents.Patch
                     }
 
                     docBlittable = document.Data;
-                    metadata = docBlittable.GetMetadata();
                 }
                 else
                 {
                     ThrowInvalidDocumentArgsType(signature);
                 }
 
-                Debug.Assert(id != null && metadata != null && docBlittable != null);
+                Debug.Assert(id != null && docBlittable != null);
 
                 if (args[1].IsString() == false)
                 {
@@ -740,10 +737,9 @@ namespace Raven.Server.Documents.Patch
                     value = args[2].AsNumber();
                 }
 
-                _database.DocumentsStorage.CountersStorage.IncrementCounter(_docsCtx, id, CollectionName.GetCollectionName(docBlittable), name, (long)value, out _);
+                _database.DocumentsStorage.CountersStorage.IncrementCounter(_docsCtx, id, CollectionName.GetCollectionName(docBlittable), name, (long)value, out var exists);
 
-                if (metadata.TryGet(Constants.Documents.Metadata.Counters, out BlittableJsonReaderArray counters) == false ||
-                    counters.BinarySearch(name, StringComparison.OrdinalIgnoreCase) < 0)
+                if (exists == false)
                 {
                     if (UpdatedDocumentCounterIds == null)
                         UpdatedDocumentCounterIds = new HashSet<string>(StringComparer.OrdinalIgnoreCase);

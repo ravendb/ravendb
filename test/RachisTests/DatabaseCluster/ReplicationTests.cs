@@ -5,8 +5,6 @@ using System.Security.Cryptography.X509Certificates;
 using System.Threading.Tasks;
 using Esprima.Ast;
 using FastTests.Server.Replication;
-using Microsoft.AspNetCore.Http;
-using Microsoft.AspNetCore.Http.Internal;
 using Raven.Client.Documents;
 using Raven.Client.Documents.Operations.OngoingTasks;
 using Raven.Client.Documents.Operations.Replication;
@@ -17,10 +15,7 @@ using Raven.Client.ServerWide;
 using Raven.Client.ServerWide.Operations;
 using Raven.Client.ServerWide.Operations.Certificates;
 using Raven.Server;
-using Raven.Server.Web;
-using Raven.Server.Web.System;
 using Raven.Tests.Core.Utils.Entities;
-using Tests.Infrastructure;
 using Xunit;
 
 namespace RachisTests.DatabaseCluster
@@ -327,21 +322,6 @@ namespace RachisTests.DatabaseCluster
                 }
             }
             return tasks.Values.ToList();
-        }
-
-        private static async Task<OngoingTasksHandler> InstantiateOutgoingTaskHandler(string name, RavenServer server)
-        {
-            Assert.True(server.ServerStore.DatabasesLandlord.DatabasesCache.TryGetValue(name, out var db));
-            var database = await db;
-            var handler = new OngoingTasksHandler();
-            var ctx = new RequestHandlerContext
-            {
-                RavenServer = server,
-                Database = database,
-                HttpContext = new DefaultHttpContext()
-            };
-            handler.Init(ctx);
-            return handler;
         }
 
         [Fact]

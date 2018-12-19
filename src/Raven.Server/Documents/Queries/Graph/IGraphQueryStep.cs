@@ -7,7 +7,7 @@ namespace Raven.Server.Documents.Queries.Graph
 {
     public interface IGraphQueryStep
     {
-        ValueTask Initialize(long? cutoffEtag, Stopwatch queryDuration, TimeSpan? queryWaitDuration);
+        ValueTask Initialize();
 
         HashSet<string> GetAllAliases();
 
@@ -29,7 +29,7 @@ namespace Raven.Server.Documents.Queries.Graph
 
     public interface ISingleGraphStep
     {
-        ValueTask Initialize(long? cutoffEtag, Stopwatch queryDuration, TimeSpan? queryWaitDuration);
+        ValueTask Initialize();
 
         bool GetAndClearResults(List<GraphQueryRunner.Match> matches);
 

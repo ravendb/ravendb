@@ -5,6 +5,7 @@ using System.Diagnostics;
 using System.IO;
 using System.Linq;
 using System.Runtime.CompilerServices;
+using System.Threading;
 using Raven.Client.Documents.Attachments;
 using Raven.Client.Documents.Operations.Replication;
 using Raven.Client.Documents.Replication.Messages;
@@ -171,12 +172,12 @@ namespace Raven.Server.Documents.Replication
             }
         }
 
-        public bool ExecuteReplicationOnce(OutgoingReplicationStatsScope stats, ref DateTime next)
+        public bool ExecuteReplicationOnce(OutgoingReplicationStatsScope stats, ref long next)
         {
             EnsureValidStats(stats);
             var wasInterrupted = false;
             var delay = GetDelayReplication();
-
+            var currentNext = next;
             using (_parent._database.DocumentsStorage.ContextPool.AllocateOperationContext(out DocumentsOperationContext documentsContext))
             using (documentsContext.OpenReadTransaction())
             {
@@ -207,9 +208,11 @@ namespace Raven.Server.Documents.Replication
                                     var nextReplication = item.LastModifiedTicks + delay.Ticks;
                                     if (_parent._database.Time.GetUtcNow().Ticks < nextReplication)
                                     {
-                                        next = new DateTime(nextReplication);
-                                        wasInterrupted = true;
-                                        break;
+                                        if (Interlocked.CompareExchange(ref next, nextReplication, currentNext) == currentNext)
+                                        {
+                                            wasInterrupted = true;
+                                            break;
+                                        }
                                     }
                                 }
                                 lastTransactionMarker = item.TransactionMarker;

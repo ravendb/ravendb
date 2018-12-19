@@ -49,7 +49,6 @@ namespace Raven.Client.ServerWide.Operations.Certificates
             public override HttpRequestMessage CreateRequest(JsonOperationContext ctx, ServerNode node, out string url)
             {
                 url = $"{node.Url}/admin/certificates";
-
                 var request = new HttpRequestMessage
                 {
                     Method = HttpMethod.Put,
@@ -67,7 +66,6 @@ namespace Raven.Client.ServerWide.Operations.Certificates
                             writer.WritePropertyName(nameof(CertificateDefinition.SecurityClearance));
                             writer.WriteString(_clearance.ToString());
                             writer.WriteComma();
-
                             writer.WritePropertyName(nameof(CertificateDefinition.Permissions));
                             writer.WriteStartObject();
                             bool first = true;
@@ -79,7 +77,7 @@ namespace Raven.Client.ServerWide.Operations.Certificates
 
                                 writer.WriteString(kvp.Key);
                                 writer.WriteComma();
-                                writer.WriteString(kvp.Value == DatabaseAccess.ReadWrite ? nameof(DatabaseAccess.ReadWrite) : nameof(DatabaseAccess.Admin));
+                                writer.WriteString(kvp.Value.ToString());
                             }
 
                             writer.WriteEndObject();

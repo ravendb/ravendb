@@ -435,6 +435,9 @@ namespace Voron
                 Options = Options
             };
 
+            if (Options.SimulateFailureOnDbCreation)
+                ThrowSimulateFailureOnDbCreation();
+
             var transactionPersistentContext = new TransactionPersistentContext();
             using (var tx = NewLowLevelTransaction(transactionPersistentContext, TransactionFlags.ReadWrite))
             using (var root = Tree.Create(tx, null, Constants.RootTreeNameSlice))
@@ -976,6 +979,9 @@ namespace Voron
                 NumberOfFreePages = numberOfFreePages,
                 NextPageNumber = NextPageNumber,
                 Journals = Journal.Files.ToList(),
+                LastFlushedTransactionId = Journal.Applicator.LastFlushedTransactionId,
+                LastFlushedJournalId = Journal.Applicator.LastFlushedJournalId,
+                TotalWrittenButUnsyncedBytes = Journal.Applicator.TotalWrittenButUnsyncedBytes,
                 Trees = trees,
                 FixedSizeTrees = fixedSizeTrees,
                 Tables = tables,
@@ -1256,6 +1262,11 @@ namespace Voron
             Debug.Assert(tx.Flags == TransactionFlags.Read);
             _envDispose.Signal();
             tx.AlreadyAllowedDisposeWithLazyTransactionRunning = true;
+        }
+
+        private static void ThrowSimulateFailureOnDbCreation()
+        {
+            throw new InvalidOperationException("Simulation of db creation failure");
         }
     }
 }
