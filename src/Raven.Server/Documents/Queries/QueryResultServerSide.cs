@@ -31,7 +31,7 @@ namespace Raven.Server.Documents.Queries
 
         public abstract bool SupportsExplanations { get; }
 
-        public bool NotModified { get; protected set; }
+        public bool NotModified { get; set; }
 
         public abstract void AddCounterIncludes(IncludeCountersCommand includeCountersCommand);
 
