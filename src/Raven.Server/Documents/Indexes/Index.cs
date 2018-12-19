@@ -191,7 +191,7 @@ namespace Raven.Server.Documents.Indexes
 
         private static readonly Size DefaultMaximumMemoryAllocation = new Size(32, SizeUnit.Megabytes);
 
-        public long LastTransactionId => _environment.CurrentReadTransactionId;
+        public long? LastTransactionId => _environment?.CurrentReadTransactionId;
 
         protected Index(IndexType type, IndexDefinitionBase definition)
         {
