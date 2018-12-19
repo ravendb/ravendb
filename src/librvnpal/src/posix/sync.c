@@ -149,7 +149,7 @@ sync_directory_for (const char *file_path, uint32_t * detailed_error_code) {
   char *dir_path = dirname (file_path_copy);
 
   int32_t rc = sync_directory_maybe_symblink (dir_path, 
-    256, // even that is probably just abuse
+    256, /* even that is probably just abuse */
     detailed_error_code);
 
   free (file_path_copy);
