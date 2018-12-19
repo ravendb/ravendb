@@ -1270,7 +1270,7 @@ namespace Voron.Impl.Journal
                 }
 
                 sp.Restart();
-                CurrentFile.Write(tx, journalEntry, _lazyTransactionBuffer);
+                journalEntry.UpdatePageTranslationTable = CurrentFile.Write(tx, journalEntry, _lazyTransactionBuffer);
                 sp.Stop();
                 _lastCompressionAccelerationInfo.WriteDuration = sp.Elapsed;
                 _lastCompressionAccelerationInfo.CalculateOptimalAcceleration();
@@ -1690,6 +1690,7 @@ namespace Voron.Impl.Journal
         public byte* Base;
         public int NumberOf4Kbs;
         public int NumberOfUncompressedPages;
+        public JournalFile.UpdatePageTranslationTableAction? UpdatePageTranslationTable;
     }
 }
 
