@@ -605,7 +605,7 @@ namespace Voron.Impl.Journal
 
                     ApplyJournalStateAfterFlush(token, lastProcessedJournal, lastFlushedTransactionId, unusedJournals, byteStringContext);
 
-                    _waj._env.SuggestSyncDataFileSyncDataFile();
+                    _waj._env.SuggestSyncDataFile();
                 }
                 finally
                 {
@@ -846,9 +846,9 @@ namespace Voron.Impl.Journal
                     _parent = parent;
                     _journalsToDelete = new List<KeyValuePair<long, JournalFile>>();
                     _fsyncLockTaken = false;
-                    _lastSyncedJournal = 0;
-                    _currentTotalWrittenBytes = 0;
-                    _lastSyncedTransactionId = 0;
+                    _lastSyncedJournal = -1;
+                    _currentTotalWrittenBytes = -1;
+                    _lastSyncedTransactionId = -1;
                     _transactionHeader = new TransactionHeader();
                 }
 
@@ -860,7 +860,7 @@ namespace Voron.Impl.Journal
                     if (_fsyncLockTaken == false)
                     {
                         // probably another sync taking place right now, let us schedule another one, just in case
-                        _parent._waj._env.SuggestSyncDataFileSyncDataFile();
+                        _parent._waj._env.SuggestSyncDataFile();
                         return false;
                     }
 
@@ -879,10 +879,12 @@ namespace Voron.Impl.Journal
                     return _parent._flushLockTaskResponsible.WaitForTaskToBeDone(UpdateDatabaseStateAfterSync);
                 }
 
-                private void UpdateDatabaseStateAfterSync()
+                private bool UpdateDatabaseStateAfterSync()
                 {
+                    AssertGatherInformationToStartSyncBeforeUpdate();
+
                     if (_parent._waj._env.Disposed)
-                        return;
+                        return false;
 
                     Interlocked.Add(ref _parent._totalWrittenButUnsyncedBytes, -_currentTotalWrittenBytes);
                     _parent.UpdateFileHeaderAfterDataFileSync(_lastSyncedJournal, _lastSyncedTransactionId, ref _transactionHeader);
@@ -894,6 +896,19 @@ namespace Voron.Impl.Journal
 
                         toDelete.Value.Release();
                     }
+
+                    return true;
+                }
+
+                [Conditional("DEBUG")]
+                private void AssertGatherInformationToStartSyncBeforeUpdate()
+                {
+                    if (_lastSyncedJournal == -1
+                        && _currentTotalWrittenBytes == -1
+                        && _lastSyncedTransactionId == -1)
+                        throw new InvalidOperationException(
+                            $"Try to {nameof(UpdateDatabaseStateAfterSync)} " +
+                            $"without to call {nameof(GatherInformationToStartSync)} before");
                 }
 
                 private void CallPagerSync()
@@ -913,14 +928,14 @@ namespace Voron.Impl.Journal
                     }
                 }
 
-                private void GatherInformationToStartSync()
+                private bool GatherInformationToStartSync()
                 {
                     if (_parent._waj._env.Disposed)
-                        return; // we have already disposed, nothing to do here
+                        return false; // we have already disposed, nothing to do here
 
                     if (_parent._lastFlushedJournal == null)
                         // nothing was flushed since we last synced, nothing to do
-                        return;
+                        return false;
 
                     _currentTotalWrittenBytes = Interlocked.Read(ref _parent._totalWrittenButUnsyncedBytes);
                     _lastSyncedJournal = _parent._lastFlushedJournalId;
@@ -949,6 +964,8 @@ namespace Voron.Impl.Journal
                     {
                         _parent._journalsToDelete.Remove(kvp.Key);
                     }
+
+                    return true;
                 }
 
                 public void Dispose()
@@ -967,11 +984,12 @@ namespace Voron.Impl.Journal
 
                 private class AssignedTask
                 {
-                    public readonly Action Task;
+                    public readonly Func<bool> Task;
                     public readonly SingleUseFlag DoneFlag = new SingleUseFlag();
                     public ExceptionDispatchInfo Error;
+                    public volatile bool Result = true;
 
-                    public AssignedTask(Action task) => Task = task;
+                    public AssignedTask(Func<bool> task) => Task = task;
                 }
 
                 public LockTaskResponsible(object @lock, CancellationToken token)
@@ -980,7 +998,7 @@ namespace Voron.Impl.Journal
                     _token = token;
                 }
 
-                public bool WaitForTaskToBeDone(Action task)
+                public bool WaitForTaskToBeDone(Func<bool> task)
                 {
                     var current = new AssignedTask(task);
                     try
@@ -1006,7 +1024,6 @@ namespace Voron.Impl.Journal
                                 try
                                 {
                                     RunTaskIfNotAlreadyRan();
-                                    return true;
                                 }
                                 finally
                                 {
@@ -1022,7 +1039,7 @@ namespace Voron.Impl.Journal
                             if (current.DoneFlag.IsRaised())
                             {
                                 current.Error?.Throw();
-                                return true;
+                                return current.Result;
                             }
                         }
                     }
@@ -1031,21 +1048,17 @@ namespace Voron.Impl.Journal
                         return false;
                     }
                 }
-
+                
                 public void RunTaskIfNotAlreadyRan()
                 {
-                    Debug.Assert(Monitor.IsEntered(_lock));
-
-                    if (_token.IsCancellationRequested)
-                        return;
-
+                    AssertRunTaskWithLock();
                     var current = Interlocked.Exchange(ref _active, null);
                     if (current == null)
                         return;
-
                     try
                     {
-                        current.Task();
+                        _token.ThrowIfCancellationRequested();
+                        current.Result = current.Task();
                     }
                     catch (Exception e)
                     {
@@ -1056,6 +1069,15 @@ namespace Voron.Impl.Journal
                         current.DoneFlag.Raise();
                         _waitForTaskToBeDone.Set();
                     }
+                }
+
+                [Conditional("DEBUG")]
+                private void AssertRunTaskWithLock()
+                {
+                    if (Monitor.IsEntered(_lock))
+                        return;
+
+                    throw new InvalidOperationException("The task has to be under the lock");
                 }
             }
 

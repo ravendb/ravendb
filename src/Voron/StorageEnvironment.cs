@@ -45,7 +45,7 @@ namespace Voron
 
         internal IndirectReference SelfReference = new IndirectReference();
 
-        public void SuggestSyncDataFileSyncDataFile()
+        public void SuggestSyncDataFile()
         {
             GlobalFlushingBehavior.GlobalFlusher.Value.SuggestSyncEnvironment(this);
         }
@@ -248,7 +248,7 @@ namespace Voron
                             GlobalFlushingBehavior.GlobalFlusher.Value.MaybeFlushEnvironment(this);
 
                         else if (Journal.Applicator.TotalWrittenButUnsyncedBytes != 0)
-                            SuggestSyncDataFileSyncDataFile();
+                            SuggestSyncDataFile();
                     }
                     else
                     {

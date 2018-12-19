@@ -5,10 +5,10 @@ using System.Threading;
 using System.Threading.Tasks;
 using FastTests.Voron;
 using Voron;
-using Voron.Impl.Journal;
 using Xunit;
 using TimeoutException = System.TimeoutException;
 using LockTaskResponsible = Voron.Impl.Journal.WriteAheadJournal.JournalApplicator.LockTaskResponsible;
+using SyncOperation = Voron.Impl.Journal.WriteAheadJournal.JournalApplicator.SyncOperation;
 
 namespace SlowTests.Voron.Storage
 {
@@ -58,7 +58,7 @@ namespace SlowTests.Voron.Storage
             {
                 try
                 {
-                    using (var operation = new WriteAheadJournal.JournalApplicator.SyncOperation(Env.Journal.Applicator))
+                    using (var operation = new SyncOperation(Env.Journal.Applicator))
                     {
                         operation.SyncDataFile();
                     }
@@ -94,6 +94,40 @@ namespace SlowTests.Voron.Storage
                 var totalWrittenButUnsyncedBytes = Env.Journal.Applicator.TotalWrittenButUnsyncedBytes;
                 Assert.Equal(0, totalWrittenButUnsyncedBytes);
             }
+        }
+
+        [Fact(Timeout = 10 * 1000)]
+        // http://issues.hibernatingrhinos.com/issue/RavenDB-12525
+        // The problem was when sync operates while there is no data to sync
+        // the sync operation continued with default properties
+        // and at the end, it updated the state with those properties
+        public void Sync_WhenThereIsNoJournalToSync_ShouldNotUpdateHeaderToDefault()
+        {
+            for (var i = 0; i < 100; i++)
+            {
+                using (var tx = Env.WriteTransaction())
+                {
+                    var tree = tx.CreateTree("foo");
+                    tree.Add("items/" + i, StreamFor("values/" + i));
+                    tx.Commit();
+                }
+            }
+            Env.FlushLogToDataFile();
+
+            using (var operation = new SyncOperation(Env.Journal.Applicator))
+            {
+                operation.SyncDataFile();
+            }
+
+            using (var operation = new SyncOperation(Env.Journal.Applicator))
+            {
+                operation.SyncDataFile();
+            }
+
+            var journalInfo = Env.Journal.GetCurrentJournalInfo();
+
+            Assert.NotEqual(-1, journalInfo.LastSyncedJournal);
+            Assert.NotEqual(-1, journalInfo.LastSyncedTransactionId);
         }
 
         [Fact]
@@ -158,6 +192,7 @@ namespace SlowTests.Voron.Storage
                 worker.WaitThrow(TimeSpan.FromSeconds(10));
                 Assert.Equal(1, worker.Job.TimesJobDone);
                 Assert.Equal(null, worker.Exception);
+                Assert.True(worker.Result);
             }
             catch (Exception)
             {
@@ -189,6 +224,42 @@ namespace SlowTests.Voron.Storage
 
                 Assert.Equal(1, worker.Job.TimesJobDone);
                 Assert.Equal(null, worker.Exception);
+                Assert.True(worker.Result);
+            }
+            catch (Exception)
+            {
+                tokenSource.Cancel();
+                throw;
+            }
+        }
+
+        [Fact]
+        public void LockTaskResponsible_WhenLockTakenAndJobFailed_ShouldBeDoneByRunTaskIfNotAlreadyRanAndReturnFalse()
+        {
+            var tokenSource = new CancellationTokenSource();
+            try
+            {
+                var worker = new Worker("worker")
+                {
+                    Job = new FailJob()
+                };
+
+                var @lock = new object();
+                var lockTaskResponsible = new LockTaskResponsible(@lock, tokenSource.Token);
+                Monitor.Enter(@lock);
+
+                worker.TaskRun((j) => lockTaskResponsible.WaitForTaskToBeDone(j));
+
+                var stop = Stopwatch.StartNew();
+                while (worker.Job.TimesJobDone == 0 && stop.Elapsed < TimeSpan.FromSeconds(10))
+                {
+                    lockTaskResponsible.RunTaskIfNotAlreadyRan();
+                    Thread.Sleep(100);
+                }
+
+                Assert.Equal(1, worker.Job.TimesJobDone);
+                Assert.Equal(null, worker.Exception);
+                Assert.False(worker.Result);
             }
             catch (Exception)
             {
@@ -215,8 +286,9 @@ namespace SlowTests.Voron.Storage
                 var isContinueBeforeJobFinished = true;
                 worker.TaskRun(j =>
                 {
-                    lockTaskResponsible.WaitForTaskToBeDone(j);
+                    var result = lockTaskResponsible.WaitForTaskToBeDone(j);
                     isContinueBeforeJobFinished = worker.Job.TimesJobDone == 0;
+                    return result;
                 });
 
                 var stop = Stopwatch.StartNew();
@@ -234,6 +306,7 @@ namespace SlowTests.Voron.Storage
                 Assert.Equal(1, worker.Job.TimesJobDone);
                 Assert.False(isContinueBeforeJobFinished);
                 Assert.Equal(null, worker.Exception);
+                Assert.True(worker.Result);
             }
             catch (Exception)
             {
@@ -243,7 +316,7 @@ namespace SlowTests.Voron.Storage
         }
 
         [Fact]
-        public void LockTaskResponsible_WhenTwoThreadsAreWaitingToToTaskToBeDone_TheRunThreadShouldRunOnlyOneForCallAndEventuallyCompleteAll()
+        public void LockTaskResponsible_WhenTwoThreadsAreWaitingToTaskToBeDone_TheRunThreadShouldRunOnlyOneForCallAndEventuallyCompleteAll()
         {
             var tokenSource = new CancellationTokenSource();
             try
@@ -277,6 +350,8 @@ namespace SlowTests.Voron.Storage
                 Assert.Equal(1, worker2.Job.TimesJobDone);
                 Assert.Equal(null, worker1.Exception);
                 Assert.Equal(null, worker2.Exception);
+                Assert.True(worker1.Result);
+                Assert.True(worker2.Result);
             }
             catch (Exception)
             {
@@ -302,6 +377,36 @@ namespace SlowTests.Voron.Storage
 
                 Assert.Equal(1, worker.Job.TimesJobDone);
                 Assert.Equal(null, worker.Exception);
+                Assert.True(worker.Result);
+            }
+            catch (Exception)
+            {
+                tokenSource.Cancel();
+                throw;
+            }
+        }
+
+        [Fact]
+        public void LockTaskResponsible_WhenLockNotTakenAndJobFailed_WorkShouldReturnFalse()
+        {
+            var tokenSource = new CancellationTokenSource();
+            try
+            {
+                var worker = new Worker("worker")
+                {
+                    Job = new FailJob()
+                };
+
+                var @lock = new object();
+                var lockTaskResponsible = new LockTaskResponsible(@lock, tokenSource.Token);
+
+                worker.TaskRun(j => lockTaskResponsible.WaitForTaskToBeDone(j));
+
+                worker.WaitThrow(TimeSpan.FromSeconds(10));
+
+                Assert.Equal(1, worker.Job.TimesJobDone);
+                Assert.Equal(null, worker.Exception);
+                Assert.False(worker.Result);
             }
             catch (Exception)
             {
@@ -321,16 +426,14 @@ namespace SlowTests.Voron.Storage
                 var @lock = new object();
                 var lockTaskResponsible = new LockTaskResponsible(@lock, tokenSource.Token);
 
-                worker.TaskRun(j =>
-                {
-                    lockTaskResponsible.WaitForTaskToBeDone(j);
-                    lockTaskResponsible.WaitForTaskToBeDone(j);
-                });
+                worker.TaskRun(j => lockTaskResponsible.WaitForTaskToBeDone(j)
+                                    && lockTaskResponsible.WaitForTaskToBeDone(j));
 
                 worker.WaitThrow(TimeSpan.FromSeconds(10));
 
                 Assert.Equal(2, worker.Job.TimesJobDone);
                 Assert.Equal(null, worker.Exception);
+                Assert.True(worker.Result);
             }
             catch (Exception)
             {
@@ -429,49 +532,62 @@ namespace SlowTests.Voron.Storage
 
             public int TimesJobDone => _timesJobDone;
 
-            public virtual void Do()
+            public virtual bool Do()
             {
                 Interlocked.Add(ref _timesJobDone, 1);
+                return true;
             }
         }
 
         private class LongJob : Job
         {
-            public override void Do()
+            public override bool Do()
             {
                 Thread.Sleep(TimeSpan.FromSeconds(1));
                 base.Do();
+                return true;
             }
         }
 
         private class ThrowJob<T> : Job where T : Exception
         {
-            public override void Do()
+            public override bool Do()
             {
                 throw new DataException();
             }
         }
 
+        private class FailJob : Job
+        {
+            public override bool Do()
+            {
+                base.Do();
+                return false;
+            }
+        }
+
         private class Worker
         {
+            private volatile bool _result;
             private readonly AutoResetEvent _finishedWaiting = new AutoResetEvent(false);
+
             public string Name { get; }
+            public bool Result => _result;
             public Exception Exception { get; private set; }
+            public Job Job { get; set; } = new Job();
 
             public Worker(string name)
             {
                 Name = name;
             }
 
-            public Job Job { get; set; } = new Job();
-
-            public void TaskRun(Action<Action> action)
+            public void TaskRun(Func<Func<bool>, bool> action)
             {
                 Task.Run(() =>
                 {
                     try
                     {
-                        action(Job.Do);
+                        _result = action(Job.Do);
                     }
                     catch (Exception e)
                     {
