@@ -18,7 +18,7 @@ namespace Raven.Server.Documents.Indexes.MapReduce
 
         public Tree MapPhaseTree;
         public Tree ReducePhaseTree;
-        
+
         public FixedSizeTree ResultsStoreTypes;
         public Dictionary<ulong, MapReduceResultsStore> StoreByReduceKeyHash = new Dictionary<ulong, MapReduceResultsStore>(NumericEqualityComparer.BoxedInstanceUInt64);
         public Dictionary<string, long> ProcessedDocEtags = new Dictionary<string, long>();
@@ -43,21 +43,14 @@ namespace Raven.Server.Documents.Indexes.MapReduce
 
         public void Dispose()
         {
-            try
-            {
-                StoreNextMapResultId();
-            }
-            finally
-            {
-                DocumentMapEntries?.Dispose();
-                DocumentMapEntries = null;
-                MapPhaseTree = null;
-                ReducePhaseTree = null;
-                PageModifiedInReduceTree = null;
-                ProcessedDocEtags.Clear();
-                ProcessedTombstoneEtags.Clear();
-                StoreByReduceKeyHash.Clear();
-            }
+            DocumentMapEntries?.Dispose();
+            DocumentMapEntries = null;
+            MapPhaseTree = null;
+            ReducePhaseTree = null;
+            PageModifiedInReduceTree = null;
+            ProcessedDocEtags.Clear();
+            ProcessedTombstoneEtags.Clear();
+            StoreByReduceKeyHash.Clear();
         }
 
         public unsafe void StoreNextMapResultId()
