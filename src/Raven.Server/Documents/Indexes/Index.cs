@@ -1001,6 +1001,13 @@ namespace Raven.Server.Documents.Indexes
                                         lastAllocatedBytes = GC.GetAllocatedBytesForCurrentThread() - lastAllocatedBytes;
                                         scope.AddAllocatedBytes(lastAllocatedBytes);
                                     }
+                                    catch
+                                    {
+                                        // need to call it here to the let the index continue running
+                                        // we'll stop when we reach the index error threshold 
+                                        _mre.Set();
+                                        throw;
+                                    }
                                     finally
                                     {
                                         if (_batchStopped)
@@ -1628,10 +1635,6 @@ namespace Raven.Server.Documents.Indexes
                     }
                     catch
                     {
-                        // need to call it here to the let the index continue running
-                        // we'll stop when we reach the index error threshold 
-                        _mre.Set();
-
                         DisposeIndexWriterOnError(writeOperation);
                         throw;
                     }
