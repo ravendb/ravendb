@@ -79,9 +79,13 @@ namespace Raven.Server.Utils
                             Name = threadName ?? "Unmanaged Thread",
                             ManagedThreadId = managedThreadId,
                             StartingTime = GetThreadInfoOrDefault<DateTime?>(() => thread.StartTime.ToUniversalTime()),
+                            Duration = thread.TotalProcessorTime.TotalMilliseconds,
+                            TotalProcessorTime = thread.TotalProcessorTime,
+                            PrivilegedProcessorTime = thread.PrivilegedProcessorTime,
+                            UserProcessorTime = thread.UserProcessorTime,
                             State = threadState,
                             Priority = GetThreadInfoOrDefault<ThreadPriorityLevel?>(() => thread.PriorityLevel),
-                            ThreadWaitReason = GetThreadInfoOrDefault(() => threadState == ThreadState.Wait ? thread.WaitReason : (ThreadWaitReason?)null)
+                            WaitReason = GetThreadInfoOrDefault(() => threadState == ThreadState.Wait ? thread.WaitReason : (ThreadWaitReason?)null)
                         });
                     }
                     catch (InvalidOperationException)
