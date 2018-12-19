@@ -32,8 +32,8 @@ namespace Voron.Platform
             }
             else if (RuntimeInformation.IsOSPlatform(OSPlatform.OSX))
             {
-                fromFilename = Environment.Is64BitProcess ? $"{toFilename}.mac.x64.dylib" : $"{toFilename}.mac.x86.dylib";
-                toFilename += ".dylib";
+                fromFilename = Environment.Is64BitProcess ? $"{toFilename}.mac.x64.so" : $"{toFilename}.mac.x86.so";
+                toFilename += ".so";
             }
             else if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
             {
