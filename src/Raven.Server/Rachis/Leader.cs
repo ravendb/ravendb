@@ -454,28 +454,83 @@ namespace Raven.Server.Rachis
                 maxIndexOnQuorum == 0)
                 return; // nothing to do here
 
-            bool changedFromLeaderElectToLeader;
-            using (_engine.ContextPool.AllocateOperationContext(out context))
-            using (context.OpenWriteTransaction())
+            try
             {
-                _lastCommit = _engine.GetLastCommitIndex(context);
+                bool changedFromLeaderElectToLeader;
+                using (_engine.ContextPool.AllocateOperationContext(out context))
+                using (context.OpenWriteTransaction())
+                {
+                    _lastCommit = _engine.GetLastCommitIndex(context);
 
-                if (_lastCommit >= maxIndexOnQuorum ||
-                    maxIndexOnQuorum == 0)
-                    return; // nothing to do here
+                    if (_lastCommit >= maxIndexOnQuorum ||
+                        maxIndexOnQuorum == 0)
+                        return; // nothing to do here
 
-                if (_engine.GetTermForKnownExisting(context, maxIndexOnQuorum) < Term)
-                    return;// can't commit until at least one entry from our term has been published
+                    if (_engine.GetTermForKnownExisting(context, maxIndexOnQuorum) < Term)
+                        return; // can't commit until at least one entry from our term has been published
 
-                changedFromLeaderElectToLeader = _engine.TakeOffice();
+                    changedFromLeaderElectToLeader = _engine.TakeOffice();
 
-                maxIndexOnQuorum = _engine.Apply(context, maxIndexOnQuorum, this, Stopwatch.StartNew());
+                    maxIndexOnQuorum = _engine.Apply(context, maxIndexOnQuorum, this, Stopwatch.StartNew());
 
-                context.Transaction.Commit();
+                    context.Transaction.Commit();
 
-                _lastCommit = maxIndexOnQuorum;
+                    _lastCommit = maxIndexOnQuorum;
+                }
+
+                if (changedFromLeaderElectToLeader)
+                    _engine.LeaderElectToLeaderChanged();
+            }
+            catch
+            {
+                CommitOneByOne(maxIndexOnQuorum);
+            }
+            finally
+            {
+                SetEntriesCompletion();
             }
 
+            // we have still items to process, run them in 1 node cluster
+            // and speed up the followers ambassadors if they can
+            _newEntry.Set();
+        }
+
+        private void CommitOneByOne(long maxIndexOnQuorum)
+        {
+            var sp = Stopwatch.StartNew();
+            while (_lastCommit <= maxIndexOnQuorum)
+            {
+                using (_engine.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
+                using (context.OpenWriteTransaction())
+                {
+                    _lastCommit = _engine.GetLastCommitIndex(context);
+
+                    if (_lastCommit >= maxIndexOnQuorum ||
+                        maxIndexOnQuorum == 0)
+                        return;
+
+                    if (_engine.GetTermForKnownExisting(context, maxIndexOnQuorum) < Term)
+                        return;
+
+                    var changedFromLeaderElectToLeader = _engine.TakeOffice();
+
+                    var lastCommit = _engine.Apply(context, _lastCommit + 1, this, sp);
+
+                    if(lastCommit == _lastCommit)
+                        break;
+
+                    context.Transaction.Commit();
+
+                    _lastCommit = lastCommit;
+
+                    if (changedFromLeaderElectToLeader)
+                        _engine.LeaderElectToLeaderChanged();
+                }
+            }
+        }
+
+        private void SetEntriesCompletion()
+        {
             foreach (var kvp in _entries)
             {
                 if (kvp.Key > _lastCommit)
@@ -491,17 +546,11 @@ namespace Raven.Server.Rachis
                             tuple.OnNotify(tuple.TaskCompletionSource);
                             return;
                         }
+
                         tuple.TaskCompletionSource.TrySetResult((tuple.CommandIndex, tuple.Result));
                     }, value);
                 }
             }
-
-            // we have still items to process, run them in 1 node cluster
-            // and speed up the followers ambassadors if they can
-            _newEntry.Set();
-            
-            if (changedFromLeaderElectToLeader)
-                _engine.LeaderElectToLeaderChanged();
         }
 
         private readonly List<(FollowerAmbassador voter, TimeSpan time)> _timeoutsForVoters = new List<(FollowerAmbassador, TimeSpan)>();

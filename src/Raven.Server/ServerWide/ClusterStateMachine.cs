@@ -47,6 +47,7 @@ using Sparrow;
 using Sparrow.Binary;
 using Sparrow.Json;
 using Sparrow.Json.Parsing;
+using Sparrow.LowMemory;
 using Sparrow.Utils;
 using Voron;
 using Voron.Data;
@@ -173,30 +174,21 @@ namespace Raven.Server.ServerWide
                         break;
                     case nameof(IncrementClusterIdentityCommand):
                         if (ValidatePropertyExistence(cmd, nameof(IncrementClusterIdentityCommand), nameof(IncrementClusterIdentityCommand.Prefix), out errorMessage) == false)
-                        {
-                            NotifyLeaderAboutError(index, leader, new InvalidDataException(errorMessage));
-                            return;
-                        }
+                            throw new InvalidDataException(errorMessage);
 
                         SetValueForTypedDatabaseCommand(context, type, cmd, index, leader, out object result);
                         leader?.SetStateOf(index, result);
                         break;
                     case nameof(IncrementClusterIdentitiesBatchCommand):
                         if (ValidatePropertyExistence(cmd, nameof(IncrementClusterIdentitiesBatchCommand), nameof(IncrementClusterIdentitiesBatchCommand.DatabaseName), out errorMessage) == false)
-                        {
-                            NotifyLeaderAboutError(index, leader, new InvalidDataException(errorMessage));
-                            return;
-                        }
+                            throw new InvalidDataException(errorMessage);
 
                         SetValueForTypedDatabaseCommand(context, type, cmd, index, leader, out result);
                         leader?.SetStateOf(index, result);
                         break;
                     case nameof(UpdateClusterIdentityCommand):
                         if (ValidatePropertyExistence(cmd, nameof(UpdateClusterIdentityCommand), nameof(UpdateClusterIdentityCommand.Identities), out errorMessage) == false)
-                        {
-                            NotifyLeaderAboutError(index, leader, new InvalidDataException(errorMessage));
-                            return;
-                        }
+                            throw new InvalidDataException(errorMessage);
 
                         SetValueForTypedDatabaseCommand(context, type, cmd, index, leader, out result);
                         leader?.SetStateOf(index, result);
@@ -300,14 +292,20 @@ namespace Raven.Server.ServerWide
                         throw new UnknownClusterCommand(massage);
                 }
             }
-            catch (Exception e) when (e is VoronErrorException || e is UnknownClusterCommand)
+            catch (Exception e) when (RachisUnrecoverableException(e))
             {
-                NotifyLeaderAboutError(index, leader, new CommandExecutionException($"Cannot execute command of type {type}", e));
+                if (_parent.Log.IsInfoEnabled)
+                    _parent.Log.Info($"Unrecoverable exception on database '{DatabaseName}' at command type '{type}', execution will be retried later.", e);
+
+                NotifyLeaderAboutError(index, leader, e);
                 throw;
             }
             catch (Exception e)
             {
-                NotifyLeaderAboutError(index, leader, new CommandExecutionException($"Cannot execute command of type {type}", e));
+                if (_parent.Log.IsInfoEnabled)
+                    _parent.Log.Info($"Failed to execute command of type '{type}' on database '{DatabaseName}'", e);
+
+                NotifyLeaderAboutError(index, leader, e);
             }
             finally
             {
@@ -322,6 +320,19 @@ namespace Raven.Server.ServerWide
                     LeaderShipDuration = leader?.LeaderShipDuration,
                 });
             }
+        }
+
+        public static bool RachisUnrecoverableException(Exception e)
+        {
+            // IMPORTANT
+            // Other exceptions MUST be consistent across the cluster (meaning: if it occured on one node it must occur on the rest also).
+            // only those are machine specific and will cause a jam in the state machine until the exception will be resolved.
+
+            return e is VoronErrorException || 
+                   e is UnknownClusterCommand || 
+                   e is DiskFullException || 
+                   e is EarlyOutOfMemoryException || 
+                   e is OutOfMemoryException;
         }
 
         private void ClusterStateCleanUp(TransactionOperationContext context, BlittableJsonReaderObject cmd, long index)
@@ -439,6 +450,8 @@ namespace Raven.Server.ServerWide
                     AlertType.Certificates_ReplaceError,
                     NotificationSeverity.Error,
                     details: new ExceptionDetails(e)));
+
+                throw;
             }
         }
 
@@ -489,6 +502,8 @@ namespace Raven.Server.ServerWide
                     AlertType.Certificates_ReplaceError,
                     NotificationSeverity.Error,
                     details: new ExceptionDetails(e)));
+
+                throw;
             }
         }
 
@@ -563,6 +578,8 @@ namespace Raven.Server.ServerWide
                     AlertType.Certificates_ReplaceError,
                     NotificationSeverity.Error,
                     details: new ExceptionDetails(e)));
+
+                throw;
             }
         }
 
@@ -652,23 +669,11 @@ namespace Raven.Server.ServerWide
 
                 var record = ReadDatabase(context, updateCommand.DatabaseName);
                 if (record == null)
-                {
-                    NotifyLeaderAboutError(index, leader,
-                        new CommandExecutionException($"Cannot set typed value of type {type} for database {updateCommand.DatabaseName}, because it does not exist"));
-                    return;
-                }
+                    throw new CommandExecutionException($"Cannot set typed value of type {type} for database {updateCommand.DatabaseName}, because it does not exist");
 
-                try
-                {
-                    updateCommand.Execute(context, items, index, record, _parent.CurrentState, out result);
-                }
-                catch (Exception e)
-                {
-                    NotifyLeaderAboutError(index, leader,
-                        new CommandExecutionException($"Operation of type {type} for database {updateCommand.DatabaseName} has failed", e));
-                }
+                updateCommand.Execute(context, items, index, record, _parent.CurrentState, out result);
             }
-            finally
+            finally 
             {
                 NotifyDatabaseAboutChanged(context, updateCommand?.DatabaseName, index, type, DatabasesLandlord.ClusterDatabaseChangeType.ValueChanged);
             }
@@ -689,10 +694,8 @@ namespace Raven.Server.ServerWide
             using (Slice.From(context.Allocator, "db/" + databaseName, out Slice key))
             {
                 if (items.ReadByKey(lowerKey, out TableValueReader reader) == false)
-                {
-                    NotifyLeaderAboutError(index, leader, new InvalidOperationException($"The database {databaseName} does not exists"));
-                    return;
-                }
+                    throw new InvalidOperationException($"The database {databaseName} does not exists");
+
                 var doc = new BlittableJsonReaderObject(reader.Read(2, out int size), size, context);
 
                 var databaseRecord = JsonDeserializationCluster.DatabaseRecord(doc);
@@ -782,22 +785,15 @@ namespace Raven.Server.ServerWide
                     if (addDatabaseCommand.RaftCommandIndex != null)
                     {
                         if (items.ReadByKey(valueNameLowered, out TableValueReader reader) == false && addDatabaseCommand.RaftCommandIndex != 0)
-                        {
-                            NotifyLeaderAboutError(index, leader,
-                                new ConcurrencyException("Concurrency violation, the database " + addDatabaseCommand.Name + " does not exists, but had a non zero etag"));
-                            return null;
-                        }
+                            throw new ConcurrencyException("Concurrency violation, the database " + addDatabaseCommand.Name +
+                                                           " does not exists, but had a non zero etag");
 
                         var actualEtag = Bits.SwapBytes(*(long*)reader.Read(3, out int size));
                         Debug.Assert(size == sizeof(long));
 
                         if (actualEtag != addDatabaseCommand.RaftCommandIndex.Value)
-                        {
-                            NotifyLeaderAboutError(index, leader,
-                                new ConcurrencyException("Concurrency violation, the database " + addDatabaseCommand.Name + " has etag " + actualEtag +
-                                                         " but was expecting " + addDatabaseCommand.RaftCommandIndex));
-                            return null;
-                        }
+                            throw new ConcurrencyException("Concurrency violation, the database " + addDatabaseCommand.Name + " has etag " + actualEtag +
+                                                           " but was expecting " + addDatabaseCommand.RaftCommandIndex);
                     }
 
                     UpdateValue(index, items, valueNameLowered, valueName, databaseRecordAsJson);
@@ -846,15 +842,11 @@ namespace Raven.Server.ServerWide
             {
                 var delCmd = JsonDeserializationCluster.DeleteValueCommand(cmd);
                 if (delCmd.Name.StartsWith("db/"))
-                {
-                    NotifyLeaderAboutError(index, leader,
-                        new InvalidOperationException("Cannot delete " + delCmd.Name + " using DeleteValueCommand, only via dedicated database calls"));
-                    return;
-                }
+                    throw new InvalidOperationException("Cannot delete " + delCmd.Name + " using DeleteValueCommand, only via dedicated database calls");
 
                 DeleteItem(context, delCmd.Name);
             }
-            finally
+            finally 
             {
                 NotifyValueChanged(context, type, index);
             }
@@ -876,11 +868,7 @@ namespace Raven.Server.ServerWide
                 var items = context.Transaction.InnerTransaction.OpenTable(ItemsSchema, Items);
                 var delCmd = JsonDeserializationCluster.DeleteMultipleValuesCommand(cmd);
                 if (delCmd.Names.Any(name => name.StartsWith("db/")))
-                {
-                    NotifyLeaderAboutError(index, leader,
-                        new InvalidOperationException("Cannot delete " + delCmd.Names + " using DeleteMultipleValuesCommand, only via dedicated database calls"));
-                    return;
-                }
+                    throw new InvalidOperationException("Cannot delete " + delCmd.Names + " using DeleteMultipleValuesCommand, only via dedicated database calls");
 
                 foreach (var name in delCmd.Names)
                 {
@@ -891,7 +879,7 @@ namespace Raven.Server.ServerWide
                     }
                 }
             }
-            finally
+            finally 
             {
                 NotifyValueChanged(context, type, index);
             }
@@ -904,11 +892,7 @@ namespace Raven.Server.ServerWide
                 var items = context.Transaction.InnerTransaction.OpenTable(ItemsSchema, Items);
                 var command = (UpdateValueCommand<T>)CommandBase.CreateFrom(cmd);
                 if (command.Name.StartsWith(Constants.Documents.Prefix))
-                {
-                    NotifyLeaderAboutError(index, leader,
-                        new InvalidOperationException("Cannot set " + command.Name + " using PutValueCommand, only via dedicated database calls"));
-                    return;
-                }
+                    throw new InvalidOperationException("Cannot set " + command.Name + " using PutValueCommand, only via dedicated database calls");
 
                 using (Slice.From(context.Allocator, command.Name, out Slice valueName))
                 using (Slice.From(context.Allocator, command.Name.ToLowerInvariant(), out Slice valueNameLowered))
@@ -927,7 +911,7 @@ namespace Raven.Server.ServerWide
                     UpdateValue(index, items, valueNameLowered, valueName, newValue);
                 }
             }
-            finally
+            finally 
             {
                 NotifyValueChanged(context, type, index);
             }
@@ -940,10 +924,7 @@ namespace Raven.Server.ServerWide
                 var items = context.Transaction.InnerTransaction.OpenTable(ItemsSchema, Items);
                 var command = (PutValueCommand<T>)CommandBase.CreateFrom(cmd);
                 if (command.Name.StartsWith(Constants.Documents.Prefix))
-                {
-                    NotifyLeaderAboutError(index, leader,
-                        new InvalidOperationException("Cannot set " + command.Name + " using PutValueCommand, only via dedicated database calls"));
-                }
+                    throw new InvalidOperationException("Cannot set " + command.Name + " using PutValueCommand, only via dedicated database calls");
 
                 using (Slice.From(context.Allocator, command.Name, out Slice valueName))
                 using (Slice.From(context.Allocator, command.Name.ToLowerInvariant(), out Slice valueNameLowered))
@@ -953,7 +934,7 @@ namespace Raven.Server.ServerWide
                     return command.Value;
                 }
             }
-            finally
+            finally 
             {
                 NotifyValueChanged(context, type, index);
             }
@@ -1022,50 +1003,37 @@ namespace Raven.Server.ServerWide
                 using (Slice.From(context.Allocator, dbKey, out Slice valueName))
                 using (Slice.From(context.Allocator, dbKey.ToLowerInvariant(), out Slice valueNameLowered))
                 {
-                    DatabaseRecord databaseRecord;
-                    try
+                    var databaseRecordJson = ReadInternal(context, out long etag, valueNameLowered);
+                    var updateCommand = (UpdateDatabaseCommand)JsonDeserializationCluster.Commands[type](cmd);
+
+                    if (databaseRecordJson == null)
                     {
-                        var databaseRecordJson = ReadInternal(context, out long etag, valueNameLowered);
-                        var updateCommand = (UpdateDatabaseCommand)JsonDeserializationCluster.Commands[type](cmd);
+                        if (updateCommand.ErrorOnDatabaseDoesNotExists)
+                            throw DatabaseDoesNotExistException.CreateWithMessage(databaseName, $"Could not execute update command of type '{type}'.");
+                        return;
+                    }
 
-                        if (databaseRecordJson == null)
-                        {
-                            if (updateCommand.ErrorOnDatabaseDoesNotExists)
-                                NotifyLeaderAboutError(index, leader,
-                                    DatabaseDoesNotExistException.CreateWithMessage(databaseName, $"Could not execute update command of type '{type}'."));
-                            return;
-                        }
+                    var databaseRecord = JsonDeserializationCluster.DatabaseRecord(databaseRecordJson);
 
-                        databaseRecord = JsonDeserializationCluster.DatabaseRecord(databaseRecordJson);
+                    if (updateCommand.RaftCommandIndex != null && etag != updateCommand.RaftCommandIndex.Value)
+                        throw new ConcurrencyException(
+                            $"Concurrency violation at executing {type} command, the database {databaseRecord.DatabaseName} has etag {etag} but was expecting {updateCommand.RaftCommandIndex}");
 
-                        if (updateCommand.RaftCommandIndex != null && etag != updateCommand.RaftCommandIndex.Value)
+                    updateCommand.Initialize(serverStore, context);
+                    var relatedRecordIdToDelete = updateCommand.UpdateDatabaseRecord(databaseRecord, index);
+                    if (relatedRecordIdToDelete != null)
+                    {
+                        var itemKey = relatedRecordIdToDelete;
+                        using (Slice.From(context.Allocator, itemKey, out Slice _))
+                        using (Slice.From(context.Allocator, itemKey.ToLowerInvariant(), out Slice valueNameToDeleteLowered))
                         {
-                            NotifyLeaderAboutError(index, leader,
-                                new ConcurrencyException(
-                                    $"Concurrency violation at executing {type} command, the database {databaseRecord.DatabaseName} has etag {etag} but was expecting {updateCommand.RaftCommandIndex}"));
-                            return;
-                        }
-                        updateCommand.Initialize(serverStore, context);
-                        var relatedRecordIdToDelete = updateCommand.UpdateDatabaseRecord(databaseRecord, index);
-                        if (relatedRecordIdToDelete != null)
-                        {
-                            var itemKey = relatedRecordIdToDelete;
-                            using (Slice.From(context.Allocator, itemKey, out Slice _))
-                            using (Slice.From(context.Allocator, itemKey.ToLowerInvariant(), out Slice valueNameToDeleteLowered))
-                            {
-                                items.DeleteByKey(valueNameToDeleteLowered);
-                            }
-                        }
-
-                        if (databaseRecord.Topology.Count == 0 && databaseRecord.DeletionInProgress.Count == 0)
-                        {
-                            DeleteDatabaseRecord(context, index, items, valueNameLowered, databaseName);
-                            return;
+                            items.DeleteByKey(valueNameToDeleteLowered);
                         }
                     }
-                    catch (Exception e)
+
+                    if (databaseRecord.Topology.Count == 0 && databaseRecord.DeletionInProgress.Count == 0)
                     {
-                        NotifyLeaderAboutError(index, leader, new CommandExecutionException($"Cannot execute command of type {type} for database {databaseName}", e));
+                        DeleteDatabaseRecord(context, index, items, valueNameLowered, databaseName);
                         return;
                     }
 
@@ -1073,7 +1041,7 @@ namespace Raven.Server.ServerWide
                     UpdateValue(index, items, valueNameLowered, valueName, updatedDatabaseBlittable);
                 }
             }
-            finally
+            finally 
             {
                 NotifyDatabaseAboutChanged(context, databaseName, index, type, DatabasesLandlord.ClusterDatabaseChangeType.RecordChanged);
             }

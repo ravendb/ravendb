@@ -57,12 +57,9 @@ namespace Raven.Server.Rachis
             {
                 _engine.Log.Info($"{ToString()}: Entering steady state");
             }
-            
+
             while (true)
             {
-               
-                entries.Clear();
-
                 using (_engine.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
                 {
                     _debugRecorder.Record("Wait for entries");
@@ -120,13 +117,46 @@ namespace Raven.Server.Rachis
                             var task = Concurrent_SendAppendEntriesPendingToLeaderAsync(cts, _term, lastLogIndex);
                             try
                             {
-                                bool hasRemovedFromTopology;
+                                bool hasRemovedFromTopology = false;
 
-                                (hasRemovedFromTopology, lastLogIndex, lastTruncate, lastCommit) = ApplyLeaderStateToLocalState(sp,
-                                    context,
-                                    entries,
-                                    appendEntries);
+                                try
+                                {
+                                    (hasRemovedFromTopology, lastLogIndex, lastTruncate, lastCommit) = ApplyLeaderStateToLocalState(sp,
+                                        context,
+                                        entries,
+                                        appendEntries);
 
+                                    entries.Clear();
+                                }
+                                catch
+                                {
+                                    var processed = 0;
+                                    try
+                                    {
+                                        foreach (var entry in entries)
+                                        {
+                                            (hasRemovedFromTopology, lastLogIndex, lastTruncate, lastCommit) = ApplyLeaderStateToLocalState(sp,
+                                                context,
+                                                new List<RachisEntry>
+                                                {
+                                                    entry
+                                                },
+                                                appendEntries);
+
+                                            if (hasRemovedFromTopology)
+                                            {
+                                                break;
+                                            }
+
+                                            processed++;
+                                        }
+                                    }
+                                    finally
+                                    {
+                                        entries.RemoveRange(0, processed);
+                                    }
+                                }
+                                
                                 if (hasRemovedFromTopology)
                                 {
                                     if (_engine.Log.IsInfoEnabled)
