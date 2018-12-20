@@ -221,12 +221,14 @@ class indexErrors extends viewModelBase {
     }
 
     private extractIndexNamesAndCount(indexErrors: Raven.Client.Documents.Indexes.IndexErrors[]): Array<indexNameAndCount> {
-        return indexErrors.filter(error => error.Errors.length > 0).map(errors => {
+        const array = indexErrors.filter(error => error.Errors.length > 0).map(errors => {
             return {
                 indexName: errors.Name,
                 count: errors.Errors.length
             }
         });
+
+        return array.sort((a, b) => this.sortStrings(a.indexName, b.indexName));
     }
 
     private extractActionNamesAndCount(indexErrors: Raven.Client.Documents.Indexes.IndexErrors[]): Array<indexActionAndCount> {
@@ -238,7 +240,7 @@ class indexErrors extends viewModelBase {
                 } as indexActionAndCount));
             });
 
-        return mappedItems.reduce((result: indexActionAndCount[], next: indexActionAndCount) => {
+        const mappedReducedItems = mappedItems.reduce((result: indexActionAndCount[], next: indexActionAndCount) => {
             var existing = result.find(x => x.actionName === next.actionName);
             if (existing) {
                 existing.count += next.count;
@@ -247,6 +249,14 @@ class indexErrors extends viewModelBase {
             }
             return result;
         }, []);
+
+        return mappedReducedItems.sort((a, b) => this.sortStrings(a.actionName, b.actionName));
+    }
+
+    private sortStrings(a: string, b: string) {
+        a = a.toLowerCase();
+        b = b.toLowerCase();
+        return a > b ? 1 : (a < b ? -1 : 0);
     }
 
     private mapItems(indexErrors: Raven.Client.Documents.Indexes.IndexErrors[]): IndexErrorPerDocument[] {
