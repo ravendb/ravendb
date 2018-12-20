@@ -399,7 +399,7 @@ namespace TypingsGenerator
             scripter.AddType(typeof(CompareExchangeValue<object>));
             
             // debug
-            scripter.AddType(typeof(ThreadsHandler.ThreadInfo));
+            scripter.AddType(typeof(ThreadsInfo));
             scripter.AddType(typeof(MemoryDebugHandler.MemoryInfo));
             
             // counters

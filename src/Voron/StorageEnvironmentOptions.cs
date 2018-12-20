@@ -561,43 +561,6 @@ namespace Voron
                 }
             }
 
-            public void DeleteRecyclableJournals()
-            {
-                lock (_journalsForReuse)
-                {
-                    foreach (var recyclableJournal in _journalsForReuse)
-                    {
-                        try
-                        {
-                            var fileInfo = new FileInfo(recyclableJournal.Value);
-
-                            if (fileInfo.Exists)
-                                TryDelete(fileInfo.FullName);
-                        }
-                        catch (Exception ex)
-                        {
-                            if (_log.IsInfoEnabled)
-                                _log.Info($"Couldn't delete recyclable journal: {recyclableJournal.Value}", ex);
-                        }
-                    }
-
-                    _journalsForReuse.Clear();
-                }
-            }
-
-            private void TryDelete(string file)
-            {
-                try
-                {
-                    File.Delete(file);
-                }
-                catch (Exception ex)
-                {
-                    if (_log.IsInfoEnabled)
-                        _log.Info("Failed to delete " + file, ex);
-                }
-            }
-
             protected override void Disposing()
             {
                 if (Disposed)
@@ -616,17 +579,10 @@ namespace Voron
                 {
                     foreach (var reusableFile in _journalsForReuse.Values)
                     {
-                        try
-                        {
-                            File.Delete(reusableFile);
+                        TryDelete(reusableFile);
                         }
-                        catch (Exception)
-                        {
-                            // ignored
                         }
                     }
-                }
-            }
 
             public override bool TryDeleteJournal(long number)
             {
@@ -1172,8 +1128,7 @@ namespace Voron
         public OpenFlags SafePosixOpenFlags = PerPlatformValues.OpenFlags.O_DSYNC | PerPlatformValues.OpenFlags.O_DIRECT;
         private readonly Logger _log;
 
-        private readonly SortedList<long, string> _journalsForReuse =
-            new SortedList<long, string>();
+        private readonly SortedList<long, string> _journalsForReuse = new SortedList<long, string>();
 
         private int _numOfConcurrentSyncsPerPhysDrive;
         private int _timeToSyncAfterFlashInSec;
@@ -1243,6 +1198,50 @@ namespace Voron
                 {
                     // nothing we can do about it
                 }
+            }
+        }
+
+        private void TryDelete(string file)
+        {
+            try
+            {
+                File.Delete(file);
+            }
+            catch (Exception ex)
+            {
+                if (_log.IsInfoEnabled)
+                    _log.Info("Failed to delete " + file, ex);
+            }
+        }
+
+        public void TryCleanupRecycledJournals()
+        {
+            if (Monitor.TryEnter(_journalsForReuse, 10) == false)
+                return;
+
+            try
+            {
+                foreach (var recyclableJournal in _journalsForReuse)
+                {
+                    try
+                    {
+                        var fileInfo = new FileInfo(recyclableJournal.Value);
+
+                        if (fileInfo.Exists)
+                            TryDelete(fileInfo.FullName);
+                    }
+                    catch (Exception ex)
+                    {
+                        if (_log.IsInfoEnabled)
+                            _log.Info($"Couldn't delete recyclable journal: {recyclableJournal.Value}", ex);
+                    }
+                }
+
+                _journalsForReuse.Clear();
+            }
+            finally
+            {
+                Monitor.Exit(_journalsForReuse);
             }
         }
 

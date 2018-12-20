@@ -69,7 +69,7 @@ namespace Voron.Data.RawData
                 var actualSection = new RawDataSection(_tx, sectionPageNumber);
                 if (actualSection._sectionHeader->SectionOwnerHash != _sectionHeader->SectionOwnerHash)
                 {
-                    VoronUnrecoverableErrorException.Raise(_tx.Environment,
+                    VoronUnrecoverableErrorException.Raise(_tx,
                         $"Cannot get all ids in section containing {id} because the raw data section starting in {sectionPageNumber} belongs to a different owner");
                 }
                 return actualSection.GetAllIdsInSectionContaining(id);
@@ -163,14 +163,14 @@ namespace Voron.Data.RawData
             var pageHeader = PageHeaderFor(pageNumberInSection);
 
             if (posInPage >= pageHeader->NextAllocation)
-                VoronUnrecoverableErrorException.Raise(_tx.Environment, $"Asked to load a past the allocated values: {id} from page {pageHeader->PageNumber}");
+                VoronUnrecoverableErrorException.Raise(_tx, $"Asked to load a past the allocated values: {id} from page {pageHeader->PageNumber}");
 
             var sizes = (RawDataEntrySizes*)((byte*)pageHeader + posInPage);
             if (sizes->UsedSize < 0)
-                VoronUnrecoverableErrorException.Raise(_tx.Environment, $"Asked to load a value that was already freed: {id} from page {pageHeader->PageNumber}");
+                VoronUnrecoverableErrorException.Raise(_tx, $"Asked to load a value that was already freed: {id} from page {pageHeader->PageNumber}");
 
             if (sizes->AllocatedSize < sizes->UsedSize)
-                VoronUnrecoverableErrorException.Raise(_tx.Environment,
+                VoronUnrecoverableErrorException.Raise(_tx,
                     "Asked to load a value that where the allocated size is smaller than the used size: " + id +
                     " from page " +
                     pageHeader->PageNumber);
@@ -212,20 +212,20 @@ namespace Voron.Data.RawData
             if (posInPage >= pageHeader->NextAllocation)
             {
                 if (posInPage == 0)
-                    VoronUnrecoverableErrorException.Raise(tx.Environment,
+                    VoronUnrecoverableErrorException.Raise(tx,
                         $"Asked to load a large value from a raw data section page {pageHeader->PageNumber}, this is a bug");
 
-                VoronUnrecoverableErrorException.Raise(tx.Environment,
+                VoronUnrecoverableErrorException.Raise(tx,
                     $"Asked to load a past the allocated values: {id} from page {pageHeader->PageNumber}");
             }
 
             var sizes = (RawDataEntrySizes*)((byte*)pageHeader + posInPage);
             if (sizes->UsedSize < 0)
-                VoronUnrecoverableErrorException.Raise(tx.Environment,
+                VoronUnrecoverableErrorException.Raise(tx,
                     $"Asked to load a value that was already freed: {id} from page {pageHeader->PageNumber}");
 
             if (sizes->AllocatedSize < sizes->UsedSize)
-                VoronUnrecoverableErrorException.Raise(tx.Environment,
+                VoronUnrecoverableErrorException.Raise(tx,
                     $"Asked to load a value that where the allocated size is smaller than the used size: {id} from page {pageHeader->PageNumber}");
 
             return sizes;
@@ -252,7 +252,7 @@ namespace Voron.Data.RawData
                 var actualSection = new RawDataSection(_tx, sectionPageNumber);
                 if (actualSection._sectionHeader->SectionOwnerHash != _sectionHeader->SectionOwnerHash)
                 {
-                    VoronUnrecoverableErrorException.Raise(_tx.Environment,
+                    VoronUnrecoverableErrorException.Raise(_tx,
                         $"Cannot delete section because the raw data section starting in {sectionPageNumber} belongs to a different owner");
                 }
                 actualSection.DeleteSection(sectionPageNumber);
@@ -281,11 +281,11 @@ namespace Voron.Data.RawData
                 var sectionPageNumber = pageHeader->PageNumber - pageHeader->PageNumberInSection - 1;
                 var actualSection = new RawDataSection(_tx, sectionPageNumber);
                 if (actualSection.Contains(id) == false)
-                    VoronUnrecoverableErrorException.Raise(_tx.Environment, $"Cannot delete {id} because the raw data section starting in {sectionPageNumber} with size {actualSection.AllocatedSize} doesn't own it. Possible data corruption?");
+                    VoronUnrecoverableErrorException.Raise(_tx, $"Cannot delete {id} because the raw data section starting in {sectionPageNumber} with size {actualSection.AllocatedSize} doesn't own it. Possible data corruption?");
 
                 if (actualSection._sectionHeader->SectionOwnerHash != _sectionHeader->SectionOwnerHash)
                 {
-                    VoronUnrecoverableErrorException.Raise(_tx.Environment,
+                    VoronUnrecoverableErrorException.Raise(_tx,
                         $"Cannot delete {id} because the raw data section starting in {sectionPageNumber} belongs to a different owner");
                 }
 
@@ -294,11 +294,11 @@ namespace Voron.Data.RawData
 
             pageHeader = ModifyPage(pageHeader);
             if (posInPage >= pageHeader->NextAllocation)
-                VoronUnrecoverableErrorException.Raise(_tx.Environment, $"Asked to load a past the allocated values: {id} from page {pageHeader->PageNumber}");
+                VoronUnrecoverableErrorException.Raise(_tx, $"Asked to load a past the allocated values: {id} from page {pageHeader->PageNumber}");
 
             var sizes = (RawDataEntrySizes*)((byte*)pageHeader + posInPage);
             if (sizes->UsedSize < 0)
-                VoronUnrecoverableErrorException.Raise(_tx.Environment, $"Asked to free a value that was already freed: {id} from page {pageHeader->PageNumber}");
+                VoronUnrecoverableErrorException.Raise(_tx, $"Asked to free a value that was already freed: {id} from page {pageHeader->PageNumber}");
 
             sizes->UsedSize = -1;
             Memory.Set((byte*)pageHeader + posInPage + sizeof(RawDataEntrySizes), 0, sizes->AllocatedSize);

@@ -43,7 +43,7 @@ namespace SlowTests.Voron.Issues
             Assert.True(SpinWait.SpinUntil(() => new DirectoryInfo(journalPath).GetFiles($"{StorageEnvironmentOptions.RecyclableJournalFileNamePrefix}*").Length == 6,
                 TimeSpan.FromSeconds(30)));
 
-            Env.Cleanup(deleteRecyclableJournals: true);
+            Env.Cleanup(tryCleanupRecycledJournals: true);
 
             var journalsForReuse = new DirectoryInfo(journalPath).GetFiles($"{StorageEnvironmentOptions.RecyclableJournalFileNamePrefix}*");
 

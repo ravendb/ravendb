@@ -72,7 +72,7 @@ namespace Raven.Server.Storage
                 {
                     try
                     {
-                        storageEnvironment.Cleanup(deleteRecyclableJournals: true);
+                        storageEnvironment.Cleanup(tryCleanupRecycledJournals: true);
                     }
                     catch (Exception e)
                     {

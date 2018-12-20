@@ -81,17 +81,21 @@ namespace Raven.Server.Documents.Indexes
 
     public abstract class Index : ITombstoneAware, IDisposable, ILowMemoryHandler
     {
-        private long _writeErrors;
+        private int _writeErrors;
 
-        private long _unexpectedErrors;
+        private int _unexpectedErrors;
 
-        private long _analyzerErrors;
+        private int _analyzerErrors;
 
-        private const long WriteErrorsLimit = 10;
+        private int _diskFullErrors;
 
-        private const long UnexpectedErrorsLimit = 3;
+        private const int WriteErrorsLimit = 10;
 
-        private const long AnalyzerErrorLimit = 0;
+        private const int UnexpectedErrorsLimit = 3;
+
+        private const int AnalyzerErrorLimit = 0;
+
+        private const int DiskFullErrorLimit = 10;
 
         protected Logger _logger;
 
@@ -992,9 +996,21 @@ namespace Raven.Server.Documents.Indexes
                                         var lastAllocatedBytes = GC.GetAllocatedBytesForCurrentThread();
 
                                         didWork = DoIndexingWork(scope, _indexingProcessCancellationTokenSource.Token);
+
+                                        if (_lowMemoryPressure > 0)
+                                            LowMemoryOver();
+
                                         batchCompleted = true;
+
                                         lastAllocatedBytes = GC.GetAllocatedBytesForCurrentThread() - lastAllocatedBytes;
                                         scope.AddAllocatedBytes(lastAllocatedBytes);
+                                    }
+                                    catch
+                                    {
+                                        // need to call it here to the let the index continue running
+                                        // we'll stop when we reach the index error threshold 
+                                        _mre.Set();
+                                        throw;
                                     }
                                     finally
                                     {
@@ -1052,6 +1068,10 @@ namespace Raven.Server.Documents.Indexes
                                 catch (ExcessiveNumberOfReduceErrorsException enre)
                                 {
                                     HandleExcessiveNumberOfReduceErrors(scope, enre);
+                                }
+                                catch (DiskFullException dfe)
+                                {
+                                    HandleDiskFullErrors(scope, storageEnvironment, dfe);
                                 }
                                 catch (OperationCanceledException)
                                 {
@@ -1301,6 +1321,7 @@ namespace Raven.Server.Documents.Indexes
             Interlocked.Exchange(ref _writeErrors, 0);
             Interlocked.Exchange(ref _unexpectedErrors, 0);
             Interlocked.Exchange(ref _analyzerErrors, 0);
+            Interlocked.Exchange(ref _diskFullErrors, 0);
         }
 
         internal void HandleAnalyzerErrors(IndexingStatsScope stats, IndexAnalyzerException iae)
@@ -1315,8 +1336,7 @@ namespace Raven.Server.Documents.Indexes
             if (State == IndexState.Error || analyzerErrors < AnalyzerErrorLimit)
                 return;
 
-            _errorStateReason = $"State was changed due to excessive number of analyzer errors ({analyzerErrors}).";
-            SetState(IndexState.Error, ignoreWriteError: true);
+            SetErrorState($"State was changed due to excessive number of analyzer errors ({analyzerErrors}).");
         }
 
         internal void HandleUnexpectedErrors(IndexingStatsScope stats, Exception e)
@@ -1331,8 +1351,7 @@ namespace Raven.Server.Documents.Indexes
             if (State == IndexState.Error || unexpectedErrors < UnexpectedErrorsLimit)
                 return;
 
-            _errorStateReason = $"State was changed due to excessive number of unexpected errors ({unexpectedErrors}).";
-            SetState(IndexState.Error, ignoreWriteError: true);
+            SetErrorState($"State was changed due to excessive number of unexpected errors ({unexpectedErrors}).");
         }
 
         internal void HandleCriticalErrors(IndexingStatsScope stats, CriticalIndexingException e)
@@ -1343,8 +1362,7 @@ namespace Raven.Server.Documents.Indexes
             if (State == IndexState.Error)
                 return;
 
-            _errorStateReason = $"State was changed due to a critical error. Error message: {e.Message}";
-            SetState(IndexState.Error, ignoreWriteError: true);
+            SetErrorState($"State was changed due to a critical error. Error message: {e.Message}");
         }
 
         internal void HandleWriteErrors(IndexingStatsScope stats, IndexWriteException iwe)
@@ -1362,8 +1380,7 @@ namespace Raven.Server.Documents.Indexes
             if (State == IndexState.Error || writeErrors < WriteErrorsLimit)
                 return;
 
-            _errorStateReason = $"State was changed due to excessive number of write errors ({writeErrors}).";
-            SetState(IndexState.Error, ignoreWriteError: true);
+            SetErrorState($"State was changed due to excessive number of write errors ({writeErrors}).");
         }
 
         internal void HandleExcessiveNumberOfReduceErrors(IndexingStatsScope stats, ExcessiveNumberOfReduceErrorsException e)
@@ -1376,7 +1393,53 @@ namespace Raven.Server.Documents.Indexes
             if (State == IndexState.Error)
                 return;
 
-            _errorStateReason = e.Message;
+            SetErrorState(e.Message);
+        }
+
+        internal void HandleDiskFullErrors(IndexingStatsScope stats, StorageEnvironment storageEnvironment, DiskFullException dfe)
+        {
+            stats.AddDiskFullError(dfe);
+
+            var diskFullErrors = Interlocked.Increment(ref _diskFullErrors);
+            if (diskFullErrors < DiskFullErrorLimit)
+            {
+                var timeToWaitInMilliseconds = (int)Math.Min(Math.Pow(2, diskFullErrors), 30) * 1000;
+
+                if (_logger.IsOperationsEnabled)
+                    _logger.Operations($"After disk full error in index : '{Name}', " +
+                                       $"going to try flushing and syncing the environment to cleanup the storage. " +
+                                       $"Will wait for flush for: {timeToWaitInMilliseconds}ms", dfe);
+
+                // force flush and sync
+                var sp = Stopwatch.StartNew();
+                GlobalFlushingBehavior.GlobalFlusher.Value.MaybeFlushEnvironment(storageEnvironment);
+                if (_logsAppliedEvent.Wait(timeToWaitInMilliseconds, _indexingProcessCancellationTokenSource.Token))
+                {
+                    storageEnvironment.ForceSyncDataFile();
+                }
+
+                var timeLeft = timeToWaitInMilliseconds - sp.ElapsedMilliseconds;
+                // wait for sync
+                if (timeLeft > 0)
+                    Task.Delay((int)timeLeft, _indexingProcessCancellationTokenSource.Token).Wait();
+
+                storageEnvironment.Cleanup(tryCleanupRecycledJournals: true);
+                return;
+            }
+
+            if (_logger.IsOperationsEnabled)
+                _logger.Operations($"Disk full error occurred for '{Name}'. Setting index to errored state", dfe);
+
+            if (State == IndexState.Error)
+                return;
+
+            storageEnvironment.Options.TryCleanupRecycledJournals();
+            SetErrorState($"State was changed due to excessive number of disk full errors ({diskFullErrors}).");
+        }
+
+        private void SetErrorState(string reason)
+        {
+            _errorStateReason = reason;
             SetState(IndexState.Error, ignoreWriteError: true);
         }
 
@@ -1407,7 +1470,7 @@ namespace Raven.Server.Documents.Indexes
 
                 DocumentDatabase.NotificationCenter.Add(alert);
             }
-            catch (OutOfMemoryException)
+            catch (Exception e) when (e.IsOutOfMemory())
             {
                 // nothing to do here
             }
@@ -1573,7 +1636,6 @@ namespace Raven.Server.Documents.Indexes
 
                             tx.Commit();
                             SlowWriteNotification.Notify(commitStats, DocumentDatabase);
-
                             stats.RecordCommitStats(commitStats.NumberOfModifiedPages, commitStats.NumberOf4KbsWrittenToDisk);
                         }
                     }
@@ -3539,7 +3601,7 @@ namespace Raven.Server.Documents.Indexes
 
         internal void SimulateLowMemory()
         {
-            _lowMemoryPressure = long.MaxValue;
+            _lowMemoryPressure = 10;
             LowMemory();
         }
 

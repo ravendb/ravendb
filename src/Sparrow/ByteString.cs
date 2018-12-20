@@ -460,7 +460,7 @@ namespace Sparrow
 
     public interface IByteStringAllocator
     {
-        UnmanagedGlobalSegment Allocate(int size);
+        UnmanagedGlobalSegment Allocate(int size, Action allocationFailure);
         void Free(UnmanagedGlobalSegment memory);
     }
 
@@ -469,9 +469,17 @@ namespace Sparrow
     /// </summary>
     public struct ByteStringDirectAllocator : IByteStringAllocator
     {
-        public UnmanagedGlobalSegment Allocate(int size)
+        public UnmanagedGlobalSegment Allocate(int size, Action allocationFailure)
         {
-            return new UnmanagedGlobalSegment(size);
+            try
+            {
+                return new UnmanagedGlobalSegment(size);
+            }
+            catch 
+            {
+                allocationFailure?.Invoke();
+                throw;
+            }
         }
 
         public void Free(UnmanagedGlobalSegment memory)
@@ -516,7 +524,7 @@ namespace Sparrow
         [ThreadStatic]
         private static int _minSize;
 
-        public UnmanagedGlobalSegment Allocate(int size)
+        public UnmanagedGlobalSegment Allocate(int size, Action allocationFailure)
         {
             if (_minSize < size)
                 _minSize = size;
@@ -550,7 +558,15 @@ namespace Sparrow
             }
 
             // have to allocate it directly
-            return new UnmanagedGlobalSegment(size);
+            try
+            {
+                return new UnmanagedGlobalSegment(size);
+            }
+            catch 
+            {
+                allocationFailure?.Invoke();
+                throw;
+            }
         }
 
         public unsafe void Free(UnmanagedGlobalSegment memory)
@@ -641,6 +657,8 @@ namespace Sparrow
     public unsafe class ByteStringContext<TAllocator> : IDisposable where TAllocator : struct, IByteStringAllocator
     {
         public static TAllocator Allocator;
+
+        public event Action AllocationFailed;
 
         private class SegmentInformation
         {
@@ -1133,7 +1151,7 @@ namespace Sparrow
 
         private SegmentInformation AllocateSegment(int size)
         {
-            var memorySegment = Allocator.Allocate(size);
+            var memorySegment = Allocator.Allocate(size, AllocationFailed);
             if(memorySegment.Segment == null)
                 ThrowInvalidMemorySegmentOnAllocation();
 
@@ -1148,19 +1166,21 @@ namespace Sparrow
             return segment;
         }
 
-        private static void ThrowInvalidMemorySegmentOnAllocation()
+        private void ThrowInvalidMemorySegmentOnAllocation()
         {
+            AllocationFailed?.Invoke();
             throw new InvalidOperationException("Allocate gave us a segment that was already disposed.");
         }
 
-        private static void ThrowObjectDisposed()
+        private void ThrowObjectDisposed()
         {
+            AllocationFailed?.Invoke();
             throw new ObjectDisposedException("ByteStringContext");
         }
 
         private void AllocateExternalSegment(int size)
         {
-            var memorySegment = Allocator.Allocate(size);
+            var memorySegment = Allocator.Allocate(size, AllocationFailed);
 
             _totalAllocated += memorySegment.Size;
 

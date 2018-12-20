@@ -18,6 +18,11 @@ type indexNameAndCount = {
     count: number;
 }
 
+type indexActionAndCount = {
+    actionName: string;
+    count: number;
+}
+
 class indexErrors extends viewModelBase {
 
     private allIndexErrors: IndexErrorPerDocument[] = null;
@@ -26,7 +31,9 @@ class indexErrors extends viewModelBase {
     private columnPreview = new columnPreviewPlugin<IndexErrorPerDocument>();
 
     private allErroredIndexNames = ko.observableArray<indexNameAndCount>([]);
+    private allErroredActionNames = ko.observableArray<indexActionAndCount>([]);
     private selectedIndexNames = ko.observableArray<string>([]);
+    private selectedActionNames = ko.observableArray<string>([]);
     private ignoreSearchCriteriaUpdatesMode = false;
     searchText = ko.observable<string>();
 
@@ -43,6 +50,7 @@ class indexErrors extends viewModelBase {
     private initObservables() {
         this.searchText.throttle(200).subscribe(() => this.onSearchCriteriaChanged());
         this.selectedIndexNames.subscribe(() => this.onSearchCriteriaChanged());
+        this.selectedActionNames.subscribe(() => this.onSearchCriteriaChanged());
 
         this.isDirty = ko.pureComputed(() => {
             const local = this.localLatestIndexErrorTime();
@@ -62,16 +70,34 @@ class indexErrors extends viewModelBase {
 
         awesomeMultiselect.build($("#visibleIndexesSelector"), opts => {
             opts.enableHTML = true;
+            opts.includeSelectAllOption = true;
+            opts.nSelectedText = " indexes selected";
+            opts.allSelectedText = "All indexes selected";
+            opts.maxHeight = 500;
             opts.optionLabel = (element: HTMLOptionElement) => {
                 const indexName = $(element).text();
                 const indexItem = this.allErroredIndexNames().find(x => x.indexName === indexName);
                 return `<span class="name">${generalUtils.escape(indexName)}</span><span class="badge">${indexItem.count}</span>`;
             };
         });
+
+        awesomeMultiselect.build($("#visibleActionsSelector"), opts => {
+            opts.enableHTML = true;
+            opts.includeSelectAllOption = true;
+            opts.nSelectedText = " actions selected";
+            opts.allSelectedText = "All actions selected";
+            opts.maxHeight = 500;
+            opts.optionLabel = (element: HTMLOptionElement) => {
+                const actionName = $(element).text();
+                const actionItem = this.allErroredActionNames().find(x => x.actionName === actionName);
+                return `<span class="name">${generalUtils.escape(actionName)}</span><span class="badge">${actionItem.count}</span>`;
+            };
+        });
     }
 
     private syncMultiSelect() {
         awesomeMultiselect.rebuild($("#visibleIndexesSelector"));
+        awesomeMultiselect.rebuild($("#visibleActionsSelector"));
     }
 
     protected afterClientApiConnected() {
@@ -147,9 +173,13 @@ class indexErrors extends viewModelBase {
                 this.ignoreSearchCriteriaUpdatesMode = true;
 
                 const indexNamesAndCount = this.extractIndexNamesAndCount(result);
+                const actionNamesAndCount = this.extractActionNamesAndCount(result);
 
                 this.allErroredIndexNames(indexNamesAndCount);
+                this.allErroredActionNames(actionNamesAndCount);
                 this.selectedIndexNames(this.allErroredIndexNames().map(x => x.indexName).slice());
+                this.selectedActionNames(this.allErroredActionNames().map(x => x.actionName).slice());
+
                 this.syncMultiSelect();
 
                 this.ignoreSearchCriteriaUpdatesMode = false;
@@ -167,6 +197,9 @@ class indexErrors extends viewModelBase {
         let filteredItems = list;
         if (this.selectedIndexNames().length !== this.allErroredIndexNames().length) {
             filteredItems = filteredItems.filter(error => _.includes(this.selectedIndexNames(), error.IndexName));
+        }
+        if (this.selectedActionNames().length !== this.allErroredActionNames().length) {
+            filteredItems = filteredItems.filter(error => _.includes(this.selectedActionNames(), error.Action));
         }
 
         if (this.searchText()) {
@@ -188,12 +221,36 @@ class indexErrors extends viewModelBase {
     }
 
     private extractIndexNamesAndCount(indexErrors: Raven.Client.Documents.Indexes.IndexErrors[]): Array<indexNameAndCount> {
-        return indexErrors.filter(error => error.Errors.length > 0).map(errors => {
+        const array = indexErrors.filter(error => error.Errors.length > 0).map(errors => {
             return {
                 indexName: errors.Name,
                 count: errors.Errors.length
             }
         });
+
+        return _.sortBy(array, x => x.indexName.toLocaleLowerCase());
+    }
+
+    private extractActionNamesAndCount(indexErrors: Raven.Client.Documents.Indexes.IndexErrors[]): Array<indexActionAndCount> {
+        const mappedItems = _.flatMap(indexErrors,
+            value => {
+                return value.Errors.map(x => ({
+                    actionName: x.Action,
+                    count: 1
+                } as indexActionAndCount));
+            });
+
+        const mappedReducedItems = mappedItems.reduce((result: indexActionAndCount[], next: indexActionAndCount) => {
+            var existing = result.find(x => x.actionName === next.actionName);
+            if (existing) {
+                existing.count += next.count;
+            } else {
+                result.push(next);
+            }
+            return result;
+        }, []);
+
+        return _.sortBy(mappedReducedItems, x => x.actionName.toLocaleLowerCase());
     }
 
     private mapItems(indexErrors: Raven.Client.Documents.Indexes.IndexErrors[]): IndexErrorPerDocument[] {

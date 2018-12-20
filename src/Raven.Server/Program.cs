@@ -393,8 +393,7 @@ namespace Raven.Server
                 var count = 0;
                 var isFirst = true;
                 foreach (var threadInfo in threadsInfo.List
-                    .Where(x => x.CpuUsage >= cpuUsageThreshold)
-                    .OrderByDescending(x => x.CpuUsage))
+                    .Where(x => x.CpuUsage >= cpuUsageThreshold))
                 {
                     if (isFirst)
                     {
