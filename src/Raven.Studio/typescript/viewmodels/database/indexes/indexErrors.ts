@@ -228,7 +228,7 @@ class indexErrors extends viewModelBase {
             }
         });
 
-        return array.sort((a, b) => this.sortStrings(a.indexName, b.indexName));
+        return _.sortBy(array, x => x.indexName.toLocaleLowerCase());
     }
 
     private extractActionNamesAndCount(indexErrors: Raven.Client.Documents.Indexes.IndexErrors[]): Array<indexActionAndCount> {
@@ -250,13 +250,7 @@ class indexErrors extends viewModelBase {
             return result;
         }, []);
 
-        return mappedReducedItems.sort((a, b) => this.sortStrings(a.actionName, b.actionName));
-    }
-
-    private sortStrings(a: string, b: string) {
-        a = a.toLowerCase();
-        b = b.toLowerCase();
-        return a > b ? 1 : (a < b ? -1 : 0);
+        return _.sortBy(mappedReducedItems, x => x.actionName.toLocaleLowerCase());
     }
 
     private mapItems(indexErrors: Raven.Client.Documents.Indexes.IndexErrors[]): IndexErrorPerDocument[] {
