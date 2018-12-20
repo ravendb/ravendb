@@ -181,7 +181,7 @@ namespace Voron.Debugging
                         // could be deleted meanwhile
                         return null;
                     }
-                }).ToList();
+                }).Where(x => x != null).ToList();
 
                 tempFiles.AddRange(recyclableJournals);
             }
