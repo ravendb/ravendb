@@ -32,7 +32,7 @@ namespace Raven.Server.Documents.Queries.AST
             }
         }
 
-        public static bool IsMatchedBy(this QueryExpression where, BlittableJsonReaderObject value, BlittableJsonReaderObject queryParameters)
+        public static bool IsMatchedBy(this QueryExpression where, BlittableJsonReaderObject value, BlittableJsonReaderObject queryParameters, bool shouldCaseSensitiveStringCompare = false)
         {
             switch (where)
             {
@@ -41,10 +41,10 @@ namespace Raven.Server.Documents.Queries.AST
                     var hValue = GetFieldValue(between.Max.Token.Value, between.Max.Value, queryParameters);
                     var lValue = GetFieldValue(between.Min.Token.Value, between.Min.Value, queryParameters);
 
-                    if (Compare(lValue, src) < 0)
+                    if (Compare(lValue, src, shouldCaseSensitiveStringCompare) < 0)
                         return false;
 
-                    if (Compare(src, hValue) > 0)
+                    if (Compare(src, hValue, shouldCaseSensitiveStringCompare) > 0)
                         return false;
 
                     return true;
@@ -52,9 +52,9 @@ namespace Raven.Server.Documents.Queries.AST
                     return true;
 
                 case BinaryExpression be:
-                    return IsMatchedBy(be, value, queryParameters);
+                    return IsMatchedBy(be, value, queryParameters, shouldCaseSensitiveStringCompare);
                 case NegatedExpression not:
-                    var result = IsMatchedBy(not.Expression, value, queryParameters);
+                    var result = IsMatchedBy(not.Expression, value, queryParameters, shouldCaseSensitiveStringCompare);
                     return !result;
                 case InExpression ine:
                     var inSrc = Evaluate(ine.Source, value);
@@ -66,7 +66,7 @@ namespace Raven.Server.Documents.Queries.AST
                         {
                             foreach (var el in array)
                             {
-                                if (AreEqual(inSrc, el))
+                                if (AreEqual(inSrc, el, shouldCaseSensitiveStringCompare))
                                 {
                                     if (ine.All == false)
                                         return true;
@@ -76,7 +76,7 @@ namespace Raven.Server.Documents.Queries.AST
                         }
                         else
                         {
-                            if (AreEqual(inSrc, val))
+                            if (AreEqual(inSrc, val, shouldCaseSensitiveStringCompare))
                             {
                                 if (ine.All == false)
                                     return true;
@@ -85,19 +85,32 @@ namespace Raven.Server.Documents.Queries.AST
                         }
                     }
                     return matches == ine.Values.Count;
+                case MethodExpression me:
+                    var methodType = QueryMethod.GetMethodType(me.Name.Value);
+                    switch (methodType)
+                    {
+                        case MethodType.Exact:
+                            if (me.Arguments.Count == 1)
+                            {
+                                return me.Arguments[0].IsMatchedBy(value, queryParameters, true);
+                            }
+
+                            break;
+                    }
+                    throw new InvalidOperationException("Unsupported edge method invocation in where clause: " + where);
                 default:
                     throw new InvalidOperationException("Unsupported edge where expression: " + where);
             }
         }
 
-        private static bool IsMatchedBy(BinaryExpression be, BlittableJsonReaderObject value, BlittableJsonReaderObject queryParameters)
+        private static bool IsMatchedBy(BinaryExpression be, BlittableJsonReaderObject value, BlittableJsonReaderObject queryParameters, bool shouldCaseSensitiveStringCompare)
         {
             switch (be.Operator)
             {
                 case OperatorType.And:
-                    return IsMatchedBy(be.Left, value, queryParameters) && IsMatchedBy(be.Right, value, queryParameters);
+                    return IsMatchedBy(be.Left, value, queryParameters) && IsMatchedBy(be.Right, value, queryParameters, shouldCaseSensitiveStringCompare);
                 case OperatorType.Or:
-                    return IsMatchedBy(be.Left, value, queryParameters) || IsMatchedBy(be.Right, value, queryParameters);
+                    return IsMatchedBy(be.Left, value, queryParameters) || IsMatchedBy(be.Right, value, queryParameters, shouldCaseSensitiveStringCompare);
             }
 
             var left = GetValue(be.Left, value, queryParameters);
@@ -106,24 +119,24 @@ namespace Raven.Server.Documents.Queries.AST
             switch (be.Operator)
             {
                 case OperatorType.Equal:
-                    return AreEqual(left, right);
+                    return AreEqual(left, right, shouldCaseSensitiveStringCompare);
                 case OperatorType.NotEqual:
-                    return AreEqual(left, right) == false;
+                    return AreEqual(left, right, shouldCaseSensitiveStringCompare) == false;
                 case OperatorType.LessThan:
-                    return Compare(left, right) < 0;
+                    return Compare(left, right, shouldCaseSensitiveStringCompare) < 0;
                 case OperatorType.GreaterThan:
-                    return Compare(left, right) > 0;
+                    return Compare(left, right, shouldCaseSensitiveStringCompare) > 0;
                 case OperatorType.LessThanEqual:
-                    return Compare(left, right) <= 0;
+                    return Compare(left, right, shouldCaseSensitiveStringCompare) <= 0;
                 case OperatorType.GreaterThanEqual:
-                    return Compare(left, right) >= 0;
+                    return Compare(left, right, shouldCaseSensitiveStringCompare) >= 0;
 
                 default:
                     throw new NotSupportedException("Cannot handle edge query: " + be.Operator + ", " + be);
             }
         }
 
-        private static bool AreEqual(object left, object right)
+        private static bool AreEqual(object left, object right, bool shouldCaseSensitiveStringCompare)
         {
             switch (left)
             {
@@ -159,39 +172,39 @@ namespace Raven.Server.Documents.Queries.AST
                             return false;
                     }
                 case string s:
-                    return AreEqual(s);
+                    return AreEqual(s, shouldCaseSensitiveStringCompare);
                 case StringSegment seg:
                     switch (right)
                     {
                         case string rs:
-                            return seg.Equals(rs, StringComparison.OrdinalIgnoreCase);
+                            return seg.Equals(rs, shouldCaseSensitiveStringCompare?StringComparison.Ordinal:StringComparison.OrdinalIgnoreCase);
                         case StringSegment rseg:
-                            return rseg.Equals(seg, StringComparison.OrdinalIgnoreCase);
+                            return rseg.Equals(seg, shouldCaseSensitiveStringCompare ? StringComparison.Ordinal : StringComparison.OrdinalIgnoreCase);
                         case LazyStringValue _:
                         case LazyCompressedStringValue _:
-                            return seg.Equals(right.ToString(), StringComparison.OrdinalIgnoreCase);
+                            return seg.Equals(right.ToString(), shouldCaseSensitiveStringCompare ? StringComparison.Ordinal : StringComparison.OrdinalIgnoreCase);
                         default:
                             return false;
                     }
                 case LazyStringValue lsv:
-                    return AreEqual(lsv.ToString());
+                    return AreEqual(lsv.ToString(), shouldCaseSensitiveStringCompare);
                 case LazyCompressedStringValue lcsv:
-                    return AreEqual(lcsv.ToString());
+                    return AreEqual(lcsv.ToString(), shouldCaseSensitiveStringCompare);
                 default:
                     return false;
             }
 
-            bool AreEqual(string s)
+            bool AreEqual(string s, bool caseSensitive)
             {
                 switch (right)
                 {
                     case string rs:
-                        return string.Equals(s, rs, StringComparison.OrdinalIgnoreCase);
+                        return string.Equals(s, rs, caseSensitive ? StringComparison.Ordinal : StringComparison.OrdinalIgnoreCase);
                     case StringSegment rseg:
-                        return rseg.Equals(s, StringComparison.OrdinalIgnoreCase);
+                        return rseg.Equals(s, caseSensitive ? StringComparison.Ordinal : StringComparison.OrdinalIgnoreCase);
                     case LazyStringValue _:
                     case LazyCompressedStringValue _:
-                        return s.Equals(right.ToString(), StringComparison.OrdinalIgnoreCase);
+                        return s.Equals(right.ToString(), caseSensitive ? StringComparison.Ordinal : StringComparison.OrdinalIgnoreCase);
                     default:
                         return false;
                 }
@@ -199,7 +212,7 @@ namespace Raven.Server.Documents.Queries.AST
         }
 
 
-        private static int? Compare(object left, object right)
+        private static int? Compare(object left, object right, bool shouldCaseSensitiveStringCompare)
         {
             switch (left)
             {
@@ -230,39 +243,39 @@ namespace Raven.Server.Documents.Queries.AST
                             return null;
                     }
                 case string s:
-                    return Compare(s);
+                    return Compare(s, shouldCaseSensitiveStringCompare);
                 case StringSegment seg:
                     switch (right)
                     {
                         case string rs:
-                            return string.Compare(seg.Value, rs, StringComparison.OrdinalIgnoreCase);
+                            return string.Compare(seg.Value, rs, shouldCaseSensitiveStringCompare ? StringComparison.Ordinal : StringComparison.OrdinalIgnoreCase);
                         case StringSegment rseg:
-                            return string.Compare(rseg.Value, seg.Value, StringComparison.OrdinalIgnoreCase);
+                            return string.Compare(rseg.Value, seg.Value, shouldCaseSensitiveStringCompare ? StringComparison.Ordinal : StringComparison.OrdinalIgnoreCase);
                         case LazyStringValue _:
                         case LazyCompressedStringValue _:
-                            return string.Compare(seg.Value, right.ToString(), StringComparison.OrdinalIgnoreCase);
+                            return string.Compare(seg.Value, right.ToString(), shouldCaseSensitiveStringCompare ? StringComparison.Ordinal : StringComparison.OrdinalIgnoreCase);
                         default:
                             return null;
                     }
                 case LazyStringValue lsv:
-                    return Compare(lsv.ToString());
+                    return Compare(lsv.ToString(), shouldCaseSensitiveStringCompare);
                 case LazyCompressedStringValue lcsv:
-                    return Compare(lcsv.ToString());
+                    return Compare(lcsv.ToString(), shouldCaseSensitiveStringCompare);
                 default:
                     return null;
             }
 
-            int? Compare(string s)
+            int? Compare(string s, bool caseSensitive)
             {
                 switch (right)
                 {
                     case string rs:
-                        return string.Compare(s, rs, StringComparison.OrdinalIgnoreCase);
+                        return string.Compare(s, rs, caseSensitive ? StringComparison.Ordinal : StringComparison.OrdinalIgnoreCase);
                     case StringSegment rseg:
-                        return string.Compare(s, rseg.Value, StringComparison.OrdinalIgnoreCase);
+                        return string.Compare(s, rseg.Value, caseSensitive ? StringComparison.Ordinal : StringComparison.OrdinalIgnoreCase);
                     case LazyStringValue _:
                     case LazyCompressedStringValue _:
-                        return string.Compare(s, right.ToString(), StringComparison.OrdinalIgnoreCase);
+                        return string.Compare(s, right.ToString(), caseSensitive ? StringComparison.Ordinal : StringComparison.OrdinalIgnoreCase);
                     default:
                         return null;
                 }
