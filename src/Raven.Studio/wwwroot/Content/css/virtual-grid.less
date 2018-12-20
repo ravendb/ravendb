@@ -42,62 +42,72 @@
             flex-grow: 1;
         }
     }
-    
+
     .sortable {
         position: relative;
         cursor: pointer;
-        
+        display: flex;
+        align-items: center;
+
+        strong {
+            flex-grow: 1;
+            order: 1;
+            flex-shrink: 1;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+        }
+
         .sortable-controls {
-            position: absolute;
-            right: 0;
-            top: 0;
-            line-height: 15px;
-            
-            &:before {
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            order: 10;
+            flex-shrink: 0;
+
+            &:before, &::after {
+                font-family: 'icomoon' !important;
                 opacity: 0.2;
-                content: 'A'; //TODO: use icons!
-                position: absolute;
-                right: 3px;
-                top: 0;
-                font-size: 9px;
+                font-size: 10px;
+                line-height: 8px;
             }
 
+            &:before {
+                content: '\e91f';
+            }
             //TODO: add support for .condensed class
-
             &:after {
-                opacity: 0.2;
-                content: 'D'; //TODO: use icons!
-                position: absolute;
-                right: 3px;
-                top: 10px;
-                font-size: 9px;
+                content: '\e918';
             }
         }
-        
+
         &:hover {
             .sortable-controls {
                 &:before {
-                    opacity: 0.8;
+                    opacity: 0.5;
                 }
+
                 &:after {
-                    opacity: 0.8;
-                }       
+                    opacity: 0.5;
+                }
             }
         }
-        
+
         &.asc, &.desc {
-            background-color: @gray-dark; 
         }
-        
+
         &.asc {
             .sortable-controls:before {
                 opacity: 1;
+                color: @brand-info;
             }
         }
-        
+
         &.desc {
             .sortable-controls:after {
                 opacity: 1;
+                color: @brand-info;
             }
         }
     }
@@ -127,7 +137,7 @@
     @row-bg: @gray-base;
     @row-bg-selection-preview: @gray-darker;
     @row-bg-selected: @gray-dark;
-    @row-bg-sorted: lighten(@gray-base, 6%); 
+    @row-bg-sorted: lighten(@gray-base, 6%);
 
     .virtual-row {
         position: absolute;
@@ -221,55 +231,48 @@
             }
         }
     }
-    
-    .virtual-row {
-        .cell.sorted {
-            background-color: @row-bg-sorted;
-        }
-        
-        &:hover {
-            .sorted {
-                background-color: lighten(@row-bg-sorted, 5%);    
-            }
-        }
 
-        &.even {
-            .sorted {
-                background-color: lighten(@row-bg-sorted, 2%);    
-            }
 
-            &:hover {
-                .sorted {
-                    background-color: lighten(@row-bg-sorted, 6%);    
-                }
-            }
+    .cell.sorted, .column.asc, .column.desc {
+        position: relative;
+
+        &::after {
+            content: '';
+            position: absolute;
+            background-color: fadeout(@brand-info,90%);
+            width: 100%;
+            height: 100%;
+            left: 0;
+            top: 0;
+            pointer-events: none;
         }
     }
+
 
     .text-cell {
         text-overflow: ellipsis;
         overflow: hidden;
-        
+
         &.flags-cell {
             i {
                 opacity: 0.2;
                 font-size: 100%;
             }
-            
+
             &.attachments {
                 i[class=icon-attachment] {
                     opacity: 1;
                     color: @color-attachments;
                 }
             }
-            
+
             &.revisions {
                 i[class=icon-revisions] {
                     opacity: 1;
                     color: @color-revisions;
                 }
             }
-            
+
             &.counters {
                 i[class=icon-new-counter] {
                     opacity: 1;
@@ -278,8 +281,8 @@
             }
         }
     }
-    
-    
+
+
 
     .eval-error {
         color: @brand-danger;
@@ -296,17 +299,17 @@
         overflow-x: auto;
         background-color: @gray-base;
     }
-    
+
     &.condensed {
         .column {
             line-height: 25px;
         }
-        
+
         .cell {
             font-size: 11px;
             line-height: 25px;
         }
-        
+
         .column-container {
             .column {
                 line-height: 25px;
@@ -341,8 +344,8 @@
 
         .column {
             position: relative;
-            overflow:hidden;
-            text-overflow:ellipsis;
+            overflow: hidden;
+            text-overflow: ellipsis;
 
             + .column {
                 border-left: 1px solid @gray-dark;
@@ -386,4 +389,3 @@
     animation: none;
     display: none;
 }
-
