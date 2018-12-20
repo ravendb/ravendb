@@ -68,7 +68,7 @@ namespace Voron.Platform.Win32
                     {
                         Win32NativeFileMethods.SetFileLength(_handle, journalSize);
                     }
-                    catch (Exception ex)
+                    catch (Exception)
                     {
                         try
                         {
@@ -80,8 +80,10 @@ namespace Voron.Platform.Win32
                         {
                             // there's nothing we can do about it
                         }
-                        throw new IOException("When SetFileLength file " + filename + " to " + journalSize, ex);
+
+                        throw;
                     }
+
                     length = journalSize;
                 }
 

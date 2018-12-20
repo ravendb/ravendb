@@ -445,7 +445,17 @@ namespace Voron.Impl.Scratch
                 txIdAllowingToReleaseOldScratches = Math.Max(txIdAllowingToReleaseOldScratches,
                     scratchBufferItem.Value.File.TxIdAfterWhichLatestFreePagesBecomeAvailable);
             }
-            
+
+            ByteStringContext byteStringContext;
+            try
+            {
+                byteStringContext = new ByteStringContext(SharedMultipleUseFlag.None);
+            }
+            catch (Exception e) when (e is OutOfMemoryException || e is EarlyOutOfMemoryException)
+            {
+                return;
+            }
+
             while (_env.CurrentReadTransactionId <= txIdAllowingToReleaseOldScratches)
             {
                 // we've just flushed and had no more writes after that, let us bump id of next read transactions to ensure
@@ -454,7 +464,7 @@ namespace Voron.Impl.Scratch
                 try
                 {
                     using (var tx = _env.NewLowLevelTransaction(new TransactionPersistentContext(),
-                        TransactionFlags.ReadWrite, timeout: TimeSpan.FromMilliseconds(500)))
+                        TransactionFlags.ReadWrite, timeout: TimeSpan.FromMilliseconds(500), context: byteStringContext))
                     {
                         tx.ModifyPage(0);
                         tx.Commit();
@@ -474,7 +484,7 @@ namespace Voron.Impl.Scratch
             // and only methods that access this are used within write transaction
             try
             {
-                using (_env.WriteTransaction())
+                using (_env.WriteTransaction(context: byteStringContext))
                 {
                     RemoveInactiveScratches(_current);
 

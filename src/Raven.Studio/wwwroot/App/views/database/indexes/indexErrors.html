@@ -2,11 +2,15 @@
     <div class="flex-header">
         <div class="flex-horizontal clearfix">
             <div class="input-group">
-                <input type="text" accesskey="/" class="form-control" placeholder="Filter" title="Filter index errors (Alt+/)" data-bind="textInput: searchText" />
+                <input type="text" accesskey="/" class="form-control" placeholder="Filter errors" title="Filter index errors (Alt+/)" data-bind="textInput: searchText" />
             </div>
             <div class="btn-group">
                 <select id="visibleIndexesSelector" size="5" multiple="multiple"
-                        data-bind="options: allErroredIndexNames, selectedOptions: selectedIndexNames, optionsText: 'indexName', optionsValue: 'indexName'" ></select>
+                        data-bind="options: allErroredIndexNames, selectedOptions: selectedIndexNames, optionsText: 'indexName', optionsValue: 'indexName'"></select>
+            </div>
+            <div class="btn-group">
+                <select id="visibleActionsSelector" size="5" multiple="multiple"
+                    data-bind="options: allErroredActionNames, selectedOptions: selectedActionNames, optionsText: 'actionName', optionsValue: 'actionName'"></select>
             </div>
         </div>
     </div>

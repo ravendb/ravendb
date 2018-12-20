@@ -303,14 +303,14 @@ namespace Voron
 
                 var metadataTree = writeTx.ReadTree(Constants.MetadataTreeNameSlice);
                 if (metadataTree == null)
-                    VoronUnrecoverableErrorException.Raise(this,
+                    VoronUnrecoverableErrorException.Raise(tx,
                         "Could not find metadata tree in database, possible mismatch / corruption?");
 
                 Debug.Assert(metadataTree != null);
                 // ReSharper disable once PossibleNullReferenceException
                 var dbId = metadataTree.Read("db-id");
                 if (dbId == null)
-                    VoronUnrecoverableErrorException.Raise(this,
+                    VoronUnrecoverableErrorException.Raise(tx,
                         "Could not find db id in metadata tree, possible mismatch / corruption?");
 
                 var buffer = new byte[16];
@@ -318,7 +318,7 @@ namespace Voron
                 // ReSharper disable once PossibleNullReferenceException
                 var dbIdBytes = dbId.Reader.Read(buffer, 0, 16);
                 if (dbIdBytes != 16)
-                    VoronUnrecoverableErrorException.Raise(this,
+                    VoronUnrecoverableErrorException.Raise(tx,
                         "The db id value in metadata tree wasn't 16 bytes in size, possible mismatch / corruption?");
 
                 var databaseGuidId = _options.GenerateNewDatabaseId == false ? new Guid(buffer) : Guid.NewGuid();
@@ -395,7 +395,7 @@ namespace Voron
 
                     var metadataTree = writeTx.ReadTree(Constants.MetadataTreeNameSlice);
                     //schemaVersionVal++;
-                    
+
                     metadataTree.Add("schema-version", EndianBitConverter.Little.GetBytes(schemaVersionVal));
                     writeTx.Commit();
                 }
@@ -669,7 +669,7 @@ namespace Voron
                     };
 
                     if (flags == TransactionFlags.ReadWrite)
-                        tx.CurrentTransactionHolder = _currentWriteTransactionHolder; 
+                        tx.CurrentTransactionHolder = _currentWriteTransactionHolder;
 
                     ActiveTransactions.Add(tx);
                 }
@@ -709,7 +709,7 @@ namespace Voron
         private void ThrowOnWriteTransactionOpenedByTheSameThread()
         {
             var currentWriteTransactionHolder = _currentWriteTransactionHolder;
-            if (currentWriteTransactionHolder != null && 
+            if (currentWriteTransactionHolder != null &&
                 currentWriteTransactionHolder == NativeMemory.CurrentThreadStats)
             {
                 throw new InvalidOperationException($"A write transaction is already opened by thread name: " +
@@ -750,7 +750,7 @@ namespace Voron
                 throw new InvalidOperationException("A write transaction is already opened by this thread");
             }
 
-            
+
             var message = $"Waited for {wait} for transaction write lock, but could not get it";
             if (copy != null)
                 message += $", the tx is currently owned by thread {copy.Id} - {copy.Name}, OS thread id: {copy.UnmanagedThreadId}";
@@ -1245,16 +1245,14 @@ namespace Voron
             }
         }
 
-        public void Cleanup(bool deleteRecyclableJournals = false)
+        public void Cleanup(bool tryCleanupRecycledJournals = false)
         {
             Journal.TryReduceSizeOfCompressionBufferIfNeeded();
             ScratchBufferPool.Cleanup();
             DecompressionBuffers.Cleanup();
 
-            if (deleteRecyclableJournals && Options is StorageEnvironmentOptions.DirectoryStorageEnvironmentOptions dirOptions)
-            {
-                dirOptions.DeleteRecyclableJournals();
-            }
+            if (tryCleanupRecycledJournals)
+                Options.TryCleanupRecycledJournals();
         }
 
         public override string ToString()
