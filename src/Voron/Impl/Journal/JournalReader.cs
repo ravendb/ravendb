@@ -155,6 +155,11 @@ namespace Voron.Impl.Journal
 
                 _modifiedPages.Add(pageNumber);
 
+                for (var j = 1; j < numberOfPagesOnDestination; j++)
+                {
+                    _modifiedPages.Remove(pageNumber + j);
+                }
+
                 _dataPager.UnprotectPageRange(pagePtr, (ulong)pageInfoPtr[i].Size);
  
                 if (pageInfoPtr[i].DiffSize == 0)
