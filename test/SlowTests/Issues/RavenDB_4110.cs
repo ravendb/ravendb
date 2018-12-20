@@ -56,7 +56,7 @@ namespace SlowTests.Issues
 
                 WaitForIndexing(store);
 
-                var e= Assert.Throws<CommandExecutionException>(() => index.Execute(store));
+                var e= Assert.Throws<RavenException>(() => index.Execute(store));
                 Assert.Contains("IndexAlreadyExistException", e.Message);
             }
         }
@@ -85,7 +85,7 @@ namespace SlowTests.Issues
 
                 WaitForIndexing(store);
 
-                var c = await Assert.ThrowsAsync<CommandExecutionException>(() => index.ExecuteAsync(store));
+                var c = await Assert.ThrowsAsync<RavenException>(() => index.ExecuteAsync(store));
                 Assert.Contains("IndexAlreadyExistException", c.Message);
             }
         }
