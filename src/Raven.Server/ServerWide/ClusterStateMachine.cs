@@ -17,6 +17,7 @@ using Raven.Client.Documents.Operations.Configuration;
 using Raven.Client.Documents.Session;
 using Raven.Client.Exceptions.Cluster;
 using Raven.Client.Exceptions.Database;
+using Raven.Client.Exceptions.Documents.Subscriptions;
 using Raven.Client.Exceptions.Security;
 using Raven.Client.ServerWide;
 using Raven.Client.ServerWide.Commands;
@@ -119,7 +120,7 @@ namespace Raven.Server.ServerWide
         {
             if (cmd.TryGet("Type", out string type) == false)
             {
-                NotifyLeaderAboutError(index, leader, new CommandExecutionException("Cannot execute command, wrong format"));
+                NotifyLeaderAboutError(index, leader, new RachisApplyException("Cannot execute command, wrong format"));
                 return;
             }
 
@@ -293,7 +294,6 @@ namespace Raven.Server.ServerWide
                 // IMPORTANT
                 // Other exceptions MUST be consistent across the cluster (meaning: if it occured on one node it must occur on the rest also).
                 // the exceptions here are machine specific and will cause a jam in the state machine until the exception will be resolved.
-
                 if (_parent.Log.IsInfoEnabled)
                     _parent.Log.Info($"Unrecoverable exception on database '{DatabaseName}' at command type '{type}', execution will be retried later.", e);
 
@@ -318,6 +318,7 @@ namespace Raven.Server.ServerWide
         public static bool ExpectedException(Exception e)
         {
             return e is RachisException ||
+                   e is SubscriptionException ||
                    e is DatabaseDoesNotExistException;
         }
 

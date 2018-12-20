@@ -93,7 +93,7 @@ namespace Raven.Server.Rachis
 
         public static void Throw(string msg)
         {
-            throw new RachisConcurrencyException(msg);
+            throw new RachisApplyException(msg);
         }
     }
 }

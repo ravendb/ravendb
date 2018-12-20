@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Threading.Tasks;
 using Raven.Client.Documents.Operations.ETL;
+using Raven.Client.Exceptions;
 using Raven.Client.Exceptions.Cluster;
 using Sparrow.Collections;
 using Sparrow.Json.Parsing;
@@ -116,7 +117,7 @@ namespace SlowTests.Server.Documents.ETL
                     });
 
 
-                    Assert.Throws<CommandExecutionException>(() =>
+                    Assert.Throws<RavenException>(() =>
                     {
                         AddEtl(store, new RavenEtlConfiguration
                         {
