@@ -5,11 +5,10 @@ using System.Runtime.InteropServices;
 using FastTests;
 using Raven.Server.Utils.Cpu;
 using Sparrow.Json;
-using Sparrow.Logging;
 using Xunit;
 using Assert = Xunit.Assert;
 
-namespace SlowTests.Issues
+namespace SlowTests.ExtensionPoints
 {
     public class CpuUsageExtensionPointTests : RavenTestBase
     {

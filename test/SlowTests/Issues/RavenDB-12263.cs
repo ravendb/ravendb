@@ -1,7 +1,5 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
+﻿using System.Linq;
+using FastTests;
 using FastTests.Graph;
 using Newtonsoft.Json.Linq;
 using Raven.Client.Documents;
@@ -9,7 +7,7 @@ using Xunit;
 
 // ReSharper disable InconsistentNaming
 
-namespace FastTests.Issues
+namespace SlowTests.Issues
 {
     public class RavenDB_12263 : RavenTestBase
     {

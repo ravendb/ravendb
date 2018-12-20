@@ -1,9 +1,10 @@
 ﻿using System.Linq;
+using FastTests;
 using Newtonsoft.Json.Linq;
 using Raven.Client.Exceptions;
 using Xunit;
 
-namespace FastTests.Issues
+namespace SlowTests.Issues
 {
     public class RavenDB_12459 : RavenTestBase
     {

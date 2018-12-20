@@ -21,7 +21,7 @@ namespace Tryouts
         {
             using (var test = new BasicGraphQueries())
             {
-                test.CanProjectSameDocumentTwice();
+                //test.CanProjectSameDocumentTwice();
             }
             return;
             /*

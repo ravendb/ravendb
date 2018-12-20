@@ -1,10 +1,12 @@
 ﻿using System.Collections.Generic;
 using System.Linq;
+using FastTests;
+using FastTests.Graph;
 using Newtonsoft.Json.Linq;
 using Raven.Client.Exceptions;
 using Xunit;
 
-namespace FastTests.Graph
+namespace SlowTests.Graph
 {
     public class IntersectionTests : RavenTestBase
     {

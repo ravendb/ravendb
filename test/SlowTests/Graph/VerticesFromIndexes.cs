@@ -1,11 +1,12 @@
 ﻿using System;
-using Newtonsoft.Json.Linq;
-using Xunit;
 using System.Linq;
+using FastTests;
 using FastTests.Server.Basic.Entities;
+using Newtonsoft.Json.Linq;
 using Raven.Client.Exceptions;
+using Xunit;
 
-namespace FastTests.Graph
+namespace SlowTests.Graph
 {
     public class VerticesFromIndexes : RavenTestBase
     {

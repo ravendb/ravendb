@@ -1,8 +1,9 @@
 ﻿using System.Linq;
+using FastTests;
 using Newtonsoft.Json.Linq;
 using Xunit;
 
-namespace FastTests.Issues
+namespace SlowTests.Issues
 {
     public class RavenDB_12187 : RavenTestBase
     {
