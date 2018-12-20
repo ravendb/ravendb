@@ -114,15 +114,17 @@ namespace Voron.Platform.Win32
         {
             if (SetFilePointerEx(fileHandle, length, IntPtr.Zero, Win32NativeFileMoveMethod.Begin) == false)
             {
-                var filePath = GetFilePath();
                 var exception = new Win32Exception(Marshal.GetLastWin32Error());
+                var filePath = GetFilePath();
+                
                 throw new IOException($"Could not move the pointer of file {filePath}", exception);
             }
 
             if (SetEndOfFile(fileHandle) == false)
             {
-                var filePath = GetFilePath();
                 var lastError = Marshal.GetLastWin32Error();
+                var filePath = GetFilePath();
+
                 if (lastError == (int) Win32NativeFileErrors.ERROR_DISK_FULL)
                 {
                     var driveInfo = DiskSpaceChecker.GetDiskSpaceInfo(filePath);
