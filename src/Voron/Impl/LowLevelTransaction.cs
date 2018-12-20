@@ -998,8 +998,8 @@ namespace Voron.Impl
             if (_requestedCommitStats != null)
             {
                 _requestedCommitStats.WriteToJournalDuration = sp.Elapsed;
-                _requestedCommitStats.NumberOfModifiedPages = result.NumberOfUncompressedPages;
-                _requestedCommitStats.NumberOf4KbsWrittenToDisk = result.NumberOf4Kbs;
+                _requestedCommitStats.NumberOfModifiedPages = numberOfWrittenPages.NumberOfUncompressedPages;
+                _requestedCommitStats.NumberOf4KbsWrittenToDisk = numberOfWrittenPages.NumberOf4Kbs;
                 _requestedCommitStats.JournalFilePath = journalFilePath;
             }
         }
