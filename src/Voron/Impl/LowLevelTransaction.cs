@@ -171,7 +171,7 @@ namespace Voron.Impl
             }
 
             var pagers = new HashSet<AbstractPager>();
-            
+
             foreach (var scratchAndDataPagerState in previous._pagerStates)
             {
                 // in order to avoid "dragging" pager state ref on non active scratch - we will not copy disposed scratches from previous async tx. RavenDB-6766
@@ -413,7 +413,7 @@ namespace Voron.Impl
             Memory.Copy(newPage.Pointer, currentPage.Pointer, pageSize);
 
             ZeroPageHeaderChecksumToEnsureNoUseOfCryptoReservedSpace(newPage.Pointer);
-            
+
             TrackWritablePage(newPage);
 
             _pageLocator.SetWritable(num, newPage);
@@ -430,8 +430,8 @@ namespace Voron.Impl
                 // that check for the full page hash, and it isn't relevant for 
                 // crypto anyway
                 return;
-            } 
-            
+            }
+
             // in order to ensure that the last 32 bytes of the page are always reserved
             // for crypto, we'll zero them after copying them from the pager. If using 
             // encrypted, we'll always re-write it anyway, and this ensures that we'll
@@ -697,7 +697,7 @@ namespace Voron.Impl
             if (lowerNumberOfPages > 1)
             {
                 // if we aren't freeing pages of the overflow from the beginning we need to manually change the range
-                _dirtyOverflowPages[pageNumber + 1] = lowerNumberOfPages - 1; 
+                _dirtyOverflowPages[pageNumber + 1] = lowerNumberOfPages - 1;
             }
 
             // need to set the proper number of pages in the scratch page
@@ -974,7 +974,7 @@ namespace Voron.Impl
             // In the case of non-lazy transactions, we must flush the data from older lazy transactions
             // to ensure the sequentiality of the data.
             Stopwatch sp = null;
-            if(_requestedCommitStats != null)
+            if (_requestedCommitStats != null)
             {
                 sp = Stopwatch.StartNew();
             }
@@ -985,9 +985,9 @@ namespace Voron.Impl
             {
                 numberOfWrittenPages = _journal.WriteToJournal(this, out journalFilePath);
                 FlushedToJournal = true;
-				_updatePageTranslationTable = numberOfWrittenPages.UpdatePageTranslationTable;           
-				if (SimulateThrowingOnCommitStage2)
-                	ThrowSimulateErrorOnCommitStage2();
+                _updatePageTranslationTable = numberOfWrittenPages.UpdatePageTranslationTable;
+                if (SimulateThrowingOnCommitStage2)
+                    ThrowSimulateErrorOnCommitStage2();
             }
             catch
             {

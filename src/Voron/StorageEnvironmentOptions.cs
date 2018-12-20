@@ -50,9 +50,9 @@ namespace Voron
 
         public void SetLastReusedJournalCountOnSync(long journalNum)
         {
-            _lastReusedJournalCountOnSync = journalNum; 
+            _lastReusedJournalCountOnSync = journalNum;
         }
-        
+
         public abstract override string ToString();
 
         private bool _forceUsing32BitsPager;
@@ -1169,7 +1169,7 @@ namespace Voron
                 lock (_journalsForReuse)
                 {
                     reusedCount = _journalsForReuse.Count;
-                    
+
                     if (reusedCount > _lastReusedJournalCountOnSync)
                     {
                         if (File.Exists(newName))
@@ -1221,10 +1221,23 @@ namespace Voron
 
             try
             {
-                foreach (var journalForReuse in _journalsForReuse.Values)
+                foreach (var recyclableJournal in _journalsForReuse)
                 {
-                    TryDelete(journalForReuse);
+                    try
+                    {
+                        var fileInfo = new FileInfo(recyclableJournal.Value);
+
+                        if (fileInfo.Exists)
+                            TryDelete(fileInfo.FullName);
+                    }
+                    catch (Exception ex)
+                    {
+                        if (_log.IsInfoEnabled)
+                            _log.Info($"Couldn't delete recyclable journal: {recyclableJournal.Value}", ex);
+                    }
                 }
+
+                _journalsForReuse.Clear();
             }
             finally
             {
@@ -1243,5 +1256,5 @@ namespace Voron
         }
     }
 
-    
+
 }
