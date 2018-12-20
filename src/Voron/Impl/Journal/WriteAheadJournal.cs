@@ -1094,6 +1094,7 @@ namespace Voron.Impl.Journal
                     {
                         using (var batchWrites = _waj._dataPager.BatchWriter())
                         {
+                            var tempTx = new TempPagerTransaction(isWriteTransaction:false);
                             foreach (var pagePosition in pagesToWrite.Values)
                             {
                                 var scratchNumber = pagePosition.ScratchNumber;
@@ -1105,6 +1106,19 @@ namespace Voron.Impl.Journal
 
                                     scratchPagerStates.Add(scratchNumber, pagerState);
                                 }
+
+                                if(_waj._env.Options.EncryptionEnabled == false)
+                                {
+                                    var page = (PageHeader*)scratchBufferPool.AcquirePagePointerWithOverflowHandling(tempTx, scratchNumber, pagePosition.ScratchPage);
+                                    var checksum = StorageEnvironment.CalculatePageChecksum((byte*)page, page->PageNumber, out var expectedChecksum);
+                                    if (checksum != expectedChecksum)
+                                    {
+                                        throw new InvalidDataException(
+                                            $"During apply logs to data, tried to copy {scratchNumber} / {pagePosition.ScratchNumber} ({page->PageNumber}) " +
+                                            $"has checksum {checksum} but expected {expectedChecksum}");
+                                    }
+                                }
+
 
                                 var numberOfPages = scratchBufferPool.CopyPage(
                                     batchWrites,
