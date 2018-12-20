@@ -143,14 +143,20 @@ namespace Raven.Server.Documents.Queries
                         fieldsToFetch, 
                         idc);
 
-
+                    HashSet<ulong> alreadySeenProjections = null;
+                    if (q.IsDistinct)
+                    {
+                        alreadySeenProjections = new HashSet<ulong>();
+                    }
                     foreach (var match in qr.Matches)
                     {
                         if (match.Empty)
                             continue;
 
                         var result = resultRetriever.ProjectFromMatch(match, documentsContext);
-
+                        // ReSharper disable once PossibleNullReferenceException
+                        if (q.IsDistinct && alreadySeenProjections.Add(result.DataHash) == false)
+                            continue;
                         final.AddResult(result);
                     }
 

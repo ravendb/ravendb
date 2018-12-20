@@ -266,6 +266,15 @@ match (Employees where id() ='employees/7-A')-[ReportsTo]->(Employees as Boss)
         }
 
         [Fact]
+        public void CanUseDistinctInGraphQueries()
+        {
+            var results = Query<Product>(@"
+match (Orders as o)-[Lines select Product]->(Products)
+select distinct Products");
+            Assert.Equal(77, results.Count);
+        }
+
+        [Fact]
         public void CanWaitForNonStaleResults()
         {
             var results = Query<Product>(@"
