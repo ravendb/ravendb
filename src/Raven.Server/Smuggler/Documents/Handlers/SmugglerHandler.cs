@@ -14,7 +14,6 @@ using System.IO.Compression;
 using System.Linq;
 using System.Net;
 using System.Net.Http;
-using System.Text;
 using System.Threading.Tasks;
 using System.Xml.Linq;
 using Microsoft.AspNetCore.WebUtilities;
@@ -23,7 +22,6 @@ using Raven.Client.Documents.Conventions;
 using Raven.Client.Documents.Operations;
 using Raven.Client.Documents.Smuggler;
 using Raven.Client.Exceptions.Security;
-using Raven.Client.Extensions;
 using Raven.Client.Properties;
 using Raven.Client.Util;
 using Raven.Server.Documents;
@@ -35,6 +33,7 @@ using Raven.Server.ServerWide;
 using Raven.Server.ServerWide.Context;
 using Raven.Server.Smuggler.Documents.Data;
 using Raven.Server.Smuggler.Migration;
+using Raven.Server.Utils;
 using Sparrow.Json;
 using Sparrow.Json.Parsing;
 using Sparrow.Platform;
@@ -461,7 +460,7 @@ namespace Raven.Server.Smuggler.Documents.Handlers
                 }
                 catch (Exception e)
                 {
-                    var killed = KillProcess(process);
+                    var killed = ProcessExtensions.TryKill(process);
                     throw new InvalidOperationException($"Unable to execute Migrator. Process killed: {killed}" + Environment.NewLine +
                                                         "Command was: " + Environment.NewLine +
                                                         (processStartInfo.WorkingDirectory ?? Directory.GetCurrentDirectory()) + "> "
@@ -473,8 +472,8 @@ namespace Raven.Server.Smuggler.Documents.Handlers
                 var isExportCommand = command == "export";
                 if (isExportCommand == false)
                 {
-                    var errorReadTask = ReadOutput(process.StandardError);
-                    var outputReadTask = ReadOutput(process.StandardOutput);
+                    var errorReadTask = ProcessExtensions.ReadOutput(process.StandardError);
+                    var outputReadTask = ProcessExtensions.ReadOutput(process.StandardOutput);
 
                     await Task.WhenAll(new Task[] { errorReadTask, outputReadTask }).ConfigureAwait(false);
 
@@ -526,21 +525,21 @@ namespace Raven.Server.Smuggler.Documents.Handlers
                             }
                             catch (OperationCanceledException)
                             {
-                                KillProcess(process);
+                                ProcessExtensions.TryKill(process);
                                 throw;
                             }
                             catch (ObjectDisposedException)
                             {
-                                KillProcess(process);
+                                ProcessExtensions.TryKill(process);
                                 throw;
                             }
                             catch (Exception e)
                             {
-                                var errorString = await ReadOutput(process.StandardError).ConfigureAwait(false);
+                                var errorString = await ProcessExtensions.ReadOutput(process.StandardError).ConfigureAwait(false);
                                 result.AddError($"Error occurred during migration. Process error: {errorString}, exception: {e}");
                                 onProgress.Invoke(result.Progress);
-                                var killed = KillProcess(process);
-                                throw new InvalidOperationException($"{errorString}, process killed: {killed}");
+                                var killed = ProcessExtensions.TryKill(process);
+                                throw new InvalidOperationException($"{errorString}, process pid: {process.Id} killed: {killed}");
                             }
 
                             return (IOperationResult)result;
@@ -581,47 +580,6 @@ namespace Raven.Server.Smuggler.Documents.Handlers
                 throw new InvalidOperationException($"The file '{migratorFileName}' doesn't exist in path: {migrationConfiguration.MigratorFullPath}");
 
             return migratorFile;
-        }
-
-        private static bool KillProcess(Process process)
-        {
-            try
-            {
-                process?.Kill();
-                return true;
-            }
-            catch
-            {
-                return false;
-            }
-        }
-
-        private static async Task<string> ReadOutput(StreamReader output)
-        {
-            var sb = new StringBuilder();
-
-            Task<string> readLineTask = null;
-            while (true)
-            {
-                if (readLineTask == null)
-                    readLineTask = output.ReadLineAsync();
-
-                var hasResult = await readLineTask.WaitWithTimeout(TimeSpan.FromSeconds(5)).ConfigureAwait(false);
-                if (hasResult == false)
-                    continue;
-
-                var line = readLineTask.Result;
-
-                readLineTask = null;
-
-                if (line != null)
-                    sb.AppendLine(line);
-
-                if (line == null)
-                    break;
-            }
-
-            return sb.ToString();
         }
 
         [RavenAction("/databases/*/smuggler/import", "POST", AuthorizationStatus.ValidUser)]
