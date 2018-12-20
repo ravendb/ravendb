@@ -278,7 +278,7 @@ namespace Voron.Impl.Scratch
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public byte* AcquirePagePointerWithOverflowHandling(LowLevelTransaction tx, long p)
+        public byte* AcquirePagePointerWithOverflowHandling(IPagerLevelTransactionState tx, long p)
         {
             return _scratchPager.AcquirePagePointerWithOverflowHandling(tx, p);
         }
