@@ -27,6 +27,8 @@ namespace Raven.Server.Documents.ETL.Providers.SQL
             Metrics = SqlMetrics;
         }
 
+        public override EtlType EtlType => EtlType.Sql;
+        
         protected override IEnumerator<ToSqlItem> ConvertDocsEnumerator(IEnumerator<Document> docs, string collection)
         {
             return new DocumentsToSqlItems(docs, collection);
@@ -57,8 +59,10 @@ namespace Raven.Server.Documents.ETL.Providers.SQL
             return new SqlDocumentTransformer(Transformation, Database, context, Configuration);
         }
 
-        protected override void LoadInternal(IEnumerable<SqlTableWithRecords> records, JsonOperationContext context)
+        protected override int LoadInternal(IEnumerable<SqlTableWithRecords> records, JsonOperationContext context)
         {
+            var count = 0;
+
             using (var writer = new RelationalDatabaseWriter(this, Database))
             {
                 foreach (var table in records)
@@ -66,10 +70,14 @@ namespace Raven.Server.Documents.ETL.Providers.SQL
                     var stats = writer.Write(table, null, CancellationToken);
 
                     LogStats(stats, table);
+
+                    count += stats.DeletedRecordsCount + stats.InsertedRecordsCount;
                 }
 
                 writer.Commit();
             }
+
+            return count;
         }
 
         private void LogStats(SqlWriteStats stats, SqlTableWithRecords table)

@@ -9,7 +9,7 @@ class genericProgress {
     
     percentage: KnockoutComputed<number>;
     percentageFormatted: KnockoutComputed<string>;
-    completed: KnockoutComputed<boolean>;
+    completed: KnockoutObservable<boolean>;
     formattedTimeLeftToProcess: KnockoutComputed<string>;
     textualProgress: KnockoutComputed<string>;
 
@@ -79,7 +79,7 @@ class genericProgress {
         
         const toProcess = total - processed;
         if (toProcess === 0) {
-            return `${this.numberFormatter(total)}`;
+            return `Processed all items (${this.numberFormatter(total)})`;
         }
 
         const processedFormatted = this.numberFormatter(processed);

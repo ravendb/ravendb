@@ -95,7 +95,7 @@ this.SomeNullableDecimal = null;
 this.SomeNullableInt = null;
 this.SomeNullableDouble = null;
 this.SomeNullableLong = null;
-SomeArray=null;"
+this.SomeArray = null;"
                     }));
 
                     var afterPatchEtag = commands.Head("entities/1");

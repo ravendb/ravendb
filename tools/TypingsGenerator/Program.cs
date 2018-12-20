@@ -43,6 +43,7 @@ using Raven.Server.Documents.ETL;
 using Raven.Server.Documents.ETL.Providers.Raven.Test;
 using Raven.Server.Documents.ETL.Providers.SQL.RelationalWriters;
 using Raven.Server.Documents.ETL.Providers.SQL.Test;
+using Raven.Server.Documents.ETL.Stats;
 using Raven.Server.Documents.Handlers;
 using Raven.Server.Documents.Handlers.Admin;
 using Raven.Server.Documents.Handlers.Debugging;
@@ -330,6 +331,7 @@ namespace TypingsGenerator
             scripter.AddType(typeof(SubscriptionOpeningStrategy));
 
             // ongoing tasks - ravenDB ETL
+            scripter.AddType(typeof(EtlTaskProgress));
             scripter.AddType(typeof(OngoingTaskRavenEtlDetails));
             scripter.AddType(typeof(OngoingTaskRavenEtlListView));
             scripter.AddType(typeof(RavenEtlConfiguration));
@@ -337,6 +339,7 @@ namespace TypingsGenerator
             scripter.AddType(typeof(TestRavenEtlScript));
             scripter.AddType(typeof(RavenEtlTestScriptResult));
             scripter.AddType(typeof(EtlType));
+            scripter.AddType(typeof(EtlTaskPerformanceStats));
 
             // ongoing tasks - SQL ETL
             scripter.AddType(typeof(OngoingTaskSqlEtlDetails));

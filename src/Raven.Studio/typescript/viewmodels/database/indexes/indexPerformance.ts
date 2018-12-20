@@ -240,6 +240,7 @@ class indexPerformance extends viewModelBase {
         trackBackground: undefined as string,
         trackNameBg: undefined as string,
         faulty: undefined as string,
+        itemWithError: undefined as string,
         trackNameFg: undefined as string,
         openedTrackArrow: undefined as string,
         closedTrackArrow: undefined as string,
@@ -480,7 +481,7 @@ class indexPerformance extends viewModelBase {
             
             this.checkBufferUsage();
 
-            const [workData, maxConcurrentIndexes] = this.prepareTimeData();
+            const [workData, maxConcurrentItems] = this.prepareTimeData();
 
             if (!firstTime) {
                 const newBrush = timeRange.map(x => this.xBrushTimeScale(x)) as [number, number];
@@ -491,7 +492,7 @@ class indexPerformance extends viewModelBase {
                 this.scrollToRight();
             }
 
-            this.draw(workData, maxConcurrentIndexes, firstTime);
+            this.draw(workData, maxConcurrentItems, firstTime);
 
             this.maybeUpdateTooltip();
             
@@ -565,10 +566,10 @@ class indexPerformance extends viewModelBase {
         }
     }
 
-    private draw(workData: indexesWorkData[], maxConcurrentIndexes: number, resetFilteredIndexNames: boolean) {
+    private draw(workData: workData[], maxConcurrentItems: number, resetFilteredIndexNames: boolean) {
         this.hasAnyData(this.data.length > 0);
 
-        this.prepareBrushSection(workData, maxConcurrentIndexes);
+        this.prepareBrushSection(workData, maxConcurrentItems);
         this.prepareMainSection(resetFilteredIndexNames);
 
         const canvas = this.canvas.node() as HTMLCanvasElement;
@@ -579,36 +580,36 @@ class indexPerformance extends viewModelBase {
         this.drawMainSection();
     }
 
-    private prepareTimeData(): [indexesWorkData[], number] {
+    private prepareTimeData(): [workData[], number] {
         let timeRanges = this.extractTimeRanges(); 
 
-        let maxConcurrentIndexes: number;
-        let workData: indexesWorkData[];
+        let maxConcurrentItems: number;
+        let workData: workData[];
 
         if (timeRanges.length === 0) {
             // no data - create fake scale
             timeRanges = [[new Date(), new Date()]];
-            maxConcurrentIndexes = 1;
+            maxConcurrentItems = 1;
             workData = [];
         } else {
             const aggregatedRanges = new rangeAggregator(timeRanges);
             workData = aggregatedRanges.aggregate();
-            maxConcurrentIndexes = aggregatedRanges.maxConcurrentIndexes;
+            maxConcurrentItems = aggregatedRanges.maxConcurrentItems;
         }
 
         this.gapFinder = new gapFinder(timeRanges, indexPerformance.minGapSize);
         this.xBrushTimeScale = this.gapFinder.createScale(this.totalWidth, 0);
 
-        return [workData, maxConcurrentIndexes];
+        return [workData, maxConcurrentItems];
     }
 
-    private prepareBrushSection(workData: indexesWorkData[], maxConcurrentIndexes: number) {
+    private prepareBrushSection(workData: workData[], maxConcurrentItems: number) {
         this.brushSection = document.createElement("canvas");
         this.brushSection.width = this.totalWidth + 1;
         this.brushSection.height = indexPerformance.brushSectionHeight;
 
         this.yBrushValueScale = d3.scale.linear()
-            .domain([0, maxConcurrentIndexes])
+            .domain([0, maxConcurrentItems])
             .range([0, indexPerformance.brushSectionIndexesWorkHeight]); 
 
         const context = this.brushSection.getContext("2d");
@@ -632,7 +633,7 @@ class indexPerformance extends viewModelBase {
         
         for (let i = 0; i < workData.length - 1; i++) {
             x1 = x2;
-            y1 = Math.round(this.yBrushValueScale(workData[i].numberOfIndexesWorking)) + 0.5;
+            y1 = Math.round(this.yBrushValueScale(workData[i].numberOfItems)) + 0.5;
             x2 = this.xBrushTimeScale(new Date(workData[i + 1].pointInTime));
             context.moveTo(x1, indexPerformance.brushSectionHeight - y0);
             context.lineTo(x1, indexPerformance.brushSectionHeight - y1);
@@ -960,7 +961,7 @@ class indexPerformance extends viewModelBase {
                     
                     const x1 = xScale(startDate);
                     
-                    this.drawStripes(0, context, [perf.Details], x1, stripesYStart, yOffset, extentFunc, perfStat.Name);
+                    this.drawStripes(0, perf, context, [perf.Details], x1, stripesYStart, yOffset, extentFunc, perfStat.Name);
 
                     if (!perf.Completed) {
                         this.findInProgressAction(context, perf, extentFunc, x1, stripesYStart, yOffset);
@@ -1005,8 +1006,9 @@ class indexPerformance extends viewModelBase {
         throw new Error("Unable to find color for: " + operationName);
     }
 
-    private drawStripes(level: number, context: CanvasRenderingContext2D, operations: Array<Raven.Client.Documents.Indexes.IndexingPerformanceOperation>, xStart: number, yStart: number,
-        yOffset: number, extentFunc: (duration: number) => number, indexName?: string) {
+    private drawStripes(level: number, rootPerf:Raven.Client.Documents.Indexes.IndexingPerformanceStats, 
+                        context: CanvasRenderingContext2D, operations: Array<Raven.Client.Documents.Indexes.IndexingPerformanceOperation>, 
+                        xStart: number, yStart: number, yOffset: number, extentFunc: (duration: number) => number, indexName?: string) {
 
         let currentX = xStart;
         const length = operations.length;
@@ -1049,8 +1051,20 @@ class indexPerformance extends viewModelBase {
             }
             
             if ((level > 0 || dx > 1) && op.Operations.length > 0) {
-                this.drawStripes(level + 1, context, op.Operations, currentX, yStart + yOffset, yOffset, extentFunc);
+                this.drawStripes(level + 1, rootPerf, context, op.Operations, currentX, yStart + yOffset, yOffset, extentFunc);
             }
+            
+            // check if item has errors - draw error marks *after* inner stripes to overlap
+            if (level === 1) {
+                if (op.Name === "Map" && rootPerf.FailedCount > 0) {
+                    context.fillStyle = this.colors.itemWithError;
+                    graphHelper.drawErrorMark(context, currentX, yStart, dx);
+                } else if (op.Name === "Reduce" && op.ReduceDetails && op.ReduceDetails.ReduceErrors > 0) {
+                    context.fillStyle = this.colors.itemWithError;
+                    graphHelper.drawErrorMark(context, currentX, yStart, dx);
+                }
+            }
+            
             currentX += dx;
         }
     }
@@ -1286,7 +1300,7 @@ class indexPerformance extends viewModelBase {
         const reader = new FileReader();
         reader.onload = function() {
 // ReSharper disable once SuspiciousThisUsage
-            self.dataImported(this.result);
+            self.dataImported(this.result as string);
         };
         reader.onerror = function(error: any) {
             alert(error);
@@ -1314,8 +1328,8 @@ class indexPerformance extends viewModelBase {
                 this.data = importedData;
                 this.fillCache();
                 this.resetGraphData();
-                const [workData, maxConcurrentIndexes] = this.prepareTimeData();
-                this.draw(workData, maxConcurrentIndexes, true);
+                const [workData, maxConcurrentItems] = this.prepareTimeData();
+                this.draw(workData, maxConcurrentItems, true);
                 this.isImport(true);
             }         
         }

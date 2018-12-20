@@ -63,7 +63,7 @@ namespace SlowTests.Issues
                                     var newDocId = 'newDocId';
                                     put(newDocId, doc);
                                     var countByDay = doc.CountByDay;
-                                    for(i in countByDay) {
+                                    for(var i in countByDay) {
                                         incrementCounter(newDocId, i, countByDay[i])
                                     }
                                   }"

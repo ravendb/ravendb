@@ -42,8 +42,54 @@ namespace Raven.Server.Documents.ETL.Stats
                 Completed = completed ? StartTime.Add(Scope.Duration) : (DateTime?)null,
                 Details = Scope.ToPerformanceOperation("ETL"),
                 LastLoadedEtag = Stats.LastLoadedEtag,
-                LastTransformedEtag = Stats.LastTransformedEtags,
+                NumberOfLoadedItems = Stats.NumberOfLoadedItems,
+                LastExtractedEtags = Stats.LastExtractedEtags,
+                LastTransformedEtags = Stats.LastTransformedEtags,
+                LastFilteredOutEtags = Stats.LastFilteredOutEtags,
                 NumberOfExtractedItems = Stats.NumberOfExtractedItems,
+                NumberOfTransformedItems = Stats.NumberOfTransformedItems,
+                NumberOfTransformedTombstones = Stats.NumberOfTransformedTombstones,
+                TransformationErrorCount = Scope.TransformationErrorCount,
+                SuccessfullyLoaded = Stats.SuccessfullyLoaded,
+                BatchCompleteReason = Stats.BatchCompleteReason,
+                CurrentlyAllocated = Stats.CurrentlyAllocated,
+            };
+        }
+
+        public EtlPerformanceStats ToPerformanceLiveStatsWithDetails()
+        {
+            if (_performanceStats != null)
+                return _performanceStats;
+
+            if (Scope == null || Stats == null)
+                return null;
+
+            if (Completed)
+                return ToPerformanceStats();
+
+            return CreatePerformanceStats(completed: false);
+        }
+
+        public EtlPerformanceStats ToPerformanceLiveStats()
+        {
+            if (_performanceStats != null)
+                return _performanceStats;
+
+            if (Scope == null || Stats == null)
+                return null;
+
+            return new EtlPerformanceStats(Scope.Duration)
+            {
+                Started = StartTime,
+                Completed = Completed ? StartTime.Add(Scope.Duration) : (DateTime?)null,
+                LastLoadedEtag = Stats.LastLoadedEtag,
+                LastTransformedEtags = Stats.LastTransformedEtags,
+                LastFilteredOutEtags = Stats.LastFilteredOutEtags,
+                NumberOfExtractedItems = Stats.NumberOfExtractedItems,
+                NumberOfTransformedItems = Stats.NumberOfTransformedItems,
+                NumberOfTransformedTombstones = Stats.NumberOfTransformedTombstones,
+                TransformationErrorCount = Scope.TransformationErrorCount,
+                SuccessfullyLoaded = Stats.SuccessfullyLoaded,
                 BatchCompleteReason = Stats.BatchCompleteReason
             };
         }

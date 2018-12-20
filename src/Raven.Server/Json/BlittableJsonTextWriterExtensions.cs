@@ -12,6 +12,7 @@ using Raven.Client.Documents.Queries.Suggestions;
 using Raven.Client.Documents.Queries.Timings;
 using Raven.Client.Extensions;
 using Raven.Server.Documents;
+using Raven.Server.Documents.ETL.Stats;
 using Raven.Server.Documents.Includes;
 using Raven.Server.Documents.Indexes.Debugging;
 using Raven.Server.Documents.Queries;
@@ -29,7 +30,7 @@ namespace Raven.Server.Json
 {
     internal static class BlittableJsonTextWriterExtensions
     {
-        public static void WritePerformanceStats(this BlittableJsonTextWriter writer, JsonOperationContext context, IEnumerable<IndexPerformanceStats> stats)
+        public static void WritePerformanceStats(this AbstractBlittableJsonTextWriter writer, JsonOperationContext context, IEnumerable<IndexPerformanceStats> stats)
         {
             writer.WriteStartObject();
             writer.WriteArray(context, "Results", stats, (w, c, stat) =>
@@ -41,6 +42,117 @@ namespace Raven.Server.Json
                 w.WriteComma();
 
                 w.WriteArray(c, nameof(stat.Performance), stat.Performance, (wp, cp, performance) => { wp.WriteIndexingPerformanceStats(context, performance); });
+
+                w.WriteEndObject();
+            });
+            writer.WriteEndObject();
+        }
+
+        public static void WriteEtlTaskPerformanceStats(this AbstractBlittableJsonTextWriter writer, JsonOperationContext context, IEnumerable<EtlTaskPerformanceStats> stats)
+        {
+            writer.WriteStartObject();
+            writer.WriteArray(context, "Results", stats, (w, c, taskStats) =>
+            {
+                w.WriteStartObject();
+                
+                w.WritePropertyName(nameof(taskStats.TaskId));
+                w.WriteInteger(taskStats.TaskId);
+                w.WriteComma();
+
+                w.WritePropertyName(nameof(taskStats.TaskName));
+                w.WriteString(taskStats.TaskName);
+                w.WriteComma();
+                
+                w.WritePropertyName(nameof(taskStats.EtlType));
+                w.WriteString(taskStats.EtlType.ToString());
+                w.WriteComma();
+
+                w.WriteArray(c, nameof(taskStats.Stats), taskStats.Stats, (wp, cp, scriptStats) =>
+                {
+                    wp.WriteStartObject();
+
+                    wp.WritePropertyName(nameof(scriptStats.TransformationName));
+                    wp.WriteString(scriptStats.TransformationName);
+                    wp.WriteComma();
+
+                    wp.WriteArray(cp, nameof(scriptStats.Performance), scriptStats.Performance, (wpp, cpp, perfStats) => wpp.WriteEtlPerformanceStats(cpp, perfStats));
+
+                    wp.WriteEndObject();
+                });
+
+                w.WriteEndObject();
+            });
+            writer.WriteEndObject();
+        }
+
+        public static void WriteEtlTaskProgress(this AbstractBlittableJsonTextWriter writer, JsonOperationContext context, IEnumerable<EtlTaskProgress> progress)
+        {
+            writer.WriteStartObject();
+            writer.WriteArray(context, "Results", progress, (w, c, taskStats) =>
+            {
+                w.WriteStartObject();
+
+                w.WritePropertyName(nameof(taskStats.TaskName));
+                w.WriteString(taskStats.TaskName);
+                w.WriteComma();
+
+                w.WritePropertyName(nameof(taskStats.EtlType));
+                w.WriteString(taskStats.EtlType.ToString());
+                w.WriteComma();
+
+                w.WriteArray(c, nameof(taskStats.ProcessesProgress), taskStats.ProcessesProgress, (wp, cp, processProgress) =>
+                {
+                    wp.WriteStartObject();
+
+                    wp.WritePropertyName(nameof(processProgress.TransformationName));
+                    wp.WriteString(processProgress.TransformationName);
+                    wp.WriteComma();
+
+                    wp.WritePropertyName(nameof(processProgress.Completed));
+                    wp.WriteBool(processProgress.Completed);
+                    wp.WriteComma();
+
+                    wp.WritePropertyName(nameof(processProgress.Disabled));
+                    wp.WriteBool(processProgress.Disabled);
+                    wp.WriteComma();
+
+                    wp.WritePropertyName(nameof(processProgress.AverageProcessedPerSecond));
+                    wp.WriteDouble(processProgress.AverageProcessedPerSecond);
+                    wp.WriteComma();
+
+                    wp.WritePropertyName(nameof(processProgress.NumberOfDocumentsToProcess));
+                    wp.WriteInteger(processProgress.NumberOfDocumentsToProcess);
+                    wp.WriteComma();
+
+                    wp.WritePropertyName(nameof(processProgress.TotalNumberOfDocuments));
+                    wp.WriteInteger(processProgress.TotalNumberOfDocuments);
+                    wp.WriteComma();
+
+                    wp.WritePropertyName(nameof(processProgress.NumberOfDocumentTombstonesToProcess));
+                    wp.WriteInteger(processProgress.NumberOfDocumentTombstonesToProcess);
+                    wp.WriteComma();
+
+                    wp.WritePropertyName(nameof(processProgress.TotalNumberOfDocumentTombstones));
+                    wp.WriteInteger(processProgress.TotalNumberOfDocumentTombstones);
+                    wp.WriteComma();
+
+                    wp.WritePropertyName(nameof(processProgress.NumberOfCountersToProcess));
+                    wp.WriteInteger(processProgress.NumberOfCountersToProcess);
+                    wp.WriteComma();
+
+                    wp.WritePropertyName(nameof(processProgress.TotalNumberOfCounters));
+                    wp.WriteInteger(processProgress.TotalNumberOfCounters);
+                    wp.WriteComma();
+
+                    wp.WritePropertyName(nameof(processProgress.NumberOfCounterTombstonesToProcess));
+                    wp.WriteInteger(processProgress.NumberOfCounterTombstonesToProcess);
+                    wp.WriteComma();
+
+                    wp.WritePropertyName(nameof(processProgress.TotalNumberOfCounterTombstones));
+                    wp.WriteInteger(processProgress.TotalNumberOfCounterTombstones);
+
+                    wp.WriteEndObject();
+                });
 
                 w.WriteEndObject();
             });
@@ -590,6 +702,12 @@ namespace Raven.Server.Json
         {
             var djv = (DynamicJsonValue)TypeConverter.ToBlittableSupportedType(stats);
             writer.WriteObject(context.ReadObject(djv, "index/performance"));
+        }
+
+        public static void WriteEtlPerformanceStats(this AbstractBlittableJsonTextWriter writer, JsonOperationContext context, EtlPerformanceStats stats)
+        {
+            var djv = (DynamicJsonValue)TypeConverter.ToBlittableSupportedType(stats);
+            writer.WriteObject(context.ReadObject(djv, "etl/performance"));
         }
 
         public static void WriteIndexQuery(this BlittableJsonTextWriter writer, JsonOperationContext context, IIndexQuery query)

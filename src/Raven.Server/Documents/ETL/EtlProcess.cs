@@ -43,6 +43,10 @@ namespace Raven.Server.Documents.ETL
     {
         public string Tag { get; protected set; }
 
+        public abstract EtlType EtlType { get; }
+        
+        public abstract long TaskId { get; }
+
         public EtlProcessStatistics Statistics { get; protected set; }
 
         public EtlMetricsCountersManager Metrics { get; protected set; }
@@ -69,11 +73,15 @@ namespace Raven.Server.Documents.ETL
 
         public abstract EtlPerformanceStats[] GetPerformanceStats();
 
+        public abstract EtlStatsAggregator GetLatestPerformanceStats();
+
         public string TombstoneCleanerIdentifier => $"ETL '{Name}'";
 
         public abstract Dictionary<string, long> GetLastProcessedTombstonesPerCollection();
 
         public abstract OngoingTaskConnectionStatus GetConnectionStatus();
+
+        public abstract EtlProcessProgress GetProgress(DocumentsOperationContext documentsContext);
 
         public static EtlProcessState GetProcessState(DocumentDatabase database, string configurationName, string transformationName)
         {
@@ -111,6 +119,7 @@ namespace Raven.Server.Documents.ETL
         private PoolOfThreads.LongRunningWork _longRunningWork;
         private readonly MultipleUseFlag _lowMemoryFlag = new MultipleUseFlag();
         private EtlStatsAggregator _lastStats;
+        private EtlProcessState _lastProcessState;
         private int _statsId;
 
         private TestMode _testMode;
@@ -138,6 +147,8 @@ namespace Raven.Server.Documents.ETL
 
             if (transformation.ApplyToAllDocuments == false)
                 _collections = new HashSet<string>(Transformation.Collections, StringComparer.OrdinalIgnoreCase);
+
+            _lastProcessState = GetProcessState(Database, Configuration.Name, Transformation.Name);
         }
 
         protected CancellationToken CancellationToken => _cts.Token;
@@ -149,6 +160,8 @@ namespace Raven.Server.Documents.ETL
         protected abstract IEnumerator<TExtracted> ConvertCountersEnumerator(IEnumerator<CounterDetail> counters, string collection);
 
         protected abstract bool ShouldTrackAttachmentTombstones();
+        
+        public override long TaskId => Configuration.TaskId;
 
         public virtual IEnumerable<TExtracted> Extract(DocumentsOperationContext context, long fromEtag, EtlItemType type, EtlStatsScope stats)
         {
@@ -272,8 +285,12 @@ namespace Raven.Server.Documents.ETL
 
                 var batchSize = 0;
 
+                var batchStopped = false;
+
                 foreach (var item in items)
                 {
+                    stats.RecordLastExtractedEtag(item.Etag, item.Type);
+
                     if (AlreadyLoadedByDifferentNode(item, state))
                     {
                         stats.RecordChangeVector(item.ChangeVector);
@@ -300,13 +317,16 @@ namespace Raven.Server.Documents.ETL
                         try
                         {
                             if (CanContinueBatch(stats, item, batchSize, context) == false)
+                            {
+                                batchStopped = true;
                                 break;
+                            }
 
                             transformer.Transform(item);
 
                             Statistics.TransformationSuccess();
 
-                            stats.RecordTransformedItem(item.Type);
+                            stats.RecordTransformedItem(item.Type, item.IsDelete);
                             stats.RecordLastTransformedEtag(item.Etag, item.Type);
                             stats.RecordChangeVector(item.ChangeVector);
 
@@ -330,6 +350,8 @@ namespace Raven.Server.Documents.ETL
 
                             Database.NotificationCenter.Add(alert);
 
+                            stats.RecordBatchCompleteReason(message);
+
                             Stop();
 
                             break;
@@ -338,11 +360,16 @@ namespace Raven.Server.Documents.ETL
                         {
                             Statistics.RecordTransformationError(e, item.DocumentId);
 
+                            stats.RecordTransformationError();
+
                             if (Logger.IsInfoEnabled)
                                 Logger.Info($"Could not process SQL ETL script for '{Name}', skipping document: {item.DocumentId}", e);
                         }
                     }
                 }
+
+                if (batchStopped == false && stats.HasBatchCompleteReason() == false)
+                    stats.RecordBatchCompleteReason("No more items to process");
 
                 _testMode?.DebugOutput.AddRange(transformer.GetDebugOutput());
 
@@ -356,16 +383,20 @@ namespace Raven.Server.Documents.ETL
             {
                 try
                 {
-                    LoadInternal(items, context);
+                    var count = LoadInternal(items, context);
 
                     stats.RecordLastLoadedEtag(stats.LastTransformedEtags.Values.Max());
 
                     Statistics.LoadSuccess(stats.NumberOfTransformedItems.Sum(x => x.Value));
+
+                    stats.RecordLoadSuccess(count);
                 }
                 catch (Exception e)
                 {
                     if (Logger.IsOperationsEnabled)
                         Logger.Operations($"Failed to load transformed data for '{Name}'", e);
+
+                    stats.RecordLoadFailure();
 
                     EnterFallbackMode();
 
@@ -387,7 +418,7 @@ namespace Raven.Server.Documents.ETL
             }
         }
 
-        protected abstract void LoadInternal(IEnumerable<TTransformed> items, JsonOperationContext context);
+        protected abstract int LoadInternal(IEnumerable<TTransformed> items, JsonOperationContext context);
 
         public bool CanContinueBatch(EtlStatsScope stats, TExtracted currentItem, int batchSize, JsonOperationContext ctx)
         {
@@ -448,6 +479,9 @@ namespace Raven.Server.Documents.ETL
             var totalAllocated = _threadAllocations.TotalAllocated;
             _threadAllocations.CurrentlyAllocatedForProcessing = totalAllocated;
             var currentlyInUse = new Size(totalAllocated, SizeUnit.Bytes);
+
+            stats.RecordCurrentlyAllocated(totalAllocated + GC.GetAllocatedBytesForCurrentThread());
+
             if (currentlyInUse > _currentMaximumAllowedMemory)
             {
                 if (MemoryUsageGuard.TryIncreasingMemoryUsageForThread(_threadAllocations, ref _currentMaximumAllowedMemory,
@@ -478,7 +512,10 @@ namespace Raven.Server.Documents.ETL
 
         protected void UpdateMetrics(DateTime startTime, EtlStatsScope stats)
         {
-            Metrics.BatchSizeMeter.MarkSingleThreaded(stats.NumberOfExtractedItems.Sum(x => x.Value));
+            var batchSize = stats.NumberOfExtractedItems.Sum(x => x.Value);
+
+            Metrics.BatchSizeMeter.MarkSingleThreaded(batchSize);
+            Metrics.UpdateProcessedPerSecondRate(batchSize, stats.Duration);
         }
 
         public override void Reset()
@@ -505,7 +542,7 @@ namespace Raven.Server.Documents.ETL
             if (_longRunningWork != null)
                 return;
 
-            if (Transformation.Disabled)
+            if (Transformation.Disabled || Configuration.Disabled)
                 return;
 
             var threadName = $"{Tag} process: {Name}";
@@ -570,7 +607,7 @@ namespace Raven.Server.Documents.ETL
 
                     var didWork = false;
 
-                    var state = GetProcessState(Database, Configuration.Name, Transformation.Name);
+                    var state  = _lastProcessState = GetProcessState(Database, Configuration.Name, Transformation.Name);
 
                     var loadLastProcessedEtag = state.GetLastProcessedEtagForNode(_serverStore.NodeTag);
 
@@ -670,8 +707,7 @@ namespace Raven.Server.Documents.ETL
 
                         if (CancellationToken.IsCancellationRequested == false)
                         {
-                            var batchCompleted = Database.EtlLoader.BatchCompleted;
-                            batchCompleted?.Invoke(Name, Statistics);
+                            Database.EtlLoader.OnBatchCompleted(ConfigurationName, TransformationName, Statistics);
                         }
 
                         continue;
@@ -779,12 +815,16 @@ namespace Raven.Server.Documents.ETL
 
         public override EtlPerformanceStats[] GetPerformanceStats()
         {
-            //var lastStats = _lastStats;
+            var lastStats = _lastStats;
 
             return _lastEtlStats
-                // .Select(x => x == lastStats ? x.ToEtlPerformanceStats().ToIndexingPerformanceLiveStatsWithDetails() : x.ToIndexingPerformanceStats())
-                .Select(x => x.ToPerformanceStats())
+                .Select(x => x == lastStats ? x.ToPerformanceLiveStatsWithDetails() : x.ToPerformanceStats())
                 .ToArray();
+        }
+
+        public override EtlStatsAggregator GetLatestPerformanceStats()
+        {
+            return _lastStats;
         }
 
         private void LogSuccessfulBatchInfo(EtlStatsScope stats)
@@ -974,6 +1014,111 @@ namespace Raven.Server.Documents.ETL
                 _testMode = null;
                 disableAlerts.Dispose();
             });
+        }
+
+        public override EtlProcessProgress GetProgress(DocumentsOperationContext documentsContext)
+        {
+            var result = new EtlProcessProgress
+            {
+                TransformationName = TransformationName,
+                Disabled = Transformation.Disabled || Configuration.Disabled,
+                AverageProcessedPerSecond = Metrics.GetProcessedPerSecondRate() ?? 0.0
+            };
+            
+            List<string> collections;
+
+            if (Transformation.ApplyToAllDocuments)
+            {
+                collections = Database.DocumentsStorage.GetCollections(documentsContext).Select(x => x.Name).ToList();
+            }
+            else
+            {
+                collections = Transformation.Collections;
+            }
+
+            long docsToProcess = 0;
+            long totalDocsCount = 0;
+
+            long docsTombstonesToProcess = 0;
+            long totalDocsTombstonesCount = 0;
+
+            long countersToProcess = 0;
+            long totalCountersCount = 0;
+
+            var lastProcessedEtag = _lastProcessState.GetLastProcessedEtagForNode(_serverStore.NodeTag);
+
+            foreach (var collection in collections)
+            {
+                docsToProcess += Database.DocumentsStorage.GetNumberOfDocumentsToProcess(documentsContext, collection, lastProcessedEtag, out var total);
+                totalDocsCount += total;
+
+                docsTombstonesToProcess += Database.DocumentsStorage.GetNumberOfTombstonesToProcess(documentsContext, collection, lastProcessedEtag, out total);
+                totalDocsTombstonesCount += total;
+
+                if (ShouldTrackCounters())
+                {
+                    countersToProcess += Database.DocumentsStorage.CountersStorage.GetNumberOfCountersToProcess(documentsContext, collection, lastProcessedEtag, out total);
+                    totalCountersCount += total;
+                }
+            }
+
+            long countersTombstonesToProcess = 0;
+            long totalCountersTombstonesCount = 0;
+
+            if (ShouldTrackCounters())
+            {
+                countersTombstonesToProcess =
+                    Database.DocumentsStorage.CountersStorage.GetNumberOfTombstonesToProcess(documentsContext, lastProcessedEtag, out totalCountersTombstonesCount);
+            }
+
+            result.NumberOfDocumentsToProcess = docsToProcess;
+            result.TotalNumberOfDocuments = totalDocsCount;
+
+            result.NumberOfDocumentTombstonesToProcess = docsTombstonesToProcess;
+            result.TotalNumberOfDocumentTombstones = totalDocsTombstonesCount;
+
+            result.NumberOfCountersToProcess = countersToProcess;
+            result.TotalNumberOfCounters = totalCountersCount;
+
+            result.NumberOfCounterTombstonesToProcess = countersTombstonesToProcess;
+            result.TotalNumberOfCounterTombstones = totalCountersTombstonesCount;
+
+            result.Completed = (result.NumberOfDocumentsToProcess > 0 || result.NumberOfDocumentTombstonesToProcess > 0 ||
+                                result.NumberOfCountersToProcess > 0 || result.NumberOfCounterTombstonesToProcess > 0) == false;
+
+            var performance = _lastStats?.ToPerformanceLiveStats();
+
+            if (performance != null && performance.DurationInMs > 0)
+            {
+                var processedPerSecondInCurrentBatch = performance.NumberOfExtractedItems.Sum(x => x.Value) / (performance.DurationInMs / 1000);
+
+                result.AverageProcessedPerSecond = (result.AverageProcessedPerSecond + processedPerSecondInCurrentBatch) / 2;
+
+                if (result.NumberOfDocumentsToProcess > 0)
+                    result.NumberOfDocumentsToProcess -= performance.NumberOfTransformedItems[EtlItemType.Document];
+
+                if (result.NumberOfDocumentTombstonesToProcess > 0)
+                    result.NumberOfDocumentTombstonesToProcess -= performance.NumberOfTransformedTombstones[EtlItemType.Document];
+
+                if (result.NumberOfCountersToProcess > 0)
+                    result.NumberOfCountersToProcess -= performance.NumberOfTransformedItems[EtlItemType.Counter];
+
+                if (result.NumberOfCounterTombstonesToProcess > 0)
+                    result.NumberOfCounterTombstonesToProcess -= performance.NumberOfTransformedTombstones[EtlItemType.Counter];
+
+                result.Completed = (result.NumberOfDocumentsToProcess > 0 || result.NumberOfDocumentTombstonesToProcess > 0 ||
+                                    result.NumberOfCountersToProcess > 0 || result.NumberOfCounterTombstonesToProcess > 0) == false;
+
+                if (result.Completed && performance.Completed == null)
+                {
+                    // note the above calculations of items to process subtract _transformed_ items in current batch, they aren't loaded yet
+                    // in order to indicate that load phase is still in progress we're marking that it isn't completed yet
+
+                    result.Completed = performance.SuccessfullyLoaded ?? false;
+                }
+            }
+
+            return result;
         }
 
         public override void Dispose()

@@ -168,7 +168,7 @@ namespace Voron.Impl.Journal
         /// <summary>
         /// write transaction's raw page data into journal
         /// </summary>
-        public void Write(LowLevelTransaction tx, CompressedPagesResult pages, LazyTransactionBuffer lazyTransactionScratch)
+        public UpdatePageTranslationTableAction Write(LowLevelTransaction tx, CompressedPagesResult pages, LazyTransactionBuffer lazyTransactionScratch)
         {
             var ptt = new Dictionary<long, PagePosition>(NumericEqualityComparer.BoxedInstanceInt64);
             var cur4KbPos = _writePosIn4Kb;
@@ -231,19 +231,8 @@ namespace Voron.Impl.Journal
                 }
             }
 
-            using (_locker2.Lock())
-            {
-                _pageTranslationTable.SetItems(tx, ptt);
-                // it is important that the last write position will be set
-                // _after_ the PTT update, because a flush that is concurrent 
-                // with the write will first get the WritePosIn4KB and then 
-                // do the flush based on the PTT. Worst case, we'll flush 
-                // more then we need, but won't get into a position where we
-                // think we flushed, and then realize that we didn't.
-                Interlocked.Add(ref _writePosIn4Kb, pages.NumberOf4Kbs);
-            }
+            return new UpdatePageTranslationTableAction(this, tx, ptt, pages.NumberOf4Kbs);
         }
-
 
         private void UpdatePageTranslationTable(LowLevelTransaction tx, HashSet<PagePosition> unused, Dictionary<long, PagePosition> ptt)
         {
@@ -372,6 +361,39 @@ namespace Voron.Impl.Journal
 
             _scratchPagesPositionsPool.Free(unusedPages);
             _scratchPagesPositionsPool.Free(unusedAndFree);
+        }
+
+        public struct UpdatePageTranslationTableAction
+        {
+            private readonly JournalFile _parent;
+            private readonly LowLevelTransaction _tx;
+            private readonly Dictionary<long, PagePosition> _ptt;
+            private readonly int _numberOfWritten4Kbs;
+
+            public UpdatePageTranslationTableAction(JournalFile parent, LowLevelTransaction tx, Dictionary<long, PagePosition> ptt, int numberOfWritten4Kbs)
+            {
+                _parent = parent;
+                _tx = tx;
+                _ptt = ptt;
+                _numberOfWritten4Kbs = numberOfWritten4Kbs;
+            }
+
+            public void ExecuteAfterCommit()
+            {
+                Debug.Assert(_tx.Committed);
+
+                using (_parent._locker2.Lock())
+                {
+                    _parent._pageTranslationTable.SetItems(_tx, _ptt);
+                    // it is important that the last write position will be set
+                    // _after_ the PTT update, because a flush that is concurrent 
+                    // with the write will first get the WritePosIn4KB and then 
+                    // do the flush based on the PTT. Worst case, we'll flush 
+                    // more then we need, but won't get into a position where we
+                    // think we flushed, and then realize that we didn't.
+                    Interlocked.Add(ref _parent._writePosIn4Kb, _numberOfWritten4Kbs);
+                }
+            }
         }
     }
 }

@@ -192,6 +192,13 @@ namespace Raven.Client.Documents.Session
         }
 
         /// <inheritdoc />
+        IDocumentQuery<T> IFilterDocumentQueryBase<T, IDocumentQuery<T>>.ContainsAll<TValue>(Expression<Func<T, IEnumerable<TValue>>> propertySelector, IEnumerable<TValue> values)
+        {
+            ContainsAll(GetMemberQueryPath(propertySelector.Body), values.Cast<object>());
+            return this;
+        }
+
+        /// <inheritdoc />
         IDocumentQuery<T> IFilterDocumentQueryBase<T, IDocumentQuery<T>>.ContainsAny(string fieldName, IEnumerable<object> values)
         {
             ContainsAny(fieldName, values);
@@ -200,6 +207,13 @@ namespace Raven.Client.Documents.Session
 
         /// <inheritdoc />
         IDocumentQuery<T> IFilterDocumentQueryBase<T, IDocumentQuery<T>>.ContainsAny<TValue>(Expression<Func<T, TValue>> propertySelector, IEnumerable<TValue> values)
+        {
+            ContainsAny(GetMemberQueryPath(propertySelector.Body), values.Cast<object>());
+            return this;
+        }
+
+        /// <inheritdoc />
+        IDocumentQuery<T> IFilterDocumentQueryBase<T, IDocumentQuery<T>>.ContainsAny<TValue>(Expression<Func<T, IEnumerable<TValue>>> propertySelector, IEnumerable<TValue> values)
         {
             ContainsAny(GetMemberQueryPath(propertySelector.Body), values.Cast<object>());
             return this;
@@ -995,18 +1009,6 @@ namespace Raven.Client.Documents.Session
         public IAsyncDocumentQuery<TResult> AsyncQuery<TResult>(string indexName, string collectionName, bool isMapReduce)
         {
             throw new NotSupportedException("Cannot create an async LINQ query from DocumentQuery, you need to use AsyncDocumentQuery for that");
-        }
-
-        public IDocumentQuery<T> ContainsAll<TValue>(Expression<Func<T, IEnumerable<TValue>>> propertySelector, IEnumerable<TValue> values)
-        {
-            ContainsAll(GetMemberQueryPath(propertySelector.Body), values.Cast<object>());
-            return this;
-        }
-
-        public IDocumentQuery<T> ContainsAny<TValue>(Expression<Func<T, IEnumerable<TValue>>> propertySelector, IEnumerable<TValue> values)
-        {
-            ContainsAny(GetMemberQueryPath(propertySelector.Body), values.Cast<object>());
-            return this;
         }
     }
 }

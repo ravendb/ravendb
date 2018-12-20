@@ -2,10 +2,7 @@
 using System;
 using System.Globalization;
 using Microsoft.Extensions.Primitives;
-using Raven.Client.Documents.Indexes;
-using Raven.Server.Documents.Queries.Facets;
 using Raven.Server.Json;
-using Sparrow;
 using Sparrow.Json;
 
 namespace Raven.Server.Documents.Queries.AST
@@ -130,11 +127,11 @@ namespace Raven.Server.Documents.Queries.AST
         {
             switch (left)
             {
-                case BlittableJsonReaderObject leftBlittableJson:
-                    if (right is BlittableJsonReaderObject rightBlittableJson)
-                        return leftBlittableJson.Equals(rightBlittableJson, ignoreRavenProperties: true);
-
-                    throw new NotSupportedException("Cannot compare objects with non-objects.");
+                case BlittableJsonReaderObject leftBlittableJson when right is BlittableJsonReaderObject rightBlittableJson:
+                    return leftBlittableJson.Equals(rightBlittableJson, ignoreRavenProperties: true);
+                    // Note:
+                    // We shouldn't throw here if right is not an object because of polymorphism considerations -
+                    // some documents may contain objects and some non-objects with the same property name
                 case long l:
                     switch (right)
                     {

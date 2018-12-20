@@ -36,7 +36,12 @@ namespace Raven.Server.Documents.ETL
 
         protected Logger Logger;
 
-        public Action<string, EtlProcessStatistics> BatchCompleted;
+        public event Action<(string ConfigurationName, string TransformationName, EtlProcessStatistics Statistics)> BatchCompleted;
+
+        public void OnBatchCompleted(string configurationName, string transformationName, EtlProcessStatistics statistics)
+        {
+            BatchCompleted?.Invoke((configurationName, transformationName, statistics));
+        }
 
         public EtlLoader(DocumentDatabase database, ServerStore serverStore)
         {
@@ -55,6 +60,19 @@ namespace Raven.Server.Documents.ETL
         public void Initialize(DatabaseRecord record)
         {
             LoadProcesses(record, record.RavenEtls, record.SqlEtls, toRemove: null);
+        }
+
+        public event Action<EtlProcess> ProcessAdded;
+        public event Action<EtlProcess> ProcessRemoved;
+
+        private void OnProcessAdded(EtlProcess process)
+        {
+            ProcessAdded?.Invoke(process);
+        }
+
+        private void OnProcessRemoved(EtlProcess process)
+        {
+            ProcessRemoved?.Invoke(process);
         }
 
         private void LoadProcesses(DatabaseRecord record,
@@ -76,6 +94,8 @@ namespace Raven.Server.Documents.ETL
                     {
                         processes.Remove(process);
                         _uniqueNames.Remove(process.ConfigurationName);
+
+                        OnProcessRemoved(process);
                     }
                 }
 
@@ -95,6 +115,8 @@ namespace Raven.Server.Documents.ETL
                 {
                     _database.TombstoneCleaner.Subscribe(process);
                     process.Start();
+
+                    OnProcessAdded(process);
                 }
             }
         }
@@ -180,9 +202,6 @@ namespace Raven.Server.Documents.ETL
                     continue;
                 }
 
-                if (config.Disabled)
-                    continue;
-
                 if (ValidateConfiguration(config, uniqueNames) == false)
                     continue;
 
@@ -193,9 +212,6 @@ namespace Raven.Server.Documents.ETL
 
                 foreach (var transform in config.Transforms)
                 {
-                    if (transform.Disabled)
-                        continue;
-
                     EtlProcess process = null;
 
                     if (sqlConfig != null)

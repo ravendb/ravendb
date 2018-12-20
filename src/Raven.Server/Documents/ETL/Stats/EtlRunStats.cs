@@ -1,4 +1,5 @@
 ﻿using System.Collections.Generic;
+using Raven.Client.Util;
 
 namespace Raven.Server.Documents.ETL.Stats
 {
@@ -16,22 +17,43 @@ namespace Raven.Server.Documents.ETL.Stats
             {EtlItemType.Counter, 0}
         };
 
-        public Dictionary<EtlItemType, long> LastTransformedEtags = new Dictionary<EtlItemType, long>
+        public Dictionary<EtlItemType, int> NumberOfTransformedTombstones = new Dictionary<EtlItemType, int>()
         {
             {EtlItemType.Document, 0},
             {EtlItemType.Counter, 0}
         };
 
-        public long LastLoadedEtag;
+        public Dictionary<EtlItemType, long> LastExtractedEtags = new Dictionary<EtlItemType, long>
+        {
+            {EtlItemType.Document, 0},
+            {EtlItemType.Counter, 0}
+        };
 
+        public Dictionary<EtlItemType, long> LastTransformedEtags = new Dictionary<EtlItemType, long>
+        {
+            {EtlItemType.Document, 0},
+            {EtlItemType.Counter, 0}
+        };
+        
         public Dictionary<EtlItemType, long> LastFilteredOutEtags = new Dictionary<EtlItemType, long>
         {
             {EtlItemType.Document, 0},
             {EtlItemType.Counter, 0}
         };
 
+        public Size CurrentlyAllocated { get; set; } = new Size();
+
+        public long LastLoadedEtag;
+
+        public int NumberOfLoadedItems;
+
+        public int TransformationErrorCount;
+
         public string BatchCompleteReason;
 
         public string ChangeVector;
+
+        public bool? SuccessfullyLoaded;
+        
     }
 }

@@ -5,6 +5,7 @@ using FastTests.Server.Basic.Entities;
 using Newtonsoft.Json.Linq;
 using Raven.Client.Documents;
 using Raven.Client.Documents.Queries;
+using Raven.Client.Documents.Session;
 using Raven.Client.Exceptions;
 using Raven.Tests.Core.Utils.Entities;
 using Tests.Infrastructure;
@@ -252,6 +253,36 @@ namespace FastTests.Graph
         }
 
         [Fact]
+        public void CanCacheGraphQueries()
+        {
+            void IssueQuery(IDocumentSession session)
+            {
+                var results = session.Advanced.RawQuery<JObject>(@"
+                        with {from Users where id() = 'users/2'} as u
+                        match (u) select u.Name").ToList().Select(x => x["Name"].Value<string>()).ToArray();
+
+                Assert.Equal(1, results.Length);
+                results[0] = "Jill";
+            }
+
+            using (var store = GetDocumentStore())
+            {
+                CreateMoviesData(store);
+                using (var session = store.OpenSession())
+                {
+                    IssueQuery(session);
+                    Assert.Equal(1, session.Advanced.RequestExecutor.Cache.NumberOfItems);
+                    Assert.Equal(1, session.Advanced.NumberOfRequests);
+                    IssueQuery(session);
+                    Assert.Equal(1, session.Advanced.RequestExecutor.Cache.NumberOfItems);
+                    Assert.Equal(2, session.Advanced.NumberOfRequests);
+
+                }
+               
+            }
+        }
+
+        [Fact]
         public void CanProjectSameDocumentTwice()
         {
             var results = Query<OrderAndProduct>(@"
@@ -315,7 +346,7 @@ declare function includeProducts(doc)
 {
     var lines = doc.Lines; // avoid eval
     var length = lines.length; // avoid eval
-    for (let i=0; i< length; i++)
+    for (var i=0; i< length; i++)
     {
         include(lines[i].Product);
     }
@@ -721,12 +752,12 @@ select {
                 using (var session = store.OpenSession())
                 {
                     var results = session.Advanced.RawQuery<HobbitAncestry>(@"
-match (People as son)-recursive as ancestry ($min,$max, $type) { [Parents where Gender = 'Male' select Id]->(People as paternal where BornAt='Shire') } 
-select ancestry.paternal.Name as PaternalAncestors, son.Name")
-.AddParameter("min", 2)
-.AddParameter("max", 3)
-.AddParameter("type", "longest")
-.ToList();
+                        match (People as son)-recursive as ancestry ($min,$max, $type) { [Parents where Gender = 'Male' select Id]->(People as paternal where BornAt='Shire') } 
+                        select ancestry.paternal.Name as PaternalAncestors, son.Name")
+                        .AddParameter("min", 2)
+                        .AddParameter("max", 3)
+                        .AddParameter("type", "longest")
+                        .ToList();
                     results.Sort((x, y) => x.Name.CompareTo(y.Name)); // we didn't implement order by yet
                     Assert.Equal(2, results.Count);
                     Assert.Equal("Bilbo Baggins", results[0].Name);
