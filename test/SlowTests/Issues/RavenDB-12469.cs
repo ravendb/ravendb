@@ -1,12 +1,11 @@
 ﻿using System;
-using System.Collections.Generic;
 using System.Linq;
-using System.Text;
+using FastTests;
 using Newtonsoft.Json.Linq;
 using Raven.Client.Documents;
 using Xunit;
 
-namespace FastTests.Issues
+namespace SlowTests.Issues
 {
     public class RavenDB_12469 : RavenTestBase
     {

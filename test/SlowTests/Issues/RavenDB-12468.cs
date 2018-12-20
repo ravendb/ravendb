@@ -1,9 +1,10 @@
-﻿using FastTests.Graph;
+﻿using FastTests;
 using Newtonsoft.Json.Linq;
 using Raven.Client.Documents;
+using SlowTests.Graph;
 using Xunit;
 
-namespace FastTests.Issues
+namespace SlowTests.Issues
 {
     public class RavenDB_12468 : RavenTestBase
     {

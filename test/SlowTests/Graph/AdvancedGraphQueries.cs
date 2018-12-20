@@ -1,18 +1,18 @@
-﻿using System;
+﻿using System.Collections.Generic;
 using System.Linq;
+using FastTests;
+using FastTests.Blittable;
+using FastTests.Graph;
 using Newtonsoft.Json.Linq;
 using Raven.Client.Documents.Operations;
+using Raven.Client.Documents.Session;
 using Raven.Client.Exceptions;
 using Xunit;
 using Order = FastTests.Server.Basic.Entities.Order;
 using Product = FastTests.Server.Basic.Entities.Product;
 using OrderLine = FastTests.Server.Basic.Entities.OrderLine;
-using System.Collections.Generic;
-using FastTests.Blittable;
-using System.Diagnostics;
-using Raven.Client.Documents.Session;
 
-namespace FastTests.Graph
+namespace SlowTests.Graph
 {
     public class AdvancedGraphQueries : RavenTestBase
     {

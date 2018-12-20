@@ -1,12 +1,10 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
+﻿using System.Linq;
+using FastTests;
 using Raven.Client.Documents;
 using Raven.Client.Exceptions;
 using Xunit;
 
-namespace FastTests.Graph
+namespace SlowTests.Graph
 {
     public class GraphPermissionTests : RavenTestBase
     {
