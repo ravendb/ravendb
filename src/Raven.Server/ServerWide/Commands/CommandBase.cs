@@ -1,5 +1,6 @@
 using System;
 using Raven.Client.Exceptions.Security;
+using Raven.Server.Rachis;
 using Raven.Server.ServerWide.Context;
 using Sparrow.Json;
 using Sparrow.Json.Parsing;
@@ -22,7 +23,7 @@ namespace Raven.Server.ServerWide.Commands
         {
             if (json.TryGet("Type", out string type) == false)
             {
-                throw new ArgumentException("Command must contain 'Type' field.");
+                throw new RachisApplyException("Command must contain 'Type' field.");
             }
 
             if (JsonDeserializationCluster.Commands.TryGetValue(type, out Func<BlittableJsonReaderObject, CommandBase> deserializer) == false)
