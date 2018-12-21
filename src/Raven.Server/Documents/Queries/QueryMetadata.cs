@@ -2140,7 +2140,7 @@ namespace Raven.Server.Documents.Queries
 
         private static readonly HashSet<string> JsBaseObjects = new HashSet<string>
         {
-            "Math", "Number", "Object", "Date"
+            "Math", "Number", "Object", "Date", "Array"
         };
 
         private Esprima.Ast.Program ValidateScript(BlittableJsonReaderObject parameters)
