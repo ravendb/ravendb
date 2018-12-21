@@ -151,6 +151,11 @@ class virtualGrid<T> {
     }
     
     private handleSort(e: JQueryEventObject) {
+        if (e.offsetX <= 8) {
+            return;
+        }
+        this.markEventAsHandled(e);
+        
         const columnIndex = $(e.currentTarget).index();
         if (columnIndex < 0) {
             return;
@@ -197,6 +202,14 @@ class virtualGrid<T> {
             }
         }
     }
+    
+    private markEventAsHandled(e: JQueryEventObject) {
+        // Stop propagation of the event so the text selection doesn't fire up
+        if (e.stopPropagation) e.stopPropagation();
+        if (e.preventDefault) e.preventDefault();
+        e.cancelBubble = true;
+        e.returnValue = false;
+    }
 
     private handleResize(e: JQueryEventObject) {
         // since resize handles are pseudo html elements, we get invalid target
@@ -204,12 +217,8 @@ class virtualGrid<T> {
         if (e.offsetX > 8) {
             return;
         }
-
-        // Stop propagation of the event so the text selection doesn't fire up
-        if (e.stopPropagation) e.stopPropagation();
-        if (e.preventDefault) e.preventDefault();
-        e.cancelBubble = true;
-        e.returnValue = false;
+        
+        this.markEventAsHandled(e);
 
         const $document = $(document);
         const targetColumnIdx = $(e.target).index();
