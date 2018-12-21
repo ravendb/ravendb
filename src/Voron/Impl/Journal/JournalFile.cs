@@ -168,7 +168,7 @@ namespace Voron.Impl.Journal
         /// <summary>
         /// write transaction's raw page data into journal
         /// </summary>
-        public UpdatePageTranslationTableAction Write(LowLevelTransaction tx, CompressedPagesResult pages, LazyTransactionBuffer lazyTransactionScratch)
+        public UpdatePageTranslationTableAndUnusedPagesAction Write(LowLevelTransaction tx, CompressedPagesResult pages, LazyTransactionBuffer lazyTransactionScratch)
         {
             var ptt = new Dictionary<long, PagePosition>(NumericEqualityComparer.BoxedInstanceInt64);
             var cur4KbPos = _writePosIn4Kb;
@@ -176,16 +176,7 @@ namespace Voron.Impl.Journal
             Debug.Assert(pages.NumberOf4Kbs > 0);
 
             UpdatePageTranslationTable(tx, _unusedPagesHashSetPool, ptt);
-
-            using (_locker2.Lock())
-            {
-                Debug.Assert(!_unusedPages.Any(_unusedPagesHashSetPool.Contains)); // We ensure there cannot be duplicates here (disjoint sets). 
-
-                foreach (var item in _unusedPagesHashSetPool)
-                    _unusedPages.Add(item);
-            }
-            _unusedPagesHashSetPool.Clear();
-
+            
             if (tx.IsLazyTransaction == false && (lazyTransactionScratch == null || lazyTransactionScratch.HasDataInBuffer() == false))
             {
                 try
@@ -231,7 +222,7 @@ namespace Voron.Impl.Journal
                 }
             }
 
-            return new UpdatePageTranslationTableAction(this, tx, ptt, pages.NumberOf4Kbs);
+            return new UpdatePageTranslationTableAndUnusedPagesAction(this, tx, ptt, pages.NumberOf4Kbs);
         }
 
         private void UpdatePageTranslationTable(LowLevelTransaction tx, HashSet<PagePosition> unused, Dictionary<long, PagePosition> ptt)
@@ -363,14 +354,14 @@ namespace Voron.Impl.Journal
             _scratchPagesPositionsPool.Free(unusedAndFree);
         }
 
-        public struct UpdatePageTranslationTableAction
+        public struct UpdatePageTranslationTableAndUnusedPagesAction
         {
             private readonly JournalFile _parent;
             private readonly LowLevelTransaction _tx;
             private readonly Dictionary<long, PagePosition> _ptt;
             private readonly int _numberOfWritten4Kbs;
 
-            public UpdatePageTranslationTableAction(JournalFile parent, LowLevelTransaction tx, Dictionary<long, PagePosition> ptt, int numberOfWritten4Kbs)
+            public UpdatePageTranslationTableAndUnusedPagesAction(JournalFile parent, LowLevelTransaction tx, Dictionary<long, PagePosition> ptt, int numberOfWritten4Kbs)
             {
                 _parent = parent;
                 _tx = tx;
@@ -384,6 +375,11 @@ namespace Voron.Impl.Journal
 
                 using (_parent._locker2.Lock())
                 {
+                    Debug.Assert(!_parent._unusedPages.Any(_parent._unusedPagesHashSetPool.Contains)); // We ensure there cannot be duplicates here (disjoint sets). 
+
+                    foreach (var item in _parent._unusedPagesHashSetPool)
+                        _parent._unusedPages.Add(item);
+
                     _parent._pageTranslationTable.SetItems(_tx, _ptt);
                     // it is important that the last write position will be set
                     // _after_ the PTT update, because a flush that is concurrent 
@@ -393,6 +389,8 @@ namespace Voron.Impl.Journal
                     // think we flushed, and then realize that we didn't.
                     Interlocked.Add(ref _parent._writePosIn4Kb, _numberOfWritten4Kbs);
                 }
+
+                _parent._unusedPagesHashSetPool.Clear();
             }
         }
     }

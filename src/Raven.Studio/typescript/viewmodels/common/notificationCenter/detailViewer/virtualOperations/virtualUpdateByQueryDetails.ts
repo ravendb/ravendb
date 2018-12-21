@@ -30,11 +30,22 @@ class virtualUpdateByQueryDetails extends dialogViewModelBase {
 
         grid.init((s, t) => this.fetcher(s, t), () => {
             return [
-                new textColumn<queryBasedVirtualBulkOperationItem>(grid, x => generalUtils.formatUtcDateAsLocal(x.date), "Date", "25%"),
-                new textColumn<queryBasedVirtualBulkOperationItem>(grid, x => x.duration, "Duration (ms)", "15%"),
-                new textColumn<queryBasedVirtualBulkOperationItem>(grid, x => x.items, "Processed documents", "15%"),
-                new textColumn<queryBasedVirtualBulkOperationItem>(grid, x => x.indexOrCollectionUsed, "Collection/Index", "20%"),
-                new textColumn<queryBasedVirtualBulkOperationItem>(grid, x => x.query, "Query", "25%"),
+                new textColumn<queryBasedVirtualBulkOperationItem>(grid, x => generalUtils.formatUtcDateAsLocal(x.date), "Date", "25%", {
+                    sortable: x => x.date
+                }),
+                new textColumn<queryBasedVirtualBulkOperationItem>(grid, x => x.duration, "Duration (ms)", "15%", {
+                    sortable: "number",
+                    defaultSortOrder: "desc"
+                }),
+                new textColumn<queryBasedVirtualBulkOperationItem>(grid, x => x.items, "Processed documents", "15%", {
+                    sortable: "number"
+                }),
+                new textColumn<queryBasedVirtualBulkOperationItem>(grid, x => x.indexOrCollectionUsed, "Collection/Index", "20%", {
+                    sortable: "string"
+                }),
+                new textColumn<queryBasedVirtualBulkOperationItem>(grid, x => x.query, "Query", "25%", {
+                    sortable: "string"
+                }),
             ];
         });
 

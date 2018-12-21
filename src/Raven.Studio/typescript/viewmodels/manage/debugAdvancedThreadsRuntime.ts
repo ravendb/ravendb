@@ -90,16 +90,32 @@ class debugAdvancedThreadsRuntime extends viewModelBase {
 
         const grid = this.gridController();
         grid.headerVisible(true);
-        grid.init(fetcher, () =>
-            [
-                new textColumn<Raven.Server.Dashboard.ThreadInfo>(grid, x => x.Name, "Name", "25%"),
-                new textColumn<Raven.Server.Dashboard.ThreadInfo>(grid, x => `${(x.CpuUsage === 0 ? "0" : generalUtils.formatNumberToStringFixed(x.CpuUsage, 2))}%`, "Current CPU %", "10%"),
-                new textColumn<Raven.Server.Dashboard.ThreadInfo>(grid, x => generalUtils.formatTimeSpan(x.Duration, false), "Overall CPU Time", "10%"),
-                new textColumn<Raven.Server.Dashboard.ThreadInfo>(grid, x => x.Id + " (" + (x.ManagedThreadId || "n/a") + ")", "Thread Id", "10%"),
-                new textColumn<Raven.Server.Dashboard.ThreadInfo>(grid, x => generalUtils.formatUtcDateAsLocal(x.StartingTime), "Start Time", "20%"),
-                new textColumn<Raven.Server.Dashboard.ThreadInfo>(grid, x => x.State, "State", "10%"),
-                new textColumn<Raven.Server.Dashboard.ThreadInfo>(grid, x => x.WaitReason, "Wait reason", "15%")
-            ]
+        grid.setDefaultSortBy(3, "desc");
+        grid.init(fetcher, () => {
+                return [
+                    new textColumn<Raven.Server.Dashboard.ThreadInfo>(grid, x => x.Name, "Name", "25%", {
+                        sortable: "string"
+                    }),
+                    new textColumn<Raven.Server.Dashboard.ThreadInfo>(grid, x => `${(x.CpuUsage === 0 ? "0" : generalUtils.formatNumberToStringFixed(x.CpuUsage, 2))}%`, "Current CPU %", "10%", {
+                        sortable: x => x.CpuUsage,
+                        defaultSortOrder: "desc"
+                    }),
+                    new textColumn<Raven.Server.Dashboard.ThreadInfo>(grid, x => generalUtils.formatTimeSpan(x.Duration, false), "Overall CPU Time", "10%", {
+                        sortable: x => x.Duration,
+                        defaultSortOrder: "desc"
+                    }),
+                    new textColumn<Raven.Server.Dashboard.ThreadInfo>(grid, x => x.Id + " (" + (x.ManagedThreadId || "n/a") + ")", "Thread Id", "10%", {
+                        sortable: x => x.Id
+                    }),
+                    new textColumn<Raven.Server.Dashboard.ThreadInfo>(grid, x => generalUtils.formatUtcDateAsLocal(x.StartingTime), "Start Time", "20%", {
+                        sortable: x => x.StartingTime
+                    }),
+                    new textColumn<Raven.Server.Dashboard.ThreadInfo>(grid, x => x.State, "State", "10%", {
+                        sortable: "string"
+                    }),
+                    new textColumn<Raven.Server.Dashboard.ThreadInfo>(grid, x => x.WaitReason, "Wait reason", "15%")
+                ];
+            }
         );
 
         this.columnPreview.install("virtual-grid", ".js-threads-runtime-tooltip",
@@ -109,7 +125,7 @@ class debugAdvancedThreadsRuntime extends viewModelBase {
                 if (column.header === "Overall CPU Time") {
                     const timings = {
                         StartTime: entry.StartingTime,
-                        TotalProcessorTime: entry.TotalProcessorTime,
+                            TotalProcessorTime: entry.TotalProcessorTime,
                         PrivilegedProcessorTime: entry.PrivilegedProcessorTime,
                         UserProcessorTime: entry.UserProcessorTime
                     };

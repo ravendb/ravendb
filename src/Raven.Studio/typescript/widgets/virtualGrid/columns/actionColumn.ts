@@ -22,7 +22,7 @@ class actionColumn<T> implements virtualColumn {
     extraClass: string;
 
     private opts: actionColumnOpts<T>;
-
+    
     actionUniqueId = _.uniqueId("action-");
 
     constructor(gridController: virtualGridController<T>, action: (obj: T, idx: number) => void, header: string, buttonText: provider<T> | string, width: string, opts: actionColumnOpts<T> = {}) {
@@ -32,6 +32,10 @@ class actionColumn<T> implements virtualColumn {
         this.buttonText = _.isString(buttonText) ? (item: T) => buttonText : buttonText;
         this.width = width;
         this.opts = opts || {};
+    }
+
+    get sortable() {
+        return false;
     }
     
     get headerTitle() {
@@ -50,9 +54,14 @@ class actionColumn<T> implements virtualColumn {
         this.action(row.data as T, row.index);
     }
 
-    renderCell(item: T, isSelected: boolean): string {
+    renderCell(item: T, isSelected: boolean, isSorted: boolean): string {
         const extraButtonHtml = this.opts.title ? ` title="${utils.escape(this.opts.title(item))}" ` : '';
-        const extraCssClasses = this.opts.extraClass ? this.opts.extraClass(item) : '';
+        let extraCssClasses = this.opts.extraClass ? this.opts.extraClass(item) : '';
+        
+        if (isSorted) {
+           extraCssClasses += " sorted"; 
+        }
+        
         return `<div class="cell action-cell" style="width: ${this.width}">
             <button type="button" ${extraButtonHtml} data-action="${this.actionUniqueId}" class="btn btn-sm btn-block ${extraCssClasses}">${this.buttonText(item)}</button>
         </div>`;

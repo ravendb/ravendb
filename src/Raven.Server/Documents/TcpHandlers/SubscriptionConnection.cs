@@ -9,6 +9,7 @@ using System.Threading.Tasks;
 using Microsoft.Extensions.Primitives;
 using Raven.Client.Documents.Changes;
 using Raven.Client.Documents.Subscriptions;
+using Raven.Client.Exceptions;
 using Raven.Client.Exceptions.Cluster;
 using Raven.Client.Exceptions.Documents.Subscriptions;
 using Raven.Client.ServerWide.Tcp;
@@ -19,6 +20,7 @@ using Raven.Server.Documents.Queries.AST;
 using Raven.Server.Documents.Replication;
 using Raven.Server.Documents.Subscriptions;
 using Raven.Server.Json;
+using Raven.Server.Rachis;
 using Raven.Server.ServerWide.Context;
 using Raven.Server.Utils;
 using Sparrow;
@@ -360,7 +362,7 @@ namespace Raven.Server.Documents.TcpHandlers
                         [nameof(SubscriptionConnectionServerMessage.Exception)] = ex.ToString()
                     });
                 }
-                else if (ex is CommandExecutionException commandExecution && commandExecution.InnerException is SubscriptionException)
+                else if (ex is RachisApplyException commandExecution && commandExecution.InnerException is SubscriptionException)
                 {
                     await ReportExceptionToClient(connection, commandExecution.InnerException, recursionDepth - 1);
                 }
