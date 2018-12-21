@@ -244,12 +244,32 @@ namespace Voron.Impl.Journal
                 // corruption when applying journals at recovery time rather than at usage.
                 var tempTx = new TempPagerTransaction();
 
-                foreach (var modifiedPage in modifiedPages)
-                {
-                    var ptr = (PageHeader*)_dataPager.AcquirePagePointerWithOverflowHandling(tempTx, modifiedPage, null);
-                    _env.ValidatePageChecksum(modifiedPage, ptr);
+                var sortedPages = modifiedPages.ToArray();
+                Array.Sort(sortedPages);
 
-                    tempTx.Dispose(); // release any resources, we just wanted to validate things
+                long minPageChecked = -1;
+
+                // we need to iterate from the end in order to filter out pages that was overwritten by later transaction
+
+                for (var i = sortedPages.Length - 1; i >= 0; i--)
+                {
+                    using (tempTx) // release any resources, we just wanted to validate things
+                    {
+                        var modifiedPage = sortedPages[i];
+
+                        var ptr = (PageHeader*)_dataPager.AcquirePagePointerWithOverflowHandling(tempTx, modifiedPage, null);
+
+                        var maxPageRange = modifiedPage + VirtualPagerLegacyExtensions.GetNumberOfPages(ptr) - 1;
+
+                        if (minPageChecked != -1 && maxPageRange >= minPageChecked)
+                        {
+                            continue;
+                        }
+
+                        _env.ValidatePageChecksum(modifiedPage, ptr);
+
+                        minPageChecked = modifiedPage;
+                    }
                 }
             }
 
