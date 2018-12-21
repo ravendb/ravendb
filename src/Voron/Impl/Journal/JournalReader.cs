@@ -129,7 +129,7 @@ namespace Voron.Impl.Journal
             for (var i = 0; i < current->PageCount; i++)
             {
                 if(pageInfoPtr[i].PageNumber > current->LastPageNumber)
-                    throw new InvalidDataException($"Transaction {current->TransactionId} contains refeence to page {pageInfoPtr[i].PageNumber} which is after the last allocated page {current->LastPageNumber}");
+                    throw new InvalidDataException($"Transaction {current->TransactionId} contains reference to page {pageInfoPtr[i].PageNumber} which is after the last allocated page {current->LastPageNumber}");
             }
 
             for (var i = 0; i < current->PageCount; i++)
@@ -164,7 +164,28 @@ namespace Voron.Impl.Journal
  
                 if (pageInfoPtr[i].DiffSize == 0)
                 {
-                    Memory.Copy(pagePtr, outputPage + totalRead, pageInfoPtr[i].Size);
+                    if (pageInfoPtr[i].Size == 0)
+                    {
+                        // diff contained no changes
+                        continue;
+                    }
+
+                    var journalPagePtr = outputPage + totalRead;
+
+                    if (options.EncryptionEnabled == false)
+                    {
+                        var pageHeader = (PageHeader*)journalPagePtr;
+
+                        var checksum = StorageEnvironment.CalculatePageChecksum((byte*)pageHeader, pageNumber, out var expectedChecksum);
+                        if (checksum != expectedChecksum)
+                        {
+                            throw new InvalidDataException(
+                                $"Invalid checksum for page {pageNumber} in transaction {current->TransactionId}, journal file {_journalPager} might be corrupted, expected hash to be {expectedChecksum} but was {checksum}." +
+                                $"Data from journal has not been applied to data file {_dataPager} yet");
+                        }
+                    }
+
+                    Memory.Copy(pagePtr, journalPagePtr, pageInfoPtr[i].Size);
                     totalRead += pageInfoPtr[i].Size;
 
                     if (options.EncryptionEnabled)
