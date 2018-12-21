@@ -116,32 +116,27 @@ namespace Sparrow.LowMemory
             _lowMemoryHandlers.Add(new WeakReference<ILowMemoryHandler>(handler));
         }
 
-        public static readonly LowMemoryNotification Instance = new LowMemoryNotification(
-            new Size(1024 * 1024 * 256, SizeUnit.Bytes),
-            0.05f);
+        public static readonly LowMemoryNotification Instance = new LowMemoryNotification(new Size(1024 * 1024 * 256, SizeUnit.Bytes));
 
         public bool LowMemoryState { get; set; }
 
-        public static void Initialize(Size lowMemoryThreshold, float commitChargeThreshold, CancellationToken shutdownNotification)
+        public static void Initialize(Size lowMemoryThreshold, CancellationToken shutdownNotification)
         {
             Instance._lowMemoryThreshold = lowMemoryThreshold;
-            Instance._commitChargeThreshold = commitChargeThreshold;
 
             shutdownNotification.Register(() => Instance._shutdownRequested.Set());
         }
 
         private Size _lowMemoryThreshold;
-        private float _commitChargeThreshold;
         private readonly ManualResetEvent _simulatedLowMemory = new ManualResetEvent(false);
         private readonly ManualResetEvent _shutdownRequested = new ManualResetEvent(false);
         private readonly List<WeakReference<ILowMemoryHandler>> _inactiveHandlers = new List<WeakReference<ILowMemoryHandler>>(128);
 
-        public LowMemoryNotification(Size lowMemoryThreshold, float commitChargeThreshold)
+        public LowMemoryNotification(Size lowMemoryThreshold)
         {
             _logger = LoggingSource.Instance.GetLogger<LowMemoryNotification>("Server");
 
             _lowMemoryThreshold = lowMemoryThreshold;
-            _commitChargeThreshold = commitChargeThreshold;
 
             var thread = new Thread(MonitorMemoryUsage)
             {
@@ -323,12 +318,7 @@ namespace Sparrow.LowMemory
                 isLowMemory = IsAvailableMemoryBelowThreshold(memInfo);
             }
 
-            if (PlatformDetails.RunningOnPosix == false)
-            {
-                // this is relevant only on Windows
-                var commitChargePlusMinSizeToKeepFree = memInfo.CurrentCommitCharge + GetCommitChargeThreshold(memInfo);
-                isLowMemory |= memInfo.TotalCommittableMemory <= commitChargePlusMinSizeToKeepFree;
-            }
+            isLowMemory |= MemoryInformation.IsEarlyOutOfMemory(memInfo);
 
             return isLowMemory;
         }
@@ -339,11 +329,6 @@ namespace Sparrow.LowMemory
         }
 
         public Size LowMemoryThreshold => _lowMemoryThreshold;
-
-        public Size GetCommitChargeThreshold(MemoryInfoResult memInfo)
-        {
-            return memInfo.TotalCommittableMemory * _commitChargeThreshold;
-        }
 
         private void AddLowMemEvent(LowMemReason reason, long availableMem, long totalUnmanaged, long physicalMem, long currentcommitCharge)
         {
