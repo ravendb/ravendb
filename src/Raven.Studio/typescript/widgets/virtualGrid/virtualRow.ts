@@ -6,6 +6,7 @@ import virtualColumn = require("widgets/virtualGrid/columns/virtualColumn");
  */
 class virtualRow {
     private _item: Object | null = null; // The last item populated into this virtual row.
+    private sortColumnIndex: number = -1;
     private isItemSelected = false;
     readonly element: JQuery;
     private _top = -9999;
@@ -48,16 +49,16 @@ class virtualRow {
         this.element.text(`Unable to load data`);
     }
 
-    populate(item: Object | null, rowIndex: number, isSelected: boolean, columns: virtualColumn[]) {
+    populate(item: Object | null, rowIndex: number, isSelected: boolean, columns: virtualColumn[], sortColumnIndex: number) {
         // Optimization: don't regenerate this row HTML if nothing's changed since last render.
-        const alreadyDisplayingData = !!item && this._item === item && this._index === rowIndex && this.isItemSelected === isSelected;
+        const alreadyDisplayingData = !!item && this._item === item && this._index === rowIndex && this.isItemSelected === isSelected && this.sortColumnIndex === sortColumnIndex;
         if (!alreadyDisplayingData) {
             this._item = item;
             this._index = rowIndex;
 
             // If we have data, fill up this row content.
             if (item) {
-                const html = this.createCellsHtml(item, columns, isSelected);
+                const html = this.createCellsHtml(item, columns, isSelected, sortColumnIndex);
                 this.element.html(html);
             } else {
                 this.element.text("");
@@ -69,7 +70,7 @@ class virtualRow {
                 this.element.toggleClass("selected");
                 this.isItemSelected = isSelected;
             }
-
+            
             // Update the "even" status. Used for striping the virtual rows.
             const newEvenState = rowIndex % 2 === 0;
             const hasChangedEven = this._even !== newEvenState;
@@ -98,8 +99,8 @@ class virtualRow {
         this.element.removeClass("selected");
     }
 
-    private createCellsHtml(item: Object, columns: virtualColumn[], isSelected: boolean): string {
-        return columns.map(c => c.renderCell(item, isSelected))
+    private createCellsHtml(item: Object, columns: virtualColumn[], isSelected: boolean, sortColumnIndex: number): string {
+        return columns.map((c, idx) => c.renderCell(item, isSelected, sortColumnIndex === idx))
             .join("");
     }
 

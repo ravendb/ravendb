@@ -76,4 +76,24 @@ namespace Raven.Server.Rachis
             throw new RachisConcurrencyException(msg);
         }
     }
+
+    public class RachisApplyException : RachisException
+    {
+        public RachisApplyException()
+        {
+        }
+
+        public RachisApplyException(string message) : base(message)
+        {
+        }
+
+        public RachisApplyException(string message, Exception innerException) : base(message, innerException)
+        {
+        }
+
+        public static void Throw(string msg)
+        {
+            throw new RachisApplyException(msg);
+        }
+    }
 }

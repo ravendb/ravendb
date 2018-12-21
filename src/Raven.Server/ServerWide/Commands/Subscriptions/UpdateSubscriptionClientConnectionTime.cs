@@ -1,6 +1,7 @@
 ﻿using System;
 using Raven.Client.Documents.Subscriptions;
 using Raven.Client.ServerWide;
+using Raven.Server.Rachis;
 using Sparrow.Json;
 using Sparrow.Json.Parsing;
 
@@ -24,13 +25,13 @@ namespace Raven.Server.ServerWide.Commands.Subscriptions
         {
             var itemId = GetItemId();
             if (existingValue == null)
-                throw new InvalidOperationException($"Subscription with id {itemId} does not exist");
+                throw new RachisApplyException($"Subscription with id {itemId} does not exist");
 
             var subscription = JsonDeserializationCluster.SubscriptionState(existingValue);
 
             var lastResponsibleNode = AcknowledgeSubscriptionBatchCommand.GetLastResponsibleNode(HasHighlyAvailableTasks, record.Topology, NodeTag);
             if (record.Topology.WhoseTaskIsIt(state, subscription, lastResponsibleNode) != NodeTag)
-                throw new InvalidOperationException($"Can't update subscription with name {itemId} by node {NodeTag}, because it's not it's task to update this subscription");
+                throw new RachisApplyException($"Can't update subscription with name {itemId} by node {NodeTag}, because it's not it's task to update this subscription");
 
             subscription.LastClientConnectionTime = LastClientConnectionTime;
             subscription.NodeTag = NodeTag;

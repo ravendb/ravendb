@@ -42,9 +42,15 @@ class slowSqlDetails extends abstractPerformanceHintDetails {
             
             return [
                     previewColumn,
-                    new textColumn<Raven.Server.NotificationCenter.Notifications.Details.SlowSqlStatementInfo>(grid, x => x.Duration, "Duration (ms)", "15%"),
-                    new textColumn<Raven.Server.NotificationCenter.Notifications.Details.SlowSqlStatementInfo>(grid, x => generalUtils.formatUtcDateAsLocal(x.Date), "Date", "20%"),
-                    new textColumn<Raven.Server.NotificationCenter.Notifications.Details.SlowSqlStatementInfo>(grid, x => x.Statement, "Statement", "50%")
+                    new textColumn<Raven.Server.NotificationCenter.Notifications.Details.SlowSqlStatementInfo>(grid, x => x.Duration, "Duration (ms)", "15%", {
+                        sortable: "number"
+                    }),
+                    new textColumn<Raven.Server.NotificationCenter.Notifications.Details.SlowSqlStatementInfo>(grid, x => generalUtils.formatUtcDateAsLocal(x.Date), "Date", "20%", {
+                        sortable: x => x.Date
+                    }),
+                    new textColumn<Raven.Server.NotificationCenter.Notifications.Details.SlowSqlStatementInfo>(grid, x => x.Statement, "Statement", "50%", {
+                        sortable: "string"
+                    })
                 ];
         });
         

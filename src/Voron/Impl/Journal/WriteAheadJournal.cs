@@ -234,20 +234,10 @@ namespace Voron.Impl.Journal
                 // corruption when applying journals at recovery time rather than at usage.
                 var tempTx = new TempPagerTransaction();
 
-                var sortedPages = modifiedPages.ToArray();
-                Array.Sort(sortedPages);
-
-                long minPageChecked = -1;
-
-                foreach (var modifedPage in modifiedPages)
+                foreach (var modifiedPage in modifiedPages)
                 {
-                    if (minPageChecked >= modifedPage)
-                        continue;
-
-                    var ptr = (PageHeader*)_dataPager.AcquirePagePointerWithOverflowHandling(tempTx, modifedPage, null);
-                    _env.ValidatePageChecksum(modifedPage, ptr);
-
-                    minPageChecked = modifedPage + VirtualPagerLegacyExtensions.GetNumberOfPages(ptr);
+                    var ptr = (PageHeader*)_dataPager.AcquirePagePointerWithOverflowHandling(tempTx, modifiedPage, null);
+                    _env.ValidatePageChecksum(modifiedPage, ptr);
 
                     tempTx.Dispose(); // release any resources, we just wanted to validate things
                 }
@@ -1306,7 +1296,7 @@ namespace Voron.Impl.Journal
                 }
 
                 sp.Restart();
-                journalEntry.UpdatePageTranslationTable = CurrentFile.Write(tx, journalEntry, _lazyTransactionBuffer);
+                journalEntry.UpdatePageTranslationTableAndUnusedPages = CurrentFile.Write(tx, journalEntry, _lazyTransactionBuffer);
                 sp.Stop();
                 _lastCompressionAccelerationInfo.WriteDuration = sp.Elapsed;
                 _lastCompressionAccelerationInfo.CalculateOptimalAcceleration();
@@ -1726,7 +1716,7 @@ namespace Voron.Impl.Journal
         public byte* Base;
         public int NumberOf4Kbs;
         public int NumberOfUncompressedPages;
-        public JournalFile.UpdatePageTranslationTableAction? UpdatePageTranslationTable;
+        public JournalFile.UpdatePageTranslationTableAndUnusedPagesAction? UpdatePageTranslationTableAndUnusedPages;
     }
 }
 

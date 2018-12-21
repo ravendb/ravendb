@@ -20,12 +20,17 @@ interface virtualColumn {
     /**
      * Renders a cell for this column. Returns a string, either text or HTML, containing the content.
      */
-    renderCell(item: Object, isSelected: boolean): string;
+    renderCell(item: Object, isSelected: boolean, isSorted: boolean): string;
 
     /**
      * Serialize column to json
      */
     toDto(): virtualColumnDto;
+
+    /**
+     * Returns true if column is sortable
+     */
+    sortable: boolean;
 }
 
 export = virtualColumn;

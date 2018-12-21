@@ -202,30 +202,51 @@ class trafficWatch extends viewModelBase {
 
         $('.traffic-watch [data-toggle="tooltip"]').tooltip();
 
-        const rowHighlightRules = {
-            extraClass: (item: Raven.Client.Documents.Changes.TrafficWatchChange) => {
-                const responseCode = item.ResponseStatusCode.toString();
-                if (responseCode.startsWith("4")) {
-                    return "bg-warning";
-                } else if (responseCode.startsWith("5")) {
-                    return "bg-danger";
-                }
-                return "";
+        const rowHighlightRules = (item: Raven.Client.Documents.Changes.TrafficWatchChange) => {
+            const responseCode = item.ResponseStatusCode.toString();
+            if (responseCode.startsWith("4")) {
+                return "bg-warning";
+            } else if (responseCode.startsWith("5")) {
+                return "bg-danger";
             }
+            return "";
         };
         
         const grid = this.gridController();
         grid.headerVisible(true);
         grid.init((s, t) => this.fetchTraffic(s, t), () =>
             [
-                new textColumn<Raven.Client.Documents.Changes.TrafficWatchChange>(grid, x => generalUtils.formatUtcDateAsLocal(x.TimeStamp), "Timestamp", "20%", rowHighlightRules),
-                new textColumn<Raven.Client.Documents.Changes.TrafficWatchChange>(grid, x => x.ResponseStatusCode, "Status", "8%", rowHighlightRules),
-                new textColumn<Raven.Client.Documents.Changes.TrafficWatchChange>(grid, x => x.DatabaseName, "Database Name", "8%", rowHighlightRules),
-                new textColumn<Raven.Client.Documents.Changes.TrafficWatchChange>(grid, x => x.ElapsedMilliseconds, "Duration", "8%", rowHighlightRules),
-                new textColumn<Raven.Client.Documents.Changes.TrafficWatchChange>(grid, x => x.HttpMethod, "Method", "6%", rowHighlightRules),
-                new textColumn<Raven.Client.Documents.Changes.TrafficWatchChange>(grid, x => x.Type, "Type", "6%", rowHighlightRules),
-                new textColumn<Raven.Client.Documents.Changes.TrafficWatchChange>(grid, x => x.CustomInfo, "CustomInfo", "8%", rowHighlightRules),
-                new textColumn<Raven.Client.Documents.Changes.TrafficWatchChange>(grid, x => x.RequestUri, "URI", "35%", rowHighlightRules)
+                new textColumn<Raven.Client.Documents.Changes.TrafficWatchChange>(grid, x => generalUtils.formatUtcDateAsLocal(x.TimeStamp), "Timestamp", "20%", {
+                    extraClass: rowHighlightRules,
+                    sortable: "string"
+                }),
+                new textColumn<Raven.Client.Documents.Changes.TrafficWatchChange>(grid, x => x.ResponseStatusCode, "Status", "8%", {
+                    extraClass: rowHighlightRules,
+                    sortable: "number"
+                }),
+                new textColumn<Raven.Client.Documents.Changes.TrafficWatchChange>(grid, x => x.DatabaseName, "Database Name", "8%", {
+                    extraClass: rowHighlightRules,
+                    sortable: "string"
+                }),
+                new textColumn<Raven.Client.Documents.Changes.TrafficWatchChange>(grid, x => x.ElapsedMilliseconds, "Duration", "8%", {
+                    extraClass: rowHighlightRules,
+                    sortable: "number"
+                }),
+                new textColumn<Raven.Client.Documents.Changes.TrafficWatchChange>(grid, x => x.HttpMethod, "Method", "6%", {
+                    extraClass: rowHighlightRules,
+                    sortable: "string"
+                }),
+                new textColumn<Raven.Client.Documents.Changes.TrafficWatchChange>(grid, x => x.Type, "Type", "6%", {
+                    extraClass: rowHighlightRules,
+                    sortable: "string"
+                }),
+                new textColumn<Raven.Client.Documents.Changes.TrafficWatchChange>(grid, x => x.CustomInfo, "CustomInfo", "8%", {
+                    extraClass: rowHighlightRules
+                }),
+                new textColumn<Raven.Client.Documents.Changes.TrafficWatchChange>(grid, x => x.RequestUri, "URI", "35%", {
+                    extraClass: rowHighlightRules,
+                    sortable: "string"
+                })
             ]
         );
 
