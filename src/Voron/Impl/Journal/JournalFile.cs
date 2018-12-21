@@ -185,16 +185,7 @@ namespace Voron.Impl.Journal
             Debug.Assert(pages.NumberOf4Kbs > 0);
 
             UpdatePageTranslationTable(tx, _unusedPagesHashSetPool, ptt);
-
-            using (_locker2.Lock())
-            {
-                Debug.Assert(!_unusedPages.Any(_unusedPagesHashSetPool.Contains)); // We ensure there cannot be duplicates here (disjoint sets). 
-
-                foreach (var item in _unusedPagesHashSetPool)
-                    _unusedPages.Add(item);
-            }
-            _unusedPagesHashSetPool.Clear();
-
+            
             if (tx.IsLazyTransaction == false && (lazyTransactionScratch == null || lazyTransactionScratch.HasDataInBuffer() == false))
             {
                 try
@@ -393,6 +384,11 @@ namespace Voron.Impl.Journal
 
                 using (_parent._locker2.Lock())
                 {
+                    Debug.Assert(!_parent._unusedPages.Any(_parent._unusedPagesHashSetPool.Contains)); // We ensure there cannot be duplicates here (disjoint sets). 
+
+                    foreach (var item in _parent._unusedPagesHashSetPool)
+                        _parent._unusedPages.Add(item);
+
                     _parent._pageTranslationTable.SetItems(_tx, _ptt);
                     // it is important that the last write position will be set
                     // _after_ the PTT update, because a flush that is concurrent 
@@ -402,6 +398,8 @@ namespace Voron.Impl.Journal
                     // think we flushed, and then realize that we didn't.
                     Interlocked.Add(ref _parent._writePosIn4Kb, _numberOfWritten4Kbs);
                 }
+
+                _parent._unusedPagesHashSetPool.Clear();
             }
         }
     }
