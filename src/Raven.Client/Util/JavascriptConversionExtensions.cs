@@ -527,13 +527,12 @@ namespace Raven.Client.Util
                     case "Distinct":
                         {
                             context.PreventDefault();
-                            context.Visitor.Visit(methodCallExpression.Arguments[0]);
                             var writer = context.GetWriter();
                             using (writer.Operation(methodCallExpression))
                             {
-                                writer.Write(".filter((value, index) => ");
+                                writer.Write("Array.from(new Set(");
                                 context.Visitor.Visit(methodCallExpression.Arguments[0]);
-                                writer.Write(".indexOf(value) == index)");
+                                writer.Write("))");
                                 return;
                             }
                         }

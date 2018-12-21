@@ -2845,7 +2845,7 @@ from Orders as o load o.Employee as employee select output(o, employee)" , query
                                  "Reverse : u.Roles.slice().reverse(), " +
                                  "IndexOf : u.Roles.indexOf(\"3\"), " +
                                  "Concat : u.Roles.concat($p0), " +
-                                 "Distinct : u.Roles.filter((value, index) => u.Roles.indexOf(value) == index), " +
+                                 "Distinct : Array.from(new Set(u.Roles)), " +
                                  "ElementAt : u.Details.map(function(x){return x.Number;})[2] }"
                                 , query.ToString());
 
