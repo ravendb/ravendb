@@ -35,6 +35,8 @@ namespace Raven.Client.Documents.Operations.Counters
 
         public string ChangeVector { get; set; }
 
+        internal string DbId { get; set; }
+
         public DynamicJsonValue ToJson()
         {
             return new DynamicJsonValue

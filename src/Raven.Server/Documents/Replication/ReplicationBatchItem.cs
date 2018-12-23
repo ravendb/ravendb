@@ -35,6 +35,8 @@ namespace Raven.Server.Documents.Replication
 
         public long Value;
 
+        public BlittableJsonReaderObject Values;
+
         #endregion
 
         public static ReplicationBatchItem From(Document doc)

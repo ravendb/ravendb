@@ -695,7 +695,9 @@ namespace Raven.Server.Smuggler.Documents
                     Type = CounterOperationType.Put,
                     CounterName = counter.CounterName,
                     Delta = counter.TotalValue,
-                    ChangeVector = counter.ChangeVector
+                    ChangeVector = counter.ChangeVector,
+                    DbId = counter.DbId,
+                    SourceEtag = counter.Etag
                 };
 
                 var countersCount = _cmd.Add(counter.DocumentId, counterOp, out var isNew);

@@ -693,6 +693,8 @@ namespace Raven.Server.Documents.Replication
             public long CounterValue;
             public string CounterName;
 
+            public Dictionary<string, List<(string DbId, long Value, long Etag)>> CounterValues;
+
             #endregion
 
             #region Attachment
@@ -826,10 +828,29 @@ namespace Raven.Server.Documents.Replication
                     Debug.Assert(collectionSize > 0);
                     item.Collection = Encoding.UTF8.GetString(ReadExactly(collectionSize), collectionSize);
 
-                    var nameSize = *(int*)ReadExactly(sizeof(int));
-                    item.CounterName = Encoding.UTF8.GetString(ReadExactly(nameSize), nameSize);
+                    var numOfItems = *(int*)ReadExactly(sizeof(int));
 
-                    item.CounterValue = *(long*)ReadExactly(sizeof(long));
+                    item.CounterValues = new Dictionary<string, List<(string, long, long)>>();
+
+                    for (int i = 0; i < numOfItems; i++)
+                    {
+                        var values = new List<(string, long, long)>();
+
+                        var nameSize = *(int*)ReadExactly(sizeof(int));
+                        var counterName = Encoding.UTF8.GetString(ReadExactly(nameSize), nameSize);
+
+                        var numOfProperties = *(int*)ReadExactly(sizeof(int));
+                        for (int j = 0; j < numOfProperties; j++)
+                        {
+                            var dbId = Encoding.UTF8.GetString(ReadExactly(22), 22); //todo Constant (DbIdAsBase64Size = 22 bytes)
+                            var value = *(long*)ReadExactly(sizeof(long));
+                            var etag = *(long*)ReadExactly(sizeof(long));
+
+                            values.Add((dbId, value, etag));
+                        }
+
+                        item.CounterValues[counterName]= values;
+                    }
                 }
                 else if (item.Type == ReplicationBatchItem.ReplicationItemType.CounterTombstone)
                 {
@@ -1130,9 +1151,11 @@ namespace Raven.Server.Documents.Replication
                             }
                             else if (item.Type == ReplicationBatchItem.ReplicationItemType.Counter)
                             {
-                                database.DocumentsStorage.CountersStorage.PutCounter(context,
-                                    item.Id, item.Collection, item.CounterName, item.ChangeVector,
-                                    item.CounterValue);
+                                //(DocumentsOperationContext context, string documentId, string collection, string changeVector, List<(long value, string name)> values)
+
+                                database.DocumentsStorage.CountersStorage.PutCounters(context,
+                                    item.Id, item.Collection, item.ChangeVector,
+                                    item.CounterValues);
                             }
                             else if (item.Type == ReplicationBatchItem.ReplicationItemType.CounterTombstone)
                             {

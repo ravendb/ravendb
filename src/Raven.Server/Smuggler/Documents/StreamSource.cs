@@ -276,7 +276,9 @@ namespace Raven.Server.Smuggler.Documents
                     if (reader.TryGet(nameof(DocumentItem.CounterItem.DocId), out string docId) == false ||
                         reader.TryGet(nameof(DocumentItem.CounterItem.Name), out string name) == false ||
                         reader.TryGet(nameof(DocumentItem.CounterItem.ChangeVector), out string cv) == false ||
-                        reader.TryGet(nameof(DocumentItem.CounterItem.Value), out long value) == false)
+                        reader.TryGet(nameof(DocumentItem.CounterItem.Value), out long value) == false ||
+                        reader.TryGet(nameof(DocumentItem.CounterItem.DbId), out string dbId) == false ||
+                        reader.TryGet(nameof(DocumentItem.CounterItem.SourceEtag), out long sourceEtag) == false)
                     {
                         _result.Counters.ErroredCount++;
                         _result.AddWarning("Could not read counter entry.");
@@ -289,7 +291,9 @@ namespace Raven.Server.Smuggler.Documents
                         DocumentId = docId,
                         CounterName = name,
                         ChangeVector = cv,
-                        TotalValue = value
+                        TotalValue = value,
+                        DbId = dbId,
+                        Etag = sourceEtag
                     };
                 }
             }

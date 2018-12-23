@@ -6,6 +6,7 @@
 
 using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.Net;
 using System.Text;
 using System.Threading.Tasks;
@@ -113,6 +114,65 @@ namespace Raven.Server.Documents.Handlers
                     var docId = kvp.Key;
                     string docCollection = null;
                     ops += kvp.Value.Count;
+
+                    if (_fromSmuggler || _fromEtl)
+                    {
+                        var counterValues = new Dictionary<string, List<(string, long, long)>>();
+                        LoadDocument();
+
+                        if (doc != null)
+                            docCollection = CollectionName.GetCollectionName(doc.Data);
+
+                        if (_fromEtl && doc == null)
+                            break;
+
+                        foreach (var operation in kvp.Value)
+                        {
+                            if (_fromEtl && operation.Type == CounterOperationType.Delete)
+                            {
+                                DeleteCounter(context, docId, docCollection, operation, countersToAdd, countersToRemove);
+                                continue;
+                            }
+
+                            Debug.Assert(operation.Type == CounterOperationType.Put);
+
+                            var value = (operation.DbId, operation.Delta, operation.SourceEtag);
+
+                            if (counterValues.TryGetValue(operation.CounterName, out var existing))
+                            {
+                                existing.Add(value);
+                            }
+                            else
+                            {
+                                counterValues[operation.CounterName] = new List<(string, long, long)>
+                                {
+                                    value
+                                };
+                            }
+
+                            countersToAdd.Add(operation.CounterName);
+                            //countersToRemove.Remove(operation.CounterName);
+
+                        }
+
+                        _database.DocumentsStorage.CountersStorage.PutCounters(context, docId, docCollection,
+                            kvp.Value[0].ChangeVector, counterValues);
+
+                        if (doc != null)
+                        {
+                            var nonPersistentFlags = NonPersistentDocumentFlags.ByCountersUpdate;
+                            if (_fromSmuggler)
+                                nonPersistentFlags |= NonPersistentDocumentFlags.FromSmuggler;
+
+                            _database.DocumentsStorage.CountersStorage.UpdateDocumentCounters(context, doc, docId, countersToAdd, countersToRemove, nonPersistentFlags);
+                            doc.Data?.Dispose(); // we cloned the data, so we can dispose it.
+                        }
+
+                        countersToAdd.Clear();
+                        countersToRemove.Clear();
+                        continue;
+                    }
+
                     foreach (var operation in kvp.Value)
                     {
                         switch (operation.Type)
@@ -141,19 +201,12 @@ namespace Raven.Server.Documents.Handlers
                                     countersToAdd.Add(operation.CounterName);
                                     countersToRemove.Remove(operation.CounterName);
                                 }
-
                                 break;
                             case CounterOperationType.Delete:
-                                if (_fromEtl && doc == null)
-                                    break;
-
-                                LastChangeVector = _database.DocumentsStorage.CountersStorage.DeleteCounter(context, docId, docCollection, operation.CounterName);
-
-                                countersToAdd.Remove(operation.CounterName);
-                                countersToRemove.Add(operation.CounterName);
+                                DeleteCounter(context, docId, docCollection, operation, countersToAdd, countersToRemove);
                                 break;
                             case CounterOperationType.Put:
-                                if (_fromEtl && doc == null)
+/*                                if (_fromEtl && doc == null)
                                     break;
 
                                 // intentionally not setting LastChangeVector, we never use it for
@@ -167,11 +220,11 @@ namespace Raven.Server.Documents.Handlers
                                 else
                                 {
                                     _database.DocumentsStorage.CountersStorage.PutCounter(context, docId, docCollection,
-                                        operation.CounterName, operation.ChangeVector, operation.Delta);
+                                        operation.CounterName, operation.ChangeVector, operation.Delta, operation.DbId);
                                 }
 
                                 countersToAdd.Add(operation.CounterName);
-                                countersToRemove.Remove(operation.CounterName);
+                                countersToRemove.Remove(operation.CounterName);*/
                                 break;
                             case CounterOperationType.None:
                                 break;
@@ -233,6 +286,15 @@ namespace Raven.Server.Documents.Handlers
                 }
 
                 return ops;
+            }
+
+            private void DeleteCounter(DocumentsOperationContext context, string docId, string docCollection, CounterOperation operation, SortedSet<string> countersToAdd,
+                HashSet<string> countersToRemove)
+            {
+                LastChangeVector = _database.DocumentsStorage.CountersStorage.DeleteCounter(context, docId, docCollection, operation.CounterName);
+
+                countersToAdd.Remove(operation.CounterName);
+                countersToRemove.Add(operation.CounterName);
             }
 
             public override TransactionOperationsMerger.IReplayableCommandDto<TransactionOperationsMerger.MergedTransactionCommand> ToDto(JsonOperationContext context)

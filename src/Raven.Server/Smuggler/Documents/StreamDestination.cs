@@ -430,6 +430,12 @@ namespace Raven.Server.Smuggler.Documents
                 Writer.WritePropertyName(nameof(DocumentItem.CounterItem.ChangeVector));
                 Writer.WriteString(counterDetail.ChangeVector);
 
+                Writer.WritePropertyName(nameof(DocumentItem.CounterItem.DbId));
+                Writer.WriteString(counterDetail.DbId);
+
+                Writer.WritePropertyName(nameof(DocumentItem.CounterItem.SourceEtag));
+                Writer.WriteInteger(counterDetail.Etag);
+
                 Writer.WriteEndObject();
             }
 

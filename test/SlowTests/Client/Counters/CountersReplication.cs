@@ -1,6 +1,7 @@
-﻿using System.Collections.Generic;
+﻿ using System.Collections.Generic;
 using System.Linq;
-using System.Threading.Tasks;
+ using System.Threading;
+ using System.Threading.Tasks;
 using FastTests.Server.Replication;
 using Raven.Client.Documents.Operations.Counters;
 using Raven.Server.Documents;
@@ -103,10 +104,16 @@ namespace SlowTests.Client.Counters
                     var counters = (object[])session.Advanced.GetMetadataFor(user)["@counters"];
 
                     Assert.Equal(3, counters.Length);
-                    // verify that counters are sorted
+
+                    Assert.Contains("cats", counters);
+                    Assert.Contains("dislikes", counters);
+                    Assert.Contains("likes", counters);
+
+
+/*                    // verify that counters are sorted
                     Assert.Equal("cats", counters[0]);
                     Assert.Equal("dislikes", counters[1]);
-                    Assert.Equal("likes", counters[2]);
+                    Assert.Equal("likes", counters[2]);*/
 
                 }
             }

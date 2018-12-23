@@ -87,7 +87,10 @@ namespace Raven.Client.Documents.Operations.Counters
         public string CounterName;
         public long Delta;
 
+
         internal string ChangeVector;
+        internal long SourceEtag;
+        internal string DbId;
 
         public static CounterOperation Parse(BlittableJsonReaderObject input)
         {

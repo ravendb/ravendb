@@ -50,6 +50,9 @@ namespace Raven.Server.Smuggler.Documents
             public string DocId;
             public string ChangeVector;
             public long Value;
+
+            public string DbId;
+            public long SourceEtag;
         }
     }
 }

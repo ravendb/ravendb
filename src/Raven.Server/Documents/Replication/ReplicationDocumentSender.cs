@@ -14,6 +14,7 @@ using Sparrow.Json.Parsing;
 using Sparrow.Logging;
 using Raven.Server.ServerWide.Context;
 using Raven.Server.Utils;
+using Sparrow.Json;
 using Voron;
 
 namespace Raven.Server.Documents.Replication
@@ -25,6 +26,7 @@ namespace Raven.Server.Documents.Replication
 
         private readonly SortedList<long, ReplicationBatchItem> _orderedReplicaItems = new SortedList<long, ReplicationBatchItem>();
         private readonly Dictionary<Slice, ReplicationBatchItem> _replicaAttachmentStreams = new Dictionary<Slice, ReplicationBatchItem>();
+        private readonly Dictionary<LazyStringValue, List<ReplicationBatchItem>> _countersToReplicate = new Dictionary<LazyStringValue, List<ReplicationBatchItem>>();
         private readonly byte[] _tempBuffer = new byte[32 * 1024];
         private readonly Stream _stream;
         private readonly OutgoingReplicationHandler _parent;
@@ -234,6 +236,7 @@ namespace Raven.Server.Documents.Replication
                                     wasInterrupted = true;
                                     break;
                                 }
+/*
 
                                 if (_stats.Storage.CurrentStats.InputCount % 16384 == 0)
                                 {
@@ -243,7 +246,7 @@ namespace Raven.Server.Documents.Replication
                                         wasInterrupted = true;
                                         break;
                                     }
-                                }
+                                }*/
                             }
 
                             _stats.Storage.RecordInputAttempt();
@@ -351,6 +354,7 @@ namespace Raven.Server.Documents.Replication
                     }
                     _orderedReplicaItems.Clear();
                     _replicaAttachmentStreams.Clear();
+                    _countersToReplicate.Clear();
                 }
             }
         }
@@ -497,6 +501,23 @@ namespace Raven.Server.Documents.Replication
 
             if (item.Type == ReplicationBatchItem.ReplicationItemType.Attachment)
                 _replicaAttachmentStreams[item.Base64Hash] = item;
+            if (item.Type == ReplicationBatchItem.ReplicationItemType.Counter)
+            {
+                if (_countersToReplicate.TryGetValue(item.Id, out var existing))
+                {
+                    existing.Add(item);
+                }
+                else
+                {
+                    _countersToReplicate[item.Id] = new List<ReplicationBatchItem>
+                    {
+                        item
+                    };
+                }
+
+                return true;
+
+            }
 
             Debug.Assert(item.Flags.Contain(DocumentFlags.Artificial) == false);
             _orderedReplicaItems.Add(item.Etag, item);
@@ -513,13 +534,21 @@ namespace Raven.Server.Documents.Replication
             {
                 [nameof(ReplicationMessageHeader.Type)] = ReplicationMessageType.Documents,
                 [nameof(ReplicationMessageHeader.LastDocumentEtag)] = _lastEtag,
-                [nameof(ReplicationMessageHeader.ItemsCount)] = _orderedReplicaItems.Count,
+                [nameof(ReplicationMessageHeader.ItemsCount)] = _orderedReplicaItems.Count + _countersToReplicate.Count,
                 [nameof(ReplicationMessageHeader.AttachmentStreamsCount)] = _replicaAttachmentStreams.Count
             };
 
             stats.RecordLastEtag(_lastEtag);
 
             _parent.WriteToServer(headerJson);
+
+            foreach (var item in _countersToReplicate)
+            {
+                WriteCountersToServer(documentsContext, item.Key, item.Value);
+
+                stats.RecordCountersOutput(item.Value.Count);
+            }
+
             foreach (var item in _orderedReplicaItems)
             {
                 var value = item.Value;
@@ -533,7 +562,7 @@ namespace Raven.Server.Documents.Replication
 
                 stats.RecordAttachmentOutput(value.Stream.Length);
             }
-            
+
             // close the transaction as early as possible, and before we wait for reply
             // from other side
             documentsContext.Transaction.Dispose();
@@ -921,6 +950,100 @@ namespace Raven.Server.Documents.Replication
 
                 _stream.Write(_tempBuffer, 0, tempBufferPos);
             }
+        }
+
+        private unsafe void WriteCountersToServer(DocumentsOperationContext context, LazyStringValue docId, List<ReplicationBatchItem> items)
+        {
+            using (Slice.From(context.Allocator, items[0].ChangeVector, out var cv))
+            fixed (byte* pTemp = _tempBuffer)
+                {
+                    var requiredSize = sizeof(byte) + // type
+                                       sizeof(int) + // change vector size
+                                       cv.Size + // change vector
+                                       sizeof(short) + // transaction marker
+                                       sizeof(int) + // size of doc id
+                                       docId.Size +
+                                       sizeof(int) + // size of doc collection
+                                       items[0].Collection.Size +// doc collection
+                                       sizeof(int); // number of items
+
+                    foreach (var item in items)
+                    {
+                        requiredSize += sizeof(int) + // size of name
+                                        item.Name.Size + // name
+                                        sizeof(int); // number of properties (dbIds)
+
+                        var prop = new BlittableJsonReaderObject.PropertyDetails();
+                        for (var i = 0; i < item.Values.Count; i++)
+                        {
+                            item.Values.GetPropertyByIndex(i, ref prop);
+                            requiredSize += prop.Name.Size + // prop name (DbIdAsBase64Size = 22 bytes)
+                                            sizeof(long) + // value
+                                            sizeof(long); // etag
+                        }
+                    }
+
+                    if (requiredSize > _tempBuffer.Length)
+                        ThrowTooManyChangeVectorEntries(items[0]);
+
+                    var tempBufferPos = 0;
+                    pTemp[tempBufferPos++] = (byte)items[0].Type;
+
+                    *(int*)(pTemp + tempBufferPos) = cv.Size;
+                    tempBufferPos += sizeof(int);
+
+                    Memory.Copy(pTemp + tempBufferPos, cv.Content.Ptr, cv.Size);
+                    tempBufferPos += cv.Size;
+
+                    *(short*)(pTemp + tempBufferPos) = items[0].TransactionMarker;
+                    tempBufferPos += sizeof(short);
+
+                    *(int*)(pTemp + tempBufferPos) = docId.Size;
+                    tempBufferPos += sizeof(int);
+                    Memory.Copy(pTemp + tempBufferPos, docId.Buffer, docId.Size);
+                    tempBufferPos += docId.Size;
+
+                    *(int*)(pTemp + tempBufferPos) = items[0].Collection.Size;
+                    tempBufferPos += sizeof(int);
+                    Memory.Copy(pTemp + tempBufferPos, items[0].Collection.Buffer, items[0].Collection.Size);
+                    tempBufferPos += items[0].Collection.Size;
+
+                    *(int*)(pTemp + tempBufferPos) = items.Count;
+                    tempBufferPos += sizeof(int);
+
+                    foreach (var item in items)
+                    {
+                        *(int*)(pTemp + tempBufferPos) = item.Name.Size;
+                        tempBufferPos += sizeof(int);
+
+                        Memory.Copy(pTemp + tempBufferPos, item.Name.Buffer, item.Name.Size);
+                        tempBufferPos += item.Name.Size;
+
+                        *(int*)(pTemp + tempBufferPos) = item.Values.Count;
+                        tempBufferPos += sizeof(int);
+
+                        var prop = new BlittableJsonReaderObject.PropertyDetails();
+                        for (var i =0; i< item.Values.Count; i++)
+                        {
+                            item.Values.GetPropertyByIndex(i, ref prop);
+
+                            Memory.Copy(pTemp + tempBufferPos, prop.Name.Buffer, prop.Name.Size);
+                            tempBufferPos += 22; //todo Constant (DbIdAsBase64Size = 22 bytes)
+
+                            var arr = (BlittableJsonReaderArray)prop.Value;
+
+                            *(long*)(pTemp + tempBufferPos) = (long)arr[0];
+                            tempBufferPos += sizeof(long);
+
+                            *(long*)(pTemp + tempBufferPos) = (long)arr[1];
+                            tempBufferPos += sizeof(long);
+                        }
+
+                    }
+
+
+                    _stream.Write(_tempBuffer, 0, tempBufferPos);
+                }
         }
 
         private unsafe void WriteCounterTombstoneToServer(DocumentsOperationContext context, ReplicationBatchItem item)
