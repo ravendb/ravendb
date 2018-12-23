@@ -31,7 +31,7 @@ namespace Raven.Server.Config.Categories
         [Description("EXPERT: The maximum amount of committed memory that RavenDB will attempt to ensure remains available. Reducing this value too much may cause RavenDB to fail if there is not enough memory available for the operation system to handle operations.")]
         [DefaultValue(128)]
         [SizeUnit(SizeUnit.Megabytes)]
-        [ConfigurationEntry("Memory.MaxFreeCommittedMemoryToKeep", ConfigurationEntryScope.ServerWideOnly)]
-        public Size MaxFreeCommittedMemoryToKeep { get; set; }
+        [ConfigurationEntry("Memory.MaxFreeCommittedMemoryToKeepInMb", ConfigurationEntryScope.ServerWideOnly)]
+        public Size MaxFreeCommittedMemoryToKeepInMb { get; set; }
     }
 }
