@@ -16,11 +16,11 @@ namespace Raven.Server.Documents.Queries.Graph
         DocumentsOperationContext _context;
         DocumentsStorage _documentStorage;
         private List<GraphQueryRunner.Match> _temp = new List<GraphQueryRunner.Match>();
-        private string _colectionName;
+        public readonly string CollectionName;
 
-        public CollectionDestinationQueryStep(StringSegment alias, DocumentsOperationContext documentsContext, DocumentsStorage documentStorage, string colectionName)
+        public CollectionDestinationQueryStep(StringSegment alias, DocumentsOperationContext documentsContext, DocumentsStorage documentStorage, string collectionName)
         {
-            _colectionName = colectionName;
+            CollectionName = collectionName;
             _alias = alias;
             _aliases = new HashSet<string> { alias.Value };
             _context = documentsContext;
@@ -29,14 +29,22 @@ namespace Raven.Server.Documents.Queries.Graph
 
         public bool IsEmpty()
         {
-            if (_colectionName == string.Empty)
+            if (CollectionName == string.Empty)
                 return _documentStorage.GetNumberOfDocuments() == 0;
-            return _documentStorage.GetCollection(_colectionName, _context).Count == 0;
+            return _documentStorage.GetCollection(CollectionName, _context).Count == 0;
         }
+
+        public bool CollectIntermediateResults { get; set; } 
+
+        public List<GraphQueryRunner.Match> IntermediateResults { get; } = new List<GraphQueryRunner.Match>();
 
         public IGraphQueryStep Clone()
         {
-            return new CollectionDestinationQueryStep(_alias, _context, _documentStorage, _colectionName);
+            return new CollectionDestinationQueryStep(_alias, _context, _documentStorage, CollectionName)
+            {
+                CollectIntermediateResults = CollectIntermediateResults
+            };
+            ;
         }
 
         public void Analyze(GraphQueryRunner.Match match, GraphQueryRunner.GraphDebugInfo graphDebugInfo)
@@ -81,13 +89,18 @@ namespace Raven.Server.Documents.Queries.Graph
 
             var document = _documentStorage.Get(_context, id);
             var match = new GraphQueryRunner.Match();
-            if (_colectionName == string.Empty /* in the case of alias like '_'*/ ||
+            if (CollectionName == string.Empty /* in the case of alias like '_'*/ ||
                 document != null && document.TryGetMetadata(out var metadata)
                 && metadata.TryGetWithoutThrowingOnError(Constants.Documents.Metadata.Collection, out string cn)
-                && cn == _colectionName)
+                && cn == CollectionName)
             {
                 match.Set(_alias, document);
                 _temp.Add(match);
+            }
+
+            if (CollectIntermediateResults)
+            {
+                IntermediateResults.AddRange(_temp);
             }
             return _temp;
         }

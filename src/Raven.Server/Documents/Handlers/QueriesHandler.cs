@@ -220,6 +220,20 @@ namespace Raven.Server.Documents.Handlers
             AddPagingPerformanceHint(PagingOperationType.Queries, $"{nameof(SuggestQuery)} ({result.IndexName})", indexQuery.Query, numberOfResults, indexQuery.PageSize, result.DurationInMs);
         }
 
+        private async Task DetailedGraphResult(DocumentsOperationContext context, RequestTimeTracker tracker, HttpMethod method)
+        {
+            var indexQuery = await GetIndexQuery(context, method, tracker);
+            var queryRunner = Database.QueryRunner.GetRunner(indexQuery);
+            if (!(queryRunner is GraphQueryRunner gqr))
+                throw new InvalidOperationException("The specified query is not a graph query.");
+            using (var token = CreateTimeLimitedQueryToken())
+            using (Database.DocumentsStorage.ContextPool.AllocateOperationContext(out DocumentsOperationContext ctx))
+            using (var writer = new BlittableJsonTextWriter(context, ResponseBodyStream()))
+            {
+                await gqr.WriteDetailedQueryResult(indexQuery, ctx, writer, token);
+            }
+        }
+
         private  async Task Graph(DocumentsOperationContext context, RequestTimeTracker tracker, HttpMethod method)
         {
             var indexQuery = await GetIndexQuery(context, method, tracker);
@@ -556,6 +570,11 @@ namespace Raven.Server.Documents.Handlers
                 return;
             }
 
+            if (string.Equals(debug, "detailedGraphResult", StringComparison.OrdinalIgnoreCase))
+            {
+                await DetailedGraphResult(context, tracker, method);
+                return;
+            }
             throw new NotSupportedException($"Not supported query debug operation: '{debug}'");
         }
 

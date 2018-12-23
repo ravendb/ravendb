@@ -22,6 +22,10 @@ namespace Raven.Server.Documents.Queries.Graph
 
         bool IsEmpty();
 
+        bool CollectIntermediateResults { get; set; }
+
+        List<GraphQueryRunner.Match> IntermediateResults { get;} 
+
         IGraphQueryStep Clone();
 
         ISingleGraphStep GetSingleGraphStepExecution();
