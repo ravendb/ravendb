@@ -785,7 +785,8 @@ namespace SlowTests.Graph
                 }
             }
         }
-        [Fact(Skip = "Should work when RavenDB-12187 is fixed")]
+
+        [Fact]
         public void Make_sure_cycles_and_where_expression_are_handled_in_multi_hop_queries()
         {
             using (var store = GetDocumentStore())
@@ -809,26 +810,28 @@ namespace SlowTests.Graph
                     });
                     session.SaveChanges();
                 }
-
+                
                 using (var session = store.OpenSession())
                 {
                     var results = session.Advanced.RawQuery<JObject>(@"
-                       match (Dogs as d1)-recursive { [Likes as l] ->(Dogs as d2) }
-                       where d1 != d2
-                       select d1.Name as d1,l.Name as l, d2.Name as d2").ToList();
+                       match (Dogs as d1)-recursive as r (2,all) { [Likes as l] ->(Dogs as d2) }
+                       select d1.Name as d1, r.l as path").ToList();
                     Assert.NotEmpty(results); //sanity check
                     var interpretedResults = results.Select(x => new
                     {
                         D1 = x["d1"].Value<string>(),
-                        L = x["l"].First.Value<string>(), //we have only one item in pathes in this use-case
-                        D2 = x["d2"].Value<string>()
+                        TraversalPath = x["path"].Children().Select(c => c.Value<string>()).ToArray(), 
                     }).ToArray();
-                    Assert.Contains(interpretedResults, item => item.D1 == "Arava" && item.L == "Oscar" && item.D2 == "Pheobe");
-                    Assert.Contains(interpretedResults, item => item.D1 == "Oscar" && item.L == "Pheobe" && item.D2 == "Arava");
-                    Assert.Contains(interpretedResults, item => item.D1 == "Pheobe" && item.L == "Arava" && item.D2 == "Oscar");
+
+                    Assert.Equal(3, interpretedResults.Length);
+
+                    Assert.Contains(interpretedResults, item => item.D1 == "Arava" && item.TraversalPath[0] == "dogs/2-A" && item.TraversalPath[1] == "dogs/3-A");
+                    Assert.Contains(interpretedResults, item => item.D1 == "Oscar" && item.TraversalPath[0] == "dogs/3-A" && item.TraversalPath[1] == "dogs/1-A");
+                    Assert.Contains(interpretedResults, item => item.D1 == "Pheobe" && item.TraversalPath[0] == "dogs/1-A" && item.TraversalPath[1] == "dogs/2-A");
                 }
             }
         }
+
         public class Person
         {
             public string Name { get; set; }
