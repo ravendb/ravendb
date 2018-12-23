@@ -35,9 +35,9 @@ namespace Raven.Server.Documents.Queries.Graph
             _token = token;
         }
 
-
         public void BuildQueryPlan()
         {
+            GraphQuerySyntaxValidatorVisitor.Instance.Visit(_query.Metadata.Query); //this will throw if the syntax will be bad
             _rootQueryStep = BuildQueryPlanForExpression(_query.Metadata.Query.GraphQuery.MatchClause);                       
         }
 
@@ -122,7 +122,7 @@ namespace Raven.Server.Documents.Queries.Graph
 
             if (GraphQuery.WithEdgePredicates.TryGetValue(alias, out var withEdge) == false)
             {
-                throw new InvalidOperationException($"BuildQueryPlanForEdge was invoked for alias='{alias}' which suppose to be an edge but no corresponding WITH EDGE clause was found.");
+                throw new InvalidOperationException($"BuildQueryPlanForEdge was invoked for alias='{alias}' which is supposed to be an edge but no corresponding WITH EDGE clause was found.");
             }
 
             return new EdgeQueryStep(left, right, withEdge, edge, _query.QueryParameters);

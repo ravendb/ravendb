@@ -120,7 +120,7 @@ namespace SlowTests.Graph
 
 
 
-        [Fact(Skip = "Should not work until RavenDB-12075 is implemented")]
+        [Fact]
         public void Graph_query_missing_FROM_vertex_should_fail_properly()
         {
             using (var store = GetDocumentStore())
@@ -136,7 +136,7 @@ namespace SlowTests.Graph
             }
         }
 
-        [Fact(Skip = "Should not work until RavenDB-12075 is implemented")]
+        [Fact]
         public void Graph_query_missing_TO_vertex_should_fail_properly()
         {
             using (var store = GetDocumentStore())
@@ -151,6 +151,71 @@ namespace SlowTests.Graph
                 }
             }
         }
+
+        [Fact]
+        public void Graph_query_empty_recursive_clause_should_properly_fail()
+        {
+            using (var store = GetDocumentStore())
+            {
+                CreateNorthwindDatabase(store);
+                using (var session = store.OpenSession())
+                {
+                    Assert.Throws<InvalidQueryException>(() =>
+                        session.Advanced.RawQuery<JObject>(@"
+                            match (Employees as e)- recursive { } ->(Employees as m)
+                        ").ToList());
+                }
+            }
+        }
+
+        [Fact]
+        public void Graph_query_recursive_clause_with_edge_only_should_properly_fail()
+        {
+            using (var store = GetDocumentStore())
+            {
+                CreateNorthwindDatabase(store);
+                using (var session = store.OpenSession())
+                {
+                    Assert.Throws<InvalidQueryException>(() =>
+                        session.Advanced.RawQuery<JObject>(@"
+                            match (Employees as e)- recursive { [ReportsTo] } ->(Employees as m)
+                        ").ToList());
+                }
+            }
+        }
+
+        [Fact]
+        public void Graph_query_recursive_clause_that_ends_on_edge_should_properly_fail()
+        {
+            using (var store = GetDocumentStore())
+            {
+                CreateNorthwindDatabase(store);
+                using (var session = store.OpenSession())
+                {
+                    Assert.Throws<InvalidQueryException>(() =>
+                        session.Advanced.RawQuery<JObject>(@"
+                            match (Employees as e)- recursive { [ReportsTo]->(Employees as m)-[ReportsTo] } ->(Employees as m)
+                        ").ToList());
+                }
+            }
+        }
+
+        [Fact]
+        public void Graph_query_recursive_clause_that_ends_on_vertex_and_has_vertex_afterward_should_properly_fail()
+        {
+            using (var store = GetDocumentStore())
+            {
+                CreateNorthwindDatabase(store);
+                using (var session = store.OpenSession())
+                {
+                    Assert.Throws<InvalidQueryException>(() =>
+                        session.Advanced.RawQuery<JObject>(@"
+                            match (Employees as e)- recursive { [ReportsTo]->(Employees as m) }->(Employees as m)
+                        ").ToList());
+                }
+            }
+        }
+          
 
         [Fact]
         public void Query_with_duplicate_implicit_aliases_in_select_should_fail_properly()
@@ -972,6 +1037,95 @@ namespace SlowTests.Graph
                 }
             }
         }                
+
+        [Fact(DisplayName = "Edge_array_with_filter_should_work() -> Relevant for RavenDB-12206")]
+        public void Edge_array_with_filter_should_work()
+        {
+            using (var store = GetDocumentStore())
+            {
+                using (var session = store.OpenSession())
+                {
+                    session.Store(new Dog
+                    {
+                        Name = "Arava",
+                        Likes = new[] {"dogs/2-A"}
+                    });
+                    session.Store(new Dog
+                    {
+                        Name = "Oscar",
+                        Likes = new[] {"dogs/3-A"}
+                    });
+                    session.Store(new Dog
+                    {
+                        Name = "Pheobe",
+                        Likes = new[] {"dogs/1-A"}
+                    });
+                    session.SaveChanges();
+                }
+                
+                using (var session = store.OpenSession())
+                {
+                    //simple projection
+                    var results = session.Advanced.RawQuery<JObject>(@"match (Dogs as d1)-[Likes as l where Likes = 'dogs/2-A']->(Dogs) select l")
+                                                    .ToList().Select(x => x["l"].Value<string>()).ToArray();
+
+                    Assert.Equal(1, results.Length);
+                    Assert.Contains(results, x => x == "dogs/2-A");
+                }
+            }
+        }        
+
+        [Fact(DisplayName = "Projection_with_edge_array_with_filter_should_work() -> Relevant for RavenDB-12206")]
+        public void Projection_with_edge_array_with_filter_should_work()
+        {
+            using (var store = GetDocumentStore())
+            {
+                using (var session = store.OpenSession())
+                {
+                    session.Store(new Dog
+                    {
+                        Name = "Arava",
+                        Likes = new[] {"dogs/2-A"}
+                    });
+                    session.Store(new Dog
+                    {
+                        Name = "Oscar",
+                        Likes = new[] {"dogs/3-A"}
+                    });
+                    session.Store(new Dog
+                    {
+                        Name = "Pheobe",
+                        Likes = new[] {"dogs/1-A"}
+                    });
+                    session.SaveChanges();
+                }
+                
+                using (var session = store.OpenSession())
+                {
+                    //simple projection
+                    var results = session.Advanced.RawQuery<JObject>(@"match (Dogs as d1)-[Likes as l where Likes = 'dogs/2-A' select Likes]->(Dogs) select l")
+                        .ToList().Select(x => x["l"].Value<string>()).ToArray();
+
+                    Assert.Equal(1, results.Length);
+                    Assert.Contains(results, x => x == "dogs/2-A");
+
+                    //simple projection with alias in select
+                    results = session.Advanced.RawQuery<JObject>(@"match (Dogs as d1)-[Likes as l where Likes = 'dogs/2-A' select l]->(Dogs) select l")
+                        .ToList().Select(x => x["l"].Value<string>()).ToArray();
+
+                    Assert.Equal(1, results.Length);
+                    Assert.Contains(results, x => x == "dogs/2-A");
+
+                    //simple projection with alias in where
+                    results = session.Advanced.RawQuery<JObject>(@"match (Dogs as d1)-[Likes as l where l = 'dogs/2-A']->(Dogs) select l")
+                        .ToList().Select(x => x["l"].Value<string>()).ToArray();
+
+                    Assert.Equal(1, results.Length);
+                    Assert.Contains(results, x => x == "dogs/2-A");
+
+                }
+            }
+        }        
 
         [Fact(Skip = "Should not work until RavenDB-12205 is fixed")]
         public void Queries_with_non_existing_fields_in_vertex_filter_should_fail()

@@ -65,9 +65,8 @@ namespace SlowTests.Graph
 with {  from Users where id() = $uid    }   as u
 
 match   (u)<-[Users]-(Issues as i)          or
-        (Issues as i)-[Groups]->(Groups as direct)-recursive (0, all) {
-            [Parents]->(Groups)
-        }->(Groups as g)<-[Groups]-(u)
+        (Issues as i)-[Groups]->(Groups as direct)-recursive (0, all) { [Parents]->(Groups) }-[Parents]->(Groups as g)<-[Groups]-(u) or 
+        (Issues as i)-[Groups]->(Groups as direct)<-[Groups]-(u)
 
 select  i.Name as Issue, 
         u.Name as User
