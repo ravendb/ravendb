@@ -242,9 +242,21 @@ namespace FastTests.Client.Indexing
         [Fact]
         public void CanUseJavaScriptIndexWithLoadDocument()
         {
+            CanUseJavaScriptIndexWithLoadInternal<UsersWithProductsByName>();            
+        }
+
+        [Fact]
+        public void CanUseJavaScriptIndexWithExternalLoadDocument()
+        {
+            CanUseJavaScriptIndexWithLoadInternal<UsersWithProductsByNameWithExternalLoad>();
+        }
+
+        private void CanUseJavaScriptIndexWithLoadInternal<T>() where T : AbstractJavaScriptIndexCreationTask, new()
+        {
             using (var store = GetDocumentStore())
             {
-                store.ExecuteIndex(new UsersWithProductsByName());
+                var index = new T();
+                store.ExecuteIndex(index);
                 using (var session = store.OpenSession())
                 {
                     var productId = "Products/1";
@@ -261,9 +273,8 @@ namespace FastTests.Client.Indexing
                     }, productId);
                     session.SaveChanges();
                     WaitForIndexing(store);
-                    session.Query<User>("UsersWithProductsByName").Single(x => x.Name == "Brendan Eich");
+                    session.Query<User>(index.IndexName).Single(x => x.Name == "Brendan Eich");
                 }
-
             }
         }
 
@@ -720,6 +731,20 @@ namespace FastTests.Client.Indexing
             }
         }
 
+        private class UsersWithProductsByNameWithExternalLoad : AbstractJavaScriptIndexCreationTask
+        {
+            public UsersWithProductsByNameWithExternalLoad()
+            {
+                Maps = new HashSet<string>
+                {
+                    @"
+function GetProductName(u){
+    return load(u.Product,'Products').Name
+}
+map('Users', function (u){ return { Name: u.Name, Count: 1, Product: GetProductName(u)};})",
+                };
+            }
+        }
         private class Location
         {
             public string Description { get; set; }
