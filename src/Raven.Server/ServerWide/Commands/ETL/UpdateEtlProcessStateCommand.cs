@@ -3,6 +3,7 @@ using System.Linq;
 using Raven.Client.Documents.Operations.ETL;
 using Raven.Client.Json.Converters;
 using Raven.Client.ServerWide;
+using Raven.Server.Rachis;
 using Sparrow.Json;
 using Sparrow.Json.Parsing;
 
@@ -76,12 +77,12 @@ namespace Raven.Server.ServerWide.Commands.ETL
                 var databaseTask = GetMatchingConfiguration(record);
 
                 if (databaseTask == null)
-                    throw new Exception($"Can't update progress of ETL {ConfigurationName} by node {NodeTag}, because it's configuration can't be found");
+                    throw new RachisApplyException($"Can't update progress of ETL {ConfigurationName} by node {NodeTag}, because it's configuration can't be found");
 
 
                 var lastResponsibleNode = GetLastResponsibleNode(HasHighlyAvailableTasks, record.Topology, NodeTag);
                 if (record.Topology.WhoseTaskIsIt(state, databaseTask, lastResponsibleNode) != NodeTag)
-                    throw new Exception($"Can't update progress of ETL {ConfigurationName} by node {NodeTag}, because it's not its task to update this ETL");
+                    throw new RachisApplyException($"Can't update progress of ETL {ConfigurationName} by node {NodeTag}, because it's not its task to update this ETL");
             }
                 
             else

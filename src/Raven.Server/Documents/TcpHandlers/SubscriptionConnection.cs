@@ -7,9 +7,11 @@ using System.Threading;
 using System.Threading.Tasks;
 using Raven.Client.Documents.Changes;
 using Raven.Client.Documents.Subscriptions;
+using Raven.Client.Exceptions.Documents.Subscriptions;
 using Raven.Client.Util;
 using Raven.Server.Documents.Subscriptions;
 using Raven.Server.Json;
+using Raven.Server.Rachis;
 using Raven.Server.ServerWide.Context;
 using Sparrow;
 using Sparrow.Json;
@@ -17,12 +19,10 @@ using Sparrow.Json.Parsing;
 using Sparrow.Logging;
 using Raven.Server.Utils;
 using Sparrow.Utils;
-using Raven.Client.Exceptions.Documents.Subscriptions;
 using Raven.Server.Documents.Queries.AST;
 using Raven.Server.Documents.Replication;
 using Constants = Voron.Global.Constants;
 using QueryParser = Raven.Server.Documents.Queries.Parser.QueryParser;
-using Raven.Client.Exceptions.Cluster;
 
 namespace Raven.Server.Documents.TcpHandlers
 {
@@ -352,9 +352,9 @@ namespace Raven.Server.Documents.TcpHandlers
                         [nameof(SubscriptionConnectionServerMessage.Exception)] = ex.ToString()
                     });
                 }
-                else if (ex is CommandExecutionException commandExecution && commandExecution.InnerException != null && commandExecution.InnerException is SubscriptionException)
-                {                    
-                    await ReportExceptionToClient(connection, commandExecution.InnerException, recursionDepth - 1);                    
+                else if (ex is RachisApplyException commandExecution && commandExecution.InnerException is SubscriptionException)
+                {
+                    await ReportExceptionToClient(connection, commandExecution.InnerException, recursionDepth - 1);
                 }
                 else
                 {

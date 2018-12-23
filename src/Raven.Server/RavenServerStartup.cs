@@ -22,6 +22,7 @@ using Raven.Client.Exceptions.Routing;
 using Raven.Client.Exceptions.Security;
 using Raven.Client.Properties;
 using Raven.Server.Config;
+using Raven.Server.Rachis;
 using Raven.Server.Routing;
 using Raven.Server.TrafficWatch;
 using Raven.Server.Utils;
@@ -292,7 +293,8 @@ namespace Raven.Server
 
             if (exception is DocumentConflictException ||
                 exception is ConflictException ||
-                exception is ConcurrencyException)
+                exception is ConcurrencyException ||
+                exception is RachisConcurrencyException)
             {
                 response.StatusCode = (int)HttpStatusCode.Conflict;
                 return;

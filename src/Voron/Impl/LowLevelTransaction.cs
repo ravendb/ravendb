@@ -104,7 +104,7 @@ namespace Voron.Impl
         private readonly StorageEnvironmentState _state;
 
         private CommitStats _requestedCommitStats;
-        private JournalFile.UpdatePageTranslationTableAndUnusedPagesAction? _updatePageTranslationTableAndUnusedPages;
+        private JournalFile.UpdatePageTranslationTableAction? _updatePageTranslationTable;
 
         public TransactionPersistentContext PersistentContext { get; }
         public TransactionFlags Flags { get; }
@@ -937,7 +937,7 @@ namespace Voron.Impl
             }
             var result = _journal.WriteToJournal(this, out var journalFilePath);
 
-            _updatePageTranslationTableAndUnusedPages = result.UpdatePageTranslationTableAndUnusedPages;
+            _updatePageTranslationTable = result.UpdatePageTranslationTable;
 
             FlushedToJournal = true;
 
@@ -996,7 +996,7 @@ namespace Voron.Impl
 
                 Committed = true;
 
-                _updatePageTranslationTableAndUnusedPages?.ExecuteAfterCommit();
+                _updatePageTranslationTable?.ExecuteAfterCommit();
 
                 _env.TransactionAfterCommit(this);
 

@@ -1,5 +1,6 @@
 ﻿using System;
 using System.IO;
+using Raven.Server.Rachis;
 using Raven.Server.ServerWide.Context;
 using Sparrow.Json;
 using Sparrow.Json.Parsing;
@@ -77,7 +78,7 @@ namespace Raven.Server.ServerWide.Commands
                     Value = tuple.Item2
                 };
             }
-            throw new InvalidOperationException("Unable to convert result type: " + result?.GetType()?.FullName + ", " + result);
+            throw new RachisApplyException("Unable to convert result type: " + result?.GetType()?.FullName + ", " + result);
         }
     }
 
