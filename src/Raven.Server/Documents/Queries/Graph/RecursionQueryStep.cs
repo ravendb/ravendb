@@ -109,9 +109,16 @@ namespace Raven.Server.Documents.Queries.Graph
             return _results.Count == 0;
         }
 
+        public bool CollectIntermediateResults { get; set; }
+
+        public List<Match> IntermediateResults => CollectIntermediateResults ? _results : new List<Match>();
+
         public IGraphQueryStep Clone()
         {
-            return new RecursionQueryStep(_left.Clone(), new List<SingleEdgeMatcher>(_steps), _recursive, _options);
+            return new RecursionQueryStep(_left.Clone(), new List<SingleEdgeMatcher>(_steps), _recursive, _options)
+            {
+                CollectIntermediateResults = CollectIntermediateResults
+            };
         }
 
         internal (WithEdgesExpression Edge, StringSegment EdgeAlias, StringSegment RecursionAlias, string SourceAlias) GetOutputEdgeInfo()

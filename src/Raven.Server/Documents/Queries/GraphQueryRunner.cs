@@ -92,6 +92,13 @@ namespace Raven.Server.Documents.Queries
             return result;
         }
 
+        public async Task WriteDetailedQueryResult(IndexQueryServerSide indexQuery, DocumentsOperationContext ctx, BlittableJsonTextWriter writer, OperationCancelToken token)
+        {
+            var qr = await GetQueryResults(indexQuery, ctx, null, token, true);
+            var reporter = new GraphQueryDetailedReporter(writer, ctx);
+            reporter.Visit(qr.QueryPlan.RootQueryStep);
+        }
+
         public override async Task<DocumentQueryResult> ExecuteQuery(IndexQueryServerSide query, DocumentsOperationContext documentsContext, long? existingResultEtag,
             OperationCancelToken token)
         {
@@ -194,10 +201,13 @@ namespace Raven.Server.Documents.Queries
         }
 
 
-        private async Task<(List<Match> Matches, GraphQueryPlan QueryPlan, bool NotModified)> GetQueryResults(IndexQueryServerSide query, DocumentsOperationContext documentsContext, long? existingResultEtag, OperationCancelToken token)
+        private async Task<(List<Match> Matches, GraphQueryPlan QueryPlan, bool NotModified)> GetQueryResults(IndexQueryServerSide query, DocumentsOperationContext documentsContext, long? existingResultEtag, OperationCancelToken token, bool collectIntermediateResults = false)
         {
             var q = query.Metadata.Query;
-            var qp = new GraphQueryPlan(query, documentsContext, existingResultEtag, token, Database);
+            var qp = new GraphQueryPlan(query, documentsContext, existingResultEtag, token, Database)
+            {
+                CollectIntermediateResults = collectIntermediateResults
+            };
             qp.BuildQueryPlan();
             qp.OptimizeQueryPlan(); //TODO: audit optimization
 

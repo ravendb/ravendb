@@ -14,7 +14,7 @@ namespace Raven.Server.Documents.Queries.Graph
 {
     public class QueryQueryStep : IGraphQueryStep
     {
-        private Query _query;
+        public readonly Query Query;
         private StringSegment _alias;
         private HashSet<string> _aliases;
         private DocumentsOperationContext _context;
@@ -35,7 +35,7 @@ namespace Raven.Server.Documents.Queries.Graph
             GraphQueryPlan gqp, OperationCancelToken token)
         {
             _graphQueryPlan = gqp;
-            _query = query;
+            Query = query;
             _alias = alias;
             _aliases = new HashSet<string> { _alias.Value };
             _queryRunner = queryRunner;
@@ -59,7 +59,7 @@ namespace Raven.Server.Documents.Queries.Graph
         }
 
         public bool IsCollectionQuery => _queryMetadata.IsCollectionQuery;
-        public bool HasWhereClause => _query.Where != null;
+        public bool HasWhereClause => Query.Where != null;
 
         public static CollectionDestinationQueryStep ToCollectionDestinationQueryStep(DocumentsStorage documentsStorage, QueryQueryStep qqs)
         {
@@ -71,9 +71,16 @@ namespace Raven.Server.Documents.Queries.Graph
             return _results.Count == 0;
         }
 
+        public bool CollectIntermediateResults { get; set; }
+
+        public List<Match> IntermediateResults => CollectIntermediateResults ? _results : new List<Match>();
+
         public IGraphQueryStep Clone()
         {
-            return new QueryQueryStep(_queryRunner, _alias, _query, _queryMetadata, _queryParameters, _context, _resultEtag, _graphQueryPlan, _token);
+            return new QueryQueryStep(_queryRunner, _alias, Query, _queryMetadata, _queryParameters, _context, _resultEtag, _graphQueryPlan, _token)
+            {
+                CollectIntermediateResults = CollectIntermediateResults
+            };
         }
 
         public bool GetNext(out Match match)

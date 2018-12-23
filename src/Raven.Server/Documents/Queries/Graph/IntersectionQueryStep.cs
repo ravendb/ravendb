@@ -48,9 +48,17 @@ namespace Raven.Server.Documents.Queries.Graph
             return _results.Count == 0;
         }
 
+        public bool CollectIntermediateResults { get; set; }
+
+        public List<Match> IntermediateResults => CollectIntermediateResults ? _results : new List<Match>();
+
         public IGraphQueryStep Clone()
         {
-            return new IntersectionQueryStep<TOp>(_left.Clone(), _right.Clone(), _returnEmptyIfRightEmpty, _returnEmptyIfLeftEmpty);
+            return new IntersectionQueryStep<TOp>(_left.Clone(), _right.Clone(), _returnEmptyIfRightEmpty, _returnEmptyIfLeftEmpty)
+            {
+                CollectIntermediateResults = CollectIntermediateResults
+            };
+
         }
 
         private void IntersectExpressions()

@@ -15,7 +15,7 @@ namespace Raven.Server.Documents.Queries.Graph
 {
     public class GraphQueryPlan
     {
-        private IGraphQueryStep _rootQueryStep;
+        public IGraphQueryStep RootQueryStep;
         private IndexQueryServerSide _query;
         private DocumentsOperationContext _context;
         private long? _resultEtag;
@@ -24,6 +24,7 @@ namespace Raven.Server.Documents.Queries.Graph
         public bool IsStale { get; set; }
         public long ResultEtag { get; set; }
         public GraphQuery GraphQuery => _query.Metadata.Query.GraphQuery;
+        public bool CollectIntermediateResults { get; set; }
 
         public GraphQueryPlan(IndexQueryServerSide query, DocumentsOperationContext context, long? resultEtag,
             OperationCancelToken token, DocumentDatabase database)
@@ -35,10 +36,10 @@ namespace Raven.Server.Documents.Queries.Graph
             _token = token;
         }
 
+
         public void BuildQueryPlan()
         {
-            GraphQuerySyntaxValidatorVisitor.Instance.Visit(_query.Metadata.Query); //this will throw if the syntax will be bad
-            _rootQueryStep = BuildQueryPlanForExpression(_query.Metadata.Query.GraphQuery.MatchClause);                       
+            RootQueryStep = BuildQueryPlanForExpression(_query.Metadata.Query.GraphQuery.MatchClause);                       
         }
 
         private IGraphQueryStep BuildQueryPlanForExpression(QueryExpression expression)
@@ -58,13 +59,13 @@ namespace Raven.Server.Documents.Queries.Graph
         {
             foreach (var match in matches)
             {
-                _rootQueryStep.Analyze(match, graphDebugInfo);
+                RootQueryStep.Analyze(match, graphDebugInfo);
             }
         }
 
         public async Task Initialize()
         {
-            await _rootQueryStep.Initialize();
+            await RootQueryStep.Initialize();
         }
 
         private IGraphQueryStep BuildQueryPlanForBinaryExpression(BinaryExpression be)
@@ -83,12 +84,20 @@ namespace Raven.Server.Documents.Queries.Graph
             {
                 case OperatorType.And:
                     if(negated)
-                        return new IntersectionQueryStep<Except>(left, right);
-
-                    return new IntersectionQueryStep<Intersection>(left, right, returnEmptyIfRightEmpty:true);
+                        return new IntersectionQueryStep<Except>(left, right)
+                        {
+                            CollectIntermediateResults = CollectIntermediateResults
+                        };
+                    return new IntersectionQueryStep<Intersection>(left, right, returnEmptyIfRightEmpty:true)
+                    {
+                        CollectIntermediateResults = CollectIntermediateResults
+                    };
 
                case OperatorType.Or:
-                    return new IntersectionQueryStep<Union>(left, right, returnEmptyIfLeftEmpty:false);
+                    return new IntersectionQueryStep<Union>(left, right, returnEmptyIfLeftEmpty:false)
+                    {
+                        CollectIntermediateResults = CollectIntermediateResults
+                    };
 
                 default:
                     throw new ArgumentOutOfRangeException($"Unexpected binary expression of type: {be.Operator}");
@@ -122,10 +131,13 @@ namespace Raven.Server.Documents.Queries.Graph
 
             if (GraphQuery.WithEdgePredicates.TryGetValue(alias, out var withEdge) == false)
             {
-                throw new InvalidOperationException($"BuildQueryPlanForEdge was invoked for alias='{alias}' which is supposed to be an edge but no corresponding WITH EDGE clause was found.");
+                throw new InvalidOperationException($"BuildQueryPlanForEdge was invoked for alias='{alias}' which suppose to be an edge but no corresponding WITH EDGE clause was found.");
             }
 
-            return new EdgeQueryStep(left, right, withEdge, edge, _query.QueryParameters);
+            return new EdgeQueryStep(left, right, withEdge, edge, _query.QueryParameters)
+            {
+                CollectIntermediateResults = CollectIntermediateResults
+            };
         }
 
         private IGraphQueryStep BuildQueryPlanForRecursiveEdge(IGraphQueryStep left, int index, PatternMatchElementExpression patternExpression)
@@ -151,7 +163,10 @@ namespace Raven.Server.Documents.Queries.Graph
                 });
             }
 
-            var recursiveStep = new RecursionQueryStep(left, steps, recursive, recursive.GetOptions(_query.Metadata, _query.QueryParameters));
+            var recursiveStep = new RecursionQueryStep(left, steps, recursive, recursive.GetOptions(_query.Metadata, _query.QueryParameters))
+            {
+                CollectIntermediateResults = CollectIntermediateResults
+            };            
 
             if(index + 1 < patternExpression.Path.Length)
             {
@@ -182,19 +197,22 @@ namespace Raven.Server.Documents.Queries.Graph
             // TODO: we can tell at this point if it is a collection query or not,
             // TODO: in the future, we want to build a diffrent step for collection queries in the future.        
             var queryMetadata = new QueryMetadata(query, _query.QueryParameters, 0);
-            return new QueryQueryStep(_database.QueryRunner, alias, query, queryMetadata, _query.QueryParameters, _context, _resultEtag, this, _token);
+            return new QueryQueryStep(_database.QueryRunner, alias, query, queryMetadata, _query.QueryParameters, _context, _resultEtag, this, _token)
+            {
+                CollectIntermediateResults = CollectIntermediateResults
+            };
         }
 
         public void OptimizeQueryPlan()
         {
             var cdqsr = new EdgeCollectionDestinationRewriter(_database.DocumentsStorage);
-            _rootQueryStep = cdqsr.Visit(_rootQueryStep);
+            RootQueryStep = cdqsr.Visit(RootQueryStep);
         }
 
         public List<Match> Execute()
         {
             var list = new List<Match>();
-            while (_rootQueryStep.GetNext(out var m))
+            while (RootQueryStep.GetNext(out var m))
             {
                 list.Add(m);
             }
@@ -209,7 +227,7 @@ namespace Raven.Server.Documents.Queries.Graph
             var etag = DocumentsStorage.ReadLastEtag(_context.Transaction.InnerTransaction);
             var queryDuration = Stopwatch.StartNew();
             var indexNamesGatherer = new GraphQueryIndexNamesGatherer();
-            indexNamesGatherer.Visit(_rootQueryStep);
+            indexNamesGatherer.Visit(RootQueryStep);
             var indexes = new List<Index>();
             Dictionary<Index, AsyncWaitForIndexing> indexWaiters = new Dictionary<Index, AsyncWaitForIndexing>();
             var queryTimeout = _query.WaitForNonStaleResultsTimeout ?? Index.DefaultWaitForNonStaleResultsTimeout;
