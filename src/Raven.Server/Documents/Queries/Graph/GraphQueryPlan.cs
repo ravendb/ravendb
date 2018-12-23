@@ -39,6 +39,7 @@ namespace Raven.Server.Documents.Queries.Graph
 
         public void BuildQueryPlan()
         {
+            GraphQuerySyntaxValidatorVisitor.Instance.Visit(_query.Metadata.Query); //this will throw if the syntax will be bad
             RootQueryStep = BuildQueryPlanForExpression(_query.Metadata.Query.GraphQuery.MatchClause);                       
         }
 
