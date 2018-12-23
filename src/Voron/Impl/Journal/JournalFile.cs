@@ -177,7 +177,7 @@ namespace Voron.Impl.Journal
         /// <summary>
         /// write transaction's raw page data into journal
         /// </summary>
-        public UpdatePageTranslationTableAndUnusedPagesAction Write(LowLevelTransaction tx, CompressedPagesResult pages, LazyTransactionBuffer lazyTransactionScratch)
+        public UpdatePageTranslationTableAction Write(LowLevelTransaction tx, CompressedPagesResult pages, LazyTransactionBuffer lazyTransactionScratch)
         {
             var ptt = new Dictionary<long, PagePosition>(NumericEqualityComparer.BoxedInstanceInt64);
             var cur4KbPos = _writePosIn4Kb;
@@ -231,7 +231,7 @@ namespace Voron.Impl.Journal
                 }
             }
 
-            return new UpdatePageTranslationTableAndUnusedPagesAction(this, tx, ptt, pages.NumberOf4Kbs);
+            return new UpdatePageTranslationTableAction(this, tx, ptt, pages.NumberOf4Kbs);
         }
 
         private void UpdatePageTranslationTable(LowLevelTransaction tx, HashSet<PagePosition> unused, Dictionary<long, PagePosition> ptt)
@@ -363,14 +363,14 @@ namespace Voron.Impl.Journal
             _scratchPagesPositionsPool.Free(unusedAndFree);
         }
 
-        public struct UpdatePageTranslationTableAndUnusedPagesAction
+        public struct UpdatePageTranslationTableAction
         {
             private readonly JournalFile _parent;
             private readonly LowLevelTransaction _tx;
             private readonly Dictionary<long, PagePosition> _ptt;
             private readonly int _numberOfWritten4Kbs;
 
-            public UpdatePageTranslationTableAndUnusedPagesAction(JournalFile parent, LowLevelTransaction tx, Dictionary<long, PagePosition> ptt, int numberOfWritten4Kbs)
+            public UpdatePageTranslationTableAction(JournalFile parent, LowLevelTransaction tx, Dictionary<long, PagePosition> ptt, int numberOfWritten4Kbs)
             {
                 _parent = parent;
                 _tx = tx;

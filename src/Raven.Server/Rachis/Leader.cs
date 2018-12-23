@@ -957,11 +957,11 @@ namespace Raven.Server.Rachis
                 return;
 
             if (result is BlittableJsonReaderObject || result is BlittableJsonReaderArray)
-                throw new InvalidOperationException("You cannot return a blittable here, it is bound to the context of the state machine, and cannot leak outside");
+                throw new RachisApplyException("You cannot return a blittable here, it is bound to the context of the state machine, and cannot leak outside");
 
             if (TypeConverter.IsSupportedType(result) == false)
             {
-                throw new InvalidOperationException("We don't support type " + result.GetType().FullName + ".");
+                throw new RachisApplyException("We don't support type " + result.GetType().FullName + ".");
             }
         }
 
