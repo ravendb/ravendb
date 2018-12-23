@@ -62,13 +62,14 @@ namespace SlowTests.Issues
             using (var store = GetDocumentStore())
             {
                 CreateData(store);
+                WaitForUserToContinueTheTest(store);
                 using (var session = store.OpenSession())
                 {
                     var result = session.Advanced.RawQuery<JObject>(@"
-                                        with {  from Users where id() = 'users/341'    }   as u
-                                        match (Issues as i)-[Groups]->(Groups as direct)-recursive {
+                                        with {  from Users where id() = 'users/341' } as u
+                                        match (Issues as i)-[Groups]->(Groups as direct)-recursive (0) {
                                                     [Parents]->(Groups)
-                                        }->(Groups as g)<-[Groups]-(u)
+                                        }-[Parents]->(Groups as g)<-[Groups]-(u)
                                         select  i.Name as Issue,  u.Name as User, id(u) as UserId
                                     ").First();
 
