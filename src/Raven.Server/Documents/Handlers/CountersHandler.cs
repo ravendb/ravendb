@@ -121,10 +121,6 @@ namespace Raven.Server.Documents.Handlers
                             case CounterOperationType.Delete:
                             case CounterOperationType.Put:
                                 LoadDocument();
-
-                                if (doc != null)
-                                    docCollection = CollectionName.GetCollectionName(doc.Data);
-
                                 break;
                         }
 
@@ -184,14 +180,14 @@ namespace Raven.Server.Documents.Handlers
                         }
                     }
 
-                    if (doc != null)
+                    if (doc?.Data != null)
                     {
                         var nonPersistentFlags = NonPersistentDocumentFlags.ByCountersUpdate;
                         if (_fromSmuggler)
                             nonPersistentFlags |= NonPersistentDocumentFlags.FromSmuggler;
 
                         _database.DocumentsStorage.CountersStorage.UpdateDocumentCounters(context, doc, docId, countersToAdd, countersToRemove, nonPersistentFlags);
-                        doc.Data?.Dispose(); // we cloned the data, so we can dispose it.
+                        doc.Data.Dispose(); // we cloned the data, so we can dispose it.
                     }
 
                     countersToAdd.Clear();
@@ -216,6 +212,8 @@ namespace Raven.Server.Documents.Handlers
 
                             if (doc.Flags.HasFlag(DocumentFlags.Artificial))
                                 ThrowArtificialDocument(doc);
+
+                            docCollection = CollectionName.GetCollectionName(doc.Data);
                         }
                         catch (DocumentConflictException)
                         {
@@ -228,6 +226,7 @@ namespace Raven.Server.Documents.Handlers
 
                             // avoid loading same document again, we validate write using the metadata instance
                             doc = new Document();
+                            docCollection = _database.DocumentsStorage.ConflictsStorage.GetCollection(context, docId);
                         }
                     }
                 }
