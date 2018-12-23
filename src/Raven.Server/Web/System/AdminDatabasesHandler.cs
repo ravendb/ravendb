@@ -1088,14 +1088,7 @@ namespace Raven.Server.Web.System
                 EnableRaisingEvents = true
             };
 
-            process.Start();
-
-            var result = new OfflineMigrationResult();
-            var overallProgress = result.Progress as SmugglerResult.SmugglerProgress;
-            var operationId = ServerStore.Operations.GetNextOperationId();
             var processDone = new AsyncManualResetEvent(token.Token);
-            // send new line to avoid issue with read key 
-            process.StandardInput.WriteLine();
             process.Exited += (sender, e) =>
             {
                 try
@@ -1107,6 +1100,14 @@ namespace Raven.Server.Web.System
                     // This is an expected exception during manually started operation cancellation
                 }
             };
+
+            process.Start();
+            var result = new OfflineMigrationResult();
+            var overallProgress = result.Progress as SmugglerResult.SmugglerProgress;
+            var operationId = ServerStore.Operations.GetNextOperationId();
+
+            // send new line to avoid issue with read key 
+            process.StandardInput.WriteLine();
 
             // don't await here - this operation is async - all we return is operation id 
             var t = ServerStore.Operations.AddOperation(null, $"Migration of {dataDir} to {databaseName}",
@@ -1206,8 +1207,17 @@ namespace Raven.Server.Web.System
                         finally
                         {
                             if (process.HasExited && string.IsNullOrEmpty(tmpFile) == false)
-                            {
                                 IOExtensions.DeleteFile(tmpFile);
+                            else if (process.HasExited == false && string.IsNullOrEmpty(tmpFile) == false)
+                            {
+                                if(ProcessExtensions.TryKill(process))
+                                    IOExtensions.DeleteFile(tmpFile);
+                                else
+                                {
+                                    var errorString = $"Error occurred during closing the tool. Process pid: {process.Id}, please close manually.";
+                                    result.AddError($"{errorString}");
+                                    throw new InvalidOperationException($"{errorString}");
+                                }
                             }
                         }
                         return (IOperationResult)result;
