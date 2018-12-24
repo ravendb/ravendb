@@ -8,9 +8,7 @@
 
 int32_t
 flush_file (int32_t fd) {
-
   return fcntl(fd, F_FULLFSYNC);
-
 }
 
 int32_t

@@ -3,7 +3,7 @@
 #include <sys/param.h>
 #include <sys/mount.h>
 
-#elif define(__unix__)
+#elif defined(__unix__)
 
 #include <sys/statfs.h>
 

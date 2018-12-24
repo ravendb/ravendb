@@ -7,7 +7,7 @@
 #define EXPORT __attribute__((visibility("default")))	
 #elif _WIN32
 #define EXPORT _declspec(dllexport) 
-#elif
+#else
 #define EXPORT 
 #endif
 
