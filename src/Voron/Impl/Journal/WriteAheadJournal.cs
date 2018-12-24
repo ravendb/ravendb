@@ -123,6 +123,9 @@ namespace Voron.Impl.Journal
             if (_currentJournalFileSize < minRequiredSize)
             {
                 _currentJournalFileSize = Bits.NextPowerOf2(minRequiredSize);
+                if (_currentJournalFileSize > _env.Options.MaxLogFileSize)
+                    _currentJournalFileSize = Math.Max(_env.Options.MaxLogFileSize, minRequiredSize);
+
                 actualLogSize = _currentJournalFileSize;
             }
 
