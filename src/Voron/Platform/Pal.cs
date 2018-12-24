@@ -33,7 +33,7 @@ namespace Voron.Platform
             else if (RuntimeInformation.IsOSPlatform(OSPlatform.OSX))
             {
                 fromFilename = Environment.Is64BitProcess ? $"{toFilename}.mac.x64.so" : $"{toFilename}.mac.x86.so";
-                toFilename += ".so";
+                // in mac we are not : `toFilename += ".so";` as DllImport doesn't assume .so nor .dylib by default
             }
             else if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
             {
