@@ -348,7 +348,7 @@ class editDocument extends viewModelBase {
                 const metadataAsString = JSON.stringify(this.metadata().toDto());
                 const metadataSize = genUtils.getSizeInBytesAsUTF8(metadataAsString);
                 const metadataKey = genUtils.getSizeInBytesAsUTF8(", @metadata: ");
-                return genUtils.formatAsCommaSeperatedString((textSize + metadataSize + metadataKey) / 1024, 2);
+                return genUtils.formatBytesToSize(textSize + metadataSize + metadataKey);
             } catch (e) {
                 return "cannot compute";
             }
