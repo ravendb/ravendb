@@ -1,4 +1,4 @@
-#if defined(__unix__) && !defined(APPLE)
+#if defined(__unix__) || defined(__APPLE__)
 
 #define _GNU_SOURCE
 #include <unistd.h>
