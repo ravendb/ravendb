@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Globalization;
 using System.Runtime.InteropServices;
 using Sparrow.Platform.Posix;
 using Sparrow.Platform.Posix.macOS;
@@ -55,7 +56,7 @@ namespace Sparrow.Platform
                 var index = ver.IndexOf('.', ver.IndexOf('.') + 1);
                 ver = string.Concat(ver.Substring(0, index), ver.Substring(index + 1));
 
-                if (decimal.TryParse(ver, out decimal output))
+                if (decimal.TryParse(ver, System.Globalization.NumberStyles.AllowDecimalPoint, CultureInfo.InvariantCulture, out decimal output))
                 {
                     return output >= 6.19m; // 6.2 is win8, 6.1 win7..
                 }
@@ -88,7 +89,7 @@ namespace Sparrow.Platform
                 var index = ver.IndexOf('.', ver.IndexOf('.') + 1);
                 ver = string.Concat(ver.Substring(0, index), ver.Substring(index + 1));
 
-                if (decimal.TryParse(ver, out decimal output))
+                if (decimal.TryParse(ver, System.Globalization.NumberStyles.AllowDecimalPoint, CultureInfo.InvariantCulture, out decimal output))
                 {
                     return output >= 10m; // 6.2 is win8, 6.1 win7..
                 }
