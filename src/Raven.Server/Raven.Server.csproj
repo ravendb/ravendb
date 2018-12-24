@@ -52,12 +52,6 @@
     <None Include="..\..\libs\librvnpal\librvnpal.linux.x64.so" Link="librvnpal.linux.x64.so">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </None>
-    <None Include="..\..\libs\librvnpal\librvnpal.linux.x86.so" Link="librvnpal.linux.x86.so">
-      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
-    </None>
-    <None Include="..\..\libs\librvnpal\librvnpal.arm.64.so" Link="librvnpal.arm.64.so">
-      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
-    </None>
     <None Include="..\..\libs\librvnpal\librvnpal.arm.32.so" Link="librvnpal.arm.32.so">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </None>
@@ -68,9 +62,6 @@
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </None>
     <None Include="..\..\libs\librvnpal\librvnpal.mac.x64.so" Link="librvnpal.mac.x64.so">
-      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
-    </None>
-    <None Include="..\..\libs\librvnpal\librvnpal.mac.x86.so" Link="librvnpal.mac.x86.so">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </None>
 
