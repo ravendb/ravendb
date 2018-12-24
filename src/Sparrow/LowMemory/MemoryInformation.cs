@@ -82,14 +82,16 @@ namespace Sparrow.LowMemory
 
         private static float _minimumFreeCommittedMemoryPercentage = 0.05f;
         private static Size _maxFreeCommittedMemoryToKeep = new Size(128, SizeUnit.Megabytes);
+        private static Size _lowMemoryCommitLimitInMb = new Size(512, SizeUnit.Megabytes);
 
-        public static void SetMinimumFreeCommittedMemory(float minimumFreeCommittedMemoryPercentage, Size maxFreeCommittedMemoryToKeep)
+        public static void SetFreeCommittedMemory(float minimumFreeCommittedMemoryPercentage, Size maxFreeCommittedMemoryToKeep, Size lowMemoryCommitLimitInMb)
         {
             if (minimumFreeCommittedMemoryPercentage <= 0)
                 throw new ArgumentException($"MinimumFreeCommittedMemory must be positive, but was: {minimumFreeCommittedMemoryPercentage}");
 
             _minimumFreeCommittedMemoryPercentage = minimumFreeCommittedMemoryPercentage;
             _maxFreeCommittedMemoryToKeep = maxFreeCommittedMemoryToKeep;
+            _lowMemoryCommitLimitInMb = lowMemoryCommitLimitInMb;
         }
 
         public static void AssertNotAboutToRunOutOfMemory()
@@ -98,16 +100,19 @@ namespace Sparrow.LowMemory
                 return;
 
             var memInfo = GetMemoryInfo();
-            if (IsEarlyOutOfMemoryInternal(memInfo))
+            if (IsEarlyOutOfMemoryInternal(memInfo, earlyOutOfMemoryWarning: false, out _))
                 ThrowInsufficientMemory(memInfo);
         }
 
-        public static bool IsEarlyOutOfMemory(MemoryInfoResult memInfo)
+        public static bool IsEarlyOutOfMemory(MemoryInfoResult memInfo, out Size commitChargeThreshold)
         {
             if (NeedEarlyOutMemoryValidation() == false)
+            {
+                commitChargeThreshold = Size.Zero;
                 return false;
+            }
 
-            return IsEarlyOutOfMemoryInternal(memInfo);
+            return IsEarlyOutOfMemoryInternal(memInfo, earlyOutOfMemoryWarning: true, out commitChargeThreshold);
         }
 
         private static bool NeedEarlyOutMemoryValidation()
@@ -125,7 +130,7 @@ namespace Sparrow.LowMemory
             return true;
         }
 
-        private static bool IsEarlyOutOfMemoryInternal(MemoryInfoResult memInfo)
+        private static bool IsEarlyOutOfMemoryInternal(MemoryInfoResult memInfo, bool earlyOutOfMemoryWarning, out Size commitChargeThreshold)
         {
             // if we are about to create a new thread, might not always be a good idea:
             // https://ayende.com/blog/181537-B/production-test-run-overburdened-and-under-provisioned
@@ -138,36 +143,30 @@ namespace Sparrow.LowMemory
                 // sometimes this kind of stat is shared, see: 
                 // https://fabiokung.com/2014/03/13/memory-inside-linux-containers/
 
-                overage =
-                    GetMinCommittedToKeep(memInfo.TotalPhysicalMemory) +       //extra to keep free
+                commitChargeThreshold = GetMinCommittedToKeep(memInfo.TotalPhysicalMemory);
+                overage = 
+                    commitChargeThreshold +                                    //extra to keep free
                     (memInfo.TotalPhysicalMemory - memInfo.AvailableMemory);   //actually in use now
-                if (overage >= memInfo.TotalPhysicalMemory)
+
+                return overage >= memInfo.TotalPhysicalMemory;
+            }
+
+            commitChargeThreshold = GetMinCommittedToKeep(memInfo.TotalCommittableMemory);
+            overage = commitChargeThreshold + memInfo.CurrentCommitCharge;
+            return overage >= memInfo.TotalCommittableMemory;
+
+            Size GetMinCommittedToKeep(Size currentValue)
+            {
+                if (earlyOutOfMemoryWarning)
                 {
-                    ThrowInsufficientMemory(memInfo);
-                    return true;
+                    return Size.Min(
+                        _lowMemoryCommitLimitInMb,
+                        // needs to be bigger than the MaxFreeCommittedMemoryToKeep
+                        Size.Max(currentValue / 20, _maxFreeCommittedMemoryToKeep * 1.2));
                 }
 
-                return false;
+                return Size.Min(_maxFreeCommittedMemoryToKeep, currentValue * _minimumFreeCommittedMemoryPercentage);
             }
-
-            overage = GetMinCommittedToKeep(memInfo.TotalCommittableMemory) + memInfo.CurrentCommitCharge;
-            if (overage >= memInfo.TotalCommittableMemory)
-            {
-                ThrowInsufficientMemory(memInfo);
-                return true;
-            }
-
-            return false;
-
-            Size GetMinCommittedToKeep(Size memory)
-            {
-                return Size.Min(_maxFreeCommittedMemoryToKeep, memory * _minimumFreeCommittedMemoryPercentage);
-            }
-        }
-
-        public static Size GetCommitChargeThreshold(MemoryInfoResult memInfo)
-        {
-            return Size.Min(_maxFreeCommittedMemoryToKeep, memInfo.TotalCommittableMemory * _minimumFreeCommittedMemoryPercentage);
         }
 
         private static void ThrowInsufficientMemory(MemoryInfoResult memInfo)
