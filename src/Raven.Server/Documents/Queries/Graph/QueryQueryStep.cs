@@ -58,7 +58,20 @@ namespace Raven.Server.Documents.Queries.Graph
             }
         }
 
-        public bool IsCollectionQuery => _queryMetadata.IsCollectionQuery;
+        public bool CanBeConsideredForDestinationOptimization
+        {
+            get
+            {
+                if (_queryMetadata.IsCollectionQuery == false)
+                    return false;
+
+                if (_queryMetadata.HasIncludeOrLoad || _queryMetadata.Query.Limit != null || _queryMetadata.Query.Offset != null )
+                    return false;
+
+                return true;
+            }
+        }
+
         public bool HasWhereClause => Query.Where != null;
 
         public static CollectionDestinationQueryStep ToCollectionDestinationQueryStep(DocumentsStorage documentsStorage, QueryQueryStep qqs)

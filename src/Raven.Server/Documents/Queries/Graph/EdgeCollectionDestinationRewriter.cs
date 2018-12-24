@@ -30,7 +30,7 @@ namespace Raven.Server.Documents.Queries.Graph
 
         public override IGraphQueryStep VisitQueryQueryStep(QueryQueryStep qqs)
         {
-            if (_isVisitingRight && qqs.IsCollectionQuery && qqs.HasWhereClause == false)
+            if (_isVisitingRight && qqs.CanBeConsideredForDestinationOptimization)
             {
                 return QueryQueryStep.ToCollectionDestinationQueryStep(_documentsStorage, qqs);
             }
