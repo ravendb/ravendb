@@ -88,6 +88,9 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene
             if (_fieldsToFetch.IsDistinct == false)
                 return;
 
+            if (search.ScoreDocs.Length <= _alreadyScannedForDuplicates)
+                return;
+
             for (; _alreadyScannedForDuplicates < _query.Start; _alreadyScannedForDuplicates++)
             {
                 var scoreDoc = search.ScoreDocs[_alreadyScannedForDuplicates];
