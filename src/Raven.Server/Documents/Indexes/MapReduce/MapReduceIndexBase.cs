@@ -324,6 +324,11 @@ namespace Raven.Server.Documents.Indexes.MapReduce
             }
         }
 
+        public override void SaveLastState()
+        {
+            throw new NotSupportedException();
+        }
+
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         private void EnsureValidStats(IndexingStatsScope stats)
         {
