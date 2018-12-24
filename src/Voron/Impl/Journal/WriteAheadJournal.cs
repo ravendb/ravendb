@@ -1054,7 +1054,7 @@ namespace Voron.Impl.Journal
                             if (current.DoneFlag.IsRaised())
                             {
                                 if (current.Error != null)
-                                    throw new AggregateException("Unable to complete flush", current.Error);
+                                    throw new InvalidOperationException("The lock task failed", current.Error);
                                 return current.Result;
                             }
                         }
