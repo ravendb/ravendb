@@ -6,7 +6,7 @@ ADDITIONAL_FLAGS = -MM
 SRC_POSIX = $(wildcard src/posix/*.c)
 
 ifeq ($(OS),Windows_NT)
-	SRC_POSIX=""
+	SRC_POSIX=
 	ifeq ($(PROCESSOR_ARCHITECTURE),AMD64)
 		OSFLAG=.win.x64.dll
 		OSDIR=win
@@ -21,6 +21,7 @@ else
 	UNAME_M := $(shell uname -m)
 	ifeq ($(UNAME_S),Linux)
 		OSDIR=posix
+		SRC_POSIX=
 		ifeq ($(UNAME_P),x86_64)
 			OSFLAG=.linux.x64.so
 		endif
@@ -55,17 +56,16 @@ TARGET_LIB = librvnpal$(OSFLAG) # target lib
 SODIUM="/home/avivi/Downloads/libsodium-1.0.16/src/libsodium/.libs/libsodium.a"
 
 SRC = src/$(OSDIR)
-SRC_ALL = src/all
-SRCS = $(wildcard $(SRC)/*.c) $(wildcard $(SRC_ALL)/*.c) $(SRC_POSIX) # source files
+SRCS = $(wildcard $(SRC)/*.c) $(SRC_POSIX) # source files
 OBJS = $(SRCS:.c=.o)
 
 .PHONY: all
 all: ${TARGET_LIB}
 
 $(TARGET_LIB): $(OBJS)
-	$(CC) ${LDFLAGS}  -o $@ $^
+	$(CC) ${LDFLAGS}  -o $@ $^ 
 
-$(SRCS:.c=.d):%.d:%.c
+$(SRCS):
 	$(CC) $(CFLAGS) $(ADDITIONAL_FLAGS)  $< >$@
 
 # include $(SRCS:.c=.d)
