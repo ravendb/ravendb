@@ -387,7 +387,10 @@ namespace Raven.Server.ServerWide
 
             LowMemoryNotification.Initialize(Configuration.Memory.LowMemoryLimit, ServerShutdown);
 
-            MemoryInformation.SetMinimumFreeCommittedMemory(Configuration.Memory.MinimumFreeCommittedMemoryPercentage, Configuration.Memory.MaxFreeCommittedMemoryToKeepInMb);
+            MemoryInformation.SetFreeCommittedMemory(
+                Configuration.Memory.MinimumFreeCommittedMemoryPercentage,
+                Configuration.Memory.MaxFreeCommittedMemoryToKeepInMb,
+                Configuration.Memory.LowMemoryCommitLimitInMb);
 
             if (Logger.IsInfoEnabled)
                 Logger.Info("Starting to open server store for " + (Configuration.Core.RunInMemory ? "<memory>" : Configuration.Core.DataDirectory.FullPath));
