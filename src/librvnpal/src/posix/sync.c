@@ -1,9 +1,7 @@
-#if defined(__unix__) && !defined(APPLE)
+#if defined(__unix__) || defined(__APPLE__)
 
 #define _GNU_SOURCE
 #include <unistd.h>
-#include <sys/statfs.h>
-#include <linux/magic.h>
 #include <sys/types.h>
 #include <sys/stat.h>
 #include <fcntl.h>
@@ -14,25 +12,10 @@
 #include <libgen.h>
 
 #include "rvn.h"
+#include "internal_posix.h"
 #include "status_codes.h"
 
 
-static
-int32_t
-sync_directory_allowed (int dir_fd) {
-  struct statfs buf;
-  if (fstatfs (dir_fd, &buf) == -1)
-    return SYNC_DIR_FAILED;
-
-  switch (buf.f_type) {
-    case NFS_SUPER_MAGIC:
-    case CIFS_MAGIC_NUMBER:
-    case SMB_SUPER_MAGIC:
-      return SYNC_DIR_NOT_ALLOWED;
-    default:
-      return SYNC_DIR_ALLOWED;
-  }
-}
 
 static
 int32_t
@@ -136,7 +119,7 @@ success:
   return rc;
 }
 
-int32_t
+EXPORT int32_t
 sync_directory_for (const char *file_path, uint32_t * detailed_error_code) {
   assert (file_path != NULL);
 
@@ -155,12 +138,6 @@ sync_directory_for (const char *file_path, uint32_t * detailed_error_code) {
   free (file_path_copy);
 
   return rc;
-}
-
-int32_t
-flush_file (int32_t fd) {
-  /* fcntl(fd, F_FULLFSYNC); */
-  return fsync (fd);
 }
 
 #endif
