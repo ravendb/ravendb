@@ -316,7 +316,7 @@ namespace Sparrow.Json
         public JsonOperationContext(int initialSize, int longLivedSize, SharedMultipleUseFlag lowMemoryFlag)
         {
             Debug.Assert(lowMemoryFlag != null);
-            _disposeOnceRunner = new DisposeOnce<SingleAttempt>(() =>
+            _disposeOnceRunner = new DisposeOnce<ExceptionRetry>(() =>
             {
 #if MEM_GUARD_STACK
                 ElectricFencedMemory.DecrementConext();
@@ -488,7 +488,7 @@ namespace Sparrow.Json
             return new UnmanagedWriteBuffer(this, bufferMemory);
         }
 
-        private readonly DisposeOnce<SingleAttempt> _disposeOnceRunner;
+        private readonly DisposeOnce<ExceptionRetry> _disposeOnceRunner;
         private bool Disposed => _disposeOnceRunner.Disposed;
         public override void Dispose()
         {
