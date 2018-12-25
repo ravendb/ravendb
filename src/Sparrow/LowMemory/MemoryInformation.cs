@@ -150,15 +150,17 @@ namespace Sparrow.LowMemory
 
             Size GetMinCommittedToKeep(Size currentValue)
             {
+                var minFreeToKeep = Size.Min(_maxFreeCommittedMemoryToKeep, currentValue * _minimumFreeCommittedMemoryPercentage);
+
                 if (earlyOutOfMemoryWarning)
                 {
                     return Size.Min(
                         _lowMemoryCommitLimitInMb,
                         // needs to be bigger than the MaxFreeCommittedMemoryToKeep
-                        Size.Max(currentValue / 20, _maxFreeCommittedMemoryToKeep * 1.2));
+                        Size.Max(currentValue / 20, minFreeToKeep * 1.5));
                 }
 
-                return Size.Min(_maxFreeCommittedMemoryToKeep, currentValue * _minimumFreeCommittedMemoryPercentage);
+                return minFreeToKeep;
             }
         }
 
