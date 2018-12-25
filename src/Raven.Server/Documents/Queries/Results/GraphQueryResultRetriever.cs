@@ -91,18 +91,11 @@ namespace Raven.Server.Documents.Queries.Results
                             case BlittableJsonReaderObject bjro:
                                 args[i] = bjro;
                                 break;
-                            case List<Match> matches:
-                                var array = new DynamicJsonArray();
-                                foreach (var m in matches)
-                                {
-                                    var djv = new DynamicJsonValue();
-                                    m.PopulateVertices(djv);
-                                    array.Add(djv);
-                                }
-
-                                var dummy = new DynamicJsonValue();
-                                dummy["Dummy"] = array;
-                                args[i] = _context.ReadObject(dummy, "graph/arg")["Dummy"];
+                            case List<Match> matchList:
+                                CreateArgsFromMatchList(matchList, args, i);
+                                break;
+                            case MatchCollection matchCollection:
+                                CreateArgsFromMatchList(matchCollection, args, i);
                                 break;
                             case string s:
                                 args[i] = s;
@@ -147,7 +140,7 @@ namespace Raven.Server.Documents.Queries.Results
                                 return immediateResult;
                             break;
                         }
-                        case List<Match> matches:
+                        case MatchCollection matches:
                             var array = new DynamicJsonArray();
                             foreach (var m in matches)
                             {
@@ -186,6 +179,21 @@ namespace Raven.Server.Documents.Queries.Results
             {
                 Data = context.ReadObject(result, "projection result")
             };
+        }
+
+        private void CreateArgsFromMatchList(IEnumerable<Match> matchCollection, object[] args, int i)
+        {
+            var array = new DynamicJsonArray();
+            foreach (var m in matchCollection)
+            {
+                var djv = new DynamicJsonValue();
+                m.PopulateVertices(djv);
+                array.Add(djv);
+            }
+
+            var dummy = new DynamicJsonValue();
+            dummy["Dummy"] = array;
+            args[i] = _context.ReadObject(dummy, "graph/arg")["Dummy"];
         }
     }
 }

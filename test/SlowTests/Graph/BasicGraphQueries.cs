@@ -363,20 +363,24 @@ match (Employees as e where id() = 'employees/7-A')-recursive as n (longest) { [
 select e.FirstName as Employee, n.m as MiddleManagement, boss.FirstName as Boss
 ", store =>
             {
-                using (var s = store.OpenSession())
+                using (var s = store.OpenSession())                
                 {
+                    //add self-cycle at "employees/2-A"
                     var e = s.Load<Employee>("employees/2-A");
                     e.ReportsTo = e.Id;
                     s.SaveChanges();
                 }
-
+                WaitForUserToContinueTheTest(store);
             });
             Assert.Equal(1, results.Count);
+
             foreach (var item in results)
             {
                 Assert.Equal("Andrew", item.Boss);
                 Assert.Equal("Robert", item.Employee);
-                Assert.Equal(new[] { "employees/5-A", "employees/2-A" }, item.MiddleManagement);
+                
+                //because of self-cycle of "employees/2-A" we see it twice in the path
+                Assert.Equal(new[] { "employees/5-A", "employees/2-A", "employees/2-A" }, item.MiddleManagement);
             }
         }
 
