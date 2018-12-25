@@ -187,7 +187,7 @@ class virtualGrid<T> {
             }
         }
         
-        let columnToUse = this.sortByColumn();
+        const columnToUse = this.sortByColumn();
         
         if (columnToUse) {
             let itemsToSort = Array.from(this.items.values());
