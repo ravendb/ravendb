@@ -5,6 +5,7 @@ using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 using FastTests;
+using Raven.Client.Documents;
 using Raven.Client.Documents.Indexes;
 using Raven.Client.Documents.Operations;
 using Raven.Client.Documents.Operations.Backups;
@@ -48,7 +49,7 @@ namespace SlowTests.Server.Documents.PeriodicBackup
 
                 var result = await store.Maintenance.SendAsync(new UpdatePeriodicBackupOperation(config));
                 var documentDatabase = (await GetDocumentDatabaseInstanceFor(store));
-                RunBackup(result.TaskId, documentDatabase, true);
+                RunBackup(result.TaskId, documentDatabase, true, store);
 
               
                 var input = new IndexDefinition
@@ -64,10 +65,10 @@ namespace SlowTests.Server.Documents.PeriodicBackup
                 await store
                     .Maintenance
                     .SendAsync(new PutIndexesOperation(new[] { input }));
-                config.IncrementalBackupFrequency = "* */2 * * *";
+                config.IncrementalBackupFrequency = "* */300 * * *";
                 config.TaskId = result.TaskId;
                 result = await store.Maintenance.SendAsync(new UpdatePeriodicBackupOperation(config));
-                RunBackup(result.TaskId, documentDatabase, false);
+                RunBackup(result.TaskId, documentDatabase, false, store);
                 
                 var backupDirectory = Directory.GetDirectories(backupPath).First();
 
@@ -97,12 +98,17 @@ namespace SlowTests.Server.Documents.PeriodicBackup
             }
         }
 
-        private static void RunBackup(long taskId, Raven.Server.Documents.DocumentDatabase documentDatabase, bool isFullBackup )
+        private void RunBackup(long taskId, Raven.Server.Documents.DocumentDatabase documentDatabase, bool isFullBackup ,DocumentStore store )
         {
             var periodicBackupRunner = documentDatabase.PeriodicBackupRunner;
-            periodicBackupRunner.StartBackupTask(taskId, isFullBackup);
-            while (periodicBackupRunner.HasRunningBackups())
-                Thread.Sleep(100);
+            var op = periodicBackupRunner.StartBackupTask(taskId, isFullBackup);
+            var value = WaitForValue(() =>
+            {
+                var status = store.Maintenance.Send(new GetOperationStateOperation(op)).Status;
+                return status;
+            }, OperationStatus.Completed);
+
+            Assert.Equal(OperationStatus.Completed, value);
         }
 
         [Fact (Skip = "RavenDB-12349")]
@@ -133,7 +139,7 @@ namespace SlowTests.Server.Documents.PeriodicBackup
 
                 var result = await store.Maintenance.SendAsync(new UpdatePeriodicBackupOperation(config));
                 var documentDatabase = (await GetDocumentDatabaseInstanceFor(store));
-                RunBackup(result.TaskId, documentDatabase, true);
+                RunBackup(result.TaskId, documentDatabase, true, store);
 
 
                 CompareExchangeResult<string> compareExchangeResult
@@ -143,7 +149,7 @@ namespace SlowTests.Server.Documents.PeriodicBackup
                 config.IncrementalBackupFrequency = "* */2 * * *";
                 config.TaskId = result.TaskId;
                 result = await store.Maintenance.SendAsync(new UpdatePeriodicBackupOperation(config));
-                RunBackup(result.TaskId, documentDatabase, false);
+                RunBackup(result.TaskId, documentDatabase, false, store);
 
                 var backupDirectory = Directory.GetDirectories(backupPath).First();
 
@@ -215,14 +221,14 @@ namespace SlowTests.Server.Documents.PeriodicBackup
 
                 var result = await store.Maintenance.SendAsync(new UpdatePeriodicBackupOperation(config));
                 var documentDatabase = (await GetDocumentDatabaseInstanceFor(store));
-                RunBackup(result.TaskId, documentDatabase, true);
+                RunBackup(result.TaskId, documentDatabase, true, store);
 
                 Dictionary<string, long> identities = store.Maintenance.Send(new GetIdentitiesOperation());
 
                 config.IncrementalBackupFrequency = "* */2 * * *";
                 config.TaskId = result.TaskId;
                 result = await store.Maintenance.SendAsync(new UpdatePeriodicBackupOperation(config));
-                RunBackup(result.TaskId, documentDatabase, false);
+                RunBackup(result.TaskId, documentDatabase, false, store);
 
                 var backupDirectory = Directory.GetDirectories(backupPath).First();
 
