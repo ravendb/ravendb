@@ -104,6 +104,7 @@ namespace Raven.Client.Http
 
             ~HttpCacheItem()
             {
+                Allocation = null;
 #if !RELEASE
                 // Hitting this on DEBUG and/or VALIDATE and getting a higher number than 0 means we have a leak.
                 // On release we will leak, but wont crash. 

@@ -103,7 +103,7 @@ namespace Sparrow.Json
             _propertiesCache = _cacheItem.PropertyCache;
             _positionsCache = _cacheItem.PositionsCache;
             _tokensCache = _cacheItem.TokensCache;            
-        }
+        }  
 
         public BlittableJsonDocumentBuilder(
             JsonOperationContext context, 
@@ -170,6 +170,8 @@ namespace Sparrow.Json
 
             _writer.Dispose();
             GlobalCache.Free(_cacheItem);
+            GC.SuppressFinalize(this);
+
         }
 
         private bool ReadInternal<TWriteStrategy>() where TWriteStrategy : IWriteStrategy

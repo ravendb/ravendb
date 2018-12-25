@@ -7,6 +7,7 @@ namespace Sparrow.Threading
     public interface IDisposeOnceOperationMode {}
     public struct ExceptionRetry : IDisposeOnceOperationMode { }
     public struct SingleAttempt : IDisposeOnceOperationMode { }
+    public struct SingleAttemptWithWaitForDisposeToFinish : IDisposeOnceOperationMode { }
 
     public sealed class DisposeOnce<TOperationMode>
         where TOperationMode : struct, IDisposeOnceOperationMode
@@ -19,7 +20,8 @@ namespace Sparrow.Threading
         {
             _action = action;
             if (typeof(TOperationMode) != typeof(ExceptionRetry) &&
-                typeof(TOperationMode) != typeof(SingleAttempt)) 
+                typeof(TOperationMode) != typeof(SingleAttempt) &&
+                typeof(TOperationMode) != typeof(SingleAttemptWithWaitForDisposeToFinish)) 
             {
                 throw new NotSupportedException("Unknown operation mode: " + typeof(TOperationMode));
             }
@@ -37,7 +39,7 @@ namespace Sparrow.Threading
         /// Dispose until it succeeds. Retry, however, happens on successive
         /// calls to Dispose, rather than in a single attempt.
         /// 
-        /// When behavior is <see cref="SingleAttempt"/>, a failure means all
+        /// When behavior is <see cref="SingleAttempt"/> or <see cref="SingleAttemptWithWaitForDisposeToFinish"/>, a failure means all
         /// subsequent calls will fail by throwing the same exception that
         /// was thrown by the action.
         /// </summary>
@@ -80,7 +82,7 @@ namespace Sparrow.Threading
                     );
 
                 }
-                else if (typeof(TOperationMode) == typeof(SingleAttempt))
+                else if (typeof(TOperationMode) == typeof(SingleAttempt) || typeof(TOperationMode) == typeof(SingleAttemptWithWaitForDisposeToFinish))
                 {
                     // Let everyone waiting know that this run failed
                     localState.Item2.SetException(e);
@@ -105,7 +107,7 @@ namespace Sparrow.Threading
                 if (typeof(TOperationMode) == typeof(SingleAttempt))
                     return true;
 
-                if (typeof(TOperationMode) == typeof(ExceptionRetry))
+                if (typeof(TOperationMode) == typeof(ExceptionRetry) || typeof(TOperationMode) == typeof(SingleAttemptWithWaitForDisposeToFinish))
                 {
                     if (state.Item2.Task.IsFaulted || state.Item2.Task.IsCanceled)
                         return false;
@@ -131,7 +133,8 @@ namespace Sparrow.Threading
         {
             _action = action;
             if (typeof(TOperationMode) != typeof(ExceptionRetry) &&
-                typeof(TOperationMode) != typeof(SingleAttempt)) 
+                typeof(TOperationMode) != typeof(SingleAttempt) &&
+                typeof(TOperationMode) != typeof(SingleAttemptWithWaitForDisposeToFinish)) 
             {
                 throw new NotSupportedException("Unknown operation mode: " + typeof(TOperationMode));
             }
@@ -149,7 +152,7 @@ namespace Sparrow.Threading
         /// Dispose until it succeeds. Retry, however, happens on successive
         /// calls to Dispose, rather than in a single attempt.
         /// 
-        /// When behavior is <see cref="SingleAttempt"/>, a failure means all
+        /// When behavior is <see cref="SingleAttempt"/> or <see cref="SingleAttemptWithWaitForDisposeToFinish"/>, a failure means all
         /// subsequent calls will fail by throwing the same exception that
         /// was thrown by the action.
         /// </summary>
@@ -191,7 +194,7 @@ namespace Sparrow.Threading
                     );
 
                 }
-                else if (typeof(TOperationMode) == typeof(SingleAttempt))
+                else if (typeof(TOperationMode) == typeof(SingleAttempt) || typeof(TOperationMode) == typeof(SingleAttemptWithWaitForDisposeToFinish))
                 {
                     // Let everyone waiting know that this run failed
                     localState.Item2.SetException(e);
@@ -217,7 +220,7 @@ namespace Sparrow.Threading
                 if (typeof(TOperationMode) == typeof(SingleAttempt))
                     return true;
 
-                if (typeof(TOperationMode) == typeof(ExceptionRetry))
+                if (typeof(TOperationMode) == typeof(ExceptionRetry)|| typeof(TOperationMode) == typeof(SingleAttemptWithWaitForDisposeToFinish))
                 {
                     if (state.Item2.Task.IsFaulted || state.Item2.Task.IsCanceled)
                         return false;

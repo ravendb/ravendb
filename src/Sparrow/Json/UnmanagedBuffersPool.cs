@@ -125,7 +125,7 @@ namespace Sparrow.Json
             NativeMemory.ThreadStats stats;
             if (index == -1)
             {
-                return new AllocatedMemoryData
+                return new AllocatedMemoryData()
                 {
                     SizeInBytes = size,
                     Address = NativeMemory.AllocateMemory(size, out stats),
@@ -139,7 +139,7 @@ namespace Sparrow.Json
             {
                 return list;
             }
-            return new AllocatedMemoryData
+            return new AllocatedMemoryData()
             {
                 SizeInBytes = actualSize,
                 Address = NativeMemory.AllocateMemory(actualSize, out stats),
@@ -185,9 +185,10 @@ namespace Sparrow.Json
 
         public void Return(AllocatedMemoryData returned)
         {
+            GC.SuppressFinalize(returned);
+
 #if MEM_GUARD
             ElectricFencedMemory.Free(returned.Address);
-            GC.SuppressFinalize(returned);
 #else
 
             if (returned == null) throw new ArgumentNullException(nameof(returned));

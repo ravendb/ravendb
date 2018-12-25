@@ -433,7 +433,10 @@ namespace Sparrow
         {
             try
             {
-                Dispose();
+                if (Segment == null)
+                    return;
+                NativeMemory.Free(Segment, Size, _thread);
+                Segment = null;
             }
             catch (ObjectDisposedException)
             {
@@ -490,11 +493,11 @@ namespace Sparrow
 
     public struct ByteStringMemoryCache : IByteStringAllocator
     {
-        private static readonly ThreadLocal<SegmentStack> SegmentsPool;
+        private static readonly ThreadLocal<StackHeader<UnmanagedGlobalSegment>> SegmentsPool;
         private static readonly SharedMultipleUseFlag LowMemoryFlag;
         private static readonly LowMemoryHandler LowMemoryHandlerInstance = new LowMemoryHandler();
 
-        public static readonly NativeMemoryCleaner<SegmentStack, UnmanagedGlobalSegment> Cleaner;
+        public static readonly NativeMemoryCleaner<StackHeader<UnmanagedGlobalSegment>, UnmanagedGlobalSegment> Cleaner;
 
         private class LowMemoryHandler : ILowMemoryHandler
         {
@@ -512,9 +515,9 @@ namespace Sparrow
 
         static ByteStringMemoryCache()
         {
-            SegmentsPool = new ThreadLocal<SegmentStack>(() => new SegmentStack(), trackAllValues: true);
+            SegmentsPool = new ThreadLocal<StackHeader<UnmanagedGlobalSegment>>(() => new StackHeader<UnmanagedGlobalSegment>(), trackAllValues: true);
             LowMemoryFlag = new SharedMultipleUseFlag();
-            Cleaner = new NativeMemoryCleaner<SegmentStack, UnmanagedGlobalSegment>(() => SegmentsPool.Values, LowMemoryFlag, TimeSpan.FromMinutes(1), TimeSpan.FromMinutes(1));
+            Cleaner = new NativeMemoryCleaner<StackHeader<UnmanagedGlobalSegment>, UnmanagedGlobalSegment>(() => SegmentsPool.Values, LowMemoryFlag, TimeSpan.FromMinutes(1), TimeSpan.FromMinutes(1));
 
             ThreadLocalCleanup.ReleaseThreadLocalState += CleanForCurrentThread;
 
@@ -612,35 +615,7 @@ namespace Sparrow
                 current.Value?.Dispose();
                 current = current.Next;
             }
-        }
-      
-        public class SegmentStack : StackHeader<UnmanagedGlobalSegment>
-        {
-            ~SegmentStack()
-            {
-                if (Environment.HasShutdownStarted)
-                    return; // no need
-
-                var current = Interlocked.Exchange(ref Head, HeaderDisposed);
-                try
-                {
-                    while (current != null)
-                    {
-                        var segment = current.Value;
-                        current = current.Next;
-                        if (segment == null)
-                            continue;
-                        if (!segment.InUse.Raise())
-                            continue;
-                        segment.Dispose();
-                    }
-                }
-                catch (ObjectDisposedException)
-                {
-                    // in case that in the future we will throw that exception
-                }
-            }
-        }
+        }       
     }
 
     public sealed class ByteStringContext : ByteStringContext<ByteStringMemoryCache>
@@ -755,7 +730,12 @@ namespace Sparrow
         public void Reset()
         {
             if (_disposed)
+            {
+                if (_isFinalizerThread)
+                    return;
                 ThrowObjectDisposed();
+            }
+                
 
             Array.Clear(_internalReusableStringPoolCount, 0, _internalReusableStringPoolCount.Length);
             foreach (var stack in _internalReusableStringPool)
@@ -1582,16 +1562,12 @@ namespace Sparrow
         ~ByteStringContext()
         {
             _isFinalizerThread = true;
-            try
-            {
-                Dispose();
-            }
-            catch (ObjectDisposedException)
-            {
-                // This is expected, we might be calling the finalizer on an object that
-                // was already disposed, we don't want to error here because of this
-            }
+            _wholeSegments.Clear();
+            _internalReadyToUseMemorySegments.Clear();
         }
+
+
+
 
         public void Dispose()
         {
@@ -1603,6 +1579,7 @@ namespace Sparrow
                 GC.SuppressFinalize(this);
 
                 _disposed = true;
+
 
                 foreach (var segment in _wholeSegments)
                 {

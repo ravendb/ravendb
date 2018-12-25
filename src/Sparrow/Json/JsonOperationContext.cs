@@ -311,12 +311,12 @@ namespace Sparrow.Json
         public static JsonOperationContext ShortTermSingleUse()
         {
             return new JsonOperationContext(4096, 1024, SharedMultipleUseFlag.None);
-        }
+        }       
 
         public JsonOperationContext(int initialSize, int longLivedSize, SharedMultipleUseFlag lowMemoryFlag)
         {
             Debug.Assert(lowMemoryFlag != null);
-            _disposeOnceRunner = new DisposeOnce<ExceptionRetry>(() =>
+            _disposeOnceRunner = new DisposeOnce<SingleAttemptWithWaitForDisposeToFinish>(() =>
             {
 #if MEM_GUARD_STACK
                 ElectricFencedMemory.DecrementConext();
@@ -408,7 +408,7 @@ namespace Sparrow.Json
             {
                 _buffer = buffer;
                 _parent = parent;
-            }
+            }  
 
             public void Dispose()
             {
@@ -421,6 +421,15 @@ namespace Sparrow.Json
                     ThrowParentWasDisposed();
 
                 _parent._managedBuffers.Push(_buffer);
+                _buffer = null;
+            }
+            
+            public void Kill()
+            {
+                if (_buffer == null || _parent.Disposed)
+                    return;
+
+                _parent?._managedBuffers?.Push(_buffer);
                 _buffer = null;
             }
 
@@ -488,7 +497,7 @@ namespace Sparrow.Json
             return new UnmanagedWriteBuffer(this, bufferMemory);
         }
 
-        private readonly DisposeOnce<ExceptionRetry> _disposeOnceRunner;
+        private readonly DisposeOnce<SingleAttemptWithWaitForDisposeToFinish> _disposeOnceRunner;
         private bool Disposed => _disposeOnceRunner.Disposed;
         public override void Dispose()
         {
@@ -975,6 +984,9 @@ namespace Sparrow.Json
 
         protected internal virtual void Renew()
         {
+            if (Disposed)
+                ThrowObjectDisposed();
+
             _arenaAllocator.RenewArena();
             if (_arenaAllocatorForLongLivedValues == null)
             {
@@ -1004,7 +1016,7 @@ namespace Sparrow.Json
                 {
                     _arenaAllocatorForLongLivedValues.Return(mem.AllocatedMemoryData);
                     mem.AllocatedMemoryData = null;
-                    mem.Dispose();
+                    mem.Dispose(); // todo: probably we don't need this call
                 }
 
                 _arenaAllocatorForLongLivedValues = null;
