@@ -56,10 +56,10 @@ IS_MAC=$(uname -s | grep Darwin | wc -l)
 IS_32BIT=$(file /bin/bash | grep 32-bit | wc -l)
 IS_COMPILER=$(which ${C_COMPILER} | wc -l)
 
-if [ ${IS_LINUX} -eq 1 ] && [ ${IS_ARM} -eq 1} ]; then
+if [ ${IS_LINUX} -eq 1 ] && [ ${IS_ARM} -eq 1 ]; then
 	IS_LINUX=0
 fi
-if [ ${IS_LINUX} -eq 1 ] && [ ${IS_MAC} -eq 1} ]; then
+if [ ${IS_LINUX} -eq 1 ] && [ ${IS_MAC} -eq 1 ]; then
 	IS_LINUX=0
 fi
 
