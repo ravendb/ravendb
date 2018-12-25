@@ -90,7 +90,6 @@ class debugAdvancedThreadsRuntime extends viewModelBase {
 
         const grid = this.gridController();
         grid.headerVisible(true);
-        grid.setDefaultSortBy(3, "desc");
         grid.init(fetcher, () => {
                 return [
                     new textColumn<Raven.Server.Dashboard.ThreadInfo>(grid, x => x.Name, "Name", "25%", {
