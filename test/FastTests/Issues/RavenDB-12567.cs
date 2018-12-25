@@ -72,7 +72,25 @@ namespace FastTests.Issues
                     ").ToList();
 
                     Assert.Equal(queryResults.Count, 7);
-                    //TODO : finish assertion in this test (after verifying that the code is good)
+
+                    var stronglyTypedQueryResults = queryResults.Select(x => new
+                    {
+                        Start = x["Start"].Value<string>(),
+                        Path = x["Path"].Value<string>()
+                    }).ToArray();
+
+                    var dog1StartResults = stronglyTypedQueryResults.Where(x => x.Start == "dogs/1").ToArray();
+                    var dog2StartResults = stronglyTypedQueryResults.Where(x => x.Start == "dogs/2").ToArray();
+
+                    Assert.Contains(dog1StartResults, x => x.Path == "dogs/2->dogs/1->dogs/1");
+                    Assert.Contains(dog1StartResults, x => x.Path == "dogs/2->dogs/1");
+                    Assert.Contains(dog1StartResults, x => x.Path == "dogs/2");
+                    Assert.Contains(dog1StartResults, x => x.Path == "dogs/1");
+
+                    Assert.Contains(dog2StartResults, x => x.Path == "dogs/1");
+                    Assert.Contains(dog2StartResults, x => x.Path == "dogs/1->dogs/1");
+                    Assert.Contains(dog2StartResults, x => x.Path == "dogs/1->dogs/2");
+
                 }
             }
         }
