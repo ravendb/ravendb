@@ -331,7 +331,10 @@ namespace Raven.Server.Documents
                     var collection = _documentsStorage.ExtractCollectionName(context, conflicted.Collection);
 
                     if (conflicted.Doc != null)
-                    { 
+                    {
+                        if (conflicted.Flags.Contain(DocumentFlags.HasCounters))
+                            nonPersistentFlags |= NonPersistentDocumentFlags.ResolveCountersConflict;
+
                         _documentsStorage.RevisionsStorage.Put(
                             context, conflicted.Id, conflicted.Doc, conflicted.Flags | DocumentFlags.Conflicted, nonPersistentFlags, conflicted.ChangeVector,
                             conflicted.LastModified.Ticks,
@@ -896,6 +899,28 @@ namespace Raven.Server.Documents
         {
             var table = new Table(ConflictsSchema, context.Transaction.InnerTransaction);
             return table.GetNumberOfEntriesFor(ConflictsSchema.FixedSizeIndexes[AllConflictedDocsEtagsSlice]);
+        }
+
+        public string GetCollection(DocumentsOperationContext context, string id)
+        {
+            LazyStringValue collection = null;
+            using (DocumentIdWorker.GetSliceFromId(context, id, out Slice lowerId))
+            using (GetConflictsIdPrefix(context, lowerId, out Slice prefixSlice))
+            {
+                foreach (var conflict in GetConflictsFor(context, prefixSlice))
+                {
+                    if (collection == null)
+                        collection = conflict.Collection;
+
+                    if (conflict.Collection.Equals(collection) == false)
+                        throw new NotSupportedException($"Two different collections were found: '{collection}' and '{conflict.Collection}'");
+                }
+
+                if (collection == null)
+                    throw new NotSupportedException($"Collection not found.");
+            }
+
+            return collection;
         }
     }
 }

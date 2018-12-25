@@ -140,6 +140,42 @@ namespace FastTests.Server.Documents.Revisions
         }
 
         [Fact]
+        public async Task RemoveHasRevisionsFlag()
+        {
+            var company = new Company { Name = "Company Name" };
+            using (var store = GetDocumentStore())
+            {
+                await RevisionsHelper.SetupRevisions(Server.ServerStore, store.Database);
+                using (var session = store.OpenAsyncSession())
+                {
+                    await session.StoreAsync(company);
+                    await session.SaveChangesAsync();
+                }
+                using (var session = store.OpenAsyncSession())
+                {
+                    var company3 = await session.LoadAsync<Company>(company.Id);
+                    var metadata = session.Advanced.GetMetadataFor(company3);
+
+                    Assert.Equal(DocumentFlags.HasRevisions.ToString(), metadata.GetString(Constants.Documents.Metadata.Flags));
+                }
+
+                await RevisionsHelper.SetupRevisions(Server.ServerStore, store.Database, (config) => { config.Default.MinimumRevisionsToKeep = 0; });
+                using (var session = store.OpenAsyncSession())
+                {
+                    await session.StoreAsync(company);
+                    await session.SaveChangesAsync();
+                }
+                using (var session = store.OpenAsyncSession())
+                {
+                    var company3 = await session.LoadAsync<Company>(company.Id);
+                    var metadata = session.Advanced.GetMetadataFor(company3);
+
+                    Assert.False(metadata.TryGetValue(Constants.Documents.Metadata.Flags, out _));
+                }
+            }
+        }
+
+        [Fact]
         public async Task GetRevisionsOfNotExistKey()
         {
 

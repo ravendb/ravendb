@@ -3,6 +3,7 @@
 import virtualColumn = require("widgets/virtualGrid/columns/virtualColumn");
 import virtualGridController = require("widgets/virtualGrid/virtualGridController");
 import utils = require("widgets/virtualGrid/virtualGridUtils");
+import generalUtils = require("common/generalUtils");
 
 type preparedValue = {
     rawText: string;
@@ -35,10 +36,10 @@ class textColumn<T> implements virtualColumn {
             switch (this.opts.sortable) {
                 case "string":
                 case "number":
-                    return (input: Array<any>) => _.orderBy(input, x => this.getCellValue(x), mode);
+                    return (input: Array<any>) => input.sort((a, b) => generalUtils.sortAlphaNumeric(this.getCellValue(a), this.getCellValue(b), mode));
                 default:
                     const provider = this.opts.sortable as valueProvider<T>;
-                    return (input: Array<any>) => _.orderBy(input, x => provider(x), mode);
+                    return (input: Array<any>) => input.sort((a, b) => generalUtils.sortAlphaNumeric(provider(a), provider(b), mode));
             }
         }
         return null;

@@ -257,7 +257,15 @@ class genUtils {
         return message.substr(0, 256) + "...";
     }
 
-    static sortAlphaNumeric(a: string, b: string): number {
+    static sortAlphaNumeric(a: string, b: string, mode: sortMode = "asc"): number {
+        const result = this.sortAlphaNumericInternal(a, b);
+        if (result === 0)
+            return 0;
+
+        return mode === "asc" ? result : -result;
+    }
+
+    static sortAlphaNumericInternal(a: string, b: string): number {
         const aInt = parseInt(a, 10);
         const bInt = parseInt(b, 10);
 
@@ -282,7 +290,7 @@ class genUtils {
             return -1;
         }
 
-        return aInt > bInt ? 1 : -1;
+        return aInt === bInt ? 0 : aInt > bInt ? 1 : -1;
     }
     
     static formatAsCommaSeperatedString(input: number, digitsAfterDecimalPoint: number) {

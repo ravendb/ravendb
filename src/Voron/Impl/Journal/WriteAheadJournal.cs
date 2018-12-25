@@ -123,6 +123,9 @@ namespace Voron.Impl.Journal
             if (_currentJournalFileSize < minRequiredSize)
             {
                 _currentJournalFileSize = Bits.NextPowerOf2(minRequiredSize);
+                if (_currentJournalFileSize > _env.Options.MaxLogFileSize)
+                    _currentJournalFileSize = Math.Max(_env.Options.MaxLogFileSize, minRequiredSize);
+
                 actualLogSize = _currentJournalFileSize;
             }
 
@@ -642,8 +645,18 @@ namespace Voron.Impl.Journal
                     _waitForJournalStateUpdateUnderTx.Reset();
                     ExceptionDispatchInfo edi = null;
                     var sp = Stopwatch.StartNew();
+
+                    foreach (var unused in unusedJournals)
+                    {
+                        _journalsToDelete[unused.Number] = unused;
+                    }
+
+                    var singleUseFlag = new SingleUseFlag();
                     Action<LowLevelTransaction> currentAction = txw =>
                     {
+                        if (singleUseFlag.Raise() == false)
+                            throw new InvalidOperationException("Tried to update journal state after flush twice");
+
                         try
                         {
                             UpdateJournalStateUnderWriteTransactionLock(txw, lastProcessedJournal, lastFlushedTransactionId, unusedJournals);
@@ -728,11 +741,6 @@ namespace Voron.Impl.Journal
                 _lastFlushedJournalId = lastProcessedJournal;
                 _lastFlushedTransactionId = lastFlushedTransactionId;
                 _lastFlushedJournal = _waj._files.First(x => x.Number == lastProcessedJournal);
-
-                foreach (var unused in unusedJournals)
-                {
-                    _journalsToDelete[unused.Number] = unused;
-                }
 
                 if (unusedJournals.Count > 0)
                 {
@@ -996,7 +1004,7 @@ namespace Voron.Impl.Journal
                 {
                     public readonly Func<bool> Task;
                     public readonly SingleUseFlag DoneFlag = new SingleUseFlag();
-                    public ExceptionDispatchInfo Error;
+                    public Exception Error;
                     public volatile bool Result = true;
 
                     public AssignedTask(Func<bool> task) => Task = task;
@@ -1048,7 +1056,8 @@ namespace Voron.Impl.Journal
 
                             if (current.DoneFlag.IsRaised())
                             {
-                                current.Error?.Throw();
+                                if (current.Error != null)
+                                    throw new InvalidOperationException("The lock task failed", current.Error);
                                 return current.Result;
                             }
                         }
@@ -1058,7 +1067,7 @@ namespace Voron.Impl.Journal
                         return false;
                     }
                 }
-                
+
                 public void RunTaskIfNotAlreadyRan()
                 {
                     AssertRunTaskWithLock();
@@ -1072,7 +1081,7 @@ namespace Voron.Impl.Journal
                     }
                     catch (Exception e)
                     {
-                        current.Error = ExceptionDispatchInfo.Capture(e);
+                        current.Error = e;
                     }
                     finally
                     {

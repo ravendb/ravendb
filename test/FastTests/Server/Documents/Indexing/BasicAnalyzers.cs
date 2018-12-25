@@ -152,6 +152,11 @@ namespace FastTests.Server.Documents.Indexing
         {
             throw new NotImplementedException();
         }
+
+        public override void SaveLastState()
+        {
+            throw new NotImplementedException();
+        }
     }
 
     internal class TestIndexDefinitions : IndexDefinitionBase

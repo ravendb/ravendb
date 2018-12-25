@@ -16,8 +16,6 @@ namespace Sparrow.Utils
 {
     public static unsafe class NativeMemory
     {
-        private static float _minimumFreeCommittedMemory = 0.05f;
-
         private static readonly ThreadLocal<ThreadStats> ThreadAllocations = new ThreadLocal<ThreadStats>(
             () => new ThreadStats(), trackAllValues: true);
 
@@ -35,11 +33,6 @@ namespace Sparrow.Utils
         public static long TotalAllocatedMemory => _totalAllocatedMemory;
 
         public static ConcurrentDictionary<string, Lazy<FileMappingInfo>> FileMapping = new ConcurrentDictionary<string, Lazy<FileMappingInfo>>();
-
-        public static void SetMinimumFreeCommittedMemory(float min)
-        {
-            _minimumFreeCommittedMemory = min;
-        }
 
         public class ThreadStats
         {
@@ -123,7 +116,7 @@ namespace Sparrow.Utils
             // fun, so let's try to avoid it explicitly.
             // This is not expected to be called frequently, since we are caching the memory used here
 
-            MemoryInformation.AssertNotAboutToRunOutOfMemory(_minimumFreeCommittedMemory);
+            MemoryInformation.AssertNotAboutToRunOutOfMemory();
 
             try
             {
