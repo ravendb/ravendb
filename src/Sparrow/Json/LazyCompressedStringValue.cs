@@ -1,5 +1,6 @@
 using System;
 using Sparrow.Compression;
+using static Sparrow.Hashing;
 
 namespace Sparrow.Json
 {
@@ -10,6 +11,41 @@ namespace Sparrow.Json
         public readonly int UncompressedSize;
         public readonly int CompressedSize;
         public string String;
+
+        protected bool Equals(LazyCompressedStringValue other)
+        {
+            var size = CompressedSize;
+            if (other.CompressedSize != size)
+                return false;
+
+            return Memory.CompareInline(Buffer, other.Buffer, size) == 0;
+        }
+
+        public override bool Equals(object obj)
+        {
+            if (ReferenceEquals(null, obj)) return false;
+            if (ReferenceEquals(this, obj)) return true;
+            
+            switch (obj)
+            {
+                case LazyCompressedStringValue lcsv:
+                    return Equals(lcsv);
+                case LazyStringValue lsv:
+                    return lsv.Equals(ToLazyStringValue());
+                case string str:
+                    return str.Equals(ToString());
+            }
+
+            return false;
+        }
+
+        public override int GetHashCode()
+        {
+            unchecked
+            {
+                return (int)XXHash64.Calculate(Buffer, (ulong)CompressedSize);
+            }
+        }
 
         /// <summary>
         /// Returns uncompressed data in form of LazyStringValue

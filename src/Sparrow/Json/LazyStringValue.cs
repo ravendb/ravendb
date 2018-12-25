@@ -29,9 +29,9 @@ namespace Sparrow.Json
             unsafe
             {
                 //PERF: JIT will remove the corresponding line based on the target architecture using dead code removal.                                 
-                if (IntPtr.Size == 4)
-                    return (int)Hashing.XXHash32.CalculateInline(obj.Buffer, obj.Size);
-                return (int)Hashing.XXHash64.CalculateInline(obj.Buffer, (ulong)obj.Size);
+                return IntPtr.Size == 4
+                    ? (int)Hashing.XXHash32.CalculateInline(obj.Buffer, obj.Size)
+                    : (int)Hashing.XXHash64.CalculateInline(obj.Buffer, (ulong)obj.Size);
             }
         }
     }
@@ -199,24 +199,8 @@ namespace Sparrow.Json
             return result == 0 ? size - otherSize : result;
         }
 
-        [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public static bool operator ==(LazyStringValue self, LazyStringValue str)
-        {
-            if (ReferenceEquals(self, str))
-                return true;
-
-            if (ReferenceEquals(self, null))
-                return false;
-            if (ReferenceEquals(str, null))
-                return false;
-
-            return self.Equals(str);
-        }
-
-        public static bool operator !=(LazyStringValue self, LazyStringValue str)
-        {
-            return !(self == str);
-        }
+        public static bool operator !=(LazyStringValue self, LazyStringValue str) => !(self == str);
+        public static bool operator !=(LazyStringValue self, string str) => !(self == str);
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public static bool operator ==(LazyStringValue self, string str)
@@ -228,9 +212,15 @@ namespace Sparrow.Json
             return self.Equals(str);
         }
 
-        public static bool operator !=(LazyStringValue self, string str)
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public static bool operator ==(LazyStringValue self, LazyStringValue str)
         {
-            return !(self == str);
+            if (ReferenceEquals(self, str))
+                return true;
+
+            if (ReferenceEquals(self, null))
+                return false;
+            return !ReferenceEquals(str, null) && self.Equals(str);
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
@@ -271,23 +261,28 @@ namespace Sparrow.Json
             throw new InvalidCastException($"Couldn't convert {valueAsString} (LazyStringValue) to float");
         }
 
-        public override bool Equals(object obj)
+        public override bool Equals(object other)
         {
 #if DEBUG
             if (IsDisposed)
                 ThrowAlreadyDisposed();
 #endif
-            if (ReferenceEquals(obj, null))
-                return false;
+            if (ReferenceEquals(other, this))
+                return true;
 
-            var s = obj as string;
-            if (s != null)
-                return Equals(s);
-            var comparer = obj as LazyStringValue;
-            if (comparer != null)
-                return Equals(comparer);
+            switch (other)
+            {
+                case null:
+                    return false;
+                case string str:
+                    return Equals(str);
+                case LazyStringValue lsv:
+                    return lsv.Equals(this);
+                case LazyCompressedStringValue lcsv:
+                    return lcsv.ToLazyStringValue().Equals(this);
+            }
 
-            return ReferenceEquals(obj, this);
+            return false;
         }
 
         public override int GetHashCode()
@@ -296,10 +291,9 @@ namespace Sparrow.Json
             if (IsDisposed)
                 ThrowAlreadyDisposed();
 #endif
-            if (IntPtr.Size == 4)
-                return (int)Hashing.XXHash32.CalculateInline(Buffer, Size);
-            else
-                return (int)Hashing.XXHash64.CalculateInline(Buffer, (ulong)Size);
+            return IntPtr.Size == 4 ? 
+                (int)Hashing.XXHash32.CalculateInline(Buffer, Size) : 
+                (int)Hashing.XXHash64.CalculateInline(Buffer, (ulong)Size);
         }
 
         public override string ToString()
