@@ -96,7 +96,14 @@ namespace Sparrow.LowMemory
 
         public static void AssertNotAboutToRunOutOfMemory()
         {
-            if (NeedEarlyOutMemoryValidation() == false)
+            if (EnableEarlyOutOfMemoryChecks == false)
+                return;
+
+            if (DisableEarlyOutOfMemoryCheck)
+                return;
+
+            if (PlatformDetails.RunningOnPosix &&       // we only _need_ this check on Windows
+                EnableEarlyOutOfMemoryCheck == false)   // but we want to enable this manually if needed
                 return;
 
             var memInfo = GetMemoryInfo();
@@ -106,28 +113,14 @@ namespace Sparrow.LowMemory
 
         public static bool IsEarlyOutOfMemory(MemoryInfoResult memInfo, out Size commitChargeThreshold)
         {
-            if (NeedEarlyOutMemoryValidation() == false)
+            if (PlatformDetails.RunningOnPosix &&       // we only _need_ this check on Windows
+                EnableEarlyOutOfMemoryCheck == false)   // but we want to enable this manually if needed
             {
                 commitChargeThreshold = Size.Zero;
                 return false;
             }
 
             return IsEarlyOutOfMemoryInternal(memInfo, earlyOutOfMemoryWarning: true, out commitChargeThreshold);
-        }
-
-        private static bool NeedEarlyOutMemoryValidation()
-        {
-            if (EnableEarlyOutOfMemoryChecks == false)
-                return false;
-
-            if (DisableEarlyOutOfMemoryCheck)
-                return false;
-
-            if (PlatformDetails.RunningOnPosix &&       // we only _need_ this check on Windows
-                EnableEarlyOutOfMemoryCheck == false)   // but we want to enable this manually if needed
-                return false;
-
-            return true;
         }
 
         private static bool IsEarlyOutOfMemoryInternal(MemoryInfoResult memInfo, bool earlyOutOfMemoryWarning, out Size commitChargeThreshold)
