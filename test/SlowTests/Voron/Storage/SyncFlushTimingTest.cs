@@ -470,7 +470,7 @@ namespace SlowTests.Voron.Storage
                 }
 
                 worker.WaitThrow(TimeSpan.FromSeconds(10));
-                Assert.Equal(typeof(DataException), worker.Exception.GetType());
+                Assert.Equal(typeof(DataException), worker.Exception.InnerException.GetType());
             }
             catch (Exception)
             {
@@ -516,7 +516,7 @@ namespace SlowTests.Voron.Storage
 
                 Assert.Equal(0, throwWorker.Job.TimesJobDone);
                 Assert.Equal(1, worker.Job.TimesJobDone);
-                Assert.Equal(typeof(DataException), throwWorker.Exception.GetType());
+                Assert.Equal(typeof(DataException), throwWorker.Exception.InnerException.GetType());
                 Assert.Equal(null, worker.Exception);
             }
             catch (Exception)

@@ -36,17 +36,8 @@ namespace Raven.Server.Utils
 
         public static PoolOfThreads GlobalRavenThreadPool => _globalRavenThreadPool.Value;
         private static Logger _log = LoggingSource.Instance.GetLogger<PoolOfThreads>("Server");
-        private float _minimumFreeCommittedMemory = 0.05f;
 
         public int TotalNumberOfThreads;
-
-        public void SetMinimumFreeCommittedMemory(float min)
-        {
-            if (min <= 0)
-                throw new ArgumentException("MinimumFreeCommittedMemory must be positive, but was: " + min);
-
-            _minimumFreeCommittedMemory = min;
-        }
 
         public void SetThreadsAffinityIfNeeded()
         {
@@ -119,7 +110,7 @@ namespace Raven.Server.Utils
         {
             if (_pool.TryDequeue(out var pooled) == false)
             {
-                MemoryInformation.AssertNotAboutToRunOutOfMemory(_minimumFreeCommittedMemory);
+                MemoryInformation.AssertNotAboutToRunOutOfMemory();
 
                 pooled = new PooledThread(this);
                 var thread = new Thread(pooled.Run, PlatformDetails.Is32Bits ? 512 * Constants.Size.Kilobyte : 0)

@@ -15,7 +15,7 @@ namespace Raven.Server.Documents.Indexes
 {
     public abstract class MapIndexBase<T, TField> : Index<T, TField> where T : IndexDefinitionBase<TField> where TField : IndexFieldBase
     {
-        private CollectionOfBloomFilters _filter;
+        private CollectionOfBloomFilters _filters;
         private IndexingStatsScope _statsInstance;
         private readonly MapStats _stats = new MapStats();
 
@@ -38,9 +38,9 @@ namespace Raven.Server.Documents.Indexes
                 ? CollectionOfBloomFilters.Mode.X86
                 : CollectionOfBloomFilters.Mode.X64;
 
-            _filter = CollectionOfBloomFilters.Load(mode, indexContext);
+            _filters = CollectionOfBloomFilters.Load(mode, indexContext);
 
-            return _filter;
+            return _filters;
         }
 
         public override void HandleDelete(Tombstone tombstone, string collection, IndexWriteOperation writer, TransactionOperationContext indexContext, IndexingStatsScope stats)
@@ -55,7 +55,7 @@ namespace Raven.Server.Documents.Indexes
             bool mustDelete;
             using (_stats.BloomStats.Start())
             {
-                mustDelete = _filter.Add(lowerId) == false;
+                mustDelete = _filters.Add(lowerId) == false;
             }
 
             if (mustDelete)
@@ -78,6 +78,11 @@ namespace Raven.Server.Documents.Indexes
         public override IQueryResultRetriever GetQueryResultRetriever(IndexQueryServerSide query, QueryTimingsScope queryTimings, DocumentsOperationContext documentsContext, FieldsToFetch fieldsToFetch, IncludeDocumentsCommand includeDocumentsCommand)
         {
             return new MapQueryResultRetriever(DocumentDatabase, query, queryTimings, DocumentDatabase.DocumentsStorage, documentsContext, fieldsToFetch, includeDocumentsCommand);
+        }
+
+        public override void SaveLastState()
+        {
+            _filters?.Flush();
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]

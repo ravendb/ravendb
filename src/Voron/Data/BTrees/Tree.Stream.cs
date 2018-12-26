@@ -353,7 +353,7 @@ namespace Voron.Data.BTrees
                 if (it.Seek(0) == false)
                     return pages;
 
-                var totalSize = 0;
+                var totalSize = 0L;
 
                 do
                 {
@@ -361,7 +361,7 @@ namespace Voron.Data.BTrees
 
                     totalSize += chunk->ChunkSize;
 
-                    var size = chunk->ChunkSize;
+                    long size = chunk->ChunkSize;
 
                     if (chunkIndex == chunksTree.NumberOfEntries - 1)
                     {
@@ -407,10 +407,10 @@ namespace Voron.Data.BTrees
                 return GetStreamTag(str);
         }
 
-        private void ThrowStreamSizeMismatch(Slice name, int chunksSize, StreamInfo* info)
+        private void ThrowStreamSizeMismatch(Slice name, long totalChunksSize, StreamInfo* info)
         {
             VoronUnrecoverableErrorException.Raise(_tx.LowLevelTransaction.Environment,
-                $"Stream size mismatch of '{name}' stream. Sum of chunks size is {chunksSize} while stream info has {info->TotalSize}");
+                $"Stream size mismatch of '{name}' stream. Sum of chunks size is {totalChunksSize} while stream info has {info->TotalSize}");
         }
     }
 

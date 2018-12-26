@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
+using Esprima;
 using Jint;
 using Jint.Native;
 using Jint.Native.Function;
@@ -47,11 +48,11 @@ namespace Raven.Server.Documents.Indexes.Static
                     .LocalTimeZone(TimeZoneInfo.Utc);
             });
 
-            InitializeEngine(definition, out var mapList);
+            var (mapList, mapReferencedCollections) = InitializeEngine(definition);
 
             var definitions = GetDefinitions();
 
-            ProcessMaps(configuration, definitions, resolver, mapList, out var collectionFunctions);
+            ProcessMaps(configuration, definitions, resolver, mapList, mapReferencedCollections, out var collectionFunctions);
 
             ProcessReduce(definition, definitions, resolver);
 
@@ -104,7 +105,7 @@ namespace Raven.Server.Documents.Indexes.Static
         }
 
         private void ProcessMaps(RavenConfiguration configuration, ObjectInstance definitions, JintPreventResolvingTasksReferenceResolver resolver, List<string> mapList,
-            out Dictionary<string, List<JavaScriptMapOperation>> collectionFunctions)
+            List<HashSet<CollectionName>> mapReferencedCollections,out Dictionary<string, List<JavaScriptMapOperation>> collectionFunctions)
         {
             var mapsArray = definitions.GetProperty(MapsProperty).Value;
             if (mapsArray.IsNull() || mapsArray.IsUndefined() || mapsArray.IsArray() == false)
@@ -161,7 +162,7 @@ namespace Raven.Server.Documents.Indexes.Static
                     ReferencedCollections.Add(mapCollection, collectionNames);
                 }
 
-                collectionNames.UnionWith(operation.ReferencedCollections);
+                collectionNames.UnionWith(mapReferencedCollections[i]);
 
                 list.Add(operation);
             }
@@ -181,7 +182,19 @@ namespace Raven.Server.Documents.Indexes.Static
             return definitions;
         }
 
-        private void InitializeEngine(IndexDefinition definition, out List<string> maps)
+        private static ParserOptions DefaultParserOptions = new ParserOptions();
+        
+        private HashSet<CollectionName> ExecuteCodeAndCollectRefrencedCollections(string code)
+        {
+            var javascriptParser = new JavaScriptParser(code, DefaultParserOptions);
+            var program = javascriptParser.ParseProgram();
+            _engine.Execute(program);
+            var loadVisitor = new EsprimaReferencedCollectionVisitor();
+            loadVisitor.Visit(program);
+            return loadVisitor.ReferencedCollection;
+        }
+
+        private (List<string> Maps, List<HashSet<CollectionName>> MapReferencedCollections) InitializeEngine(IndexDefinition definition)
         {
             _engine.SetValue("load", new ClrFunctionInstance(_engine, "load", LoadDocument));
 
@@ -195,13 +208,20 @@ namespace Raven.Server.Documents.Indexes.Static
                 }
             }
 
-            maps = definition.Maps.ToList();
+            var maps = definition.Maps.ToList();
+            var mapReferencedCollections = new List<HashSet<CollectionName>>();
 
             foreach (var t in maps)
-                _engine.Execute(t);
+            {
+                mapReferencedCollections.Add(ExecuteCodeAndCollectRefrencedCollections(t));
+            }
 
             if (definition.Reduce != null)
+            {
                 _engine.Execute(definition.Reduce);
+        }
+
+            return (maps, mapReferencedCollections);
         }
 
         private void ThrowIndexCreationException(string message)

@@ -72,6 +72,8 @@ namespace FastTests.Server.Documents.Indexing
                     {
                         Assert.True(filter.Add(key1));
                         Assert.Equal(1, filter.Count);
+
+                        filter.Flush();
                     }
 
                     tx.Commit();
@@ -93,7 +95,7 @@ namespace FastTests.Server.Documents.Indexing
         }
 
         [Fact]
-        public void CheckWriteability()
+        public void CheckWritability()
         {
             using (var context = new TransactionOperationContext(Env, 1024, 1024, SharedMultipleUseFlag.None))
             {
@@ -110,6 +112,8 @@ namespace FastTests.Server.Documents.Indexing
                         Assert.Equal(1, filter.Count);
                         Assert.True(filter.Writable);
                         Assert.False(filter.ReadOnly);
+
+                        filter.Flush();
                     }
 
                     tx.Commit();
