@@ -3,6 +3,7 @@ echo ""
 LIBFILE="librvnpal"
 CLEAN=0
 C_COMPILER=c89
+C_SHARED_FLAG="-shared"
 
 NC="\\e[39m"
 C_BLACK="\\e[30m"
@@ -65,7 +66,7 @@ fi
 
 if [ ${IS_COMPILER} -ne 1 ]; then
 	echo -e "${ERR_STRING}Unable to determine if ${C_COMPILER} compiler exists. Consider installing clang-3.9"
-	return 1
+	exit 1
 fi
 FILTERS=(-1)
 if [ ${IS_LINUX} -eq 1 ]; then 
@@ -79,9 +80,12 @@ if [ ${IS_LINUX} -eq 1 ]; then
 	fi
 fi
 if [ ${IS_MAC} -eq 1 ]; then
-	FILTERS=(src/posix src/mac);
+	FILTERS=(src/posix)
+       	FILTERS+=(src/mac)
 	LINKFILE=${LIBFILE}.mac
-	if [ ${IS_32BIT} ]; then
+	C_COMPILER="clang -std=c89"
+	C_SHARED_FLAG="-dynamiclib"
+	if [ ${IS_32BIT} -eq 1 ]; then
 		echo -e "${ERR_STRING}mac 32 bit build is not supported${NC}"
 		exit 1
         else
@@ -109,10 +113,10 @@ if [ ${CLEAN} -eq 1 ]; then
 	echo -e "${C_L_CYAN}Cleaning for ${C_L_GREEN}${LINKFILE}${NC}"
 fi
 
-echo -e "${C_L_YELLOW}FILTER:   ${C_YELLOW}${FILTERS}${NC}"
+echo -e "${C_L_YELLOW}FILTER:   ${C_YELLOW}${FILTERS[@]}${NC}"
 FILES=()
 for SRCPATH in "${FILTERS[@]}"; do
-	for SRCFILE in $(find ${SRCPATH} | grep "^${FILTERS}" | grep "\.c$"); do
+	for SRCFILE in $(find ${SRCPATH} | grep "^${SRCPATH}" | grep "\.c$"); do
 		SRCFILE_O=$(echo ${SRCFILE} | sed -e "s|\.c$|\.o|g")
 		if [ ${CLEAN} -eq 0 ]; then
 			CMD="${C_COMPILER} -Iinc -O2 -Wall -c -o ${SRCFILE_O} ${SRCFILE}"
@@ -130,7 +134,7 @@ for SRCPATH in "${FILTERS[@]}"; do
 	done
 done
 if [ ${CLEAN} -eq 0 ]; then
-	CMD="${C_COMPILER} -shared -o ${LINKFILE} ${FILES[@]}"
+	CMD="${C_COMPILER} ${C_SHARED_FLAG} -o ${LINKFILE} ${FILES[@]}"
 	echo -e "${C_L_GREEN}${T_BOLD}${CMD}${NC}${NT}"
 else
 	if [ -f ${LINKFILE} ]; then 
@@ -142,7 +146,7 @@ ${CMD}
 if [ $? -ne 0 ]; then
 	echo ""
 	echo -e "${ERR_STRING}: Build Failed."
-	return 1
+	exit 1
 fi
 echo ""
 echo -e "${C_L_CYAN}Done for ${C_L_GREEN}${T_BLINK}${LINKFILE}${NT}${NC}"

@@ -13,7 +13,7 @@ flush_file (int32_t fd) {
 
 int32_t
 sync_directory_allowed (int dir_fd) {
-  return 1; // always allowed on Mac
+  return 1; /* always allowed on Mac */
 }
 
 #endif
