@@ -1,8 +1,6 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Text;
-using FastTests;
+﻿using FastTests;
 using Raven.Client.Documents;
+using Raven.Client.Exceptions;
 using SlowTests.Graph;
 using Xunit;
 
@@ -64,34 +62,23 @@ namespace SlowTests.Issues
         }
 
         const string Query = @"
-with {  from Users where id() = $uid    }   as u
-
-match   (u)<-[Users]-(Issues as i)          or
+with {  from Users where id() = 'users/84' } as u
+match   (u)<-[Users]-(Issues as i) or
         (Issues as i)-[Groups]->(Groups as direct)-recursive (0, all) { [Parents]->(Groups) }<-[Groups]-(u)
 
 select  i.Name as Issue, 
         u.Name as User
 ";
 
-        [Theory(Skip = "Should pass when RavenDB-12563 is fixed")]
-        [InlineData("users/2944", "Sunny")]
-        [InlineData("users/84", "Max")]
-        [InlineData("users/12", "Arava")]
-        [InlineData("users/23", "Pheobe")]
-        public void Should_properly_support_zero_length_recursive(string uid, string name)
+        [Fact]
+        public void Should_throw_error_because_invalid_query()
         {
             using (var store = GetDocumentStore())
             {
                 CreateData(store);
-                WaitForUserToContinueTheTest(store);
-                using (var s = store.OpenSession())
+                using (var session = store.OpenSession())
                 {
-                    var r = s.Advanced.RawQuery<GraphPermissionTests.Result>(Query)
-                        .AddParameter("uid", uid)
-                        .Single();
-
-                    Assert.Equal("Design a logo of the project (red)", r.Issue);
-                    Assert.Equal(name, r.User);
+                    Assert.Throws<InvalidQueryException>(() => session.Advanced.RawQuery<GraphPermissionTests.Result>(Query).Single());
                 }
             }
         }

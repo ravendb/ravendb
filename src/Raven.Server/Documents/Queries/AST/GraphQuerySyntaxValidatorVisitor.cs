@@ -37,10 +37,12 @@ namespace Raven.Server.Documents.Queries.AST
                 for (var i = 1; i < elements.Length; i++)
                 {
                     QueryStepElementType next;
+                    var nextIsRecursive = false;
                     if (elements[i].Recursive.HasValue)
                     {
                         var matchPath = elements[i].Recursive.Value.Pattern;
                         next = DetermineEdgeOrVertex(matchPath[0]);
+                        nextIsRecursive = true;
                     }
                     else
                     {
@@ -50,9 +52,13 @@ namespace Raven.Server.Documents.Queries.AST
                     switch (last)
                     {
                         case QueryStepElementType.Vertex when next != QueryStepElementType.Edge:
+                            if (nextIsRecursive)
+                                ThrowExpectedEdgeButFoundRecursive(elements[i], elementExpression);
                             ThrowExpectedEdgeButFoundVertex(elements[i], elementExpression);
                             break;
                         case QueryStepElementType.Edge when next != QueryStepElementType.Vertex:
+                            if (nextIsRecursive)
+                                ThrowExpectedVertexButFoundRecursive(elements[i], elementExpression);
                             ThrowExpectedVertexButFoundEdge(elements[i], elementExpression);
                             break;
                     }
@@ -76,9 +82,19 @@ namespace Raven.Server.Documents.Queries.AST
             throw new InvalidQueryException($"Invalid pattern match syntax: expected element '{patternMatchElement}' to be of type vertex, but it is an edge. (The full expression: '{elementExpression}')");
         }
 
+        private static void ThrowExpectedVertexButFoundRecursive(MatchPath patternMatchElement, PatternMatchElementExpression elementExpression)
+        {
+            throw new InvalidQueryException($"Invalid pattern match syntax: expected element '{patternMatchElement}' to be of type vertex, but it is a recursive clause. In a graph query, recursive clause is considered an edge, and should be preceded by a vertex and superseded by edge. (The full expression: '{elementExpression}')");
+        }
+
         private static void ThrowExpectedEdgeButFoundVertex(MatchPath patternMatchElement, PatternMatchElementExpression elementExpression)
         {
             throw new InvalidQueryException($"Invalid pattern match syntax: expected element '{patternMatchElement}' to be of type edge, but it is an vertex. (The full expression: '{elementExpression}')");
+        }
+
+        private static void ThrowExpectedEdgeButFoundRecursive(MatchPath patternMatchElement, PatternMatchElementExpression elementExpression)
+        {
+            throw new InvalidQueryException($"Invalid pattern match syntax: expected element '{patternMatchElement}' to be of type edge, but it is a recursive clause. In a graph query, recursive clause is considered an edge, and should be preceded by a vertex and superseded by edge. (The full expression: '{elementExpression}')");
         }
     }
 }
