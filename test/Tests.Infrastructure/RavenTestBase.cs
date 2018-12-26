@@ -292,13 +292,21 @@ namespace FastTests
                 var indexes = databaseStatistics.Indexes
                     .Where(x => x.State != IndexState.Disabled);
 
-                if (indexes.All(x => x.IsStale == false && x.Name.StartsWith("ReplacementOf/") == false))
+                var staleIndexesCount = indexes.Count(x => x.IsStale || x.Name.StartsWith("ReplacementOf/"));
+                if (staleIndexesCount == 0)
                     return;
 
-                if (databaseStatistics.Indexes.Any(x => x.State == IndexState.Error))
+                var erroredIndexesCount = databaseStatistics.Indexes.Count(x => x.State == IndexState.Error);
+                if (allowErrors)
                 {
+                    // wait for all indexes to become non stale
+                }
+                else if (erroredIndexesCount > 0)
+                {
+                    // have at least some errors
                     break;
                 }
+
                 Thread.Sleep(32);
             }
 
