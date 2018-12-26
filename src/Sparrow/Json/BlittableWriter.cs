@@ -55,7 +55,7 @@ namespace Sparrow.Json
         {
             _context = context;
             _innerBuffer = _context.GetMemory(32);
-        }
+        }        
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public int WriteValue(long value)
@@ -251,6 +251,12 @@ namespace Sparrow.Json
         {
             ThreadLocalCleanup.ReleaseThreadLocalState += CleanPropertyArrayOffset;
         }
+
+        ~BlittableWriter()
+        {
+            _unmanagedWriteBuffer.Kill();
+        }
+
 
         public static void CleanPropertyArrayOffset()
         {
@@ -758,14 +764,16 @@ namespace Sparrow.Json
         public void Dispose()
         {
             _unmanagedWriteBuffer.Dispose();
+
             if (_compressionBuffer != null)
                 _context.ReturnMemory(_compressionBuffer);
 
-            _compressionBuffer = null;
-
             if (_innerBuffer != null)
                 _context.ReturnMemory(_innerBuffer);
+
+            _compressionBuffer = null;
             _innerBuffer = null;
+            GC.SuppressFinalize(this);
         }
     }
 }

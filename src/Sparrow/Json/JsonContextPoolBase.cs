@@ -108,24 +108,7 @@ namespace Sparrow.Json
   
         private class ContextStack : StackHeader<T>, IDisposable
         {
-            public bool AvoidWorkStealing;
-
-            ~ContextStack()
-            {
-                if (Environment.HasShutdownStarted)
-                    return; // let the OS clean this up
-
-                try
-                {
-                    DisposeOfContexts();
-                }
-                catch (ObjectDisposedException)
-                {
-                    // This is expected, we might be calling the finalizer on an object that
-                    // was already disposed, we don't want to error here because of this
-                }
-            }
-
+            public bool AvoidWorkStealing;        
             public void Dispose()
             {
                 GC.SuppressFinalize(this);
@@ -137,6 +120,7 @@ namespace Sparrow.Json
             private void DisposeOfContexts()
             {
                 var current = Interlocked.Exchange(ref Head, HeaderDisposed);
+
                 while (current != null)
                 {
                     var ctx = current.Value;
@@ -312,6 +296,8 @@ namespace Sparrow.Json
                 if (Parent == null)
                     return;// disposed already
 
+                GC.SuppressFinalize(this);
+
                 if (Context.DoNotReuse)
                 {
                     Context.Dispose();
@@ -328,7 +314,6 @@ namespace Sparrow.Json
                 Parent = null;
                 Context = null;
             }
-
         }
 
         private void Push(T context)

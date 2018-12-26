@@ -103,7 +103,7 @@ namespace Sparrow.Json
             _propertiesCache = _cacheItem.PropertyCache;
             _positionsCache = _cacheItem.PositionsCache;
             _tokensCache = _cacheItem.TokensCache;            
-        }
+        }  
 
         public BlittableJsonDocumentBuilder(
             JsonOperationContext context, 

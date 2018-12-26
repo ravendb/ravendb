@@ -4,9 +4,38 @@ using System.Threading.Tasks;
 
 namespace Sparrow.Threading
 {
-    public interface IDisposeOnceOperationMode {}
-    public struct ExceptionRetry : IDisposeOnceOperationMode { }
-    public struct SingleAttempt : IDisposeOnceOperationMode { }
+    public interface IDisposeOnceOperationMode
+    {
+        void Initialize();
+        bool DuringDispose { get; }
+        void EnterDispose();
+        void LeaveDispose();
+
+    }
+    public struct ExceptionRetry : IDisposeOnceOperationMode {
+        public void Initialize()
+        {            
+        }
+        public bool DuringDispose => false;
+        public void EnterDispose(){}
+        public void LeaveDispose(){}
+    }
+    public struct SingleAttempt : IDisposeOnceOperationMode {
+        private int disposeDepth;
+        public void Initialize()
+        {
+            disposeDepth = 0;
+        }
+        public bool DuringDispose => disposeDepth != 0;
+        public void EnterDispose()
+        {
+            disposeDepth++;
+        }
+        public void LeaveDispose()
+        {
+            disposeDepth--;
+        }
+    }
 
     public sealed class DisposeOnce<TOperationMode>
         where TOperationMode : struct, IDisposeOnceOperationMode
@@ -15,14 +44,19 @@ namespace Sparrow.Threading
         private Tuple<MultipleUseFlag, TaskCompletionSource<object>> _state 
             = Tuple.Create(new MultipleUseFlag(), new TaskCompletionSource<object>(TaskCreationOptions.RunContinuationsAsynchronously));
 
+        TOperationMode _operationModeData;
+             
         public DisposeOnce(Action action)
         {
             _action = action;
             if (typeof(TOperationMode) != typeof(ExceptionRetry) &&
-                typeof(TOperationMode) != typeof(SingleAttempt)) 
+                typeof(TOperationMode) != typeof(SingleAttempt))                
             {
                 throw new NotSupportedException("Unknown operation mode: " + typeof(TOperationMode));
             }
+
+            _operationModeData = default;
+            _operationModeData.Initialize();
         }
 
         /// <summary>
@@ -37,60 +71,68 @@ namespace Sparrow.Threading
         /// Dispose until it succeeds. Retry, however, happens on successive
         /// calls to Dispose, rather than in a single attempt.
         /// 
-        /// When behavior is <see cref="SingleAttempt"/>, a failure means all
+        /// When behavior is <see cref="SingleAttempt"/> or <see cref="SingleAttemptWithWaitForDisposeToFinish"/>, a failure means all
         /// subsequent calls will fail by throwing the same exception that
         /// was thrown by the action.
         /// </summary>
         public void Dispose()
         {
-            var localState = _state;
-            var disposeInProgress = localState.Item1;
-            if (disposeInProgress.Raise() == false)
-            {
-                // If a dispose is in progress, all other threads
-                // attempting to dispose will stop here and wait until it
-                // is over. This call to Wait may throw with an
-                // AggregateException
-                localState.Item2.Task.Wait();
-                return;
-            }
-
+            _operationModeData.EnterDispose();
             try
             {
-                _action();
+                var localState = _state;
+                var disposeInProgress = localState.Item1;
+                if (disposeInProgress.Raise() == false)
+                {
+                    // If a dispose is in progress, all other threads
+                    // attempting to dispose will stop here and wait until it
+                    // is over. This call to Wait may throw with an
+                    // AggregateException
+                    localState.Item2.Task.Wait();
+                    return;
+                }
 
-                // Let everyone know this run worked out!
-                localState.Item2.SetResult(null);
+                try
+                {
+                    _action();
+
+                    // Let everyone know this run worked out!
+                    localState.Item2.SetResult(null);
+                }
+                catch (Exception e)
+                {
+                    if (typeof(TOperationMode) == typeof(ExceptionRetry))
+                    {
+                        // Reset the state for the next attempt. First backup the
+                        // current task completion.
+                        // Let everyone waiting know that this run failed
+                        localState.Item2.SetException(e);
+
+                        // atomically replace both the flag and the task to wait, so new 
+                        // callers to the Dispose are either getting the error or can start
+                        // calling this again
+                        Interlocked.CompareExchange(ref _state,
+                            Tuple.Create(new MultipleUseFlag(), new TaskCompletionSource<object>(TaskCreationOptions.RunContinuationsAsynchronously)),
+                            localState
+                        );
+
+                    }
+                    else if (typeof(TOperationMode) == typeof(SingleAttempt))
+                    {
+                        // Let everyone waiting know that this run failed
+                        localState.Item2.SetException(e);
+                    }
+                    else
+                    {
+                        throw new NotSupportedException("Unknown operation mode: " + typeof(TOperationMode));
+                    }
+
+                    throw;
+                }
             }
-            catch (Exception e)
+            finally
             {
-                if (typeof(TOperationMode) == typeof(ExceptionRetry))
-                {
-                    // Reset the state for the next attempt. First backup the
-                    // current task completion.
-                    // Let everyone waiting know that this run failed
-                    localState.Item2.SetException(e);
-
-                    // atomically replace both the flag and the task to wait, so new 
-                    // callers to the Dispose are either getting the error or can start
-                    // calling this again
-                    Interlocked.CompareExchange(ref _state,
-                        Tuple.Create(new MultipleUseFlag(), new TaskCompletionSource<object>(TaskCreationOptions.RunContinuationsAsynchronously)),
-                        localState
-                    );
-
-                }
-                else if (typeof(TOperationMode) == typeof(SingleAttempt))
-                {
-                    // Let everyone waiting know that this run failed
-                    localState.Item2.SetException(e);
-                }
-                else
-                {
-                    throw new NotSupportedException("Unknown operation mode: " + typeof(TOperationMode));
-                }
-
-                throw;
+                _operationModeData.LeaveDispose();
             }
         }
 
@@ -102,10 +144,10 @@ namespace Sparrow.Threading
                 if (state.Item1 == false)
                     return false;
 
-                if (typeof(TOperationMode) == typeof(SingleAttempt))
+                if (typeof(TOperationMode) == typeof(SingleAttempt) && _operationModeData.DuringDispose == false)
                     return true;
 
-                if (typeof(TOperationMode) == typeof(ExceptionRetry))
+                if (typeof(TOperationMode) == typeof(ExceptionRetry) || typeof(TOperationMode) == typeof(SingleAttempt))
                 {
                     if (state.Item2.Task.IsFaulted || state.Item2.Task.IsCanceled)
                         return false;
@@ -126,6 +168,7 @@ namespace Sparrow.Threading
         private readonly Func<Task> _action;
         private Tuple<MultipleUseFlag, TaskCompletionSource<object>> _state 
             = Tuple.Create(new MultipleUseFlag(), new TaskCompletionSource<object>(TaskCreationOptions.RunContinuationsAsynchronously));
+        TOperationMode _operationModeData;
 
         public DisposeOnceAsync(Func<Task> action)
         {
@@ -135,6 +178,7 @@ namespace Sparrow.Threading
             {
                 throw new NotSupportedException("Unknown operation mode: " + typeof(TOperationMode));
             }
+            _operationModeData = default;
         }
 
         /// <summary>
@@ -149,60 +193,69 @@ namespace Sparrow.Threading
         /// Dispose until it succeeds. Retry, however, happens on successive
         /// calls to Dispose, rather than in a single attempt.
         /// 
-        /// When behavior is <see cref="SingleAttempt"/>, a failure means all
+        /// When behavior is <see cref="SingleAttempt"/> or <see cref="SingleAttemptWithWaitForDisposeToFinish"/>, a failure means all
         /// subsequent calls will fail by throwing the same exception that
         /// was thrown by the action.
         /// </summary>
         public async Task DisposeAsync()
         {
-            var localState = _state;
-            var disposeInProgress = localState.Item1;
-            if (disposeInProgress.Raise() == false)
-            {
-                // If a dispose is in progress, all other threads
-                // attempting to dispose will stop here and wait until it
-                // is over. This call to Wait may throw with an
-                // AggregateException
-                await localState.Item2.Task.ConfigureAwait(false);
-            }
+            _operationModeData.EnterDispose();
 
             try
             {
-                await _action().ConfigureAwait(false);
+                var localState = _state;
+                var disposeInProgress = localState.Item1;
+                if (disposeInProgress.Raise() == false)
+                {
+                    // If a dispose is in progress, all other threads
+                    // attempting to dispose will stop here and wait until it
+                    // is over. This call to Wait may throw with an
+                    // AggregateException
+                    await localState.Item2.Task.ConfigureAwait(false);
+                }
 
-                // Let everyone know this run worked out!
-                localState.Item2.SetResult(null);
+                try
+                {
+                    await _action().ConfigureAwait(false);
+
+                    // Let everyone know this run worked out!
+                    localState.Item2.SetResult(null);
+                }
+                catch (Exception e)
+                {
+                    if (typeof(TOperationMode) == typeof(ExceptionRetry))
+                    {
+                        // Reset the state for the next attempt. First backup the
+                        // current task completion.
+                        // Let everyone waiting know that this run failed
+                        localState.Item2.SetException(e);
+
+                        // atomically replace both the flag and the task to wait, so new 
+                        // callers to the Dispose are either getting the error or can start
+                        // calling this again
+                        Interlocked.CompareExchange(ref _state,
+                            Tuple.Create(new MultipleUseFlag(), new TaskCompletionSource<object>(TaskCreationOptions.RunContinuationsAsynchronously)),
+                            localState
+                        );
+
+                    }
+                    else if (typeof(TOperationMode) == typeof(SingleAttempt))
+                    {
+                        // Let everyone waiting know that this run failed
+                        localState.Item2.SetException(e);
+                    }
+                    else
+                    {
+                        throw new NotSupportedException("Unknown operation mode: " + typeof(TOperationMode));
+                    }
+
+                    // Rethrow so that our thread knows it failed
+                    throw new AggregateException(e);
+                }
             }
-            catch (Exception e)
+            finally
             {
-                if (typeof(TOperationMode) == typeof(ExceptionRetry))
-                {
-                    // Reset the state for the next attempt. First backup the
-                    // current task completion.
-                    // Let everyone waiting know that this run failed
-                    localState.Item2.SetException(e);
-
-                    // atomically replace both the flag and the task to wait, so new 
-                    // callers to the Dispose are either getting the error or can start
-                    // calling this again
-                    Interlocked.CompareExchange(ref _state,
-                        Tuple.Create(new MultipleUseFlag(), new TaskCompletionSource<object>(TaskCreationOptions.RunContinuationsAsynchronously)),
-                        localState
-                    );
-
-                }
-                else if (typeof(TOperationMode) == typeof(SingleAttempt))
-                {
-                    // Let everyone waiting know that this run failed
-                    localState.Item2.SetException(e);
-                }
-                else
-                {
-                    throw new NotSupportedException("Unknown operation mode: " + typeof(TOperationMode));
-                }
-
-                // Rethrow so that our thread knows it failed
-                throw new AggregateException(e);
+                _operationModeData.LeaveDispose();
             }
         }
 
@@ -214,10 +267,10 @@ namespace Sparrow.Threading
                 if (state.Item1 == false)
                     return false;
 
-                if (typeof(TOperationMode) == typeof(SingleAttempt))
+                if (typeof(TOperationMode) == typeof(SingleAttempt) && _operationModeData.DuringDispose == false)
                     return true;
 
-                if (typeof(TOperationMode) == typeof(ExceptionRetry))
+                if (typeof(TOperationMode) == typeof(ExceptionRetry) || typeof(TOperationMode) == typeof(SingleAttempt))
                 {
                     if (state.Item2.Task.IsFaulted || state.Item2.Task.IsCanceled)
                         return false;
