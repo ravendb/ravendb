@@ -7,7 +7,7 @@ namespace FastTests.Issues
 {
     public class RavenDB_8680 : NoDisposalNeeded
     {
-        private static IEnumerable<object[]> GetTestData()
+        public static IEnumerable<object[]> GetTestData()
         {
             yield return new object[] {"from Categories where id() = 'categories/8'", $"FROM Categories WHERE id() = 'categories/8'{Environment.NewLine}"};
             yield return new object[] {"from Categories where id() in ('categories/8')", $"FROM Categories WHERE id() IN ('categories/8'){Environment.NewLine}"};
