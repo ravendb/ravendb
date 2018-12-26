@@ -350,7 +350,7 @@ namespace Sparrow.Json
         {
             if (_isDisposed)
                 return;
-            GC.SuppressFinalize(allocation);
+            
 
             var address = allocation.Address;
 

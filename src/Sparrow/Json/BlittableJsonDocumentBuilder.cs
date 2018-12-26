@@ -170,8 +170,6 @@ namespace Sparrow.Json
 
             _writer.Dispose();
             GlobalCache.Free(_cacheItem);
-            GC.SuppressFinalize(this);
-
         }
 
         private bool ReadInternal<TWriteStrategy>() where TWriteStrategy : IWriteStrategy

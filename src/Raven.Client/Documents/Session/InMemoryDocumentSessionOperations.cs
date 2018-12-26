@@ -1271,13 +1271,6 @@ more responsive application.
             Dispose(true);
         }
 
-        ~InMemoryDocumentSessionOperations()
-        {          
-#if DEBUG
-            Debug.WriteLine("Disposing a session for finalizer! It should be disposed by calling session.Dispose()!");
-#endif
-        }
-
         public void RegisterMissing(string id)
         {
             if (NoTracking)

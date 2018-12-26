@@ -1559,16 +1559,6 @@ namespace Sparrow
 
         private bool _disposed;
 
-        ~ByteStringContext()
-        {
-            _isFinalizerThread = true;
-            _wholeSegments.Clear();
-            _internalReadyToUseMemorySegments.Clear();
-        }
-
-
-
-
         public void Dispose()
         {
             lock (this)

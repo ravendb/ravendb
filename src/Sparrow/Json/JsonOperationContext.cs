@@ -316,7 +316,7 @@ namespace Sparrow.Json
         public JsonOperationContext(int initialSize, int longLivedSize, SharedMultipleUseFlag lowMemoryFlag)
         {
             Debug.Assert(lowMemoryFlag != null);
-            _disposeOnceRunner = new DisposeOnce<SingleAttemptWithWaitForDisposeToFinish>(() =>
+            _disposeOnceRunner = new DisposeOnce<SingleAttempt>(() =>
             {
 #if MEM_GUARD_STACK
                 ElectricFencedMemory.DecrementConext();
@@ -426,10 +426,9 @@ namespace Sparrow.Json
             
             public void Kill()
             {
-                if (_buffer == null || _parent.Disposed)
+                if (_buffer == null)
                     return;
-
-                _parent?._managedBuffers?.Push(_buffer);
+                _buffer.Dispose();                
                 _buffer = null;
             }
 
@@ -497,7 +496,7 @@ namespace Sparrow.Json
             return new UnmanagedWriteBuffer(this, bufferMemory);
         }
 
-        private readonly DisposeOnce<SingleAttemptWithWaitForDisposeToFinish> _disposeOnceRunner;
+        private readonly DisposeOnce<SingleAttempt> _disposeOnceRunner;
         private bool Disposed => _disposeOnceRunner.Disposed;
         public override void Dispose()
         {
@@ -1016,7 +1015,7 @@ namespace Sparrow.Json
                 {
                     _arenaAllocatorForLongLivedValues.Return(mem.AllocatedMemoryData);
                     mem.AllocatedMemoryData = null;
-                    mem.Dispose(); // todo: probably we don't need this call
+                    mem.IsDisposed = true;
                 }
 
                 _arenaAllocatorForLongLivedValues = null;
