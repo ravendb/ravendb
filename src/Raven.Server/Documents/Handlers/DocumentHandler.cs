@@ -458,6 +458,27 @@ namespace Raven.Server.Documents.Handlers
                         });
                     }
 
+                    switch (command.PatchResult.Status)
+                    {
+                        case PatchStatus.Created :
+                        case PatchStatus.Patched :
+
+                            writer.WriteComma();
+
+                            writer.WritePropertyName(nameof(command.PatchResult.LastModified));
+                            writer.WriteString(command.PatchResult.LastModified.ToString(DefaultFormat.DateTimeFormatsToWrite));
+                            writer.WriteComma();
+
+                            writer.WritePropertyName(nameof(command.PatchResult.ChangeVector));
+                            writer.WriteString(command.PatchResult.ChangeVector);
+                            writer.WriteComma();
+
+                            writer.WritePropertyName(nameof(command.PatchResult.Collection));
+                            writer.WriteString(command.PatchResult.Collection);
+                            break;
+                        default:
+                            break;
+                    }
 
                     writer.WriteEndObject();
                 }
