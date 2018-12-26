@@ -181,6 +181,13 @@ namespace Raven.Server.Documents.Indexes.Static
 
         public bool Contains(object item)
         {
+            if (item is int)
+                return Enumerable.Contains(this, Convert.ToInt64(item));
+            if (item is short)
+                return Enumerable.Contains(this, Convert.ToInt64(item));
+            if (item is float)
+                return Enumerable.Contains(this, Convert.ToDouble(item));
+
             return Enumerable.Contains(this, item);
         }
 
