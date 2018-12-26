@@ -144,10 +144,10 @@ namespace Sparrow.Threading
                 if (state.Item1 == false)
                     return false;
 
-                if (typeof(TOperationMode) == typeof(SingleAttempt) && _operationModeData.DuringDispose == false)
-                    return true;
+                if (typeof(TOperationMode) == typeof(SingleAttempt))
+                    return _operationModeData.DuringDispose == false;
 
-                if (typeof(TOperationMode) == typeof(ExceptionRetry) || typeof(TOperationMode) == typeof(SingleAttempt))
+                if (typeof(TOperationMode) == typeof(ExceptionRetry))
                 {
                     if (state.Item2.Task.IsFaulted || state.Item2.Task.IsCanceled)
                         return false;
@@ -267,10 +267,10 @@ namespace Sparrow.Threading
                 if (state.Item1 == false)
                     return false;
 
-                if (typeof(TOperationMode) == typeof(SingleAttempt) && _operationModeData.DuringDispose == false)
-                    return true;
+                if (typeof(TOperationMode) == typeof(SingleAttempt))
+                    return _operationModeData.DuringDispose == false;
 
-                if (typeof(TOperationMode) == typeof(ExceptionRetry) || typeof(TOperationMode) == typeof(SingleAttempt))
+                if (typeof(TOperationMode) == typeof(ExceptionRetry))
                 {
                     if (state.Item2.Task.IsFaulted || state.Item2.Task.IsCanceled)
                         return false;
