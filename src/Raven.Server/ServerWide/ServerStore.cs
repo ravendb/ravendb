@@ -15,6 +15,7 @@ using System.Threading.Tasks;
 using Lucene.Net.Search;
 using NCrontab.Advanced.Extensions;
 using Raven.Client;
+using Raven.Client.Documents.Changes;
 using Raven.Client.Documents.Operations.ConnectionStrings;
 using Raven.Client.Documents.Operations.ETL;
 using Raven.Client.Documents.Operations.OngoingTasks;
@@ -750,6 +751,15 @@ namespace Raven.Server.ServerWide
             NotificationCenter.Add(ClusterTopologyChanged.Create(topologyJson, LeaderTag,
                 NodeTag, _engine.CurrentTerm, _engine.CurrentState, GetNodesStatuses(), LoadLicenseLimits()?.NodeLicenseDetails),
                 DateTime.MinValue);
+
+            foreach (var db in DatabasesLandlord.DatabasesCache)
+            {
+                db.Value.Result.Changes.RaiseNotifications(new TopologyChange
+                {
+                    Url = topologyJson.GetUrlFromTag(NodeTag),
+                    Database = db.Value.Result.Name
+                });
+            }
             // we set the postpone time to the minimum in order to overwrite it and to send this notification every time when a new client connects. 
         }
 
@@ -1359,7 +1369,7 @@ namespace Raven.Server.ServerWide
 
             void ThrowInvalidConfigurationIfNecessary(IReadOnlyCollection<string> errors)
             {
-                if (errors.Count <= 0) 
+                if (errors.Count <= 0)
                     return;
 
                 var sb = new StringBuilder();
