@@ -7,7 +7,7 @@ using Xunit;
 
 namespace SlowTests.SchemaUpgrade.Issues
 {
-    class RavenDB_12321 : RavenTestBase
+    public class RavenDB_12321 : RavenTestBase
     {
         [Theory]
         [InlineData("999")]
