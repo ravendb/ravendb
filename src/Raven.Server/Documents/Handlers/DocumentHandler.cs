@@ -437,10 +437,10 @@ namespace Raven.Server.Documents.Handlers
 
                     writer.WritePropertyName(nameof(command.PatchResult.ModifiedDocument));
                     writer.WriteObject(command.PatchResult.ModifiedDocument);
+                    writer.WriteComma();
 
                     if (debugMode)
                     {
-                        writer.WriteComma();
                         writer.WritePropertyName(nameof(command.PatchResult.OriginalDocument));
                         if (isTest)
                             writer.WriteObject(command.PatchResult.OriginalDocument);
@@ -456,8 +456,20 @@ namespace Raven.Server.Documents.Handlers
                             ["Info"] = new DynamicJsonArray(command.DebugOutput),
                             ["Actions"] = command.DebugActions
                         });
+
+                        writer.WriteComma();
                     }
 
+                    writer.WritePropertyName(nameof(command.PatchResult.LastModified));
+                    writer.WriteString(command.PatchResult.LastModified.ToString(DefaultFormat.DateTimeFormatsToWrite));
+                    writer.WriteComma();
+
+                    writer.WritePropertyName(nameof(command.PatchResult.ChangeVector));
+                    writer.WriteString(command.PatchResult.ChangeVector);
+                    writer.WriteComma();
+
+                    writer.WritePropertyName(nameof(command.PatchResult.Collection));
+                    writer.WriteString(command.PatchResult.Collection);
 
                     writer.WriteEndObject();
                 }
