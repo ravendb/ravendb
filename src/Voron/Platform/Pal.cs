@@ -18,7 +18,7 @@ namespace Voron.Platform
             string fromFilename;
             if (RuntimeInformation.IsOSPlatform(OSPlatform.Linux))
             {
-                if (RuntimeInformation.ProcessArchitecture != Architecture.Arm && 
+                if (RuntimeInformation.ProcessArchitecture != Architecture.Arm &&
                     RuntimeInformation.ProcessArchitecture != Architecture.Arm64)
                 {
                     fromFilename = Environment.Is64BitProcess ? $"{toFilename}.linux.x64.so" : $"{toFilename}.linux.x86.so";
@@ -59,7 +59,7 @@ namespace Voron.Platform
                     e);
             }
         }
-        
+
         [SuppressMessage("ReSharper", "InconsistentNaming")]
         private const string LIBRVNPAL = "librvnpal";
 
@@ -68,14 +68,37 @@ namespace Voron.Platform
             string filename,
             void* header,
             Int32 size,
-            out Int32 errorCode);
+            out UInt32 errorCode);
 
         [DllImport(LIBRVNPAL, SetLastError = true)]
         public static extern Int32 rvn_get_error_string(
-            Int32 errorCode,
+            UInt32 errorCode,
             void* sb,
             Int32 capacity,
             out Int32 specialErrnoCodes
             );
+
+        [DllImport(LIBRVNPAL, SetLastError = true)]
+        public static extern Int32 open_journal(
+            string file_name,
+            Int64 file_size,
+            out IntPtr handle,
+            out UInt32 error_code);
+
+        [DllImport(LIBRVNPAL, SetLastError = true)]
+        public static extern Int32 close_journal(
+            IntPtr handle,
+            out UInt32 errorCode
+        );
+
+
+        [DllImport(LIBRVNPAL, SetLastError = true)]
+        public static extern Int32 write_journal(
+            IntPtr handle,
+            IntPtr buffer,
+            UInt64 size,
+            Int64 offset,
+            out UInt32 errorCode
+        );
     }
 }

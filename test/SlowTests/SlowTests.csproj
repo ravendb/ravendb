@@ -85,6 +85,7 @@
     <Folder Include="SchemaUpgrade\Issues\VoronCurrentVersion\" />
     <Folder Include="Server\Basic" />
     <Folder Include="Server\Documents\Notifications" />
+    <Folder Include="Voron\Pal\" />
   </ItemGroup>
   <ItemGroup>
     <None Update="SchemaUpgrade\Issues\DocumentsVersion\schema_999\headers.one">
@@ -133,4 +134,7 @@
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </None>
   </ItemGroup>
+  <Target Name="PostBuild" AfterTargets="PostBuildEvent">
+    <Exec Command="copy &quot;$(ProjectDir)..\..\src\librvnpal\librvnpal.x64.dll&quot; &quot;$(TargetDir)\librvnpal.dll&quot;" />
+  </Target>
 </Project>

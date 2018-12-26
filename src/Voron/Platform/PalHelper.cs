@@ -7,7 +7,7 @@ namespace Voron.Platform
 {
     public static class PalHelper
     {
-        public static unsafe void ThrowLastError(int lastError, string msg)
+        public static unsafe void ThrowLastError(uint lastError, string msg)
         {
             string txt;
             try
