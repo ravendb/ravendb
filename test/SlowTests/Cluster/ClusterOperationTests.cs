@@ -1,11 +1,18 @@
 ﻿using System;
+using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
+using FastTests;
 using Raven.Client.Documents;
+using Raven.Client.Documents.Changes;
 using Raven.Client.Documents.Commands;
 using Raven.Client.Exceptions;
+using Raven.Client.ServerWide;
 using Raven.Client.ServerWide.Operations;
+using Raven.Server;
+using Raven.Server.Config;
+using Raven.Server.Utils;
 using Tests.Infrastructure;
 using Raven.Tests.Core.Utils.Entities;
 using Xunit;
@@ -87,6 +94,145 @@ namespace SlowTests.Cluster
                     var id = session.Advanced.GetDocumentId(user);
                     Assert.Equal("users/1991", id);
                 }
+            }
+        }
+
+        [Fact]
+        public async Task ChangesApiFailOver()
+        {
+            DebuggerAttachedTimeout.DisableLongTimespan = true;
+
+            var db = "Test";
+            var topology = new DatabaseTopology
+            {
+                DynamicNodesDistribution = true
+            };
+            var leader = await CreateRaftClusterAndGetLeader(3, customSettings: new Dictionary<string, string>()
+            {
+                [RavenConfiguration.GetKey(x => x.Cluster.AddReplicaTimeout)] = "1",
+                [RavenConfiguration.GetKey(x => x.Cluster.MoveToRehabGraceTime)] = "0",
+                [RavenConfiguration.GetKey(x => x.Cluster.StabilizationTime)] = "1",
+                [RavenConfiguration.GetKey(x => x.Cluster.ElectionTimeout)] = "50"
+            });
+
+            await CreateDatabaseInCluster(new DatabaseRecord
+            {
+                DatabaseName = db,
+                Topology = topology
+            }, 2, leader.WebUrl);
+
+            using (var store = new DocumentStore
+            {
+                Database = db,
+                Urls = new[] { leader.WebUrl }
+            }.Initialize())
+            {
+                var list = new BlockingCollection<DocumentChange>();
+                var taskObservable = store.Changes();
+                await taskObservable.EnsureConnectedNow();
+                var observableWithTask = taskObservable.ForDocument("users/1");
+                observableWithTask.Subscribe(list.Add);
+                await observableWithTask.EnsureSubscribedNow();
+
+                using (var session = store.OpenAsyncSession())
+                {
+                    await session.StoreAsync(new User(), "users/1");
+                    await session.SaveChangesAsync();
+                }
+
+                Assert.Equal(list.Count, 1);
+
+                string currnetUrl = store.GetRequestExecutor().Url;
+                RavenServer toDispose = null;
+                foreach (var server in Servers)
+                {
+                    if (server.WebUrl == currnetUrl)
+                    {
+                        toDispose = server;
+                        break;
+                    }
+                }
+
+                DisposeServerAndWaitForFinishOfDisposal(toDispose);
+                await taskObservable.EnsureConnectedNow();
+
+                await Task.Delay(12000);
+
+                using (var session = store.OpenAsyncSession())
+                {
+                    await session.StoreAsync(new User(), "users/1");
+                    await session.SaveChangesAsync();
+                }
+                Assert.Equal(list.Count, 2);
+
+                currnetUrl = store.GetRequestExecutor().Url;
+                foreach (var server in Servers)
+                {
+                    if (server.WebUrl == currnetUrl)
+                    {
+                        toDispose = server;
+                        break;
+                    }
+                }
+
+                DisposeServerAndWaitForFinishOfDisposal(toDispose);
+                await taskObservable.EnsureConnectedNow();
+
+                await Task.Delay(500);
+
+                using (var session = store.OpenAsyncSession())
+                {
+                    await session.StoreAsync(new User(), "users/1");
+                    await session.SaveChangesAsync();
+                }
+
+                Assert.Equal(list.Count, 3);
+            }
+        }
+
+        [Fact]
+        public async Task ChangesApiReorderDatabaseNodes()
+        {
+            DebuggerAttachedTimeout.DisableLongTimespan = true;
+
+            var db = "ReorderDatabaseNodes";
+            var leader = await CreateRaftClusterAndGetLeader(2);
+            await CreateDatabaseInCluster(db, 2, leader.WebUrl);
+            using (var store = new DocumentStore
+            {
+                Database = db,
+                Urls = new[] { leader.WebUrl }
+            }.Initialize())
+            {
+                var list = new BlockingCollection<DocumentChange>();
+                var taskObservable = store.Changes();
+                await taskObservable.EnsureConnectedNow();
+                var observableWithTask = taskObservable.ForDocument("users/1");
+                observableWithTask.Subscribe(list.Add);
+                await observableWithTask.EnsureSubscribedNow();
+
+                using (var session = store.OpenAsyncSession())
+                {
+                    await session.StoreAsync(new User(), "users/1");
+                    await session.SaveChangesAsync();
+                }
+
+                await Task.Delay(100);
+                Assert.Equal(list.Count, 1);
+
+                string url1 = store.GetRequestExecutor().Url;
+                await ReverseOrderSuccessfully(store, db);
+
+                await Task.Delay(500);
+
+                using (var session = store.OpenAsyncSession())
+                {
+                    await session.StoreAsync(new User(), "users/1");
+                    await session.SaveChangesAsync();
+                }
+                Assert.Equal(list.Count, 2);
+                string url2 = store.GetRequestExecutor().Url;
+                Assert.NotEqual(url1, url2);
             }
         }
 
