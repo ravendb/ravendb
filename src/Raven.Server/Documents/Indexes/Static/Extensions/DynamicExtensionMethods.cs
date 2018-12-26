@@ -107,162 +107,241 @@ namespace Raven.Server.Documents.Indexes.Static.Extensions
             return false;
         }
 
-        public static string Substring(dynamic o, int value)
+        public static string Substring(object o, int value)
         {
             if (o is IConvertible c)
             {
                 string result = c.ToString(CultureInfo.InvariantCulture).Substring(value);
                 return result;
             }
+            if (o is DynamicArray a)
+                UnsupportedExtension(a);
 
             return o.ToString().Substring(value);
         }
 
-        public static string Substring(dynamic o, int from, int to)
+        public static string Substring(object o, int startIndex, int length)
         {
             if (o is IConvertible c)
             {
-                var result = c.ToString(CultureInfo.InvariantCulture).Substring(from, to);
+                var result = c.ToString(CultureInfo.InvariantCulture).Substring(startIndex, length);
                 return result;
             }
+            if (o is DynamicArray a)
+                UnsupportedExtension(a);
 
-            return o.ToString().Substring(from, to);
+            return o.ToString().Substring(startIndex, length);
         }
         
-        public static int IndexOf(dynamic o, char value)
+        public static int IndexOf(object o, char value)
         {
             if (o is IConvertible c)
                 return c.ToString(CultureInfo.InvariantCulture).IndexOf(value);
+            if (o is DynamicArray a)
+                return a.IndexOf(value);
 
             return o.ToString().IndexOf(value);
         }
 
-        public static int IndexOf(dynamic o, char value, StringComparison comparisonType)
+        public static int IndexOf(object o, char value, StringComparison comparisonType)
         {
             if (o is IConvertible c)
                 return c.ToString(CultureInfo.InvariantCulture).IndexOf(value, comparisonType);
+            if (o is DynamicArray a)
+                UnsupportedExtension(a);
 
             return o.ToString().IndexOf(value, comparisonType);
         }
-
-        public static int IndexOf(dynamic o, char value, int startIndex)
+       
+        public static int IndexOf(object o, char value, int startIndex)
         {
             if (o is IConvertible c)
                 return c.ToString(CultureInfo.InvariantCulture).IndexOf(value, startIndex);
+            if (o is DynamicArray a)
+                return a.IndexOf(value, startIndex);
 
             return o.ToString().IndexOf(value, startIndex);
         }
 
-        public static int IndexOf(dynamic o, char value, int startIndex, int count)
+        public static int IndexOf(object o, char value, int startIndex, int count)
         {
             if (o is IConvertible c)
                 return c.ToString(CultureInfo.InvariantCulture).IndexOf(value, startIndex, count);
+            if (o is DynamicArray a)
+                return a.IndexOf(value, startIndex, count);
 
             return o.ToString().IndexOf(value, startIndex, count);
         }
 
-        public static int IndexOf(dynamic o, string value)
+        public static int IndexOf(object o, string value)
         {
             if (o is IConvertible c)
                 return c.ToString(CultureInfo.InvariantCulture).IndexOf(value, StringComparison.InvariantCulture);
+            if (o is DynamicArray a)
+                return a.IndexOf(value);
 
             return o.ToString().IndexOf(value);
         }
 
-        public static bool StartsWith(dynamic o, char value)
+        public static bool StartsWith(object o, char value)
         {
             if (o is IConvertible c)
                 return c.ToString(CultureInfo.InvariantCulture).StartsWith(value);
+            if (o is DynamicArray a)
+                UnsupportedExtension(a);
 
             return o.ToString().StartsWith(value);
         }
 
-        public static bool StartsWith(dynamic o, string value)
+        public static bool StartsWith(object o, string value)
         {
             if (o is IConvertible c)
                 return c.ToString(CultureInfo.InvariantCulture).StartsWith(value);
+            if (o is DynamicArray a)
+                UnsupportedExtension(a);
 
             return o.ToString().StartsWith(value);
         }
 
-        public static bool StartsWith(dynamic o, string value, StringComparison comparisonType)
+        public static bool StartsWith(object o, string value, StringComparison comparisonType)
         {
             if (o is IConvertible c)
                 return c.ToString(CultureInfo.InvariantCulture).StartsWith(value, comparisonType);
+            if (o is DynamicArray a)
+                UnsupportedExtension(a);
 
             return o.ToString().StartsWith(value, comparisonType);
         }
 
-        public static bool StartsWith(dynamic o, string value, bool ignoreCase, CultureInfo cultureInfo)
+        public static bool StartsWith(object o, string value, bool ignoreCase, CultureInfo cultureInfo)
         {
             if (o is IConvertible c)
                 return c.ToString(CultureInfo.InvariantCulture).StartsWith(value, ignoreCase, cultureInfo);
+            if (o is DynamicArray a)
+                UnsupportedExtension(a);
 
             return o.ToString().StartsWith(value, ignoreCase, cultureInfo);
         }
 
-        public static bool EndsWith(dynamic o, char value)
+        public static bool EndsWith(object o, char value)
         {
             if (o is IConvertible c)
                 return c.ToString(CultureInfo.InvariantCulture).EndsWith(value);
+            if (o is DynamicArray a)
+                UnsupportedExtension(a);
 
             return o.ToString().EndsWith(value);
         }
 
-        public static bool EndsWith(dynamic o, string value)
+        public static bool EndsWith(object o, string value)
         {
             if (o is IConvertible c)
                 return c.ToString(CultureInfo.InvariantCulture).EndsWith(value);
+            if (o is DynamicArray a)
+                UnsupportedExtension(a);
 
             return o.ToString().EndsWith(value);
         }
 
-        public static bool EndsWith(dynamic o, string value, StringComparison comparisonType)
+        public static bool EndsWith(object o, string value, StringComparison comparisonType)
         {
             if (o is IConvertible c)
                 return c.ToString(CultureInfo.InvariantCulture).EndsWith(value, comparisonType);
+            if (o is DynamicArray a)
+                UnsupportedExtension(a);
 
             return o.ToString().EndsWith(value, comparisonType);
         }
 
-        public static bool EndsWith(dynamic o, string value, bool ignoreCase, CultureInfo cultureInfo)
+        public static bool EndsWith(object o, string value, bool ignoreCase, CultureInfo cultureInfo)
         {
             if (o is IConvertible c)
                 return c.ToString(CultureInfo.InvariantCulture).EndsWith(value, ignoreCase, cultureInfo);
+            if (o is DynamicArray a)
+                UnsupportedExtension(a);
 
             return o.ToString().EndsWith(value, ignoreCase, cultureInfo);
         }
 
-        public static bool Contains(dynamic o, char value)
+        public static bool Contains(object o, char value)
         {
             if (o is IConvertible c)
                 return c.ToString(CultureInfo.InvariantCulture).Contains(value);
+            if (o is DynamicArray a)
+                a.Contains(value);
 
             return o.ToString().Contains(value);
         }
 
-        public static bool Contains(dynamic o, char value, StringComparison comparisonType)
+        public static bool Contains(object o, char value, StringComparison comparisonType)
         {
             if (o is IConvertible c)
                 return c.ToString(CultureInfo.InvariantCulture).Contains(value, comparisonType);
+            if (o is DynamicArray a)
+                UnsupportedExtension(a);
 
             return o.ToString().Contains(value, comparisonType);
         }
 
-        public static bool Contains(dynamic o, string value)
+        public static bool Contains(object o, string value)
         {
             if (o is IConvertible c)
                 return c.ToString(CultureInfo.InvariantCulture).Contains(value);
+            if (o is DynamicArray a)
+                return a.Contains(value);
 
             return o.ToString().Contains(value);
         }
 
-        public static bool Contains(dynamic o, string value, StringComparison comparisonType)
+        public static bool Contains(object o, string value, StringComparison comparisonType)
         {
             if (o is IConvertible c)
                 return c.ToString(CultureInfo.InvariantCulture).Contains(value, comparisonType);
+            if (o is DynamicArray a)
+                UnsupportedExtension(a);
 
             return o.ToString().Contains(value, comparisonType);
+        }
+
+        public static int IndexOf(object o, object value)
+        {
+            if (o is DynamicArray a)
+                return a.IndexOf(value);
+
+            UnsupportedExtension(o);
+            return -1;
+        }
+
+        public static int IndexOf(object o, object value, int startIndex)
+        {
+            if (o is DynamicArray a)
+                return a.IndexOf(value, startIndex);
+
+            UnsupportedExtension(o);
+            return -1;
+        }
+
+        public static int IndexOf(object o, object value, int startIndex, int count)
+        {
+            if (o is DynamicArray a)
+                return a.IndexOf(value, startIndex, count);
+
+            UnsupportedExtension(o);
+            return -1;
+        }
+
+        public static bool Contains(object o, object value)
+        {
+            if (o is DynamicArray a)
+                return a.Contains(value);
+
+            UnsupportedExtension(o);
+            return false;
+        }
+
+        private static void UnsupportedExtension(object obj)
+        {
+            throw new InvalidOperationException($"Unsupported operation for {obj.GetType().FullName}.");
         }
     }
 }
