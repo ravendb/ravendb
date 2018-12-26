@@ -157,7 +157,7 @@ namespace Voron.Data.RawData
                     var oldSize = (RawDataEntrySizes*)(tmp.TempPagePointer + pos);
 
                     if (oldSize->AllocatedSize <= 0)
-                        VoronUnrecoverableErrorException.Raise(_tx.Environment, $"Allocated size cannot be zero or negative, but was {oldSize->AllocatedSize} in page {pageHeader->PageNumber}");
+                        VoronUnrecoverableErrorException.Raise(_tx, $"Allocated size cannot be zero or negative, but was {oldSize->AllocatedSize} in page {pageHeader->PageNumber}");
 
                     if (oldSize->UsedSize < 0)
                     {

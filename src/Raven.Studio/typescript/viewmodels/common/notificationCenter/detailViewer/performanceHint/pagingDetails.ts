@@ -40,11 +40,24 @@ class pagingDetails extends abstractPerformanceHintDetails {
 
         grid.init((s, t) => this.fetcher(s, t), () => {
             return [
-                new textColumn<pagingDetailsItemDto>(grid, x => x.Action, "Action", "20%"),
-                new textColumn<pagingDetailsItemDto>(grid, x => x.NumberOfResults ? x.NumberOfResults.toLocaleString() : 'n/a', "# of results", "10%"),
-                new textColumn<pagingDetailsItemDto>(grid, x => x.PageSize ? x.PageSize.toLocaleString() : 'n/a', "Page size", "10%"),
-                new textColumn<pagingDetailsItemDto>(grid, x => generalUtils.formatUtcDateAsLocal(x.Occurrence), "Date", "15%"),
-                new textColumn<pagingDetailsItemDto>(grid, x => x.Duration, "Duration (ms)", "15%"),
+                new textColumn<pagingDetailsItemDto>(grid, x => x.Action, "Action", "20%", {
+                    sortable: "string"
+                }),
+                new textColumn<pagingDetailsItemDto>(grid, x => x.NumberOfResults ? x.NumberOfResults.toLocaleString() : 'n/a', "# of results", "10%", {
+                    sortable: x => x.NumberOfResults,
+                    defaultSortOrder: "desc"
+                }),
+                new textColumn<pagingDetailsItemDto>(grid, x => x.PageSize ? x.PageSize.toLocaleString() : 'n/a', "Page size", "10%", {
+                    sortable: x => x.PageSize,
+                    defaultSortOrder: "desc"
+                }),
+                new textColumn<pagingDetailsItemDto>(grid, x => generalUtils.formatUtcDateAsLocal(x.Occurrence), "Date", "15%", {
+                    sortable: x => x.Occurrence
+                }),
+                new textColumn<pagingDetailsItemDto>(grid, x => x.Duration, "Duration (ms)", "15%", {
+                    sortable: "number",
+                    defaultSortOrder: "desc"
+                }),
                 new textColumn<pagingDetailsItemDto>(grid, x => x.Details, "Details", "30%")
             ];
         });

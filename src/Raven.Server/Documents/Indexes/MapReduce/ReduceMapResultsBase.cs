@@ -11,7 +11,6 @@ using Raven.Server.Documents.Indexes.MapReduce.Exceptions;
 using Raven.Server.Documents.Indexes.Persistence.Lucene;
 using Raven.Server.Documents.Indexes.Workers;
 using Raven.Server.ServerWide.Context;
-using Raven.Server.ServerWide.Memory;
 using Raven.Server.Utils;
 using Sparrow;
 using Sparrow.Binary;
@@ -127,6 +126,7 @@ namespace Raven.Server.Documents.Indexes.MapReduce
                 if (_mapReduceContext.FreedPages.Count > 0)
                 {
                     long tmp = 0;
+                    using (treeScopeStats.Start())
                     using (Slice.External(indexContext.Allocator, (byte*)&tmp, sizeof(long), out Slice pageNumberSlice))
                     {
                         foreach (var freedPage in _mapReduceContext.FreedPages)
@@ -146,6 +146,7 @@ namespace Raven.Server.Documents.Indexes.MapReduce
             }
 
             WriteLastEtags(indexContext);
+            _mapReduceContext.StoreNextMapResultId();
 
             return false;
         }
@@ -213,7 +214,7 @@ namespace Raven.Server.Documents.Indexes.MapReduce
                 _index.UpdateThreadAllocations(indexContext, writer, stats, updateReduceStats: true);
                 
             }
-            catch (Exception e) when (e.IsOperationCanceled() == false && e.IsOutOfMemory() == false)
+            catch (Exception e) when (e.IsIndexError())
             {
                 _index.ErrorIndexIfCriticalException(e);
 
@@ -325,7 +326,7 @@ namespace Raven.Server.Documents.Indexes.MapReduce
                             stats.RecordReduceSuccesses(leafPage.NumberOfEntries);
                         }
                     }
-                    catch (Exception e) when (e.IsOperationCanceled() == false && e.IsOutOfMemory() == false)
+                    catch (Exception e) when (e.IsIndexError())
                     {
                         if (failedAggregatedLeafs == null)
                             failedAggregatedLeafs = new Dictionary<long, Exception>();
@@ -385,7 +386,7 @@ namespace Raven.Server.Documents.Indexes.MapReduce
                             stats.RecordReduceSuccesses(page.NumberOfEntries);
                         }
                     }
-                    catch (Exception e) when (e.IsOperationCanceled() == false && e.IsOutOfMemory() == false)
+                    catch (Exception e) when (e.IsIndexError())
                     {
                         _index.ErrorIndexIfCriticalException(e);
 

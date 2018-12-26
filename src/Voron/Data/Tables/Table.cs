@@ -64,7 +64,7 @@ namespace Voron.Data.Tables
 #if DEBUG
             if (IsOwned(previousId) == false || IsOwned(newId) == false)
             {
-                VoronUnrecoverableErrorException.Raise(_tx.LowLevelTransaction.Environment,
+                VoronUnrecoverableErrorException.Raise(_tx.LowLevelTransaction,
                     $"Cannot move data in section because the old ({previousId}) or new ({newId}) belongs to a different owner");
 
             }

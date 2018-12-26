@@ -111,9 +111,6 @@ namespace Raven.Server.Documents.Indexes.Static
                 MapFunc = res.Value.Function;
                 theFuncAst = res.Value.FunctionAst;
             }
-            var loadSearcher = new EsprimaReferencedCollectionVisitor();
-            loadSearcher.VisitFunctionExpression(theFuncAst);
-            ReferencedCollections.UnionWith(loadSearcher.ReferencedCollection);
 
             foreach (var returnStatement in JavaScriptIndexUtils.GetReturnStatements(theFuncAst.Body))
             {

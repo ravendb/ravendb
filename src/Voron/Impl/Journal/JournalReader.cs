@@ -16,7 +16,7 @@ namespace Voron.Impl.Journal
         private readonly AbstractPager _journalPager;
         private readonly AbstractPager _dataPager;
         private readonly AbstractPager _recoveryPager;
-
+        private readonly HashSet<long> _modifiedPages;
         private readonly long _lastSyncedTransactionId;
         private long _readAt4Kb;
         private readonly DiffApplier _diffApplier = new DiffApplier();
@@ -27,13 +27,13 @@ namespace Voron.Impl.Journal
 
         public long Next4Kb => _readAt4Kb;
 
-        public JournalReader(AbstractPager journalPager, AbstractPager dataPager, AbstractPager recoveryPager,
-            long lastSyncedTransactionId, TransactionHeader* previous)
+        public JournalReader(AbstractPager journalPager, AbstractPager dataPager, AbstractPager recoveryPager, HashSet<long> modifiedPages, long lastSyncedTransactionId, TransactionHeader* previous)
         {
             RequireHeaderUpdate = false;
             _journalPager = journalPager;
             _dataPager = dataPager;
             _recoveryPager = recoveryPager;
+            _modifiedPages = modifiedPages;
             _lastSyncedTransactionId = lastSyncedTransactionId;
             _readAt4Kb = 0;
             LastTransactionHeader = previous;
@@ -129,7 +129,7 @@ namespace Voron.Impl.Journal
             for (var i = 0; i < current->PageCount; i++)
             {
                 if(pageInfoPtr[i].PageNumber > current->LastPageNumber)
-                    throw new InvalidDataException($"Transaction {current->TransactionId} contains refeence to page {pageInfoPtr[i].PageNumber} which is after the last allocated page {current->LastPageNumber}");
+                    throw new InvalidDataException($"Transaction {current->TransactionId} contains reference to page {pageInfoPtr[i].PageNumber} which is after the last allocated page {current->LastPageNumber}");
             }
 
             for (var i = 0; i < current->PageCount; i++)
@@ -145,19 +145,49 @@ namespace Voron.Impl.Journal
                 _dataPager.EnsureContinuous(pageInfoPtr[i].PageNumber, numberOfPagesOnDestination);
                 _dataPager.EnsureMapped(this, pageInfoPtr[i].PageNumber, numberOfPagesOnDestination);
 
+
                 // We are going to overwrite the page, so we don't care about its current content
                 var pagePtr = _dataPager.AcquirePagePointerForNewPage(this, pageInfoPtr[i].PageNumber, numberOfPagesOnDestination);
+                _dataPager.MaybePrefetchMemory(pageInfoPtr[i].PageNumber, numberOfPagesOnDestination);
                 
                 var pageNumber = *(long*)(outputPage + totalRead);
                 if (pageInfoPtr[i].PageNumber != pageNumber)
                     throw new InvalidDataException($"Expected a diff for page {pageInfoPtr[i].PageNumber} but got one for {pageNumber}");
                 totalRead += sizeof(long);
 
+                _modifiedPages.Add(pageNumber);
+
+                for (var j = 1; j < numberOfPagesOnDestination; j++)
+                {
+                    _modifiedPages.Remove(pageNumber + j);
+                }
+
                 _dataPager.UnprotectPageRange(pagePtr, (ulong)pageInfoPtr[i].Size);
  
                 if (pageInfoPtr[i].DiffSize == 0)
                 {
-                    Memory.Copy(pagePtr, outputPage + totalRead, pageInfoPtr[i].Size);
+                    if (pageInfoPtr[i].Size == 0)
+                    {
+                        // diff contained no changes
+                        continue;
+                    }
+
+                    var journalPagePtr = outputPage + totalRead;
+
+                    if (options.EncryptionEnabled == false)
+                    {
+                        var pageHeader = (PageHeader*)journalPagePtr;
+
+                        var checksum = StorageEnvironment.CalculatePageChecksum((byte*)pageHeader, pageNumber, out var expectedChecksum);
+                        if (checksum != expectedChecksum)
+                        {
+                            throw new InvalidDataException(
+                                $"Invalid checksum for page {pageNumber} in transaction {current->TransactionId}, journal file {_journalPager} might be corrupted, expected hash to be {expectedChecksum} but was {checksum}." +
+                                $"Data from journal has not been applied to data file {_dataPager} yet");
+                        }
+                    }
+
+                    Memory.Copy(pagePtr, journalPagePtr, pageInfoPtr[i].Size);
                     totalRead += pageInfoPtr[i].Size;
 
                     if (options.EncryptionEnabled)
@@ -398,8 +428,7 @@ namespace Voron.Impl.Journal
                 options.InvokeRecoveryError(this, $"Compresses size {current->CompressedSize} is negative", null);
                 return false;
             }
-            if (size >
-                (_journalPagerNumberOfAllocated4Kb - _readAt4Kb) * 4 * Constants.Size.Kilobyte)
+            if (size > (_journalPagerNumberOfAllocated4Kb - _readAt4Kb) * 4 * Constants.Size.Kilobyte)
             {
                 // we can't read past the end of the journal
                 RequireHeaderUpdate = true;

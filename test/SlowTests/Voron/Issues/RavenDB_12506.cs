@@ -33,5 +33,18 @@ namespace SlowTests.Voron.Issues
                 }
             }
         }
+
+        [Fact]
+        public void Page_locator_must_not_return_true_on_invalid_page_number()
+        {
+            using (var tx = Env.WriteTransaction())
+            {
+                var pageLocator = new PageLocator(tx.LowLevelTransaction);
+
+                Assert.False(pageLocator.TryGetReadOnlyPage(-1, out _));
+
+                Assert.False(pageLocator.TryGetWritablePage(-1, out _));
+            }
+        }
     }
 }

@@ -123,6 +123,9 @@ namespace Voron.Impl.Journal
             if (_currentJournalFileSize < minRequiredSize)
             {
                 _currentJournalFileSize = Bits.NextPowerOf2(minRequiredSize);
+                if (_currentJournalFileSize > _env.Options.MaxLogFileSize)
+                    _currentJournalFileSize = Math.Max(_env.Options.MaxLogFileSize, minRequiredSize);
+
                 actualLogSize = _currentJournalFileSize;
             }
 
@@ -143,6 +146,7 @@ namespace Voron.Impl.Journal
 
             return journal;
         }
+
         public bool RecoverDatabase(TransactionHeader* txHeader, Action<string> addToInitLog)
         {
             // note, we don't need to do any concurrency here, happens as a single threaded
@@ -173,6 +177,9 @@ namespace Voron.Impl.Journal
 
             var lastSyncedTransactionId = logInfo.LastSyncedTransactionId;
 
+
+            var modifiedPages = new HashSet<long>();
+
             var journalFiles = new List<JournalFile>();
             long lastSyncedTxId = -1;
             long lastSyncedJournal = logInfo.LastSyncedJournal;
@@ -187,7 +194,7 @@ namespace Voron.Impl.Journal
                     RecoverCurrentJournalSize(pager);
 
                     var transactionHeader = txHeader->TransactionId == 0 ? null : txHeader;
-                    using (var journalReader = new JournalReader(pager, _dataPager, recoveryPager, lastSyncedTransactionId, transactionHeader))
+                    using (var journalReader = new JournalReader(pager, _dataPager, recoveryPager, modifiedPages, lastSyncedTransactionId, transactionHeader))
                     {
                         var transactionHeaders = journalReader.RecoverAndValidate(_env.Options);
 
@@ -218,6 +225,43 @@ namespace Voron.Impl.Journal
                             requireHeaderUpdate = true;
                             break;
                         }
+                    }
+                }
+            }
+
+            if (_env.Options.EncryptionEnabled == false) // for encryption, we already use AEAD, so no need
+            {
+                // here we want to check that the checksum on all the modified pages is valid
+                // we can't do that during the journal application process because we may have modifications
+                // to pages that overwrite one another. So we have to do this at the end, this will detect
+                // corruption when applying journals at recovery time rather than at usage.
+                var tempTx = new TempPagerTransaction();
+
+                var sortedPages = modifiedPages.ToArray();
+                Array.Sort(sortedPages);
+
+                long minPageChecked = -1;
+
+                // we need to iterate from the end in order to filter out pages that was overwritten by later transaction
+
+                for (var i = sortedPages.Length - 1; i >= 0; i--)
+                {
+                    using (tempTx) // release any resources, we just wanted to validate things
+                    {
+                        var modifiedPage = sortedPages[i];
+
+                        var ptr = (PageHeader*)_dataPager.AcquirePagePointerWithOverflowHandling(tempTx, modifiedPage, null);
+
+                        var maxPageRange = modifiedPage + VirtualPagerLegacyExtensions.GetNumberOfPages(ptr) - 1;
+
+                        if (minPageChecked != -1 && maxPageRange >= minPageChecked)
+                        {
+                            continue;
+                        }
+
+                        _env.ValidatePageChecksum(modifiedPage, ptr);
+
+                        minPageChecked = modifiedPage;
                     }
                 }
             }
@@ -426,9 +470,9 @@ namespace Voron.Impl.Journal
 
             private long _lastFlushedTransactionId;
             private long _lastFlushedJournalId;
+            private long _totalWrittenButUnsyncedBytes;
             private JournalFile _lastFlushedJournal;
             private bool _ignoreLockAlreadyTaken;
-            private long _totalWrittenButUnsyncedBytes;
             private Action<LowLevelTransaction> _updateJournalStateAfterFlush;
 
             public void OnTransactionCommitted(LowLevelTransaction tx)
@@ -437,6 +481,8 @@ namespace Voron.Impl.Journal
                 action?.Invoke(tx);
             }
 
+            public long LastFlushedTransactionId => Interlocked.Read(ref _lastFlushedTransactionId);
+            public long LastFlushedJournalId => Interlocked.Read(ref _lastFlushedJournalId);
             public long TotalWrittenButUnsyncedBytes => Interlocked.Read(ref _totalWrittenButUnsyncedBytes);
             public int JournalsToDeleteCount => _journalsToDelete.Count;
 
@@ -572,7 +618,7 @@ namespace Voron.Impl.Journal
 
                     ApplyJournalStateAfterFlush(token, lastProcessedJournal, lastFlushedTransactionId, unusedJournals, byteStringContext);
 
-                    _waj._env.SuggestSyncDataFileSyncDataFile();
+                    _waj._env.SuggestSyncDataFile();
                 }
                 finally
                 {
@@ -599,8 +645,18 @@ namespace Voron.Impl.Journal
                     _waitForJournalStateUpdateUnderTx.Reset();
                     ExceptionDispatchInfo edi = null;
                     var sp = Stopwatch.StartNew();
+
+                    foreach (var unused in unusedJournals)
+                    {
+                        _journalsToDelete[unused.Number] = unused;
+                    }
+
+                    var singleUseFlag = new SingleUseFlag();
                     Action<LowLevelTransaction> currentAction = txw =>
                     {
+                        if (singleUseFlag.Raise() == false)
+                            throw new InvalidOperationException("Tried to update journal state after flush twice");
+
                         try
                         {
                             UpdateJournalStateUnderWriteTransactionLock(txw, lastProcessedJournal, lastFlushedTransactionId, unusedJournals);
@@ -685,11 +741,6 @@ namespace Voron.Impl.Journal
                 _lastFlushedJournalId = lastProcessedJournal;
                 _lastFlushedTransactionId = lastFlushedTransactionId;
                 _lastFlushedJournal = _waj._files.First(x => x.Number == lastProcessedJournal);
-
-                foreach (var unused in unusedJournals)
-                {
-                    _journalsToDelete[unused.Number] = unused;
-                }
 
                 if (unusedJournals.Count > 0)
                 {
@@ -813,9 +864,9 @@ namespace Voron.Impl.Journal
                     _parent = parent;
                     _journalsToDelete = new List<KeyValuePair<long, JournalFile>>();
                     _fsyncLockTaken = false;
-                    _lastSyncedJournal = 0;
-                    _currentTotalWrittenBytes = 0;
-                    _lastSyncedTransactionId = 0;
+                    _lastSyncedJournal = -1;
+                    _currentTotalWrittenBytes = -1;
+                    _lastSyncedTransactionId = -1;
                     _transactionHeader = new TransactionHeader();
                 }
 
@@ -827,7 +878,7 @@ namespace Voron.Impl.Journal
                     if (_fsyncLockTaken == false)
                     {
                         // probably another sync taking place right now, let us schedule another one, just in case
-                        _parent._waj._env.SuggestSyncDataFileSyncDataFile();
+                        _parent._waj._env.SuggestSyncDataFile();
                         return false;
                     }
 
@@ -846,10 +897,12 @@ namespace Voron.Impl.Journal
                     return _parent._flushLockTaskResponsible.WaitForTaskToBeDone(UpdateDatabaseStateAfterSync);
                 }
 
-                private void UpdateDatabaseStateAfterSync()
+                private bool UpdateDatabaseStateAfterSync()
                 {
+                    AssertGatherInformationToStartSyncBeforeUpdate();
+
                     if (_parent._waj._env.Disposed)
-                        return;
+                        return false;
 
                     Interlocked.Add(ref _parent._totalWrittenButUnsyncedBytes, -_currentTotalWrittenBytes);
                     _parent.UpdateFileHeaderAfterDataFileSync(_lastSyncedJournal, _lastSyncedTransactionId, ref _transactionHeader);
@@ -861,6 +914,19 @@ namespace Voron.Impl.Journal
 
                         toDelete.Value.Release();
                     }
+
+                    return true;
+                }
+
+                [Conditional("DEBUG")]
+                private void AssertGatherInformationToStartSyncBeforeUpdate()
+                {
+                    if (_lastSyncedJournal == -1
+                        && _currentTotalWrittenBytes == -1
+                        && _lastSyncedTransactionId == -1)
+                        throw new InvalidOperationException(
+                            $"Try to {nameof(UpdateDatabaseStateAfterSync)} " +
+                            $"without to call {nameof(GatherInformationToStartSync)} before");
                 }
 
                 private void CallPagerSync()
@@ -880,14 +946,14 @@ namespace Voron.Impl.Journal
                     }
                 }
 
-                private void GatherInformationToStartSync()
+                private bool GatherInformationToStartSync()
                 {
                     if (_parent._waj._env.Disposed)
-                        return; // we have already disposed, nothing to do here
+                        return false; // we have already disposed, nothing to do here
 
                     if (_parent._lastFlushedJournal == null)
                         // nothing was flushed since we last synced, nothing to do
-                        return;
+                        return false;
 
                     _currentTotalWrittenBytes = Interlocked.Read(ref _parent._totalWrittenButUnsyncedBytes);
                     _lastSyncedJournal = _parent._lastFlushedJournalId;
@@ -916,6 +982,8 @@ namespace Voron.Impl.Journal
                     {
                         _parent._journalsToDelete.Remove(kvp.Key);
                     }
+
+                    return true;
                 }
 
                 public void Dispose()
@@ -934,11 +1002,12 @@ namespace Voron.Impl.Journal
 
                 private class AssignedTask
                 {
-                    public readonly Action Task;
+                    public readonly Func<bool> Task;
                     public readonly SingleUseFlag DoneFlag = new SingleUseFlag();
-                    public ExceptionDispatchInfo Error;
+                    public Exception Error;
+                    public volatile bool Result = true;
 
-                    public AssignedTask(Action task) => Task = task;
+                    public AssignedTask(Func<bool> task) => Task = task;
                 }
 
                 public LockTaskResponsible(object @lock, CancellationToken token)
@@ -947,7 +1016,7 @@ namespace Voron.Impl.Journal
                     _token = token;
                 }
 
-                public bool WaitForTaskToBeDone(Action task)
+                public bool WaitForTaskToBeDone(Func<bool> task)
                 {
                     var current = new AssignedTask(task);
                     try
@@ -973,7 +1042,6 @@ namespace Voron.Impl.Journal
                                 try
                                 {
                                     RunTaskIfNotAlreadyRan();
-                                    return true;
                                 }
                                 finally
                                 {
@@ -988,8 +1056,9 @@ namespace Voron.Impl.Journal
 
                             if (current.DoneFlag.IsRaised())
                             {
-                                current.Error?.Throw();
-                                return true;
+                                if (current.Error != null)
+                                    throw new InvalidOperationException("The lock task failed", current.Error);
+                                return current.Result;
                             }
                         }
                     }
@@ -1001,28 +1070,33 @@ namespace Voron.Impl.Journal
 
                 public void RunTaskIfNotAlreadyRan()
                 {
-                    Debug.Assert(Monitor.IsEntered(_lock));
-
-                    if (_token.IsCancellationRequested)
-                        return;
-
+                    AssertRunTaskWithLock();
                     var current = Interlocked.Exchange(ref _active, null);
                     if (current == null)
                         return;
-
                     try
                     {
-                        current.Task();
+                        _token.ThrowIfCancellationRequested();
+                        current.Result = current.Task();
                     }
                     catch (Exception e)
                     {
-                        current.Error = ExceptionDispatchInfo.Capture(e);
+                        current.Error = e;
                     }
                     finally
                     {
                         current.DoneFlag.Raise();
                         _waitForTaskToBeDone.Set();
                     }
+                }
+
+                [Conditional("DEBUG")]
+                private void AssertRunTaskWithLock()
+                {
+                    if (Monitor.IsEntered(_lock))
+                        return;
+
+                    throw new InvalidOperationException("The task has to be under the lock");
                 }
             }
 
@@ -1039,6 +1113,7 @@ namespace Voron.Impl.Journal
                     {
                         using (var batchWrites = _waj._dataPager.BatchWriter())
                         {
+                            var tempTx = new TempPagerTransaction(isWriteTransaction:false);
                             foreach (var pagePosition in pagesToWrite.Values)
                             {
                                 var scratchNumber = pagePosition.ScratchNumber;
@@ -1050,6 +1125,19 @@ namespace Voron.Impl.Journal
 
                                     scratchPagerStates.Add(scratchNumber, pagerState);
                                 }
+
+                                if(_waj._env.Options.EncryptionEnabled == false)
+                                {
+                                    var page = (PageHeader*)scratchBufferPool.AcquirePagePointerWithOverflowHandling(tempTx, scratchNumber, pagePosition.ScratchPage);
+                                    var checksum = StorageEnvironment.CalculatePageChecksum((byte*)page, page->PageNumber, out var expectedChecksum);
+                                    if (checksum != expectedChecksum)
+                                    {
+                                        throw new InvalidDataException(
+                                            $"During apply logs to data, tried to copy {scratchNumber} / {pagePosition.ScratchNumber} ({page->PageNumber}) " +
+                                            $"has checksum {checksum} but expected {expectedChecksum}");
+                                    }
+                                }
+
 
                                 var numberOfPages = scratchBufferPool.CopyPage(
                                     batchWrites,
@@ -1237,7 +1325,7 @@ namespace Voron.Impl.Journal
                 }
 
                 sp.Restart();
-                CurrentFile.Write(tx, journalEntry, _lazyTransactionBuffer);
+                journalEntry.UpdatePageTranslationTableAndUnusedPages = CurrentFile.Write(tx, journalEntry, _lazyTransactionBuffer);
                 sp.Stop();
                 _lastCompressionAccelerationInfo.WriteDuration = sp.Elapsed;
                 _lastCompressionAccelerationInfo.CalculateOptimalAcceleration();
@@ -1657,6 +1745,7 @@ namespace Voron.Impl.Journal
         public byte* Base;
         public int NumberOf4Kbs;
         public int NumberOfUncompressedPages;
+        public JournalFile.UpdatePageTranslationTableAndUnusedPagesAction? UpdatePageTranslationTableAndUnusedPages;
     }
 }
 

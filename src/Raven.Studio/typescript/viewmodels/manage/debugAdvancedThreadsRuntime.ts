@@ -8,11 +8,11 @@ import getDebugThreadsRunawayCommand = require("commands/database/debug/getDebug
 
 class debugAdvancedThreadsRuntime extends viewModelBase {
 
-    allData = ko.observable<Raven.Server.Documents.Handlers.Debugging.ThreadsHandler.ThreadInfo[]>();
-    filteredData = ko.observable<Raven.Server.Documents.Handlers.Debugging.ThreadsHandler.ThreadInfo[]>();
+    allData = ko.observable<Raven.Server.Dashboard.ThreadInfo[]>();
+    filteredData = ko.observable<Raven.Server.Dashboard.ThreadInfo[]>();
 
-    private gridController = ko.observable<virtualGridController<Raven.Server.Documents.Handlers.Debugging.ThreadsHandler.ThreadInfo>>();
-    private columnPreview = new columnPreviewPlugin<Raven.Server.Documents.Handlers.Debugging.ThreadsHandler.ThreadInfo>();
+    private gridController = ko.observable<virtualGridController<Raven.Server.Dashboard.ThreadInfo>>();
+    private columnPreview = new columnPreviewPlugin<Raven.Server.Dashboard.ThreadInfo>();
 
     threadsCount: KnockoutComputed<number>;
     dedicatedThreadsCount: KnockoutComputed<number>;
@@ -61,7 +61,7 @@ class debugAdvancedThreadsRuntime extends viewModelBase {
         }
     }
     
-    private matchesFilter(item: Raven.Server.Documents.Handlers.Debugging.ThreadsHandler.ThreadInfo) {
+    private matchesFilter(item: Raven.Server.Dashboard.ThreadInfo) {
         const filter = this.filter();
         if (!filter) {
             return true;
@@ -85,30 +85,46 @@ class debugAdvancedThreadsRuntime extends viewModelBase {
             return $.when({
                 totalResultCount: data.length,
                 items: data
-            } as pagedResult<Raven.Server.Documents.Handlers.Debugging.ThreadsHandler.ThreadInfo>);
+            } as pagedResult<Raven.Server.Dashboard.ThreadInfo>);
         };
 
         const grid = this.gridController();
         grid.headerVisible(true);
-        grid.init(fetcher, () =>
-            [
-                new textColumn<Raven.Server.Documents.Handlers.Debugging.ThreadsHandler.ThreadInfo>(grid, x => x.Name, "Name", "25%"),
-                new textColumn<Raven.Server.Documents.Handlers.Debugging.ThreadsHandler.ThreadInfo>(grid, x => x.Id + " (" + (x.ManagedThreadId || 'n/a') + ")", "Thread Id", "10%"),
-                new textColumn<Raven.Server.Documents.Handlers.Debugging.ThreadsHandler.ThreadInfo>(grid, x => generalUtils.formatUtcDateAsLocal(x.StartingTime), "Start Time", "20%"),
-                new textColumn<Raven.Server.Documents.Handlers.Debugging.ThreadsHandler.ThreadInfo>(grid, x => generalUtils.formatTimeSpan(x.Duration, false), "Duration", "10%"),
-                new textColumn<Raven.Server.Documents.Handlers.Debugging.ThreadsHandler.ThreadInfo>(grid, x => x.State, "State", "10%"),
-                new textColumn<Raven.Server.Documents.Handlers.Debugging.ThreadsHandler.ThreadInfo>(grid, x => x.WaitReason, "Wait reason", "20%"),
-            ]
+        grid.init(fetcher, () => {
+                return [
+                    new textColumn<Raven.Server.Dashboard.ThreadInfo>(grid, x => x.Name, "Name", "25%", {
+                        sortable: "string"
+                    }),
+                    new textColumn<Raven.Server.Dashboard.ThreadInfo>(grid, x => `${(x.CpuUsage === 0 ? "0" : generalUtils.formatNumberToStringFixed(x.CpuUsage, 2))}%`, "Current CPU %", "10%", {
+                        sortable: x => x.CpuUsage,
+                        defaultSortOrder: "desc"
+                    }),
+                    new textColumn<Raven.Server.Dashboard.ThreadInfo>(grid, x => generalUtils.formatTimeSpan(x.Duration, false), "Overall CPU Time", "10%", {
+                        sortable: x => x.Duration,
+                        defaultSortOrder: "desc"
+                    }),
+                    new textColumn<Raven.Server.Dashboard.ThreadInfo>(grid, x => x.Id + " (" + (x.ManagedThreadId || "n/a") + ")", "Thread Id", "10%", {
+                        sortable: x => x.Id
+                    }),
+                    new textColumn<Raven.Server.Dashboard.ThreadInfo>(grid, x => generalUtils.formatUtcDateAsLocal(x.StartingTime), "Start Time", "20%", {
+                        sortable: x => x.StartingTime
+                    }),
+                    new textColumn<Raven.Server.Dashboard.ThreadInfo>(grid, x => x.State, "State", "10%", {
+                        sortable: "string"
+                    }),
+                    new textColumn<Raven.Server.Dashboard.ThreadInfo>(grid, x => x.WaitReason, "Wait reason", "15%")
+                ];
+            }
         );
 
         this.columnPreview.install("virtual-grid", ".js-threads-runtime-tooltip",
-            (entry: Raven.Server.Documents.Handlers.Debugging.ThreadsHandler.ThreadInfo,
-             column: textColumn<Raven.Server.Documents.Handlers.Debugging.ThreadsHandler.ThreadInfo>,
+            (entry: Raven.Server.Dashboard.ThreadInfo,
+                column: textColumn<Raven.Server.Dashboard.ThreadInfo>,
              e: JQueryEventObject, onValue: (context: any, valueToCopy?: string) => void) => {
-                if (column.header === "Duration") {
+                if (column.header === "Overall CPU Time") {
                     const timings = {
                         StartTime: entry.StartingTime,
-                        TotalProcessorTime: entry.TotalProcessorTime,
+                            TotalProcessorTime: entry.TotalProcessorTime,
                         PrivilegedProcessorTime: entry.PrivilegedProcessorTime,
                         UserProcessorTime: entry.UserProcessorTime
                     };

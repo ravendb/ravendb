@@ -45,7 +45,7 @@ namespace Voron
 
         internal IndirectReference SelfReference = new IndirectReference();
 
-        public void SuggestSyncDataFileSyncDataFile()
+        public void SuggestSyncDataFile()
         {
             GlobalFlushingBehavior.GlobalFlusher.Value.SuggestSyncEnvironment(this);
         }
@@ -248,7 +248,7 @@ namespace Voron
                             GlobalFlushingBehavior.GlobalFlusher.Value.MaybeFlushEnvironment(this);
 
                         else if (Journal.Applicator.TotalWrittenButUnsyncedBytes != 0)
-                            SuggestSyncDataFileSyncDataFile();
+                            SuggestSyncDataFile();
                     }
                     else
                     {
@@ -303,14 +303,14 @@ namespace Voron
 
                 var metadataTree = writeTx.ReadTree(Constants.MetadataTreeNameSlice);
                 if (metadataTree == null)
-                    VoronUnrecoverableErrorException.Raise(this,
+                    VoronUnrecoverableErrorException.Raise(tx,
                         "Could not find metadata tree in database, possible mismatch / corruption?");
 
                 Debug.Assert(metadataTree != null);
                 // ReSharper disable once PossibleNullReferenceException
                 var dbId = metadataTree.Read("db-id");
                 if (dbId == null)
-                    VoronUnrecoverableErrorException.Raise(this,
+                    VoronUnrecoverableErrorException.Raise(tx,
                         "Could not find db id in metadata tree, possible mismatch / corruption?");
 
                 var buffer = new byte[16];
@@ -318,7 +318,7 @@ namespace Voron
                 // ReSharper disable once PossibleNullReferenceException
                 var dbIdBytes = dbId.Reader.Read(buffer, 0, 16);
                 if (dbIdBytes != 16)
-                    VoronUnrecoverableErrorException.Raise(this,
+                    VoronUnrecoverableErrorException.Raise(tx,
                         "The db id value in metadata tree wasn't 16 bytes in size, possible mismatch / corruption?");
 
                 var databaseGuidId = _options.GenerateNewDatabaseId == false ? new Guid(buffer) : Guid.NewGuid();
@@ -979,6 +979,9 @@ namespace Voron
                 NumberOfFreePages = numberOfFreePages,
                 NextPageNumber = NextPageNumber,
                 Journals = Journal.Files.ToList(),
+                LastFlushedTransactionId = Journal.Applicator.LastFlushedTransactionId,
+                LastFlushedJournalId = Journal.Applicator.LastFlushedJournalId,
+                TotalWrittenButUnsyncedBytes = Journal.Applicator.TotalWrittenButUnsyncedBytes,
                 Trees = trees,
                 FixedSizeTrees = fixedSizeTrees,
                 Tables = tables,
@@ -1089,6 +1092,9 @@ namespace Voron
             // No need to call EnsureMapped here. ValidatePageChecksum is only called for pages in the datafile, 
             // which we already got using AcquirePagePointerWithOverflowHandling()
 
+            if (pageNumber != current->PageNumber)
+                ThrowInvalidPageNumber(pageNumber, current);
+
             ulong checksum = CalculatePageChecksum((byte*)current, current->PageNumber, current->Flags, current->OverflowSize);
 
             if (checksum == current->Checksum)
@@ -1097,10 +1103,22 @@ namespace Voron
             ThrowInvalidChecksum(pageNumber, current, checksum);
         }
 
+        private static unsafe void ThrowInvalidPageNumber(long pageNumber, PageHeader* current)
+        {
+            throw new InvalidDataException($"When reading page {pageNumber}, we read a page with header of page {current->PageNumber}");
+        }
+
         private unsafe void ThrowInvalidChecksum(long pageNumber, PageHeader* current, ulong checksum)
         {
             throw new InvalidDataException(
                 $"Invalid checksum for page {pageNumber}, data file {_options.DataPager} might be corrupted, expected hash to be {current->Checksum} but was {checksum}");
+        }
+
+        public static unsafe ulong CalculatePageChecksum(byte* ptr, long pageNumber, out ulong expectedChecksum)
+        {
+            var header = (PageHeader*)(ptr);
+            expectedChecksum = header->Checksum;
+            return CalculatePageChecksum(ptr, pageNumber, header->Flags, header->OverflowSize);
         }
 
         public static unsafe ulong CalculatePageChecksum(byte* ptr, long pageNumber, PageFlags flags, int overflowSize)

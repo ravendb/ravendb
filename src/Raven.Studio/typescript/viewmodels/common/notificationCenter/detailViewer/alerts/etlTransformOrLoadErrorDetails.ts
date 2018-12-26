@@ -40,9 +40,15 @@ class etlTransformOrLoadErrorDetails extends abstractAlertDetails {
             {
                 title: () => 'Show item preview'
             });
-            const dateColumn = new textColumn<Raven.Server.NotificationCenter.Notifications.Details.EtlErrorInfo>(grid, x => generalUtils.formatUtcDateAsLocal(x.Date), "Date", "20%");
-            const errorColumn = new textColumn<Raven.Server.NotificationCenter.Notifications.Details.EtlErrorInfo>(grid, x => x.Error, "Error", "50%");
-            const documentIdColumn = new textColumn<Raven.Server.NotificationCenter.Notifications.Details.EtlErrorInfo>(grid, x => x.DocumentId || ' - ', "Document ID", "20%");
+            const dateColumn = new textColumn<Raven.Server.NotificationCenter.Notifications.Details.EtlErrorInfo>(grid, x => generalUtils.formatUtcDateAsLocal(x.Date), "Date", "20%", {
+                sortable: x => x.Date
+            });
+            const errorColumn = new textColumn<Raven.Server.NotificationCenter.Notifications.Details.EtlErrorInfo>(grid, x => x.Error, "Error", "50%", {
+                sortable: x => x.Error
+            });
+            const documentIdColumn = new textColumn<Raven.Server.NotificationCenter.Notifications.Details.EtlErrorInfo>(grid, x => x.DocumentId || ' - ', "Document ID", "20%", {
+                sortable: x => x.DocumentId
+            });
             
             return this.alert.alertType() === "Etl_LoadError" ?
                 [previewColumn, dateColumn, errorColumn, documentIdColumn] :

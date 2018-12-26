@@ -34,7 +34,7 @@ namespace Raven.Server.ServerWide.Maintenance
             public TimeSpan? LastQueried;
             public bool IsStale;
             public IndexState State;
-            public long LastTransactionId; // this is local, so we don't serialize it
+            public long? LastTransactionId; // this is local, so we don't serialize it
         }
 
         public long LastEtag;

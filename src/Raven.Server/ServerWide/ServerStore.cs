@@ -385,11 +385,12 @@ namespace Raven.Server.ServerWide
         {
             Configuration.CheckDirectoryPermissions();
 
-            LowMemoryNotification.Initialize(Configuration.Memory.LowMemoryLimit, Configuration.Memory.MinimumFreeCommittedMemory, ServerShutdown);
+            LowMemoryNotification.Initialize(Configuration.Memory.LowMemoryLimit, ServerShutdown);
 
-            PoolOfThreads.GlobalRavenThreadPool.SetMinimumFreeCommittedMemory(Configuration.Memory.MinimumFreeCommittedMemory);
-
-            NativeMemory.SetMinimumFreeCommittedMemory(Configuration.Memory.MinimumFreeCommittedMemory);
+            MemoryInformation.SetFreeCommittedMemory(
+                Configuration.Memory.MinimumFreeCommittedMemoryPercentage,
+                Configuration.Memory.MaxFreeCommittedMemoryToKeepInMb,
+                Configuration.Memory.LowMemoryCommitLimitInMb);
 
             if (Logger.IsInfoEnabled)
                 Logger.Info("Starting to open server store for " + (Configuration.Core.RunInMemory ? "<memory>" : Configuration.Core.DataDirectory.FullPath));

@@ -10,7 +10,7 @@ interface virtualGridController<T> {
 
     headerVisible(value: boolean): void;
 
-    reset(hard?: boolean): void;
+    reset(hard?: boolean, retainSort?: boolean): void;
 
     findRowForCell(cellElement: JQuery | Element): virtualRow;
 
@@ -28,6 +28,7 @@ interface virtualGridController<T> {
     
     scrollDown: () => void;
 
+    setDefaultSortBy(columnIndex: number, mode?: sortMode): void;
 }
 
 export = virtualGridController;

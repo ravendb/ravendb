@@ -47,6 +47,9 @@ namespace Voron.Debugging
         public bool IncludeDetails { get; set; }
         public VoronPathSetting TempPath { get; set; }
         public VoronPathSetting JournalPath { get; set; }
+        public long LastFlushedTransactionId { get; set; }
+        public long LastFlushedJournalId { get; set; }
+        public long TotalWrittenButUnsyncedBytes { get; set; }
     }
 
     public unsafe class StorageReportGenerator
@@ -103,7 +106,14 @@ namespace Voron.Debugging
                 tables.Add(tableReport);
             }
 
-            var journals = GenerateJournalsReport(input.Journals);
+            var journals = new JournalsReport
+            {
+                Journals = GenerateJournalsReport(input.Journals),
+                LastFlushedJournal = input.LastFlushedJournalId,
+                LastFlushedTransaction = input.LastFlushedTransactionId,
+                TotalWrittenButUnsyncedBytes = input.TotalWrittenButUnsyncedBytes
+            };
+
             var tempBuffers = GenerateTempBuffersReport(input.TempPath, input.JournalPath);
 
             return new DetailedStorageReport
@@ -132,10 +142,16 @@ namespace Voron.Debugging
 
         private List<JournalReport> GenerateJournalsReport(List<JournalFile> journals)
         {
-            return journals.Select(journal => new JournalReport
+            return journals.Select(journal =>
             {
-                Number = journal.Number,
-                AllocatedSpaceInBytes = (long)journal.JournalWriter.NumberOfAllocated4Kb * 4 * Constants.Size.Kilobyte
+                var snapshot = journal.GetSnapshot();
+                return new JournalReport
+                {
+                    Number = journal.Number,
+                    AllocatedSpaceInBytes = (long)journal.JournalWriter.NumberOfAllocated4Kb * 4 * Constants.Size.Kilobyte,
+                    Available4Kbs = snapshot.Available4Kbs,
+                    LastTransaction = snapshot.LastTransaction,
+                };
             }).ToList();
         }
 
@@ -181,7 +197,7 @@ namespace Voron.Debugging
                         // could be deleted meanwhile
                         return null;
                     }
-                }).ToList();
+                }).Where(x => x != null).ToList();
 
                 tempFiles.AddRange(recyclableJournals);
             }
@@ -351,7 +367,7 @@ namespace Voron.Debugging
                                     break;
                                 }
                             default:
-                                VoronUnrecoverableErrorException.Raise(tree.Llt.Environment, "currentNode->FixedTreeFlags has value of " + currentNode->Flags);
+                                VoronUnrecoverableErrorException.Raise(tree.Llt, "currentNode->FixedTreeFlags has value of " + currentNode->Flags);
                                 break;
                         }
                     } while (multiTreeIterator.MoveNext());

@@ -281,13 +281,13 @@ namespace Raven.Server.Documents.Handlers
                                     }
                                     catch (Exception addAlertException)
                                     {
-                                        if (Logger.IsOperationsEnabled && addAlertException.IsOutOfMemory() == false)
+                                        if (Logger.IsOperationsEnabled && addAlertException.IsOutOfMemory() == false && addAlertException.IsDiskFullException() == false)
                                             Logger.Operations($"Failed to add alert when getting error on retrieving stats of '{x.Name}' index", addAlertException);
                                     }
 
                                     var state = x.State;
 
-                                    if (e.IsOutOfMemory() == false)
+                                    if (e.IsOutOfMemory() == false && e.IsDiskFullException() == false)
                                     {
                                         try
                                         {

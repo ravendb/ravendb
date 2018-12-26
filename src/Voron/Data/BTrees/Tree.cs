@@ -690,7 +690,7 @@ namespace Voron.Data.BTrees
             }
 
             if (p.IsLeaf == false)
-                VoronUnrecoverableErrorException.Raise(_llt.Environment, "Index points to a non leaf page " + p.PageNumber);
+                VoronUnrecoverableErrorException.Raise(_llt, "Index points to a non leaf page " + p.PageNumber);
 
             if (p.IsCompressed)
                 ThrowOnCompressedPage(p);
@@ -760,7 +760,7 @@ namespace Voron.Data.BTrees
             cursorConstructor = new TreeCursorConstructor(cursor);
 
             if (p.IsLeaf == false)
-                VoronUnrecoverableErrorException.Raise(_llt.Environment, "Index points to a non leaf page");
+                VoronUnrecoverableErrorException.Raise(_llt, "Index points to a non leaf page");
 
             if (allowCompressed == false && p.IsCompressed)
                 ThrowOnCompressedPage(p);
@@ -872,7 +872,7 @@ namespace Voron.Data.BTrees
             }
 
             if (page.IsLeaf == false)
-                VoronUnrecoverableErrorException.Raise(_llt.Environment, "Index points to a non leaf page");
+                VoronUnrecoverableErrorException.Raise(_llt, "Index points to a non leaf page");
 
             node = page.Search(_llt, key); // will set the LastSearchPosition
 
@@ -904,7 +904,7 @@ namespace Voron.Data.BTrees
             }
 
             if (page.IsLeaf == false)
-                VoronUnrecoverableErrorException.Raise(_llt.Environment, "Index points to a non leaf page");
+                VoronUnrecoverableErrorException.Raise(_llt, "Index points to a non leaf page");
 
             node = page.Search(_llt, key); // will set the LastSearchPosition
 
@@ -1113,7 +1113,7 @@ namespace Voron.Data.BTrees
                         // the key we were looking for might belong to an compressed entry
                         // if the page isn't compressed then it's a corruption
                         
-                        VoronUnrecoverableErrorException.Raise(_tx.LowLevelTransaction.Environment,
+                        VoronUnrecoverableErrorException.Raise(_tx.LowLevelTransaction,
                             $"Could not find a page containing {key} when looking for a parent of {page}. Page {p} was found, last match: {p.LastMatch}.");
                     }
 #if DEBUG

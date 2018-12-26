@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Buffers;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
@@ -6,6 +7,7 @@ using System.Runtime.InteropServices;
 using Sparrow;
 using Sparrow.Utils;
 using Voron.Data.Fixed;
+using Voron.Exceptions;
 using Voron.Global;
 using Voron.Impl;
 using Voron.Impl.Paging;
@@ -84,11 +86,10 @@ namespace Voron.Data.BTrees
 
             public void Write(Stream stream)
             {
-                if (_localBuffer == null)
-                    _localBuffer = new byte[4 * Constants.Storage.PageSize];
-                
+                _localBuffer = ArrayPool<byte>.Shared.Rent(512 * Constants.Size.Kilobyte);
+
                 AllocateNextPage();
-                var firstPage = _currentPage;
+              
                 ((StreamPageHeader*)_currentPage.Pointer)->StreamPageFlags |= StreamPageFlags.First;
                 
                 fixed (byte* pBuffer = _localBuffer)
@@ -133,6 +134,8 @@ namespace Voron.Data.BTrees
 
                     _parent._tx.LowLevelTransaction.ShrinkOverflowPage(_currentPage.PageNumber, chunkSize + infoSize, _parent.State); 
                 }
+
+                ArrayPool<byte>.Shared.Return(_localBuffer);
             }
 
             private long WriteBufferToPage(byte* pBuffer, long size)
@@ -350,11 +353,15 @@ namespace Voron.Data.BTrees
                 if (it.Seek(0) == false)
                     return pages;
 
+                var totalSize = 0L;
+
                 do
                 {
                     var chunk = (ChunkDetails*)it.CreateReaderForCurrent().Base;
 
-                    var size = chunk->ChunkSize;
+                    totalSize += chunk->ChunkSize;
+
+                    long size = chunk->ChunkSize;
 
                     if (chunkIndex == chunksTree.NumberOfEntries - 1)
                     {
@@ -373,6 +380,9 @@ namespace Voron.Data.BTrees
                     chunkIndex++;
 
                 } while (it.MoveNext());
+
+                if (totalSize != info->TotalSize)
+                    ThrowStreamSizeMismatch(chunksTree.Name, totalSize, info);
 
                 return pages;
             }
@@ -395,6 +405,12 @@ namespace Voron.Data.BTrees
         {
             using (Slice.From(_tx.Allocator, key, out Slice str))
                 return GetStreamTag(str);
+        }
+
+        private void ThrowStreamSizeMismatch(Slice name, long totalChunksSize, StreamInfo* info)
+        {
+            VoronUnrecoverableErrorException.Raise(_tx.LowLevelTransaction.Environment,
+                $"Stream size mismatch of '{name}' stream. Sum of chunks size is {totalChunksSize} while stream info has {info->TotalSize}");
         }
     }
 

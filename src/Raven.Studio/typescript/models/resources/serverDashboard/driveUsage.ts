@@ -25,7 +25,11 @@ class legendColumn<T> implements virtualColumn {
         return this.header;
     }
 
-    renderCell(item: T, isSelected: boolean): string {
+    get sortable() {
+        return false;
+    }
+
+    renderCell(item: T, isSelected: boolean, isSorted: boolean): string {
         const color = this.colorAccessor(item);
         return `<div class="cell text-cell" style="width: ${this.width}"><div class="legend-rect" style="background-color: ${color}"></div></div>`;
     }
@@ -99,7 +103,8 @@ class driveUsage {
         
         const gridInitialization = this.gridController.subscribe((grid) => {
             grid.headerVisible(true);
-
+            grid.setDefaultSortBy(1);
+            
             grid.init((s, t) => $.when({
                 totalResultCount: this.items().length,
                 items: this.items()
@@ -108,20 +113,32 @@ class driveUsage {
                     return [
                         new legendColumn<driveUsageDetails>(grid, x => this.colorProvider(x.database()), "", "26px"),
                         new hyperlinkColumn<driveUsageDetails>(grid, x => x.database(), x => appUrl.forStatusStorageReport(x.database()), "Database", "42%", {
-                            extraClass: d => isDisabled(d.database()) ? "disabled" : ""
+                            extraClass: d => isDisabled(d.database()) ? "disabled" : "",
+                            sortable: "string"
                         }),
-                        new textColumn<driveUsageDetails>(grid, x => this.sizeFormatter(x.size()), "Data", "16%"),
-                        new textColumn<driveUsageDetails>(grid, x => this.sizeFormatter(x.tempBuffersSize()), "Temp", "16%"),
-                        new textColumn<driveUsageDetails>(grid, x => this.sizeFormatter(x.tempBuffersSize() + x.size()), "Total", "16%")
-                        
+                        new textColumn<driveUsageDetails>(grid, x => this.sizeFormatter(x.size()), "Data", "16%", {
+                            sortable: x => x.size(),
+                            defaultSortOrder: "desc"
+                        }),
+                        new textColumn<driveUsageDetails>(grid, x => this.sizeFormatter(x.tempBuffersSize()), "Temp", "16%", {
+                            sortable: x => x.tempBuffersSize(),
+                            defaultSortOrder: "desc"
+                        }),
+                        new textColumn<driveUsageDetails>(grid, x => this.sizeFormatter(x.tempBuffersSize() + x.size()), "Total", "16%", {
+                            sortable: x => x.tempBuffersSize() + x.size(),
+                            defaultSortOrder: "desc"
+                        })
                     ] 
                 } else {
                     return [ 
                         new legendColumn<driveUsageDetails>(grid, x => this.colorProvider(x.database()), "", "26px"),
                         new hyperlinkColumn<driveUsageDetails>(grid, x => x.database(), x => appUrl.forStatusStorageReport(x.database()), "Database", "60%", {
-                            extraClass: d => isDisabled(d.database()) ? "disabled" : ""
+                            extraClass: d => isDisabled(d.database()) ? "disabled" : "",
+                            sortable: "string"
                         }),
-                        new textColumn<driveUsageDetails>(grid, x => this.sizeFormatter(x.size()), "Data", "30%") 
+                        new textColumn<driveUsageDetails>(grid, x => this.sizeFormatter(x.size()), "Data", "30%", {
+                            sortable: x => x.size()
+                        }) 
                     ]
                 }
             });

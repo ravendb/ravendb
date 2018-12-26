@@ -32,10 +32,18 @@ class requestLatencyDetails extends abstractPerformanceHintDetails {
 
         grid.init((s, t) => this.fetcher(s, t), () => {
             return [
-                new textColumn<Raven.Server.NotificationCenter.Notifications.Details.RequestLatencyInfo>(grid, x => x.Action, "Action", "20%"),
-                new textColumn<Raven.Server.NotificationCenter.Notifications.Details.RequestLatencyInfo>(grid, x => generalUtils.formatUtcDateAsLocal(x.Date), "Date", "20%"),
-                new textColumn<Raven.Server.NotificationCenter.Notifications.Details.RequestLatencyInfo>(grid, x => generalUtils.formatTimeSpan(x.Duration, true), "Duration", "15%"),
-                new textColumn<Raven.Server.NotificationCenter.Notifications.Details.RequestLatencyInfo>(grid, x => x.Query, "Query", "45%") 
+                new textColumn<Raven.Server.NotificationCenter.Notifications.Details.RequestLatencyInfo>(grid, x => x.Action, "Action", "20%", {
+                    sortable: "string"
+                }),
+                new textColumn<Raven.Server.NotificationCenter.Notifications.Details.RequestLatencyInfo>(grid, x => generalUtils.formatUtcDateAsLocal(x.Date), "Date", "20%", {
+                    sortable: x => x.Date
+                }),
+                new textColumn<Raven.Server.NotificationCenter.Notifications.Details.RequestLatencyInfo>(grid, x => generalUtils.formatTimeSpan(x.Duration, true), "Duration", "15%", {
+                    sortable: x => x.Duration
+                }),
+                new textColumn<Raven.Server.NotificationCenter.Notifications.Details.RequestLatencyInfo>(grid, x => x.Query, "Query", "45%", {
+                    sortable: "string"
+                }) 
             ];
         });
 
