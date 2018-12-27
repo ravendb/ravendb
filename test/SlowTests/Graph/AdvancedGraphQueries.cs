@@ -879,20 +879,35 @@ namespace SlowTests.Graph
                 using (var session = store.OpenSession())
                 {
                     var results = session.Advanced.RawQuery<JObject>(@"
-                       match (Dogs as d1)-recursive as r (2,all) { [Likes as l] ->(Dogs as d2) }
+                       match (Dogs as d1)-recursive as r (2,longest) { [Likes as l] ->(Dogs as d2) }
                        select d1.Name as d1, r.l as path").ToList();
                     Assert.NotEmpty(results); //sanity check
                     var interpretedResults = results.Select(x => new
                     {
-                        D1 = x["d1"].Value<string>(),
+                        Start = x["d1"].Value<string>(),
                         TraversalPath = x["path"].Children().Select(c => c.Value<string>()).ToArray(), 
                     }).ToArray();
 
                     Assert.Equal(3, interpretedResults.Length);
 
-                    Assert.Contains(interpretedResults, item => item.D1 == "Arava" && item.TraversalPath[0] == "dogs/2-A" && item.TraversalPath[1] == "dogs/3-A");
-                    Assert.Contains(interpretedResults, item => item.D1 == "Oscar" && item.TraversalPath[0] == "dogs/3-A" && item.TraversalPath[1] == "dogs/1-A");
-                    Assert.Contains(interpretedResults, item => item.D1 == "Pheobe" && item.TraversalPath[0] == "dogs/1-A" && item.TraversalPath[1] == "dogs/2-A");
+                    //verify that traversal ends when we return to the "starting" point, and it doesn't continue on nodes we already traversed
+                    Assert.Contains(interpretedResults, 
+                        item => item.Start == "Arava" &&  //start with dogs/1
+                                item.TraversalPath[0] == "dogs/2-A" && 
+                                item.TraversalPath[1] == "dogs/3-A" && 
+                                item.TraversalPath[2] == "dogs/1-A");
+
+                    Assert.Contains(interpretedResults, 
+                        item => item.Start == "Oscar" && //start with dogs/2
+                                item.TraversalPath[0] == "dogs/3-A" && 
+                                item.TraversalPath[1] == "dogs/1-A" && 
+                                item.TraversalPath[2] == "dogs/2-A");
+
+                    Assert.Contains(interpretedResults, 
+                        item => item.Start == "Pheobe" && //start with dogs/3
+                                item.TraversalPath[0] == "dogs/1-A" && 
+                                item.TraversalPath[1] == "dogs/2-A" && 
+                                item.TraversalPath[2] == "dogs/3-A");
                 }
             }
         }

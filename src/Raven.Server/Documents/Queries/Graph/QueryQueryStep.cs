@@ -62,6 +62,9 @@ namespace Raven.Server.Documents.Queries.Graph
         {
             get
             {
+                if (HasWhereClause) //TODO: verify with Tal how good is this change
+                    return false;
+
                 if (_queryMetadata.IsCollectionQuery == false)
                     return false;
 

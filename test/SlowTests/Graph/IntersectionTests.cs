@@ -867,7 +867,6 @@ namespace SlowTests.Graph
             using (var store = GetDocumentStore())
             {
                 CreateMoviesData(store);
-                WaitForUserToContinueTheTest(store);
                 using (var session = store.OpenSession())
                 {
                     var results = session.Advanced.RawQuery<JObject>(@"
