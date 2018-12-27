@@ -300,7 +300,7 @@ namespace Raven.Server.Documents.TcpHandlers
                     json.Put(Constants.Documents.Metadata.Key, metadata, false);
                 }
 
-                metadata.Put(Constants.Documents.Metadata.Projection, JsBoolean.True, false);
+                metadata.Put(Constants.Documents.Metadata.Projection, JsValue.True, false);
             }
         }
     }
