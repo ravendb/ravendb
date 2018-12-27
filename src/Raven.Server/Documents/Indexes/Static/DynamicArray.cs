@@ -181,7 +181,9 @@ namespace Raven.Server.Documents.Indexes.Static
 
         public bool Contains(object item)
         {
-            return Enumerable.Contains(this, item);
+            var  itemToWorkOn = InternalConvert(item);
+
+            return Enumerable.Contains(this, itemToWorkOn);
         }
 
         public int Sum(Func<dynamic, int> selector)
@@ -366,38 +368,78 @@ namespace Raven.Server.Documents.Indexes.Static
 
         public dynamic IndexOf(dynamic item)
         {
-            var items = Enumerable.ToList(this);
-            return items.IndexOf(item);
+            return IndexOf(item, -1, -1);
         }
 
         public dynamic IndexOf(dynamic item, int index)
         {
-            var items = Enumerable.ToList(this);
-            return items.IndexOf(item, index);
+            return IndexOf(item, index, -1);
         }
 
         public dynamic IndexOf(dynamic item, int index, int count)
         {
             var items = Enumerable.ToList(this);
-            return items.IndexOf(item, index, count);
+
+            if (index > -1 && count > -1)
+                return IndexOfInternal(item, items, index, count);
+
+            if (index > -1)
+                return IndexOfInternal(item, items, index, -1);
+
+            return IndexOfInternal(item, items, 0, items.Count);
+        }
+
+        private static dynamic IndexOfInternal(dynamic item, List<object> items, int index, int count)
+        {
+            var itemToWorkOn = InternalConvert(item);
+
+            if(count == -1)
+                return items.IndexOf(itemToWorkOn, index);
+
+            return items.IndexOf(itemToWorkOn, index, count);
         }
 
         public dynamic LastIndexOf(dynamic item)
         {
-            var items = Enumerable.ToList(this);
-            return items.LastIndexOf(item);
+            return LastIndexOf(item, -1, -1);
         }
 
         public dynamic LastIndexOf(dynamic item, int index)
         {
-            var items = Enumerable.ToList(this);
-            return items.LastIndexOf(item, index);
+            return LastIndexOf(item, index, -1);
         }
 
         public dynamic LastIndexOf(dynamic item, int index, int count)
         {
             var items = Enumerable.ToList(this);
-            return items.LastIndexOf(item, index, count);
+
+            if (index > -1 && count > -1)
+                return LastIndexOfInternal(item, items, index, count);
+
+            return index > -1 ? LastIndexOfInternal(item, items, index, -1) : LastIndexOfInternal(item, items, items.Count - 1, items.Count);
+        }
+
+        private static dynamic LastIndexOfInternal(dynamic item, List<object> items, int index, int count)
+        {
+            var itemToWorkOn = InternalConvert(item);
+
+            return count == -1 ? items.LastIndexOf(itemToWorkOn, index) : items.LastIndexOf(itemToWorkOn, index, count);
+        }
+
+        private static dynamic InternalConvert(dynamic item)
+        {
+            switch (item)
+            {
+                case int _:
+                case short _:
+                    return Convert.ToInt64(item);
+                case float _:
+                    return Convert.ToDouble(item);
+                case char _:
+                    return Convert.ToString(item);
+                default:
+                    return item;
+            }
         }
 
         public IEnumerable<dynamic> Take(int count)
