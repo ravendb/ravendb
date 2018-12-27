@@ -10,8 +10,10 @@ using Raven.Client;
 using Raven.Client.Documents.Operations;
 using Raven.Client.Documents.Operations.Backups;
 using Raven.Client.Documents.Smuggler;
+using Raven.Client.ServerWide;
 using Raven.Client.Util;
 using Raven.Server.Config.Settings;
+using Raven.Server.Documents.Indexes.Static.Extensions;
 using Raven.Server.Documents.PeriodicBackup.Aws;
 using Raven.Server.Documents.PeriodicBackup.Azure;
 using Raven.Server.Documents.PeriodicBackup.Restore;
@@ -93,6 +95,7 @@ namespace Raven.Server.Documents.PeriodicBackup
                 TaskId = _configuration.TaskId,
                 BackupType = _configuration.BackupType,
                 LastEtag = _previousBackupStatus.LastEtag,
+                LastRaftIndex = _previousBackupStatus.LastRaftIndex,
                 LastFullBackup = _previousBackupStatus.LastFullBackup,
                 LastIncrementalBackup = _previousBackupStatus.LastIncrementalBackup,
                 LastFullBackupInternal = _previousBackupStatus.LastFullBackupInternal,
@@ -110,17 +113,21 @@ namespace Raven.Server.Documents.PeriodicBackup
                 if (runningBackupStatus.LocalBackup == null)
                     runningBackupStatus.LocalBackup = new LocalBackup();
 
+                if (runningBackupStatus.LastRaftIndex == null)
+                    runningBackupStatus.LastRaftIndex = new LastRaftIndex();
+
                 if (_logger.IsInfoEnabled)
                 {
                     var fullBackupText = "a " + (_configuration.BackupType == BackupType.Backup ? "full backup" : "snapshot");
                     _logger.Info($"Creating {(_isFullBackup ? fullBackupText : "an incremental backup")}");
                 }
+                var currentLastRaftIndex = GetDatabaseEtagForBackup();
 
                 if (_isFullBackup == false)
                 {
                     // no-op if nothing has changed
                     var currentLastEtag = _database.ReadLastEtag();
-                    if (currentLastEtag == _previousBackupStatus.LastEtag)
+                    if ((currentLastEtag == _previousBackupStatus.LastEtag) && (currentLastRaftIndex == _previousBackupStatus.LastRaftIndex.LastEtag))
                     {
                         var message = "Skipping incremental backup because " +
                                       $"last etag ({currentLastEtag:#,#;;0}) hasn't changed since last backup";
@@ -166,6 +173,7 @@ namespace Raven.Server.Documents.PeriodicBackup
 
                 UpdateOperationId(runningBackupStatus);
                 runningBackupStatus.LastEtag = lastEtag;
+                runningBackupStatus.LastRaftIndex.LastEtag = currentLastRaftIndex;
                 runningBackupStatus.FolderName = folderName;
                 if (_isFullBackup)
                     runningBackupStatus.LastFullBackup = _periodicBackup.StartTime;
@@ -239,6 +247,18 @@ namespace Raven.Server.Documents.PeriodicBackup
                     // save the backup status
                     await WriteStatus(runningBackupStatus, onProgress);
                 }
+            }
+        }
+
+        private long GetDatabaseEtagForBackup()
+        {
+            using (_serverStore.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
+            using (context.OpenReadTransaction())
+            {
+                var databaseRecord = _serverStore.Cluster.ReadRawDatabase(context, _database.Name, out _);
+                if (databaseRecord.TryGet(nameof(DatabaseRecord.EtagForBackup), out long etagForBackUp))
+                    return etagForBackUp;
+                return 0;
             }
         }
 
@@ -404,7 +424,12 @@ namespace Raven.Server.Documents.PeriodicBackup
                             options.OperateOnTypes |= DatabaseItemType.Tombstones;
 
                         var lastEtagFromStorage = CreateBackup(options, tempBackupFilePath, startDocumentEtag, onProgress);
-                        lastEtag = _isFullBackup ? lastEtagFromStorage : _backupResult.GetLastEtag();
+                        if (_isFullBackup)
+                            lastEtag = lastEtagFromStorage;
+                        else if (_database.ReadLastEtag() == _previousBackupStatus.LastEtag)
+                            lastEtag = startDocumentEtag ?? 0;
+                        else
+                            lastEtag = _backupResult.GetLastEtag();
                     }
                     else
                     {
