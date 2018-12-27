@@ -816,7 +816,8 @@ namespace Raven.Server.Documents.Queries.Parser
                     {
                         Alias = list[i].Alias,
                         EdgeType = list[i - 1].EdgeType,
-                        IsEdge = list[i].IsEdge
+                        IsEdge = list[i].IsEdge,
+                        Recursive = list[i].Recursive
                     };
                     clauses.Add(new PatternMatchElementExpression
                     {
