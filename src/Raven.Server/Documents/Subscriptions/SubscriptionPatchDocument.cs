@@ -16,7 +16,7 @@ namespace Raven.Server.Documents.Subscriptions
             DeclaredFunctions = declaredFunctions;
         }
 
-        public bool MatchCriteria(ScriptRunner.SingleRun run, DocumentsOperationContext context, object document, ref BlittableJsonReaderObject transformResult)
+        public bool MatchCriteria(ScriptRunner.SingleRun run, DocumentsOperationContext context, object document, JsBlittableBridge.IResultModifier modifier, ref BlittableJsonReaderObject transformResult)
         {
             using (var result = run.Run(context, context, "execute", new[] { document }))
             {
@@ -24,7 +24,7 @@ namespace Raven.Server.Documents.Subscriptions
                 if (resultAsBool != null)
                     return resultAsBool.Value;
 
-                transformResult = result.TranslateToObject(context);
+                transformResult = result.TranslateToObject(context, modifier);
                 return transformResult != null;
             }
         }
