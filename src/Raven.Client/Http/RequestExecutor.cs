@@ -106,6 +106,8 @@ namespace Raven.Client.Http
 
         protected bool _disableClientConfigurationUpdates;
 
+        internal string LastServerVersion;
+
         public TimeSpan? DefaultTimeout
         {
             get => _defaultTimeout;
@@ -707,13 +709,16 @@ namespace Raven.Client.Http
                                 }
 
                                 response = await preferredTask.ConfigureAwait(false);
+
+                                if (TryGetServerVersion(response, out var serverVersion))
+                                    LastServerVersion = serverVersion;
+
                                 if (sessionInfo?.LastClusterTransactionIndex != null)
                                 {
                                     // if we reach here it means that sometime a cluster transaction has occurred against this database.
                                     // Since the current executed command can be dependent on that, we have to wait for the cluster transaction.
                                     // But we can't do that if the server is an old one.
-                                    if (response.Headers.TryGetValues(Constants.Headers.ServerVersion, out var version) == false ||
-                                        string.Compare(version.FirstOrDefault(), "4.1", StringComparison.Ordinal) < 0)
+                                    if (serverVersion == null || string.Compare(serverVersion, "4.1", StringComparison.Ordinal) < 0)
                                         throw new ClientVersionMismatchException(
                                             $"The server on {chosenNode.Url} has an old version and can't perform the command '{command.GetType()}', " +
                                             "since this command dependent on a cluster transaction which this node doesn't support");
@@ -751,6 +756,9 @@ namespace Raven.Client.Http
                         }
 
                         response = await preferredTask.ConfigureAwait(false);
+
+                        if (TryGetServerVersion(response, out var serverVersion))
+                            LastServerVersion = serverVersion;
                     }
                     sp.Stop();
                 }
@@ -842,6 +850,18 @@ namespace Raven.Client.Http
                     }
                 }
             }
+        }
+
+        private static bool TryGetServerVersion(HttpResponseMessage response, out string version)
+        {
+            if (response.Headers.TryGetValues(Constants.Headers.ServerVersion, out var values) == false)
+            {
+                version = null;
+                return false;
+            }
+
+            version = values.FirstOrDefault();
+            return version != null;
         }
 
         private void ThrowFailedToContactAllNodes<TResult>(RavenCommand<TResult> command, HttpRequestMessage request)
@@ -1189,7 +1209,7 @@ namespace Raven.Client.Http
                     }
 
                     if (_failedNodesTimers.TryRemove(nodeStatus.Node, out status))
-                            status.Value.Dispose();
+                        status.Value.Dispose();
 
                     _nodeSelector?.RestoreNodeIndex(nodeStatus.NodeIndex);
                 }
