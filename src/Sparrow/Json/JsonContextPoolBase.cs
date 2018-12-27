@@ -53,21 +53,11 @@ namespace Sparrow.Json
             ~ContextStackThreadReleaser()
             {
                 ThreadIdHolder.ThreadId = -1;
-                if (_parent._contextStacksByThreadId.TryRemove(_threadId, out var contextStack))
-                {
-                    // We expect this to be happen only when we lose a thread pool thread
-                    // which can usually only happen on long idle periods. Therefor, we 
-                    // want to dispose the memory for this thread.
-                    while (contextStack.Head != null)
-                    {
-                        var copy = contextStack.Head.Value;
-                        if (copy != null && copy.InUse.Raise())
-                        {
-                            copy.Dispose();
-                        }
-                        contextStack.Head = contextStack.Head.Next;
-                    }
-                }
+                // we remove the references from the thread dictionary
+                // it is possible that the pool is no longer referenced and was collected, and as such
+                // the finalizers for the context stack values were already run, if not, they will run soon
+                // anyway, so we just clear it.
+                _parent._contextStacksByThreadId.TryRemove(_threadId, out var contextStack);
             }
         }
 
