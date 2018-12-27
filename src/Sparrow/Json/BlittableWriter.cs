@@ -251,13 +251,7 @@ namespace Sparrow.Json
         {
             ThreadLocalCleanup.ReleaseThreadLocalState += CleanPropertyArrayOffset;
         }
-
-        ~BlittableWriter()
-        {
-            _unmanagedWriteBuffer.Kill();
-        }
-
-
+     
         public static void CleanPropertyArrayOffset()
         {
             _propertyArrayOffset = null;
@@ -773,7 +767,6 @@ namespace Sparrow.Json
 
             _compressionBuffer = null;
             _innerBuffer = null;
-            GC.SuppressFinalize(this);
         }
     }
 }

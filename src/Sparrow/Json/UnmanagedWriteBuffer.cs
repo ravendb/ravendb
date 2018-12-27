@@ -15,7 +15,6 @@ namespace Sparrow.Json
         void WriteByte(byte data);
         void EnsureSingleChunk(JsonParserState state);
         void EnsureSingleChunk(out byte* ptr, out int size);
-        void Kill();
     }
 
     public unsafe struct UnmanagedStreamBuffer : IUnmanagedWriteBuffer
@@ -129,12 +128,7 @@ namespace Sparrow.Json
         public void EnsureSingleChunk(out byte* ptr, out int size)
         {
             throw new NotSupportedException();
-        }
-
-        public void Kill()
-        {   
-            _returnBuffer.Kill();            
-        }
+        }        
     }
 
     public unsafe struct UnmanagedWriteBuffer : IUnmanagedWriteBuffer
@@ -522,11 +516,6 @@ Grow:
 
             ptr = _head.Address;
             size = _head.Used;
-        }
-
-        public void Kill()
-        {
-            // nothing to do here
-        }
+        }  
     }
 }

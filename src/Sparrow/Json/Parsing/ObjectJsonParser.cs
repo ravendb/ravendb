@@ -203,8 +203,6 @@ namespace Sparrow.Json.Parsing
             _disposed = true;
             if (_currentStateBuffer != null)
                 _ctx.ReturnMemory(_currentStateBuffer);
-
-            GC.SuppressFinalize(this);
         }
 
         public bool Read()

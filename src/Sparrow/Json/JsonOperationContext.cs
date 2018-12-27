@@ -422,15 +422,7 @@ namespace Sparrow.Json
 
                 _parent._managedBuffers.Push(_buffer);
                 _buffer = null;
-            }
-            
-            public void Kill()
-            {
-                if (_buffer == null)
-                    return;
-                _buffer.Dispose();                
-                _buffer = null;
-            }
+            }         
 
             private static void ThrowParentWasDisposed()
             {
