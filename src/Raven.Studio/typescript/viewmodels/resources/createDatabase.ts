@@ -33,7 +33,8 @@ class createDatabase extends dialogViewModelBase {
     clientVersion = viewModelBase.clientVersion;
 
     spinners = {
-        create: ko.observable<boolean>(false)
+        create: ko.observable<boolean>(false),
+        databaseLocationInfoLoading: ko.observable<boolean>(false)
     };
 
     databaseModel: databaseCreationModel;
@@ -114,11 +115,9 @@ class createDatabase extends dialogViewModelBase {
         });
 
         const getEncryptionKeyTask = this.encryptionSection.generateEncryptionKey();
-        const getDefaultDatabaseLocationTask = new getDatabaseLocationCommand(this.databaseModel.name(), this.databaseModel.path.dataPath())
-            .execute()
-            .done((result: Raven.Server.Web.Studio.DataDirectoryResult) => this.updateDataDirectoryInfo(result));
-        
-        return $.when<any>(getTopologyTask, getEncryptionKeyTask, getDefaultDatabaseLocationTask, getStudioSettingsTask)
+        this.updateDatabaseLocationInfo(this.databaseModel.name(), this.databaseModel.path.dataPath());
+
+        return $.when<any>(getTopologyTask, getEncryptionKeyTask, getStudioSettingsTask)
             .done(() => {
                 // setup validation after we fetch and populate form with data
                 this.databaseModel.setupValidation((name: string) => !this.getDatabaseByName(name), this.clusterNodes.length);
@@ -159,10 +158,6 @@ class createDatabase extends dialogViewModelBase {
         if (this.clusterNodes.length === 1) {
             this.databaseModel.replication.nodes([this.clusterNodes[0]]);
         }
-    }
-
-    private updateDataDirectoryInfo(dataDirectoryResult: Raven.Server.Web.Studio.DataDirectoryResult) {
-        this.databaseLocationInfo(dataDirectoryResult.List);
     }
 
     private setDefaultReplicationFactor(topology: clusterTopology) {
@@ -246,11 +241,10 @@ class createDatabase extends dialogViewModelBase {
 
         this.databaseModel.path.dataPath.throttle(300).subscribe((newPathValue) => {
             if (this.databaseModel.path.dataPath.isValid()) {
-                new getDatabaseLocationCommand(this.databaseModel.name(), newPathValue)
-                    .execute()
-                    .done((result: Raven.Server.Web.Studio.DataDirectoryResult) => this.updateDataDirectoryInfo(result));
+                this.updateDatabaseLocationInfo(this.databaseModel.name(), newPathValue);
             } else {
                 this.databaseLocationInfo([]);
+                this.spinners.databaseLocationInfoLoading(false);
             }
         });
 
@@ -294,6 +288,27 @@ class createDatabase extends dialogViewModelBase {
 
             return `${message} ${replicationFactor} of the following nodes:`;
         });
+    }
+
+    updateDatabaseLocationInfo(name: string, path: string) {
+        this.spinners.databaseLocationInfoLoading(true);
+
+        new getDatabaseLocationCommand(name, path)
+            .execute()
+            .done((result: Raven.Server.Web.Studio.DataDirectoryResult) => {
+                if (!this.spinners.databaseLocationInfoLoading()) {
+                    return;
+                }
+
+                if (this.databaseModel.name() !== name ||
+                    this.databaseModel.path.dataPath() !== path) {
+                    // the path and name were changed
+                    return;
+                }
+
+                this.databaseLocationInfo(result.List);
+            })
+            .always(() => this.spinners.databaseLocationInfoLoading(false));
     }
 
     getAvailableSections() {
