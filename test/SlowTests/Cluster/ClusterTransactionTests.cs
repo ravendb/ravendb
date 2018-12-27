@@ -648,7 +648,7 @@ namespace SlowTests.Cluster
         }
 
         [Fact]
-        public async Task ClusterTxWithCounters()
+        public async Task AddCounterAfterClusterTransaction()
         {
             using (var storeA = GetDocumentStore())
             {
@@ -661,7 +661,6 @@ namespace SlowTests.Cluster
                     await session.SaveChangesAsync();
                 }
 
-
                 using (var session = storeA.OpenAsyncSession())
                 {
                     session.CountersFor("users/1").Increment("likes", 10);
@@ -672,9 +671,44 @@ namespace SlowTests.Cluster
                 {
                     var user = await session.LoadAsync<User>("users/1");
                     var flags = session.Advanced.GetMetadataFor(user)[Constants.Documents.Metadata.Flags];
-                    var list = session.Advanced.GetCountersFor(user);
+                    var counters = await session.CountersFor("users/1").GetAsync(new[]{"likes"});
                     Assert.Equal((DocumentFlags.HasCounters).ToString(), flags);
-                    Assert.Equal(1, list.Count);
+                    Assert.Equal(1, counters.Count);
+                    Assert.Equal(10, counters["likes"]);
+                }
+            }
+        }
+
+        [Fact]
+        public async Task PreserveCounterAfterClusterTransaction()
+        {
+            using (var storeA = GetDocumentStore())
+            {
+
+                using (var session = storeA.OpenAsyncSession())
+                {
+                    await session.StoreAsync(new User { Name = "Aviv1" }, "users/1");
+                    session.CountersFor("users/1").Increment("likes", 10);
+                    await session.SaveChangesAsync();
+                }
+
+                using (var session = storeA.OpenAsyncSession(new SessionOptions
+                {
+                    TransactionMode = TransactionMode.ClusterWide
+                }))
+                {
+                    await session.StoreAsync(new User { Name = "Aviv2" }, "users/1");
+                    await session.SaveChangesAsync();
+                }
+
+                using (var session = storeA.OpenAsyncSession())
+                {
+                    var user = await session.LoadAsync<User>("users/1");
+                    var flags = session.Advanced.GetMetadataFor(user)[Constants.Documents.Metadata.Flags];
+                    var counters = await session.CountersFor("users/1").GetAsync(new[] { "likes" });
+                    Assert.Equal((DocumentFlags.HasCounters | DocumentFlags.FromClusterTransaction).ToString(), flags);
+                    Assert.Equal(1, counters.Count);
+                    Assert.Equal(10, counters["likes"]);
                 }
             }
         }

@@ -102,7 +102,7 @@ namespace Raven.Server.Documents
                     if (nonPersistentFlags.Contain(NonPersistentDocumentFlags.FromReplication) == false)
                     {
                         if (nonPersistentFlags.Contain(NonPersistentDocumentFlags.ByAttachmentUpdate) == false &&
-                            oldFlags .Contain(DocumentFlags.HasAttachments))
+                            oldFlags.Contain(DocumentFlags.HasAttachments))
                         {
                             flags |= DocumentFlags.HasAttachments;
                         }
@@ -136,8 +136,7 @@ namespace Raven.Server.Documents
                     flags |= DocumentFlags.Resolved;
                 }
 
-                if (collectionName.IsHiLo == false &&
-                    (flags & DocumentFlags.Artificial) != DocumentFlags.Artificial)
+                if (collectionName.IsHiLo == false && flags.Contain(DocumentFlags.Artificial) == false)
                 {
                     if (ShouldRecreateAttachments(context, lowerId, oldDoc, document, ref flags, nonPersistentFlags))
                     {
@@ -378,24 +377,25 @@ namespace Raven.Server.Documents
                                             ". Identities are only generated for external requests, not calls to PutDocument and such.");
         }
 
-        private void RecreateAttachments(DocumentsOperationContext context, Slice lowerId, BlittableJsonReaderObject document,
+        private bool RecreateAttachments(DocumentsOperationContext context, Slice lowerId, BlittableJsonReaderObject document,
             BlittableJsonReaderObject metadata, ref DocumentFlags flags)
         {
             var actualAttachments = _documentsStorage.AttachmentsStorage.GetAttachmentsMetadataForDocument(context, lowerId);
             if (actualAttachments.Count == 0)
             {
-                if (metadata != null)
-                {
-                    metadata.Modifications = new DynamicJsonValue(metadata);
-                    metadata.Modifications.Remove(Constants.Documents.Metadata.Attachments);
-                    document.Modifications = new DynamicJsonValue(document)
-                    {
-                        [Constants.Documents.Metadata.Key] = metadata
-                    };
-                }
-
                 flags &= ~DocumentFlags.HasAttachments;
-                return;
+                var attachmentsKey = context.GetLazyStringForFieldWithCaching(Constants.Documents.Metadata.Attachments);
+                if (metadata?.Contains(attachmentsKey) != true)
+                    return false;
+
+                metadata.Modifications = new DynamicJsonValue(metadata);
+                metadata.Modifications.Remove(Constants.Documents.Metadata.Attachments);
+                document.Modifications = new DynamicJsonValue(document)
+                {
+                    [Constants.Documents.Metadata.Key] = metadata
+                };
+                return true;
+
             }
 
             flags |= DocumentFlags.HasAttachments;
@@ -420,16 +420,18 @@ namespace Raven.Server.Documents
                     [Constants.Documents.Metadata.Key] = metadata
                 };
             }
+
+            return true;
         }
 
         private bool ShouldRecreateAttachments(DocumentsOperationContext context, Slice lowerId, BlittableJsonReaderObject oldDoc,
             BlittableJsonReaderObject document, ref DocumentFlags flags, NonPersistentDocumentFlags nonPersistentFlags)
         {
-            if ((nonPersistentFlags & NonPersistentDocumentFlags.ResolveAttachmentsConflict) == NonPersistentDocumentFlags.ResolveAttachmentsConflict)
+            if (nonPersistentFlags.Contain(NonPersistentDocumentFlags.ResolveAttachmentsConflict) ||
+                nonPersistentFlags.Contain(NonPersistentDocumentFlags.PreserveAttachments))
             {
                 document.TryGet(Constants.Documents.Metadata.Key, out BlittableJsonReaderObject metadata);
-                RecreateAttachments(context, lowerId, document, metadata, ref flags);
-                return true;
+                return RecreateAttachments(context, lowerId, document, metadata, ref flags);
             }
 
             if ((flags & DocumentFlags.HasAttachments) == DocumentFlags.HasAttachments &&
@@ -447,8 +449,7 @@ namespace Raven.Server.Documents
                         metadata.TryGet(Constants.Documents.Metadata.Attachments, out BlittableJsonReaderArray attachments) == false ||
                         attachments.Equals(oldAttachments) == false)
                     {
-                        RecreateAttachments(context, lowerId, document, metadata, ref flags);
-                        return true;
+                        return RecreateAttachments(context, lowerId, document, metadata, ref flags);
                     }
                 }
             }
@@ -456,7 +457,7 @@ namespace Raven.Server.Documents
             return false;
         }
 
-        private void RecreateCounters(DocumentsOperationContext context, string id, BlittableJsonReaderObject document,
+        private bool RecreateCounters(DocumentsOperationContext context, string id, BlittableJsonReaderObject document,
             BlittableJsonReaderObject metadata, ref DocumentFlags flags)
         {
             var countersStorage = context.DocumentDatabase.DocumentsStorage.CountersStorage;
@@ -464,18 +465,19 @@ namespace Raven.Server.Documents
 
             if (onDiskCounters.Count == 0)
             {
-                if (metadata != null)
-                {
-                    metadata.Modifications = new DynamicJsonValue(metadata);
-                    metadata.Modifications.Remove(Constants.Documents.Metadata.Counters);
-                    document.Modifications = new DynamicJsonValue(document)
-                    {
-                        [Constants.Documents.Metadata.Key] = metadata
-                    };
-                }
-
                 flags &= ~DocumentFlags.HasCounters;
-                return;
+                var counterKeyString = context.GetLazyStringForFieldWithCaching(Constants.Documents.Metadata.Counters);
+                if (metadata?.Contains(counterKeyString) != true)
+                    return false;
+
+                metadata.Modifications = new DynamicJsonValue(metadata);
+                metadata.Modifications.Remove(Constants.Documents.Metadata.Counters);
+                document.Modifications = new DynamicJsonValue(document)
+                {
+                    [Constants.Documents.Metadata.Key] = metadata
+                };
+
+                return true;
             }
 
             flags |= DocumentFlags.HasCounters;
@@ -503,16 +505,18 @@ namespace Raven.Server.Documents
                 };
 
             }
+
+            return true;
         }
 
         private bool ShouldRecreateCounters(DocumentsOperationContext context, string id, BlittableJsonReaderObject oldDoc,
             BlittableJsonReaderObject document, ref DocumentFlags flags, NonPersistentDocumentFlags nonPersistentFlags)
         {
-            if ((nonPersistentFlags & NonPersistentDocumentFlags.ResolveCountersConflict) == NonPersistentDocumentFlags.ResolveCountersConflict)
+            if (nonPersistentFlags.Contain(NonPersistentDocumentFlags.ResolveCountersConflict) || 
+                flags.Contain(DocumentFlags.FromClusterTransaction))
             {
                 document.TryGet(Constants.Documents.Metadata.Key, out BlittableJsonReaderObject metadata);
-                RecreateCounters(context, id, document, metadata, ref flags);
-                return true;
+                return RecreateCounters(context, id, document, metadata, ref flags);
             }
 
             if ((flags & DocumentFlags.HasCounters) == DocumentFlags.HasCounters &&
@@ -531,8 +535,7 @@ namespace Raven.Server.Documents
                         counters.Length != oldCounters.Length ||
                         !counters.All(oldCounters.Contains) )
                     {
-                        RecreateCounters(context, id, document, metadata, ref flags);
-                        return true;
+                        return RecreateCounters(context, id, document, metadata, ref flags);
                     }
                 }
             }

@@ -696,7 +696,7 @@ namespace Raven.Server.Documents
             public Tombstone Tombstone;
             public bool Missing => Document == null && Tombstone == null;
         }
-
+        
         public DocumentOrTombstone GetDocumentOrTombstone(DocumentsOperationContext context, Slice lowerId, bool throwOnConflict = true)
         {
             if (context.Transaction == null)
@@ -1222,11 +1222,13 @@ namespace Raven.Server.Documents
 
                 table.Delete(doc.StorageId);
 
-                if ((flags & DocumentFlags.HasAttachments) == DocumentFlags.HasAttachments)
+                if (flags.Contain(DocumentFlags.HasAttachments) && 
+                    nonPersistentFlags.Contain(NonPersistentDocumentFlags.PreserveAttachments) == false)
                     AttachmentsStorage.DeleteAttachmentsOfDocument(context, lowerId, changeVector, modifiedTicks);
 
-
-                CountersStorage.DeleteCountersForDocument(context, id, collectionName);
+                if (flags.Contain(DocumentFlags.HasCounters) &&
+                    nonPersistentFlags.Contain(NonPersistentDocumentFlags.PreserveCounters) == false)
+                    CountersStorage.DeleteCountersForDocument(context, id, collectionName);
 
                 context.Transaction.AddAfterCommitNotification(new DocumentChange
                 {
