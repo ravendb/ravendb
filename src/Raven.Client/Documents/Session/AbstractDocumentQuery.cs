@@ -218,7 +218,10 @@ namespace Raven.Client.Documents.Session
 
         public IndexQuery GetIndexQuery()
         {
-            var query = ToString();
+            var serverVersion = TheSession.RequestExecutor.LastServerVersion;
+            var compatibilityMode = serverVersion != null && string.Compare(serverVersion, "4.2", StringComparison.Ordinal) < 0;
+
+            var query = ToString(compatibilityMode);
             var indexQuery = GenerateIndexQuery(query);
             BeforeQueryExecutedCallback?.Invoke(indexQuery);
 
@@ -1003,7 +1006,7 @@ Use session.Query<T>() instead of session.Advanced.DocumentQuery<T>. The session
 
         public void OrderBy(string field, string sorterName)
         {
-            if (string.IsNullOrWhiteSpace(sorterName)) 
+            if (string.IsNullOrWhiteSpace(sorterName))
                 throw new ArgumentException("Value cannot be null or whitespace.", nameof(sorterName));
 
             AssertNoRawQuery();
@@ -1025,7 +1028,7 @@ Use session.Query<T>() instead of session.Advanced.DocumentQuery<T>. The session
 
         public void OrderByDescending(string field, string sorterName)
         {
-            if (string.IsNullOrWhiteSpace(sorterName)) 
+            if (string.IsNullOrWhiteSpace(sorterName))
                 throw new ArgumentException("Value cannot be null or whitespace.", nameof(sorterName));
 
             AssertNoRawQuery();
@@ -1124,8 +1127,7 @@ Use session.Query<T>() instead of session.Advanced.DocumentQuery<T>. The session
             tokens.AddLast(whereToken);
         }
 
-        /// <inheritdoc />
-        public override string ToString()
+        private string ToString(bool compatibilityMode)
         {
             if (QueryRaw != null)
                 return QueryRaw;
@@ -1143,9 +1145,17 @@ Use session.Query<T>() instead of session.Advanced.DocumentQuery<T>. The session
             BuildLoad(queryText);
             BuildSelect(queryText);
             BuildInclude(queryText);
-            BuildPagination(queryText);
+
+            if (compatibilityMode == false)
+                BuildPagination(queryText);
 
             return queryText.ToString();
+        }
+
+        /// <inheritdoc />
+        public override string ToString()
+        {
+            return ToString(compatibilityMode: false);
         }
 
         private void BuildPagination(StringBuilder queryText)
