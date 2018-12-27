@@ -536,13 +536,13 @@ namespace Raven.Server.Documents
             });
         }
 
-        public void EnableTopologyChangeNotification()
+        public void SendSupportedFeatures()
         {
             _sendQueue.Enqueue(new ChangeValue
             {
                 ValueToSend = new DynamicJsonValue
                 {
-                    ["EnableTopologyChangeNotification"] = ""
+                    ["TopologyChange"] = "true"
                 },
                 AllowSkip = false
             });
