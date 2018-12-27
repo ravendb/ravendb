@@ -218,7 +218,7 @@ namespace Raven.Client.Documents.Session
 
         public IndexQuery GetIndexQuery()
         {
-            var serverVersion = TheSession.RequestExecutor.LastServerVersion;
+            var serverVersion = TheSession?.RequestExecutor?.LastServerVersion;
             var compatibilityMode = serverVersion != null && string.Compare(serverVersion, "4.2", StringComparison.Ordinal) < 0;
 
             var query = ToString(compatibilityMode);
