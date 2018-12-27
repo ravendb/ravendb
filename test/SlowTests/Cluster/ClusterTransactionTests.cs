@@ -6,6 +6,7 @@ using System.Threading;
 using System.Threading.Tasks;
 using FastTests.Server.Replication;
 using FastTests.Utils;
+using Raven.Client;
 using Raven.Client.Documents;
 using Raven.Client.Documents.Conventions;
 using Raven.Client.Documents.Indexes;
@@ -15,6 +16,7 @@ using Raven.Client.Documents.Smuggler;
 using Raven.Client.Exceptions;
 using Raven.Client.ServerWide;
 using Raven.Server.Config;
+using Raven.Server.Documents;
 using Raven.Server.Documents.Replication;
 using Raven.Server.ServerWide.Commands;
 using Raven.Server.ServerWide.Context;
@@ -642,6 +644,38 @@ namespace SlowTests.Cluster
                 var values = await session.Advanced.ClusterTransaction.GetCompareExchangeValuesAsync<User>(new[] { "usernames/ayende", "usernames/karmel", "usernames/grisha" });
                 Assert.Equal(3, values.Count);
                 Assert.Equal(user.Index, values["usernames/ayende"].Index);
+            }
+        }
+
+        [Fact]
+        public async Task ClusterTxWithCounters()
+        {
+            using (var storeA = GetDocumentStore())
+            {
+                using (var session = storeA.OpenAsyncSession(new SessionOptions
+                {
+                    TransactionMode = TransactionMode.ClusterWide
+                }))
+                {
+                    await session.StoreAsync(new User { Name = "Aviv1" }, "users/1");
+                    await session.SaveChangesAsync();
+                }
+
+
+                using (var session = storeA.OpenAsyncSession())
+                {
+                    session.CountersFor("users/1").Increment("likes", 10);
+                    await session.SaveChangesAsync();
+                }
+
+                using (var session = storeA.OpenAsyncSession())
+                {
+                    var user = await session.LoadAsync<User>("users/1");
+                    var flags = session.Advanced.GetMetadataFor(user)[Constants.Documents.Metadata.Flags];
+                    var list = session.Advanced.GetCountersFor(user);
+                    Assert.Equal((DocumentFlags.HasCounters).ToString(), flags);
+                    Assert.Equal(1, list.Count);
+                }
             }
         }
 
