@@ -220,7 +220,7 @@ include Lines.Product
 
                 using (var session = store.OpenSession())
                 {
-                    var res = session.Advanced.RawQuery<Order>(rawQuery).ToList();
+                    var _ = session.Advanced.RawQuery<Order>(rawQuery).ToList();
                     var numberOfRequests = session.Advanced.NumberOfRequests;
                     var products = session.Load<Product>(new[] { "products/28-A", "products/43-A", "products/77-A" });
                     Assert.Equal(products.Count, 3);
@@ -228,6 +228,63 @@ include Lines.Product
                     Assert.True(products.ContainsKey("products/43-A"));
                     Assert.True(products.ContainsKey("products/77-A"));
                     Assert.Equal(numberOfRequests, session.Advanced.NumberOfRequests);
+                }
+            }
+        }
+
+        [Fact]
+        public void Can_filter_source_node()
+        {
+            using (var store = GetDocumentStore())
+            {
+                CreateMoviesData(store);
+                using (var session = store.OpenSession())
+                {
+                    var movieIds = session.Advanced.RawQuery<JObject>(@"
+                        match(Users as u where id() = 'users/3')-[HasRated.Movie]->(Movies as m)
+                        select id(m) as MovieId
+                    ").ToArray().Select(x => x["MovieId"].Value<string>()).Distinct().ToArray();
+
+                    Assert.Contains("movies/3",movieIds);
+                    Assert.Equal(1, movieIds.Length);
+                }
+            }
+        }
+
+        [Fact]
+        public void Can_filter_destination_node()
+        {
+            using (var store = GetDocumentStore())
+            {
+                CreateMoviesData(store);
+                using (var session = store.OpenSession())
+                {
+                    var userIds = session.Advanced.RawQuery<JObject>(@"
+                        match(Users as u)-[HasRated.Movie]->(Movies as m where id() = 'movies/2')
+                        select id(u) as UserId
+                    ").ToArray().Select(x => x["UserId"].Value<string>()).Distinct().ToArray();
+
+                    Assert.DoesNotContain("users/3",userIds); //only user with Id == 'users/3' didn't rate 'movies/2'
+                    Assert.Equal(2, userIds.Length);
+                }
+            }
+        }
+
+        [Fact]
+        public void Can_filter_edge()
+        {
+            using (var store = GetDocumentStore())
+            {
+                CreateMoviesData(store);
+                using (var session = store.OpenSession())
+                {
+                    var userIds = session.Advanced.RawQuery<JObject>(@"
+                        match(Users as u)-[HasRated where Movie = 'movies/2' select Movie]->(Movies as m)
+                        select id(u) as UserId
+                    ").ToArray().Select(x => x["UserId"].Value<string>()).Distinct().ToArray();
+
+                    Assert.DoesNotContain("users/3",userIds); //only user with Id == 'users/3' didn't rate 'movies/2'
+                    Assert.Equal(2, userIds.Length);
                 }
             }
         }
