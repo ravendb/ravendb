@@ -46,7 +46,8 @@ namespace Raven.Server.Web.Studio
             {
                 NodeTag = _serverStore.NodeTag,
                 FullPath = realPath,
-                TotalFreeSpaceHumane = diskSpaceInfo?.TotalFreeSpace.ToString()
+                TotalFreeSpaceHumane = diskSpaceInfo?.TotalFreeSpace.ToString(),
+                TotalSpaceHumane = diskSpaceInfo?.TotalSize.ToString()
             };
 
             if (_getNodesInfo == false)
@@ -179,6 +180,8 @@ namespace Raven.Server.Web.Studio
 
         public string FullPath { get; set; }
 
+        public string TotalSpaceHumane { get; set; }
+
         public string TotalFreeSpaceHumane { get; set; }
 
         public DynamicJsonValue ToJson()
@@ -187,7 +190,8 @@ namespace Raven.Server.Web.Studio
             {
                 [nameof(NodeTag)] = NodeTag,
                 [nameof(FullPath)] = FullPath,
-                [nameof(TotalFreeSpaceHumane)] = TotalFreeSpaceHumane
+                [nameof(TotalFreeSpaceHumane)] = TotalFreeSpaceHumane,
+                [nameof(TotalSpaceHumane)] = TotalSpaceHumane
             };
         }
     }

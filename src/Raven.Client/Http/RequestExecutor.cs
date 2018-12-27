@@ -129,12 +129,12 @@ namespace Raven.Client.Http
         }
 
         private static HttpClient GetCachedOrCreateHttpClient(
-            ConcurrentDictionary<string, Lazy<HttpClient>> httpClientCache, 
-            X509Certificate2 certificate, 
+            ConcurrentDictionary<string, Lazy<HttpClient>> httpClientCache,
+            X509Certificate2 certificate,
             DocumentConventions conventions)
-         => httpClientCache.GetOrAdd(
-             certificate?.Thumbprint ?? string.Empty, 
-             new Lazy<HttpClient>(() => CreateClient(certificate, conventions))).Value;
+            => httpClientCache.GetOrAdd(
+                certificate?.Thumbprint ?? string.Empty,
+                new Lazy<HttpClient>(() => CreateClient(certificate, conventions))).Value;
 
         private static readonly Exception ServerCertificateCustomValidationCallbackRegistrationException;
 

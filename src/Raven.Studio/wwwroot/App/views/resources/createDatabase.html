@@ -367,18 +367,32 @@
             <div class="col-sm-12" data-bind="if: $root.databaseLocationInfoMessage">
                 <p class="text-info bg-info padding padding-sm">
                     <span data-bind="text: $root.databaseLocationInfoMessage"></span><br />
-                    <ul data-bind="foreach: $root.databaseLocationInfoToDisplay" class="text-info bg-info">
-                        <li>
-                            <small>
-                                Node Tag: <strong data-bind="text: NodeTag"></strong>
-                                <br />
-                                Path: <strong data-bind="text: FullPath"></strong>
-                                <span data-bind="if: TotalFreeSpaceHumane">
-                                    <br/>Free Disk Space: <strong data-bind="text: TotalFreeSpaceHumane"></strong>
-                                </span>
-                            </small>
-                        </li>
-                    </ul>
+                    <div data-bind="if: $root.spinners.databaseLocationInfoLoading">
+                        <span class="btn-spinner"></span>
+                    </div>
+                    <div data-bind="if: !$root.spinners.databaseLocationInfoLoading()">
+                        <ul data-bind="foreach: $root.databaseLocationInfoToDisplay" class="text-info bg-info">
+                            <li>
+                                <small>
+                                    Node Tag: <strong data-bind="text: NodeTag"></strong>
+                                    <br />
+                                    Path: <strong data-bind="text: FullPath"></strong>
+                                    <span>
+                                        <br />Free Disk Space:
+                                        <span data-bind="if: TotalFreeSpaceHumane">
+                                            <strong data-bind="text: TotalFreeSpaceHumane"></strong>
+                                        </span>
+                                        <span data-bind="if: TotalSpaceHumane">
+                                            (Total: <strong data-bind="text: TotalSpaceHumane"></strong>)
+                                        </span>
+                                        <span data-bind="if: !TotalFreeSpaceHumane">
+                                            <strong>(Path is unreachable)</strong>
+                                        </span>
+                                    </span>
+                                </small>
+                            </li>
+                        </ul>
+                    </div>
                 </p>
             </div>
         </div>
