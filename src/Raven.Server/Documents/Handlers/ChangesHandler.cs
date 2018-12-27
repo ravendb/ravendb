@@ -111,7 +111,7 @@ namespace Raven.Server.Documents.Handlers
                     var jsonParserState = new JsonParserState();
                     using (var parser = new UnmanagedJsonParser(context, jsonParserState, debugTag))
                     {
-                        connection.EnableTopologyChangeNotification();
+                        connection.SendSupportedFeatures();
 
                         var result = await receiveAsync;
                         Database.DatabaseShutdown.ThrowIfCancellationRequested();

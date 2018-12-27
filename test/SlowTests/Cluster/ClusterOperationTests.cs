@@ -7,14 +7,17 @@ using FastTests;
 using Raven.Client.Documents;
 using Raven.Client.Documents.Changes;
 using Raven.Client.Documents.Commands;
+using Raven.Client.Documents.Conventions;
 using Raven.Client.Exceptions;
+using Raven.Client.Http;
 using Raven.Client.ServerWide;
+using Raven.Client.ServerWide.Commands;
 using Raven.Client.ServerWide.Operations;
 using Raven.Server;
 using Raven.Server.Config;
-using Raven.Server.Utils;
 using Tests.Infrastructure;
 using Raven.Tests.Core.Utils.Entities;
+using Sparrow.Json;
 using Xunit;
 
 namespace SlowTests.Cluster
@@ -100,8 +103,6 @@ namespace SlowTests.Cluster
         [Fact]
         public async Task ChangesApiFailOver()
         {
-            DebuggerAttachedTimeout.DisableLongTimespan = true;
-
             var db = "Test";
             var topology = new DatabaseTopology
             {
@@ -142,21 +143,15 @@ namespace SlowTests.Cluster
 
                 Assert.Equal(list.Count, 1);
 
-                string currnetUrl = store.GetRequestExecutor().Url;
+                var currnetUrl = store.GetRequestExecutor().Url;
                 RavenServer toDispose = null;
-                foreach (var server in Servers)
-                {
-                    if (server.WebUrl == currnetUrl)
-                    {
-                        toDispose = server;
-                        break;
-                    }
-                }
+                RavenServer workingServer = null;
 
-                DisposeServerAndWaitForFinishOfDisposal(toDispose);
+                DisposeCurrentServer(currnetUrl, ref toDispose, ref workingServer);
+
                 await taskObservable.EnsureConnectedNow();
 
-                await Task.Delay(12000);
+                WaitForTopologyStabilization(db, workingServer, 1, 2);
 
                 using (var session = store.OpenAsyncSession())
                 {
@@ -166,24 +161,16 @@ namespace SlowTests.Cluster
                 Assert.Equal(list.Count, 2);
 
                 currnetUrl = store.GetRequestExecutor().Url;
-                foreach (var server in Servers)
-                {
-                    if (server.WebUrl == currnetUrl)
-                    {
-                        toDispose = server;
-                        break;
-                    }
-                }
+                DisposeCurrentServer(currnetUrl, ref toDispose, ref workingServer);
 
-                DisposeServerAndWaitForFinishOfDisposal(toDispose);
                 await taskObservable.EnsureConnectedNow();
 
-                await Task.Delay(500);
+                WaitForTopologyStabilization(db, workingServer, 2, 1);
 
-                using (var session = store.OpenAsyncSession())
+                using (var session = store.OpenSession())
                 {
-                    await session.StoreAsync(new User(), "users/1");
-                    await session.SaveChangesAsync();
+                    session.Store(new User(), "users/1");
+                    session.SaveChanges();
                 }
 
                 Assert.Equal(list.Count, 3);
@@ -193,8 +180,6 @@ namespace SlowTests.Cluster
         [Fact]
         public async Task ChangesApiReorderDatabaseNodes()
         {
-            DebuggerAttachedTimeout.DisableLongTimespan = true;
-
             var db = "ReorderDatabaseNodes";
             var leader = await CreateRaftClusterAndGetLeader(2);
             await CreateDatabaseInCluster(db, 2, leader.WebUrl);
@@ -211,28 +196,81 @@ namespace SlowTests.Cluster
                 observableWithTask.Subscribe(list.Add);
                 await observableWithTask.EnsureSubscribedNow();
 
-                using (var session = store.OpenAsyncSession())
+                using (var session = store.OpenSession())
                 {
-                    await session.StoreAsync(new User(), "users/1");
-                    await session.SaveChangesAsync();
+                    session.Store(new User(), "users/1");
+                    session.SaveChanges();
                 }
+                string url1 = store.GetRequestExecutor().Url;
+                Assert.True(WaitForDocument(store, "users/1"));
 
-                await Task.Delay(100);
                 Assert.Equal(list.Count, 1);
 
-                string url1 = store.GetRequestExecutor().Url;
+
                 await ReverseOrderSuccessfully(store, db);
 
-                await Task.Delay(500);
-
-                using (var session = store.OpenAsyncSession())
+                using (var session = store.OpenSession())
                 {
-                    await session.StoreAsync(new User(), "users/1");
-                    await session.SaveChangesAsync();
+                     session.Store(new User(), "users/1");
+                     session.SaveChanges();
                 }
                 Assert.Equal(list.Count, 2);
                 string url2 = store.GetRequestExecutor().Url;
                 Assert.NotEqual(url1, url2);
+            }
+        }
+
+        private void DisposeCurrentServer(string currnetUrl, ref RavenServer toDispose, ref RavenServer workingServer)
+        {
+            foreach (var server in Servers)
+            {
+                if (server.WebUrl == currnetUrl)
+                {
+                    toDispose = server;
+                    continue;
+                }
+                if (server.Disposed != true)
+                    workingServer = server;
+            }
+            DisposeServerAndWaitForFinishOfDisposal(toDispose);
+        }
+
+        public void WaitForTopologyStabilization(string s, RavenServer workingServer, int rehabCount, int memberCount)
+        {
+            using (var tempStore = new DocumentStore
+            {
+                Database = s,
+                Urls = new[] { workingServer.WebUrl },
+                Conventions = new DocumentConventions
+                    { DisableTopologyUpdates = true }
+            }.Initialize())
+            {
+                Topology topo;
+                using (var context = JsonOperationContext.ShortTermSingleUse())
+                {
+                    var value = WaitForValue(() =>
+                    {
+                        var topologyGetCommand = new GetDatabaseTopologyCommand();
+                        tempStore.GetRequestExecutor().Execute(topologyGetCommand, context);
+                        topo = topologyGetCommand.Result;
+                        int rehab = 0;
+                        int members = 0;
+                        topo.Nodes.ForEach(n =>
+                        {
+                            switch (n.ServerRole)
+                            {
+                                case ServerNode.Role.Rehab:
+                                    rehab++;
+                                    break;
+                                case ServerNode.Role.Member:
+                                    members++;
+                                    break;
+                            }
+                        });
+                        return new Tuple<int, int>(rehab, members);
+
+                    }, new Tuple<int, int>(rehabCount, memberCount));
+                }
             }
         }
 

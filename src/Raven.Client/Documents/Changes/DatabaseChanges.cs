@@ -477,7 +477,7 @@ namespace Raven.Client.Documents.Changes
                     {
                         ConnectionStatusChanged?.Invoke(this, EventArgs.Empty);
 
-                        _serverNode = await _requestExecutor.HandleServerDown(_url.AbsoluteUri, _serverNode, _nodeIndex, e).ConfigureAwait(false);
+                        _serverNode = await _requestExecutor.HandleServerNotResponsive(_url.AbsoluteUri, _serverNode, _nodeIndex, e).ConfigureAwait(false);
 
                         if (ReconnectClient() == false)
                             return;
@@ -560,9 +560,10 @@ namespace Raven.Client.Documents.Changes
 
                             try
                             {
-                                if (json.TryGet("EnableTopologyChangeNotification", out string ver))
+                                if ((json.TryGet("TopologyChange", out string change)) && (string.Equals(change,"true", StringComparison.OrdinalIgnoreCase)))
                                 {
                                     GetOrAddConnectionState("Topology", "watch-topology-change", "", "");
+                                    await _requestExecutor.UpdateTopologyAsync(_serverNode, 0, true).ConfigureAwait(false);
                                     continue;
                                 }
 

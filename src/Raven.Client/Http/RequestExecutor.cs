@@ -1096,8 +1096,9 @@ namespace Raven.Client.Http
             return true;
         }
 
-        public async Task<ServerNode> HandleServerDown(string url, ServerNode chosenNode, int nodeIndex, Exception e)
+        public async Task<ServerNode> HandleServerNotResponsive(string url, ServerNode chosenNode, int nodeIndex, Exception e)
         {
+            SpawnHealthChecks(chosenNode, nodeIndex);
             _nodeSelector?.OnFailedRequest(nodeIndex);
             var (_, serverNode) = await GetPreferredNode().ConfigureAwait(false);
             await UpdateTopologyAsync(serverNode, 0, true).ConfigureAwait(false);
