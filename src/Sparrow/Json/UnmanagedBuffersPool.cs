@@ -185,8 +185,6 @@ namespace Sparrow.Json
 
         public void Return(AllocatedMemoryData returned)
         {
-            GC.SuppressFinalize(returned);
-
 #if MEM_GUARD
             ElectricFencedMemory.Free(returned.Address);
 #else

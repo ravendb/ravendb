@@ -36,18 +36,17 @@ namespace Sparrow.Json
 
         private class ContextStackThreadReleaser
         {
-            private readonly JsonContextPoolBase<T> _parent;
+            private HashSet<JsonContextPoolBase<T>> _parents = new HashSet<JsonContextPoolBase<T>>();
             int _threadId;
             public ThreadIdHolder ThreadIdHolder;
 
-            public ContextStackThreadReleaser(JsonContextPoolBase<T> parent)
+            public ContextStackThreadReleaser()
             {
                 _threadId = NativeMemory.CurrentThreadStats.Id;
                 ThreadIdHolder = new ThreadIdHolder
                 {
                     ThreadId = _threadId
                 };
-                _parent = parent;
             }
 
             ~ContextStackThreadReleaser()
@@ -57,7 +56,15 @@ namespace Sparrow.Json
                 // it is possible that the pool is no longer referenced and was collected, and as such
                 // the finalizers for the context stack values were already run, if not, they will run soon
                 // anyway, so we just clear it.
-                _parent._contextStacksByThreadId.TryRemove(_threadId, out var contextStack);
+                foreach (var parent in _parents)
+                {
+                    parent._contextStacksByThreadId.TryRemove(_threadId, out var contextStack);
+                }
+            }
+
+            public bool Add(JsonContextPoolBase<T> parent)
+            {
+                return _parents.Add(parent);
             }
         }
 
@@ -65,15 +72,18 @@ namespace Sparrow.Json
         private static ContextStackThreadReleaser _releaser;
         
 
-        private void EnsureCurrentThreadContextWillBeReleased()
+        private void EnsureCurrentThreadContextWillBeReleased(int currentThreadId)
         {
-            if (_releaser != null)
+            if (_releaser == null)
+            {
+                _releaser = new ContextStackThreadReleaser();
+            }
+
+            if (_releaser.Add(this) == false)
                 return;
-            _releaser = new ContextStackThreadReleaser(this);
 
             while (true)
             {
-                var currentThreadId = NativeMemory.CurrentThreadStats.Id;
                 var copy = _threadIds;
                 for (int i = 0; i < copy.Length; i++)
                 {
@@ -141,9 +151,9 @@ namespace Sparrow.Json
         private ContextStack GetCurrentContextStack()
         {
             return _contextStacksByThreadId.GetOrAdd(NativeMemory.CurrentThreadStats.Id, 
-                _=>
+                currentThreadId =>
                 {
-                    EnsureCurrentThreadContextWillBeReleased();
+                    EnsureCurrentThreadContextWillBeReleased(currentThreadId);
                     var ctx =  _contextStackPool.Allocate();
                     ctx.AvoidWorkStealing = JsonContextPoolWorkStealing.AvoidForCurrentThread;
                     return ctx;
@@ -285,8 +295,6 @@ namespace Sparrow.Json
             {
                 if (Parent == null)
                     return;// disposed already
-
-                GC.SuppressFinalize(this);
 
                 if (Context.DoNotReuse)
                 {

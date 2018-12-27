@@ -730,9 +730,7 @@ namespace Sparrow
         public void Reset()
         {
             if (_disposed)
-            {
-                if (_isFinalizerThread)
-                    return;
+            {                
                 ThrowObjectDisposed();
             }
                 
@@ -1580,8 +1578,7 @@ namespace Sparrow
                 _internalReadyToUseMemorySegments.Clear();
             }
         }
-
-        [ThreadStatic] private static bool _isFinalizerThread;
+        
         private readonly SharedMultipleUseFlag _lowMemoryFlag;
 
         private void ReleaseSegment(SegmentInformation segment)
@@ -1592,8 +1589,7 @@ namespace Sparrow
             _totalAllocated -= segment.Size;
 
             // Check if we can release this memory segment back to the pool.
-            if (_isFinalizerThread || 
-                segment.Memory.Size > ByteStringContext.MaxAllocationBlockSizeInBytes ||
+            if (segment.Memory.Size > ByteStringContext.MaxAllocationBlockSizeInBytes ||
                 _lowMemoryFlag)
             {
                 segment.Memory.Dispose();
