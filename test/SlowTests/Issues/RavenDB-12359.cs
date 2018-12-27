@@ -16,7 +16,9 @@ namespace SlowTests.Issues
         private class WithHasValue
         {
             public bool? HasValue;
+#pragma warning disable 649
             public object SomeProp;
+#pragma warning restore 649
         }
 
         private void Setup(IDocumentStore store)
