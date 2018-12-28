@@ -138,5 +138,21 @@ namespace Raven.Client.Documents.Session
             // as an id
 
         }
+
+        internal static bool RequiresQuotes(string include, out string escapedInclude)
+        {
+            for (var i = 0; i < include.Length; i++)
+            {
+                var ch = include[i];
+                if (char.IsLetterOrDigit(ch) == false && ch != '_' && ch != '.')
+                {
+                    escapedInclude = include.Replace("'", "\\'");
+                    return true;
+                }
+            }
+
+            escapedInclude = null;
+            return false;
+        }
     }
 }

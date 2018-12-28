@@ -12,6 +12,7 @@ using System.Threading;
 using System.Threading.Tasks;
 using Lambda2Js;
 using Raven.Client.Documents.Commands;
+using Raven.Client.Documents.Session;
 using Raven.Client.Documents.Session.Loaders;
 using Raven.Client.Extensions;
 using Raven.Client.Util;
@@ -171,24 +172,11 @@ namespace Raven.Client.Documents.Subscriptions
                         if (first == false)
                             criteria.Query += ",";
                         first = false;
-                        var requiredQuotes = false;
-                        for (int i = 0; i < include.Length; i++)
-                        {
-                            var ch = include[i];
-                            if (char.IsLetterOrDigit(ch) == false && ch != '_' && ch != '.')
-                            {
-                                requiredQuotes = true;
-                                break;
-                            }
-                        }
-                        if (requiredQuotes)
-                        {
-                            criteria.Query += $"'{include.Replace("'", "\\'")}'";
-                        }
+
+                        if (IncludesUtil.RequiresQuotes(include, out var escapedInclude))
+                            criteria.Query += $"'{escapedInclude}'";
                         else
-                        {
                             criteria.Query += include;
-                        }
                     }
                 }
             }
