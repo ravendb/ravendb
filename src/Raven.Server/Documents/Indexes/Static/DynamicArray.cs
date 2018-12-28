@@ -26,7 +26,6 @@ namespace Raven.Server.Documents.Indexes.Static
 
         public int Count => _inner.Count();
 
-
         public dynamic Get(params int[] indexes)
         {
             if (indexes == null)
@@ -571,6 +570,11 @@ namespace Raven.Server.Documents.Indexes.Static
         public long LongCount()
         {
             return Enumerable.LongCount(this);
+        }
+
+        public long LongCount(Func<dynamic, bool> predicate)
+        {
+            return Enumerable.LongCount(this, predicate);
         }
 
         public dynamic Aggregate(Func<dynamic, dynamic, dynamic> func)
