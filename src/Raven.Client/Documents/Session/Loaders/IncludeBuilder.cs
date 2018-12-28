@@ -6,14 +6,8 @@ using Raven.Client.Extensions;
 
 namespace Raven.Client.Documents.Session.Loaders
 {
-    public interface IIncludeBuilder<T, out TBuilder>
+    public interface IDocumentIncludeBuilder<T, out TBuilder>
     {
-        TBuilder IncludeCounter(string name);
-
-        TBuilder IncludeCounters(string[] names);
-
-        TBuilder IncludeAllCounters();
-
         TBuilder IncludeDocuments(string path);
 
         TBuilder IncludeDocuments(Expression<Func<T, string>> path);
@@ -25,7 +19,24 @@ namespace Raven.Client.Documents.Session.Loaders
         TBuilder IncludeDocuments<TInclude>(Expression<Func<T, IEnumerable<string>>> path);
     }
 
+    public interface ICounterIncludeBuilder<T, out TBuilder>
+    {
+        TBuilder IncludeCounter(string name);
+
+        TBuilder IncludeCounters(string[] names);
+
+        TBuilder IncludeAllCounters();
+    }
+
+    public interface IIncludeBuilder<T, out TBuilder> : IDocumentIncludeBuilder<T, TBuilder>, ICounterIncludeBuilder<T, TBuilder>
+    {
+    }
+
     public interface IIncludeBuilder<T> : IIncludeBuilder<T, IIncludeBuilder<T>>
+    {
+    }
+
+    public interface ISubscriptionIncludeBuilder<T> : IDocumentIncludeBuilder<T, ISubscriptionIncludeBuilder<T>>
     {
     }
 
@@ -71,7 +82,7 @@ namespace Raven.Client.Documents.Session.Loaders
         internal Dictionary<string, (bool AllCounters, HashSet<string> CountersToInclude)> CountersToIncludeBySourcePath;
     }
 
-    internal class IncludeBuilder<T> : IncludeBuilder, IQueryIncludeBuilder<T>, IIncludeBuilder<T>
+    internal class IncludeBuilder<T> : IncludeBuilder, IQueryIncludeBuilder<T>, IIncludeBuilder<T>, ISubscriptionIncludeBuilder<T>
     {
         private readonly DocumentConventions _conventions;
 
@@ -98,97 +109,127 @@ namespace Raven.Client.Documents.Session.Loaders
             return this;
         }
 
-        IQueryIncludeBuilder<T> IIncludeBuilder<T, IQueryIncludeBuilder<T>>.IncludeCounter(string name)
+        IQueryIncludeBuilder<T> ICounterIncludeBuilder<T, IQueryIncludeBuilder<T>>.IncludeCounter(string name)
         {
             IncludeCounter(string.Empty, name);
             return this;
         }
 
-        IQueryIncludeBuilder<T> IIncludeBuilder<T, IQueryIncludeBuilder<T>>.IncludeCounters(string[] names)
+        IQueryIncludeBuilder<T> ICounterIncludeBuilder<T, IQueryIncludeBuilder<T>>.IncludeCounters(string[] names)
         {
             IncludeCounters(string.Empty, names);
             return this;
         }
 
-        IQueryIncludeBuilder<T> IIncludeBuilder<T, IQueryIncludeBuilder<T>>.IncludeAllCounters()
+        IQueryIncludeBuilder<T> ICounterIncludeBuilder<T, IQueryIncludeBuilder<T>>.IncludeAllCounters()
         {
             IncludeAllCounters(string.Empty);
             return this;
         }
 
-        IQueryIncludeBuilder<T> IIncludeBuilder<T, IQueryIncludeBuilder<T>>.IncludeDocuments(string path)
+        ISubscriptionIncludeBuilder<T> IDocumentIncludeBuilder<T, ISubscriptionIncludeBuilder<T>>.IncludeDocuments(Expression<Func<T, string>> path)
+        {
+            IncludeDocuments(path.ToPropertyPath());
+            return this;
+        }
+
+        ISubscriptionIncludeBuilder<T> IDocumentIncludeBuilder<T, ISubscriptionIncludeBuilder<T>>.IncludeDocuments(Expression<Func<T, IEnumerable<string>>> path)
+        {
+            IncludeDocuments(path.ToPropertyPath());
+            return this;
+        }
+
+        ISubscriptionIncludeBuilder<T> IDocumentIncludeBuilder<T, ISubscriptionIncludeBuilder<T>>.IncludeDocuments<TInclude>(Expression<Func<T, string>> path)
+        {
+            IncludeDocuments(IncludesUtil.GetPrefixedIncludePath<TInclude>(path.ToPropertyPath(), _conventions));
+            return this;
+        }
+
+        ISubscriptionIncludeBuilder<T> IDocumentIncludeBuilder<T, ISubscriptionIncludeBuilder<T>>.IncludeDocuments<TInclude>(Expression<Func<T, IEnumerable<string>>> path)
+        {
+            IncludeDocuments(IncludesUtil.GetPrefixedIncludePath<TInclude>(path.ToPropertyPath(), _conventions));
+            return this;
+        }
+
+        ISubscriptionIncludeBuilder<T> IDocumentIncludeBuilder<T, ISubscriptionIncludeBuilder<T>>.IncludeDocuments(string path)
         {
             IncludeDocuments(path);
             return this;
         }
 
-        IQueryIncludeBuilder<T> IIncludeBuilder<T, IQueryIncludeBuilder<T>>.IncludeDocuments(Expression<Func<T, string>> path)
+        IQueryIncludeBuilder<T> IDocumentIncludeBuilder<T, IQueryIncludeBuilder<T>>.IncludeDocuments(Expression<Func<T, string>> path)
         {
             IncludeDocuments(path.ToPropertyPath());
             return this;
         }
 
-        IQueryIncludeBuilder<T> IIncludeBuilder<T, IQueryIncludeBuilder<T>>.IncludeDocuments(Expression<Func<T, IEnumerable<string>>> path)
+        IQueryIncludeBuilder<T> IDocumentIncludeBuilder<T, IQueryIncludeBuilder<T>>.IncludeDocuments(Expression<Func<T, IEnumerable<string>>> path)
         {
             IncludeDocuments(path.ToPropertyPath());
             return this;
         }
 
-        IQueryIncludeBuilder<T> IIncludeBuilder<T, IQueryIncludeBuilder<T>>.IncludeDocuments<TInclude>(Expression<Func<T, string>> path)
+        IQueryIncludeBuilder<T> IDocumentIncludeBuilder<T, IQueryIncludeBuilder<T>>.IncludeDocuments<TInclude>(Expression<Func<T, string>> path)
         {
             IncludeDocuments(IncludesUtil.GetPrefixedIncludePath<TInclude>(path.ToPropertyPath(), _conventions));
             return this;
         }
 
-        IQueryIncludeBuilder<T> IIncludeBuilder<T, IQueryIncludeBuilder<T>>.IncludeDocuments<TInclude>(Expression<Func<T, IEnumerable<string>>> path)
+        IQueryIncludeBuilder<T> IDocumentIncludeBuilder<T, IQueryIncludeBuilder<T>>.IncludeDocuments<TInclude>(Expression<Func<T, IEnumerable<string>>> path)
         {
             IncludeDocuments(IncludesUtil.GetPrefixedIncludePath<TInclude>(path.ToPropertyPath(), _conventions));
             return this;
         }
 
-        IIncludeBuilder<T> IIncludeBuilder<T, IIncludeBuilder<T>>.IncludeCounter(string name)
+        IQueryIncludeBuilder<T> IDocumentIncludeBuilder<T, IQueryIncludeBuilder<T>>.IncludeDocuments(string path)
+        {
+            IncludeDocuments(path);
+            return this;
+        }
+
+        IIncludeBuilder<T> ICounterIncludeBuilder<T, IIncludeBuilder<T>>.IncludeCounter(string name)
         {
             IncludeCounter(string.Empty, name);
             return this;
         }
 
-        IIncludeBuilder<T> IIncludeBuilder<T, IIncludeBuilder<T>>.IncludeCounters(string[] names)
+        IIncludeBuilder<T> ICounterIncludeBuilder<T, IIncludeBuilder<T>>.IncludeCounters(string[] names)
         {
             IncludeCounters(string.Empty, names);
             return this;
         }
 
-        IIncludeBuilder<T> IIncludeBuilder<T, IIncludeBuilder<T>>.IncludeAllCounters()
+        IIncludeBuilder<T> ICounterIncludeBuilder<T, IIncludeBuilder<T>>.IncludeAllCounters()
         {
             IncludeAllCounters(string.Empty);
             return this;
         }
 
-        IIncludeBuilder<T> IIncludeBuilder<T, IIncludeBuilder<T>>.IncludeDocuments(string path)
+        IIncludeBuilder<T> IDocumentIncludeBuilder<T, IIncludeBuilder<T>>.IncludeDocuments(string path)
         {
             IncludeDocuments(path);
             return this;
         }
 
-        IIncludeBuilder<T> IIncludeBuilder<T, IIncludeBuilder<T>>.IncludeDocuments(Expression<Func<T, string>> path)
+        IIncludeBuilder<T> IDocumentIncludeBuilder<T, IIncludeBuilder<T>>.IncludeDocuments(Expression<Func<T, string>> path)
         {
             IncludeDocuments(path.ToPropertyPath());
             return this;
         }
 
-        IIncludeBuilder<T> IIncludeBuilder<T, IIncludeBuilder<T>>.IncludeDocuments(Expression<Func<T, IEnumerable<string>>> path)
+        IIncludeBuilder<T> IDocumentIncludeBuilder<T, IIncludeBuilder<T>>.IncludeDocuments(Expression<Func<T, IEnumerable<string>>> path)
         {
             IncludeDocuments(path.ToPropertyPath());
             return this;
         }
 
-        IIncludeBuilder<T> IIncludeBuilder<T, IIncludeBuilder<T>>.IncludeDocuments<TInclude>(Expression<Func<T, string>> path)
+        IIncludeBuilder<T> IDocumentIncludeBuilder<T, IIncludeBuilder<T>>.IncludeDocuments<TInclude>(Expression<Func<T, string>> path)
         {
             IncludeDocuments(IncludesUtil.GetPrefixedIncludePath<TInclude>(path.ToPropertyPath(), _conventions));
             return this;
         }
 
-        IIncludeBuilder<T> IIncludeBuilder<T, IIncludeBuilder<T>>.IncludeDocuments<TInclude>(Expression<Func<T, IEnumerable<string>>> path)
+        IIncludeBuilder<T> IDocumentIncludeBuilder<T, IIncludeBuilder<T>>.IncludeDocuments<TInclude>(Expression<Func<T, IEnumerable<string>>> path)
         {
             IncludeDocuments(IncludesUtil.GetPrefixedIncludePath<TInclude>(path.ToPropertyPath(), _conventions));
             return this;
