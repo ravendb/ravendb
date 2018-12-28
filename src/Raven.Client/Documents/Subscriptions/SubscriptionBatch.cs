@@ -20,6 +20,7 @@ namespace Raven.Client.Documents.Subscriptions
             public string ExceptionMessage { get; internal set; }
             public string Id { get; internal set; }
             public string ChangeVector { get; internal set; }
+            public bool Projection { get; internal set; }
 
             private void ThrowItemProcessException()
             {
@@ -139,6 +140,9 @@ namespace Raven.Client.Documents.Subscriptions
 
             foreach (var item in Items)
             {
+                if (item.Projection)
+                    continue;
+
                 s.RegisterExternalLoadedIntoTheSession(new DocumentInfo
                 {
                     Id = item.Id,
@@ -182,6 +186,8 @@ namespace Raven.Client.Documents.Subscriptions
                 else
                     lastReceivedChangeVector = changeVector;
 
+                metadata.TryGet(Constants.Documents.Metadata.Projection, out bool projection);
+
                 if (_logger.IsInfoEnabled)
                 {
                     _logger.Info($"Got {id} (change vector: [{lastReceivedChangeVector}], size {curDoc.Size}");
@@ -211,7 +217,8 @@ namespace Raven.Client.Documents.Subscriptions
                     RawResult = curDoc,
                     RawMetadata = metadata,
                     Result = instance,
-                    ExceptionMessage = item.Exception
+                    ExceptionMessage = item.Exception,
+                    Projection = projection
                 });
             }
             return lastReceivedChangeVector;
