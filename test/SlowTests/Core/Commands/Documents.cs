@@ -141,7 +141,7 @@ namespace SlowTests.Core.Commands
                     operation.WaitForCompletion(TimeSpan.FromSeconds(15));
 
                     var documents = await commands.GetAsync(0, 25);
-                    Assert.Equal(0, documents.Count);
+                    Assert.Equal(0, documents.Length);
                 }
             }
         }

@@ -38,7 +38,7 @@ namespace SlowTests.Issues
                     {
                         @"
 from doc in docs.Users
-let c = doc.Names.Where(x => x is string).Count
+let c = doc.Names.Where(x => x is string).Count()
 where c > 0
 select new
 {
