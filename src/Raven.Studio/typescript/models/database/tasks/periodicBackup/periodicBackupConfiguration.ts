@@ -90,11 +90,7 @@ class periodicBackupConfiguration {
 
         this.updateFolderPathOptions(folderPath);
 
-        this.initObservables();
-    }
-
-    private initObservables() {
-        this.encryptionSettings(new encryptionSettings(encryptedDatabase, serverLimits.EnableUnencryptedBackupForEncryptedDatabase, this.backupType, dto.EncryptionSettings));
+        this.encryptionSettings(new encryptionSettings(encryptedDatabase, this.backupType, dto.EncryptionSettings));
         
         this.fullBackupHumanReadable = ko.pureComputed(() => {
             return periodicBackupConfiguration.getHumanReadable(
