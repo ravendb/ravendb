@@ -12,13 +12,15 @@ class encryptionSettings {
     key = ko.observable<string>();
     keyConfirmation = ko.observable<boolean>(false);
 
-    enableUnencryptedBackupForEncryptedDatabase: boolean;
+    allowUnencryptedBackupForEncryptedDatabase = ko.observable<boolean>(false);
 
     canProvideOwnKey: KnockoutComputed<boolean>;
     canUseDatabaseKey: KnockoutComputed<boolean>;
     showKeySourceDropdown: KnockoutComputed<boolean>;
     enableKeySourceDropdown: KnockoutComputed<boolean>;
     showProvidedKeySection: KnockoutComputed<boolean>;
+    
+    needExplicitConsent = ko.pureComputed(() => !this.enabled() && this.encryptedDatabase());
     
     dirtyFlag: () => DirtyFlag;
     
@@ -35,12 +37,11 @@ class encryptionSettings {
 
     validationGroup: KnockoutValidationGroup;
     
-    constructor(encryptedDatabase: boolean, enableUnencryptedBackupForEncryptedDatabase: boolean, 
+    constructor(encryptedDatabase: boolean,
                 backupType: KnockoutObservable<Raven.Client.Documents.Operations.Backups.BackupType>, 
                 dto: Raven.Client.Documents.Operations.Backups.EncryptionSettings) {
         this.encryptedDatabase(encryptedDatabase);
         this.backupType = backupType;
-        this.enableUnencryptedBackupForEncryptedDatabase = enableUnencryptedBackupForEncryptedDatabase;
         
         this.enabled(encryptedDatabase);
         this.key(dto ? dto.Key : undefined);
@@ -55,6 +56,7 @@ class encryptionSettings {
         this.dirtyFlag = new ko.DirtyFlag([
             this.enabled,
             this.mode,
+            this.allowUnencryptedBackupForEncryptedDatabase,
             this.key
         ], false, jsonUtil.newLineNormalizingHashFunction);
         
@@ -109,7 +111,15 @@ class encryptionSettings {
             const mode = this.mode();
             return encryptBackup && type === "Backup" && mode === "UseProvidedKey";
         });
-        
+
+        this.allowUnencryptedBackupForEncryptedDatabase.extend({
+            validation: [{
+                validator: (v: boolean) => this.needExplicitConsent() ? v : true,
+                message: "Please confirm you want to perform unencrypted backup of encrypted database"
+            }]
+        });
+
+
         const self = this;
         this.enabled.extend({
             validation: [{
@@ -122,12 +132,7 @@ class encryptionSettings {
                                     this.message = "A 'Snapshot' backup-type was selected. An Unencrypted backup can only be defined for Encrypted databases when a 'Backup' backup-type is selected.";
                                     return false;
                                 case "Backup":
-                                    if (self.enableUnencryptedBackupForEncryptedDatabase) {
-                                        return true;
-                                    } else {
-                                        this.message = "Your database is Encrypted. In order to create an Unencrypted backup, option 'Backup.EnableUnencryptedBackupForEncryptedDatabase' must be enabled by the system administrator. "; 
-                                        return false;
-                                    }
+                                    return true;
                             }
                         }
                     } else {
@@ -147,14 +152,15 @@ class encryptionSettings {
                 onlyIf: () => this.canProvideOwnKey() && this.mode() === "UseProvidedKey"
             }
         });
-
+        
         setupEncryptionKey.setupKeyValidation(this.key);
         setupEncryptionKey.setupConfirmationValidation(this.keyConfirmation);
 
         this.validationGroup = ko.validatedObservable({
             key: this.key,
             mode: this.mode,
-            keyConfirmation: this.keyConfirmation
+            keyConfirmation: this.keyConfirmation,
+            allowUnencryptedBackupForEncryptedDatabase: this.allowUnencryptedBackupForEncryptedDatabase
         });
     }
 

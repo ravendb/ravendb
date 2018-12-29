@@ -17,11 +17,6 @@ namespace Raven.Server.Config.Categories
         [ConfigurationEntry("Backup.LocalRootPath", ConfigurationEntryScope.ServerWideOnly)]
         public PathSetting LocalRootPath { get; set; }
         
-        [Description("Allows to perform unencrypted backup of encrypted database")]
-        [DefaultValue(false)]
-        [ConfigurationEntry("Backup.EnableUnencryptedBackupForEncryptedDatabase", ConfigurationEntryScope.ServerWideOnly)]
-        public bool EnableUnencryptedBackupForEncryptedDatabase { get; set; }
-
         [Description("Semicolon seperated list of allowed backup destinations. If not specified, all destinations are allowed. Possible values: None, Local, Azure, AmazonGlacier, AmazonS3, FTP. Example list: \"Local;AmazonGlacier;AmazonS3\".")]
         [DefaultValue(null)]
         [ConfigurationEntry("Backup.AllowedDestinations", ConfigurationEntryScope.ServerWideOnly)]

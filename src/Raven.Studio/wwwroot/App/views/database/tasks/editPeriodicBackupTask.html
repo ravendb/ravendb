@@ -140,6 +140,18 @@
                 </div>
                 <span class="help-block" data-bind="validationMessage: enabled"></span>
             </div>
+
+            <div data-bind="collapse: needExplicitConsent">
+                <div class="flex-horizontal" data-bind="validationElement: allowUnencryptedBackupForEncryptedDatabase">
+                    <div class="toggle margin-right" data-bind="validationOptions: { insertMessages: false }">
+                        <input id="toggle-unencrypted-backup" type="checkbox" data-bind="checked: allowUnencryptedBackupForEncryptedDatabase">
+                        <label for="toggle-unencrypted-backup">Allow unencrypted backup for encrypted database</label>
+                    </div>
+                    <span class="help-block" data-bind="validationMessage: allowUnencryptedBackupForEncryptedDatabase"></span>
+                </div>    
+            </div>
+            
+            
             <div data-bind="collapse: showKeySourceDropdown()">
                 <div class="row flex-row margin-bottom" data-bind="validationElement: mode">
                     <label class="control-label col-sm-4 col-lg-2">Encryption Mode<i class="required"></i></label>
