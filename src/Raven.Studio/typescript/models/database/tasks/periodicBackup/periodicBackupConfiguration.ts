@@ -5,9 +5,12 @@ import glacierSettings = require("models/database/tasks/periodicBackup/glacierSe
 import azureSettings = require("models/database/tasks/periodicBackup/azureSettings");
 import ftpSettings = require("models/database/tasks/periodicBackup/ftpSettings");
 import getNextBackupOccurrenceCommand = require("commands/database/tasks/getNextBackupOccurrenceCommand");
+import getBackupLocationCommand = require("commands/database/tasks/getBackupLocationCommand");
 import jsonUtil = require("common/jsonUtil");
 import backupSettings = require("backupSettings");
 import generalUtils = require("common/generalUtils");
+import database = require("models/resources/database");
+import activeDatabaseTracker = require("common/shell/activeDatabaseTracker");
 
 class periodicBackupConfiguration {
     taskId = ko.observable<number>();
@@ -41,7 +44,12 @@ class periodicBackupConfiguration {
 
     validationGroup: KnockoutValidationGroup;
     backupOptions = ["Backup", "Snapshot"];
-    
+
+    backupLocationInfo = ko.observableArray<Raven.Server.Web.Studio.SingleNodeDataDirectoryResult>([]);
+    spinners = {
+        backupLocationInfoLoading: ko.observable<boolean>(false)
+    };
+
     dirtyFlag: () => DirtyFlag;
 
     allBackupFrequencyOptions = [
@@ -67,7 +75,15 @@ class periodicBackupConfiguration {
         this.glacierSettings(!dto.GlacierSettings ? glacierSettings.empty(serverLimits.AllowedAwsRegions) : new glacierSettings(dto.GlacierSettings, serverLimits.AllowedAwsRegions));
         this.azureSettings(!dto.AzureSettings ? azureSettings.empty() : new azureSettings(dto.AzureSettings));
         this.ftpSettings(!dto.FtpSettings ? ftpSettings.empty() : new ftpSettings(dto.FtpSettings));
+        this.manualChooseMentor(!!dto.MentorNode);
+        this.preferredMentor(dto.MentorNode);
 
+        this.updateBackupLocationInfo(this.localSettings().folderPath());
+
+        this.initObservables();
+    }
+
+    private initObservables() {
         this.fullBackupHumanReadable = ko.pureComputed(() => {
             return periodicBackupConfiguration.getHumanReadable(
                 this.fullBackupFrequency,
@@ -113,22 +129,19 @@ class periodicBackupConfiguration {
                 this.nextIncrementalBackupInterval,
                 this.incrementalBackupParsingError);
         }
-        
-        this.manualChooseMentor(!!dto.MentorNode);
-        this.preferredMentor(dto.MentorNode);
 
         this.initValidation();
-        
+
         const anyBackupTypeIsDirty = ko.pureComputed(() => {
             let anyDirty = false;
             const backupTypes = [this.localSettings(), this.s3Settings(), this.glacierSettings(), this.azureSettings(), this.ftpSettings()] as backupSettings[];
-            
+
             backupTypes.forEach(type => {
                 if (type.dirtyFlag().isDirty()) {
                     anyDirty = true;
                 }
             });
-            
+
             return anyDirty;
         });
 
@@ -138,8 +151,17 @@ class periodicBackupConfiguration {
         this.canDisplayNextIncrementalBackupOccurrenceLocalTime = ko.pureComputed(() =>
             this.nextIncrementalBackupOccurrenceServerTime() !== this.nextIncrementalBackupOccurrenceLocalTime());
 
+        this.localSettings().folderPath.throttle(300).subscribe((newPathValue) => {
+            if (this.localSettings().folderPath.isValid()) {
+                this.updateBackupLocationInfo(newPathValue);
+            } else {
+                this.backupLocationInfo([]);
+                this.spinners.backupLocationInfoLoading(false);
+            }
+        });
+
         this.dirtyFlag = new ko.DirtyFlag([
-            this.name, 
+            this.name,
             this.backupType,
             this.fullBackupFrequency,
             this.incrementalBackupFrequency,
@@ -147,6 +169,26 @@ class periodicBackupConfiguration {
             this.preferredMentor,
             anyBackupTypeIsDirty
         ], false, jsonUtil.newLineNormalizingHashFunction);
+    }
+
+    private updateBackupLocationInfo(path: string) {
+        this.spinners.backupLocationInfoLoading(true);
+
+        new getBackupLocationCommand(path, activeDatabaseTracker.default.database())
+            .execute()
+            .done((result: Raven.Server.Web.Studio.DataDirectoryResult) => {
+                if (!this.spinners.backupLocationInfoLoading()) {
+                    return;
+                }
+
+                if (this.localSettings().folderPath() !== path) {
+                    // the path has changed
+                    return;
+                }
+
+                this.backupLocationInfo(result.List);
+            })
+            .always(() => this.spinners.backupLocationInfoLoading(false));
     }
 
     private static getHumanReadable(backupFrequency: KnockoutObservable<string>,
