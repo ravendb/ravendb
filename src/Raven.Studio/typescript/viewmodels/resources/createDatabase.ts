@@ -164,6 +164,18 @@ class createDatabase extends dialogViewModelBase {
         if (this.clusterNodes.length === 1) {
             this.databaseModel.replication.nodes([this.clusterNodes[0]]);
         }
+        
+        this.databaseModel.restore.selectedRestorePoint.subscribe(restorePoint => {
+            this.encryptionSection.canProvideOwnKey(!restorePoint || !restorePoint.isEncrypted || !restorePoint.isSnapshotRestore);
+        });
+        
+        this.databaseModel.restore.backupEncryptionKey.subscribe(key => {
+            const restorePoint = this.databaseModel.restore.selectedRestorePoint();
+            if (restorePoint && restorePoint.isEncrypted && restorePoint.isSnapshotRestore) {
+                // update database encryption key to match backup encryption key
+                this.databaseModel.encryption.key(key);
+            }
+        })
     }
 
     private setDefaultReplicationFactor(topology: clusterTopology) {

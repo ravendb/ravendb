@@ -16,6 +16,6 @@ namespace Raven.Client.Documents.Operations.Backups
 
         public bool SkipIndexes { get; set; }
 
-        public EncryptionSettings EncryptionSettings { get; set; }
+        public BackupEncryptionSettings BackupEncryptionSettings { get; set; }
     }
 }

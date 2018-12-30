@@ -21,7 +21,7 @@ namespace Raven.Client.Documents.Operations.Backups
 
         public BackupType BackupType { get; set; }
 
-        public EncryptionSettings EncryptionSettings { get; set; }
+        public BackupEncryptionSettings BackupEncryptionSettings { get; set; }
 
         /// <summary>
         /// Frequency of full backup jobs in cron format

@@ -4,8 +4,8 @@
     </label>
     <div class="input-group">
         <input type="text" class="form-control" placeholder="Key" autocomplete="off"
-               data-bind="textInput: key">
-        <span class="input-group-btn">
+               data-bind="textInput: key, enable: canProvideOwnKey">
+        <span class="input-group-btn" data-bind="visible: canProvideOwnKey">
             <button class="btn btn-default" type="button" data-bind="click: generateEncryptionKey">
                 <i class="icon-reset"></i>
             </button>

@@ -547,10 +547,10 @@ namespace Raven.Server.Documents.PeriodicBackup.Restore
 
         private Stream GetInputStream(FileStream fileStream)
         {
-            if (_restoreConfiguration.EncryptionSettings == null)
+            if (_restoreConfiguration.BackupEncryptionSettings == null)
                 return fileStream;
 
-            var keyAsString = _restoreConfiguration.EncryptionSettings.Key;
+            var keyAsString = _restoreConfiguration.BackupEncryptionSettings.Key;
             return new DecryptingXChaCha20Oly1305Stream(fileStream, Convert.FromBase64String(keyAsString));
         }
 

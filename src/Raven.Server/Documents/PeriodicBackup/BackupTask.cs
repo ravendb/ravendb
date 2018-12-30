@@ -545,10 +545,10 @@ namespace Raven.Server.Documents.PeriodicBackup
 
         private Stream GetOutputStream(Stream fileStream)
         {
-            if (_configuration?.EncryptionSettings == null || _configuration.EncryptionSettings.EncryptionMode == EncryptionMode.None)
+            if (_configuration?.BackupEncryptionSettings == null || _configuration.BackupEncryptionSettings.EncryptionMode == EncryptionMode.None)
                 return fileStream;
 
-            var key = _configuration.EncryptionSettings.Key;
+            var key = _configuration.BackupEncryptionSettings.Key;
             return new EncryptingXChaCha20Poly1305Stream(fileStream,
                 Convert.FromBase64String(key), _configuration);
         }

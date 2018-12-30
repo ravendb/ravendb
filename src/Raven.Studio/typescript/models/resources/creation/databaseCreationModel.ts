@@ -83,12 +83,14 @@ class databaseCreationModel {
         restorePointsCount: ko.observable<number>(0),
         disableOngoingTasks: ko.observable<boolean>(false),
         skipIndexes: ko.observable<boolean>(false),
-        requiresEncryption: undefined as KnockoutComputed<boolean>
+        requiresEncryption: undefined as KnockoutComputed<boolean>,
+        backupEncryptionKey: ko.observable<string>()
     };
     
     restoreValidationGroup = ko.validatedObservable({ 
         selectedRestorePoint: this.restore.selectedRestorePoint,
-        backupDirectory: this.restore.backupDirectory
+        backupDirectory: this.restore.backupDirectory,
+        backupEncryptionKey: this.restore.backupEncryptionKey
     });
     
     legacyMigration = {
@@ -267,6 +269,7 @@ class databaseCreationModel {
 
                 this.restore.restorePoints(groups);
                 this.restore.selectedRestorePoint(null);
+                this.restore.backupEncryptionKey("");
                 this.restore.backupDirectoryError(null);
                 this.restore.lastFailedBackupDirectory = null;
                 this.restore.restorePointsCount(restorePoints.List.length);
@@ -281,6 +284,7 @@ class databaseCreationModel {
                 this.restore.backupDirectoryError(generalUtils.trimMessage(messageAndOptionalException.message));
                 this.restore.lastFailedBackupDirectory = this.restore.backupDirectory();
                 this.restore.restorePoints([]);
+                this.restore.backupEncryptionKey("");
                 this.restore.restorePointsCount(0);
             })
             .always(() => this.spinners.fetchingRestorePoints(false));
@@ -390,6 +394,16 @@ class databaseCreationModel {
     }
     
     private setupRestoreValidation() {
+        this.restore.backupEncryptionKey.extend({
+            required: {
+                onlyIf: () => {
+                    const restorePoint = this.restore.selectedRestorePoint();
+                    return restorePoint ? restorePoint.isEncrypted : false;
+                }
+            },
+            base64: true
+        });
+        
         this.restore.backupDirectory.extend({
             required: {
                 onlyIf: () => this.creationMode === "restore" && this.restore.restorePoints().length === 0
@@ -528,14 +542,46 @@ class databaseCreationModel {
     toRestoreDocumentDto(): Raven.Client.Documents.Operations.Backups.RestoreBackupConfiguration {
         const dataDirectory = _.trim(this.path.dataPath()) || null;
 
+        const restorePoint = this.restore.selectedRestorePoint();
+        const encryptDb = this.getEncryptionConfigSection().enabled();
+        
+        let encryptionSettings = null as Raven.Client.Documents.Operations.Backups.BackupEncryptionSettings;
+        let databaseEncryptionKey = null;
+        
+        if (restorePoint.isEncrypted) {
+            if (restorePoint.isSnapshotRestore) {
+                if (encryptDb) {
+                    encryptionSettings = {
+                        EncryptionMode: "UseDatabaseKey",
+                        Key: null
+                    };
+                    databaseEncryptionKey = this.restore.backupEncryptionKey();
+                }
+            } else { // backup of type backup
+                encryptionSettings = {
+                    EncryptionMode: "UseProvidedKey",
+                    Key: this.restore.backupEncryptionKey()
+                };
+                
+                if (encryptDb) {
+                    databaseEncryptionKey = this.encryption.key();
+                }
+            }
+        } else { // backup is not encrypted
+            if (!restorePoint.isSnapshotRestore && encryptDb) {
+                databaseEncryptionKey = this.encryption.key();
+            }
+        }
+        
         return {
             DatabaseName: this.name(),
-            BackupLocation: this.restore.selectedRestorePoint().location,
+            BackupLocation: restorePoint.location,
             DisableOngoingTasks: this.restore.disableOngoingTasks(),
             SkipIndexes: this.restore.skipIndexes(),
-            LastFileNameToRestore: this.restore.selectedRestorePoint().fileName,
+            LastFileNameToRestore:restorePoint.fileName,
             DataDirectory: dataDirectory,
-            EncryptionKey: this.getEncryptionConfigSection().enabled() ? this.encryption.key() : null
+            EncryptionKey: databaseEncryptionKey,
+            BackupEncryptionSettings: encryptionSettings
         } as Raven.Client.Documents.Operations.Backups.RestoreBackupConfiguration;
     }
     

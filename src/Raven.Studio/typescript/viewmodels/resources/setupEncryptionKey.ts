@@ -9,6 +9,8 @@ abstract class setupEncryptionKey {
     private readonly keyConfirmation: KnockoutObservable<boolean>;
     protected readonly databaseName: KnockoutObservable<string>;
 
+    canProvideOwnKey = ko.observable<boolean>(true);
+
     disableSavingKeyData: KnockoutComputed<boolean>;
     saveKeyValidationGroup: KnockoutValidationGroup;
     

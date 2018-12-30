@@ -39,7 +39,7 @@ class encryptionSettings {
     
     constructor(encryptedDatabase: boolean,
                 backupType: KnockoutObservable<Raven.Client.Documents.Operations.Backups.BackupType>, 
-                dto: Raven.Client.Documents.Operations.Backups.EncryptionSettings) {
+                dto: Raven.Client.Documents.Operations.Backups.BackupEncryptionSettings) {
         this.encryptedDatabase(encryptedDatabase);
         this.backupType = backupType;
         
@@ -173,7 +173,7 @@ class encryptionSettings {
         this.mode(mode);
     }
     
-    toDto(): Raven.Client.Documents.Operations.Backups.EncryptionSettings {
+    toDto(): Raven.Client.Documents.Operations.Backups.BackupEncryptionSettings {
         return {
             EncryptionMode: this.mode(),
             Key: this.mode() === "UseProvidedKey" ? this.key() : undefined
