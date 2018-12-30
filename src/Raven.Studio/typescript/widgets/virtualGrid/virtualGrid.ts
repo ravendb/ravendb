@@ -151,7 +151,7 @@ class virtualGrid<T> {
     }
     
     private handleSort(e: JQueryEventObject) {
-        if (e.offsetX <= 8) {
+        if (e.offsetX <= 8 && !$(e.target).hasClass('sortable-controls')) {
             return;
         }
         this.markEventAsHandled(e);
