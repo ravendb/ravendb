@@ -40,7 +40,7 @@ namespace SlowTests.Server.Documents.PeriodicBackup
                         FolderPath = backupPath
                     },
                     IncrementalBackupFrequency = "0 */6 * * *",
-                    EncryptionSettings = new EncryptionSettings
+                    BackupEncryptionSettings = new BackupEncryptionSettings
                     {
                         Key = "OI7Vll7DroXdUORtc6Uo64wdAk1W0Db9ExXXgcg5IUs="
                     }
@@ -85,7 +85,7 @@ namespace SlowTests.Server.Documents.PeriodicBackup
                 {
                     BackupLocation = Directory.GetDirectories(backupPath).First(),
                     DatabaseName = databaseName,
-                    EncryptionSettings = new EncryptionSettings
+                    BackupEncryptionSettings = new BackupEncryptionSettings
                     {
                         Key = "OI7Vll7DroXdUORtc6Uo64wdAk1W0Db9ExXXgcg5IUs="
                     }
@@ -144,7 +144,7 @@ namespace SlowTests.Server.Documents.PeriodicBackup
                         FolderPath = backupPath
                     },
                     IncrementalBackupFrequency = "0 */6 * * *",
-                    EncryptionSettings = new EncryptionSettings
+                    BackupEncryptionSettings = new BackupEncryptionSettings
                     {
                         Key = "OI7Vll7DroXdUORtc6Uo64wdAk1W0Db9ExXXgcg5IUs="
                     }
@@ -166,7 +166,7 @@ namespace SlowTests.Server.Documents.PeriodicBackup
                 {
                     BackupLocation = Directory.GetDirectories(backupPath).First(),
                     DatabaseName = restoredDatabaseName, 
-                    EncryptionSettings = new EncryptionSettings
+                    BackupEncryptionSettings = new BackupEncryptionSettings
                     {
                         Key = "OI7Vll7DroXdUORtc6Uo64wdAk1W0Db9ExXXgcg5IUs="
                     }
@@ -221,7 +221,7 @@ namespace SlowTests.Server.Documents.PeriodicBackup
                         FolderPath = backupPath
                     },
                     IncrementalBackupFrequency = "0 */6 * * *",
-                    EncryptionSettings = new EncryptionSettings
+                    BackupEncryptionSettings = new BackupEncryptionSettings
                     {
                         Key = "OI7Vll7DroXdUORtc6Uo64wdAk1W0Db9ExXXgcg5IUs="
                     }
@@ -252,7 +252,7 @@ namespace SlowTests.Server.Documents.PeriodicBackup
                     {
                         BackupLocation = Directory.GetDirectories(backupPath).First(),
                         DatabaseName = databaseName,
-                        EncryptionSettings = new EncryptionSettings
+                        BackupEncryptionSettings = new BackupEncryptionSettings
                         {
                             Key = Convert.ToBase64String(key)
                         }

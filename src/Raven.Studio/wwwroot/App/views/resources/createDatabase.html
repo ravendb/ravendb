@@ -325,11 +325,19 @@
                 </div>
             </div>
         </div>
-
+        
         <div data-bind="with: selectedRestorePoint">
+            <div class="form-group" data-bind="visible: isEncrypted, validationElement: $parent.backupEncryptionKey">
+                <label class="control-label">
+                    Backup Encryption Key <small class="text-muted">(Base64 Encoding)</small>
+                </label>
+                <input type="text" class="form-control" placeholder="Key" autocomplete="off"
+                       data-bind="textInput: $parent.backupEncryptionKey">
+            </div>            
+            
             <div class="panel panel-info padding flex-horizontal" data-bind="visible: isSnapshotRestore && isEncrypted">
                 <i class="icon-info"></i>
-                <div class="margin-left">Selected restore point is encrypted. Please provide encryption key in 'Encryption' tab.</div>
+                <div class="margin-left">Selected restore point is encrypted. Backup encryption key will be used as database encryption key.</div>
             </div>
 
             <div class="panel panel-info padding flex-horizontal" data-bind="visible: isSnapshotRestore && !isEncrypted">
