@@ -542,7 +542,7 @@ namespace Raven.Server.Documents
             {
                 ValueToSend = new DynamicJsonValue
                 {
-                    ["TopologyChange"] = "true"
+                    ["TopologyChange"] = true
                 },
                 AllowSkip = false
             });

@@ -560,7 +560,7 @@ namespace Raven.Client.Documents.Changes
 
                             try
                             {
-                                if ((json.TryGet("TopologyChange", out string change)) && (string.Equals(change,"true", StringComparison.OrdinalIgnoreCase)))
+                                if ((json.TryGet(nameof(TopologyChange), out bool supports)) && (supports))
                                 {
                                     GetOrAddConnectionState("Topology", "watch-topology-change", "", "");
                                     await _requestExecutor.UpdateTopologyAsync(_serverNode, 0, true).ConfigureAwait(false);
