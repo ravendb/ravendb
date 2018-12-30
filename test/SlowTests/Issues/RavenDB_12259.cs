@@ -21,7 +21,7 @@ namespace SlowTests.Issues
                     await session.StoreAsync(new Company
                     {
                         Name = "HR"
-                    });
+                    }, "companies/1");
 
                     await session.SaveChangesAsync();
                 }
@@ -35,9 +35,7 @@ namespace SlowTests.Issues
 
                 using (var worker = store.Subscriptions.GetSubscriptionWorker(name))
                 {
-#pragma warning disable 4014
-                    worker.Run(batch =>
-#pragma warning restore 4014
+                    var r = worker.Run(batch =>
                     {
                         Assert.Equal(1, batch.NumberOfItemsInBatch);
                         Assert.Equal(1, batch.Items.Count);
@@ -47,10 +45,19 @@ namespace SlowTests.Issues
                         Assert.Equal("HR", item.RawResult["Name"].ToString());
                         Assert.True(item.Metadata.GetBoolean(Constants.Documents.Metadata.Projection));
 
+                        using (var s = batch.OpenSession())
+                        {
+                            Assert.Equal(0, s.Advanced.NumberOfRequests);
+                            var company = s.Load<Company>("companies/1");
+                            Assert.Equal(1, s.Advanced.NumberOfRequests);
+                        }
+
                         mre.Set();
                     });
 
                     Assert.True(mre.Wait(TimeSpan.FromSeconds(10)));
+                    await worker.DisposeAsync();
+                    await r;// no error
                 }
 
                 mre.Reset();
@@ -59,9 +66,7 @@ namespace SlowTests.Issues
 
                 using (var worker = store.Subscriptions.GetSubscriptionWorker(name))
                 {
-#pragma warning disable 4014
-                    worker.Run(batch =>
-#pragma warning restore 4014
+                    var r = worker.Run(batch =>
                     {
                         Assert.Equal(1, batch.NumberOfItemsInBatch);
                         Assert.Equal(1, batch.Items.Count);
@@ -71,10 +76,19 @@ namespace SlowTests.Issues
                         Assert.Equal("HR", item.RawResult["Name"].ToString());
                         Assert.False(item.Metadata.ContainsKey(Constants.Documents.Metadata.Projection));
 
+                        using (var s = batch.OpenSession())
+                        {
+                            Assert.Equal(0, s.Advanced.NumberOfRequests);
+                            var company = s.Load<Company>("companies/1");
+                            Assert.Equal(0, s.Advanced.NumberOfRequests);
+                        }
+
                         mre.Set();
                     });
 
                     Assert.True(mre.Wait(TimeSpan.FromSeconds(10)));
+                    await worker.DisposeAsync();
+                    await r;// no error
                 }
             }
         }
