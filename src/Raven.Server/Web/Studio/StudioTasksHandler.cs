@@ -59,6 +59,25 @@ namespace Raven.Server.Web.Studio
             await info.UpdateDirectoryResult(urlPath, databaseName: null);
         }
 
+        [RavenAction("/admin/studio-tasks/folder-path-options", "GET", AuthorizationStatus.Operator)]
+        public Task GetFolderPathOptions()
+        {
+            var path = GetStringQueryString("path", required: false);
+            var isBackupFolder = GetBoolValueQueryString("backupFolder", required: false) ?? false;
+
+            var folderPathOptions = FolderPath.GetOptions(path, isBackupFolder, ServerStore.Configuration);
+            using (ServerStore.ContextPool.AllocateOperationContext(out JsonOperationContext context))
+            using (var writer = new BlittableJsonTextWriter(context, ResponseBodyStream()))
+            {
+                context.Write(writer, new DynamicJsonValue
+                {
+                    [nameof(FolderPathOptions.List)] = TypeConverter.ToBlittableSupportedType(folderPathOptions.List)
+                });
+            }
+
+            return Task.CompletedTask;
+        }
+
         [RavenAction("/admin/studio-tasks/offline-migration-test", "GET", AuthorizationStatus.Operator)]
         public Task OfflineMigrationTest()
         {
