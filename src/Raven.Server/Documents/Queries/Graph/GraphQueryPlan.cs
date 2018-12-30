@@ -188,6 +188,8 @@ namespace Raven.Server.Documents.Queries.Graph
             return recursiveStep;
         }
 
+        private Dictionary<string, List<QueryQueryStep>> _identicalQuerySteps = new Dictionary<string, List<QueryQueryStep>>();
+        
         private IGraphQueryStep BuildQueryPlanForMatchNode(MatchPath node)
         {            
             var alias = node.Alias;
@@ -198,14 +200,27 @@ namespace Raven.Server.Documents.Queries.Graph
             // TODO: we can tell at this point if it is a collection query or not,
             // TODO: in the future, we want to build a diffrent step for collection queries in the future.        
             var queryMetadata = new QueryMetadata(query, _query.QueryParameters, 0);
-            return new QueryQueryStep(_database.QueryRunner, alias, query, queryMetadata, _query.QueryParameters, _context, _resultEtag, this, _token)
+            var res = new QueryQueryStep(_database.QueryRunner, alias, query, queryMetadata, _query.QueryParameters, _context, _resultEtag, this, _token)
             {
                 CollectIntermediateResults = CollectIntermediateResults
             };
+            var queryStr = query.ToString();
+            if (_identicalQuerySteps.TryGetValue(queryStr, out var identical))
+            {
+                identical.Add(res);
+            }
+            else
+            {
+                _identicalQuerySteps.Add(queryStr,new List<QueryQueryStep>{res});
+            }
+
+            return res;
         }
 
         public void OptimizeQueryPlan()
         {
+            var iqsr = new IdenticalQueryStepRewriter(_identicalQuerySteps);
+            RootQueryStep = iqsr.Visit(RootQueryStep);
             var cdqsr = new EdgeCollectionDestinationRewriter(_database.DocumentsStorage);
             RootQueryStep = cdqsr.Visit(RootQueryStep);
         }

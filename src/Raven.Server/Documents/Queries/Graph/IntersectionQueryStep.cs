@@ -218,5 +218,11 @@ namespace Raven.Server.Documents.Queries.Graph
         {
             throw new System.NotSupportedException("Cannot get single step results from an intersection operation");
         }
+
+        public bool IsInitialized => _index != -1;
+        public void Reset()
+        {
+            _index = 0;
+        }
     }
 }

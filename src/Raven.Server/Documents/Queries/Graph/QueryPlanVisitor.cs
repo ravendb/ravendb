@@ -30,10 +30,18 @@ namespace Raven.Server.Documents.Queries.Graph
                 case RecursionQueryStep rqs:
                     VisitRecursionQueryStep(rqs);
                     return;
+                case ForwardedQueryStep fqs:
+                    VisitForwardedQueryStep(fqs);
+                    return;
                 default:
                     throw new NotSupportedException($"Unexpected type {root.GetType().Name} for QueryPlanVisitor.Visit");
 
             }
+        }
+
+        public virtual void VisitForwardedQueryStep(ForwardedQueryStep fqs)
+        {
+            Visit(fqs.ForwardedStep);
         }
 
         public virtual void VisitQueryQueryStep(QueryQueryStep qqs)

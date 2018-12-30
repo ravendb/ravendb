@@ -282,6 +282,14 @@ namespace Raven.Server.Documents.Queries
                 }
                 throw new InvalidOperationException("Cannot return single result when there are no results");
             }
+
+            public void ReplaceAlias(string originalAlias, string aliasStr)
+            {
+                if(originalAlias == aliasStr)
+                    return;
+                _inner.Remove(originalAlias, out var obj);
+                _inner.Add(aliasStr, obj);
+            }
         }
     }
 }

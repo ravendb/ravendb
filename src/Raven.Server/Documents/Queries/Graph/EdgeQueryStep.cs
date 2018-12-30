@@ -132,6 +132,12 @@ namespace Raven.Server.Documents.Queries.Graph
             return new EdgeMatcher(this);
         }
 
+        public bool IsInitialized => _index != -1;
+        public void Reset()
+        {
+            _index = 0;
+        }
+
         private void CompleteInitialization()
         {
             _index = 0;

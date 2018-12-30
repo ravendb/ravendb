@@ -109,5 +109,10 @@ namespace Raven.Server.Documents.Queries.Graph
         {
             throw new NotSupportedException();
         }
+
+        public bool IsInitialized => true;
+        public void Reset()
+        {
+        }
     }
 }

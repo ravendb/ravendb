@@ -15,7 +15,7 @@ namespace Raven.Server.Documents.Queries.Graph
     public class QueryQueryStep : IGraphQueryStep
     {
         public readonly Query Query;
-        private StringSegment _alias;
+        internal StringSegment _alias;
         private HashSet<string> _aliases;
         private DocumentsOperationContext _context;
         private long? _resultEtag;
@@ -195,6 +195,12 @@ namespace Raven.Server.Documents.Queries.Graph
         {
             return new QuerySingleStep(this);
     }
+
+        public bool IsInitialized => _index != -1;
+        public void Reset()
+        {
+            _index = 0;
+        }
 
         private class QuerySingleStep : ISingleGraphStep
         {

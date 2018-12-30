@@ -29,6 +29,9 @@ namespace Raven.Server.Documents.Queries.Graph
         IGraphQueryStep Clone();
 
         ISingleGraphStep GetSingleGraphStepExecution();
+
+        bool IsInitialized { get; }
+        void Reset();
     }
 
     public interface ISingleGraphStep

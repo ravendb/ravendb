@@ -38,6 +38,11 @@ namespace Raven.Server.Documents.Queries.Graph
             return qqs;
         }
 
+        public override IGraphQueryStep VisitForwardedQueryStep(ForwardedQueryStep fqs)
+        {
+            return fqs;
+        }
+
         public override IGraphQueryStep VisitRecursionQueryStep(RecursionQueryStep rqs)
         {
             var left = Visit(rqs.Left);

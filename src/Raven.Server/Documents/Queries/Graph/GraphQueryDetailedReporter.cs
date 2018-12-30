@@ -153,5 +153,18 @@ namespace Raven.Server.Documents.Queries.Graph
             WriteIntermidiateResults(rqs.IntermediateResults);
             _writer.WriteEndObject();
         }
+
+        public override void VisitForwardedQueryStep(ForwardedQueryStep fqs)
+        {
+            _writer.WriteStartObject();
+            _writer.WritePropertyName("Type");
+            _writer.WriteString("ForwardedQueryStep");
+            _writer.WriteComma();
+            _writer.WritePropertyName("Forwarded");
+            Visit(fqs.ForwardedStep);
+            _writer.WriteComma();
+            WriteIntermidiateResults(fqs.IntermediateResults);
+            _writer.WriteEndObject();
+        }
     }
 }
