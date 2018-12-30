@@ -148,8 +148,17 @@
                         <label class="control-label col-xs-12 col-sm-6 col-lg-4">Backup directory <i class="required"></i></label>
                         <div class="col-xs-12 col-sm-6 col-lg-8 flex-horizontal" data-bind="validationElement: folderPath">
                             <div data-bind="text: $root.serverConfiguration().LocalRootPath"></div>
-                            <input type="text" class="form-control"
-                                   data-bind="textInput: folderPath, attr: { 'placeholder': $root.serverConfiguration().LocalRootPath ? 'Relative backup path' : 'Full directory backup path' }" />
+                            <div class="dropdown btn-block">
+                                <input type="text" class="form-control dropdown-toggle" data-toggle="dropdown"
+                                       id="localFolderPath"
+                                       data-bind="textInput: folderPath, attr: { 'placeholder': $root.serverConfiguration().LocalRootPath ? 'Relative backup path' : 'Full directory backup path' }">
+                                <span class="caret dropdown-toggle" data-toggle="dropdown"></span>
+                                <ul class="dropdown-menu max-height" data-bind="foreach: $parent.folderPathOptions, autoComplete: '#localFolderPath'">
+                                    <li data-bind="click: $parent.folderPath.bind($parent, $data)">
+                                        <a href="#" data-bind="text: $data"></a>
+                                    </li>
+                                </ul>
+                            </div>
                         </div>
                     </div>
 
