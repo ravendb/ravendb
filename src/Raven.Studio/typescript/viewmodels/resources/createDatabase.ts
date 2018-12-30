@@ -7,6 +7,7 @@ import restoreDatabaseFromBackupCommand = require("commands/resources/restoreDat
 import migrateLegacyDatabaseFromDatafilesCommand = require("commands/resources/migrateLegacyDatabaseFromDatafilesCommand");
 import getClusterTopologyCommand = require("commands/database/cluster/getClusterTopologyCommand");
 import getDatabaseLocationCommand = require("commands/resources/getDatabaseLocationCommand");
+import getFolderPathOptionsCommand = require("commands/resources/getFolderPathOptionsCommand");
 import clusterTopology = require("models/database/cluster/clusterTopology");
 import clusterNode = require("models/database/cluster/clusterNode");
 import databaseCreationModel = require("models/resources/creation/databaseCreationModel");
@@ -60,6 +61,8 @@ class createDatabase extends dialogViewModelBase {
 
     recentPathsAutocomplete: lastUsedAutocomplete;
     dataExporterAutocomplete: lastUsedAutocomplete;
+    folderPathOptions = ko.observableArray<string>([]);
+    allAutoCompleteOptions: KnockoutComputed<{ path: string, isRecent: boolean }[]>;
     
     getDatabaseByName(name: string): database {
         return databasesManager.default.getDatabaseByName(name);
@@ -115,7 +118,10 @@ class createDatabase extends dialogViewModelBase {
         });
 
         const getEncryptionKeyTask = this.encryptionSection.generateEncryptionKey();
-        this.updateDatabaseLocationInfo(this.databaseModel.name(), this.databaseModel.path.dataPath());
+
+        const dataPath = this.databaseModel.path.dataPath();
+        this.updateDatabaseLocationInfo(this.databaseModel.name(), dataPath);
+        this.updateFolderPathOptions(dataPath);
 
         return $.when<any>(getTopologyTask, getEncryptionKeyTask, getStudioSettingsTask)
             .done(() => {
@@ -242,6 +248,7 @@ class createDatabase extends dialogViewModelBase {
         this.databaseModel.path.dataPath.throttle(300).subscribe((newPathValue) => {
             if (this.databaseModel.path.dataPath.isValid()) {
                 this.updateDatabaseLocationInfo(this.databaseModel.name(), newPathValue);
+                this.updateFolderPathOptions(newPathValue);
             } else {
                 this.databaseLocationInfo([]);
                 this.spinners.databaseLocationInfoLoading(false);
@@ -288,6 +295,22 @@ class createDatabase extends dialogViewModelBase {
 
             return `${message} ${replicationFactor} of the following nodes:`;
         });
+
+        this.allAutoCompleteOptions = ko.pureComputed(() => {
+            const result: { path: string, isRecent: boolean }[] = [];
+
+            const autoComplete = this.recentPathsAutocomplete.createCompleter();
+            autoComplete().forEach(p => {
+                result.push({ path: p, isRecent: true });
+            });
+
+            const pathOptions = this.folderPathOptions();
+            pathOptions.forEach(p => {
+                result.push({ path: p, isRecent: false });
+            });
+
+            return result;
+        });
     }
 
     updateDatabaseLocationInfo(name: string, path: string) {
@@ -309,6 +332,19 @@ class createDatabase extends dialogViewModelBase {
                 this.databaseLocationInfo(result.List);
             })
             .always(() => this.spinners.databaseLocationInfoLoading(false));
+    }
+
+    updateFolderPathOptions(path: string) {
+        new getFolderPathOptionsCommand(path)
+            .execute()
+            .done((result: Raven.Server.Web.Studio.FolderPathOptions) => {
+                if (this.databaseModel.path.dataPath() !== path) {
+                    // the path has changed
+                    return;
+                }
+
+                this.folderPathOptions(result.List);
+            });
     }
 
     getAvailableSections() {

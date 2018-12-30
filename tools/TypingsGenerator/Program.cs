@@ -427,6 +427,7 @@ namespace TypingsGenerator
             scripter.AddType(typeof(StudioConfiguration));
 
             scripter.AddType(typeof(StudioTasksHandler.OfflineMigrationValidation));
+            scripter.AddType(typeof(FolderPathOptions));
             scripter.AddType(typeof(DataDirectoryResult));
 
             return scripter;

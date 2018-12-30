@@ -353,11 +353,16 @@
                        data-bind="textInput: dataPath, attr: { placeholder: $root.databaseModel.name() || 'Enter database path (optional)' }"
                        title="Enter location for the database files."/>
                 
-                <ul class="dropdown-menu" role="menu"
-                    data-bind="autoComplete: '#dataPath', foreach: $root.recentPathsAutocomplete.createCompleter()">
-                    <li role="presentation" data-bind="click: _.partial($root.recentPathsAutocomplete.complete, $data)">
+                <ul class="dropdown-menu max-height" role="menu"
+                    data-bind="autoComplete: '#dataPath', foreach: $root.allAutoCompleteOptions">
+                    <li role="presentation" data-bind="click: $data.isRecent ? _.partial($root.recentPathsAutocomplete.complete, $data.path) : $parent.dataPath.bind($parent, $data.path)">
                         <a role="menuitem" tabindex="-1" href="#">
-                            <span data-bind="text: $data"></span>
+                            <!-- ko if: $data.isRecent -->
+                            <strong data-bind="text: $data.path"></strong>
+                            <!-- /ko -->
+                            <!-- ko ifnot: $data.isRecent -->
+                            <span data-bind="text: $data.path"></span>
+                            <!-- /ko -->
                         </a>
                     </li>
                 </ul>
