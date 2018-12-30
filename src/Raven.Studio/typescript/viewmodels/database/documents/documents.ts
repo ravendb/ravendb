@@ -202,6 +202,8 @@ class documents extends viewModelBase {
         const documentsProvider = new documentBasedColumnsProvider(this.activeDatabase(), grid, 
             { showRowSelectionCheckbox: true, enableInlinePreview: false, showSelectAllCheckbox: true, showFlags: true });
 
+        this.columnsSelector.tryInitializeWithSavedDefault(source => documentsProvider.reviver(source));
+        
         this.columnsSelector.init(grid, (s, t, previewCols, fullCols) => this.fetchDocs(s, t, previewCols, fullCols), (w, r) => {
             if (this.currentCollection().isAllDocuments) {
                 return [
@@ -216,8 +218,6 @@ class documents extends viewModelBase {
                 return documentsProvider.findColumns(w, r);
             }
         }, (results: pagedResultWithAvailableColumns<document>) => results.availableColumns);
-        
-        this.columnsSelector.tryInitializeWithSavedDefault(source => documentsProvider.reviver(source));
 
         grid.dirtyResults.subscribe(dirty => this.dirtyResult(dirty));
 
