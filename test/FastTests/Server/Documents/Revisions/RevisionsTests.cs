@@ -580,7 +580,7 @@ namespace FastTests.Server.Documents.Revisions
                 await RevisionsHelper.SetupRevisions(Server.ServerStore, store.Database, modifyConfiguration: configuration => configuration.Collections["Users"].PurgeOnDelete = false);
 
                 var deletedRevisions = await store.Commands().GetRevisionsBinEntriesAsync(long.MaxValue);
-                Assert.Equal(0, deletedRevisions.Count);
+                Assert.Equal(0, deletedRevisions.Length);
 
                 var id = "users/1";
                 if (useSession)
@@ -614,7 +614,7 @@ namespace FastTests.Server.Documents.Revisions
                 Assert.Equal(4, statistics.CountOfRevisionDocuments);
 
                 deletedRevisions = await store.Commands().GetRevisionsBinEntriesAsync(long.MaxValue);
-                Assert.Equal(1, deletedRevisions.Count);
+                Assert.Equal(1, deletedRevisions.Length);
 
                 using (var session = store.OpenAsyncSession())
                 {

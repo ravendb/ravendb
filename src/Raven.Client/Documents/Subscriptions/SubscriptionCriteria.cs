@@ -1,5 +1,7 @@
 using System;
+using System.Collections.Generic;
 using System.Linq.Expressions;
+using Raven.Client.Documents.Session.Loaders;
 
 namespace Raven.Client.Documents.Subscriptions
 {
@@ -12,7 +14,7 @@ namespace Raven.Client.Documents.Subscriptions
     public class SubscriptionCreationOptions
     {
         public string Name { get; set; }
-        public string Query{ get; set; }
+        public string Query { get; set; }
         public string ChangeVector { get; set; }
         public string MentorNode { get; set; }
     }
@@ -22,6 +24,7 @@ namespace Raven.Client.Documents.Subscriptions
         public string Name { get; set; }
         public Expression<Func<T, bool>> Filter { get; set; }
         public Expression<Func<T, object>> Projection { get; set; }
+        public Action<ISubscriptionIncludeBuilder<T>> Includes { get; set; }
         public string ChangeVector { get; set; }
         public string MentorNode { get; set; }
     }

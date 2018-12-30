@@ -90,7 +90,7 @@ namespace SlowTests.Issues
                     commands.RequestExecutor.Execute(command, commands.Context);
 
                     var results = new DynamicArray(command.Result.Results);
-                    Assert.Equal(2, results.Count);
+                    Assert.Equal(2, results.Length);
 
                     foreach (dynamic r in results)
                     {
@@ -133,7 +133,7 @@ namespace SlowTests.Issues
                     commands.RequestExecutor.Execute(command, commands.Context);
 
                     var results = new DynamicArray(command.Result.Results);
-                    Assert.Equal(2, results.Count);
+                    Assert.Equal(2, results.Length);
 
                     foreach (dynamic r in results)
                     {
@@ -178,7 +178,7 @@ namespace SlowTests.Issues
                     commands.RequestExecutor.Execute(command, commands.Context);
 
                     var results = new DynamicArray(command.Result.Results);
-                    Assert.Equal(2, results.Count);
+                    Assert.Equal(2, results.Length);
 
                     foreach (dynamic r in results)
                     {
@@ -226,7 +226,7 @@ namespace SlowTests.Issues
                     commands.RequestExecutor.Execute(command, commands.Context);
 
                     var results = new DynamicArray(command.Result.Results);
-                    Assert.Equal(2, results.Count);
+                    Assert.Equal(2, results.Length);
 
                     foreach (dynamic r in results)
                     {
@@ -278,7 +278,7 @@ namespace SlowTests.Issues
                     commands.RequestExecutor.Execute(command, commands.Context);
 
                     var results = new DynamicArray(command.Result.Results);
-                    Assert.Equal(2, results.Count);
+                    Assert.Equal(2, results.Length);
 
                     foreach (dynamic r in results)
                     {
@@ -321,7 +321,7 @@ namespace SlowTests.Issues
                     commands.RequestExecutor.Execute(command, commands.Context);
 
                     var results = new DynamicArray(command.Result.Results);
-                    Assert.Equal(2, results.Count);
+                    Assert.Equal(2, results.Length);
 
                     foreach (dynamic r in results)
                     {
@@ -365,7 +365,7 @@ namespace SlowTests.Issues
                     commands.RequestExecutor.Execute(command, commands.Context);
 
                     var results = new DynamicArray(command.Result.Results);
-                    Assert.Equal(2, results.Count);
+                    Assert.Equal(2, results.Length);
 
                     foreach (dynamic r in results)
                     {
@@ -410,7 +410,7 @@ namespace SlowTests.Issues
                     commands.RequestExecutor.Execute(command, commands.Context);
 
                     var results = new DynamicArray(command.Result.Results);
-                    Assert.Equal(2, results.Count);
+                    Assert.Equal(2, results.Length);
 
                     foreach (dynamic r in results)
                     {
@@ -462,7 +462,7 @@ namespace SlowTests.Issues
                     commands.RequestExecutor.Execute(command, commands.Context);
 
                     var results = new DynamicArray(command.Result.Results);
-                    Assert.Equal(2, results.Count);
+                    Assert.Equal(2, results.Length);
 
                     foreach (dynamic r in results)
                     {

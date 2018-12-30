@@ -12,6 +12,8 @@ using System.Threading;
 using System.Threading.Tasks;
 using Lambda2Js;
 using Raven.Client.Documents.Commands;
+using Raven.Client.Documents.Session;
+using Raven.Client.Documents.Session.Loaders;
 using Raven.Client.Extensions;
 using Raven.Client.Util;
 using Sparrow.Collections;
@@ -40,7 +42,7 @@ namespace Raven.Client.Documents.Subscriptions
             {
                 Name = options.Name,
                 ChangeVector = options.ChangeVector
-            }, options.Filter, options.Projection), database);
+            }, options.Filter, options.Projection, options.Includes), database);
 
         }
 
@@ -54,7 +56,7 @@ namespace Raven.Client.Documents.Subscriptions
             SubscriptionCreationOptions options = null,
             string database = null)
         {
-            return Create(EnsureCriteria(options, predicate, null), database);
+            return Create(EnsureCriteria(options, predicate, null, includes: null), database);
         }
 
 
@@ -70,7 +72,7 @@ namespace Raven.Client.Documents.Subscriptions
                 Name = options.Name,
                 ChangeVector = options.ChangeVector,
                 MentorNode = options.MentorNode
-            }, options.Filter, options.Projection), database, token);
+            }, options.Filter, options.Projection, options.Includes), database, token);
         }
 
         /// <summary>
@@ -80,16 +82,17 @@ namespace Raven.Client.Documents.Subscriptions
         public Task<string> CreateAsync<T>(
             Expression<Func<T, bool>> predicate = null,
             SubscriptionCreationOptions options = null,
-            string database = null, 
+            string database = null,
             CancellationToken token = default)
         {
-            return CreateAsync(EnsureCriteria(options, predicate, null), database, token);
+            return CreateAsync(EnsureCriteria(options, predicate, null, includes: null), database, token);
         }
 
         private SubscriptionCreationOptions EnsureCriteria<T>(
             SubscriptionCreationOptions criteria,
             Expression<Func<T, bool>> predicate,
-            Expression<Func<T, object>> project)
+            Expression<Func<T, object>> project,
+            Action<ISubscriptionIncludeBuilder<T>> includes)
         {
             criteria = criteria ?? new SubscriptionCreationOptions();
             var collectionName = _store.Conventions.GetCollectionName(typeof(T));
@@ -106,7 +109,8 @@ namespace Raven.Client.Documents.Subscriptions
                 else
                     criteria.Query = "from " + collectionName;
                 criteria.Query += " as doc";
-            }            
+            }
+
             if (predicate != null)
             {
                 var script = predicate.CompileToJavascript(
@@ -123,13 +127,14 @@ namespace Raven.Client.Documents.Subscriptions
                         JavascriptConversionExtensions.InvokeSupport.Instance,
                         JavascriptConversionExtensions.NullCoalescingSupport.Instance,
                         JavascriptConversionExtensions.NestedConditionalSupport.Instance,
-                        JavascriptConversionExtensions.StringSupport.Instance                        
+                        JavascriptConversionExtensions.StringSupport.Instance
                     ));
 
                 criteria.Query = $"declare function predicate() {{ return {script} }}{Environment.NewLine}" +
                                  $"{criteria.Query}{Environment.NewLine}" +
                                  "where predicate.call(doc)";
             }
+
             if (project != null)
             {
                 var script = project.CompileToJavascript(
@@ -144,13 +149,38 @@ namespace Raven.Client.Documents.Subscriptions
                         JavascriptConversionExtensions.InvokeSupport.Instance,
                         JavascriptConversionExtensions.NullCoalescingSupport.Instance,
                         JavascriptConversionExtensions.StringSupport.Instance,
-                        JavascriptConversionExtensions.NestedConditionalSupport.Instance,                        
+                        JavascriptConversionExtensions.NestedConditionalSupport.Instance,
                         new JavascriptConversionExtensions.ReplaceParameterWithNewName(project.Parameters[0], "doc"),
                         JavascriptConversionExtensions.CounterSupport.Instance,
                         JavascriptConversionExtensions.CompareExchangeSupport.Instance
                     ));
                 criteria.Query += Environment.NewLine + "select " + script;
             }
+
+            if (includes != null)
+            {
+                var builder = new IncludeBuilder<T>(_store.Conventions);
+                includes(builder);
+
+                if (builder.DocumentsToInclude != null && builder.DocumentsToInclude.Count > 0)
+                {
+                    criteria.Query += Environment.NewLine + "include ";
+
+                    var first = true;
+                    foreach (var include in builder.DocumentsToInclude)
+                    {
+                        if (first == false)
+                            criteria.Query += ",";
+                        first = false;
+
+                        if (IncludesUtil.RequiresQuotes(include, out var escapedInclude))
+                            criteria.Query += $"'{escapedInclude}'";
+                        else
+                            criteria.Query += include;
+                    }
+                }
+            }
+
             return criteria;
         }
 
@@ -171,7 +201,7 @@ namespace Raven.Client.Documents.Subscriptions
         /// </summary>
         /// <returns>Created subscription name.</returns>
         public async Task<string> CreateAsync(SubscriptionCreationOptions options, string database = null, CancellationToken token = default)
-        {            
+        {
             if (options == null)
                 throw new InvalidOperationException("Cannot create a subscription if options is null");
 
@@ -180,7 +210,7 @@ namespace Raven.Client.Documents.Subscriptions
 
             var requestExecutor = _store.GetRequestExecutor(database ?? _store.Database);
             using (requestExecutor.ContextPool.AllocateOperationContext(out JsonOperationContext context))
-            {                
+            {
                 var command = new CreateSubscriptionCommand(_store.Conventions, options);
                 await requestExecutor.ExecuteAsync(command, context, sessionInfo: null, token: token).ConfigureAwait(false);
 
@@ -209,7 +239,7 @@ namespace Raven.Client.Documents.Subscriptions
         /// </summary>
         /// <returns>Subscription object that allows to add/remove subscription handlers.</returns>
         public SubscriptionWorker<dynamic> GetSubscriptionWorker(string subscriptionName, string database = null)
-        {            
+        {
             return GetSubscriptionWorker<dynamic>(new SubscriptionWorkerOptions(subscriptionName), database);
         }
 

@@ -1186,24 +1186,11 @@ Use session.Query<T>() instead of session.Advanced.DocumentQuery<T>. The session
                 if (first == false)
                     queryText.Append(",");
                 first = false;
-                var requiredQuotes = false;
-                for (int i = 0; i < include.Length; i++)
-                {
-                    var ch = include[i];
-                    if (char.IsLetterOrDigit(ch) == false && ch != '_' && ch != '.')
-                    {
-                        requiredQuotes = true;
-                        break;
-                    }
-                }
-                if (requiredQuotes)
-                {
-                    queryText.Append("'").Append(include.Replace("'", "\\'")).Append("'");
-                }
+
+                if (IncludesUtil.RequiresQuotes(include, out var escapedInclude))
+                    queryText.Append("'").Append(escapedInclude).Append("'");
                 else
-                {
                     queryText.Append(include);
-                }
             }
 
             if (CounterIncludesTokens != null)

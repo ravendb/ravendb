@@ -24,9 +24,6 @@ namespace Raven.Server.Documents.Indexes.Static
 
         public int Length => _inner.Count();
 
-        public int Count => _inner.Count();
-
-
         public dynamic Get(params int[] indexes)
         {
             if (indexes == null)
@@ -89,7 +86,7 @@ namespace Raven.Server.Documents.Indexes.Static
             if (binder.ReturnType.IsArray)
             {
                 var elementType = binder.ReturnType.GetElementType();
-                var count = Count;
+                var count = Length;
                 var array = Array.CreateInstance(elementType, count);
 
                 for (var i = 0; i < count; i++)
@@ -123,6 +120,10 @@ namespace Raven.Server.Documents.Indexes.Static
         {
             return new DynamicArrayIterator(_inner);
         }
+
+        public int Count() => _inner.Count();
+
+        public int Count(Func<dynamic, bool> predicate) => _inner.Count(predicate);
 
         public dynamic Any()
         {
@@ -181,7 +182,7 @@ namespace Raven.Server.Documents.Indexes.Static
 
         public bool Contains(object item)
         {
-            var  itemToWorkOn = InternalConvert(item);
+            var itemToWorkOn = InternalConvert(item);
 
             return Enumerable.Contains(this, itemToWorkOn);
         }
@@ -393,7 +394,7 @@ namespace Raven.Server.Documents.Indexes.Static
         {
             var itemToWorkOn = InternalConvert(item);
 
-            if(count == -1)
+            if (count == -1)
                 return items.IndexOf(itemToWorkOn, index);
 
             return items.IndexOf(itemToWorkOn, index, count);
@@ -571,6 +572,11 @@ namespace Raven.Server.Documents.Indexes.Static
         public long LongCount()
         {
             return Enumerable.LongCount(this);
+        }
+
+        public long LongCount(Func<dynamic, bool> predicate)
+        {
+            return Enumerable.LongCount(this, predicate);
         }
 
         public dynamic Aggregate(Func<dynamic, dynamic, dynamic> func)
