@@ -148,8 +148,43 @@
                         <label class="control-label col-xs-12 col-sm-6 col-lg-4">Backup directory <i class="required"></i></label>
                         <div class="col-xs-12 col-sm-6 col-lg-8 flex-horizontal" data-bind="validationElement: folderPath">
                             <div data-bind="text: $root.serverConfiguration().LocalRootPath"></div>
-                            <input type="text" class="form-control" 
-                                   data-bind="textInput: folderPath, attr: { 'placeholder': $root.serverConfiguration().LocalRootPath ? 'Relative backup path' : 'Full directory backup path' }"  />
+                            <input type="text" class="form-control"
+                                   data-bind="textInput: folderPath, attr: { 'placeholder': $root.serverConfiguration().LocalRootPath ? 'Relative backup path' : 'Full directory backup path' }" />
+                        </div>
+                    </div>
+
+                    <div class="row flex-row margin-bottom">
+                        <label class="control-label col-xs-12 col-sm-6 col-lg-4"></label>
+                        <div class="col-xs-12 col-sm-6 col-lg-8">
+                            <p class="text-info bg-info padding padding-sm">
+                                <span>The backup files will be created in:</span><br />
+                                <div data-bind="if: $parent.spinners.backupLocationInfoLoading">
+                                    <span class="btn-spinner"></span>
+                                </div>
+                                <div data-bind="if: !$parent.spinners.backupLocationInfoLoading()">
+                                    <ul data-bind="foreach: $parent.backupLocationInfo" class="text-info bg-info">
+                                        <li>
+                                            <small>
+                                                Node Tag: <strong data-bind="text: NodeTag"></strong>
+                                                <br />
+                                                Path: <strong data-bind="text: FullPath"></strong>
+                                                <span>
+                                                    <br />Free Disk Space:
+                                                    <span data-bind="if: TotalFreeSpaceHumane">
+                                                        <strong data-bind="text: TotalFreeSpaceHumane"></strong>
+                                                    </span>
+                                                    <span data-bind="if: TotalSpaceHumane">
+                                                        (Total: <strong data-bind="text: TotalSpaceHumane"></strong>)
+                                                    </span>
+                                                    <span data-bind="if: !TotalFreeSpaceHumane">
+                                                        <strong>(Path is unreachable)</strong>
+                                                    </span>
+                                                </span>
+                                            </small>
+                                        </li>
+                                    </ul>
+                                </div>
+                            </p>
                         </div>
                     </div>
                 </div>
