@@ -148,7 +148,7 @@ namespace Voron.Platform.Win32
                     HandleWriteError(position, p, numberOf4Kb);
                 }
 
-                metrics.SetFileSize(NumberOfAllocated4Kb * (4 * Constants.Size.Kilobyte));
+                metrics.SetFileSize(NumberOfAllocated4Kb * (4L * Constants.Size.Kilobyte));
             }
         }
 
