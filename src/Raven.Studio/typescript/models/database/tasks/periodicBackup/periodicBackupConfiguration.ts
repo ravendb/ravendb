@@ -6,10 +6,10 @@ import azureSettings = require("models/database/tasks/periodicBackup/azureSettin
 import ftpSettings = require("models/database/tasks/periodicBackup/ftpSettings");
 import getNextBackupOccurrenceCommand = require("commands/database/tasks/getNextBackupOccurrenceCommand");
 import getBackupLocationCommand = require("commands/database/tasks/getBackupLocationCommand");
+import getFolderPathOptionsCommand = require("commands/resources/getFolderPathOptionsCommand");
 import jsonUtil = require("common/jsonUtil");
 import backupSettings = require("backupSettings");
 import generalUtils = require("common/generalUtils");
-import database = require("models/resources/database");
 import activeDatabaseTracker = require("common/shell/activeDatabaseTracker");
 
 class periodicBackupConfiguration {
@@ -46,6 +46,8 @@ class periodicBackupConfiguration {
     backupOptions = ["Backup", "Snapshot"];
 
     backupLocationInfo = ko.observableArray<Raven.Server.Web.Studio.SingleNodeDataDirectoryResult>([]);
+    folderPathOptions = ko.observableArray<string>([]);
+
     spinners = {
         backupLocationInfoLoading: ko.observable<boolean>(false)
     };
@@ -78,7 +80,9 @@ class periodicBackupConfiguration {
         this.manualChooseMentor(!!dto.MentorNode);
         this.preferredMentor(dto.MentorNode);
 
-        this.updateBackupLocationInfo(this.localSettings().folderPath());
+        const folderPath = this.localSettings().folderPath();
+        this.updateBackupLocationInfo(folderPath);
+        this.updateFolderPathOptions(folderPath);
 
         this.initObservables();
     }
@@ -154,8 +158,10 @@ class periodicBackupConfiguration {
         this.localSettings().folderPath.throttle(300).subscribe((newPathValue) => {
             if (this.localSettings().folderPath.isValid()) {
                 this.updateBackupLocationInfo(newPathValue);
+                this.updateFolderPathOptions(newPathValue);
             } else {
                 this.backupLocationInfo([]);
+                this.folderPathOptions([]);
                 this.spinners.backupLocationInfoLoading(false);
             }
         });
@@ -189,6 +195,19 @@ class periodicBackupConfiguration {
                 this.backupLocationInfo(result.List);
             })
             .always(() => this.spinners.backupLocationInfoLoading(false));
+    }
+
+    private updateFolderPathOptions(path: string) {
+        new getFolderPathOptionsCommand(path)
+            .execute()
+            .done((result: Raven.Server.Web.Studio.FolderPathOptions) => {
+                if (this.localSettings().folderPath() !== path) {
+                    // the path has changed
+                    return;
+                }
+
+                this.folderPathOptions(result.List);
+            });
     }
 
     private static getHumanReadable(backupFrequency: KnockoutObservable<string>,
