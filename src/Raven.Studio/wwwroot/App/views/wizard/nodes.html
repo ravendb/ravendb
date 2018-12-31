@@ -67,7 +67,10 @@
                         </div>
                     </div>
                     <div class="form-group" data-bind="validationElement: port">
-                        <label for="port" class="control-label">HTTPS Port</label>
+                        <label for="port" class="control-label">
+                            <i id="https-port-info" class="icon-info text-info"></i>
+                            HTTPS Port
+                        </label>
                         <div class="flex-grow">
                             <input type="text" autocomplete="off" class="form-control" id="port"
                                    placeholder="Default: 443"
@@ -75,7 +78,10 @@
                         </div>
                     </div>
                     <div class="form-group" data-bind="validationElement: tcpPort">
-                        <label for="tcpPort" class="control-label">TCP Port</label>
+                        <label for="tcpPort" class="control-label">
+                            <i id="tcp-port-info" class="icon-info text-info"></i>
+                            TCP Port
+                        </label>
                         <div class="flex-grow">
                             <input type="text" autocomplete="off" class="form-control" id="tcpPort"
                                    placeholder="Default: 38888"

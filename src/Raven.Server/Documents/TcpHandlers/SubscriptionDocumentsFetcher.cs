@@ -2,6 +2,10 @@ using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Net;
+using Jint.Native;
+using Jint.Native.Object;
+using Jint.Runtime;
+using Raven.Client;
 using Raven.Client.Documents.Subscriptions;
 using Raven.Client.Exceptions.Documents.Subscriptions;
 using Raven.Server.Documents.Includes;
@@ -109,7 +113,7 @@ namespace Raven.Server.Documents.TcpHandlers
                                 }
                                 else
                                 {
-                                    yield return (new Document
+                                    var projection = new Document
                                     {
                                         Id = doc.Id,
                                         Etag = doc.Etag,
@@ -117,7 +121,9 @@ namespace Raven.Server.Documents.TcpHandlers
                                         LowerId = doc.LowerId,
                                         ChangeVector = doc.ChangeVector,
                                         LastModified = doc.LastModified,
-                                    }, null);
+                                    };
+
+                                    yield return (projection, null);
                                 }
                             }
                             if (++size >= _maxBatchSize)
@@ -174,10 +180,9 @@ namespace Raven.Server.Documents.TcpHandlers
                             {
                                 yield return (revisionTuple.current, null);
                             }
-
                             else
                             {
-                                yield return (new Document
+                                var projection = new Document
                                 {
                                     Id = item.Id,
                                     Etag = item.Etag,
@@ -185,7 +190,9 @@ namespace Raven.Server.Documents.TcpHandlers
                                     LowerId = item.LowerId,
                                     ChangeVector = item.ChangeVector,
                                     LastModified = item.LastModified,
-                                }, null);
+                                };
+
+                                yield return (projection, null);
                             }
                             if (++size >= _maxBatchSize)
                                 yield break;
@@ -217,7 +224,7 @@ namespace Raven.Server.Documents.TcpHandlers
 
             try
             {
-                return patch.MatchCriteria(run, dbContext, doc, ref transformResult);
+                return patch.MatchCriteria(run, dbContext, doc, ProjectionMetadataModifier.Instance, ref transformResult);
             }
             catch (Exception ex)
             {
@@ -231,7 +238,6 @@ namespace Raven.Server.Documents.TcpHandlers
                 return false;
             }
         }
-
 
         private bool ShouldSendDocumentWithRevisions(SubscriptionState subscriptionState,
             ScriptRunner.SingleRun run,
@@ -269,7 +275,7 @@ namespace Raven.Server.Documents.TcpHandlers
 
             try
             {
-                return patch.MatchCriteria(run, dbContext, transformResult, ref transformResult);
+                return patch.MatchCriteria(run, dbContext, transformResult, ProjectionMetadataModifier.Instance, ref transformResult);
             }
             catch (Exception ex)
             {
@@ -284,8 +290,28 @@ namespace Raven.Server.Documents.TcpHandlers
             }
         }
 
+        private class ProjectionMetadataModifier : JsBlittableBridge.IResultModifier
+        {
+            public static readonly ProjectionMetadataModifier Instance = new ProjectionMetadataModifier();
 
+            private ProjectionMetadataModifier()
+            {
+            }
 
+            public void Modify(ObjectInstance json)
+            {
+                ObjectInstance metadata;
+                var value = json.Get(Constants.Documents.Metadata.Key);
+                if (value.Type == Types.Object)
+                    metadata = value.AsObject();
+                else
+                {
+                    metadata = json.Engine.Object.Construct(Array.Empty<JsValue>());
+                    json.Put(Constants.Documents.Metadata.Key, metadata, false);
+                }
 
+                metadata.Put(Constants.Documents.Metadata.Projection, JsBoolean.True, false);
+            }
+        }
     }
 }

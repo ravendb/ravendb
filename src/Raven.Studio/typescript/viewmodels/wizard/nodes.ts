@@ -268,6 +268,16 @@ class nodes extends setupStep {
                 content: ipAddressInfo + "<strong>Note:</strong> If Hostname is used then an external ip must also be provided.",
                 placement: "top"
             });
+        
+        popoverUtils.longWithHover($("#https-port-info"), {
+            content: "HTTPs port used for clients/browser (RavenDB Studio) communication.",
+            placement: "top"
+        });
+        
+        popoverUtils.longWithHover($("#tcp-port-info"), {
+            content: "TCP port used by the cluster nodes to communicate with each other.",
+            placement: "top"
+        })
     }
 
     addIpAddressFromNode(node: nodeInfo) {

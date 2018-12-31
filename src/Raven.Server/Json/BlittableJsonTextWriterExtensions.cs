@@ -1463,7 +1463,7 @@ namespace Raven.Server.Json
                 writer.WriteComma();
 
                 writer.WritePropertyName(nameof(CounterDetail.TotalValue));
-                writer.WriteDouble(counter.TotalValue);
+                writer.WriteInteger(counter.TotalValue);
 
                 writer.WriteEndObject();
 

@@ -50,6 +50,19 @@ namespace Raven.Client.Documents.Operations.Backups
         }
     }
 
+    public class LastRaftIndex
+    {
+        public long LastEtag { get; set; }
+
+        public virtual DynamicJsonValue ToJson()
+        {
+            return new DynamicJsonValue
+            {
+                [nameof(LastEtag)] = LastEtag
+            };
+        }
+    }
+
     public class LocalBackup : BackupStatus
     {
         public string BackupDirectory { get; set; }
