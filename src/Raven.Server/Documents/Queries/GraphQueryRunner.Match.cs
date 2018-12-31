@@ -287,8 +287,11 @@ namespace Raven.Server.Documents.Queries
             {
                 if(originalAlias == aliasStr)
                     return;
-                _inner.Remove(originalAlias, out var obj);
-                _inner.Add(aliasStr, obj);
+
+                if (_inner.Remove(originalAlias, out var obj))
+                {
+                    _inner.Add(aliasStr, obj);
+                }
             }
         }
     }
