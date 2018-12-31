@@ -72,6 +72,22 @@ namespace SlowTests.Issues
         }
 
         [Fact]
+        public void Index_query_expression_inside_edge_expressions_should_throw()
+        {
+            using (var store = GetDocumentStore())
+            {
+                CreateNorthwindDatabase(store);
+                WaitForIndexing(store);
+                using (var session = store.OpenSession())
+                {
+                    //this use-case is a bit silly, but why not throw explicit & informative exception even in such case :)
+                    Assert.Throws<InvalidQueryException>(() => session.Advanced.RawQuery<JObject>("match (Employee as e)-[index 'Orders/Totals' as o select Employee]->(Employee as anotherE)").ToArray());
+                }
+            }
+        }
+
+
+        [Fact]
         public void Select_clause_inside_node_expressions_should_throw()
         {
             using (var store = GetDocumentStore())
