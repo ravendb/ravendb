@@ -57,7 +57,7 @@ namespace Voron.Impl.Journal
 
         private readonly object _writeLock = new object();
         private int _maxNumberOfPagesRequiredForCompressionBuffer;
-        
+
         internal NativeMemory.ThreadStats CurrentFlushingInProgressHolder;
 
         private readonly DisposeOnce<SingleAttempt> _disposeRunner;
@@ -263,7 +263,7 @@ namespace Voron.Impl.Journal
                 }
             }
 
-                    _files = _files.AppendRange(journalFiles);
+            _files = _files.AppendRange(journalFiles);
 
             if (lastSyncedTxId < 0)
                 VoronUnrecoverableErrorException.Raise(_env,
@@ -1044,7 +1044,7 @@ namespace Voron.Impl.Journal
                         }
 
                         _parent._waj._env.Options.SetLastReusedJournalCountOnSync(_journalsToDelete.Count);
-                        
+
                         foreach (var kvp in _journalsToDelete)
                         {
                             _parent._journalsToDelete.Remove(kvp.Key);
@@ -1079,12 +1079,11 @@ namespace Voron.Impl.Journal
                     {
                         using (var batchWrites = _waj._dataPager.BatchWriter())
                         {
-                            var tempTx = new TempPagerTransaction(isWriteTransaction:false);
+                            var tempTx = new TempPagerTransaction();
                             foreach (var pagePosition in pagesToWrite.Values)
                             {
                                 var scratchNumber = pagePosition.ScratchNumber;
-                                PagerState pagerState;
-                                if (scratchPagerStates.TryGetValue(scratchNumber, out pagerState) == false)
+                                if (scratchPagerStates.TryGetValue(scratchNumber, out var pagerState) == false)
                                 {
                                     pagerState = scratchBufferPool.GetPagerState(scratchNumber);
                                     pagerState.AddRef();
@@ -1092,18 +1091,20 @@ namespace Voron.Impl.Journal
                                     scratchPagerStates.Add(scratchNumber, pagerState);
                                 }
 
-                                if(_waj._env.Options.EncryptionEnabled == false)
+                                if (_waj._env.Options.EncryptionEnabled == false)
                                 {
-                                    var page = (PageHeader*)scratchBufferPool.AcquirePagePointerWithOverflowHandling(tempTx, scratchNumber, pagePosition.ScratchPage);
-                                    var checksum = StorageEnvironment.CalculatePageChecksum((byte*)page, page->PageNumber, out var expectedChecksum);
-                                    if (checksum != expectedChecksum)
+                                    using (tempTx) // release any resources, we just wanted to validate things
                                     {
-                                        throw new InvalidDataException(
-                                            $"During apply logs to data, tried to copy {scratchNumber} / {pagePosition.ScratchNumber} ({page->PageNumber}) " +
-                                            $"has checksum {checksum} but expected {expectedChecksum}");
+                                        var page = (PageHeader*)scratchBufferPool.AcquirePagePointerWithOverflowHandling(tempTx, scratchNumber, pagePosition.ScratchPage);
+                                        var checksum = StorageEnvironment.CalculatePageChecksum((byte*)page, page->PageNumber, out var expectedChecksum);
+                                        if (checksum != expectedChecksum)
+                                        {
+                                            throw new InvalidDataException(
+                                                $"During apply logs to data, tried to copy {scratchNumber} / {pagePosition.ScratchNumber} ({page->PageNumber}) " +
+                                                $"has checksum {checksum} but expected {expectedChecksum}");
+                                        }
                                     }
                                 }
-
 
                                 var numberOfPages = scratchBufferPool.CopyPage(
                                     batchWrites,
@@ -1144,8 +1145,8 @@ namespace Voron.Impl.Journal
                     if (j.Number == lastProcessedJournal) // we are in the last log we synced
                     {
                         if (j.Available4Kbs != 0 || //　if there are more pages to be used here or
-                            // we didn't synchronize whole journal
-                            j.PageTranslationTable.MaxTransactionId() != lastFlushedTransactionId) 
+                                                    // we didn't synchronize whole journal
+                            j.PageTranslationTable.MaxTransactionId() != lastFlushedTransactionId)
                             continue; // do not mark it as unused
 
 
@@ -1320,7 +1321,7 @@ namespace Voron.Impl.Journal
                     CurrentFile = null;
                 }
 
-                ZeroCompressionBufferIfNeeded(tx); 
+                ZeroCompressionBufferIfNeeded(tx);
                 ReduceSizeOfCompressionBufferIfNeeded();
 
                 return journalEntry;
@@ -1459,7 +1460,7 @@ namespace Voron.Impl.Journal
                     _lastCompressionBufferReduceCheck = DateTime.UtcNow;
                     throw;
                 }
-                
+
                 tx.EnsurePagerStateReference(pagerState);
                 _compressionPager.EnsureMapped(tx, pagesWritten, outputBufferInPages);
 
@@ -1523,7 +1524,7 @@ namespace Voron.Impl.Journal
                 // the AEAD method, so no need to do it twice
                 txHeader->Hash = 0;
             }
-            
+
             var prepreToWriteToJournal = new CompressedPagesResult
             {
                 Base = txHeaderPtr,
@@ -1549,7 +1550,7 @@ namespace Voron.Impl.Journal
             txHeader->Flags |= TransactionPersistenceModeFlags.Encrypted;
             ulong macLen = (ulong)Sodium.crypto_aead_xchacha20poly1305_ietf_abytes();
             var subKeyLen = Sodium.crypto_aead_xchacha20poly1305_ietf_keybytes();
-            var subKey = stackalloc byte[(int)subKeyLen ];
+            var subKey = stackalloc byte[(int)subKeyLen];
             fixed (byte* mk = _env.Options.MasterKey)
             fixed (byte* ctx = Context)
             {
@@ -1575,7 +1576,7 @@ namespace Voron.Impl.Journal
                 npub,
                 subKey
             );
-            
+
             Debug.Assert(macLen == (ulong)Sodium.crypto_aead_xchacha20poly1305_ietf_abytes());
 
             if (rc != 0)
