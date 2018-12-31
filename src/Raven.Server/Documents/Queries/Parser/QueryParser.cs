@@ -355,7 +355,10 @@ namespace Raven.Server.Documents.Queries.Parser
             }
 
             if (Scanner.TryPeek("INDEX") && TryParseExpressionAfterFromKeyword(out var fromClause, out _))
-            {                
+            {
+                if (isEdge)
+                    throw new InvalidQueryException("Unexpected index query expression - they are forbidden to be inside edge query elements.");
+
                 var query = new Query
                 {
                     From = fromClause
