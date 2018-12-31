@@ -1044,6 +1044,7 @@ namespace Raven.Server.ServerWide
                         return;
                     }
 
+                    UpdateEtagForBackup(databaseRecord, type, index);
                     var updatedDatabaseBlittable = EntityToBlittable.ConvertCommandToBlittable(databaseRecord, context);
                     UpdateValue(index, items, valueNameLowered, valueName, updatedDatabaseBlittable);
                 }
@@ -1052,6 +1053,35 @@ namespace Raven.Server.ServerWide
             {
                 NotifyDatabaseAboutChanged(context, databaseName, index, type, DatabasesLandlord.ClusterDatabaseChangeType.RecordChanged);
             }
+        }
+
+        private void UpdateEtagForBackup(DatabaseRecord databaseRecord, string type, long index)
+        {
+            switch (type)
+            {
+                case nameof(UpdatePeriodicBackupCommand):
+                case nameof(UpdateExternalReplicationCommand):
+                case nameof(AddRavenEtlCommand):
+                case nameof(AddSqlEtlCommand):
+                case nameof(UpdateRavenEtlCommand):
+                case nameof(UpdateSqlEtlCommand):
+                case nameof(DeleteOngoingTaskCommand):
+                case nameof(PutRavenConnectionStringCommand):
+                case nameof(PutSqlConnectionStringCommand):
+                case nameof(RemoveRavenConnectionStringCommand):
+                case nameof(RemoveSqlConnectionStringCommand):
+                case nameof(PutIndexCommand):
+                case nameof(PutAutoIndexCommand):
+                case nameof(DeleteIndexCommand):
+                case nameof(SetIndexLockCommand):
+                case nameof(SetIndexPriorityCommand):
+                case nameof(SetIndexStateCommand):
+                case nameof(EditRevisionsConfigurationCommand):
+                case nameof(EditExpirationCommand):
+                    databaseRecord.EtagForBackup = index;
+                    break;
+            }
+
         }
 
         public override bool ShouldSnapshot(Slice slice, RootObjectType type)

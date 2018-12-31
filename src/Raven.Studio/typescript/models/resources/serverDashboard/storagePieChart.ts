@@ -49,7 +49,15 @@ class storagePieChart {
     
     highlightDatabase(dbName: string, container: JQuery) {
         if (dbName) {
-            $("[data-db-name=" + CSS.escape(dbName) + "]", container).addClass("active");
+            
+            // here we iterate over matching elements and compare values to avoid issues with
+            // CSS.escape method like: escape on number, etc. see: RavenDB-12600
+            $("[data-db-name]", container).each((idx, node) => {
+                const $node = $(node);
+                if ($node.attr("data-db-name") === dbName) {
+                    $node.addClass("active");
+                }
+            });
         } else {
             $("path", container).removeClass("active");
         }

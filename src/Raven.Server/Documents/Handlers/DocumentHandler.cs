@@ -27,6 +27,7 @@ using Raven.Server.Routing;
 using Raven.Server.ServerWide.Context;
 using Raven.Server.TrafficWatch;
 using Sparrow;
+using Sparrow.Extensions;
 using Sparrow.Json;
 using Sparrow.Json.Parsing;
 using Sparrow.Utils;
@@ -458,6 +459,25 @@ namespace Raven.Server.Documents.Handlers
                         });
                     }
 
+                    switch (command.PatchResult.Status)
+                    {
+                        case PatchStatus.Created:
+                        case PatchStatus.Patched:
+
+                            writer.WriteComma();
+
+                            writer.WritePropertyName(nameof(command.PatchResult.LastModified));
+                            writer.WriteString(command.PatchResult.LastModified.GetDefaultRavenFormat(isUtc: command.PatchResult.LastModified.Kind == DateTimeKind.Utc));
+                            writer.WriteComma();
+
+                            writer.WritePropertyName(nameof(command.PatchResult.ChangeVector));
+                            writer.WriteString(command.PatchResult.ChangeVector);
+                            writer.WriteComma();
+
+                            writer.WritePropertyName(nameof(command.PatchResult.Collection));
+                            writer.WriteString(command.PatchResult.Collection);
+                            break;
+                    }
 
                     writer.WriteEndObject();
                 }

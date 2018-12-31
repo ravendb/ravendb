@@ -80,12 +80,12 @@ namespace Sparrow
             public Action<MeterItem> OnFileChange;
             public DateTime End;
 
-            public DurationMeasurement(IoMeterBuffer parent, IoMetrics.MeterType type, long size, long filesize, Action<MeterItem> onFileChange)
+            public DurationMeasurement(IoMeterBuffer parent, IoMetrics.MeterType type, long size, long fileSize, Action<MeterItem> onFileChange)
             {
                 Parent = parent;
                 Type = type;
                 Size = size;
-                FileSize = filesize;
+                FileSize = fileSize;
                 Start = DateTime.UtcNow;
                 End = default(DateTime);
                 OnFileChange = onFileChange;

@@ -39,7 +39,6 @@ using Raven.Server.Smuggler.Documents;
 using Raven.Client.Extensions;
 using Raven.Client.ServerWide.Operations.Migration;
 using Raven.Server.Config;
-using Raven.Server.Config.Settings;
 using Raven.Server.Documents.Indexes;
 using Raven.Server.Documents.Indexes.Auto;
 using Raven.Server.Documents.PeriodicBackup.Restore;
@@ -1054,7 +1053,10 @@ namespace Raven.Server.Web.System
             OfflineMigrationConfiguration.ValidateDataDirectory(dataDir);
             var dataExporter = OfflineMigrationConfiguration.EffectiveDataExporterFullPath(configuration.DataExporterFullPath);
             OfflineMigrationConfiguration.ValidateExporterPath(dataExporter);
-            
+
+            if (IOExtensions.EnsureReadWritePermissionForDirectory(dataDir) == false)
+                throw new IOException($"Could not access {dataDir}");
+
             var databaseName = configuration.DatabaseRecord.DatabaseName;
             if (ResourceNameValidator.IsValidResourceName(databaseName, ServerStore.Configuration.Core.DataDirectory.FullPath, out string errorMessage) == false)
                 throw new BadRequestException(errorMessage);
@@ -1086,16 +1088,26 @@ namespace Raven.Server.Web.System
                 EnableRaisingEvents = true
             };
 
-            process.Start();
+            var processDone = new AsyncManualResetEvent(token.Token);
+            process.Exited += (sender, e) =>
+            {
+                try
+                {
+                    processDone.Set();
+                }
+                catch (OperationCanceledException oce)
+                {
+                    // This is an expected exception during manually started operation cancellation
+                }
+            };
 
+            process.Start();
             var result = new OfflineMigrationResult();
             var overallProgress = result.Progress as SmugglerResult.SmugglerProgress;
             var operationId = ServerStore.Operations.GetNextOperationId();
-            var processDone = new AsyncManualResetEvent(token.Token);
 
             // send new line to avoid issue with read key 
             process.StandardInput.WriteLine();
-            process.Exited += (sender, e) => { processDone.Set(); };
 
             // don't await here - this operation is async - all we return is operation id 
             var t = ServerStore.Operations.AddOperation(null, $"Migration of {dataDir} to {databaseName}",
@@ -1112,7 +1124,6 @@ namespace Raven.Server.Web.System
                                 result.AddInfo("Starting migration");
                                 result.AddInfo($"Path of temporary export file: {tmpFile}");
                                 onProgress(overallProgress);
-
                                 while (true)
                                 {
                                     var (hasTimeout, readMessage) = await ReadLineOrTimeout(process, timeout, configuration, token.Token);
@@ -1144,17 +1155,12 @@ namespace Raven.Server.Web.System
                                 }
 
                                 if (process.ExitCode != 0)
-                                {
                                     throw new ApplicationException($"The data export tool have exited with code {process.ExitCode}.");
-                                }
 
                                 result.DataExporter.Processed = true;
 
                                 if (File.Exists(configuration.OutputFilePath) == false)
-                                {
-                                    throw new FileNotFoundException(
-                                        $"Was expecting the output file to be located at {configuration.OutputFilePath}, but it is not there.");
-                                }
+                                    throw new FileNotFoundException($"Was expecting the output file to be located at {configuration.OutputFilePath}, but it is not there.");
 
                                 result.AddInfo("Starting the import phase of the migration");
                                 onProgress(overallProgress);
@@ -1173,14 +1179,45 @@ namespace Raven.Server.Web.System
                         }
                         catch (Exception e)
                         {
-                            result.AddError(e.ToString());
-                            throw;
+                            if (e is OperationCanceledException || e is ObjectDisposedException)
+                            {
+                                var killed = ProcessExtensions.TryKill(process);
+                                result.AddError($"Exception: {e}, process pid: {process.Id}, killed: {killed}");
+                                throw;
+                            }
+                            else
+                            {
+                                string errorString;
+                                try
+                                {
+                                    var processErrorString = await ProcessExtensions.ReadOutput(process.StandardError).ConfigureAwait(false);
+                                    errorString = $"Error occurred during migration. Process error: {processErrorString}, exception: {e}";
+                                }
+                                catch
+                                {
+                                    errorString = $"Error occurred during migration. Exception: {e}.";
+                                }
+                                result.AddError($"{errorString}");
+                                onProgress.Invoke(result.Progress);
+
+                                var killed = ProcessExtensions.TryKill(process);
+                                throw new InvalidOperationException($"{errorString} Process pid: {process.Id}, killed: {killed}");
+                            }
                         }
                         finally
                         {
-                            if (string.IsNullOrEmpty(tmpFile) == false)
-                            {
+                            if (process.HasExited && string.IsNullOrEmpty(tmpFile) == false)
                                 IOExtensions.DeleteFile(tmpFile);
+                            else if (process.HasExited == false && string.IsNullOrEmpty(tmpFile) == false)
+                            {
+                                if(ProcessExtensions.TryKill(process))
+                                    IOExtensions.DeleteFile(tmpFile);
+                                else
+                                {
+                                    var errorString = $"Error occurred during closing the tool. Process pid: {process.Id}, please close manually.";
+                                    result.AddError($"{errorString}");
+                                    throw new InvalidOperationException($"{errorString}");
+                                }
                             }
                         }
                         return (IOperationResult)result;
