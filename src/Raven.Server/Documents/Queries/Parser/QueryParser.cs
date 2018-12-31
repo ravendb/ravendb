@@ -52,48 +52,76 @@ namespace Raven.Server.Documents.Queries.Parser
 
         public Query Parse(QueryType queryType = QueryType.Select, bool recursive = false)
         {
-            var q = new Query
+            if(!TryParse(out var query, out var message, queryType, recursive))
+                ThrowParseException(message);
+
+            return query;
+        }
+
+        public bool TryParse(out Query query,out string message, QueryType queryType = QueryType.Select, bool recursive = false)
+        {
+            query = new Query
             {
                 QueryText = Scanner.Input
             };
+            message = string.Empty;
 
             while (Scanner.TryScan("DECLARE"))
             {
                 var (name, func) = DeclaredFunction();
 
-                if (q.TryAddFunction(name, func) == false)
-                    ThrowParseException(name + " function was declared multiple times");
+                if (query.TryAddFunction(name, func) == false)
+                {
+                    message = $"{name} function was declared multiple times";
+                    return false;
+                }
             }
 
             while (Scanner.TryScan("WITH"))
             {
                 if (recursive)
-                    ThrowParseException("With clause is not allow inside inner query");
+                {
+                    message = "With clause is not allow inside inner query";
+                    return false;
+                }
 
-                WithClause(q);
+                WithClause(query);
             }
 
             if (Scanner.TryScan("MATCH") == false)
             {
-                if (q.GraphQuery != null)
-                    ThrowParseException("Missing a 'match' clause after 'with' clause");
+                if (query.GraphQuery != null)
+                {
+                    message = "Missing a 'match' clause after 'with' clause";
+                    return false;
+                }
 
-                q.From = FromClause();
+                if (!TryParseFromClause(out var fromClause, out message))
+                    return false;
+
+                query.From = fromClause;
 
                 if (Scanner.TryScan("GROUP BY"))
-                    q.GroupBy = GroupBy();
+                    query.GroupBy = GroupBy();
 
-                if (Scanner.TryScan("WHERE") && Expression(out q.Where) == false)
-                    ThrowParseException("Unable to parse WHERE clause");
+                if (Scanner.TryScan("WHERE") && Expression(out query.Where) == false)
+                {
+                    message = "Unable to parse WHERE clause";
+                    return false;
+                }
             }
             else
             {
-                if (q.GraphQuery == null)
-                    q.GraphQuery = new GraphQuery();
+                if (query.GraphQuery == null)
+                    query.GraphQuery = new GraphQuery();
 
-                if (BinaryGraph(q.GraphQuery, out var op) == false)
-                    ThrowParseException("Unexpected input when trying to parse the MATCH clause");
-                q.GraphQuery.MatchClause = op;
+                if (BinaryGraph(query.GraphQuery, out var op) == false)
+                {
+                    message = "Unexpected input when trying to parse the MATCH clause";
+                    return false;
+                }
+
+                query.GraphQuery.MatchClause = op;
 
                 if (_synteticWithQueries != null)
                 {
@@ -102,11 +130,11 @@ namespace Raven.Server.Documents.Queries.Parser
                         if (sq.IsEdge)
                         {
                             var with = new WithEdgesExpression(sq.Filter, sq.Path, sq.Project, null);
-                            q.TryAddWithEdgePredicates(with, alias);
+                            query.TryAddWithEdgePredicates(with, alias);
                         }
                         else
                         {
-                            q.TryAddWithClause(new Query
+                            query.TryAddWithClause(new Query
                             {
                                 From = new FromClause
                                 {
@@ -119,41 +147,53 @@ namespace Raven.Server.Documents.Queries.Parser
                     _synteticWithQueries.Clear();
                 }
 
-                if (Scanner.TryScan("WHERE") && Expression(out q.GraphQuery.Where) == false)
-                    ThrowParseException("Unable to parse MATCH's WHERE clause");
+                if (Scanner.TryScan("WHERE") && Expression(out query.GraphQuery.Where) == false)
+                {
+                    message = "Unable to parse MATCH's WHERE clause";
+                    return false;
+                }
             }
 
             if (Scanner.TryScan("ORDER BY"))
-                q.OrderBy = OrderBy();
+                query.OrderBy = OrderBy();
 
             if (Scanner.TryScan("LOAD"))
-                q.Load = SelectClauseExpressions("LOAD", false);
+                query.Load = SelectClauseExpressions("LOAD", false);
 
             switch (queryType)
             {
                 case QueryType.Select:
                     if (Scanner.TryScan("SELECT"))
-                        q.Select = SelectClause("SELECT", q);
+                        query.Select = SelectClause("SELECT", query);
                     if (Scanner.TryScan("INCLUDE"))
-                        q.Include = IncludeClause();
+                        query.Include = IncludeClause();
                     break;
                 case QueryType.Update:
 
-                    if(q.GraphQuery != null)
-                        ThrowParseException("Update operations cannot use graph queries");
+                    if (query.GraphQuery != null)
+                    {
+                        message = "Update operations cannot use graph queries";
+                        return false;
+                    }
 
                     if (Scanner.TryScan("UPDATE") == false)
-                        ThrowParseException("Update operations must end with UPDATE clause");
+                    {
+                        message = "Update operations must end with UPDATE clause";
+                        return false;
+                    }
 
                     var functionStart = Scanner.Position;
                     if (Scanner.FunctionBody() == false)
-                        ThrowParseException("Update clause must have a single function body");
+                    {
+                        message = "Update clause must have a single function body";
+                        return false;
+                    }
 
-                    q.UpdateBody = Scanner.Input.Substring(functionStart, Scanner.Position - functionStart);
+                    query.UpdateBody = Scanner.Input.Substring(functionStart, Scanner.Position - functionStart);
                     try
                     {
                         // validate the js code
-                        ValidateScript("function test()" + q.UpdateBody);
+                        ValidateScript("function test()" + query.UpdateBody);
                     }
                     catch (Exception e)
                     {
@@ -166,13 +206,17 @@ namespace Raven.Server.Documents.Queries.Parser
                     break;
             }
 
-            Paging(out q.Offset, out q.Limit);
+            Paging(out query.Offset, out query.Limit);
 
             if (recursive == false && Scanner.AtEndOfInput() == false)
-                ThrowParseException("Expected end of query");
+            {
+                message = "Expected end of query";
+                return false;
+            }
 
-            return q;
+            return true;
         }
+
 
         private void Paging(out ValueExpression offset, out ValueExpression limit)
         {
@@ -304,60 +348,97 @@ namespace Raven.Server.Documents.Queries.Parser
 
             SynteticWithQuery prev = default;
             var start = Scanner.Position;
-            if (Field(out var collection) == false)
+
+            if (Scanner.TryScan("from"))
             {
-                if (isEdge)
-                {
-                    ThrowParseException("Unable to read edge alias");
-                }
-                if (Scanner.TryPeek(')'))// anonymous alias () accepts everything
-                {
-                    alias = "__alias" + (++_counter);
-                    AddWithQuery(new FieldExpression(new List<StringSegment>()), null, alias, null, false, start, false);
-                    return true;
-                }
-                alias = default;
-                return false;
+                ThrowParseException("Unexpected 'from' clause. The correct syntax to use in pattern match node/edge expressions is to omit the 'from' keyword and then write the expression inside the node/edge.");
             }
 
-            if (Scanner.TryPeek(')'))
-            {
-                alias = GenerateAlias(implicitPrefix, collection);
-
-                if (gq.HasAlias(alias))
-                    return true;
-
-                if (_synteticWithQueries?.TryGetValue(collection.FieldValue, out prev) == true && !prev.IsEdge)
-                    return true;
-
-                AddWithQuery(collection, null, alias, null, isEdge, start, true);
-                return true;
-            }
-
-            if (collection.FieldValue == "_") // (_ as e) anonymous alias
-                collection = new FieldExpression(new List<StringSegment>());
-
-            if (Alias(true, out var maybeAlias) == false)
-            {
-                if(gq.HasAlias(collection.FieldValue) ||
-                    isEdge == false && _synteticWithQueries?.ContainsKey(collection.FieldValue) == true
-                    )
+            if (Scanner.TryPeek("INDEX") && TryParseExpressionAfterFromKeyword(out var fromClause, out _))
+            {                
+                var query = new Query
                 {
-                    alias = collection.FieldValue;
+                    From = fromClause
+                };
+
+                if (Scanner.TryScan("WHERE") && Expression(out query.Where) == false)
+                {                
+                    ThrowParseException("Unable to parse WHERE clause in the nod/edge expression.");
                 }
-                else
-                {
-                    alias = GenerateAlias(implicitPrefix, collection);
+                
+                if (Scanner.TryScan("ORDER BY"))
+                {                    
+                    ThrowParseException("ORDER BY clause is not supported in the nod/edge expression.");
                 }
-            }
-            else if(maybeAlias.Value == "_")
-            {
-                alias = "__alias" + (++_counter);
+
+                if (Scanner.TryScan("LOAD"))
+                    query.Load = SelectClauseExpressions("LOAD", false);
+
+                if (Scanner.TryScan("SELECT"))
+                    throw new InvalidQueryException("SELECT clause is allowed only in edge expressions");
+
+                alias = fromClause.Alias ?? new StringSegment($"index_{string.Join('_', fromClause.From.Compound).Replace('/', '_')}_{++_counter}");
+                gq.WithDocumentQueries.TryAdd(alias, query);
             }
             else
             {
-                alias = maybeAlias.Value;
-            }
+                if (Field(out var collection) == false)
+                {
+                    if (isEdge)
+                    {
+                        ThrowParseException("Unable to read edge alias");
+                    }                 
+
+                    if (Scanner.TryPeek(')')) // anonymous alias () accepts everything
+                    {
+                        alias = "__alias" + (++_counter);
+                        AddWithQuery(new FieldExpression(new List<StringSegment>()), null, alias, null, false, start, false);
+                        return true;
+                    }
+
+                    alias = default;
+                    return false;
+                }
+
+                if (Scanner.TryPeek(')'))
+                {
+                    alias = GenerateAlias(implicitPrefix, collection);
+
+                    if (gq.HasAlias(alias))
+                        return true;
+
+                    if (_synteticWithQueries?.TryGetValue(collection.FieldValue, out prev) == true && !prev.IsEdge)
+                        return true;
+
+                    AddWithQuery(collection, null, alias, null, isEdge, start, true);
+                    return true;
+                }
+
+                if (collection.FieldValue == "_") // (_ as e) anonymous alias
+                    collection = new FieldExpression(new List<StringSegment>());
+
+                if (Alias(true, out var maybeAlias) == false)
+                {
+                    if (gq.HasAlias(collection.FieldValue) ||
+                        isEdge == false && _synteticWithQueries?.ContainsKey(collection.FieldValue) == true
+                    )
+                    {
+                        alias = collection.FieldValue;
+                    }
+                    else
+                    {
+                        alias = GenerateAlias(implicitPrefix, collection);
+                    }
+                }
+                else if (maybeAlias.Value == "_")
+                {
+                    alias = "__alias" + (++_counter);
+                }
+                else
+                {
+                    alias = maybeAlias.Value;
+                }
+            
 
             QueryExpression filter = null;
             if (Scanner.TryScan("WHERE"))
@@ -369,6 +450,9 @@ namespace Raven.Server.Documents.Queries.Parser
             FieldExpression project = null;
             if (Scanner.TryScan("SELECT"))
             {
+                if (!isEdge)
+                    throw new InvalidQueryException("Select expression is allowed only inside an edge query.");
+
                 var fields = SelectClauseExpressions("SELECT", false);
                 if (fields.Count != 1)
                     throw new InvalidQueryException("Select expression inside graph query for '" + alias + "' must have excatly one projected field", Scanner.Input, null);
@@ -383,7 +467,7 @@ namespace Raven.Server.Documents.Queries.Parser
                 return true;
         
             AddWithQuery(collection, project, alias, filter, isEdge, start, maybeAlias == null);
-
+                }
             return true;
         }
 
@@ -482,6 +566,7 @@ namespace Raven.Server.Documents.Queries.Parser
         {
             if (Scanner.TryScan('(') == false)
                 throw new InvalidQueryException("MATCH operator expected a '(', but didn't get it.", Scanner.Input, null);
+
 
             if (GraphAlias(gq, false, default, out var alias) == false)
             {
@@ -1134,48 +1219,80 @@ namespace Raven.Server.Documents.Queries.Parser
             return select;
         }
 
-
-        private FromClause FromClause()
+        private bool TryParseFromClause(out FromClause fromClause, out string message)
         {
+            fromClause = default;
             if (Scanner.TryScan("FROM") == false)
-                ThrowParseException("Expected FROM clause");
+            {
+                message = "Expected FROM clause";
+                return false;
+            }
 
+            return TryParseExpressionAfterFromKeyword(out fromClause, out message);
+        }
+
+        private bool TryParseExpressionAfterFromKeyword(out FromClause fromClause, out string message)
+        {
             FieldExpression field;
             QueryExpression filter = null;
-            bool index = false;
+            fromClause = default;
+            message = string.Empty;
+            var index = false;
             if (Scanner.TryScan("INDEX"))
             {
                 if (Field(out field) == false)
-                    ThrowParseException("Expected FROM INDEX source");
+                {
+                    message = "Invalid syntax. Expected 'INDEX source' expression.";
+                    return false;
+                }
 
                 index = true;
             }
             else
             {
-
                 if (Field(out field) == false)
-                    ThrowParseException("Expected FROM source");
+                {
+                    message = "Unable to parse identifier in FROM clause";
+                    return false;
+                }
 
-                if (Scanner.TryScan('(')) // FROM  Collection ( filter )
+                if (Scanner.TryScan('(')) // Collection ( filter )
                 {
                     if (Expression(out filter) == false)
-                        ThrowParseException("Expected filter in filtered FORM clause");
+                    {
+                        message = "Expected filter in filtered FROM clause";
+                        return false;
+                    }
 
                     if (Scanner.TryScan(')') == false)
-                        ThrowParseException("Expected closing parenthesis in filtered FORM clause after filter");
+                    {
+                        message = "Expected closing parenthesis in filtered FORM clause after filter";
+                        return false;
+                    }
                 }
             }
 
 
             Alias(false, out var alias);
 
-            return new FromClause
+            fromClause = new FromClause
             {
                 From = field,
                 Alias = alias,
                 Filter = filter,
                 Index = index
             };
+
+
+            return true;
+        }
+
+        private FromClause FromClause()
+        {
+            if(!TryParseFromClause(out var fromClause, out var msg))
+                ThrowParseException(msg);
+
+            return fromClause;
         }
 
         private static readonly string[] AliasKeywords =
