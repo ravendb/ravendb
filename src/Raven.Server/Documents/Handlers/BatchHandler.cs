@@ -495,7 +495,12 @@ namespace Raven.Server.Documents.Handlers
                         foreach (BlittableJsonReaderObject blittableCommand in commands)
                         {
                             count++;
-                            var changeVector = $"RAFT:{count}-{dbGrpId}";
+                            var changeVector = global;
+                            var updatedChangeVector = ChangeVectorUtils.TryUpdateChangeVector("RAFT", dbGrpId, count, context.LastDatabaseChangeVector);
+                            if (updatedChangeVector.IsValid)
+                            {
+                                changeVector = updatedChangeVector.ChangeVector;
+                            }
 
                             var cmd = JsonDeserializationServer.ClusterTransactionDataCommand(blittableCommand);
 
@@ -605,12 +610,6 @@ namespace Raven.Server.Documents.Handlers
                     if (context.LastDatabaseChangeVector == null)
                     {
                         context.LastDatabaseChangeVector = global;
-                    }
-
-                    var result = ChangeVectorUtils.TryUpdateChangeVector("RAFT", dbGrpId, count, context.LastDatabaseChangeVector);
-                    if (result.IsValid)
-                    {
-                        context.LastDatabaseChangeVector = result.ChangeVector;
                     }
                 }
 

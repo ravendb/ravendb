@@ -1,7 +1,9 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Diagnostics;
+using System.Linq;
 using System.Net.Http;
+using System.Runtime.CompilerServices;
 using System.Threading;
 using System.Threading.Tasks;
 using Raven.Client.Documents;
@@ -283,6 +285,31 @@ namespace FastTests.Server.Replication
                 await AddWatcherToReplicationTopology(fromStore, databaseWatcher, new[] { node.Url });
             }
         }
+
+        protected async Task<(DocumentStore source, DocumentStore destination)> CreateDuoCluster([CallerMemberName] string caller = null)
+        {
+            var leader = await CreateRaftClusterAndGetLeader(2);
+            var follower = Servers.First(srv => ReferenceEquals(srv, leader) == false);
+            var source = new DocumentStore
+            {
+                Urls = new[] { leader.WebUrl },
+                Database = caller
+            };
+            var destination = new DocumentStore
+            {
+                Urls = new[] { follower.WebUrl },
+                Database = caller
+            };
+            source.Initialize();
+            destination.Initialize();
+
+            var res = CreateClusterDatabase(caller, source, 2);
+            //var doc = MultiDatabase.CreateDatabaseDocument(dbName);
+            //var databaseResult = source.Admin.Server.Send(new CreateDatabaseOperation(doc, 2));
+            await WaitForRaftIndexToBeAppliedInCluster(res.RaftCommandIndex, TimeSpan.FromSeconds(5));
+            return (source, destination);
+        }
+
 
         private class GetConnectionFailuresCommand : RavenCommand<Dictionary<string, string[]>>
         {
