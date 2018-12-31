@@ -812,7 +812,7 @@ namespace SlowTests.Cluster
         }
 
         [Fact]
-        public async Task ThrowOnOptimisticConcurrencyForSignleDcoument()
+        public async Task ThrowOnOptimisticConcurrencyForSingleDocument()
         {
             using (var store = GetDocumentStore())
             {
