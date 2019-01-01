@@ -226,7 +226,7 @@ namespace Raven.Server.ServerWide.Commands
             var items = context.Transaction.InnerTransaction.OpenTable(ClusterStateMachine.TransactionCommandsSchema, ClusterStateMachine.TransactionCommands);
             using (GetPrefix(context, database, out var prefixSlice))
             {
-                if(items.SeekOnePrimaryKeyPrefix(prefixSlice,out var reader) == false)
+                if (items.SeekOnePrimaryKeyPrefix(prefixSlice,out var reader) == false)
                     return null;
 
                 return ReadCommand(context, reader);
