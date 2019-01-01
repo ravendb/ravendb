@@ -114,13 +114,20 @@ namespace Raven.Server.Documents.Queries.Graph
         {
             if (_index != -1)
                 return default;
-
-            var results = _queryRunner.ExecuteQuery(new IndexQueryServerSide(_queryMetadata)
+            //TODO: we can cache only queries we know has identical steps to save memory 
+            //TODO: we can also add ref count per step and clear the results once they are populated
+            var cache = _graphQueryPlan.QueryCache;
+            var key = _queryMetadata.Query.ToString();
+            if(cache.TryGetValue(key,out var results) == false)
             {
-                QueryParameters = _queryParameters,
-            },
+                results = _queryRunner.ExecuteQuery(new IndexQueryServerSide(_queryMetadata)
+                {
+                    QueryParameters = _queryParameters,
+                },
                   _context, _resultEtag, _token);
-
+                cache.Add(key, results);
+            }
+            
             if (results.IsCompleted)
             {
                 // most of the time, we complete in a sync fashion
