@@ -13,7 +13,7 @@
             <div class="row flex-row margin-bottom" data-bind="validationElement: name">
                 <label class="control-label col-sm-4 col-lg-2">Task name</label>
                 <div class="col-sm-4 col-lg-4">
-                    <input data-bind="textInput: name" id="taskName" type="text" class="form-control" placeholder="Enter a descriptive name for the periodic backup task (optional)"/>
+                    <input data-bind="textInput: name" id="taskName" type="text" class="form-control" placeholder="Enter a descriptive name for the periodic backup task (optional)" />
                 </div>
             </div>
             <div class="row flex-row margin-bottom" data-bind="validationElement: backupType">
@@ -152,6 +152,14 @@
                                    data-bind="textInput: folderPath, attr: { 'placeholder': $root.serverConfiguration().LocalRootPath ? 'Relative backup path' : 'Full directory backup path' }"  />
                         </div>
                     </div>
+                </div>
+                <div class="col-xs-6">
+                    <p class="text-info bg-info padding padding-sm">
+                        The backup files will be created in:<br />
+                        <strong><small data-bind="text: $root.backupLocationShowing"></small></strong>
+                        <br />
+                        Available Space: <strong><small data-bind="text: $root.freeSpaceShowing"></small></strong>
+                    </p>
                 </div>
             </div>
         </div>

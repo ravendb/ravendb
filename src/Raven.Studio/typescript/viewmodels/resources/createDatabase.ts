@@ -55,7 +55,8 @@ class createDatabase extends dialogViewModelBase {
 
     databaseLocationCalculated = ko.observable<string>();
     databaseLocationShowing: KnockoutComputed<string>;
-    
+    freeSpaceShowing = ko.observable<string>();
+
     recentPathsAutocomplete: lastUsedAutocomplete;
     dataExporterAutocomplete: lastUsedAutocomplete;
     
@@ -116,8 +117,9 @@ class createDatabase extends dialogViewModelBase {
 
         const getDefaultDatabaseLocationTask = new getDatabaseLocationCommand(this.databaseModel.name(), this.databaseModel.path.dataPath())
             .execute()
-            .done((fullPath: string) => {
-                this.databaseLocationCalculated(fullPath);
+            .done((pathDetails: Array<string>) => {
+                this.databaseLocationCalculated(pathDetails[0]),
+                    this.freeSpaceShowing(pathDetails[1]);
             });
         
         return $.when<any>(getTopologyTask, getEncryptionKeyTask, getDefaultDatabaseLocationTask, getStudioSettingsTask)
@@ -251,9 +253,13 @@ class createDatabase extends dialogViewModelBase {
             if (this.databaseModel.path.dataPath.isValid()) {
                 new getDatabaseLocationCommand(this.databaseModel.name(), newPathValue)
                     .execute()
-                    .done((fullPath: string) => this.databaseLocationCalculated(fullPath))
+                    .done((pathDetails: Array<string>) => {
+                        this.databaseLocationCalculated(pathDetails[0]),
+                            this.freeSpaceShowing(pathDetails[1]);
+                    });
             } else {
                 this.databaseLocationCalculated("Invalid path");
+                this.freeSpaceShowing("N/A");
             }
         });
     }

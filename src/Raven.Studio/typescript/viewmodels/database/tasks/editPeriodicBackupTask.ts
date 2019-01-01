@@ -5,6 +5,7 @@ import savePeriodicBackupConfigurationCommand = require("commands/database/tasks
 import periodicBackupConfiguration = require("models/database/tasks/periodicBackup/periodicBackupConfiguration");
 import getPeriodicBackupConfigurationCommand = require("commands/database/tasks/getPeriodicBackupConfigurationCommand");
 import getPeriodicBackupConfigCommand = require("commands/database/tasks/getPeriodicBackupConfigCommand");
+import getBackupLocationCommand = require("commands/resources/getBackupLocationCommand");
 import testPeriodicBackupCredentialsCommand = require("commands/database/tasks/testPeriodicBackupCredentialsCommand");
 import popoverUtils = require("common/popoverUtils");
 import eventsCollector = require("common/eventsCollector");
@@ -18,10 +19,14 @@ class editPeriodicBackupTask extends viewModelBase {
     possibleMentors = ko.observableArray<string>([]);
     serverConfiguration = ko.observable<periodicBackupServerLimitsResponse>();
 
+    backupLocationCalculated = ko.observable<string>();
+    backupLocationShowing: KnockoutComputed<string>;
+    freeSpaceShowing = ko.observable<string>();
+
     constructor() {
         super();
         
-        this.bindToCurrentInstance("testCredentials");
+        this.bindToCurrentInstance("testCredentials"); 
     }
 
     activate(args: any) { 
@@ -60,6 +65,7 @@ class editPeriodicBackupTask extends viewModelBase {
             deferred
                 .done(() => {
                     this.dirtyFlag = this.configuration().dirtyFlag;
+                    this.setupBackupLocation();
                 });
             
             return deferred;
@@ -67,6 +73,17 @@ class editPeriodicBackupTask extends viewModelBase {
 
         return $.when<any>(this.loadPossibleMentors(), this.loadServerSideConfiguration())
             .then(backupLoader);
+    }
+
+    private setupBackupLocation() {
+        new getBackupLocationCommand(this.configuration().localSettings().folderPath() == null ? "" : this.configuration().localSettings().folderPath())
+            .execute()
+            .done((pathDetails: Array<string>) => {
+                this.backupLocationCalculated(pathDetails[0]),
+                    this.freeSpaceShowing(pathDetails[1]);
+            });
+
+        this.initObservables();
     }
 
     private loadServerSideConfiguration() {
@@ -90,7 +107,27 @@ class editPeriodicBackupTask extends viewModelBase {
         }
         return true;
     }
-    
+
+    protected initObservables() {
+        this.backupLocationShowing = ko.pureComputed(() => {
+            return this.backupLocationCalculated();
+        });
+
+        this.configuration().localSettings().folderPath.throttle(300).subscribe((newPathValue) => {
+            if (this.configuration().localSettings().folderPath.isValid()) {
+                new getBackupLocationCommand(newPathValue)
+                    .execute()
+                    .done((pathDetails: Array<string>) => {
+                        this.backupLocationCalculated(pathDetails[0]),
+                            this.freeSpaceShowing(pathDetails[1]);
+                    });
+            } else {
+                this.backupLocationCalculated("Invalid path");
+                this.freeSpaceShowing("N/A");
+            }
+        });
+    }
+
     compositionComplete() {
         super.compositionComplete();
         

@@ -7,6 +7,7 @@ using Microsoft.CodeAnalysis.CSharp;
 using Microsoft.CodeAnalysis.Formatting;
 using Raven.Client.Exceptions;
 using Raven.Client.ServerWide.Operations.Migration;
+using Raven.Client.Util;
 using Raven.Server.Routing;
 using Raven.Server.ServerWide;
 using Raven.Server.Utils;
@@ -29,6 +30,7 @@ namespace Raven.Server.Web.Studio
             var name = GetStringQueryString("name", required: false);
 
             var baseDataDirectory = ServerStore.Configuration.Core.DataDirectory.FullPath;
+            var freeSpace = Size.Humane(new DriveInfo(Path.GetPathRoot(baseDataDirectory)).TotalFreeSpace);
 
             // 1. Used as default when both Name & Path are Not defined
             var result = baseDataDirectory;
@@ -57,8 +59,12 @@ namespace Raven.Server.Web.Studio
             using (var writer = new BlittableJsonTextWriter(context, ResponseBodyStream()))
             {
                 writer.WriteStartObject();
-                writer.WritePropertyName("FullPath");
+                writer.WritePropertyName("PathDetails");
+                writer.WriteStartArray();
                 writer.WriteString(result);
+                writer.WriteComma();
+                writer.WriteString(freeSpace);
+                writer.WriteEndArray();
                 writer.WriteEndObject();
             }
 
