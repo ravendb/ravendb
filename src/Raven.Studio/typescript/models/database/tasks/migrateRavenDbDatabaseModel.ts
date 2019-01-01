@@ -62,8 +62,9 @@ class migrateRavenDbDatabaseModel {
         this.showTransformScript.subscribe(v => {
             if (v) {
                 this.transformScript(
-                    "var id = this['@metadata']['@id'];\r\n" +
-                    "// current object is available under 'this' variable");
+                    "this.collection = this['@metadata']['@collection'];\r\n" +
+                    "// current object is available under 'this' variable\r\n" +
+                    "// @change-vector, @id, @last-modified metadata fields are not available");
             } else {
                 this.transformScript("");
             }
