@@ -43,8 +43,9 @@ class exportDatabase extends viewModelBase {
         this.showTransformScript.subscribe(v => {
             if (v) {
                 this.model.transformScript(
-                    "var id = this['@metadata']['@id'];\r\n" +
-                    "// current object is available under 'this' variable");
+                    "this.collection = this['@metadata']['@collection'];\r\n" +
+                    "// current object is available under 'this' variable\r\n" +
+                    "// @change-vector, @id, @last-modified metadata fields are not available");
             } else {
                 this.model.transformScript("");
             }
@@ -145,12 +146,12 @@ class exportDatabase extends viewModelBase {
         popoverUtils.longWithHover($("#scriptPopover"),
             {
                 content:
-                "<div class=\"text-center\">Transform scripts are written in JavaScript </div>" +
-                "<pre><span class=\"token keyword\">var</span> id = doc[<span class=\"token string\">'@metadata'</span>][<span class=\"token string\">'@id'</span>];<br />" +
-                "<span class=\"token keyword\">if</span> (id === <span class=\"token string\">'orders/999'</span>)<br />&nbsp;&nbsp;&nbsp;&nbsp;" +
-                "<span class=\"token keyword\">throw </span><span class=\"token string\">'skip'</span>; <span class=\"token comment\">// filter-out</span><br /><br />" +
-                "<span class=\"token keyword\">this</span>.Freight = <span class=\"token number\">15.3</span>;<br />" +
-                "</pre>" 
+                    "<div class=\"text-center\">Transform scripts are written in JavaScript </div>" +
+                        "<pre><span class=\"token keyword\">var</span> name = <span class=\"token keyword\">this.</span>FirstName;<br />" +
+                        "<span class=\"token keyword\">if</span> (name === <span class=\"token string\">'Bob'</span>)<br />&nbsp;&nbsp;&nbsp;&nbsp;" +
+                        "<span class=\"token keyword\">throw </span><span class=\"token string\">'skip'</span>; <span class=\"token comment\">// filter-out</span><br /><br />" +
+                        "<span class=\"token keyword\">this</span>.Freight = <span class=\"token number\">15.3</span>;<br />" +
+                        "</pre>"
             });
         
         popoverUtils.longWithHover($("#configurationPopover"),

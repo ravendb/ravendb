@@ -124,8 +124,8 @@ class migrateDatabase extends viewModelBase {
             {
                 content:
                     "<div class=\"text-center\">Transform scripts are written in JavaScript </div>" +
-                        "<pre><span class=\"token keyword\">var</span> id = doc[<span class=\"token string\">'@metadata'</span>][<span class=\"token string\">'@id'</span>];<br />" +
-                        "<span class=\"token keyword\">if</span> (id === <span class=\"token string\">'orders/999'</span>)<br />&nbsp;&nbsp;&nbsp;&nbsp;" +
+                        "<pre><span class=\"token keyword\">var</span> name = <span class=\"token keyword\">this.</span>FirstName;<br />" +
+                        "<span class=\"token keyword\">if</span> (name === <span class=\"token string\">'Bob'</span>)<br />&nbsp;&nbsp;&nbsp;&nbsp;" +
                         "<span class=\"token keyword\">throw </span><span class=\"token string\">'skip'</span>; <span class=\"token comment\">// filter-out</span><br /><br />" +
                         "<span class=\"token keyword\">this</span>.Freight = <span class=\"token number\">15.3</span>;<br />" +
                         "</pre>"
