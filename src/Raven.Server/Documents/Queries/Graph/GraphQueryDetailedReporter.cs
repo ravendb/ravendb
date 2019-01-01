@@ -134,7 +134,10 @@ namespace Raven.Server.Documents.Queries.Graph
             _writer.WriteStartObject();
             _writer.WritePropertyName("Type");
             _writer.WriteString("RecursionQueryStep");
+            _writer.WriteComma();
+            _writer.WritePropertyName("Left");
             Visit(rqs.Left);
+            _writer.WriteComma();
             _writer.WritePropertyName("Steps");
             _writer.WriteStartArray();
             var first = true;
