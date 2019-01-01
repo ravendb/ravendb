@@ -134,7 +134,6 @@ namespace Raven.Server.Documents.Queries.Graph
             if (_index != -1)
                 return default;
 
-            var cache = _graphQueryPlan.QueryCache;
             var key = GetQueryString;
             if(_graphQueryPlan.IdenticalQueriesCount.ContainsKey(key))
             {                
