@@ -26,7 +26,7 @@ namespace Raven.Server.Documents.Queries.Graph
         public long ResultEtag { get; set; }
         public GraphQuery GraphQuery => _query.Metadata.Query.GraphQuery;
         public bool CollectIntermediateResults { get; set; }
-        public Dictionary<string, DocumentQueryResult> QueryCache { get; internal set; } = new Dictionary<string, DocumentQueryResult>();
+        public Dictionary<string, DocumentQueryResult> QueryCache = new Dictionary<string, DocumentQueryResult>();
         public Dictionary<string, Reference<int>> IdenticalQueriesCount = new Dictionary<string, Reference<int>>();
 
         public GraphQueryPlan(IndexQueryServerSide query, DocumentsOperationContext context, long? resultEtag,
