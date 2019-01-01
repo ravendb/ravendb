@@ -458,7 +458,7 @@ namespace Raven.Database.Bundles.Replication.Controllers
         public async Task<HttpResponseMessage> AttachmentReplicatePost()
         {
             var topologyId = Request.Headers.GetFirstValue("Topology-Id");
-            if (topologyId != null && topologyId != Database.ClusterManager?.Value?.Engine.CurrentTopology.TopologyId.ToString())
+            if (!string.IsNullOrEmpty(topologyId) && Database.ClusterManager?.Value?.Engine.CurrentTopology.ToString() != Topology.EmptyTopology && topologyId != Database.ClusterManager?.Value?.Engine.CurrentTopology.TopologyId.ToString())
             {
                 return GetMessageWithString("Refusing to accept data outside of my topology", HttpStatusCode.Forbidden);
             }
