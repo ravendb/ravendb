@@ -53,7 +53,7 @@ namespace Raven.Server.Documents.Queries.Graph
                 }
                 catch (Exception e)
                 {
-                    throw new InvalidQueryException("Query on collection " + queryMetadata.CollectionName + " failed, because there is no such collection. If you meant to use " + queryMetadata.CollectionName + " as an alias, use: (_ as " + queryMetadata.CollectionName +")", e );
+                    throw new InvalidQueryException("Query on collection " + queryMetadata.CollectionName + " failed, because there is no such collection. If you meant to use " + queryMetadata.CollectionName + " as an alias, use: (_ as " + queryMetadata.CollectionName + ")", e);
                 }
             }
         }
@@ -62,13 +62,16 @@ namespace Raven.Server.Documents.Queries.Graph
         {
             get
             {
+                if (_graphQueryPlan.IdenticalQueriesCount.ContainsKey(GetQueryString))
+                    return false;
+
                 if (HasWhereClause) //TODO: verify with Tal how good is this change
                     return false;
 
                 if (_queryMetadata.IsCollectionQuery == false)
                     return false;
 
-                if (_queryMetadata.HasIncludeOrLoad || _queryMetadata.Query.Limit != null || _queryMetadata.Query.Offset != null )
+                if (_queryMetadata.HasIncludeOrLoad || _queryMetadata.Query.Limit != null || _queryMetadata.Query.Offset != null)
                     return false;
 
                 return true;
@@ -110,24 +113,55 @@ namespace Raven.Server.Documents.Queries.Graph
             return true;
         }
 
+
+        private string _queryString;
+        private bool _shouldCacheResults;
+
+        public string GetQueryString 
+            {
+                get
+                {
+                    if (_queryString == null)
+                    {
+                        _queryString = _queryMetadata.Query.ToString();
+                    }
+                    return _queryString;
+                }
+            }
+
         public ValueTask Initialize()
         {
             if (_index != -1)
                 return default;
-            //TODO: we can cache only queries we know has identical steps to save memory 
-            //TODO: we can also add ref count per step and clear the results once they are populated
+
             var cache = _graphQueryPlan.QueryCache;
-            var key = _queryMetadata.Query.ToString();
-            if(cache.TryGetValue(key,out var results) == false)
-            {
-                results = _queryRunner.ExecuteQuery(new IndexQueryServerSide(_queryMetadata)
+            var key = GetQueryString;
+            if(_graphQueryPlan.IdenticalQueriesCount.ContainsKey(key))
+            {                
+                if (_graphQueryPlan.QueryCache.TryGetValue(key, out var res))
                 {
-                    QueryParameters = _queryParameters,
-                },
-                  _context, _resultEtag, _token);
-                cache.Add(key, results);
+                    CompleteInitialization(res);
+                    //Updating ref count so we can get rid of the cached results
+                    var count = _graphQueryPlan.IdenticalQueriesCount[key];
+                    count.Value -= 1;
+                    if (count.Value == 0)
+                    {
+                        _graphQueryPlan.QueryCache.Remove(key);
+                    }
+                    return default;
+                }
+                else //This is the first step to actually perform the query
+                {
+                    _shouldCacheResults = true;
+                }
             }
-            
+
+            var results = _queryRunner.ExecuteQuery(new IndexQueryServerSide(_queryMetadata)
+            {
+                QueryParameters = _queryParameters,
+            },
+                _context, _resultEtag, _token);
+
             if (results.IsCompleted)
             {
                 // most of the time, we complete in a sync fashion
@@ -155,6 +189,13 @@ namespace Raven.Server.Documents.Queries.Graph
                 if (result.Id == null)
                     continue;
                 _resultsById[result.Id] = match;
+            }
+            //If needed cache the results and update ref count
+            if(_shouldCacheResults)
+            {
+                var key = GetQueryString;
+                _graphQueryPlan.QueryCache.Add(key, results);
+                _graphQueryPlan.IdenticalQueriesCount[key].Value -= 1;
             }
         }
 
