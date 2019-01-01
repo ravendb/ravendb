@@ -8,6 +8,7 @@ using Raven.Server.Documents.Indexes;
 using Raven.Server.Documents.Queries.AST;
 using Raven.Server.ServerWide;
 using Raven.Server.ServerWide.Context;
+using Raven.Server.Utils;
 using Sparrow;
 using static Raven.Server.Documents.Queries.GraphQueryRunner;
 
@@ -25,7 +26,8 @@ namespace Raven.Server.Documents.Queries.Graph
         public long ResultEtag { get; set; }
         public GraphQuery GraphQuery => _query.Metadata.Query.GraphQuery;
         public bool CollectIntermediateResults { get; set; }
-        public Dictionary<string, Task<DocumentQueryResult>> QueryCache { get; internal set; } = new Dictionary<string, Task<DocumentQueryResult>>();
+        public Dictionary<string, DocumentQueryResult> QueryCache { get; internal set; } = new Dictionary<string, DocumentQueryResult>();
+        public Dictionary<string, Reference<int>> IdenticalQueriesCount = new Dictionary<string, Reference<int>>();
 
         public GraphQueryPlan(IndexQueryServerSide query, DocumentsOperationContext context, long? resultEtag,
             OperationCancelToken token, DocumentDatabase database)
@@ -41,7 +43,21 @@ namespace Raven.Server.Documents.Queries.Graph
         public void BuildQueryPlan()
         {
             GraphQuerySyntaxValidatorVisitor.Instance.Visit(_query.Metadata.Query); //this will throw if the syntax will be bad
-            RootQueryStep = BuildQueryPlanForExpression(_query.Metadata.Query.GraphQuery.MatchClause);                       
+            RootQueryStep = BuildQueryPlanForExpression(_query.Metadata.Query.GraphQuery.MatchClause);
+            ClearUniqueQueriesFromIdenticalQueries();
+        }
+
+        private void ClearUniqueQueriesFromIdenticalQueries()
+        {
+            var tmp = new Dictionary<string, Reference<int>>();
+            foreach (var keyVal in IdenticalQueriesCount)
+            {
+                if (keyVal.Value.Value > 1)
+                {
+                    tmp.Add(keyVal.Key, keyVal.Value);
+                }
+            }
+            IdenticalQueriesCount = tmp;
         }
 
         private IGraphQueryStep BuildQueryPlanForExpression(QueryExpression expression)
@@ -199,10 +215,22 @@ namespace Raven.Server.Documents.Queries.Graph
             // TODO: we can tell at this point if it is a collection query or not,
             // TODO: in the future, we want to build a diffrent step for collection queries in the future.        
             var queryMetadata = new QueryMetadata(query, _query.QueryParameters, 0);
-            return new QueryQueryStep(_database.QueryRunner, alias, query, queryMetadata, _query.QueryParameters, _context, _resultEtag, this, _token)
+            var qqs = new QueryQueryStep(_database.QueryRunner, alias, query, queryMetadata, _query.QueryParameters, _context, _resultEtag, this, _token)
             {
                 CollectIntermediateResults = CollectIntermediateResults
             };
+            var key = qqs.GetQueryString;
+            //We only want to cache queries that are not unique so we count them during their creation
+            if (IdenticalQueriesCount.TryGetValue(key, out var count))
+            {
+                count.Value += 1;
+            }
+            else
+            {
+                IdenticalQueriesCount.Add(key, new Reference<int>() { Value = 1});
+            }
+
+            return qqs;
         }
 
         public void OptimizeQueryPlan()
