@@ -58,6 +58,9 @@ namespace Raven.Server.Documents.Queries.Graph
             var left = Visit(iqse.Left);
             var right = Visit(iqse.Right);
 
+            if (ReferenceEquals(left, iqse.Left) && ReferenceEquals(right, iqse.Right))
+                return iqse;
+
             return new IntersectionQueryStep<Except>(left, right);
         }
 
@@ -66,6 +69,9 @@ namespace Raven.Server.Documents.Queries.Graph
             var left = Visit(iqsu.Left);
             var right = Visit(iqsu.Right);
 
+            if (ReferenceEquals(left, iqsu.Left) && ReferenceEquals(right, iqsu.Right))
+                return iqsu;
+
             return new IntersectionQueryStep<Union>(left, right, returnEmptyIfLeftEmpty:false);
         }
 
@@ -73,6 +79,9 @@ namespace Raven.Server.Documents.Queries.Graph
         {
             var left = Visit(iqsi.Left);
             var right = Visit(iqsi.Right);
+
+            if (ReferenceEquals(left, iqsi.Left) && ReferenceEquals(right, iqsi.Right))
+                return iqsi;
 
             return new IntersectionQueryStep<Intersection>(left, right, returnEmptyIfRightEmpty: true);
         }
@@ -103,7 +112,7 @@ namespace Raven.Server.Documents.Queries.Graph
                 return new RecursionQueryStep(rqs, left, steps);
             }
 
-            return new RecursionQueryStep(left, rqs);
+            return rqs;
         }
     }
 }
