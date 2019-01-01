@@ -25,6 +25,7 @@ namespace Raven.Server.Documents.Queries.Graph
         public long ResultEtag { get; set; }
         public GraphQuery GraphQuery => _query.Metadata.Query.GraphQuery;
         public bool CollectIntermediateResults { get; set; }
+        public Dictionary<string, Task<DocumentQueryResult>> QueryCache { get; internal set; } = new Dictionary<string, Task<DocumentQueryResult>>();
 
         public GraphQueryPlan(IndexQueryServerSide query, DocumentsOperationContext context, long? resultEtag,
             OperationCancelToken token, DocumentDatabase database)
