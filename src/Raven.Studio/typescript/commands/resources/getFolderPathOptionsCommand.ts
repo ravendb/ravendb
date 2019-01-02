@@ -9,7 +9,7 @@ class getFolderPathOptionsCommand extends commandBase {
 
     execute(): JQueryPromise<Raven.Server.Web.Studio.FolderPathOptions> {
         const args = {
-            path: this.inputPath,
+            path: this.inputPath ? this.inputPath : "",
             backupFolder: this.isBackupFolder
         };
 

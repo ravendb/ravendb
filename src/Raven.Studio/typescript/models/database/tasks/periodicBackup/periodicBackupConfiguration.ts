@@ -81,7 +81,10 @@ class periodicBackupConfiguration {
         this.preferredMentor(dto.MentorNode);
 
         const folderPath = this.localSettings().folderPath();
-        this.updateBackupLocationInfo(folderPath);
+        if (folderPath) {
+            this.updateBackupLocationInfo(folderPath);
+        }
+
         this.updateFolderPathOptions(folderPath);
 
         this.initObservables();
@@ -198,7 +201,7 @@ class periodicBackupConfiguration {
     }
 
     private updateFolderPathOptions(path: string) {
-        new getFolderPathOptionsCommand(path)
+        new getFolderPathOptionsCommand(path, true)
             .execute()
             .done((result: Raven.Server.Web.Studio.FolderPathOptions) => {
                 if (this.localSettings().folderPath() !== path) {
