@@ -13,7 +13,6 @@ using System.Threading.Tasks;
 using Raven.Client.Exceptions.Documents.Subscriptions;
 using Raven.Client.Json.Converters;
 using Raven.Client.ServerWide;
-using Raven.Client.ServerWide.Commands;
 using Raven.Server.Rachis;
 using Raven.Server.Utils;
 
@@ -24,8 +23,6 @@ namespace Raven.Server.Documents.Subscriptions
     {
         private readonly DocumentDatabase _db;
         private readonly ServerStore _serverStore;
-        public static TimeSpan TwoMinutesTimespan = TimeSpan.FromMinutes(2);
-        public bool HasHighlyAvailableTasks;
         private readonly ConcurrentDictionary<long, SubscriptionConnectionState> _subscriptionConnectionStates = new ConcurrentDictionary<long, SubscriptionConnectionState>();
         private readonly Logger _logger;
         private readonly SemaphoreSlim _concurrentConnectionsSemiSemaphore;
@@ -337,26 +334,13 @@ namespace Raven.Server.Documents.Subscriptions
                 Query = @base.Query;
                 ChangeVectorForNextBatchStartingPoint = @base.ChangeVectorForNextBatchStartingPoint;
                 SubscriptionId = @base.SubscriptionId;
-                LastBatchAckTime = @base.LastBatchAckTime;
                 SubscriptionName = @base.SubscriptionName;
                 MentorNode = @base.MentorNode;
+                NodeTag = @base.NodeTag;
+                LastBatchAckTime = @base.LastBatchAckTime;
+                LastClientConnectionTime = @base.LastClientConnectionTime;
+                Disabled = @base.Disabled;
             }
-        }
-
-        public SubscriptionGeneralDataAndStats GetRunningSubscriptionConnectionHistory(TransactionOperationContext context, long subscriptionId)
-        {
-            if (!_subscriptionConnectionStates.TryGetValue(subscriptionId, out SubscriptionConnectionState subscriptionConnectionState))
-                return null;
-
-            var subscriptionConnection = subscriptionConnectionState.Connection;
-            if (subscriptionConnection == null)
-                return null;
-
-            var subscriptionData = GetSubscriptionFromServerStore(context, subscriptionConnection.Options.SubscriptionName);
-            subscriptionData.Connection = subscriptionConnection;
-            SetSubscriptionHistory(subscriptionConnectionState, subscriptionData);
-
-            return subscriptionData;
         }
 
         public long GetRunningCount()
