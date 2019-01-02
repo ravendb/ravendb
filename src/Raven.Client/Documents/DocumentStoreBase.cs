@@ -192,6 +192,11 @@ namespace Raven.Client.Documents
         public event EventHandler<BeforeQueryEventArgs> OnBeforeQuery;
         public event EventHandler<SessionCreatedEventArgs> OnSessionCreated;
 
+        public event EventHandler<BeforeStoreEventArgs> OnBeforeConversionToDocument;
+        public event EventHandler<BeforeStoreEventArgs> OnAfterConversionToDocument;
+        public event EventHandler<BeforeConversionEventArgs> OnBeforeConversionToEntity;
+        public event EventHandler<AfterConversionEventArgs> OnAfterConversionToEntity;
+
         /// <summary>
         /// The default database name
         /// </summary>
@@ -240,6 +245,11 @@ namespace Raven.Client.Documents
             session.OnAfterSaveChanges += OnAfterSaveChanges;
             session.OnBeforeDelete += OnBeforeDelete;
             session.OnBeforeQuery += OnBeforeQuery;
+
+            session.OnBeforeConversionToDocument += OnBeforeConversionToDocument;
+            session.OnAfterConversionToDocument += OnAfterConversionToDocument;
+            session.OnBeforeConversionToEntity += OnBeforeConversionToEntity;
+            session.OnAfterConversionToEntity += OnAfterConversionToEntity;
         }
 
         protected void AfterSessionCreated(InMemoryDocumentSessionOperations session)

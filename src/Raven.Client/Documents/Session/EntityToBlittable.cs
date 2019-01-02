@@ -145,7 +145,20 @@ namespace Raven.Client.Documents.Session
         /// <param name="id">The id.</param>
         /// <param name="document">The document found.</param>
         /// <returns>The converted entity</returns>
+        [Obsolete("Use different ConvertToEntity overload")]
         public object ConvertToEntity(Type entityType, string id, BlittableJsonReaderObject document)
+        {
+            return ConvertToEntity(entityType, id, ref document);
+        }
+
+        /// <summary>
+        /// Converts a BlittableJsonReaderObject to an entity.
+        /// </summary>
+        /// <param name="entityType"></param>
+        /// <param name="id">The id.</param>
+        /// <param name="document">The document found.</param>
+        /// <returns>The converted entity</returns>
+        public object ConvertToEntity(Type entityType, string id, ref BlittableJsonReaderObject document)
         {
             try
             {
@@ -153,6 +166,8 @@ namespace Raven.Client.Documents.Session
                 {
                     return document;
                 }
+
+                _session.OnBeforeConversionToEntityInvoke(id, entityType, ref document);
 
                 var defaultValue = InMemoryDocumentSessionOperations.GetDefaultValue(entityType);
                 var entity = defaultValue;
@@ -177,6 +192,8 @@ namespace Raven.Client.Documents.Session
 
                 if (id != null)
                     _session.GenerateEntityIdOnTheClient.TrySetIdentity(entity, id);
+
+                _session.OnAfterConversionToEntityInvoke(id, document, entity);
 
                 return entity;
             }
@@ -350,7 +367,7 @@ namespace Raven.Client.Documents.Session
         {
             if (value is ValueType ||
                   value is string ||
-                  value is BlittableJsonReaderArray ||
+                  value is BlittableJsonReaderObject ||
                   value is BlittableJsonReaderArray)
                 return value;
 
