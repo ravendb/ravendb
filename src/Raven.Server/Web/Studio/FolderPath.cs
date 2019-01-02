@@ -27,7 +27,7 @@ namespace Raven.Server.Web.Studio
                     path = path.Trim();
 
                     if (path.EndsWith("/") == false && path.EndsWith("\\") == false)
-                        path = Path.Combine(path, Path.DirectorySeparatorChar.ToString());
+                        path += Path.DirectorySeparatorChar;
 
                     foreach (var directory in Directory.GetDirectories(path))
                     {
