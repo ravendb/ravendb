@@ -74,7 +74,7 @@ namespace Raven.Server.Documents.Indexes.Static.Roslyn.Rewriters
             if (expression is ParenthesizedExpressionSyntax pes)
                 return pes.WithExpression(HandleCondition(pes.Expression));
 
-            if (expression is BinaryExpressionSyntax bes)
+            if (expression is BinaryExpressionSyntax bes && (bes.IsKind(SyntaxKind.LogicalAndExpression) || bes.IsKind(SyntaxKind.LogicalOrExpression)))
             {
                 return bes
                     .WithLeft(SyntaxFactory.ParseExpression($"(bool)({HandleCondition(bes.Left)})"))
@@ -84,7 +84,7 @@ namespace Raven.Server.Documents.Indexes.Static.Roslyn.Rewriters
             return expression;
         }
 
-        private SyntaxNode HandleMethod(LambdaExpressionSyntax node, InvocationExpressionSyntax invocation, string method)
+        private static SyntaxNode HandleMethod(LambdaExpressionSyntax node, InvocationExpressionSyntax invocation, string method)
         {
             switch (method)
             {
@@ -98,7 +98,7 @@ namespace Raven.Server.Documents.Indexes.Static.Roslyn.Rewriters
                 case "Where":
                 case "Count":
                 case "SingleOrDefault":
-                    return Visit(ModifyLambdaForBools(node));
+                    return ModifyLambdaForBools(node);
             }
 
             return node;
