@@ -113,6 +113,8 @@ namespace Raven.Server
             _tcpLogger = LoggingSource.Instance.GetLogger<RavenServer>("Server/TCP");
         }
 
+        public List<string> StartupWarnings = new List<string>();
+
         public TcpListenerStatus GetTcpServerStatus()
         {
             return _tcpListenerStatus;

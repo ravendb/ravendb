@@ -43,6 +43,11 @@ namespace Raven.Server
         private int _requestId;
         private readonly Logger _logger = LoggingSource.Instance.GetLogger<RavenServerStartup>("Server");
 
+        public RavenServerStartup(RavenServer server)
+        {
+            _server = server;
+        }
+
         public void Configure(IApplicationBuilder app, ILoggerFactory loggerFactory)
         {
             app.UseWebSockets(new WebSocketOptions
@@ -67,6 +72,9 @@ namespace Raven.Server
             if(IsMissingRequiredDependencies(out var msgs) )
             {
                 msgs.InsertRange(0, MissingDependeciesWarning);
+
+                _server.StartupWarnings.AddRange(msgs);
+
                 var deps = new MissingDependencies { Messages = msgs, Parent = this };
                 app.Use(_ => deps.Handler);
                 return;
@@ -74,6 +82,8 @@ namespace Raven.Server
 
             if (IsServerRunningInASafeManner() == false)
             {
+                _server.StartupWarnings.AddRange(UnsafeWarning);
+
                 app.Use(_ => UnsafeRequestHandler);
                 return;
             }

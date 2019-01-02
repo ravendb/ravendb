@@ -174,6 +174,15 @@ namespace Raven.Server
                             Console.WriteLine("Server started, listening to requests...");
 
                             prevColor = Console.ForegroundColor;
+                            Console.ForegroundColor = ConsoleColor.Red;
+                            foreach (var item in server.StartupWarnings)
+                            {
+                                Console.WriteLine(item);
+                            }
+                            Console.ForegroundColor = prevColor;
+
+
+                            prevColor = Console.ForegroundColor;
                             Console.ForegroundColor = ConsoleColor.DarkGray;
                             Console.WriteLine("TIP: type 'help' to list the available commands.");
                             Console.ForegroundColor = prevColor;
