@@ -99,7 +99,13 @@ namespace SlowTests.Bugs.Indexing
                         session.SaveChanges();
                     }
 
-                    WaitForIndexing(store, allowErrors: true);
+                    try
+                    {
+                        WaitForIndexing(store);
+                    }
+                    catch
+                    {
+                    }
                 }
 
                 var fooIndex = store.Maintenance.Send(new GetStatisticsOperation()).Indexes.First(x => x.Name == "foo");
