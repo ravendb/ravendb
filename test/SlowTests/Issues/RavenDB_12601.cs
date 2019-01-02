@@ -1,5 +1,6 @@
 ﻿using System.Threading.Tasks;
 using FastTests.Server.Replication;
+using Raven.Client.Documents.Operations;
 using Raven.Client.Documents.Session;
 using Xunit;
 
@@ -8,7 +9,7 @@ namespace SlowTests.Issues
     public class RavenDB_12601 : ReplicationTestBase
     {
         [Fact]
-        public void Change_vector_of_cluster_tx_updated_correctly()
+        public async Task Change_vector_of_cluster_tx_updated_correctly()
         {
             using (var store = GetDocumentStore())
             {
@@ -29,18 +30,9 @@ namespace SlowTests.Issues
                     Assert.True(changeVector.Contains("A:1"));
                 }
 
-                using (var session = store.OpenSession(new SessionOptions
-                {
-                    TransactionMode = TransactionMode.ClusterWide
-                }))
-                {
-                    var user = session.Load<User>(userId);
-                    user.Age++;
-                    session.SaveChanges();
-
-                    var changeVector = session.Advanced.GetChangeVectorFor(user);
-                    Assert.True(changeVector.Contains("A:1") && changeVector.Contains("RAFT:1"));
-                }
+                var stats = await store.Maintenance.SendAsync(new GetStatisticsOperation());
+                var databaseChangeVector = stats.DatabaseChangeVector;
+                Assert.True(databaseChangeVector.Contains("A:1"));
 
                 using (var session = store.OpenSession(new SessionOptions
                 {
@@ -52,8 +44,29 @@ namespace SlowTests.Issues
                     session.SaveChanges();
 
                     var changeVector = session.Advanced.GetChangeVectorFor(user);
-                    Assert.True(changeVector.Contains("A:1") && changeVector.Contains("RAFT:2"));
+                    Assert.True(changeVector.Contains("RAFT:1"));
                 }
+
+                stats = await store.Maintenance.SendAsync(new GetStatisticsOperation());
+                databaseChangeVector = stats.DatabaseChangeVector;
+                Assert.True(databaseChangeVector.Contains("A:1") && databaseChangeVector.Contains("RAFT:1"));
+
+                using (var session = store.OpenSession(new SessionOptions
+                {
+                    TransactionMode = TransactionMode.ClusterWide
+                }))
+                {
+                    var user = session.Load<User>(userId);
+                    user.Age++;
+                    session.SaveChanges();
+
+                    var changeVector = session.Advanced.GetChangeVectorFor(user);
+                    Assert.True(changeVector.Contains("RAFT:2"));
+                }
+
+                stats = await store.Maintenance.SendAsync(new GetStatisticsOperation());
+                databaseChangeVector = stats.DatabaseChangeVector;
+                Assert.True(databaseChangeVector.Contains("A:1") && databaseChangeVector.Contains("RAFT:2"));
             }
         }
 
@@ -109,9 +122,77 @@ namespace SlowTests.Issues
                     session.SaveChanges();
 
                     var changeVector = session.Advanced.GetChangeVectorFor(user);
-                    Assert.True(changeVector.Contains("A:") && changeVector.Contains("B:") && changeVector.Contains("RAFT:1"), 
-                        $"changeVector is: {changeVector}");
+                    Assert.True(changeVector.Contains("RAFT:1"), $"changeVector is: {changeVector}");
                 }
+
+                var stats = await source.Maintenance.SendAsync(new GetStatisticsOperation());
+                var databaseChangeVector = stats.DatabaseChangeVector;
+                Assert.True(databaseChangeVector.Contains("A:") && 
+                            databaseChangeVector.Contains("B:") && 
+                            databaseChangeVector.Contains("RAFT:1"), 
+                    $"changeVector is: {databaseChangeVector}");
+            }
+        }
+
+        [Fact]
+        public async Task Can_use_cluster_tx_mixed_with_tx()
+        {
+            using (var store = GetDocumentStore())
+            {
+                const string userId = "users/1";
+
+                using (var session = store.OpenSession(new SessionOptions
+                {
+                    TransactionMode = TransactionMode.ClusterWide
+                }))
+                {
+                    var user = new User
+                    {
+                        Id = userId,
+                        Name = "User1"
+                    };
+
+                    session.Store(user);
+                    session.SaveChanges();
+
+                    var changeVector = session.Advanced.GetChangeVectorFor(user);
+                    Assert.True(changeVector.Contains("RAFT:1"));
+                }
+
+                var stats = await store.Maintenance.SendAsync(new GetStatisticsOperation());
+                var databaseChangeVector = stats.DatabaseChangeVector;
+                Assert.True(databaseChangeVector.Contains("RAFT:1"));
+
+                using (var session = store.OpenSession())
+                {
+                    var user = session.Load<User>(userId);
+                    user.Age++;
+                    session.SaveChanges();
+
+                    var changeVector = session.Advanced.GetChangeVectorFor(user);
+                    Assert.True(changeVector.Contains("RAFT:1")&& changeVector.Contains("A:2"));
+                }
+
+                stats = await store.Maintenance.SendAsync(new GetStatisticsOperation());
+                databaseChangeVector = stats.DatabaseChangeVector;
+                Assert.True(databaseChangeVector.Contains("A:2") && databaseChangeVector.Contains("RAFT:1"));
+
+                using (var session = store.OpenSession(new SessionOptions
+                {
+                    TransactionMode = TransactionMode.ClusterWide
+                }))
+                {
+                    var user = session.Load<User>(userId);
+                    user.Age++;
+                    session.SaveChanges();
+
+                    var changeVector = session.Advanced.GetChangeVectorFor(user);
+                    Assert.True(changeVector.Contains("RAFT:2"));
+                }
+
+                stats = await store.Maintenance.SendAsync(new GetStatisticsOperation());
+                databaseChangeVector = stats.DatabaseChangeVector;
+                Assert.True(databaseChangeVector.Contains("A:2") && databaseChangeVector.Contains("RAFT:2"));
             }
         }
 
