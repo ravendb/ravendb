@@ -357,11 +357,11 @@
                     data-bind="autoComplete: '#dataPath', foreach: $root.allAutoCompleteOptions">
                     <li role="presentation" data-bind="click: $data.isRecent ? _.partial($root.recentPathsAutocomplete.complete, $data.path) : $parent.dataPath.bind($parent, $data.path)">
                         <a role="menuitem" tabindex="-1" href="#">
-                            <!-- ko if: $data.isRecent -->
-                            <strong data-bind="text: $data.path"></strong>
+                            <!-- ko if: isRecent -->
+                            <strong data-bind="text: path"></strong>
                             <!-- /ko -->
-                            <!-- ko ifnot: $data.isRecent -->
-                            <span data-bind="text: $data.path"></span>
+                            <!-- ko ifnot: isRecent -->
+                            <span data-bind="text: path"></span>
                             <!-- /ko -->
                         </a>
                     </li>
@@ -373,7 +373,7 @@
                 <p class="text-info bg-info padding padding-sm">
                     <span data-bind="text: $root.databaseLocationInfoMessage"></span><br />
                     <div data-bind="if: $root.spinners.databaseLocationInfoLoading">
-                        <span class="btn-spinner"></span>
+                        <span class="global-spinner"></span>
                     </div>
                     <div data-bind="if: !$root.spinners.databaseLocationInfoLoading()">
                         <ul data-bind="foreach: $root.databaseLocationInfoToDisplay" class="text-info bg-info">

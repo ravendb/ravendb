@@ -263,8 +263,7 @@ class createDatabase extends dialogViewModelBase {
                 if (selectedNodes.length === 0) {
                     return [];
                 }
-            }
-            else if (replicationFactor === 0) {
+            } else if (replicationFactor === 0) {
                 return [];
             }
 
@@ -282,7 +281,7 @@ class createDatabase extends dialogViewModelBase {
                 return `${message}:`;
             }
 
-            const numberOfClusterNodes = this.clusterNodes.slice().length;
+            const numberOfClusterNodes = this.clusterNodes.length;
             const replicationFactor = Math.min(this.databaseModel.replication.replicationFactor(), numberOfClusterNodes);
             if (replicationFactor === 0) {
                 return null;
@@ -293,7 +292,7 @@ class createDatabase extends dialogViewModelBase {
                 return `${message}:`;
             }
 
-            return `${message} ${replicationFactor} of the following nodes:`;
+            return `${message} ${replicationFactor} of the ${numberOfClusterNodes} nodes:`;
         });
 
         this.allAutoCompleteOptions = ko.pureComputed(() => {
