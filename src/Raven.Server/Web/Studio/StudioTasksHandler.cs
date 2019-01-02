@@ -25,6 +25,7 @@ namespace Raven.Server.Web.Studio
         {
             var path = GetStringQueryString("path", required: false);
             var name = GetStringQueryString("name", required: false);
+            var requestTimeoutInMs = GetIntValueQueryString("requestTimeoutInMs", required: false) ?? 5 * 1000;
 
             var baseDataDirectory = ServerStore.Configuration.Core.DataDirectory.FullPath;
 
@@ -54,7 +55,7 @@ namespace Raven.Server.Web.Studio
             }
 
             var getNodesInfo = GetBoolValueQueryString("getNodesInfo", required: false) ?? false;
-            var info = new DataDirectoryInfo(ServerStore, result, getNodesInfo, ResponseBodyStream());
+            var info = new DataDirectoryInfo(ServerStore, result, getNodesInfo, requestTimeoutInMs, ResponseBodyStream());
             var urlPath = $"admin/studio-tasks/full-data-directory?path={path}&name={name}";
             await info.UpdateDirectoryResult(urlPath, databaseName: null);
         }

@@ -482,6 +482,7 @@ namespace Raven.Server.Web.System
         public async Task FullBackupDataDirectory()
         {
             var path = GetStringQueryString("path", required: true);
+            var requestTimeoutInMs = GetIntValueQueryString("requestTimeoutInMs", required: false) ?? 5 * 1000;
 
             string actualFullPath;
 
@@ -495,7 +496,7 @@ namespace Raven.Server.Web.System
             }
 
             var getNodesInfo = GetBoolValueQueryString("getNodesInfo", required: false) ?? false;
-            var info = new DataDirectoryInfo(ServerStore, actualFullPath, getNodesInfo, ResponseBodyStream());
+            var info = new DataDirectoryInfo(ServerStore, actualFullPath, getNodesInfo, requestTimeoutInMs, ResponseBodyStream());
             var urlPath = $"databases/{Database.Name}/admin/backup-data-directory?path={path}";
             await info.UpdateDirectoryResult(urlPath, Database.Name);
         }
