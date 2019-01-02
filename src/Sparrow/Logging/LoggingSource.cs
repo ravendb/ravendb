@@ -23,6 +23,8 @@ namespace Sparrow.Logging
         private static string _currentThreadId;
 
         public static bool UseUtcTime;
+        public static long MaxFileSizeInBytes;
+
         internal static long LocalToUtcOffsetInTicks;
 
         static LoggingSource()
@@ -407,7 +409,7 @@ namespace Sparrow.Logging
                 {
                     try
                     {
-                        const int maxFileSize = 1024 * 1024 * 256;
+                        var maxFileSize = MaxFileSizeInBytes;
                         using (var currentFile = GetNewStream(maxFileSize))
                         {
                             var sizeWritten = 0;
