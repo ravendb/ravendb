@@ -11,6 +11,7 @@ using Raven.Server.Json;
 using Raven.Server.ServerWide;
 using Raven.Server.ServerWide.Context;
 using Raven.Server.Utils;
+using Sparrow;
 using Sparrow.Json;
 using Sparrow.Json.Parsing;
 using Sparrow.Logging;
@@ -46,7 +47,9 @@ namespace Raven.Server.Web.Studio
             {
                 NodeTag = _serverStore.NodeTag,
                 FullPath = realPath,
-                TotalFreeSpaceHumane = diskSpaceInfo?.TotalFreeSpace.ToString(),
+                FreeSpaceInBytes = diskSpaceInfo?.TotalFreeSpace.GetValue(SizeUnit.Bytes) ?? 0,
+                FreeSpaceHumane = diskSpaceInfo?.TotalFreeSpace.ToString(),
+                TotalSpaceInBytes = diskSpaceInfo?.TotalSize.GetValue(SizeUnit.Bytes) ?? 0,
                 TotalSpaceHumane = diskSpaceInfo?.TotalSize.ToString()
             };
 
@@ -180,9 +183,13 @@ namespace Raven.Server.Web.Studio
 
         public string FullPath { get; set; }
 
-        public string TotalSpaceHumane { get; set; }
+        public long FreeSpaceInBytes { get; set; }
 
-        public string TotalFreeSpaceHumane { get; set; }
+        public string FreeSpaceHumane { get; set; }
+
+        public long TotalSpaceInBytes { get; set; }
+
+        public string TotalSpaceHumane { get; set; }
 
         public DynamicJsonValue ToJson()
         {
@@ -190,7 +197,9 @@ namespace Raven.Server.Web.Studio
             {
                 [nameof(NodeTag)] = NodeTag,
                 [nameof(FullPath)] = FullPath,
-                [nameof(TotalFreeSpaceHumane)] = TotalFreeSpaceHumane,
+                [nameof(FreeSpaceInBytes)] = FreeSpaceInBytes,
+                [nameof(FreeSpaceHumane)] = FreeSpaceHumane,
+                [nameof(TotalSpaceInBytes)] = TotalSpaceInBytes,
                 [nameof(TotalSpaceHumane)] = TotalSpaceHumane
             };
         }
