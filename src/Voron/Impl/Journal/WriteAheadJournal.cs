@@ -470,12 +470,20 @@ namespace Voron.Impl.Journal
 
             public class LastFlushState
             {
-               public long TransactionId;
-               public long JournalId;
-               public JournalFile Journal;
+                public readonly long TransactionId;
+                public readonly long JournalId;
+                public readonly JournalFile Journal;
+                public readonly SingleUseFlag DoneFlag = new SingleUseFlag();
+
+                public LastFlushState(long transactionId, long journalId, JournalFile journal)
+                {
+                    TransactionId = transactionId;
+                    JournalId = journalId;
+                    Journal = journal;
+                }
             }
 
-            private LastFlushState _lastFlushed = new LastFlushState();
+            private LastFlushState _lastFlushed = new LastFlushState(0,0, null);
             private long _totalWrittenButUnsyncedBytes;
             private bool _ignoreLockAlreadyTaken;
             private Action<LowLevelTransaction> _updateJournalStateAfterFlush;
@@ -486,8 +494,8 @@ namespace Voron.Impl.Journal
                 action?.Invoke(tx);
             }
 
-            public long LastFlushedTransactionId => Interlocked.Read(ref _lastFlushed.TransactionId);
-            public long LastFlushedJournalId => Interlocked.Read(ref _lastFlushed.JournalId);
+            public long LastFlushedTransactionId => _lastFlushed.TransactionId;
+            public long LastFlushedJournalId => _lastFlushed.JournalId;
             public long TotalWrittenButUnsyncedBytes => Interlocked.Read(ref _totalWrittenButUnsyncedBytes);
             public int JournalsToDeleteCount => _journalsToDelete.Count;
 
@@ -744,12 +752,12 @@ namespace Voron.Impl.Journal
 
             private void UpdateJournalStateUnderWriteTransactionLock(LowLevelTransaction txw, long lastProcessedJournal, long lastFlushedTransactionId, List<JournalFile> unusedJournals)
             {
-                _lastFlushed = new LastFlushState
-                {
-                    JournalId = lastProcessedJournal,
-                    TransactionId = lastFlushedTransactionId,
-                    Journal = _waj._files.First(x => x.Number == lastProcessedJournal)
-                };
+                var lastFlushState = new LastFlushState(
+                    lastFlushedTransactionId,
+                    lastProcessedJournal,
+                    _waj._files.First(x => x.Number == lastProcessedJournal));
+
+                Interlocked.Exchange(ref _lastFlushed, lastFlushState);
 
                 if (unusedJournals.Count > 0)
                 {
@@ -961,7 +969,7 @@ namespace Voron.Impl.Journal
                         return false; // we have already disposed, nothing to do here
 
                     var lastFlushed = _parent._lastFlushed;
-                    if (lastFlushed.Journal == null)
+                    if (lastFlushed.DoneFlag.IsRaised())
                         // nothing was flushed since we last synced, nothing to do
                         return false;
 
@@ -976,7 +984,7 @@ namespace Voron.Impl.Journal
                         );
                     }
 
-                    lastFlushed.Journal = null;
+                    lastFlushed.DoneFlag.Raise();
 
                     foreach (var toDelete in _parent._journalsToDelete)
                     {
