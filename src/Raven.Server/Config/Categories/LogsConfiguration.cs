@@ -1,6 +1,7 @@
 using System.ComponentModel;
 using Raven.Server.Config.Attributes;
 using Raven.Server.Config.Settings;
+using Sparrow;
 using Sparrow.Logging;
 
 namespace Raven.Server.Config.Categories
@@ -18,5 +19,10 @@ namespace Raven.Server.Config.Categories
         [DefaultValue(true)]
         [ConfigurationEntry("Logs.UseUtcTime", ConfigurationEntryScope.ServerWideOnly)]
         public bool UseUtcTime { get; set; }
+
+        [DefaultValue(128)]
+        [SizeUnit(SizeUnit.Megabytes)]
+        [ConfigurationEntry("Logs.MaxFileSizeInMb", ConfigurationEntryScope.ServerWideOnly)]
+        public Size MaxFileSize { get; set; }
     }
 }

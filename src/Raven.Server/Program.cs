@@ -14,6 +14,7 @@ using Raven.Server.Config.Settings;
 using Raven.Server.ServerWide;
 using Raven.Server.Utils;
 using Raven.Server.Utils.Cli;
+using Sparrow;
 using Sparrow.Logging;
 using Sparrow.Platform;
 
@@ -74,8 +75,9 @@ namespace Raven.Server
 
             configuration.Initialize();
 
-            LoggingSource.Instance.SetupLogMode(configuration.Logs.Mode, configuration.Logs.Path.FullPath);
             LoggingSource.UseUtcTime = configuration.Logs.UseUtcTime;
+            LoggingSource.MaxFileSizeInBytes = configuration.Logs.MaxFileSize.GetValue(SizeUnit.Bytes);
+            LoggingSource.Instance.SetupLogMode(configuration.Logs.Mode, configuration.Logs.Path.FullPath);
 
             if (Logger.IsInfoEnabled)
                 Logger.Info($"Logging to {configuration.Logs.Path} set to {configuration.Logs.Mode} level.");
