@@ -682,6 +682,7 @@ namespace Raven.Server.Documents
         {
             if (countersToRemove.Count == 0 && countersToAdd.Count == 0)
                 return;
+
             var data = doc.Data;
             BlittableJsonReaderArray metadataCounters = null;
             if (data.TryGet(Constants.Documents.Metadata.Key, out BlittableJsonReaderObject metadata))
@@ -693,9 +694,10 @@ namespace Raven.Server.Documents
             if (hadModifications == false)
                 return;
 
-            var flags = doc.Flags.Strip(DocumentFlags.HasCounters).Strip(DocumentFlags.FromClusterTransaction);
+            var flags = doc.Flags.Strip(DocumentFlags.FromClusterTransaction);
             if (counters.Count == 0)
             {
+                flags = flags.Strip(DocumentFlags.HasCounters);
                 if (metadata != null)
                 {
                     metadata.Modifications = new DynamicJsonValue(metadata);
