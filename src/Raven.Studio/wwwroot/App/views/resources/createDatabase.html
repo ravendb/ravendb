@@ -384,13 +384,13 @@
                                     Path: <strong data-bind="text: FullPath"></strong>
                                     <span>
                                         <br />Free Disk Space:
-                                        <span data-bind="if: TotalFreeSpaceHumane">
-                                            <strong data-bind="text: TotalFreeSpaceHumane"></strong>
+                                        <span data-bind="if: FreeSpaceHumane">
+                                            <strong data-bind="text: FreeSpaceHumane"></strong>
                                         </span>
                                         <span data-bind="if: TotalSpaceHumane">
                                             (Total: <strong data-bind="text: TotalSpaceHumane"></strong>)
                                         </span>
-                                        <span data-bind="if: !TotalFreeSpaceHumane">
+                                        <span data-bind="if: !FreeSpaceHumane">
                                             <strong>(Path is unreachable)</strong>
                                         </span>
                                     </span>
