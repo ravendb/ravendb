@@ -5,7 +5,6 @@ using System.Linq;
 using System.Net.Http;
 using System.Threading;
 using System.Threading.Tasks;
-using Raven.Client.Documents.Conventions;
 using Raven.Client.Http;
 using Raven.Server.Json;
 using Raven.Server.ServerWide;
@@ -26,20 +25,26 @@ namespace Raven.Server.Web.Studio
 
         private readonly ServerStore _serverStore;
         private readonly string _path;
+        private readonly string _name;
+        private readonly bool _isBackup;
         private readonly bool _getNodesInfo;
         private readonly int _requestTimeoutInMs;
         private readonly Stream _responseBodyStream;
 
-        public DataDirectoryInfo(ServerStore serverStore, string path, bool getNodesInfo, int requestTimeoutInMs, Stream responseBodyStream)
+        public DataDirectoryInfo(
+            ServerStore serverStore, string path, string name, bool isBackup,
+            bool getNodesInfo, int requestTimeoutInMs, Stream responseBodyStream)
         {
             _serverStore = serverStore;
             _path = path;
+            _name = name;
+            _isBackup = isBackup;
             _getNodesInfo = getNodesInfo;
             _requestTimeoutInMs = requestTimeoutInMs;
             _responseBodyStream = responseBodyStream;
         }
 
-        public async Task UpdateDirectoryResult(string urlPath, string databaseName)
+        public async Task UpdateDirectoryResult(string databaseName)
         {
             var drivesInfo = PlatformDetails.RunningOnPosix ? DriveInfo.GetDrives() : null;
             var driveInfo = DiskSpaceChecker.GetDriveInfo(_path, drivesInfo, out var realPath);
@@ -75,7 +80,7 @@ namespace Raven.Server.Web.Studio
 
             if (relevantNodes.Count > 1)
             {
-                await UpdateNodesDirectoryResult(relevantNodes, clusterTopology, urlPath, dataDirectoryResult);
+                await UpdateNodesDirectoryResult(relevantNodes, clusterTopology, dataDirectoryResult);
             }
 
             using (_serverStore.ContextPool.AllocateOperationContext(out JsonOperationContext context))
@@ -105,11 +110,8 @@ namespace Raven.Server.Web.Studio
             }
         }
 
-        private async Task UpdateNodesDirectoryResult(
-            IEnumerable<string> nodes, ClusterTopology clusterTopology,
-            string urlPath, DataDirectoryResult dataDirectoryResult)
+        private async Task UpdateNodesDirectoryResult(IEnumerable<string> nodes, ClusterTopology clusterTopology, DataDirectoryResult dataDirectoryResult)
         {
-            var httpClient = RequestExecutor.CreateHttpClient(_serverStore.Server.Certificate.Certificate, DocumentConventions.Default);
             var tasks = new List<Task<SingleNodeDataDirectoryResult>>();
 
             foreach (var nodeTag in nodes)
@@ -125,8 +127,7 @@ namespace Raven.Server.Web.Studio
 
                 tasks.Add(Task.Run(async () =>
                 {
-                    var url = $"{serverUrl}/{urlPath}";
-                    var singleNodeResult = await GetSingleNodeDataDirectoryInfo(url, httpClient);
+                    var singleNodeResult = await GetSingleNodeDataDirectoryInfo(serverUrl);
                     return singleNodeResult;
                 }, _serverStore.ServerShutdown));
             }
@@ -146,22 +147,19 @@ namespace Raven.Server.Web.Studio
             }
         }
 
-        private async Task<SingleNodeDataDirectoryResult> GetSingleNodeDataDirectoryInfo(string url, HttpClient httpClient)
+        private async Task<SingleNodeDataDirectoryResult> GetSingleNodeDataDirectoryInfo(string serverUrl)
         {
             using (var cts = new CancellationTokenSource(_requestTimeoutInMs))
             {
                 try
                 {
-                    var request = new HttpRequestMessage(HttpMethod.Get, url);
-                    var response = await httpClient.SendAsync(request, cts.Token);
-                    if (response.IsSuccessStatusCode == false)
-                        return null;
-
-                    using (var responseStream = await response.Content.ReadAsStreamAsync())
+                    using (var requestExecutor = ClusterRequestExecutor.CreateForSingleNode(serverUrl, _serverStore.Server.Certificate.Certificate))
                     using (_serverStore.ContextPool.AllocateOperationContext(out JsonOperationContext context))
                     {
-                        var singleNodeDataBlittable = await context.ReadForMemoryAsync(responseStream, "studio-tasks-full-data-directory");
-                        return JsonDeserializationServer.SingleNodeDataDirectoryResult(singleNodeDataBlittable);
+                        var dataDirectoryInfo = new GetDataDirectoryInfoCommand(_path, _name, _isBackup);
+                        await requestExecutor.ExecuteAsync(dataDirectoryInfo, context, token: cts.Token);
+
+                        return dataDirectoryInfo.Result;
                     }
                 }
                 catch (OperationCanceledException)
@@ -171,11 +169,47 @@ namespace Raven.Server.Web.Studio
                 catch (Exception e)
                 {
                     if (Logger.IsInfoEnabled)
-                        Logger.Info($"Failed to get directory info result from: {url}", e);
+                        Logger.Info($"Failed to get directory info result from: {serverUrl}", e);
 
                     return null;
                 }
             }
+        }
+
+        private class GetDataDirectoryInfoCommand : RavenCommand<SingleNodeDataDirectoryResult>
+        {
+            private readonly string _path;
+            private readonly string _name;
+            private readonly bool _isBackup;
+
+
+            public GetDataDirectoryInfoCommand(string path, string name, bool isBackup)
+            {
+                _path = path;
+                _name = name;
+                _isBackup = isBackup;
+            }
+
+            public override HttpRequestMessage CreateRequest(JsonOperationContext ctx, ServerNode node, out string url)
+            {
+                var path = _isBackup
+                    ? $"databases/{_name}/admin/backup-data-directory?path={_path}"
+                    : $"admin/studio-tasks/full-data-directory?path={_path}&name={_name}";
+
+                url = $"{node.Url}/{path}";
+
+                return new HttpRequestMessage
+                {
+                    Method = HttpMethod.Get
+                };
+            }
+
+            public override void SetResponse(JsonOperationContext context, BlittableJsonReaderObject response, bool fromCache)
+            {
+                Result = JsonDeserializationServer.SingleNodeDataDirectoryResult(response);
+            }
+
+            public override bool IsReadRequest => true;
         }
     }
 
