@@ -27,13 +27,15 @@ namespace Raven.Server.Web.Studio
         private readonly ServerStore _serverStore;
         private readonly string _path;
         private readonly bool _getNodesInfo;
+        private readonly int _requestTimeoutInMs;
         private readonly Stream _responseBodyStream;
 
-        public DataDirectoryInfo(ServerStore serverStore, string path, bool getNodesInfo, Stream responseBodyStream)
+        public DataDirectoryInfo(ServerStore serverStore, string path, bool getNodesInfo, int requestTimeoutInMs, Stream responseBodyStream)
         {
             _serverStore = serverStore;
             _path = path;
             _getNodesInfo = getNodesInfo;
+            _requestTimeoutInMs = requestTimeoutInMs;
             _responseBodyStream = responseBodyStream;
         }
 
@@ -146,7 +148,7 @@ namespace Raven.Server.Web.Studio
 
         private async Task<SingleNodeDataDirectoryResult> GetSingleNodeDataDirectoryInfo(string url, HttpClient httpClient)
         {
-            using (var cts = new CancellationTokenSource(7 * 1000))
+            using (var cts = new CancellationTokenSource(_requestTimeoutInMs))
             {
                 try
                 {
