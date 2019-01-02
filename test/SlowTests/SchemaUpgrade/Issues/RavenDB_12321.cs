@@ -2,6 +2,7 @@
 using System.Threading.Tasks;
 using FastTests;
 using Raven.Client.Exceptions;
+using Raven.Server.Config.Settings;
 using Voron.Global;
 using Xunit;
 
@@ -27,7 +28,8 @@ namespace SlowTests.SchemaUpgrade.Issues
                 schemaVer = documentDatabase.DocumentsStorage.Environment.Options.SchemaVersion;
             }
 
-            var schemaDir = new DirectoryInfo($"SchemaUpgrade\\Issues\\DocumentsVersion\\schema_{schemaNum}");
+            var path = new PathSetting($"SchemaUpgrade/Issues/DocumentsVersion/schema_{schemaNum}");
+            var schemaDir = new DirectoryInfo(path.FullPath);
             Assert.Equal(true, schemaDir.Exists);
             CopyAll(schemaDir, new DirectoryInfo(Path.GetFullPath(folder)));
 
@@ -55,8 +57,8 @@ namespace SlowTests.SchemaUpgrade.Issues
             {
                  schemaVer = Constants.CurrentVersion;
             }
-
-            var schemaDir = new DirectoryInfo("SchemaUpgrade\\Issues\\VoronCurrentVersion\\schema_999");
+            var path = new PathSetting("SchemaUpgrade/Issues/VoronCurrentVersion/schema_999");
+            var schemaDir = new DirectoryInfo(path.FullPath);
             Assert.Equal(true, schemaDir.Exists);
             CopyAll(schemaDir, new DirectoryInfo(Path.GetFullPath(folder)));
 
