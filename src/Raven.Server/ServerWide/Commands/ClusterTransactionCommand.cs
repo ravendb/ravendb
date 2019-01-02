@@ -352,6 +352,7 @@ namespace Raven.Server.ServerWide.Commands
             var ptr = reader.Read((int)TransactionCommandsColumn.Commands, out var size);
             if (ptr == null)
                 return null;
+
             var blittable = new BlittableJsonReaderObject(ptr, size, context);
             blittable.TryGet(nameof(DatabaseCommands), out BlittableJsonReaderArray array);
 
