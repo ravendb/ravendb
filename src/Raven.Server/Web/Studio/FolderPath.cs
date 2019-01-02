@@ -2,63 +2,68 @@
 using System.Collections.Generic;
 using System.IO;
 using Raven.Server.Config;
-using Sparrow.Platform;
 
 namespace Raven.Server.Web.Studio
 {
     public static class FolderPath
     {
-        private static readonly string FolderPathSuffix = PlatformDetails.RunningOnPosix ? "/" : "\\";
-
         public static FolderPathOptions GetOptions(string path, bool isBackupFolder, RavenConfiguration ravenConfiguration)
         {
             var folderPathOptions = new FolderPathOptions();
-            var restrictedFolder = GetRestrictedFolder(isBackupFolder, ravenConfiguration);
-            if (restrictedFolder != null)
-            {
-                folderPathOptions.List.Add(restrictedFolder);
-            }
-            else if (string.IsNullOrWhiteSpace(path))
-            {
-                folderPathOptions.List.AddRange(GetAvailableDrives());
-            }
-            else if (Directory.Exists(path))
-            {
-                path = path.Trim();
 
-                if (path.EndsWith("/") == false && path.EndsWith("\\") == false)
-                    path = $"{path}{FolderPathSuffix}";
-
-                foreach (var directory in Directory.GetDirectories(path))
+            try
+            {
+                var restrictedFolder = GetRestrictedFolder(isBackupFolder, ravenConfiguration);
+                if (restrictedFolder != null)
                 {
-                    folderPathOptions.List.Add(directory);
+                    folderPathOptions.List.Add(restrictedFolder);
                 }
-            }
-            else
-            {
-                path = path.Trim();
-
-                // prefix of a directory
-                var directoryPrefix = Path.GetFileName(path);
-                var directoryPath = Path.GetDirectoryName(path);
-                if (Directory.Exists(directoryPath))
+                else if (string.IsNullOrWhiteSpace(path))
                 {
-                    foreach (var directory in Directory.GetDirectories(directoryPath))
+                    folderPathOptions.List.AddRange(GetAvailableDrives());
+                }
+                else if (Directory.Exists(path))
+                {
+                    path = path.Trim();
+
+                    if (path.EndsWith("/") == false && path.EndsWith("\\") == false)
+                        path = Path.Combine(path, Path.DirectorySeparatorChar.ToString());
+
+                    foreach (var directory in Directory.GetDirectories(path))
                     {
-                        var directoryName = Path.GetFileName(directory);
-                        if (directoryName.StartsWith(directoryPrefix, StringComparison.OrdinalIgnoreCase))
-                            folderPathOptions.List.Add(directory);
+                        folderPathOptions.List.Add(directory);
                     }
                 }
                 else
                 {
-                    var availableDrives = GetAvailableDrives();
-                    foreach (var drive in availableDrives)
+                    path = path.Trim();
+
+                    // prefix of a directory
+                    var directoryPrefix = Path.GetFileName(path);
+                    var directoryPath = Path.GetDirectoryName(path);
+                    if (Directory.Exists(directoryPath))
                     {
-                        if (drive.StartsWith(directoryPrefix, StringComparison.OrdinalIgnoreCase))
-                            folderPathOptions.List.Add(drive);
+                        foreach (var directory in Directory.GetDirectories(directoryPath))
+                        {
+                            var directoryName = Path.GetFileName(directory);
+                            if (directoryName.StartsWith(directoryPrefix, StringComparison.OrdinalIgnoreCase))
+                                folderPathOptions.List.Add(directory);
+                        }
+                    }
+                    else
+                    {
+                        var availableDrives = GetAvailableDrives();
+                        foreach (var drive in availableDrives)
+                        {
+                            if (drive.StartsWith(directoryPrefix, StringComparison.OrdinalIgnoreCase))
+                                folderPathOptions.List.Add(drive);
+                        }
                     }
                 }
+            }
+            catch
+            {
+                // nothing we can do here
             }
 
             return folderPathOptions;
