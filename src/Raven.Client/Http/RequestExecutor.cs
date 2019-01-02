@@ -128,13 +128,8 @@ namespace Raven.Client.Http
             FailedRequest?.Invoke(url, e);
         }
 
-        private static HttpClient GetCachedOrCreateHttpClient(
-            ConcurrentDictionary<string, Lazy<HttpClient>> httpClientCache,
-            X509Certificate2 certificate,
-            DocumentConventions conventions)
-            => httpClientCache.GetOrAdd(
-                certificate?.Thumbprint ?? string.Empty,
-                new Lazy<HttpClient>(() => CreateClient(certificate, conventions))).Value;
+        private HttpClient GetCachedOrCreateHttpClient(ConcurrentDictionary<string, Lazy<HttpClient>> httpClientCache) =>
+            httpClientCache.GetOrAdd(Certificate?.Thumbprint ?? string.Empty, new Lazy<HttpClient>(CreateClient)).Value;
 
         private static readonly Exception ServerCertificateCustomValidationCallbackRegistrationException;
 
@@ -184,7 +179,7 @@ namespace Raven.Client.Http
                 GlobalHttpClientWithoutCompression;
 
             HttpClient = httpClientCache.TryGetValue(thumbprint, out var lazyClient) == false ?
-                GetCachedOrCreateHttpClient(httpClientCache, Certificate, Conventions) : lazyClient.Value;
+                GetCachedOrCreateHttpClient(httpClientCache) : lazyClient.Value;
 
             TopologyHash = Http.TopologyHash.GetTopologyHash(initialUrls);
         }
@@ -194,22 +189,6 @@ namespace Raven.Client.Http
             var executor = new RequestExecutor(databaseName, certificate, conventions, initialUrls);
             executor._firstTopologyUpdate = executor.FirstTopologyUpdate(initialUrls);
             return executor;
-        }
-
-        internal static HttpClient CreateHttpClient(X509Certificate2 certificate, DocumentConventions conventions)
-        {
-            var thumbprint = string.Empty;
-            if (certificate != null)
-                thumbprint = certificate.Thumbprint;
-
-            var httpClientCache = conventions.UseCompression ?
-                GlobalHttpClientWithCompression :
-                GlobalHttpClientWithoutCompression;
-
-            if (httpClientCache.TryGetValue(thumbprint, out var lazyClient))
-                return lazyClient.Value;
-
-            return GetCachedOrCreateHttpClient(httpClientCache, certificate, conventions);
         }
 
         public static RequestExecutor CreateForSingleNodeWithConfigurationUpdates(string url, string databaseName, X509Certificate2 certificate, DocumentConventions conventions)
@@ -1324,15 +1303,10 @@ namespace Raven.Client.Http
 
         public HttpClient CreateClient()
         {
-            return CreateClient(Certificate, Conventions);
-        }
-
-        private static HttpClient CreateClient(X509Certificate2 certificate, DocumentConventions conventions)
-        {
-            var httpMessageHandler = CreateHttpMessageHandler(certificate,
+            var httpMessageHandler = CreateHttpMessageHandler(Certificate,
                 setSslProtocols: true,
-                useCompression: conventions.UseCompression,
-                hasExplicitlySetCompressionUsage: conventions.HasExplicitlySetCompressionUsage);
+                useCompression: Conventions.UseCompression,
+                hasExplicitlySetCompressionUsage: Conventions.HasExplicitlySetCompressionUsage);
 
             return new HttpClient(httpMessageHandler)
             {
