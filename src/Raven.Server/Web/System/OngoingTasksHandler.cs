@@ -496,9 +496,8 @@ namespace Raven.Server.Web.System
             }
 
             var getNodesInfo = GetBoolValueQueryString("getNodesInfo", required: false) ?? false;
-            var info = new DataDirectoryInfo(ServerStore, actualFullPath, getNodesInfo, requestTimeoutInMs, ResponseBodyStream());
-            var urlPath = $"databases/{Database.Name}/admin/backup-data-directory?path={path}";
-            await info.UpdateDirectoryResult(urlPath, Database.Name);
+            var info = new DataDirectoryInfo(ServerStore, actualFullPath, Database.Name, isBackup: true, getNodesInfo, requestTimeoutInMs, ResponseBodyStream());
+            await info.UpdateDirectoryResult(databaseName: Database.Name);
         }
 
         private string GetActualFullPath(string folderPath, out bool hasLocalRootPath)

@@ -55,9 +55,8 @@ namespace Raven.Server.Web.Studio
             }
 
             var getNodesInfo = GetBoolValueQueryString("getNodesInfo", required: false) ?? false;
-            var info = new DataDirectoryInfo(ServerStore, result, getNodesInfo, requestTimeoutInMs, ResponseBodyStream());
-            var urlPath = $"admin/studio-tasks/full-data-directory?path={path}&name={name}";
-            await info.UpdateDirectoryResult(urlPath, databaseName: null);
+            var info = new DataDirectoryInfo(ServerStore, result, name, isBackup: false, getNodesInfo, requestTimeoutInMs, ResponseBodyStream());
+            await info.UpdateDirectoryResult(databaseName: null);
         }
 
         [RavenAction("/admin/studio-tasks/folder-path-options", "GET", AuthorizationStatus.Operator)]
