@@ -1,4 +1,5 @@
 ﻿using System;
+using Sparrow.Json;
 
 namespace Raven.Client.Documents.Session
 {
@@ -82,5 +83,43 @@ namespace Raven.Client.Documents.Session
         }
 
         public InMemoryDocumentSessionOperations Session { get; }
+    }
+
+    public class BeforeConversionEventArgs : EventArgs
+    {
+        public string Id { get; }
+
+        public Type Type { get; }
+
+        public BlittableJsonReaderObject Document { get; }
+
+        public InMemoryDocumentSessionOperations Session { get; }
+
+        internal BeforeConversionEventArgs(InMemoryDocumentSessionOperations session, string id, Type type, BlittableJsonReaderObject document)
+        {
+            Session = session;
+            Id = id;
+            Type = type;
+            Document = document;
+        }
+    }
+
+    public class AfterConversionEventArgs : EventArgs
+    {
+        public string Id { get; }
+
+        public BlittableJsonReaderObject Document { get; }
+
+        public object Entity { get; }
+
+        public InMemoryDocumentSessionOperations Session { get; }
+
+        internal AfterConversionEventArgs(InMemoryDocumentSessionOperations session, string id, BlittableJsonReaderObject document, object entity)
+        {
+            Session = session;
+            Id = id;
+            Document = document;
+            Entity = entity;
+        }
     }
 }

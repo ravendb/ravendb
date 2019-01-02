@@ -179,6 +179,7 @@ namespace Raven.Client.Documents.Session.Operations
                 }
             }
 
+            session.OnBeforeConversionToEntityInvoke(id, typeof(T), ref document);
             var result = (T)session.Conventions.DeserializeEntityFromBlittable(typeof(T), document);
 
             if (string.IsNullOrEmpty(id) == false)
@@ -189,6 +190,8 @@ namespace Raven.Client.Documents.Session.Operations
                 if (identityProperty != null && (document.TryGetMember(identityProperty.Name, out object value) == false || value == null))
                     session.GenerateEntityIdOnTheClient.TrySetIdentity(result, id);
             }
+
+            session.OnAfterConversionToEntityInvoke(id, document, result);
 
             return result;
         }

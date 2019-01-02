@@ -57,7 +57,7 @@ namespace Raven.Client.Documents.Session.Operations
 
             var metadata = document.GetMetadata();
             var id = metadata.GetId();
-            var entity = (T)_session.EntityToBlittable.ConvertToEntity(typeof(T), id, document);
+            var entity = (T)_session.EntityToBlittable.ConvertToEntity(typeof(T), id, ref document);
 
             _session.DocumentsByEntity[entity] = new DocumentInfo
             {

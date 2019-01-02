@@ -76,6 +76,11 @@ namespace Raven.Client.Documents.Session
         public event EventHandler<BeforeDeleteEventArgs> OnBeforeDelete;
         public event EventHandler<BeforeQueryEventArgs> OnBeforeQuery;
 
+        public event EventHandler<BeforeStoreEventArgs> OnBeforeConversionToDocument;
+        public event EventHandler<BeforeStoreEventArgs> OnAfterConversionToDocument;
+        public event EventHandler<BeforeConversionEventArgs> OnBeforeConversionToEntity;
+        public event EventHandler<AfterConversionEventArgs> OnAfterConversionToEntity;
+
         /// <summary>
         /// Entities whose id we already know do not exists, because they are a missing include, or a missing load, etc.
         /// </summary>
@@ -469,7 +474,7 @@ more responsive application.
                 // the local instance may have been changed, we adhere to the current Unit of Work
                 // instance, and return that, ignoring anything new.
                 if (docInfo.Entity == null)
-                    docInfo.Entity = EntityToBlittable.ConvertToEntity(entityType, id, document);
+                    docInfo.Entity = EntityToBlittable.ConvertToEntity(entityType, id, ref document);
 
                 if (noTracking == false)
                 {
@@ -483,7 +488,7 @@ more responsive application.
             if (IncludedDocumentsById.TryGetValue(id, out docInfo))
             {
                 if (docInfo.Entity == null)
-                    docInfo.Entity = EntityToBlittable.ConvertToEntity(entityType, id, document);
+                    docInfo.Entity = EntityToBlittable.ConvertToEntity(entityType, id, ref document);
 
                 if (noTracking == false)
                 {
@@ -495,7 +500,7 @@ more responsive application.
                 return docInfo.Entity;
             }
 
-            var entity = EntityToBlittable.ConvertToEntity(entityType, id, document);
+            var entity = EntityToBlittable.ConvertToEntity(entityType, id, ref document);
 
             if (metadata.TryGet(Constants.Documents.Metadata.ChangeVector, out string changeVector) == false)
                 throw new InvalidOperationException("Document " + id + " must have Change Vector");
@@ -597,7 +602,7 @@ more responsive application.
             var hasId = GenerateEntityIdOnTheClient.TryGetIdFromInstance(entity, out string _);
             StoreInternal(entity, null, null, hasId == false ? ConcurrencyCheckMode.Forced : ConcurrencyCheckMode.Auto);
         }
-      
+
         /// <summary>
         /// Stores the specified entity in the session, explicitly specifying its Id. The entity will be saved when SaveChanges is called.
         /// </summary>
@@ -660,7 +665,7 @@ more responsive application.
             var collectionName = _requestExecutor.Conventions.GetCollectionName(entity);
             var metadata = new DynamicJsonValue();
             if (collectionName != null)
-                metadata[Constants.Documents.Metadata.Collection] = collectionName;           
+                metadata[Constants.Documents.Metadata.Collection] = collectionName;
 
             var clrType = _requestExecutor.Conventions.GetClrTypeName(entity.GetType());
             if (clrType != null)
@@ -875,11 +880,11 @@ more responsive application.
 
         private static bool UpdateMetadataModifications(DocumentInfo documentInfo)
         {
-            if ((documentInfo.MetadataInstance == null || 
+            if ((documentInfo.MetadataInstance == null ||
                 ((MetadataAsDictionary)documentInfo.MetadataInstance).Changed == false) &&
-                (documentInfo.Metadata.Modifications == null || 
+                (documentInfo.Metadata.Modifications == null ||
                 documentInfo.Metadata.Modifications.Properties.Count == 0))
-                    return false;
+                return false;
 
             if (documentInfo.Metadata.Modifications == null || documentInfo.Metadata.Modifications.Properties.Count == 0)
             {
@@ -960,7 +965,7 @@ more responsive application.
                     continue;
 
                 var metadataUpdated = UpdateMetadataModifications(entity.Value);
-           
+
                 var document = EntityToBlittable.ConvertEntityToBlittable(entity.Key, entity.Value);
                 if (EntityChanged(document, entity.Value, null) == false)
                     continue;
@@ -1560,7 +1565,7 @@ more responsive application.
         private object DeserializeFromTransformer(Type entityType, string id, BlittableJsonReaderObject document)
         {
             HandleInternalMetadata(document);
-            return EntityToBlittable.ConvertToEntity(entityType, id, document);
+            return EntityToBlittable.ConvertToEntity(entityType, id, ref document);
         }
 
         public bool CheckIfIdAlreadyIncluded(string[] ids, KeyValuePair<string, Type>[] includes)
@@ -1615,9 +1620,8 @@ more responsive application.
                 documentInfo.ChangeVector = (LazyStringValue)changeVector;
             }
 
+            documentInfo.Entity = EntityToBlittable.ConvertToEntity(typeof(T), documentInfo.Id, ref document);
             documentInfo.Document = document;
-
-            documentInfo.Entity = EntityToBlittable.ConvertToEntity(typeof(T), documentInfo.Id, document);
 
             var type = entity.GetType();
             foreach (var property in ReflectionUtil.GetPropertiesAndFieldsFor(type, BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic))
@@ -1683,14 +1687,31 @@ more responsive application.
             SessionInfo.LastClusterTransactionIndex = returnedTransactionIndex;
         }
 
-        public void OnAfterSaveChangesInvoke(AfterSaveChangesEventArgs afterSaveChangesEventArgs)
+        internal void OnBeforeConversionToEntityInvoke(string id, Type type, ref BlittableJsonReaderObject document)
         {
-            OnAfterSaveChanges?.Invoke(this, afterSaveChangesEventArgs);
+            var onBeforeConversionToEntity = OnBeforeConversionToEntity;
+            if (onBeforeConversionToEntity != null)
+            {
+                onBeforeConversionToEntity.Invoke(this, new BeforeConversionEventArgs(this, id, type, document));
+
+                if (document.Modifications != null)
+                    document = Context.ReadObject(document, id);
+            }
         }
 
-        public void OnBeforeQueryInvoke(BeforeQueryEventArgs beforeQueryEventArgs)
+        internal void OnAfterConversionToEntityInvoke(string id, BlittableJsonReaderObject document, object entity)
         {
-            OnBeforeQuery?.Invoke(this, beforeQueryEventArgs);
+            OnAfterConversionToEntity?.Invoke(this, new AfterConversionEventArgs(this, id, document, entity));
+        }
+
+        internal void OnAfterSaveChangesInvoke(AfterSaveChangesEventArgs args)
+        {
+            OnAfterSaveChanges?.Invoke(this, args);
+        }
+
+        internal void OnBeforeQueryInvoke(BeforeQueryEventArgs args)
+        {
+            OnBeforeQuery?.Invoke(this, args);
         }
 
         protected (string IndexName, string CollectionName) ProcessQueryParameters(Type type, string indexName, string collectionName, DocumentConventions conventions)
