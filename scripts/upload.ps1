@@ -1,4 +1,3 @@
-# TODO @gregolsky update regexes for stable
 $CATEGORIES = @(
     @('RavenDB-[0-9]\.[0-9]\.[0-9](-[a-zA-Z]+-([0-9-]+))?-windows-x64.Tools', "RavenDB Tools for Windows x64"),
     @('RavenDB-[0-9]\.[0-9]\.[0-9](-[a-zA-Z]+-([0-9-]+))?-windows-x86.Tools', "RavenDB Tools for Windows x86"),
@@ -58,6 +57,8 @@ function UploadArtifact ($uploader, $versionInfo, $filename, $log, $dryRun) {
 
         if ($dryRun -eq $False) {
             & $uploader "$uploadCategory" "$versionString" "$filename" "$log"
+        } else {
+            write-host "[DRYRUN] Upload: $uploader ""$uploadCategory"" ""$versionString"" $filename ""$log"""
         }
 
         if ($lastExitCode -ne 0) {
