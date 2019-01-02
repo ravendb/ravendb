@@ -21,13 +21,15 @@ function SignFile( $projectDir, $filePath, $dryRun ) {
         }
     }
 
-    $installerCert = "$projectDir\..\BuildsInfo\RavenDB\certs\code-sign.pfx"
+    $installerCert = $env:CODESIGN_CERTPATH
+
     if (!(Test-Path $installerCert))
     {
         throw "Could not find pfx file under the path $installerCert to sign the installer"
     }
 
-    $certPasswordPath = "$projectDir\..\BuildsInfo\RavenDB\certs\installerCertPassword.txt"
+    $certPasswordPath = $env:CODESIGN_PASSPATH
+
     if (!(Test-Path $certPasswordPath))
     {
         throw "Could not find the path for the certificate password of the installer"
