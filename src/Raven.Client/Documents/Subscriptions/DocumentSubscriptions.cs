@@ -12,6 +12,8 @@ using System.Threading;
 using System.Threading.Tasks;
 using Lambda2Js;
 using Raven.Client.Documents.Commands;
+using Raven.Client.Documents.Operations;
+using Raven.Client.Documents.Operations.OngoingTasks;
 using Raven.Client.Documents.Session;
 using Raven.Client.Documents.Session.Loaders;
 using Raven.Client.Extensions;
@@ -401,6 +403,28 @@ namespace Raven.Client.Documents.Subscriptions
                 var command = new DropSubscriptionConnectionCommand(name);
                 await requestExecutor.ExecuteAsync(command, jsonOperationContext, sessionInfo: null, token: token).ConfigureAwait(false);
             }
+        }
+
+        public void Enable(string name, string database = null)
+        {
+            AsyncHelpers.RunSync(() => EnableAsync(name, database));
+        }
+
+        public Task EnableAsync(string name, string database = null, CancellationToken token = default)
+        {
+            var operation = new ToggleOngoingTaskStateOperation(name, OngoingTaskType.Subscription, disable: false);
+            return _store.Maintenance.ForDatabase(database ?? _store.Database).SendAsync(operation, token);
+        }
+
+        public void Disable(string name, string database = null)
+        {
+            AsyncHelpers.RunSync(() => DisableAsync(name, database));
+        }
+
+        public Task DisableAsync(string name, string database = null, CancellationToken token = default)
+        {
+            var operation = new ToggleOngoingTaskStateOperation(name, OngoingTaskType.Subscription, disable: true);
+            return _store.Maintenance.ForDatabase(database ?? _store.Database).SendAsync(operation, token);
         }
     }
 }
