@@ -27,7 +27,7 @@ namespace SlowTests.SchemaUpgrade.Issues
                 schemaVer = documentDatabase.DocumentsStorage.Environment.Options.SchemaVersion;
             }
 
-            var schemaDir = new DirectoryInfo($"SchemaUpgrade\\Issues\\DocumentsVersion\\schema_{schemaNum}");
+            var schemaDir = new DirectoryInfo($"SchemaUpgrade/Issues/DocumentsVersion/schema_{schemaNum}");
             Assert.Equal(true, schemaDir.Exists);
             CopyAll(schemaDir, new DirectoryInfo(Path.GetFullPath(folder)));
 
@@ -56,7 +56,7 @@ namespace SlowTests.SchemaUpgrade.Issues
                  schemaVer = Constants.CurrentVersion;
             }
 
-            var schemaDir = new DirectoryInfo("SchemaUpgrade\\Issues\\VoronCurrentVersion\\schema_999");
+            var schemaDir = new DirectoryInfo("SchemaUpgrade/Issues/VoronCurrentVersion/schema_999");
             Assert.Equal(true, schemaDir.Exists);
             CopyAll(schemaDir, new DirectoryInfo(Path.GetFullPath(folder)));
 
