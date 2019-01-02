@@ -1,9 +1,9 @@
 $CATEGORIES = @(
-    @('RavenDB-[0-9]\.[0-9]\.[0-9](-[a-zA-Z]+-([0-9-]+))?-windows-x64', "RavenDB for Windows x64"),
-    @('RavenDB-[0-9]\.[0-9]\.[0-9](-[a-zA-Z]+-([0-9-]+))?-windows-x86', "RavenDB for Windows x86"),
-    @('RavenDB-[0-9]\.[0-9]\.[0-9](-[a-zA-Z]+-([0-9-]+))?-linux-x64', "RavenDB for Linux x64"),
-    @('RavenDB-[0-9]\.[0-9]\.[0-9](-[a-zA-Z]+-([0-9-]+))?-osx-x64', "RavenDB for OSX"),
-    @('RavenDB-[0-9]\.[0-9]\.[0-9](-[a-zA-Z]+-([0-9-]+))?-raspberry-pi', "RavenDB for Raspberry Pi")
+    @('RavenDB-[0-9]\.[0-9]\.[0-9]+(-[a-zA-Z]+-([0-9-]+))?-windows-x64', "RavenDB for Windows x64"),
+    @('RavenDB-[0-9]\.[0-9]\.[0-9]+(-[a-zA-Z]+-([0-9-]+))?-windows-x86', "RavenDB for Windows x86"),
+    @('RavenDB-[0-9]\.[0-9]\.[0-9]+(-[a-zA-Z]+-([0-9-]+))?-linux-x64', "RavenDB for Linux x64"),
+    @('RavenDB-[0-9]\.[0-9]\.[0-9]+(-[a-zA-Z]+-([0-9-]+))?-osx-x64', "RavenDB for OSX"),
+    @('RavenDB-[0-9]\.[0-9]\.[0-9]+(-[a-zA-Z]+-([0-9-]+))?-raspberry-pi', "RavenDB for Raspberry Pi")
 )
 function Get-UploadCategory ( $filename ) {
     $result = [io.path]::GetFilenameWithoutExtension($filename)
