@@ -103,6 +103,7 @@ namespace Raven.Client.Documents.Subscriptions
                     }
                 }
 
+                _subscriptionLocalRequestExecutor?.Dispose();
             }
             catch (Exception ex)
             {
