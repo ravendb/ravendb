@@ -31,6 +31,7 @@ namespace Raven.Server.Documents.Indexes.Static.Roslyn
                 _selectManyRewriter,
                 SelectManyRewriter.SelectMethodOnProperties,
                 new ThrowOnInvalidMethodCalls(),
+                WhereRewriter.Instance,
                 DynamicInvocationExpressionsRewriter.Instance,
                 DynamicExtensionMethodsRewriter.Instance,
                 DynamicLambdaExpressionsRewriter.Instance,

@@ -9,20 +9,20 @@ namespace SlowTests.Issues
     public class RavenDB_12468 : RavenTestBase
     {
 
-        public class User
+        private class User
         {
             public string Name;
             public string Title;
             public string[] Groups;
         }
 
-        public class Group
+        private class Group
         {
             public string Name;
             public string[] Parents;
         }
 
-        public class Issue
+        private class Issue
         {
             public string Name;
             public string[] Users;
@@ -33,7 +33,7 @@ namespace SlowTests.Issues
         {
             using (var session = store.OpenSession())
             {
-                session.Store(new GraphPermissionTests.User { Name = "Sunny", Title  = "Designer" }, "users/2944");
+                session.Store(new GraphPermissionTests.User { Name = "Sunny", Title = "Designer" }, "users/2944");
                 session.Store(new GraphPermissionTests.User { Name = "Max", Title = "Project Manager", Groups = new[] { "groups/project-x" } }, "users/84");
                 session.Store(new GraphPermissionTests.User { Name = "Arava", Title = "CEO", Groups = new[] { "groups/execs" } }, "users/12");
                 session.Store(new GraphPermissionTests.User { Name = "Oscar", Title = "CTO", Groups = new[] { "groups/execs" } }, "users/62");
@@ -73,7 +73,7 @@ namespace SlowTests.Issues
                                         select  i.Name as Issue,  u.Name as User, id(u) as UserId
                                     ").First();
 
-                    Assert.Equal("users/341",result["UserId"].Value<string>());
+                    Assert.Equal("users/341", result["UserId"].Value<string>());
                 }
             }
         }
