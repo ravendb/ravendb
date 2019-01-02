@@ -8,20 +8,20 @@ namespace SlowTests.Issues
 {
     public class RavenDB_12563 : RavenTestBase
     {
-          public class User
+        private class User
         {
             public string Name;
             public string Title;
             public string[] Groups;
         }
 
-        public class Group
+        private class Group
         {
             public string Name;
             public string[] Parents;
         }
 
-        public class Issue
+        private class Issue
         {
             public string Name;
             public string[] Users;
@@ -32,7 +32,7 @@ namespace SlowTests.Issues
         {
             using (var session = store.OpenSession())
             {
-                session.Store(new User { Name = "Sunny", Title  = "Designer" }, "users/2944");
+                session.Store(new User { Name = "Sunny", Title = "Designer" }, "users/2944");
                 session.Store(new User { Name = "Max", Title = "Project Manager", Groups = new[] { "groups/project-x" } }, "users/84");
                 session.Store(new User { Name = "Arava", Title = "CEO", Groups = new[] { "groups/execs" } }, "users/12");
                 session.Store(new User { Name = "Oscar", Title = "CTO", Groups = new[] { "groups/execs" } }, "users/62");
