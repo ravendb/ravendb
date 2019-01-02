@@ -81,11 +81,12 @@ namespace Raven.Server
             app.Use(_ => RequestHandler);
         }
 
-        private bool IsMissingRequiredDependencies(out List<string> msgs)
+        private unsafe bool IsMissingRequiredDependencies(out List<string> msgs)
         {
             try
             {
                 Sparrow.Sodium.GenerateRandomBuffer(32);
+                Voron.Platform.Pal.rvn_get_error_string(0, null, 0, out _);
                 msgs = null;
                 return false;
             }
