@@ -10,7 +10,7 @@ $ARTIFACTS = Get-ChildItem $([io.path]::combine("artifacts", '*')) -Include "*.z
 . '.\scripts\getScriptDirectory.ps1'
 
 $projectDir = Get-ScriptDirectory
-$uploader = [io.path]::combine($projectDir, '..', 'Uploader', 'S3Uploader.exe')
+$uploader = $env:UPLOADER_PATH
 $versionInfo = GetVersionInfo
 $files = Get-ChildItem $ARTIFACTS
 
