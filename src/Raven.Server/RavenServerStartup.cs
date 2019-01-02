@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Net;
+using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
 using Microsoft.AspNetCore.Builder;
@@ -63,6 +64,13 @@ namespace Raven.Server
                     appBuilder => appBuilder.UseResponseCompression());
             }
 
+            if(IsMissingRequiredDependencies(out var msgs) )
+            {
+                msgs.InsertRange(0, MissingDependeciesWarning);
+                var deps = new MissingDependencies { Messages = msgs, Parent = this };
+                app.Use(_ => deps.Handler);
+                return;
+            }
 
             if (IsServerRunningInASafeManner() == false)
             {
@@ -71,6 +79,28 @@ namespace Raven.Server
             }
 
             app.Use(_ => RequestHandler);
+        }
+
+        private bool IsMissingRequiredDependencies(out List<string> msgs)
+        {
+            try
+            {
+                Sparrow.Sodium.GenerateRandomBuffer(32);
+                msgs = null;
+                return false;
+            }
+            catch (Exception e)
+            {
+                msgs = new List<string>();
+
+                while(e != null)
+                {
+                    msgs.Add(e.Message);
+                    e = e.InnerException;
+                }
+                msgs.Reverse();
+                return true;
+            }
         }
 
         private bool IsServerRunningInASafeManner()
@@ -87,6 +117,28 @@ namespace Raven.Server
             "/debug/server-id"
         };
 
+        private class MissingDependencies
+        {
+            public List<string> Messages;
+            public RavenServerStartup Parent;
+            public Task Handler(HttpContext context)
+            {
+                context.Response.StatusCode = (int)HttpStatusCode.ServiceUnavailable;
+
+                if (IsHtmlAcceptable(context))
+                {
+                    context.Response.Headers["Content-Type"] = "text/html; charset=utf-8";
+                    //TODO: Fix this
+                    return context.Response.WriteAsync(HtmlUtil.RenderUnsafePage());
+                }
+
+                context.Response.Headers["Content-Type"] = "application/json; charset=utf-8";
+                Parent.WriteErrorMessage(context, Messages);
+
+                return Task.CompletedTask;
+            }
+
+        }
         private Task UnsafeRequestHandler(HttpContext context)
         {
             if (RoutesAllowedInUnsafeMode.Contains(context.Request.Path.Value))
@@ -103,17 +155,24 @@ namespace Raven.Server
             }
 
             context.Response.Headers["Content-Type"] = "application/json; charset=utf-8";
+            WriteErrorMessage(context, UnsafeWarning);
+
+            return Task.CompletedTask;
+        }
+
+        private void WriteErrorMessage(HttpContext context, ICollection<string> warning)
+        {
             using (_server.ServerStore.ContextPool.AllocateOperationContext(out JsonOperationContext ctx))
             using (var writer = new BlittableJsonTextWriter(ctx, context.Response.Body))
             {
                 writer.WriteStartObject();
                 writer.WritePropertyName("Message");
-                writer.WriteString(string.Join(" ", UnsafeWarning));
+                writer.WriteString(string.Join(" ", warning));
                 writer.WriteComma();
                 writer.WritePropertyName("MessageAsArray");
                 writer.WriteStartArray();
                 var first = true;
-                foreach (var val in UnsafeWarning)
+                foreach (var val in warning)
                 {
                     if (first == false)
                         writer.WriteComma();
@@ -123,8 +182,6 @@ namespace Raven.Server
                 writer.WriteEndArray();
                 writer.WriteEndObject();
             }
-
-            return Task.CompletedTask;
         }
 
         public static bool IsHtmlAcceptable(HttpContext context)
@@ -149,6 +206,11 @@ namespace Raven.Server
             "Server certificate information has not been set up and the server address is not configured within allowed unsecured access address range.",
             $"Please find the RavenDB settings file *settings.json* in the server directory and fill in your certificate information in either { RavenConfiguration.GetKey(x => x.Security.CertificatePath) } or { RavenConfiguration.GetKey(x => x.Security.CertificateExec) }",
             $"If you would rather like to keep your server unsecured, please relax the { RavenConfiguration.GetKey(x => x.Security.UnsecuredAccessAllowed) } setting to match the { RavenConfiguration.GetKey(x => x.Core.ServerUrls) } setting value."
+        };
+
+        private static readonly string[] MissingDependeciesWarning = {
+            //TODO: provide actual required file names for the platform, such as librvnpal.linux.x64.so, libsodium.arm.so, etc
+            "RavenDB is missing required dependecies: (libsodium, librvnpal). Make sure that the files are located in the same directory as Raven.Server.dll.",
         };
 
         private async Task RequestHandler(HttpContext context)
