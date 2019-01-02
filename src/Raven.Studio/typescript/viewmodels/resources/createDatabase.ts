@@ -255,6 +255,20 @@ class createDatabase extends dialogViewModelBase {
             }
         });
 
+        this.databaseModel.name.throttle(300).subscribe((newDatabaseName) => {
+            const dataPath = this.databaseModel.path.dataPath();
+            if (dataPath) {
+                return;
+            }
+
+            if (this.databaseModel.path.dataPath.isValid()) {
+                this.updateDatabaseLocationInfo(newDatabaseName, dataPath);
+            } else {
+                this.databaseLocationInfo([]);
+                this.spinners.databaseLocationInfoLoading(false);
+            }
+        });
+
         this.databaseLocationInfoToDisplay = ko.pureComputed(() => {
             const databaseLocationInfo = this.databaseLocationInfo();
             const selectedNodes = this.databaseModel.replication.nodes().map(x => x.tag());
