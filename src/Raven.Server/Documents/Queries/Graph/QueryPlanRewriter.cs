@@ -30,6 +30,30 @@ namespace Raven.Server.Documents.Queries.Graph
             }
         }
 
+        public virtual void Visit(ISingleGraphStep step)
+        {
+            switch (step)
+            {
+                case EdgeQueryStep.EdgeMatcher em:
+                     VisitEdgeMatcher(em);
+                    break;
+                case null:
+                case QueryQueryStep.QuerySingleStep _:
+                case RecursionQueryStep.RecursionSingleStep _:
+                    break;
+            }
+        }
+
+        //This method is only invoked from recursive step and fix the problem that we don't visit edges after recursive steps
+        public virtual void VisitEdgeMatcher(EdgeQueryStep.EdgeMatcher em)
+        {
+            var newRight = Visit(em._parent.Right);
+            if (ReferenceEquals(newRight, em._parent.Right) == false)
+            {
+                em._parent.SetRight(newRight);
+            }
+        }
+
         public virtual IGraphQueryStep VisitQueryQueryStep(QueryQueryStep qqs)
         {
             return qqs;
@@ -105,6 +129,12 @@ namespace Raven.Server.Documents.Queries.Graph
                 {
                     steps.Add(step);
                 }
+            }
+
+            var next = rqs.GetNextStep();
+            if (next != null)
+            {
+                Visit(next);
             }
 
             if (modified)

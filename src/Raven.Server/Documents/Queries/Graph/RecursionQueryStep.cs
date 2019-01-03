@@ -92,6 +92,7 @@ namespace Raven.Server.Documents.Queries.Graph
             _steps = steps;
             _recursive = rqs._recursive;
             _options = rqs._options;
+            _next = rqs._next;
 
             _stepAliases.Add(left.GetOutputAlias());
 
@@ -232,7 +233,7 @@ namespace Raven.Server.Documents.Queries.Graph
             }
         }
 
-        private class RecursionSingleStep : ISingleGraphStep
+        internal class RecursionSingleStep : ISingleGraphStep
         {
             private readonly RecursionQueryStep _parent;
             private List<Match> _matches = new List<Match>();

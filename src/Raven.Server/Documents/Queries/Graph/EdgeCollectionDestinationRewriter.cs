@@ -38,6 +38,13 @@ namespace Raven.Server.Documents.Queries.Graph
             return qqs;
         }
 
+        public override void VisitEdgeMatcher(EdgeQueryStep.EdgeMatcher em)
+        {
+            _isVisitingRight = true;
+            base.VisitEdgeMatcher(em);
+            _isVisitingRight = false;
+        }
+
         public override IGraphQueryStep VisitRecursionQueryStep(RecursionQueryStep rqs)
         {
             var left = Visit(rqs.Left);
@@ -60,6 +67,8 @@ namespace Raven.Server.Documents.Queries.Graph
                     steps.Add(step);
                 }
             }
+            var next = rqs.GetNextStep();
+            Visit(next);
 
             if (modified == false)
             {
@@ -67,8 +76,7 @@ namespace Raven.Server.Documents.Queries.Graph
             }
 
             var result = new RecursionQueryStep(rqs, left, steps);
-
-            var next = rqs.GetNextStep();
+            
             if (next != null)
             {
                 next.SetPrev(result);
