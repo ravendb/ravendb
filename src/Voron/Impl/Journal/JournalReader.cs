@@ -177,12 +177,8 @@ namespace Voron.Impl.Journal
                         var pageHeader = (PageHeader*)journalPagePtr;
 
                         var checksum = StorageEnvironment.CalculatePageChecksum((byte*)pageHeader, pageNumber, out var expectedChecksum);
-                        if (checksum != expectedChecksum)
-                        {
-                            throw new InvalidDataException(
-                                $"Invalid checksum for page {pageNumber} in transaction {current->TransactionId}, journal file {_journalPager} might be corrupted, expected hash to be {expectedChecksum} but was {checksum}." +
-                                $"Data from journal has not been applied to data file {_dataPager} yet");
-                        }
+                        if (checksum != expectedChecksum) 
+                            ThrowInvalidChecksumOnPageFromJournal(pageNumber, current, expectedChecksum, checksum, pageHeader);
                     }
 
                     Memory.Copy(pagePtr, journalPagePtr, pageInfoPtr[i].Size);
@@ -226,6 +222,21 @@ namespace Voron.Impl.Journal
             LastTransactionHeader = current;
 
             return true;
+        }
+
+        private void ThrowInvalidChecksumOnPageFromJournal(long pageNumber, TransactionHeader* current, ulong expectedChecksum, ulong checksum, PageHeader* pageHeader)
+        {
+            var message =
+                $"Invalid checksum for page {pageNumber} in transaction {current->TransactionId}, journal file {_journalPager} might be corrupted, expected hash to be {expectedChecksum} but was {checksum}." +
+                $"Data from journal has not been applied to data file {_dataPager} yet. ";
+
+            message += $"Page flags: {pageHeader->Flags}. ";
+
+            if ((pageHeader->Flags & PageFlags.Overflow) == PageFlags.Overflow)
+                message += $"Overflow size: {pageHeader->OverflowSize}. ";
+
+
+            throw new InvalidDataException(message);
         }
 
         public int RecoverAndValidate(StorageEnvironmentOptions options, TransactionHeader[] transactionHeaders)
