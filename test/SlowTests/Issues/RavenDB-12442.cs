@@ -1,5 +1,6 @@
 ﻿using System.Linq;
 using FastTests;
+using Raven.Client.Documents;
 using Raven.Client.Documents.Indexes;
 using Raven.Client.Documents.Queries;
 using Xunit;
@@ -53,6 +54,47 @@ namespace SlowTests.Issues
                     Assert.Equal(null, list[1].Prop1);
                     Assert.Equal(EnumTest.Item2, list[1].Prop2);
                     Assert.Equal(str, list[1].Str);
+                }
+            }
+        }
+
+        [Theory]
+        [InlineData(Raven.Client.Constants.Documents.Indexing.Fields.NullValue)]
+        [InlineData(Raven.Client.Constants.Documents.Indexing.Fields.EmptyString)]
+        public void Can_convert_store_and_get_null_value_and_empty_string(string str)
+        {
+            using (var store = GetDocumentStore())
+            {
+                using (var session = store.OpenSession())
+                {
+                    var otherEnt = new OtherEnt("test1");
+                    session.Store(otherEnt);
+
+                    session.Store(new Ent1(otherEnt.Id, 1, EnumTest.Item1, str));
+                    session.Store(new Ent2(otherEnt.Id, 2, EnumTest.Item2, str));
+                    session.SaveChanges();
+                }
+
+                new SampleIndex().Execute(store);
+                WaitForIndexing(store);
+
+                using (var session = store.OpenSession())
+                {
+                    var list = session.Query<SampleIndex.Result, SampleIndex>()
+                        .ProjectInto<SampleDto>()
+                        .ToList();
+
+                    Assert.Equal(2, list.Count);
+
+                    Assert.Equal(1, list[0].PropBase);
+                    Assert.Equal(EnumTest.Item1, list[0].Prop1);
+                    Assert.Equal(null, list[0].Prop2);
+                    Assert.Equal(str, list[0].Str);
+
+                    Assert.Equal(2, list[1].PropBase);
+                    Assert.Equal(null, list[1].Prop1);
+                    Assert.Equal(EnumTest.Item2, list[1].Prop2);
+                    Assert.Equal(str, list[0].Str);
                 }
             }
         }
