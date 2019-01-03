@@ -23,7 +23,7 @@ namespace Sparrow.Logging
         private static string _currentThreadId;
 
         public static bool UseUtcTime;
-        public static long MaxFileSizeInBytes;
+        public static long MaxFileSizeInBytes = 1024 * 1024 * 128;
 
         internal static long LocalToUtcOffsetInTicks;
 
