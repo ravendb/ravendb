@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Collections.Generic;
 using System.Threading;
 using System.Threading.Tasks;
 
@@ -21,19 +22,20 @@ namespace Sparrow.Threading
         public void LeaveDispose(){}
     }
     public struct SingleAttempt : IDisposeOnceOperationMode {
-        private int disposeDepth;
+        private long disposeDepth;
         public void Initialize()
         {
             disposeDepth = 0;
         }
-        public bool DuringDispose => disposeDepth != 0;
+        public bool DuringDispose => Interlocked.Read(ref disposeDepth) != 0;
+
         public void EnterDispose()
-        {
-            disposeDepth++;
+        {               
+            Interlocked.Increment(ref disposeDepth);            
         }
         public void LeaveDispose()
-        {
-            disposeDepth--;
+        {   
+            Interlocked.Decrement(ref disposeDepth);            
         }
     }
 
@@ -154,7 +156,6 @@ namespace Sparrow.Threading
 
                     return state.Item2.Task.IsCompleted;
                 }
-
 
                 throw new NotSupportedException("Unknown operation mode: " + typeof(TOperationMode));
             }
