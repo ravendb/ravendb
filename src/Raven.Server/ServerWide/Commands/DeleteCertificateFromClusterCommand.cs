@@ -13,6 +13,7 @@ namespace Raven.Server.ServerWide.Commands
                 var read = store.Cluster.Read(context, Name);
                 if (read == null)
                     return;
+
                 var definition = JsonDeserializationServer.CertificateDefinition(read);
                 if (definition.SecurityClearance != SecurityClearance.ClusterAdmin || definition.SecurityClearance != SecurityClearance.ClusterNode)
                     return;

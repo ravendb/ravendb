@@ -5,6 +5,7 @@ using System.Text;
 using Raven.Client.Documents.Commands.Batches;
 using Raven.Server.Documents.Handlers;
 using Raven.Server.Json;
+using Raven.Server.Rachis;
 using Raven.Server.ServerWide.Context;
 using Sparrow;
 using Sparrow.Binary;
@@ -36,7 +37,7 @@ namespace Raven.Server.ServerWide.Commands
             {
                 if (command.IdPrefixed)
                 {
-                    throw new NotSupportedException("Deleting by prefix is not supported on cluster transaction.");
+                    throw new RachisApplyException("Deleting by prefix is not supported on cluster transaction");
                 }
 
                 return new ClusterTransactionDataCommand
@@ -121,7 +122,7 @@ namespace Raven.Server.ServerWide.Commands
                         ClusterCommands.Add(command);
                         break;
                     default:
-                        throw new ArgumentException($"The type '{commandData.Type}' is not supported in '{nameof(ClusterTransactionCommand)}.'");
+                        throw new RachisApplyException($"The type '{commandData.Type}' is not supported in '{nameof(ClusterTransactionCommand)}.'");
                 }
             }
 
@@ -133,7 +134,7 @@ namespace Raven.Server.ServerWide.Commands
             var lastChar = command.Id[command.Id.Length - 1];
             if (lastChar == '/' || lastChar == '|')
             {
-                throw new NotSupportedException($"Document id {command.Id} cannot end with '|' or '/' as part of cluster transaction");
+                throw new RachisApplyException($"Document id {command.Id} cannot end with '|' or '/' as part of cluster transaction");
             }
         }
 
@@ -169,7 +170,9 @@ namespace Raven.Server.ServerWide.Commands
                         toExecute.Add(delete);
                         break;
                     default:
-                        throw new InvalidOperationException("Invalid cluster command detected: " + clusterCommand.Type + "! Only CompareExchangePUT and CompareExchangeDELETE are supported.");
+                        throw new RachisApplyException(
+                            $"Invalid cluster command detected: {clusterCommand.Type}! Only " +
+                            $"CompareExchangePUT and CompareExchangeDELETE are supported.");
                 }
             }
 

@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using Raven.Client.Extensions;
 using Raven.Client.ServerWide;
+using Raven.Server.Rachis;
 using Raven.Server.ServerWide.Context;
 using Sparrow.Json;
 using Sparrow.Json.Parsing;
@@ -85,13 +86,15 @@ namespace Raven.Server.ServerWide.Commands
         {
             var bja = remoteResult as BlittableJsonReaderArray;
             if (bja == null)
-                throw new ArgumentException($"UpdateClusterIdentityCommand.FromRemote expected an object of type 'BlittableJsonReaderArray' but got {remoteResult.GetType().Name}.");
+                throw new RachisApplyException($"UpdateClusterIdentityCommand.FromRemote expected an object of type 'BlittableJsonReaderArray' but got {remoteResult.GetType().Name}.");
+
             var res = new Dictionary<string, long>();
             foreach (var o in bja)
             {
                 var bjro = o as BlittableJsonReaderObject;
-                if(o == null)
-                    throw new ArgumentException($"UpdateClusterIdentityCommand.FromRemote expected an array of type 'BlittableJsonReaderObject' but got {o.GetType().Name}.");
+                if (bjro == null)
+                    throw new RachisApplyException($"UpdateClusterIdentityCommand.FromRemote expected an array of type 'BlittableJsonReaderObject' but got {o.GetType().Name}.");
+
                 var names = bjro.GetPropertyNames();
                 foreach (var name in names)
                 {
@@ -99,11 +102,11 @@ namespace Raven.Server.ServerWide.Commands
                     {
                         if (value is long == false)
                         {
-                            throw new ArgumentException($"UpdateClusterIdentityCommand.FromRemote expected properties with 'long' type but got {value.GetType().Name}.");
+                            throw new RachisApplyException($"UpdateClusterIdentityCommand.FromRemote expected properties with 'long' type but got {value.GetType().Name}.");
                         }
+
                         res.Add(name,(long)value);
                     }
-                        
                 }
             }
 

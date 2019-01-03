@@ -2,7 +2,7 @@
 
 namespace Raven.Client.Exceptions.Documents.Subscriptions
 {
-    public class SubscriptionDoesNotBelongToNodeException:SubscriptionException
+    public class SubscriptionDoesNotBelongToNodeException : SubscriptionException
     {
         public string AppropriateNode;
 

@@ -39,6 +39,7 @@ namespace Raven.Client.Documents.Operations.Replication
             {
                 if (watcher.TaskId != taskId)
                     continue;
+
                 watchers.Remove(watcher);
                 return;
             }
