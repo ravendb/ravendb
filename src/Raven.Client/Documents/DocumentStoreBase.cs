@@ -192,10 +192,10 @@ namespace Raven.Client.Documents
         public event EventHandler<BeforeQueryEventArgs> OnBeforeQuery;
         public event EventHandler<SessionCreatedEventArgs> OnSessionCreated;
 
-        public event EventHandler<BeforeStoreEventArgs> OnBeforeConversionToDocument;
-        public event EventHandler<BeforeStoreEventArgs> OnAfterConversionToDocument;
-        public event EventHandler<BeforeConversionEventArgs> OnBeforeConversionToEntity;
-        public event EventHandler<AfterConversionEventArgs> OnAfterConversionToEntity;
+        public event EventHandler<BeforeConversionToDocumentEventArgs> OnBeforeConversionToDocument;
+        public event EventHandler<AfterConversionToDocumentEventArgs> OnAfterConversionToDocument;
+        public event EventHandler<BeforeConversionToEntityEventArgs> OnBeforeConversionToEntity;
+        public event EventHandler<AfterConversionToEntityEventArgs> OnAfterConversionToEntity;
 
         /// <summary>
         /// The default database name

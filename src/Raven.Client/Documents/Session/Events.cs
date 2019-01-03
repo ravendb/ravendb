@@ -85,7 +85,42 @@ namespace Raven.Client.Documents.Session
         public InMemoryDocumentSessionOperations Session { get; }
     }
 
-    public class BeforeConversionEventArgs : EventArgs
+    public class BeforeConversionToDocumentEventArgs : EventArgs
+    {
+        public string Id { get; }
+
+        public object Entity { get; }
+
+        public InMemoryDocumentSessionOperations Session { get; }
+
+        public BeforeConversionToDocumentEventArgs(InMemoryDocumentSessionOperations session, string id, object entity)
+        {
+            Session = session;
+            Id = id;
+            Entity = entity;
+        }
+    }
+
+    public class AfterConversionToDocumentEventArgs : EventArgs
+    {
+        public string Id { get; }
+
+        public object Entity { get; }
+
+        public BlittableJsonReaderObject Document { get; }
+
+        public InMemoryDocumentSessionOperations Session { get; }
+
+        public AfterConversionToDocumentEventArgs(InMemoryDocumentSessionOperations session, string id, object entity, BlittableJsonReaderObject document)
+        {
+            Session = session;
+            Id = id;
+            Entity = entity;
+            Document = document;
+        }
+    }
+
+    public class BeforeConversionToEntityEventArgs : EventArgs
     {
         public string Id { get; }
 
@@ -95,7 +130,7 @@ namespace Raven.Client.Documents.Session
 
         public InMemoryDocumentSessionOperations Session { get; }
 
-        internal BeforeConversionEventArgs(InMemoryDocumentSessionOperations session, string id, Type type, BlittableJsonReaderObject document)
+        internal BeforeConversionToEntityEventArgs(InMemoryDocumentSessionOperations session, string id, Type type, BlittableJsonReaderObject document)
         {
             Session = session;
             Id = id;
@@ -104,7 +139,7 @@ namespace Raven.Client.Documents.Session
         }
     }
 
-    public class AfterConversionEventArgs : EventArgs
+    public class AfterConversionToEntityEventArgs : EventArgs
     {
         public string Id { get; }
 
@@ -114,7 +149,7 @@ namespace Raven.Client.Documents.Session
 
         public InMemoryDocumentSessionOperations Session { get; }
 
-        internal AfterConversionEventArgs(InMemoryDocumentSessionOperations session, string id, BlittableJsonReaderObject document, object entity)
+        internal AfterConversionToEntityEventArgs(InMemoryDocumentSessionOperations session, string id, BlittableJsonReaderObject document, object entity)
         {
             Session = session;
             Id = id;

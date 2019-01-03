@@ -33,10 +33,18 @@ namespace Raven.Client.Documents.Session
             if (entity is BlittableJsonReaderObject blittable)
                 return blittable;
 
+            if (documentInfo != null)
+                _session.OnBeforeConversionToDocumentInvoke(documentInfo.Id, entity);
+
             using (DefaultRavenContractResolver.RegisterExtensionDataGetter(FillMissingProperties))
             using (var writer = new BlittableJsonWriter(_session.Context, documentInfo))
             {
-                return ConvertEntityToBlittableInternal(entity, _session.Conventions, _session.Context, _session.JsonSerializer, writer);
+                var document = ConvertEntityToBlittableInternal(entity, _session.Conventions, _session.Context, _session.JsonSerializer, writer);
+
+                if (documentInfo != null)
+                    _session.OnAfterConversionToDocumentInvoke(documentInfo.Id, entity, ref document);
+
+                return document;
             }
         }
 

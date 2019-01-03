@@ -24,6 +24,52 @@ namespace SlowTests.Issues
         }
 
         [Fact]
+        public void CanUseToDocumentConversionEvents()
+        {
+            using (var store = GetDocumentStore())
+            {
+                store.OnBeforeConversionToDocument += (sender, args) =>
+                {
+                    if (args.Entity is Item item)
+                        item.Before = true;
+                };
+
+                store.OnAfterConversionToDocument += (sender, args) =>
+                {
+                    if (args.Entity is Item item)
+                    {
+                        if (args.Document.Modifications == null)
+                            args.Document.Modifications = new DynamicJsonValue();
+
+                        args.Document.Modifications["After"] = true;
+                        item.After = true;
+                    }
+                };
+
+                using (var session = store.OpenSession())
+                {
+                    session.Store(new Item(), "items/1");
+                    session.SaveChanges();
+
+                    Assert.Equal(1, session.Advanced.NumberOfRequests);
+
+                    session.SaveChanges();
+
+                    Assert.Equal(1, session.Advanced.NumberOfRequests);
+                }
+
+                using (var session = store.OpenSession())
+                {
+                    var item = session.Load<Item>("items/1");
+
+                    Assert.NotNull(item);
+                    Assert.True(item.Before);
+                    Assert.True(item.After);
+                }
+            }
+        }
+
+        [Fact]
         public void CanUseToEntityConversionEvents()
         {
             using (var store = GetDocumentStore())
