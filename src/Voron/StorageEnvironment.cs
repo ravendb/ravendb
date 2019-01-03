@@ -1099,13 +1099,26 @@ namespace Voron
 
         private static unsafe void ThrowInvalidPageNumber(long pageNumber, PageHeader* current)
         {
-            throw new InvalidDataException($"When reading page {pageNumber}, we read a page with header of page {current->PageNumber}");
+            var message = $"When reading page {pageNumber}, we read a page with header of page {current->PageNumber}. ";
+
+            message += $"Page flags: {current->Flags}. ";
+
+            if ((current->Flags & PageFlags.Overflow) == PageFlags.Overflow)
+                message += $"Overflow size: {current->OverflowSize}. ";
+
+            throw new InvalidDataException(message);
         }
 
         private unsafe void ThrowInvalidChecksum(long pageNumber, PageHeader* current, ulong checksum)
         {
-            throw new InvalidDataException(
-                $"Invalid checksum for page {pageNumber}, data file {_options.DataPager} might be corrupted, expected hash to be {current->Checksum} but was {checksum}");
+            var message = $"Invalid checksum for page {pageNumber}, data file {_options.DataPager} might be corrupted, expected hash to be {current->Checksum} but was {checksum}. ";
+
+            message += $"Page flags: {current->Flags}. ";
+
+            if ((current->Flags & PageFlags.Overflow) == PageFlags.Overflow)
+                message += $"Overflow size: {current->OverflowSize}. ";
+
+            throw new InvalidDataException(message);
         }
 
         public static unsafe ulong CalculatePageChecksum(byte* ptr, long pageNumber, out ulong expectedChecksum)
