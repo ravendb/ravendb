@@ -319,7 +319,8 @@ namespace Raven.Server.ServerWide
         {
             return e is RachisException ||
                    e is SubscriptionException ||
-                   e is DatabaseDoesNotExistException;
+                   e is DatabaseDoesNotExistException ||
+                   e is AuthorizationException;
         }
 
         private void ClusterStateCleanUp(TransactionOperationContext context, BlittableJsonReaderObject cmd, long index)
