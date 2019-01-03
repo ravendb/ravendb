@@ -6,7 +6,6 @@
 
 using System;
 using System.Collections.Generic;
-using System.Diagnostics;
 using System.Dynamic;
 using System.Linq;
 using System.Reflection;
@@ -76,10 +75,10 @@ namespace Raven.Client.Documents.Session
         public event EventHandler<BeforeDeleteEventArgs> OnBeforeDelete;
         public event EventHandler<BeforeQueryEventArgs> OnBeforeQuery;
 
-        public event EventHandler<BeforeStoreEventArgs> OnBeforeConversionToDocument;
-        public event EventHandler<BeforeStoreEventArgs> OnAfterConversionToDocument;
-        public event EventHandler<BeforeConversionEventArgs> OnBeforeConversionToEntity;
-        public event EventHandler<AfterConversionEventArgs> OnAfterConversionToEntity;
+        public event EventHandler<BeforeConversionToDocumentEventArgs> OnBeforeConversionToDocument;
+        public event EventHandler<AfterConversionToDocumentEventArgs> OnAfterConversionToDocument;
+        public event EventHandler<BeforeConversionToEntityEventArgs> OnBeforeConversionToEntity;
+        public event EventHandler<AfterConversionToEntityEventArgs> OnAfterConversionToEntity;
 
         /// <summary>
         /// Entities whose id we already know do not exists, because they are a missing include, or a missing load, etc.
@@ -1687,12 +1686,29 @@ more responsive application.
             SessionInfo.LastClusterTransactionIndex = returnedTransactionIndex;
         }
 
+        internal void OnBeforeConversionToDocumentInvoke(string id, object entity)
+        {
+            OnBeforeConversionToDocument?.Invoke(this, new BeforeConversionToDocumentEventArgs(this, id, entity));
+        }
+
+        internal void OnAfterConversionToDocumentInvoke(string id, object entity, ref BlittableJsonReaderObject document)
+        {
+            var onAfterConversionToDocument = OnAfterConversionToDocument;
+            if (onAfterConversionToDocument != null)
+            {
+                onAfterConversionToDocument.Invoke(this, new AfterConversionToDocumentEventArgs(this, id, entity, document));
+
+                if (document.Modifications != null)
+                    document = Context.ReadObject(document, id);
+            }
+        }
+
         internal void OnBeforeConversionToEntityInvoke(string id, Type type, ref BlittableJsonReaderObject document)
         {
             var onBeforeConversionToEntity = OnBeforeConversionToEntity;
             if (onBeforeConversionToEntity != null)
             {
-                onBeforeConversionToEntity.Invoke(this, new BeforeConversionEventArgs(this, id, type, document));
+                onBeforeConversionToEntity.Invoke(this, new BeforeConversionToEntityEventArgs(this, id, type, document));
 
                 if (document.Modifications != null)
                     document = Context.ReadObject(document, id);
@@ -1701,7 +1717,7 @@ more responsive application.
 
         internal void OnAfterConversionToEntityInvoke(string id, BlittableJsonReaderObject document, object entity)
         {
-            OnAfterConversionToEntity?.Invoke(this, new AfterConversionEventArgs(this, id, document, entity));
+            OnAfterConversionToEntity?.Invoke(this, new AfterConversionToEntityEventArgs(this, id, document, entity));
         }
 
         internal void OnAfterSaveChangesInvoke(AfterSaveChangesEventArgs args)
