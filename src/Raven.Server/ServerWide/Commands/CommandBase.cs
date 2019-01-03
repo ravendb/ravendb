@@ -44,7 +44,7 @@ namespace Raven.Server.ServerWide.Commands
             if (isClusterAdmin)
                 return;
 
-            throw new AuthorizationException("Attempted to " + GetType().Name + " but this is only available for cluster administrators");
+            throw new AuthorizationException($"Attempted to {GetType().Name} but this is only available for cluster administrators");
         }
 
         public virtual object FromRemote(object remoteResult)

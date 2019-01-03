@@ -1,5 +1,7 @@
+using System;
 using Raven.Client.Documents.Indexes;
 using Raven.Client.ServerWide;
+using Raven.Server.Rachis;
 using Raven.Server.Utils;
 using Sparrow.Json.Parsing;
 
@@ -22,7 +24,15 @@ namespace Raven.Server.ServerWide.Commands.Indexes
 
         public override string UpdateDatabaseRecord(DatabaseRecord record, long etag)
         {
-            record.AddIndex(Definition);
+            try
+            {
+                record.AddIndex(Definition);
+            }
+            catch (Exception e)
+            {
+                throw new RachisApplyException("Failed to update index", e);
+            }
+            
             return null;
         }
 
