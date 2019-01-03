@@ -42,6 +42,8 @@ namespace SlowTests.Issues
                             args.Document.Modifications = new DynamicJsonValue();
 
                         args.Document.Modifications["After"] = true;
+                        args.Document = args.Session.Context.ReadObject(args.Document, args.Id);
+
                         item.After = true;
                     }
                 };
@@ -81,6 +83,7 @@ namespace SlowTests.Issues
                         document.Modifications = new DynamicJsonValue();
 
                     document.Modifications["Before"] = true;
+                    args.Document = args.Session.Context.ReadObject(document, args.Id);
                 };
 
                 store.OnAfterConversionToEntity += (sender, args) =>

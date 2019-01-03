@@ -107,7 +107,7 @@ namespace Raven.Client.Documents.Session
 
         public object Entity { get; }
 
-        public BlittableJsonReaderObject Document { get; }
+        public BlittableJsonReaderObject Document { get; set; }
 
         public InMemoryDocumentSessionOperations Session { get; }
 
@@ -126,7 +126,7 @@ namespace Raven.Client.Documents.Session
 
         public Type Type { get; }
 
-        public BlittableJsonReaderObject Document { get; }
+        public BlittableJsonReaderObject Document { get; set; }
 
         public InMemoryDocumentSessionOperations Session { get; }
 
