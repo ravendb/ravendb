@@ -215,7 +215,7 @@ namespace Raven.Server.Documents
             {
                 //otherwise this is a tombstone conflict and should be treated as such
                 result.Doc = new BlittableJsonReaderObject(read, size, context);
-                DebugDisposeReaderAfterTransaction(context.Transaction, result.Doc);
+                Transaction.DebugDisposeReaderAfterTransaction(context.Transaction.InnerTransaction, result.Doc);
             }
 
             return result;
@@ -436,7 +436,7 @@ namespace Raven.Server.Documents
                     {
                         var dataPtr = tvr.Result.Reader.Read((int)ConflictsTable.Data, out int size);
                         var doc = size == 0 ? null : new BlittableJsonReaderObject(dataPtr, size, context);
-                        DebugDisposeReaderAfterTransaction(context.Transaction, doc);
+                        Transaction.DebugDisposeReaderAfterTransaction(context.Transaction.InnerTransaction, doc);
                         return new DocumentConflict
                         {
                             ChangeVector = currentChangeVector,

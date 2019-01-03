@@ -1002,24 +1002,12 @@ namespace Raven.Server.Documents
         {
             var document = ParseDocument(context, ref tvr);
 #if DEBUG
-            DebugDisposeReaderAfterTransaction(context.Transaction, document.Data);
+            Transaction.DebugDisposeReaderAfterTransaction(context.Transaction.InnerTransaction, document.Data);
             DocumentPutAction.AssertMetadataWasFiltered(document.Data);
             AttachmentsStorage.AssertAttachments(document.Data, document.Flags);
 #endif
             return document;
-        }
-
-        [Conditional("DEBUG")]
-        public static void DebugDisposeReaderAfterTransaction(DocumentsTransaction tx, BlittableJsonReaderObject reader)
-        {
-            if (reader == null)
-                return;
-            Debug.Assert(tx != null);
-            // this method is called to ensure that after the transaction is completed, all the readers are disposed
-            // so we won't have read-after-tx use scenario, which can in rare case corrupt memory. This is a debug
-            // helper that is used across the board, but it is meant to assert stuff during debug only
-            tx.InnerTransaction.LowLevelTransaction.OnDispose += state => reader.Dispose();
-        }
+        }        
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         private static Document ParseDocument(JsonOperationContext context, ref TableValueReader tvr)
