@@ -461,7 +461,7 @@ namespace Sparrow.Json
         }
 
         private readonly DisposeOnce<ExceptionRetry> _disposeOnceRunner;
-        private bool Disposed => _disposeOnceRunner.Disposed;
+        public bool Disposed => _disposeOnceRunner.Disposed;
         public override void Dispose()
         {
             _disposeOnceRunner.Dispose();
