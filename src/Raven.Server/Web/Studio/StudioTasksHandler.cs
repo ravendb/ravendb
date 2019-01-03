@@ -31,29 +31,36 @@ namespace Raven.Server.Web.Studio
 
             // 1. Used as default when both Name & Path are Not defined
             var result = baseDataDirectory;
-
-            // 2. Path defined, Path overrides any given Name
-            if (string.IsNullOrEmpty(path) == false)
-            {
-                result = PathUtil.ToFullPath(path, baseDataDirectory);
-            }
-
-            // 3. Name defined, No path 
-            else if (string.IsNullOrEmpty(name) == false)
-            {
-                // 'Databases' prefix is added...
-                result = RavenConfiguration.GetDataDirectoryPath(ServerStore.Configuration.Core, name, ResourceType.Database);
-            }
-
             string error = null;
-            if (ServerStore.Configuration.Core.EnforceDataDirectoryPath)
+
+            try
             {
-                if (PathUtil.IsSubDirectory(result, ServerStore.Configuration.Core.DataDirectory.FullPath) == false)
+                // 2. Path defined, Path overrides any given Name
+                if (string.IsNullOrEmpty(path) == false)
                 {
-                    error = $"The administrator has restricted databases to be created only " +
-                            $"under the {RavenConfiguration.GetKey(x => x.Core.DataDirectory)} " +
-                            $"directory: '{ServerStore.Configuration.Core.DataDirectory.FullPath}'.";
+                    result = PathUtil.ToFullPath(path, baseDataDirectory);
                 }
+
+                // 3. Name defined, No path 
+                else if (string.IsNullOrEmpty(name) == false)
+                {
+                    // 'Databases' prefix is added...
+                    result = RavenConfiguration.GetDataDirectoryPath(ServerStore.Configuration.Core, name, ResourceType.Database);
+                }
+
+                if (ServerStore.Configuration.Core.EnforceDataDirectoryPath)
+                {
+                    if (PathUtil.IsSubDirectory(result, ServerStore.Configuration.Core.DataDirectory.FullPath) == false)
+                    {
+                        error = $"The administrator has restricted databases to be created only " +
+                                $"under the {RavenConfiguration.GetKey(x => x.Core.DataDirectory)} " +
+                                $"directory: '{ServerStore.Configuration.Core.DataDirectory.FullPath}'.";
+                    }
+                }
+            }
+            catch (Exception e)
+            {
+                error = e.Message;
             }
 
             var getNodesInfo = GetBoolValueQueryString("getNodesInfo", required: false) ?? false;
