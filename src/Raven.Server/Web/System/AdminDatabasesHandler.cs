@@ -44,6 +44,7 @@ using Raven.Server.Documents.Indexes.Auto;
 using Raven.Server.Documents.PeriodicBackup.Restore;
 using Raven.Server.ServerWide.Commands.Indexes;
 using Raven.Server.Utils;
+using Raven.Server.Web.Studio;
 using Sparrow.Logging;
 using Sparrow;
 using Voron.Util.Settings;
@@ -229,14 +230,21 @@ namespace Raven.Server.Web.System
                     throw new ArgumentException("DatabaseName property has invalid value (null, empty or whitespace only)");
                 databaseRecord.DatabaseName = databaseRecord.DatabaseName.Trim();
 
-                if (ServerStore.Configuration.Core.EnforceDataDirectoryPath 
-                    && databaseRecord.Settings.TryGetValue(RavenConfiguration.GetKey(x => x.Core.DataDirectory), out var dir))
+                if (databaseRecord.Settings.TryGetValue(RavenConfiguration.GetKey(x => x.Core.DataDirectory), out var dir))
                 {
                     var requestedDirectory = PathUtil.ToFullPath(dir, ServerStore.Configuration.Core.DataDirectory.FullPath);
 
-                    if (PathUtil.IsSubDirectory(requestedDirectory, ServerStore.Configuration.Core.DataDirectory.FullPath) == false)
+                    if (ServerStore.Configuration.Core.EnforceDataDirectoryPath)
                     {
-                        throw new ArgumentException($"The administrator has restricted databases to be created only under the DataDir '{ServerStore.Configuration.Core.DataDirectory.FullPath}' but the actual requested path is '{requestedDirectory}'.");
+                        if (PathUtil.IsSubDirectory(requestedDirectory, ServerStore.Configuration.Core.DataDirectory.FullPath) == false)
+                        {
+                            throw new ArgumentException($"The administrator has restricted databases to be created only under the DataDir '{ServerStore.Configuration.Core.DataDirectory.FullPath}' but the actual requested path is '{requestedDirectory}'.");
+                        }
+                    }
+
+                    if (DataDirectoryInfo.CanAccessPath(requestedDirectory, out var error) == false)
+                    {
+                        throw new InvalidOperationException($"Cannot access path '{requestedDirectory}'. {error}");
                     }
                 }
 
