@@ -21,6 +21,7 @@ namespace Raven.Server.Config.Categories
         public bool UseUtcTime { get; set; }
 
         [DefaultValue(128)]
+        [MinValue(16)]
         [SizeUnit(SizeUnit.Megabytes)]
         [ConfigurationEntry("Logs.MaxFileSizeInMb", ConfigurationEntryScope.ServerWideOnly)]
         public Size MaxFileSize { get; set; }
