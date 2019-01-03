@@ -1,5 +1,5 @@
-﻿using System;
-using Raven.Client;
+﻿using Raven.Client;
+using Raven.Server.Rachis;
 using Raven.Server.ServerWide.Context;
 using Sparrow.Json;
 using Sparrow.Json.Parsing;
@@ -21,7 +21,7 @@ namespace Raven.Server.ServerWide.Commands
         public override void VerifyCanExecuteCommand(ServerStore store, TransactionOperationContext context, bool isClusterAdmin)
         {
             if (Name == ServerStore.LicenseStorageKey || Name.StartsWith(Constants.Certificates.Prefix))
-                throw new InvalidOperationException("Attempted to use DeleteValueCommand to delete a certificate or license, use dedicated commands for this.");
+                throw new RachisApplyException("Attempted to use DeleteValueCommand to delete a certificate or a license, use dedicated commands for this.");
         }
     }
 }

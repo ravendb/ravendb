@@ -1,6 +1,7 @@
 ﻿using System;
 using Raven.Client.Documents.Indexes;
 using Raven.Client.ServerWide;
+using Raven.Server.Rachis;
 using Sparrow.Json.Parsing;
 
 namespace Raven.Server.ServerWide.Commands.Indexes
@@ -32,7 +33,7 @@ namespace Raven.Server.ServerWide.Commands.Indexes
 
             if (record.AutoIndexes.ContainsKey(IndexName))
             {
-                throw new InvalidOperationException($"'Lock Mode' can't be set for the Auto-Index '{IndexName}'.");
+                throw new RachisApplyException($"'Lock Mode' can't be set for the Auto-Index '{IndexName}'.");
             }
 
             return null;

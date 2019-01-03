@@ -24,7 +24,6 @@ namespace Raven.Server.ServerWide.Commands.Subscriptions
             SubscriptionName = subscriptionName;
         }
 
-
         public override string GetItemId()
         {
             throw new NotImplementedException();

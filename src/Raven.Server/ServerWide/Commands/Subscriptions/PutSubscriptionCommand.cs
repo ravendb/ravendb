@@ -10,6 +10,7 @@ using Sparrow.Json.Parsing;
 using Voron;
 using Voron.Data.Tables;
 using Raven.Server.Documents.Replication;
+using Raven.Server.Rachis;
 
 namespace Raven.Server.ServerWide.Commands.Subscriptions
 {
@@ -58,7 +59,7 @@ namespace Raven.Server.ServerWide.Commands.Subscriptions
                     var existingSubscriptionState = JsonDeserializationClient.SubscriptionState(doc);
 
                     if (SubscriptionId != existingSubscriptionState.SubscriptionId)
-                        throw new InvalidOperationException("A subscription could not be modified because the name '" + subscriptionItemName +
+                        throw new RachisApplyException("A subscription could not be modified because the name '" + subscriptionItemName +
                                                             "' is already in use in a subscription with different Id.");
 
                     if (string.IsNullOrEmpty(InitialChangeVector) == false && InitialChangeVector == nameof(Constants.Documents.SubscriptionChangeVectorSpecialStates.DoNotChange))
@@ -101,7 +102,7 @@ namespace Raven.Server.ServerWide.Commands.Subscriptions
             }
             catch (Exception e)
             {
-                throw new InvalidOperationException(
+                throw new RachisApplyException(
                     $"Received change vector {InitialChangeVector} is not in a valid format, therefore request cannot be processed.", e);
             }
         }

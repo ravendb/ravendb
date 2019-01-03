@@ -1263,7 +1263,7 @@ namespace FastTests.Server.Documents.Indexing.Auto
 
                 var e = (await Assert.ThrowsAsync<RachisApplyException>(() => database.IndexStore.CreateIndex(definition3))).InnerException;
 
-                Assert.Contains("Can not update auto-index", e.Message);
+                Assert.Contains("Failed to update auto-index", e.Message);
                 Assert.NotNull(index1);
                 Assert.Equal(1, database.IndexStore.GetIndexes().Count());
             }

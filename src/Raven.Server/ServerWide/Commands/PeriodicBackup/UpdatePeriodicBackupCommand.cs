@@ -38,7 +38,7 @@ namespace Raven.Server.ServerWide.Commands.PeriodicBackup
                 Configuration.Name = record.EnsureUniqueTaskName(Configuration.GetDefaultTaskName());
             }
 
-            record.EnsureTaskNameIsNotUsed(Configuration.Name);
+            EnsureTaskNameIsNotUsed(record, Configuration.Name);
 
             record.PeriodicBackups.Add(Configuration);
             return null;

@@ -37,7 +37,8 @@ namespace Raven.Server.ServerWide.Commands
             {
                 Watcher.Name = record.EnsureUniqueTaskName(Watcher.GetDefaultTaskName());
             }
-            record.EnsureTaskNameIsNotUsed(Watcher.Name);
+
+            EnsureTaskNameIsNotUsed(record, Watcher.Name);
             record.ExternalReplications.Add(Watcher);
             return null;
         }
