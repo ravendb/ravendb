@@ -18,11 +18,9 @@ using Raven.Client.Json.Converters;
 using Raven.Client.Http;
 using Raven.Client.ServerWide;
 using Raven.Client.ServerWide.Operations;
-using Raven.Server.Config;
 using Raven.Server.Documents;
 using Raven.Server.Documents.ETL;
 using Raven.Server.Documents.ETL.Providers.Raven;
-using Raven.Server.Documents.ETL.Providers.SQL;
 using Raven.Server.Routing;
 using Raven.Server.ServerWide;
 using Raven.Server.ServerWide.Context;
@@ -32,7 +30,6 @@ using Raven.Server.Documents.PeriodicBackup;
 using Raven.Server.Documents.PeriodicBackup.Aws;
 using Raven.Server.Documents.PeriodicBackup.Azure;
 using Raven.Server.Documents.Replication;
-using Raven.Server.Json;
 using Raven.Server.Web.Studio;
 using Voron.Util.Settings;
 
@@ -443,8 +440,13 @@ namespace Raven.Server.Web.System
 
             localSettings.TryGet(nameof(LocalSettings.FolderPath), out string folderPath);
 
-            folderPath = GetActualFullPath(folderPath, out var hasLocalRootPath);
-            if (hasLocalRootPath)
+            var pathResult = GetActualFullPath(folderPath);
+            if (pathResult.Error != null)
+                throw new ArgumentException(pathResult.Error);
+
+            folderPath = pathResult.FolderPath;
+
+            if (pathResult.HasLocalRootPath)
             {
                 readerObject.Modifications = new DynamicJsonValue
                 {
@@ -458,24 +460,8 @@ namespace Raven.Server.Web.System
                 readerObject = context.ReadObject(readerObject, "modified-backup-configuration");
             }
 
-            var originalFolderPath = folderPath;
-            while (true)
-            {
-                var directoryInfo = new DirectoryInfo(folderPath);
-                if (directoryInfo.Exists == false)
-                {
-                    if (directoryInfo.Parent == null)
-                        throw new ArgumentException($"Path {originalFolderPath} cannot be accessed " +
-                                                    $"because '{folderPath}' doesn't exist");
-                    folderPath = directoryInfo.Parent.FullName;
-                    continue;
-                }
-
-                if (directoryInfo.Attributes.HasFlag(FileAttributes.ReadOnly))
-                    throw new ArgumentException($"Cannot write to directory path: {originalFolderPath}");
-
-                break;
-            }
+            if (DataDirectoryInfo.CanAccessPath(folderPath, out var error) == false)
+                throw new ArgumentException(error);
         }
 
         [RavenAction("/databases/*/admin/backup-data-directory", "GET", AuthorizationStatus.DatabaseAdmin)]
@@ -484,52 +470,57 @@ namespace Raven.Server.Web.System
             var path = GetStringQueryString("path", required: true);
             var requestTimeoutInMs = GetIntValueQueryString("requestTimeoutInMs", required: false) ?? 5 * 1000;
 
-            string actualFullPath;
-
-            try
-            {
-                actualFullPath = GetActualFullPath(path, out _);
-            }
-            catch (Exception e)
-            {
-                actualFullPath = e.Message;
-            }
-
+            var pathResult = GetActualFullPath(path);
             var getNodesInfo = GetBoolValueQueryString("getNodesInfo", required: false) ?? false;
-            var info = new DataDirectoryInfo(ServerStore, actualFullPath, Database.Name, isBackup: true, getNodesInfo, requestTimeoutInMs, ResponseBodyStream());
-            await info.UpdateDirectoryResult(databaseName: Database.Name);
+            var info = new DataDirectoryInfo(ServerStore, pathResult.FolderPath, Database.Name, isBackup: true, getNodesInfo, requestTimeoutInMs, ResponseBodyStream());
+            await info.UpdateDirectoryResult(databaseName: Database.Name, error: pathResult.Error);
         }
 
-        private string GetActualFullPath(string folderPath, out bool hasLocalRootPath)
+        private ActualPathResult GetActualFullPath(string folderPath)
         {
+            var pathResult = new ActualPathResult();
             if (ServerStore.Configuration.Backup.LocalRootPath == null)
             {
+                pathResult.FolderPath = folderPath;
+
                 if (string.IsNullOrWhiteSpace(folderPath))
                 {
-                    throw new ArgumentException("Backup directory cannot be null or empty");
+                    pathResult.Error = "Backup directory cannot be null or empty";
                 }
 
-                hasLocalRootPath = false;
-                return folderPath;
+                return pathResult;
             }
 
             // in this case we receive a path relative to the root path
             try
             {
-                folderPath = ServerStore.Configuration.Backup.LocalRootPath.Combine(folderPath).FullPath;
+                pathResult.FolderPath = ServerStore.Configuration.Backup.LocalRootPath.Combine(folderPath).FullPath;
             }
-            catch (Exception e)
+            catch
             {
-                throw new ArgumentException($"Unable to combine the local root path '{ServerStore.Configuration.Backup.LocalRootPath?.FullPath}' with the user supplied relative path '{folderPath}'", e);
+                pathResult.Error = $"Unable to combine the local root path '{ServerStore.Configuration.Backup.LocalRootPath?.FullPath}' " +
+                                         $"with the user supplied relative path '{folderPath}'";
+                return pathResult;
             }
 
-            if (PathUtil.IsSubDirectory(folderPath, ServerStore.Configuration.Backup.LocalRootPath.FullPath) == false)
+            if (PathUtil.IsSubDirectory(pathResult.FolderPath, ServerStore.Configuration.Backup.LocalRootPath.FullPath) == false)
             {
-                throw new ArgumentException($"The administrator has restricted local backups to be saved under the following root path '{ServerStore.Configuration.Backup.LocalRootPath?.FullPath}' but the actual chosen path is '{folderPath}' which is not a sub-directory of the root path.");
+                pathResult.Error = $"The administrator has restricted local backups to be saved under the following root path '{ServerStore.Configuration.Backup.LocalRootPath?.FullPath}' " +
+                                         $"but the actual chosen path is '{pathResult.FolderPath}' which is not a sub-directory of the root path.";
+                return pathResult;
             }
 
-            hasLocalRootPath = true;
-            return folderPath;
+            pathResult.HasLocalRootPath = true;
+            return pathResult;
+        }
+
+        private class ActualPathResult
+        {
+            public bool HasLocalRootPath { get; set; }
+
+            public string FolderPath { get; set; }
+
+            public string Error { get; set; }
         }
 
         private static CrontabSchedule VerifyBackupFrequency(string backupFrequency)

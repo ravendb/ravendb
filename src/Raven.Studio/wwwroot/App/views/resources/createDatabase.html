@@ -381,19 +381,24 @@
                                 <small>
                                     Node Tag: <strong data-bind="text: NodeTag"></strong>
                                     <br />
-                                    Path: <strong data-bind="text: FullPath"></strong>
-                                    <span>
-                                        <br />Free Disk Space:
-                                        <span data-bind="if: FreeSpaceHumane">
-                                            <strong data-bind="text: FreeSpaceHumane"></strong>
-                                        </span>
-                                        <span data-bind="if: TotalSpaceHumane">
-                                            (Total: <strong data-bind="text: TotalSpaceHumane"></strong>)
-                                        </span>
-                                        <span data-bind="if: !FreeSpaceHumane">
-                                            <strong>(Path is unreachable)</strong>
-                                        </span>
+                                    Path: <strong data-bind="text: FullPath"></strong><br />
+                                    
+                                    <!-- ko if: Error -->
+                                    Error: <strong data-bind="text: Error"></strong>
+                                    <!-- /ko -->
+
+                                    <!-- ko ifnot: Error -->
+                                    Free Disk Space:
+                                    <span data-bind="if: FreeSpaceHumane">
+                                        <strong data-bind="text: FreeSpaceHumane"></strong>
                                     </span>
+                                    <span data-bind="if: TotalSpaceHumane">
+                                        (Total: <strong data-bind="text: TotalSpaceHumane"></strong>)
+                                    </span>
+                                    <span data-bind="if: !FreeSpaceHumane">
+                                        <strong>(Path is unreachable)</strong>
+                                    </span>
+                                    <!-- /ko -->
                                 </small>
                             </li>
                         </ul>
