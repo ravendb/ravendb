@@ -81,6 +81,7 @@ namespace Voron.Platform
         [DllImport(LIBRVNPAL, SetLastError = true)]
         public static extern Int32 open_journal(
             string file_name,
+            Int32 mode,
             Int64 file_size,
             out IntPtr handle,
             out UInt32 error_code);

@@ -115,7 +115,7 @@ for SRCPATH in "${FILTERS[@]}"; do
 	for SRCFILE in $(find ${SRCPATH} | grep "^${FILTERS}" | grep "\.c$"); do
 		SRCFILE_O=$(echo ${SRCFILE} | sed -e "s|\.c$|\.o|g")
 		if [ ${CLEAN} -eq 0 ]; then
-			CMD="${C_COMPILER} -Iinc -O2 -Wall -c -o ${SRCFILE_O} ${SRCFILE}"
+			CMD="${C_COMPILER} -Iinc -O2 -Wall -fPIC -c -o ${SRCFILE_O} ${SRCFILE}"
 		else
 			if [ -f ${LINKFILE} ]; then 
 				CMD="rm ${SRCFILE_O}"
@@ -130,7 +130,7 @@ for SRCPATH in "${FILTERS[@]}"; do
 	done
 done
 if [ ${CLEAN} -eq 0 ]; then
-	CMD="${C_COMPILER} -shared -o ${LINKFILE} ${FILES[@]}"
+	CMD="${C_COMPILER} -shared -fPIC -o ${LINKFILE} ${FILES[@]}"
 	echo -e "${C_L_GREEN}${T_BOLD}${CMD}${NC}${NT}"
 else
 	if [ -f ${LINKFILE} ]; then 

@@ -6,11 +6,19 @@ using FastTests;
 using Sparrow.Utils;
 using Voron.Platform;
 using Xunit;
+using Xunit.Abstractions;
 
 namespace SlowTests.Voron.PalTest
 {
     public class JournalPalTests : RavenTestBase
     {
+        private readonly ITestOutputHelper _testOutputHelper;
+
+        public JournalPalTests(ITestOutputHelper testOutputHelper)
+        {
+            _testOutputHelper = testOutputHelper;
+        }
+
         [Fact]
         public unsafe void rvn_get_error_string_WhenCalled_ShouldCreateFile()
         {
@@ -18,28 +26,36 @@ namespace SlowTests.Voron.PalTest
 
             fixed (byte* p = errBuffer)
             {
-                Pal.rvn_get_error_string(
+                var size = Pal.rvn_get_error_string(
                     0, 
                     p,
                     256,
                     out int errno
                 );
-                var errorString = Encoding.UTF8.GetString(p, Array.IndexOf(errBuffer, (byte)'\n'));
+                
+                
+                _testOutputHelper.WriteLine(""+size);
+                var errorString = Encoding.UTF8.GetString(p, size);
 
-                Assert.Equal("The operation completed successfully.\r", errorString);
+                if(RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
+                    Assert.Equal("The operation completed successfully.\r", errorString);
+                else if(RuntimeInformation.IsOSPlatform(OSPlatform.Linux))
+                    Assert.Equal("Success", errorString);
             }
         }
 
         [Fact]
         public void OpenJournal_WhenCalled_ShouldCreateFile()
         {
-            string file = Path.Combine(NewDataPath(forceCreateDir: true), $"test_journal.{Guid.NewGuid()}");
-            Assert.Equal(0, Pal.open_journal(file, 4096, out IntPtr handle, out uint errno));
-            Assert.True(File.Exists(file));
-            Assert.NotEqual(IntPtr.Zero, handle);
-
+            var file = Path.Combine(NewDataPath(forceCreateDir: true), $"test_journal.{Guid.NewGuid()}");
+            var ret = Pal.open_journal(file, 0, 4096, out IntPtr handle, out uint errno);
             if(errno != 0)
                 PalHelper.ThrowLastError(errno, "");
+            
+            Assert.Equal(0, ret);
+            
+            Assert.True(File.Exists(file));
+            Assert.NotEqual(IntPtr.Zero, handle);
 
             Pal.close_journal(handle, out errno);
             if (errno != 0)
@@ -50,7 +66,7 @@ namespace SlowTests.Voron.PalTest
         public unsafe void WriteJournal_WhenCalled_ShouldCreateFile()
         {
             var file = Path.Combine(NewDataPath(forceCreateDir: true), $"test_journal.{Guid.NewGuid()}");
-            if (Pal.open_journal(file, 4096, out IntPtr handle, out uint errno) != 0)
+            if (Pal.open_journal(file, 0, 4096, out IntPtr handle, out uint errno) != 0)
                 PalHelper.ThrowLastError(errno, "");
 
             var buffer = NativeMemory.Allocate4KbAlignedMemory(4096, out var stats);
