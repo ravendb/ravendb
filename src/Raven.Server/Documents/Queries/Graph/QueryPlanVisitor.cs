@@ -36,6 +36,25 @@ namespace Raven.Server.Documents.Queries.Graph
             }
         }
 
+        public virtual void Visit(ISingleGraphStep step)
+        {
+            switch (step)
+            {
+                case EdgeQueryStep.EdgeMatcher em:
+                    VisitEdgeMatcher(em);
+                    break;
+                case null:
+                case QueryQueryStep.QuerySingleStep _:
+                case RecursionQueryStep.RecursionSingleStep _:
+                    break;
+            }
+        }
+
+        public virtual void VisitEdgeMatcher(EdgeQueryStep.EdgeMatcher em)
+        {
+            Visit(em._parent.Right);
+        }
+
         public virtual void VisitQueryQueryStep(QueryQueryStep qqs)
         {
         }
@@ -76,6 +95,8 @@ namespace Raven.Server.Documents.Queries.Graph
             {
                 Visit(step.Right);
             }
+
+            Visit(rqs.GetNextStep());
         }
     }
 }

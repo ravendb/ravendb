@@ -149,7 +149,7 @@ namespace Raven.Server.Documents.Queries.Graph
 
         public class EdgeMatcher : ISingleGraphStep
         {
-            private readonly EdgeQueryStep _parent;
+            internal readonly EdgeQueryStep _parent;
             SingleEdgeMatcher _processor;
 
             public EdgeMatcher(EdgeQueryStep parent)
@@ -318,5 +318,9 @@ namespace Raven.Server.Documents.Queries.Graph
         private readonly BlittableJsonReaderObject _queryParameters;
         private WithEdgesExpression _edgesExpression;
 
+        public void SetRight(IGraphQueryStep newRight)
+        {
+            _right = newRight;
+        }
     }
 }

@@ -153,8 +153,16 @@ namespace Raven.Server.Documents.Queries.Graph
             }
             _writer.WriteEndArray();
             _writer.WriteComma();
+            Visit(rqs.GetNextStep());
             WriteIntermidiateResults(rqs.IntermediateResults);
             _writer.WriteEndObject();
+        }
+
+        public override void VisitEdgeMatcher(EdgeQueryStep.EdgeMatcher em)
+        {
+            _writer.WritePropertyName("Next");
+            Visit(em._parent.Right);
+            _writer.WriteComma();
         }
     }
 }

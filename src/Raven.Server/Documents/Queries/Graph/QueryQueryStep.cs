@@ -243,7 +243,7 @@ namespace Raven.Server.Documents.Queries.Graph
             return new QuerySingleStep(this);
     }
 
-        private class QuerySingleStep : ISingleGraphStep
+        internal class QuerySingleStep : ISingleGraphStep
         {
             private QueryQueryStep _parent;
             private List<Match> _temp = new List<Match>(1);
