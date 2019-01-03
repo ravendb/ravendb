@@ -1696,10 +1696,11 @@ more responsive application.
             var onAfterConversionToDocument = OnAfterConversionToDocument;
             if (onAfterConversionToDocument != null)
             {
-                onAfterConversionToDocument.Invoke(this, new AfterConversionToDocumentEventArgs(this, id, entity, document));
+                var args = new AfterConversionToDocumentEventArgs(this, id, entity, document);
+                onAfterConversionToDocument.Invoke(this, args);
 
-                if (document.Modifications != null)
-                    document = Context.ReadObject(document, id);
+                if (args.Document != null && ReferenceEquals(args.Document, document) == false)
+                    document = args.Document;
             }
         }
 
@@ -1708,10 +1709,11 @@ more responsive application.
             var onBeforeConversionToEntity = OnBeforeConversionToEntity;
             if (onBeforeConversionToEntity != null)
             {
-                onBeforeConversionToEntity.Invoke(this, new BeforeConversionToEntityEventArgs(this, id, type, document));
+                var args = new BeforeConversionToEntityEventArgs(this, id, type, document);
+                onBeforeConversionToEntity.Invoke(this, args);
 
-                if (document.Modifications != null)
-                    document = Context.ReadObject(document, id);
+                if (args.Document != null && ReferenceEquals(args.Document, document) == false)
+                    document = args.Document;
             }
         }
 
