@@ -10,9 +10,9 @@ using System.Runtime.InteropServices;
 [assembly: ComVisible(false)]
 [assembly: CLSCompliant(true)]
 [assembly: AssemblyTitle("RavenDB")]
-[assembly: AssemblyVersion("3.5.8")]
-[assembly: AssemblyFileVersion("3.5.8.13")]
-[assembly: AssemblyInformationalVersion("3.5.8")]
+[assembly: AssemblyVersion("3.5.9")]
+[assembly: AssemblyFileVersion("3.5.9.13")]
+[assembly: AssemblyInformationalVersion("3.5.9")]
 [assembly: AssemblyProduct("RavenDB")]
 [assembly: AssemblyDescription("RavenDB is a second generation LINQ enabled document database for .NET")]
 
