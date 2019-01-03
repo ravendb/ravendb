@@ -39,7 +39,7 @@ namespace Voron.Impl.Journal
             _options = options;
             FileName = filename;
 
-            Pal.open_journal(filename.FullPath, journalSize, out _handle, out uint error);
+            Pal.open_journal(filename.FullPath, 0, journalSize, out _handle, out uint error);
         }
 
         public void Write(long posBy4Kb, byte* p, int numberOf4Kb)

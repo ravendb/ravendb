@@ -49,6 +49,10 @@ Testresults
 /Raven.Client.MvcIntegration/Content/ravendb-profiler.min.js
 /*.shfbproj_Fitzchak
 Raven.Studio/Settings.dat
+src/librvnpal/Debug
+src/librvnpal/*.exp
+src/librvnpal/*.obj
+src/librvnpal/*.lib
 
 Raven.Studio.Html5/Scripts/typings/ace/aceExt.js
 Raven.Studio.Html5/Scripts/typings/ace/aceExt.js.map

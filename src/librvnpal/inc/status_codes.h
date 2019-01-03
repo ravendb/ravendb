@@ -15,9 +15,16 @@
 #define FAIL_RACE_RETRIES 			7
 #define FAIL_PATH_RECURSION			8
 #define FAIL_FLUSH_FILE				9
-#define FAIL_ALLOC_FILE			   10
-#define FAIL_CLOSE_FILE			   11
-
+#define FAIL_SYSCONF                10
+#define FAIL_PWRITE                 11
+#define FAIL_PWRITE_WITH_RETRIES    12
+#define FAIL_MMAP64                 13
+#define FAIL_UNLINK                 14
+#define FAIL_CLOSE                  15
+#define FAIL_ALLOCATION_NO_RESIZE   16
+#define FAIL_FREE                   17
+#define FAIL_ALLOC_FILE			    18
+#define FAIL_CLOSE_FILE			    19
 
 
 #define ERRNO_SPECIAL_CODES_NONE	1
