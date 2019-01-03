@@ -1,4 +1,5 @@
 using System;
+using System.Buffers.Text;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Globalization;
@@ -1025,7 +1026,8 @@ namespace Sparrow.Json
                         var numberCharsStart = _mem + objStartOffset - propOffset + lengthOffset;
 
                         // try and validate number using double's validation
-                        if (_context.TryParseDouble(numberCharsStart, numberLength, out _) == false)
+                        if (Utf8Parser.TryParse(new ReadOnlySpan<byte>(numberCharsStart, numberLength), out double _, out var consumed) == false ||
+                            consumed != numberLength)
                             ThrowInvalidNumber(propValueOffset);
                         break;
                     case BlittableJsonToken.String:

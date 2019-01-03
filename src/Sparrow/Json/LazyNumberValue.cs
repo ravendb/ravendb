@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Buffers.Text;
 using System.Globalization;
 using System.Runtime.CompilerServices;
 
@@ -8,10 +9,7 @@ namespace Sparrow.Json
     {
         public readonly LazyStringValue Inner;
         private double? _val;
-        private float? _floatVal;
         private decimal? _decimalVal;
-        private long? _longVal;
-        private ulong? _ulongVal;
                 
         public LazyNumberValue(LazyStringValue inner)
         {
@@ -20,36 +18,41 @@ namespace Sparrow.Json
 
         public static unsafe implicit operator long(LazyNumberValue self)
         {
-            if (self.Inner._context.TryParseLong(self.Inner.Buffer, self.Inner.Size, out long val) == false)
+            if (Utf8Parser.TryParse(new ReadOnlySpan<byte>(self.Inner.Buffer, self.Inner.Size), out long val, out _) == false)
             {
                 var doubleVal = (double)self;
                 val = (long)doubleVal;
             }
-
             
-            self._longVal = val;
             return val;
         }
 
         public static unsafe implicit operator ulong(LazyNumberValue self)
         {
-            if (self.Inner._context.TryParseULong(self.Inner.Buffer, self.Inner.Size, out ulong val) == false)
+            if(Utf8Parser.TryParse(new ReadOnlySpan<byte>(self.Inner.Buffer, self.Inner.Size), out ulong val, out var consumed) == false ||
+                self.Inner.Size != consumed)
             {
                 var doubleVal = (double)self;
                 val = (ulong)doubleVal;
             }
 
-            
-            self._ulongVal = val;
             return val;
         }
 
 
         public static unsafe implicit operator double(LazyNumberValue self)
         {
-            double val = self.Inner._context.ParseDouble(self.Inner.Buffer, self.Inner.Size);
-            self._val = val;
+            if (Utf8Parser.TryParse(new ReadOnlySpan<byte>(self.Inner.Buffer, self.Inner.Size), out double val, out var consumed) == false || 
+                self.Inner.Size != consumed)
+            {
+                ThrowInvalidNumberFormat(self, "double");
+            }
             return val;
+        }
+
+        private static void ThrowInvalidNumberFormat(LazyNumberValue self, string type)
+        {
+            throw new InvalidCastException("Unable to convert '" + self.Inner.ToString() + "' to a " + type);
         }
 
         public static implicit operator string(LazyNumberValue self)
@@ -59,14 +62,19 @@ namespace Sparrow.Json
 
         public static unsafe implicit operator float(LazyNumberValue self)
         {
-            float val = self.Inner._context.ParseFloat(self.Inner.Buffer, self.Inner.Size);
-            self._floatVal = val;
+            if (Utf8Parser.TryParse(new ReadOnlySpan<byte>(self.Inner.Buffer, self.Inner.Size), out float val, out _) == false)
+            {
+                ThrowInvalidNumberFormat(self, "float");
+            }
             return val;
         }
 
         public static unsafe implicit operator decimal(LazyNumberValue self)
         {
-            decimal val = self.Inner._context.ParseDecimal(self.Inner.Buffer, self.Inner.Size);
+            if (Utf8Parser.TryParse(new ReadOnlySpan<byte>(self.Inner.Buffer, self.Inner.Size), out decimal val, out _) == false)
+            {
+                ThrowInvalidNumberFormat(self, "decimal");
+            }
             self._decimalVal = val;
             return val;
         }
@@ -161,20 +169,20 @@ namespace Sparrow.Json
 
         internal unsafe bool TryParseDouble(out double doubleVal)
         {
-            bool parsedDoubleValue = Inner._context.TryParseDouble(Inner.Buffer, Inner.Size, out doubleVal);
-            return parsedDoubleValue;
+            return Utf8Parser.TryParse(new ReadOnlySpan<byte>(Inner.Buffer, Inner.Size), out doubleVal, out var consumed) && 
+                Inner.Size == consumed;
         }
 
         internal unsafe bool TryParseDecimal(out decimal decimalValue)
         {
-            bool parsedDecimalValue = Inner._context.TryParseDecimal(Inner.Buffer, Inner.Size, out decimalValue);
-            return parsedDecimalValue;
+            return Utf8Parser.TryParse(new ReadOnlySpan<byte>(Inner.Buffer, Inner.Size), out decimalValue, out var consumed) &&
+                Inner.Size == consumed;
         }
 
         internal unsafe bool TryParseULong(out ulong ulongValue)
         {
-            bool parsedDecimalValue = Inner._context.TryParseULong(Inner.Buffer, Inner.Size, out ulongValue);
-            return parsedDecimalValue;
+            return Utf8Parser.TryParse(new ReadOnlySpan<byte>(Inner.Buffer, Inner.Size), out ulongValue,out var consumed) &&
+                Inner.Size == consumed;
         }
 
         public override int GetHashCode()

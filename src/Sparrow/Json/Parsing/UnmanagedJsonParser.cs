@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Buffers.Text;
 using System.IO;
 using System.Runtime.CompilerServices;
 using System.Text;
@@ -913,39 +914,12 @@ ReturnFalse:
 
         public void ValidateFloat()
         {
-            try
-            {
-                int numLength = _unmanagedWriteBuffer.SizeInBytes;
+            _unmanagedWriteBuffer.EnsureSingleChunk(out var buffer, out var size);
+            if (Utf8Parser.TryParse(new ReadOnlySpan<byte>(buffer, size), out double _, out var consumed) && 
+                size == consumed)
+                return;
 
-                if (numLength <= 100)
-                {
-                    byte* tmpBuff = stackalloc byte[numLength];
-                    _unmanagedWriteBuffer.CopyTo(tmpBuff);
-                    _ctx.ParseDouble(tmpBuff, numLength);
-                }
-                else
-                {
-                    var memoryForNumber = _ctx.GetMemory(numLength);
-
-                    try
-                    {
-                        _unmanagedWriteBuffer.CopyTo(memoryForNumber.Address);                        
-                        _ctx.ParseDouble(memoryForNumber.Address, numLength);
-                    }
-                    finally
-                    {
-                        _ctx.ReturnMemory(memoryForNumber);
-                    }
-
-                }
-                
-            }
-#pragma warning disable RDB0004 // Exception handler is empty or just logging
-            catch (Exception e)
-            {
-                ThrowException("Could not parse double", e);                
-            }
-#pragma warning restore RDB0004 // Exception handler is empty or just logging
+            ThrowException("Could not parse double: " +Encoding.UTF8.GetString(buffer, size));
         }
 
 
