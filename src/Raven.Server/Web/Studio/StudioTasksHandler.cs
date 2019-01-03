@@ -45,18 +45,20 @@ namespace Raven.Server.Web.Studio
                 result = RavenConfiguration.GetDataDirectoryPath(ServerStore.Configuration.Core, name, ResourceType.Database);
             }
 
+            string error = null;
             if (ServerStore.Configuration.Core.EnforceDataDirectoryPath)
             {
                 if (PathUtil.IsSubDirectory(result, ServerStore.Configuration.Core.DataDirectory.FullPath) == false)
                 {
-                    result =
-                        $"The administrator has restricted databases to be created only under the {RavenConfiguration.GetKey(x => x.Core.DataDirectory)} directory: '{ServerStore.Configuration.Core.DataDirectory.FullPath}'.";
+                    error = $"The administrator has restricted databases to be created only " +
+                            $"under the {RavenConfiguration.GetKey(x => x.Core.DataDirectory)} " +
+                            $"directory: '{ServerStore.Configuration.Core.DataDirectory.FullPath}'.";
                 }
             }
 
             var getNodesInfo = GetBoolValueQueryString("getNodesInfo", required: false) ?? false;
             var info = new DataDirectoryInfo(ServerStore, result, name, isBackup: false, getNodesInfo, requestTimeoutInMs, ResponseBodyStream());
-            await info.UpdateDirectoryResult(databaseName: null);
+            await info.UpdateDirectoryResult(databaseName: null, error: error);
         }
 
         [RavenAction("/admin/studio-tasks/folder-path-options", "GET", AuthorizationStatus.Operator)]

@@ -44,11 +44,14 @@ namespace Raven.Server.Web.Studio
             _responseBodyStream = responseBodyStream;
         }
 
-        public async Task UpdateDirectoryResult(string databaseName)
+        public async Task UpdateDirectoryResult(string databaseName, string error)
         {
             var drivesInfo = PlatformDetails.RunningOnPosix ? DriveInfo.GetDrives() : null;
             var driveInfo = DiskSpaceChecker.GetDriveInfo(_path, drivesInfo, out var realPath);
             var diskSpaceInfo = DiskSpaceChecker.GetDiskSpaceInfo(driveInfo.DriveName);
+
+            if (CanAccessPath(_path, out var pathAccessError) == false)
+                error = pathAccessError;
 
             var currentNodeInfo = new SingleNodeDataDirectoryResult
             {
@@ -57,8 +60,11 @@ namespace Raven.Server.Web.Studio
                 FreeSpaceInBytes = diskSpaceInfo?.TotalFreeSpace.GetValue(SizeUnit.Bytes) ?? 0,
                 FreeSpaceHumane = diskSpaceInfo?.TotalFreeSpace.ToString(),
                 TotalSpaceInBytes = diskSpaceInfo?.TotalSize.GetValue(SizeUnit.Bytes) ?? 0,
-                TotalSpaceHumane = diskSpaceInfo?.TotalSize.ToString()
+                TotalSpaceHumane = diskSpaceInfo?.TotalSize.ToString(),
+                Error = error
             };
+
+
 
             if (_getNodesInfo == false)
             {
@@ -88,6 +94,38 @@ namespace Raven.Server.Web.Studio
             {
                 context.Write(writer, dataDirectoryResult.ToJson());
             }
+        }
+
+        public static bool CanAccessPath(string folderPath, out string error)
+        {
+            var originalFolderPath = folderPath;
+            while (true)
+            {
+                var directoryInfo = new DirectoryInfo(folderPath);
+                if (directoryInfo.Exists == false)
+                {
+                    if (directoryInfo.Parent == null)
+                    {
+                        error = $"Path {originalFolderPath} cannot be accessed " +
+                                $"because '{folderPath}' doesn't exist";
+                        return false;
+                    }
+
+                    folderPath = directoryInfo.Parent.FullName;
+                    continue;
+                }
+
+                if (directoryInfo.Attributes.HasFlag(FileAttributes.ReadOnly))
+                {
+                    error = $"Cannot write to directory path: {originalFolderPath}";
+                    return false;
+                }
+
+                break;
+            }
+
+            error = null;
+            return true;
         }
 
         private List<string> GetRelevantNodes(string databaseName, ClusterTopology clusterTopology)
@@ -227,6 +265,8 @@ namespace Raven.Server.Web.Studio
 
         public string TotalSpaceHumane { get; set; }
 
+        public string Error { get; set; }
+
         public DynamicJsonValue ToJson()
         {
             return new DynamicJsonValue
@@ -236,7 +276,8 @@ namespace Raven.Server.Web.Studio
                 [nameof(FreeSpaceInBytes)] = FreeSpaceInBytes,
                 [nameof(FreeSpaceHumane)] = FreeSpaceHumane,
                 [nameof(TotalSpaceInBytes)] = TotalSpaceInBytes,
-                [nameof(TotalSpaceHumane)] = TotalSpaceHumane
+                [nameof(TotalSpaceHumane)] = TotalSpaceHumane,
+                [nameof(Error)] = Error
             };
         }
     }
