@@ -1150,11 +1150,7 @@ namespace Voron.Impl.Journal
                                         var page = (PageHeader*)scratchBufferPool.AcquirePagePointerWithOverflowHandling(tempTx, scratchNumber, pagePosition.ScratchPage);
                                         var checksum = StorageEnvironment.CalculatePageChecksum((byte*)page, page->PageNumber, out var expectedChecksum);
                                         if (checksum != expectedChecksum)
-                                        {
-                                            throw new InvalidDataException(
-                                                $"During apply logs to data, tried to copy {scratchNumber} / {pagePosition.ScratchNumber} ({page->PageNumber}) " +
-                                                $"has checksum {checksum} but expected {expectedChecksum}");
-                                        }
+                                            ThrowInvalidChecksumOnPageFromScratch(scratchNumber, pagePosition, page, checksum, expectedChecksum);
                                     }
                                 }
 
@@ -1186,6 +1182,18 @@ namespace Voron.Impl.Journal
                 }
             }
 
+            private static void ThrowInvalidChecksumOnPageFromScratch(int scratchNumber, PagePosition pagePosition, PageHeader* page, ulong checksum, ulong expectedChecksum)
+            {
+                var message = $"During apply logs to data, tried to copy {scratchNumber} / {pagePosition.ScratchNumber} ({page->PageNumber}) " +
+                              $"has checksum {checksum} but expected {expectedChecksum}";
+
+                message += $"Page flags: {page->Flags}. ";
+
+                if ((page->Flags & PageFlags.Overflow) == PageFlags.Overflow)
+                    message += $"Overflow size: {page->OverflowSize}. ";
+
+                throw new InvalidDataException(message);
+            }
 
             private List<JournalFile> GetUnusedJournalFiles(IEnumerable<JournalSnapshot> jrnls, long lastProcessedJournal, long lastFlushedTransactionId)
             {

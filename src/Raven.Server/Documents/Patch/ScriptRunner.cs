@@ -1277,6 +1277,7 @@ namespace Raven.Server.Documents.Patch
                 origin.NoCache = noCache;
                 return cloned;
             }
+
             private JsValue TranslateToJs(Engine engine, JsonOperationContext context, object o)
             {
                 if (o is Tuple<Document, Lucene.Net.Documents.Document, IState> t)

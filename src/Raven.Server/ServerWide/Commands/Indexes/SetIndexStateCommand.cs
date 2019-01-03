@@ -1,7 +1,7 @@
-﻿using System;
-using JetBrains.Annotations;
+﻿using JetBrains.Annotations;
 using Raven.Client.Documents.Indexes;
 using Raven.Client.ServerWide;
+using Raven.Server.Rachis;
 using Sparrow.Json.Parsing;
 
 namespace Raven.Server.ServerWide.Commands.Indexes
@@ -20,8 +20,11 @@ namespace Raven.Server.ServerWide.Commands.Indexes
         public SetIndexStateCommand([NotNull] string name, IndexState state, string databaseName)
             : base(databaseName)
         {
+            if (string.IsNullOrEmpty(name))
+                throw new RachisApplyException($"Index name cannot be null or empty");
+
             State = state;
-            IndexName = name ?? throw new ArgumentNullException(nameof(name));
+            IndexName = name;
         }
 
         public override string UpdateDatabaseRecord(DatabaseRecord record, long etag)

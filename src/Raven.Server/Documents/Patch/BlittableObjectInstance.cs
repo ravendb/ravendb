@@ -132,7 +132,17 @@ namespace Raven.Server.Documents.Patch
                             }
                             else
                             {
-                                _value = values[0];
+                                var value = values[0];
+                                switch (value)
+                                {
+                                    case Client.Constants.Documents.Indexing.Fields.NullValue:
+                                        value = null;
+                                        break;
+                                    case Client.Constants.Documents.Indexing.Fields.EmptyString:
+                                        value = string.Empty;
+                                        break;
+                                }
+                                _value = value;
                             }                            
                         }
                         else
@@ -201,15 +211,14 @@ namespace Raven.Server.Documents.Patch
                 return jsArray;
             }
 
-            private unsafe JsValue TranslateToJs(BlittableObjectInstance owner, string key, BlittableJsonToken type, object value)
+            private JsValue TranslateToJs(BlittableObjectInstance owner, string key, BlittableJsonToken type, object value)
             {
-                
                 switch (type & BlittableJsonReaderBase.TypesMask)
                 {
                     case BlittableJsonToken.Null:
                         return JsValue.Null;
                     case BlittableJsonToken.Boolean:
-                        return (bool)value?JsBoolean.True:JsBoolean.False;
+                        return (bool)value ? JsBoolean.True : JsBoolean.False;
                     case BlittableJsonToken.Integer:
                         // TODO: in the future, add [numeric type]TryFormat, when parsing numbers to strings
                         owner?.RecordNumericFieldType(key, BlittableJsonToken.Integer);

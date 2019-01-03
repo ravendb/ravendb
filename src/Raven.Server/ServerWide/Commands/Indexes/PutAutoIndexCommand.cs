@@ -7,6 +7,7 @@ using Raven.Client.ServerWide;
 using Raven.Server.Documents.Indexes;
 using Raven.Server.Documents.Indexes.Auto;
 using Raven.Server.Documents.Indexes.MapReduce.Auto;
+using Raven.Server.Rachis;
 using Raven.Server.Utils;
 using Sparrow.Json.Parsing;
 
@@ -29,7 +30,15 @@ namespace Raven.Server.ServerWide.Commands.Indexes
 
         public override string UpdateDatabaseRecord(DatabaseRecord record, long etag)
         {
-            record.AddIndex(Definition);
+            try
+            {
+                record.AddIndex(Definition);
+            }
+            catch (Exception e)
+            {
+                throw new RachisApplyException("Failed to update auto-index", e);
+            }
+            
             return null;
         }
 
@@ -55,7 +64,7 @@ namespace Raven.Server.ServerWide.Commands.Indexes
                 indexType = IndexType.AutoMapReduce;
 
             if (indexType == IndexType.None)
-                throw new NotSupportedException("Invalid definition type: " + definition.GetType());
+                throw new RachisApplyException($"Invalid definition type: {definition.GetType()}");
 
             return indexType;
         }

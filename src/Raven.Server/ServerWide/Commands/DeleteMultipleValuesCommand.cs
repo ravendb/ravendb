@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using System.Linq;
 using Raven.Client;
+using Raven.Server.Rachis;
 using Raven.Server.ServerWide.Context;
 using Sparrow.Json;
 using Sparrow.Json.Parsing;
@@ -23,7 +24,7 @@ namespace Raven.Server.ServerWide.Commands
         public override void VerifyCanExecuteCommand(ServerStore store, TransactionOperationContext context, bool isClusterAdmin)
         {
             if (Names.Contains(ServerStore.LicenseStorageKey) || Names.Any(name => name.StartsWith(Constants.Certificates.Prefix)))
-                throw new InvalidOperationException("Attempted to use DeleteMultipleValuesCommand to delete certificates or licenses, use dedicated commands for this.");
+                throw new RachisApplyException("Attempted to use DeleteMultipleValuesCommand to delete certificates or a license, use dedicated commands for this.");
         }
     }
 }

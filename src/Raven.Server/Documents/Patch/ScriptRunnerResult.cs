@@ -48,6 +48,7 @@ namespace Raven.Server.Documents.Patch
         {
             if (IsNull)
                 return null;
+
             var obj = _instance.AsObject();
             return JsBlittableBridge.Translate(context, _parent.ScriptEngine, obj, modifier, usageMode);
         }

@@ -28,8 +28,8 @@ namespace Raven.Server.ServerWide.Commands.ETL
             {
                 Configuration.Name = record.EnsureUniqueTaskName(Configuration.GetDefaultTaskName());
             }
-            
-            record.EnsureTaskNameIsNotUsed(Configuration.Name);
+
+            EnsureTaskNameIsNotUsed(record, Configuration.Name);
 
             Configuration.TaskId = etag;
 
