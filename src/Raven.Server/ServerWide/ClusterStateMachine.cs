@@ -684,8 +684,7 @@ namespace Raven.Server.ServerWide
                 if (items.ReadByKey(lowerKey, out TableValueReader reader) == false)
                     throw new RachisApplyException($"The database {databaseName} does not exists");
 
-                var doc = new BlittableJsonReaderObject(reader.Read(2, out int size), size, context);
-
+                var doc = new BlittableJsonReaderObject(reader.Read(2, out int size), size, context);                
                 var databaseRecord = JsonDeserializationCluster.DatabaseRecord(doc);
 
                 if (doc.TryGet(nameof(DatabaseRecord.Topology), out BlittableJsonReaderObject _) == false)
@@ -1191,7 +1190,10 @@ namespace Raven.Server.ServerWide
             var read = localState.Read(key);
             if (read == null)
                 return null;
-            return new BlittableJsonReaderObject(read.Reader.Base, read.Reader.Length, context);
+            BlittableJsonReaderObject localStateBlittable = new BlittableJsonReaderObject(read.Reader.Base, read.Reader.Length, context);
+
+            Transaction.DebugDisposeReaderAfterTransaction(context.Transaction.InnerTransaction, localStateBlittable);
+            return localStateBlittable;
         }
 
         public IEnumerable<string> GetCertificateKeysFromLocalState(TransactionOperationContext context)
@@ -1334,7 +1336,9 @@ namespace Raven.Server.ServerWide
 
         private static unsafe BlittableJsonReaderObject ReadCompareExchangeValue(TransactionOperationContext context, TableValueReader reader)
         {
-            return new BlittableJsonReaderObject(reader.Read((int)UniqueItems.Value, out var size), size, context);
+            BlittableJsonReaderObject compareExchangeValue = new BlittableJsonReaderObject(reader.Read((int)UniqueItems.Value, out var size), size, context);
+            Transaction.DebugDisposeReaderAfterTransaction(context.Transaction.InnerTransaction, compareExchangeValue);
+            return compareExchangeValue;
         }
 
         private static unsafe long ReadCompareExchangeIndex(TableValueReader reader)
@@ -1402,13 +1406,13 @@ namespace Raven.Server.ServerWide
             return Encoding.UTF8.GetString(result.Reader.Read(1, out int size), size);
         }
 
-        private static unsafe (string, BlittableJsonReaderObject) GetCurrentItem(JsonOperationContext context, Table.TableValueHolder result)
+        private static unsafe (string, BlittableJsonReaderObject) GetCurrentItem(TransactionOperationContext context, Table.TableValueHolder result)
         {
             var ptr = result.Reader.Read(2, out int size);
-            var doc = new BlittableJsonReaderObject(ptr, size, context);
-
+            var doc = new BlittableJsonReaderObject(ptr, size, context);            
             var key = Encoding.UTF8.GetString(result.Reader.Read(1, out size), size);
 
+            Transaction.DebugDisposeReaderAfterTransaction(context.Transaction.InnerTransaction, doc);
             return (key, doc);
         }
 
@@ -1574,7 +1578,7 @@ namespace Raven.Server.ServerWide
 
             var ptr = reader.Read(2, out int size);
             var doc = new BlittableJsonReaderObject(ptr, size, context);
-
+            Transaction.DebugDisposeReaderAfterTransaction(context.Transaction.InnerTransaction, doc);
             etag = Bits.SwapBytes(*(long*)reader.Read(3, out size));
             Debug.Assert(size == sizeof(long));
 
@@ -1600,12 +1604,13 @@ namespace Raven.Server.ServerWide
             }
         }
 
-        private static unsafe int GetDataAndEtagTupleFromReader(JsonOperationContext context, TableValueReader reader, out BlittableJsonReaderObject doc,
+        private static unsafe int GetDataAndEtagTupleFromReader(TransactionOperationContext context, TableValueReader reader, out BlittableJsonReaderObject doc,
             out long etag)
         {
             var ptr = reader.Read(2, out int size);
             doc = new BlittableJsonReaderObject(ptr, size, context);
 
+            Transaction.DebugDisposeReaderAfterTransaction(context.Transaction.InnerTransaction, doc);
             etag = Bits.SwapBytes(*(long*)reader.Read(3, out size));
             Debug.Assert(size == sizeof(long));
             return size;
