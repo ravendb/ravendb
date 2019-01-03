@@ -113,7 +113,7 @@ namespace SlowTests.Issues
                     }, "num");
                     var thrownException =  Assert.Throws<RavenException>(() => requestExecuter.Execute(new PutDocumentCommand("bignum/1", null, reader), context));
 
-                    Assert.StartsWith("System.IO.InvalidDataException: Could not parse double at", thrownException.Message);
+                    Assert.StartsWith("System.IO.InvalidDataException: Could not parse double:", thrownException.Message);
                 }              
             }
         }        
