@@ -314,10 +314,25 @@ namespace Raven.Server.Documents.Queries.Results
                 ThrowBinaryValuesNotSupported();
 
             var stringValue = field.StringValue(state);
-            if (stringValue == Constants.Documents.Indexing.Fields.NullValue || stringValue == null)
+
+            if (stringValue == null)
                 return null;
-            if (stringValue == Constants.Documents.Indexing.Fields.EmptyString || stringValue == string.Empty)
+
+            if (stringValue == string.Empty)
                 return string.Empty;
+
+            if (field.IsTokenized == false)
+            {
+                // NULL_VALUE and EMPTY_STRING fields aren't tokenized
+                // this will prevent converting fields with a "NULL_VALUE" string to null
+                switch (stringValue)
+                {
+                    case Constants.Documents.Indexing.Fields.NullValue:
+                        return null;
+                    case Constants.Documents.Indexing.Fields.EmptyString:
+                        return string.Empty;
+                }
+            }
 
             if (fieldType.IsJson == false)
                 return stringValue;
