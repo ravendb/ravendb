@@ -9,6 +9,8 @@ using Voron.Data.BTrees;
 using Voron.Data.Fixed;
 using Voron.Data.Tables;
 using Voron.Global;
+using System.Diagnostics;
+using Sparrow.Json;
 
 namespace Voron.Impl
 {
@@ -468,6 +470,18 @@ namespace Voron.Impl
                 tree.SetNewPageAllocator(newPageAllocator);
 
             return tree;
+        }
+
+        [Conditional("DEBUG")]
+        public static void DebugDisposeReaderAfterTransaction(Transaction tx, BlittableJsonReaderObject reader)
+        {
+            if (reader == null)
+                return;
+            Debug.Assert(tx != null);
+            // this method is called to ensure that after the transaction is completed, all the readers are disposed
+            // so we won't have read-after-tx use scenario, which can in rare case corrupt memory. This is a debug
+            // helper that is used across the board, but it is meant to assert stuff during debug only
+            tx.LowLevelTransaction.OnDispose += state => reader.Dispose();
         }
     }
 }

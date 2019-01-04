@@ -31,6 +31,8 @@ namespace Sparrow.Json
 
         public override string ToString()
         {
+            AssertContextNotDisposed();
+
             using (var memoryStream = new MemoryStream())
             {
                 WriteJsonTo(memoryStream);
@@ -41,7 +43,9 @@ namespace Sparrow.Json
         }
 
         public void WriteJsonTo(Stream stream)
-        {
+        {         
+            AssertContextNotDisposed();
+
             _context.Write(stream, this);
         }
 
@@ -93,6 +97,8 @@ namespace Sparrow.Json
 
         private void SetupPropertiesAccess(byte* mem, int propsOffset)
         {
+            AssertContextNotDisposed();
+
             _propNames = (mem + propsOffset);
             var propNamesOffsetFlag = (BlittableJsonToken)(*_propNames);
             switch (propNamesOffsetFlag)
@@ -163,6 +169,8 @@ namespace Sparrow.Json
         {
             get
             {
+                AssertContextNotDisposed();
+
                 if (_parent != null)
                     InvalidAttemptToCopyNestedObject();
 
@@ -170,7 +178,15 @@ namespace Sparrow.Json
             }
         }
 
-        public ulong DebugHash => Hashing.XXHash64.Calculate(_mem, (ulong)_size);
+        public ulong DebugHash
+        {
+            get
+            {
+                AssertContextNotDisposed();
+
+                return Hashing.XXHash64.Calculate(_mem, (ulong)_size);
+            }
+        }
 
         public long Location => (long)_objStart;
 
@@ -181,6 +197,8 @@ namespace Sparrow.Json
         /// <returns></returns>
         public string[] GetPropertyNames()
         {
+            AssertContextNotDisposed();
+
             var offsets = new int[_propCount];
             var propertyNames = new string[_propCount];
 
@@ -205,6 +223,8 @@ namespace Sparrow.Json
 
         private LazyStringValue GetPropertyName(int propertyId)
         {
+            AssertContextNotDisposed();
+
             var propertyNameOffsetPtr = _propNames + sizeof(byte) + propertyId * _propNamesDataOffsetSize;
             var propertyNameOffset = ReadNumber(propertyNameOffsetPtr, _propNamesDataOffsetSize);
 
@@ -242,6 +262,12 @@ namespace Sparrow.Json
                 obj = default(T);
                 return false;
             }
+#if DEBUG
+            finally
+            {
+                AssertContextNotDisposed();
+            }
+#endif
         }
 
         public bool TryGet<T>(StringSegment name, out T obj)
@@ -455,6 +481,8 @@ namespace Sparrow.Json
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         private bool TryGetObjectByIndex(int index, BlittableJsonToken expectedToken, out object result)
         {
+            AssertContextNotDisposed();
+
             var metadataSize = _currentOffsetSize + _currentPropertyIdSize + sizeof(byte);
 
             GetPropertyTypeAndPosition(index, metadataSize, out var token, out var position, out var propertyId);
@@ -469,6 +497,8 @@ namespace Sparrow.Json
 
         private bool CompareTokens(BlittableJsonToken firstToken, BlittableJsonToken secondToken)
         {
+            AssertContextNotDisposed();
+
             var firstClearedToken = (firstToken & TypesMask);
             var secondClearedToken = (secondToken & TypesMask);
             if (firstClearedToken == secondClearedToken)
@@ -480,6 +510,8 @@ namespace Sparrow.Json
 
         public bool TryGetMember(StringSegment name, out object result)
         {
+            AssertContextNotDisposed();
+
             if (_mem == null)
                 goto ThrowDisposed;
 
@@ -522,6 +554,8 @@ namespace Sparrow.Json
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         private void AddToCache(StringSegment name, object result, int index)
         {
+            AssertContextNotDisposed();
+
             if (_objectsPathCache == null)
             {
                 _context.AcquirePathCache(out _objectsPathCache, out _objectsPathCacheByIndex);
@@ -533,6 +567,8 @@ namespace Sparrow.Json
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         private void GetPropertyTypeAndPosition(int index, long metadataSize, out BlittableJsonToken token, out int position, out int propertyId)
         {
+            AssertContextNotDisposed();
+
             var propPos = _metadataPtr + index * metadataSize;
             position = ReadNumber(propPos, _currentOffsetSize);
             propertyId = ReadNumber(propPos + _currentOffsetSize, _currentPropertyIdSize);
@@ -549,6 +585,8 @@ namespace Sparrow.Json
 
         public void GetPropertyByIndex(int index, ref PropertyDetails prop, bool addObjectToCache = false)
         {
+            AssertContextNotDisposed();
+
             if (_mem == null)
                 ThrowObjectDisposed();
 
@@ -591,12 +629,16 @@ namespace Sparrow.Json
 
         public int GetPropertyIndex(string name)
         {
+            AssertContextNotDisposed();
+
             return GetPropertyIndex(new StringSegment(name));
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public int GetPropertyIndex(StringSegment name)
         {
+            AssertContextNotDisposed();
+
             var comparer = _context.GetLazyStringForFieldWithCaching(name);
             return GetPropertyIndex(comparer);
         }
@@ -604,6 +646,8 @@ namespace Sparrow.Json
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         private int GetPropertyIndex(LazyStringValue comparer)
         {
+            AssertContextNotDisposed();
+
             if (_propCount == 0)
                 goto NotFound;
 
@@ -655,6 +699,8 @@ namespace Sparrow.Json
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         private int ComparePropertyName(int propertyId, LazyStringValue comparer)
         {
+            AssertContextNotDisposed();
+
             // Get the offset of the property name from the _proprNames position
             var propertyNameOffsetPtr = _propNames + 1 + propertyId * _propNamesDataOffsetSize;
             var propertyNameOffset = ReadNumber(propertyNameOffsetPtr, _propNamesDataOffsetSize);
@@ -680,6 +726,8 @@ namespace Sparrow.Json
 
         public int GetPropertiesByInsertionOrder(PropertiesInsertionBuffer buffers)
         {
+            AssertContextNotDisposed();
+
             if (_metadataPtr == null)
                 ThrowObjectDisposed();
 
@@ -706,6 +754,8 @@ namespace Sparrow.Json
 
         public ulong GetHashOfPropertyNames()
         {
+            AssertContextNotDisposed();
+
             ulong hash = (ulong)_propCount;
             for (int i = 0; i < _propCount; i++)
             {
@@ -723,6 +773,8 @@ namespace Sparrow.Json
 
         public int[] GetPropertiesByInsertionOrder()
         {
+            AssertContextNotDisposed();
+
             var props = new int[_propCount];
             var offsets = new int[_propCount];
             var metadataSize = _currentOffsetSize + _currentPropertyIdSize + sizeof(byte);
@@ -741,6 +793,8 @@ namespace Sparrow.Json
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         internal object GetObject(BlittableJsonToken type, int position)
         {
+            AssertContextNotDisposed();
+
             BlittableJsonToken actualType = type & TypesMask;
             if (actualType == BlittableJsonToken.String)
                 return ReadStringLazily(position);
@@ -754,6 +808,8 @@ namespace Sparrow.Json
 
         private object GetObjectUnlikely(BlittableJsonToken type, int position, BlittableJsonToken actualType)
         {
+            AssertContextNotDisposed();
+
             switch (actualType)
             {
                 case BlittableJsonToken.EmbeddedBlittable:
@@ -778,6 +834,8 @@ namespace Sparrow.Json
 
         public void Dispose()
         {
+            AssertContextNotDisposed();
+
             if (_mem == null) //double dispose will do nothing
                 return;
             if (_allocatedMemory != null && _buffer.IsDisposed == false)
@@ -806,6 +864,8 @@ namespace Sparrow.Json
 
         public void CopyTo(byte* ptr)
         {
+            AssertContextNotDisposed();
+
             if (_parent != null)
                 InvalidAttemptToCopyNestedObject();
             Memory.Copy(ptr, _mem, _size);
@@ -824,6 +884,8 @@ namespace Sparrow.Json
 
         public BlittableJsonReaderObject Clone(JsonOperationContext context)
         {
+            AssertContextNotDisposed();
+
             if (_parent != null)
                 return context.ReadObject(this, "cloning nested obj");
 
@@ -895,6 +957,8 @@ namespace Sparrow.Json
 
         private int PropertiesNamesValidation(int numberOfProps, int propsOffsetList, int propsNamesOffsetSize, int currentSize)
         {
+            AssertContextNotDisposed();
+
             var blittableSize = currentSize;
             var offsetCounter = 0;
             for (var i = numberOfProps - 1; i >= 0; i--)
@@ -916,6 +980,8 @@ namespace Sparrow.Json
 
         private int StringValidation(int stringOffset)
         {
+            AssertContextNotDisposed();
+
             byte lenOffset;
             byte escOffset;
             int stringLength;
@@ -959,6 +1025,8 @@ namespace Sparrow.Json
         private BlittableJsonToken TokenValidation(byte tokenStart, out int propOffsetSize,
             out int propIdSize)
         {
+            AssertContextNotDisposed();
+
             var token = (BlittableJsonToken)tokenStart;
             var tokenType = ProcessTokenTypeFlags(token);
             propOffsetSize = ((tokenType == BlittableJsonToken.StartObject) ||
@@ -975,6 +1043,8 @@ namespace Sparrow.Json
         private int PropertiesValidation(BlittableJsonToken rootTokenTypen, int mainPropOffsetSize, int mainPropIdSize,
             int objStartOffset, int numberOfPropsNames)
         {
+            AssertContextNotDisposed();
+
             byte offset;
             var numberOfProperties = ReadVariableSizeInt(_mem + objStartOffset, 0, out offset);
             var current = objStartOffset + offset;
@@ -1067,6 +1137,8 @@ namespace Sparrow.Json
         public void AddItemsToStream<T>(ManualBlittableJsonDocumentBuilder<T> writer)
             where T : struct, IUnmanagedWriteBuffer
         {
+            AssertContextNotDisposed();
+
             for (var i = 0; i < Count; i++)
             {
                 var prop = new PropertyDetails();
@@ -1118,6 +1190,7 @@ namespace Sparrow.Json
 
         public override bool Equals(object obj)
         {
+            AssertContextNotDisposed();
             if (ReferenceEquals(null, obj))
                 return false;
 
@@ -1132,6 +1205,7 @@ namespace Sparrow.Json
 
         public bool Equals(BlittableJsonReaderObject other, bool ignoreRavenProperties = false)
         {
+            AssertContextNotDisposed();
             if (_propCount != other._propCount)
                 return false;
 
@@ -1175,12 +1249,15 @@ namespace Sparrow.Json
 
         public override int GetHashCode()
         {
+            AssertContextNotDisposed();
             return _propCount;
         }
 
         [Conditional("DEBUG")]
         public static void AssertNoModifications(BlittableJsonReaderObject data, string id, bool assertChildren, bool assertRemovals = true, bool assertProperties = true)
         {
+            data.AssertContextNotDisposed();            
+
             if (assertRemovals == false && assertProperties == false)
                 throw new InvalidOperationException($"Both {nameof(assertRemovals)} and {nameof(assertProperties)} cannot be set to false.");
 
@@ -1225,6 +1302,8 @@ namespace Sparrow.Json
 
         public bool Contains(LazyStringValue propertyName)
         {
+            AssertContextNotDisposed();
+
             var metadataSize = (_currentOffsetSize + _currentPropertyIdSize + sizeof(byte));
 
             for (int i = 0; i < _propCount; i++)
