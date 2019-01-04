@@ -12,7 +12,7 @@
     <Compile Include="..\..\src\Raven.Client\Extensions\StringExtensions.cs" Link="Extensions\StringExtensions.cs" />
   </ItemGroup>
   <ItemGroup>
-    <PackageReference Include="Microsoft.Azure.DocumentDB.Core" Version="2.2.0" />
+    <PackageReference Include="Microsoft.Azure.DocumentDB.Core" Version="2.2.1" />
     <PackageReference Include="Microsoft.Extensions.CommandLineUtils" Version="1.1.1" />
     <PackageReference Include="MongoDB.Driver" Version="2.7.2" />
     <PackageReference Include="MongoDB.Driver.GridFS" Version="2.7.2" />

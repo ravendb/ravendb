@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Diagnostics;
 using System.Runtime.CompilerServices;
 
 namespace Sparrow.Json
@@ -14,10 +15,12 @@ namespace Sparrow.Json
         protected BlittableJsonReaderBase(JsonOperationContext context)
         {
             _context = context;
+            AssertContextNotDisposed();
         }
 
         public bool BelongsToContext(JsonOperationContext context)
         {
+            AssertContextNotDisposed();
             return context == _context;
         }
 
@@ -28,6 +31,7 @@ namespace Sparrow.Json
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public int ProcessTokenPropertyFlags(BlittableJsonToken currentType)
         {
+            AssertContextNotDisposed();
             // process part of byte flags that responsible for property ids sizes
             const BlittableJsonToken mask =
                 BlittableJsonToken.PropertyIdSizeByte | 
@@ -53,6 +57,7 @@ namespace Sparrow.Json
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public int ProcessTokenOffsetFlags(BlittableJsonToken currentType)
         {
+            AssertContextNotDisposed();
             // process part of byte flags that responsible for offset sizes
             const BlittableJsonToken mask =
                 BlittableJsonToken.OffsetSizeByte |
@@ -92,6 +97,7 @@ namespace Sparrow.Json
 
         public BlittableJsonToken ProcessTokenTypeFlags(BlittableJsonToken currentType)
         {
+            AssertContextNotDisposed();
             switch (currentType & TypesMask)
             {
                 case BlittableJsonToken.StartObject:
@@ -118,6 +124,7 @@ namespace Sparrow.Json
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public int ReadNumber(byte* value, long sizeOfValue)
         {
+            AssertContextNotDisposed();
             int returnValue = *value;
             if (sizeOfValue == sizeof(byte))
                 goto Successful;
@@ -146,6 +153,7 @@ namespace Sparrow.Json
 
         public BlittableJsonReaderObject ReadNestedObject(int pos)
         {
+            AssertContextNotDisposed();
             byte offset;
             var size = ReadVariableSizeInt(pos, out offset);
             return new BlittableJsonReaderObject(_mem + pos + offset, size, _context)
@@ -157,6 +165,7 @@ namespace Sparrow.Json
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public LazyStringValue ReadStringLazily(int pos)
         {
+            AssertContextNotDisposed();
             byte offset;
             var size = ReadVariableSizeInt(pos, out offset);
 
@@ -166,6 +175,7 @@ namespace Sparrow.Json
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public LazyCompressedStringValue ReadCompressStringLazily(int pos)
         {
+            AssertContextNotDisposed();
             byte offset;
             var uncompressedSize = ReadVariableSizeInt(pos, out offset);
             pos += offset;
@@ -272,6 +282,7 @@ namespace Sparrow.Json
 
         protected long ReadVariableSizeLong(int pos)
         {
+            AssertContextNotDisposed();
             // ReadAsync out an Int64 7 bits at a time.  The high bit 
             // of the byte when on means to continue reading more bytes.
 
@@ -297,6 +308,15 @@ namespace Sparrow.Json
             Error:
             ThrowInvalidShift();
             return -1;
+        }
+
+        [Conditional("DEBUG")]
+        protected void AssertContextNotDisposed()
+        {
+            if (_context?.Disposed ?? false)
+            {
+                throw new ObjectDisposedException("blittable's context has been disposed, blittable should not be used now in that case!");
+            }
         }
     }
 }

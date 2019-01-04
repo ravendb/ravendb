@@ -114,6 +114,7 @@ namespace Raven.Server.Rachis
                 foreach (var value in table.SeekByPrimaryKey(key, 0))
                 {
                     var entry = FollowerAmbassador.BuildRachisEntryToSend(context, value);
+                    Transaction.DebugDisposeReaderAfterTransaction(context.Transaction.InnerTransaction, entry);
                     entries.Add(entry);
                     if (entries.Count >= max)
                         break;
@@ -890,7 +891,11 @@ namespace Raven.Server.Rachis
             if (read == null)
                 return null;
 
-            return new BlittableJsonReaderObject(read.Reader.Base, read.Reader.Length, context);
+            BlittableJsonReaderObject topologyBlittable = new BlittableJsonReaderObject(read.Reader.Base, read.Reader.Length, context);
+
+            Transaction.DebugDisposeReaderAfterTransaction(context.Transaction.InnerTransaction, topologyBlittable);
+
+            return topologyBlittable;
         }
 
         public BlittableJsonReaderObject SetTopology(TransactionOperationContext context, ClusterTopology topology)
@@ -918,6 +923,9 @@ namespace Raven.Server.Rachis
                 TaskExecutor.CompleteAndReplace(ref engine._topologyChanged);
                 engine.TopologyChanged?.Invoke(engine, clusterTopology);
             };
+
+            Transaction.DebugDisposeReaderAfterTransaction(context.Transaction.InnerTransaction, topologyJson);
+
 
             return topologyJson;
         }
@@ -1278,6 +1286,8 @@ namespace Raven.Server.Rachis
                     }
                 }
             }
+
+            Transaction.DebugDisposeReaderAfterTransaction(context.Transaction.InnerTransaction, lastTopology);
             return (lastTopology, lastTopologyIndex);
         }
 
@@ -1325,7 +1335,10 @@ namespace Raven.Server.Rachis
                 flags = *(RachisEntryFlags*)reader.Read(3, out int size);
                 Debug.Assert(size == sizeof(RachisEntryFlags));
                 var ptr = reader.Read(2, out size);
-                return new BlittableJsonReaderObject(ptr, size, context);
+                BlittableJsonReaderObject entry = new BlittableJsonReaderObject(ptr, size, context);
+
+                Transaction.DebugDisposeReaderAfterTransaction(context.Transaction.InnerTransaction, entry);
+                return entry;
             }
         }
 
