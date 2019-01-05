@@ -46,7 +46,7 @@ namespace Sparrow.Logging
             }
         }
 
-        public void Info(string msg, Exception ex = null)
+        public void Info(string msg, Exception ex = null, bool track = false)
         {
             _logEntry.At = GetLogDate();
             _logEntry.Exception = ex;
@@ -54,7 +54,7 @@ namespace Sparrow.Logging
             _logEntry.Message = msg;
             _logEntry.Source = _source;
             _logEntry.Type = LogMode.Information;
-            _parent.Log(ref _logEntry);
+            _parent.Log(ref _logEntry, track: track);
         }
 
         public Task InfoAsync(string msg, Exception ex = null)

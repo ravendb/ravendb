@@ -546,24 +546,47 @@ loadToOrders(orderData);");
 
                 var mre = new AsyncManualResetEvent();
 
-                await client.ConnectAsync(new Uri(str), CancellationToken.None);
-                var task = Task.Run((Func<Task>)(async () =>
-               {
-                   ArraySegment<byte> buffer = new ArraySegment<byte>(new byte[1024]);
-                   while (client.State == WebSocketState.Open)
-                   {
-                       var value = await ReadFromWebSocket(buffer, client);
-                       lock (sb)
-                       {
-                           mre.Set();
-                           sb.AppendLine(value);
-                       }
-                       const string expectedValue = "skipping document: orders/1";
-                       if (value.Contains(expectedValue) || sb.ToString().Contains(expectedValue))
-                           return;
+                Console.WriteLine($"Connecting to: {str}");
 
-                   }
-               }));
+                await client.ConnectAsync(new Uri(str), CancellationToken.None);
+                var task = Task.Run(async () =>
+                {
+                    try
+                    {
+                        Console.WriteLine($"Socket: {client.State}");
+
+                        ArraySegment<byte> buffer = new ArraySegment<byte>(new byte[1024]);
+                        while (client.State == WebSocketState.Open)
+                        {
+                            var value = await ReadFromWebSocket(buffer, client);
+
+                            //Console.WriteLine($"Socket received: {value}");
+
+                            lock (sb)
+                            {
+                                mre.Set();
+                                sb.AppendLine(value);
+                            }
+
+                            const string expectedValue = "skipping document: orders/1";
+                            if (value.Contains(expectedValue) || sb.ToString().Contains(expectedValue))
+                            {
+                                Console.WriteLine("Contains!");
+                                return;
+                            }
+
+                        }
+                    }
+                    catch (Exception e)
+                    {
+                        Console.WriteLine($"Task exception: {e}");
+                        throw;
+                    }
+                    finally
+                    {
+                        Console.WriteLine($"Socket finally: {client.State}");
+                    }
+                });
                 await mre.WaitAsync(TimeSpan.FromSeconds(60));
                 SetupSqlEtl(store, @"output ('Tralala'); 
 
@@ -582,6 +605,8 @@ var nameArr = this.StepName.split('.'); loadToOrders({});");
                     }
                     throw new InvalidOperationException($"{msg}. Full log is: \r\n{tempFileName}");
                 }
+
+                Console.WriteLine("END");
             }
         }
 
@@ -998,9 +1023,9 @@ loadToUsers(
                     {
                         result = await source.ReceiveAsync(buffer, CancellationToken.None);
                     }
-                    catch (Exception)
+                    catch (Exception e)
                     {
-                        break;
+                        return e.ToString();
                     }
                     ms.Write(buffer.Array, buffer.Offset, result.Count);
                 }

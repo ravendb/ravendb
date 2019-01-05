@@ -12,6 +12,7 @@ namespace Sparrow.Logging
         public TaskCompletionSource<object> Task;
 
         public readonly List<WebSocket> WebSocketsList = new List<WebSocket>();
+        public bool Track;
 
         public override string ToString()
         {

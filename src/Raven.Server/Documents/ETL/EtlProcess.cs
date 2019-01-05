@@ -256,8 +256,16 @@ namespace Raven.Server.Documents.ETL
                         {
                             Statistics.RecordTransformationError(e, item.DocumentId);
 
+                            Console.WriteLine($"ETL exception: {e}");
+
                             if (Logger.IsInfoEnabled)
-                                Logger.Info($"Could not process SQL ETL script for '{Name}', skipping document: {item.DocumentId}", e);
+                            {
+                                var msg = $"Could not process SQL ETL script for '{Name}', skipping document: {item.DocumentId}";
+                                Console.WriteLine($"ETL will log: {msg}");
+                                Logger.Info(msg, e, track: true);
+
+                                Console.WriteLine("ETL logged");
+                            }
                         }
                     }
                 }

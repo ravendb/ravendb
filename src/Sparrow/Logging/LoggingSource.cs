@@ -87,6 +87,8 @@ namespace Sparrow.Logging
                 }
                 if (_listeners.TryAdd(source, context) == false)
                     throw new InvalidOperationException("Socket was already added?");
+
+                Console.WriteLine("Listener added");
             }
 
             var arraySegment = new ArraySegment<byte>(new byte[512]);
@@ -310,7 +312,7 @@ namespace Sparrow.Logging
             return state;
         }
 
-        public void Log(ref LogEntry entry, TaskCompletionSource<object> tcs = null)
+        public void Log(ref LogEntry entry, TaskCompletionSource<object> tcs = null, bool track = false)
         {
             var state = _localState.Value;
             if (state.Generation != _generation)
@@ -320,6 +322,7 @@ namespace Sparrow.Logging
 
             if (state.Free.Dequeue(out var item))
             {
+                item.Track = false;
                 item.Data.SetLength(0);
                 item.WebSocketsList.Clear();
                 item.Task = tcs;
@@ -332,6 +335,8 @@ namespace Sparrow.Logging
                 state.ForwardingStream.Destination = new MemoryStream();
             }
 
+            item.Track = track;
+
             foreach (var kvp in _listeners)
             {
                 if (kvp.Value.Filter.Forward(ref entry))
@@ -340,10 +345,16 @@ namespace Sparrow.Logging
                 }
             }
 
+            if (item.Track)
+                Console.WriteLine($"Sockets added: {item.WebSocketsList.Count}");
+
             WriteEntryToWriter(state.Writer, ref entry);
             item.Data = state.ForwardingStream.Destination;
 
-            state.Full.Enqueue(item, timeout: 128);
+            var enqueued = state.Full.Enqueue(item, timeout: 128);
+
+            if (item.Track)
+                Console.WriteLine("Log enqueued: " + enqueued);
 
             _hasEntries.Set();
         }
@@ -425,7 +436,7 @@ namespace Sparrow.Logging
                                     currentFile.Flush(flushToDisk: false);
                                     if (_hasEntries.IsSet == false)
                                         // about to go to sleep, so can check if need to update offset
-                                        UpdateLocalDateTimeOffset(); 
+                                        UpdateLocalDateTimeOffset();
                                     _hasEntries.Wait();
                                     if (_keepLogging == false)
                                         return;
@@ -520,6 +531,9 @@ namespace Sparrow.Logging
 
         private int ActualWriteToLogTargets(WebSocketMessageEntry item, Stream file)
         {
+            if (item.Track)
+                Console.WriteLine("Writing to targets");
+
             item.Data.TryGetBuffer(out var bytes);
             file.Write(bytes.Array, bytes.Offset, bytes.Count);
             _additionalOutput?.Write(bytes.Array, bytes.Offset, bytes.Count);
@@ -565,6 +579,9 @@ namespace Sparrow.Logging
             if (_tasks.Length != item.WebSocketsList.Count)
                 Array.Resize(ref _tasks, item.WebSocketsList.Count);
 
+            if (item.Track)
+                Console.WriteLine("Sending...");
+
             for (int i = 0; i < item.WebSocketsList.Count; i++)
             {
                 var socket = item.WebSocketsList[i];
@@ -572,8 +589,10 @@ namespace Sparrow.Logging
                 {
                     _tasks[i] = socket.SendAsync(bytes, WebSocketMessageType.Text, true, CancellationToken.None);
                 }
-                catch (Exception)
+                catch (Exception e)
                 {
+                    Console.WriteLine($"Send error: {e}");
+
                     RemoveWebSocket(socket);
                 }
             }
@@ -583,8 +602,10 @@ namespace Sparrow.Logging
             {
                 success = Task.WaitAll(_tasks, 250);
             }
-            catch (Exception)
+            catch (Exception e)
             {
+                Console.WriteLine($"Wait error: {e}");
+
                 success = false;
             }
 
@@ -604,6 +625,8 @@ namespace Sparrow.Logging
 
         private void RemoveWebSocket(WebSocket socket)
         {
+            Console.WriteLine($"Removing socket: {socket.CloseStatusDescription}");
+
             WebSocketContext value;
             _listeners.TryRemove(socket, out value);
             if (!_listeners.IsEmpty)
