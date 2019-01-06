@@ -287,10 +287,10 @@ namespace Raven.Server.Web.System
         }
 
         [RavenAction("/setup/parameters", "GET", AuthorizationStatus.UnauthenticatedClients)]
-        public Task GetSetupParameters()
+        public async Task GetSetupParameters()
         {
             AssertOnlyInSetupMode();
-            var setupParameters = SetupParameters.Get(ServerStore);
+            var setupParameters = await SetupParameters.Get(ServerStore);
             using (ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
             using (var writer = new BlittableJsonTextWriter(context, ResponseBodyStream()))
             {
@@ -310,15 +310,21 @@ namespace Raven.Server.Web.System
 
                 writer.WritePropertyName(nameof(SetupParameters.IsDocker));
                 writer.WriteBool(setupParameters.IsDocker);
+                writer.WriteComma();
+
+                writer.WritePropertyName(nameof(SetupParameters.IsAzure));
+                writer.WriteBool(setupParameters.IsAzure);
+                writer.WriteComma();
+
+                writer.WritePropertyName(nameof(SetupParameters.IsAws));
+                writer.WriteBool(setupParameters.IsAws);
 
                 writer.WriteEndObject();
             }
-
-            return Task.CompletedTask;
         }
 
         [RavenAction("/setup/ips", "GET", AuthorizationStatus.UnauthenticatedClients)]
-        public Task GetIps()
+        public async Task GetIps()
         {
             AssertOnlyInSetupMode();
 
@@ -337,6 +343,8 @@ namespace Raven.Server.Web.System
             using (ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
             using (var writer = new BlittableJsonTextWriter(context, ResponseBodyStream()))
             {
+                var setupParameters = await SetupParameters.Get(ServerStore);
+
                 writer.WriteStartObject();
                 writer.WritePropertyName("MachineName");
                 writer.WriteString(Environment.MachineName);
@@ -359,7 +367,7 @@ namespace Raven.Server.Web.System
                                 var addressBytes = x.Address.GetAddressBytes();
 
                                 // filter 127.xxx.xxx.xxx out, in docker only
-                                if (SetupParameters.Get(ServerStore).IsDocker && addressBytes[0] == 127)
+                                if (setupParameters.IsDocker && addressBytes[0] == 127)
                                     return false;
 
                                 return addressBytes[0] != 169 || addressBytes[1] != 254;
@@ -368,8 +376,8 @@ namespace Raven.Server.Web.System
                             .ToList();
 
                         // If there's a hostname in the server url, add it to the list
-                        if (SetupParameters.Get(ServerStore).DockerHostname != null && ips.Contains(SetupParameters.Get(ServerStore).DockerHostname) == false)
-                            ips.Add(SetupParameters.Get(ServerStore).DockerHostname);
+                        if (setupParameters.DockerHostname != null && ips.Contains(setupParameters.DockerHostname) == false)
+                            ips.Add(setupParameters.DockerHostname);
 
                         if (first == false)
                             writer.WriteComma();
@@ -409,8 +417,6 @@ namespace Raven.Server.Web.System
                 writer.WriteEndArray();
                 writer.WriteEndObject();
             }
-
-            return Task.CompletedTask;
         }
 
         [RavenAction("/setup/hosts", "POST", AuthorizationStatus.UnauthenticatedClients)]
