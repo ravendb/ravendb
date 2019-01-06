@@ -278,7 +278,16 @@ namespace Voron.Impl.Journal
             _transactionHeaders = new List<TransactionHeader>(transactionHeaders);
         }
 
-        public bool DeleteOnClose { set { _journalWriter.DeleteOnClose = value; } }
+        public bool DeleteOnClose
+        {
+            set
+            {
+                var writer = _journalWriter;
+
+                if (writer != null)
+                    writer.DeleteOnClose = value;
+            }
+        }
 
 
         private static readonly ObjectPool<FastList<PagePosition>, FastList<PagePosition>.ResetBehavior> _scratchPagesPositionsPool = new ObjectPool<FastList<PagePosition>, FastList<PagePosition>.ResetBehavior>(() => new FastList<PagePosition>(), 10);
