@@ -84,7 +84,7 @@ WITH {
 WITH EDGES (Rated) AS r
 MATCH (m)-[r]->(u)")]
         [InlineData(@"with { from Movies where Genre = $genre } as m
-match (Users as u)<-[Rated as r]-(m)->(Actor as a)", @"WITH {
+match (Users as u)<-[Rated as r]-(m)-[Starred as s]->(Actor as a)", @"WITH {
     FROM Movies WHERE Genre = $genre
 } AS m
 WITH {
@@ -94,7 +94,9 @@ WITH {
     FROM Actor
 } AS a
 WITH EDGES (Rated) AS r
-MATCH ((m)-[r]->(u) AND (m)->(a))")]
+WITH EDGES (Starred) AS s
+MATCH ((m)-[s]->(a) AND (m)-[r]->(u))
+")]
         public void CanRoundTripQueries(string q, string expected)
         {
             var queryParser = new QueryParser();
