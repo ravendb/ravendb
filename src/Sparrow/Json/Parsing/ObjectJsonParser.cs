@@ -363,6 +363,15 @@ namespace Sparrow.Json.Parsing
                     return true;
                 }
 
+                if (current is BlittableJsonReaderObject.RawBlob bs)
+                {
+                    _state.StringBuffer = bs.Ptr;
+                    _state.StringSize = bs.Length;
+                    _state.CompressedSize = null;// don't even try
+                    _state.CurrentTokenType = JsonParserToken.Blob;
+                    return true;
+                }
+
                 if (current is LazyCompressedStringValue lcsv)
                 {
                     _state.StringBuffer = lcsv.Buffer;

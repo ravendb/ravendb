@@ -512,6 +512,23 @@ namespace Sparrow.Json
             WriteEmbeddedBlittableDocument(document.BasePointer, document.Size);
         }
 
+        public unsafe void WriteRawBlob(byte* ptr, int size)
+        {
+            var currentState = _continuationState.Pop();
+            var valuePos = _writer.WriteValue(ptr, size, out _, UsageMode.None, null);
+            _writeToken = new WriteToken
+            {
+                ValuePos = valuePos,
+                WrittenToken = BlittableJsonToken.RawBlob
+            };
+
+            if (currentState.FirstWrite == -1)
+                currentState.FirstWrite = valuePos;
+
+            currentState = FinishWritingScalarValue(currentState);
+            _continuationState.Push(currentState);
+        }
+
         public unsafe void WriteEmbeddedBlittableDocument(byte* ptr, int size)
         {
             var currentState = _continuationState.Pop();
