@@ -98,6 +98,11 @@ namespace Raven.Server.Documents.Indexes.Static
             throw new NotImplementedException($"ESprima visitor doesn't support nodes of type {node.Type}, you can override VisitUnknownNode to handle this case.");
         }
 
+        public virtual void VisitUnkownObject(object obj)
+        {
+            throw new NotImplementedException($"ESprima visitor doesn't support object of type {obj}, you can override VisitUnkownObject to handle this case.");
+        }
+
         private void VisitCatchClause(CatchClause catchClause)
         {            
             VisitIdentifier(catchClause.Param.As<Identifier>());
@@ -173,7 +178,19 @@ namespace Raven.Server.Documents.Indexes.Static
             VisitExpression(switchCase.Test);
             foreach (var s in switchCase.Consequent)
             {
-                VisitStatement(switchCase.Consequent.As<Statement>());
+                //In most cases it is going to be statment
+                if (s is Statement statment)
+                {
+                    VisitStatement(statment);
+                }
+                else if (s is INode node)
+                {
+                    Visit(node);
+                }
+                else
+                {
+                    VisitUnkownObject(s);
+                }
             }
         }
 
