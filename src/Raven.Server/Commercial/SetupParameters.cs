@@ -1,4 +1,7 @@
 ﻿using System;
+using System.Net;
+using System.Net.Http;
+using System.Threading.Tasks;
 using Raven.Server.Config;
 using Raven.Server.ServerWide;
 using Raven.Server.Utils.Cli;
@@ -14,7 +17,14 @@ namespace Raven.Server.Commercial
         public bool IsDocker { get; set; }
         public string DockerHostname { get; set; }
 
-        public static SetupParameters Get(ServerStore serverStore)
+        public bool IsAws { get; set; }
+        public bool IsAzure { get; set; }
+
+        private const string AzureUrl = "http://169.254.169.254/metadata/instance?api-version=2017-04-02";
+        private const string AwsUrl = "http://instance-data.ec2.internal";
+        private static readonly Lazy<HttpClient> HttpClient = new Lazy<HttpClient>(() => new HttpClient());
+
+        public static async Task<SetupParameters> Get(ServerStore serverStore)
         {
             var result = new SetupParameters();
             DetermineFixedPortNumber(serverStore, result);
@@ -23,7 +33,43 @@ namespace Raven.Server.Commercial
             result.IsDocker = PlatformDetails.RunningOnDocker;
             result.DockerHostname = result.IsDocker ? new Uri(serverStore.GetNodeHttpServerUrl()).Host : null;
 
+            result.IsAws = await DetectIfRunningInAws();
+            result.IsAzure = await DetectIfRunningInAzure();
+
             return result;
+        }
+
+        private static async Task<bool> DetectIfRunningInAws()
+        {
+            try
+            {
+                var response = await HttpClient.Value.GetAsync(AwsUrl).ConfigureAwait(false);
+                return response.IsSuccessStatusCode;
+            }
+            catch (Exception e)
+            {
+                return false;
+            }
+        }
+
+        private static async Task<bool> DetectIfRunningInAzure()
+        {
+            try
+            {
+                var request = new HttpRequestMessage
+                {
+                    Method = HttpMethod.Get,
+                    RequestUri = new Uri(AzureUrl),
+                    Headers = {{ "Metadata", "true" }}
+                };
+
+                var response = await HttpClient.Value.SendAsync(request).ConfigureAwait(false);
+                return response.IsSuccessStatusCode;
+            }
+            catch (Exception e)
+            {
+                return false;
+            }
         }
 
         private static void DetermineFixedPortNumber(ServerStore serverStore, SetupParameters result)

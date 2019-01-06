@@ -1037,7 +1037,7 @@ namespace Raven.Server.Commercial
 
         public static async Task ValidateSetupInfo(SetupMode setupMode, SetupInfo setupInfo, ServerStore serverStore)
         {
-            if (SetupParameters.Get(serverStore).IsDocker)
+            if ((await SetupParameters.Get(serverStore)).IsDocker)
             {
                 if (setupInfo.NodeSetupInfos[setupInfo.LocalNodeTag].Addresses.Any(ip => ip.StartsWith("127.")))
                 {
