@@ -98,9 +98,9 @@ namespace Raven.Server.Documents.Indexes.Static
             throw new NotImplementedException($"ESprima visitor doesn't support nodes of type {node.Type}, you can override VisitUnknownNode to handle this case.");
         }
 
-        public virtual void VisitUnkownObject(object obj)
+        public virtual void VisitUnknownObject(object obj)
         {
-            throw new NotImplementedException($"ESprima visitor doesn't support object of type {obj}, you can override VisitUnkownObject to handle this case.");
+            throw new NotImplementedException($"ESprima visitor doesn't support object of type {obj?.GetType()}, you can override VisitUnknownObject to handle this case.");
         }
 
         private void VisitCatchClause(CatchClause catchClause)
@@ -189,7 +189,7 @@ namespace Raven.Server.Documents.Indexes.Static
                 }
                 else
                 {
-                    VisitUnkownObject(s);
+                    VisitUnknownObject(s);
                 }
             }
         }
