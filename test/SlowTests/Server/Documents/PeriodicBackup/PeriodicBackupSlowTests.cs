@@ -6,6 +6,7 @@ using System.Reflection;
 using System.Threading;
 using System.Threading.Tasks;
 using FastTests;
+using FastTests.Server.Basic.Entities;
 using Raven.Client;
 using Raven.Client.Documents;
 using Raven.Client.Documents.Operations;
@@ -447,8 +448,8 @@ namespace SlowTests.Server.Documents.PeriodicBackup
                 {
                     var status = store.Maintenance.Send(operation).Status;
                     return status?.LastEtag;
-                }, 3);
-                Assert.Equal(3, value);
+                }, 4);
+                Assert.Equal(4, value);
 
                 var backupStatus = store.Maintenance.Send(operation);
                 var backupOperationId = backupStatus.Status.LastOperationId;
@@ -516,8 +517,8 @@ namespace SlowTests.Server.Documents.PeriodicBackup
                         .ToListAsync(); // create an index to backup
 
                     await session
-                        .Query<User>()
-                        .Where(x => x.Age > 20)
+                        .Query<Order>()
+                        .Where(x => x.Freight > 20)
                         .ToListAsync(); // create an index to backup
 
                     session.CountersFor("users/1").Increment("likes", 100); //create a counter to backup
@@ -541,8 +542,8 @@ namespace SlowTests.Server.Documents.PeriodicBackup
                 {
                     var status = store.Maintenance.Send(operation).Status;
                     return status?.LastEtag;
-                }, 3);
-                Assert.Equal(3, value);
+                }, 4);
+                Assert.Equal(4, value);
 
                 using (var session = store.OpenAsyncSession())
                 {
