@@ -169,7 +169,7 @@ namespace Voron.Recovery
                     WriteSmugglerHeader(documentsWriter, ServerVersion.Build, "Docs");
                     WriteSmugglerHeader(revisionsWriter, ServerVersion.Build, nameof(DatabaseItemType.RevisionDocuments));
                     WriteSmugglerHeader(conflictsWriter, ServerVersion.Build, nameof(DatabaseItemType.Conflicts));
-                    WriteSmugglerHeader(countersWriter, ServerVersion.Build, nameof(DatabaseItemType.Counters));
+                    WriteSmugglerHeader(countersWriter, ServerVersion.Build, nameof(DatabaseItemType.CountersBatch));
 
                     while (mem < eof)
                     {
@@ -874,8 +874,10 @@ namespace Voron.Recovery
             }
         }
 
-        private bool WriteCounter(byte* mem, int sizeInBytes, BlittableJsonTextWriter countersWriter, JsonOperationContext context, long startOffest)
+        private bool WriteCounter(byte* mem, int sizeInBytes, BlittableJsonTextWriter countersWriter, JsonOperationContext context, long startOffset)
         {
+            //TODO aviv
+
             try
             {
                 var tvr = new TableValueReader(mem, sizeInBytes);
@@ -885,38 +887,37 @@ namespace Voron.Recovery
 
                 _counterWritten = false;
 
-                CounterDetail counter = null;
+                CounterGroupDetail counter = null;
                 try
                 {
-                    counter = CountersStorage.TableValueToCounterDetail(context, tvr);
+                    counter = CountersStorage.TableValueToCounterGroupDetail(context, tvr);
                     if (counter == null)
                     {
                         if (_logger.IsOperationsEnabled)
-                            _logger.Operations($"Failed to convert table value to counter at position {GetFilePosition(startOffest, mem)}");
+                            _logger.Operations($"Failed to convert table value to counter at position {GetFilePosition(startOffset, mem)}");
                         return false;
                     }
                 }
                 catch (Exception e)
                 {
                     if (_logger.IsOperationsEnabled)
-                        _logger.Operations($"Found invalid counter item at position={GetFilePosition(startOffest, mem)} with document Id={counter?.DocumentId ?? "null"} and name={counter?.CounterName ?? "null"}{Environment.NewLine}{e}");
+                        _logger.Operations($"Found invalid counter item at position={GetFilePosition(startOffset, mem)} with document Id={counter?.DocumentId ?? "null"} and counter values={counter?.Values}{Environment.NewLine}{e}");
                     return false;
                 }
 
                 context.Write(countersWriter, new DynamicJsonValue
                 {
-                    [nameof(DocumentItem.CounterItem.DocId)] = counter.DocumentId,
-                    [nameof(DocumentItem.CounterItem.Name)] = counter.CounterName,
-                    [nameof(DocumentItem.CounterItem.ChangeVector)] = counter.ChangeVector,
-                    [nameof(DocumentItem.CounterItem.Value)] = counter.TotalValue
+                    [nameof(CounterItem.DocId)] = counter.DocumentId,
+                    [nameof(CounterItem.ChangeVector)] = counter.ChangeVector,
+                    [nameof(CounterItem.Batch.Values)] = counter.Values
                 });
 
                 _counterWritten = true;
                 if (_logger.IsInfoEnabled)
-                    _logger.Info($"Found counter item with document Id={counter.DocumentId} and name={counter.CounterName}");
+                    _logger.Info($"Found counter item with document Id={counter.DocumentId} and counter values={counter.Values}");
 
-                _lastRecoveredDocumentKey = counter.DocumentId + SpecialChars.RecordSeparator + counter.CounterName;
-                _uniqueCountersDiscovered.Add((counter.CounterName, counter.DocumentId));
+                _lastRecoveredDocumentKey = counter.DocumentId;
+                _uniqueCountersDiscovered.Add((null, counter.DocumentId));
                 _numberOfCountersRetrieved++;
 
                 return true;
@@ -924,7 +925,7 @@ namespace Voron.Recovery
             catch (Exception e)
             {
                 if (_logger.IsOperationsEnabled)
-                    _logger.Operations($"Unexpected exception while writing counter item at position {GetFilePosition(startOffest, mem)}: {e}");
+                    _logger.Operations($"Unexpected exception while writing counter item at position {GetFilePosition(startOffset, mem)}: {e}");
                 return false;
             }
         }

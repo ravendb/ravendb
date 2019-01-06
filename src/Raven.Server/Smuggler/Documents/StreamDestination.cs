@@ -97,7 +97,7 @@ namespace Raven.Server.Smuggler.Documents
 
         public ICounterActions Counters()
         {
-            return new StreamCounterActions(_writer, nameof(DatabaseItemType.Counters));
+            return new StreamCounterActions(_writer, _context, nameof(DatabaseItemType.CountersBatch));
         }
 
         public IIndexActions Indexes()
@@ -407,34 +407,70 @@ namespace Raven.Server.Smuggler.Documents
 
         private class StreamCounterActions : StreamActionsBase, ICounterActions
         {
-            public void WriteCounter(CounterDetail counterDetail)
+            private readonly DocumentsOperationContext _context;
+
+            public void WriteCounter(CounterGroupDetail counterDetail)
             {
+                ConvertFromBlobToNumbers(counterDetail);
+
                 if (First == false)
                     Writer.WriteComma();
                 First = false;
 
                 Writer.WriteStartObject();
 
-                Writer.WritePropertyName(nameof(DocumentItem.CounterItem.DocId));
+                Writer.WritePropertyName(nameof(CounterItem.DocId));
                 Writer.WriteString(counterDetail.DocumentId);
                 Writer.WriteComma();
 
-                Writer.WritePropertyName(nameof(DocumentItem.CounterItem.Name));
-                Writer.WriteString(counterDetail.CounterName);
-                Writer.WriteComma();
-
-                Writer.WritePropertyName(nameof(DocumentItem.CounterItem.Value));
-                Writer.WriteInteger(counterDetail.TotalValue);
-                Writer.WriteComma();
-
-                Writer.WritePropertyName(nameof(DocumentItem.CounterItem.ChangeVector));
+                Writer.WritePropertyName(nameof(CounterItem.ChangeVector));
                 Writer.WriteString(counterDetail.ChangeVector);
+                Writer.WriteComma();
+
+                Writer.WritePropertyName(nameof(CounterItem.Batch.Values));
+                Writer.WriteObject(counterDetail.Values);
 
                 Writer.WriteEndObject();
             }
 
-            public StreamCounterActions(BlittableJsonTextWriter writer, string propertyName) : base(writer, propertyName)
+            public void WriteLegacyCounter(CounterDetail counterDetail)
             {
+                // Used only in Database Destination 
+                throw new NotImplementedException();
+            }
+
+            private unsafe void ConvertFromBlobToNumbers(CounterGroupDetail counterDetail)
+            {
+                counterDetail.Values.Modifications = new DynamicJsonValue(counterDetail.Values);
+                var prop = new BlittableJsonReaderObject.PropertyDetails();
+
+                for (int i = 0; i < counterDetail.Values.Count; i++)
+                {
+                    counterDetail.Values.GetPropertyByIndex(i, ref prop);
+                    if (prop.Name.Equals(CountersStorage.DbIds))
+                        continue;
+
+                    var dja = new DynamicJsonArray();
+                    var blob = (BlittableJsonReaderObject.RawBlob)prop.Value;
+                    var existingCount = blob.Length / CountersStorage.SizeOfCounterValues;
+
+                    for (int dbIdIndex = 0; dbIdIndex < existingCount; dbIdIndex++)
+                    {
+                        var current = (CountersStorage.CounterValues*)blob.Ptr + dbIdIndex;
+
+                        dja.Add(current->Value);
+                        dja.Add(current->Etag);
+                    }
+
+                    counterDetail.Values.Modifications[prop.Name] = dja;
+                }
+
+                counterDetail.Values = _context.ReadObject(counterDetail.Values, null);
+            }
+
+            public StreamCounterActions(BlittableJsonTextWriter writer, DocumentsOperationContext context, string propertyName) : base(writer, propertyName)
+            {
+                _context = context;
             }
         }
 

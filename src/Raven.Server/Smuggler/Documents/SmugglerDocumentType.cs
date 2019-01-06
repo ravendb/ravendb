@@ -43,13 +43,22 @@ namespace Raven.Server.Smuggler.Documents
                 Data.Dispose();
             }
         }
+    }
 
-        public struct CounterItem
+    public class CounterItem
+    {
+        public string DocId;
+        public string ChangeVector;
+
+        public struct Legacy
         {
             public string Name;
-            public string DocId;
-            public string ChangeVector;
             public long Value;
+        }
+
+        public struct Batch
+        {
+            public BlittableJsonReaderObject Values;
         }
     }
 }

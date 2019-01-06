@@ -219,7 +219,7 @@ namespace Raven.Server.Documents.ETL
 
                         break;
                     case EtlItemType.Counter:
-
+/* todo aviv RavenDB-12022
                         var lastDocEtag = stats.GetLastTransformedOrFilteredEtag(EtlItemType.Document);
 
                         if (Transformation.ApplyToAllDocuments)
@@ -261,9 +261,10 @@ namespace Raven.Server.Documents.ETL
                                 fromCollections: Transformation.Collections, maxEtag: lastDocEtag);
 
                             merged.AddEnumerator(ConvertTombstonesEnumerator(counterTombstones, null, EtlItemType.Counter));
-                        }
+                            break;
 
-                        break;
+                        }*/
+                        goto default;
                     default:
                         throw new NotSupportedException($"Invalid ETL item type: {type}");
                 }
