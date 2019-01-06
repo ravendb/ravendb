@@ -283,9 +283,10 @@ namespace SlowTests.Client.Counters
 
                 var counter = storeB.Operations
                     .Send(new GetCountersOperation("users/1"));
+
                 Assert.Equal(2, counter.Counters.Count);
-                Assert.Equal(10, counter.Counters[0].TotalValue);
-                Assert.Equal(30, counter.Counters[1].TotalValue);
+                Assert.Equal(30, counter.Counters[0].TotalValue);
+                Assert.Equal(10, counter.Counters[1].TotalValue);
 
                 using (var session = storeB.OpenAsyncSession())
                 {
