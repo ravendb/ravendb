@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.IO;
+using System.Linq;
 using System.Threading;
 using Raven.Client;
 using Raven.Client.Documents.Indexes;
@@ -16,6 +17,7 @@ using Raven.Server.ServerWide;
 using Raven.Server.ServerWide.Context;
 using Raven.Server.Smuggler.Documents.Data;
 using Raven.Server.Smuggler.Documents.Processors;
+using Raven.Server.Utils;
 using Sparrow;
 using Sparrow.Json;
 using Sparrow.Json.Parsing;
@@ -223,10 +225,38 @@ namespace Raven.Server.Smuggler.Documents
             return InternalGetCompareExchangeValues();
         }
 
-        public IEnumerable<CounterDetail> GetCounterValues()
+        public IEnumerable<CounterGroupDetail> GetCounterValues()
         {
             return InternalGetCounterValues();
         }
+
+        public IEnumerable<CounterDetail> GetLegacyCounterValues()
+        {
+            foreach (var reader in ReadArray())
+            {
+                using (reader)
+                {
+                    if (reader.TryGet(nameof(CounterItem.DocId), out string docId) == false ||
+                        reader.TryGet(nameof(CounterItem.ChangeVector), out string cv) == false ||
+                        reader.TryGet(nameof(CounterItem.Legacy.Name), out string name) == false ||
+                        reader.TryGet(nameof(CounterItem.Legacy.Value), out long value) == false)
+                    {
+                        _result.Counters.ErroredCount++;
+                        _result.AddWarning("Could not read counter entry.");
+                        continue;
+                    }
+
+                    yield return new CounterDetail
+                    {
+                        DocumentId = docId,
+                        ChangeVector = cv,
+                        CounterName = name,
+                        TotalValue = value
+                    };
+                }
+            }
+        }
+
 
         private unsafe void SetBuffer(UnmanagedJsonParser parser, LazyStringValue value)
         {
@@ -266,35 +296,74 @@ namespace Raven.Server.Smuggler.Documents
                 }
             }
         }
-
-        private IEnumerable<CounterDetail> InternalGetCounterValues()
+        
+        private IEnumerable<CounterGroupDetail> InternalGetCounterValues()
         {
             foreach (var reader in ReadArray())
             {
                 using (reader)
                 {
-                    if (reader.TryGet(nameof(DocumentItem.CounterItem.DocId), out string docId) == false ||
-                        reader.TryGet(nameof(DocumentItem.CounterItem.Name), out string name) == false ||
-                        reader.TryGet(nameof(DocumentItem.CounterItem.ChangeVector), out string cv) == false ||
-                        reader.TryGet(nameof(DocumentItem.CounterItem.Value), out long value) == false)
+                    if (reader.TryGet(nameof(CounterItem.DocId), out string docId) == false ||
+                        reader.TryGet(nameof(CounterItem.ChangeVector), out string cv) == false ||
+                        reader.TryGet(nameof(CounterItem.Batch.Values), out BlittableJsonReaderObject values) == false)
                     {
                         _result.Counters.ErroredCount++;
                         _result.AddWarning("Could not read counter entry.");
-
                         continue;
                     }
 
-                    yield return new CounterDetail
+                    values = ConvertToBlob(values);
+
+                    yield return new CounterGroupDetail
                     {
                         DocumentId = docId,
-                        CounterName = name,
                         ChangeVector = cv,
-                        TotalValue = value
+                        Values = values
                     };
                 }
             }
         }
 
+        private unsafe BlittableJsonReaderObject ConvertToBlob(BlittableJsonReaderObject values)
+        {
+            var scopes = new List<ByteStringContext<ByteStringMemoryCache>.InternalScope>();
+
+            values.Modifications = new DynamicJsonValue(values);
+            var prop = new BlittableJsonReaderObject.PropertyDetails();
+
+            for (int i = 0; i < values.Count; i++)
+            {
+                values.GetPropertyByIndex(i, ref prop);
+                if (prop.Name.Equals(CountersStorage.DbIds))
+                    continue;
+
+                var arr = (BlittableJsonReaderArray)prop.Value;
+                var sizeToAllocate = CountersStorage.SizeOfCounterValues * arr.Length / 2 ;
+
+                scopes.Add(_context.Allocator.Allocate(sizeToAllocate, out var newVal));
+                
+                for (int j = 0; j < arr.Length; j += 2)
+                {
+                    var newEntry = (CountersStorage.CounterValues*)newVal.Ptr + j / 2;
+                    newEntry->Value = (long)arr[j];
+                    newEntry->Etag = (long)arr[j + 1];
+                }
+
+                values.Modifications[prop.Name] = new BlittableJsonReaderObject.RawBlob
+                {
+                    Ptr = newVal.Ptr,
+                    Length = newVal.Length
+                };
+                
+            }
+
+            foreach (var scope in scopes)
+            {
+                scope.Dispose();
+            }
+
+            return _context.ReadObject(values, null);
+        }
 
         public long SkipType(DatabaseItemType type, Action<long> onSkipped, CancellationToken token)
         {
@@ -312,6 +381,7 @@ namespace Raven.Server.Smuggler.Documents
                 case DatabaseItemType.LegacyDocumentDeletions:
                 case DatabaseItemType.LegacyAttachmentDeletions:
                 case DatabaseItemType.Counters:
+                case DatabaseItemType.CountersBatch:
                     return SkipArray(onSkipped, token);
                 case DatabaseItemType.DatabaseRecord:
                     return SkipObject(onSkipped);
@@ -1115,6 +1185,9 @@ namespace Raven.Server.Smuggler.Documents
             if (type.Equals(nameof(DatabaseItemType.CompareExchange), StringComparison.OrdinalIgnoreCase) ||
                 type.Equals("CmpXchg", StringComparison.OrdinalIgnoreCase)) //support the old name
                 return DatabaseItemType.CompareExchange;
+
+            if (type.Equals(nameof(DatabaseItemType.CountersBatch), StringComparison.OrdinalIgnoreCase))
+                return DatabaseItemType.CountersBatch;
 
             if (type.Equals(nameof(DatabaseItemType.Counters), StringComparison.OrdinalIgnoreCase))
                 return DatabaseItemType.Counters;

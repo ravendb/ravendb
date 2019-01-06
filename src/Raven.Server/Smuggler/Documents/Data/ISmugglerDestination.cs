@@ -48,7 +48,8 @@ namespace Raven.Server.Smuggler.Documents.Data
 
     public interface ICounterActions : IDisposable
     {
-        void WriteCounter(CounterDetail counterDetail);
+        void WriteCounter(CounterGroupDetail counterDetail);
+        void WriteLegacyCounter(CounterDetail counterDetail);
     }
 
     public interface IKeyValueActions<in T> : IDisposable
