@@ -22,7 +22,10 @@ namespace Raven.Server.Commercial
 
         private const string AzureUrl = "http://169.254.169.254/metadata/instance?api-version=2017-04-02";
         private const string AwsUrl = "http://instance-data.ec2.internal";
-        private static readonly Lazy<HttpClient> HttpClient = new Lazy<HttpClient>(() => new HttpClient());
+        private static readonly Lazy<HttpClient> HttpClient = new Lazy<HttpClient>(() => new HttpClient
+        {
+            Timeout = TimeSpan.FromSeconds(5)
+        });
 
         public static async Task<SetupParameters> Get(ServerStore serverStore)
         {
@@ -34,7 +37,8 @@ namespace Raven.Server.Commercial
             result.DockerHostname = result.IsDocker ? new Uri(serverStore.GetNodeHttpServerUrl()).Host : null;
 
             result.IsAws = await DetectIfRunningInAws();
-            result.IsAzure = await DetectIfRunningInAzure();
+            if (result.IsAws == false)
+                result.IsAzure = await DetectIfRunningInAzure();
 
             return result;
         }
