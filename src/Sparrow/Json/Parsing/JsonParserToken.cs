@@ -14,6 +14,7 @@ namespace Sparrow.Json.Parsing
         StartArray      = 1 << 9,
         EndArray        = 1 << 10,
         EndObject       = 1 << 11,
+        Blob            = 1 << 12,
     }
 
     // should never be visible externally
