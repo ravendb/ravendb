@@ -413,10 +413,16 @@ namespace Sparrow.Json
                 _modifier?.StartObject();
                 _continuationState.Push(new BuildingState(ContinuationState.ReadObject));
             }
+            else if (current == JsonParserToken.Blob)
+            {
+                start = _writer.WriteValue(_state.StringBuffer, _state.StringSize);
+                _writeToken = new WriteToken(start, BlittableJsonToken.RawBlob);
+            }
             else if (current != JsonParserToken.EndObject)
             { 
                 ReadJsonValueUnlikely<TWriteStrategy>(current);
             }       
+            
         }
 
         private unsafe void ReadJsonValueUnlikely<TWriteStrategy>(JsonParserToken current) where TWriteStrategy : IWriteStrategy

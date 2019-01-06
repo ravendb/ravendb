@@ -17,8 +17,8 @@ namespace Sparrow.Json
         Boolean = 7,
         Null = 8,
         EmbeddedBlittable = 9,
+        RawBlob = 10,
 
-        Reserved1 = 10,
         Reserved2 = 11,
         Reserved3 = 12,
         Reserved4 = 13,
