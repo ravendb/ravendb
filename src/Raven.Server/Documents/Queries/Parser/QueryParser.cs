@@ -875,63 +875,83 @@ namespace Raven.Server.Documents.Queries.Parser
             };
             return op;
         }
-
-        private static QueryExpression BreakPatternChainToAndClauses(List<MatchPath> list, out QueryExpression op)
+      
+        private static QueryExpression BreakPatternChainToAndClauses(List<MatchPath> matchPaths, out QueryExpression op)
         {
-            // need to split the expression based on the direction of the arrows
+            op = null;
             var clauses = new List<PatternMatchElementExpression>();
-            bool reversed = false;
-            for (int i = list.Count - 1; i >= 1; i--)
-            {
-                if (list[i].EdgeType != list[i - 1].EdgeType)
-                {
-                    var part = list.Skip(i).ToList();
-                    if (part.Last().EdgeType == EdgeType.Left)
-                    {
-                        reversed = true;
-                        ReverseIncomingChain(part);
-                    }
-                    else
-                    {
-                        part[0] = new MatchPath
-                        {
-                            Alias = part[0].Alias,
-                            EdgeType = EdgeType.Left,
-                            IsEdge = part[0].IsEdge
-                        };
-                    }
-                    list[i] = new MatchPath
-                    {
-                        Alias = list[i].Alias,
-                        EdgeType = list[i - 1].EdgeType,
-                        IsEdge = list[i].IsEdge,
-                        Recursive = list[i].Recursive
-                    };
-                    clauses.Add(new PatternMatchElementExpression
-                    {
-                        Path = part.ToArray(),
-                        Type = ExpressionType.Pattern
-                    });
-                    list.RemoveRange(i + 1, list.Count - i - 1);
-                }
-            }
 
-            if (list[0].EdgeType == EdgeType.Left)
+            //the last path element cannot be a "cross-road"
+            while (matchPaths.Count > 1)
             {
-                ReverseIncomingChain(list);
+                var hasFoundJunction = false;
+                for (var i = 0; i < matchPaths.Count - 2; i++)
+                {
+                    if (matchPaths[i].EdgeType == matchPaths[i + 1].EdgeType)
+                        continue;
+
+                    hasFoundJunction = true;
+
+                    List<MatchPath> subRange = null;
+                    if (matchPaths[i].EdgeType == EdgeType.Left && matchPaths[i + 1].EdgeType == EdgeType.Right)
+                    {
+                        subRange = matchPaths.GetRange(0, i + 1);
+                        matchPaths.RemoveRange(0, i);
+                    }
+                    else if (matchPaths[i].EdgeType == EdgeType.Right && matchPaths[i + 1].EdgeType == EdgeType.Left)
+                    {
+                        subRange = matchPaths.GetRange(0, i + 2);
+                        matchPaths.RemoveRange(0, i + 1);
+                    }
+
+                    if (subRange != null)
+                    {
+                        if (subRange[0].EdgeType == EdgeType.Left)
+                            subRange.Reverse();
+
+                        for (var r = 0; r < subRange.Count; r++)
+                            subRange[r] = subRange[r].CloneWithDifferentEdgeType(EdgeType.Right);
+
+                        clauses.Add(new PatternMatchElementExpression
+                        {
+                            Path = subRange.ToArray(),
+                            Type = ExpressionType.Pattern
+                        });
+                    }
+
+
+                    if (matchPaths[0].EdgeType == EdgeType.Left && matchPaths[1].EdgeType == EdgeType.Right)
+                    {
+                        matchPaths[0] = matchPaths[0].CloneWithDifferentEdgeType(EdgeType.Right);
+                    }
+
+                    break;
+                }
+
+                if (hasFoundJunction)
+                    continue;
+                
+                if (matchPaths[0].EdgeType == EdgeType.Left)
+                {
+                    matchPaths.Reverse();
+                    for (var r = 0; r < matchPaths.Count; r++)
+                        matchPaths[r] = matchPaths[r].CloneWithDifferentEdgeType(EdgeType.Right);
+                }
+
+                clauses.Add(new PatternMatchElementExpression
+                {
+                    Path = matchPaths.ToArray(),
+                    Type = ExpressionType.Pattern
+                });
+                break;
             }
-            clauses.Add(new PatternMatchElementExpression
-            {
-                Path = list.ToArray(),
-                Type = ExpressionType.Pattern,
-                Reversed = reversed,
-            });
 
             op = clauses.Last();
             for (int i = clauses.Count - 2; i >= 0; i--)
             {
                 op = new BinaryExpression(op, clauses[i], OperatorType.And);
             }
+
             return op;
         }
 

@@ -238,6 +238,17 @@ namespace Raven.Server.Documents.Queries.AST
         public bool IsEdge;
         public RecursiveMatch? Recursive;
 
+        public MatchPath CloneWithDifferentEdgeType(EdgeType type)
+        {
+            return new MatchPath
+            {
+                Alias = Alias,
+                EdgeType = type,
+                IsEdge = IsEdge,
+                Recursive = Recursive
+            };
+        }
+
         public override string ToString()
         {
             if(Recursive != null)
