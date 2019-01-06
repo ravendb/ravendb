@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Collections.Generic;
 using System.IO;
 using Sparrow.Json;
 using Voron;
@@ -34,6 +35,8 @@ namespace Raven.Server.Documents.Replication
         #region Counter
 
         public long Value;
+
+        public BlittableJsonReaderObject Values;
 
         #endregion
 

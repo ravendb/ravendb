@@ -15,6 +15,7 @@ using Sparrow.Json.Parsing;
 using Sparrow.Logging;
 using Raven.Server.ServerWide.Context;
 using Raven.Server.Utils;
+using Sparrow.Json;
 using Voron;
 
 namespace Raven.Server.Documents.Replication
@@ -26,6 +27,7 @@ namespace Raven.Server.Documents.Replication
 
         private readonly SortedList<long, ReplicationBatchItem> _orderedReplicaItems = new SortedList<long, ReplicationBatchItem>();
         private readonly Dictionary<Slice, ReplicationBatchItem> _replicaAttachmentStreams = new Dictionary<Slice, ReplicationBatchItem>();
+        private readonly List<ReplicationBatchItem> _countersToReplicate = new List<ReplicationBatchItem>();
         private readonly byte[] _tempBuffer = new byte[32 * 1024];
         private readonly Stream _stream;
         private readonly OutgoingReplicationHandler _parent;
@@ -342,6 +344,7 @@ namespace Raven.Server.Documents.Replication
                 {
                     _orderedReplicaItems.Clear();
                     _replicaAttachmentStreams.Clear();
+                    _countersToReplicate.Clear();
                 }
             }
         }
@@ -498,6 +501,11 @@ namespace Raven.Server.Documents.Replication
 
             if (item.Type == ReplicationBatchItem.ReplicationItemType.Attachment)
                 _replicaAttachmentStreams[item.Base64Hash] = item;
+            if (item.Type == ReplicationBatchItem.ReplicationItemType.Counter)
+            {
+                _countersToReplicate.Add(item);
+                return true;
+            }
 
             Debug.Assert(item.Flags.Contain(DocumentFlags.Artificial) == false);
             _orderedReplicaItems.Add(item.Etag, item);
@@ -514,13 +522,21 @@ namespace Raven.Server.Documents.Replication
             {
                 [nameof(ReplicationMessageHeader.Type)] = ReplicationMessageType.Documents,
                 [nameof(ReplicationMessageHeader.LastDocumentEtag)] = _lastEtag,
-                [nameof(ReplicationMessageHeader.ItemsCount)] = _orderedReplicaItems.Count,
+                [nameof(ReplicationMessageHeader.ItemsCount)] = _orderedReplicaItems.Count + _countersToReplicate.Count,
                 [nameof(ReplicationMessageHeader.AttachmentStreamsCount)] = _replicaAttachmentStreams.Count
             };
 
             stats.RecordLastEtag(_lastEtag);
 
             _parent.WriteToServer(headerJson);
+
+            foreach (var item in _countersToReplicate)
+            {
+                WriteCountersToServer(documentsContext, item);
+
+                stats.RecordCountersOutput(item.Values.Count -1); //?
+            }
+
             foreach (var item in _orderedReplicaItems)
             {
                 var value = item.Value;
@@ -534,7 +550,7 @@ namespace Raven.Server.Documents.Replication
 
                 stats.RecordAttachmentOutput(value.Stream.Length);
             }
-            
+
             // close the transaction as early as possible, and before we wait for reply
             // from other side
             documentsContext.Transaction.Dispose();
@@ -923,6 +939,58 @@ namespace Raven.Server.Documents.Replication
                 _stream.Write(_tempBuffer, 0, tempBufferPos);
             }
         }
+
+        private unsafe void WriteCountersToServer(DocumentsOperationContext context, ReplicationBatchItem item)
+        {
+            using (Slice.From(context.Allocator, item.ChangeVector, out var cv))
+                fixed (byte* pTemp = _tempBuffer)
+                {
+                    var requiredSize = sizeof(byte) + // type
+                                       sizeof(int) + // change vector size
+                                       cv.Size + // change vector
+                                       sizeof(short) + // transaction marker
+                                       sizeof(int) + // size of doc id
+                                       item.Id.Size +
+                                       sizeof(int) + // size of doc collection
+                                       item.Collection.Size + // doc collection
+                                       sizeof(int) // size of data
+                                       + item.Values.Size; // data
+
+                    if (requiredSize > _tempBuffer.Length)
+                        ThrowTooManyChangeVectorEntries(item);
+
+                    var tempBufferPos = 0;
+                    pTemp[tempBufferPos++] = (byte)item.Type;
+
+                    *(int*)(pTemp + tempBufferPos) = cv.Size;
+                    tempBufferPos += sizeof(int);
+
+                    Memory.Copy(pTemp + tempBufferPos, cv.Content.Ptr, cv.Size);
+                    tempBufferPos += cv.Size;
+
+                    *(short*)(pTemp + tempBufferPos) = item.TransactionMarker;
+                    tempBufferPos += sizeof(short);
+
+                    *(int*)(pTemp + tempBufferPos) = item.Id.Size;
+                    tempBufferPos += sizeof(int);
+                    Memory.Copy(pTemp + tempBufferPos, item.Id.Buffer, item.Id.Size);
+                    tempBufferPos += item.Id.Size;
+
+                    *(int*)(pTemp + tempBufferPos) = item.Collection.Size;
+                    tempBufferPos += sizeof(int);
+                    Memory.Copy(pTemp + tempBufferPos, item.Collection.Buffer, item.Collection.Size);
+                    tempBufferPos += item.Collection.Size;
+
+                    *(int*)(pTemp + tempBufferPos) = item.Values.Size;
+                    tempBufferPos += sizeof(int);
+
+                    Memory.Copy(pTemp + tempBufferPos, item.Values.BasePointer, item.Values.Size);
+                    tempBufferPos += item.Values.Size;
+
+                    _stream.Write(_tempBuffer, 0, tempBufferPos);
+                }
+        }
+
 
         private unsafe void WriteCounterTombstoneToServer(DocumentsOperationContext context, ReplicationBatchItem item)
         {

@@ -150,6 +150,11 @@ namespace Raven.Server.Documents.Replication
             _stats.CounterOutputCount++;
         }
 
+        public void RecordCountersOutput(int numberOfCounters)
+        {
+            _stats.CounterOutputCount += numberOfCounters;
+        }
+
         public void RecordCounterTombstoneOutput()
         {
             _stats.CounterTombstoneOutputCount++;
