@@ -17,7 +17,10 @@ using Raven.Client.Json.Converters;
 using Raven.Server.Routing;
 using Raven.Server.ServerWide.Context;
 using Raven.Server.TrafficWatch;
+using Raven.Server.Utils;
+using Sparrow;
 using Sparrow.Json;
+using Sparrow.Json.Parsing;
 
 namespace Raven.Server.Documents.Handlers
 {
@@ -37,7 +40,6 @@ namespace Raven.Server.Documents.Handlers
             private readonly DocumentDatabase _database;
             private readonly bool _replyWithAllNodesValues;
             private readonly bool _fromEtl;
-            private readonly bool _fromSmuggler;
             private readonly Dictionary<string, List<CounterOperation>> _dictionary;
             public long ErrorCount;
             public ExecuteCounterBatchCommand(DocumentDatabase database, CounterBatch counterBatch)
@@ -76,15 +78,6 @@ namespace Raven.Server.Documents.Handlers
                 _dictionary = operationsPreDocument;
             }
 
-            // used only from smuggler import
-            public ExecuteCounterBatchCommand(DocumentDatabase database)
-            {
-                _fromSmuggler = true;
-                _database = database;
-                _dictionary = new Dictionary<string, List<CounterOperation>>();
-                ErrorCount = 0;
-            }
-
             public int Add(string id, CounterOperation op, out bool isNew)
             {
                 isNew = false;
@@ -100,16 +93,17 @@ namespace Raven.Server.Documents.Handlers
 
             protected override int ExecuteCmd(DocumentsOperationContext context)
             {
-                var ops = 0;
                 var countersToAdd = new SortedSet<string>(StringComparer.OrdinalIgnoreCase);
                 var countersToRemove = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
 
+                var ops = 0;
                 foreach (var kvp in _dictionary)
                 {
                     Document doc = null;
                     var docId = kvp.Key;
                     string docCollection = null;
                     ops += kvp.Value.Count;
+
                     foreach (var operation in kvp.Value)
                     {
                         switch (operation.Type)
@@ -147,34 +141,22 @@ namespace Raven.Server.Documents.Handlers
                                     countersToAdd.Add(operation.CounterName);
                                     countersToRemove.Remove(operation.CounterName);
                                 }
-
                                 break;
                             case CounterOperationType.Delete:
-                                if (_fromEtl && doc == null)
-                                    break;
-
                                 LastChangeVector = _database.DocumentsStorage.CountersStorage.DeleteCounter(context, docId, docCollection, operation.CounterName);
 
                                 countersToAdd.Remove(operation.CounterName);
                                 countersToRemove.Add(operation.CounterName);
                                 break;
                             case CounterOperationType.Put:
-                                if (_fromEtl && doc == null)
+                                if (_fromEtl == false || doc == null)
                                     break;
 
-                                // intentionally not setting LastChangeVector, we never use it for
-                                // etl / import and it isn't meaningful in those scenarios
+                                //TODO aviv RavenDB-12022
+/*
 
-                                if (_fromEtl)
-                                {
-                                    _database.DocumentsStorage.CountersStorage.PutCounter(context, docId, docCollection,
-                                        operation.CounterName, operation.Delta);
-                                }
-                                else
-                                {
-                                    _database.DocumentsStorage.CountersStorage.PutCounter(context, docId, docCollection,
-                                        operation.CounterName, operation.ChangeVector, operation.Delta);
-                                }
+                                _database.DocumentsStorage.CountersStorage.PutCounter(context, docId, docCollection,
+                                    operation.CounterName, operation.Delta);*/
 
                                 countersToAdd.Add(operation.CounterName);
                                 countersToRemove.Remove(operation.CounterName);
@@ -260,7 +242,7 @@ namespace Raven.Server.Documents.Handlers
                 };
             }
 
-            private static void ThrowArtificialDocument(Document doc)
+            public static void ThrowArtificialDocument(Document doc)
             {
                 throw new InvalidOperationException($"Document '{doc.Id}' has '{nameof(DocumentFlags.Artificial)}' flag set. " +
                                                     "Cannot put Counters on artificial documents.");
@@ -269,6 +251,218 @@ namespace Raven.Server.Documents.Handlers
             private static void ThrowInvalidBatchOperationType(CounterOperation operation)
             {
                 throw new ArgumentOutOfRangeException($"Unknown value {operation.Type}");
+            }
+        }
+
+        public class SmugglerCounterBatchCommand : TransactionOperationsMerger.MergedTransactionCommand
+        {
+            private readonly DocumentDatabase _database;
+            private readonly bool _fromEtl;
+            private readonly bool _fromSmuggler;
+
+            private readonly Dictionary<string, CounterGroup> _dictionary;
+
+            private Dictionary<string, Dictionary<string, List<(string ChangeVector, long Value)>>> _legacyDictionary;
+
+
+            public SmugglerCounterBatchCommand(DocumentDatabase database)
+            {
+                _fromSmuggler = true;
+
+                _database = database;
+                _dictionary = new Dictionary<string, CounterGroup>();
+                _fromEtl =  false;
+            }
+
+            public void Add(string id, CounterGroup cg)
+            {
+                _dictionary.Add(id, cg);
+            }
+
+            public void Add(string id, CounterDetail counterDetail, out bool isNew)
+            {
+                isNew = false;
+                _legacyDictionary = _legacyDictionary ?? new Dictionary<string, Dictionary<string, List<(string ChangeVector, long Value)>>>();
+                var valueToAdd = (counterDetail.ChangeVector, counterDetail.TotalValue);
+
+                if (_legacyDictionary.TryGetValue(counterDetail.DocumentId, out var counters))
+                {
+                    if (counters.TryGetValue(counterDetail.CounterName, out var counterValues))
+                    {
+                        counterValues.Add(valueToAdd);
+                    }
+                    else
+                    {
+                        counters.Add(counterDetail.CounterName, new List<(string ChangeVector, long Value)>
+                        {
+                            valueToAdd
+                        });
+                    }                   
+                }
+                else
+                {
+                    isNew = true;
+                    _legacyDictionary[counterDetail.DocumentId] = new Dictionary<string, List<(string ChangeVector, long Value)>>
+                    {
+                        {
+                            counterDetail.CounterName, new List<(string ChangeVector, long Value)>
+                            {
+                                valueToAdd
+                            }
+                        }
+                    };
+                }
+
+            }
+
+            protected override int ExecuteCmd(DocumentsOperationContext context)
+            {
+
+                var countersToAdd = new SortedSet<string>(StringComparer.OrdinalIgnoreCase);
+
+                if (_legacyDictionary != null)
+                {
+                    foreach (var kvp in _legacyDictionary)
+                    {
+                        var values = ToCounterGroup(context, kvp.Value, out var cv);
+                        PutCounters(context, (kvp.Key, new CounterGroup
+                        {
+                            ChangeVector = cv,
+                            Values = values
+                        }), countersToAdd);
+                    }
+
+                    return _legacyDictionary.Count;
+                }
+
+                foreach (var kvp in _dictionary)
+                {
+                    PutCounters(context, (kvp.Key, kvp.Value), countersToAdd);
+                }
+
+                return _dictionary.Count;
+            }
+
+            private void PutCounters(DocumentsOperationContext context, (string DocId, CounterGroup CounterGroup) counters, SortedSet<string> countersToAdd)
+            {
+                Document doc = null;
+                string docCollection = null;
+                LoadDocument();
+
+                if (doc != null)
+                    docCollection = CollectionName.GetCollectionName(doc.Data);
+
+                _database.DocumentsStorage.CountersStorage.PutCounters(context, counters.DocId, docCollection,
+                    counters.CounterGroup.ChangeVector, counters.CounterGroup.Values);
+
+                foreach (var counter in counters.CounterGroup.Values.GetPropertyNames())
+                {
+                    if (counter.Equals(CountersStorage.DbIds))
+                        continue;
+
+                    countersToAdd.Add(counter);
+                }
+
+                if (doc?.Data != null)
+                {
+                    var nonPersistentFlags = NonPersistentDocumentFlags.ByCountersUpdate;
+                    if (_fromSmuggler)
+                        nonPersistentFlags |= NonPersistentDocumentFlags.FromSmuggler;
+
+                    _database.DocumentsStorage.CountersStorage.UpdateDocumentCounters(context, doc, counters.DocId, countersToAdd, new HashSet<string>(), nonPersistentFlags);
+                    doc.Data?.Dispose(); // we cloned the data, so we can dispose it.
+                }
+
+                countersToAdd.Clear();
+
+                void LoadDocument()
+                {
+                    try
+                    {
+                        doc = _database.DocumentsStorage.Get(context, counters.DocId,
+                            throwOnConflict: true);
+                        if (doc == null)
+                        {
+                            if (_fromEtl)
+                                return;
+
+                            ThrowMissingDocument(counters.DocId);
+                            return; // never hit
+                        }
+
+                        if (doc.Flags.HasFlag(DocumentFlags.Artificial))
+                            ExecuteCounterBatchCommand.ThrowArtificialDocument(doc);
+
+                        docCollection = CollectionName.GetCollectionName(doc.Data);
+                    }
+                    catch (DocumentConflictException)
+                    {
+                        if (_fromEtl)
+                            return;
+
+                        // this is fine, we explicitly support
+                        // setting the flag if we are in conflicted state is 
+                        // done by the conflict resolver
+
+                        // avoid loading same document again, we validate write using the metadata instance
+                        doc = new Document();
+                        docCollection = _database.DocumentsStorage.ConflictsStorage.GetCollection(context, counters.DocId);
+                    }
+                }
+
+
+            }
+
+            private static unsafe BlittableJsonReaderObject ToCounterGroup(DocumentsOperationContext context, Dictionary<string, List<(string ChangeVector, long Value)>> dict, out string lastCv)
+            {
+                lastCv = null;
+                var dbIds = new Dictionary<string, int>();
+                var djv = new DynamicJsonValue(); 
+                var scopes = new List<ByteStringContext<ByteStringMemoryCache>.InternalScope>();
+
+                foreach (var kvp in dict)
+                {
+                    var sizeToAllocate = CountersStorage.SizeOfCounterValues * kvp.Value.Count;
+
+                    scopes.Add(context.Allocator.Allocate(sizeToAllocate, out var newVal));
+
+                    var name = kvp.Key;
+                    foreach (var tuple in kvp.Value)
+                    {
+                        var dbId = tuple.ChangeVector.Substring(tuple.ChangeVector.Length - 22); //???
+                        if (dbIds.TryGetValue(dbId, out var dbIdIndex) == false)
+                        {
+                            dbIdIndex = dbIds.Count;
+                            dbIds.TryAdd(dbId, dbIdIndex);
+                        }
+
+                        var etag = ChangeVectorUtils.GetEtagById(tuple.ChangeVector, dbId);
+
+                        var newEntry = (CountersStorage.CounterValues*)newVal.Ptr + dbIdIndex;
+                        newEntry->Value = tuple.Value;
+                        newEntry->Etag = etag;
+                    }
+
+                    lastCv = kvp.Value[kvp.Value.Count -1].ChangeVector;
+
+                    djv[name] = new BlittableJsonReaderObject.RawBlob { Ptr = newVal.Ptr, Length = newVal.Length };
+                }
+
+                djv[CountersStorage.DbIds] = dbIds.Keys;
+
+                var values = context.ReadObject(djv, null);
+
+                foreach (var scope in scopes)
+                {
+                    scope.Dispose();
+                }
+
+                return values;
+            }
+
+            public override TransactionOperationsMerger.IReplayableCommandDto<TransactionOperationsMerger.MergedTransactionCommand> ToDto(JsonOperationContext context)
+            {
+                return new SmugglerCounterBatchCommandDto();
             }
         }
 
@@ -392,11 +586,6 @@ namespace Raven.Server.Documents.Handlers
             });
         }
 
-        private static void ThrowInvalidDocumentWithNoMetadata(Document doc)
-        {
-            throw new InvalidOperationException("Cannot increment counters for " + doc + " because the document has no metadata. Should not happen ever");
-        }
-
         private static void ThrowMissingDocument(string docId)
         {
             throw new DocumentDoesNotExistException(docId, "Cannot operate on counters of a missing document.");
@@ -413,6 +602,16 @@ namespace Raven.Server.Documents.Handlers
         {
             var command = new CountersHandler.
                 ExecuteCounterBatchCommand(database, Dictionary, ReplyWithAllNodesValues, FromEtl);
+            return command;
+        }
+    }
+
+    public class SmugglerCounterBatchCommandDto : TransactionOperationsMerger.IReplayableCommandDto<CountersHandler.SmugglerCounterBatchCommand>
+    {
+        public CountersHandler.SmugglerCounterBatchCommand ToCommand(DocumentsOperationContext context, DocumentDatabase database)
+        {
+            var command = new CountersHandler.
+                SmugglerCounterBatchCommand(database);
             return command;
         }
     }

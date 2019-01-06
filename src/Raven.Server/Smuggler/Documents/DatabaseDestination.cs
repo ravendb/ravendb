@@ -918,8 +918,8 @@ namespace Raven.Server.Smuggler.Documents
         private class CounterActions : ICounterActions
         {
             private readonly DocumentDatabase _database;
-            private CountersHandler.ExecuteCounterBatchCommand _cmd;
-            private CountersHandler.ExecuteCounterBatchCommand _prevCommand;
+            private CountersHandler.SmugglerCounterBatchCommand _cmd;
+            private CountersHandler.SmugglerCounterBatchCommand _prevCommand;
             private Task _prevCommandTask = Task.CompletedTask;
             private int _docCount;
             private int _countersPerDoc;
@@ -930,33 +930,42 @@ namespace Raven.Server.Smuggler.Documents
             {
                 _database = database;
                 _docCount = 0;
-                _cmd = new CountersHandler.ExecuteCounterBatchCommand(_database)
+                _cmd = new CountersHandler.SmugglerCounterBatchCommand(_database);
+            }
+
+            private void AddToBatch(CounterGroupDetail counter)
+            {
+                _cmd.Add(counter.DocumentId, new CounterGroup
                 {
-                    HasWrites = true
-                };
+                    ChangeVector = counter.ChangeVector,
+                    Values = counter.Values
+                });
+
+                _docCount++;
+
+                _countersPerDoc += counter.Values.Count - 1;
+
             }
 
             private void AddToBatch(CounterDetail counter)
             {
-                var counterOp = new CounterOperation
-                {
-                    Type = CounterOperationType.Put,
-                    CounterName = counter.CounterName,
-                    Delta = counter.TotalValue,
-                    ChangeVector = counter.ChangeVector
-                };
+                _cmd.Add(counter.DocumentId, counter, out var isNew);
 
-                var countersCount = _cmd.Add(counter.DocumentId, counterOp, out var isNew);
                 if (isNew)
-                    _docCount++;
-
-                if (countersCount > _countersPerDoc)
                 {
-                    _countersPerDoc = countersCount;
+                    _docCount++;
                 }
+
+                _countersPerDoc++;
             }
 
-            public void WriteCounter(CounterDetail counterDetail)
+            public void WriteCounter(CounterGroupDetail counterDetail)
+            {
+                AddToBatch(counterDetail);
+                HandleBatchOfCountersIfNecessary();
+            }
+
+            public void WriteLegacyCounter(CounterDetail counterDetail)
             {
                 AddToBatch(counterDetail);
                 HandleBatchOfCountersIfNecessary();
@@ -984,10 +993,7 @@ namespace Raven.Server.Smuggler.Documents
                 {
                     AsyncHelpers.RunSync(() => prevCommandTask);
                 }
-                _cmd = new CountersHandler.ExecuteCounterBatchCommand(_database)
-                {
-                    HasWrites = true
-                };
+                _cmd = new CountersHandler.SmugglerCounterBatchCommand(_database);
 
                 _docCount = 0;
                 _countersPerDoc = 0;

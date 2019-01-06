@@ -20,7 +20,7 @@ namespace Raven.Server.Smuggler.Documents.Data
             if (metadata == null)
                 return;
 
-            if (_operateOnTypes.HasFlag(DatabaseItemType.Counters) == false && metadata.TryGet(Constants.Documents.Metadata.Counters, out BlittableJsonReaderArray _))
+            if (_operateOnTypes.HasFlag(DatabaseItemType.CountersBatch) == false && metadata.TryGet(Constants.Documents.Metadata.Counters, out BlittableJsonReaderArray _))
                 modifications.Remove(Constants.Documents.Metadata.Counters);
 
             if (_operateOnTypes.HasFlag(DatabaseItemType.Attachments) == false && metadata.TryGet(Constants.Documents.Metadata.Attachments, out BlittableJsonReaderArray _))

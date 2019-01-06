@@ -45,7 +45,7 @@ namespace Raven.Server.Smuggler.Documents
             DatabaseItemType.Indexes,
             DatabaseItemType.Identities,
             DatabaseItemType.CompareExchange,
-            DatabaseItemType.Counters,
+            DatabaseItemType.CountersBatch,
             DatabaseItemType.None
         };
 
@@ -65,7 +65,7 @@ namespace Raven.Server.Smuggler.Documents
                 options.OperateOnTypes.HasFlag(DatabaseItemType.RevisionDocuments) ||
                 options.OperateOnTypes.HasFlag(DatabaseItemType.Tombstones) ||
                 options.OperateOnTypes.HasFlag(DatabaseItemType.Conflicts) ||
-                options.OperateOnTypes.HasFlag(DatabaseItemType.Counters))
+                options.OperateOnTypes.HasFlag(DatabaseItemType.CountersBatch))
             {
                 _returnContext = _database.DocumentsStorage.ContextPool.AllocateOperationContext(out _context);
                 _disposeTransaction = _context.OpenReadTransaction();
@@ -265,11 +265,17 @@ namespace Raven.Server.Smuggler.Documents
             return _database.ServerStore.Cluster.GetCompareExchangeValuesStartsWith(_serverContext, _database.Name, CompareExchangeCommandBase.GetActualKey(_database.Name, null), 0, int.MaxValue);
         }
 
-        public IEnumerable<CounterDetail> GetCounterValues()
+        public IEnumerable<CounterGroupDetail> GetCounterValues()
         {
             Debug.Assert(_context != null);
 
             return _database.DocumentsStorage.CountersStorage.GetCountersFrom(_context, _startDocumentEtag, 0, int.MaxValue);
+        }
+
+        public IEnumerable<CounterDetail> GetLegacyCounterValues()
+        {
+            // used only in StreamSource
+            return Enumerable.Empty<CounterDetail>();
         }
 
         public long SkipType(DatabaseItemType type, Action<long> onSkipped, CancellationToken token)
