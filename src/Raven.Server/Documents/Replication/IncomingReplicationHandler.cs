@@ -711,7 +711,8 @@ namespace Raven.Server.Documents.Replication
             #region Counter
 
             public long CounterValue;
-            public string CounterName;
+
+            public BlittableJsonReaderObject CounterValues;
 
             #endregion
 
@@ -846,10 +847,10 @@ namespace Raven.Server.Documents.Replication
                     Debug.Assert(collectionSize > 0);
                     item.Collection = Encoding.UTF8.GetString(ReadExactly(collectionSize), collectionSize);
 
-                    var nameSize = *(int*)ReadExactly(sizeof(int));
-                    item.CounterName = Encoding.UTF8.GetString(ReadExactly(nameSize), nameSize);
+                    var sizeOfData = *(int*)ReadExactly(sizeof(int));
+                    item.DocumentSize = sizeOfData;
 
-                    item.CounterValue = *(long*)ReadExactly(sizeof(long));
+                    ReadExactly(sizeOfData, ref writeBuffer);
                 }
                 else if (item.Type == ReplicationBatchItem.ReplicationItemType.CounterTombstone)
                 {
@@ -1144,9 +1145,12 @@ namespace Raven.Server.Documents.Replication
                             }
                             else if (item.Type == ReplicationBatchItem.ReplicationItemType.Counter)
                             {
-                                database.DocumentsStorage.CountersStorage.PutCounter(context,
-                                    item.Id, item.Collection, item.CounterName, item.ChangeVector,
-                                    item.CounterValue);
+                                var counterValues = new BlittableJsonReaderObject(_buffer + item.Position, item.DocumentSize, context);
+                                counterValues.BlittableValidation();
+
+                                database.DocumentsStorage.CountersStorage.PutCounters(context,
+                                    item.Id, item.Collection, item.ChangeVector,
+                                    counterValues);
                             }
                             else if (item.Type == ReplicationBatchItem.ReplicationItemType.CounterTombstone)
                             {

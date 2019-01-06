@@ -481,7 +481,6 @@ namespace Raven.Server.Documents
         {
             var countersStorage = context.DocumentDatabase.DocumentsStorage.CountersStorage;
             var onDiskCounters = countersStorage.GetCountersForDocument(context, id).ToList();
-
             if (onDiskCounters.Count == 0)
             {
                 if (metadata != null)
@@ -499,6 +498,7 @@ namespace Raven.Server.Documents
             }
 
             flags |= DocumentFlags.HasCounters;
+            onDiskCounters.Sort(StringComparer.OrdinalIgnoreCase);
 
             if (metadata == null)
             {
