@@ -16,12 +16,12 @@ namespace Raven.Client.Exceptions.Documents.Counters
         {
         }
 
-        internal static void ThrowFor(string docId, string counterName, long value, long delta, OverflowException inner)
+        public static void ThrowFor(string docId, string counterName, long value, long delta, OverflowException inner)
         {
             throw new CounterOverflowException($"Could not increment counter '{counterName}' from document '{docId}' with value '{value}' by '{delta}'.", inner);
         }
 
-        internal static void ThrowFor(string docId, string counterName, OverflowException inner)
+        public static void ThrowFor(string docId, string counterName, OverflowException inner)
         {
             throw new CounterOverflowException($"Overflow detected in counter '{counterName}' from document '{docId}'.", inner);
         }
