@@ -21,6 +21,8 @@ class revisions extends viewModelBase {
     currentlyEditedItem = ko.observable<revisionsConfigurationEntry>(); // reference to cloned and currently being edited item
     currentBackingItem = ko.observable<revisionsConfigurationEntry>(null); // original item which is edited
 
+    revertRevisionsUrl: KnockoutComputed<string>;
+    
     spinners = {
         save: ko.observable<boolean>(false)
     };
@@ -45,6 +47,10 @@ class revisions extends viewModelBase {
             if (selectedCount > 0)
                 return "some_checked";
             return "unchecked";
+        });
+        
+        this.revertRevisionsUrl = ko.pureComputed(() => {
+            return appUrl.forRevertRevisions(this.activeDatabase());
         });
     }
 

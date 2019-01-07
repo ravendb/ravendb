@@ -6,7 +6,7 @@ using Sparrow.Json.Parsing;
 
 namespace Raven.Client.ServerWide.Operations
 {
-    public class CompactionResult : CompactionProgressBase, IOperationResult, IOperationProgress
+    public class CompactionResult : CompactionProgressBase, IOperationResult
     {
         public long SizeBeforeCompactionInMb { get; set; }
         public long SizeAfterCompactionInMb { get; set; }

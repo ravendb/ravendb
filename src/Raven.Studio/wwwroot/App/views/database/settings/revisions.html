@@ -1,14 +1,13 @@
 <form role="form" class="revisions flex-vertical absolute-fill content-margin" data-bind="submit: saveChanges" novalidate>
-    <div class="flex-header">
-        <div class="clearfix toolbar">
-            <div class="pull-left">
+    <div class="row flex-row flex-grow flex-stretch-items">
+        <div class="col-sm-12 col-lg-8 flex-vertical">
+            <div class="flex-header flex-horizontal">
                 <div class="form-inline">
                     <div class="checkbox checkbox-primary checkbox-inline align-checkboxes" title="Select all or none">
                         <input type="checkbox" class="styled" data-bind="checkboxTriple: selectionState, event: { change: toggleSelectAll }" />
                         <label></label>
                     </div>
                     <div class="toolbar-actions">
-                    
                         <div class="btn-group btn-group-label" data-label="Selection" data-bind="css: { active: selectedItems().length }">
                             <button type="button" class="btn btn-default dropdown-toggle" data-toggle="dropdown" data-bind="enable: selectedItems().length">
                                 <i class="icon-play"></i><span>Set status</span>
@@ -35,24 +34,15 @@
                         </button>
                     </div>
                 </div>
+                <div class="flex-separator"></div>
+                <div>
+                    <a class="btn btn-default" data-bind="attr: { href: revertRevisionsUrl }">
+                        <i class="icon-revert-revisions"></i>
+                        <span>Revert revisions</span>
+                    </a>
+                </div>
             </div>
-            <div class="pull-right">
-                <span class="has-disable-reason" data-bind="attr: { 'data-original-title': defaultConfiguration() ? 'Default configuration was already created' : '' }">
-                    <button class="btn btn-info" data-bind="click: createDefaultConfiguration, disable: defaultConfiguration()">
-                        <i class="icon-settings"></i>
-                        <span>Create a default configuration</span>
-                    </button>
-                </span>
-                <button class="btn btn-default" data-bind="click: addCollectionSpecificConfiguration">
-                    <i class="icon-plus"></i>
-                    <span>Add a collection specific configuration</span>
-                </button>
-            </div>
-        </div>
-    </div>
-
-    <div class="row flex-row flex-grow flex-stretch-items">
-        <div class="col-sm-12 col-lg-8 flex-vertical">
+            
             <div class="scroll flex-grow">
                 <div data-bind="with: defaultConfiguration">
                     <div class="panel panel-info panel-state revisions-item" data-bind="css: { active: $data === $root.currentBackingItem() }, template: { name: 'revisions-config-item-template' }">
@@ -70,65 +60,79 @@
                 </div>
             </div>
         </div>
-        <div class="col-sm-12 col-lg-4 pick-item-to-edit" data-bind="visible: !currentlyEditedItem()">
-            <div class="padding absolute-center">
-                <h2 class="text-center text-muted">Add new <br />or edit existing one</h2>
+        <div class="col-sm-12 col-lg-4">
+            <div class="flex-header">
+                <span class="has-disable-reason" data-bind="attr: { 'data-original-title': defaultConfiguration() ? 'Default configuration was already created' : '' }">
+                            <button class="btn btn-info" data-bind="click: createDefaultConfiguration, disable: defaultConfiguration()">
+                                <i class="icon-settings"></i>
+                                <span>Create a default configuration</span>
+                            </button>
+                        </span>
+                <button class="btn btn-default" data-bind="click: addCollectionSpecificConfiguration">
+                    <i class="icon-plus"></i>
+                    <span>Add a collection specific configuration</span>
+                </button>
             </div>
-            
-        </div>
-        <div class="col-sm-12 col-lg-4" data-bind="with: currentlyEditedItem">
-            <div class="panel padding edit-panel">
-                <div class="flex-horizontal">
-                    <div data-bind="text: isDefault() ? 'Default collection' : 'Collection'"></div>
+            <div class="pick-item-to-edit" data-bind="visible: !currentlyEditedItem()">
+                <div class="padding absolute-center">
+                    <h2 class="text-center text-muted">Add new <br />or edit existing one</h2>
+                </div>
+            </div>
+            <div data-bind="with: currentlyEditedItem">
+                <div class="panel padding edit-panel">
+                    <div class="flex-horizontal">
+                        <div data-bind="text: isDefault() ? 'Default collection' : 'Collection'"></div>
 
-                    <div class="dropdown btn-group flex-grow" data-bind="validationElement: collection, visible: !isDefault()">
-                        <input class="form-control dropdown-toggle" placeholder="Select collection" data-toggle="dropdown" data-bind="textInput: collection, attr: { id: 'collectionNameInput' }" />
-                        <span class="caret dropdown-toggle" data-toggle="dropdown"></span>
-                        <ul class="dropdown-menu" role="menu" style="display: none;" data-bind="autoComplete: '#' + 'collectionNameInput', foreach: $root.createCollectionNameAutocompleter($data)">
-                            <li role="presentation" data-bind="click: $parent.collection.bind($parent, $data)">
-                                <a role="menuitem" tabindex="-1" href="#">
-                                    <span data-bind="text: $data"></span>
-                                </a>
-                            </li>
-                        </ul>
+                        <div class="dropdown btn-group flex-grow" data-bind="validationElement: collection, visible: !isDefault()">
+                            <input class="form-control dropdown-toggle" placeholder="Select collection" data-toggle="dropdown" data-bind="textInput: collection, attr: { id: 'collectionNameInput' }" />
+                            <span class="caret dropdown-toggle" data-toggle="dropdown"></span>
+                            <ul class="dropdown-menu" role="menu" style="display: none;" data-bind="autoComplete: '#' + 'collectionNameInput', foreach: $root.createCollectionNameAutocompleter($data)">
+                                <li role="presentation" data-bind="click: $parent.collection.bind($parent, $data)">
+                                    <a role="menuitem" tabindex="-1" href="#">
+                                        <span data-bind="text: $data"></span>
+                                    </a>
+                                </li>
+                            </ul>
+                        </div>
+                    </div>
+                    <div class="toggle toggle-primary">
+                        <input id="purge" class="styled" type="checkbox" data-bind="checked: purgeOnDelete">
+                        <label for="purge">
+                            Purge on delete
+                        </label>
+                    </div>
+                    <div class="toggle toggle-primary">
+                        <input id="limitRevisions" class="styled" type="checkbox" data-bind="checked: limitRevisions">
+                        <label for="limitRevisions">
+                            Limit # of revisions
+                        </label>
+                    </div>
+                    <div class="toggle-margin" data-bind="collapse: limitRevisions, validationElement: minimumRevisionsToKeep">
+                        <small>Minimum revisions to keep</small>
+                        <input type="number" min="0" class="form-control" placeholder="0" data-bind="numericInput: minimumRevisionsToKeep" />
+                    </div>
+                    <div class="toggle toggle-primary">
+                        <input id="limitRevisionsByAge" class="styled" type="checkbox" data-bind="checked: limitRevisionsByAge">
+                        <label for="limitRevisionsByAge">
+                            Limit # of revisions by age
+                        </label>
+                    </div>
+                    <div id="limitRevisionsParametersByAge" class="toggle-margin collapse" data-bind="collapse: limitRevisionsByAge, validationElement: minimumRevisionAgeToKeep">
+                        <small>Minimum retention time</small>
+                        <input type="text" class="form-control" data-bind="durationPicker: minimumRevisionAgeToKeep, durationPickerOptions: { showDays: true, showSeconds: true }" />
+                    </div>
+                    <div class="bg-info padding padding-sm small flex-horizontal margin-top" data-bind="visible: humaneRetentionDescription">
+                        <div><i class="icon-info"></i></div>
+                        <div data-bind="html: humaneRetentionDescription"></div>
+                    </div>
+                    <div class="text-right margin-top">
+                        <button class="btn btn-success" data-bind="click: $root.applyChanges"><i class="icon-check"></i><span>OK</span></button>
+                        <button class="btn btn-default" data-bind="click: $root.exitEditMode"><i class="icon-cancel"></i><span>Cancel</span></button>
                     </div>
                 </div>
-                <div class="toggle toggle-primary">
-                    <input id="purge" class="styled" type="checkbox" data-bind="checked: purgeOnDelete">
-                    <label for="purge">
-                        Purge on delete
-                    </label>
-                </div>
-                <div class="toggle toggle-primary">
-                    <input id="limitRevisions" class="styled" type="checkbox" data-bind="checked: limitRevisions">
-                    <label for="limitRevisions">
-                        Limit # of revisions
-                    </label>
-                </div>
-                <div class="toggle-margin" data-bind="collapse: limitRevisions, validationElement: minimumRevisionsToKeep">
-                    <small>Minimum revisions to keep</small>
-                    <input type="number" min="0" class="form-control" placeholder="0" data-bind="numericInput: minimumRevisionsToKeep" />
-                </div>
-                <div class="toggle toggle-primary">
-                    <input id="limitRevisionsByAge" class="styled" type="checkbox" data-bind="checked: limitRevisionsByAge">
-                    <label for="limitRevisionsByAge">
-                        Limit # of revisions by age
-                    </label>
-                </div>
-                <div id="limitRevisionsParametersByAge" class="toggle-margin collapse" data-bind="collapse: limitRevisionsByAge, validationElement: minimumRevisionAgeToKeep">
-                    <small>Minimum retention time</small>
-                    <input type="text" class="form-control" data-bind="durationPicker: minimumRevisionAgeToKeep, durationPickerOptions: { showDays: true, showSeconds: true }" />
-                </div>
-                <div class="bg-info padding padding-sm small flex-horizontal margin-top" data-bind="visible: humaneRetentionDescription">
-                    <div><i class="icon-info"></i></div>
-                    <div data-bind="html: humaneRetentionDescription"></div>
-                </div>
-                <div class="text-right margin-top">
-                    <button class="btn btn-success" data-bind="click: $root.applyChanges"><i class="icon-check"></i><span>OK</span></button>
-                    <button class="btn btn-default" data-bind="click: $root.exitEditMode"><i class="icon-cancel"></i><span>Cancel</span></button>
-                </div>
             </div>
         </div>
+        
     </div>
 </form>
 

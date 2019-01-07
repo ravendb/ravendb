@@ -5,6 +5,7 @@ using System.Linq;
 using System.Runtime.CompilerServices;
 using System.Threading.Tasks;
 using Raven.Client;
+using Raven.Client.Documents.Linq;
 using Raven.Client.Documents.Operations;
 using Raven.Client.Documents.Operations.Revisions;
 using Raven.Client.Exceptions.Documents;
@@ -886,7 +887,7 @@ namespace Raven.Server.Documents.Revisions
                     var etag = TableValueToEtag((int)RevisionsTable.Etag, ref tvr.Result.Reader);
                     if (etag > parameters.EtagBarrier)
                     {
-                        progressResult.Progress.Warn(id, "This document wouldn't be reverted, because it changed after the revert progress started.");
+                        progressResult.Warn(id, "This document wouldn't be reverted, because it changed after the revert progress started.");
                         return null;
                     }
 
@@ -935,7 +936,7 @@ namespace Raven.Server.Documents.Revisions
                     if (prev.Flags.Contain(DocumentFlags.Conflicted) && result.Flags.Contain(DocumentFlags.Conflicted))
                     {
                         // found two successive conflicted revisions, which means we were in a conflicted state.
-                        progressResult.Progress.Warn(id, $"Skip revert, since the document was conflicted during '{parameters.Before}'.");
+                        progressResult.Warn(id, $"Skip revert, since the document was conflicted during '{parameters.Before}'.");
                         return null;
                     }
                 }
@@ -945,7 +946,7 @@ namespace Raven.Server.Documents.Revisions
 
                 if (result == null)
                 {
-                    progressResult.Progress.Warn(id, $"The oldest revision is after the '{parameters.Before}'.");
+                    progressResult.Warn(id, $"The oldest revision is after the '{parameters.Before}'.");
                 }
 
                 return result;
@@ -976,6 +977,9 @@ namespace Raven.Server.Documents.Revisions
             };
             parameters.LastScannedEtag = parameters.EtagBarrier;
 
+            // send initial progress
+            onProgressAction?.Invoke(result);
+            
             var hasMore = true;
             while (hasMore)
             {
@@ -983,8 +987,8 @@ namespace Raven.Server.Documents.Revisions
                 {
                     hasMore = PrepareRevertedRevisions(writeCtx, parameters, result, list);
                     await WriteRevertedRevisions(list);
-                    onProgressAction?.Invoke(result.Progress);
-                    result.Progress.Warnings.Clear();
+                    onProgressAction?.Invoke(result);
+                    result.Warnings.Clear();
                 }
             }
 
@@ -1010,7 +1014,7 @@ namespace Raven.Server.Documents.Revisions
                 foreach (var tvr in revisions.SeekBackwardFrom(RevisionsSchema.FixedSizeIndexes[AllRevisionsEtagsSlice],
                     parameters.LastScannedEtag))
                 {
-                    result.Progress.ScannedRevisions++;
+                    result.ScannedRevisions++;
 
                     var id = TableValueToString(readCtx, (int)RevisionsTable.LowerId, ref tvr.Reader);
                     var etag = TableValueToEtag((int)RevisionsTable.Etag, ref tvr.Reader);
@@ -1019,17 +1023,17 @@ namespace Raven.Server.Documents.Revisions
                     if (parameters.ScannedIds.Add(id) == false)
                         continue;
 
-                    result.Progress.ScannedDocuments++;
+                    result.ScannedDocuments++;
 
                     if (etag > parameters.EtagBarrier)
                     {
-                        result.Progress.Warn(id, "This document wouldn't be reverted, because it changed after the revert progress started.");
+                        result.Warn(id, "This document wouldn't be reverted, because it changed after the revert progress started.");
                         continue;
                     }
 
                     if (_documentsStorage.ConflictsStorage.HasConflictsFor(readCtx, id))
                     {
-                        result.Progress.Warn(id, "The document is conflicted and wouldn't be reverted.");
+                        result.Warn(id, "The document is conflicted and wouldn't be reverted.");
                         continue;
                     } 
 
@@ -1059,7 +1063,7 @@ namespace Raven.Server.Documents.Revisions
             if (revision == null)
                 return;
          
-            result.Progress.RevertedDocuments++;
+            result.RevertedDocuments++;
 
             revision.Data = revision.Flags.Contain(DocumentFlags.DeleteRevision) ? null : revision.Data?.Clone(writeCtx);
             revision.LowerId = writeCtx.GetLazyString(revision.LowerId);
