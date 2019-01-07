@@ -8,10 +8,32 @@
         </div>
         <div class="flex-separator"></div>
         <div>
-            <a target="_blank" data-bind="attr: { href: 'https://ravendb.net/l/8H5IPX/' + $root.constructor.clientVersion() }">
+            
+            <a target="_blank" data-bind="visible: $data.constructor.deploymentEnvironment() === 'Custom', attr: { href: 'https://ravendb.net/l/8H5IPX/' + $root.constructor.clientVersion() }">
                 <div class="label label-info padding padding-sm">
                     <i class="icon-info"></i>
-                    <span>Need assistance? Click here for a detailed walk-through and setup examples.</span>
+                    <span>Need assistance? Click here for detailed walk-through and setup examples.</span>
+                </div>
+            </a>
+            
+            <a target="_blank" data-bind="visible: $data.constructor.deploymentEnvironment() === 'AwsLinux', attr: { href: 'https://ravendb.net/l/VPQ69V/' + $root.constructor.clientVersion() }">
+                <div class="label label-info padding padding-sm">
+                    <i class="icon-info"></i>
+                    <span>Need assistance? Click here for detailed instructions for AWS deployment</span>
+                </div>
+            </a>
+            
+            <a target="_blank" data-bind="visible: $data.constructor.deploymentEnvironment() === 'AwsWindows', attr: { href: 'https://ravendb.net/l/2QAB8W/' + $root.constructor.clientVersion() }">
+                <div class="label label-info padding padding-sm">
+                    <i class="icon-info"></i>
+                    <span>Need assistance? Click here for detailed instructions for AWS deployment</span>
+                </div>
+            </a>
+
+            <a target="_blank" data-bind="visible: $data.constructor.deploymentEnvironment() === 'Azure', attr: { href: 'https://ravendb.net/l/9GHB89/' + $root.constructor.clientVersion() }">
+                <div class="label label-info padding padding-sm">
+                    <i class="icon-info"></i>
+                    <span>Need assistance? Click here for detailed instructions for Azure deployment</span>
                 </div>
             </a>
         </div>

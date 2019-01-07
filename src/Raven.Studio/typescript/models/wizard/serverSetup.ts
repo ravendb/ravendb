@@ -6,6 +6,7 @@ import nodeInfo = require("models/wizard/nodeInfo");
 import continueSetup = require("models/wizard/continueSetup");
 import certificateInfo = require("models/wizard/certificateInfo");
 import ipEntry = require("models/wizard/ipEntry");
+import setupShell = require("viewmodels/wizard/setupShell");
 
 class serverSetup {
     static default = new serverSetup();
@@ -94,6 +95,14 @@ class serverSetup {
         }
         
         ipEntry.runningOnDocker = params.IsDocker;
+
+        if (params.IsAzure) {
+            setupShell.deploymentEnvironment("Azure");
+        } else if (params.IsAws) {
+            setupShell.deploymentEnvironment(params.RunningOnPosix ? "AwsLinux" : "AwsWindows");
+        } else {
+            setupShell.deploymentEnvironment("Custom");
+        }
     }
 
     private getLocalNode() {
