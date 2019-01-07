@@ -17,23 +17,26 @@
 #include "status_codes.h"
 
 int32_t
-flush_file (int32_t fd) {
+rvn_flush_file(int32_t fd)
+{
   return fsync(fd);
 }
 
 int32_t
-sync_directory_allowed (int dir_fd) {
+rvn_sync_directory_allowed(int32_t dir_fd)
+{
   struct statfs buf;
-  if (fstatfs (dir_fd, &buf) == -1)
-    return SYNC_DIR_FAILED;
+  if (fstatfs(dir_fd, &buf) == -1)
+    return FAIL;
 
-  switch (buf.f_type) {
-    case NFS_SUPER_MAGIC:
-    case CIFS_MAGIC_NUMBER:
-    case SMB_SUPER_MAGIC:
-      return SYNC_DIR_NOT_ALLOWED;
-    default:
-      return SYNC_DIR_ALLOWED;
+  switch (buf.f_type)
+  {
+  case NFS_SUPER_MAGIC:
+  case CIFS_MAGIC_NUMBER:
+  case SMB_SUPER_MAGIC:
+    return SYNC_DIR_NOT_ALLOWED;
+  default:
+    return SYNC_DIR_ALLOWED;
   }
 }
 
