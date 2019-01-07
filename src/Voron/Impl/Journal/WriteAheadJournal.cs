@@ -942,7 +942,7 @@ namespace Voron.Impl.Journal
                     if (_lastFlushed == null && _currentTotalWrittenBytes == -1)
                     {
                         throw new InvalidOperationException(
-                            $"Try to {nameof(UpdateDatabaseStateAfterSync)} without to call {nameof(GatherInformationToStartSync)} before");
+                            $"Try to {nameof(UpdateDatabaseStateAfterSync)} without calling {nameof(GatherInformationToStartSync)} before");
                     }
                 }
 
