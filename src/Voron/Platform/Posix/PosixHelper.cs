@@ -27,7 +27,7 @@ namespace Voron.Platform.Posix
             if (result == (int)Errno.ENOSPC)
             {
                 var diskSpaceResult = DiskSpaceChecker.GetDiskSpaceInfo(file);
-                throw new DiskFullException(file, size, diskSpaceResult?.TotalFreeSpace.GetValue(SizeUnit.Bytes));
+                throw new DiskFullException(file, size, diskSpaceResult?.TotalFreeSpace.GetValue(SizeUnit.Bytes), result.ToString());
             }
             if (result != 0)
                 Syscall.ThrowLastError(result, $"posix_fallocate(\"{file}\", {size})");
