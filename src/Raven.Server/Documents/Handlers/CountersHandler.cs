@@ -252,7 +252,6 @@ namespace Raven.Server.Documents.Handlers
 
             private Dictionary<string, Dictionary<string, List<(string ChangeVector, long Value)>>> _legacyDictionary;
 
-
             public SmugglerCounterBatchCommand(DocumentDatabase database)
             {
                 _fromSmuggler = true;
@@ -267,7 +266,7 @@ namespace Raven.Server.Documents.Handlers
                 _dictionary.Add(id, cg);
             }
 
-            public void Add(string id, CounterDetail counterDetail, out bool isNew)
+            public void AddLegacy(string id, CounterDetail counterDetail, out bool isNew)
             {
                 isNew = false;
                 _legacyDictionary = _legacyDictionary ?? new Dictionary<string, Dictionary<string, List<(string ChangeVector, long Value)>>>();
