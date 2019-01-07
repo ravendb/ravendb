@@ -796,8 +796,16 @@ namespace Raven.Server.Rachis
                 {
                     if (lockTaken == false)
                     {
+                        var dueTime = DateTime.UtcNow + TimeSpan.FromSeconds(15);
                         //We need to wait that refresh ambassador finish
-                        if (Monitor.Wait(this, TimeSpan.FromSeconds(15)) == false)
+                        while (DateTime.UtcNow < dueTime)
+                        {
+                            Monitor.TryEnter(this, ref lockTaken);
+                            if (lockTaken)
+                                break;
+                            Thread.Yield();
+                        }
+                        if (lockTaken == false)                        
                         {
                             var message = $"{ToString()}: Refresh ambassador is taking the lock for 15 sec giving up on leader dispose";
                             if (_engine.Log.IsInfoEnabled)
