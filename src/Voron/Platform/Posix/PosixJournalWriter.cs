@@ -173,7 +173,7 @@ namespace Voron.Platform.Posix
             if (_options.RunningOn32Bits)
                 return new Posix32BitsMemoryMapPager(_options, _filename);
 
-            return new PosixMemoryMapPager(_options, _filename);
+            return new RvnMemoryMapPager(_options, _filename);
         }
 
         public unsafe bool Read(byte* buffer, long numOfBytes, long offsetInFile)

@@ -21,7 +21,7 @@ namespace FastTests.Utils
             // tests on windows 64bits or linux 64bits only
             if (RunningOnPosix)
             {
-                return new PosixMemoryMapPager(options, new VoronPathSetting(Path.Combine(dataDir, filename)));
+                return new RvnMemoryMapPager(options, new VoronPathSetting(Path.Combine(dataDir, filename)));
             }
             return new WindowsMemoryMapPager(options, new VoronPathSetting(Path.Combine(dataDir, filename)));
         }
