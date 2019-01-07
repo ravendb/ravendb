@@ -181,6 +181,15 @@ namespace Raven.Server.Documents.Queries
                 idc.Fill(final.Includes);
 
                 final.TotalResults = final.Results.Count;
+
+                if(query.Limit != null || query.Offset != null)
+                {
+                    final.CappedMaxResults = Math.Min(
+                        query.Limit ?? int.MaxValue,
+                        final.TotalResults - (query.Offset ?? 0)
+                        );
+                }
+
                 final.IsStale = qr.QueryPlan.IsStale;
                 final.ResultEtag = qr.QueryPlan.ResultEtag;
                 return final;
