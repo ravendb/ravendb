@@ -4,6 +4,7 @@ using System.Linq;
 using System.Net;
 using System.Threading.Tasks;
 using Raven.Client.Exceptions.Documents.Indexes;
+using Raven.Server.Documents.Queries;
 using Raven.Server.Json;
 using Raven.Server.Routing;
 using Raven.Server.ServerWide.Context;
@@ -17,16 +18,23 @@ namespace Raven.Server.Documents.Handlers.Debugging
         [RavenAction("/databases/*/debug/queries/kill", "POST", AuthorizationStatus.ValidUser)]
         public Task KillQuery()
         {
+            ExecutingQueryInfo query;
             var name = GetQueryStringValueAndAssertIfSingleAndNotEmpty("indexName");
             var id = GetLongQueryString("id");
+            if (name == "@graph")
+            {
+                query = Database.CurrentlyRunningGraphQueries.FirstOrDefault(q => q.QueryId == id);
+            }
+            else
+            {
+                var index = Database.IndexStore.GetIndex(name);
+                if (index == null)
+                    IndexDoesNotExistException.ThrowFor(name);
 
-            var index = Database.IndexStore.GetIndex(name);
-            if (index == null)
-                IndexDoesNotExistException.ThrowFor(name);
-
-            var query = index.CurrentlyRunningQueries
-                .FirstOrDefault(q => q.QueryId == id);
-
+                query = index.CurrentlyRunningQueries
+                    .FirstOrDefault(q => q.QueryId == id);
+            }
+            
             if (query == null)
             {
                 HttpContext.Response.StatusCode = (int)HttpStatusCode.NotFound;
@@ -41,6 +49,28 @@ namespace Raven.Server.Documents.Handlers.Debugging
         [RavenAction("/databases/*/debug/queries/running", "GET", AuthorizationStatus.ValidUser, IsDebugInformationEndpoint = true)]
         public Task RunningQueries()
         {
+            void WriteQueryInfo(BlittableJsonTextWriter writer, ExecutingQueryInfo query, DocumentsOperationContext context)
+            {
+                writer.WriteStartObject();
+
+                writer.WritePropertyName((nameof(query.Duration)));
+                writer.WriteString(query.Duration.ToString());
+                writer.WriteComma();
+
+                writer.WritePropertyName((nameof(query.QueryId)));
+                writer.WriteInteger(query.QueryId);
+                writer.WriteComma();
+
+                writer.WritePropertyName((nameof(query.StartTime)));
+                writer.WriteDateTime(query.StartTime, isUtc: true);
+                writer.WriteComma();
+
+                writer.WritePropertyName((nameof(query.QueryInfo)));
+                writer.WriteIndexQuery(context, query.QueryInfo);
+
+                writer.WriteEndObject();
+            }
+
             var indexes = Database
                 .IndexStore
                 .GetIndexes()
@@ -68,28 +98,31 @@ namespace Raven.Server.Documents.Handlers.Debugging
 
                         isFirstInternal = false;
 
-                        writer.WriteStartObject();
-
-                        writer.WritePropertyName((nameof(query.Duration)));
-                        writer.WriteString(query.Duration.ToString());
-                        writer.WriteComma();
-
-                        writer.WritePropertyName((nameof(query.QueryId)));
-                        writer.WriteInteger(query.QueryId);
-                        writer.WriteComma();
-
-                        writer.WritePropertyName((nameof(query.StartTime)));
-                        writer.WriteDateTime(query.StartTime, isUtc: true);
-                        writer.WriteComma();
-
-                        writer.WritePropertyName((nameof(query.QueryInfo)));
-                        writer.WriteIndexQuery(context, query.QueryInfo);
-
-                        writer.WriteEndObject();
+                        WriteQueryInfo(writer, query, context);
                     }
 
                     writer.WriteEndArray();
                 }
+
+                if(indexes.Count != 0)
+                    writer.WriteComma();
+
+                writer.WritePropertyName("Graph queries");
+                writer.WriteStartArray();
+
+                isFirst = true;
+
+                foreach (var query in Database.CurrentlyRunningGraphQueries)
+                {
+                    if (isFirst == false)
+                        writer.WriteComma();
+
+                    isFirst = false;
+
+                    WriteQueryInfo(writer, query, context);
+                }
+
+                writer.WriteEndArray();
 
                 writer.WriteEndObject();
             }

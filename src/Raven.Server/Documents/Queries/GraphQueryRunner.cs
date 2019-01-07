@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq;
+using System.Threading;
 using System.Threading.Tasks;
 using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.Primitives;
@@ -115,11 +116,24 @@ namespace Raven.Server.Documents.Queries
             throw new NotImplementedException();
         }
 
+        private GraphQueryDoneRunning MarkQueryAsRunning(IIndexQuery query, OperationCancelToken token)
+        {
+            var queryStartTime = DateTime.UtcNow;
+            var queryId = Database.GetNextGraphQueryId();
+
+
+            var executingQueryInfo = new ExecutingQueryInfo(queryStartTime, query, queryId, token);
+            Database.AddToCurrentlyRunningGraphQueries(executingQueryInfo);
+
+            return new GraphQueryDoneRunning(this, executingQueryInfo);
+        }
+
         private async Task<TResult> ExecuteQuery<TResult>(TResult final,IndexQueryServerSide query, DocumentsOperationContext documentsContext, long? existingResultEtag, OperationCancelToken token) where TResult : QueryResultServerSide<Document>
         {
             if (Database.ServerStore.Configuration.Core.FeaturesAvailability == FeaturesAvailability.Stable)
                 FeaturesAvailabilityException.Throw("Graph Queries");
 
+            using(MarkQueryAsRunning(query, token))
             using (var timingScope = new QueryTimingsScope())
             {
                 var qr = await GetQueryResults(query, documentsContext, existingResultEtag, token);
