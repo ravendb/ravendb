@@ -27,13 +27,7 @@ namespace Sparrow.Json
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public int GetHashCode(LazyStringValue obj)
         {
-            unsafe
-            {
-                //PERF: JIT will remove the corresponding line based on the target architecture using dead code removal.                                 
-                return IntPtr.Size == 4
-                    ? (int)Hashing.XXHash32.CalculateInline(obj.Buffer, obj.Size)
-                    : (int)Hashing.XXHash64.CalculateInline(obj.Buffer, (ulong)obj.Size);
-            }
+            return obj.GetHashCode();
         }
     }
 
@@ -286,15 +280,22 @@ namespace Sparrow.Json
             return false;
         }
 
+        private int? _hashCode;
+
         public override int GetHashCode()
         {
 #if DEBUG
             if (IsDisposed)
                 ThrowAlreadyDisposed();
 #endif
-            return IntPtr.Size == 4 ? 
-                (int)Hashing.XXHash32.CalculateInline(Buffer, Size) : 
-                (int)Hashing.XXHash64.CalculateInline(Buffer, (ulong)Size);
+            if (_hashCode.HasValue)
+                return _hashCode.Value;
+
+            _hashCode = IntPtr.Size == 4
+                ? (int)Hashing.XXHash32.CalculateInline(Buffer, Size)
+                : (int)Hashing.XXHash64.CalculateInline(Buffer, (ulong)Size);
+
+            return _hashCode.Value;
         }
 
         public override string ToString()
@@ -997,6 +998,7 @@ namespace Sparrow.Json
             EscapePositions = null;
             IsDisposed = false;
             AllocatedMemoryData = null;
+            _hashCode = new int?();
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]

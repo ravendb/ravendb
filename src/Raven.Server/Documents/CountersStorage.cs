@@ -42,7 +42,7 @@ namespace Raven.Server.Documents
 
         private long _countersCount;
 
-        private readonly List<ByteStringContext<ByteStringMemoryCache>.InternalScope> _scopes = new List<ByteStringContext<ByteStringMemoryCache>.InternalScope>();
+        private readonly List<ByteStringContext<ByteStringMemoryCache>.InternalScope> _counterModificationMemoryScopes = new List<ByteStringContext<ByteStringMemoryCache>.InternalScope>();
 
         private static readonly TableSchema CountersSchema = new TableSchema
         {
@@ -230,12 +230,12 @@ namespace Raven.Server.Documents
             var collectionName = _documentsStorage.ExtractCollectionName(context, collection);
             var table = GetCountersTable(context.Transaction.InnerTransaction, collectionName);
 
-            using (DocumentIdWorker.GetLowerIdSliceAndStorageKey(context, documentId, out Slice lowerId, out _))
+            using (DocumentIdWorker.GetLowerIdSliceAndStorageKey(context, documentId, out Slice docLowerId, out _))
             {
                 BlittableJsonReaderObject data = null;
                 exists = false;
                 var value = delta;
-                if (table.ReadByKey(lowerId, out var existing))
+                if (table.ReadByKey(docLowerId, out var existing))
                 {
                     data = new BlittableJsonReaderObject(existing.Read((int)CountersTable.Data, out int oldSize), oldSize, context);
                 }
@@ -281,7 +281,7 @@ namespace Raven.Server.Documents
                 using (DocumentIdWorker.GetStringPreserveCase(context, collectionName.Name, out Slice collectionSlice))
                 using (table.Allocate(out TableValueBuilder tvb))
                 {
-                    tvb.Add(lowerId);
+                    tvb.Add(docLowerId);
                     tvb.Add(Bits.SwapBytes(etag));
                     tvb.Add(cv);
                     tvb.Add(data.BasePointer, data.Size);
@@ -298,7 +298,7 @@ namespace Raven.Server.Documents
                     }
                 }
 
-                UpdateMetrics(lowerId, name, result.ChangeVector, collection);
+                UpdateMetrics(docLowerId, name, result.ChangeVector, collection);
 
                 context.Transaction.AddAfterCommitNotification(new CounterChange
                 {
@@ -464,7 +464,7 @@ namespace Raven.Server.Documents
                         data = new BlittableJsonReaderObject(existing.Read((int)CountersTable.Data, out int oldSize), oldSize, context);
                         data = data.Clone(context);
                         data.TryGet(DbIds, out BlittableJsonReaderArray dbIds);
-                        _scopes.Clear();
+                        _counterModificationMemoryScopes.Clear();
 
                         var dict = DbIdToIndex(dbIds);
 
@@ -510,7 +510,7 @@ namespace Raven.Server.Documents
                         if (data.Modifications != null)
                         {
                             data = context.ReadObject(data, null, BlittableJsonDocumentBuilder.UsageMode.ToDisk);
-                            foreach (var s in _scopes)
+                            foreach (var s in _counterModificationMemoryScopes)
                             {
                                 s.Dispose();
                             }
@@ -550,8 +550,13 @@ namespace Raven.Server.Documents
 
         private static Dictionary<LazyStringValue, int> DbIdToIndex(BlittableJsonReaderArray dbIds)
         {
-            var count = 0;
-            return new Dictionary<LazyStringValue, int>(dbIds.Items.ToDictionary(x => (LazyStringValue)x, x => count++));
+            var dictionary = new Dictionary<LazyStringValue, int>(dbIds.Length);
+            for (var i = 0; i < dbIds.Length; i++)
+            {
+                dictionary[(LazyStringValue)dbIds[i]] = i;
+            }
+
+            return dictionary;
         }
 
         private long PutNewCounter(DocumentsOperationContext context, BlittableJsonReaderObject data, string documentId, string counterName, 
@@ -569,7 +574,7 @@ namespace Raven.Server.Documents
             var maxDbIdIndex = FindMaxDbIdIndex(sourceCount, dict, localDbIds, sourceDbIds);
             var sourceValues = (CounterValues*)counterValues.Ptr;
 
-            _scopes.Add(context.Allocator.Allocate((maxDbIdIndex + 1) * SizeOfCounterValues, out var newVal));
+            _counterModificationMemoryScopes.Add(context.Allocator.Allocate((maxDbIdIndex + 1) * SizeOfCounterValues, out var newVal));
 
             Memory.Set(newVal.Ptr, 0, (maxDbIdIndex + 1) * SizeOfCounterValues);
 
@@ -604,8 +609,8 @@ namespace Raven.Server.Documents
         {
             long value = 0;
             modified = false;
-            var existingCount = existingCounter.Length / SizeOfCounterValues;
             var sorted = SortValuesByDbIdIndex(dict, localDbIds, sourceDbIds, source.Length / SizeOfCounterValues);
+            var existingCount = existingCounter.Length / SizeOfCounterValues;
 
             for (var index = sorted.Length - 1; index >= 0; index--)
             {
@@ -620,7 +625,7 @@ namespace Raven.Server.Documents
 
                 if (localDbIdIndex < existingCount)
                 {
-                    var localValuePtr = (CounterValues*)existingCounter.Ptr  + localDbIdIndex;
+                    var localValuePtr = (CounterValues*)existingCounter.Ptr + localDbIdIndex;
                     if (localValuePtr->Etag >= sourceValue.Etag ||
                         sourceDbId.Equals(context.Environment.Base64Id))
                     {
@@ -639,7 +644,9 @@ namespace Raven.Server.Documents
                 modified = true;
                 value += sourceValue.Value;
                 var scope = AddPartialValueToExistingCounter(context, data, counterName, existingCounter, localDbIdIndex, sourceValue.Value, sourceValue.Etag);
-                _scopes.Add(scope);
+                _counterModificationMemoryScopes.Add(scope);
+
+                existingCount = existingCounter.Length / SizeOfCounterValues;
             }
 
             return value;
@@ -651,7 +658,7 @@ namespace Raven.Server.Documents
             var scope = context.Allocator.Allocate((dbIdIndex + 1) * SizeOfCounterValues, out var newVal);
 
             Memory.Copy(newVal.Ptr, existingCounter.Ptr, existingCounter.Length);
-            var empties = dbIdIndex - existingCounter.Length / SizeOfCounterValues - 1;
+            var empties = dbIdIndex - existingCounter.Length / SizeOfCounterValues;
             if (empties > 0)
             {
                 Memory.Set(newVal.Ptr + existingCounter.Length, 0, empties * SizeOfCounterValues);
@@ -666,6 +673,9 @@ namespace Raven.Server.Documents
             {
                 Length = newVal.Length, Ptr = newVal.Ptr
             };
+
+            existingCounter.Ptr = newVal.Ptr;
+            existingCounter.Length = newVal.Length;
 
             return scope;
 
