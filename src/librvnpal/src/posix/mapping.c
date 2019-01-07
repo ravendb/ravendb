@@ -1,5 +1,11 @@
 #if defined(__unix__) || defined(__APPLE__)
 
+#ifdef __APPLE__
+#define MMAP mmap
+#else
+#define MMAP mmap64
+#endif
+
 #define _GNU_SOURCE
 #include <unistd.h>
 #include <stdlib.h>
@@ -76,7 +82,7 @@ rvn_create_and_mmap64_file(const char *path,
     else
         mmap_flags |= MAP_SHARED;
 
-    void *address = mmap64(NULL, sz, PROT_READ | PROT_WRITE, mmap_flags, fd, 0L);
+    void *address = MMAP(NULL, sz, PROT_READ | PROT_WRITE, mmap_flags, fd, 0L);
 
     if (address == MAP_FAILED)
     {
@@ -136,7 +142,7 @@ rvn_allocate_more_space(int64_t new_length, int64_t total_allocation_size, const
     else
         mmap_flags |= MAP_SHARED;
 
-    void *address = mmap64(NULL, total_allocation_size + allocation_size, PROT_READ | PROT_WRITE, mmap_flags, fd, 0L);
+    void *address = MMAP(NULL, total_allocation_size + allocation_size, PROT_READ | PROT_WRITE, mmap_flags, fd, 0L);
     if (address == MAP_FAILED)
     {
         rc = FAIL_MMAP64;
