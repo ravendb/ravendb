@@ -119,7 +119,7 @@ for SRCPATH in "${FILTERS[@]}"; do
 	for SRCFILE in $(find ${SRCPATH} | grep "^${SRCPATH}" | grep "\.c$"); do
 		SRCFILE_O=$(echo ${SRCFILE} | sed -e "s|\.c$|\.o|g")
 		if [ ${CLEAN} -eq 0 ]; then
-			CMD="${C_COMPILER} -Iinc -O2 -Wall -c -o ${SRCFILE_O} ${SRCFILE}"
+			CMD="${C_COMPILER} -fPIC -Iinc -O2 -Wall -c -o ${SRCFILE_O} ${SRCFILE}"
 		else
 			if [ -f ${LINKFILE} ]; then 
 				CMD="rm ${SRCFILE_O}"
