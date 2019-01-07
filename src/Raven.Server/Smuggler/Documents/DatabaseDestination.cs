@@ -949,7 +949,7 @@ namespace Raven.Server.Smuggler.Documents
 
             private void AddToBatch(CounterDetail counter)
             {
-                _cmd.Add(counter.DocumentId, counter, out var isNew);
+                _cmd.AddLegacy(counter.DocumentId, counter, out var isNew);
 
                 if (isNew)
                 {
