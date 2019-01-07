@@ -541,29 +541,30 @@ loadToOrders(orderData);");
                     await session.StoreAsync(new Order());
                     await session.SaveChangesAsync();
                 }
-                string str = string.Format("{0}/admin/logs/watch", store.Urls.First().Replace("http", "ws"));
-                StringBuilder sb = new StringBuilder();
+
+                var str = string.Format("{0}/admin/logs/watch", store.Urls.First().Replace("http", "ws"));
+                var sb = new StringBuilder();
 
                 var mre = new AsyncManualResetEvent();
 
                 await client.ConnectAsync(new Uri(str), CancellationToken.None);
-                var task = Task.Run((Func<Task>)(async () =>
-               {
-                   ArraySegment<byte> buffer = new ArraySegment<byte>(new byte[1024]);
-                   while (client.State == WebSocketState.Open)
-                   {
-                       var value = await ReadFromWebSocket(buffer, client);
-                       lock (sb)
-                       {
-                           mre.Set();
-                           sb.AppendLine(value);
-                       }
-                       const string expectedValue = "skipping document: orders/1";
-                       if (value.Contains(expectedValue) || sb.ToString().Contains(expectedValue))
-                           return;
+                var task = Task.Run(async () =>
+                {
+                    ArraySegment<byte> buffer = new ArraySegment<byte>(new byte[1024]);
+                    while (client.State == WebSocketState.Open)
+                    {
+                        var value = await ReadFromWebSocket(buffer, client);
+                        lock (sb)
+                        {
+                            mre.Set();
+                            sb.AppendLine(value);
+                        }
+                        const string expectedValue = "skipping document: orders/";
+                        if (value.Contains(expectedValue) || sb.ToString().Contains(expectedValue))
+                            return;
 
-                   }
-               }));
+                    }
+                });
                 await mre.WaitAsync(TimeSpan.FromSeconds(60));
                 SetupSqlEtl(store, @"output ('Tralala'); 
 
@@ -571,10 +572,18 @@ undefined();
 
 var nameArr = this.StepName.split('.'); loadToOrders({});");
 
+                using (var session = store.OpenAsyncSession())
+                {
+                    for (var i = 0; i < 100; i++)
+                        await session.StoreAsync(new Order());
+
+                    await session.SaveChangesAsync();
+                }
+
                 var condition = await task.WaitWithTimeout(TimeSpan.FromSeconds(60));
                 if (condition == false)
                 {
-                    var msg = "Could not process SQL Replication script for OrdersAndLines, skipping document: orders/1";
+                    var msg = "Could not process SQL Replication script for OrdersAndLines, skipping document: orders/";
                     var tempFileName = Path.GetTempFileName();
                     lock (sb)
                     {
