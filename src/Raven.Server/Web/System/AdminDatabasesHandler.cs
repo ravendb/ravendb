@@ -1103,7 +1103,7 @@ namespace Raven.Server.Web.System
                 {
                     processDone.Set();
                 }
-                catch (OperationCanceledException oce)
+                catch (OperationCanceledException)
                 {
                     // This is an expected exception during manually started operation cancellation
                 }

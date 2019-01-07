@@ -160,7 +160,7 @@ namespace Voron
         private void SyncEnvironment(EnvSyncReq req)
         {
             var storageEnvironment = req.Env;
-            if (storageEnvironment  == null || storageEnvironment.Disposed)
+            if (storageEnvironment  == null || storageEnvironment.Disposed || storageEnvironment.Options.SyncDisabled)
                 return;
 
             try

@@ -17,6 +17,7 @@ namespace SlowTests.Voron.Storage
         protected override void Configure(StorageEnvironmentOptions options)
         {
             options.ManualFlushing = true;
+            options.SyncDisabled = true;
         }
 
         [Fact]
@@ -54,13 +55,15 @@ namespace SlowTests.Voron.Storage
                 }
             }
 
+            var syncResult = false;
+
             void Sync()
             {
                 try
                 {
                     using (var operation = new SyncOperation(Env.Journal.Applicator))
                     {
-                        operation.SyncDataFile();
+                        syncResult = operation.SyncDataFile();
                     }
                 }
                 finally
@@ -91,6 +94,7 @@ namespace SlowTests.Voron.Storage
                 Task.Run((Action)Flush);
 
                 syncMayFinishedEvent.WaitOne(TimeSpan.FromSeconds(10));
+                Assert.True(syncResult);
                 var totalWrittenButUnsyncedBytes = Env.Journal.Applicator.TotalWrittenButUnsyncedBytes;
                 Assert.Equal(0, totalWrittenButUnsyncedBytes);
             }
