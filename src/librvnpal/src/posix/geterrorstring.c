@@ -9,7 +9,12 @@
 #include "rvn.h"
 #include "status_codes.h"
 
-int32_t rvn_get_error_string(int32_t error, char* buf, int32_t buf_size, int32_t* special_errno_flags) {
+int32_t
+rvn_get_error_string(int32_t error, 
+					 char* buf, 
+					 int32_t buf_size, 
+					 int32_t* special_errno_flags) 
+{
 	char* tmp_buf = NULL;
 	switch (error) {
 		case ENOMEM:
@@ -18,8 +23,11 @@ int32_t rvn_get_error_string(int32_t error, char* buf, int32_t buf_size, int32_t
 		case ENOENT:
 			*special_errno_flags = ERRNO_SPECIAL_CODES_ENOENT;
 			break;
+		case ENOSPC:
+			*special_errno_flags = ERRNO_SPECIAL_CODES_ENOSPC;
+			break;
 		default:
-			*special_errno_flags = ERRNO_SPECIAL_CODES_NONE;
+			*special_errno_flags = ERRNO_SPECIAL_CODES_NO_ERROR;
 			break;
 	}
 	
@@ -45,7 +53,7 @@ int32_t rvn_get_error_string(int32_t error, char* buf, int32_t buf_size, int32_t
 error_cleanup:
 	if(tmp_buf != NULL)
 		free(tmp_buf);
-	return -1;
+	return FAIL;
 }
 
 #endif
