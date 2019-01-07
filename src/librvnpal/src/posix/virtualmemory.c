@@ -53,10 +53,12 @@ rvn_protect_range(void *start_address, int64_t size, int32_t flags, int32_t *det
         mprotect_flags |= PROT_WRITE;
     if (flags & MPROTECT_OPTIONS_PROT_EXEC)
         mprotect_flags |= PROT_EXEC;
+#ifndef __APPLE__        
     if (flags & MPROTECT_OPTIONS_PROT_GROWSUP)
         mprotect_flags |= PROT_GROWSUP;
     if (flags & MPROTECT_OPTIONS_PROT_GROWSDOWN)
         mprotect_flags |= PROT_GROWSDOWN;
+#endif
 
     int32_t rc = mprotect(start_address, size, mprotect_flags);
 
