@@ -4,6 +4,7 @@ using System.Diagnostics;
 using System.IO;
 using System.IO.Compression;
 using System.Linq;
+using System.Runtime.CompilerServices;
 using System.Threading;
 using System.Threading.Tasks;
 using Raven.Client;
@@ -392,7 +393,15 @@ namespace Raven.Server.Documents
         private long? _nextClusterCommand;
         private long _lastCompletedClusterTransaction;
         public long LastCompletedClusterTransaction => _lastCompletedClusterTransaction;
+        private int _numberOfGraphQueries;
+
+        public int GetNextGraphQueryId()
+        {
+            return Interlocked.Increment(ref _numberOfGraphQueries);
+        }
+
         private int _clusterTransactionDelayOnFailure = 1000;
+        public readonly ConcurrentSet<ExecutingQueryInfo> CurrentlyRunningGraphQueries = new ConcurrentSet<ExecutingQueryInfo>();
 
         private async Task ExecuteClusterTransactionTask()
         {
@@ -1435,6 +1444,18 @@ namespace Raven.Server.Documents
             }
 
             return hash;
+        }
+
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public void AddToCurrentlyRunningGraphQueries(ExecutingQueryInfo executingQueryInfo)
+        {
+            CurrentlyRunningGraphQueries.Add(executingQueryInfo);
+        }
+
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public void RemoveFromCurrentlyRunningGraphQueries(ExecutingQueryInfo executingQueryInfo)
+        {
+            CurrentlyRunningGraphQueries.TryRemove(executingQueryInfo);
         }
     }
 
