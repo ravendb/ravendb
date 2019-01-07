@@ -13,11 +13,14 @@ import protractedCommandsDetector = require("common/notifications/protractedComm
 import buildInfo = require("models/resources/buildInfo");
 import constants = require("common/constants/constants");
 
+type deploymentEnvironment = "AwsLinux" | "AwsWindows" | "Azure" | "Custom";
+
 class setupShell extends viewModelBase {
 
     private router = router;
     studioLoadingFakeRequest: requestExecution;
     clientBuildVersion = ko.observable<clientBuildVersionDto>();
+    static deploymentEnvironment = ko.observable<deploymentEnvironment>("Custom");
     static buildInfo = buildInfo;
 
     showSplash = viewModelBase.showSplash;
