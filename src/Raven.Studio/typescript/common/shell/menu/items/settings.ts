@@ -1,4 +1,4 @@
-﻿import intermediateMenuItem = require("common/shell/menu/intermediateMenuItem");
+﻿﻿import intermediateMenuItem = require("common/shell/menu/intermediateMenuItem");
 import leafMenuItem = require("common/shell/menu/leafMenuItem");
 import separatorMenuItem = require("common/shell/menu/separatorMenuItem");
 import accessManager = require("common/shell/accessManager");
@@ -59,6 +59,15 @@ function getSettingsMenuItem(appUrls: computedAppUrls) {
             nav: true,
             css: 'icon-revisions',
             dynamicHash: appUrls.revisions
+        }),
+        new leafMenuItem({
+            route: 'databases/settings/revertRevisions',
+            moduleId: 'viewmodels/database/settings/revertRevisions',
+            title: 'Revert Revisions',
+            nav: false,
+            css: 'icon-revert-revisions',
+            dynamicHash: appUrls.revertRevisions,
+            itemRouteToHighlight: "databases/settings/revisions"
         }),
         new leafMenuItem({
             route: 'databases/settings/expiration',

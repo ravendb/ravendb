@@ -32,6 +32,7 @@ using Raven.Server.Smuggler.Documents.Data;
 using Sparrow.Json;
 using FacetSetup = Raven.Client.Documents.Queries.Facets.FacetSetup;
 using Raven.Server.Documents.Replication;
+using Raven.Server.Documents.Revisions;
 using Raven.Server.NotificationCenter.Notifications.Server;
 using Raven.Server.ServerWide.Commands;
 using Raven.Server.Smuggler.Migration;
@@ -101,6 +102,8 @@ namespace Raven.Server.Json
         public static readonly Func<BlittableJsonReaderObject, LicenseLimits> LicenseLimits = GenerateJsonDeserializationRoutine<LicenseLimits>();
 
         public static readonly Func<BlittableJsonReaderObject, LeasedLicense> LeasedLicense = GenerateJsonDeserializationRoutine<LeasedLicense>();
+        
+        public static readonly Func<BlittableJsonReaderObject, RevertRevisionsRequest> RevertRevisions = GenerateJsonDeserializationRoutine<RevertRevisionsRequest>();
 
         public static readonly Func<BlittableJsonReaderObject, LicenseSupportInfo> LicenseSupportInfo = GenerateJsonDeserializationRoutine<LicenseSupportInfo>();
 

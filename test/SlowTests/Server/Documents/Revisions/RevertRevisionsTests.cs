@@ -42,9 +42,9 @@ namespace SlowTests.Server.Documents.Revisions
                 var db = await GetDocumentDatabaseInstanceFor(store);
                 var result = (RevertResult) await db.DocumentsStorage.RevisionsStorage.RevertRevisions(last, TimeSpan.FromMinutes(60));
 
-                Assert.Equal(2, result.Progress.ScannedRevisions);
-                Assert.Equal(1, result.Progress.ScannedDocuments);
-                Assert.Equal(1, result.Progress.RevertedDocuments);
+                Assert.Equal(2, result.ScannedRevisions);
+                Assert.Equal(1, result.ScannedDocuments);
+                Assert.Equal(1, result.RevertedDocuments);
 
                 using (var session = store.OpenAsyncSession())
                 {
@@ -82,9 +82,9 @@ namespace SlowTests.Server.Documents.Revisions
                 var db = await GetDocumentDatabaseInstanceFor(store);
                 var result = (RevertResult) await db.DocumentsStorage.RevisionsStorage.RevertRevisions(last, TimeSpan.FromMinutes(60));
 
-                Assert.Equal(2, result.Progress.ScannedRevisions);
-                Assert.Equal(1, result.Progress.ScannedDocuments);
-                Assert.Equal(0, result.Progress.RevertedDocuments);
+                Assert.Equal(2, result.ScannedRevisions);
+                Assert.Equal(1, result.ScannedDocuments);
+                Assert.Equal(0, result.RevertedDocuments);
 
                 using (var session = store.OpenAsyncSession())
                 {
@@ -114,9 +114,9 @@ namespace SlowTests.Server.Documents.Revisions
                 var db = await GetDocumentDatabaseInstanceFor(store);
                 var result = (RevertResult)await db.DocumentsStorage.RevisionsStorage.RevertRevisions(last.Add(TimeSpan.FromMinutes(1)), TimeSpan.FromMinutes(60));
 
-                Assert.Equal(1, result.Progress.ScannedRevisions);
-                Assert.Equal(1, result.Progress.ScannedDocuments);
-                Assert.Equal(0, result.Progress.RevertedDocuments);
+                Assert.Equal(1, result.ScannedRevisions);
+                Assert.Equal(1, result.ScannedDocuments);
+                Assert.Equal(0, result.RevertedDocuments);
 
                 using (var session = store.OpenAsyncSession())
                 {
@@ -148,9 +148,9 @@ namespace SlowTests.Server.Documents.Revisions
                 var db = await GetDocumentDatabaseInstanceFor(store);
                 var result = (RevertResult)await db.DocumentsStorage.RevisionsStorage.RevertRevisions(last, TimeSpan.FromMinutes(60));
 
-                Assert.Equal(2, result.Progress.ScannedRevisions);
-                Assert.Equal(1, result.Progress.ScannedDocuments);
-                Assert.Equal(1, result.Progress.RevertedDocuments);
+                Assert.Equal(2, result.ScannedRevisions);
+                Assert.Equal(1, result.ScannedDocuments);
+                Assert.Equal(1, result.RevertedDocuments);
 
                 using (var session = store.OpenAsyncSession())
                 {
@@ -189,9 +189,9 @@ namespace SlowTests.Server.Documents.Revisions
                 var db = await GetDocumentDatabaseInstanceFor(store);
                 var result = (RevertResult)await db.DocumentsStorage.RevisionsStorage.RevertRevisions(last, TimeSpan.FromMinutes(60));
 
-                Assert.Equal(3, result.Progress.ScannedRevisions);
-                Assert.Equal(1, result.Progress.ScannedDocuments);
-                Assert.Equal(1, result.Progress.RevertedDocuments);
+                Assert.Equal(3, result.ScannedRevisions);
+                Assert.Equal(1, result.ScannedDocuments);
+                Assert.Equal(1, result.RevertedDocuments);
 
                 using (var session = store.OpenAsyncSession())
                 {
@@ -273,9 +273,9 @@ namespace SlowTests.Server.Documents.Revisions
                 var db = await GetDocumentDatabaseInstanceFor(store1);
                 var result = (RevertResult)await db.DocumentsStorage.RevisionsStorage.RevertRevisions(last.Add(TimeSpan.FromMinutes(1)), TimeSpan.FromMinutes(60));
 
-                Assert.Equal(3, result.Progress.ScannedRevisions);
-                Assert.Equal(1, result.Progress.ScannedDocuments);
-                Assert.Equal(0, result.Progress.RevertedDocuments);
+                Assert.Equal(3, result.ScannedRevisions);
+                Assert.Equal(1, result.ScannedDocuments);
+                Assert.Equal(0, result.RevertedDocuments);
 
                 using (var session = store1.OpenAsyncSession())
                 {
@@ -332,9 +332,9 @@ namespace SlowTests.Server.Documents.Revisions
                 var db = await GetDocumentDatabaseInstanceFor(store1);
                 var result = (RevertResult)await db.DocumentsStorage.RevisionsStorage.RevertRevisions(last, TimeSpan.FromMinutes(60));
 
-                Assert.Equal(3, result.Progress.ScannedRevisions);
-                Assert.Equal(1, result.Progress.ScannedDocuments);
-                Assert.Equal(1, result.Progress.RevertedDocuments);
+                Assert.Equal(3, result.ScannedRevisions);
+                Assert.Equal(1, result.ScannedDocuments);
+                Assert.Equal(1, result.RevertedDocuments);
 
                 using (var session = store1.OpenAsyncSession())
                 {
@@ -412,9 +412,9 @@ namespace SlowTests.Server.Documents.Revisions
                 var db = await GetDocumentDatabaseInstanceFor(store1);
                 var result = (RevertResult)await db.DocumentsStorage.RevisionsStorage.RevertRevisions(last, TimeSpan.FromMinutes(60));
 
-                Assert.Equal(3, result.Progress.ScannedRevisions);
-                Assert.Equal(1, result.Progress.ScannedDocuments);
-                Assert.Equal(1, result.Progress.RevertedDocuments);
+                Assert.Equal(3, result.ScannedRevisions);
+                Assert.Equal(1, result.ScannedDocuments);
+                Assert.Equal(1, result.RevertedDocuments);
 
                 using (var session = store1.OpenAsyncSession())
                 {
@@ -489,9 +489,9 @@ namespace SlowTests.Server.Documents.Revisions
                 var db = await GetDocumentDatabaseInstanceFor(store1);
                 var result = (RevertResult)await db.DocumentsStorage.RevisionsStorage.RevertRevisions(last, TimeSpan.FromMinutes(60));
 
-                Assert.Equal(4, result.Progress.ScannedRevisions);
-                Assert.Equal(1, result.Progress.ScannedDocuments);
-                Assert.Equal(1, result.Progress.RevertedDocuments);
+                Assert.Equal(4, result.ScannedRevisions);
+                Assert.Equal(1, result.ScannedDocuments);
+                Assert.Equal(1, result.RevertedDocuments);
 
                 using (var session = store1.OpenAsyncSession())
                 {
@@ -581,9 +581,9 @@ namespace SlowTests.Server.Documents.Revisions
                 var db = await GetDocumentDatabaseInstanceFor(store1);
                 var result = (RevertResult)await db.DocumentsStorage.RevisionsStorage.RevertRevisions(last, TimeSpan.FromMinutes(60));
 
-                Assert.Equal(4, result.Progress.ScannedRevisions);
-                Assert.Equal(1, result.Progress.ScannedDocuments);
-                Assert.Equal(1, result.Progress.RevertedDocuments);
+                Assert.Equal(4, result.ScannedRevisions);
+                Assert.Equal(1, result.ScannedDocuments);
+                Assert.Equal(1, result.RevertedDocuments);
 
                 using (var session = store1.OpenAsyncSession())
                 {

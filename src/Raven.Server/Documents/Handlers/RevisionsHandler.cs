@@ -18,6 +18,7 @@ using Raven.Server.Json;
 using Raven.Server.NotificationCenter.Notifications.Details;
 using Raven.Server.Routing;
 using Raven.Server.ServerWide.Context;
+using Sparrow.Extensions;
 using Sparrow.Json;
 using Sparrow.Json.Parsing;
 
@@ -82,20 +83,26 @@ namespace Raven.Server.Documents.Handlers
             }
         }
 
-        [RavenAction("/databases/*/revisions/revert", "GET", AuthorizationStatus.ValidUser)]
-        public Task Revert()
+        [RavenAction("/databases/*/revisions/revert", "POST", AuthorizationStatus.ValidUser)]
+        public async Task Revert()
         {
-            var time = GetDateTimeQueryString("time");
-            var window = GetTimeSpanQueryString("window", required: false) ?? TimeSpan.FromHours(48);
+            RevertRevisionsRequest configuration;
+            
+            using (ServerStore.ContextPool.AllocateOperationContext(out JsonOperationContext context))
+            {
+                var json = await context.ReadForMemoryAsync(RequestBodyStream(), "revisions/revert");
+
+                configuration = JsonDeserializationServer.RevertRevisions(json);
+            }
 
             var token = CreateOperationToken();
             var operationId = ServerStore.Operations.GetNextOperationId();
 
             var t = Database.Operations.AddOperation(
                 Database,
-                $"Revert database '{Database.Name}' to {time}.",
+                $"Revert database '{Database.Name}' to {configuration.Time} UTC.",
                 Operations.Operations.OperationType.DatabaseRevert,
-                onProgress => Task.Run(async () => await Database.DocumentsStorage.RevisionsStorage.RevertRevisions(time.Value, window, onProgress), token.Token),
+                onProgress => Task.Run(async () => await Database.DocumentsStorage.RevisionsStorage.RevertRevisions(configuration.Time, TimeSpan.FromSeconds(configuration.WindowInSec), onProgress), token.Token),
                 operationId,
                 token: token);
 
@@ -104,8 +111,6 @@ namespace Raven.Server.Documents.Handlers
             {
                 writer.WriteOperationId(context, operationId);
             }
-
-            return Task.CompletedTask;
         }
 
         private void GetRevisionByChangeVector(DocumentsOperationContext context, StringValues changeVectors, bool metadataOnly)

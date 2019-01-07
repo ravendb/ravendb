@@ -42,7 +42,7 @@ namespace Raven.Server.Documents
                 throw new InvalidOperationException($"Database '{_database}' cannot be compacted because compaction is already in progress.");
 
             result.AddMessage($"Started database compaction for {_database}");
-            onProgress?.Invoke(result);
+            onProgress?.Invoke(result.Progress);
 
             _isCompactionInProgress = true;
             bool done = false;
@@ -97,7 +97,7 @@ namespace Raven.Server.Documents
                             result.Progress.GlobalProgress = progressReport.GlobalProgress;
                             result.Progress.GlobalTotal = progressReport.GlobalTotal;
                             result.AddMessage(progressReport.Message);
-                            onProgress?.Invoke(result);
+                            onProgress?.Invoke(result.Progress);
                         }, _token);
                     }
 

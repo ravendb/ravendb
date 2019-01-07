@@ -1,0 +1,55 @@
+<div class="modal-dialog" role="document">
+    <div class="modal-content" tabindex="-1">
+        <div class="modal-header">
+            <div class="flex-horizontal">
+                <div class="flex-grow">
+                    <h3 id="myModalLabel" data-bind="text: op.title, attr:{ class: 'modal-title ' + op.headerClass() }"></h3>
+                </div>
+                <div class="flex-grow text-right">
+                    <span class="text-muted">Time elapsed:</span> <span data-bind="text: op.duration"></span>
+                </div>
+                <div>
+                    <button type="button" class="close" data-bind="click: $root.close" aria-hidden="true">
+                        <i class="icon-cancel"></i>
+                    </button>
+                </div>
+            </div>
+        </div>
+        <div class="modal-body">
+            
+            <p data-bind="html: op.message"></p>
+            
+            <div class="modal-details" data-bind="with: progress">
+                <div class="details-item">
+                    <div class="row">
+                        <div class="col-sm-6 text-right">Scanned revisions:</div>
+                        <div class="col-sm-6 details-value" data-bind="text: ScannedRevisions.toLocaleString()"></div>
+                    </div>
+                </div>
+                <div class="details-item">
+                    <div class="row">
+                        <div class="col-sm-6 text-right">Scanned documents:</div>
+                        <div class="col-sm-6 details-value" data-bind="text: ScannedDocuments.toLocaleString()"></div>
+                    </div>
+                </div>
+                <div class="details-item">
+                    <div class="row">
+                        <div class="col-sm-6 text-right">Reverted documents:</div>
+                        <div class="col-sm-6 details-value" data-bind="text: RevertedDocuments.toLocaleString()"></div>
+                    </div>
+                </div>
+            </div>
+            <div data-bind="if: operationFailed">
+                <h3 class="text-danger text-center">Operation failed!</h3>
+                <pre class="margin-top error-messages"><code data-bind="foreach: errorMessages"><span data-bind="text: $data"></span>
+</code></pre>
+            </div>
+        </div>
+        <div class="modal-footer">
+            <button type="button" class="btn btn-default" data-bind="click: $root.close">Close</button>
+            <button type="button" class="btn btn-danger" data-bind="click: killOperation, visible: killable">
+                <i class="icon-cancel"></i> <span>Abort</span>
+            </button>
+        </div>
+    </div>
+</div>

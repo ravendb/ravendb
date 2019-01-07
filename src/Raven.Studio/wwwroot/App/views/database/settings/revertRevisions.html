@@ -1,0 +1,91 @@
+<div class="content-container">
+    <form class="flex-form" data-bind="submit: run">
+        <div class="content-margin">
+            <div class="toolbar">
+                <button type="submit" class="btn btn-primary" data-bind="css: { 'btn-spinner': spinners.save }">
+                    <i class="icon-revisions"></i> <span>Revert revisions</span>
+                </button>
+            </div>
+            <div class="row flex-row">
+                <div class="col-xs-12 col-lg-7 flex-vertical">
+                    <div class="panel">
+                        <div class="panel-body">
+                            <div class="form-group">
+                                <div>
+                                    <label class="control-label">Point in time<br/>
+                                        <small class="text-muted">(local time)</small>
+                                    </label>
+                                </div>
+                                <div style="position: relative">
+                                    <input class="form-control"
+                                           data-bind="datePicker: model.date, datepickerOptions: datePickerOptions"/>
+                                </div>
+                            </div>
+                            <div class="form-group">
+                                <div>
+                                    <label class="control-label">Window</label>
+                                </div>
+                                <div class="input-group">
+                                    <input class="form-control" type="number" min="0" placeholder="Default (96)"
+                                           data-bind="numericInput: model.windowValue"/>
+
+                                    <div class="dropdown" style="display:block;">
+                                        <button type="button" class="btn set-size dropdown-toggle"
+                                                data-toggle="dropdown">
+                                            <span data-bind="text: model.windowMagnitude"></span> <span class="caret"></span>
+                                        </button>
+                                        <ul class="dropdown-menu" data-bind="foreach: $root.constructor.magnitudes">
+                                            <li><a href="#"
+                                                   data-bind="text: $data, click: _.partial($root.setMagnitude, $data)"></a>
+                                            </li>
+                                        </ul>
+                                    </div>
+                                </div>
+                            </div>
+
+                        </div>
+                    </div>
+                </div>
+                <div class="col-xs-12 col-lg-5" data-bind="visible: model.pointInTimeFormatted">
+                    <div class="bg-info padding" data-bind="with: model">
+                        <div class="flex-horizontal margin-bottom">
+                            <div class="flex-start"><i class="icon-info"></i></div>
+                            <div>
+                                
+                                When 'Revert Revision' is executed the following rules are applied: 
+                                
+                                <ul>
+                                    <li>
+                                        Documents created after <strong><em>Point in time</em></strong>:
+                                        <code data-bind="text: pointInTimeFormatted() + ' UTC'"></code>
+                                        will be moved to <strong><em>Revisions&nbsp;Bin</em></strong>.
+                                    </li>
+                                    <li>
+                                        Documents modified after <strong><em>Point in time</em></strong>:
+                                        <code data-bind="text: pointInTimeFormatted() + ' UTC'"></code>
+                                        will be reverted to latest revision between
+                                        <code data-bind="text: revertStartTime() + ' UTC'"></code> and
+                                        <code data-bind="text: pointInTimeFormatted() + ' UTC'"></code>. <br />
+
+                                        <strong>If such revision is not found, document is not changed.</strong>
+
+                                        <div class="padding">
+                                            HERE GOES IMAGE #1
+                                        </div>
+                                    </li>
+                                    
+                                    <li>
+                                        Remaining documents will not be modified.
+                                        <div class="padding">
+                                            HERE GOES IMAGE #2
+                                        </div>
+                                    </li>
+                                </ul>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </form>
+</div>
