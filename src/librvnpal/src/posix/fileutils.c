@@ -60,8 +60,11 @@ rvn_allocate_file_space(int32_t fd, int64_t size, int32_t *detailed_error_code)
     int32_t retries;
     for (retries = 0; retries < 1024; retries++)
     {
+#ifndef __APPLE__
         result = posix_fallocate64(fd, 0, size);
-
+#else
+        result = EINVAL;
+#endif
         switch (result)
         {
         case EINVAL:
