@@ -665,7 +665,6 @@ namespace Raven.Client.Http
                     {
                         sessionInfo.AsyncCommandRunning = true;
                     }
-
                     Interlocked.Increment(ref NumberOfServerRequests);
                     var timeout = command.Timeout ?? _defaultTimeout;
                     if (timeout.HasValue)
@@ -905,7 +904,6 @@ namespace Raven.Client.Http
                 {
                     disposable = ContextPool.AllocateOperationContext(out var tmpCtx);
                     var request = CreateRequest(tmpCtx, nodes[i], command, out var _);
-
                     Interlocked.Increment(ref NumberOfServerRequests);
                     tasks[i] = command.SendAsync(HttpClient, request, token).ContinueWith(x =>
                     {
@@ -1096,14 +1094,18 @@ namespace Raven.Client.Http
             return true;
         }
 
-        public async Task<ServerNode> HandleServerNotResponsive(string url, ServerNode chosenNode, int nodeIndex, Exception e)
+        public async Task<ServerNode> HandleServerNotResponsive(string url, ServerNode chosenNode, int nodeIndex, Exception e, CancellationToken token = default)
         {
             SpawnHealthChecks(chosenNode, nodeIndex);
             _nodeSelector?.OnFailedRequest(nodeIndex);
-            var (_, serverNode) = await GetPreferredNode().ConfigureAwait(false);
-            await UpdateTopologyAsync(serverNode, 0, true).ConfigureAwait(false);
-            OnFailedRequest(url, e);
-            return serverNode;
+            if (token.IsCancellationRequested == false)
+            {
+                var (_, serverNode) = await GetPreferredNode().ConfigureAwait(false);
+                await UpdateTopologyAsync(serverNode, 0, true).ConfigureAwait(false);
+                OnFailedRequest(url, e);
+                return serverNode;
+            }
+            return chosenNode;
         }
 
         private void SpawnHealthChecks(ServerNode chosenNode, int nodeIndex)

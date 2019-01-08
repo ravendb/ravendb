@@ -8,6 +8,10 @@ namespace Raven.Client.ServerWide.Commands
 {
     public class GetDatabaseTopologyCommand : RavenCommand<Topology>
     {
+        public GetDatabaseTopologyCommand()
+        {
+            CanCacheAggressively = false;
+        }
         public override HttpRequestMessage CreateRequest(JsonOperationContext ctx, ServerNode node, out string url)
         {
             url = $"{node.Url}/topology?name={node.Database}";
