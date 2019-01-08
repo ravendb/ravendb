@@ -52,6 +52,7 @@ using Raven.Server.Documents.Operations;
 using Raven.Server.Documents.Patch;
 using Raven.Server.Documents.PeriodicBackup;
 using Raven.Server.Documents.PeriodicBackup.Restore;
+using Raven.Server.Documents.Queries;
 using Raven.Server.Documents.Queries.Dynamic;
 using Raven.Server.Documents.Studio;
 using Raven.Server.Documents.Subscriptions;
@@ -429,6 +430,8 @@ namespace TypingsGenerator
             scripter.AddType(typeof(StudioTasksHandler.OfflineMigrationValidation));
             scripter.AddType(typeof(FolderPathOptions));
             scripter.AddType(typeof(DataDirectoryResult));
+
+            scripter.AddType(typeof(LiveRunningQueriesCollector.ExecutingQueryCollection));
 
             return scripter;
         }

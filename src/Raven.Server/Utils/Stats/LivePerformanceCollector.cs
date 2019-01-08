@@ -20,14 +20,12 @@ namespace Raven.Server.Utils.Stats
         private Task _task;
 
         protected readonly Logger Logger;
-        protected readonly DocumentDatabase Database;
 
-        protected LivePerformanceCollector(DocumentDatabase database)
+        protected LivePerformanceCollector(CancellationToken parentCts, string loggingSource)
         {
-            Database = database;
-            Logger = LoggingSource.Instance.GetLogger(database.Name, GetType().FullName);
+            Logger = LoggingSource.Instance.GetLogger(loggingSource, GetType().FullName);
 
-            _cts = CancellationTokenSource.CreateLinkedTokenSource(database.DatabaseShutdown);
+            _cts = CancellationTokenSource.CreateLinkedTokenSource(parentCts);
         }
 
         protected void Start()
@@ -39,29 +37,36 @@ namespace Raven.Server.Utils.Stats
 
         protected CancellationToken CancellationToken => _cts.Token;
 
+        protected virtual TimeSpan SleepTime => TimeSpan.FromSeconds(3);
+
         protected abstract Task StartCollectingStats();
 
         protected async Task RunInLoop()
         {
             while (CancellationToken.IsCancellationRequested == false)
             {
-                await TimeoutManager.WaitFor(TimeSpan.FromMilliseconds(3000), CancellationToken).ConfigureAwait(false);
+                await TimeoutManager.WaitFor(SleepTime, CancellationToken).ConfigureAwait(false);
 
                 if (CancellationToken.IsCancellationRequested)
                     break;
 
                 var performanceStats = PreparePerformanceStats();
 
-                if (performanceStats.Count > 0)
+                if (ShouldEnqueue(performanceStats))
                 {
                     Stats.Enqueue(performanceStats);
                 }
             }
         }
 
+        protected virtual bool ShouldEnqueue(List<T> items)
+        {
+            return items.Count > 0;
+        }
+
         protected abstract List<T> PreparePerformanceStats();
 
-        public async Task<bool> SendStatsOrHeartbeatToWebSocket(Task<WebSocketReceiveResult> receive, WebSocket webSocket, DocumentsContextPool contextPool, MemoryStream ms, int timeToWait)
+        public async Task<bool> SendStatsOrHeartbeatToWebSocket<TContext>(Task<WebSocketReceiveResult> receive, WebSocket webSocket, JsonContextPoolBase<TContext> contextPool, MemoryStream ms, int timeToWait) where TContext : JsonOperationContext
         {
             if (receive.IsCompleted || webSocket.State != WebSocketState.Open)
                 return false;
@@ -69,14 +74,14 @@ namespace Raven.Server.Utils.Stats
             var tuple = await Stats.TryDequeueAsync(TimeSpan.FromMilliseconds(timeToWait));
             if (tuple.Item1 == false)
             {
-                await webSocket.SendAsync(WebSocketHelper.Heartbeat, WebSocketMessageType.Text, true, Database.DatabaseShutdown);
+                await webSocket.SendAsync(WebSocketHelper.Heartbeat, WebSocketMessageType.Text, true, CancellationToken);
                 return true;
             }
 
             ms.SetLength(0);
 
-            using (contextPool.AllocateOperationContext(out JsonOperationContext context))
-            using (var writer = new AsyncBlittableJsonTextWriter(context, ms, Database.DatabaseShutdown))
+            using (contextPool.AllocateOperationContext(out TContext context))
+            using (var writer = new AsyncBlittableJsonTextWriter(context, ms, CancellationToken))
             {
                 WriteStats(tuple.Item2, writer, context);
 
@@ -84,7 +89,7 @@ namespace Raven.Server.Utils.Stats
             }
 
             ms.TryGetBuffer(out ArraySegment<byte> bytes);
-            await webSocket.SendAsync(bytes, WebSocketMessageType.Text, true, Database.DatabaseShutdown);
+            await webSocket.SendAsync(bytes, WebSocketMessageType.Text, true, CancellationToken);
 
             return true;
         }

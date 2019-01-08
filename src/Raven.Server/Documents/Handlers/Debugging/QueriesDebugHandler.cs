@@ -1,9 +1,12 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.IO;
 using System.Linq;
 using System.Net;
 using System.Threading.Tasks;
 using Raven.Client.Exceptions.Documents.Indexes;
+using Raven.Server.Documents.Indexes;
+using Raven.Server.Documents.Queries;
 using Raven.Server.Json;
 using Raven.Server.Routing;
 using Raven.Server.ServerWide.Context;
@@ -37,7 +40,7 @@ namespace Raven.Server.Documents.Handlers.Debugging
 
             return NoContent();
         }
-
+        
         [RavenAction("/databases/*/debug/queries/running", "GET", AuthorizationStatus.ValidUser, IsDebugInformationEndpoint = true)]
         public Task RunningQueries()
         {
@@ -47,7 +50,7 @@ namespace Raven.Server.Documents.Handlers.Debugging
                 .ToList();
 
             using (ContextPool.AllocateOperationContext(out DocumentsOperationContext context))
-            using (var writer = new BlittableJsonTextWriter(context, ResponseBodyStream()))
+            using (var writer = new AsyncBlittableJsonTextWriter(context, ResponseBodyStream(), Database.DatabaseShutdown))
             {
                 writer.WriteStartObject();
                 var isFirst = true;
@@ -68,24 +71,7 @@ namespace Raven.Server.Documents.Handlers.Debugging
 
                         isFirstInternal = false;
 
-                        writer.WriteStartObject();
-
-                        writer.WritePropertyName((nameof(query.Duration)));
-                        writer.WriteString(query.Duration.ToString());
-                        writer.WriteComma();
-
-                        writer.WritePropertyName((nameof(query.QueryId)));
-                        writer.WriteInteger(query.QueryId);
-                        writer.WriteComma();
-
-                        writer.WritePropertyName((nameof(query.StartTime)));
-                        writer.WriteDateTime(query.StartTime, isUtc: true);
-                        writer.WriteComma();
-
-                        writer.WritePropertyName((nameof(query.QueryInfo)));
-                        writer.WriteIndexQuery(context, query.QueryInfo);
-
-                        writer.WriteEndObject();
+                        query.Write(writer, context);
                     }
 
                     writer.WriteEndArray();
