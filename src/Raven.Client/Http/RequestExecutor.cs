@@ -1180,7 +1180,7 @@ namespace Raven.Client.Http
                     ms.Position = 0;
                     using (var responseJson = context.ReadForMemory(ms, "RequestExecutor/HandleServerDown/ReadResponseContent"))
                     {
-                        command.FailedNodes.Add(chosenNode, ExceptionDispatcher.Get(JsonDeserializationClient.ExceptionSchema(responseJson), response.StatusCode));
+                        command.FailedNodes.Add(chosenNode, ExceptionDispatcher.Get(JsonDeserializationClient.ExceptionSchema(responseJson), response.StatusCode, e));
                     }
                 }
                 catch
@@ -1193,7 +1193,7 @@ namespace Raven.Client.Http
                         Message = "Got unrecognized response from the server",
                         Error = new StreamReader(ms).ReadToEnd(),
                         Type = "Unparseable Server Response"
-                    }, response.StatusCode));
+                    }, response.StatusCode, e));
                 }
                 return;
             }
@@ -1204,7 +1204,7 @@ namespace Raven.Client.Http
                 Message = e.Message,
                 Error = e.ToString(),
                 Type = e.GetType().FullName
-            }, HttpStatusCode.InternalServerError));
+            }, HttpStatusCode.InternalServerError, e));
         }
 
         protected Task _firstTopologyUpdate;

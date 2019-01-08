@@ -11,6 +11,7 @@ using System.IO;
 using System.IO.Compression;
 using System.Linq;
 using System.Net;
+using System.Net.Http;
 using System.Threading;
 using System.Threading.Tasks;
 using Microsoft.AspNetCore.Http.Features.Authentication;
@@ -42,6 +43,7 @@ using Raven.Client.ServerWide.Operations.Migration;
 using Raven.Server.Documents.Indexes;
 using Raven.Server.Documents.Indexes.Auto;
 using Raven.Server.Documents.PeriodicBackup.Restore;
+using Raven.Server.Extensions;
 using Raven.Server.ServerWide.Commands.Indexes;
 using Raven.Server.Utils;
 using Sparrow.Logging;
@@ -428,44 +430,71 @@ namespace Raven.Server.Web.System
                 throw new InvalidOperationException("Cannot wait for execution when there are no nodes to execute ON.");
 
             var executors = new List<ClusterRequestExecutor>();
-            var timeoutTask = TimeoutManager.WaitFor(TimeSpan.FromMilliseconds(10000));
-            var waitingTasks = new List<Task>
-            {
-                timeoutTask
-            };
-            var cts = CancellationTokenSource.CreateLinkedTokenSource(ServerStore.ServerShutdown);
+
             try
             {
-                foreach (var member in members)
+                using (var cts = CancellationTokenSource.CreateLinkedTokenSource(ServerStore.ServerShutdown))
                 {
-                    var url = clusterTopology.GetUrlFromTag(member);
-                    var requester = ClusterRequestExecutor.CreateForSingleNode(url, ServerStore.Server.Certificate.Certificate);
-                    executors.Add(requester);
-                    waitingTasks.Add(requester.ExecuteAsync(new WaitForRaftIndexCommand(index), context, token: cts.Token));
-                }
+                    cts.CancelAfter(ServerStore.Configuration.Cluster.OperationTimeout.AsTimeSpan);
 
-                while (true)
-                {
-                    var task = await Task.WhenAny(waitingTasks);
-                    if (task == timeoutTask)
-                        throw new TimeoutException($"Waited too long for the raft command (number {index}) to be executed on any of the relevant nodes to this command.");
-                    if (task.IsCompletedSuccessfully)
+                    var waitingTasks = new List<Task>();
+                    List<Exception> exceptions = null;
+
+                    foreach (var member in members)
                     {
-                        break;
+                        var url = clusterTopology.GetUrlFromTag(member);
+                        var executor = ClusterRequestExecutor.CreateForSingleNode(url, ServerStore.Server.Certificate.Certificate);
+                        executors.Add(executor);
+                        waitingTasks.Add(executor.ExecuteAsync(new WaitForRaftIndexCommand(index), context, token: cts.Token));
                     }
-                    waitingTasks.Remove(task);
-                    if (waitingTasks.Count == 1) // only the timeout task is left
-                        throw new InvalidDataException($"The database '{database}' was created but is not accessible, because all of the nodes on which this database was suposed to reside on, threw an exception.", task.Exception);
+
+                    while (waitingTasks.Count > 0)
+                    {
+                        var task = await Task.WhenAny(waitingTasks);
+                        waitingTasks.Remove(task);
+
+                        if (task.IsCompletedSuccessfully)
+                            continue;
+
+                        var exception = task.Exception.ExtractSingleInnerException();
+                        if (exception is RavenException re && re.InnerException is HttpRequestException)
+                        {
+                            // ignore - we are ok when connection with a node cannot be established (test: AddDatabaseOnDisconnectedNode)
+                            continue;
+                        }
+
+                        if (exceptions == null)
+                            exceptions = new List<Exception>();
+
+                        exceptions.Add(exception);
+                    }
+
+                    if (exceptions != null)
+                    {
+                        var allTimeouts = true;
+                        foreach (var exception in exceptions)
+                        {
+                            if (exception is OperationCanceledException)
+                                continue;
+
+                            allTimeouts = false;
+                        }
+
+                        var aggregateException = new AggregateException(exceptions);
+
+                        if (allTimeouts)
+                            throw new TimeoutException($"Waited too long for the raft command (number {index}) to be executed on any of the relevant nodes to this command.", aggregateException);
+                        
+                        throw new InvalidDataException($"The database '{database}' was created but is not accessible, because all of the nodes on which this database was supposed to reside on, threw an exception.", aggregateException);
+                    }
                 }
             }
             finally
             {
-                cts.Cancel();
-                foreach (var clusterRequestExecutor in executors)
+                foreach (var executor in executors)
                 {
-                    clusterRequestExecutor.Dispose();
+                    executor.Dispose();
                 }
-                cts.Dispose();
             }
         }
 
@@ -479,7 +508,7 @@ namespace Raven.Server.Web.System
             }
         }
 
-        
+
 
         private void ValidateClusterMembers(ClusterTopology clusterTopology, DatabaseRecord databaseRecord)
         {
