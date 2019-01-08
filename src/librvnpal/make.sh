@@ -4,6 +4,7 @@ LIBFILE="librvnpal"
 CLEAN=0
 C_COMPILER=c89
 C_SHARED_FLAG="-shared"
+IS_CROSS=0
 
 NC="\\e[39m"
 C_BLACK="\\e[30m"
@@ -30,6 +31,11 @@ T_BLINK="\\e[5m"
 
 ERR_STRING="${C_L_RED}${T_BOLD}Error: ${NT}${C_L_RED}"
 
+IS_LINUX=0
+IS_ARM=0
+IS_MAC=0
+IS_32BIT=0
+
 if [ $# -eq 1 ]; then
 	if [[ "$1" == "clean" ]]; then
 		CLEAN=1
@@ -40,6 +46,29 @@ if [ $# -eq 1 ]; then
 		echo -e "${ERR_STRING}Invalid arguments${NC}"
 		exit 1
 	fi
+elif [ $# -gt 1 ]; then
+	if [[ "$1" == "cross" ]]; then
+		if [[ "$2" == "linux-arm" ]]; then
+			IS_CROSS=1
+			IS_ARM=1
+			IS_32BIT=1
+			C_COMPILER=arm-linux-gnueabi-gcc
+		else
+			echo -e "${ERR_STRING}Invalid architecture for cross compiling${NC}"
+			exit 1
+		fi
+		if [ $# -eq 3 ]; then
+			if [[ "$3" == "clean" ]]; then
+				CLEAN=1
+			else
+				echo -e "${ERR_STRING}Invalid arguments for cross compiling${NC}"
+				exit 1
+			fi
+		fi
+	else
+		echo -e "${ERR_STRING}Invalid arguments${NC}"
+                exit 1
+        fi
 elif [ $# -ne 0 ]; then
 	echo -e "${ERR_STRING}Invalid arguments${NC}"
         exit 1
@@ -48,24 +77,32 @@ fi
 echo -e "${C_L_GREEN}${T_BOLD}Build librvnpal${NC}${NT}"
 echo -e "${C_D_GRAY}===============${NC}"
 echo ""
-echo -e "${C_MAGENTA}${T_UL}$(uname -a)${NC}${NT}"
-echo ""
 
-IS_LINUX=$(uname -s | grep Linux  | wc -l)
-IS_ARM=$(uname -m | grep arm    | wc -l)
-IS_MAC=$(uname -s | grep Darwin | wc -l)
-IS_32BIT=$(file /bin/bash | grep 32-bit | wc -l)
 IS_COMPILER=$(which ${C_COMPILER} | wc -l)
 
-if [ ${IS_LINUX} -eq 1 ] && [ ${IS_ARM} -eq 1 ]; then
-	IS_LINUX=0
-fi
-if [ ${IS_LINUX} -eq 1 ] && [ ${IS_MAC} -eq 1 ]; then
-	IS_LINUX=0
+if [ ${IS_CROSS} -eq 0 ]; then
+	echo -e "${C_MAGENTA}${T_UL}$(uname -a)${NC}${NT}"
+	echo ""
+
+	IS_LINUX=$(uname -s | grep Linux  | wc -l)
+	IS_ARM=$(uname -m | grep arm    | wc -l)
+	IS_MAC=$(uname -s | grep Darwin | wc -l)
+	IS_32BIT=$(file /bin/bash | grep 32-bit | wc -l)
+	IS_COMPILER=$(which ${C_COMPILER} | wc -l)
+
+	if [ ${IS_LINUX} -eq 1 ] && [ ${IS_ARM} -eq 1 ]; then
+		IS_LINUX=0
+	fi
+	if [ ${IS_LINUX} -eq 1 ] && [ ${IS_MAC} -eq 1 ]; then
+		IS_LINUX=0
+	fi
+else
+	echo -e "${C_MAGENTA}${T_UL}Cross Compilation${NC}${NT}"
+        echo ""
 fi
 
 if [ ${IS_COMPILER} -ne 1 ]; then
-	echo -e "${ERR_STRING}Unable to determine if ${C_COMPILER} compiler exists. Consider installing clang-3.9"
+	echo -e "${ERR_STRING}Unable to determine if ${C_COMPILER} compiler exists. Consider installing : linux-x64 - clang-3.9, linux-arm - gcc make gcc-arm-linux-gnueabi binutils-arm-linux-gnueabi"
 	exit 1
 fi
 FILTERS=(-1)
