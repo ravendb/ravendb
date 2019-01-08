@@ -6,6 +6,8 @@ using Esprima;
 using Microsoft.Extensions.Primitives;
 using Raven.Client.Exceptions;
 using Raven.Server.Documents.Queries.AST;
+using Raven.Server.Extensions;
+// ReSharper disable ConditionIsAlwaysTrueOrFalse
 
 namespace Raven.Server.Documents.Queries.Parser
 {
@@ -347,6 +349,7 @@ namespace Raven.Server.Documents.Queries.Parser
             // Lines where Name = 'Chang' select Product
 
             SynteticWithQuery prev = default;
+            alias = default;
             var start = Scanner.Position;
 
             if (Scanner.TryScan("from"))
@@ -428,6 +431,26 @@ namespace Raven.Server.Documents.Queries.Parser
                     {
                         alias = collection.FieldValue;
                     }
+                    //by this point we know AS' keyword is not the next token because Alias() checks for that
+                    else if (Scanner.TryPeekNextToken(c => c != ' ' && c != ')' && c != ']', out var token) && token.IsIdentifier())
+                    {
+                        if (isEdge && !token.Equals("where",StringComparison.OrdinalIgnoreCase) && !token.Equals("select",StringComparison.OrdinalIgnoreCase))
+                        {
+                            ThrowInvalidSyntaxMissingAs(isEdge, collection, token); //this will throw
+                        }
+                        else if (!isEdge && token.Equals("select", StringComparison.OrdinalIgnoreCase))
+                        {
+                            ThrowInvalidSyntaxSelectIsForbidden(collection);
+                        }
+                        else if (!isEdge && !token.Equals("where", StringComparison.OrdinalIgnoreCase))
+                        {
+                            ThrowInvalidSyntaxMissingAs(isEdge, collection, token);
+                        }
+                        else
+                        {
+                            alias = GenerateAlias(implicitPrefix, collection);
+                        }
+                    }
                     else
                     {
                         alias = GenerateAlias(implicitPrefix, collection);
@@ -447,7 +470,7 @@ namespace Raven.Server.Documents.Queries.Parser
             if (Scanner.TryScan("WHERE"))
             {
                 if (Expression(out filter) == false)
-                    throw new InvalidQueryException("Failed to parse filter expression for: " + alias, Scanner.Input, null);
+                    throw new InvalidQueryException($"Failed to parse filter expression for: {alias}", Scanner.Input, null);
             }
 
             FieldExpression project = null;
@@ -472,6 +495,20 @@ namespace Raven.Server.Documents.Queries.Parser
             AddWithQuery(collection, project, alias, filter, isEdge, start, maybeAlias == null);
                 }
             return true;
+        }
+
+        private void ThrowInvalidSyntaxMissingAs(bool isEdge, FieldExpression collection, StringSegment token)
+        {
+            var msg =
+                $"Inside a {(isEdge ? "edge" : "node")} I found an expression in a form of '{collection.FieldValue} {token}'. This is invalid syntax, perhaps '{token}' is an alias? If so, the correct syntax to specify an alias for an edge or a node is '{collection.FieldValue} as {token}'";
+            throw new InvalidQueryException(msg, Scanner.Input);
+        }
+
+        private void ThrowInvalidSyntaxSelectIsForbidden(FieldExpression collection)
+        {
+            var msg =
+                $"Inside a node I found an expression in a form of '{collection.FieldValue} select <SELECT FIELDS>'. Select clauses are forbidden in node query elements.";
+            throw new InvalidQueryException(msg, Scanner.Input);
         }
 
         private StringSegment GenerateAlias(StringSegment implicitPrefix, FieldExpression collection)

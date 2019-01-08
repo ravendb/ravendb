@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Text;
+using Esprima;
 using Raven.Server.Documents.Queries.AST;
 using Sparrow;
 using Microsoft.Extensions.Primitives;
@@ -234,6 +235,46 @@ namespace Raven.Server.Documents.Queries.Parser
             Column += match.Length;
             return true;
         }
+
+        public bool TryPeekNextToken(Func<char, bool> predicate, StringSegment currentToken, out StringSegment nextToken)
+        {
+            nextToken = null;
+            if (SkipWhitespace() == false)
+                return false;
+
+            var tokenOffset = currentToken.Offset + currentToken.Length;
+            var tokenLength = 0;
+            var peekOffset = tokenOffset;
+            if (currentToken.Length > 0)
+            {
+                tokenOffset++; //include the whitespace too
+                tokenLength = currentToken.Length;
+            }
+            else
+            {
+                if(_q[tokenOffset] == ' ')
+                    while (_q[tokenOffset] == ' ')
+                        tokenOffset++;
+            }
+
+            while (peekOffset < _q.Length && predicate(_q[peekOffset]))
+            {
+                var current = _q[peekOffset];
+                if (char.IsWhiteSpace(current))
+                {
+                    nextToken = new StringSegment(_q, tokenOffset, tokenLength);
+                    return true;
+                }
+                peekOffset++;
+                tokenLength++;
+            }
+
+            nextToken = new StringSegment(_q, tokenOffset, tokenLength);
+            return true;
+        }
+
+        public bool TryPeekNextToken(Func<char, bool> predicate, out StringSegment nextToken) => 
+            TryPeekNextToken(predicate, new StringSegment(_q, _pos, 0), out nextToken);
 
         public bool TryScan(string[] matches, out string found)
         {

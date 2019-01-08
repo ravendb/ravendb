@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Text;
+using Microsoft.Extensions.Primitives;
 
 namespace Raven.Server.Extensions
 {
@@ -13,6 +14,26 @@ namespace Raven.Server.Extensions
             return self.Split(new[] { ';' }, StringSplitOptions.RemoveEmptyEntries)
                 .Select(x => x.Trim())
                 .ToList();
+        }
+
+        public static bool IsIdentifier(this StringSegment token)
+        {
+            if (token.Length == 0)
+                return false;
+
+            if (token.Length == 1)
+                return char.IsLetter(token[0]);
+            
+            if (!char.IsLetter(token[0]))
+                return false;
+
+            for (int i = 1; i < token.Length; i++)
+            {
+                if (!char.IsLetterOrDigit(token[i]))
+                    return false;
+            }
+
+            return true;
         }
 
         public static string NormalizeLineEnding(this string script)
