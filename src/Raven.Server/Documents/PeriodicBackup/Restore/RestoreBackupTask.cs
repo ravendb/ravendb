@@ -219,6 +219,13 @@ namespace Raven.Server.Documents.PeriodicBackup.Restore
                 var (updateIndex, _) = await _serverStore.WriteDatabaseRecordAsync(databaseName, databaseRecord, null);
                 await _serverStore.Cluster.WaitForIndexNotification(updateIndex);
 
+                if (databaseRecord.Topology.RelevantFor(_serverStore.NodeTag))
+                {
+                    // we need to wait for the database record change to be propagated properly
+                    var db = await _serverStore.DatabasesLandlord.TryGetOrCreateResourceStore(databaseName);
+                    await db.RachisLogIndexNotifications.WaitForIndexNotification(updateIndex, _operationCancelToken.Token);
+                }
+
                 return result;
             }
             catch (Exception e)

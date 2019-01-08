@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Security.Cryptography.X509Certificates;
 using FastTests.Server.Basic.Entities;
 using Microsoft.CodeAnalysis.CSharp.Syntax;
 using Raven.Client;
@@ -403,9 +404,9 @@ namespace FastTests.Client.Indexing
                 {
                     session.Store(new Category { Name = "Beverages" }, "categories/1-A");
                     session.Store(new Category { Name = "Seafood" }, "categories/2-A");
-                    session.Store(new product { Name = "Lakkalikööri", Category = "categories/1-A", PricePerUnit = 13 });
-                    session.Store(new product { Name = "Original Frankfurter", Category = "categories/1-A", PricePerUnit = 16 });
-                    session.Store(new product { Name = "Röd Kaviar", Category = "categories/2-A", PricePerUnit = 18 });
+                    session.Store(new Product { Name = "Lakkalikööri", Category = "categories/1-A", PricePerUnit = 13 });
+                    session.Store(new Product { Name = "Original Frankfurter", Category = "categories/1-A", PricePerUnit = 16 });
+                    session.Store(new Product { Name = "Röd Kaviar", Category = "categories/2-A", PricePerUnit = 18 });
                     session.SaveChanges();
                     WaitForIndexing(store);
                     var res = session.Query<Products_ByCategory.Result>("Products/ByCategory")
@@ -489,17 +490,67 @@ namespace FastTests.Client.Indexing
                 }
             }
         }
+        private class ProductsWarrentyResult
+        {
+            public string Warranty { get; set; }
+            public int Duration { get; set; }
+        }
+
+        [Fact]
+        public void CanIndexSwitchCases()
+        {
+            using (var store = GetDocumentStore())
+            {
+                store.ExecuteIndex(new ProductsWarrenty());                
+                using (var session = store.OpenSession())
+                {
+                    session.Store(new Product
+                    {
+                        Name = "p1",
+                        Mode = "Used",
+                        Manufacturer = "ACME",
+                        Type = 1
+                    });
+                    session.Store(new Product
+                    {
+                        Name = "p2",
+                        Mode = "Refurbished",
+                        Manufacturer = "ACME",
+                        Type = 1
+                    });
+                    session.Store(new Product
+                    {
+                        Name = "p3",
+                        Mode = "New",
+                        Manufacturer = "ACME",
+                        Type = 2
+                    });
+                    session.Store(new Product
+                    {
+                        Name = "p4",
+                        Mode = "New",
+                        Manufacturer = "EMCA",
+                        Type = 2
+                    });
+                    session.Store(new Product
+                    {
+                        Name = "p5",
+                        Mode = "Refurbished",
+                        Manufacturer = "EMCA",
+                        Type = 2
+                    });
+                    session.SaveChanges();
+                    WaitForIndexing(store);
+                    var res = session.Query<ProductsWarrentyResult>("ProductsWarrenty").Where(u => u.Duration > 20).ProjectInto<Product>().Single();
+                    Assert.Equal(res.Name, "p3");
+                }
+            }
+        }
 
         private class Category
         {
             public string Description { get; set; }
             public string Name { get; set; }
-        }
-        private class product
-        {
-            public string Category { get; set; }
-            public string Name { get; set; }
-            public int PricePerUnit { get; set; }
         }
 
         private class CategoryCount
@@ -527,6 +578,11 @@ namespace FastTests.Client.Indexing
         {
             public string Name { get; set; }
             public bool IsAvailable { get; set; }
+            public string Category { get; set; }
+            public int PricePerUnit { get; set; }
+            public string Mode { get; set; }
+            public int Type { get; set; }
+            public string Manufacturer { get; set; }
         }
 
         private class ReduceResults
@@ -726,6 +782,42 @@ function GetProductName(u){
     return load(u.Product,'Products').Name
 }
 map('Users', function (u){ return { Name: u.Name, Count: 1, Product: GetProductName(u)};})",
+                };
+            }
+        }
+
+        private class ProductsWarrenty : AbstractJavaScriptIndexCreationTask
+        {
+            public ProductsWarrenty()
+            {
+                Maps = new HashSet<string>
+                {
+                    @"
+map('Products', prod => {
+                    var result = { Warranty: 'Parts', Duration: 1 };
+                if (prod.Mode == 'Used')
+                    return result;
+                switch (prod.Type)
+                {
+                    case 1:
+                        return null;
+                }
+                if (prod.Manufacturer == 'ACME')
+                {  // our product
+                    result.Warranty = 'Full';
+                    result.Duration = 24;
+                }
+                else
+                { // 3rd party
+                    result.Warranty = 'Parts';
+                    result.Duration = 6;
+                }
+
+                if (prod.Mode == Refurbished)
+                    result.Duration /= 2;
+
+                return result;
+                });"
                 };
             }
         }
