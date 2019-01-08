@@ -26,6 +26,7 @@ using Raven.Server.NotificationCenter.Notifications;
 using Raven.Server.Utils;
 using Sparrow.Utils;
 using Voron;
+using Raven.Client.Extensions;
 
 namespace Raven.Server.Documents.Replication
 {
