@@ -11,6 +11,7 @@ services:
       - RAVEN_Security_UnsecuredAccessAllowed=PublicNetwork
       - RAVEN_PublicServerUrl=http://raven1:8080
       - RAVEN_PublicServerUrl_Tcp=tcp://raven1:38888
+      - RAVEN_License_Eula_Accepted=true
     env_file: ./license.env
       
   raven2:
@@ -24,6 +25,7 @@ services:
       - RAVEN_Security_UnsecuredAccessAllowed=PublicNetwork
       - RAVEN_PublicServerUrl=http://raven2:8080
       - RAVEN_PublicServerUrl_Tcp=tcp://raven2:38888
+      - RAVEN_License_Eula_Accepted=true
     env_file: ./license.env
    
   raven3:
@@ -37,6 +39,7 @@ services:
       - RAVEN_Security_UnsecuredAccessAllowed=PublicNetwork
       - RAVEN_PublicServerUrl=http://raven3:8080
       - RAVEN_PublicServerUrl_Tcp=tcp://raven3:38888
+      - RAVEN_License_Eula_Accepted=true
     env_file: ./license.env
     
 

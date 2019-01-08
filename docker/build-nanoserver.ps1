@@ -5,6 +5,9 @@ param(
     $DockerfileDir = "./ravendb-nanoserver")
 
 $ErrorActionPreference = "Stop"
+
+. ".\common.ps1"
+
 function BuildWindowsDockerImage ($version) {
     $packageFileName = "RavenDB-$version-windows-x64.zip"
     $artifactsPackagePath = Join-Path -Path $ArtifactsDir -ChildPath $packageFileName
@@ -34,20 +37,5 @@ function BuildWindowsDockerImage ($version) {
     Remove-Item -Path $dockerPackagePath
 }
 
-function GetVersionFromArtifactName() {
-    $versionRegex = [regex]'RavenDB-([0-9]\.[0-9]\.[0-9](-[a-zA-Z]+-[0-9-]+)?)-[a-z]+'
-    $fname = $(Get-ChildItem $ArtifactsDir `
-        | Where-Object { $_.Name -Match $versionRegex } `
-        | Sort-Object LastWriteTime -Descending `
-        | Select-Object -First 1).Name
-    $match = $fname | select-string -Pattern $versionRegex
-    $version = $match.Matches[0].Groups[1]
-
-    if (!$Version) {
-        throw "Could not parse version from artifact file name: $fname"
-    }
-
-    return $version
-}
 
 BuildWindowsDockerImage $(GetVersionFromArtifactName)
