@@ -135,12 +135,13 @@ namespace SlowTests.Cluster
                 observableWithTask.Subscribe(list.Add);
                 await observableWithTask.EnsureSubscribedNow();
 
-                using (var session = store.OpenAsyncSession())
+                using (var session = store.OpenSession())
                 {
-                    await session.StoreAsync(new User(), "users/1");
-                    await session.SaveChangesAsync();
+                    session.Store(new User(), "users/1");
+                    session.SaveChanges();
                 }
 
+                WaitForDocument(store, "users/1");
                 Assert.Equal(list.Count, 1);
 
                 var currnetUrl = store.GetRequestExecutor().Url;

@@ -477,7 +477,7 @@ namespace Raven.Client.Documents.Changes
                     {
                         ConnectionStatusChanged?.Invoke(this, EventArgs.Empty);
 
-                        _serverNode = await _requestExecutor.HandleServerNotResponsive(_url.AbsoluteUri, _serverNode, _nodeIndex, e).ConfigureAwait(false);
+                        _serverNode = await _requestExecutor.HandleServerNotResponsive(_url.AbsoluteUri, _serverNode, _nodeIndex, e, _cts.Token).ConfigureAwait(false);
 
                         if (ReconnectClient() == false)
                             return;
@@ -638,7 +638,7 @@ namespace Raven.Client.Documents.Changes
                     {
                         Url = topologyChange.Url,
                         Database = topologyChange.Database
-                    }, 0, true);
+                    }, 0, true).ConfigureAwait(false);
                     break;
                 default:
                     throw new NotSupportedException(type);
