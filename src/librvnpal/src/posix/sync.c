@@ -16,7 +16,7 @@
 #include "internal_posix.h"
 #include "status_codes.h"
 
-int32_t
+PRIVATE int32_t
 _sync_directory_for_internal(char *dir_path, int32_t *detailed_error_code)
 {
     int32_t rc;
@@ -56,7 +56,7 @@ error_cleanup:
     return rc;
 }
 
-int32_t
+PRIVATE int32_t
 _sync_directory_maybe_symblink(char *dir_path, int32_t depth,
                               int32_t *detailed_error_code)
 {
@@ -130,7 +130,7 @@ success:
     return rc;
 }
 
-int32_t
+PRIVATE int32_t
 _sync_directory_for(const char *file_path, int32_t *detailed_error_code)
 {
     assert(file_path != NULL);
@@ -153,7 +153,7 @@ _sync_directory_for(const char *file_path, int32_t *detailed_error_code)
     return rc;
 }
 
-int32_t
+EXPORT int32_t
 rvn_memory_sync(void *address, int64_t size, int32_t *detailed_error_code)
 {    
     int32_t rc = msync(address, size, MS_SYNC);
