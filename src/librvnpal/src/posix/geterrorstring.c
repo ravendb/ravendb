@@ -27,7 +27,7 @@ rvn_get_error_string(int32_t error,
 			*special_errno_flags = ERRNO_SPECIAL_CODES_ENOSPC;
 			break;
 		default:
-			*special_errno_flags = ERRNO_SPECIAL_CODES_NO_ERROR;
+			*special_errno_flags = ERRNO_SPECIAL_CODES_NONE;
 			break;
 	}
 	

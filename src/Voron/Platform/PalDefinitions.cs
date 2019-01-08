@@ -1,22 +1,17 @@
 using System;
 using System.Diagnostics.CodeAnalysis;
-// ReSharper disable BuiltInTypeReferenceStyle
+using System.Runtime.InteropServices;
 
 namespace Voron.Platform
 {
     public unsafe class PalDefinitions
     {
-        public static Int32 True => 1;
-        public static Int32 False => 0;
-
-        [SuppressMessage("ReSharper", "UnassignedField.Global")]
         public struct SystemInformation
         {
             public Int32 PageSize;
-            public Int32 CanPrefetch;
+            [MarshalAs(UnmanagedType.U1)] public bool CanPrefetch;
         }
 
-        [SuppressMessage("ReSharper", "UnusedMember.Global")]
         public struct PrefetchRanges
         {
             public void* VirtualAddress;

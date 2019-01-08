@@ -128,7 +128,7 @@ namespace Voron.Platform.Win32
                 if (lastError == (int) Win32NativeFileErrors.ERROR_DISK_FULL)
                 {
                     var driveInfo = DiskSpaceChecker.GetDiskSpaceInfo(filePath);
-                    throw new DiskFullException(filePath, length, driveInfo?.TotalFreeSpace.GetValue(SizeUnit.Bytes), lastError.ToString());
+                    throw new DiskFullException(filePath, length, driveInfo?.TotalFreeSpace.GetValue(SizeUnit.Bytes), new Win32Exception(lastError).Message);
                 }
 
                 var exception = new Win32Exception(lastError);
