@@ -96,6 +96,14 @@ function getManageServerMenuItem() {
             enabled: access.enableGatherDebugInfoMenuItem
         }),
         new leafMenuItem({
+            route: 'admin/settings/runningQueries',
+            moduleId: 'viewmodels/manage/runningQueries',
+            title: 'Running Queries',
+            nav: true,
+            css: 'icon-running-queries',
+            dynamicHash: appUrl.forRunningQueries
+        }),
+        new leafMenuItem({
             route: 'admin/settings/debug/advanced*details',
             moduleId: 'viewmodels/manage/debugAdvancedParent',
             title: 'Advanced',

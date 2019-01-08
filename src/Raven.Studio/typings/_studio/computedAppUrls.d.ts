@@ -40,6 +40,7 @@ interface computedAppUrls {
     settings: KnockoutComputed<string>;
     indexErrors: KnockoutComputed<string>;
     ongoingTasksStats: KnockoutComputed<string>;
+    runningQueries: KnockoutComputed<string>;
     visualizer: KnockoutComputed<string>;
     databaseRecord: KnockoutComputed<string>;
     revisions: KnockoutComputed<string>;

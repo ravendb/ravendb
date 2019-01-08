@@ -710,7 +710,7 @@ namespace Raven.Server.Json
             writer.WriteObject(context.ReadObject(djv, "etl/performance"));
         }
 
-        public static void WriteIndexQuery(this BlittableJsonTextWriter writer, JsonOperationContext context, IIndexQuery query)
+        public static void WriteIndexQuery(this AbstractBlittableJsonTextWriter writer, JsonOperationContext context, IIndexQuery query)
         {
             var indexQuery = query as IndexQueryServerSide;
             if (indexQuery != null)
@@ -722,7 +722,7 @@ namespace Raven.Server.Json
             throw new NotSupportedException($"Not supported query type: {query.GetType()}");
         }
 
-        public static void WriteIndexQuery(this BlittableJsonTextWriter writer, JsonOperationContext context, IndexQueryServerSide query)
+        public static void WriteIndexQuery(this AbstractBlittableJsonTextWriter writer, JsonOperationContext context, IndexQueryServerSide query)
         {
             writer.WriteStartObject();
 

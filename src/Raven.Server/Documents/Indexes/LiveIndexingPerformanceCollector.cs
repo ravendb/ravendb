@@ -11,7 +11,7 @@ using Sparrow.Json;
 
 namespace Raven.Server.Documents.Indexes
 {
-    public class LiveIndexingPerformanceCollector : LivePerformanceCollector<IndexPerformanceStats>
+    public class LiveIndexingPerformanceCollector : DatabaseAwareLivePerformanceCollector<IndexPerformanceStats>
     {
         private readonly ConcurrentDictionary<string, IndexAndPerformanceStatsList> _perIndexStats = 
             new ConcurrentDictionary<string, IndexAndPerformanceStatsList>();

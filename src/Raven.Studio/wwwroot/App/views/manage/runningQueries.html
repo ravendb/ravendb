@@ -1,0 +1,33 @@
+<div class="flex-vertical absolute-fill content-margin running-queries">
+    <div class="flex-horizontal flex-noshrink">
+        <div>
+            <input class="form-control filter" placeholder="Filter by index name or query" data-bind="textInput: filter">
+        </div>
+        <div class="btn-group">
+            <select id="visibleDbsSelector" size="5" multiple="multiple"
+                    data-bind="options: allDbNames, selectedOptions: selectedDbNames"></select>
+        </div>
+    </div>
+    <div class="flex-horizontal flex-noshrink">
+        <div class="flex-separator"></div>
+        <div class="btn-group">
+            <button class="btn btn-sm btn-info btn-checkable" data-bind="click: toggleTail, css: { active: tailEnabled }">
+                <i class="icon-logs"></i> <span>Monitoring (tail -f)</span>
+            </button>
+        </div>
+    </div>
+    <div class="flex-grow">
+        <div class="scroll-stretch">
+            <div class="panel-body">
+                <virtual-grid class="resizable" params="controller: gridController, emptyTemplate: 'empty-running-queries-template'"></virtual-grid>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script type="text/html" id="empty-running-queries-template">
+    No running queries for now.
+</script>
+
+<div class="tooltip json-preview lg js-running-queries-tooltip" style="opacity: 0">
+</div>

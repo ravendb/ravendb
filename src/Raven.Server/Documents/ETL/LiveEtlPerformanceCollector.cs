@@ -11,7 +11,7 @@ using Sparrow.Json;
 
 namespace Raven.Server.Documents.ETL
 {
-    public class LiveEtlPerformanceCollector : LivePerformanceCollector<EtlTaskPerformanceStats>
+    public class LiveEtlPerformanceCollector : DatabaseAwareLivePerformanceCollector<EtlTaskPerformanceStats>
     {
         private readonly ConcurrentDictionary<string, ConcurrentDictionary<string, EtlProcessAndPerformanceStatsList>> _perEtlProcessStats =
             new ConcurrentDictionary<string, ConcurrentDictionary<string, EtlProcessAndPerformanceStatsList>>();

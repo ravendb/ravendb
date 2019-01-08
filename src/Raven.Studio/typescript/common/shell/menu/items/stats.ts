@@ -34,6 +34,14 @@ function getStatsMenuItem(appUrls: computedAppUrls) {
             dynamicHash: appUrls.statusStorageReport
         }),
         new leafMenuItem({
+            route: "virtual", // here we only redirect to global section with proper db set in url
+            moduleId: "virtual",
+            title: 'Running queries',
+            nav: true,
+            css: 'icon-running-queries',
+            dynamicHash: appUrls.runningQueries
+        }),
+        new leafMenuItem({
             route: 'databases/status/ongoingTasksStats',
             moduleId: 'viewmodels/database/status/ongoingTasksStats',
             title: 'Ongoing Tasks Stats',
@@ -41,6 +49,7 @@ function getStatsMenuItem(appUrls: computedAppUrls) {
             css: 'icon-replication-stats',
             dynamicHash: appUrls.ongoingTasksStats
         }),
+      
         new leafMenuItem({
             route: 'databases/status/debug*details',
             moduleId: 'viewmodels/database/status/debug/statusDebug',

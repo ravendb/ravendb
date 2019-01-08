@@ -69,6 +69,7 @@ class appUrl {
         settings: ko.pureComputed(() => appUrl.forSettings(appUrl.currentDatabase())),
         indexErrors: ko.pureComputed(() => appUrl.forIndexErrors(appUrl.currentDatabase())),
         ongoingTasksStats: ko.pureComputed(() => appUrl.forOngoingTasksStats(appUrl.currentDatabase())),
+        runningQueries: ko.pureComputed(() => appUrl.forRunningQueries(appUrl.currentDatabase())),
         visualizer: ko.pureComputed(() => appUrl.forVisualizer(appUrl.currentDatabase())),
         databaseRecord: ko.pureComputed(() => appUrl.forDatabaseRecord(appUrl.currentDatabase())),
         revisions: ko.pureComputed(() => appUrl.forRevisions(appUrl.currentDatabase())),
@@ -119,6 +120,11 @@ class appUrl {
 
     static forDebugInfo(): string {
         return "#admin/settings/debugInfo";
+    }
+    
+    static forRunningQueries(db: database | databaseInfo = null): string {
+        let databasePart = appUrl.getEncodedDbPart(db);
+        return "#admin/settings/runningQueries?" + databasePart;
     }
 
     static forAdminJsConsole(): string {
