@@ -19,7 +19,9 @@
 #include "rvn.h"
 #include "status_codes.h"
 
-int32_t
+_ensure_path_exists(path);
+
+EXPORT int32_t
 rvn_create_and_mmap64_file(const char *path,
                            int64_t initial_file_size,
                            int32_t flags,
@@ -32,7 +34,7 @@ rvn_create_and_mmap64_file(const char *path,
 
     assert(initial_file_size > 0);
 
-    /* TODO: rnv_ensure_file_exists(path); */
+    _ensure_path_exists(path);
 
     int32_t fd = open(path, O_RDWR | O_CREAT, S_IWUSR | S_IRUSR);
 
@@ -73,7 +75,7 @@ rvn_create_and_mmap64_file(const char *path,
 
     *actual_file_size = sz;
 
-    if (_sync_directory_allowed(fd))
+    if (_sync_directory_allowed(fd) == SYNC_DIR_ALLOWED)
     {
         rc = _sync_directory_for(path, detailed_error_code);
         if (rc != SUCCESS)
@@ -107,7 +109,7 @@ error_cleanup:
     return rc;
 }
 
-int32_t
+EXPORT int32_t
 rvn_allocate_more_space(const char *filename, int64_t new_length, int64_t total_allocation_size, void *handle, int32_t flags,
                         void **new_address, int64_t *new_length_after_adjustment, int32_t *detailed_error_code)
 {
@@ -132,7 +134,7 @@ rvn_allocate_more_space(const char *filename, int64_t new_length, int64_t total_
     if (rc != SUCCESS)
         goto error_cleanup;
 
-    if (_sync_directory_allowed(fd))
+    if (_sync_directory_allowed(fd) == SYNC_DIR_ALLOWED)
     {
         rc = _sync_directory_for(filename, detailed_error_code);
         if (rc != SUCCESS)
@@ -164,7 +166,7 @@ error_cleanup:
     return rc;
 }
 
-int32_t
+EXPORT int32_t
 rvn_unmap(void *address, int64_t size, bool delete_on_close, int32_t *unmap_error_code, int32_t *madvise_error_code)
 {
     int32_t rc = SUCCESS;
