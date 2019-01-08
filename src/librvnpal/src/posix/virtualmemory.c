@@ -13,7 +13,7 @@
 #include "rvn.h"
 #include "status_codes.h"
 
-int32_t
+EXPORT int32_t
 rvn_prefetch_virtual_memory(void *virtualAddress, int64_t length, int32_t *detailed_error_code)
 {
     int32_t rc = madvise(virtualAddress, length, MADV_WILLNEED);
@@ -22,7 +22,7 @@ rvn_prefetch_virtual_memory(void *virtualAddress, int64_t length, int32_t *detai
     return rc;
 }
 
-int32_t
+EXPORT int32_t
 rvn_prefetch_ranges(struct RVN_RANGE_LIST *range_list, int32_t count, int32_t *detailed_error_code)
 {
     int32_t i = 0;
@@ -35,7 +35,7 @@ rvn_prefetch_ranges(struct RVN_RANGE_LIST *range_list, int32_t count, int32_t *d
     return SUCCESS;
 }
 
-int32_t
+EXPORT int32_t
 rvn_protect_range(void *start_address, int64_t size, bool protection, int32_t *detailed_error_code)
 {
     int32_t mprotect_flags = PROT_READ;

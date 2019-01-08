@@ -10,7 +10,7 @@
 #include "rvn.h"
 #include "status_codes.h"
 
-int32_t
+EXPORT int32_t
 rvn_write_header(const char *path,
                  void *header, int32_t size,
                  int32_t *detailed_error_code)
