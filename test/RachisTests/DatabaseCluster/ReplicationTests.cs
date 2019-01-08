@@ -125,7 +125,7 @@ namespace RachisTests.DatabaseCluster
                     databaseName,
                     "users/1",
                     u => u.Name.Equals("Karmel"),
-                    TimeSpan.FromSeconds(clusterSize + 5),
+                    TimeSpan.FromSeconds(60),
                     certificate: clientCertificate));
 
             }
@@ -181,7 +181,7 @@ namespace RachisTests.DatabaseCluster
                     databaseName,
                     "users/1",
                     u => u.Name.Equals("Karmel"),
-                    TimeSpan.FromSeconds(clusterSize + 5),
+                    TimeSpan.FromSeconds(60),
                     adminCertificate));
                 for (var i = 0; i < 5; i++)
                 {
@@ -608,7 +608,7 @@ namespace RachisTests.DatabaseCluster
                     databaseName,
                     "users/1",
                     u => u.Name.Equals("Karmel"),
-                    TimeSpan.FromSeconds(clusterSize + 5),
+                    TimeSpan.FromSeconds(60),
                     certificate: adminCertificate));
 
                 topology.RemoveFromTopology(leader.ServerStore.NodeTag);
@@ -678,7 +678,7 @@ namespace RachisTests.DatabaseCluster
                     databaseName,
                     "users/1",
                     u => u.Name.Equals("Karmel"),
-                    TimeSpan.FromSeconds(clusterSize + 5),
+                    TimeSpan.FromSeconds(60),
                     certificate: adminCertificate));
             }
 
