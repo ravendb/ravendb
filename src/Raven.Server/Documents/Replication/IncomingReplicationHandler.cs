@@ -27,6 +27,7 @@ using Voron;
 using Raven.Client.Documents.Operations.Attachments;
 using Raven.Client.ServerWide.Tcp;
 using Raven.Server.NotificationCenter.Notifications;
+using Raven.Client.Extensions;
 
 namespace Raven.Server.Documents.Replication
 {

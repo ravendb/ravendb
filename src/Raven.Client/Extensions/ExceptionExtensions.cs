@@ -35,12 +35,11 @@ namespace Raven.Client.Extensions
         public static Exception ExtractSingleInnerException(this Exception e)
         {
             if (e is AggregateException ae)
-            {
                 return ae.ExtractSingleInnerException();
-            }
 
             return e;
         }
+
         /// <remarks>Code from http://stackoverflow.com/questions/1886611/c-overriding-tostring-method-for-custom-exceptions </remarks>
         public static string ExceptionToString(
             this Exception ex,

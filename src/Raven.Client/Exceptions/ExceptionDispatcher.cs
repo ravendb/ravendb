@@ -26,11 +26,10 @@ namespace Raven.Client.Exceptions
             public string Error { get; set; }
         }
 
-        public static Exception Get(ExceptionSchema schema, HttpStatusCode code)
-        {
-            var message = schema.Message;
-            var typeAsString = schema.Type;
+        public static Exception Get(ExceptionSchema schema, HttpStatusCode code, Exception inner) => Get(schema.Message, schema.Error, schema.Type, code, inner);
 
+        public static Exception Get(string message, string error, string typeAsString, HttpStatusCode code, Exception inner = null)
+        {
             if (code == HttpStatusCode.Conflict)
             {
                 if (typeAsString.Contains(nameof(DocumentConflictException)))
@@ -45,7 +44,7 @@ namespace Raven.Client.Exceptions
 
             var type = GetType(typeAsString);
             if (type == null)
-                return new RavenException(error);
+                return new RavenException(error, inner);
 
             Exception exception;
             try
