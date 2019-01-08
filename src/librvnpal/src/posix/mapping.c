@@ -58,20 +58,24 @@ rvn_create_and_mmap64_file(const char *path,
         goto error_cleanup;
     }
 
+    int32_t allocation_granularity = 64 * 1024;
+    if (initial_file_size < allocation_granularity)
+        initial_file_size = allocation_granularity;
+
     if (sz <= initial_file_size || sz % sys_page_size != 0)
     {
-        sz = rvn_nearest_size_to_page_size(max(initial_file_size, sz), sys_page_size);
+        sz = _nearest_size_to_page_size(max(initial_file_size, sz), allocation_granularity);
     }
 
-    rc = rvn_allocate_file_space(fd, sz, detailed_error_code);
+    rc = _allocate_file_space(fd, sz, detailed_error_code);
     if (rc != SUCCESS)
         goto error_cleanup;
 
     *actual_file_size = sz;
 
-    if (rvn_sync_directory_allowed(fd))
+    if (_sync_directory_allowed(fd))
     {
-        rc = rvn_sync_directory_for(path, detailed_error_code);
+        rc = _sync_directory_for(path, detailed_error_code);
         if (rc != SUCCESS)
             goto error_cleanup;
     }
@@ -104,10 +108,10 @@ error_cleanup:
 }
 
 int32_t
-rvn_allocate_more_space(int64_t new_length, int64_t total_allocation_size, const char *filename, void *handle, int32_t flags,
+rvn_allocate_more_space(const char *filename, int64_t new_length, int64_t total_allocation_size, void *handle, int32_t flags,
                         void **new_address, int64_t *new_length_after_adjustment, int32_t *detailed_error_code)
 {
-    int32_t fd = rvn_pointer_to_int(handle);
+    int32_t fd = _pointer_to_int(handle);
     int32_t rc = SUCCESS;
 
     int64_t sys_page_size = sysconf(_SC_PAGE_SIZE);
@@ -117,21 +121,20 @@ rvn_allocate_more_space(int64_t new_length, int64_t total_allocation_size, const
         goto error_cleanup;
     }
 
-    *new_length_after_adjustment = rvn_nearest_size_to_page_size(new_length, sys_page_size);
+    *new_length_after_adjustment = _nearest_size_to_page_size(new_length, sys_page_size);
 
     if (*new_length_after_adjustment <= total_allocation_size)
         return FAIL_ALLOCATION_NO_RESIZE;
 
     int64_t allocation_size = *new_length_after_adjustment - total_allocation_size;
 
-    /* TODO :: ADIADI : verify why there's an offset in fallocate and is it better to use it? */
-    rc = rvn_allocate_file_space(fd, total_allocation_size + allocation_size, detailed_error_code);
+    rc = _allocate_file_space(fd, total_allocation_size + allocation_size, detailed_error_code);
     if (rc != SUCCESS)
         goto error_cleanup;
 
-    if (rvn_sync_directory_allowed(fd))
+    if (_sync_directory_allowed(fd))
     {
-        rc = rvn_sync_directory_for(filename, detailed_error_code);
+        rc = _sync_directory_for(filename, detailed_error_code);
         if (rc != SUCCESS)
             goto error_cleanup;
     }
@@ -162,7 +165,7 @@ error_cleanup:
 }
 
 int32_t
-rvn_unmap(void *address, int64_t size, int32_t delete_on_close, int32_t *unmap_error_code, int32_t *madvise_error_code)
+rvn_unmap(void *address, int64_t size, bool delete_on_close, int32_t *unmap_error_code, int32_t *madvise_error_code)
 {
     int32_t rc = SUCCESS;
     if (delete_on_close == true)

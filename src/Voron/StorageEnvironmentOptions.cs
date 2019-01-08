@@ -632,7 +632,7 @@ namespace Voron
                 var path = _basePath.Combine(filename);
                 var rc = Pal.rvn_write_header(path.FullPath, header, sizeof(FileHeader), out var errorCode);
                 if (rc != 0)
-                    PalHelper.ThrowLastError(errorCode, $"Failed to rvn_write_header '{filename}', reason : {((PalFlags.FAIL_CODES)rc).ToString()}");
+                    PalHelper.ThrowLastError(errorCode, $"Failed to rvn_write_header '{filename}', reason : {((PalFlags.FailCodes)rc).ToString()}");
             }
 
             public void DeleteAllTempBuffers()

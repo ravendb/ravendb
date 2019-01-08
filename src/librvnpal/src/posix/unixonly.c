@@ -17,13 +17,13 @@
 #include "status_codes.h"
 
 int32_t
-rvn_flush_file(int32_t fd)
+_flush_file(int32_t fd)
 {
   return fsync(fd);
 }
 
 int32_t
-rvn_sync_directory_allowed(int32_t dir_fd)
+_sync_directory_allowed(int32_t dir_fd)
 {
   struct statfs buf;
   if (fstatfs(dir_fd, &buf) == -1)

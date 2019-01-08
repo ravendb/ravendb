@@ -17,7 +17,7 @@
 #include "status_codes.h"
 
 int32_t
-rvn_sync_directory_for_internal(char *dir_path, int32_t *detailed_error_code)
+_sync_directory_for_internal(char *dir_path, int32_t *detailed_error_code)
 {
     int32_t rc;
     int32_t fd = open(dir_path, 0, 0);
@@ -27,7 +27,7 @@ rvn_sync_directory_for_internal(char *dir_path, int32_t *detailed_error_code)
         goto error_cleanup;
     }
 
-    rc = rvn_sync_directory_allowed(fd);
+    rc = _sync_directory_allowed(fd);
 
     if (rc == FAIL)
     {
@@ -40,7 +40,7 @@ rvn_sync_directory_for_internal(char *dir_path, int32_t *detailed_error_code)
         goto error_cleanup;
     }
 
-    if (rvn_flush_file(fd) == -1)
+    if (_flush_file(fd) == -1)
     {
         rc = FAIL_FLUSH_FILE;
         goto error_cleanup;
@@ -57,7 +57,7 @@ error_cleanup:
 }
 
 int32_t
-sync_directory_maybe_symblink(char *dir_path, int32_t depth,
+_sync_directory_maybe_symblink(char *dir_path, int32_t depth,
                               int32_t *detailed_error_code)
 {
     struct stat sb;
@@ -84,8 +84,9 @@ sync_directory_maybe_symblink(char *dir_path, int32_t depth,
         int32_t len = readlink(dir_path, link_name, sb.st_size + 1);
 
         if (len == 0 || (len == -1 && errno == EINVAL))
-        { /* EINVAL on non-symlink dir_path */
-            rc = rvn_sync_directory_for_internal(dir_path, detailed_error_code);
+        { 
+            /* EINVAL on non-symlink dir_path */
+            rc = _sync_directory_for_internal(dir_path, detailed_error_code);
             goto success;
         }
 
@@ -116,9 +117,9 @@ sync_directory_maybe_symblink(char *dir_path, int32_t depth,
         goto error_cleanup;
     }
 
-    rc = sync_directory_maybe_symblink(link_name,
-                                       depth - 1,
-                                       detailed_error_code);
+    rc = _sync_directory_maybe_symblink(link_name,
+                                        depth - 1,
+                                        detailed_error_code);
 
 error_cleanup:
     *detailed_error_code = errno;
@@ -130,7 +131,7 @@ success:
 }
 
 int32_t
-rvn_sync_directory_for(const char *file_path, int32_t *detailed_error_code)
+_sync_directory_for(const char *file_path, int32_t *detailed_error_code)
 {
     assert(file_path != NULL);
 
@@ -143,9 +144,9 @@ rvn_sync_directory_for(const char *file_path, int32_t *detailed_error_code)
     }
     char *dir_path = dirname(file_path_copy);
 
-    int32_t rc = sync_directory_maybe_symblink(dir_path,
-                                               256, /* even that is probably just abuse */
-                                               detailed_error_code);
+    int32_t rc = _sync_directory_maybe_symblink(dir_path,
+                                                256, /* even that is probably just abuse */
+                                                detailed_error_code);
 
     free(file_path_copy);
 
@@ -153,17 +154,9 @@ rvn_sync_directory_for(const char *file_path, int32_t *detailed_error_code)
 }
 
 int32_t
-rvn_memory_sync(void *address, int64_t size, int32_t flags, int32_t *detailed_error_code)
-{
-    int32_t msync_flags = 0;
-    if (flags & MSYNC_OPTIONS_MS_SYNC)
-        msync_flags |= MS_SYNC;
-    if (flags & MSYNC_OPTIONS_MS_ASYNC)
-        msync_flags |= MS_ASYNC;
-    if (flags & MSYNC_OPTIONS_MS_INVALIDATE)
-        msync_flags |= MS_INVALIDATE;
-
-    int32_t rc = msync(address, size, msync_flags);
+rvn_memory_sync(void *address, int64_t size, int32_t *detailed_error_code)
+{    
+    int32_t rc = msync(address, size, MS_SYNC);
     if (rc != 0)
         *detailed_error_code = errno;
     return rc;
