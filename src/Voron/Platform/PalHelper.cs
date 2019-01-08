@@ -2,32 +2,26 @@ using System;
 using System.IO;
 using System.Text;
 using Voron.Exceptions;
-// ReSharper disable StringLiteralTypo
+using static Voron.Platform.PalFlags;
 
 namespace Voron.Platform
 {
     public static class PalHelper
     {
-        public static unsafe void ThrowLastError(int lastError, string msg, bool forceThrowOutOfMemory = false)
+        public static void ThrowLastError(int lastError, string msg)
         {
             string txt;
             try
             {
-                const int maxNativeErrorStr = 256;
-                var buf = stackalloc byte[maxNativeErrorStr];
-                var size = Pal.rvn_get_error_string(lastError, buf, maxNativeErrorStr, out int specialErrnoCodes);
+                txt = GetNativeErrorString(lastError, msg, out var specialErrnoCodes);
 
-                var nativeMsg = size >= 0 ? Encoding.UTF8.GetString(buf, size) : lastError.ToString();
-
-                txt = $"Errno: {lastError}='{nativeMsg}' (rc={specialErrnoCodes}) - '{msg}'";
-
-                if ((specialErrnoCodes & (int)PalFlags.ERRNO_SPECIAL_CODES.ENOMEM) != 0 || forceThrowOutOfMemory)
+                if ((specialErrnoCodes & ErrnoSpecialCodes.NoMem) != 0)
                     throw new OutOfMemoryException(txt);
 
-                if ((specialErrnoCodes & (int)PalFlags.ERRNO_SPECIAL_CODES.ENOENT) != 0)
+                if ((specialErrnoCodes & ErrnoSpecialCodes.NoEnt) != 0)
                     throw new FileNotFoundException(txt);
 
-                if ((specialErrnoCodes & (int)PalFlags.ERRNO_SPECIAL_CODES.ENOSPC) != 0)
+                if ((specialErrnoCodes & ErrnoSpecialCodes.NoSpc) != 0)
                     throw new DiskFullException(txt);
             }
             catch (OutOfMemoryException)
@@ -40,6 +34,18 @@ namespace Voron.Platform
             }
 
             throw new InvalidOperationException(txt);
+        }
+
+        public static unsafe string GetNativeErrorString(int lastError, string msg, out ErrnoSpecialCodes errnoSpecialCodes)
+        {
+            const int maxNativeErrorStr = 256;
+            var buf = stackalloc byte[maxNativeErrorStr];
+
+            var size = Pal.rvn_get_error_string(lastError, buf, maxNativeErrorStr, out var specialErrnoCodes);
+            var nativeMsg = size >= 0 ? Encoding.UTF8.GetString(buf, size) : lastError.ToString();
+
+            errnoSpecialCodes = (ErrnoSpecialCodes)specialErrnoCodes;
+            return $"Errno: {lastError}='{nativeMsg}' (rc={specialErrnoCodes}) - '{msg}'";
         }
     }
 }

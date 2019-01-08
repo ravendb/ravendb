@@ -2,7 +2,6 @@ using System;
 using System.IO;
 using System.Runtime.InteropServices;
 using static Voron.Platform.PalDefinitions;
-// ReSharper disable BuiltInTypeReferenceStyle
 
 namespace Voron.Platform
 {
@@ -79,7 +78,7 @@ namespace Voron.Platform
         public static extern Int32 rvn_create_and_mmap64_file(
             string filename,
             Int64 initialFileSize,
-            PalFlags.MMAP_OPTIONS flags,
+            PalFlags.MmapOptions flags,
             out void* handle,
             out void* baseAddress,
             out Int64 actualFileSize,
@@ -100,14 +99,13 @@ namespace Voron.Platform
         public static extern Int32 rvn_memory_sync(
             void *address,
             Int64 size,
-            PalFlags.MSYNC_OPTIONS flags,
             out Int32 errorCode);
 
         [DllImport(LIBRVNPAL, SetLastError = true)]
         public static extern Int32 rvn_dispose_handle(
             string filepath,
             void* handle,
-            Int32 deleteOnClose,
+            [MarshalAs(UnmanagedType.U1)] bool deleteOnClose,
             out Int32 errorCodeClose,
             out Int32 errorCodeUnlink);
 
@@ -115,7 +113,7 @@ namespace Voron.Platform
         public static extern Int32 rvn_unmap(
             void* address,
             Int64 size,
-            Int32 deleteOnClose,
+            [MarshalAs(UnmanagedType.U1)] bool deleteOnClose,
             out Int32 errorCodeUnmap,
             out Int32 errorCodeMadvise);
 
@@ -129,16 +127,16 @@ namespace Voron.Platform
         public static extern Int32 rvn_protect_range(
             void* start,
             Int64 size,
-            PalFlags.MPROTECT_OPTIONS flags,
+            [MarshalAs(UnmanagedType.U1)] bool protection,
             out Int32 errorCode);
 
         [DllImport(LIBRVNPAL, SetLastError = true)]
         public static extern Int32 rvn_allocate_more_space(
+            string fileNameFullPath,
             Int64 newLength,
             Int64 fileSize,
-            string fileNameFullPath,
             void* handle,
-            PalFlags.MMAP_OPTIONS mmapOptions,
+            PalFlags.MmapOptions mmapOptions,
             out void* newAddress,
             out Int64 newLengthAfterAdjustment,
             out Int32 errorCode);
