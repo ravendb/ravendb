@@ -26,8 +26,7 @@ rvn_write_header(const char *path,
     }
 
     int32_t remaining = size;
-
-    /* do not call rvn_get_file_size to avoid 3 lseek calls, and use only 2 calls */
+    
     int64_t sz = lseek(fd, 0L, SEEK_END);
     if (sz == -1)
     {
@@ -56,7 +55,7 @@ rvn_write_header(const char *path,
         remaining -= (int)written;
         header += written;
     }
-    if (rvn_flush_file(fd) == -1)
+    if (_flush_file(fd) == -1)
     {
         rc = FAIL_FLUSH_FILE;
         goto error_cleanup;
@@ -66,7 +65,7 @@ rvn_write_header(const char *path,
     fd = -1;
 
     if (syncIsNeeded == true)
-        return rvn_sync_directory_for(path, detailed_error_code);
+        return _sync_directory_for(path, detailed_error_code);
     return SUCCESS;
 
 error_cleanup:

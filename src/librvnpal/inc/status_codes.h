@@ -24,27 +24,17 @@
 #define FAIL_CLOSE                      15
 #define FAIL_ALLOCATION_NO_RESIZE       16
 #define FAIL_FREE                       17
+#define FAIL_INVALID_HANDLE             18
 
-#define ERRNO_SPECIAL_CODES_NO_ERROR    (1 << 0)
-#define ERRNO_SPECIAL_CODES_ENOMEM      (1 << 1)
-#define ERRNO_SPECIAL_CODES_ENOENT      (1 << 2)
-#define ERRNO_SPECIAL_CODES_ENOSPC      (1 << 3)
+#define ERRNO_SPECIAL_CODES_NONE        0
+#define ERRNO_SPECIAL_CODES_ENOMEM      (1 << 0)
+#define ERRNO_SPECIAL_CODES_ENOENT      (1 << 1)
+#define ERRNO_SPECIAL_CODES_ENOSPC      (1 << 2)
 
 #define SYNC_DIR_ALLOWED                0
 #define SYNC_DIR_NOT_ALLOWED            1
 
 #define MMOPTIONS_NONE                  0
 #define MMOPTIONS_COPY_ON_WRITE         1
-
-#define MSYNC_OPTIONS_MS_SYNC           (1 << 0)
-#define MSYNC_OPTIONS_MS_ASYNC          (1 << 1)
-#define MSYNC_OPTIONS_MS_INVALIDATE     (1 << 2)
-
-#define MPROTECT_OPTIONS_PROT_NONE      0
-#define MPROTECT_OPTIONS_PROT_READ      (1 << 0)
-#define MPROTECT_OPTIONS_PROT_WRITE     (1 << 1)
-#define MPROTECT_OPTIONS_PROT_EXEC      (1 << 2)
-#define MPROTECT_OPTIONS_PROT_GROWSUP   (1 << 3)
-#define MPROTECT_OPTIONS_PROT_GROWSDOWN (1 << 4)
 
 #endif
