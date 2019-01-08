@@ -33,14 +33,16 @@ namespace Voron.Impl.Paging
             _logger = LoggingSource.Instance.GetLogger<StorageEnvironment>($"Pager-{file}");
 
             if (initialFileSize.HasValue == false || initialFileSize.Value == 0) 
-                initialFileSize = SysInfo.PageSize * 16;
+                initialFileSize = Math.Max(SysInfo.PageSize * 16, 64 * 1024);
+
+            initialFileSize += SysInfo.PageSize - initialFileSize % SysInfo.PageSize;
 
             Debug.Assert(file != null);
 
             var rc = rvn_create_and_mmap64_file(
                 file.FullPath,
                 initialFileSize.Value,
-                _copyOnWriteMode ? MMAP_OPTIONS.CopyOnWrite : MMAP_OPTIONS.None,
+                _copyOnWriteMode ? MmapOptions.CopyOnWrite : MmapOptions.None,
                 out _handle,
                 out var baseAddress,
                 out _totalAllocationSize,
@@ -50,7 +52,7 @@ namespace Voron.Impl.Paging
             {
                 try
                 {
-                    PalHelper.ThrowLastError(errorCode, $"rvn_create_and_mmap64_file failed on {(FAIL_CODES)rc}");
+                    PalHelper.ThrowLastError(errorCode, $"rvn_create_and_mmap64_file failed on {(FailCodes)rc}");
                 }
                 catch (DiskFullException dfEx)
                 {
@@ -78,12 +80,10 @@ namespace Voron.Impl.Paging
         {
             var state = pagerState ?? _pagerState;
 
-            // ReSharper disable once InvertIf
-            if (SysInfo.CanPrefetch == PalDefinitions.True)
+            if (SysInfo.CanPrefetch)
             {
-                // ReSharper disable once UnusedVariable
-                if (_pagerState.ShouldPrefetchSegment(pageNumber, out void* virtualAddress, out long bytes))
-                    rvn_prefetch_virtual_memory(virtualAddress, bytes, out var errorCode); // ignore if unsuccessful
+                if (_pagerState.ShouldPrefetchSegment(pageNumber, out var virtualAddress, out var bytes))
+                    rvn_prefetch_virtual_memory(virtualAddress, bytes, out _); // ignore if unsuccessful
             }
 
             return base.AcquirePagePointer(tx, pageNumber, state);
@@ -99,7 +99,7 @@ namespace Voron.Impl.Paging
                     foreach (var alloc in currentState.AllocationInfos)
                     {
                         metric.IncrementFileSize(alloc.Size);
-                        if (rvn_memory_sync(alloc.BaseAddress, alloc.Size, MSYNC_OPTIONS.MS_SYNC, out var errorCode) != 0)
+                        if (rvn_memory_sync(alloc.BaseAddress, alloc.Size, out var errorCode) != 0)
                             PalHelper.ThrowLastError(errorCode,$"Failed to memory sync at ${new IntPtr(alloc.BaseAddress).ToInt64():X}. TotalUnsynced = ${totalUnsynced}");
                     }
                     metric.IncrementSize(totalUnsynced);
@@ -115,7 +115,7 @@ namespace Voron.Impl.Paging
         {
             base.ReleaseAllocationInfo(baseAddress, size);
 
-            var rc = rvn_unmap(baseAddress, size, DeleteOnClose ? PalDefinitions.True : PalDefinitions.False, out var errorCodeUnmap, out var errorCodeMadvise);
+            var rc = rvn_unmap(baseAddress, size, DeleteOnClose, out var errorCodeUnmap, out var errorCodeMadvise);
             // TODO : is madvise don't need - should fail unmap call ? (currently we fail it)
             if (rc != 0)
                 PalHelper.ThrowLastError(errorCodeUnmap != 0 ? errorCodeUnmap : errorCodeMadvise,
@@ -126,12 +126,12 @@ namespace Voron.Impl.Paging
 
         protected override void DisposeInternal()
         {
-            var rc = rvn_dispose_handle(FileName.FullPath, _handle, DeleteOnClose ? PalDefinitions.True : PalDefinitions.False, out var errorCodeClose, out var errorCodeUnlink);
+            var rc = rvn_dispose_handle(FileName.FullPath, _handle, DeleteOnClose, out var errorCodeClose, out var errorCodeUnlink);
             if (rc == 0) 
                 return;
             
             // ignore results.. but warn! we cannot delete the file probably
-            // rc contains either FAIL_UNLINK, FAIL_CLOSE or both of them   
+            // rc contains either FAIL_UNLINK, FAIL_CLOSE or both of them    (or FAIL_INVALID_HANDLE)
             if (_logger.IsInfoEnabled)
                 _logger.Info($"Unable to dispose handle for {FileName.FullPath} (ignoring). rc={rc}. DeleteOnClose={DeleteOnClose}, errorCodeClose={errorCodeClose}, errorCodeUnlink={errorCodeUnlink}",
                     new IOException($"Unable to dispose handle for {FileName.FullPath} (ignoring)."));
@@ -140,8 +140,7 @@ namespace Voron.Impl.Paging
         protected internal override void PrefetchRanges(Win32MemoryMapNativeMethods.WIN32_MEMORY_RANGE_ENTRY* list, int count)
         {
             // TODO : Get rid of WIN32_MEMORY_RANGE_ENTRY and use Pal's PrefetchRanges instead
-            // ReSharper disable once UnusedVariable
-            rvn_prefetch_ranges((PalDefinitions.PrefetchRanges*)list, count, out var errorCode);
+            rvn_prefetch_ranges((PalDefinitions.PrefetchRanges*)list, count, out _);
             // we explicitly ignore the return code here, this is optimization only
         }
 
@@ -150,17 +149,14 @@ namespace Voron.Impl.Paging
             if (DisposeOnceRunner.Disposed)
                 ThrowAlreadyDisposedException();
 
-            var rc = rvn_allocate_more_space(newLength, _totalAllocationSize, FileName.FullPath, _handle, _copyOnWriteMode ? MMAP_OPTIONS.CopyOnWrite : MMAP_OPTIONS.None,
+            var rc = rvn_allocate_more_space(FileName.FullPath, newLength, _totalAllocationSize, _handle, _copyOnWriteMode ? MmapOptions.CopyOnWrite : MmapOptions.None,
                 out var newAddress, out var newLengthAfterAdjustment, out var errorCode);
 
-            if (rc == (int)FAIL_CODES.FAIL_ALLOCATION_NO_RESIZE)
+            if (rc == (int)FailCodes.FailAllocationNoResize)
                 return null;
 
             if (rc != 0)
-            {
-                // TODO : can't allocate more pages, should we force throw out of mem (as was done before RvnMemoryMapPager introduced ?
-                PalHelper.ThrowLastError(errorCode, $"can't allocate more pages (rc={rc}) - throwing out of memory exception", true);
-            }
+                PalHelper.ThrowLastError(errorCode, $"can't allocate more pages (rc={rc})");
 
             // TODO : Get rid of allocation info
             var allocationInfo = new PagerState.AllocationInfo
@@ -189,7 +185,7 @@ namespace Voron.Impl.Paging
                 UsePageProtection == false && force == false) 
                 return;
 
-            if (rvn_protect_range(start, (long)size, MPROTECT_OPTIONS.PROT_READ, out var errorCode) == 0)
+            if (rvn_protect_range(start, (long)size, true, out var errorCode) == 0)
                 return;
 
             if (_logger.IsInfoEnabled)
@@ -203,7 +199,7 @@ namespace Voron.Impl.Paging
                 UsePageProtection == false && force == false) 
                 return;
 
-            if (rvn_protect_range(start, (long)size, MPROTECT_OPTIONS.PROT_READ | MPROTECT_OPTIONS.PROT_WRITE, out var errorCode) == 0)
+            if (rvn_protect_range(start, (long)size, false, out var errorCode) == 0)
                 return;
 
             if (_logger.IsInfoEnabled)

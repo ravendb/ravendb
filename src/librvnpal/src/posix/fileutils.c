@@ -9,12 +9,13 @@
 #include <errno.h>
 #include <sys/mman.h>
 #include <assert.h>
+#include <time.h>
 
 #include "rvn.h"
 #include "status_codes.h"
 
 int64_t
-rvn_nearest_size_to_page_size(int64_t orig_size, int64_t sys_page_size)
+_nearest_size_to_page_size(int64_t orig_size, int64_t sys_page_size)
 {
     int64_t mod = orig_size % sys_page_size;
     if (mod == 0)
@@ -25,21 +26,23 @@ rvn_nearest_size_to_page_size(int64_t orig_size, int64_t sys_page_size)
 }
 
 int64_t
-rvn_pwrite(int32_t fd, void *buffer, uint64_t count, uint64_t offset, int32_t *detailed_error_code)
+_pwrite(int32_t fd, void *buffer, uint64_t count, uint64_t offset, int32_t *detailed_error_code)
 {
-    int64_t actually_written = 0;
+    uint64_t actually_written = 0;
     int64_t cifs_retries = 3;
     do
     {
-        int64_t result = pwrite(fd, buffer, count - (uint64_t)actually_written, offset + actually_written);
+        int64_t result = pwrite(fd, buffer, count - actually_written, offset + actually_written);
         if (result < 0) /* we assume zero cannot be returned at any case as defined in POSIX */
         {
-            if (errno == EINVAL && rvn_sync_directory_allowed(fd) == false && --cifs_retries > 0)
+            if (errno == EINVAL && _sync_directory_allowed(fd) == false && --cifs_retries > 0)
             {
                 /* cifs/nfs mount can sometimes fail on EINVAL after file creation
                 lets give it few retries with short pauses between them - RavenDB-11954 */
-
-                sleep(1);
+                struct timespec ts;
+                ts.tv_sec = 0;
+                ts.tv_nsec = 100000000L * cifs_retries; /* 100mSec * retries..*/
+                nanosleep(&ts, NULL);
                 continue; /* retry cifs */
             }
             *detailed_error_code = errno;
@@ -54,7 +57,7 @@ rvn_pwrite(int32_t fd, void *buffer, uint64_t count, uint64_t offset, int32_t *d
 }
 
 int32_t
-rvn_allocate_file_space(int32_t fd, int64_t size, int32_t *detailed_error_code)
+_allocate_file_space(int32_t fd, int64_t size, int32_t *detailed_error_code)
 {
     int32_t result;
     int32_t retries;
@@ -72,7 +75,7 @@ rvn_allocate_file_space(int32_t fd, int64_t size, int32_t *detailed_error_code)
             /* fallocate is not supported, we'll use lseek instead */
             {
                 char b = 0;
-                int64_t rc = rvn_pwrite(fd, &b, 1UL, (uint64_t)size - 1UL, detailed_error_code);
+                int64_t rc = _pwrite(fd, &b, 1UL, (uint64_t)size - 1UL, detailed_error_code);
                 if (rc != SUCCESS)
                     *detailed_error_code = errno;
                 return rc;
@@ -95,7 +98,7 @@ rvn_allocate_file_space(int32_t fd, int64_t size, int32_t *detailed_error_code)
 }
 
 int32_t
-rvn_pointer_to_int(void *ptr)
+_pointer_to_int(void *ptr)
 {
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Wint-conversion"
@@ -104,12 +107,12 @@ rvn_pointer_to_int(void *ptr)
 }
 
 int32_t
-rvn_dispose_handle(const char *filepath, void *handle, int32_t delete_on_close, int32_t *unlink_error_code, int32_t *close_error_code)
+rvn_dispose_handle(const char *filepath, void *handle, bool delete_on_close, int32_t *unlink_error_code, int32_t *close_error_code)
 {
     int32_t rc = SUCCESS;
 
     /* the following in two lines to avoid compilation warning */
-    int32_t fd = rvn_pointer_to_int(handle);
+    int32_t fd = _pointer_to_int(handle);
     *unlink_error_code = 0;
     *close_error_code = 0;
 
@@ -125,15 +128,17 @@ rvn_dispose_handle(const char *filepath, void *handle, int32_t delete_on_close, 
                 *unlink_error_code = errno;
             }
         }
+
+        int32_t close_rc = close(fd);
+        if (close_rc != 0)
+        {
+            rc |= FAIL_CLOSE;
+            *close_error_code = errno;
+        }
+        return rc;
     }
 
-    int32_t close_rc = close(fd);
-    if (close_rc != 0)
-    {
-        rc |= FAIL_CLOSE;
-        *close_error_code = errno;
-    }
-    return rc;
+    return FAIL_INVALID_HANDLE;
 }
 
 #endif
