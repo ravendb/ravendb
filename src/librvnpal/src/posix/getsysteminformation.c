@@ -7,7 +7,7 @@
 #include "rvn.h"
 #include "status_codes.h"
 
-int32_t
+EXPORT int32_t
 rvn_get_system_information(struct SYSTEM_INFORMATION *sys_info,
                            int32_t *detailed_error_code)
 {

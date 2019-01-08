@@ -16,13 +16,13 @@
 #include "rvn.h"
 #include "status_codes.h"
 
-int32_t
+PRIVATE int32_t
 _flush_file(int32_t fd)
 {
   return fsync(fd);
 }
 
-int32_t
+PRIVATE int32_t
 _sync_directory_allowed(int32_t dir_fd)
 {
   struct statfs buf;
