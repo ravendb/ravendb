@@ -3,8 +3,9 @@
 #include <pthread.h>
 #include <rvn.h>
 
-uint64_t rvn_get_current_thread_id() {
-  
+EXPORT uint64_t
+rvn_get_current_thread_id()
+{
   uint64_t id;
   pthread_threadid_np(NULL, &id);
 
@@ -12,4 +13,3 @@ uint64_t rvn_get_current_thread_id() {
 }
 
 #endif
-

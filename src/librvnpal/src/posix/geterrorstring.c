@@ -9,7 +9,7 @@
 #include "rvn.h"
 #include "status_codes.h"
 
-int32_t
+EXPORT int32_t
 rvn_get_error_string(int32_t error, 
 					 char* buf, 
 					 int32_t buf_size, 
