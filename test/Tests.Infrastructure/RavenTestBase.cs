@@ -241,7 +241,7 @@ namespace FastTests
                                 {
                                     continue;
                                 }
-                             }
+                            }
                         }
                     };
                     CreatedStores.Add(store);
@@ -358,6 +358,7 @@ namespace FastTests
         {
             if (Debugger.IsAttached)
                 timeout *= 100;
+
             var sw = Stopwatch.StartNew();
             do
             {
@@ -386,7 +387,9 @@ namespace FastTests
 
         protected async Task<T> WaitForValueAsync<T>(Func<T> act, T expectedVal)
         {
-            int timeout = 5000;// * (Debugger.IsAttached ? 100 : 1);
+            int timeout = 15000;
+            if (Debugger.IsAttached)
+                timeout *= 100;
 
             var sw = Stopwatch.StartNew();
             do
@@ -420,6 +423,7 @@ namespace FastTests
             int timeout = 15000;
             if (Debugger.IsAttached)
                 timeout *= 100;
+
             var sw = Stopwatch.StartNew();
             do
             {
@@ -451,7 +455,6 @@ namespace FastTests
         {
             if (debug && Debugger.IsAttached == false)
                 return;
-
 
             var documentsPage = url + "/studio/index.html";
 
