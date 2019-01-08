@@ -12,7 +12,8 @@ function LayoutDockerPrerequisites($projectDir, $artifactsDir) {
         'build-nanoserver.ps1',
         'build-ubuntu.ps1',
         'publish-nanoserver.ps1',
-        'publish-ubuntu.ps1'
+        'publish-ubuntu.ps1',
+        'common.ps1'
     )
 
     foreach ($asset in $assets) {
