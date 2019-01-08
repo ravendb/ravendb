@@ -408,6 +408,8 @@ namespace Raven.Server.Documents.PeriodicBackup
                     // will rename the file after the backup is finished
                     var tempBackupFilePath = backupFilePath + InProgressExtension;
 
+                    BackupTypeValidation();//TODO - name
+
                     if (_configuration.BackupType == BackupType.Backup ||
                         _configuration.BackupType == BackupType.Snapshot && _isFullBackup == false)
                     {
@@ -471,6 +473,28 @@ namespace Raven.Server.Documents.PeriodicBackup
             }
 
             return lastEtag;
+        }
+
+        private void BackupTypeValidation()
+        {
+            if ((_database.MasterKey == null) &&
+                (_configuration.BackupEncryptionSettings?.EncryptionMode == EncryptionMode.UseDatabaseKey))
+                throw new InvalidOperationException("Can't use database key for backup encryption, the key doesn't exist");
+
+            if (_database.MasterKey != null)
+            {
+                if (_configuration.BackupEncryptionSettings != null)
+                {
+                    if ((_configuration.BackupEncryptionSettings.AllowUnencryptedBackupForEncryptedDatabase == false) &&
+                        (_configuration.BackupEncryptionSettings.EncryptionMode == EncryptionMode.None))
+                        throw new InvalidOperationException("Can't backup encrypted database without encryption");
+                }
+            }
+
+            if ((_configuration.BackupType == BackupType.Snapshot && _isFullBackup)
+             && (_configuration.BackupEncryptionSettings != null &&
+                    (_configuration.BackupEncryptionSettings.EncryptionMode == EncryptionMode.UseProvidedKey)))
+                    throw new InvalidOperationException("Can't snapshot encrypted database with different key");
         }
 
         private void EnsureSnapshotProcessed(DatabaseSummary databaseSummary, SmugglerResult snapshotSmugglerResult, long indexesCount)
@@ -537,18 +561,39 @@ namespace Raven.Server.Documents.PeriodicBackup
                     case FileStream file:
                         file.Flush(flushToDisk: true);
                         break;
+                    default:
+                        throw new InvalidOperationException($" {outputStream.GetType()} not supported");
                 }
 
                 return smugglerSource.LastEtag;
             }
         }
 
-        private Stream GetOutputStream(Stream fileStream)
+        public Stream GetOutputStream(Stream fileStream)
         {
-            if (_configuration?.BackupEncryptionSettings == null || _configuration.BackupEncryptionSettings.EncryptionMode == EncryptionMode.None)
+            if ((_database.MasterKey == null) &&
+                (_configuration.BackupEncryptionSettings == null))
                 return fileStream;
 
-            var key = _configuration.BackupEncryptionSettings.Key;
+            if ((_database.MasterKey == null) &&
+                (_configuration.BackupEncryptionSettings?.EncryptionMode == EncryptionMode.None))
+                return fileStream;
+
+            
+
+            if ((_database.MasterKey != null) &&
+                (_configuration.BackupEncryptionSettings?.EncryptionMode == EncryptionMode.None))
+                return fileStream;
+
+            if ((_database.MasterKey != null) && (_configuration?.BackupEncryptionSettings == null))
+                return new EncryptingXChaCha20Poly1305Stream(fileStream,
+                    _database.MasterKey, _configuration);
+
+            if (_configuration?.BackupEncryptionSettings?.EncryptionMode == EncryptionMode.UseDatabaseKey)
+                    return new EncryptingXChaCha20Poly1305Stream(fileStream,
+                        _database.MasterKey, _configuration);
+
+            var key = _configuration?.BackupEncryptionSettings?.Key;
             return new EncryptingXChaCha20Poly1305Stream(fileStream,
                 Convert.FromBase64String(key), _configuration);
         }

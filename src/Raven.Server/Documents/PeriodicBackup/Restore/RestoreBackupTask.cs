@@ -88,6 +88,11 @@ namespace Raven.Server.Documents.PeriodicBackup.Restore
 
                     snapshotRestore = true;
                     sw = Stopwatch.StartNew();
+                    if (_restoreConfiguration.BackupEncryptionSettings?.Key != null)
+                    {
+                        _hasEncryptionKey = true;
+                        _restoreConfiguration.EncryptionKey = _restoreConfiguration.BackupEncryptionSettings?.Key;
+                    }
                     // restore the snapshot
                     restoreSettings = SnapshotRestore(firstFile,
                         _restoreConfiguration.DataDirectory,
@@ -100,7 +105,6 @@ namespace Raven.Server.Documents.PeriodicBackup.Restore
                         restoreSettings.DatabaseRecord.AutoIndexes = null;
                         restoreSettings.DatabaseRecord.Indexes = null;
                     }
-
                     // removing the snapshot from the list of files
                     _filesToRestore.RemoveAt(0);
                 }
@@ -371,6 +375,7 @@ namespace Raven.Server.Documents.PeriodicBackup.Restore
             if (_hasEncryptionKey)
             {
                 var key = Convert.FromBase64String(_restoreConfiguration.EncryptionKey);
+
                 if (key.Length != 256 / 8)
                     throw new InvalidOperationException($"The size of the encryption key must be 256 bits, but was {key.Length * 8} bits.");
             }
@@ -531,7 +536,7 @@ namespace Raven.Server.Documents.PeriodicBackup.Restore
             Action<DatabaseRecord> onDatabaseRecordAction = null)
         {
             using (var fileStream = File.Open(filePath, FileMode.Open))
-            using (var inputStream = GetInputStream(fileStream))
+            using (var inputStream = GetInputStream(fileStream, database.Name))
             using (var gzipStream = new GZipStream(inputStream, CompressionMode.Decompress))
             using (var source = new StreamSource(gzipStream, context, database))
             {
@@ -545,13 +550,22 @@ namespace Raven.Server.Documents.PeriodicBackup.Restore
             }
         }
 
-        private Stream GetInputStream(FileStream fileStream)
+        private Stream GetInputStream(FileStream fileStream, string database)
         {
-            if (_restoreConfiguration.BackupEncryptionSettings == null)
-                return fileStream;
-
-            var keyAsString = _restoreConfiguration.BackupEncryptionSettings.Key;
-            return new DecryptingXChaCha20Oly1305Stream(fileStream, Convert.FromBase64String(keyAsString));
+            using (_serverStore.ContextPool.AllocateOperationContext(out TransactionOperationContext ctx))
+            using (ctx.OpenReadTransaction())
+            {
+                var key = _serverStore.GetSecretKey(ctx, database);
+                if (key != null)
+                {
+                    return new DecryptingXChaCha20Oly1305Stream(fileStream, key);
+                }
+                if (_restoreConfiguration.BackupEncryptionSettings?.Key != null)
+                {
+                    return new DecryptingXChaCha20Oly1305Stream(fileStream, Convert.FromBase64String(_restoreConfiguration.BackupEncryptionSettings.Key));
+                }
+            }
+            return fileStream;
         }
 
         private RestoreSettings SnapshotRestore(
