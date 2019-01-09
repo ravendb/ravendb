@@ -26,7 +26,11 @@
 #define FAIL_FREE                       17
 #define FAIL_INVALID_HANDLE             18
 #define FAIL_TRUNCATE_FILE              19
-
+#define FAIL_GET_FILE_SIZE              20
+#define FAIL_ALLOC_FILE                 21
+#define FAIL_READ_FILE                  22
+#define FAIL_SET_FILE_POINTER           23
+#define FAIL_SET_EOF                    24
 #define ERRNO_SPECIAL_CODES_NONE        0
 #define ERRNO_SPECIAL_CODES_ENOMEM      (1 << 0)
 #define ERRNO_SPECIAL_CODES_ENOENT      (1 << 1)
@@ -44,5 +48,9 @@
 #define PROTECT_RANGE_NONE              0
 #define PROTECT_RANGE_PROTECT           1
 #define PROTECT_RANGE_UNPROTECT         2
+
+#define JOURNAL_MODE_SAFE               0
+#define JOURNAL_MODE_DANGER             1
+#define JOURNAL_MODE_PURE_MEMORY        2
 
 #endif

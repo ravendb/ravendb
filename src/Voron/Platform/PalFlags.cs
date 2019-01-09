@@ -19,13 +19,19 @@ namespace Voron.Platform
             FailFlushFile = 9,
             FailSysconf = 10,
             FailPwrite = 11,
-            FailPwriteWithRetries= 12,
+            FailPwriteWithRetries = 12,
             FailMmap = 13,
             FailUnlink = 14,
             FailClose = 15,
             FailAllocationNoResize = 16,
             FailFree = 17,
-            FailInvalidHandle = 18
+            FailInvalidHandle = 18,
+            FailTruncateFile = 19,
+            FailGetFileSize = 20,
+            FailAllocFile = 21,
+            FailReadFile = 22,
+            FileSetFilePointer = 23,
+            FailSetEndOfFile = 24,
         };
 
         [Flags]
@@ -43,7 +49,8 @@ namespace Voron.Platform
             CopyOnWrite = 1
         }
 
-        public enum FileCloseFlags {
+        public enum FileCloseFlags
+        {
             None = 0,
             DeleteOnClose = 1
         }
@@ -53,6 +60,14 @@ namespace Voron.Platform
             None = 0,
             Protect = 1,
             Unprotect = 2
+        }
+
+        [Flags]
+        public enum JOURNAL_MODE
+        {
+            SAFE = 0,
+            DANGER = 1,
+            PURE_MEMORY = 2
         }
     }
 }

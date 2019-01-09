@@ -136,5 +136,48 @@ namespace Voron.Platform
             PalFlags.MmapOptions mmapOptions,
             out void* newAddress,
             out Int32 errorCode);
+
+        [DllImport(LIBRVNPAL, SetLastError = true)]
+        public static extern Int32 rvn_open_journal(
+            string fileName,
+            Int32 mode,
+            Int64 requiredSize,
+            out IntPtr handle,
+            out Int64 actualSize,
+            out Int32 errorCode);
+
+        [DllImport(LIBRVNPAL, SetLastError = true)]
+        public static extern Int32 rvn_close_journal(
+            IntPtr handle,
+            out Int32 errorCode
+        );
+
+
+        [DllImport(LIBRVNPAL, SetLastError = true)]
+        public static extern Int32 rvn_write_journal(
+            IntPtr handle,
+            IntPtr buffer,
+            UInt64 size,
+            Int64 offset,
+            out Int32 errorCode
+        );
+
+        [DllImport(LIBRVNPAL, SetLastError = true)]
+        public static extern Int32 rvn_read_journal(
+            string fileName,
+            ref IntPtr handle,
+            byte* buffer,
+            UInt64 requiredSize,
+            Int64 offset,
+            out UInt64 actualSize,
+            out Int32 errorCode
+        );
+
+        [DllImport(LIBRVNPAL, SetLastError = true)]
+        public static extern Int32 rvn_truncate_journal(
+            IntPtr handle,
+            UInt64 size,
+            out Int32 errorCode
+            );
     }
 }

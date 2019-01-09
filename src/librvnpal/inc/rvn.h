@@ -73,6 +73,21 @@ rvn_protect_range(void *start_address, int64_t size, int32_t protection, int32_t
 EXPORT int32_t
 rvn_allocate_more_space(const char *filename, int64_t new_length_after_adjustment, void *handle, int32_t flags, void **new_address, int32_t *detailed_error_code);
 
+EXPORT int32_t
+rvn_open_journal(char* file_name, int32_t mode, int64_t required_size, void** handle, int64_t* actual_size, int32_t* error_code);
+
+EXPORT int32_t
+rvn_close_journal(void* handle, int32_t* error_code);
+
+EXPORT int32_t
+rvn_write_journal(void* handle, char* buffer, uint64_t size, int64_t offset, int32_t* error_code);
+
+EXPORT int32_t
+rvn_read_journal(char* file_name, void** handle, char* buffer, uint64_t required_size, int64_t offset, uint64_t* actual_size, int32_t* error_code);
+
+EXPORT int32_t
+rvn_truncate_journal(void* handle, uint64_t size, int32_t* error_code);
+
 /* For internal use: */
 PRIVATE int64_t
 _nearest_size_to_page_size(int64_t orig_size, int64_t sys_page_size);
