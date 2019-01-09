@@ -122,7 +122,8 @@ class driveUsage {
                         new legendColumn<driveUsageDetails>(grid, x => this.colorClassProvider(x.database()), "", "26px"),
                         new hyperlinkColumn<driveUsageDetails>(grid, x => x.database(), x => appUrl.forStatusStorageReport(x.database()), "Database", "42%", {
                             extraClass: d => isDisabled(d.database()) ? "disabled" : "",
-                            sortable: "string"
+                            sortable: "string",
+                            customComparator: generalUtils.sortAlphaNumeric
                         }),
                         new textColumn<driveUsageDetails>(grid, x => this.sizeFormatter(x.size()), "Data", "16%", {
                             sortable: x => x.size(),
@@ -142,7 +143,8 @@ class driveUsage {
                         new legendColumn<driveUsageDetails>(grid, x => this.colorClassProvider(x.database()), "", "26px"),
                         new hyperlinkColumn<driveUsageDetails>(grid, x => x.database(), x => appUrl.forStatusStorageReport(x.database()), "Database", "60%", {
                             extraClass: d => isDisabled(d.database()) ? "disabled" : "",
-                            sortable: "string"
+                            sortable: "string",
+                            customComparator: generalUtils.sortAlphaNumeric
                         }),
                         new textColumn<driveUsageDetails>(grid, x => this.sizeFormatter(x.size()), "Data", "30%", {
                             sortable: x => x.size()

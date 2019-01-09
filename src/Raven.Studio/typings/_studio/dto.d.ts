@@ -530,6 +530,7 @@ interface textColumnOpts<T> {
     title?: (item:T) => string;
     sortable?: "number" | "string" | valueProvider<T>;
     defaultSortOrder?: sortMode;
+    customComparator?: (a: any, b: any) => number;
 }
 
 interface hypertextColumnOpts<T> extends textColumnOpts<T> {

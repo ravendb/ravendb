@@ -47,7 +47,8 @@ class etlTransformOrLoadErrorDetails extends abstractAlertDetails {
                 sortable: x => x.Error
             });
             const documentIdColumn = new textColumn<Raven.Server.NotificationCenter.Notifications.Details.EtlErrorInfo>(grid, x => x.DocumentId || ' - ', "Document ID", "20%", {
-                sortable: x => x.DocumentId
+                sortable: x => x.DocumentId,
+                customComparator: generalUtils.sortAlphaNumeric
             });
             
             return this.alert.alertType() === "Etl_LoadError" ?

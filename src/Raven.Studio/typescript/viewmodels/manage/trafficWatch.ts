@@ -226,7 +226,8 @@ class trafficWatch extends viewModelBase {
                 }),
                 new textColumn<Raven.Client.Documents.Changes.TrafficWatchChange>(grid, x => x.DatabaseName, "Database Name", "8%", {
                     extraClass: rowHighlightRules,
-                    sortable: "string"
+                    sortable: "string",
+                    customComparator: generalUtils.sortAlphaNumeric
                 }),
                 new textColumn<Raven.Client.Documents.Changes.TrafficWatchChange>(grid, x => x.ElapsedMilliseconds, "Duration", "8%", {
                     extraClass: rowHighlightRules,

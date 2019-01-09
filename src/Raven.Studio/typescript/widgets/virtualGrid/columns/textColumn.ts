@@ -33,13 +33,21 @@ class textColumn<T> implements virtualColumn {
 
     sortProvider(mode: sortMode): (array: Array<any>) => Array<any> {
         if (this.opts && this.opts.sortable) {
+            
+            const multiplier = mode === "asc" ? 1 : -1;
             switch (this.opts.sortable) {
                 case "string":
                 case "number":
-                    return (input: Array<any>) => input.sort((a, b) => generalUtils.sortAlphaNumeric(this.getCellValue(a), this.getCellValue(b), mode));
+                    return this.opts.customComparator ? 
+                        (input: Array<any>) => input.sort((a, b) => multiplier * this.opts.customComparator(this.getCellValue(a), this.getCellValue(b)))
+                        : (input: Array<any>) => _.orderBy(input, x => this.getCellValue(x), mode);
                 default:
                     const provider = this.opts.sortable as valueProvider<T>;
-                    return (input: Array<any>) => input.sort((a, b) => generalUtils.sortAlphaNumeric(provider(a), provider(b), mode));
+                    
+                    return this.opts.customComparator ?
+                        (input: Array<any>) => input.sort((a, b) => multiplier * this.opts.customComparator(provider(a), provider(b)))
+                        : (input: Array<any>) => _.orderBy(input, x => provider(x), mode);
+                    
             }
         }
         return null;
