@@ -604,26 +604,40 @@ namespace Raven.Client.Documents.Indexes
             {
                 case ExpressionType.ConvertChecked:
                 case ExpressionType.Convert:
-                    var expression = ((UnaryExpression)left).Operand;
-                    var enumType = Nullable.GetUnderlyingType(expression.Type) ?? expression.Type;
+                    var leftWithoutConvert = SkipConvertExpressions(left);
+                    var enumType = Nullable.GetUnderlyingType(leftWithoutConvert.Type) ?? leftWithoutConvert.Type;
                     if (enumType.GetTypeInfo().IsEnum == false)
                         return;
 
-                    var constantExpression = SkipConvertExpressions(right) as ConstantExpression;
-                    if (constantExpression == null)
-                        return;
-                    left = expression;
-                    if (constantExpression.Value == null)
+                    var rightWithoutConvert = SkipConvertExpressions(right);
+
+                    if (rightWithoutConvert is ConstantExpression constantExpression)
                     {
-                        right = Expression.Constant(null);
+                        left = leftWithoutConvert;
+
+                        if (constantExpression.Value == null)
+                        {
+                            right = Expression.Constant(null);
+                        }
+                        else
+                        {
+                            right = _conventions.SaveEnumsAsIntegers
+                                ? Expression.Constant(Convert.ToInt32(constantExpression.Value))
+                                : Expression.Constant(Enum.ToObject(enumType, constantExpression.Value).ToString());
+
+                        }
                     }
                     else
                     {
-                        right = _conventions.SaveEnumsAsIntegers
-                                    ? Expression.Constant(Convert.ToInt32(constantExpression.Value))
-                                    : Expression.Constant(Enum.ToObject(enumType, constantExpression.Value).ToString());
+                        var rightType = Nullable.GetUnderlyingType(rightWithoutConvert.Type) ?? rightWithoutConvert.Type;
 
+                        if (rightType.GetTypeInfo().IsEnum)
+                        {
+                            left = leftWithoutConvert;
+                            right = rightWithoutConvert;
+                        }
                     }
+
                     break;
             }
 
