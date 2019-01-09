@@ -37,4 +37,10 @@
 #define MMOPTIONS_NONE                  0
 #define MMOPTIONS_COPY_ON_WRITE         1
 
+#define DELETE_ON_CLOSE_NO              0
+#define DELETE_ON_CLOSE_YES             1
+
+#define PROTECT_RANGE_UNPROTECT         0
+#define PROTECT_RANGE_PROTECT           1
+
 #endif
