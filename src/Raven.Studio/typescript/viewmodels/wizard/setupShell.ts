@@ -12,6 +12,8 @@ import requestExecution = require("common/notifications/requestExecution");
 import protractedCommandsDetector = require("common/notifications/protractedCommandsDetector");
 import buildInfo = require("models/resources/buildInfo");
 import constants = require("common/constants/constants");
+import chooseTheme = require("viewmodels/shell/chooseTheme");
+import app = require("durandal/app");
 
 type deploymentEnvironment = "AwsLinux" | "AwsWindows" | "Azure" | "Custom";
 
@@ -104,6 +106,11 @@ class setupShell extends viewModelBase {
 
         this.studioLoadingFakeRequest.markCompleted();
         this.studioLoadingFakeRequest = null;
+    }
+
+    static chooseTheme() {
+        const dialog = new chooseTheme();
+        app.showBootstrapDialog(dialog);
     }
 }
 
