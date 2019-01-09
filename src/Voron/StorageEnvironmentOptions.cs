@@ -454,7 +454,7 @@ namespace Voron
                     if (RunningOnPosix)
                         return new PosixJournalWriter(this, path, journalSize);
 
-                    return new Win32FileJournalWriter(this, path, journalSize);
+                    return new JournalWriter(this, path, journalSize);
                 }));
 
                 bool createJournal;
@@ -476,7 +476,7 @@ namespace Voron
                         if (RunningOnPosix)
                             return new PosixJournalWriter(this, path, journalSize);
 
-                        return new Win32FileJournalWriter(this, path, journalSize);
+                        return new JournalWriter(this, path, journalSize);
                     });
                     if (_journals.TryUpdate(name, newWriter, result) == false)
                         throw new InvalidOperationException("Could not update journal pager");
@@ -862,10 +862,7 @@ namespace Voron
                 }
                 else
                 {
-                    value = new Win32FileJournalWriter(this, path, journalSize,
-                        Win32NativeFileAccess.GenericWrite,
-                        Win32NativeFileShare.Read | Win32NativeFileShare.Write | Win32NativeFileShare.Delete
-                        );
+                    value = new JournalWriter(this, path, journalSize, PalFlags.JOURNAL_MODE.PURE_MEMORY);
                 }
 
                 _logs[name] = value;
