@@ -988,7 +988,6 @@ namespace Raven.Server.Documents.Revisions
                     hasMore = PrepareRevertedRevisions(writeCtx, parameters, result, list);
                     await WriteRevertedRevisions(list);
                     onProgressAction?.Invoke(result);
-                    result.Warnings.Clear();
                 }
             }
 

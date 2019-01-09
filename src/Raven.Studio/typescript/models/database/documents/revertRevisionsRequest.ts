@@ -8,11 +8,10 @@ class revertRevisionsRequest {
     static defaultWindowValue = 96;
     
     date = ko.observable<string>();
-    windowValue = ko.observable<number>();
+    windowValue = ko.observable<number>(); //TODO: do we need window here?
     windowMagnitude = ko.observable<timeMagnitude>("hours");
 
     pointInTimeFormatted: KnockoutComputed<string>;
-    revertStartTime: KnockoutComputed<string>;
 
     validationGroup = ko.validatedObservable({
         date: this.date,
@@ -31,15 +30,6 @@ class revertRevisionsRequest {
                 return moment(date, revertRevisionsRequest.defaultDateFormat).utc().format(revertRevisionsRequest.defaultDateFormat);
             }
             return null;
-        });
-        
-        this.revertStartTime = ko.pureComputed(() => {
-            const date = this.date();
-            const potUtc = moment(date, revertRevisionsRequest.defaultDateFormat).utc();
-
-            const windowValue = this.windowValue() || revertRevisionsRequest.defaultWindowValue;
-
-            return potUtc.add(-windowValue, this.windowMagnitude()).format(revertRevisionsRequest.defaultDateFormat);
         });
         
         this.date.extend({
