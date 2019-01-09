@@ -11,9 +11,9 @@ namespace Raven.Server.Documents.Queries
     public class LiveRunningQueriesCollector : LivePerformanceCollector<LiveRunningQueriesCollector.ExecutingQueryCollection>
     {
         private readonly ServerStore _serverStore;
-        private readonly string[] _dbNames;
+        private readonly HashSet<string> _dbNames;
         
-        public LiveRunningQueriesCollector(ServerStore serverStore, string[] dbNames)
+        public LiveRunningQueriesCollector(ServerStore serverStore, HashSet<string> dbNames)
             : base(serverStore.ServerShutdown, "Server")
         {
             _dbNames = dbNames;

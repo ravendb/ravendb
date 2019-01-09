@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Threading.Tasks;
@@ -16,10 +17,10 @@ namespace Raven.Server.Documents.Handlers.Debugging
             if (TryGetAllowedDbs(null, out var allowedDbs, requireAdmin: false) == false)
                 return;
 
-            string[] dbNames = null;
+            HashSet<string> dbNames = null;
             if (allowedDbs != null)
             {
-                dbNames = allowedDbs.Keys.ToArray();
+                dbNames = allowedDbs.Keys.ToHashSet();
             }
             
             using (var webSocket = await HttpContext.WebSockets.AcceptWebSocketAsync())
