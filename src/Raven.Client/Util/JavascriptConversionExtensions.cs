@@ -2347,7 +2347,7 @@ namespace Raven.Client.Util
 
             public override void ConvertToJavascript(JavascriptConversionContext context)
             {
-                if (CanConvert(context.Node, _conventions, out var alias, out var member, out var innerMemberExpression) == false)
+                if (CanConvert(context.Node, _conventions, out var alias, out var member) == false)
                     return;
 
                 var writer = context.GetWriter();
@@ -2355,29 +2355,19 @@ namespace Raven.Client.Util
 
                 using (writer.Operation(member))
                 {
-                    if (innerMemberExpression != null)
-                    {
-                        writer.Write("id(");
-                        context.Visitor.Visit(innerMemberExpression);
-                        writer.Write(")");
-                    }
-                    else
-                    {
-                        writer.Write($"id({alias})");
-                    }
+                    writer.Write($"id({alias})");
                 }
             }
 
             internal static bool CanConvert(Expression expression, DocumentConventions conventions, out string aliasName)
             {
-                return CanConvert(expression, conventions, out aliasName, out _, out _);
+                return CanConvert(expression, conventions, out aliasName, out _);
             }
 
-            private static bool CanConvert(Expression expression, DocumentConventions conventions, out string aliasName, out MemberExpression memberExpression, out MemberExpression innerMemberExpression)
+            private static bool CanConvert(Expression expression, DocumentConventions conventions, out string aliasName, out MemberExpression memberExpression)
             {
                 aliasName = null;
                 memberExpression = null;
-                innerMemberExpression = null;
 
                 if (!(expression is MemberExpression member))
                     return false;
@@ -2400,7 +2390,6 @@ namespace Raven.Client.Util
                               && conventions.GetIdentityProperty(member.Member.DeclaringType) == member.Member)
                 {
                     aliasName = innerMember.Member.Name;
-                    innerMemberExpression = innerMember;
                     return true;
                 }
 
