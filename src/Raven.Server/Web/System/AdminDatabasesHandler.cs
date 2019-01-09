@@ -445,7 +445,7 @@ namespace Raven.Server.Web.System
                         var url = clusterTopology.GetUrlFromTag(member);
                         var executor = ClusterRequestExecutor.CreateForSingleNode(url, ServerStore.Server.Certificate.Certificate);
                         executors.Add(executor);
-                        waitingTasks.Add(executor.ExecuteAsync(new WaitForRaftIndexCommand(index), context, token: cts.Token));
+                        waitingTasks.Add(ExecuteTask(executor, member, cts.Token));
                     }
 
                     while (waitingTasks.Count > 0)
@@ -457,11 +457,6 @@ namespace Raven.Server.Web.System
                             continue;
 
                         var exception = task.Exception.ExtractSingleInnerException();
-                        if (exception is RavenException re && re.InnerException is HttpRequestException)
-                        {
-                            // ignore - we are ok when connection with a node cannot be established (test: AddDatabaseOnDisconnectedNode)
-                            continue;
-                        }
 
                         if (exceptions == null)
                             exceptions = new List<Exception>();
@@ -484,7 +479,7 @@ namespace Raven.Server.Web.System
 
                         if (allTimeouts)
                             throw new TimeoutException($"Waited too long for the raft command (number {index}) to be executed on any of the relevant nodes to this command.", aggregateException);
-                        
+
                         throw new InvalidDataException($"The database '{database}' was created but is not accessible, because all of the nodes on which this database was supposed to reside on, threw an exception.", aggregateException);
                     }
                 }
@@ -494,6 +489,22 @@ namespace Raven.Server.Web.System
                 foreach (var executor in executors)
                 {
                     executor.Dispose();
+                }
+            }
+
+            async Task ExecuteTask(RequestExecutor executor, string nodeTag, CancellationToken token)
+            {
+                try
+                {
+                    await executor.ExecuteAsync(new WaitForRaftIndexCommand(index), context, token: token);
+                }
+                catch (RavenException re) when (re.InnerException is HttpRequestException)
+                {
+                    // we want to throw for self-checks
+                    if (nodeTag == ServerStore.NodeTag)
+                        throw;
+
+                    // ignore - we are ok when connection with a node cannot be established (test: AddDatabaseOnDisconnectedNode)
                 }
             }
         }
