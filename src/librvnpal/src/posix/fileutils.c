@@ -98,23 +98,19 @@ _allocate_file_space(int32_t fd, int64_t size, int32_t *detailed_error_code)
 }
 
 PRIVATE int32_t
-_pointer_to_int(void *ptr)
+_ensure_path_exists(const char* path)
 {
-#pragma GCC diagnostic push
-#pragma GCC diagnostic ignored "-Wint-conversion"
-    return ptr;
-#pragma GCC diagnostic pop
+    /* TODO: implement */
+    return SUCCESS;   
 }
 
 EXPORT int32_t
-rvn_dispose_handle(const char *filepath, void *handle, bool delete_on_close, int32_t *unlink_error_code, int32_t *close_error_code)
+rvn_dispose_handle(const char *filepath, void *handle, bool delete_on_close, int32_t *detailed_error_code)
 {
     int32_t rc = SUCCESS;
 
     /* the following in two lines to avoid compilation warning */
-    int32_t fd = _pointer_to_int(handle);
-    *unlink_error_code = 0;
-    *close_error_code = 0;
+    int32_t fd = (int)(long)handle;
 
     if (fd != -1)
     {
@@ -124,16 +120,19 @@ rvn_dispose_handle(const char *filepath, void *handle, bool delete_on_close, int
             if (unlink_rc != 0)
             {
                 /* record the error and continue to close */
-                rc |= FAIL_UNLINK;
-                *unlink_error_code = errno;
+                rc = FAIL_UNLINK;
+                *detailed_error_code = errno;
             }
         }
 
         int32_t close_rc = close(fd);
         if (close_rc != 0)
         {
-            rc |= FAIL_CLOSE;
-            *close_error_code = errno;
+            if (rc == 0) /* if unlink failed - return unlink's error */
+            {
+                rc = FAIL_CLOSE;
+                *detailed_error_code = errno;
+            }
         }
         return rc;
     }

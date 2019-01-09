@@ -19,8 +19,6 @@
 #include "rvn.h"
 #include "status_codes.h"
 
-_ensure_path_exists(path);
-
 EXPORT int32_t
 rvn_create_and_mmap64_file(const char *path,
                            int64_t initial_file_size,
@@ -113,7 +111,7 @@ EXPORT int32_t
 rvn_allocate_more_space(const char *filename, int64_t new_length, int64_t total_allocation_size, void *handle, int32_t flags,
                         void **new_address, int64_t *new_length_after_adjustment, int32_t *detailed_error_code)
 {
-    int32_t fd = _pointer_to_int(handle);
+    int32_t fd = (int)(long)handle;
     int32_t rc = SUCCESS;
 
     int64_t sys_page_size = sysconf(_SC_PAGE_SIZE);
@@ -167,17 +165,14 @@ error_cleanup:
 }
 
 EXPORT int32_t
-rvn_unmap(void *address, int64_t size, bool delete_on_close, int32_t *unmap_error_code, int32_t *madvise_error_code)
-{
-    int32_t rc = SUCCESS;
+rvn_unmap(void *address, int64_t size, bool delete_on_close, int32_t *detailed_error_code)
+{    
     if (delete_on_close == true)
-    {
-        rc |= madvise(address, size, MADV_DONTNEED);
-        *madvise_error_code = errno;
-    }
+        madvise(address, size, MADV_DONTNEED); /* ignore error */        
 
-    rc |= munmap(address, size);
-    *unmap_error_code = errno;
+    int32_t rc = munmap(address, size);
+    if (rc != 0)
+        *detailed_error_code = errno;
 
     return rc;
 }

@@ -115,25 +115,25 @@ namespace Voron.Impl.Paging
         {
             base.ReleaseAllocationInfo(baseAddress, size);
 
-            var rc = rvn_unmap(baseAddress, size, DeleteOnClose, out var errorCodeUnmap, out var errorCodeMadvise);
-            // TODO : is madvise don't need - should fail unmap call ? (currently we fail it)
+            var rc = rvn_unmap(baseAddress, size, DeleteOnClose, out var errorCode);
             if (rc != 0)
-                PalHelper.ThrowLastError(errorCodeUnmap != 0 ? errorCodeUnmap : errorCodeMadvise,
-                    $"Failed to unmap {FileName.FullPath}. rc={rc}. DeleteOnClose={DeleteOnClose}, errorCodeUnmap={errorCodeUnmap}, errorCodeMadvise={errorCodeMadvise}");
+                PalHelper.ThrowLastError(errorCode,
+                    $"Failed to unmap {FileName.FullPath}. DeleteOnClose={DeleteOnClose}");
 
             NativeMemory.UnregisterFileMapping(FileName?.FullPath, new IntPtr(baseAddress), size);
         }
 
         protected override void DisposeInternal()
         {
-            var rc = rvn_dispose_handle(FileName.FullPath, _handle, DeleteOnClose, out var errorCodeClose, out var errorCodeUnlink);
+            var rc = rvn_dispose_handle(FileName.FullPath, _handle, DeleteOnClose, out var errorCode);
             if (rc == 0) 
                 return;
             
             // ignore results.. but warn! we cannot delete the file probably
             // rc contains either FAIL_UNLINK, FAIL_CLOSE or both of them    (or FAIL_INVALID_HANDLE)
             if (_logger.IsInfoEnabled)
-                _logger.Info($"Unable to dispose handle for {FileName.FullPath} (ignoring). rc={rc}. DeleteOnClose={DeleteOnClose}, errorCodeClose={errorCodeClose}, errorCodeUnlink={errorCodeUnlink}",
+                _logger.Info($"Unable to dispose handle for {FileName.FullPath} (ignoring). rc={(FailCodes)rc}. DeleteOnClose={DeleteOnClose}, "
+                             + $"errorCodeClose={PalHelper.GetNativeErrorString(errorCode, "Unable to dispose handle for {FileName.FullPath} (ignoring).", out _)}",
                     new IOException($"Unable to dispose handle for {FileName.FullPath} (ignoring)."));
         }
 
