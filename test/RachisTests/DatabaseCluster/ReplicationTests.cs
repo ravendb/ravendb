@@ -120,7 +120,7 @@ namespace RachisTests.DatabaseCluster
                     databaseName,
                     "users/1",
                     u => u.Name.Equals("Karmel"),
-                    TimeSpan.FromSeconds(clusterSize + 5),
+                    TimeSpan.FromSeconds(60),
                     certificate: clientCertificate));
 
             }
@@ -176,7 +176,7 @@ namespace RachisTests.DatabaseCluster
                     databaseName,
                     "users/1",
                     u => u.Name.Equals("Karmel"),
-                    TimeSpan.FromSeconds(clusterSize + 5),
+                    TimeSpan.FromSeconds(60),
                     adminCertificate));
                 for (var i = 0; i < 5; i++)
                 {
@@ -576,7 +576,7 @@ namespace RachisTests.DatabaseCluster
                {
                    var db = s.DatabasesLandlord.TryGetOrCreateResourceStore(databaseName).Result;
                    return db.ReplicationLoader?.OutgoingConnections.Count();
-               }, clusterSize - 1);
+               }, clusterSize - 1, 60000);
 
                 using (var session = store.OpenAsyncSession())
                 {
@@ -588,7 +588,7 @@ namespace RachisTests.DatabaseCluster
                     databaseName,
                     "users/1",
                     u => u.Name.Equals("Karmel"),
-                    TimeSpan.FromSeconds(clusterSize + 5),
+                    TimeSpan.FromSeconds(60),
                     certificate: adminCertificate));
 
                 topology.RemoveFromTopology(leader.ServerStore.NodeTag);
@@ -658,7 +658,7 @@ namespace RachisTests.DatabaseCluster
                     databaseName,
                     "users/1",
                     u => u.Name.Equals("Karmel"),
-                    TimeSpan.FromSeconds(clusterSize + 5),
+                    TimeSpan.FromSeconds(60),
                     certificate: adminCertificate));
             }
 

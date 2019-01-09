@@ -26,7 +26,7 @@ namespace Raven.Client.Exceptions
             public string Error { get; set; }
         }
 
-        public static Exception Get(ExceptionSchema schema, HttpStatusCode code)
+        public static Exception Get(ExceptionSchema schema, HttpStatusCode code, Exception inner = null)
         {
             var message = schema.Message;
             var typeAsString = schema.Type;
@@ -45,7 +45,7 @@ namespace Raven.Client.Exceptions
 
             var type = GetType(typeAsString);
             if (type == null)
-                return new RavenException(error);
+                return new RavenException(error, inner);
 
             Exception exception;
             try

@@ -2652,7 +2652,7 @@ The recommended method is to use full text search (mark the field as Analyzed an
                 MemberInitAsJson.ForAllTypes
             };
 
-            if (loadArg == false && _isMapReduce == false)
+            if (loadArg == false && (_isMapReduce == false || ShouldConvertDueToLoad()))
             {
                 Array.Resize(ref extensions, extensions.Length + 1);
 
@@ -2663,6 +2663,13 @@ The recommended method is to use full text search (mark the field as Analyzed an
             {
                 CustomMetadataProvider = new PropertyNameConventionJSMetadataProvider(_conventions)
             });
+
+            bool ShouldConvertDueToLoad()
+            {
+                return _loadAliases != null &&
+                       JavascriptConversionExtensions.IdentityPropertySupport.CanConvert(expression, _documentQuery.Conventions, out var alias) &&
+                       _loadAliases.Contains(alias);
+            }
         }
 
         private static bool HasComputation(MemberExpression memberExpression)
