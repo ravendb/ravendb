@@ -58,7 +58,7 @@ rvn_create_and_mmap64_file(const char *path,
         goto error_cleanup;
     }
 
-    int32_t allocation_granularity = 64 * 1024;
+    int32_t allocation_granularity = ALLOCATION_GRANULARITY;
     if (initial_file_size < allocation_granularity)
         initial_file_size = allocation_granularity;
 
