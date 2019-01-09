@@ -5,7 +5,7 @@
 
 EXPORT int32_t
 rvn_write_header (const char *path, void *header, int32_t size,
-		  uint32_t * detailed_error_code) {
+		  int32_t * detailed_error_code) {
 
 	int32_t rc;
 	HANDLE file = CreateFile(path,
