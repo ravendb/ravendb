@@ -12,7 +12,8 @@
     }
 
     #applicationHost {
-        background: #22252b;
+        background: @body-bg;
+        color: @text-color;
         padding-bottom: 60px;
     }
 
@@ -143,5 +144,11 @@
             max-height: 50vh;
             overflow: auto;
         }
+    }
+    
+    .select-theme-btn {
+        position: fixed;
+        top: 0;
+        right: 20px;
     }
 }
