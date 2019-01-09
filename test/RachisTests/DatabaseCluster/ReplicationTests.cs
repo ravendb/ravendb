@@ -596,7 +596,7 @@ namespace RachisTests.DatabaseCluster
                {
                    var db = s.DatabasesLandlord.TryGetOrCreateResourceStore(databaseName).Result;
                    return db.ReplicationLoader?.OutgoingConnections.Count();
-               }, clusterSize - 1);
+               }, clusterSize - 1, 60000);
 
                 using (var session = store.OpenAsyncSession())
                 {
