@@ -2320,40 +2320,53 @@ namespace Raven.Client.Util
 
             public override void ConvertToJavascript(JavascriptConversionContext context)
             {
-                if (!(context.Node is MemberExpression member))
+                if (CanConvert(context.Node, _conventions, out var alias, out var member) == false)
                     return;
+
+                var writer = context.GetWriter();
+                context.PreventDefault();
+
+                using (writer.Operation(member))
+                {
+                    writer.Write($"id({alias})");
+                }
+            }
+
+            internal static bool CanConvert(Expression expression, DocumentConventions conventions, out string aliasName)
+            {
+                return CanConvert(expression, conventions, out aliasName, out _);
+            }
+
+            private static bool CanConvert(Expression expression, DocumentConventions conventions, out string aliasName, out MemberExpression memberExpression)
+            {
+                aliasName = null;
+                memberExpression = null;
+
+                if (!(expression is MemberExpression member))
+                    return false;
+
+                memberExpression = member;
 
                 if (member.Expression is ParameterExpression parameter
-                    && _conventions.GetIdentityProperty(member.Member.DeclaringType) == member.Member)
+                    && conventions.GetIdentityProperty(member.Member.DeclaringType) == member.Member)
                 {
-                    var writer = context.GetWriter();
-                    context.PreventDefault();
-
-                    using (writer.Operation(member))
-                    {
-                        writer.Write($"id({parameter.Name})");
-                    }
-                    return;
+                    aliasName = parameter.Name;
+                    return true;
                 }
 
                 if (!(member.Expression is MemberExpression innerMember))
-                    return;
+                    return false;
 
                 var p = GetParameter(innerMember)?.Name;
 
                 if (p != null && p.StartsWith(TransparentIdentifier)
-                    && _conventions.GetIdentityProperty(member.Member.DeclaringType) == member.Member)
+                              && conventions.GetIdentityProperty(member.Member.DeclaringType) == member.Member)
                 {
-                    var writer = context.GetWriter();
-                    context.PreventDefault();
-
-                    using (writer.Operation(member))
-                    {
-                        writer.Write("id(");
-                        context.Visitor.Visit(innerMember);
-                        writer.Write(")");
-                    }
+                    aliasName = innerMember.Member.Name;
+                    return true;
                 }
+
+                return false;
             }
         }
 
