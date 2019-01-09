@@ -432,7 +432,7 @@ namespace Raven.Server.Documents.Queries.Parser
                         alias = collection.FieldValue;
                     }
                     //by this point we know AS' keyword is not the next token because Alias() checks for that
-                    else if (Scanner.TryPeekNextToken(c => c != ' ' && c != ')' && c != ']', out var token) && token.IsIdentifier())
+                    else if (Scanner.TryPeekNextToken(c => c != ')' && c != ']', out var token) && token.IsIdentifier())
                     {
                         if (isEdge && !token.Equals("where",StringComparison.OrdinalIgnoreCase) && !token.Equals("select",StringComparison.OrdinalIgnoreCase))
                         {

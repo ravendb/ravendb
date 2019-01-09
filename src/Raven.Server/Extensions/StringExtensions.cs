@@ -22,14 +22,14 @@ namespace Raven.Server.Extensions
                 return false;
 
             if (token.Length == 1)
-                return char.IsLetter(token[0]);
+                return char.IsLetter(token[0]) || token[0] == '_';
             
-            if (!char.IsLetter(token[0]))
+            if (!char.IsLetter(token[0]) && token[0] != '_')
                 return false;
 
             for (int i = 1; i < token.Length; i++)
             {
-                if (!char.IsLetterOrDigit(token[i]))
+                if (!char.IsLetterOrDigit(token[i]) && token[i] != '_')
                     return false;
             }
 

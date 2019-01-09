@@ -27,6 +27,23 @@ namespace SlowTests.Issues
         }
 
         [Fact]
+        public void Missing_as_keyword_in_node_without_additional_clauses_should_properly_throw_in_non_recursive_query()
+        {
+            using (var store = GetDocumentStore())
+            {
+                CreateMoviesData(store);
+                using (var session = store.OpenSession())
+                {
+                    var e = Assert.Throws<InvalidQueryException>(() => session.Advanced.RawQuery<JObject>(@"
+                       match (Users u1)-[HasRated select Movie]->(Movies as m)
+                    ").ToArray());
+
+                    Assert.True(e.Message.Contains("invalid",StringComparison.OrdinalIgnoreCase) && e.Message.Contains("alias",StringComparison.OrdinalIgnoreCase) && e.Message.Contains("u1",StringComparison.OrdinalIgnoreCase));
+                }
+            }
+        }
+
+        [Fact]
         public void Select_in_node_without_alias_should_properly_throw()
         {
             using (var store = GetDocumentStore())
