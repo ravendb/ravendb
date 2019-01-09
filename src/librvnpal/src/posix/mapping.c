@@ -1,9 +1,9 @@
 #if defined(__unix__) || defined(__APPLE__)
 
 #ifdef __APPLE__
-#define MMAP mmap
+#define rvn_mmap mmap
 #else
-#define MMAP mmap64
+#define rvn_mmap mmap64
 #endif
 
 #define _GNU_SOURCE
@@ -86,7 +86,7 @@ rvn_create_and_mmap64_file(const char *path,
     else
         mmap_flags |= MAP_SHARED;
 
-    void *address = MMAP(NULL, sz, PROT_READ | PROT_WRITE, mmap_flags, fd, 0L);
+    void *address = rvn_mmap(NULL, sz, PROT_READ | PROT_WRITE, mmap_flags, fd, 0L);
 
     if (address == MAP_FAILED)
     {
@@ -108,27 +108,13 @@ error_cleanup:
 }
 
 EXPORT int32_t
-rvn_allocate_more_space(const char *filename, int64_t new_length, int64_t total_allocation_size, void *handle, int32_t flags,
-                        void **new_address, int64_t *new_length_after_adjustment, int32_t *detailed_error_code)
+rvn_allocate_more_space(const char *filename, int64_t new_length_after_adjustment, void *handle, int32_t flags,
+                        void **new_address, int32_t *detailed_error_code)
 {
     int32_t fd = (int)(long)handle;
     int32_t rc = SUCCESS;
 
-    int64_t sys_page_size = sysconf(_SC_PAGE_SIZE);
-    if (sys_page_size == -1)
-    {
-        rc = FAIL_SYSCONF;
-        goto error_cleanup;
-    }
-
-    *new_length_after_adjustment = _nearest_size_to_page_size(new_length, sys_page_size);
-
-    if (*new_length_after_adjustment <= total_allocation_size)
-        return FAIL_ALLOCATION_NO_RESIZE;
-
-    int64_t allocation_size = *new_length_after_adjustment - total_allocation_size;
-
-    rc = _allocate_file_space(fd, total_allocation_size + allocation_size, detailed_error_code);
+    rc = _allocate_file_space(fd, new_length_after_adjustment, detailed_error_code);
     if (rc != SUCCESS)
         goto error_cleanup;
 
@@ -145,7 +131,7 @@ rvn_allocate_more_space(const char *filename, int64_t new_length, int64_t total_
     else
         mmap_flags |= MAP_SHARED;
 
-    void *address = MMAP(NULL, total_allocation_size + allocation_size, PROT_READ | PROT_WRITE, mmap_flags, fd, 0L);
+    void *address = rvn_mmap(NULL, new_length_after_adjustment, PROT_READ | PROT_WRITE, mmap_flags, fd, 0L);
     if (address == MAP_FAILED)
     {
         rc = FAIL_MMAP64;
