@@ -14,17 +14,21 @@
 #define PRIVATE __attribute__ ((visibility ("hidden")))
 #endif
 
-typedef uint8_t bool;
+typedef int32_t bool;
 #define true 1
 #define false 0
 
 #define max(x, y) ((x) >= (y)) ? (x) : (y)
 #define min(x, y) ((x) <= (y)) ? (x) : (y)
 
+#define ALLOCATION_GRANULARITY 64*1024
+
 EXPORT struct SYSTEM_INFORMATION
 {
     int32_t page_size;
-    bool can_prefetch;
+    int32_t prefetch_status;
+
+    /* can_prefetch => prefetch_status == true */
 };
 
 EXPORT struct RVN_RANGE_LIST
