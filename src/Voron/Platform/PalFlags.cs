@@ -42,5 +42,17 @@ namespace Voron.Platform
             None = 0,
             CopyOnWrite = 1,
         }
+
+        public enum DeleteOnClose
+        {
+            No = 0,
+            Yes = 1
+        }
+
+        public enum ProtectRange
+        {
+            Unprotect = 0,
+            Protect = 1
+        }
     }
 }

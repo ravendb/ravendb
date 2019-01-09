@@ -36,10 +36,10 @@ rvn_prefetch_ranges(struct RVN_RANGE_LIST *range_list, int32_t count, int32_t *d
 }
 
 EXPORT int32_t
-rvn_protect_range(void *start_address, int64_t size, bool protection, int32_t *detailed_error_code)
+rvn_protect_range(void *start_address, int64_t size, int32_t protection, int32_t *detailed_error_code)
 {
     int32_t mprotect_flags = PROT_READ;
-    if (protection == false)
+    if (protection == PROTECT_RANGE_UNPROTECT)
         mprotect_flags |= PROT_WRITE;
 
     int32_t rc = mprotect(start_address, size, mprotect_flags);

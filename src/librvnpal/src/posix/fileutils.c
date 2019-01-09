@@ -105,7 +105,7 @@ _ensure_path_exists(const char* path)
 }
 
 EXPORT int32_t
-rvn_dispose_handle(const char *filepath, void *handle, bool delete_on_close, int32_t *detailed_error_code)
+rvn_dispose_handle(const char *filepath, void *handle, int32_t delete_on_close, int32_t *detailed_error_code)
 {
     int32_t rc = SUCCESS;
 
@@ -114,7 +114,7 @@ rvn_dispose_handle(const char *filepath, void *handle, bool delete_on_close, int
 
     if (fd != -1)
     {
-        if (delete_on_close == true)
+        if (delete_on_close == DELETE_ON_CLOSE_YES)
         {
             int32_t unlink_rc = unlink(filepath);
             if (unlink_rc != 0)
