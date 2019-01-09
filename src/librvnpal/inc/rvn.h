@@ -67,7 +67,7 @@ EXPORT int32_t
 rvn_protect_range(void *start_address, int64_t size, bool protection, int32_t *detailed_error_code);
 
 EXPORT int32_t
-rvn_allocate_more_space(const char *filename, int64_t new_length, int64_t total_allocation_size, void *handle, int32_t flags, void **new_address, int64_t *new_length_after_adjustment, int32_t *detailed_error_code);
+rvn_allocate_more_space(const char *filename, int64_t new_length_after_adjustment, void *handle, int32_t flags, void **new_address, int32_t *detailed_error_code);
 
 /* For internal use: */
 PRIVATE int64_t

@@ -19,6 +19,7 @@ namespace Voron.Impl.Paging
         public override long TotalAllocationSize => _totalAllocationSize;
         public override int CopyPage(I4KbBatchWrites destwI4KbBatchWrites, long p, PagerState pagerState) => CopyPageImpl(destwI4KbBatchWrites, p, pagerState);
         public override string ToString() => FileName.FullPath;
+        private const int AllocationGranularity = 64 * Constants.Size.Kilobyte;
         protected override string GetSourceName() => $"mmf64: {FileName?.FullPath}";
         private long _totalAllocationSize;
         private readonly bool _copyOnWriteMode;
@@ -144,19 +145,38 @@ namespace Voron.Impl.Paging
             // we explicitly ignore the return code here, this is optimization only
         }
 
+
+        private long NearestSizeToPageSize(long size)
+        {
+            // return OS page aligned size, but not less then AllocationGranularity
+
+            Debug.Assert(SysInfo.PageSize > 0);
+            Debug.Assert(AllocationGranularity % SysInfo.PageSize == 0);
+
+            if (size == 0)
+                return AllocationGranularity;
+
+            if (size % SysInfo.PageSize == 0)
+                return Math.Max(size, AllocationGranularity);
+
+            return Math.Max((size / SysInfo.PageSize + 1) * SysInfo.PageSize, AllocationGranularity);
+        }
+
         protected internal override PagerState AllocateMorePages(long newLength)
         {
             if (DisposeOnceRunner.Disposed)
                 ThrowAlreadyDisposedException();
 
-            var rc = rvn_allocate_more_space(FileName.FullPath, newLength, _totalAllocationSize, _handle, _copyOnWriteMode ? MmapOptions.CopyOnWrite : MmapOptions.None,
-                out var newAddress, out var newLengthAfterAdjustment, out var errorCode);
+            var newLengthAfterAdjustment = NearestSizeToPageSize(newLength);
 
-            if (rc == (int)FailCodes.FailAllocationNoResize)
+            if (newLengthAfterAdjustment <= _totalAllocationSize)
                 return null;
 
+            var rc = rvn_allocate_more_space(FileName.FullPath, newLengthAfterAdjustment, _handle,
+                _copyOnWriteMode ? MmapOptions.CopyOnWrite : MmapOptions.None,out var newAddress, out var errorCode);
+
             if (rc != 0)
-                PalHelper.ThrowLastError(errorCode, $"can't allocate more pages (rc={rc})");
+                PalHelper.ThrowLastError(errorCode, $"can't allocate more pages (rc={(FailCodes)rc}). Requested {newLength} (adjusted to {newLengthAfterAdjustment})");
 
             // TODO : Get rid of allocation info
             var allocationInfo = new PagerState.AllocationInfo

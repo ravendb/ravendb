@@ -131,12 +131,10 @@ namespace Voron.Platform
         [DllImport(LIBRVNPAL, SetLastError = true)]
         public static extern Int32 rvn_allocate_more_space(
             string fileNameFullPath,
-            Int64 newLength,
-            Int64 fileSize,
+            Int64 newLengthAfterAdjustment,
             void* handle,
             PalFlags.MmapOptions mmapOptions,
             out void* newAddress,
-            out Int64 newLengthAfterAdjustment,
             out Int32 errorCode);
     }
 }
