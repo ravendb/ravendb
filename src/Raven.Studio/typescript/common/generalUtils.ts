@@ -258,14 +258,14 @@ class genUtils {
     }
 
     static sortAlphaNumeric(a: string, b: string, mode: sortMode = "asc"): number {
-        const result = this.sortAlphaNumericInternal(a, b);
+        const result = genUtils.sortAlphaNumericInternal(a, b);
         if (result === 0)
             return 0;
 
         return mode === "asc" ? result : -result;
     }
 
-    static sortAlphaNumericInternal(a: string, b: string): number {
+    private static sortAlphaNumericInternal(a: string, b: string): number {
         const aInt = parseInt(a, 10);
         const bInt = parseInt(b, 10);
 

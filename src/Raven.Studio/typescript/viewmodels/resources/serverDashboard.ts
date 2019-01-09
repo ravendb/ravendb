@@ -136,7 +136,8 @@ class indexingSpeedSection {
         }), () => {
             return [
                 new hyperlinkColumn<indexingSpeed>(grid, x => x.database(), x => appUrl.forIndexPerformance(x.database()), "Database", "30%", {
-                    sortable: "string"
+                    sortable: "string",
+                    customComparator: generalUtils.sortAlphaNumeric
                 }),
                 new textColumn<indexingSpeed>(grid, x => x.indexedPerSecond() != null ? x.indexedPerSecond() : "n/a", "Indexed / sec", "15%", {
                     extraClass: item => item.indexedPerSecond() != null ? "" : "na",
@@ -273,7 +274,8 @@ class databasesSection {
                 new hyperlinkColumn<databaseItem>(grid, x => iconProvider(x) + '<span>' + utils.escape(x.database()) + '</span>', x => appUrl.forDocuments(null, x.database()), "Database", "30%", {
                     extraClass: x => x.disabled() ? "disabled" : "",
                     useRawValue: () => true,
-                    sortable: x => x.database()
+                    sortable: x => x.database(),
+                    customComparator: generalUtils.sortAlphaNumeric
                 }), 
                 new textColumn<databaseItem>(grid, x => x.documentsCount(), "Docs #", "25%", {
                     sortable: "number",
@@ -405,7 +407,8 @@ class trafficSection {
                     "Database", 
                     "30%", 
                     {
-                        sortable: "string"
+                        sortable: "string",
+                        customComparator: generalUtils.sortAlphaNumeric
                     }),
                 new textColumn<trafficItem>(grid, 
                     x => x.requestsPerSecond(), 

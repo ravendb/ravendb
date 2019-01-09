@@ -76,7 +76,8 @@ class clusterObserverLog extends viewModelBase {
                     sortable: x => x.Date
                 }),
                 new textColumn<Raven.Server.ServerWide.Maintenance.ClusterObserverLogEntry>(grid, x => x.Database, "Database", "20%", {
-                    sortable: "string"
+                    sortable: "string",
+                    customComparator: generalUtils.sortAlphaNumeric
                 }),
                 new textColumn<Raven.Server.ServerWide.Maintenance.ClusterObserverLogEntry>(grid, x => x.Message, "Message", "60%")
             ]
