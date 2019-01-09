@@ -1,7 +1,7 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
   <PropertyGroup>
     <TargetFrameworks>netstandard2.0;netcoreapp2.1</TargetFrameworks>
-    <RuntimeFrameworkVersion>2.1.6</RuntimeFrameworkVersion>
+    <RuntimeFrameworkVersion>2.1.7</RuntimeFrameworkVersion>
     <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
     <AssemblyName>Sparrow</AssemblyName>
     <PackageId>Sparrow</PackageId>
