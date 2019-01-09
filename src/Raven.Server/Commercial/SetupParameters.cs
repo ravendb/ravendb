@@ -54,7 +54,7 @@ namespace Raven.Server.Commercial
                 var response = await HttpClient.Value.GetAsync(AwsUrl).ConfigureAwait(false);
                 return response.IsSuccessStatusCode;
             }
-            catch (Exception e)
+            catch (Exception)
             {
                 return false;
             }
@@ -74,7 +74,7 @@ namespace Raven.Server.Commercial
                 var response = await HttpClient.Value.SendAsync(request).ConfigureAwait(false);
                 return response.IsSuccessStatusCode;
             }
-            catch (Exception e)
+            catch (Exception)
             {
                 return false;
             }

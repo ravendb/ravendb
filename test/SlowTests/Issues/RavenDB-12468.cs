@@ -11,22 +11,28 @@ namespace SlowTests.Issues
 
         private class User
         {
+#pragma warning disable 649
             public string Name;
             public string Title;
             public string[] Groups;
+#pragma warning restore 649
         }
 
         private class Group
         {
+#pragma warning disable 649
             public string Name;
             public string[] Parents;
+#pragma warning restore 649
         }
 
         private class Issue
         {
+#pragma warning disable 649
             public string Name;
             public string[] Users;
             public string[] Groups;
+#pragma warning restore 649
         }
 
         private static void CreateData(IDocumentStore store)
