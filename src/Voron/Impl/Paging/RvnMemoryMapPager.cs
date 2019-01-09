@@ -25,6 +25,7 @@ namespace Voron.Impl.Paging
         private readonly bool _copyOnWriteMode;
         private readonly Logger _logger;
         private readonly void* _handle;
+        private DeleteOnClose IsDeleteOnClose => DeleteOnClose ? PalFlags.DeleteOnClose.Yes : PalFlags.DeleteOnClose.No;
 
         public RvnMemoryMapPager(StorageEnvironmentOptions options, VoronPathSetting file, long? initialFileSize = null, bool canPrefetchAhead = true, bool usePageProtection = false)
             : base(options, canPrefetchAhead, usePageProtection)
@@ -116,7 +117,7 @@ namespace Voron.Impl.Paging
         {
             base.ReleaseAllocationInfo(baseAddress, size);
 
-            var rc = rvn_unmap(baseAddress, size, DeleteOnClose, out var errorCode);
+            var rc = rvn_unmap(baseAddress, size, IsDeleteOnClose, out var errorCode);
             if (rc != 0)
                 PalHelper.ThrowLastError(errorCode,
                     $"Failed to unmap {FileName.FullPath}. DeleteOnClose={DeleteOnClose}");
@@ -126,7 +127,7 @@ namespace Voron.Impl.Paging
 
         protected override void DisposeInternal()
         {
-            var rc = rvn_dispose_handle(FileName.FullPath, _handle, DeleteOnClose, out var errorCode);
+            var rc = rvn_dispose_handle(FileName.FullPath, _handle, IsDeleteOnClose, out var errorCode);
             if (rc == 0) 
                 return;
             
@@ -205,7 +206,7 @@ namespace Voron.Impl.Paging
                 UsePageProtection == false && force == false) 
                 return;
 
-            if (rvn_protect_range(start, (long)size, true, out var errorCode) == 0)
+            if (rvn_protect_range(start, (long)size, ProtectRange.Protect, out var errorCode) == 0)
                 return;
 
             if (_logger.IsInfoEnabled)
@@ -219,7 +220,7 @@ namespace Voron.Impl.Paging
                 UsePageProtection == false && force == false) 
                 return;
 
-            if (rvn_protect_range(start, (long)size, false, out var errorCode) == 0)
+            if (rvn_protect_range(start, (long)size, ProtectRange.Unprotect, out var errorCode) == 0)
                 return;
 
             if (_logger.IsInfoEnabled)
