@@ -391,6 +391,8 @@ namespace Raven.Server.Documents
 
                 using (AddPartialValueToExistingCounter(context, data, name, existingCounter, dbIdIndex, value, newETag))
                 {
+                    data.Modifications = data.Modifications ?? new DynamicJsonValue(data);
+                    data.Modifications[name] = existingCounter;
                 }
             }
         }
@@ -443,87 +445,85 @@ namespace Raven.Server.Documents
             if (context.Transaction == null)
             {
                 DocumentPutAction.ThrowRequiresTransaction();
-                Debug.Assert(false); // never hit
+                return;
             }
 
-            var collectionName = _documentsStorage.ExtractCollectionName(context, collection);
-            var table = GetCountersTable(context.Transaction.InnerTransaction, collectionName);
-            BlittableJsonReaderObject data = null;
-
-            using (DocumentIdWorker.GetLowerIdSliceAndStorageKey(context, documentId, out Slice lowerId, out _))
+            try
             {
-                using (table.Allocate(out TableValueBuilder tvb))
+                var collectionName = _documentsStorage.ExtractCollectionName(context, collection);
+                var table = GetCountersTable(context.Transaction.InnerTransaction, collectionName);
+                BlittableJsonReaderObject data = null;
+
+                using (DocumentIdWorker.GetLowerIdSliceAndStorageKey(context, documentId, out Slice lowerId, out _))
                 {
-                    if (changeVector != null && table.ReadByKey(lowerId, out var existing))
+                    using (table.Allocate(out TableValueBuilder tvb))
                     {
-                        var existingChangeVector = TableValueToChangeVector(context, (int)CountersTable.ChangeVector, ref existing);
-
-                        if (ChangeVectorUtils.GetConflictStatus(changeVector, existingChangeVector) == ConflictStatus.AlreadyMerged)
-                            return;
-
-                        data = new BlittableJsonReaderObject(existing.Read((int)CountersTable.Data, out int oldSize), oldSize, context);
-                        data = data.Clone(context);
-                        data.TryGet(DbIds, out BlittableJsonReaderArray dbIds);
-                        _counterModificationMemoryScopes.Clear();
-
-                        var dict = DbIdToIndex(dbIds);
-
-                        sourceData.TryGet(DbIds, out BlittableJsonReaderArray sourceDbIds);
-                        var prop = new BlittableJsonReaderObject.PropertyDetails();
-                        for (var i = 0; i< sourceData.Count; i++)
+                        if (changeVector != null && table.ReadByKey(lowerId, out var existing))
                         {
-                            sourceData.GetPropertyByIndex(i, ref prop);
-                            if (prop.Name.Equals(DbIds))                        
-                                continue;
+                            var existingChangeVector = TableValueToChangeVector(context, (int)CountersTable.ChangeVector, ref existing);
 
-                            bool modified;
-                            var counterName = prop.Name;
-                            var source = (BlittableJsonReaderObject.RawBlob)prop.Value;
-                            long value;
+                            if (ChangeVectorUtils.GetConflictStatus(changeVector, existingChangeVector) == ConflictStatus.AlreadyMerged)
+                                return;
 
-                            if (data.TryGet(counterName, out BlittableJsonReaderObject.RawBlob existingCounter))
-                            {                                
-                                value = PutExistingCounter(context, data, counterName, dbIds, sourceDbIds, dict, existingCounter, source, out modified);
+                            data = GetData(context, ref existing);
+                            data = data.Clone(context);
+                            data.TryGet(DbIds, out BlittableJsonReaderArray dbIds);
+
+                            var localDbIdsList = DbIdsToList(dbIds);
+
+                            sourceData.TryGet(DbIds, out BlittableJsonReaderArray sourceDbIds);
+                            var prop = new BlittableJsonReaderObject.PropertyDetails();
+                            for (var i = 0; i< sourceData.Count; i++)
+                            {
+                                sourceData.GetPropertyByIndex(i, ref prop);
+                                if (prop.Name.Equals(DbIds))                        
+                                    continue;
+
+                                var counterName = prop.Name;
+
+                                var source = (BlittableJsonReaderObject.RawBlob)prop.Value;
+
+                                if (data.TryGet(counterName, out BlittableJsonReaderObject.RawBlob existingCounter) == false)
+                                {
+                                    using (GetCounterPartialKey(context, documentId, counterName, out var counterKey))
+                                    {
+                                        RemoveTombstoneIfExists(context, counterKey);
+                                    }
+
+                                    _countersCount++;
+                                    existingCounter = new BlittableJsonReaderObject.RawBlob();
+                                }
+
+                                var value = InternalPutCounter(context, data, counterName, dbIds, sourceDbIds, localDbIdsList, existingCounter, source, out bool modified);
+
+                                if (modified == false)
+                                    continue;
+
+                                context.Transaction.AddAfterCommitNotification(new CounterChange
+                                {
+                                    ChangeVector = changeVector,
+                                    DocumentId = documentId,
+                                    Name = counterName,
+                                    Value = value,
+                                    Type = CounterChangeTypes.Put
+                                });
+
+                                UpdateMetrics(lowerId, counterName, changeVector, collection);
                             }
 
-                            else
+                            if (data.Modifications != null)
                             {
-                                modified = true;
-                                value = PutNewCounter(context, data, documentId, counterName, dbIds, sourceDbIds, dict, source);
+                                data = context.ReadObject(data, null, BlittableJsonDocumentBuilder.UsageMode.ToDisk);
                             }
-
-                            if (modified == false)
-                                continue;
-
-                            context.Transaction.AddAfterCommitNotification(new CounterChange
-                            {
-                                ChangeVector = changeVector,
-                                DocumentId = documentId,
-                                Name = counterName,
-                                Value = value,
-                                Type = CounterChangeTypes.Put
-                            });
-
-                            UpdateMetrics(lowerId, counterName, changeVector, collection);
                         }
 
-                        if (data.Modifications != null)
+                        if (data == null)
                         {
-                            data = context.ReadObject(data, null, BlittableJsonDocumentBuilder.UsageMode.ToDisk);
-                            foreach (var s in _counterModificationMemoryScopes)
-                            {
-                                s.Dispose();
-                            }
+                            data = context.ReadObject(sourceData, null, BlittableJsonDocumentBuilder.UsageMode.ToDisk);
+                            _countersCount += sourceData.Count - 1;
                         }
-                    }
 
-                    if (data == null)
-                    {
-                        data = context.ReadObject(sourceData, null, BlittableJsonDocumentBuilder.UsageMode.ToDisk);
-                        _countersCount += sourceData.Count - 1;
-                    }
-
-                    var etag = _documentsStorage.GenerateNextEtag();
+                        var etag = _documentsStorage.GenerateNextEtag();
 
                     if (changeVector == null)
                     {
@@ -532,96 +532,57 @@ namespace Raven.Server.Documents
                             ChangeVectorUtils.MergeVectors(context.LastDatabaseChangeVector ?? GetDatabaseChangeVector(context), changeVector);
                     }
 
-                    using (Slice.From(context.Allocator, changeVector, out var cv))
-                    using (DocumentIdWorker.GetStringPreserveCase(context, collectionName.Name, out Slice collectionSlice))
-                    {
-                        tvb.Add(lowerId);
-                        tvb.Add(Bits.SwapBytes(etag));
-                        tvb.Add(cv);
-                        tvb.Add(data.BasePointer, data.Size);
-                        tvb.Add(collectionSlice);
-                        tvb.Add(context.TransactionMarkerOffset);
+                        using (Slice.From(context.Allocator, changeVector, out var cv))
+                        using (DocumentIdWorker.GetStringPreserveCase(context, collectionName.Name, out Slice collectionSlice))
+                        {
+                            tvb.Add(lowerId);
+                            tvb.Add(Bits.SwapBytes(etag));
+                            tvb.Add(cv);
+                            tvb.Add(data.BasePointer, data.Size);
+                            tvb.Add(collectionSlice);
+                            tvb.Add(context.TransactionMarkerOffset);
 
-                        table.Set(tvb);
+                            table.Set(tvb);
+                        }
                     }
                 }
             }
+            finally 
+            {
+                foreach (var s in _counterModificationMemoryScopes)
+                {
+                    s.Dispose();
+                }
+                _counterModificationMemoryScopes.Clear();              
+            }
         }
 
-        private static Dictionary<LazyStringValue, int> DbIdToIndex(BlittableJsonReaderArray dbIds)
+        private static List<LazyStringValue> DbIdsToList(BlittableJsonReaderArray dbIds)
         {
-            var dictionary = new Dictionary<LazyStringValue, int>(dbIds.Length);
-            for (var i = 0; i < dbIds.Length; i++)
+            var localDbIdsList = new List<LazyStringValue>(dbIds.Length);
+            for (int i = 0; i < dbIds.Length; i++)
             {
-                dictionary[(LazyStringValue)dbIds[i]] = i;
+                localDbIdsList.Add((LazyStringValue)dbIds[i]);
             }
 
-            return dictionary;
+            return localDbIdsList;
         }
 
-        private long PutNewCounter(DocumentsOperationContext context, BlittableJsonReaderObject data, string documentId, string counterName, 
-            BlittableJsonReaderArray localDbIds, BlittableJsonReaderArray sourceDbIds, Dictionary<LazyStringValue, int> dict, BlittableJsonReaderObject.RawBlob counterValues)
-        {
-            _countersCount++;
-
-            long value = 0;
-            using (GetCounterPartialKey(context, documentId, counterName, out var counterKey))
-            {
-                RemoveTombstoneIfExists(context, counterKey);
-            }
-
-            var sourceCount = counterValues.Length / SizeOfCounterValues;
-            var maxDbIdIndex = FindMaxDbIdIndex(sourceCount, dict, localDbIds, sourceDbIds);
-            var sourceValues = (CounterValues*)counterValues.Ptr;
-
-            _counterModificationMemoryScopes.Add(context.Allocator.Allocate((maxDbIdIndex + 1) * SizeOfCounterValues, out var newVal));
-
-            Memory.Set(newVal.Ptr, 0, (maxDbIdIndex + 1) * SizeOfCounterValues);
-
-            data.Modifications = data.Modifications ?? new DynamicJsonValue(data);
-
-            for (int i = 0; i < sourceCount; i++)
-            {
-                var sourceDbId = (LazyStringValue)sourceDbIds[i];
-                var dbIdIndex = dict[sourceDbId];
-
-                var newEntry = (CounterValues*)newVal.Ptr+ dbIdIndex;
-
-                newEntry->Value = sourceValues[i].Value;
-                newEntry->Etag = sourceValues[i].Etag;
-
-                value += sourceValues[i].Value;
-            }
-
-            data.Modifications[counterName] = new BlittableJsonReaderObject.RawBlob
-            {
-                Length = newVal.Length,
-                Ptr = newVal.Ptr
-            };
-
-            return value;
-        }
-
-        private long PutExistingCounter(DocumentsOperationContext context, BlittableJsonReaderObject data, LazyStringValue counterName,
-            BlittableJsonReaderArray localDbIds,
-            BlittableJsonReaderArray sourceDbIds, Dictionary<LazyStringValue, int> dict, BlittableJsonReaderObject.RawBlob existingCounter,
-            BlittableJsonReaderObject.RawBlob source, out bool modified)
+        private long InternalPutCounter(DocumentsOperationContext context, BlittableJsonReaderObject data, string counterName,
+            BlittableJsonReaderArray localDbIds, BlittableJsonReaderArray sourceDbIds, List<LazyStringValue> localDbIdsList, 
+            BlittableJsonReaderObject.RawBlob existingCounter, BlittableJsonReaderObject.RawBlob source, out bool modified)
         {
             long value = 0;
-            modified = false;
-            var sorted = SortValuesByDbIdIndex(dict, localDbIds, sourceDbIds, source.Length / SizeOfCounterValues);
             var existingCount = existingCounter.Length / SizeOfCounterValues;
+            var sourceCount = source.Length / SizeOfCounterValues;
+            modified = false;
 
-            for (var index = sorted.Length - 1; index >= 0; index--)
+            for (var index = 0; index < sourceCount; index++)
             {
-                if (sorted[index] == -1)
-                    continue;
+                var sourceDbId = (LazyStringValue)sourceDbIds[index];
+                var sourceValue = ((CounterValues*)source.Ptr)[index];
 
-                var sourceDbIdIndex = sorted[index];
-                var sourceDbId = (LazyStringValue)sourceDbIds[sourceDbIdIndex];
-
-                var localDbIdIndex = dict[sourceDbId];
-                var sourceValue = ((CounterValues*)source.Ptr)[sourceDbIdIndex];
+                int localDbIdIndex = GetOrAddDbIdIndex(localDbIds, localDbIdsList, sourceDbId);
 
                 if (localDbIdIndex < existingCount)
                 {
@@ -649,7 +610,34 @@ namespace Raven.Server.Documents
                 existingCount = existingCounter.Length / SizeOfCounterValues;
             }
 
+            if (modified)
+            {
+                data.Modifications = data.Modifications ?? new DynamicJsonValue(data);
+                data.Modifications[counterName] = existingCounter;
+            }
+
             return value;
+        }
+
+        private static int GetOrAddDbIdIndex(BlittableJsonReaderArray localDbIds, List<LazyStringValue> localDbIdsList, LazyStringValue dbId)
+        {
+            int dbIdIndex;
+            for (dbIdIndex = 0; dbIdIndex < localDbIdsList.Count; dbIdIndex++)
+            {
+                var current = localDbIdsList[dbIdIndex];
+                if (current.Equals(dbId) == false)
+                    continue;
+                break;
+            }
+
+            if (dbIdIndex == localDbIdsList.Count)
+            {
+                localDbIdsList.Add(dbId);
+                localDbIds.Modifications = localDbIds.Modifications ?? new DynamicJsonArray();
+                localDbIds.Modifications.Add(dbId);
+            }
+
+            return dbIdIndex;
         }
 
         private static ByteStringContext<ByteStringMemoryCache>.InternalScope AddPartialValueToExistingCounter(DocumentsOperationContext context, BlittableJsonReaderObject data, string counterName,
@@ -668,70 +656,11 @@ namespace Raven.Server.Documents
             newEntry->Value = sourceValue;
             newEntry->Etag = sourceEtag;
 
-            data.Modifications = data.Modifications ?? new DynamicJsonValue(data);
-            data.Modifications[counterName] = new BlittableJsonReaderObject.RawBlob
-            {
-                Length = newVal.Length, Ptr = newVal.Ptr
-            };
-
             existingCounter.Ptr = newVal.Ptr;
             existingCounter.Length = newVal.Length;
 
             return scope;
 
-        }
-
-        private static int[] SortValuesByDbIdIndex(Dictionary<LazyStringValue, int> dict,
-            BlittableJsonReaderArray localDbIds, BlittableJsonReaderArray sourceDbIds, int sourceCount)
-        {
-            var sorted = new int[dict.Count + sourceDbIds.Length];
-            Array.Fill(sorted, -1);
-
-            for (int i = 0; i < sourceCount; i++)
-            {
-                var dbId = (LazyStringValue)sourceDbIds[i];
-
-                if (dict.TryGetValue(dbId, out var dbIdIndex))
-                {
-                    sorted[dbIdIndex] = i;
-                }
-                else
-                {
-
-                    localDbIds.Modifications = localDbIds.Modifications ?? new DynamicJsonArray();
-                    localDbIds.Modifications.Add(dbId);
-
-                    var newIndex = dict.Count;
-                    sorted[newIndex] = i;
-
-                    dict.Add(dbId, newIndex);
-                }
-            }
-
-            return sorted;
-        }
-
-        private static int FindMaxDbIdIndex(int sourceCount, Dictionary<LazyStringValue, int> dict, BlittableJsonReaderArray localDbIds, BlittableJsonReaderArray sourceDbIds)
-        {
-            var maxDbIdIndex = -1;
-
-            for (int i = 0; i < sourceCount; i++)
-            {
-                var sourceDbId = (LazyStringValue)sourceDbIds[i];
-                if (dict.TryGetValue(sourceDbId, out var dbIdIndex))
-                {
-                    maxDbIdIndex = Math.Max(maxDbIdIndex, dbIdIndex);
-                }
-                else
-                {
-                    localDbIds.Modifications = localDbIds.Modifications ?? new DynamicJsonArray();
-                    localDbIds.Modifications.Add(sourceDbId);
-                    maxDbIdIndex = dict.Count;
-                    dict.Add(sourceDbId, maxDbIdIndex);
-                }
-            }
-
-            return maxDbIdIndex;
         }
 
         private void UpdateMetrics(Slice counterKey, string counterName, string changeVector, string collection)
