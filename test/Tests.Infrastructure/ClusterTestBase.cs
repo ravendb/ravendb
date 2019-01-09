@@ -179,7 +179,7 @@ namespace Tests.Infrastructure
             throw new InvalidOperationException("Failed to get leader after 5 retries.", err);
         }
 
-        protected async Task<T> WaitForValueOnGroupAsync<T>(DatabaseTopology topology, Func<ServerStore, T> func, T expected)
+        protected async Task<T> WaitForValueOnGroupAsync<T>(DatabaseTopology topology, Func<ServerStore, T> func, T expected, int timeout = 15000)
         {
             var nodes = topology.AllNodes;
             var servers = new List<ServerStore>();
@@ -192,7 +192,7 @@ namespace Tests.Infrastructure
             }
             foreach (var server in servers)
             {
-                var task = WaitForValueAsync(() => func(server), expected);
+                var task = WaitForValueAsync(() => func(server), expected, timeout);
                 tasks.Add(server.NodeTag, task);
             }
 
