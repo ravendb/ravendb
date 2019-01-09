@@ -105,14 +105,14 @@ namespace Voron.Platform
         public static extern Int32 rvn_dispose_handle(
             string filepath,
             void* handle,
-            [MarshalAs(UnmanagedType.U1)] bool deleteOnClose,
+            PalFlags.DeleteOnClose deleteOnClose,
             out Int32 errorCode);
 
         [DllImport(LIBRVNPAL, SetLastError = true)]
         public static extern Int32 rvn_unmap(
             void* address,
             Int64 size,
-            [MarshalAs(UnmanagedType.U1)] bool deleteOnClose,
+            PalFlags.DeleteOnClose deleteOnClose,
             out Int32 errorCode);
 
         [DllImport(LIBRVNPAL, SetLastError = true)]
@@ -125,7 +125,7 @@ namespace Voron.Platform
         public static extern Int32 rvn_protect_range(
             void* start,
             Int64 size,
-            [MarshalAs(UnmanagedType.U1)] bool protection,
+            PalFlags.ProtectRange protection,
             out Int32 errorCode);
 
         [DllImport(LIBRVNPAL, SetLastError = true)]
