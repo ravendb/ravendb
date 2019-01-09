@@ -231,7 +231,7 @@ namespace Raven.Server.Web.System
                     throw new ArgumentException("DatabaseName property has invalid value (null, empty or whitespace only)");
                 databaseRecord.DatabaseName = databaseRecord.DatabaseName.Trim();
 
-                if (ServerStore.Configuration.Core.EnforceDataDirectoryPath 
+                if (ServerStore.Configuration.Core.EnforceDataDirectoryPath
                     && databaseRecord.Settings.TryGetValue(RavenConfiguration.GetKey(x => x.Core.DataDirectory), out var dir))
                 {
                     var requestedDirectory = PathUtil.ToFullPath(dir, ServerStore.Configuration.Core.DataDirectory.FullPath);
@@ -435,93 +435,6 @@ namespace Raven.Server.Web.System
                 NoContentStatus();
             }
         }
-
-        private async Task WaitForExecutionOnRelevantNodes(JsonOperationContext context, string database, ClusterTopology clusterTopology, List<string> members, long index)
-        {
-            await ServerStore.Cluster.WaitForIndexNotification(index); // first let see if we commit this in the leader
-            if (members.Count == 0)
-                throw new InvalidOperationException("Cannot wait for execution when there are no nodes to execute ON.");
-
-            var executors = new List<ClusterRequestExecutor>();
-
-            try
-            {
-                using (var cts = CancellationTokenSource.CreateLinkedTokenSource(ServerStore.ServerShutdown))
-                {
-                    cts.CancelAfter(ServerStore.Configuration.Cluster.OperationTimeout.AsTimeSpan);
-
-                    var waitingTasks = new List<Task>();
-                    List<Exception> exceptions = null;
-
-                    foreach (var member in members)
-                    {
-                        var url = clusterTopology.GetUrlFromTag(member);
-                        var executor = ClusterRequestExecutor.CreateForSingleNode(url, ServerStore.Server.Certificate.Certificate);
-                        executors.Add(executor);
-                        waitingTasks.Add(executor.ExecuteAsync(new WaitForRaftIndexCommand(index), context, token: cts.Token));
-                    }
-
-                    while (waitingTasks.Count > 0)
-                    {
-                        var task = await Task.WhenAny(waitingTasks);
-                        waitingTasks.Remove(task);
-
-                        if (task.IsCompletedSuccessfully)
-                            continue;
-
-                        var exception = task.Exception.ExtractSingleInnerException();
-                        if (exception is RavenException re && re.InnerException is HttpRequestException)
-                        {
-                            // ignore - we are ok when connection with a node cannot be established (test: AddDatabaseOnDisconnectedNode)
-                            continue;
-                        }
-
-                        if (exceptions == null)
-                            exceptions = new List<Exception>();
-
-                        exceptions.Add(exception);
-                    }
-
-                    if (exceptions != null)
-                    {
-                        var allTimeouts = true;
-                        foreach (var exception in exceptions)
-                        {
-                            if (exception is OperationCanceledException)
-                                continue;
-
-                            allTimeouts = false;
-                        }
-
-                        var aggregateException = new AggregateException(exceptions);
-
-                        if (allTimeouts)
-                            throw new TimeoutException($"Waited too long for the raft command (number {index}) to be executed on any of the relevant nodes to this command.", aggregateException);
-                        
-                        throw new InvalidDataException($"The database '{database}' was created but is not accessible, because all of the nodes on which this database was supposed to reside on, threw an exception.", aggregateException);
-                    }
-                }
-            }
-            finally
-            {
-                foreach (var executor in executors)
-                {
-                    executor.Dispose();
-                }
-            }
-        }
-
-        private async Task WaitForExecutionOnSpecificNode(TransactionOperationContext context, ClusterTopology clusterTopology, string node, long index)
-        {
-            await ServerStore.Cluster.WaitForIndexNotification(index); // first let see if we commit this in the leader
-
-            using (var requester = ClusterRequestExecutor.CreateForSingleNode(clusterTopology.GetUrlFromTag(node), ServerStore.Server.Certificate.Certificate))
-            {
-                await requester.ExecuteAsync(new WaitForRaftIndexCommand(index), context);
-            }
-        }
-
-
 
         private void ValidateClusterMembers(ClusterTopology clusterTopology, DatabaseRecord databaseRecord)
         {
@@ -1299,7 +1212,7 @@ namespace Raven.Server.Web.System
                                 IOExtensions.DeleteFile(tmpFile);
                             else if (process.HasExited == false && string.IsNullOrEmpty(tmpFile) == false)
                             {
-                                if(ProcessExtensions.TryKill(process))
+                                if (ProcessExtensions.TryKill(process))
                                     IOExtensions.DeleteFile(tmpFile);
                                 else
                                 {
