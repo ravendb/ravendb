@@ -1283,7 +1283,7 @@ namespace Raven.Database.Prefetching
                         t.AssertNotFailed();
                     }
                     return t.Result;
-                })
+                }, CancellationToken.None, TaskContinuationOptions.ExecuteSynchronously, TaskScheduler.Default)
             };
 
             futureIndexBatch.Task.ContinueWith(t =>
@@ -1297,7 +1297,7 @@ namespace Raven.Database.Prefetching
                 {
                     // this is an expected race with the actual task, this is fine
                 }
-            });
+            }, CancellationToken.None, TaskContinuationOptions.ExecuteSynchronously, TaskScheduler.Default);
 
             var addFutureBatch = futureIndexBatches.TryAdd(nextEtag, futureIndexBatch);
             if (addFutureBatch == false)
@@ -1401,7 +1401,7 @@ namespace Raven.Database.Prefetching
                 {
                     log.Warn("WASTE: Discarding future work item without using it, to reduce memory usage");
                 }
-            });
+            }, CancellationToken.None, TaskContinuationOptions.ExecuteSynchronously, TaskScheduler.Default);
         }
 
         public void BatchProcessingComplete()
