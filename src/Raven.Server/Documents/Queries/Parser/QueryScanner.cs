@@ -250,12 +250,6 @@ namespace Raven.Server.Documents.Queries.Parser
                 tokenOffset++; //include the whitespace too
                 tokenLength = currentToken.Length;
             }
-            else
-            {
-                if(_q[tokenOffset] == ' ')
-                    while (_q[tokenOffset] == ' ')
-                        tokenOffset++;
-            }
 
             while (peekOffset < _q.Length && predicate(_q[peekOffset]))
             {
