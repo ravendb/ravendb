@@ -59,16 +59,16 @@ EXPORT int32_t
 rvn_memory_sync(void *address, int64_t size, int32_t *detailed_error_code);
 
 EXPORT int32_t
-rvn_dispose_handle(const char *filepath, void *handle, bool delete_on_close, int32_t *detailed_error_code);
+rvn_dispose_handle(const char *filepath, void *handle, int32_t delete_on_close, int32_t *detailed_error_code);
 
 EXPORT int32_t
-rvn_unmap(void *address, int64_t size, bool delete_on_close, int32_t *detailed_error_code);
+rvn_unmap(void *address, int64_t size, int32_t delete_on_close, int32_t *detailed_error_code);
 
 EXPORT int32_t
 rvn_prefetch_ranges(struct RVN_RANGE_LIST *range_list, int32_t count, int32_t *detailed_error_code);
 
 EXPORT int32_t
-rvn_protect_range(void *start_address, int64_t size, bool protection, int32_t *detailed_error_code);
+rvn_protect_range(void *start_address, int64_t size, int32_t protection, int32_t *detailed_error_code);
 
 EXPORT int32_t
 rvn_allocate_more_space(const char *filename, int64_t new_length_after_adjustment, void *handle, int32_t flags, void **new_address, int32_t *detailed_error_code);

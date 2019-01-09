@@ -151,9 +151,9 @@ error_cleanup:
 }
 
 EXPORT int32_t
-rvn_unmap(void *address, int64_t size, bool delete_on_close, int32_t *detailed_error_code)
+rvn_unmap(void *address, int64_t size, int32_t delete_on_close, int32_t *detailed_error_code)
 {    
-    if (delete_on_close == true)
+    if (delete_on_close == DELETE_ON_CLOSE_YES)
         madvise(address, size, MADV_DONTNEED); /* ignore error */        
 
     int32_t rc = munmap(address, size);
