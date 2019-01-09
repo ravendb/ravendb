@@ -1,5 +1,4 @@
 using System;
-// ReSharper disable UnusedMember.Global
 
 namespace Voron.Platform
 {
