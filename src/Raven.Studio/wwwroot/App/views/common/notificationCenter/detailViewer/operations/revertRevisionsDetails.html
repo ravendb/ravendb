@@ -1,4 +1,4 @@
-<div class="modal-dialog" role="document">
+<div class="modal-dialog modal-lg revertRevisionsDetails" role="document">
     <div class="modal-content" tabindex="-1">
         <div class="modal-header">
             <div class="flex-horizontal">
@@ -44,6 +44,10 @@
                 <pre class="margin-top error-messages"><code data-bind="foreach: errorMessages"><span data-bind="text: $data"></span>
 </code></pre>
             </div>
+
+            <div class="margin-bottom" style="position: relative; height: 300px">
+                <virtual-grid style="height: 300px" class="resizable flex-window" params="controller: gridController, emptyTemplate: 'empty-revert-revisions-template'"></virtual-grid>
+            </div>
         </div>
         <div class="modal-footer">
             <button type="button" class="btn btn-default" data-bind="click: $root.close">Close</button>
@@ -53,3 +57,10 @@
         </div>
     </div>
 </div>
+
+<div class="tooltip json-preview js-revert-revisions-details-tooltip" style="opacity: 0">
+</div>
+
+<script type="text/html" id="empty-revert-revisions-template">
+    No warnings found.
+</script>

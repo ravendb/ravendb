@@ -16,9 +16,10 @@
                                         <small class="text-muted">(local time)</small>
                                     </label>
                                 </div>
-                                <div style="position: relative">
+                                <div style="position: relative" data-bind="validationElement: model.date">
                                     <input class="form-control"
                                            data-bind="datePicker: model.date, datepickerOptions: datePickerOptions"/>
+                                    <span class="help-block" data-bind="validationMessage: model.date"></span>
                                 </div>
                             </div>
                             <div class="form-group">
@@ -63,22 +64,11 @@
                                     <li>
                                         Documents modified after <strong><em>Point in time</em></strong>:
                                         <code data-bind="text: pointInTimeFormatted() + ' UTC'"></code>
-                                        will be reverted to latest revision between
-                                        <code data-bind="text: revertStartTime() + ' UTC'"></code> and
-                                        <code data-bind="text: pointInTimeFormatted() + ' UTC'"></code>. <br />
-
-                                        <strong>If such revision is not found, document is not changed.</strong>
-
-                                        <div class="padding">
-                                            HERE GOES IMAGE #1
-                                        </div>
+                                        will be reverted (by creating new revision) to latest version before
+                                        <code data-bind="text: pointInTimeFormatted() + ' UTC'"></code>.
                                     </li>
-                                    
                                     <li>
                                         Remaining documents will not be modified.
-                                        <div class="padding">
-                                            HERE GOES IMAGE #2
-                                        </div>
                                     </li>
                                 </ul>
                             </div>
