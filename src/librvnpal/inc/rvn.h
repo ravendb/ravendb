@@ -55,10 +55,10 @@ EXPORT int32_t
 rvn_memory_sync(void *address, int64_t size, int32_t *detailed_error_code);
 
 EXPORT int32_t
-rvn_dispose_handle(const char *filepath, void *handle, bool delete_on_close, int32_t *unlink_error_code, int32_t *close_error_code);
+rvn_dispose_handle(const char *filepath, void *handle, bool delete_on_close, int32_t *detailed_error_code);
 
 EXPORT int32_t
-rvn_unmap(void *address, int64_t size, bool delete_on_close, int32_t *unmap_error_code, int32_t *madvise_error_code);
+rvn_unmap(void *address, int64_t size, bool delete_on_close, int32_t *detailed_error_code);
 
 EXPORT int32_t
 rvn_prefetch_ranges(struct RVN_RANGE_LIST *range_list, int32_t count, int32_t *detailed_error_code);
@@ -77,9 +77,6 @@ PRIVATE int32_t
 _allocate_file_space(int32_t fd, int64_t size, int32_t *detailed_error_code);
 
 PRIVATE int32_t
-_pointer_to_int(void *ptr);
-
-PRIVATE int32_t
 _sync_directory_for(const char *file_path, int32_t *detailed_error_code);
 
 PRIVATE int32_t
@@ -96,5 +93,8 @@ _sync_directory_maybe_symblink(char *dir_path, int32_t depth, int32_t *detailed_
 
 PRIVATE int64_t
 _pwrite(int32_t fd, void *buffer, uint64_t count, uint64_t offset, int32_t *detailed_error_code);
+
+PRIVATE int32_t
+_ensure_path_exists(const char* path);
 
 #endif
