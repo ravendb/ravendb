@@ -1,6 +1,5 @@
 ﻿using System;
 using System.Buffers.Text;
-using System.Globalization;
 using System.Runtime.CompilerServices;
 
 namespace Sparrow.Json
@@ -9,50 +8,58 @@ namespace Sparrow.Json
     {
         public readonly LazyStringValue Inner;
         private double? _val;
+        private float? _floatVal;
         private decimal? _decimalVal;
-                
+        private long? _longVal;
+        private ulong? _ulongVal;
+
         public LazyNumberValue(LazyStringValue inner)
         {
             Inner = inner;
         }
 
-        public static unsafe implicit operator long(LazyNumberValue self)
+        public static implicit operator long(LazyNumberValue self)
         {
-            if (Utf8Parser.TryParse(new ReadOnlySpan<byte>(self.Inner.Buffer, self.Inner.Size), out long val, out _) == false)
+            if (self._longVal.HasValue)
+                return self._longVal.Value;
+
+            if (self.TryParseLong(out var val) == false)
             {
                 var doubleVal = (double)self;
                 val = (long)doubleVal;
             }
-            
+
+            self._longVal = val;
             return val;
         }
 
-        public static unsafe implicit operator ulong(LazyNumberValue self)
+        public static implicit operator ulong(LazyNumberValue self)
         {
-            if(Utf8Parser.TryParse(new ReadOnlySpan<byte>(self.Inner.Buffer, self.Inner.Size), out ulong val, out var consumed) == false ||
-                self.Inner.Size != consumed)
+            if (self._ulongVal.HasValue)
+                return self._ulongVal.Value;
+
+            if (self.TryParseULong(out var val) == false)
             {
                 var doubleVal = (double)self;
                 val = (ulong)doubleVal;
             }
 
+            self._ulongVal = val;
             return val;
         }
 
-
-        public static unsafe implicit operator double(LazyNumberValue self)
+        public static implicit operator double(LazyNumberValue self)
         {
-            if (Utf8Parser.TryParse(new ReadOnlySpan<byte>(self.Inner.Buffer, self.Inner.Size), out double val, out var consumed) == false || 
-                self.Inner.Size != consumed)
+            if (self._val.HasValue)
+                return self._val.Value;
+
+            if (self.TryParseDouble(out var val) == false)
             {
                 ThrowInvalidNumberFormat(self, "double");
             }
-            return val;
-        }
 
-        private static void ThrowInvalidNumberFormat(LazyNumberValue self, string type)
-        {
-            throw new InvalidCastException("Unable to convert '" + self.Inner.ToString() + "' to a " + type);
+            self._val = val;
+            return val;
         }
 
         public static implicit operator string(LazyNumberValue self)
@@ -60,25 +67,39 @@ namespace Sparrow.Json
             return self.Inner;
         }
 
-        public static unsafe implicit operator float(LazyNumberValue self)
+        public static implicit operator float(LazyNumberValue self)
         {
-            if (Utf8Parser.TryParse(new ReadOnlySpan<byte>(self.Inner.Buffer, self.Inner.Size), out float val, out _) == false)
+            if (self._floatVal.HasValue)
+                return self._floatVal.Value;
+
+            if (self.TryParseFloat(out var val) == false)
             {
-                ThrowInvalidNumberFormat(self, "float");
+                var doubleVal = (double)self;
+                val = (float)doubleVal;
             }
+
+            self._floatVal = val;
             return val;
         }
 
-        public static unsafe implicit operator decimal(LazyNumberValue self)
+        public static implicit operator decimal(LazyNumberValue self)
         {
-            if (Utf8Parser.TryParse(new ReadOnlySpan<byte>(self.Inner.Buffer, self.Inner.Size), out decimal val, out _) == false)
+            if (self._decimalVal.HasValue)
+                return self._decimalVal.Value;
+
+            if (self.TryParseDecimal(out var val) == false)
             {
                 ThrowInvalidNumberFormat(self, "decimal");
             }
+
             self._decimalVal = val;
             return val;
         }
-       
+
+        private static void ThrowInvalidNumberFormat(LazyNumberValue self, string type)
+        {
+            throw new InvalidCastException($"Unable to convert '{self.Inner}' to a {type}");
+        }
 
         public static decimal operator *(LazyNumberValue x, LazyNumberValue y)
         {
@@ -138,16 +159,14 @@ namespace Sparrow.Json
             if (ReferenceEquals(this, obj))
                 return true;
 
-            var lazyDouble = obj as LazyNumberValue;
-
-            if (lazyDouble != null)
+            if (obj is LazyNumberValue lazyDouble)
                 return Equals(lazyDouble);
 
-            if (obj is double)
-                return Math.Abs(this - (double)obj) < double.Epsilon;
+            if (obj is double dbl)
+                return Math.Abs(this - dbl) < double.Epsilon;
 
-            if (obj is decimal)
-                return ((decimal)this).Equals((decimal)obj);
+            if (obj is decimal dec)
+                return ((decimal)this).Equals(dec);
 
             if (obj is LazyStringValue l &&
                 l.Length == 3) // checking for 3 as optimization
@@ -167,21 +186,38 @@ namespace Sparrow.Json
             return Inner.Equals(other.Inner);
         }
 
-        internal unsafe bool TryParseDouble(out double doubleVal)
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        internal unsafe bool TryParseLong(out long longValue)
         {
-            return Utf8Parser.TryParse(new ReadOnlySpan<byte>(Inner.Buffer, Inner.Size), out doubleVal, out var consumed) && 
-                Inner.Size == consumed;
+            return Utf8Parser.TryParse(new ReadOnlySpan<byte>(Inner.Buffer, Inner.Size), out longValue, out var consumed) &&
+                   Inner.Size == consumed;
         }
 
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        internal unsafe bool TryParseULong(out ulong ulongValue)
+        {
+            return Utf8Parser.TryParse(new ReadOnlySpan<byte>(Inner.Buffer, Inner.Size), out ulongValue, out var consumed) &&
+                   Inner.Size == consumed;
+        }
+        
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        internal unsafe bool TryParseDouble(out double doubleVal)
+        {
+            return Utf8Parser.TryParse(new ReadOnlySpan<byte>(Inner.Buffer, Inner.Size), out doubleVal, out var consumed) &&
+                   Inner.Size == consumed;
+        }
+
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        internal unsafe bool TryParseFloat(out float floatVal)
+        {
+            return Utf8Parser.TryParse(new ReadOnlySpan<byte>(Inner.Buffer, Inner.Size), out floatVal, out var consumed) &&
+                   Inner.Size == consumed;
+        }
+
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         internal unsafe bool TryParseDecimal(out decimal decimalValue)
         {
             return Utf8Parser.TryParse(new ReadOnlySpan<byte>(Inner.Buffer, Inner.Size), out decimalValue, out var consumed) &&
-                Inner.Size == consumed;
-        }
-
-        internal unsafe bool TryParseULong(out ulong ulongValue)
-        {
-            return Utf8Parser.TryParse(new ReadOnlySpan<byte>(Inner.Buffer, Inner.Size), out ulongValue,out var consumed) &&
                 Inner.Size == consumed;
         }
 
@@ -198,8 +234,8 @@ namespace Sparrow.Json
             if (that is long l)
                 return Compare(this, l);
 
-            if (that is LazyNumberValue)
-                return Compare(this, (LazyNumberValue)that);
+            if (that is LazyNumberValue lnv)
+                return Compare(this, lnv);
 
             throw new NotSupportedException($"Could not compare with '{that}' of type '{that.GetType()}'.");
         }
@@ -212,8 +248,8 @@ namespace Sparrow.Json
             if (that is long l)
                 return Compare(this, l);
 
-            if (that is LazyNumberValue)
-                return Compare(this, (LazyNumberValue)that);
+            if (that is LazyNumberValue lnv)
+                return Compare(this, lnv);
 
             return null;
         }
