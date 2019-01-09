@@ -602,6 +602,7 @@ namespace Raven.Server.Documents.Queries.Parser
         {
             var expectNode = false;
             MatchPath last;
+            var foundLeftArrow = false;
             while (true)
 
             {
@@ -611,7 +612,7 @@ namespace Raven.Server.Documents.Queries.Parser
                     {
                         case "-":
                             foundDash = true;
-                            
+                            foundLeftArrow = false;
                             continue;
                         case "[":
                             if (foundDash == false)
@@ -630,14 +631,21 @@ namespace Raven.Server.Documents.Queries.Parser
                             }
 
                             if (Scanner.TryScan(']') == false)
-                                throw new InvalidQueryException("MATCH operator expected a ']' after reading: " + alias, Scanner.Input, null);                            
+                                throw new InvalidQueryException("MATCH operator expected a ']' after reading: " + alias, Scanner.Input, null);
+
+                            if (foundLeftArrow && //before current edge we had '<-' operator
+                                Scanner.TryPeek("->"))
+                            {
+                                throw new InvalidQueryException($"The edge with alias '{alias}' has arrow operators ('->') in both left and right directions. This is invalid syntax, edge elements should have either '-[edge expression]->' or '<-[edge expression]-' format.");
+                            }
+
                             list.Add(new MatchPath
                             {
                                 Alias = alias,
                                 EdgeType = list[list.Count - 1].EdgeType,
                                 IsEdge = true
                             });
-
+                            foundLeftArrow = false;
                             expectNode = true; //after each edge we expect a node
                             break;
                         case "<-":
@@ -652,6 +660,7 @@ namespace Raven.Server.Documents.Queries.Parser
                             };
 
                             foundDash = true;
+                            foundLeftArrow = true;
 
                             continue;
                         case "<":
@@ -683,7 +692,6 @@ namespace Raven.Server.Documents.Queries.Parser
                             goto case "(";
 
                         case "(":
-
                             var start = Scanner.Position - 1;
                             if (GraphAlias(gq, false, default, out alias) == false)
                                 throw new InvalidQueryException("Couldn't get node's alias", Scanner.Input, null);
@@ -693,14 +701,16 @@ namespace Raven.Server.Documents.Queries.Parser
                                 ThrowExpectedEdgeButFoundNode(alias,Scanner.Input.Substring(start, end - start),Scanner.Input);
 
                             if (Scanner.TryScan(')') == false)
-                                throw new InvalidQueryException("MATCH operator expected a ')' after reading: " + alias, Scanner.Input, null);
+                                throw new InvalidQueryException("MATCH operator expected a ')' after reading: " + alias, Scanner.Input, null);                           
 
                             list.Add(new MatchPath
                             {
                                 Alias = alias,
                                 EdgeType = list[list.Count - 1].EdgeType
                             });
+
                             expectNode = false; //the next should be an edge
+                            foundLeftArrow = false;
                             break;
                         case "recursive":
                             if (allowRecursive == false)
@@ -881,27 +891,43 @@ namespace Raven.Server.Documents.Queries.Parser
             op = null;
             var clauses = new List<PatternMatchElementExpression>();
 
+            if (matchPaths.Count == 0) //precaution, obviously shouldn't happen
+                return null;
+
+            if (matchPaths.Count == 1)
+                return new PatternMatchElementExpression
+                {
+                    Path = matchPaths.ToArray(),
+                    Type = ExpressionType.Pattern
+                };
+
+            ThrowIfMatchPathIsInvalid(matchPaths);
+
             //the last path element cannot be a "cross-road"
             while (matchPaths.Count > 1)
             {
-                var hasFoundJunction = false;
+                var hasFoundJunction = false;        
+                
+                //the first two and the last two cannot have different directions, since 
+                //minimal query with different directions will look like (node1)-[edge1]->(node2)<-[edge2]-(node3)
                 for (var i = 0; i < matchPaths.Count - 2; i++)
                 {
                     if (matchPaths[i].EdgeType == matchPaths[i + 1].EdgeType)
                         continue;
-
+                    
                     hasFoundJunction = true;
 
                     List<MatchPath> subRange = null;
-                    if (matchPaths[i].EdgeType == EdgeType.Left && matchPaths[i + 1].EdgeType == EdgeType.Right)
+                    switch (matchPaths[i].EdgeType)
                     {
-                        subRange = matchPaths.GetRange(0, i + 1);
-                        matchPaths.RemoveRange(0, i);
-                    }
-                    else if (matchPaths[i].EdgeType == EdgeType.Right && matchPaths[i + 1].EdgeType == EdgeType.Left)
-                    {
-                        subRange = matchPaths.GetRange(0, i + 2);
-                        matchPaths.RemoveRange(0, i + 1);
+                        case EdgeType.Left when matchPaths[i + 1].EdgeType == EdgeType.Right:
+                            subRange = matchPaths.GetRange(0, i + 1);
+                            matchPaths.RemoveRange(0, i);
+                            break;
+                        case EdgeType.Right when matchPaths[i + 1].EdgeType == EdgeType.Left:
+                            subRange = matchPaths.GetRange(0, i + 2);
+                            matchPaths.RemoveRange(0, i + 1);
+                            break;
                     }
 
                     if (subRange != null)
@@ -953,6 +979,42 @@ namespace Raven.Server.Documents.Queries.Parser
             }
 
             return op;
+        }
+
+        private static void ThrowIfMatchPathIsInvalid(List<MatchPath> matchPaths)
+        {
+            var first = matchPaths[0];
+            var second = matchPaths[1];
+            //since the first element should be a node, we cannot have first and second path element changing directions
+            ThrowIfDirectionChanges(matchPaths, first, second, "first");
+            if (first.IsEdge)
+                throw new InvalidQueryException($"Expected the first query element '{first}' to be a node, but it is an edge. Graph pattern match queries should start from a node element.");
+
+            var last = matchPaths[matchPaths.Count - 1];
+            if (last.IsEdge)
+                throw new InvalidQueryException($"Expected the last query element '{last}' to be a node, but it is an edge. Graph pattern match queries should end with a node element.");
+            
+            var beforeLast = matchPaths[matchPaths.Count - 2];
+
+            //the last two path elements should not have different directions because it will have the following pattern:
+            // [edge]-> -(node) ==> and this is obviously a meaningless syntax
+            ThrowIfDirectionChanges(matchPaths, last, beforeLast, "last");
+        }
+
+        private static void ThrowIfDirectionChanges(List<MatchPath> matchPaths, MatchPath elementA, MatchPath elementB, string description)
+        {
+            if (!elementA.Recursive.HasValue &&
+                !elementB.Recursive.HasValue &&
+                elementA.EdgeType != elementB.EdgeType)
+            {
+                var offendingExpression = new PatternMatchElementExpression
+                {
+                    Path = matchPaths.ToArray(),
+                    Type = ExpressionType.Pattern
+                };
+                throw new InvalidQueryException(
+                    $"Pattern match expression that contains '{elementA}' and '{elementB}' is invalid (full expression: '{offendingExpression}'). The {description} two elements (with aliases '{elementB.Alias}' and '{elementA.Alias}') should not change direction.");
+            }
         }
 
         private static void ReverseIncomingChain(List<MatchPath> list)

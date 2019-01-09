@@ -2,13 +2,14 @@
 using FastTests;
 using Newtonsoft.Json.Linq;
 using Raven.Client.Documents;
+using Raven.Client.Exceptions;
 using Xunit;
 
 namespace SlowTests.Issues
 {
     public class RavenDB_12397 : RavenTestBase
     {
-        public class Beer
+        private class Beer
         {
             public string Id { get; set; }
 
@@ -17,13 +18,13 @@ namespace SlowTests.Issues
             public string Brewery { get; set; }            
         }
 
-        public class BeerStyle
+        private class BeerStyle
         {
             public string Id { get; set; }
             public string Name { get; set; }
         }
 
-        public class Brewery
+        private class Brewery
         {
             public string Id { get; set; }
             public string Name { get; set; }
@@ -76,6 +77,53 @@ namespace SlowTests.Issues
                         ").ToArray();
 
                     Assert.Equal(intersectionResults,unifiedIntersectionResults);
+                }
+            }
+        }
+
+        [Fact]
+        public void Should_throw_if_reverse_in_direction_in_first_two_query_elements()
+        {
+            using (var store = GetDocumentStore())
+            {
+                CreateData(store);
+                using (var session = store.OpenSession())
+                {
+                    Assert.Throws<InvalidQueryException>(() => 
+                        session.Advanced.RawQuery<JObject>(
+                        @"
+                            match (Beers as beer)<-[Style]->(BeerStyles as beerStyle)<-[Style]-(Beers as anotherBeer)
+                            where beer != anotherBeer
+                        ").ToArray());
+                }
+            }
+        }
+
+        [Fact]
+        public void Should_throw_if_reverse_in_direction_in_element_before_last()
+        {
+            using (var store = GetDocumentStore())
+            {
+                CreateData(store);
+                using (var session = store.OpenSession())
+                {
+                    Assert.Throws<InvalidQueryException>(() => 
+                        session.Advanced.RawQuery<JObject>("match (Beers as beer)-[Style]->(BeerStyles as beerStyle)<-[Style]->(Beers as anotherBeer)").ToArray());
+                }
+            }
+        }
+
+        [Fact]
+        public void Should_throw_if_last_element_has_wrong_direction()
+        {
+            using (var store = GetDocumentStore())
+            {
+                CreateData(store);
+                using (var session = store.OpenSession())
+                {
+                    //this edge-case is handled by GraphQuerySyntaxValidatorVisitor, but adding the test here because it is relevant edge-case to RavenDB-12397
+                   Assert.Throws<InvalidQueryException>(() => 
+                        session.Advanced.RawQuery<JObject>("match (Beers as beer)-[Style]->(BeerStyles as beerStyle)-[Style]<-(Beers as anotherBeer)").ToArray());
                 }
             }
         }
