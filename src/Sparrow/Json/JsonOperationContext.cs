@@ -38,8 +38,6 @@ namespace Sparrow.Json
         private readonly ArenaMemoryAllocator _arenaAllocator;
         private ArenaMemoryAllocator _arenaAllocatorForLongLivedValues;
         private AllocatedMemoryData _tempBuffer;
-        private List<string> _normalNumbersStringBuffers = new List<string>(5);
-        private string _hugeNumbersBuffer;
 
         private readonly Dictionary<string, LazyStringValue> _fieldNames = new Dictionary<string, LazyStringValue>(OrdinalStringStructComparer.Instance);
 
@@ -57,7 +55,7 @@ namespace Sparrow.Json
 
         private int _numberOfAllocatedPathCaches = -1;
         private readonly PathCacheHolder[] _allocatePathCaches = new PathCacheHolder[512];
-        private Stack<MemoryStream> _cachedMemoryStreams = new Stack<MemoryStream>();
+        private readonly Stack<MemoryStream> _cachedMemoryStreams = new Stack<MemoryStream>();
 
         private int _numberOfAllocatedStringsValues;
         private readonly FastList<LazyStringValue> _allocateStringValues = new FastList<LazyStringValue>(256);
