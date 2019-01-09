@@ -318,6 +318,10 @@ namespace Raven.Server.Web.System
 
                 writer.WritePropertyName(nameof(SetupParameters.IsAws));
                 writer.WriteBool(setupParameters.IsAws);
+                writer.WriteComma();
+                
+                writer.WritePropertyName(nameof(SetupParameters.RunningOnPosix));
+                writer.WriteBool(setupParameters.RunningOnPosix);
 
                 writer.WriteEndObject();
             }
