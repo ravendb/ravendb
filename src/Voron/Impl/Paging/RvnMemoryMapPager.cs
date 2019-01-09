@@ -10,6 +10,7 @@ using Voron.Platform;
 using Voron.Platform.Win32;
 using Voron.Util.Settings;
 using static Voron.Platform.Pal;
+using static Voron.Platform.PalDefinitions;
 using static Voron.Platform.PalFlags;
 
 namespace Voron.Impl.Paging
@@ -19,7 +20,6 @@ namespace Voron.Impl.Paging
         public override long TotalAllocationSize => _totalAllocationSize;
         public override int CopyPage(I4KbBatchWrites destwI4KbBatchWrites, long p, PagerState pagerState) => CopyPageImpl(destwI4KbBatchWrites, p, pagerState);
         public override string ToString() => FileName.FullPath;
-        private const int AllocationGranularity = 64 * Constants.Size.Kilobyte;
         protected override string GetSourceName() => $"mmf64: {FileName?.FullPath}";
         private long _totalAllocationSize;
         private readonly bool _copyOnWriteMode;
@@ -134,14 +134,14 @@ namespace Voron.Impl.Paging
             // rc contains either FAIL_UNLINK, FAIL_CLOSE or both of them    (or FAIL_INVALID_HANDLE)
             if (_logger.IsInfoEnabled)
                 _logger.Info($"Unable to dispose handle for {FileName.FullPath} (ignoring). rc={(FailCodes)rc}. DeleteOnClose={DeleteOnClose}, "
-                             + $"errorCodeClose={PalHelper.GetNativeErrorString(errorCode, "Unable to dispose handle for {FileName.FullPath} (ignoring).", out _)}",
+                             + $"errorCode={PalHelper.GetNativeErrorString(errorCode, "Unable to dispose handle for {FileName.FullPath} (ignoring).", out _)}",
                     new IOException($"Unable to dispose handle for {FileName.FullPath} (ignoring)."));
         }
 
         protected internal override void PrefetchRanges(Win32MemoryMapNativeMethods.WIN32_MEMORY_RANGE_ENTRY* list, int count)
         {
             // TODO : Get rid of WIN32_MEMORY_RANGE_ENTRY and use Pal's PrefetchRanges instead
-            rvn_prefetch_ranges((PalDefinitions.PrefetchRanges*)list, count, out _);
+            rvn_prefetch_ranges((PrefetchRanges*)list, count, out _);
             // we explicitly ignore the return code here, this is optimization only
         }
 

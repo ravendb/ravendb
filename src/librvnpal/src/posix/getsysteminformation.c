@@ -16,7 +16,7 @@ rvn_get_system_information(struct SYSTEM_INFORMATION *sys_info,
         goto error;
 
     sys_info->page_size = page_size;
-    sys_info->can_prefetch = true;
+    sys_info->prefetch_status = true;
 
     return SUCCESS;
     
