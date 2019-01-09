@@ -106,16 +106,14 @@ namespace Voron.Platform
             string filepath,
             void* handle,
             [MarshalAs(UnmanagedType.U1)] bool deleteOnClose,
-            out Int32 errorCodeClose,
-            out Int32 errorCodeUnlink);
+            out Int32 errorCode);
 
         [DllImport(LIBRVNPAL, SetLastError = true)]
         public static extern Int32 rvn_unmap(
             void* address,
             Int64 size,
             [MarshalAs(UnmanagedType.U1)] bool deleteOnClose,
-            out Int32 errorCodeUnmap,
-            out Int32 errorCodeMadvise);
+            out Int32 errorCode);
 
         [DllImport(LIBRVNPAL, SetLastError = true)]
         public static extern Int32 rvn_prefetch_ranges(
