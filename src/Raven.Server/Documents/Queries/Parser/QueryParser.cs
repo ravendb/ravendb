@@ -7,7 +7,6 @@ using Microsoft.Extensions.Primitives;
 using Raven.Client.Exceptions;
 using Raven.Server.Documents.Queries.AST;
 using Raven.Server.Extensions;
-// ReSharper disable ConditionIsAlwaysTrueOrFalse
 
 namespace Raven.Server.Documents.Queries.Parser
 {
