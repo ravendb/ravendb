@@ -163,19 +163,18 @@ namespace Raven.Client.Documents.Session.Operations
                 return;
 
             documentInfo.MetadataInstance = null;
-            using (var old = documentInfo.Metadata)
+
+            using (documentInfo.Document)
+            using (documentInfo.Metadata)
             {
                 documentInfo.Metadata = _session.Context.ReadObject(documentInfo.Metadata, id);
                 documentInfo.Metadata.Modifications = null;
-            }
 
-            documentInfo.Document.Modifications = new DynamicJsonValue(documentInfo.Document)
-            {
-                [Constants.Documents.Metadata.Key] = documentInfo.Metadata
-            };
+                documentInfo.Document.Modifications = new DynamicJsonValue(documentInfo.Document)
+                {
+                    [Constants.Documents.Metadata.Key] = documentInfo.Metadata
+                };
 
-            using (var old = documentInfo.Document)
-            {
                 documentInfo.Document = _session.Context.ReadObject(documentInfo.Document, id);
                 documentInfo.Document.Modifications = null;
             }
