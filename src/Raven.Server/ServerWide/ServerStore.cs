@@ -198,75 +198,67 @@ namespace Raven.Server.ServerWide
                 if (ServerShutdown.IsCancellationRequested)
                     return;
 
+                CancellationTokenSource cts = null;
+                Task leaderChangedTask = null;
+
                 try
                 {
-                    using (var cts = CancellationTokenSource.CreateLinkedTokenSource(ServerShutdown))
+                    cts = CancellationTokenSource.CreateLinkedTokenSource(ServerShutdown);
+                    leaderChangedTask = _engine.WaitForLeaderChange(cts.Token);
+                    if (await Task.WhenAny(NotificationCenter.WaitForAnyWebSocketClient, leaderChangedTask).WithCancellation(ServerShutdown) == leaderChangedTask)
                     {
-                        var leaderChangedTask = _engine.WaitForLeaderChange(cts.Token);
-                        if (await Task.WhenAny(NotificationCenter.WaitForAnyWebSocketClient, leaderChangedTask).WithCancellation(ServerShutdown) == leaderChangedTask)
+                        // leaderChangedTask has completed
+                        continue;
+                    }
+
+                    var cancelTask = Task.WhenAny(NotificationCenter.WaitForRemoveAllWebSocketClients, leaderChangedTask);
+
+                    while (cancelTask.IsCompleted == false)
+                    {
+                        var topology = GetClusterTopology();
+                        var leaderUrl = topology.GetUrlFromTag(_engine.LeaderTag);
+                        if (leaderUrl == null)
+                            break; // will continue from the top of the loop
+
+                        if (IsLeader())
+                            break;
+
+                        using (var ws = new ClientWebSocket())
+                        using (ContextPool.AllocateOperationContext(out JsonOperationContext context))
                         {
-                            continue;
-                        }
+                            var leaderWsUrl = new Uri($"{leaderUrl.Replace("http", "ws", StringComparison.OrdinalIgnoreCase)}/server/notification-center/watch");
 
-                        var cancelTask = Task.WhenAny(NotificationCenter.WaitForRemoveAllWebSocketClients, leaderChangedTask)
-                            .ContinueWith(state =>
+                            if (Server.Certificate?.Certificate != null)
                             {
-                                try
-                                {
-                                    // ReSharper disable once AccessToDisposedClosure
-                                    cts.Cancel();
-                                }
-                                catch
-                                {
-                                    // ignored
-                                }
-                            }, ServerShutdown);
-
-                        while (cancelTask.IsCompleted == false)
-                        {
-                            var topology = GetClusterTopology();
-                            var leaderUrl = topology.GetUrlFromTag(_engine.LeaderTag);
-                            if (leaderUrl == null)
-                                break; // will continue from the top of the loop
-
-                            if (IsLeader())
-                                break;
-
-                            using (var ws = new ClientWebSocket())
-                            using (ContextPool.AllocateOperationContext(out JsonOperationContext context))
-                            {
-                                var leaderWsUrl = new Uri($"{leaderUrl.Replace("http", "ws", StringComparison.OrdinalIgnoreCase)}/server/notification-center/watch");
-
-                                if (Server.Certificate?.Certificate != null)
-                                {
-                                    ws.Options.ClientCertificates.Add(Server.Certificate.Certificate);
-                                }
-                                await ws.ConnectAsync(leaderWsUrl, cts.Token);
-                                while (ws.State == WebSocketState.Open || ws.State == WebSocketState.CloseSent)
-                                {
-                                    using (var notification = await context.ReadFromWebSocket(ws, "ws from Leader", cts.Token))
-                                    {
-                                        if (notification == null)
-                                            break;
-
-                                        if (notification.TryGet(nameof(ClusterTopologyChanged.Type), out NotificationType notificationType) == false ||
-                                            notificationType != NotificationType.ClusterTopologyChanged)
-                                            continue;
-
-                                        var topologyNotification = JsonDeserializationServer.ClusterTopologyChanged(notification);
-                                        if (topologyNotification == null)
-                                            continue;
-
-                                        if (_engine.LeaderTag != topologyNotification.Leader)
-                                            break;
-
-                                        delay = 500; // on successful read, reset the delay
-                                        topologyNotification.NodeTag = _engine.Tag;
-                                        NotificationCenter.Add(topologyNotification);
-                                    }
-                                }
-                                delay = await ReconnectionBackoff(delay);
+                                ws.Options.ClientCertificates.Add(Server.Certificate.Certificate);
                             }
+
+                            await ws.ConnectAsync(leaderWsUrl, cts.Token);
+                            while (ws.State == WebSocketState.Open || ws.State == WebSocketState.CloseSent)
+                            {
+                                using (var notification = await context.ReadFromWebSocket(ws, "ws from Leader", cts.Token))
+                                {
+                                    if (notification == null)
+                                        break;
+
+                                    if (notification.TryGet(nameof(ClusterTopologyChanged.Type), out NotificationType notificationType) == false ||
+                                        notificationType != NotificationType.ClusterTopologyChanged)
+                                        continue;
+
+                                    var topologyNotification = JsonDeserializationServer.ClusterTopologyChanged(notification);
+                                    if (topologyNotification == null)
+                                        continue;
+
+                                    if (_engine.LeaderTag != topologyNotification.Leader)
+                                        break;
+
+                                    delay = 500; // on successful read, reset the delay
+                                    topologyNotification.NodeTag = _engine.Tag;
+                                    NotificationCenter.Add(topologyNotification);
+                                }
+                            }
+
+                            delay = await ReconnectionBackoff(delay);
                         }
                     }
                 }
@@ -279,7 +271,33 @@ namespace Raven.Server.ServerWide
                     {
                         Logger.Info($"Error during receiving topology updates from the leader. Waiting {delay} [ms] before trying again.", e);
                     }
+
                     delay = await ReconnectionBackoff(delay);
+                }
+                finally
+                {
+                    await WaitForLeaderChangeTaskToComplete(leaderChangedTask, cts);
+                }
+            }
+        }
+
+        private static async Task WaitForLeaderChangeTaskToComplete(Task leaderChangedTask, CancellationTokenSource cts)
+        {
+            using (cts)
+            {
+                cts.Cancel();
+
+                // wait for leader change task to complete
+                try
+                {
+                    if (leaderChangedTask == null || leaderChangedTask.IsCompleted)
+                        return;
+
+                    await leaderChangedTask;
+                }
+                catch (OperationCanceledException)
+                {
+                    // ignored
                 }
             }
         }
