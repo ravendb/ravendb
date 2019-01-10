@@ -69,7 +69,7 @@ namespace Sparrow.Json
         }
 
         [ThreadStatic]
-        private static ContextStackThreadReleaser _releaser;
+        private ContextStackThreadReleaser _releaser;
         
 
         private void EnsureCurrentThreadContextWillBeReleased(int currentThreadId)
@@ -339,7 +339,6 @@ namespace Sparrow.Json
                     return;
             }
         }
-
         public void Dispose()
         {
             if (_disposed)
@@ -352,8 +351,19 @@ namespace Sparrow.Json
                 _disposed = true;
                 ThreadLocalCleanup.ReleaseThreadLocalState -= CleanThreadLocalState;
                 _nativeMemoryCleaner.Dispose();
+
+#if Debug
+                var z = new HashSet<ContextStack>();
+#endif
                 foreach (var kvp in EnumerateAllThreadContexts())
                 {
+#if Debug
+                    if (z.Add(kvp) == false)
+                    {
+                        throw new InvalidOperationException("threads list is not unique");
+                    }
+#endif
+
                     kvp.Dispose();
                 }
                 _contextStacksByThreadId.Clear();
