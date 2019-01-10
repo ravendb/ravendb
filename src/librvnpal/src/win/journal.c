@@ -132,7 +132,7 @@ int32_t rvn_read_journal(char* file_name, void** handle, char* buffer, uint64_t 
 {
     int32_t rc;
     HANDLE hfile = *handle;
-    if (!hfile)
+    if (INVALID_HANDLE_VALUE == hfile)
     {
         hfile = CreateFile(
             file_name,
@@ -175,7 +175,7 @@ error_cleanup:
     return rc;
 }
 
-int32_t rvn_truncate_journal(void* handle, uint64_t size, int32_t* error_code)
+int32_t rvn_truncate_journal(char* file_name, void* handle, uint64_t size, int32_t* error_code)
 {
     /*TODO Should size be aligned to 4K?*/
     /*TODO Should check the function doesn't try to make the file bigger?*/
