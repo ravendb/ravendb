@@ -175,6 +175,7 @@ namespace Voron.Platform
 
         [DllImport(LIBRVNPAL, SetLastError = true)]
         public static extern Int32 rvn_truncate_journal(
+            string fileName,
             IntPtr handle,
             UInt64 size,
             out Int32 errorCode
