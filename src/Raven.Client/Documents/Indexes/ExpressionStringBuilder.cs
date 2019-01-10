@@ -604,7 +604,7 @@ namespace Raven.Client.Documents.Indexes
             {
                 case ExpressionType.ConvertChecked:
                 case ExpressionType.Convert:
-                    var leftWithoutConvert = SkipConvertExpressions(left);
+                    var leftWithoutConvert = ((UnaryExpression)left).Operand;
                     var enumType = Nullable.GetUnderlyingType(leftWithoutConvert.Type) ?? leftWithoutConvert.Type;
                     if (enumType.GetTypeInfo().IsEnum == false)
                         return;
