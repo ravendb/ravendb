@@ -703,9 +703,9 @@ namespace RachisTests.DatabaseCluster
                 {
                     var user = await session.LoadAsync<User>("users/2");
                     var changeVector = session.Advanced.GetChangeVectorFor(user);
-                    Assert.True(changeVector.Contains("A:1-"));
-                    Assert.True(changeVector.Contains("B:2-"));
-                    Assert.True(changeVector.Contains("C:1-"));
+                    Assert.True(changeVector.Contains("A:1-"), $"No A:1- in {changeVector}");
+                    Assert.True(changeVector.Contains("B:2-"), $"No B:1- in {changeVector}");
+                    Assert.True(changeVector.Contains("C:1-"), $"No C:1- in {changeVector}");
                 }
             }
         }
