@@ -48,11 +48,15 @@ if [ $# -eq 1 ]; then
 	fi
 elif [ $# -gt 1 ]; then
 	if [[ "$1" == "cross" ]]; then
-		if [[ "$2" == "linux-arm" ]]; then
+		if [[ "$2" == "osx-x64" ]]; then
 			IS_CROSS=1
-			IS_ARM=1
-			IS_32BIT=1
-			C_COMPILER=arm-linux-gnueabi-gcc
+			IS_MAC=1
+			C_COMPILER="o64-clang -Wno-ignored-attributes"
+		elif [[ "$2" == "linux-arm" ]]; then
+                        IS_CROSS=1
+                        IS_ARM=1
+                        IS_32BIT=1
+                        C_COMPILER=arm-linux-gnueabi-gcc
 		else
 			echo -e "${ERR_STRING}Invalid architecture for cross compiling${NC}"
 			exit 1
@@ -102,7 +106,12 @@ else
 fi
 
 if [ ${IS_COMPILER} -ne 1 ]; then
-	echo -e "${ERR_STRING}Unable to determine if ${C_COMPILER} compiler exists. Consider installing : linux-x64 - clang-3.9, linux-arm - gcc make gcc-arm-linux-gnueabi binutils-arm-linux-gnueabi"
+	echo -e "${ERR_STRING}Unable to determine if ${C_COMPILER} compiler exists."
+        echo -e "${C_D_YELLOW}    Consider installing :"
+        echo -e "                                       linux-x64 / linux-arm     - clang-3.9 and/or c89"
+	echo -e "                                       cross compiling linux-arm - gcc make gcc-arm-linux-gnueabi binutils-arm-linux-gnueabi, osx-x64 - libc6-dev-i386"
+	echo -e "                                       cross compiling osx-x64   - libc6-dev-i386 cmake libxml2-dev fuse clang libbz2-1.0 libbz2-dev libbz2-ocaml libbz2-ocaml-dev libfuse-dev + download Xcode_7.3, and follow https://github.com/tpoechtrager/osxcross instructions"
+	echo -e "${NC}"
 	exit 1
 fi
 FILTERS=(-1)
@@ -120,7 +129,9 @@ if [ ${IS_MAC} -eq 1 ]; then
 	FILTERS=(src/posix)
        	FILTERS+=(src/mac)
 	LINKFILE=${LIBFILE}.mac
-	C_COMPILER="clang -std=c89"
+	if [ ${IS_CROSS} -eq 0 ]; then
+		C_COMPILER="clang -std=c89 -Wno-ignored-attributes"
+	fi
 	C_SHARED_FLAG="-dynamiclib"
 	if [ ${IS_32BIT} -eq 1 ]; then
 		echo -e "${ERR_STRING}mac 32 bit build is not supported${NC}"
