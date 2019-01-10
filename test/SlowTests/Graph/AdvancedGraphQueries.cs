@@ -1,4 +1,5 @@
-﻿using System.Collections.Generic;
+﻿using System;
+using System.Collections.Generic;
 using System.Linq;
 using FastTests;
 using FastTests.Blittable;
@@ -1145,8 +1146,8 @@ namespace SlowTests.Graph
             }
         }        
 
-        [Fact(Skip = "Should not work until RavenDB-12205 is fixed")]
-        public void Queries_with_non_existing_fields_in_vertex_filter_should_fail()
+        [Fact]
+        public void Queries_with_non_existing_fields_in_node_filter_should_be_excluded_from_results()
         {
             using (var store = GetDocumentStore())
             {
@@ -1157,20 +1158,27 @@ namespace SlowTests.Graph
                         Name = "Arava",
                         Likes = new[] {"dogs/2-A"}
                     });                  
+                    session.Store(new Dog
+                    {
+                        Name = "Oscar",
+                        Likes = Array.Empty<string>()
+                    });                  
                     session.SaveChanges();
                 }
                 
                 using (var session = store.OpenSession())
                 {
-                    Assert.Throws<RavenException>(() =>
-                        session.Advanced.RawQuery<JObject>(@"match (Dogs as d1 where FooBar = 'dogs/2-A')-[Likes as l]->(Dogs) select l")
-                            .ToList());
+                    Assert.Single(session.Advanced.RawQuery<JObject>(@"match (Dogs as d1)-[Likes as l]->(Dogs) select l")
+                        .ToList());
+
+                    Assert.Empty(session.Advanced.RawQuery<JObject>(@"match (Dogs as d1 where FooBar = 'dogs/2-A')-[Likes as l]->(Dogs) select l")
+                        .ToList());
                 }
             }
         }
 
-        [Fact(Skip = "Should not work until RavenDB-12205 is fixed")]
-        public void Queries_with_non_existing_fields_in_simple_edge_filter_should_fail()
+        [Fact]
+        public void Queries_with_non_existing_fields_in_simple_edge_filter_should_be_excluded_from_results()
         {
             using (var store = GetDocumentStore())
             {
@@ -1181,29 +1189,37 @@ namespace SlowTests.Graph
                         Name = "Arava",
                         Likes = new[] {"dogs/2-A"}
                     });                  
+                    session.Store(new Dog
+                    {
+                        Name = "Oscar",
+                        Likes = Array.Empty<string>()
+                    });                      
                     session.SaveChanges();
                 }
                 
                 using (var session = store.OpenSession())
                 {
-                    Assert.Throws<RavenException>(() =>
-                        session.Advanced.RawQuery<JObject>(@"match (Dogs as d1)-[Likes as l where FooBar = 123]->(Dogs) select l")
-                            .ToList());
+                   Assert.Single(session.Advanced.RawQuery<JObject>(@"match (Dogs as d1)-[Likes as l]->(Dogs) select l")
+                        .ToList());
+
+                   Assert.Empty(session.Advanced.RawQuery<JObject>(@"match (Dogs as d1)-[Likes as l where FooBar = 123]->(Dogs) select l")
+                       .ToList());
                 }
             }
         }
 
-        [Fact(Skip = "Should not work until RavenDB-12205 is fixed")]
-        public void Queries_with_non_existing_fields_in_complex_edge_filter_should_fail()
+        [Fact]
+        public void Queries_with_non_existing_fields_in_complex_edge_filter_should_be_excluded_from_results()
         {
             using (var store = GetDocumentStore())
             {
                 CreateNorthwindDatabase(store);
                 using (var session = store.OpenSession())
                 {
-                    Assert.Throws<RavenException>(() =>
-                        session.Advanced.RawQuery<JObject>(@"match (Orders as o)-[Lines as l where FooBar = 123 select Product]->(Products as p)")
-                            .ToList());
+                    Assert.NotEmpty(session.Advanced.RawQuery<JObject>(@"match (Orders as o)-[Lines as l select Product]->(Products as p)")
+                        .ToList());
+                    Assert.Empty(session.Advanced.RawQuery<JObject>(@"match (Orders as o)-[Lines as l where FooBar = 123 select Product]->(Products as p)")
+                        .ToList());
                 }
             }
         }
