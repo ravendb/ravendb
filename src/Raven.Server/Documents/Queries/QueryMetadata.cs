@@ -985,7 +985,7 @@ namespace Raven.Server.Documents.Queries
 
         private void ThrowInvalidDuplicateAliasInSelectClause(BlittableJsonReaderObject parameters, string finalAlias)
         {
-            throw new InvalidQueryException($"Duplicate alias '{finalAlias}' detected", QueryText, parameters);
+            throw new InvalidQueryException($"Duplicate alias '{finalAlias}' detected. Note: if an alias is not specified, the implicit alias equals field's name. So a select clause 'select employee.Name, manager.Name' is invalid because it has two field with the same implicit alias - 'Name'. In order to fix it, use explicit aliases - 'select employee.Name as EmployeeName, manager.Name as ManagerName'", QueryText, parameters);
         }
 
         private SelectField GetSelectField(BlittableJsonReaderObject parameters, QueryExpression expression, string alias)
