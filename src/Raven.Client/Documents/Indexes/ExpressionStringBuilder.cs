@@ -629,12 +629,15 @@ namespace Raven.Client.Documents.Indexes
                     }
                     else
                     {
-                        var rightType = Nullable.GetUnderlyingType(rightWithoutConvert.Type) ?? rightWithoutConvert.Type;
-
-                        if (rightType.GetTypeInfo().IsEnum)
+                        if (leftWithoutConvert is MemberExpression && rightWithoutConvert is MemberExpression)
                         {
-                            left = leftWithoutConvert;
-                            right = rightWithoutConvert;
+                            var rightType = Nullable.GetUnderlyingType(rightWithoutConvert.Type) ?? rightWithoutConvert.Type;
+
+                            if (rightType.GetTypeInfo().IsEnum)
+                            {
+                                left = leftWithoutConvert;
+                                right = rightWithoutConvert;
+                            }
                         }
                     }
 
