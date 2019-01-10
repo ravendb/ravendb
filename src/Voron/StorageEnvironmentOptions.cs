@@ -449,13 +449,8 @@ namespace Voron
                 if (File.Exists(path.FullPath) == false)
                     AttemptToReuseJournal(path, journalSize);
 
-                var result = _journals.GetOrAdd(name, _ => new Lazy<IJournalWriter>(() =>
-                {
-                    if (RunningOnPosix)
-                        return new PosixJournalWriter(this, path, journalSize);
-
-                    return new JournalWriter(this, path, journalSize);
-                }));
+                var result = _journals.GetOrAdd(name, _ => 
+                    new Lazy<IJournalWriter>(() => new JournalWriter(this, path, journalSize)));
 
                 bool createJournal;
                 try
@@ -471,13 +466,7 @@ namespace Voron
 
                 if (createJournal)
                 {
-                    var newWriter = new Lazy<IJournalWriter>(() =>
-                    {
-                        if (RunningOnPosix)
-                            return new PosixJournalWriter(this, path, journalSize);
-
-                        return new JournalWriter(this, path, journalSize);
-                    });
+                    var newWriter = new Lazy<IJournalWriter>(() => new JournalWriter(this, path, journalSize));
                     if (_journals.TryUpdate(name, newWriter, result) == false)
                         throw new InvalidOperationException("Could not update journal pager");
                     result = newWriter;
@@ -863,14 +852,7 @@ namespace Voron
 
                 var path = GetJournalPath(journalNumber);
 
-                if (RunningOnPosix)
-                {
-                    value = new PosixJournalWriter(this, path, journalSize);
-                }
-                else
-                {
-                    value = new JournalWriter(this, path, journalSize, PalFlags.JOURNAL_MODE.PURE_MEMORY);
-                }
+                value = new JournalWriter(this, path, journalSize, PalFlags.JOURNAL_MODE.PURE_MEMORY);
 
                 _logs[name] = value;
                 return value;
