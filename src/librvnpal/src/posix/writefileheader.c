@@ -1,5 +1,11 @@
 #if defined(__unix__) || defined(__APPLE__)
 
+#ifdef __APPLE__
+#define rvn_ftruncate ftruncate
+#else
+#define rvn_ftruncate ftruncate64
+#endif
+
 #define _GNU_SOURCE
 #include <unistd.h>
 #include <stdlib.h>
@@ -53,7 +59,7 @@ rvn_write_header(const char *path,
 
     if (sync_is_needed == true)
     {
-        if (ftruncate64(fd, size) == -1)
+        if (rvn_ftruncate(fd, size) == -1)
         {
             rc = FAIL_TRUNCATE_FILE;
             goto error_cleanup;
