@@ -456,6 +456,20 @@ namespace Raven.Server.Documents.Queries.Parser
                 if (!isEdge)
                     throw new InvalidQueryException("Select expression is allowed only inside an edge query.");
 
+                if (Scanner.TryPeek("{")) //we cannot allow javascript selects in edges, so we should throw now
+                {
+                    var invalidSelectStart = Scanner.Position + 1; //+1 so we don't include the starting '{'
+                    if (!Scanner.SkipUntil('}')) //malformed javascript select, we throw generic error
+                    {
+                        throw new InvalidQueryException(
+                            "Only simple select expression is allowed inside an edge query, and I see a javascript projection select expression.");
+                    }
+
+                    var invalidSelectionEnd = Scanner.Position;
+                    throw new InvalidQueryException(
+                        $"The select expression '{Scanner.Input.Substring(invalidSelectStart, Math.Abs(invalidSelectionEnd - invalidSelectStart))}' is invalid: only simple select expression is allowed inside an edge query.");
+                }
+
                 var fields = SelectClauseExpressions("SELECT", false);
                 if (fields.Count != 1)
                     throw new InvalidQueryException("Select expression inside graph query for '" + alias + "' must have excatly one projected field", Scanner.Input, null);
