@@ -105,14 +105,14 @@ namespace Voron.Platform
         public static extern Int32 rvn_dispose_handle(
             string filepath,
             void* handle,
-            PalFlags.DeleteOnClose deleteOnClose,
+            PalFlags.FileCloseFlags closeFlag,
             out Int32 errorCode);
 
         [DllImport(LIBRVNPAL, SetLastError = true)]
         public static extern Int32 rvn_unmap(
             void* address,
             Int64 size,
-            PalFlags.DeleteOnClose deleteOnClose,
+            PalFlags.FileCloseFlags closeFlag,
             out Int32 errorCode);
 
         [DllImport(LIBRVNPAL, SetLastError = true)]
