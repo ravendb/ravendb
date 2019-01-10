@@ -33,7 +33,10 @@ namespace Voron.Impl.Journal
         private readonly StorageEnvironmentOptions _options;
 
         private readonly IntPtr _writeHandle;
-        private IntPtr _readHandle = IntPtr.Zero;
+        //TODO Maybe should init handle to invalid value in pal function?
+        //TODO Maybe should move read functionality from this class
+        //TODO OR maybe should to reduce read code to one function that will open and close the read handle
+        private IntPtr _readHandle = new IntPtr(-1);
         private int _refs;
 
         public int NumberOfAllocated4Kb { get; }
@@ -95,7 +98,7 @@ namespace Voron.Impl.Journal
 
         public void Truncate(long size)
         {
-            var result = Pal.rvn_truncate_journal(_writeHandle, (ulong)size, out var error);
+            var result = Pal.rvn_truncate_journal(FileName.FullPath, _writeHandle, (ulong)size, out var error);
             if (result != (int)PalFlags.FailCodes.Success)
                 PalHelper.ThrowLastError(error, $"Attempted to write to journal file - Path:{FileName.FullPath} Size:{size}");
         }

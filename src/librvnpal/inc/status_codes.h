@@ -35,6 +35,7 @@
 #define ERRNO_SPECIAL_CODES_ENOMEM      (1 << 0)
 #define ERRNO_SPECIAL_CODES_ENOENT      (1 << 1)
 #define ERRNO_SPECIAL_CODES_ENOSPC      (1 << 2)
+#define FAIL_TRUNCATE                   23
 
 #define SYNC_DIR_ALLOWED                0
 #define SYNC_DIR_NOT_ALLOWED            1
