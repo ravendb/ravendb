@@ -111,7 +111,7 @@ EXPORT int32_t
 rvn_allocate_more_space(const char *filename, int64_t new_length_after_adjustment, void *handle, int32_t flags,
                         void **new_address, int32_t *detailed_error_code)
 {
-    int32_t fd = (int)(long)handle;
+    int32_t fd = (int32_t)(int64_t)handle;
     int32_t rc = SUCCESS;
 
     rc = _allocate_file_space(fd, new_length_after_adjustment, detailed_error_code);

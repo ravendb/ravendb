@@ -110,7 +110,7 @@ rvn_dispose_handle(const char *filepath, void *handle, int32_t delete_on_close, 
     int32_t rc = SUCCESS;
 
     /* the following in two lines to avoid compilation warning */
-    int32_t fd = (int)(long)handle;
+    int32_t fd = (int32_t)(int64_t)handle;
 
     if (fd != -1)
     {
