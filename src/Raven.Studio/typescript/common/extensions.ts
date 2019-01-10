@@ -43,13 +43,18 @@ class extensions {
             return null;
         }
 
-        const regexIPv4PortInTheEnd = /:\d{1,5}$/;
-        const regexIPv6PortInTheEnd = /]:\d{1,5}$/;        
+        const addressAsArray = Array.from(address);
+        const colonsCount = addressAsArray.filter(x => x === ':').length;
+        const dotsCount = addressAsArray.filter(x => x === '.').length;
         
-        if (regexIPv4PortInTheEnd.test(address) || regexIPv6PortInTheEnd.test(address)) {
+        if (dotsCount === 3 && colonsCount > 0) {
             return `Please enter IP Address without a port number`;
         }
-
+        
+        if (colonsCount === 8) {
+            return `Please enter IP Address without a port number`;
+        }
+        
         return null;
     }
     
@@ -69,7 +74,7 @@ class extensions {
           
         if (!genUtils.regexIPv4.test(address)) {
             
-            // TODO: check if this is a valid IPv6....            
+            // TODO: check if this is a valid IPv6....
         }
         
         return null;
