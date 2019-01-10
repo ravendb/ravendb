@@ -702,19 +702,26 @@ namespace Raven.Server.Documents.Indexes
 
             var indexTempPath = index.Configuration.TempPath?.Combine(name);
 
-            try
+            var aggregator = new ExceptionAggregator($"Failed to delete '{name}' index directories.");
+
+            aggregator.Execute(() =>
             {
-                IOExtensions.DeleteDirectory(indexPath.FullPath);
-            }
-            catch (Exception e)
-            {
-                if (_logger.IsInfoEnabled)
-                    _logger.Info($"Failed to delete the index {name} directory", e);
-                throw;
-            }
+                try
+                {
+                    IOExtensions.DeleteDirectory(indexPath.FullPath);
+                }
+                catch (Exception e)
+                {
+                    if (_logger.IsInfoEnabled)
+                        _logger.Info($"Failed to delete the index {name} directory", e);
+                    throw;
+                }
+            });
 
             if (indexTempPath != null)
-                IOExtensions.DeleteDirectory(indexTempPath.FullPath);
+                aggregator.Execute(() => IOExtensions.DeleteDirectory(indexTempPath.FullPath));
+                
+            aggregator.ThrowIfNeeded();
         }
 
         public IndexRunningStatus Status
