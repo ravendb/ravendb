@@ -18,19 +18,25 @@ namespace Tryouts
     {
         public static async Task Main(string[] args)
         {
-            try
+            for (int i = 0; i < 1000; i++)
             {
-                using (var test = new RavenDB_11734())
+                Console.WriteLine(i);
+
+                try
                 {
-                    await test.Index_Queries_Should_Not_Return_Deleted_Documents();
+                    using (var test = new RavenDB_8288())
+                    {
+                        await test.Queries_will_work_during_index_replacements();
+                    }
+                }
+                catch (Exception e)
+                {
+                    Console.WriteLine(e);
+                    Console.ReadLine();
                 }
             }
-            catch (Exception e)
-            {
-                Console.WriteLine(e);
-            }
 
-            
+            return;
         }
     }
 }
