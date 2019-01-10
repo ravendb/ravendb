@@ -437,7 +437,7 @@ namespace Raven.Server.Web.System
                 {
                     cts.CancelAfter(ServerStore.Configuration.Cluster.OperationTimeout.AsTimeSpan);
 
-                    var waitingTasks = new List<Task>();
+                    var waitingTasks = new List<Task<Exception>>();
                     List<Exception> exceptions = null;
 
                     foreach (var member in members)
@@ -453,10 +453,10 @@ namespace Raven.Server.Web.System
                         var task = await Task.WhenAny(waitingTasks);
                         waitingTasks.Remove(task);
 
-                        if (task.IsCompletedSuccessfully)
+                        if (task.Result == null)
                             continue;
 
-                        var exception = task.Exception.ExtractSingleInnerException();
+                        var exception = task.Result.ExtractSingleInnerException();
 
                         if (exceptions == null)
                             exceptions = new List<Exception>();
@@ -492,19 +492,25 @@ namespace Raven.Server.Web.System
                 }
             }
 
-            async Task ExecuteTask(RequestExecutor executor, string nodeTag, CancellationToken token)
+            async Task<Exception> ExecuteTask(RequestExecutor executor, string nodeTag, CancellationToken token)
             {
                 try
                 {
                     await executor.ExecuteAsync(new WaitForRaftIndexCommand(index), context, token: token);
+                    return null;
                 }
                 catch (RavenException re) when (re.InnerException is HttpRequestException)
                 {
                     // we want to throw for self-checks
                     if (nodeTag == ServerStore.NodeTag)
-                        throw;
+                        return re;
 
                     // ignore - we are ok when connection with a node cannot be established (test: AddDatabaseOnDisconnectedNode)
+                    return null;
+                }
+                catch (Exception e)
+                {
+                    return e;
                 }
             }
         }
