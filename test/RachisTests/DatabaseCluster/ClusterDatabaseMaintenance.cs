@@ -631,7 +631,7 @@ namespace RachisTests.DatabaseCluster
 
             var databaseName = GetDatabaseName();
             var groupSize = 3;
-            var newUrl = "http://" + Environment.MachineName + ":0";
+            var newUrl = "http://127.0.0.1:0";
             string nodeTag;
 
             var leader = await CreateRaftClusterAndGetLeader(groupSize, shouldRunInMemory: false, leaderIndex: 0, customSettings: new Dictionary<string, string>
