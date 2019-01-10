@@ -1076,6 +1076,8 @@ namespace Raven.Server.Documents.Indexes
                                 }
                                 catch (Exception e)
                                 {
+                                    _mre.Set(); // try again
+
                                     if (_logger.IsInfoEnabled)
                                         _logger.Info($"Could not replace index '{Name}'.", e);
                                 }
