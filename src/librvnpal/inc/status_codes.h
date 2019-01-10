@@ -25,6 +25,7 @@
 #define FAIL_ALLOCATION_NO_RESIZE       16
 #define FAIL_FREE                       17
 #define FAIL_INVALID_HANDLE             18
+#define FAIL_TRUNCATE_FILE              19
 
 #define ERRNO_SPECIAL_CODES_NONE        0
 #define ERRNO_SPECIAL_CODES_ENOMEM      (1 << 0)
@@ -40,7 +41,8 @@
 #define DELETE_ON_CLOSE_NO              0
 #define DELETE_ON_CLOSE_YES             1
 
-#define PROTECT_RANGE_UNPROTECT         0
+#define PROTECT_RANGE_NONE              0
 #define PROTECT_RANGE_PROTECT           1
+#define PROTECT_RANGE_UNPROTECT         2
 
 #endif
