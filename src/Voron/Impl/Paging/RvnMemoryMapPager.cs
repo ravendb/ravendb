@@ -25,7 +25,7 @@ namespace Voron.Impl.Paging
         private readonly bool _copyOnWriteMode;
         private readonly Logger _logger;
         private readonly void* _handle;
-        private DeleteOnClose IsDeleteOnClose => DeleteOnClose ? PalFlags.DeleteOnClose.Yes : PalFlags.DeleteOnClose.No;
+        private FileCloseFlags IsDeleteOnClose => DeleteOnClose ? PalFlags.FileCloseFlags.DeleteOnClose : PalFlags.FileCloseFlags.None;
 
         public RvnMemoryMapPager(StorageEnvironmentOptions options, VoronPathSetting file, long? initialFileSize = null, bool canPrefetchAhead = true, bool usePageProtection = false)
             : base(options, canPrefetchAhead, usePageProtection)

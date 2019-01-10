@@ -8,7 +8,7 @@
 PRIVATE int32_t
 _flush_file(int32_t fd)
 {
-  return fcntl(fd, 1); /* F_FULLFSYNC); */
+  return fcntl(fd, F_FULLFSYNC);
 }
 
 PRIVATE int32_t

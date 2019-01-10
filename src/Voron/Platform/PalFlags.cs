@@ -40,19 +40,19 @@ namespace Voron.Platform
         public enum MmapOptions
         {
             None = 0,
-            CopyOnWrite = 1,
+            CopyOnWrite = 1
         }
 
-        public enum DeleteOnClose
-        {
-            No = 0,
-            Yes = 1
+        public enum FileCloseFlags {
+            None = 0,
+            DeleteOnClose = 1
         }
 
         public enum ProtectRange
         {
-            Unprotect = 0,
-            Protect = 1
+            None = 0,
+            Protect = 1,
+            Unprotect = 2
         }
     }
 }

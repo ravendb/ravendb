@@ -4,6 +4,7 @@
 #include <unistd.h>
 #include <stdlib.h>
 #include <sys/types.h>
+#include <sys/stat.h>
 #include <fcntl.h>
 #include <errno.h>
 
@@ -16,7 +17,7 @@ rvn_write_header(const char *path,
                  int32_t *detailed_error_code)
 {
     int32_t rc;
-    bool syncIsNeeded = false;
+    bool sync_is_needed = false;
     int32_t fd = open(path, O_WRONLY | O_CREAT, S_IWUSR | S_IRUSR);
 
     if (fd == -1)
@@ -26,22 +27,16 @@ rvn_write_header(const char *path,
     }
 
     int32_t remaining = size;
-    
-    int64_t sz = lseek(fd, 0L, SEEK_END);
-    if (sz == -1)
+
+    struct stat buf;
+    if (stat(path, &buf) == -1)
     {
-        rc = FAIL_SEEK_FILE;
+        rc = FAIL_STAT_FILE;
         goto error_cleanup;
     }
 
-    if (lseek(fd, 0L, SEEK_SET) == -1)
-    {
-        rc = FAIL_SEEK_FILE;
-        goto error_cleanup;
-    }
-
-    if (sz != remaining)
-        syncIsNeeded = true;
+    if (buf.st_size != remaining)
+        sync_is_needed = true;
 
     while (remaining > 0)
     {
@@ -55,6 +50,16 @@ rvn_write_header(const char *path,
         remaining -= (int)written;
         header += written;
     }
+
+    if (sync_is_needed == true)
+    {
+        if (ftruncate64(fd, size) == -1)
+        {
+            rc = FAIL_TRUNCATE_FILE;
+            goto error_cleanup;
+        }
+    }
+
     if (_flush_file(fd) == -1)
     {
         rc = FAIL_FLUSH_FILE;
@@ -64,7 +69,7 @@ rvn_write_header(const char *path,
     close(fd);
     fd = -1;
 
-    if (syncIsNeeded == true)
+    if (sync_is_needed == true)
         return _sync_directory_for(path, detailed_error_code);
     return SUCCESS;
 
