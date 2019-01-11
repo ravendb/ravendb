@@ -75,8 +75,13 @@ namespace Raven.Client.Documents.Smuggler
                 var requestTask = _requestExecutor.ExecuteAsync(command, context, sessionInfo: null, token: token)
                     .ContinueWith(t =>
                     {
-                        if (t.IsFaulted && Logger.IsOperationsEnabled)
-                            Logger.Operations("Could not execute export", t.Exception);
+                        if (t.IsFaulted)
+                        {
+                            tcs.TrySetException(t.Exception);
+
+                            if (Logger.IsOperationsEnabled)
+                                Logger.Operations("Could not execute export", t.Exception);
+                        }
                     }, token);
 
                 try
@@ -86,6 +91,7 @@ namespace Raven.Client.Documents.Smuggler
                 catch (Exception)
                 {
                     await requestTask.ConfigureAwait(false);
+                    await tcs.Task.ConfigureAwait(false);
                 }
 
                 return new Operation(_requestExecutor, () => _store.Changes(_databaseName), _requestExecutor.Conventions, operationId);
@@ -198,8 +204,13 @@ namespace Raven.Client.Documents.Smuggler
                         {
                             using (disposeStream)
                             {
-                                if (t.IsFaulted && Logger.IsOperationsEnabled)
-                                    Logger.Operations("Could not execute import", t.Exception);
+                                if (t.IsFaulted)
+                                {
+                                    tcs.TrySetException(t.Exception);
+
+                                    if (Logger.IsOperationsEnabled)
+                                        Logger.Operations("Could not execute import", t.Exception);
+                                }
                             }
                         }, token);
 
@@ -210,6 +221,7 @@ namespace Raven.Client.Documents.Smuggler
                     catch (Exception)
                     {
                         await requestTask.ConfigureAwait(false);
+                        await tcs.Task.ConfigureAwait(false);
                     }
 
                     return new Operation(_requestExecutor, () => _store.Changes(_databaseName), _requestExecutor.Conventions, operationId);
