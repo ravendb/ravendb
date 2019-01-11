@@ -84,6 +84,8 @@ namespace Raven.Server.Utils
             {
                 try
                 {
+                    DeleteDirectory(dst);
+
                     SetDirectoryAttributes(src, FileAttributes.Normal);
                     SetDirectoryAttributes(dst, FileAttributes.Normal);
 
