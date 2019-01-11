@@ -532,7 +532,7 @@ namespace Raven.Server.Documents.Indexes
                 _unmanagedBuffersPool = new UnmanagedBuffersPoolWithLowMemoryHandling($"Indexes//{safeName}");
 
                 InitializeComponentsUsingEnvironment(documentDatabase, _environment);
-                
+
                 LoadValues();
 
                 DocumentDatabase.TombstoneCleaner.Subscribe(this);
@@ -569,7 +569,7 @@ namespace Raven.Server.Documents.Indexes
         {
             _contextPool?.Dispose();
             _contextPool = new TransactionContextPool(environment);
-            
+
             _indexStorage = new IndexStorage(this, _contextPool, documentDatabase);
             _indexStorage.Initialize(environment);
 
@@ -1131,6 +1131,8 @@ namespace Raven.Server.Documents.Indexes
                                 }
                                 catch (Exception e)
                                 {
+                                    _mre.Set(); // try again
+
                                     if (_logger.IsInfoEnabled)
                                         _logger.Info($"Could not replace index '{Name}'.", e);
                                 }
@@ -1208,7 +1210,7 @@ namespace Raven.Server.Documents.Indexes
                                 // anytime soon
                                 ReduceMemoryUsage();
 
-                                WaitHandle.WaitAny(new[] {_mre.WaitHandle, _logsAppliedEvent.WaitHandle, _indexingProcessCancellationTokenSource.Token.WaitHandle});
+                                WaitHandle.WaitAny(new[] { _mre.WaitHandle, _logsAppliedEvent.WaitHandle, _indexingProcessCancellationTokenSource.Token.WaitHandle });
 
                                 if (_logsAppliedEvent.IsSet && _mre.IsSet == false && _indexingProcessCancellationTokenSource.IsCancellationRequested == false)
                                 {
@@ -1937,7 +1939,7 @@ namespace Raven.Server.Documents.Indexes
                         Type = Type,
                         IndexRunningStatus = Status,
                         Collections = new Dictionary<string, IndexProgress.CollectionStats>(StringComparer.OrdinalIgnoreCase)
-                };
+                    };
 
                     if (disposed)
                         return progress;
@@ -1991,7 +1993,8 @@ namespace Raven.Server.Documents.Indexes
                 {
                     progressStats = progress.Collections[collectionNameForStats] = new IndexProgress.CollectionStats
                     {
-                        LastProcessedDocumentEtag = lastEtags.LastProcessedDocumentEtag, LastProcessedTombstoneEtag = lastEtags.LastProcessedTombstoneEtag
+                        LastProcessedDocumentEtag = lastEtags.LastProcessedDocumentEtag,
+                        LastProcessedTombstoneEtag = lastEtags.LastProcessedTombstoneEtag
                     };
                 }
 
@@ -3161,7 +3164,7 @@ namespace Raven.Server.Documents.Indexes
             if (_lowMemoryFlag.IsRaised() && count > MinBatchSize)
             {
                 HandleStoppedBatchesConcurrently(stats, count,
-                    canContinue: () => _lowMemoryFlag.IsRaised() == false, 
+                    canContinue: () => _lowMemoryFlag.IsRaised() == false,
                     reason: "low memory");
 
                 stats.RecordMapCompletedReason($"The batch was stopped after processing {count:#,#;;0} documents because of low memory");
@@ -3233,7 +3236,7 @@ namespace Raven.Server.Documents.Indexes
 
                 stats.RecordMapCompletedReason(
                     $"Reached global scratch space limit for indexing ({globalIndexingScratchSpaceUsage.LimitAsSize}). Current scratch space is {globalIndexingScratchSpaceUsage.ScratchSpaceAsSize}");
-                
+
                 return false;
             }
 
@@ -3272,8 +3275,8 @@ namespace Raven.Server.Documents.Indexes
                             _logger.Info(message);
                         }
 
-                        HandleStoppedBatchesConcurrently(stats, count, 
-                            canContinue: MemoryUsageGuard.CanIncreaseMemoryUsageForThread, 
+                        HandleStoppedBatchesConcurrently(stats, count,
+                            canContinue: MemoryUsageGuard.CanIncreaseMemoryUsageForThread,
                             reason: "cannot budget additional memory");
 
                         stats.RecordMapCompletedReason("Cannot budget additional memory for batch");
@@ -3336,7 +3339,7 @@ namespace Raven.Server.Documents.Indexes
         }
 
         private void HandleStoppedBatchesConcurrently(
-            IndexingStatsScope stats, int count, 
+            IndexingStatsScope stats, int count,
             Func<bool> canContinue, string reason)
         {
             if (_batchStopped)
