@@ -52,7 +52,7 @@ namespace Raven.Server.Documents.Indexes
         public Logger Logger => _logger;
 
         public SemaphoreSlim StoppedConcurrentIndexBatches { get; }
-        
+
         internal Action<(string IndexName, bool DidWork)> IndexBatchCompleted;
 
         public IndexStore(DocumentDatabase documentDatabase, ServerStore serverStore)
@@ -702,26 +702,19 @@ namespace Raven.Server.Documents.Indexes
 
             var indexTempPath = index.Configuration.TempPath?.Combine(name);
 
-            var aggregator = new ExceptionAggregator($"Failed to delete '{name}' index directories.");
-
-            aggregator.Execute(() =>
+            try
             {
-                try
-                {
-                    IOExtensions.DeleteDirectory(indexPath.FullPath);
-                }
-                catch (Exception e)
-                {
-                    if (_logger.IsInfoEnabled)
-                        _logger.Info($"Failed to delete the index {name} directory", e);
-                    throw;
-                }
-            });
+                IOExtensions.DeleteDirectory(indexPath.FullPath);
+            }
+            catch (Exception e)
+            {
+                if (_logger.IsInfoEnabled)
+                    _logger.Info($"Failed to delete the index {name} directory", e);
+                throw;
+            }
 
             if (indexTempPath != null)
-                aggregator.Execute(() => IOExtensions.DeleteDirectory(indexTempPath.FullPath));
-                
-            aggregator.ThrowIfNeeded();
+                IOExtensions.DeleteDirectory(indexTempPath.FullPath);
         }
 
         public IndexRunningStatus Status
@@ -1212,115 +1205,132 @@ namespace Raven.Server.Documents.Indexes
 
         public bool TryReplaceIndexes(string oldIndexName, string replacementIndexName)
         {
-            lock (GetIndexLock(oldIndexName))
+            try
             {
-                if (_indexes.TryGetByName(replacementIndexName, out Index newIndex) == false)
-                    return true;
 
-                if (_indexes.TryGetByName(oldIndexName, out Index oldIndex))
+
+                lock (GetIndexLock(oldIndexName))
                 {
-                    oldIndexName = oldIndex.Name;
+                    if (_indexes.TryGetByName(replacementIndexName, out Index newIndex) == false)
+                        return true;
 
-                    if (oldIndex.Type.IsStatic() && newIndex.Type.IsStatic())
+                    if (_indexes.TryGetByName(oldIndexName, out Index oldIndex))
                     {
-                        var oldIndexDefinition = oldIndex.GetIndexDefinition();
-                        var newIndexDefinition = newIndex.Definition.GetOrCreateIndexDefinitionInternal();
+                        oldIndexName = oldIndex.Name;
 
-                        if (newIndex.Definition.LockMode == IndexLockMode.Unlock &&
-                            newIndexDefinition.LockMode.HasValue == false &&
-                            oldIndexDefinition.LockMode.HasValue)
-                            newIndex.SetLock(oldIndexDefinition.LockMode.Value);
+                        if (oldIndex.Type.IsStatic() && newIndex.Type.IsStatic())
+                        {
+                            var oldIndexDefinition = oldIndex.GetIndexDefinition();
+                            var newIndexDefinition = newIndex.Definition.GetOrCreateIndexDefinitionInternal();
 
-                        if (newIndex.Definition.Priority == IndexPriority.Normal &&
-                            newIndexDefinition.Priority.HasValue == false &&
-                            oldIndexDefinition.Priority.HasValue)
-                            newIndex.SetPriority(oldIndexDefinition.Priority.Value);
-                    }
-                }
+                            if (newIndex.Definition.LockMode == IndexLockMode.Unlock &&
+                                newIndexDefinition.LockMode.HasValue == false &&
+                                oldIndexDefinition.LockMode.HasValue)
+                                newIndex.SetLock(oldIndexDefinition.LockMode.Value);
 
-                _indexes.ReplaceIndex(oldIndexName, oldIndex, newIndex);
-
-                using (newIndex.DrainRunningQueries()) // to ensure nobody will start index meanwhile if we stop it here
-                {
-                    var needToStop = newIndex.Status == IndexRunningStatus.Running && PoolOfThreads.LongRunningWork.Current != newIndex._indexingThread;
-
-                    if (needToStop)
-                    {
-                        // stop the indexing to allow renaming the index 
-                        // the write tx required to rename it might be hold by indexing thread
-                        ExecuteIndexAction(() => newIndex.Stop());
+                            if (newIndex.Definition.Priority == IndexPriority.Normal &&
+                                newIndexDefinition.Priority.HasValue == false &&
+                                oldIndexDefinition.Priority.HasValue)
+                                newIndex.SetPriority(oldIndexDefinition.Priority.Value);
+                        }
                     }
 
-                    try
+                    _indexes.ReplaceIndex(oldIndexName, oldIndex, newIndex);
+
+                    using (newIndex.DrainRunningQueries()) // to ensure nobody will start index meanwhile if we stop it here
                     {
-                        newIndex.Rename(oldIndexName);
-                    }
-                    finally
-                    {
+                        var needToStop = newIndex.Status == IndexRunningStatus.Running && PoolOfThreads.LongRunningWork.Current != newIndex._indexingThread;
+
                         if (needToStop)
-                            ExecuteIndexAction(newIndex.Start);
-                    }
-                }
+                        {
+                            // stop the indexing to allow renaming the index 
+                            // the write tx required to rename it might be hold by indexing thread
+                            ExecuteIndexAction(() => newIndex.Stop());
+                        }
 
-                newIndex.ResetIsSideBySideAfterReplacement();
-
-                if (oldIndex != null)
-                {
-                    while (_documentDatabase.DatabaseShutdown.IsCancellationRequested == false)
-                    {
                         try
                         {
-                            using (oldIndex.DrainRunningQueries())
-                                DeleteIndexInternal(oldIndex, raiseNotification: false);
-
-                            break;
+                            newIndex.Rename(oldIndexName);
                         }
-                        catch (TimeoutException)
+                        finally
                         {
+                            if (needToStop)
+                                ExecuteIndexAction(newIndex.Start);
                         }
                     }
-                }
 
-                if (newIndex.Configuration.RunInMemory == false)
-                {
-                    while (_documentDatabase.DatabaseShutdown.IsCancellationRequested == false)
+                    newIndex.ResetIsSideBySideAfterReplacement();
+
+                    if (oldIndex != null)
                     {
-                        try
+                        while (_documentDatabase.DatabaseShutdown.IsCancellationRequested == false)
                         {
-                            using (newIndex.DrainRunningQueries())
+                            try
                             {
-                                var oldIndexDirectoryName = IndexDefinitionBase.GetIndexNameSafeForFileSystem(oldIndexName);
-                                var replacementIndexDirectoryName = IndexDefinitionBase.GetIndexNameSafeForFileSystem(replacementIndexName);
+                                using (oldIndex.DrainRunningQueries())
+                                    DeleteIndexInternal(oldIndex, raiseNotification: false);
 
-                                using (newIndex.RestartEnvironment())
+                                break;
+                            }
+                            catch (TimeoutException)
+                            {
+                            }
+                        }
+                    }
+
+                    if (newIndex.Configuration.RunInMemory == false)
+                    {
+                        while (_documentDatabase.DatabaseShutdown.IsCancellationRequested == false)
+                        {
+                            try
+                            {
+                                using (newIndex.DrainRunningQueries())
                                 {
-                                    IOExtensions.MoveDirectory(newIndex.Configuration.StoragePath.Combine(replacementIndexDirectoryName).FullPath,
-                                        newIndex.Configuration.StoragePath.Combine(oldIndexDirectoryName).FullPath);
+                                    var oldIndexDirectoryName = IndexDefinitionBase.GetIndexNameSafeForFileSystem(oldIndexName);
+                                    var replacementIndexDirectoryName = IndexDefinitionBase.GetIndexNameSafeForFileSystem(replacementIndexName);
 
-                                    if (newIndex.Configuration.TempPath != null)
+                                    using (newIndex.RestartEnvironment())
                                     {
-                                        IOExtensions.MoveDirectory(newIndex.Configuration.TempPath.Combine(replacementIndexDirectoryName).FullPath,
-                                            newIndex.Configuration.TempPath.Combine(oldIndexDirectoryName).FullPath);
+                                        IOExtensions.MoveDirectory(newIndex.Configuration.StoragePath.Combine(replacementIndexDirectoryName).FullPath,
+                                            newIndex.Configuration.StoragePath.Combine(oldIndexDirectoryName).FullPath);
+
+                                        if (newIndex.Configuration.TempPath != null)
+                                        {
+                                            IOExtensions.MoveDirectory(newIndex.Configuration.TempPath.Combine(replacementIndexDirectoryName).FullPath,
+                                                newIndex.Configuration.TempPath.Combine(oldIndexDirectoryName).FullPath);
+                                        }
                                     }
                                 }
-                            }
 
-                            break;
-                        }
-                        catch (TimeoutException)
-                        {
+                                break;
+                            }
+                            catch (TimeoutException)
+                            {
+                            }
                         }
                     }
+
+                    _documentDatabase.Changes.RaiseNotifications(
+                        new IndexChange
+                        {
+                            Name = oldIndexName,
+                            Type = IndexChangeTypes.SideBySideReplace
+                        });
+
+                    return true;
                 }
+            }
+            catch (IOException)
+            {
+                // we do not want to try again, letting index to continue running
+                throw;
+            }
+            catch (Exception e)
+            {
+                if (Logger.IsInfoEnabled)
+                    Logger.Info($"Could not replace index '{oldIndexName}' with '{replacementIndexName}'.", e);
 
-                _documentDatabase.Changes.RaiseNotifications(
-                    new IndexChange
-                    {
-                        Name = oldIndexName,
-                        Type = IndexChangeTypes.SideBySideReplace
-                    });
-
-                return true;
+                return false;
             }
         }
 
