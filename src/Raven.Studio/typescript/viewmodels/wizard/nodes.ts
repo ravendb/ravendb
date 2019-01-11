@@ -108,7 +108,7 @@ class nodes extends setupStep {
             let firstNode = this.model.nodes()[0];
 
             if (firstNode.ips().length === 0 ) {
-                firstNode.ips.push(new ipEntry());
+                firstNode.ips.push(new ipEntry(true));
             }
 
             this.editedNode(firstNode);

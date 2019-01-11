@@ -15,13 +15,60 @@ class genUtils {
 
     static regexIPv4 = /^(?:(?:25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\.){3}(?:25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)$/;
     
-    // Check whether address is IP Address (i.e. 10.0.0.80) or hostname (i.e. john-pc)
-    static isHostname(address: string) : boolean {       
-        
-        // IPv4 logic 
-        return address && !genUtils.regexIPv4.test(address);
+    static isHostname(address: string): boolean {
+        const info = genUtils.getAddressInfo(address);
+        return info.Type === "hostname";
+    }
 
-        // TODO: IPv6 logic  
+    static getAddressInfo(address: string): { Type: addressType, HasPort: boolean } {
+        if (!address) {
+            return {
+                Type: "invalid",
+                HasPort: undefined
+            }
+        }
+
+        const maybeIpv6 = Array.from(address).filter(x => x === ":").length >= 2;
+
+        try {
+            if (maybeIpv6) {
+                // it seems to be ipv6 address - try to parse this as http://[address]
+                address = `[${address}]`;
+            }
+            
+            const url = new URL("http://" + address);
+
+            if (!maybeIpv6 && url.host !== address) {
+                // this can happen! Try to call: new URL("http://127.0.1255:22") -> it returns: http://127.0.4.231:22/
+                return {
+                    Type: "invalid",
+                    HasPort: undefined
+                }
+            }
+            
+            const hasPort = url.port !== "";
+
+            const hostname = url.hostname;
+
+            if (genUtils.regexIPv4.test(hostname)) {
+                return {
+                    Type: "ipv4",
+                    HasPort: hasPort
+                }
+            }
+
+            // at this point we know we have valid url and it isn't ipv4 (so it is hostname or ipv6)
+
+            return {
+                Type: hostname.includes(":") ? "ipv6" : "hostname",
+                HasPort: hasPort
+            }
+        } catch (e) {
+            return {
+                Type: "invalid",
+                HasPort: undefined
+            }
+        }
     }
     
     /***  Date-Time Methods  ***/

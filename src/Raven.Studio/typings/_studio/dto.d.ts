@@ -579,3 +579,5 @@ type etlScriptDefinitionCacheItem = {
     etlType: Raven.Client.Documents.Operations.ETL.EtlType;
     task: JQueryPromise<Raven.Client.Documents.Operations.OngoingTasks.OngoingTaskRavenEtlDetails | Raven.Client.Documents.Operations.OngoingTasks.OngoingTaskSqlEtlDetails>;
 }
+
+type addressType = "ipv4" | "ipv6" | "hostname" | "invalid";

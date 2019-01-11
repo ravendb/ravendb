@@ -61,7 +61,7 @@ class nodeInfo {
             return ips.length === 1 && ips[0].isLocalNetwork();
         });
         
-        this.ips.push(new ipEntry());
+        this.ips.push(new ipEntry(true));
         
         this.ipsContainHostName = ko.pureComputed(() => {            
             let hostName = false;
@@ -145,11 +145,7 @@ class nodeInfo {
                 onlyIf: () => this.ipsContainHostName() && !this.externalIpAddress(),                
                 message: "This field is required when an address contains Hostname"
             },
-            validAddressWithoutPort: true,
-            validation: [{
-                validator: (val: string) => !genUtils.isHostname(val),
-                message: "Please enter IP Address, not Hostname"
-            }]
+            validIpWithoutPort: true
         });
         
         this.hostname.extend({
@@ -191,7 +187,7 @@ class nodeInfo {
     }
 
     addIpAddress() {
-        this.ips.push(new ipEntry());
+        this.ips.push(new ipEntry(true));
     }
 
     removeIp(ipEntry: ipEntry) {

@@ -25,7 +25,7 @@ class unsecured extends setupStep {
         if (!unsecuredSetup.ip()) {
             const initialIp = ipEntry.runningOnDocker ? "" : "127.0.0.1";
             
-            unsecuredSetup.ip(ipEntry.forIp(initialIp));
+            unsecuredSetup.ip(ipEntry.forIp(initialIp, false));
             unsecuredSetup.ip().validationGroup.errors.showAllMessages(false);
         }
     }    
