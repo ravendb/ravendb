@@ -38,48 +38,32 @@ class extensions {
         return null;
     }
     
-    private static validateNoPort(address: string) : string {
-        if (!address || address === 'localhost' || address === '::1') {  
+    private static validateAddress(address: string, allowedTypes: Array<addressType>, allowPort: boolean = true) : string {
+        if (!address) {
             return null;
         }
-
-        const addressAsArray = Array.from(address);
-        const colonsCount = addressAsArray.filter(x => x === ':').length;
-        const dotsCount = addressAsArray.filter(x => x === '.').length;
         
-        if (dotsCount === 3 && colonsCount > 0) {
-            return `Please enter IP Address without a port number`;
+        let typesText = "address";
+        if (allowedTypes.length === 1 && allowedTypes[0] === "ipv4") {
+            typesText = "IPv4 address";
+        } else if (allowedTypes.length === 1 && allowedTypes[0] === "ipv6") {
+            typesText = "IPv6 address";
+        } else if (allowedTypes.length === 2 && _.includes(allowedTypes, "ipv4") && _.includes(allowedTypes, "ipv6")) {
+            typesText = "IP address";
         }
         
-        if (colonsCount === 8) {
-            return `Please enter IP Address without a port number`;
+        const addressInfo = genUtils.getAddressInfo(address);
+        if (addressInfo.Type === "invalid" || !_.includes(allowedTypes, addressInfo.Type)) {
+            return "Please enter valid " + typesText;
+        }
+        
+        if (addressInfo.HasPort && !allowPort) {
+            return "Please enter " + typesText + " without a port number";
         }
         
         return null;
     }
     
-    private static validateAddressAndNoPort(address: string) : string {          
-        if (!address || address === 'localhost' || address === '::1') {
-            return null;
-        }       
-                
-        if (!_.includes(address, '.') && !_.includes(address, ':')) {
-            return "Please enter a valid IPv4 or IPv6 address";
-        }   
-        
-        const addressWithPort = extensions.validateNoPort(address);        
-        if (addressWithPort) {
-            return addressWithPort;
-        }
-          
-        if (!genUtils.regexIPv4.test(address)) {
-            
-            // TODO: check if this is a valid IPv6....
-        }
-        
-        return null;
-    }
-     
     private static configureValidation() {
 
         // Validate that url is in the following format: http(s)://hostName (e.g. http://localhost)
@@ -90,17 +74,17 @@ class extensions {
             }
         };
 
-        (ko.validation.rules as any)['noPort'] = {
-            validator: (val: string) => !extensions.validateNoPort(val),
+        (ko.validation.rules as any)['validIpWithoutPort'] = {
+            validator: (val: string) => !extensions.validateAddress(val, ["ipv4", "ipv6"], false),
             message: (params: any, address: KnockoutObservable<string>) => {
-                return extensions.validateNoPort(address());
+                return extensions.validateAddress(address(), ["ipv4", "ipv6"], false);
             }
         };
         
         (ko.validation.rules as any)['validAddressWithoutPort'] = {
-            validator: (val: string) => !extensions.validateAddressAndNoPort(val),
+            validator: (val: string) => !extensions.validateAddress(val, ["ipv4", "ipv6", "hostname"], false),
             message: (params: any, ipAddress: KnockoutObservable<string>) => {
-                return extensions.validateAddressAndNoPort(ipAddress());
+                return extensions.validateAddress(ipAddress(), ["ipv4", "ipv6", "hostname"], false);
             }
         };
 

@@ -89,7 +89,7 @@ class domain extends setupStep {
                 const nodes = existingDomainInfo.map(info => {
                     const entry = new nodeInfo(this.model.hostnameIsNotRequired, this.model.mode);
                     entry.nodeTag(info.SubDomain.split(".")[0].toLocaleUpperCase());
-                    entry.ips(info.Ips.map(x => ipEntry.forIp(x)));
+                    entry.ips(info.Ips.map(x => ipEntry.forIp(x, true)));
                     return entry;
                 });
                 

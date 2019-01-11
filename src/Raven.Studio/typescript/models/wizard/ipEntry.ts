@@ -10,20 +10,30 @@ class ipEntry {
 
    static runningOnDocker: boolean = false;
    
-   constructor() {
-       this.ip.extend({
-           required: true,
-           noPort: true, 
-           validation: [
-               {
-                   validator: (ip: string) => (ipEntry.runningOnDocker && !genUtils.isLocalhostIpAddress(ip)) || !ipEntry.runningOnDocker,  
-                   message: "A localhost IP Address is not allowed when running on Docker"
-               },
-               {
-                   validator: (ip: string) => !_.startsWith(ip, "http://") && !_.startsWith(ip, "https://"),
-                   message: "Expected valid IP Address/Hostname, not URL"
-               }]
-       });      
+   constructor(allowHostname: boolean) {
+       
+       const extenders = {
+           required: true
+       } as any;
+       
+       if (allowHostname) {
+           extenders.validAddressWithoutPort = true;
+       } else {
+           extenders.validIpWithoutPort = true;
+       }
+       
+       extenders.validation = [
+           {
+               validator: (ip: string) => (ipEntry.runningOnDocker && !genUtils.isLocalhostIpAddress(ip)) || !ipEntry.runningOnDocker,
+               message: "A localhost IP Address is not allowed when running on Docker"
+           },
+           {
+               validator: (ip: string) => !_.startsWith(ip, "http://") && !_.startsWith(ip, "https://"),
+               message: "Expected valid IP Address/Hostname, not URL"
+           }];
+       
+       
+       this.ip.extend(extenders);      
        
        this.validationGroup = ko.validatedObservable({
            ip: this.ip
@@ -39,8 +49,8 @@ class ipEntry {
        });
    }
    
-   static forIp(ip: string) {
-       const entry = new ipEntry();
+   static forIp(ip: string, allowHostname: boolean) {
+       const entry = new ipEntry(allowHostname);
        entry.ip(ip);
        return entry;
    }
