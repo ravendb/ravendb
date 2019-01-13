@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Runtime.CompilerServices;
+using System.Threading;
 using System.Threading.Tasks;
 using Microsoft.AspNetCore.Http;
 using Raven.Client.Documents.Operations;
@@ -15,6 +16,7 @@ using Raven.Server.Documents.Queries.Suggestions;
 using Raven.Server.Documents.Queries.Timings;
 using Raven.Server.ServerWide;
 using Raven.Server.ServerWide.Context;
+using Sparrow.Collections;
 using Sparrow.Json;
 using PatchRequest = Raven.Server.Documents.Patch.PatchRequest;
 
@@ -28,6 +30,7 @@ namespace Raven.Server.Documents.Queries
         private readonly StaticIndexQueryRunner _static;
         private readonly AbstractQueryRunner _dynamic;
         private readonly CollectionQueryRunner _collection;
+        private int _nextQueryId;
 
         public QueryRunner(DocumentDatabase database) : base(database)
         {
@@ -37,7 +40,11 @@ namespace Raven.Server.Documents.Queries
                 : new DynamicQueryRunner(database);
             _collection = new CollectionQueryRunner(database);
             _graph = new GraphQueryRunner(database);
+            CurrentlyRunningQueries = new ConcurrentSet<ExecutingQueryInfo>();
         }
+
+        internal long NextQueryId => Interlocked.Increment(ref _nextQueryId);
+        internal readonly ConcurrentSet<ExecutingQueryInfo> CurrentlyRunningQueries;
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public AbstractQueryRunner GetRunner(IndexQueryServerSide query)

@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Text;
+using Raven.Server.ServerWide;
 
 namespace Raven.Server.Documents.Queries.Graph
 {
@@ -9,13 +10,14 @@ namespace Raven.Server.Documents.Queries.Graph
         private readonly DocumentsStorage _documentsStorage;
         private bool _isVisitingRight;
 
-        public EdgeCollectionDestinationRewriter(DocumentsStorage documentsStorage)
+        public EdgeCollectionDestinationRewriter(DocumentsStorage documentsStorage, OperationCancelToken token) : base(token)
         {
             _documentsStorage = documentsStorage;
         }
 
         public override IGraphQueryStep VisitEdgeQueryStep(EdgeQueryStep eqs)
         {
+            _token.CheckIfCancellationIsRequested();
             var left = Visit(eqs.Left);
             _isVisitingRight = true;
             var right = Visit(eqs.Right);
@@ -25,14 +27,15 @@ namespace Raven.Server.Documents.Queries.Graph
                 return eqs;
             }
 
-            return new EdgeQueryStep(left, right, eqs);
+            return new EdgeQueryStep(left, right, eqs, _token);
         }
 
         public override IGraphQueryStep VisitQueryQueryStep(QueryQueryStep qqs)
         {
+            _token.CheckIfCancellationIsRequested();
             if (_isVisitingRight && qqs.CanBeConsideredForDestinationOptimization)
             {
-                return QueryQueryStep.ToCollectionDestinationQueryStep(_documentsStorage, qqs);
+                return QueryQueryStep.ToCollectionDestinationQueryStep(_documentsStorage, qqs, _token);
             }
 
             return qqs;
@@ -40,6 +43,7 @@ namespace Raven.Server.Documents.Queries.Graph
 
         public override void VisitEdgeMatcher(EdgeQueryStep.EdgeMatcher em)
         {
+            _token.CheckIfCancellationIsRequested();
             _isVisitingRight = true;
             base.VisitEdgeMatcher(em);
             _isVisitingRight = false;
@@ -47,6 +51,7 @@ namespace Raven.Server.Documents.Queries.Graph
 
         public override IGraphQueryStep VisitRecursionQueryStep(RecursionQueryStep rqs)
         {
+            _token.CheckIfCancellationIsRequested();
             var left = Visit(rqs.Left);
             bool modified = ReferenceEquals(left, rqs.Left) == false;
 
@@ -75,7 +80,7 @@ namespace Raven.Server.Documents.Queries.Graph
                 return rqs;
             }
 
-            var result = new RecursionQueryStep(rqs, left, steps);
+            var result = new RecursionQueryStep(rqs, left, steps, _token);
             
             if (next != null)
             {

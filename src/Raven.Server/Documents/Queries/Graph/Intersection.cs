@@ -1,5 +1,6 @@
 ﻿using System.Collections.Generic;
 using Microsoft.Extensions.Primitives;
+using Raven.Server.ServerWide;
 using Sparrow;
 using static Raven.Server.Documents.Queries.GraphQueryRunner;
 
@@ -39,7 +40,7 @@ namespace Raven.Server.Documents.Queries.Graph
             _rightAliases = right.GetAllAliases();
         }
 
-        public void Complete(List<Match> output, Dictionary<long, List<Match>> intersection, HashSet<Match> state)
+        public void Complete(List<Match> output, Dictionary<long, List<Match>> intersection, HashSet<Match> state, OperationCancelToken token)
         {
             
         }

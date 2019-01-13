@@ -1,4 +1,5 @@
 ﻿using System.Collections.Generic;
+using Raven.Server.ServerWide;
 using static Raven.Server.Documents.Queries.GraphQueryRunner;
 
 namespace Raven.Server.Documents.Queries.Graph
@@ -15,6 +16,6 @@ namespace Raven.Server.Documents.Queries.Graph
 
         bool CanOptimizeSides { get; }
         bool ShouldContinueWhenNoIntersection { get; }
-        void Complete(List<Match> output, Dictionary<long, List<Match>> intersection, HashSet<Match> state);
+        void Complete(List<Match> output, Dictionary<long, List<Match>> intersection, HashSet<Match> state, OperationCancelToken token);
     }
 }

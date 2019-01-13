@@ -80,9 +80,9 @@ namespace Raven.Server.Documents.Queries.Graph
 
         public bool HasWhereClause => Query.Where != null;
 
-        public static CollectionDestinationQueryStep ToCollectionDestinationQueryStep(DocumentsStorage documentsStorage, QueryQueryStep qqs)
+        public static CollectionDestinationQueryStep ToCollectionDestinationQueryStep(DocumentsStorage documentsStorage, QueryQueryStep qqs, OperationCancelToken token)
         {
-            return new CollectionDestinationQueryStep(qqs._alias, qqs._context, documentsStorage, qqs._queryMetadata.CollectionName);
+            return new CollectionDestinationQueryStep(qqs._alias, qqs._context, documentsStorage, qqs._queryMetadata.CollectionName, token);
         }
 
         public bool IsEmpty()
@@ -104,6 +104,7 @@ namespace Raven.Server.Documents.Queries.Graph
 
         public bool GetNext(out Match match)
         {
+            _token.CheckIfCancellationIsRequested();
             if (_index >= _results.Count)
             {
                 match = default;
@@ -173,6 +174,7 @@ namespace Raven.Server.Documents.Queries.Graph
 
         private async Task CompleteInitializeAsync(Task<DocumentQueryResult> results)
         {
+            _token.CheckIfCancellationIsRequested();
             CompleteInitialization(await results);
         }
 
@@ -182,6 +184,7 @@ namespace Raven.Server.Documents.Queries.Graph
             _index = 0;
             foreach (var result in results.Results)
             {
+                _token.CheckIfCancellationIsRequested();
                 var match = new Match();
                 match.Set(_alias, result);
                 _results.Add(match);
@@ -200,7 +203,8 @@ namespace Raven.Server.Documents.Queries.Graph
 
         public List<Match> GetById(string id)
         {
-            if(_results.Count != 0 && _resultsById.Count == 0)// only reason is that we are projecting non documents here
+            _token.CheckIfCancellationIsRequested();
+            if (_results.Count != 0 && _resultsById.Count == 0)// only reason is that we are projecting non documents here
                 throw new InvalidOperationException("Target vertices in a pattern match that originate from map/reduce WITH clause are not allowed. (pattern match has multiple statements in the form of (a)-[:edge]->(b) ==> in such pattern, 'b' must not originate from map/reduce index query)");
               
             _temp.Clear();
@@ -222,8 +226,9 @@ namespace Raven.Server.Documents.Queries.Graph
             return _aliases;
         }
 
-        public void Analyze(Match match, GraphQueryRunner.GraphDebugInfo graphDebugInfo)
+        public void Analyze(Match match, GraphDebugInfo graphDebugInfo)
         {
+            _token.CheckIfCancellationIsRequested();
             var result = match.GetResult(_alias.Value);
             if (result == null)
                 return;
@@ -240,16 +245,18 @@ namespace Raven.Server.Documents.Queries.Graph
 
         public ISingleGraphStep GetSingleGraphStepExecution()
         {
-            return new QuerySingleStep(this);
-    }
+            return new QuerySingleStep(this, _token);
+        }
 
         internal class QuerySingleStep : ISingleGraphStep
         {
+            private OperationCancelToken _token;
             private QueryQueryStep _parent;
             private List<Match> _temp = new List<Match>(1);
 
-            public QuerySingleStep(QueryQueryStep queryQueryStep)
+            public QuerySingleStep(QueryQueryStep queryQueryStep, OperationCancelToken token)
             {
+                _token = token;
                 _parent = queryQueryStep;
 }
 
@@ -265,6 +272,7 @@ namespace Raven.Server.Documents.Queries.Graph
 
             public bool GetAndClearResults(List<Match> matches)
             {
+                _token.CheckIfCancellationIsRequested();
                 if (_temp.Count == 0)
                     return false;
 
@@ -277,11 +285,13 @@ namespace Raven.Server.Documents.Queries.Graph
 
             public ValueTask Initialize()
             {
+                _token.CheckIfCancellationIsRequested();
                 return _parent.Initialize();
             }
 
             public void Run(Match src, string alias)
             {
+                _token.CheckIfCancellationIsRequested();
                 // here we already get the right match, and we do nothing with it.
                 var clone = new Match(src);
                 clone.Remove(alias);

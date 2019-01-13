@@ -27,6 +27,8 @@ namespace Raven.Server.ServerWide
             _cts.CancelAfter(cancelAfter);
         }
 
+        public bool IsCancellationRequested => _cts.IsCancellationRequested;
+
         public OperationCancelToken(CancellationToken shutdown)
             : this(Timeout.InfiniteTimeSpan, shutdown)
         {
