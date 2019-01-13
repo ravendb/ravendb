@@ -210,19 +210,6 @@ namespace SlowTests.Client.Counters
                     s.SaveChanges();
                 }
 
-                foreach (var server in db.Servers)
-                {
-                    var documentDatabase = await server.ServerStore.DatabasesLandlord.TryGetOrCreateResourceStore(dbName);
-                    using (documentDatabase.DocumentsStorage.ContextPool.AllocateOperationContext(out DocumentsOperationContext ctx))
-                    using (ctx.OpenReadTransaction())
-                    {
-                        var tombstones = documentDatabase.DocumentsStorage.GetTombstonesFrom(ctx, 0, 0, int.MaxValue).ToList();
-                        Assert.Equal(2, tombstones.Count);
-                        Assert.Equal(Tombstone.TombstoneType.Counter, tombstones[0].Type);
-                        Assert.Equal(Tombstone.TombstoneType.Counter, tombstones[1].Type);
-                    }
-                }
-
                 foreach (var store in stores)
                 {
                     Assert.Equal(0, store.Operations.Send(new GetCountersOperation("users/1", new[] { "likes" })).Counters.Count);
