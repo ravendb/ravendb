@@ -331,10 +331,9 @@ namespace SlowTests.Server.Documents.PeriodicBackup
                         {
                             Key = Convert.ToBase64String(key)
                         }
-                    }))
-                        ;
+                    }));
                 });
-                Assert.IsType<ArgumentException>(e.InnerException);
+                Assert.IsType<CryptographicException>(e.InnerException);
             }
         }
 
