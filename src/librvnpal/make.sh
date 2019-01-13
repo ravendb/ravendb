@@ -56,7 +56,7 @@ elif [ $# -gt 1 ]; then
                         IS_CROSS=1
                         IS_ARM=1
                         IS_32BIT=1
-                        C_COMPILER=arm-linux-gnueabi-gcc
+                        C_COMPILER=arm-linux-gnueabihf-gcc
 		else
 			echo -e "${ERR_STRING}Invalid architecture for cross compiling${NC}"
 			exit 1
@@ -109,7 +109,7 @@ if [ ${IS_COMPILER} -ne 1 ]; then
 	echo -e "${ERR_STRING}Unable to determine if ${C_COMPILER} compiler exists."
         echo -e "${C_D_YELLOW}    Consider installing :"
         echo -e "                                       linux-x64 / linux-arm     - clang-3.9 and/or c89"
-	echo -e "                                       cross compiling linux-arm - gcc make gcc-arm-linux-gnueabi binutils-arm-linux-gnueabi, osx-x64 - libc6-dev-i386"
+	echo -e "                                       cross compiling linux-arm - gcc make gcc-arm-linux-gnueabi binutils-arm-linux-gnueabi, crossbuild-essential-armhf"
 	echo -e "                                       cross compiling osx-x64   - libc6-dev-i386 cmake libxml2-dev fuse clang libbz2-1.0 libbz2-dev libbz2-ocaml libbz2-ocaml-dev libfuse-dev + download Xcode_7.3, and follow https://github.com/tpoechtrager/osxcross instructions"
 	echo -e "${NC}"
 	exit 1
