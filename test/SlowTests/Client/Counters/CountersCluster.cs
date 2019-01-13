@@ -142,7 +142,7 @@ namespace SlowTests.Client.Counters
 
                         if (val == 30)
                             break;
-                        Thread.Sleep(50);
+                        Thread.Sleep(150);
                     }
 
                     Assert.Equal(30, val);

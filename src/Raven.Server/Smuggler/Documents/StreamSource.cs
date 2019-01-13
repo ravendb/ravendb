@@ -303,9 +303,9 @@ namespace Raven.Server.Smuggler.Documents
             {
                 using (reader)
                 {
-                    if (reader.TryGet(nameof(CounterItem.DocId), out string docId) == false ||
-                        reader.TryGet(nameof(CounterItem.ChangeVector), out string cv) == false ||
-                        reader.TryGet(nameof(CounterItem.Batch.Values), out BlittableJsonReaderObject values) == false)
+                    if (reader.TryGet(nameof(CounterItem.Batch.CounterKey), out LazyStringValue counterKey) == false ||                        
+                        reader.TryGet(nameof(CounterItem.Batch.Values), out BlittableJsonReaderObject values) == false ||
+                        reader.TryGet(nameof(CounterItem.ChangeVector), out LazyStringValue cv) == false)
                     {
                         _result.Counters.ErroredCount++;
                         _result.AddWarning("Could not read counter entry.");
@@ -316,7 +316,7 @@ namespace Raven.Server.Smuggler.Documents
 
                     yield return new CounterGroupDetail
                     {
-                        DocumentId = docId,
+                        CounterKey = counterKey,
                         ChangeVector = cv,
                         Values = values
                     };
