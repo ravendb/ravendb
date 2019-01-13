@@ -2,15 +2,41 @@
 using System.Buffers;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.Linq;
 using System.Threading;
+using Sparrow.Collections;
 using Sparrow.LowMemory;
 using Sparrow.Threading;
 using Sparrow.Utils;
 
 namespace Sparrow.Json
 {
+    public class ThreadIdHolder
+    {
+        public int ThreadId;
+        public override string ToString()
+        {
+            return ThreadId.ToString();
+        }
+    }
+
+#if DEBUG
+    public interface ThreadIDsHolderInterface
+    {
+        ThreadIdHolder[] ThreadIDs { get; }
+    }
+
+    public static class JsonContextPoolsHolder
+    {
+        public static ConcurrentSet<ThreadIDsHolderInterface> AllContexts = new ConcurrentSet<ThreadIDsHolderInterface>();
+    } 
+#endif
+
     public abstract class JsonContextPoolBase<T> : ILowMemoryHandler, IDisposable
+#if DEBUG
+        , ThreadIDsHolderInterface
+#endif
         where T : JsonOperationContext
     {
         /// <summary>
@@ -19,12 +45,11 @@ namespace Sparrow.Json
         /// average to the same overall type of contexts
         /// </summary>
         private ConcurrentDictionary<int, ContextStack> _contextStacksByThreadId = new ConcurrentDictionary<int, ContextStack>();
-        private ThreadIdHolder[] _threadIds = Array.Empty<ThreadIdHolder>();
+        private ThreadIdHolder[] _threadIds = Array.Empty< ThreadIdHolder>();
 
-        private class ThreadIdHolder
-        {
-            public int ThreadId;
-        }
+        private static ConcurrentBag<ThreadIdHolder[]> AllThreadIdHolders = new ConcurrentBag<ThreadIdHolder[]>();
+
+        public ThreadIdHolder[] ThreadIDs => _threadIds;
 
         private readonly NativeMemoryCleaner<ContextStack, T> _nativeMemoryCleaner;
         private bool _disposed;
@@ -38,20 +63,20 @@ namespace Sparrow.Json
         {
             private HashSet<JsonContextPoolBase<T>> _parents = new HashSet<JsonContextPoolBase<T>>();
             int _threadId;
-            public ThreadIdHolder ThreadIdHolder;
+            public List<ThreadIdHolder> ThreadIdHolders = new List<ThreadIdHolder>();            
 
             public ContextStackThreadReleaser()
             {
                 _threadId = NativeMemory.CurrentThreadStats.Id;
-                ThreadIdHolder = new ThreadIdHolder
-                {
-                    ThreadId = _threadId
-                };
             }
 
             ~ContextStackThreadReleaser()
             {
-                ThreadIdHolder.ThreadId = -1;
+                foreach (var item in ThreadIdHolders)
+                {
+                    Debug.Assert(item.ThreadId == _threadId);
+                    item.ThreadId = -1;
+                }
                 // we remove the references from the thread dictionary
                 // it is possible that the pool is no longer referenced and was collected, and as such
                 // the finalizers for the context stack values were already run, if not, they will run soon
@@ -82,6 +107,10 @@ namespace Sparrow.Json
             if (_releaser.Add(this) == false)
                 return;
 
+#if DEBUG
+            AssertThreadIDsUniqueness(); 
+#endif
+
             while (true)
             {
                 var copy = _threadIds;
@@ -91,21 +120,58 @@ namespace Sparrow.Json
                     {
                         if(Interlocked.CompareExchange(ref copy[i].ThreadId, currentThreadId, -1) == -1)
                         {
-                            _releaser.ThreadIdHolder = copy[i];
+                            _releaser.ThreadIdHolders.Add(copy[i]);
                             return;
                         }
                         return;
                     }
                 }
-
+                
                 var threads = new ThreadIdHolder[copy.Length + 1];
                 Array.Copy(copy, threads, copy.Length);
-                threads[copy.Length] = _releaser.ThreadIdHolder;
+                threads[copy.Length] = new ThreadIdHolder
+                {
+                    ThreadId = currentThreadId
+                };
+
                 if (Interlocked.CompareExchange(ref _threadIds, threads, copy) == copy)
+                {
+                    _releaser.ThreadIdHolders.Add(threads[copy.Length]);
                     break;
+                }
             }
         }
-  
+
+#if DEBUG
+        private void AssertThreadIDsUniqueness()
+        {
+            var ids = new HashSet<int>();
+
+            var copy = _threadIds;
+
+            foreach (var item in copy.Where(x => x.ThreadId != -1))
+            {
+                if (ids.Add(item.ThreadId) == false)
+                {                    
+                    throw new InvalidOperationException($"Double thread id spotted in {nameof(JsonContextPoolBase<T>)}");
+                }
+            }
+
+            foreach (var context in JsonContextPoolsHolder.AllContexts)
+            {
+                copy = context.ThreadIDs;
+                ids.Clear();
+                foreach (var item in copy.Where(x => x.ThreadId != -1))
+                {
+                    if (ids.Add(item.ThreadId) == false)
+                    {
+                        throw new InvalidOperationException($"Double thread id spotted in {nameof(JsonContextPoolBase<T>)} of a different context");
+                    }
+                }
+            }
+        } 
+#endif
+
         private class ContextStack : StackHeader<T>, IDisposable
         {
             public bool AvoidWorkStealing;        
@@ -140,6 +206,10 @@ namespace Sparrow.Json
             _nativeMemoryCleaner = new NativeMemoryCleaner<ContextStack, T>(()=> EnumerateAllThreadContexts().ToList(),
                 LowMemoryFlag, TimeSpan.FromMinutes(1), TimeSpan.FromMinutes(1));
             LowMemoryNotification.Instance?.RegisterLowMemoryHandler(this);
+
+#if DEBUG
+            JsonContextPoolsHolder.AllContexts.Add(this); 
+#endif
         }
 
         private ContextStack MaybeGetCurrentContextStack()
@@ -339,7 +409,6 @@ namespace Sparrow.Json
                     return;
             }
         }
-
         public void Dispose()
         {
             if (_disposed)
@@ -348,12 +417,27 @@ namespace Sparrow.Json
             {
                 if (_disposed)
                     return;
+
+#if DEBUG
+                JsonContextPoolsHolder.AllContexts.TryRemove(this); 
+#endif
                 _cts.Cancel();
                 _disposed = true;
                 ThreadLocalCleanup.ReleaseThreadLocalState -= CleanThreadLocalState;
                 _nativeMemoryCleaner.Dispose();
+
+#if Debug
+                var z = new HashSet<ContextStack>();
+#endif
                 foreach (var kvp in EnumerateAllThreadContexts())
                 {
+#if Debug
+                    if (z.Add(kvp) == false)
+                    {
+                        throw new InvalidOperationException("threads list is not unique");
+                    }
+#endif
+
                     kvp.Dispose();
                 }
                 _contextStacksByThreadId.Clear();

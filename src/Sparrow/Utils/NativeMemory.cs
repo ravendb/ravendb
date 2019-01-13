@@ -46,6 +46,8 @@ namespace Sparrow.Utils
 
             public long TotalAllocated => Allocations - ReleasesFromOtherThreads;
 
+            private static int _uniqueThreadId = 0;
+
             public long CurrentlyAllocatedForProcessing;
 
             public bool IsThreadAlive()
@@ -71,7 +73,7 @@ namespace Sparrow.Utils
             public ThreadStats()
             {
                 _threadInstance = Thread.CurrentThread;
-                Id = _threadInstance.ManagedThreadId;
+                Id = Interlocked.Increment(ref _uniqueThreadId);                    
                 UnmanagedThreadId = PlatformDetails.GetCurrentThreadId();
             }
         }
