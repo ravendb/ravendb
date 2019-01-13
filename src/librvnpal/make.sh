@@ -57,6 +57,11 @@ elif [ $# -gt 1 ]; then
                         IS_ARM=1
                         IS_32BIT=1
                         C_COMPILER=arm-linux-gnueabihf-gcc
+		elif [[ "$2" == "linux-arm64" ]]; then
+                        IS_CROSS=1
+                        IS_ARM=1
+                        IS_32BIT=0
+                        C_COMPILER=aarch64-linux-gnu-gcc
 		else
 			echo -e "${ERR_STRING}Invalid architecture for cross compiling${NC}"
 			exit 1
@@ -143,16 +148,15 @@ fi
 if [ ${IS_ARM} -eq 1 ]; then
         FILTERS=(src/posix);
         LINKFILE=${LIBFILE}.arm
-	if [ ${IS_32BIT} ]; then
+	if [ ${IS_32BIT} -eq 1 ]; then
                 LINKFILE=${LINKFILE}.32.so
         else
-		echo -e "${ERR_STRING}arm 64 bit build is not supported${NC}"
-                exit 1
+                LINKFILE=${LINKFILE}.64.so
         fi
 fi
 
 if [[ "${FILTERS[0]}" == "-1" ]]; then 
-	echo -e "${ERR_STRING}Not supported platform. Execute on either linux-x64, arm-32 or osx-x64${NC}"
+	echo -e "${ERR_STRING}Not supported platform. Execute on either linux-x64, linux-arm, linux-arm64 or osx-x64${NC}"
 	exit 1
 fi
 
