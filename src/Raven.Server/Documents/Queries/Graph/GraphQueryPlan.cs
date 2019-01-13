@@ -102,17 +102,17 @@ namespace Raven.Server.Documents.Queries.Graph
             {
                 case OperatorType.And:
                     if(negated)
-                        return new IntersectionQueryStep<Except>(left, right)
+                        return new IntersectionQueryStep<Except>(left, right, _token)
                         {
                             CollectIntermediateResults = CollectIntermediateResults
                         };
-                    return new IntersectionQueryStep<Intersection>(left, right, returnEmptyIfRightEmpty:true)
+                    return new IntersectionQueryStep<Intersection>(left, right, _token, returnEmptyIfRightEmpty:true)
                     {
                         CollectIntermediateResults = CollectIntermediateResults
                     };
 
                case OperatorType.Or:
-                    return new IntersectionQueryStep<Union>(left, right, returnEmptyIfLeftEmpty:false)
+                    return new IntersectionQueryStep<Union>(left, right, _token, returnEmptyIfLeftEmpty:false)
                     {
                         CollectIntermediateResults = CollectIntermediateResults
                     };
@@ -152,7 +152,7 @@ namespace Raven.Server.Documents.Queries.Graph
                 throw new InvalidOperationException($"BuildQueryPlanForEdge was invoked for alias='{alias}' which suppose to be an edge but no corresponding WITH EDGE clause was found.");
             }
 
-            return new EdgeQueryStep(left, right, withEdge, edge, _query.QueryParameters)
+            return new EdgeQueryStep(left, right, withEdge, edge, _query.QueryParameters, _token)
             {
                 CollectIntermediateResults = CollectIntermediateResults
             };
@@ -181,7 +181,7 @@ namespace Raven.Server.Documents.Queries.Graph
                 });
             }
 
-            var recursiveStep = new RecursionQueryStep(left, steps, recursive, recursive.GetOptions(_query.Metadata, _query.QueryParameters))
+            var recursiveStep = new RecursionQueryStep(left, steps, recursive, recursive.GetOptions(_query.Metadata, _query.QueryParameters), _token)
             {
                 CollectIntermediateResults = CollectIntermediateResults
             };            
@@ -235,7 +235,7 @@ namespace Raven.Server.Documents.Queries.Graph
 
         public void OptimizeQueryPlan()
         {
-            var cdqsr = new EdgeCollectionDestinationRewriter(_database.DocumentsStorage);
+            var cdqsr = new EdgeCollectionDestinationRewriter(_database.DocumentsStorage, _token);
             RootQueryStep = cdqsr.Visit(RootQueryStep);
         }
 

@@ -4,6 +4,7 @@ using System.IO;
 using System.Linq;
 using System.Net;
 using System.Threading.Tasks;
+using Raven.Client;
 using Raven.Client.Exceptions.Documents.Indexes;
 using Raven.Server.Documents.Indexes;
 using Raven.Server.Documents.Queries;
@@ -20,15 +21,22 @@ namespace Raven.Server.Documents.Handlers.Debugging
         [RavenAction("/databases/*/debug/queries/kill", "POST", AuthorizationStatus.ValidUser)]
         public Task KillQuery()
         {
+            ExecutingQueryInfo query;
             var name = GetQueryStringValueAndAssertIfSingleAndNotEmpty("indexName");
             var id = GetLongQueryString("id");
+            if (name == Constants.Documents.Indexing.DummyGraphIndexName)
+            {
+                query = Database.QueryRunner.CurrentlyRunningQueries.FirstOrDefault(q => q.QueryId == id);
+            }
+            else
+            {
+                var index = Database.IndexStore.GetIndex(name);
+                if (index == null)
+                    IndexDoesNotExistException.ThrowFor(name);
 
-            var index = Database.IndexStore.GetIndex(name);
-            if (index == null)
-                IndexDoesNotExistException.ThrowFor(name);
-
-            var query = index.CurrentlyRunningQueries
-                .FirstOrDefault(q => q.QueryId == id);
+                query = index.CurrentlyRunningQueries
+                    .FirstOrDefault(q => q.QueryId == id);
+            }
 
             if (query == null)
             {
@@ -76,7 +84,25 @@ namespace Raven.Server.Documents.Handlers.Debugging
 
                     writer.WriteEndArray();
                 }
+                if (indexes.Count != 0)
+                    writer.WriteComma();
 
+                writer.WritePropertyName("GraphQueries");
+                writer.WriteStartArray();
+
+                isFirst = true;
+
+                foreach (var query in Database.QueryRunner.CurrentlyRunningQueries)
+                {
+                    if (isFirst == false)
+                        writer.WriteComma();
+
+                    isFirst = false;
+
+                    query.Write(writer, context);
+                }
+
+                writer.WriteEndArray();
                 writer.WriteEndObject();
             }
 

@@ -5,6 +5,7 @@ using System.Linq;
 using System.Threading.Tasks;
 using Microsoft.Extensions.Primitives;
 using Raven.Server.Documents.Queries.AST;
+using Raven.Server.ServerWide;
 using Sparrow;
 using Sparrow.Json;
 using static Raven.Server.Documents.Queries.GraphQueryRunner;
@@ -29,7 +30,8 @@ namespace Raven.Server.Documents.Queries.Graph
         private readonly Stack<RecursionState> _path = new Stack<RecursionState>();
         public int _index = -1;
         private bool _skipMaterialization;
-  
+        private OperationCancelToken _token;
+
         public IGraphQueryStep Left => _left;
         public List<SingleEdgeMatcher> Steps => _steps;
 
@@ -41,7 +43,7 @@ namespace Raven.Server.Documents.Queries.Graph
             public bool AlreadyAdded;
         }
 
-        public RecursionQueryStep(IGraphQueryStep left, List<SingleEdgeMatcher> steps, RecursiveMatch recursive, RecursiveMatch.RecursiveOptions options)
+        public RecursionQueryStep(IGraphQueryStep left, List<SingleEdgeMatcher> steps, RecursiveMatch recursive, RecursiveMatch.RecursiveOptions options, OperationCancelToken token)
         {
             _left = left;
             _steps = steps;
@@ -60,9 +62,10 @@ namespace Raven.Server.Documents.Queries.Graph
             _outputAlias = _stepAliases.Last();
             _allLliases.UnionWith(_left.GetAllAliases());
             _allLliases.Add(_recursive.Alias.Value);
+            _token = token;
         }
 
-        public RecursionQueryStep(IGraphQueryStep left, RecursionQueryStep rqs)
+        public RecursionQueryStep(IGraphQueryStep left, RecursionQueryStep rqs, OperationCancelToken token)
         {
             _left = left;
             _steps = rqs._steps;
@@ -79,6 +82,7 @@ namespace Raven.Server.Documents.Queries.Graph
             }
 
             _outputAlias = _stepAliases.Last();
+            _token = token;
         }
 
         public void SetAliases(HashSet<string> aliases)
@@ -86,7 +90,7 @@ namespace Raven.Server.Documents.Queries.Graph
             _allLliases.UnionWith(aliases);
         }
 
-        public RecursionQueryStep(RecursionQueryStep rqs, IGraphQueryStep left, List<SingleEdgeMatcher> steps)
+        public RecursionQueryStep(RecursionQueryStep rqs, IGraphQueryStep left, List<SingleEdgeMatcher> steps, OperationCancelToken token)
         {
             _left = left;
             _steps = steps;
@@ -104,6 +108,7 @@ namespace Raven.Server.Documents.Queries.Graph
             }
 
             _outputAlias = _stepAliases.Last();
+            _token = token;
         }
 
         public bool IsEmpty()
@@ -117,7 +122,7 @@ namespace Raven.Server.Documents.Queries.Graph
 
         public IGraphQueryStep Clone()
         {
-            return new RecursionQueryStep(_left.Clone(), new List<SingleEdgeMatcher>(_steps), _recursive, _options)
+            return new RecursionQueryStep(_left.Clone(), new List<SingleEdgeMatcher>(_steps), _recursive, _options, _token)
             {
                 CollectIntermediateResults = CollectIntermediateResults
             };
@@ -147,6 +152,7 @@ namespace Raven.Server.Documents.Queries.Graph
 
         public bool GetNext(out Match match)
         {
+            _token.CheckIfCancellationIsRequested();
             if (_index >= _results.Count)
             {
                 match = default;
@@ -168,6 +174,7 @@ namespace Raven.Server.Documents.Queries.Graph
 
             _index = 0;
 
+            _token.CheckIfCancellationIsRequested();
             var leftTask = _left.Initialize();
             if (leftTask.IsCompleted == false)
             {
@@ -184,6 +191,8 @@ namespace Raven.Server.Documents.Queries.Graph
                 var item = _steps[i];
                 if (item.Right == null)
                     continue;
+
+                _token.CheckIfCancellationIsRequested();
 
                 var stepTask = item.Right.Initialize();
                 if (stepTask.IsCompleted == false)
@@ -206,6 +215,7 @@ namespace Raven.Server.Documents.Queries.Graph
 
         private async ValueTask CompleteNextStepTaskAsync(ValueTask nextTask)
         {
+            _token.CheckIfCancellationIsRequested();
             await nextTask;
             CompleteInitialization();
         }
@@ -220,6 +230,7 @@ namespace Raven.Server.Documents.Queries.Graph
             var matches = new List<Match>();
             while (_left.GetNext(out var match))
             {
+                _token.CheckIfCancellationIsRequested();
                 matches.Clear();
                 ProcessSingleResultRecursive(match, matches);
                 if (matches.Count > 0)
@@ -235,11 +246,13 @@ namespace Raven.Server.Documents.Queries.Graph
 
         internal class RecursionSingleStep : ISingleGraphStep
         {
+            private OperationCancelToken _token;
             private readonly RecursionQueryStep _parent;
             private List<Match> _matches = new List<Match>();
 
-            public RecursionSingleStep(RecursionQueryStep parent)
+            public RecursionSingleStep(RecursionQueryStep parent, OperationCancelToken token)
             {
+                _token = token;
                 _parent = parent;
             }
 
@@ -256,6 +269,7 @@ namespace Raven.Server.Documents.Queries.Graph
 
             public ValueTask Initialize()
             {
+                _token.CheckIfCancellationIsRequested();
                 _parent._skipMaterialization = true;
                 var task = _parent.Initialize();
                 if (task.IsCompleted)
@@ -268,12 +282,14 @@ namespace Raven.Server.Documents.Queries.Graph
 
             private async ValueTask CompleteInit(ValueTask task)
             {
+                _token.CheckIfCancellationIsRequested();
                 await task;
                 _parent._skipMaterialization = false;
             }
 
             public void Run(Match src, string alias)
             {
+                _token.CheckIfCancellationIsRequested();
                 _parent.ProcessSingleResultRecursive(src, _matches);
             }
 
@@ -290,18 +306,21 @@ namespace Raven.Server.Documents.Queries.Graph
 
         private async Task CompleteInitializationForStepAsync(int position, ValueTask stepTask)
         {
+            _token.CheckIfCancellationIsRequested();
             await stepTask;
             await CompleteInitializationAfterLeft(position + 1);
         }
 
         private async Task CompleteLeftInitializationAsync(ValueTask leftTask)
         {
+            _token.CheckIfCancellationIsRequested();
             await leftTask;
             await CompleteInitializationAfterLeft(0);
         }
 
         private void ProcessSingleResultRecursive(Match currentMatch, List<Match> matches)
         {
+            _token.CheckIfCancellationIsRequested();
             _visited.Clear();
             _path.Clear();
             int? bestPathLength = null;
@@ -331,6 +350,7 @@ namespace Raven.Server.Documents.Queries.Graph
 
             while (true)
             {
+                _token.CheckIfCancellationIsRequested();
                 // the first item is always the root
                 if (_path.Count - 1 == _options.Max)
                 {
@@ -362,6 +382,7 @@ namespace Raven.Server.Documents.Queries.Graph
 
                 while (true)
                 {
+                    _token.CheckIfCancellationIsRequested();
                     if (_path.Count == 0)
                         return;
 
@@ -563,7 +584,7 @@ namespace Raven.Server.Documents.Queries.Graph
 
         public ISingleGraphStep GetSingleGraphStepExecution()
         {
-            return new RecursionSingleStep(this);
+            return new RecursionSingleStep(this, _token);
     }
 }
 }

@@ -2,10 +2,12 @@
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Text;
+using System.Threading;
 using System.Threading.Tasks;
 using Microsoft.Extensions.Primitives;
 using Raven.Server.Documents.Queries.AST;
 using Raven.Server.Json;
+using Raven.Server.ServerWide;
 using Sparrow;
 using Sparrow.Json;
 using static Raven.Server.Documents.Queries.GraphQueryRunner;
@@ -24,7 +26,7 @@ namespace Raven.Server.Documents.Queries.Graph
         public IGraphQueryStep Left => _left;
         public IGraphQueryStep Right => _right;
 
-        public EdgeQueryStep(IGraphQueryStep left, IGraphQueryStep right, WithEdgesExpression edgesExpression, MatchPath edgePath, BlittableJsonReaderObject queryParameters)
+        public EdgeQueryStep(IGraphQueryStep left, IGraphQueryStep right, WithEdgesExpression edgesExpression, MatchPath edgePath, BlittableJsonReaderObject queryParameters, OperationCancelToken token)
         {
             _left = left;
             _right = right;
@@ -40,9 +42,10 @@ namespace Raven.Server.Documents.Queries.Graph
             _edgesExpression = edgesExpression;
 
             _outputAlias = _right.GetOutputAlias();
+            _token = token;
         }
 
-        public EdgeQueryStep(IGraphQueryStep left, IGraphQueryStep right, EdgeQueryStep eqs)
+        public EdgeQueryStep(IGraphQueryStep left, IGraphQueryStep right, EdgeQueryStep eqs, OperationCancelToken token)
         {
             _left = left;
             _right = right;
@@ -58,6 +61,7 @@ namespace Raven.Server.Documents.Queries.Graph
 
 
             _outputAlias = _right.GetOutputAlias();
+            _token = token;
         }
 
         public bool IsEmpty()
@@ -71,7 +75,7 @@ namespace Raven.Server.Documents.Queries.Graph
 
         public IGraphQueryStep Clone()
         {
-            return new EdgeQueryStep(_left.Clone(), _right.Clone(), _edgesExpression, _edgePath, _queryParameters)
+            return new EdgeQueryStep(_left.Clone(), _right.Clone(), _edgesExpression, _edgePath, _queryParameters, _token)
             {
                 CollectIntermediateResults = CollectIntermediateResults
             };
@@ -82,6 +86,7 @@ namespace Raven.Server.Documents.Queries.Graph
             if (_index != -1)
                 return default;
 
+            _token.CheckIfCancellationIsRequested();
             var leftTask = _left.Initialize();
             if (leftTask.IsCompleted)
             {
@@ -92,6 +97,7 @@ namespace Raven.Server.Documents.Queries.Graph
                     return default;
                 }
 
+                _token.CheckIfCancellationIsRequested();
                 var rightTask = _right.Initialize();
                 if (rightTask.IsCompleted)
                 {
@@ -106,12 +112,14 @@ namespace Raven.Server.Documents.Queries.Graph
 
         private async Task InitializeRightAsync(ValueTask rightTask)
         {
+            _token.CheckIfCancellationIsRequested();
             await rightTask;
             CompleteInitialization();
         }
 
         private async Task InitializeLeftAsync(ValueTask leftTask)
         {
+            _token.CheckIfCancellationIsRequested();
             await leftTask;
             //At this point we know we are not going to yield results we can skip running right hand side
             if (Left.IsEmpty())
@@ -133,7 +141,7 @@ namespace Raven.Server.Documents.Queries.Graph
         }
 
         private void CompleteInitialization()
-        {
+        {            
             _index = 0;
 
             if (_right.IsEmpty())
@@ -143,6 +151,7 @@ namespace Raven.Server.Documents.Queries.Graph
             var alias = _left.GetOutputAlias();
             while (_left.GetNext(out var left))
             {
+                _token.CheckIfCancellationIsRequested();
                 edgeMatcher.Run(left, alias);
             }
         }
@@ -221,6 +230,7 @@ namespace Raven.Server.Documents.Queries.Graph
 
         public bool GetNext(out Match match)
         {
+            _token.CheckIfCancellationIsRequested();
             if (_index >= _results.Count)
             {
                 match = default;
@@ -317,6 +327,7 @@ namespace Raven.Server.Documents.Queries.Graph
         private MatchPath _edgePath;
         private readonly BlittableJsonReaderObject _queryParameters;
         private WithEdgesExpression _edgesExpression;
+        private OperationCancelToken _token;
 
         public void SetRight(IGraphQueryStep newRight)
         {

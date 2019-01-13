@@ -1,9 +1,11 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Diagnostics;
+using System.Threading;
 using System.Threading.Tasks;
 using Microsoft.Extensions.Primitives;
 using Raven.Client;
+using Raven.Server.ServerWide;
 using Raven.Server.ServerWide.Context;
 using Sparrow;
 
@@ -17,14 +19,16 @@ namespace Raven.Server.Documents.Queries.Graph
         DocumentsStorage _documentStorage;
         private List<GraphQueryRunner.Match> _temp = new List<GraphQueryRunner.Match>();
         public readonly string CollectionName;
+        private OperationCancelToken _token;
 
-        public CollectionDestinationQueryStep(StringSegment alias, DocumentsOperationContext documentsContext, DocumentsStorage documentStorage, string collectionName)
+        public CollectionDestinationQueryStep(StringSegment alias, DocumentsOperationContext documentsContext, DocumentsStorage documentStorage, string collectionName, OperationCancelToken token)
         {
             CollectionName = collectionName;
             _alias = alias;
             _aliases = new HashSet<string> { alias.Value };
             _context = documentsContext;
             _documentStorage = documentStorage;
+            _token = token;
         }
 
         public bool IsEmpty()
@@ -40,7 +44,7 @@ namespace Raven.Server.Documents.Queries.Graph
 
         public IGraphQueryStep Clone()
         {
-            return new CollectionDestinationQueryStep(_alias, _context, _documentStorage, CollectionName)
+            return new CollectionDestinationQueryStep(_alias, _context, _documentStorage, CollectionName, _token)
             {
                 CollectIntermediateResults = CollectIntermediateResults
             };

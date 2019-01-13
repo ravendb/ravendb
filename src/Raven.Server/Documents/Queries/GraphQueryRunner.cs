@@ -6,6 +6,7 @@ using System.Threading;
 using System.Threading.Tasks;
 using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.Primitives;
+using Raven.Client;
 using Raven.Client.Documents.Indexes;
 using Raven.Client.Documents.Operations;
 using Raven.Client.Documents.Queries;
@@ -119,94 +120,101 @@ namespace Raven.Server.Documents.Queries
         private GraphQueryDoneRunning MarkQueryAsRunning(IIndexQuery query, OperationCancelToken token)
         {
             var queryStartTime = DateTime.UtcNow;
-            var queryId = Database.GetNextGraphQueryId();
+            var queryId = Database.QueryRunner.NextQueryId;
 
 
             var executingQueryInfo = new ExecutingQueryInfo(queryStartTime, query, queryId, token);
-            Database.AddToCurrentlyRunningGraphQueries(executingQueryInfo);
+            Database.QueryRunner.CurrentlyRunningQueries.TryAdd(executingQueryInfo);
 
             return new GraphQueryDoneRunning(this, executingQueryInfo);
         }
 
         private async Task<TResult> ExecuteQuery<TResult>(TResult final,IndexQueryServerSide query, DocumentsOperationContext documentsContext, long? existingResultEtag, OperationCancelToken token) where TResult : QueryResultServerSide<Document>
         {
-            if (Database.ServerStore.Configuration.Core.FeaturesAvailability == FeaturesAvailability.Stable)
-                FeaturesAvailabilityException.Throw("Graph Queries");
-
-            using(MarkQueryAsRunning(query, token))
-            using (var timingScope = new QueryTimingsScope())
+            try
             {
-                var qr = await GetQueryResults(query, documentsContext, existingResultEtag, token);
-                if (qr.NotModified )
+                if (Database.ServerStore.Configuration.Core.FeaturesAvailability == FeaturesAvailability.Stable)
+                    FeaturesAvailabilityException.Throw("Graph Queries");
+
+                using (MarkQueryAsRunning(query, token))
+                using (var timingScope = new QueryTimingsScope())
                 {
-                    final.NotModified = true;
+                    var qr = await GetQueryResults(query, documentsContext, existingResultEtag, token);
+                    if (qr.NotModified)
+                    {
+                        final.NotModified = true;
+                        return final;
+                    }
+                    var q = query.Metadata.Query;
+
+                    //TODO: handle order by, load,  clauses
+                    var idc = new IncludeDocumentsCommand(Database.DocumentsStorage, documentsContext, query.Metadata.Includes);
+
+                    if (q.Select == null && q.SelectFunctionBody.FunctionText == null)
+                    {
+                        HandleResultsWithoutSelect(documentsContext, qr.Matches, final);
+                    }
+                    else if (q.Select != null)
+                    {
+                        var fieldsToFetch = new FieldsToFetch(query.Metadata.SelectFields, null);
+                        var resultRetriever = new GraphQueryResultRetriever(
+                            q.GraphQuery,
+                            Database,
+                            query,
+                            timingScope,
+                            Database.DocumentsStorage,
+                            documentsContext,
+                            fieldsToFetch,
+                            idc);
+
+                        HashSet<ulong> alreadySeenProjections = null;
+                        if (q.IsDistinct)
+                        {
+                            alreadySeenProjections = new HashSet<ulong>();
+                        }
+                        foreach (var match in qr.Matches)
+                        {
+                            if (match.Empty)
+                                continue;
+
+                            var result = resultRetriever.ProjectFromMatch(match, documentsContext);
+                            // ReSharper disable once PossibleNullReferenceException
+                            if (q.IsDistinct && alreadySeenProjections.Add(result.DataHash) == false)
+                                continue;
+                            final.AddResult(result);
+                        }
+
+                    }
+
+                    if (query.Metadata.Includes?.Length > 0)
+                    {
+
+                        foreach (var result in final.Results)
+                        {
+                            idc.Gather(result);
+                        }
+                    }
+
+                    idc.Fill(final.Includes);
+
+                    final.TotalResults = final.Results.Count;
+
+                    if (query.Limit != null || query.Offset != null)
+                    {
+                        final.CappedMaxResults = Math.Min(
+                            query.Limit ?? int.MaxValue,
+                            final.TotalResults - (query.Offset ?? 0)
+                            );
+                    }
+
+                    final.IsStale = qr.QueryPlan.IsStale;
+                    final.ResultEtag = qr.QueryPlan.ResultEtag;
                     return final;
                 }
-                var q = query.Metadata.Query;
-
-                //TODO: handle order by, load,  clauses
-                var idc = new IncludeDocumentsCommand(Database.DocumentsStorage, documentsContext, query.Metadata.Includes);
-                
-                if (q.Select == null && q.SelectFunctionBody.FunctionText == null)
-                {
-                    HandleResultsWithoutSelect(documentsContext, qr.Matches, final);
-                }
-                else if (q.Select != null)
-                {
-                    var fieldsToFetch = new FieldsToFetch(query.Metadata.SelectFields, null);
-                    var resultRetriever = new GraphQueryResultRetriever(
-                        q.GraphQuery,
-                        Database,
-                        query,
-                        timingScope,
-                        Database.DocumentsStorage,
-                        documentsContext,
-                        fieldsToFetch, 
-                        idc);
-
-                    HashSet<ulong> alreadySeenProjections = null;
-                    if (q.IsDistinct)
-                    {
-                        alreadySeenProjections = new HashSet<ulong>();
-                    }
-                    foreach (var match in qr.Matches)
-                    {
-                        if (match.Empty)
-                            continue;
-
-                        var result = resultRetriever.ProjectFromMatch(match, documentsContext);
-                        // ReSharper disable once PossibleNullReferenceException
-                        if (q.IsDistinct && alreadySeenProjections.Add(result.DataHash) == false)
-                            continue;
-                        final.AddResult(result);
-                    }
-
-                }
-
-                if (query.Metadata.Includes?.Length > 0 )
-                {
-
-                    foreach (var result in final.Results)
-                    {
-                        idc.Gather(result);
-                    }                    
-                }
-
-                idc.Fill(final.Includes);
-
-                final.TotalResults = final.Results.Count;
-
-                if(query.Limit != null || query.Offset != null)
-                {
-                    final.CappedMaxResults = Math.Min(
-                        query.Limit ?? int.MaxValue,
-                        final.TotalResults - (query.Offset ?? 0)
-                        );
-                }
-
-                final.IsStale = qr.QueryPlan.IsStale;
-                final.ResultEtag = qr.QueryPlan.ResultEtag;
-                return final;
+            } 
+            catch (OperationCanceledException oce)
+            {
+                throw new OperationCanceledException($"Database:{Database} Query:{query.Metadata.Query} has been cancelled ",oce);
             }
         }
 
@@ -317,7 +325,7 @@ namespace Raven.Server.Documents.Queries
         {
             var result = new StreamDocumentQueryResult(response, writer, token)
             {
-                IndexName = "@graph"
+                IndexName = Constants.Documents.Indexing.DummyGraphIndexName
             };
             result =  await ExecuteQuery(result, query, documentsContext, null, token);
             result.Flush();
