@@ -707,7 +707,7 @@ namespace Raven.Server.Smuggler.Documents
 
             private void AddToBatch(CounterGroupDetail counter)
             {
-                _cmd.Add(counter.DocumentId, new CounterGroup
+                _cmd.Add(counter.CounterKey, new CounterGroup
                 {
                     ChangeVector = counter.ChangeVector,
                     Values = counter.Values

@@ -58,6 +58,7 @@ namespace Raven.Server.Smuggler.Documents
 
         public struct Batch
         {
+            public string CounterKey;
             public BlittableJsonReaderObject Values;
         }
     }

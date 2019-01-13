@@ -49,9 +49,9 @@ namespace Raven.Client.Documents.Operations.Counters
 
     public class CounterGroupDetail
     {
-        public string DocumentId { get; set; }
+        public LazyStringValue CounterKey { get; set; }
 
-        public string ChangeVector { get; set; }
+        public LazyStringValue ChangeVector { get; set; }
 
         public BlittableJsonReaderObject Values { get; set; }
 
@@ -61,7 +61,7 @@ namespace Raven.Client.Documents.Operations.Counters
         {
             return new DynamicJsonValue
             {
-                [nameof(DocumentId)] = DocumentId,
+                [nameof(CounterKey)] = CounterKey,
                 [nameof(ChangeVector)] = ChangeVector,
                 [nameof(Values)] = Values,
                 [nameof(Etag)] = Etag

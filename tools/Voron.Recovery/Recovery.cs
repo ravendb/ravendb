@@ -900,23 +900,23 @@ namespace Voron.Recovery
                 catch (Exception e)
                 {
                     if (_logger.IsOperationsEnabled)
-                        _logger.Operations($"Found invalid counter item at position={GetFilePosition(startOffset, mem)} with document Id={counter?.DocumentId ?? "null"} and counter values={counter?.Values}{Environment.NewLine}{e}");
+                        _logger.Operations($"Found invalid counter item at position={GetFilePosition(startOffset, mem)} with document Id={counter?.CounterKey ?? "null"} and counter values={counter?.Values}{Environment.NewLine}{e}");
                     return false;
                 }
 
                 context.Write(countersWriter, new DynamicJsonValue
                 {
-                    [nameof(CounterItem.DocId)] = counter.DocumentId,
+                    [nameof(CounterItem.DocId)] = counter.CounterKey,
                     [nameof(CounterItem.ChangeVector)] = counter.ChangeVector,
                     [nameof(CounterItem.Batch.Values)] = counter.Values
                 });
 
                 _counterWritten = true;
                 if (_logger.IsInfoEnabled)
-                    _logger.Info($"Found counter item with document Id={counter.DocumentId} and counter values={counter.Values}");
+                    _logger.Info($"Found counter item with document Id={counter.CounterKey} and counter values={counter.Values}");
 
-                _lastRecoveredDocumentKey = counter.DocumentId;
-                _uniqueCountersDiscovered.Add((null, counter.DocumentId));
+                _lastRecoveredDocumentKey = counter.CounterKey;
+                _uniqueCountersDiscovered.Add((null, counter.CounterKey));
                 _numberOfCountersRetrieved++;
 
                 return true;
