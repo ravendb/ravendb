@@ -419,8 +419,8 @@ namespace Raven.Server.Smuggler.Documents
 
                 Writer.WriteStartObject();
 
-                Writer.WritePropertyName(nameof(CounterItem.DocId));
-                Writer.WriteString(counterDetail.DocumentId);
+                Writer.WritePropertyName(nameof(CounterItem.Batch.CounterKey));
+                Writer.WriteString(counterDetail.CounterKey);
                 Writer.WriteComma();
 
                 Writer.WritePropertyName(nameof(CounterItem.ChangeVector));
@@ -436,7 +436,8 @@ namespace Raven.Server.Smuggler.Documents
             public void WriteLegacyCounter(CounterDetail counterDetail)
             {
                 // Used only in Database Destination 
-                throw new NotImplementedException();
+                throw new NotSupportedException("WriteLegacyCounter is not supported when writing to a Stream destination, " +
+                                                "it is only supported when writing to Database destination. Shouldn't happen.");
             }
 
             private unsafe void ConvertFromBlobToNumbers(CounterGroupDetail counterDetail)

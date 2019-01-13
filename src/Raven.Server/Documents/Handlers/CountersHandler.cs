@@ -281,7 +281,7 @@ namespace Raven.Server.Documents.Handlers
             public void AddLegacy(string id, CounterDetail counterDetail, out bool isNew)
             {
                 isNew = false;
-                _legacyDictionary = _legacyDictionary ?? new Dictionary<string, Dictionary<string, List<(string ChangeVector, long Value)>>>();
+                _legacyDictionary = _legacyDictionary ?? new Dictionary<string, Dictionary<string, List<(string ChangeVector, long Value)>>>(StringComparer.OrdinalIgnoreCase);
                 var valueToAdd = (counterDetail.ChangeVector, counterDetail.TotalValue);
 
                 if (_legacyDictionary.TryGetValue(counterDetail.DocumentId, out var counters))
