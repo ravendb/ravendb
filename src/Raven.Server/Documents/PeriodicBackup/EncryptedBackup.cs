@@ -168,7 +168,7 @@ namespace Raven.Server.Documents.PeriodicBackup
         private readonly byte[] _innerBuffer = new byte[Constants.Encryption.DefaultBufferSize];
         private int _pos = 0;
 
-        public unsafe EncryptingXChaCha20Poly1305Stream(Stream inner, byte[] key, PeriodicBackupConfiguration configuration)
+        public unsafe EncryptingXChaCha20Poly1305Stream(Stream inner, byte[] key)
         {
             if (key.Length != (int)Sodium.crypto_secretstream_xchacha20poly1305_keybytes())
                 throw new InvalidOperationException($"The size of the key must be " +

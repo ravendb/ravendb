@@ -901,11 +901,12 @@ namespace Raven.Server.Documents
 
                     var zipArchiveEntry = package.CreateEntry(RestoreSettings.SmugglerValuesFileName, CompressionLevel.Optimal);
                     using (var zipStream = zipArchiveEntry.Open())
+                    using (var outputStream = GetOutputStream(zipStream))
                     {
                         var smugglerSource = new DatabaseSource(this, 0);
                         using (DocumentsStorage.ContextPool.AllocateOperationContext(out DocumentsOperationContext documentsContext))
                         {
-                            var smugglerDestination = new StreamDestination(zipStream, documentsContext, smugglerSource);
+                            var smugglerDestination = new StreamDestination(outputStream, documentsContext, smugglerSource);
                             var databaseSmugglerOptionsServerSide = new DatabaseSmugglerOptionsServerSide
                             {
                                 AuthorizationStatus = AuthorizationStatus.DatabaseAdmin,
@@ -921,16 +922,27 @@ namespace Raven.Server.Documents
 
                             smugglerResult = smuggler.Execute();
                         }
+
+                        switch (outputStream)
+                        {
+                            case EncryptingXChaCha20Poly1305Stream encryptedStream:
+                                encryptedStream.Flush(flushToDisk: true);
+                                break;
+                            case Stream fileStream:
+                                fileStream.Flush();
+                                break;
+                            default:
+                                throw new InvalidOperationException($" {outputStream.GetType()} not supported");
+                        }
                     }
 
                     infoNotify?.Invoke(("Backed up Database Record", 1));
 
                     zipArchiveEntry = package.CreateEntry(RestoreSettings.SettingsFileName, CompressionLevel.Optimal);
                     using (var zipStream = zipArchiveEntry.Open())
-                    using (var writer = new BlittableJsonTextWriter(serverContext, zipStream))
+                    using (var outputStream = GetOutputStream(zipStream))
+                    using (var writer = new BlittableJsonTextWriter(serverContext, outputStream))
                     {
-                        //TODO: encrypt this file using the MasterKey
-                        //http://issues.hibernatingrhinos.com/issue/RavenDB-7546
 
                         writer.WriteStartObject();
 
@@ -968,6 +980,18 @@ namespace Raven.Server.Documents
                         // end of values
 
                         writer.WriteEndObject();
+                        writer.Flush();
+                        switch (outputStream)
+                        {
+                            case EncryptingXChaCha20Poly1305Stream encryptedStream:
+                                encryptedStream.Flush(flushToDisk: true);
+                                break;
+                            case Stream fileStream:
+                                fileStream.Flush();
+                                break;
+                            default:
+                                throw new InvalidOperationException($" {outputStream.GetType()} not supported");
+                        }
                     }
                 }
 
@@ -980,6 +1004,11 @@ namespace Raven.Server.Documents
             }
 
             return smugglerResult;
+        }
+
+        public Stream GetOutputStream(Stream fileStream)
+        {
+            return MasterKey == null ? fileStream : new EncryptingXChaCha20Poly1305Stream(fileStream, MasterKey);
         }
 
         /// <summary>

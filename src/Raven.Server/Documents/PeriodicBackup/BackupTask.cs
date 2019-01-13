@@ -587,15 +587,15 @@ namespace Raven.Server.Documents.PeriodicBackup
 
             if ((_database.MasterKey != null) && (_configuration?.BackupEncryptionSettings == null))
                 return new EncryptingXChaCha20Poly1305Stream(fileStream,
-                    _database.MasterKey, _configuration);
+                    _database.MasterKey);
 
             if (_configuration?.BackupEncryptionSettings?.EncryptionMode == EncryptionMode.UseDatabaseKey)
                     return new EncryptingXChaCha20Poly1305Stream(fileStream,
-                        _database.MasterKey, _configuration);
+                        _database.MasterKey);
 
             var key = _configuration?.BackupEncryptionSettings?.Key;
             return new EncryptingXChaCha20Poly1305Stream(fileStream,
-                Convert.FromBase64String(key), _configuration);
+                Convert.FromBase64String(key));
         }
 
         private async Task UploadToServer(string backupPath, string folderName, string fileName, Action<IOperationProgress> onProgress)

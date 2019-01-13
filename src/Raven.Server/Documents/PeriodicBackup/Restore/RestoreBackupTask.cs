@@ -324,7 +324,8 @@ namespace Raven.Server.Documents.PeriodicBackup.Restore
                         if (entry.Name == RestoreSettings.SmugglerValuesFileName)
                         {
                             using (var input = entry.Open())
-                            using (var uncompressed = new GZipStream(input, CompressionMode.Decompress))
+                            using (var inputStream = GetInputStream(input, database.Name))
+                            using (var uncompressed = new GZipStream(inputStream, CompressionMode.Decompress))
                             {
                                 var source = new StreamSource(uncompressed, context, database);
                                 var smuggler = new Smuggler.Documents.DatabaseSmuggler(database, source, destination,
@@ -550,7 +551,7 @@ namespace Raven.Server.Documents.PeriodicBackup.Restore
             }
         }
 
-        private Stream GetInputStream(FileStream fileStream, string database)
+        private Stream GetInputStream(Stream fileStream, string database)
         {
             using (_serverStore.ContextPool.AllocateOperationContext(out TransactionOperationContext ctx))
             using (ctx.OpenReadTransaction())
@@ -560,6 +561,7 @@ namespace Raven.Server.Documents.PeriodicBackup.Restore
                 {
                     return new DecryptingXChaCha20Oly1305Stream(fileStream, key);
                 }
+
                 if (_restoreConfiguration.BackupEncryptionSettings?.Key != null)
                 {
                     return new DecryptingXChaCha20Oly1305Stream(fileStream, Convert.FromBase64String(_restoreConfiguration.BackupEncryptionSettings.Key));
@@ -596,7 +598,9 @@ namespace Raven.Server.Documents.PeriodicBackup.Restore
                                 using (var entryStream = zipEntry.Open())
                                 using (_serverStore.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
                                 {
-                                    var json = context.Read(entryStream, "read database settings for restore");
+                                    var stream = _hasEncryptionKey ? GetInputStream(entryStream, _restoreConfiguration.DatabaseName) : entryStream; 
+
+                                    var json = context.Read(stream, "read database settings for restore");
                                     json.BlittableValidation();
 
                                     restoreSettings = JsonDeserializationServer.RestoreSettings(json);
