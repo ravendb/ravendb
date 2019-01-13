@@ -325,7 +325,7 @@ namespace Raven.Server.ServerWide
 
         public async Task ClusterMaintenanceSetupTask()
         {
-            while (true)
+            while (ServerShutdown.IsCancellationRequested == false)
             {
                 try
                 {
@@ -335,6 +335,7 @@ namespace Raven.Server.ServerWide
                             .WithCancellation(ServerShutdown);
                         continue;
                     }
+
                     var term = _engine.CurrentTerm;
                     using (ClusterMaintenanceSupervisor = new ClusterMaintenanceSupervisor(this, _engine.Tag, term))
                     using (Observer = new ClusterObserver(this, ClusterMaintenanceSupervisor, _engine, term, ContextPool, ServerShutdown))
