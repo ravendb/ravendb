@@ -956,20 +956,31 @@ namespace Raven.Server.Web.Authentication
                 {
                     var certificate = JsonDeserializationServer.CertificateDefinition(certificateJson);
 
-                    // This restriction should be removed when updating to .net core 2.1 when export of collection is fixed in Linux.
-                    // With export, we'll be able to load the certificate and export it without a password, and propagate it through the cluster.
-                    if (string.IsNullOrWhiteSpace(certificate.Password) == false)
-                        throw new NotSupportedException("Replacing the cluster certificate with a password protected certificates is currently not supported.");
-
                     if (string.IsNullOrWhiteSpace(certificate.Certificate))
                         throw new ArgumentException($"{nameof(certificate.Certificate)} is a required field in the certificate definition.");
 
+                    // Load the password protected certificate and export it without a password, to send it through the cluster.
+                    if (string.IsNullOrWhiteSpace(certificate.Password) == false)
+                    {
+                        try
+                        {
+                            var cert = new X509Certificate2Collection();
+                            var certBytes = Convert.FromBase64String(certificate.Certificate);
+                            cert.Import(certBytes, certificate.Password, X509KeyStorageFlags.Exportable | X509KeyStorageFlags.MachineKeySet);
+                            // Exporting with the private key, but without the password
+                            certificate.Certificate = Convert.ToBase64String(cert.Export(X509ContentType.Pkcs12));
+                        }
+                        catch (Exception e)
+                        {
+                            throw new ArgumentException("Failed to load the password protected certificate and export it back. Is the password correct?", e);
+                        }
+                    }
+
+                    // Ensure we'll be able to load the certificate
                     try
                     {
                         var certBytes = Convert.FromBase64String(certificate.Certificate);
-                        var _ = string.IsNullOrEmpty(certificate.Password)
-                            ? new X509Certificate2(certBytes, (string)null, X509KeyStorageFlags.MachineKeySet)
-                            : new X509Certificate2(certBytes, certificate.Password, X509KeyStorageFlags.MachineKeySet);
+                        var _ = new X509Certificate2(certBytes, (string)null, X509KeyStorageFlags.Exportable | X509KeyStorageFlags.MachineKeySet);
                     }
                     catch (Exception e)
                     {

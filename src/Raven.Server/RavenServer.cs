@@ -625,8 +625,10 @@ namespace Raven.Server
             return (false, firstPossibleSaturday);
         }
 
-        public async Task StartCertificateReplicationAsync(string base64Cert, bool replaceImmediately)
+        public async Task StartCertificateReplicationAsync(string base64CertWithoutPassword, bool replaceImmediately)
         {
+            // We assume that at this point, the password was already stripped out of the certificate.
+
             // the process of updating a new certificate is the same as deleting a database
             // we first send the certificate to all the nodes, then we get acknowledgments
             // about that from them, and we replace only when they are confirmed to have been
@@ -638,11 +640,11 @@ namespace Raven.Server
                 byte[] certBytes;
                 try
                 {
-                    certBytes = Convert.FromBase64String(base64Cert);
+                    certBytes = Convert.FromBase64String(base64CertWithoutPassword);
                 }
                 catch (Exception e)
                 {
-                    throw new ArgumentException($"Unable to parse the {nameof(base64Cert)} property, expected a Base64 value", e);
+                    throw new ArgumentException($"Unable to parse the {nameof(base64CertWithoutPassword)} property, expected a Base64 value", e);
                 }
 
                 X509Certificate2 newCertificate;
@@ -684,7 +686,7 @@ namespace Raven.Server
 
                 await ServerStore.SendToLeaderAsync(new InstallUpdatedServerCertificateCommand
                 {
-                    Certificate = base64Cert, // includes the private key
+                    Certificate = base64CertWithoutPassword, // includes the private key
                     ReplaceImmediately = replaceImmediately
                 });
             }
