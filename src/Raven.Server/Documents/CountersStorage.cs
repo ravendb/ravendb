@@ -26,7 +26,7 @@ namespace Raven.Server.Documents
 {
     public unsafe class CountersStorage
     {
-        private const int DbIdAsBase64Size = 22;
+        public const int DbIdAsBase64Size = 22;
 
         private readonly DocumentDatabase _documentDatabase;
         private readonly DocumentsStorage _documentsStorage;
@@ -344,10 +344,10 @@ namespace Raven.Server.Documents
         {
             _countersCount++;
 
-            using (GetCounterPartialKey(context, documentId, name, out var counterKey))
+/*            using (GetCounterPartialKey(context, documentId, name, out var counterKey))
             {
                 RemoveTombstoneIfExists(context, counterKey);
-            }
+            }*/
 
             using (context.Allocator.Allocate((dbIdIndex + 1) * SizeOfCounterValues, out var newVal))
             {
@@ -410,10 +410,10 @@ namespace Raven.Server.Documents
             _countersCount++;
 
             BlittableJsonReaderObject data;
-            using (GetCounterPartialKey(context, documentId, name, out var counterKey))
+/*            using (GetCounterPartialKey(context, documentId, name, out var counterKey))
             {
                 RemoveTombstoneIfExists(context, counterKey);
-            }
+            }*/
 
             using (context.Allocator.Allocate(SizeOfCounterValues, out var newVal))
             {
@@ -498,18 +498,30 @@ namespace Raven.Server.Documents
 
                                 var source = (BlittableJsonReaderObject.RawBlob)prop.Value;
 
-                                if (localCounters.TryGet(counterName, out BlittableJsonReaderObject.RawBlob existingCounter) == false)
-                                {
-                                    using (GetCounterPartialKey(context, documentId, counterName, out var partialKey))
-                                    {
-                                        RemoveTombstoneIfExists(context, partialKey);
-                                    }
+                                long value = 0;
+                                bool modified;
+                                var changeType = CounterChangeTypes.Put;
 
-                                    _countersCount++;
-                                    existingCounter = new BlittableJsonReaderObject.RawBlob();
+                                if (source.Length == 0)
+                                {
+                                    // Delete
+                                    modified = true;
+                                    changeType = CounterChangeTypes.Delete;
+                                    localCounters.Modifications = localCounters.Modifications ?? new DynamicJsonValue(localCounters);
+                                    localCounters.Modifications[counterName] = new BlittableJsonReaderObject.RawBlob();
+                                    _countersCount--;
                                 }
 
-                                var value = InternalPutCounter(context, localCounters, counterName, dbIds, sourceDbIds, localDbIdsList, existingCounter, source, out bool modified);
+                                else
+                                {
+                                    if (localCounters.TryGet(counterName, out BlittableJsonReaderObject.RawBlob existingCounter) == false)
+                                    {
+                                        _countersCount++;
+                                        existingCounter = new BlittableJsonReaderObject.RawBlob();
+                                    }
+
+                                    value = InternalPutCounter(context, localCounters, counterName, dbIds, sourceDbIds, localDbIdsList, existingCounter, source, out modified);
+                                }
 
                                 if (modified == false)
                                     continue;
@@ -520,7 +532,7 @@ namespace Raven.Server.Documents
                                     DocumentId = documentId,
                                     Name = counterName,
                                     Value = value,
-                                    Type = CounterChangeTypes.Put
+                                    Type = changeType
                                 });
 
                                 UpdateMetrics(counterKey, counterName, changeVector, collection);
@@ -693,16 +705,6 @@ namespace Raven.Server.Documents
             _documentDatabase.Metrics.Counters.BytesPutsPerSec.MarkSingleThreaded(bytesPutsInBytes);
         }
 
-        private void RemoveTombstoneIfExists(DocumentsOperationContext context, Slice counterKey)
-        {
-            var tombstoneTable = context.Transaction.InnerTransaction.OpenTable(TombstonesSchema, CountersTombstonesSlice);
-
-            if (tombstoneTable.ReadByKey(counterKey, out var existingTombstone))
-            {
-                tombstoneTable.Delete(existingTombstone.Id);
-            }
-        }
-
         private HashSet<string> _tableCreated = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
         public static int SizeOfCounterValues = sizeof(CounterValues);
 
@@ -745,12 +747,15 @@ namespace Raven.Server.Documents
                 var data = GetData(context, ref existing);
                 data.TryGet(Counters, out BlittableJsonReaderObject counters);
 
-                var names = counters.GetPropertyNames();
-                foreach (var prop in names)
+                var prop = new BlittableJsonReaderObject.PropertyDetails();
+                for (var i=0; i < counters.Count; i++)
                 {
-                    if (prop == DbIds)
+                    counters.GetPropertyByIndex(i, ref prop);
+                    var blob = (BlittableJsonReaderObject.RawBlob)prop.Value;
+                    if (blob.Length == 0)
                         continue;
-                    yield return prop;
+
+                    yield return prop.Name;
                 }
             }
         }
@@ -771,7 +776,8 @@ namespace Raven.Server.Documents
 
                 var data = GetData(context, ref tvr);
                 if (data.TryGet(Counters, out BlittableJsonReaderObject counters) == false ||
-                    counters.TryGet(counterName, out BlittableJsonReaderObject.RawBlob counterValues) == false)
+                    counters.TryGet(counterName, out BlittableJsonReaderObject.RawBlob counterValues) == false ||
+                    counterValues.Length == 0)
                     return null;
 
                 var existingCount = counterValues.Length / SizeOfCounterValues;
@@ -798,7 +804,8 @@ namespace Raven.Server.Documents
                 var data = GetData(context, ref tvr);
                 if (data.TryGet(DbIds, out BlittableJsonReaderArray dbIds) == false ||
                     data.TryGet(Counters, out BlittableJsonReaderObject counters) == false ||
-                    counters.TryGet(counterName, out BlittableJsonReaderObject.RawBlob counterValues) == false)                  
+                    counters.TryGet(counterName, out BlittableJsonReaderObject.RawBlob counterValues) == false ||
+                    counterValues.Length == 0)                  
                     yield break;
 
                 var existingCount = counterValues.Length / SizeOfCounterValues;
@@ -853,7 +860,8 @@ namespace Raven.Server.Documents
 
             using (DocumentIdWorker.GetLowerIdSliceAndStorageKey(context, documentId, out Slice lowerId, out _))
             {
-                table.DeleteByPrimaryKeyPrefix(lowerId, holder => _countersCount -= GetData(context, ref holder.Reader).Count -1);
+                //todo update Count of Counters
+                table.DeleteByPrimaryKeyPrefix(lowerId /*, holder => _countersCount -= GetData(context, ref holder.Reader).Count -1*/); 
             }
         }
 
@@ -873,67 +881,43 @@ namespace Raven.Server.Documents
 
             using (DocumentIdWorker.GetLowerIdSliceAndStorageKey(context, documentId, out Slice lowerId, out _))
             {
-                var lastModifiedTicks = _documentDatabase.Time.GetUtcNow().Ticks;
-                return DeleteCounter(context, keyPrefix, collection, null, lastModifiedTicks,
-                    // let's avoid creating a tombstone for missing counter if writing locally
-                    forceTombstone: false);
-            }
-        }
+                var collectionName = _documentsStorage.ExtractCollectionName(context, collection);
+                var table = GetCountersTable(context.Transaction.InnerTransaction, collectionName);
 
-        public string DeleteCounter(DocumentsOperationContext context, Slice key, string collection, string changeVector, long lastModifiedTicks, bool forceTombstone)
-        {
-            long deletedEtag = -1;
-            if (counterToDelete != null)
-            {
-                // we take the etag of the last entry
-                var lastEntry = (CounterValues*)counterToDelete.Ptr + counterToDelete.Length - SizeOfCounterValues;
-                var etag = lastEntry->Etag;
-                deletedEtag = Math.Max(Bits.SwapBytes(etag), deletedEtag);
-            }
-
-            if (deletedEtag == -1)
-            {
-                if (forceTombstone == false)
+                if (table.ReadByKey(lowerId, out var existing) == false)               
                     return null;
+                
+                var data = GetData(context, ref existing);
 
-                deletedEtag = -_documentsStorage.GenerateNextEtag();
+                if (data.TryGet(Counters, out BlittableJsonReaderObject counters) == false ||
+                    counters.TryGet(counterName, out BlittableJsonReaderObject.RawBlob counterToDelete) == false ||
+                    counterToDelete.Length == 0)                
+                    return null;
+                
+                RemoveCounterFromBlittableAndUpdateTable(context, counterName, data, counters, collectionName, table, lowerId, out var cv);
+
+                _countersCount--;
+
+                return cv;
             }
-
-            var etagForTombstone = _documentsStorage.GenerateNextEtag();
-            _documentsStorage.EnsureLastEtagIsPersisted(context, etagForTombstone);
-
-            if (changeVector == null)
-            {
-                changeVector = ChangeVectorUtils.NewChangeVector(_documentDatabase.ServerStore.NodeTag, newEtag, _documentsStorage.Environment.Base64Id);
-                context.LastDatabaseChangeVector = ChangeVectorUtils.MergeVectors(context.LastDatabaseChangeVector ?? GetDatabaseChangeVector(context), changeVector);
-            }
-
-            CreateTombstone(context, key, collection, deletedEtag, lastModifiedTicks, newEtag, changeVector);
-            context.Transaction.AddAfterCommitNotification(new CounterChange
-            {
-                ChangeVector = changeVector,
-                DocumentId = documentId,
-                Name = counterName,
-                Type = CounterChangeTypes.Delete
-            });
-
-            return changeVector;
         }
 
         private void RemoveCounterFromBlittableAndUpdateTable(DocumentsOperationContext context, string counterName, BlittableJsonReaderObject data,
             BlittableJsonReaderObject counters, CollectionName collectionName, Table table,
-            Slice lowerId)
+            Slice lowerId, out string newChangeVector)
         {
             var oldData = data;
 
-            counters.Modifications = new DynamicJsonValue(counters);
-            counters.Modifications.Remove(counterName);
+            counters.Modifications = new DynamicJsonValue(counters)
+            {
+                [counterName] = new BlittableJsonReaderObject.RawBlob()
+            };
 
             data = context.ReadObject(data, null, BlittableJsonDocumentBuilder.UsageMode.ToDisk);
             oldData.Dispose();
 
             var newEtag = _documentsStorage.GenerateNextEtag();
-            var newChangeVector = ChangeVectorUtils.NewChangeVector(_documentDatabase.ServerStore.NodeTag, newEtag, _documentsStorage.Environment.Base64Id);
+            newChangeVector = ChangeVectorUtils.NewChangeVector(_documentDatabase.ServerStore.NodeTag, newEtag, _documentsStorage.Environment.Base64Id);
             using (Slice.From(context.Allocator, newChangeVector, out var cv))
             using (DocumentIdWorker.GetStringPreserveCase(context, collectionName.Name, out Slice collectionSlice))
             using (table.Allocate(out TableValueBuilder tvb))
@@ -946,26 +930,6 @@ namespace Raven.Server.Documents
                 tvb.Add(context.TransactionMarkerOffset);
 
                 table.Set(tvb);
-            }
-        }
-
-        private static void CreateTombstone(DocumentsOperationContext context, Slice keySlice, string collectionName, long deletedEtag, long lastModifiedTicks, long newEtag, string newChangeVector)
-        {
-            var table = context.Transaction.InnerTransaction.OpenTable(TombstonesSchema, CountersTombstonesSlice);
-            using (Slice.From(context.Allocator, newChangeVector, out var cv))
-            using (DocumentIdWorker.GetStringPreserveCase(context, collectionName, out Slice collectionSlice))
-            using (table.Allocate(out TableValueBuilder tvb))
-            {
-                tvb.Add(keySlice.Content.Ptr, keySlice.Size);
-                tvb.Add(Bits.SwapBytes(newEtag));
-                tvb.Add(Bits.SwapBytes(deletedEtag)); // etag that was deleted
-                tvb.Add(context.GetTransactionMarker());
-                tvb.Add((byte)Tombstone.TombstoneType.Counter);
-                tvb.Add(collectionSlice);
-                tvb.Add((int)DocumentFlags.None);
-                tvb.Add(cv.Content.Ptr, cv.Size); // change vector
-                tvb.Add(lastModifiedTicks);
-                table.Insert(tvb);
             }
         }
 

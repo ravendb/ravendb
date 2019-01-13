@@ -255,7 +255,6 @@ namespace Raven.Server.Documents.Handlers
             public SmugglerCounterBatchCommand(DocumentDatabase database)
             {
                 _fromSmuggler = true;
-
                 _database = database;
                 _dictionary = new Dictionary<string, CounterGroup>();
                 _fromEtl =  false;
@@ -304,7 +303,6 @@ namespace Raven.Server.Documents.Handlers
 
             protected override int ExecuteCmd(DocumentsOperationContext context)
             {
-
                 var countersToAdd = new SortedSet<string>(StringComparer.OrdinalIgnoreCase);
 
                 if (_legacyDictionary != null)
@@ -404,47 +402,55 @@ namespace Raven.Server.Documents.Handlers
             {
                 lastCv = null;
                 var dbIds = new Dictionary<string, int>();
-                var djv = new DynamicJsonValue(); 
-                var scopes = new List<ByteStringContext<ByteStringMemoryCache>.InternalScope>();
+                var counters = new DynamicJsonValue(); 
+                var counterModificationScopes = new List<ByteStringContext<ByteStringMemoryCache>.InternalScope>();
 
-                foreach (var kvp in dict)
+                try
                 {
-                    var sizeToAllocate = CountersStorage.SizeOfCounterValues * kvp.Value.Count;
-
-                    scopes.Add(context.Allocator.Allocate(sizeToAllocate, out var newVal));
-
-                    var name = kvp.Key;
-                    foreach (var tuple in kvp.Value)
+                    foreach (var kvp in dict)
                     {
-                        var dbId = tuple.ChangeVector.Substring(tuple.ChangeVector.Length - 22); //???
-                        if (dbIds.TryGetValue(dbId, out var dbIdIndex) == false)
+                        var sizeToAllocate = CountersStorage.SizeOfCounterValues * kvp.Value.Count;
+
+                        counterModificationScopes.Add(context.Allocator.Allocate(sizeToAllocate, out var newVal));
+
+                        var name = kvp.Key;
+                        foreach (var tuple in kvp.Value)
                         {
-                            dbIdIndex = dbIds.Count;
-                            dbIds.TryAdd(dbId, dbIdIndex);
+                            var dbId = tuple.ChangeVector.Substring(tuple.ChangeVector.Length - CountersStorage.DbIdAsBase64Size);
+                            if (dbIds.TryGetValue(dbId, out var dbIdIndex) == false)
+                            {
+                                dbIdIndex = dbIds.Count;
+                                dbIds.TryAdd(dbId, dbIdIndex);
+                            }
+
+                            var etag = ChangeVectorUtils.GetEtagById(tuple.ChangeVector, dbId);
+
+                            var newEntry = (CountersStorage.CounterValues*)newVal.Ptr + dbIdIndex;
+                            newEntry->Value = tuple.Value;
+                            newEntry->Etag = etag;
                         }
 
-                        var etag = ChangeVectorUtils.GetEtagById(tuple.ChangeVector, dbId);
+                        lastCv = kvp.Value[kvp.Value.Count - 1].ChangeVector;
 
-                        var newEntry = (CountersStorage.CounterValues*)newVal.Ptr + dbIdIndex;
-                        newEntry->Value = tuple.Value;
-                        newEntry->Etag = etag;
+                        counters[name] = new BlittableJsonReaderObject.RawBlob { Ptr = newVal.Ptr, Length = newVal.Length };
                     }
 
-                    lastCv = kvp.Value[kvp.Value.Count -1].ChangeVector;
+                    var values = context.ReadObject(new DynamicJsonValue
+                    {
+                        [CountersStorage.DbIds] = dbIds.Keys,
+                        [CountersStorage.Counters] = counters
+                    }, null);
 
-                    djv[name] = new BlittableJsonReaderObject.RawBlob { Ptr = newVal.Ptr, Length = newVal.Length };
+                    return values;
+
                 }
-
-                djv[CountersStorage.DbIds] = dbIds.Keys;
-
-                var values = context.ReadObject(djv, null);
-
-                foreach (var scope in scopes)
+                finally 
                 {
-                    scope.Dispose();
+                    foreach (var scope in counterModificationScopes)
+                    {
+                        scope.Dispose();
+                    }
                 }
-
-                return values;
             }
 
             public override TransactionOperationsMerger.IReplayableCommandDto<TransactionOperationsMerger.MergedTransactionCommand> ToDto(JsonOperationContext context)
