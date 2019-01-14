@@ -45,6 +45,8 @@ interface computedAppUrls {
     databaseRecord: KnockoutComputed<string>;
     revisions: KnockoutComputed<string>;
     expiration: KnockoutComputed<string>;
+    customSorters: KnockoutComputed<string>;
+    editCustomSorter: KnockoutComputed<string>;
     connectionStrings: KnockoutComputed<string>;
     conflictResolution: KnockoutComputed<string>;
 
