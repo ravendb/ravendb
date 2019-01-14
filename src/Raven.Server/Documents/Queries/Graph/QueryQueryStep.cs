@@ -104,7 +104,7 @@ namespace Raven.Server.Documents.Queries.Graph
 
         public bool GetNext(out Match match)
         {
-            _token.CheckIfCancellationIsRequested();
+            _token.ThrowIfCancellationRequested();
             if (_index >= _results.Count)
             {
                 match = default;
@@ -174,7 +174,7 @@ namespace Raven.Server.Documents.Queries.Graph
 
         private async Task CompleteInitializeAsync(Task<DocumentQueryResult> results)
         {
-            _token.CheckIfCancellationIsRequested();
+            _token.ThrowIfCancellationRequested();
             CompleteInitialization(await results);
         }
 
@@ -184,7 +184,7 @@ namespace Raven.Server.Documents.Queries.Graph
             _index = 0;
             foreach (var result in results.Results)
             {
-                _token.CheckIfCancellationIsRequested();
+                _token.ThrowIfCancellationRequested();
                 var match = new Match();
                 match.Set(_alias, result);
                 _results.Add(match);
@@ -203,7 +203,7 @@ namespace Raven.Server.Documents.Queries.Graph
 
         public List<Match> GetById(string id)
         {
-            _token.CheckIfCancellationIsRequested();
+            _token.ThrowIfCancellationRequested();
             if (_results.Count != 0 && _resultsById.Count == 0)// only reason is that we are projecting non documents here
                 throw new InvalidOperationException("Target vertices in a pattern match that originate from map/reduce WITH clause are not allowed. (pattern match has multiple statements in the form of (a)-[:edge]->(b) ==> in such pattern, 'b' must not originate from map/reduce index query)");
               
@@ -228,7 +228,7 @@ namespace Raven.Server.Documents.Queries.Graph
 
         public void Analyze(Match match, GraphDebugInfo graphDebugInfo)
         {
-            _token.CheckIfCancellationIsRequested();
+            _token.ThrowIfCancellationRequested();
             var result = match.GetResult(_alias.Value);
             if (result == null)
                 return;
@@ -272,7 +272,7 @@ namespace Raven.Server.Documents.Queries.Graph
 
             public bool GetAndClearResults(List<Match> matches)
             {
-                _token.CheckIfCancellationIsRequested();
+                _token.ThrowIfCancellationRequested();
                 if (_temp.Count == 0)
                     return false;
 
@@ -285,13 +285,13 @@ namespace Raven.Server.Documents.Queries.Graph
 
             public ValueTask Initialize()
             {
-                _token.CheckIfCancellationIsRequested();
+                _token.ThrowIfCancellationRequested();
                 return _parent.Initialize();
             }
 
             public void Run(Match src, string alias)
             {
-                _token.CheckIfCancellationIsRequested();
+                _token.ThrowIfCancellationRequested();
                 // here we already get the right match, and we do nothing with it.
                 var clone = new Match(src);
                 clone.Remove(alias);

@@ -185,7 +185,7 @@ namespace Raven.Client
                 }
 
                 public const string SideBySideIndexNamePrefix = "ReplacementOf/";
-                public const string DummyGraphIndexName = "@graph";
+                internal const string DummyGraphIndexName = "@graph";
 
                 public class Fields
                 {

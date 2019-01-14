@@ -152,7 +152,7 @@ namespace Raven.Server.Documents.Queries.Graph
 
         public bool GetNext(out Match match)
         {
-            _token.CheckIfCancellationIsRequested();
+            _token.ThrowIfCancellationRequested();
             if (_index >= _results.Count)
             {
                 match = default;
@@ -174,7 +174,7 @@ namespace Raven.Server.Documents.Queries.Graph
 
             _index = 0;
 
-            _token.CheckIfCancellationIsRequested();
+            _token.ThrowIfCancellationRequested();
             var leftTask = _left.Initialize();
             if (leftTask.IsCompleted == false)
             {
@@ -192,7 +192,7 @@ namespace Raven.Server.Documents.Queries.Graph
                 if (item.Right == null)
                     continue;
 
-                _token.CheckIfCancellationIsRequested();
+                _token.ThrowIfCancellationRequested();
 
                 var stepTask = item.Right.Initialize();
                 if (stepTask.IsCompleted == false)
@@ -215,7 +215,7 @@ namespace Raven.Server.Documents.Queries.Graph
 
         private async ValueTask CompleteNextStepTaskAsync(ValueTask nextTask)
         {
-            _token.CheckIfCancellationIsRequested();
+            _token.ThrowIfCancellationRequested();
             await nextTask;
             CompleteInitialization();
         }
@@ -230,7 +230,7 @@ namespace Raven.Server.Documents.Queries.Graph
             var matches = new List<Match>();
             while (_left.GetNext(out var match))
             {
-                _token.CheckIfCancellationIsRequested();
+                _token.ThrowIfCancellationRequested();
                 matches.Clear();
                 ProcessSingleResultRecursive(match, matches);
                 if (matches.Count > 0)
@@ -269,7 +269,7 @@ namespace Raven.Server.Documents.Queries.Graph
 
             public ValueTask Initialize()
             {
-                _token.CheckIfCancellationIsRequested();
+                _token.ThrowIfCancellationRequested();
                 _parent._skipMaterialization = true;
                 var task = _parent.Initialize();
                 if (task.IsCompleted)
@@ -282,14 +282,14 @@ namespace Raven.Server.Documents.Queries.Graph
 
             private async ValueTask CompleteInit(ValueTask task)
             {
-                _token.CheckIfCancellationIsRequested();
+                _token.ThrowIfCancellationRequested();
                 await task;
                 _parent._skipMaterialization = false;
             }
 
             public void Run(Match src, string alias)
             {
-                _token.CheckIfCancellationIsRequested();
+                _token.ThrowIfCancellationRequested();
                 _parent.ProcessSingleResultRecursive(src, _matches);
             }
 
@@ -306,21 +306,21 @@ namespace Raven.Server.Documents.Queries.Graph
 
         private async Task CompleteInitializationForStepAsync(int position, ValueTask stepTask)
         {
-            _token.CheckIfCancellationIsRequested();
+            _token.ThrowIfCancellationRequested();
             await stepTask;
             await CompleteInitializationAfterLeft(position + 1);
         }
 
         private async Task CompleteLeftInitializationAsync(ValueTask leftTask)
         {
-            _token.CheckIfCancellationIsRequested();
+            _token.ThrowIfCancellationRequested();
             await leftTask;
             await CompleteInitializationAfterLeft(0);
         }
 
         private void ProcessSingleResultRecursive(Match currentMatch, List<Match> matches)
         {
-            _token.CheckIfCancellationIsRequested();
+            _token.ThrowIfCancellationRequested();
             _visited.Clear();
             _path.Clear();
             int? bestPathLength = null;
@@ -350,7 +350,7 @@ namespace Raven.Server.Documents.Queries.Graph
 
             while (true)
             {
-                _token.CheckIfCancellationIsRequested();
+                _token.ThrowIfCancellationRequested();
                 // the first item is always the root
                 if (_path.Count - 1 == _options.Max)
                 {
@@ -382,7 +382,7 @@ namespace Raven.Server.Documents.Queries.Graph
 
                 while (true)
                 {
-                    _token.CheckIfCancellationIsRequested();
+                    _token.ThrowIfCancellationRequested();
                     if (_path.Count == 0)
                         return;
 

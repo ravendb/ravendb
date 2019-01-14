@@ -17,7 +17,7 @@ namespace Raven.Server.Documents.Queries.Graph
 
         public virtual IGraphQueryStep Visit(IGraphQueryStep root)
         {
-            _token.CheckIfCancellationIsRequested();
+            _token.ThrowIfCancellationRequested();
 
             switch (root)
             {
@@ -43,7 +43,7 @@ namespace Raven.Server.Documents.Queries.Graph
 
         public virtual void Visit(ISingleGraphStep step)
         {
-            _token.CheckIfCancellationIsRequested();
+            _token.ThrowIfCancellationRequested();
             switch (step)
             {
                 case EdgeQueryStep.EdgeMatcher em:
@@ -59,7 +59,7 @@ namespace Raven.Server.Documents.Queries.Graph
         //This method is only invoked from recursive step and fix the problem that we don't visit edges after recursive steps
         public virtual void VisitEdgeMatcher(EdgeQueryStep.EdgeMatcher em)
         {
-            _token.CheckIfCancellationIsRequested();
+            _token.ThrowIfCancellationRequested();
             var newRight = Visit(em._parent.Right);
             if (ReferenceEquals(newRight, em._parent.Right) == false)
             {
@@ -69,13 +69,13 @@ namespace Raven.Server.Documents.Queries.Graph
 
         public virtual IGraphQueryStep VisitQueryQueryStep(QueryQueryStep qqs)
         {
-            _token.CheckIfCancellationIsRequested();
+            _token.ThrowIfCancellationRequested();
             return qqs;
         }
 
         public virtual IGraphQueryStep VisitEdgeQueryStep(EdgeQueryStep eqs)
         {
-            _token.CheckIfCancellationIsRequested();
+            _token.ThrowIfCancellationRequested();
             var left = Visit(eqs.Left);
             var right = Visit(eqs.Right);
 
@@ -89,13 +89,13 @@ namespace Raven.Server.Documents.Queries.Graph
 
         public virtual IGraphQueryStep VisitCollectionDestinationQueryStep(CollectionDestinationQueryStep cdqs)
         {
-            _token.CheckIfCancellationIsRequested();
+            _token.ThrowIfCancellationRequested();
             return cdqs;
         }
 
         public virtual IGraphQueryStep VisitIntersectionQueryStepExcept(IntersectionQueryStep<Except> iqse)
         {
-            _token.CheckIfCancellationIsRequested();
+            _token.ThrowIfCancellationRequested();
             var left = Visit(iqse.Left);
             var right = Visit(iqse.Right);
 
@@ -107,7 +107,7 @@ namespace Raven.Server.Documents.Queries.Graph
 
         public virtual IGraphQueryStep VisitIntersectionQueryStepUnion(IntersectionQueryStep<Union> iqsu)
         {
-            _token.CheckIfCancellationIsRequested();
+            _token.ThrowIfCancellationRequested();
             var left = Visit(iqsu.Left);
             var right = Visit(iqsu.Right);
 
@@ -119,7 +119,7 @@ namespace Raven.Server.Documents.Queries.Graph
 
         public virtual IGraphQueryStep VisitIntersectionQueryStepIntersection(IntersectionQueryStep<Intersection> iqsi)
         {
-            _token.CheckIfCancellationIsRequested();
+            _token.ThrowIfCancellationRequested();
             var left = Visit(iqsi.Left);
             var right = Visit(iqsi.Right);
 
@@ -131,7 +131,7 @@ namespace Raven.Server.Documents.Queries.Graph
 
         public virtual IGraphQueryStep VisitRecursionQueryStep(RecursionQueryStep rqs)
         {
-            _token.CheckIfCancellationIsRequested();
+            _token.ThrowIfCancellationRequested();
             var left = Visit(rqs.Left);
             bool modified = ReferenceEquals(left, rqs.Left) == false;
 

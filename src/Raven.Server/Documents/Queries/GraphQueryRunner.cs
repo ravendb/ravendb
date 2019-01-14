@@ -120,7 +120,7 @@ namespace Raven.Server.Documents.Queries
         private GraphQueryDoneRunning MarkQueryAsRunning(IIndexQuery query, OperationCancelToken token)
         {
             var queryStartTime = DateTime.UtcNow;
-            var queryId = Database.QueryRunner.NextQueryId;
+            var queryId = Database.QueryRunner.GetNextQueryId();
 
 
             var executingQueryInfo = new ExecutingQueryInfo(queryStartTime, query, queryId, token);

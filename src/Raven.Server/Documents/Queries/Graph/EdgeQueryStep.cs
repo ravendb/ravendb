@@ -86,7 +86,7 @@ namespace Raven.Server.Documents.Queries.Graph
             if (_index != -1)
                 return default;
 
-            _token.CheckIfCancellationIsRequested();
+            _token.ThrowIfCancellationRequested();
             var leftTask = _left.Initialize();
             if (leftTask.IsCompleted)
             {
@@ -97,7 +97,7 @@ namespace Raven.Server.Documents.Queries.Graph
                     return default;
                 }
 
-                _token.CheckIfCancellationIsRequested();
+                _token.ThrowIfCancellationRequested();
                 var rightTask = _right.Initialize();
                 if (rightTask.IsCompleted)
                 {
@@ -112,14 +112,14 @@ namespace Raven.Server.Documents.Queries.Graph
 
         private async Task InitializeRightAsync(ValueTask rightTask)
         {
-            _token.CheckIfCancellationIsRequested();
+            _token.ThrowIfCancellationRequested();
             await rightTask;
             CompleteInitialization();
         }
 
         private async Task InitializeLeftAsync(ValueTask leftTask)
         {
-            _token.CheckIfCancellationIsRequested();
+            _token.ThrowIfCancellationRequested();
             await leftTask;
             //At this point we know we are not going to yield results we can skip running right hand side
             if (Left.IsEmpty())
@@ -151,7 +151,7 @@ namespace Raven.Server.Documents.Queries.Graph
             var alias = _left.GetOutputAlias();
             while (_left.GetNext(out var left))
             {
-                _token.CheckIfCancellationIsRequested();
+                _token.ThrowIfCancellationRequested();
                 edgeMatcher.Run(left, alias);
             }
         }
@@ -230,7 +230,7 @@ namespace Raven.Server.Documents.Queries.Graph
 
         public bool GetNext(out Match match)
         {
-            _token.CheckIfCancellationIsRequested();
+            _token.ThrowIfCancellationRequested();
             if (_index >= _results.Count)
             {
                 match = default;
