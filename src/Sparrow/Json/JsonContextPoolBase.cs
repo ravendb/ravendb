@@ -427,12 +427,12 @@ namespace Sparrow.Json
                 _nativeMemoryCleaner.Dispose();
 
 #if Debug
-                var z = new HashSet<ContextStack>();
+                var allThreadsContextStacks = new HashSet<ContextStack>();
 #endif
                 foreach (var kvp in EnumerateAllThreadContexts())
                 {
 #if Debug
-                    if (z.Add(kvp) == false)
+                    if (allThreadsContextStacks.Add(kvp) == false)
                     {
                         throw new InvalidOperationException("threads list is not unique");
                     }
