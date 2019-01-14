@@ -284,7 +284,7 @@ namespace Raven.Server.Documents.Handlers.Debugging
                 var ids = new DynamicJsonArray(stats.OrderByDescending(x => x.TotalAllocated).Select(x => new DynamicJsonValue
                 {
                     ["Id"] = x.UnmanagedThreadId,
-                    ["ManagedThreadId"] = x.Id,
+                    ["ManagedThreadId"] = x.ManagedThreadId,
                     ["Allocations"] = x.TotalAllocated,
                     ["HumaneAllocations"] = Size.Humane(x.TotalAllocated)
                 }));
@@ -298,7 +298,7 @@ namespace Raven.Server.Documents.Handlers.Debugging
                 {
                     var threadStats = stats.First();
                     groupStats["Id"] = threadStats.UnmanagedThreadId;
-                    groupStats["ManagedThreadId"] = threadStats.Id;
+                    groupStats["ManagedThreadId"] = threadStats.ManagedThreadId;
                 }
                 else
                 {

@@ -67,7 +67,7 @@ namespace Sparrow.Json
 
             public ContextStackThreadReleaser()
             {
-                _threadId = NativeMemory.CurrentThreadStats.Id;
+                _threadId = NativeMemory.CurrentThreadStats.InternalId;
             }
 
             ~ContextStackThreadReleaser()
@@ -224,13 +224,13 @@ namespace Sparrow.Json
 
         private ContextStack MaybeGetCurrentContextStack()
         {
-            _contextStacksByThreadId.TryGetValue(NativeMemory.CurrentThreadStats.Id, out var x);
+            _contextStacksByThreadId.TryGetValue(NativeMemory.CurrentThreadStats.InternalId, out var x);
             return x;
         }
 
         private ContextStack GetCurrentContextStack()
         {
-            return _contextStacksByThreadId.GetOrAdd(NativeMemory.CurrentThreadStats.Id, 
+            return _contextStacksByThreadId.GetOrAdd(NativeMemory.CurrentThreadStats.InternalId, 
                 currentThreadId =>
                 {
                     EnsureCurrentThreadContextWillBeReleased(currentThreadId);
@@ -247,12 +247,12 @@ namespace Sparrow.Json
             {
                 current = MaybeGetCurrentContextStack()?.Head;
 
-                _contextStacksByThreadId.TryRemove(NativeMemory.CurrentThreadStats.Id, out _);
+                _contextStacksByThreadId.TryRemove(NativeMemory.CurrentThreadStats.InternalId, out _);
 
                 // we want to clear our JsonContextPool's current thread's state from the _releaser, but to avoid touching any other states
                 foreach (var threadIdHolder in _threadIds)
                 {
-                    if (Interlocked.CompareExchange(ref threadIdHolder.ThreadId, -1, NativeMemory.CurrentThreadStats.Id) == NativeMemory.CurrentThreadStats.Id)
+                    if (Interlocked.CompareExchange(ref threadIdHolder.ThreadId, -1, NativeMemory.CurrentThreadStats.InternalId) == NativeMemory.CurrentThreadStats.InternalId)
                     {
                         _releaser.RemoveThreadIdHolder(threadIdHolder);
                         break;

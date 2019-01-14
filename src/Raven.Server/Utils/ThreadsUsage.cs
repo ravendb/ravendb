@@ -68,7 +68,7 @@ namespace Raven.Server.Utils
                         if (threadAllocations.TryGetValue((ulong)thread.Id, out var threadStats))
                         {
                             threadName = threadStats.Name ?? "Thread Pool Thread";
-                            managedThreadId = threadStats.Id;
+                            managedThreadId = threadStats.ManagedThreadId;
                         }
 
                         var threadState = GetThreadInfoOrDefault<ThreadState?>(() => thread.ThreadState);

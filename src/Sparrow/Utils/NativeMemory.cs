@@ -36,12 +36,12 @@ namespace Sparrow.Utils
 
         public class ThreadStats
         {
-            public int Id;
+            public int InternalId;
             public ulong UnmanagedThreadId;
             public long Allocations;
             public long ReleasesFromOtherThreads;
             private Thread _threadInstance;
-            private readonly int ManagedThreadId;
+            public readonly int ManagedThreadId;
             private string _lastName = "Unknown";
             public string Name => _threadInstance?.Name ?? _lastName;
 
@@ -75,7 +75,7 @@ namespace Sparrow.Utils
             {
                 _threadInstance = Thread.CurrentThread;
                 ManagedThreadId = _threadInstance.ManagedThreadId;
-                Id = Interlocked.Increment(ref _uniqueThreadId);                    
+                InternalId = Interlocked.Increment(ref _uniqueThreadId);                    
                 UnmanagedThreadId = PlatformDetails.GetCurrentThreadId();
             }
         }
