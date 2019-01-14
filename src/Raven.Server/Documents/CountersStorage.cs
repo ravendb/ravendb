@@ -1063,5 +1063,39 @@ namespace Raven.Server.Documents
 
             return countersToAdd;
         }
+
+        public static void ConvertFromBlobToNumbers(JsonOperationContext context, CounterGroupDetail counterGroupDetail)
+        {
+            counterGroupDetail.Values.TryGet(Counters, out BlittableJsonReaderObject counters);
+            counters.Modifications = new DynamicJsonValue(counters);
+
+            var prop = new BlittableJsonReaderObject.PropertyDetails();
+
+            for (int i = 0; i < counters.Count; i++)
+            {
+                counters.GetPropertyByIndex(i, ref prop);
+
+                var dja = new DynamicJsonArray();
+                var blob = (BlittableJsonReaderObject.RawBlob)prop.Value;
+                var existingCount = blob.Length / SizeOfCounterValues;
+
+                for (int dbIdIndex = 0; dbIdIndex < existingCount; dbIdIndex++)
+                {
+                    var current = (CounterValues*)blob.Ptr + dbIdIndex;
+
+                    dja.Add(current->Value);
+                    dja.Add(current->Etag);
+                }
+
+                counters.Modifications[prop.Name] = dja;
+            }
+
+            var oldData = counterGroupDetail.Values;
+
+            counterGroupDetail.Values = context.ReadObject(counterGroupDetail.Values, null);
+
+            oldData.Dispose();
+        }
+
     }
 }
