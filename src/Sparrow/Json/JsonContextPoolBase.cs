@@ -249,17 +249,20 @@ namespace Sparrow.Json
 
                 _contextStacksByThreadId.TryRemove(NativeMemory.CurrentThreadStats.InternalId, out _);
 
-                // we want to clear our JsonContextPool's current thread's state from the _releaser, but to avoid touching any other states
-                foreach (var threadIdHolder in _threadIds)
+                if (_releaser != null)
                 {
-                    if (Interlocked.CompareExchange(ref threadIdHolder.ThreadId, -1, NativeMemory.CurrentThreadStats.InternalId) == NativeMemory.CurrentThreadStats.InternalId)
+                    // we want to clear our JsonContextPool's current thread's state from the _releaser, but to avoid touching any other states
+                    foreach (var threadIdHolder in _threadIds)
                     {
-                        _releaser.RemoveThreadIdHolder(threadIdHolder);
-                        break;
+                        if (Interlocked.CompareExchange(ref threadIdHolder.ThreadId, -1, NativeMemory.CurrentThreadStats.InternalId) == NativeMemory.CurrentThreadStats.InternalId)
+                        {
+                            _releaser.RemoveThreadIdHolder(threadIdHolder);
+                            break;
+                        }
                     }
-                }
 
-                _releaser.RemoveContextPool(this);
+                    _releaser.RemoveContextPool(this);
+                }
 
                 if (current == null)
                     return;
