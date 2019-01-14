@@ -411,7 +411,7 @@ namespace Raven.Server.Smuggler.Documents
 
             public void WriteCounter(CounterGroupDetail counterDetail)
             {
-                ConvertFromBlobToNumbers(counterDetail);
+                CountersStorage.ConvertFromBlobToNumbers(_context, counterDetail);
 
                 if (First == false)
                     Writer.WriteComma();
@@ -438,35 +438,6 @@ namespace Raven.Server.Smuggler.Documents
                 // Used only in Database Destination 
                 throw new NotSupportedException("WriteLegacyCounter is not supported when writing to a Stream destination, " +
                                                 "it is only supported when writing to Database destination. Shouldn't happen.");
-            }
-
-            private unsafe void ConvertFromBlobToNumbers(CounterGroupDetail counterDetail)
-            {
-                counterDetail.Values.Modifications = new DynamicJsonValue(counterDetail.Values);
-                var prop = new BlittableJsonReaderObject.PropertyDetails();
-
-                for (int i = 0; i < counterDetail.Values.Count; i++)
-                {
-                    counterDetail.Values.GetPropertyByIndex(i, ref prop);
-                    if (prop.Name.Equals(CountersStorage.DbIds))
-                        continue;
-
-                    var dja = new DynamicJsonArray();
-                    var blob = (BlittableJsonReaderObject.RawBlob)prop.Value;
-                    var existingCount = blob.Length / CountersStorage.SizeOfCounterValues;
-
-                    for (int dbIdIndex = 0; dbIdIndex < existingCount; dbIdIndex++)
-                    {
-                        var current = (CountersStorage.CounterValues*)blob.Ptr + dbIdIndex;
-
-                        dja.Add(current->Value);
-                        dja.Add(current->Etag);
-                    }
-
-                    counterDetail.Values.Modifications[prop.Name] = dja;
-                }
-
-                counterDetail.Values = _context.ReadObject(counterDetail.Values, null);
             }
 
             public StreamCounterActions(BlittableJsonTextWriter writer, DocumentsOperationContext context, string propertyName) : base(writer, propertyName)

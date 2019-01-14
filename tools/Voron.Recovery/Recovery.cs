@@ -875,8 +875,6 @@ namespace Voron.Recovery
 
         private bool WriteCounter(byte* mem, int sizeInBytes, BlittableJsonTextWriter countersWriter, JsonOperationContext context, long startOffset)
         {
-            //TODO aviv
-
             try
             {
                 var tvr = new TableValueReader(mem, sizeInBytes);
@@ -886,37 +884,40 @@ namespace Voron.Recovery
 
                 _counterWritten = false;
 
-                CounterGroupDetail counter = null;
+                CounterGroupDetail counterGroup = null;
                 try
                 {
-                    counter = CountersStorage.TableValueToCounterGroupDetail(context, tvr);
-                    if (counter == null)
+                    counterGroup = CountersStorage.TableValueToCounterGroupDetail(context, tvr);
+                    if (counterGroup == null)
                     {
                         if (_logger.IsOperationsEnabled)
                             _logger.Operations($"Failed to convert table value to counter at position {GetFilePosition(startOffset, mem)}");
                         return false;
                     }
+
+                    CountersStorage.ConvertFromBlobToNumbers(context, counterGroup);
+
                 }
                 catch (Exception e)
                 {
                     if (_logger.IsOperationsEnabled)
-                        _logger.Operations($"Found invalid counter item at position={GetFilePosition(startOffset, mem)} with document Id={counter?.CounterKey ?? "null"} and counter values={counter?.Values}{Environment.NewLine}{e}");
+                        _logger.Operations($"Found invalid counter item at position={GetFilePosition(startOffset, mem)} with document Id={counterGroup?.CounterKey ?? "null"} and counter values={counterGroup?.Values}{Environment.NewLine}{e}");
                     return false;
                 }
 
                 context.Write(countersWriter, new DynamicJsonValue
                 {
-                    [nameof(CounterItem.DocId)] = counter.CounterKey,
-                    [nameof(CounterItem.ChangeVector)] = counter.ChangeVector,
-                    [nameof(CounterItem.Batch.Values)] = counter.Values
+                    [nameof(CounterItem.DocId)] = counterGroup.CounterKey.ToString(),
+                    [nameof(CounterItem.ChangeVector)] = counterGroup.ChangeVector.ToString(),
+                    [nameof(CounterItem.Batch.Values)] = counterGroup.Values
                 });
 
                 _counterWritten = true;
                 if (_logger.IsInfoEnabled)
-                    _logger.Info($"Found counter item with document Id={counter.CounterKey} and counter values={counter.Values}");
+                    _logger.Info($"Found counter item with document Id={counterGroup.CounterKey} and counter values={counterGroup.Values}");
 
-                _lastRecoveredDocumentKey = counter.CounterKey;
-                _uniqueCountersDiscovered.Add((null, counter.CounterKey));
+                _lastRecoveredDocumentKey = counterGroup.CounterKey;
+                _uniqueCountersDiscovered.Add((null, counterGroup.CounterKey));
                 _numberOfCountersRetrieved++;
 
                 return true;
