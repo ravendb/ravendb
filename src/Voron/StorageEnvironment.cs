@@ -713,7 +713,7 @@ namespace Voron
                 currentWriteTransactionHolder == NativeMemory.CurrentThreadStats)
             {
                 throw new InvalidOperationException($"A write transaction is already opened by thread name: " +
-                                                    $"{currentWriteTransactionHolder.Name}, Id: {currentWriteTransactionHolder.Id}");
+                                                    $"{currentWriteTransactionHolder.Name}, Id: {currentWriteTransactionHolder.ManagedThreadId}");
             }
         }
 
@@ -753,7 +753,7 @@ namespace Voron
 
             var message = $"Waited for {wait} for transaction write lock, but could not get it";
             if (copy != null)
-                message += $", the tx is currently owned by thread {copy.Id} - {copy.Name}, OS thread id: {copy.UnmanagedThreadId}";
+                message += $", the tx is currently owned by thread {copy.ManagedThreadId} - {copy.Name}, OS thread id: {copy.UnmanagedThreadId}";
 
             throw new TimeoutException(message);
         }
@@ -768,7 +768,7 @@ namespace Voron
 
             var message = $"Waited for {wait} for read access of the flushing in progress lock, but could not get it";
             if (copy != null)
-                message += $", the flushing in progress lock is currently owned by thread {copy.Id} - {copy.Name}";
+                message += $", the flushing in progress lock is currently owned by thread {copy.ManagedThreadId} - {copy.Name}";
 
             throw new TimeoutException(message);
         }
