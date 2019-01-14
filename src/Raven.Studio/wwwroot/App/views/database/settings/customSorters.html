@@ -1,0 +1,43 @@
+<div class="destinations flex-vertical absolute-fill content-margin">
+    <div class="row flex-row flex-grow flex-stretch-items">
+        <div class="col-sm-12 col-lg-6 flex-vertical">
+            <div class="flex-header">
+                <div>
+                    <a class="btn btn-primary" data-bind="attr: { href: addUrl }">
+                        <i class="icon-plus"></i><span>Add Custom Sorter</span>
+                    </a>
+                </div>
+            </div>
+
+            <div class="hr-title">
+                <h5 class="no-text-transform"><span>Current custom sorters</span></h5><hr>
+            </div>
+            
+            <div data-bind="foreach: sorters">
+                <div class="panel item">
+                    <div class="padding padding-sm">
+                        <div class="flex-horizontal">
+                            <div class="flex-grow info">
+                                <span data-bind="text: Name"></span>
+                            </div>
+                            <div class="actions">
+                                <button type="button" data-bind="click: $root.editSorter.bind($root, $data)"
+                                        class="btn btn-default"><i class="icon-edit" title="Edit custom sorter"></i>
+                                </button>
+                                <button type="button" data-bind="click: $root.confirmRemoveSorter.bind($root, $data)"
+                                        class="btn btn-danger"><i class="icon-trash" title="Delete custom sorter"></i>
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <div data-bind="visible: sorters().length === 0">
+                <h3 class="text-center text-muted">No custom sorters have been defined.</h3>
+            </div>
+        </div>
+
+    </div>
+</div>
+

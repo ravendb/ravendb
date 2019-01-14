@@ -74,6 +74,8 @@ class appUrl {
         databaseRecord: ko.pureComputed(() => appUrl.forDatabaseRecord(appUrl.currentDatabase())),
         revisions: ko.pureComputed(() => appUrl.forRevisions(appUrl.currentDatabase())),
         expiration: ko.pureComputed(() => appUrl.forExpiration(appUrl.currentDatabase())),
+        customSorters: ko.pureComputed(() => appUrl.forCustomSorters(appUrl.currentDatabase())),
+        editCustomSorter: ko.pureComputed(() => appUrl.forEditCustomSorter(appUrl.currentDatabase())),
         connectionStrings: ko.pureComputed(() => appUrl.forConnectionStrings(appUrl.currentDatabase())),
         conflictResolution: ko.pureComputed(() => appUrl.forConflictResolution(appUrl.currentDatabase())),
 
@@ -248,6 +250,17 @@ class appUrl {
     static forExpiration(db: database | databaseInfo): string {
         return "#databases/settings/expiration?" + appUrl.getEncodedDbPart(db);
     }
+    
+    static forCustomSorters(db: database | databaseInfo): string {
+        return "#databases/settings/customSorters?" + appUrl.getEncodedDbPart(db);
+    }
+
+    static forEditCustomSorter(db: database | databaseInfo, sorterName?: string): string {
+        const databasePart = appUrl.getEncodedDbPart(db);
+        const namePart = sorterName ? "&name=" + encodeURIComponent(sorterName) : "";
+
+        return "#databases/settings/editCustomSorter?" + databasePart + namePart;
+    }
 
     static forConnectionStrings(db: database | databaseInfo, type?: string,  name?: string): string {
         const databaseUrlPart = appUrl.getEncodedDbPart(db);
@@ -418,7 +431,7 @@ class appUrl {
         const taskPart = taskId ? "&taskId=" + taskId : "";
         return "#databases/tasks/editSqlEtlTask?" + databasePart + taskPart;
     }
-
+    
     static forSampleData(db: database | databaseInfo): string {
         const databasePart = appUrl.getEncodedDbPart(db);
         return "#databases/tasks/sampleData?" + databasePart;

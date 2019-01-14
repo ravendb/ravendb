@@ -1,0 +1,38 @@
+<form class="edit-subscription flex-vertical absolute-fill flex-form content-margin" data-bind="submit: save">
+    <div class="flex-header">
+        <button type="submit" class="btn btn-primary" data-bind="enable: dirtyFlag().isDirty">
+            <i class="icon-save"></i>
+            <span>Save</span>
+        </button>
+        <button class="btn btn-default" data-bind="click: cancelOperation" title="Return to Custom Sorters View">
+            <i class="icon-cancel"></i>
+            <span>Cancel</span>
+        </button>
+        <label for="importFilePicker" class="btn btn-default pull-right">
+            <i class="icon-import"></i><span>Load from file</span>
+        </label>
+
+        <div class="input-group file-input" title="Import custom sorter from file">
+            <input type="file" id="importFilePicker" data-bind="event: { change: fileSelected }" tabindex="-1" accept=".cs">
+        </div>
+        
+    </div>
+    <div class="panel padding flex-grow flex-vertical" data-bind="with: editedSorter">
+        <h3 data-bind="text: $parent.isAddingNewSorter() ? `New Custom Sorter` : `Edit Custom Sorter`"></h3>
+        <div class="form-group margin-top" data-bind="validationElement: name">
+            <label class="control-label" for="sorterName">Sorter Name</label>
+            <div class="flex-grow">
+                <input type="text" class="form-control" id="sorterName" placeholder="Enter a descriptive name for sorter"
+                       data-bind="textInput: name, enable: $root.isAddingNewSorter" autocomplete="off" >    
+            </div>
+        </div>
+        <label>Code:</label>
+        <pre class="form-control margin-top flex-grow"
+             data-bind="aceEditor: { code: code, lang:'ace/mode/csharp' }, validationOptions: { errorsAsTitle: false }, validationElement: code" style="height: 300px;">
+            </pre>
+        <div data-bind="validationOptions: { errorsAsTitle: false }, validationElement: code">
+            <div class="help-block" data-bind="validationMessage: code"></div>
+        </div>
+    </div>
+</form>
+

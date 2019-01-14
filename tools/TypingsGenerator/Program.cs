@@ -27,6 +27,7 @@ using Raven.Client.Documents.Queries;
 using Raven.Client.Documents.Smuggler;
 using Raven.Client.Documents.Subscriptions;
 using Raven.Client.Documents.Operations.Counters;
+using Raven.Client.Documents.Queries.Sorting;
 using Raven.Client.Documents.Queries.Timings;
 using Raven.Client.Exceptions.Commercial;
 using Raven.Client.Http;
@@ -432,6 +433,7 @@ namespace TypingsGenerator
             scripter.AddType(typeof(DataDirectoryResult));
 
             scripter.AddType(typeof(LiveRunningQueriesCollector.ExecutingQueryCollection));
+            scripter.AddType(typeof(SorterDefinition));
 
             return scripter;
         }
