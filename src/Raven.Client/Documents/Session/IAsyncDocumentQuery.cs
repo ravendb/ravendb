@@ -67,6 +67,13 @@ namespace Raven.Client.Documents.Session
     {
     }
 
+    public interface IAsyncGraphQuery<T> :
+        IQueryBase<T, IAsyncGraphQuery<T>>,
+        IAsyncDocumentQueryBase<T>
+    {
+        IAsyncGraphQuery<T> With<TOther>(string alias, IRavenQueryable<TOther> query, CancellationToken token = default);
+    }
+
     /// <summary>
     ///     Asynchronous query against a raven index
     /// </summary>

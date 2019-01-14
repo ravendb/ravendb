@@ -322,5 +322,7 @@ namespace Raven.Client.Documents.Session
 
         void SuggestUsing(SuggestionBase suggestion);
 
+        string ParameterPrefix { get; set; }
+
     }
 }
