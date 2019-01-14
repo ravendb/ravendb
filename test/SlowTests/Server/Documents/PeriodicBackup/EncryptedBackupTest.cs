@@ -438,8 +438,7 @@ namespace SlowTests.Server.Documents.PeriodicBackup
                     IncrementalBackupFrequency = "0 */6 * * *",
                     BackupEncryptionSettings = new BackupEncryptionSettings
                     {
-                        EncryptionMode = EncryptionMode.UseDatabaseKey,
-                        AllowUnencryptedBackupForEncryptedDatabase = false
+                        EncryptionMode = EncryptionMode.UseDatabaseKey
                     }
                 };
 
@@ -509,8 +508,7 @@ namespace SlowTests.Server.Documents.PeriodicBackup
                     IncrementalBackupFrequency = "0 */6 * * *",
                     BackupEncryptionSettings = new BackupEncryptionSettings
                     {
-                        EncryptionMode = EncryptionMode.UseDatabaseKey,
-                        AllowUnencryptedBackupForEncryptedDatabase = true
+                        EncryptionMode = EncryptionMode.UseDatabaseKey
                     }
                 };
 
@@ -751,7 +749,6 @@ namespace SlowTests.Server.Documents.PeriodicBackup
                     BackupEncryptionSettings = new BackupEncryptionSettings
                     {
                         EncryptionMode = EncryptionMode.UseDatabaseKey,
-                        AllowUnencryptedBackupForEncryptedDatabase = true
                     }
                 };
 
@@ -822,8 +819,7 @@ namespace SlowTests.Server.Documents.PeriodicBackup
                     IncrementalBackupFrequency = "0 */6 * * *",
                     BackupEncryptionSettings = new BackupEncryptionSettings
                     {
-                        EncryptionMode = EncryptionMode.UseDatabaseKey,
-                        AllowUnencryptedBackupForEncryptedDatabase = false
+                        EncryptionMode = EncryptionMode.UseDatabaseKey
                     }
                 };
 
@@ -895,8 +891,7 @@ namespace SlowTests.Server.Documents.PeriodicBackup
                     BackupEncryptionSettings = new BackupEncryptionSettings
                     {
                         Key = "OI7Vll7DroXdUORtc6Uo64wdAk1W0Db9ExXXgcg5IUs=",
-                        EncryptionMode = EncryptionMode.UseProvidedKey,
-                        AllowUnencryptedBackupForEncryptedDatabase = true
+                        EncryptionMode = EncryptionMode.UseProvidedKey
                     }
                 };
 
@@ -967,8 +962,7 @@ namespace SlowTests.Server.Documents.PeriodicBackup
                     BackupEncryptionSettings = new BackupEncryptionSettings
                     {
                         Key = "OI7Vll7DroXdUORtc6Uo64wdAk1W0Db9ExXXgcg5IUs=",
-                        EncryptionMode = EncryptionMode.UseProvidedKey,
-                        AllowUnencryptedBackupForEncryptedDatabase = false
+                        EncryptionMode = EncryptionMode.UseProvidedKey
                     }
                 };
 
@@ -1090,8 +1084,7 @@ namespace SlowTests.Server.Documents.PeriodicBackup
                     IncrementalBackupFrequency = "0 */6 * * *",
                     BackupEncryptionSettings = new BackupEncryptionSettings
                     {
-                        EncryptionMode = EncryptionMode.None,
-                        AllowUnencryptedBackupForEncryptedDatabase = true
+                        EncryptionMode = EncryptionMode.None
                     }
                 };
 
