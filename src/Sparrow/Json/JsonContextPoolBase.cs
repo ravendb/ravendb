@@ -87,9 +87,19 @@ namespace Sparrow.Json
                 }
             }
 
-            public bool Add(JsonContextPoolBase<T> parent)
+            public bool AddContextPool(JsonContextPoolBase<T> parent)
             {
                 return _parents.Add(parent);
+            }
+
+            public void RemoveContextPool(JsonContextPoolBase<T> parent)
+            {
+                _parents.Remove(parent);
+            }
+
+            public void RemoveThreadIdHolder(ThreadIdHolder holder)
+            {
+                ThreadIdHolders.Remove(holder);
             }
         }
 
@@ -104,7 +114,7 @@ namespace Sparrow.Json
                 _releaser = new ContextStackThreadReleaser();
             }
 
-            if (_releaser.Add(this) == false)
+            if (_releaser.AddContextPool(this) == false)
                 return;
 
 #if DEBUG
@@ -237,10 +247,24 @@ namespace Sparrow.Json
             {
                 current = MaybeGetCurrentContextStack()?.Head;
 
+                _contextStacksByThreadId.TryRemove(NativeMemory.CurrentThreadStats.Id, out _);
+
+                // we want to clear our JsonContextPool's current thread's state from the _releaser, but to avoid touching any other states
+                foreach (var threadIdHolder in _threadIds)
+                {
+                    if (Interlocked.CompareExchange(ref threadIdHolder.ThreadId, -1, NativeMemory.CurrentThreadStats.Id) == NativeMemory.CurrentThreadStats.Id)
+                    {
+                        _releaser.RemoveThreadIdHolder(threadIdHolder);
+                        break;
+                    }
+                }
+
+                _releaser.RemoveContextPool(this);
+
                 if (current == null)
                     return;
 
-                _contextStacksByThreadId.TryRemove(NativeMemory.CurrentThreadStats.Id, out _);
+                
             }
             catch (ObjectDisposedException)
             {
