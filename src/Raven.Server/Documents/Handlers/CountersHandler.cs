@@ -352,11 +352,9 @@ namespace Raven.Server.Documents.Handlers
                 _database.DocumentsStorage.CountersStorage.PutCounters(context, counters.DocId, docCollection,
                     counters.CounterGroup.ChangeVector, counters.CounterGroup.Values);
 
-                foreach (var counter in counters.CounterGroup.Values.GetPropertyNames())
+                counters.CounterGroup.Values.TryGet(CountersStorage.Values, out BlittableJsonReaderObject values);
+                foreach (var counter in values.GetPropertyNames())
                 {
-                    if (counter.Equals(CountersStorage.DbIds))
-                        continue;
-
                     countersToAdd.Add(counter);
                 }
 
@@ -450,7 +448,7 @@ namespace Raven.Server.Documents.Handlers
                     var values = context.ReadObject(new DynamicJsonValue
                     {
                         [CountersStorage.DbIds] = dbIds.Keys,
-                        [CountersStorage.Counters] = counters
+                        [CountersStorage.Values] = counters
                     }, null);
 
                     return values;

@@ -328,41 +328,46 @@ namespace Raven.Server.Smuggler.Documents
         {
             var scopes = new List<ByteStringContext<ByteStringMemoryCache>.InternalScope>();
 
-            values.Modifications = new DynamicJsonValue(values);
-            var prop = new BlittableJsonReaderObject.PropertyDetails();
-
-            for (int i = 0; i < values.Count; i++)
+            try
             {
-                values.GetPropertyByIndex(i, ref prop);
-                if (prop.Name.Equals(CountersStorage.DbIds))
-                    continue;
+                values.TryGet(CountersStorage.Values, out BlittableJsonReaderObject counterValues);
 
-                var arr = (BlittableJsonReaderArray)prop.Value;
-                var sizeToAllocate = CountersStorage.SizeOfCounterValues * arr.Length / 2 ;
+                counterValues.Modifications = new DynamicJsonValue(counterValues);
+                var prop = new BlittableJsonReaderObject.PropertyDetails();
 
-                scopes.Add(_context.Allocator.Allocate(sizeToAllocate, out var newVal));
-                
-                for (int j = 0; j < arr.Length; j += 2)
+                for (int i = 0; i < counterValues.Count; i++)
                 {
-                    var newEntry = (CountersStorage.CounterValues*)newVal.Ptr + j / 2;
-                    newEntry->Value = (long)arr[j];
-                    newEntry->Etag = (long)arr[j + 1];
+                    counterValues.GetPropertyByIndex(i, ref prop);
+
+                    var arr = (BlittableJsonReaderArray)prop.Value;
+                    var sizeToAllocate = CountersStorage.SizeOfCounterValues * arr.Length / 2;
+
+                    scopes.Add(_context.Allocator.Allocate(sizeToAllocate, out var newVal));
+
+                    for (int j = 0; j < arr.Length; j += 2)
+                    {
+                        var newEntry = (CountersStorage.CounterValues*)newVal.Ptr + j / 2;
+                        newEntry->Value = (long)arr[j];
+                        newEntry->Etag = (long)arr[j + 1];
+                    }
+
+                    counterValues.Modifications[prop.Name] = new BlittableJsonReaderObject.RawBlob
+                    {
+                        Ptr = newVal.Ptr,
+                        Length = newVal.Length
+                    };
+
                 }
 
-                values.Modifications[prop.Name] = new BlittableJsonReaderObject.RawBlob
-                {
-                    Ptr = newVal.Ptr,
-                    Length = newVal.Length
-                };
-                
+                return _context.ReadObject(values, null);
             }
-
-            foreach (var scope in scopes)
+            finally 
             {
-                scope.Dispose();
+                foreach (var scope in scopes)
+                {
+                    scope.Dispose();
+                }
             }
-
-            return _context.ReadObject(values, null);
         }
 
         public long SkipType(DatabaseItemType type, Action<long> onSkipped, CancellationToken token)

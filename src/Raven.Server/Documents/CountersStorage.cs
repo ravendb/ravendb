@@ -39,7 +39,7 @@ namespace Raven.Server.Documents
         public static readonly string CountersTombstones = "Counters.Tombstones";
 
         public const string DbIds = "@dbIds";
-        public const string Counters = "@vals";
+        public const string Values = "@vals";
 
         private long _countersCount;
 
@@ -252,7 +252,7 @@ namespace Raven.Server.Documents
 
                     var dbIdIndex = GetDbIdIndex(context, data);
 
-                    data.TryGet(Counters, out BlittableJsonReaderObject counters);
+                    data.TryGet(Values, out BlittableJsonReaderObject counters);
 
                     if (counters.TryGet(name, out BlittableJsonReaderObject.RawBlob existingCounter))
                     {
@@ -434,7 +434,7 @@ namespace Raven.Server.Documents
                     builder.WriteValue(context.Environment.Base64Id);
                     builder.WriteArrayEnd();
 
-                    builder.WritePropertyName(Counters);
+                    builder.WritePropertyName(Values);
                     builder.StartWriteObject();
 
                     builder.WritePropertyName(name);
@@ -482,12 +482,12 @@ namespace Raven.Server.Documents
                             data = GetData(context, ref existing);
                             data = data.Clone(context);
                             data.TryGet(DbIds, out BlittableJsonReaderArray dbIds);
-                            data.TryGet(Counters, out BlittableJsonReaderObject localCounters);
+                            data.TryGet(Values, out BlittableJsonReaderObject localCounters);
 
                             var localDbIdsList = DbIdsToList(dbIds);
 
                             sourceData.TryGet(DbIds, out BlittableJsonReaderArray sourceDbIds);
-                            sourceData.TryGet(Counters, out sourceCounters);
+                            sourceData.TryGet(Values, out sourceCounters);
 
                             var prop = new BlittableJsonReaderObject.PropertyDetails();
                             for (var i = 0; i< sourceCounters.Count; i++)
@@ -745,7 +745,7 @@ namespace Raven.Server.Documents
                     yield break;
 
                 var data = GetData(context, ref existing);
-                data.TryGet(Counters, out BlittableJsonReaderObject counters);
+                data.TryGet(Values, out BlittableJsonReaderObject counters);
 
                 var prop = new BlittableJsonReaderObject.PropertyDetails();
                 for (var i=0; i < counters.Count; i++)
@@ -775,7 +775,7 @@ namespace Raven.Server.Documents
                     return null;
 
                 var data = GetData(context, ref tvr);
-                if (data.TryGet(Counters, out BlittableJsonReaderObject counters) == false ||
+                if (data.TryGet(Values, out BlittableJsonReaderObject counters) == false ||
                     counters.TryGet(counterName, out BlittableJsonReaderObject.RawBlob counterValues) == false ||
                     counterValues.Length == 0)
                     return null;
@@ -803,7 +803,7 @@ namespace Raven.Server.Documents
 
                 var data = GetData(context, ref tvr);
                 if (data.TryGet(DbIds, out BlittableJsonReaderArray dbIds) == false ||
-                    data.TryGet(Counters, out BlittableJsonReaderObject counters) == false ||
+                    data.TryGet(Values, out BlittableJsonReaderObject counters) == false ||
                     counters.TryGet(counterName, out BlittableJsonReaderObject.RawBlob counterValues) == false ||
                     counterValues.Length == 0)                  
                     yield break;
@@ -889,7 +889,7 @@ namespace Raven.Server.Documents
                 
                 var data = GetData(context, ref existing);
 
-                if (data.TryGet(Counters, out BlittableJsonReaderObject counters) == false ||
+                if (data.TryGet(Values, out BlittableJsonReaderObject counters) == false ||
                     counters.TryGet(counterName, out BlittableJsonReaderObject.RawBlob counterToDelete) == false ||
                     counterToDelete.Length == 0)                
                     return null;
@@ -1066,7 +1066,7 @@ namespace Raven.Server.Documents
 
         public static void ConvertFromBlobToNumbers(JsonOperationContext context, CounterGroupDetail counterGroupDetail)
         {
-            counterGroupDetail.Values.TryGet(Counters, out BlittableJsonReaderObject counters);
+            counterGroupDetail.Values.TryGet(Values, out BlittableJsonReaderObject counters);
             counters.Modifications = new DynamicJsonValue(counters);
 
             var prop = new BlittableJsonReaderObject.PropertyDetails();
