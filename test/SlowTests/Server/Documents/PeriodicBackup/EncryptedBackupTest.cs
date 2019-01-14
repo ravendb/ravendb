@@ -545,57 +545,6 @@ namespace SlowTests.Server.Documents.PeriodicBackup
         }
 
         [Fact]
-        public async Task snapshot_encrypted_db_and_unencrypted_backup_fail()
-        {
-            var backupPath = NewDataPath(suffix: "BackupFolder");
-            var key = encryptedServer(out X509Certificate2 adminCert, out string dbName);
-
-            using (var store = GetDocumentStore(new Options
-            {
-                AdminCertificate = adminCert,
-                ClientCertificate = adminCert,
-                ModifyDatabaseName = s => dbName,
-                ModifyDatabaseRecord = record => record.Encrypted = true,
-                Path = NewDataPath()
-            }))
-            {
-                using (var session = store.OpenAsyncSession())
-                {
-                    await session.StoreAsync(new User
-                    {
-                        Name = "oren"
-                    }, "users/1");
-                    await session.SaveChangesAsync();
-                }
-
-                var config = new PeriodicBackupConfiguration
-                {
-                    BackupType = BackupType.Snapshot,
-                    LocalSettings = new LocalSettings
-                    {
-                        FolderPath = backupPath
-                    },
-                    IncrementalBackupFrequency = "0 */6 * * *",
-                    BackupEncryptionSettings = new BackupEncryptionSettings
-                    {
-                        EncryptionMode = EncryptionMode.None
-                    }
-                };
-
-                var backupTaskId = (await store.Maintenance.SendAsync(new UpdatePeriodicBackupOperation(config))).TaskId;
-
-                await store.Maintenance.SendAsync(new StartBackupOperation(true, backupTaskId));
-                var operation = new GetPeriodicBackupStatusOperation(backupTaskId);
-                var value = WaitForValue(() =>
-                {
-                    var getPeriodicBackupResult = store.Maintenance.Send(operation);
-                    var errorException = getPeriodicBackupResult.Status?.Error.Exception.Contains("InvalidOperationException");
-                    return errorException;
-                }, true);
-            }
-        }
-
-        [Fact]
         public async Task snapshot_encrypted_db_with_new_key_fail()
         {
             var backupPath = NewDataPath(suffix: "BackupFolder");
@@ -997,57 +946,6 @@ namespace SlowTests.Server.Documents.PeriodicBackup
                 }
             }
 
-        }
-
-        [Fact]
-        public async Task backup_encrypted_db_and_encrypted_backup_fail()
-        {
-            var backupPath = NewDataPath(suffix: "BackupFolder");
-            var key = encryptedServer(out X509Certificate2 adminCert, out string dbName);
-
-            using (var store = GetDocumentStore(new Options
-            {
-                AdminCertificate = adminCert,
-                ClientCertificate = adminCert,
-                ModifyDatabaseName = s => dbName,
-                ModifyDatabaseRecord = record => record.Encrypted = true,
-                Path = NewDataPath()
-            }))
-            {
-                using (var session = store.OpenAsyncSession())
-                {
-                    await session.StoreAsync(new User
-                    {
-                        Name = "oren"
-                    }, "users/1");
-                    await session.SaveChangesAsync();
-                }
-
-                var config = new PeriodicBackupConfiguration
-                {
-                    BackupType = BackupType.Backup,
-                    LocalSettings = new LocalSettings
-                    {
-                        FolderPath = backupPath
-                    },
-                    IncrementalBackupFrequency = "0 */6 * * *",
-                    BackupEncryptionSettings = new BackupEncryptionSettings
-                    {
-                        EncryptionMode = EncryptionMode.None
-                    }
-                };
-
-                var backupTaskId = (await store.Maintenance.SendAsync(new UpdatePeriodicBackupOperation(config))).TaskId;
-
-                await store.Maintenance.SendAsync(new StartBackupOperation(true, backupTaskId));
-                var operation = new GetPeriodicBackupStatusOperation(backupTaskId);
-                var value = WaitForValue(() =>
-                {
-                    var getPeriodicBackupResult = store.Maintenance.Send(operation);
-                    var errorException = getPeriodicBackupResult.Status?.Error.Exception.Contains("InvalidOperationException");
-                    return errorException;
-                }, true);
-            }
         }
 
         [Fact]

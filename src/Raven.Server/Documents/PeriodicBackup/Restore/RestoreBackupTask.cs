@@ -561,7 +561,10 @@ namespace Raven.Server.Documents.PeriodicBackup.Restore
                 {
                     return new DecryptingXChaCha20Oly1305Stream(fileStream, key);
                 }
-
+                if (_restoreConfiguration.EncryptionKey != null)
+                {
+                    return new DecryptingXChaCha20Oly1305Stream(fileStream, Convert.FromBase64String(_restoreConfiguration.EncryptionKey));
+                }
                 if (_restoreConfiguration.BackupEncryptionSettings?.Key != null)
                 {
                     return new DecryptingXChaCha20Oly1305Stream(fileStream, Convert.FromBase64String(_restoreConfiguration.BackupEncryptionSettings.Key));
