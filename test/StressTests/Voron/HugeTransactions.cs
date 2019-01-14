@@ -131,7 +131,7 @@ namespace StressTests.Voron
             Assert.Equal(desired, val);
         }
 
-        [Theory64Bit]
+        [Theory64Bit(Skip = "RavenDB-11725")]
         [InlineData(3L * 1024 * 1024 * 1024)] // in = 3GB, out ~= 4MB
         [InlineData(2)] // in = 3GB, out ~= 1.5GB
         [InlineData(1)] // in = 3GB, out > 3GB (rare case)
