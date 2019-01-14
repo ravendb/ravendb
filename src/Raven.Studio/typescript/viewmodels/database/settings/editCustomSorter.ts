@@ -69,6 +69,14 @@ class editCustomSorter extends viewModelBase {
         }
 
         const file = fileInput.files[0];
+        let fileName = file.name;
+        
+        if (fileName.endsWith(".cs")) {
+            fileName = fileName.substr(0, fileName.length - 3);
+        }
+        
+        self.editedSorter().name(fileName);
+        
         const reader = new FileReader();
         reader.onload = function() {
 // ReSharper disable once SuspiciousThisUsage
