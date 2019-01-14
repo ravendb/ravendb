@@ -481,16 +481,6 @@ namespace Raven.Server.Documents.PeriodicBackup
                 (_configuration.BackupEncryptionSettings?.EncryptionMode == EncryptionMode.UseDatabaseKey))
                 throw new InvalidOperationException("Can't use database key for backup encryption, the key doesn't exist");
 
-            if (_database.MasterKey != null)
-            {
-                if (_configuration.BackupEncryptionSettings != null)
-                {
-                    if ((_configuration.BackupEncryptionSettings.AllowUnencryptedBackupForEncryptedDatabase == false) &&
-                        (_configuration.BackupEncryptionSettings.EncryptionMode == EncryptionMode.None))
-                        throw new InvalidOperationException("Can't backup encrypted database without encryption");
-                }
-            }
-
             if ((_configuration.BackupType == BackupType.Snapshot && _isFullBackup)
              && (_configuration.BackupEncryptionSettings != null &&
                     (_configuration.BackupEncryptionSettings.EncryptionMode == EncryptionMode.UseProvidedKey)))
