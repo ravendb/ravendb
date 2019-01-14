@@ -200,7 +200,7 @@
                 <div class="col-sm-8 col-lg-6 margin-top">
                     <div class="row flex-row margin-bottom" data-bind="validationElement: folderPath">
                         <label class="control-label col-xs-12 col-sm-6 col-lg-4">Backup directory <i class="required"></i></label>
-                        <div class="col-xs-12 col-sm-6 col-lg-8 flex-horizontal" data-bind="validationElement: folderPath">
+                        <div class="col-xs-12 col-sm-6 col-lg-8" data-bind="validationElement: folderPath, validationOptions: { insertMessages: false }">
                             <div data-bind="text: $root.serverConfiguration().LocalRootPath"></div>
                             <div class="dropdown btn-block">
                                 <input type="text" class="form-control dropdown-toggle" data-toggle="dropdown"
@@ -213,13 +213,14 @@
                                     </li>
                                 </ul>
                             </div>
+                            <span class="help-block" data-bind="validationMessage: folderPath"></span>
                         </div>
                     </div>
 
                     <div class="row flex-row margin-bottom">
                         <label class="control-label col-xs-12 col-sm-6 col-lg-4"></label>
-                        <div class="col-xs-12 col-sm-6 col-lg-8">
-                            <p class="text-info bg-info padding padding-sm">
+                        <div class="col-xs-12 col-sm-6 col-lg-8" data-bind="visible: $parent.backupLocationInfo().length">
+                            <div class="text-info bg-info padding padding-sm">
                                 <span>The backup files will be created in:</span><br />
                                 <div data-bind="if: $parent.spinners.backupLocationInfoLoading">
                                     <span class="global-spinner"></span>
@@ -252,7 +253,7 @@
                                         </li>
                                     </ul>
                                 </div>
-                            </p>
+                            </div>
                         </div>
                     </div>
                 </div>
