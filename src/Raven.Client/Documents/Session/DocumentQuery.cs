@@ -19,7 +19,7 @@ namespace Raven.Client.Documents.Session
     /// <summary>
     /// A query against a Raven index
     /// </summary>
-    public partial class DocumentQuery<T> : AbstractDocumentQuery<T, DocumentQuery<T>>, IDocumentQuery<T>, IRawDocumentQuery<T>, IDocumentQueryGenerator
+    public partial class DocumentQuery<T> : AbstractDocumentQuery<T, DocumentQuery<T>>, IDocumentQuery<T>, IRawDocumentQuery<T>, IGraphQuery<T>, IDocumentQueryGenerator
     {
         /// <summary>
         /// Initializes a new instance of the <see cref="DocumentQuery{T}"/> class.
@@ -85,6 +85,24 @@ namespace Raven.Client.Documents.Session
             return CreateDocumentQueryInternal<TProjection>(queryData);
         }
 
+        IGraphQuery<T> IQueryBase<T, IGraphQuery<T>>.UsingDefaultOperator(QueryOperator queryOperator)
+        {
+            UsingDefaultOperator(queryOperator);
+            return this;
+        }
+
+        IGraphQuery<T> IQueryBase<T, IGraphQuery<T>>.WaitForNonStaleResults(TimeSpan? waitTimeout = null)
+        {
+            WaitForNonStaleResults(waitTimeout);
+            return this;
+        }
+
+        IGraphQuery<T> IQueryBase<T, IGraphQuery<T>>.AddParameter(string name, object value)
+        {
+            AddParameter(name, value);
+            return this;
+        }
+
         /// <inheritdoc />
         IDocumentQuery<T> IQueryBase<T, IDocumentQuery<T>>.WaitForNonStaleResults(TimeSpan? waitTimeout)
         {
@@ -141,7 +159,23 @@ namespace Raven.Client.Documents.Session
             AfterQueryExecuted(action);
         }
 
+        void IQueryBase<T, IGraphQuery<T>>.AfterStreamExecuted(Action<BlittableJsonReaderObject> action)
+        {
+            AfterStreamExecuted(action);
+        }
+
+        IGraphQuery<T> IQueryBase<T, IGraphQuery<T>>.BeforeQueryExecuted(Action<IndexQuery> beforeQueryExecuted)
+        {
+            BeforeQueryExecuted(beforeQueryExecuted);
+            return this;
+        }
+
         void IQueryBase<T, IRawDocumentQuery<T>>.AfterQueryExecuted(Action<QueryResult> action)
+        {
+            AfterQueryExecuted(action);
+        }
+
+         void IQueryBase<T, IGraphQuery<T>>.AfterQueryExecuted(Action<QueryResult> action)
         {
             AfterQueryExecuted(action);
         }
@@ -233,6 +267,24 @@ namespace Raven.Client.Documents.Session
             return this;
         }
 
+        IGraphQuery<T> IQueryBase<T, IGraphQuery<T>>.Skip(int count)
+        {
+            Skip(count);
+            return this;
+        }
+
+        IGraphQuery<T> IQueryBase<T, IGraphQuery<T>>.Statistics(out QueryStatistics stats)
+        {
+            Statistics(out stats);
+            return this;
+        }
+
+        IGraphQuery<T> IQueryBase<T, IGraphQuery<T>>.Take(int count)
+        {
+            Take(count);
+            return this;
+        }
+
         /// <inheritdoc />
         IDocumentQuery<T> IQueryBase<T, IDocumentQuery<T>>.Statistics(out QueryStatistics stats)
         {
@@ -258,6 +310,24 @@ namespace Raven.Client.Documents.Session
         IRawDocumentQuery<T> IQueryBase<T, IRawDocumentQuery<T>>.UsingDefaultOperator(QueryOperator queryOperator)
         {
             UsingDefaultOperator(queryOperator);
+            return this;
+        }
+
+        IGraphQuery<T> IQueryBase<T, IGraphQuery<T>>.NoCaching()
+        {
+            NoCaching();
+            return this;
+        }
+
+        IGraphQuery<T> IQueryBase<T, IGraphQuery<T>>.NoTracking()
+        {
+            NoTracking();
+            return this;
+        }
+
+        IGraphQuery<T> IQueryBase<T, IGraphQuery<T>>.Timings(out QueryTimings timings)
+        {
+            Timings(out timings);
             return this;
         }
 
@@ -771,6 +841,12 @@ namespace Raven.Client.Documents.Session
         IRawDocumentQuery<T> IQueryBase<T, IRawDocumentQuery<T>>.BeforeQueryExecuted(Action<IndexQuery> beforeQueryExecuted)
         {
             BeforeQueryExecuted(beforeQueryExecuted);
+            return this;
+        }
+
+        IGraphQuery<T> IGraphQuery<T>.With<TOther>(string alias, IRavenQueryable<TOther> query)
+        {
+            WithTokens.AddLast(new WithToken<TOther>(alias, query));
             return this;
         }
 

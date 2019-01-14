@@ -92,6 +92,10 @@ namespace Raven.Client.Documents.Session
 
         protected LinkedList<QueryToken> OrderByTokens = new LinkedList<QueryToken>();
 
+        protected LinkedList<QueryToken> WithTokens = new LinkedList<QueryToken>();
+
+        protected QueryToken GraphRawQuery { get; private set; }
+
         /// <summary>
         ///   which record to start reading from
         /// </summary>
@@ -289,6 +293,11 @@ namespace Raven.Client.Documents.Session
             if (QueryRaw != null)
                 throw new InvalidOperationException(
                     "RawQuery was called, cannot modify this query by calling on operations that would modify the query (such as Where, Select, OrderBy, GroupBy, etc)");
+        }
+
+        public void GraphQuery(string query)
+        {
+            GraphRawQuery = new GraphQueryToken(query);
         }
 
         public void RawQuery(string query)
@@ -1137,8 +1146,17 @@ Use session.Query<T>() instead of session.Advanced.DocumentQuery<T>. The session
 
             var queryText = new StringBuilder();
 
+                      
             BuildDeclare(queryText);
-            BuildFrom(queryText);
+            if (GraphRawQuery != null)
+            {
+                BuildWith(queryText);
+                BuildGraphQuery(queryText);
+            }
+            else
+            {
+                BuildFrom(queryText);
+            }
             BuildGroupBy(queryText);
             BuildWhere(queryText);
             BuildOrderBy(queryText);
@@ -1150,6 +1168,21 @@ Use session.Query<T>() instead of session.Advanced.DocumentQuery<T>. The session
                 BuildPagination(queryText);
 
             return queryText.ToString();
+        }
+
+        private void BuildGraphQuery(StringBuilder queryText)
+        {
+            GraphRawQuery.WriteTo(queryText);
+        }
+
+        private void BuildWith(StringBuilder queryText)
+        {
+            //TODO: need to aggragate with parameters into this instance parameter list, assert and strip parameters from with clauses
+            foreach (var with in WithTokens)
+            {
+                with.WriteTo(queryText);
+                queryText.AppendLine();
+            }
         }
 
         /// <inheritdoc />
