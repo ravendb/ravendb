@@ -424,7 +424,7 @@ namespace Raven.Server.Smuggler.Documents
                 Writer.WriteComma();
 
                 Writer.WritePropertyName(nameof(CounterItem.ChangeVector));
-                Writer.WriteString(counterDetail.ChangeVector);
+                Writer.WriteString(counterDetail.ChangeVector, true);
                 Writer.WriteComma();
 
                 Writer.WritePropertyName(nameof(CounterItem.Batch.Values));
