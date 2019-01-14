@@ -147,14 +147,16 @@ class encryptionSettings {
             }]
         });
 
+        const keyConfirmationNeeded = ko.pureComputed(() => this.canProvideOwnKey() && this.mode() === "UseProvidedKey");
+        
         this.key.extend({
             required: {
-                onlyIf: () => this.canProvideOwnKey() && this.mode() === "UseProvidedKey"
+                onlyIf: () => keyConfirmationNeeded()
             }
         });
         
         setupEncryptionKey.setupKeyValidation(this.key);
-        setupEncryptionKey.setupConfirmationValidation(this.keyConfirmation);
+        setupEncryptionKey.setupConfirmationValidation(this.keyConfirmation, keyConfirmationNeeded);
 
         this.validationGroup = ko.validatedObservable({
             key: this.key,

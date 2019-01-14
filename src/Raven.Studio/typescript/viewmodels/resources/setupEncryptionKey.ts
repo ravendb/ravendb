@@ -154,11 +154,14 @@ abstract class setupEncryptionKey {
         });
     }
     
-    static setupConfirmationValidation(confirmation: KnockoutObservable<boolean>) {
+    static setupConfirmationValidation(confirmation: KnockoutObservable<boolean>, isRequired: KnockoutObservable<boolean> | boolean = true) {
         confirmation.extend({
             validation: [
                 {
-                    validator: (v: boolean) => v,
+                    validator: (v: boolean) => {
+                        const required = ko.unwrap(isRequired);
+                        return !required || v;
+                    },
                     message: "Please confirm that you have saved the encryption key"
                 }
             ]
