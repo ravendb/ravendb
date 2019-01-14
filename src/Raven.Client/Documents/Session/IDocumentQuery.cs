@@ -67,6 +67,13 @@ namespace Raven.Client.Documents.Session
     {
     }
 
+    public interface IGraphQuery<T> :
+        IQueryBase<T, IGraphQuery<T>>,
+        IDocumentQueryBase<T>, IEnumerable<T>
+    {
+        IGraphQuery<T> With<TOther>(string alias, IRavenQueryable<TOther> query);
+    }
+
     /// <summary>
     ///     A query against a Raven index
     /// </summary>

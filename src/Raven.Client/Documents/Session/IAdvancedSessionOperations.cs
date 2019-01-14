@@ -50,5 +50,11 @@ namespace Raven.Client.Documents.Session
         /// </summary>
         /// <typeparam name="T">The query result type</typeparam>
         IRawDocumentQuery<T> RawQuery<T>(string query);
+
+        /// <summary>
+        /// Issue a graph query based on the raw match query provided
+        /// </summary>
+        /// <typeparam name="T">The query result type</typeparam>
+        IGraphQuery<T> GraphQuery<T>(string query);
     }
 }

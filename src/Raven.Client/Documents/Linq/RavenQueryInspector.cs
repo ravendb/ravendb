@@ -163,22 +163,22 @@ namespace Raven.Client.Documents.Linq
             return asyncDocumentQuery.GetIndexQuery();
         }
 
-        internal IDocumentQuery<T> GetDocumentQuery()
+        internal IDocumentQuery<T> GetDocumentQuery(Action<IAbstractDocumentQuery<T>> customization = null)
         {
             if (_isAsync)
                 throw new InvalidOperationException("Cannot convert async query to sync document query.");
 
             var ravenQueryProvider = GetRavenQueryProvider();
-            return ravenQueryProvider.GetDocumentQueryFor(_expression);
+            return ravenQueryProvider.GetDocumentQueryFor(_expression, customization);
         }
 
-        internal IAsyncDocumentQuery<T> GetAsyncDocumentQuery()
+        internal IAsyncDocumentQuery<T> GetAsyncDocumentQuery(Action<IAbstractDocumentQuery<T>> customization = null)
         {
             if (_isAsync == false)
                 throw new InvalidOperationException("Cannot convert sync query to async document query.");
 
             var ravenQueryProvider = GetRavenQueryProvider();
-            return ravenQueryProvider.GetAsyncDocumentQueryFor(_expression);
+            return ravenQueryProvider.GetAsyncDocumentQueryFor(_expression, customization);
         }
 
         private RavenQueryProviderProcessor<T> GetRavenQueryProvider()

@@ -53,5 +53,11 @@ namespace Raven.Client.Documents.Session
         /// </summary>
         /// <typeparam name="T">The query result type</typeparam>
         IAsyncRawDocumentQuery<T> AsyncRawQuery<T>(string query);
+
+        /// <summary>
+        /// Issue a graph query based on the raw match query provided
+        /// </summary>
+        /// <typeparam name="T">The query result type</typeparam>
+        IAsyncGraphQuery<T> AsyncGraphQuery<T>(string query);
     }
 }

@@ -3117,13 +3117,15 @@ The recommended method is to use full text search (mark the field as Analyzed an
         /// Gets the lucene query.
         /// </summary>
         /// <value>The lucene query.</value>
-        public IDocumentQuery<T> GetDocumentQueryFor(Expression expression)
+        public IDocumentQuery<T> GetDocumentQueryFor(Expression expression, Action<IAbstractDocumentQuery<T>> customization = null)
         {
             var documentQuery = QueryGenerator.Query<T>(IndexName, _collectionName, _isMapReduce);
             if (_afterQueryExecuted != null)
                 documentQuery.AfterQueryExecuted(_afterQueryExecuted);
 
             _documentQuery = (IAbstractDocumentQuery<T>)documentQuery;
+
+            customization?.Invoke(_documentQuery);
 
             if (_highlightings != null)
             {
@@ -3164,13 +3166,14 @@ The recommended method is to use full text search (mark the field as Analyzed an
         /// Gets the lucene query.
         /// </summary>
         /// <value>The lucene query.</value>
-        public IAsyncDocumentQuery<T> GetAsyncDocumentQueryFor(Expression expression)
+        public IAsyncDocumentQuery<T> GetAsyncDocumentQueryFor(Expression expression, Action<IAbstractDocumentQuery<T>> customization = null)
         {
             var asyncDocumentQuery = QueryGenerator.AsyncQuery<T>(IndexName, _collectionName, _isMapReduce);
             if (_afterQueryExecuted != null)
                 asyncDocumentQuery.AfterQueryExecuted(_afterQueryExecuted);
-
+           
             _documentQuery = (IAbstractDocumentQuery<T>)asyncDocumentQuery;
+            customization?.Invoke(_documentQuery);
 
             if (_highlightings != null)
             {
