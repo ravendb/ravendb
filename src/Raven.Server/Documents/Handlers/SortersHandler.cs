@@ -30,30 +30,27 @@ namespace Raven.Server.Documents.Handlers
                     record = ServerStore.Cluster.ReadDatabase(context, Database.Name);
                 }
 
-                var sorters = record.Sorters;
+                var sorters = record.Sorters ?? new Dictionary<string, SorterDefinition>();
                 
                 using (var writer = new BlittableJsonTextWriter(context, ResponseBodyStream()))
                 {
                     
                     writer.WriteStartObject();
 
-                    if (sorters != null)
+                    writer.WriteArray(context, "Sorters", sorters.Values, (w, c, sorter) =>
                     {
-                        writer.WriteArray(context, "Sorters", sorters.Values, (w, c, sorter) =>
-                        {
-                            w.WriteStartObject();
-                            
-                            w.WritePropertyName(nameof(SorterDefinition.Name));
-                            w.WriteString(sorter.Name);
-                            w.WriteComma();
-                            
-                            w.WritePropertyName(nameof(SorterDefinition.Code));
-                            w.WriteString(sorter.Code);
-                            
-                            w.WriteEndObject();
-                        });
-                    }
-                    
+                        w.WriteStartObject();
+                        
+                        w.WritePropertyName(nameof(SorterDefinition.Name));
+                        w.WriteString(sorter.Name);
+                        w.WriteComma();
+                        
+                        w.WritePropertyName(nameof(SorterDefinition.Code));
+                        w.WriteString(sorter.Code);
+                        
+                        w.WriteEndObject();
+                    });
+                
                     writer.WriteEndObject();
                 }
             }

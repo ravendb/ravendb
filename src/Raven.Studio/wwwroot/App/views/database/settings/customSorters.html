@@ -18,15 +18,45 @@
                     <div class="padding padding-sm">
                         <div class="flex-horizontal">
                             <div class="flex-grow info">
-                                <span data-bind="text: Name"></span>
+                                <span data-bind="text: name"></span>
                             </div>
                             <div class="actions">
+                                <button type="button" data-bind="click: $root.enterTestSorterMode.bind($root, $data)"
+                                        class="btn btn-default"><i class="icon-rocket" title="Test custom sorter"></i>
+                                </button>
                                 <button type="button" data-bind="click: $root.editSorter.bind($root, $data)"
                                         class="btn btn-default"><i class="icon-edit" title="Edit custom sorter"></i>
                                 </button>
                                 <button type="button" data-bind="click: $root.confirmRemoveSorter.bind($root, $data)"
                                         class="btn btn-danger"><i class="icon-trash" title="Delete custom sorter"></i>
                                 </button>
+                            </div>
+                        </div>
+                    </div>
+                    <div data-bind="collapse: testModeEnabled">
+                        <div class="panel-addon padding padding-sm">
+                            <div class="margin-bottom">
+                                <label>Enter test RQL:</label>
+                                <pre class="form-control margin-top" placeholder="Enter query to test sorter"
+                                     data-bind="aceEditor: { code: testRql, lang:'ace/mode/rql', completer: $root.queryCompleter.complete }, validationOptions: { errorsAsTitle: false }, validationElement: testRql" style="height: 160px;">
+                            </pre>
+                                <div data-bind="validationOptions: { errorsAsTitle: false }, validationElement: testRql">
+                                    <div class="help-block" data-bind="validationMessage: testRql"></div>
+                                </div>
+                            </div>
+
+                            <div class="flex-horizontal toolbar">
+                                <div class="flex-separator"></div>
+                                <div>
+                                    <button class="btn btn-default" data-bind="click: $root.enterTestSorterMode.bind($root, $data)">
+                                        <i class="icon-cancel"></i>
+                                        <span>Close</span>
+                                    </button>
+                                    <button class="btn btn-primary" data-bind="click: _.partial($root.runTest, $data)">
+                                        <i class="icon-play2"></i>
+                                        <span>Run test</span>
+                                    </button>
+                                </div>
                             </div>
                         </div>
                     </div>
@@ -38,9 +68,48 @@
             </div>
         </div>
 
-        <div class="col-sm-12 col-lg-6 flex-vertical">
-            TEST area
+        <div class="col-sm-12 col-lg-6 flex-vertical" data-bind="visible: testResultsVisible">
+            <div class="panel padding flex-vertical flex-grow fixed">
+                <div class="flex-header">
+                    <div class="flex-horizontal">
+                        <div class="flex-grow"><h3>Test Results</h3></div>
+                        <div><button class="close" data-bind="click: closeTestResultsArea" title="Close the test area"><i class="icon-cancel"></i></button></div>
+                    </div>
+                </div>
+                <div class="flex-horizontal">
+                    <small class="text-muted">Displaying up to 128 results</small>
+                    <div class="flex-separator"></div>
+                    <div class="btn-group dropdown-right open">
+                        <button class="btn btn-default btn-sm dropdown-toggle" type="button" data-toggle="dropdown">
+                            <i class="icon-table"></i><span>Display</span>
+                            <span class="caret"></span>
+                        </button>
+                        <div class="dropdown-menu colselect-dropdown slidein-style" role="menu" data-bind="dropdownPanel: true">
+                            <div data-bind="compose: $root.columnsSelector"></div>
+                        </div>
+                    </div>
+                </div>
+                <div class="flex-grow scroll">
+                    <div class="objects-list-container">
+                        <virtual-grid class="resizable" params="controller: gridController, emptyTemplate: 'empty-test-results-template'"></virtual-grid>
+                    </div>
+                </div>
+                <div class="flex-window-head">
+                    <button type="button" class="btn btn-sm" data-bind="css: { active: currentTab() === 'results' }, click: _.partial(goToTab, 'results')">
+                        Results &nbsp; <span class="label label-primary" data-bind="text: resultsCount().toLocaleString()"></span>
+                    </button>
+                    <button type="button" class="btn btn-sm" data-bind="css: { active: currentTab() === 'diagnostics' }, click: _.partial(goToTab, 'diagnostics')">
+                        Diagnostics &nbsp; <span class="label label-primary" data-bind="text: diagnosticsCount().toLocaleString()"></span>
+                    </button>
+                </div>
+            </div>
         </div>
     </div>
 </div>
 
+<script type="text/html" id="empty-test-results-template">
+    No results found.
+</script>
+
+<div class="tooltip json-preview lg custom-sorters-tooltip" style="opacity: 0">
+</div>

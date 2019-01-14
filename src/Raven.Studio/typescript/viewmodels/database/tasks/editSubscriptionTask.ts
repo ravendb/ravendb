@@ -57,7 +57,6 @@ class editSubscriptionTask extends viewModelBase {
     resultsCount = ko.observable<number>(0);
     includesCache = ko.observableArray<perCollectionIncludes>([]);
     
-    
     currentTab = ko.observable<testTabName>("results");
 
     spinners = {
