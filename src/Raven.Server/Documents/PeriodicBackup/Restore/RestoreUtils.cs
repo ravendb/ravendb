@@ -58,7 +58,8 @@ namespace Raven.Server.Documents.PeriodicBackup.Restore
                 if (firstFile)
                 {
                     snapshotRestore = isSnapshot;
-                    isEncrypted = isSnapshot && CheckIfSnapshotIsEncrypted(filePath, context);
+                    isEncrypted = ((isSnapshot && CheckIfSnapshotIsEncrypted(filePath, context)) ||
+                                   ((!isSnapshot) && CheckIfBackupIsEncrypted(filePath)));
                 }
                 else if (isSnapshot)
                 {
@@ -90,8 +91,28 @@ namespace Raven.Server.Documents.PeriodicBackup.Restore
             }
         }
 
+        private static bool CheckIfBackupIsEncrypted(string filePath)
+        {
+            //TODO - change with RavenDB-12679
+            try
+            {
+                using (var fileStream = File.Open(filePath, FileMode.Open))
+                using (var gzipStream = new GZipStream(fileStream, CompressionMode.Decompress))
+                {
+                    gzipStream.Read(new byte[1], 0, 1);
+                }
+            }
+            catch (InvalidDataException )
+            {
+                return true;
+            }
+            return false;
+        }
+
+
         private static bool CheckIfSnapshotIsEncrypted(string filePath, TransactionOperationContext context)
         {
+            //TODO - change with RavenDB-12679
             using (var zip = ZipFile.Open(filePath, ZipArchiveMode.Read, System.Text.Encoding.UTF8))
             {
                 foreach (var zipEntry in zip.Entries)
@@ -100,11 +121,19 @@ namespace Raven.Server.Documents.PeriodicBackup.Restore
                     {
                         using (var entryStream = zipEntry.Open())
                         {
-                            var json = context.Read(entryStream, "read database settings");
-                            json.BlittableValidation();
+                            try
+                            {
+                                var json = context.Read(entryStream, "read database settings");
+                                json.BlittableValidation();
 
-                            RestoreSettings restoreSettings = JsonDeserializationServer.RestoreSettings(json);
-                            return restoreSettings.DatabaseRecord.Encrypted;
+                                RestoreSettings restoreSettings = JsonDeserializationServer.RestoreSettings(json);
+                                return restoreSettings.DatabaseRecord.Encrypted;
+                            }
+                            catch (InvalidDataException)
+                            {
+                                return true;
+                            }
+                            
                         }
                     }
                 }
