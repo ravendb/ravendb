@@ -834,7 +834,8 @@ namespace Raven.Server.Utils.Cli
             }
             catch (Exception e)
             {
-                throw new ArgumentException("Failed to load the provided certificate. Please check the path and password.", e);
+                WriteError("Failed to load the provided certificate. Please check the path and password." + e, cli);
+                return false;
             }
 
             // Export the certificate without a password, to send it through the cluster.
@@ -847,7 +848,8 @@ namespace Raven.Server.Utils.Cli
                 }
                 catch (Exception e)
                 {
-                    throw new ArgumentException("Failed to export the password provided certificate.", e);
+                    WriteError("Failed to export the password provided certificate." + e, cli);
+                    return false;
                 }
             }
 
@@ -874,15 +876,18 @@ namespace Raven.Server.Utils.Cli
 
                 Task.WhenAny(replicationTask, timeoutTask).Wait();
                 if (replicationTask.IsCompleted == false)
-                    throw new TimeoutException("Timeout when trying to replace the server certificate.");
+                {
+                    WriteError("Timeout when trying to replace the server certificate.", cli);
+                    return false;
+                }
             }
             catch (Exception e)
             {
-                throw new InvalidOperationException("Failed to replace the server certificate. Check the logs for details.", e);
+                WriteError("Failed to replace the server certificate. Check the logs for details." + e, cli);
+                return false;
             }
 
             WriteText("Successfully replaced the server certificate.", TextColor, cli);
-
             return true;
         }
 
@@ -902,7 +907,8 @@ namespace Raven.Server.Utils.Cli
             }
             catch (Exception e)
             {
-                throw new InvalidOperationException("Failed to trigger a certificate refresh cycle.", e);
+                WriteError("Failed to trigger a certificate refresh cycle." + e, cli);
+                return false;
             }
 
             WriteText("Triggered a certificate refresh cycle.", TextColor, cli);
