@@ -133,7 +133,6 @@ namespace Sparrow.Json
                             _releaser.ThreadIdHolders.Add(copy[i]);
                             return;
                         }
-                        return;
                     }
                 }
                 
