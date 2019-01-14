@@ -43,7 +43,7 @@ namespace Raven.Server.Documents.Queries
             CurrentlyRunningQueries = new ConcurrentSet<ExecutingQueryInfo>();
         }
 
-        internal long NextQueryId => Interlocked.Increment(ref _nextQueryId);
+        internal long GetNextQueryId() => Interlocked.Increment(ref _nextQueryId);
         internal readonly ConcurrentSet<ExecutingQueryInfo> CurrentlyRunningQueries;
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]

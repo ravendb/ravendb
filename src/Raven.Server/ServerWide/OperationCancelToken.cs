@@ -27,12 +27,12 @@ namespace Raven.Server.ServerWide
             _cts.CancelAfter(cancelAfter);
         }
 
-        public bool IsCancellationRequested => _cts.IsCancellationRequested;
+        public void ThrowIfCancellationRequested() => Token.ThrowIfCancellationRequested();
 
         public OperationCancelToken(CancellationToken shutdown)
             : this(Timeout.InfiniteTimeSpan, shutdown)
         {
-        }       
+        }
 
         public void Delay()
         {

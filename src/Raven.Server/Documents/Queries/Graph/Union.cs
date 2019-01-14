@@ -23,7 +23,7 @@ namespace Raven.Server.Documents.Queries.Graph
             {
                 foreach (var item in kvp.Value)
                 {
-                    token.CheckIfCancellationIsRequested();
+                    token.ThrowIfCancellationRequested();
 
                     if (state.Contains(item) == false)
                     {

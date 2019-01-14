@@ -67,7 +67,7 @@ namespace Raven.Server.Documents.Queries.Graph
 
         private void IntersectExpressions()
         {
-            _token.CheckIfCancellationIsRequested();
+            _token.ThrowIfCancellationRequested();
             _index = 0;
 
             if (_returnEmptyIfRightEmpty && _right.IsEmpty())
@@ -84,7 +84,7 @@ namespace Raven.Server.Documents.Queries.Graph
 
             while (_left.GetNext(out var leftMatch))
             {
-                _token.CheckIfCancellationIsRequested();
+                _token.ThrowIfCancellationRequested();
                 long key = GetMatchHashKey(_intersectedAliases, leftMatch);
                 if (_tempIntersect.TryGetValue(key, out var matches) == false)
                     _tempIntersect[key] = matches = new List<Match>(); // TODO: pool these
@@ -94,7 +94,7 @@ namespace Raven.Server.Documents.Queries.Graph
 
             while (_right.GetNext(out var rightMatch))
             {
-                _token.CheckIfCancellationIsRequested();
+                _token.ThrowIfCancellationRequested();
                 long key = GetMatchHashKey(_intersectedAliases, rightMatch);
 
                 if (_tempIntersect.TryGetValue(key, out var matchesFromLeft) == false)
@@ -106,7 +106,7 @@ namespace Raven.Server.Documents.Queries.Graph
 
                 for (int i = 0; i < matchesFromLeft.Count; i++)
                 {
-                    _token.CheckIfCancellationIsRequested();
+                    _token.ThrowIfCancellationRequested();
                     var leftMatch = matchesFromLeft[i];
                     var allIntersectionsMatch = true;
                     for (int j = 0; j < _intersectedAliases.Count; j++)
@@ -148,7 +148,7 @@ namespace Raven.Server.Documents.Queries.Graph
 
         public ValueTask Initialize()
         {
-            _token.CheckIfCancellationIsRequested();
+            _token.ThrowIfCancellationRequested();
             if (_index != -1)
                 return default;
 
@@ -163,7 +163,7 @@ namespace Raven.Server.Documents.Queries.Graph
 
         private ValueTask CompleteInitializationAfterLeft()
         {
-            _token.CheckIfCancellationIsRequested();
+            _token.ThrowIfCancellationRequested();
             //At this point we know we are not going to yield results we can skip running right hand side
             if (_returnEmptyIfLeftEmpty && _left.IsEmpty())
             {
@@ -182,14 +182,14 @@ namespace Raven.Server.Documents.Queries.Graph
 
         private async Task CompleteRightInitializationAsync(ValueTask rightTask)
         {
-            _token.CheckIfCancellationIsRequested();
+            _token.ThrowIfCancellationRequested();
             await rightTask;
             IntersectExpressions();
         }
 
         private async Task  CompleteLeftInitializationAsync(ValueTask leftTask)
         {
-            _token.CheckIfCancellationIsRequested();
+            _token.ThrowIfCancellationRequested();
             await leftTask;
             await CompleteInitializationAfterLeft();
         }

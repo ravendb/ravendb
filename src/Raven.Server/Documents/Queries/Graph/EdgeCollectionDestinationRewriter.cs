@@ -17,7 +17,7 @@ namespace Raven.Server.Documents.Queries.Graph
 
         public override IGraphQueryStep VisitEdgeQueryStep(EdgeQueryStep eqs)
         {
-            _token.CheckIfCancellationIsRequested();
+            _token.ThrowIfCancellationRequested();
             var left = Visit(eqs.Left);
             _isVisitingRight = true;
             var right = Visit(eqs.Right);
@@ -32,7 +32,7 @@ namespace Raven.Server.Documents.Queries.Graph
 
         public override IGraphQueryStep VisitQueryQueryStep(QueryQueryStep qqs)
         {
-            _token.CheckIfCancellationIsRequested();
+            _token.ThrowIfCancellationRequested();
             if (_isVisitingRight && qqs.CanBeConsideredForDestinationOptimization)
             {
                 return QueryQueryStep.ToCollectionDestinationQueryStep(_documentsStorage, qqs, _token);
@@ -43,7 +43,7 @@ namespace Raven.Server.Documents.Queries.Graph
 
         public override void VisitEdgeMatcher(EdgeQueryStep.EdgeMatcher em)
         {
-            _token.CheckIfCancellationIsRequested();
+            _token.ThrowIfCancellationRequested();
             _isVisitingRight = true;
             base.VisitEdgeMatcher(em);
             _isVisitingRight = false;
@@ -51,7 +51,7 @@ namespace Raven.Server.Documents.Queries.Graph
 
         public override IGraphQueryStep VisitRecursionQueryStep(RecursionQueryStep rqs)
         {
-            _token.CheckIfCancellationIsRequested();
+            _token.ThrowIfCancellationRequested();
             var left = Visit(rqs.Left);
             bool modified = ReferenceEquals(left, rqs.Left) == false;
 
