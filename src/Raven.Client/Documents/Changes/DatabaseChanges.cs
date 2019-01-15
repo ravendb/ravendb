@@ -319,7 +319,15 @@ namespace Raven.Client.Documents.Changes
 
             _counters.Clear();
 
-            _task.Wait();
+            try
+            {
+                _task.Wait();
+            }
+            catch
+            {
+                // we're disposing the document store
+                // nothing we can do here
+            }
 
             ConnectionStatusChanged?.Invoke(this, EventArgs.Empty);
             ConnectionStatusChanged -= OnConnectionStatusChanged;
@@ -477,7 +485,7 @@ namespace Raven.Client.Documents.Changes
                     {
                         ConnectionStatusChanged?.Invoke(this, EventArgs.Empty);
 
-                        _serverNode = await _requestExecutor.HandleServerNotResponsive(_url.AbsoluteUri, _serverNode, _nodeIndex, e, _cts.Token).ConfigureAwait(false);
+                        _serverNode = await _requestExecutor.HandleServerNotResponsive(_url.AbsoluteUri, _serverNode, _nodeIndex, e).ConfigureAwait(false);
 
                         if (ReconnectClient() == false)
                             return;

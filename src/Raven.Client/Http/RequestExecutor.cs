@@ -1094,18 +1094,14 @@ namespace Raven.Client.Http
             return true;
         }
 
-        public async Task<ServerNode> HandleServerNotResponsive(string url, ServerNode chosenNode, int nodeIndex, Exception e, CancellationToken token = default)
+        public async Task<ServerNode> HandleServerNotResponsive(string url, ServerNode chosenNode, int nodeIndex, Exception e)
         {
             SpawnHealthChecks(chosenNode, nodeIndex);
             _nodeSelector?.OnFailedRequest(nodeIndex);
-            if (token.IsCancellationRequested == false)
-            {
-                var (_, serverNode) = await GetPreferredNode().ConfigureAwait(false);
-                await UpdateTopologyAsync(serverNode, 0, true).ConfigureAwait(false);
-                OnFailedRequest(url, e);
-                return serverNode;
-            }
-            return chosenNode;
+            var (_, serverNode) = await GetPreferredNode().ConfigureAwait(false);
+            await UpdateTopologyAsync(serverNode, 0, true).ConfigureAwait(false);
+            OnFailedRequest(url, e);
+            return serverNode;
         }
 
         private void SpawnHealthChecks(ServerNode chosenNode, int nodeIndex)
