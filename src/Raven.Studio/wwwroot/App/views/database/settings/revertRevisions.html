@@ -62,10 +62,19 @@
                                         will be moved to <strong><em>Revisions&nbsp;Bin</em></strong>.
                                     </li>
                                     <li>
+                                        If collection has maximum revisions limit and all of them were created after
+                                        <strong><em>Point in time</em></strong>:
+                                        <code data-bind="text: pointInTimeFormatted() + ' UTC'"></code>
+                                        the oldest revision will be used.
+                                    </li>
+                                    <li>
                                         Documents modified after <strong><em>Point in time</em></strong>:
                                         <code data-bind="text: pointInTimeFormatted() + ' UTC'"></code>
                                         will be reverted (by creating new revision) to latest version before
                                         <code data-bind="text: pointInTimeFormatted() + ' UTC'"></code>.
+                                        
+                                        
+                                        
                                     </li>
                                     <li>
                                         Remaining documents will not be modified.
