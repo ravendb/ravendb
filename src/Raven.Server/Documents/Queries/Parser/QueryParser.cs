@@ -391,6 +391,10 @@ namespace Raven.Server.Documents.Queries.Parser
                 {
                     if (isEdge)
                     {
+                        if (Scanner.TryPeek(']'))
+                        {
+                            throw new InvalidQueryException($"Expected to find a field identifier after '{Scanner.Token}', but found ']'. Perhaps this a typo?",Scanner.Input);
+                        }
                         ThrowParseException("Unable to read edge alias");
                     }                 
 
@@ -469,7 +473,9 @@ namespace Raven.Server.Documents.Queries.Parser
             if (Scanner.TryScan("WHERE"))
             {
                 if (Expression(out filter) == false)
-                    throw new InvalidQueryException($"Failed to parse filter expression for: {alias}", Scanner.Input, null);
+                    throw new InvalidQueryException($"There is a 'where' clause after '{collection.FieldValue}', but failed to parse the filter expression that should be after the 'where'. (The alias of the problematic query element is {alias})", Scanner.Input, null);
+
+                filter.ThrowIfInvalidMethodInvocationInWhere(null,Scanner.Input, collection.FieldValue);
             }
 
             FieldExpression project = null;
@@ -653,8 +659,9 @@ namespace Raven.Server.Documents.Queries.Parser
             var expectNode = false;
             MatchPath last;
             var foundLeftArrow = false;
+            var lastElementStart = 0;
+            var lastElementLength = 0;
             while (true)
-
             {
                 if (Scanner.TryScan(EdgeOps, out var found))
                 {
@@ -669,6 +676,7 @@ namespace Raven.Server.Documents.Queries.Parser
                                 throw new InvalidQueryException("Got '[' when expected '-', did you forget to add '-[' ?", Scanner.Input, null);
 
                             var startingPos = Scanner.Position - 1;
+                            lastElementStart = startingPos;
 
                             if (GraphAlias(gq, true, alias, out alias) == false)
                                 throw new InvalidQueryException("MATCH identifier after '-['", Scanner.Input, null);
@@ -689,6 +697,7 @@ namespace Raven.Server.Documents.Queries.Parser
                                 throw new InvalidQueryException($"The edge with alias '{alias}' has arrow operators ('->') in both left and right directions. This is invalid syntax, edge elements should have either '-[edge expression]->' or '<-[edge expression]-' format.");
                             }
 
+                            lastElementLength = Scanner.Position - lastElementStart;
                             list.Add(new MatchPath
                             {
                                 Alias = alias,
@@ -743,6 +752,7 @@ namespace Raven.Server.Documents.Queries.Parser
 
                         case "(":
                             var start = Scanner.Position - 1;
+                            lastElementStart = start;
                             if (GraphAlias(gq, false, default, out alias) == false)
                                 throw new InvalidQueryException("Couldn't get node's alias", Scanner.Input, null);
                             var end = Scanner.Position + 1;
@@ -750,6 +760,7 @@ namespace Raven.Server.Documents.Queries.Parser
                             if (expectNode == false)
                                 ThrowExpectedEdgeButFoundNode(alias,Scanner.Input.Substring(start, end - start),Scanner.Input);
 
+                            lastElementLength = Scanner.Position - lastElementStart;
                             if (Scanner.TryScan(')') == false)
                                 throw new InvalidQueryException("MATCH operator expected a ')' after reading: " + alias, Scanner.Input, null);                           
 
@@ -883,6 +894,14 @@ namespace Raven.Server.Documents.Queries.Parser
                 }
                 else
                 {
+                    if (Scanner.TryPeek('.')) //error on possible typo/syntax error
+                    {
+                        //we have unexpected token in the first query element
+                        if(lastElementStart == 0 && lastElementLength == 0)
+                            throw new InvalidQueryException($"Unexpected '{Scanner.Input[Scanner.Position]}' after the token '{Scanner.Token}{Scanner.Input[Scanner.Position - 1]}'");
+
+                        throw new InvalidQueryException($"Unexpected '{Scanner.Input[Scanner.Position]}' after '{Scanner.Input.Substring(lastElementStart,lastElementLength)}'");
+                    }
                     op = FinalProcessingOfMatchExpression(list);
 
                     return true;
@@ -1663,7 +1682,7 @@ namespace Raven.Server.Documents.Queries.Parser
                     op = field;
                     return fieldOption == OperatorField.Desired;
                 }
-                ThrowParseException("Invalid operator expected any of (In, Between, =, <, >, <=, >=, !=)");
+                throw new InvalidQueryException($"Expected to a valid operator after '{field?.FieldValue ?? "<failed to fetch field name>"}', but found '{Scanner.Input[Scanner.Position]}'. Valid operators are: 'in', 'between', =, <, >, <=, >=, !=");
             }
 
 
@@ -1976,6 +1995,9 @@ namespace Raven.Server.Documents.Queries.Parser
 
                 bool? hasNextPart = null;
 
+                //if(Scanner.TryScan(']'))
+                //    throw new InvalidQueryException($"Unexpected ']' after '{string.Join(",",parts)}'. Perhaps this is a typo? Or if this is an collection reference expression, the correct syntax would be 'collection[].FieldName'", Scanner.Input);
+
                 while (Scanner.TryScan('['))
                 {
                     switch (Scanner.TryNumber())
@@ -1987,8 +2009,10 @@ namespace Raven.Server.Documents.Queries.Parser
                             break;
 
                         case null:
+                            if (Scanner.TryPeek('.'))
+                                throw new InvalidQueryException("Expected to find closing ']'. If this is an array indexer expression, the correct syntax would be 'collection[].MemberFieldName'", Scanner.Input);
                             if (Scanner.TryScan(']') == false)
-                                ThrowParseException("Expected to find closing ]");
+                                throw new InvalidQueryException($"Expected to find closing ']' after '{Scanner.Token}['.");
                             parts.Add("[]");
 
                             break;
