@@ -21,6 +21,7 @@ using Raven.Server.Documents.Queries.Facets;
 using Raven.Server.Documents.Queries.Highlightings;
 using Raven.Server.Documents.Queries.Parser;
 using Raven.Server.Documents.Queries.Suggestions;
+using Raven.Server.Extensions;
 using Sparrow;
 using Sparrow.Json;
 using Sparrow.Utils;
@@ -283,22 +284,7 @@ namespace Raven.Server.Documents.Queries
 
             if (Query.Where != null)
             {
-                if (Query.Where is MethodExpression me)
-                {
-                    var methodType = QueryMethod.GetMethodType(me.Name.Value);
-                    switch (methodType)
-                    {
-                        case MethodType.Id:
-                        case MethodType.CompareExchange:
-                        case MethodType.Count:
-                        case MethodType.Sum:
-                        case MethodType.Spatial_Point:
-                        case MethodType.Spatial_Wkt:
-                        case MethodType.Spatial_Circle:
-                            ThrowInvalidMethod(parameters, me);
-                            break;
-                    }
-                }
+                Query.Where.ThrowIfInvalidMethodInvocationInWhere(parameters, QueryText);
                 new FillWhereFieldsAndParametersVisitor(this, fromAlias, QueryText).Visit(Query.Where, parameters);
             }
 
