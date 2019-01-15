@@ -300,9 +300,12 @@ namespace Raven.Server.Documents.PeriodicBackup
 
         protected override void Dispose(bool disposing)
         {
+            Flush(flushToDisk: true);
             _inner.Dispose();
             base.Dispose(disposing);
         }
     }
+
+    
 }
 

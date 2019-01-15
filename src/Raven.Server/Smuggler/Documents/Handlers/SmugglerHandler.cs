@@ -20,6 +20,7 @@ using Microsoft.AspNetCore.WebUtilities;
 using Microsoft.Net.Http.Headers;
 using Raven.Client.Documents.Conventions;
 using Raven.Client.Documents.Operations;
+using Raven.Client.Documents.Operations.Backups;
 using Raven.Client.Documents.Smuggler;
 using Raven.Client.Exceptions.Security;
 using Raven.Client.Properties;
@@ -27,6 +28,7 @@ using Raven.Client.Util;
 using Raven.Server.Documents;
 using Raven.Server.Documents.Operations;
 using Raven.Server.Documents.Patch;
+using Raven.Server.Documents.PeriodicBackup;
 using Raven.Server.Json;
 using Raven.Server.Routing;
 using Raven.Server.ServerWide;
@@ -166,13 +168,32 @@ namespace Raven.Server.Smuggler.Documents.Handlers
             using (token)
             {
                 var source = new DatabaseSource(Database, startDocumentEtag);
-                var destination = new StreamDestination(ResponseBodyStream(), context, source);
-                var smuggler = new DatabaseSmuggler(Database, source, destination, Database.Time, options, onProgress: onProgress, token: token.Token);
-                return smuggler.Execute();
+                using (var outputStream = GetOutputStream(ResponseBodyStream(), options))
+                {
+                    var destination = new StreamDestination(outputStream, context, source);
+                    var smuggler = new DatabaseSmuggler(Database, source, destination, Database.Time, options, onProgress: onProgress, token: token.Token);
+                    return smuggler.Execute();
+                }
             }
         }
 
+        private Stream GetOutputStream(Stream fileStream, DatabaseSmugglerOptionsServerSide options)
+        {
+            if (options.EncryptionKey == null)
+                return fileStream;
 
+            var key = options?.EncryptionKey;
+            return new EncryptingXChaCha20Poly1305Stream(fileStream,
+                Convert.FromBase64String(key));
+        }
+
+        private Stream GetInputStream(Stream fileStream, DatabaseSmugglerOptionsServerSide options)
+        {
+            if (options.EncryptionKey != null)
+                return new DecryptingXChaCha20Oly1305Stream(fileStream, Convert.FromBase64String(options.EncryptionKey));
+
+            return fileStream;
+        }
 
         [RavenAction("/databases/*/admin/smuggler/import", "GET", AuthorizationStatus.Operator)]
         public async Task GetImport()
@@ -656,7 +677,8 @@ namespace Raven.Server.Smuggler.Documents.Handlers
 
                                     ApplyBackwardCompatibility(options);
 
-                                    var stream = new GZipStream(section.Body, CompressionMode.Decompress);
+                                    var inputStream = GetInputStream(section.Body, options);
+                                    var stream = new GZipStream(inputStream, CompressionMode.Decompress);
                                     DoImportInternal(context, stream, options, result, onProgress, token);
                                 }
                             }

@@ -8,6 +8,7 @@ using Raven.Client;
 using Raven.Client.Documents;
 using Raven.Client.Documents.Indexes;
 using Raven.Client.Documents.Operations;
+using Raven.Client.Documents.Operations.Backups;
 using Raven.Client.Documents.Operations.Expiration;
 using Raven.Client.Documents.Smuggler;
 using Raven.Client.ServerWide;
@@ -108,6 +109,66 @@ namespace SlowTests.Smuggler
                     await operation.WaitForCompletionAsync(TimeSpan.FromMinutes(1));
 
                     operation = await store2.Smuggler.ImportAsync(new DatabaseSmugglerImportOptions(), file);
+                    await operation.WaitForCompletionAsync(TimeSpan.FromMinutes(1));
+
+                    var stats = await store2.Maintenance.SendAsync(new GetStatisticsOperation());
+                    Assert.Equal(3, stats.CountOfDocuments);
+                    Assert.Equal(3, stats.CountOfIndexes);
+                }
+            }
+            finally
+            {
+                File.Delete(file);
+            }
+        }
+
+        [Fact]
+        public async Task CanExportAndImportEncrypted()
+        {
+            var file = Path.GetTempFileName();
+            try
+            {
+                using (var store1 = GetDocumentStore(new Options
+                {
+                    ModifyDatabaseName = s => $"{s}_1"
+                }))
+                using (var store2 = GetDocumentStore(new Options
+                {
+                    ModifyDatabaseName = s => $"{s}_2"
+                }))
+                {
+                    using (var session = store1.OpenSession())
+                    {
+                        // creating auto-indexes
+                        session.Query<User>()
+                            .Where(x => x.Age > 10)
+                            .ToList();
+
+                        session.Query<User>()
+                            .GroupBy(x => x.Name)
+                            .Select(x => new { Name = x.Key, Count = x.Count() })
+                            .ToList();
+                    }
+
+                    new Users_ByName().Execute(store1);
+
+                    using (var session = store1.OpenAsyncSession())
+                    {
+                        await session.StoreAsync(new User { Name = "Name1", LastName = "LastName1" });
+                        await session.StoreAsync(new User { Name = "Name2", LastName = "LastName2" });
+                        await session.SaveChangesAsync();
+                    }
+
+                    var operation = await store1.Smuggler.ExportAsync(new DatabaseSmugglerExportOptions
+                    {
+                       EncryptionKey = "OI7Vll7DroXdUORtc6Uo64wdAk1W0Db9ExXXgcg5IUs="
+                    }, file);
+                    await operation.WaitForCompletionAsync(TimeSpan.FromMinutes(1));
+
+                    operation = await store2.Smuggler.ImportAsync(new DatabaseSmugglerImportOptions
+                    {
+                        EncryptionKey = "OI7Vll7DroXdUORtc6Uo64wdAk1W0Db9ExXXgcg5IUs="
+                    }, file);
                     await operation.WaitForCompletionAsync(TimeSpan.FromMinutes(1));
 
                     var stats = await store2.Maintenance.SendAsync(new GetStatisticsOperation());

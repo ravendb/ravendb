@@ -1,4 +1,5 @@
 ﻿using System;
+using Raven.Client.Documents.Operations.Backups;
 
 namespace Raven.Client.Documents.Smuggler
 {
@@ -32,7 +33,7 @@ namespace Raven.Client.Documents.Smuggler
 
         public bool SkipRevisionCreation { get; set; }
 
-        public bool Encrypted { get; set; }
+        public string EncryptionKey { get; set; }
 
         [Obsolete("Not used. Will be removed in next major version of the product.")]
         public bool ReadLegacyEtag { get; set; }
