@@ -864,7 +864,7 @@ namespace Raven.Server.Documents.Revisions
             }
         }
 
-        private Document GetRevisionBefore(DocumentsOperationContext context,
+        private unsafe Document GetRevisionBefore(DocumentsOperationContext context,
             RevertParameters parameters,
             string id,
             RevertResult progressResult)
@@ -880,10 +880,18 @@ namespace Raven.Server.Documents.Revisions
                 // order is different than the last modified order
                 Document result = null;
                 Document prev = null;
+                string collection = null;
 
                 var table = new Table(RevisionsSchema, context.Transaction.InnerTransaction);
                 foreach (var tvr in table.SeekBackwardFrom(RevisionsSchema.Indexes[IdAndEtagSlice], prefixSlice, lastKey, 0))
                 {
+                    if (collection == null)
+                    {
+                        var ptr = tvr.Result.Reader.Read((int)RevisionsTable.Document, out var size);
+                        var data = new BlittableJsonReaderObject(ptr, size, context);
+                        collection = _documentsStorage.ExtractCollectionName(context, data).Name;
+                    }
+
                     var etag = TableValueToEtag((int)RevisionsTable.Etag, ref tvr.Result.Reader);
                     if (etag > parameters.EtagBarrier)
                     {
@@ -944,9 +952,31 @@ namespace Raven.Server.Documents.Revisions
                 if (foundAfter == false)
                     return null; // nothing do to, no changes were found
 
-                if (result == null)
+                if (result == null) // no revision before POT was found
                 {
-                    progressResult.Warn(id, $"The oldest revision is after the '{parameters.Before}'.");
+                    var count = CountOfRevisions(context, prefixSlice);
+                    var revisionsToKeep = GetRevisionsConfiguration(collection).MinimumRevisionsToKeep;
+                    if (revisionsToKeep == null || count < revisionsToKeep)
+                    {
+                        var copy = lowerId.Clone(context.Allocator);
+
+                        // document was created after POT so we need to delete it.
+                        return new Document
+                        {
+                            Flags = DocumentFlags.DeleteRevision,
+                            LowerId = context.AllocateStringValue(null, copy.Content.Ptr, copy.Size),
+                            Id = context.GetLazyString(id)
+                        };
+                    }
+
+                    var first = table.SeekOneForwardFromPrefix(RevisionsSchema.Indexes[IdAndEtagSlice], prefixSlice);
+                    if (first == null)
+                        return null;
+
+                    // document reached max number of revisions. So we take the oldest.
+                    progressResult.Warn(id,
+                        $"Reverted to oldest revision, since no revision prior to '{parameters.Before}' was found and you reached the maximum number of revisions ({count}).");
+                    return TableValueToRevision(context, ref first.Reader);
                 }
 
                 return result;
@@ -962,6 +992,7 @@ namespace Raven.Server.Documents.Revisions
             public long EtagBarrier;
             public long LastScannedEtag;
             public readonly HashSet<string> ScannedIds = new HashSet<string>();
+            public Action<IOperationProgress> OnProgressAction;
         }
 
         public async Task<IOperationResult> RevertRevisions(DateTime before, TimeSpan window, Action<IOperationProgress> onProgressAction = null)
@@ -973,12 +1004,13 @@ namespace Raven.Server.Documents.Revisions
             {
                 Before = before,
                 MinimalDate = before.Add(-window), // since the documents/revisions are not sorted by date, stop searching if we reached this date.
-                EtagBarrier = _documentsStorage.GenerateNextEtag() // every change after this etag, will _not_ be reverted.
+                EtagBarrier = _documentsStorage.GenerateNextEtag(), // every change after this etag, will _not_ be reverted.
+                OnProgressAction = onProgressAction
             };
             parameters.LastScannedEtag = parameters.EtagBarrier;
 
             // send initial progress
-            onProgressAction?.Invoke(result);
+            parameters.OnProgressAction?.Invoke(result);
             
             var hasMore = true;
             while (hasMore)
@@ -987,7 +1019,6 @@ namespace Raven.Server.Documents.Revisions
                 {
                     hasMore = PrepareRevertedRevisions(writeCtx, parameters, result, list);
                     await WriteRevertedRevisions(list);
-                    onProgressAction?.Invoke(result);
                 }
             }
 
@@ -1015,7 +1046,7 @@ namespace Raven.Server.Documents.Revisions
                 {
                     result.ScannedRevisions++;
 
-                    var id = TableValueToString(readCtx, (int)RevisionsTable.LowerId, ref tvr.Reader);
+                    var id = TableValueToId(readCtx, (int)RevisionsTable.Id, ref tvr.Reader);
                     var etag = TableValueToEtag((int)RevisionsTable.Etag, ref tvr.Reader);
                     parameters.LastScannedEtag = etag;
 
@@ -1041,6 +1072,10 @@ namespace Raven.Server.Documents.Revisions
                         break;
 
                     RestoreRevision(readCtx, writeCtx, parameters, id, result, list);
+
+                    if (result.ScannedDocuments % 1024 == 0)
+                        parameters.OnProgressAction?.Invoke(result);
+
                     if (readCtx.AllocatedMemory + writeCtx.AllocatedMemory > SizeLimit)
                     {
                         return true;

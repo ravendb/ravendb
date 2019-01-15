@@ -59,6 +59,81 @@ namespace SlowTests.Server.Documents.Revisions
         }
 
         [Fact]
+        public async Task RevertNewDocumentToBin()
+        {
+            var company = new Company { Name = "Hibernating Rhinos" };
+            var last = DateTime.UtcNow;
+
+            using (var store = GetDocumentStore())
+            {
+                await RevisionsHelper.SetupRevisions(Server.ServerStore, store.Database);
+                using (var session = store.OpenAsyncSession())
+                {
+                    await session.StoreAsync(company);
+                    await session.SaveChangesAsync();
+                }
+
+                var db = await GetDocumentDatabaseInstanceFor(store);
+                var result = (RevertResult)await db.DocumentsStorage.RevisionsStorage.RevertRevisions(last, TimeSpan.FromMinutes(60));
+
+                Assert.Equal(1, result.ScannedRevisions);
+                Assert.Equal(1, result.ScannedDocuments);
+                Assert.Equal(1, result.RevertedDocuments);
+
+                using (var session = store.OpenAsyncSession())
+                {
+                    var companiesRevisions = await session.Advanced.Revisions.GetForAsync<Company>(company.Id);
+                    Assert.Equal(2, companiesRevisions.Count);
+
+                    Assert.Equal(null, companiesRevisions[0].Name);
+                    Assert.Equal("Hibernating Rhinos", companiesRevisions[1].Name);
+                }
+            }
+        }
+
+        [Fact]
+        public async Task RevertToOldestIfRevisionLimitReached()
+        {
+            var last = DateTime.UtcNow;
+
+            using (var store = GetDocumentStore())
+            {
+                await RevisionsHelper.SetupRevisions(Server.ServerStore, store.Database);
+                var name = "Hibernating Rhinos";
+                var company = new Company();
+
+                using (var session = store.OpenAsyncSession())
+                {
+                    for (int i = 0; i < 6; i++)
+                    {
+                        company.Name = name + " " + i;
+                        await session.StoreAsync(company, "foo/bar");
+                        await session.SaveChangesAsync();
+                    }
+                }
+
+                var db = await GetDocumentDatabaseInstanceFor(store);
+                var result = (RevertResult)await db.DocumentsStorage.RevisionsStorage.RevertRevisions(last, TimeSpan.FromMinutes(60));
+
+                Assert.Equal(5, result.ScannedRevisions);
+                Assert.Equal(1, result.ScannedDocuments);
+                Assert.Equal(1, result.RevertedDocuments);
+
+                using (var session = store.OpenAsyncSession())
+                {
+                    var companiesRevisions = await session.Advanced.Revisions.GetForAsync<Company>("foo/bar");
+                    Assert.Equal(5, companiesRevisions.Count);
+
+                    Assert.Equal("Hibernating Rhinos 1", companiesRevisions[0].Name);
+                    Assert.Equal("Hibernating Rhinos 5", companiesRevisions[1].Name);
+                    Assert.Equal("Hibernating Rhinos 4", companiesRevisions[2].Name);
+                    Assert.Equal("Hibernating Rhinos 3", companiesRevisions[3].Name);
+                    Assert.Equal("Hibernating Rhinos 2", companiesRevisions[4].Name);
+                }
+            }
+        }
+
+        [Fact]
         public async Task DontRevertOldDocument()
         {
             var company = new Company { Name = "Company Name" };
