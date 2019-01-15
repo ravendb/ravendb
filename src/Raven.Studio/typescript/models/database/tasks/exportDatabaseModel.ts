@@ -1,5 +1,7 @@
 ﻿/// <reference path="../../../../typings/tsd.d.ts"/>
 
+import setupEncryptionKey = require("viewmodels/resources/setupEncryptionKey");
+
 class exportDatabaseModel {
 
     includeDatabaseRecord = ko.observable(true);
@@ -12,8 +14,12 @@ class exportDatabaseModel {
     includeAttachments = ko.observable(true);
     includeRevisionDocuments = ko.observable(true);
     revisionsAreConfigured: KnockoutComputed<boolean>;
+    encryptOutput = ko.observable<boolean>(false);
 
     exportFileName = ko.observable<string>();
+    
+    encryptionKey = ko.observable<string>();
+    savedKeyConfirmation = ko.observable<boolean>(false);
 
     includeExpiredDocuments = ko.observable(true);
     removeAnalyzers = ko.observable(false);
@@ -24,10 +30,12 @@ class exportDatabaseModel {
     transformScript = ko.observable<string>();
     
     validationGroup: KnockoutValidationGroup;
+    encryptionValidationGroup: KnockoutValidationGroup;
     exportDefinitionHasIncludes: KnockoutComputed<boolean>;
 
     constructor() {
         this.initValidation();
+        this.initEncryptionValidation();
 
         this.includeDocuments.subscribe(documents => {
             if (!documents) {
@@ -85,6 +93,7 @@ class exportDatabaseModel {
             IncludeExpired: this.includeExpiredDocuments(),
             TransformScript: this.transformScript(),
             RemoveAnalyzers: this.removeAnalyzers(),
+            EncryptionKey: this.encryptOutput() ? this.encryptionKey() : undefined,
             OperateOnTypes: operateOnTypes.join(",") as Raven.Client.Documents.Smuggler.DatabaseItemType,
             MaxStepsForTransformScript: 10 * 1000
         } as Raven.Server.Smuggler.Documents.Data.DatabaseSmugglerOptionsServerSide;
@@ -115,11 +124,21 @@ class exportDatabaseModel {
                 }
             ]
         });
-       
+        
         this.validationGroup = ko.validatedObservable({
             transformScript: this.transformScript,
             exportDefinitionHasIncludes: this.exportDefinitionHasIncludes
         });
+    }
+    
+    private initEncryptionValidation() {
+        setupEncryptionKey.setupConfirmationValidation(this.savedKeyConfirmation);
+        setupEncryptionKey.setupKeyValidation(this.encryptionKey);
+
+        this.encryptionValidationGroup = ko.validatedObservable({
+            savedKeyConfirmation: this.savedKeyConfirmation,
+            encryptionKey: this.encryptionKey
+        })        
     }
 }
 

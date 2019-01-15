@@ -28,7 +28,6 @@ class addNewNodeToDatabaseGroup extends dialogViewModelBase {
         addNode: ko.observable<boolean>(false)
     };
 
-
     constructor(databaseInfo: databaseInfo, isEncrypted: boolean) {
         super();
         

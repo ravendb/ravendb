@@ -28,7 +28,7 @@ namespace Raven.Client.Documents.Smuggler
         public bool RemoveAnalyzers { get; set; }
 
         public string TransformScript { get; set; }
-
+        
         public int MaxStepsForTransformScript { get; set; }
 
         public bool SkipRevisionCreation { get; set; }
