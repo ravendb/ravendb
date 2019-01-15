@@ -17,6 +17,16 @@ namespace Raven.Server.Documents
 
         public event Action<OperationStatusChange> OnOperationStatusChange;
 
+        public event Action<TopologyChange> OnTopologyChange;
+
+        public void RaiseNotifications(TopologyChange topologyChange)
+        {
+            OnTopologyChange?.Invoke(topologyChange);
+
+            foreach (var connection in Connections)
+                connection.Value.SendTopologyChanges(topologyChange);
+        }
+
         public void RaiseNotifications(IndexChange indexChange)
         {
             OnIndexChange?.Invoke(indexChange);
