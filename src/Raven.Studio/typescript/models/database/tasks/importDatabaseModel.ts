@@ -12,6 +12,9 @@ class importDatabaseModel {
     includeLegacyAttachments = ko.observable(false);
     includeAttachments = ko.observable(true);
 
+    encryptedInput = ko.observable<boolean>(false);
+    encryptionKey = ko.observable<string>();
+
     includeExpiredDocuments = ko.observable(true);
     removeAnalyzers = ko.observable(false);
     
@@ -81,6 +84,7 @@ class importDatabaseModel {
             IncludeExpired: this.includeExpiredDocuments(),
             TransformScript: this.transformScript(),
             RemoveAnalyzers: this.removeAnalyzers(),
+            EncryptionKey: this.encryptedInput() ? this.encryptionKey() : undefined,
             OperateOnTypes: operateOnTypes.join(",") as Raven.Client.Documents.Smuggler.DatabaseItemType
         } as Raven.Client.Documents.Smuggler.DatabaseSmugglerImportOptions;
     }
@@ -111,10 +115,17 @@ class importDatabaseModel {
                 }
             ]
         });
+        
+        this.encryptionKey.extend({
+            required: {
+                onlyIf: () => this.encryptedInput()
+            }
+        });
 
         this.validationGroup = ko.validatedObservable({
             transformScript: this.transformScript,
-            importDefinitionHasIncludes: this.importDefinitionHasIncludes
+            importDefinitionHasIncludes: this.importDefinitionHasIncludes,
+            encryptionKey: this.encryptionKey
         });
     }
 }
