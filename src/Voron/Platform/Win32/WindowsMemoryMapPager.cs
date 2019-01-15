@@ -66,7 +66,7 @@ namespace Voron.Platform.Win32
             _copyOnWriteMode = Options.CopyOnWriteMode && FileName.FullPath.EndsWith(Constants.DatabaseFilename);
             if (_copyOnWriteMode)
             {
-                _memoryMappedFileAccess = MemoryMappedFileAccess.Read | MemoryMappedFileAccess.CopyOnWrite;
+                _memoryMappedFileAccess = MemoryMappedFileAccess.CopyOnWrite;
                 fileAttributes = Win32NativeFileAttributes.Readonly;
                 _access = Win32NativeFileAccess.GenericRead;
             }
