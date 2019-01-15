@@ -20,6 +20,8 @@ class revertRevisionsDetails extends abstractOperationDetails {
     private gridController = ko.observable<virtualGridController<gridItem>>();
     private columnPreview = new columnPreviewPlugin<gridItem>();
     private allWarnings = ko.observableArray<gridItem>([]);
+    
+    private gridInitialized = false;
 
     constructor(op: operation, notificationCenter: notificationCenter) {
         super(op, notificationCenter);
@@ -38,6 +40,27 @@ class revertRevisionsDetails extends abstractOperationDetails {
     compositionComplete() {
         super.compositionComplete();
 
+        this.progress.subscribe(result => {
+            if (result) {
+                this.allWarnings(_.map(result.Warnings, (value, key) => {
+                    return {
+                        Id: key,
+                        Description: value
+                    } as gridItem
+                }));
+
+                if (this.allWarnings().length) {
+                    if (!this.gridInitialized) {
+                        this.initGrid();
+                    }
+                    
+                    this.gridController().reset(false);    
+                }
+            }
+        });
+    }
+    
+    private initGrid() {
         const grid = this.gridController();
         grid.headerVisible(true);
 
@@ -61,19 +84,8 @@ class revertRevisionsDetails extends abstractOperationDetails {
                     onValue(value);
                 }
             });
-
-        this.progress.subscribe(result => {
-            if (result) {
-                this.allWarnings(_.map(result.Warnings, (value, key) => {
-                    return {
-                        Id: key,
-                        Description: value
-                    } as gridItem
-                }));
-
-                this.gridController().reset(false);
-            }
-        });
+        
+        this.gridInitialized = true;
     }
 
     private fetcher(skip: number, take: number): JQueryPromise<pagedResult<gridItem>> {

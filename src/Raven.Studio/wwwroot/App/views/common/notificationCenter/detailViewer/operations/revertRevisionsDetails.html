@@ -45,7 +45,7 @@
 </code></pre>
             </div>
 
-            <div class="margin-bottom" style="position: relative; height: 300px">
+            <div class="margin-bottom" style="position: relative; height: 300px" data-bind="visible: allWarnings().length">
                 <virtual-grid style="height: 300px" class="resizable flex-window" params="controller: gridController, emptyTemplate: 'empty-revert-revisions-template'"></virtual-grid>
             </div>
         </div>
