@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Text;
+using System.Threading;
 using System.Threading.Tasks;
 using FastTests.Server.Documents.Revisions;
 using FastTests.Server.Replication;
@@ -87,6 +88,62 @@ namespace SlowTests.Server.Documents.Revisions
 
                     Assert.Equal(null, companiesRevisions[0].Name);
                     Assert.Equal("Hibernating Rhinos", companiesRevisions[1].Name);
+                }
+            }
+        }
+
+        [Fact]
+        public async Task RevertRevisionOutsideTheWindow()
+        {
+            var company = new Company { Name = "Company Name" };
+            using (var store = GetDocumentStore())
+            {
+                await RevisionsHelper.SetupRevisions(Server.ServerStore, store.Database);
+                using (var session = store.OpenAsyncSession())
+                {
+                    await session.StoreAsync(company);
+                    await session.SaveChangesAsync();
+                }
+
+                await Task.Delay(2000);
+
+                using (var session = store.OpenAsyncSession())
+                {
+                    company.Name = "Hibernating Rhinos";
+                    await session.StoreAsync(company);
+                    await session.SaveChangesAsync();
+                }
+
+                await Task.Delay(5000);
+
+                DateTime last = DateTime.UtcNow;
+                last = last.AddSeconds(-3);
+
+                using (var session = store.OpenAsyncSession())
+                {
+                    company.Name = "Hibernating Rhinos 2";
+                    await session.StoreAsync(company);
+                    await session.SaveChangesAsync();
+                }
+
+                await Task.Delay(2000);
+
+                var db = await GetDocumentDatabaseInstanceFor(store);
+                var result = (RevertResult)await db.DocumentsStorage.RevisionsStorage.RevertRevisions(last, TimeSpan.FromSeconds(1));
+
+                Assert.Equal(3, result.ScannedRevisions);
+                Assert.Equal(1, result.ScannedDocuments);
+                Assert.Equal(1, result.RevertedDocuments);
+
+                using (var session = store.OpenAsyncSession())
+                {
+                    var companiesRevisions = await session.Advanced.Revisions.GetForAsync<Company>(company.Id);
+                    Assert.Equal(4, companiesRevisions.Count);
+
+                    Assert.Equal("Hibernating Rhinos", companiesRevisions[0].Name);
+                    Assert.Equal("Hibernating Rhinos 2", companiesRevisions[1].Name);
+                    Assert.Equal("Hibernating Rhinos", companiesRevisions[2].Name);
+                    Assert.Equal("Company Name", companiesRevisions[3].Name);
                 }
             }
         }

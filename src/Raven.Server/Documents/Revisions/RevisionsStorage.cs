@@ -909,6 +909,12 @@ namespace Raven.Server.Documents.Revisions
                     if (lastModified < parameters.MinimalDate)
                     {
                         // this is a very old revision, and we should stop here
+                        if (result == null)
+                        {
+                            // we will take this old revision if no other was found
+                            result = TableValueToRevision(context, ref tvr.Result.Reader);
+                            prev = result;
+                        }
                         break;
                     }
 
