@@ -24,6 +24,7 @@ using Voron.Data;
 using Voron.Data.BTrees;
 using Voron.Data.RawData;
 using Voron.Data.Tables;
+using Voron.Exceptions;
 using Voron.Global;
 using Voron.Impl.Paging;
 using static System.String;
@@ -40,17 +41,26 @@ namespace Voron.Recovery
             _pageSize = config.PageSizeInKB * Constants.Size.Kilobyte;
             _initialContextSize = config.InitialContextSizeInMB * Constants.Size.Megabyte;
             _initialContextLongLivedSize = config.InitialContextLongLivedSizeInKB * Constants.Size.Kilobyte;
-            _option = StorageEnvironmentOptions.ForPath(config.DataFileDirectory, null, null, null, null);
-            _copyOnWrite = !config.DisableCopyOnWriteMode;
+            
             // by default CopyOnWriteMode will be true
-            _option.CopyOnWriteMode = _copyOnWrite;
-            _option.ManualFlushing = true;
+            _copyOnWrite = !config.DisableCopyOnWriteMode;
+            _config = config;
+            _option = CreateOptions();
+            
             _progressIntervalInSec = config.ProgressIntervalInSec;
             _previouslyWrittenDocs = new Dictionary<string, long>();
             LoggingSource.Instance.SetupLogMode(config.LoggingMode, Path.Combine(Path.GetDirectoryName(_output), LogFileName));
             _logger = LoggingSource.Instance.GetLogger<Recovery>("Voron Recovery");
         }
 
+        private StorageEnvironmentOptions CreateOptions()
+        {
+            var result = StorageEnvironmentOptions.ForPath(_config.DataFileDirectory, null, null, null, null);
+            result.CopyOnWriteMode = _copyOnWrite;
+            result.ManualFlushing = true;
+
+            return result;
+        }
 
         private readonly byte[] _streamHashState = new byte[(int)Sodium.crypto_generichash_statebytes()];
         private readonly byte[] _streamHashResult = new byte[(int)Sodium.crypto_generichash_bytes()];
@@ -78,7 +88,27 @@ namespace Voron.Recovery
                     try
                     {
                         _option.OwnsPagers = false;
-                        se = new StorageEnvironment(_option);
+
+                        while (true)
+                        {
+                            try
+                            {
+                                se = new StorageEnvironment(_option);
+                                break;
+                            }
+                            catch (IncreasingDataFileInCopyOnWriteModeException e)
+                            {
+                                _option.Dispose();
+
+                                using (var file = File.Open(e.DataFilePath, FileMode.Open))
+                                {
+                                    file.SetLength(e.RequestedSize);
+                                }
+
+                                _option = CreateOptions();
+                            }
+                        }
+
                         mem = se.Options.DataPager.AcquirePagePointer(null, 0);
                         writer.WriteLine(
                             $"Journal recovery has completed successfully within {sw.Elapsed.TotalSeconds:N1} seconds");
@@ -887,6 +917,7 @@ namespace Voron.Recovery
         private bool _lastWriteIsDocument;
         private (string hash, long size, string tag)? _lastAttachmentInfo;
         private Logger _logger;
+        private VoronRecoveryConfiguration _config;
 
         public enum RecoveryStatus
         {
