@@ -111,6 +111,8 @@ namespace Raven.Server.Documents.Handlers
                     var jsonParserState = new JsonParserState();
                     using (var parser = new UnmanagedJsonParser(context, jsonParserState, debugTag))
                     {
+                        connection.SendSupportedFeatures();
+
                         var result = await receiveAsync;
                         Database.DatabaseShutdown.ThrowIfCancellationRequested();
 
@@ -136,6 +138,7 @@ namespace Raven.Server.Documents.Handlers
                                         index = 0;
                                     receiveAsync = webSocket.ReceiveAsync(segments[index].Buffer, Database.DatabaseShutdown);
                                 }
+
 
                                 builder.FinalizeDocument();
 

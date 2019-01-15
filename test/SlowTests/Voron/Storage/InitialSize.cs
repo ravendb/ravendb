@@ -21,7 +21,7 @@ namespace SlowTests.Voron.Storage
         [Fact]
         public void WhenInitialFileSizeIsNotSetTheFileSizeForDataFileAndScratchFileShouldBeSetToSystemAllocationGranularity()
         {
-
+            DeleteDataDir();
 
             var options = StorageEnvironmentOptions.ForPath(DataDir);
             options.InitialFileSize = null;
@@ -39,6 +39,8 @@ namespace SlowTests.Voron.Storage
         [Fact]
         public void WhenInitialFileSizeIsSetTheFileSizeForDataFileAndScratchFileShouldBeSetAccordingly()
         {
+            DeleteDataDir();
+
             var options = StorageEnvironmentOptions.ForPath(DataDir);
             options.InitialFileSize = GetExpectedInitialSize() * 2;
 
@@ -55,6 +57,8 @@ namespace SlowTests.Voron.Storage
         [Fact]
         public void WhenInitialFileSizeIsSetTheFileSizeForDataFileAndScratchFileShouldBeSetAccordinglyAndItWillBeRoundedToTheNearestGranularity()
         {
+            DeleteDataDir();
+
             var options = StorageEnvironmentOptions.ForPath(DataDir);
             options.InitialFileSize = GetExpectedInitialSize() * 2 + 1;
 
@@ -78,11 +82,15 @@ namespace SlowTests.Voron.Storage
             }
         }
 
-        public override void Dispose()
+        private void DeleteDataDir()
         {
             if (!string.IsNullOrEmpty(DataDir) && Directory.Exists(DataDir))
                 Directory.Delete(DataDir, true);
+        }
 
+        public override void Dispose()
+        {
+            DeleteDataDir();
             base.Dispose();
         }
     }

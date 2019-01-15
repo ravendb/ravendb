@@ -825,17 +825,12 @@ namespace Raven.Server.Utils.Cli
 
             cli._server.ServerStore.EnsureNotPassive();
 
-            // This restriction should be removed when updating to .net core 2.1 when export of collection is fixed.
-            // With export, we'll be able to load the certificate and export it without a password, and propagate it through the cluster.
-            if (string.IsNullOrWhiteSpace(password) == false)
-                throw new NotSupportedException("Replacing the cluster certificate with a password protected certificates is currently not supported.");
-
-            X509Certificate2 cert;
+            X509Certificate2Collection cert = new X509Certificate2Collection();
             byte[] certBytes;
             try
             {
                 certBytes = File.ReadAllBytes(path);
-                cert = new X509Certificate2(path, password, X509KeyStorageFlags.Exportable | X509KeyStorageFlags.PersistKeySet | X509KeyStorageFlags.MachineKeySet);
+                cert.Import(certBytes, password, X509KeyStorageFlags.Exportable | X509KeyStorageFlags.MachineKeySet);
             }
             catch (Exception e)
             {
@@ -843,8 +838,35 @@ namespace Raven.Server.Utils.Cli
                 return false;
             }
 
-            WriteText("Successfully read certificate: " + cert.Thumbprint, TextColor, cli);
-            WriteText(cert.ToString(), TextColor, cli);
+            // Export the certificate without a password, to send it through the cluster.
+            if (string.IsNullOrWhiteSpace(password) == false)
+            {
+                try
+                {
+                    // With the private key, without the password
+                    certBytes = cert.Export(X509ContentType.Pkcs12);
+                }
+                catch (Exception e)
+                {
+                    WriteError("Failed to export the password provided certificate." + e, cli);
+                    return false;
+                }
+            }
+
+            // Ensure we'll be able to load the certificate
+            X509Certificate2 loadedCert;
+            try
+            {
+                loadedCert = new X509Certificate2(certBytes, (string)null, X509KeyStorageFlags.Exportable | X509KeyStorageFlags.MachineKeySet);
+            }
+            catch (Exception e)
+            {
+                WriteError("Failed to load the provided certificate." + e, cli);
+                return false;
+            }
+
+            WriteText("Successfully read certificate: " + loadedCert.Thumbprint, TextColor, cli);
+            WriteText(loadedCert.ToString(), TextColor, cli);
 
             try
             {
@@ -854,15 +876,18 @@ namespace Raven.Server.Utils.Cli
 
                 Task.WhenAny(replicationTask, timeoutTask).Wait();
                 if (replicationTask.IsCompleted == false)
-                    throw new TimeoutException("Timeout when trying to replace the server certificate.");
+                {
+                    WriteError("Timeout when trying to replace the server certificate.", cli);
+                    return false;
+                }
             }
             catch (Exception e)
             {
-                throw new InvalidOperationException("Failed to replace the server certificate. Check the logs for details.", e);
+                WriteError("Failed to replace the server certificate. Check the logs for details." + e, cli);
+                return false;
             }
 
             WriteText("Successfully replaced the server certificate.", TextColor, cli);
-
             return true;
         }
 
@@ -882,7 +907,8 @@ namespace Raven.Server.Utils.Cli
             }
             catch (Exception e)
             {
-                throw new InvalidOperationException("Failed to trigger a certificate refresh cycle.", e);
+                WriteError("Failed to trigger a certificate refresh cycle." + e, cli);
+                return false;
             }
 
             WriteText("Triggered a certificate refresh cycle.", TextColor, cli);
@@ -1110,7 +1136,7 @@ namespace Raven.Server.Utils.Cli
                 new[] {"generateClientCert <name> <path-to-output-folder> [password]", "Generate a new trusted client certificate with 'ClusterAdmin' security clearance."},
                 new[] {"trustServerCert <name> <path-to-pfx> [password]", "Register a server certificate of another node to be trusted on this server."},
                 new[] {"trustClientCert <name> <path-to-pfx> [password]", "Register a client certificate to be trusted on this server with 'ClusterAdmin' security clearance."},
-                new[] {"replaceClusterCert [-replaceImmediately] <name> <path-to-pfx> [password]", "Replace the cluster certificate."},
+                new[] {"replaceClusterCert [-replaceImmediately] <path-to-pfx> [password]", "Replace the cluster certificate."},
                 new[] {"triggerCertificateRefresh [-replaceImmediately]", "Trigger a certificate refresh check (normally happens once an hour)."}
             };
 

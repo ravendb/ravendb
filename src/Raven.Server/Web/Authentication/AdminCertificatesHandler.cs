@@ -439,6 +439,7 @@ namespace Raven.Server.Web.Authentication
             var pageSize = GetPageSize();
 
             using (ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
+            using (context.OpenReadTransaction())
             {
                 var certificateList = new Dictionary<string, BlittableJsonReaderObject>();
 
@@ -469,73 +470,66 @@ namespace Raven.Server.Web.Authentication
                         if (ServerStore.CurrentRachisState == RachisState.Passive)
                         {
                             List<string> localCertKeys;
-                            using (context.OpenReadTransaction())
-                                localCertKeys = ServerStore.Cluster.GetCertificateKeysFromLocalState(context).ToList();
 
-                            using (context.OpenReadTransaction())
+                            localCertKeys = ServerStore.Cluster.GetCertificateKeysFromLocalState(context).ToList();
+                            
+                            foreach (var localCertKey in localCertKeys)
                             {
-                                foreach (var localCertKey in localCertKeys)
-                                {
-                                    var localCertificate = ServerStore.Cluster.GetLocalState(context, localCertKey);
-                                    if (localCertificate == null)
-                                        continue;
+                                var localCertificate = ServerStore.Cluster.GetLocalState(context, localCertKey);
+                                if (localCertificate == null)
+                                    continue;
 
-                                    var def = JsonDeserializationServer.CertificateDefinition(localCertificate);
+                                var def = JsonDeserializationServer.CertificateDefinition(localCertificate);
 
-                                    if (showSecondary || string.IsNullOrEmpty(def.CollectionPrimaryKey))
-                                        certificateList.TryAdd(localCertKey, localCertificate);
-                                    else
-                                        localCertificate.Dispose();
-                                }
+                                if (showSecondary || string.IsNullOrEmpty(def.CollectionPrimaryKey))
+                                    certificateList.TryAdd(localCertKey, localCertificate);
+                                else
+                                    localCertificate.Dispose();
                             }
+                            
                         }
                         // If we are not passive, we take the certs from the cluster
                         else
                         {
-                            using (context.OpenReadTransaction())
+                            foreach (var item in ServerStore.Cluster.ItemsStartingWith(context, Constants.Certificates.Prefix, start, pageSize))
                             {
-                                foreach (var item in ServerStore.Cluster.ItemsStartingWith(context, Constants.Certificates.Prefix, start, pageSize))
-                                {
-                                    var def = JsonDeserializationServer.CertificateDefinition(item.Value);
+                                var def = JsonDeserializationServer.CertificateDefinition(item.Value);
 
-                                    if (showSecondary || string.IsNullOrEmpty(def.CollectionPrimaryKey))
-                                        certificateList.TryAdd(item.ItemName, item.Value);
-                                    else
-                                        item.Value.Dispose();
-                                }
+                                if (showSecondary || string.IsNullOrEmpty(def.CollectionPrimaryKey))
+                                    certificateList.TryAdd(item.ItemName, item.Value);
+                                else
+                                    item.Value.Dispose();
                             }
                         }
                     }
                     else
                     {
-                        using (context.OpenReadTransaction())
+                        var key = Constants.Certificates.Prefix + thumbprint;
+
+                        var certificate = ServerStore.CurrentRachisState == RachisState.Passive
+                            ? ServerStore.Cluster.GetLocalState(context, key)
+                            : ServerStore.Cluster.Read(context, key);
+
+                        if (certificate == null)
                         {
-                            var key = Constants.Certificates.Prefix + thumbprint;
+                            HttpContext.Response.StatusCode = (int)HttpStatusCode.NotFound;
+                            return Task.CompletedTask;
+                        }
 
-                            var certificate = ServerStore.CurrentRachisState == RachisState.Passive
-                                ? ServerStore.Cluster.GetLocalState(context, key)
-                                : ServerStore.Cluster.Read(context, key);
-
+                        var definition = JsonDeserializationServer.CertificateDefinition(certificate);
+                        if (string.IsNullOrEmpty(definition.CollectionPrimaryKey) == false)
+                        {
+                            certificate = ServerStore.Cluster.Read(context, definition.CollectionPrimaryKey);
                             if (certificate == null)
                             {
                                 HttpContext.Response.StatusCode = (int)HttpStatusCode.NotFound;
                                 return Task.CompletedTask;
                             }
-
-                            var definition = JsonDeserializationServer.CertificateDefinition(certificate);
-                            if (string.IsNullOrEmpty(definition.CollectionPrimaryKey) == false)
-                            {
-                                certificate = ServerStore.Cluster.Read(context, definition.CollectionPrimaryKey);
-                                if (certificate == null)
-                                {
-                                    HttpContext.Response.StatusCode = (int)HttpStatusCode.NotFound;
-                                    return Task.CompletedTask;
-                                }
-                            }
-
-                            certificateList.TryAdd(key, certificate);
                         }
+
+                        certificateList.TryAdd(key, certificate);
                     }
+                    
 
                     var wellKnown = ServerStore.Configuration.Security.WellKnownAdminCertificates;
 
@@ -759,16 +753,14 @@ namespace Raven.Server.Web.Authentication
         [RavenAction("/admin/certificates/cluster-domains", "GET", AuthorizationStatus.ClusterAdmin)]
         public Task ClusterDomains()
         {
-
             using (ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
+            using (context.OpenReadTransaction())
             {
                 List<string> domains = null;
                 if (ServerStore.CurrentRachisState != RachisState.Passive)
                 {
                     ClusterTopology clusterTopology;
-                    using (context.OpenReadTransaction())
-                        clusterTopology = ServerStore.GetClusterTopology(context);
-
+                    clusterTopology = ServerStore.GetClusterTopology(context);
                     domains = clusterTopology.AllNodes.Select(node => new Uri(node.Value).DnsSafeHost).ToList();
                 }
                 else
@@ -825,41 +817,40 @@ namespace Raven.Server.Web.Authentication
             using (ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
             using (var writer = new BlittableJsonTextWriter(context, ResponseBodyStream()))
             {
-                BlittableJsonReaderObject certStatus;
                 using (context.OpenReadTransaction())
                 {
-                    certStatus = ServerStore.Cluster.GetItem(context, CertificateReplacement.CertificateReplacementDoc);
-                }
+                    var certStatus = ServerStore.Cluster.GetItem(context, CertificateReplacement.CertificateReplacementDoc);
 
-                if (certStatus != null)
-                {
-                    certStatus.TryGet(nameof(CertificateReplacement.Confirmations), out int confirmations);
-                    certStatus.TryGet(nameof(CertificateReplacement.Thumbprint), out string thumbprint);
-                    certStatus.TryGet(nameof(CertificateReplacement.OldThumbprint), out string oldThumbprint);
-                    certStatus.TryGet(nameof(CertificateReplacement.ReplaceImmediately), out bool replaceImmediately);
-                    certStatus.TryGet(nameof(CertificateReplacement.Replaced), out int replaced);
+                    if (certStatus != null)
+                    {
+                        certStatus.TryGet(nameof(CertificateReplacement.Confirmations), out int confirmations);
+                        certStatus.TryGet(nameof(CertificateReplacement.Thumbprint), out string thumbprint);
+                        certStatus.TryGet(nameof(CertificateReplacement.OldThumbprint), out string oldThumbprint);
+                        certStatus.TryGet(nameof(CertificateReplacement.ReplaceImmediately), out bool replaceImmediately);
+                        certStatus.TryGet(nameof(CertificateReplacement.Replaced), out int replaced);
 
-                    // Not writing the certificate itself, because it has the private key
-                    writer.WriteStartObject();
-                    writer.WritePropertyName(nameof(CertificateReplacement.Confirmations));
-                    writer.WriteInteger(confirmations);
-                    writer.WriteComma();
-                    writer.WritePropertyName(nameof(CertificateReplacement.Thumbprint));
-                    writer.WriteString(thumbprint);
-                    writer.WriteComma();
-                    writer.WritePropertyName(nameof(CertificateReplacement.OldThumbprint));
-                    writer.WriteString(oldThumbprint);
-                    writer.WriteComma();
-                    writer.WritePropertyName(nameof(CertificateReplacement.ReplaceImmediately));
-                    writer.WriteBool(replaceImmediately);
-                    writer.WriteComma();
-                    writer.WritePropertyName(nameof(CertificateReplacement.Replaced));
-                    writer.WriteInteger(replaced);
-                    writer.WriteEndObject();
-                }
-                else
-                {
-                    HttpContext.Response.StatusCode = (int)HttpStatusCode.NotFound;
+                        // Not writing the certificate itself, because it has the private key
+                        writer.WriteStartObject();
+                        writer.WritePropertyName(nameof(CertificateReplacement.Confirmations));
+                        writer.WriteInteger(confirmations);
+                        writer.WriteComma();
+                        writer.WritePropertyName(nameof(CertificateReplacement.Thumbprint));
+                        writer.WriteString(thumbprint);
+                        writer.WriteComma();
+                        writer.WritePropertyName(nameof(CertificateReplacement.OldThumbprint));
+                        writer.WriteString(oldThumbprint);
+                        writer.WriteComma();
+                        writer.WritePropertyName(nameof(CertificateReplacement.ReplaceImmediately));
+                        writer.WriteBool(replaceImmediately);
+                        writer.WriteComma();
+                        writer.WritePropertyName(nameof(CertificateReplacement.Replaced));
+                        writer.WriteInteger(replaced);
+                        writer.WriteEndObject();
+                    }
+                    else
+                    {
+                        HttpContext.Response.StatusCode = (int)HttpStatusCode.NotFound;
+                    }
                 }
             }
 
@@ -956,20 +947,31 @@ namespace Raven.Server.Web.Authentication
                 {
                     var certificate = JsonDeserializationServer.CertificateDefinition(certificateJson);
 
-                    // This restriction should be removed when updating to .net core 2.1 when export of collection is fixed in Linux.
-                    // With export, we'll be able to load the certificate and export it without a password, and propagate it through the cluster.
-                    if (string.IsNullOrWhiteSpace(certificate.Password) == false)
-                        throw new NotSupportedException("Replacing the cluster certificate with a password protected certificates is currently not supported.");
-
                     if (string.IsNullOrWhiteSpace(certificate.Certificate))
                         throw new ArgumentException($"{nameof(certificate.Certificate)} is a required field in the certificate definition.");
 
+                    // Load the password protected certificate and export it without a password, to send it through the cluster.
+                    if (string.IsNullOrWhiteSpace(certificate.Password) == false)
+                    {
+                        try
+                        {
+                            var cert = new X509Certificate2Collection();
+                            var certBytes = Convert.FromBase64String(certificate.Certificate);
+                            cert.Import(certBytes, certificate.Password, X509KeyStorageFlags.Exportable | X509KeyStorageFlags.MachineKeySet);
+                            // Exporting with the private key, but without the password
+                            certificate.Certificate = Convert.ToBase64String(cert.Export(X509ContentType.Pkcs12));
+                        }
+                        catch (Exception e)
+                        {
+                            throw new ArgumentException("Failed to load the password protected certificate and export it back. Is the password correct?", e);
+                        }
+                    }
+
+                    // Ensure we'll be able to load the certificate
                     try
                     {
                         var certBytes = Convert.FromBase64String(certificate.Certificate);
-                        var _ = string.IsNullOrEmpty(certificate.Password)
-                            ? new X509Certificate2(certBytes, (string)null, X509KeyStorageFlags.MachineKeySet)
-                            : new X509Certificate2(certBytes, certificate.Password, X509KeyStorageFlags.MachineKeySet);
+                        var _ = new X509Certificate2(certBytes, (string)null, X509KeyStorageFlags.Exportable | X509KeyStorageFlags.MachineKeySet);
                     }
                     catch (Exception e)
                     {

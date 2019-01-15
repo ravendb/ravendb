@@ -40,6 +40,10 @@ namespace Raven.Client.Documents.Changes
         private readonly AtomicDictionary<DatabaseConnectionState> _counters = new AtomicDictionary<DatabaseConnectionState>(StringComparer.OrdinalIgnoreCase);
         private int _immediateConnection;
 
+        private ServerNode _serverNode;
+        private int _nodeIndex;
+        private Uri _url;
+
         public DatabaseChanges(RequestExecutor requestExecutor, string databaseName, Action onDispose)
         {
             _requestExecutor = requestExecutor;
@@ -315,7 +319,15 @@ namespace Raven.Client.Documents.Changes
 
             _counters.Clear();
 
-            _task.Wait();
+            try
+            {
+                _task.Wait();
+            }
+            catch
+            {
+                // we're disposing the document store
+                // nothing we can do here
+            }
 
             ConnectionStatusChanged?.Invoke(this, EventArgs.Empty);
             ConnectionStatusChanged -= OnConnectionStatusChanged;
@@ -415,7 +427,7 @@ namespace Raven.Client.Documents.Changes
         {
             try
             {
-                await _requestExecutor.GetPreferredNode().ConfigureAwait(false);
+                (_nodeIndex, _serverNode) = await _requestExecutor.GetPreferredNode().ConfigureAwait(false);
             }
             catch (OperationCanceledException e)
             {
@@ -431,17 +443,17 @@ namespace Raven.Client.Documents.Changes
                 return;
             }
 
-            var url = new Uri($"{_requestExecutor.Url}/databases/{_database}/changes"
-                .ToLower()
-                .ToWebSocketPath(), UriKind.Absolute);
-
             while (_cts.IsCancellationRequested == false)
             {
                 try
                 {
                     if (Connected == false)
                     {
-                        await _client.ConnectAsync(url, _cts.Token).ConfigureAwait(false);
+                        _url = new Uri($"{_serverNode.Url}/databases/{_database}/changes"
+                            .ToLower()
+                            .ToWebSocketPath(), UriKind.Absolute);
+
+                        await _client.ConnectAsync(_url, _cts.Token).ConfigureAwait(false);
 
                         Interlocked.Exchange(ref _immediateConnection, 1);
 
@@ -466,11 +478,14 @@ namespace Raven.Client.Documents.Changes
                 }
                 catch (Exception e)
                 {
+
                     //We don't report this error since we can automatically recover from it and we can't
                     // recover from the OnError accessing the faulty WebSocket.
                     try
                     {
                         ConnectionStatusChanged?.Invoke(this, EventArgs.Empty);
+
+                        _serverNode = await _requestExecutor.HandleServerNotResponsive(_url.AbsoluteUri, _serverNode, _nodeIndex, e).ConfigureAwait(false);
 
                         if (ReconnectClient() == false)
                             return;
@@ -553,6 +568,13 @@ namespace Raven.Client.Documents.Changes
 
                             try
                             {
+                                if ((json.TryGet(nameof(TopologyChange), out bool supports)) && (supports))
+                                {
+                                    GetOrAddConnectionState("Topology", "watch-topology-change", "", "");
+                                    await _requestExecutor.UpdateTopologyAsync(_serverNode, 0, true).ConfigureAwait(false);
+                                    continue;
+                                }
+
                                 if (json.TryGet("Type", out string type) == false)
                                     continue;
 
@@ -617,6 +639,14 @@ namespace Raven.Client.Documents.Changes
                     {
                         state.Send(operationStatusChange);
                     }
+                    break;
+                case nameof(TopologyChange):
+                    var topologyChange = TopologyChange.FromJson(value);
+                    _requestExecutor?.UpdateTopologyAsync(new ServerNode
+                    {
+                        Url = topologyChange.Url,
+                        Database = topologyChange.Database
+                    }, 0, true).ConfigureAwait(false);
                     break;
                 default:
                     throw new NotSupportedException(type);

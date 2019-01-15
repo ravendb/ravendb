@@ -48,6 +48,8 @@ namespace Raven.Server.Documents
 
         private readonly ConcurrentSet<long> _matchingOperations = new ConcurrentSet<long>();
 
+        private bool _watchTopology = false;
+
         private int _watchAllDocuments;
         private int _watchAllOperations;
         private int _watchAllIndexes;
@@ -71,6 +73,11 @@ namespace Raven.Server.Documents
         public long Id = Interlocked.Increment(ref _counter);
 
         public TimeSpan Age => SystemTime.UtcNow - _startedAt;
+
+        public void WatchTopology()
+        {
+            _watchTopology = true;
+        }
 
         public void WatchDocument(string docId)
         {
@@ -296,6 +303,30 @@ namespace Raven.Server.Documents
             }
         }
 
+        public void SendTopologyChanges(TopologyChange change)
+        {
+            if (_watchTopology)
+            {
+                Send(change);
+            }
+        }
+
+        private void Send(TopologyChange change)
+        {
+            var value = new DynamicJsonValue
+            {
+                ["Type"] = nameof(TopologyChange),
+                ["Value"] = change.ToJson()
+            };
+
+            if (_disposeToken.IsCancellationRequested == false)
+                _sendQueue.Enqueue(new ChangeValue
+                {
+                    ValueToSend = value,
+                    AllowSkip = true
+                });
+        }
+
         private void Send(CounterChange change)
         {
             var value = new DynamicJsonValue
@@ -505,6 +536,18 @@ namespace Raven.Server.Documents
             });
         }
 
+        public void SendSupportedFeatures()
+        {
+            _sendQueue.Enqueue(new ChangeValue
+            {
+                ValueToSend = new DynamicJsonValue
+                {
+                    ["TopologyChange"] = true
+                },
+                AllowSkip = false
+            });
+        }
+
         public void HandleCommand(string command, string commandParameter, BlittableJsonReaderArray commandParameters)
         {
             long.TryParse(commandParameter, out long commandParameterAsLong);
@@ -612,6 +655,10 @@ namespace Raven.Server.Documents
             else if (Match(command, "unwatch-document-counter"))
             {
                 UnwatchDocumentCounter(commandParameters);
+            }
+            else if (Match(command, "watch-topology-change"))
+            {
+                WatchTopology();
             }
             else
             {
