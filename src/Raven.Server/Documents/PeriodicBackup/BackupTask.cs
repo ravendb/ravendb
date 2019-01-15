@@ -408,7 +408,7 @@ namespace Raven.Server.Documents.PeriodicBackup
                     // will rename the file after the backup is finished
                     var tempBackupFilePath = backupFilePath + InProgressExtension;
 
-                    BackupTypeValidation();//TODO - name
+                    BackupTypeValidation();
 
                     if (_configuration.BackupType == BackupType.Backup ||
                         _configuration.BackupType == BackupType.Snapshot && _isFullBackup == false)
@@ -568,8 +568,6 @@ namespace Raven.Server.Documents.PeriodicBackup
             if ((_database.MasterKey == null) &&
                 (_configuration.BackupEncryptionSettings?.EncryptionMode == EncryptionMode.None))
                 return fileStream;
-
-            
 
             if ((_database.MasterKey != null) &&
                 (_configuration.BackupEncryptionSettings?.EncryptionMode == EncryptionMode.None))
