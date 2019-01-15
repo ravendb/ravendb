@@ -129,7 +129,7 @@ namespace Raven.Server.Documents.PeriodicBackup.Restore
                                 RestoreSettings restoreSettings = JsonDeserializationServer.RestoreSettings(json);
                                 return restoreSettings.DatabaseRecord.Encrypted;
                             }
-                            catch (InvalidDataException)
+                            catch (Exception e)
                             {
                                 return true;
                             }

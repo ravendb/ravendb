@@ -29,6 +29,987 @@ namespace SlowTests.Server.Documents.PeriodicBackup
     public class EncryptedBackupTest : RavenTestBase
     {
         [Fact]
+        public async Task backup_encrypted_db_and_restore_to_not_encrypted_DB_with_encrypted_backup_use_db_key_1()
+        {
+            var backupPath = NewDataPath(suffix: "BackupFolder");
+            var key = EncryptedServer(out X509Certificate2 adminCert, out string dbName);
+
+            using (var store = GetDocumentStore(new Options
+            {
+                AdminCertificate = adminCert,
+                ClientCertificate = adminCert,
+                ModifyDatabaseName = s => dbName,
+                ModifyDatabaseRecord = record => record.Encrypted = true,
+                Path = NewDataPath()
+            }))
+            {
+                using (var session = store.OpenAsyncSession())
+                {
+                    await session.StoreAsync(new User
+                    {
+                        Name = "oren"
+                    }, "users/1");
+                    await session.SaveChangesAsync();
+                }
+
+                var config = new PeriodicBackupConfiguration
+                {
+                    BackupType = BackupType.Backup,
+                    LocalSettings = new LocalSettings
+                    {
+                        FolderPath = backupPath
+                    },
+                    IncrementalBackupFrequency = "0 */6 * * *"
+                };
+
+                var backupTaskId = (await store.Maintenance.SendAsync(new UpdatePeriodicBackupOperation(config))).TaskId;
+                await store.Maintenance.SendAsync(new StartBackupOperation(true, backupTaskId));
+                var operation = new GetPeriodicBackupStatusOperation(backupTaskId);
+
+                var value = WaitForValue(() =>
+                {
+                    var getPeriodicBackupResult = store.Maintenance.Send(operation);
+                    return getPeriodicBackupResult.Status?.LastEtag;
+                }, 1);
+                Assert.Equal(1, value);
+
+                var databaseName = $"restored_database-{Guid.NewGuid()}";
+
+                using (RestoreDatabase(store, new RestoreBackupConfiguration
+                {
+                    BackupLocation = Directory.GetDirectories(backupPath).First(),
+                    DatabaseName = databaseName,
+                    BackupEncryptionSettings = new BackupEncryptionSettings
+                    {
+                        Key = key
+                    }
+                }))
+                {
+                    using (var session = store.OpenSession(dbName))
+                    {
+                        var users = session.Load<User>("users/1");
+                        Assert.NotNull(users);
+                    }
+                }
+            }
+
+        }
+
+        [Fact]
+        public async Task backup_encrypted_db_and_restore_to_not_encrypted_DB_with_encrypted_backup_use_db_key_2()
+        {
+            var backupPath = NewDataPath(suffix: "BackupFolder");
+            var key = EncryptedServer(out X509Certificate2 adminCert, out string dbName);
+
+            using (var store = GetDocumentStore(new Options
+            {
+                AdminCertificate = adminCert,
+                ClientCertificate = adminCert,
+                ModifyDatabaseName = s => dbName,
+                ModifyDatabaseRecord = record => record.Encrypted = true,
+                Path = NewDataPath()
+            }))
+            {
+                using (var session = store.OpenAsyncSession())
+                {
+                    await session.StoreAsync(new User
+                    {
+                        Name = "oren"
+                    }, "users/1");
+                    await session.SaveChangesAsync();
+                }
+
+                var config = new PeriodicBackupConfiguration
+                {
+                    BackupType = BackupType.Backup,
+                    LocalSettings = new LocalSettings
+                    {
+                        FolderPath = backupPath
+                    },
+                    IncrementalBackupFrequency = "0 */6 * * *",
+                    BackupEncryptionSettings = new BackupEncryptionSettings
+                    {
+                        EncryptionMode = EncryptionMode.UseDatabaseKey,
+                    }
+                };
+
+                var backupTaskId = (await store.Maintenance.SendAsync(new UpdatePeriodicBackupOperation(config))).TaskId;
+                await store.Maintenance.SendAsync(new StartBackupOperation(true, backupTaskId));
+                var operation = new GetPeriodicBackupStatusOperation(backupTaskId);
+
+                var value = WaitForValue(() =>
+                {
+                    var getPeriodicBackupResult = store.Maintenance.Send(operation);
+                    return getPeriodicBackupResult.Status?.LastEtag;
+                }, 1);
+                Assert.Equal(1, value);
+
+                var databaseName = $"restored_database-{Guid.NewGuid()}";
+
+                using (RestoreDatabase(store, new RestoreBackupConfiguration
+                {
+                    BackupLocation = Directory.GetDirectories(backupPath).First(),
+                    DatabaseName = databaseName,
+                    BackupEncryptionSettings = new BackupEncryptionSettings
+                    {
+                        Key = key
+                    }
+                }))
+                {
+                    using (var session = store.OpenSession(dbName))
+                    {
+                        var users = session.Load<User>("users/1");
+                        Assert.NotNull(users);
+                    }
+                }
+            }
+
+        }
+
+        [Fact]
+        public async Task backup_encrypted_db_and_restore_to_not_encrypted_DB_with_encrypted_backup_use_new_key()
+        {
+            var backupPath = NewDataPath(suffix: "BackupFolder");
+            var key = EncryptedServer(out X509Certificate2 adminCert, out string dbName);
+
+            using (var store = GetDocumentStore(new Options
+            {
+                AdminCertificate = adminCert,
+                ClientCertificate = adminCert,
+                ModifyDatabaseName = s => dbName,
+                ModifyDatabaseRecord = record => record.Encrypted = true,
+                Path = NewDataPath()
+            }))
+            {
+                using (var session = store.OpenAsyncSession())
+                {
+                    await session.StoreAsync(new User
+                    {
+                        Name = "oren"
+                    }, "users/1");
+                    await session.SaveChangesAsync();
+                }
+
+                var config = new PeriodicBackupConfiguration
+                {
+                    BackupType = BackupType.Backup,
+                    LocalSettings = new LocalSettings
+                    {
+                        FolderPath = backupPath
+                    },
+                    IncrementalBackupFrequency = "0 */6 * * *",
+                    BackupEncryptionSettings = new BackupEncryptionSettings
+                    {
+                        Key = "OI7Vll7DroXdUORtc6Uo64wdAk1W0Db9ExXXgcg5IUs=",
+                        EncryptionMode = EncryptionMode.UseProvidedKey
+                    }
+                };
+
+                var backupTaskId = (await store.Maintenance.SendAsync(new UpdatePeriodicBackupOperation(config))).TaskId;
+                await store.Maintenance.SendAsync(new StartBackupOperation(true, backupTaskId));
+                var operation = new GetPeriodicBackupStatusOperation(backupTaskId);
+
+                var value = WaitForValue(() =>
+                {
+                    var getPeriodicBackupResult = store.Maintenance.Send(operation);
+                    return getPeriodicBackupResult.Status?.LastEtag;
+                }, 1);
+                Assert.Equal(1, value);
+                var databaseName = $"restored_database-{Guid.NewGuid()}";
+
+                using (RestoreDatabase(store, new RestoreBackupConfiguration
+                {
+                    BackupLocation = Directory.GetDirectories(backupPath).First(),
+                    DatabaseName = databaseName,
+                    BackupEncryptionSettings = new BackupEncryptionSettings
+                    {
+                        Key = "OI7Vll7DroXdUORtc6Uo64wdAk1W0Db9ExXXgcg5IUs=",
+                        EncryptionMode = EncryptionMode.UseProvidedKey
+                    }
+                }))
+                {
+                    using (var session = store.OpenSession(dbName))
+                    {
+                        var users = session.Load<User>("users/1");
+                        Assert.NotNull(users);
+                    }
+                }
+            }
+        }
+
+        [Fact]
+        public async Task backup_encrypted_db_and_restore_to_encrypted_DB_with_encrypted_backup_use_db_key_1()
+        {
+            var backupPath = NewDataPath(suffix: "BackupFolder");
+            var key = EncryptedServer(out X509Certificate2 adminCert, out string dbName);
+
+            using (var store = GetDocumentStore(new Options
+            {
+                AdminCertificate = adminCert,
+                ClientCertificate = adminCert,
+                ModifyDatabaseName = s => dbName,
+                ModifyDatabaseRecord = record => record.Encrypted = true,
+                Path = NewDataPath()
+            }))
+            {
+                using (var session = store.OpenAsyncSession())
+                {
+                    await session.StoreAsync(new User
+                    {
+                        Name = "oren"
+                    }, "users/1");
+                    await session.SaveChangesAsync();
+                }
+
+                var config = new PeriodicBackupConfiguration
+                {
+                    BackupType = BackupType.Backup,
+                    LocalSettings = new LocalSettings
+                    {
+                        FolderPath = backupPath
+                    },
+                    IncrementalBackupFrequency = "0 */6 * * *"
+                };
+
+                var backupTaskId = (await store.Maintenance.SendAsync(new UpdatePeriodicBackupOperation(config))).TaskId;
+                await store.Maintenance.SendAsync(new StartBackupOperation(true, backupTaskId));
+                var operation = new GetPeriodicBackupStatusOperation(backupTaskId);
+
+                var value = WaitForValue(() =>
+                {
+                    var getPeriodicBackupResult = store.Maintenance.Send(operation);
+                    return getPeriodicBackupResult.Status?.LastEtag;
+                }, 1);
+                Assert.Equal(1, value);
+
+                var databaseName = $"restored_database-{Guid.NewGuid()}";
+
+                using (RestoreDatabase(store, new RestoreBackupConfiguration
+                {
+                    BackupLocation = Directory.GetDirectories(backupPath).First(),
+                    DatabaseName = databaseName,
+                    EncryptionKey = "OI7Vll7DroXdUORtc6Uo64wdAk1W0Db9ExXXgcg5IUs=",
+                    BackupEncryptionSettings = new BackupEncryptionSettings
+                    {
+                        Key = key
+                    }
+                }))
+                {
+                    using (var session = store.OpenSession(dbName))
+                    {
+                        var users = session.Load<User>("users/1");
+                        Assert.NotNull(users);
+                    }
+                }
+            }
+
+        }
+
+        [Fact]
+        public async Task backup_encrypted_db_and_restore_to_encrypted_DB_with_encrypted_backup_use_db_key_2()
+        {
+            var backupPath = NewDataPath(suffix: "BackupFolder");
+            var key = EncryptedServer(out X509Certificate2 adminCert, out string dbName);
+
+            using (var store = GetDocumentStore(new Options
+            {
+                AdminCertificate = adminCert,
+                ClientCertificate = adminCert,
+                ModifyDatabaseName = s => dbName,
+                ModifyDatabaseRecord = record => record.Encrypted = true,
+                Path = NewDataPath()
+            }))
+            {
+                using (var session = store.OpenAsyncSession())
+                {
+                    await session.StoreAsync(new User
+                    {
+                        Name = "oren"
+                    }, "users/1");
+                    await session.SaveChangesAsync();
+                }
+
+                var config = new PeriodicBackupConfiguration
+                {
+                    BackupType = BackupType.Backup,
+                    LocalSettings = new LocalSettings
+                    {
+                        FolderPath = backupPath
+                    },
+                    IncrementalBackupFrequency = "0 */6 * * *",
+                    BackupEncryptionSettings = new BackupEncryptionSettings
+                    {
+                        EncryptionMode = EncryptionMode.UseDatabaseKey,
+                    }
+                };
+
+                var backupTaskId = (await store.Maintenance.SendAsync(new UpdatePeriodicBackupOperation(config))).TaskId;
+                await store.Maintenance.SendAsync(new StartBackupOperation(true, backupTaskId));
+                var operation = new GetPeriodicBackupStatusOperation(backupTaskId);
+
+                var value = WaitForValue(() =>
+                {
+                    var getPeriodicBackupResult = store.Maintenance.Send(operation);
+                    return getPeriodicBackupResult.Status?.LastEtag;
+                }, 1);
+                Assert.Equal(1, value);
+
+                var databaseName = $"restored_database-{Guid.NewGuid()}";
+
+                using (RestoreDatabase(store, new RestoreBackupConfiguration
+                {
+                    BackupLocation = Directory.GetDirectories(backupPath).First(),
+                    DatabaseName = databaseName,
+                    EncryptionKey = "OI7Vll7DroXdUORtc6Uo64wdAk1W0Db9ExXXgcg5IUs=",
+                    BackupEncryptionSettings = new BackupEncryptionSettings
+                    {
+                        Key = key
+                    }
+                }))
+                {
+                    using (var session = store.OpenSession(dbName))
+                    {
+                        var users = session.Load<User>("users/1");
+                        Assert.NotNull(users);
+                    }
+                }
+            }
+
+        }
+
+        [Fact]
+        public async Task backup_encrypted_db_and_restore_to_encrypted_DB_with_encrypted_backup_use_new_key()
+        {
+            var backupPath = NewDataPath(suffix: "BackupFolder");
+            var key = EncryptedServer(out X509Certificate2 adminCert, out string dbName);
+
+            using (var store = GetDocumentStore(new Options
+            {
+                AdminCertificate = adminCert,
+                ClientCertificate = adminCert,
+                ModifyDatabaseName = s => dbName,
+                ModifyDatabaseRecord = record => record.Encrypted = true,
+                Path = NewDataPath()
+            }))
+            {
+                using (var session = store.OpenAsyncSession())
+                {
+                    await session.StoreAsync(new User
+                    {
+                        Name = "oren"
+                    }, "users/1");
+                    await session.SaveChangesAsync();
+                }
+
+                var config = new PeriodicBackupConfiguration
+                {
+                    BackupType = BackupType.Backup,
+                    LocalSettings = new LocalSettings
+                    {
+                        FolderPath = backupPath
+                    },
+                    IncrementalBackupFrequency = "0 */6 * * *",
+                    BackupEncryptionSettings = new BackupEncryptionSettings
+                    {
+                        Key = "OI7Vll7DroXdUORtc6Uo64wdAk1W0Db9ExXXgcg5IUs=",
+                        EncryptionMode = EncryptionMode.UseProvidedKey
+                    }
+                };
+
+                var backupTaskId = (await store.Maintenance.SendAsync(new UpdatePeriodicBackupOperation(config))).TaskId;
+                await store.Maintenance.SendAsync(new StartBackupOperation(true, backupTaskId));
+                var operation = new GetPeriodicBackupStatusOperation(backupTaskId);
+
+                var value = WaitForValue(() =>
+                {
+                    var getPeriodicBackupResult = store.Maintenance.Send(operation);
+                    return getPeriodicBackupResult.Status?.LastEtag;
+                }, 1);
+                Assert.Equal(1, value);
+                var databaseName = $"restored_database-{Guid.NewGuid()}";
+
+                using (RestoreDatabase(store, new RestoreBackupConfiguration
+                {
+                    BackupLocation = Directory.GetDirectories(backupPath).First(),
+                    DatabaseName = databaseName,
+                    EncryptionKey = "OI7Vll7DroXdUORtc6Uo64wdAk1W0Db9ExXXgcg5IUs=",
+                    BackupEncryptionSettings = new BackupEncryptionSettings
+                    {
+                        Key = "OI7Vll7DroXdUORtc6Uo64wdAk1W0Db9ExXXgcg5IUs=",
+                        EncryptionMode = EncryptionMode.UseProvidedKey
+                    }
+                }))
+                {
+                    using (var session = store.OpenSession(dbName))
+                    {
+                        var users = session.Load<User>("users/1");
+                        Assert.NotNull(users);
+                    }
+                }
+            }
+        }
+
+        [Fact]
+        public async Task backup_encrypted_db_and_restore_to_not_encrypted_DB_with_unencrypted_backup()
+        {
+            var backupPath = NewDataPath(suffix: "BackupFolder");
+            var key = EncryptedServer(out X509Certificate2 adminCert, out string dbName);
+
+            using (var store = GetDocumentStore(new Options
+            {
+                AdminCertificate = adminCert,
+                ClientCertificate = adminCert,
+                ModifyDatabaseName = s => dbName,
+                ModifyDatabaseRecord = record => record.Encrypted = true,
+                Path = NewDataPath()
+            }))
+            {
+                using (var session = store.OpenAsyncSession())
+                {
+                    await session.StoreAsync(new User
+                    {
+                        Name = "oren"
+                    }, "users/1");
+                    await session.SaveChangesAsync();
+                }
+
+                var config = new PeriodicBackupConfiguration
+                {
+                    BackupType = BackupType.Backup,
+                    LocalSettings = new LocalSettings
+                    {
+                        FolderPath = backupPath
+                    },
+                    IncrementalBackupFrequency = "0 */6 * * *",
+                    BackupEncryptionSettings = new BackupEncryptionSettings
+                    {
+                        EncryptionMode = EncryptionMode.None
+                    }
+                };
+
+                var backupTaskId = (await store.Maintenance.SendAsync(new UpdatePeriodicBackupOperation(config))).TaskId;
+
+                await store.Maintenance.SendAsync(new StartBackupOperation(true, backupTaskId));
+                var operation = new GetPeriodicBackupStatusOperation(backupTaskId);
+                var value = WaitForValue(() =>
+                {
+                    var getPeriodicBackupResult = store.Maintenance.Send(operation);
+                    return getPeriodicBackupResult.Status?.LastEtag;
+                }, 1);
+                Assert.Equal(1, value);
+
+                // restore the database with a different name
+                var databaseName = $"restored_database-{Guid.NewGuid()}";
+
+                using (RestoreDatabase(store, new RestoreBackupConfiguration
+                {
+                    BackupLocation = Directory.GetDirectories(backupPath).First(),
+                    DatabaseName = databaseName
+                }))
+                {
+                    using (var session = store.OpenSession(databaseName))
+                    {
+                        var users = session.Load<User>("users/1");
+                        Assert.NotNull(users);
+                    }
+                }
+            }
+        }
+
+        [Fact]
+        public async Task backup_encrypted_db_and_restore_to_encrypted_DB_with_unencrypted_backup()
+        {
+            var backupPath = NewDataPath(suffix: "BackupFolder");
+            var key = EncryptedServer(out X509Certificate2 adminCert, out string dbName);
+
+            using (var store = GetDocumentStore(new Options
+            {
+                AdminCertificate = adminCert,
+                ClientCertificate = adminCert,
+                ModifyDatabaseName = s => dbName,
+                ModifyDatabaseRecord = record => record.Encrypted = true,
+                Path = NewDataPath()
+            }))
+            {
+                using (var session = store.OpenAsyncSession())
+                {
+                    await session.StoreAsync(new User
+                    {
+                        Name = "oren"
+                    }, "users/1");
+                    await session.SaveChangesAsync();
+                }
+
+                var config = new PeriodicBackupConfiguration
+                {
+                    BackupType = BackupType.Backup,
+                    LocalSettings = new LocalSettings
+                    {
+                        FolderPath = backupPath
+                    },
+                    IncrementalBackupFrequency = "0 */6 * * *",
+                    BackupEncryptionSettings = new BackupEncryptionSettings
+                    {
+                        EncryptionMode = EncryptionMode.None
+                    }
+                };
+
+                var backupTaskId = (await store.Maintenance.SendAsync(new UpdatePeriodicBackupOperation(config))).TaskId;
+
+                await store.Maintenance.SendAsync(new StartBackupOperation(true, backupTaskId));
+                var operation = new GetPeriodicBackupStatusOperation(backupTaskId);
+                var value = WaitForValue(() =>
+                {
+                    var getPeriodicBackupResult = store.Maintenance.Send(operation);
+                    return getPeriodicBackupResult.Status?.LastEtag;
+                }, 1);
+                Assert.Equal(1, value);
+
+                // restore the database with a different name
+                var databaseName = $"restored_database-{Guid.NewGuid()}";
+
+                using (RestoreDatabase(store, new RestoreBackupConfiguration
+                {
+                    BackupLocation = Directory.GetDirectories(backupPath).First(),
+                    DatabaseName = databaseName,
+                    EncryptionKey = "OI7Vll7DroXdUORtc6Uo64wdAk1W0Db9ExXXgcg5IUs="
+                }))
+                {
+                    using (var session = store.OpenSession(databaseName))
+                    {
+                        var users = session.Load<User>("users/1");
+                        Assert.NotNull(users);
+                    }
+                }
+            }
+        }
+
+        [Fact]
+        public async Task snapshot_encrypted_db_and_restore_to_encrypted_DB_1()
+        {
+            var backupPath = NewDataPath(suffix: "BackupFolder");
+
+            var key = EncryptedServer(out X509Certificate2 adminCert, out string dbName);
+
+            using (var store = GetDocumentStore(new Options
+            {
+                AdminCertificate = adminCert,
+                ClientCertificate = adminCert,
+                ModifyDatabaseName = s => dbName,
+                ModifyDatabaseRecord = record => record.Encrypted = true,
+                Path = NewDataPath()
+            }))
+            {
+                using (var session = store.OpenAsyncSession())
+                {
+                    await session.StoreAsync(new User
+                    {
+                        Name = "oren"
+                    }, "users/1");
+                    await session.SaveChangesAsync();
+                }
+
+                var config = new PeriodicBackupConfiguration
+                {
+                    BackupType = BackupType.Snapshot,
+                    LocalSettings = new LocalSettings
+                    {
+                        FolderPath = backupPath
+                    },
+                    IncrementalBackupFrequency = "0 */6 * * *"
+                };
+
+                var backupTaskId = (await store.Maintenance.SendAsync(new UpdatePeriodicBackupOperation(config))).TaskId;
+                await store.Maintenance.SendAsync(new StartBackupOperation(true, backupTaskId));
+                var operation = new GetPeriodicBackupStatusOperation(backupTaskId);
+
+                var value = WaitForValue(() =>
+                {
+                    var getPeriodicBackupResult = store.Maintenance.Send(operation);
+                    return getPeriodicBackupResult.Status?.LastEtag;
+                }, 1);
+                Assert.Equal(1, value);
+
+                var databaseName = $"restored_database-{Guid.NewGuid()}";
+
+                using (RestoreDatabase(store, new RestoreBackupConfiguration
+                {
+                    BackupLocation = Directory.GetDirectories(backupPath).First(),
+                    DatabaseName = databaseName,
+                    EncryptionKey = key,
+                    BackupEncryptionSettings = new BackupEncryptionSettings
+                    {
+                        Key = key
+                    }
+                }))
+                {
+                    using (var session = store.OpenSession(dbName))
+                    {
+                        var users = session.Load<User>("users/1");
+                        Assert.NotNull(users);
+                    }
+                }
+            }
+        }
+
+        [Fact]
+        public async Task snapshot_encrypted_db_and_restore_to_encrypted_DB_2()
+        {
+            var backupPath = NewDataPath(suffix: "BackupFolder");
+            var key = EncryptedServer(out X509Certificate2 adminCert, out string dbName);
+
+            using (var store = GetDocumentStore(new Options
+            {
+                AdminCertificate = adminCert,
+                ClientCertificate = adminCert,
+                ModifyDatabaseName = s => dbName,
+                ModifyDatabaseRecord = record => record.Encrypted = true,
+                Path = NewDataPath()
+            }))
+            {
+                using (var session = store.OpenAsyncSession())
+                {
+                    await session.StoreAsync(new User
+                    {
+                        Name = "oren"
+                    }, "users/1");
+                    await session.SaveChangesAsync();
+                }
+
+                var config = new PeriodicBackupConfiguration
+                {
+                    BackupType = BackupType.Snapshot,
+                    LocalSettings = new LocalSettings
+                    {
+                        FolderPath = backupPath
+                    },
+                    IncrementalBackupFrequency = "0 */6 * * *",
+                    BackupEncryptionSettings = new BackupEncryptionSettings
+                    {
+                        EncryptionMode = EncryptionMode.UseDatabaseKey
+                    }
+                };
+
+                var backupTaskId = (await store.Maintenance.SendAsync(new UpdatePeriodicBackupOperation(config))).TaskId;
+                await store.Maintenance.SendAsync(new StartBackupOperation(true, backupTaskId));
+                var operation = new GetPeriodicBackupStatusOperation(backupTaskId);
+
+                var value = WaitForValue(() =>
+                {
+                    var getPeriodicBackupResult = store.Maintenance.Send(operation);
+                    return getPeriodicBackupResult.Status?.LastEtag;
+                }, 1);
+                Assert.Equal(1, value);
+
+                var databaseName = $"restored_database-{Guid.NewGuid()}";
+
+                using (RestoreDatabase(store, new RestoreBackupConfiguration
+                {
+                    BackupLocation = Directory.GetDirectories(backupPath).First(),
+                    DatabaseName = databaseName,
+                    EncryptionKey = key,
+                    BackupEncryptionSettings = new BackupEncryptionSettings
+                    {
+                        Key = key
+                    }
+                }))
+                {
+                    using (var session = store.OpenSession(dbName))
+                    {
+                        var users = session.Load<User>("users/1");
+                        Assert.NotNull(users);
+                    }
+                }
+            }
+        }
+
+        [Fact]
+        public async Task backup_not_encrypted_db_and_restore_to_not_encrypted_DB_with_encrypted_backup()
+        {
+            var backupPath = NewDataPath(suffix: "BackupFolder");
+
+            using (var store = GetDocumentStore())
+            {
+                using (var session = store.OpenAsyncSession())
+                {
+                    await session.StoreAsync(new User
+                    {
+                        Name = "oren"
+                    }, "users/1");
+                    await session.SaveChangesAsync();
+                }
+
+                var config = new PeriodicBackupConfiguration
+                {
+                    BackupType = BackupType.Backup,
+                    LocalSettings = new LocalSettings
+                    {
+                        FolderPath = backupPath
+                    },
+                    IncrementalBackupFrequency = "0 */6 * * *",
+                    BackupEncryptionSettings = new BackupEncryptionSettings
+                    {
+                        Key = "OI7Vll7DroXdUORtc6Uo64wdAk1W0Db9ExXXgcg5IUs=",
+                        EncryptionMode = EncryptionMode.UseProvidedKey
+                    }
+                };
+
+                var backupTaskId = (await store.Maintenance.SendAsync(new UpdatePeriodicBackupOperation(config))).TaskId;
+
+                await store.Maintenance.SendAsync(new StartBackupOperation(true, backupTaskId));
+                var operation = new GetPeriodicBackupStatusOperation(backupTaskId);
+                var value = WaitForValue(() =>
+                {
+                    var getPeriodicBackupResult = store.Maintenance.Send(operation);
+                    return getPeriodicBackupResult.Status?.LastEtag;
+                }, 1);
+                Assert.Equal(1, value);
+
+                // restore the database with a different name
+                var databaseName = $"restored_database-{Guid.NewGuid()}";
+
+                using (RestoreDatabase(store, new RestoreBackupConfiguration
+                {
+                    BackupLocation = Directory.GetDirectories(backupPath).First(),
+                    DatabaseName = databaseName,
+                    BackupEncryptionSettings = new BackupEncryptionSettings
+                    {
+                        Key = "OI7Vll7DroXdUORtc6Uo64wdAk1W0Db9ExXXgcg5IUs=",
+                        EncryptionMode = EncryptionMode.UseProvidedKey
+                    }
+                }))
+                {
+                    using (var session = store.OpenSession(databaseName))
+                    {
+                        var users = session.Load<User>("users/1");
+                        Assert.NotNull(users);
+                    }
+                }
+            }
+        }
+
+        [Fact]
+        public async Task backup_not_encrypted_db_and_restore_to_not_encrypted_DB_with_not_encrypted_backup_1()
+        {
+            var backupPath = NewDataPath(suffix: "BackupFolder");
+
+            using (var store = GetDocumentStore())
+            {
+                using (var session = store.OpenSession())
+                {
+                    session.Store(new User
+                    {
+                        Name = "oren"
+                    }, "users/1");
+                    session.SaveChanges();
+                }
+
+                var config = new PeriodicBackupConfiguration
+                {
+                    BackupType = BackupType.Backup,
+                    LocalSettings = new LocalSettings
+                    {
+                        FolderPath = backupPath
+                    },
+                    IncrementalBackupFrequency = "0 */6 * * *"
+                };
+
+                var backupTaskId = (await store.Maintenance.SendAsync(new UpdatePeriodicBackupOperation(config))).TaskId;
+
+                await store.Maintenance.SendAsync(new StartBackupOperation(true, backupTaskId));
+                var operation = new GetPeriodicBackupStatusOperation(backupTaskId);
+                var value = WaitForValue(() =>
+                {
+                    var getPeriodicBackupResult = store.Maintenance.Send(operation);
+                    return getPeriodicBackupResult.Status?.LastEtag;
+                }, 1);
+                Assert.Equal(1, value);
+
+                // restore the database with a different name
+                var databaseName = $"restored_database-{Guid.NewGuid()}";
+
+                using (RestoreDatabase(store, new RestoreBackupConfiguration
+                {
+                    BackupLocation = Directory.GetDirectories(backupPath).First(),
+                    DatabaseName = databaseName,
+                }))
+                {
+                    using (var session = store.OpenSession(databaseName))
+                    {
+                        var users = session.Load<User>("users/1");
+                        Assert.NotNull(users);
+                    }
+                }
+            }
+        }
+
+        [Fact]
+        public async Task backup_not_encrypted_db_and_restore_to_not_encrypted_DB_with_not_encrypted_backup_2()
+        {
+            var backupPath = NewDataPath(suffix: "BackupFolder");
+
+            using (var store = GetDocumentStore())
+            {
+                using (var session = store.OpenSession())
+                {
+                    session.Store(new User
+                    {
+                        Name = "oren"
+                    }, "users/1");
+                    session.SaveChanges();
+                }
+
+                var config = new PeriodicBackupConfiguration
+                {
+                    BackupType = BackupType.Backup,
+                    LocalSettings = new LocalSettings
+                    {
+                        FolderPath = backupPath
+                    },
+                    IncrementalBackupFrequency = "0 */6 * * *",
+                    BackupEncryptionSettings = new BackupEncryptionSettings
+                    {
+                        EncryptionMode = EncryptionMode.None
+                    }
+
+                };
+
+                var backupTaskId = (await store.Maintenance.SendAsync(new UpdatePeriodicBackupOperation(config))).TaskId;
+
+                await store.Maintenance.SendAsync(new StartBackupOperation(true, backupTaskId));
+                var operation = new GetPeriodicBackupStatusOperation(backupTaskId);
+                var value = WaitForValue(() =>
+                {
+                    var getPeriodicBackupResult = store.Maintenance.Send(operation);
+                    return getPeriodicBackupResult.Status?.LastEtag;
+                }, 1);
+                Assert.Equal(1, value);
+
+                // restore the database with a different name
+                var databaseName = $"restored_database-{Guid.NewGuid()}";
+
+                using (RestoreDatabase(store, new RestoreBackupConfiguration
+                {
+                    BackupLocation = Directory.GetDirectories(backupPath).First(),
+                    DatabaseName = databaseName,
+                }))
+                {
+                    using (var session = store.OpenSession(databaseName))
+                    {
+                        var users = session.Load<User>("users/1");
+                        Assert.NotNull(users);
+                    }
+                }
+            }
+        }
+
+        [Fact]
+        public async Task backup_not_encrypted_db_and_restore_to_not_encrypted_DB_with_not_encrypted_backup()
+        {
+            var backupPath = NewDataPath(suffix: "BackupFolder");
+
+            using (var store = GetDocumentStore())
+            {
+                using (var session = store.OpenAsyncSession())
+                {
+                    await session.StoreAsync(new User
+                    {
+                        Name = "oren"
+                    }, "users/1");
+                    await session.SaveChangesAsync();
+                }
+
+                var config = new PeriodicBackupConfiguration
+                {
+                    BackupType = BackupType.Backup,
+                    LocalSettings = new LocalSettings
+                    {
+                        FolderPath = backupPath
+                    },
+                    IncrementalBackupFrequency = "0 */6 * * *",
+                    BackupEncryptionSettings = new BackupEncryptionSettings
+                    {
+                        Key = "OI7Vll7DroXdUORtc6Uo64wdAk1W0Db9ExXXgcg5IUs=",
+                        EncryptionMode = EncryptionMode.UseProvidedKey
+                    }
+                };
+
+                var backupTaskId = (await store.Maintenance.SendAsync(new UpdatePeriodicBackupOperation(config))).TaskId;
+
+                await store.Maintenance.SendAsync(new StartBackupOperation(true, backupTaskId));
+                var operation = new GetPeriodicBackupStatusOperation(backupTaskId);
+                var value = WaitForValue(() =>
+                {
+                    var getPeriodicBackupResult = store.Maintenance.Send(operation);
+                    return getPeriodicBackupResult.Status?.LastEtag;
+                }, 1);
+                Assert.Equal(1, value);
+
+                // restore the database with a different name
+                var databaseName = $"restored_database-{Guid.NewGuid()}";
+
+                using (RestoreDatabase(store, new RestoreBackupConfiguration
+                {
+                    BackupLocation = Directory.GetDirectories(backupPath).First(),
+                    DatabaseName = databaseName,
+                    BackupEncryptionSettings = new BackupEncryptionSettings
+                    {
+                        Key = "OI7Vll7DroXdUORtc6Uo64wdAk1W0Db9ExXXgcg5IUs=",
+                        EncryptionMode = EncryptionMode.UseProvidedKey
+                    }
+                }))
+                {
+                    using (var session = store.OpenSession(databaseName))
+                    {
+                        var users = session.Load<User>("users/1");
+                        Assert.NotNull(users);
+                    }
+                }
+            }
+        }
+        
+        [Fact]
+        public async Task backup_unencrypted_db_and_encrypted_backup_fail_2()
+        {
+            var backupPath = NewDataPath(suffix: "BackupFolder");
+            using (var store = GetDocumentStore())
+            {
+                using (var session = store.OpenAsyncSession())
+                {
+                    await session.StoreAsync(new User
+                    {
+                        Name = "oren"
+                    }, "users/1");
+                    await session.SaveChangesAsync();
+                }
+
+                var config = new PeriodicBackupConfiguration
+                {
+                    BackupType = BackupType.Backup,
+                    LocalSettings = new LocalSettings
+                    {
+                        FolderPath = backupPath
+                    },
+                    IncrementalBackupFrequency = "0 */6 * * *",
+                    BackupEncryptionSettings = new BackupEncryptionSettings
+                    {
+                        EncryptionMode = EncryptionMode.UseDatabaseKey
+                    }
+                };
+
+                var backupTaskId = (await store.Maintenance.SendAsync(new UpdatePeriodicBackupOperation(config))).TaskId;
+                await store.Maintenance.SendAsync(new StartBackupOperation(true, backupTaskId));
+                var operation = new GetPeriodicBackupStatusOperation(backupTaskId);
+                var value = WaitForValue(() =>
+                {
+                    var getPeriodicBackupResult = store.Maintenance.Send(operation);
+                    var errorException = getPeriodicBackupResult.Status?.Error.Exception.Contains("InvalidOperationException");
+                    return errorException;
+                }, true);
+            }
+        }
+
+        [Fact]
         public async Task can_backup_and_restore_encrypted()
         {
             var backupPath = NewDataPath(suffix: "BackupFolder");
@@ -55,7 +1036,7 @@ namespace SlowTests.Server.Documents.PeriodicBackup
                         EncryptionMode = EncryptionMode.UseProvidedKey
                     }
                 };
-
+                
                 var backupTaskId = (await store.Maintenance.SendAsync(new UpdatePeriodicBackupOperation(config))).TaskId;
                 await store.Maintenance.SendAsync(new StartBackupOperation(true, backupTaskId));
                 var operation = new GetPeriodicBackupStatusOperation(backupTaskId);
@@ -338,217 +1319,10 @@ namespace SlowTests.Server.Documents.PeriodicBackup
         }
 
         [Fact]
-        public async Task snapshot_and_restore_encrypted_db_and_encrypted_backup_with_db_key_1()
-        {
-            var backupPath = NewDataPath(suffix: "BackupFolder");
-            
-            var key = encryptedServer(out X509Certificate2 adminCert, out string dbName);
-
-            using (var store = GetDocumentStore(new Options
-            {
-                AdminCertificate = adminCert,
-                ClientCertificate = adminCert,
-                ModifyDatabaseName = s => dbName,
-                ModifyDatabaseRecord = record => record.Encrypted = true,
-                Path = NewDataPath()
-            }))
-            {
-                using (var session = store.OpenAsyncSession())
-                {
-                    await session.StoreAsync(new User
-                    {
-                        Name = "oren"
-                    }, "users/1");
-                    await session.SaveChangesAsync();
-                }
-
-                var config = new PeriodicBackupConfiguration
-                {
-                    BackupType = BackupType.Snapshot,
-                    LocalSettings = new LocalSettings
-                    {
-                        FolderPath = backupPath
-                    },
-                    IncrementalBackupFrequency = "0 */6 * * *"
-                };
-
-                var backupTaskId = (await store.Maintenance.SendAsync(new UpdatePeriodicBackupOperation(config))).TaskId;
-                await store.Maintenance.SendAsync(new StartBackupOperation(true, backupTaskId));
-                var operation = new GetPeriodicBackupStatusOperation(backupTaskId);
-
-                var value = WaitForValue(() =>
-                {
-                    var getPeriodicBackupResult = store.Maintenance.Send(operation);
-                    return getPeriodicBackupResult.Status?.LastEtag;
-                }, 1);
-                Assert.Equal(1, value);
-
-                var databaseName = $"restored_database-{Guid.NewGuid()}";
-
-                using (RestoreDatabase(store, new RestoreBackupConfiguration
-                {
-                    BackupLocation = Directory.GetDirectories(backupPath).First(),
-                    DatabaseName = databaseName,
-                    BackupEncryptionSettings = new BackupEncryptionSettings
-                    {
-                        Key = key
-                    }
-                }))
-                {
-                    using (var session = store.OpenSession(dbName))
-                    {
-                        var users = session.Load<User>("users/1");
-                        Assert.NotNull(users);
-                    }
-                }
-            }
-        }
-
-        [Fact]
-        public async Task snapshot_and_restore_encrypted_db_and_encrypted_backup_with_db_key_2()
-        {
-            var backupPath = NewDataPath(suffix: "BackupFolder");
-            var key = encryptedServer(out X509Certificate2 adminCert, out string dbName);
-
-            using (var store = GetDocumentStore(new Options
-            {
-                AdminCertificate = adminCert,
-                ClientCertificate = adminCert,
-                ModifyDatabaseName = s => dbName,
-                ModifyDatabaseRecord = record => record.Encrypted = true,
-                Path = NewDataPath()
-            }))
-            {
-                using (var session = store.OpenAsyncSession())
-                {
-                    await session.StoreAsync(new User
-                    {
-                        Name = "oren"
-                    }, "users/1");
-                    await session.SaveChangesAsync();
-                }
-
-                var config = new PeriodicBackupConfiguration
-                {
-                    BackupType = BackupType.Snapshot,
-                    LocalSettings = new LocalSettings
-                    {
-                        FolderPath = backupPath
-                    },
-                    IncrementalBackupFrequency = "0 */6 * * *",
-                    BackupEncryptionSettings = new BackupEncryptionSettings
-                    {
-                        EncryptionMode = EncryptionMode.UseDatabaseKey
-                    }
-                };
-
-                var backupTaskId = (await store.Maintenance.SendAsync(new UpdatePeriodicBackupOperation(config))).TaskId;
-                await store.Maintenance.SendAsync(new StartBackupOperation(true, backupTaskId));
-                var operation = new GetPeriodicBackupStatusOperation(backupTaskId);
-
-                var value = WaitForValue(() =>
-                {
-                    var getPeriodicBackupResult = store.Maintenance.Send(operation);
-                    return getPeriodicBackupResult.Status?.LastEtag;
-                }, 1);
-                Assert.Equal(1, value);
-
-                var databaseName = $"restored_database-{Guid.NewGuid()}";
-
-                using (RestoreDatabase(store, new RestoreBackupConfiguration
-                {
-                    BackupLocation = Directory.GetDirectories(backupPath).First(),
-                    DatabaseName = databaseName,
-                    BackupEncryptionSettings = new BackupEncryptionSettings
-                    {
-                        Key = key
-                    }
-                }))
-                {
-                    using (var session = store.OpenSession(dbName))
-                    {
-                        var users = session.Load<User>("users/1");
-                        Assert.NotNull(users);
-                    }
-                }
-            }
-        }
-
-        [Fact]
-        public async Task snapshot_and_restore_encrypted_db_and_encrypted_backup_with_db_key_3()
-        {
-            var backupPath = NewDataPath(suffix: "BackupFolder");
-            var key = encryptedServer(out X509Certificate2 adminCert, out string dbName);
-
-            using (var store = GetDocumentStore(new Options
-            {
-                AdminCertificate = adminCert,
-                ClientCertificate = adminCert,
-                ModifyDatabaseName = s => dbName,
-                ModifyDatabaseRecord = record => record.Encrypted = true,
-                Path = NewDataPath()
-            }))
-            {
-                using (var session = store.OpenAsyncSession())
-                {
-                    await session.StoreAsync(new User
-                    {
-                        Name = "oren"
-                    }, "users/1");
-                    await session.SaveChangesAsync();
-                }
-
-                var config = new PeriodicBackupConfiguration
-                {
-                    BackupType = BackupType.Snapshot,
-                    LocalSettings = new LocalSettings
-                    {
-                        FolderPath = backupPath
-                    },
-                    IncrementalBackupFrequency = "0 */6 * * *",
-                    BackupEncryptionSettings = new BackupEncryptionSettings
-                    {
-                        EncryptionMode = EncryptionMode.UseDatabaseKey
-                    }
-                };
-
-                var backupTaskId = (await store.Maintenance.SendAsync(new UpdatePeriodicBackupOperation(config))).TaskId;
-                await store.Maintenance.SendAsync(new StartBackupOperation(true, backupTaskId));
-                var operation = new GetPeriodicBackupStatusOperation(backupTaskId);
-
-                var value = WaitForValue(() =>
-                {
-                    var getPeriodicBackupResult = store.Maintenance.Send(operation);
-                    return getPeriodicBackupResult.Status?.LastEtag;
-                }, 1);
-                Assert.Equal(1, value);
-
-                var databaseName = $"restored_database-{Guid.NewGuid()}";
-
-                using (RestoreDatabase(store, new RestoreBackupConfiguration
-                {
-                    BackupLocation = Directory.GetDirectories(backupPath).First(),
-                    DatabaseName = databaseName,
-                    BackupEncryptionSettings = new BackupEncryptionSettings
-                    {
-                        Key = key
-                    }
-                }))
-                {
-                    using (var session = store.OpenSession(dbName))
-                    {
-                        var users = session.Load<User>("users/1");
-                        Assert.NotNull(users);
-                    }
-                }
-            }
-        }
-
-        [Fact]
         public async Task snapshot_encrypted_db_with_new_key_fail()
         {
             var backupPath = NewDataPath(suffix: "BackupFolder");
-            var key = encryptedServer(out X509Certificate2 adminCert, out string dbName);
+            var key = EncryptedServer(out X509Certificate2 adminCert, out string dbName);
 
             using (var store = GetDocumentStore(new Options
             {
@@ -593,425 +1367,6 @@ namespace SlowTests.Server.Documents.PeriodicBackup
                     var errorException = getPeriodicBackupResult.Status?.Error.Exception.Contains("InvalidOperationException");
                     return errorException;
                 }, true);
-            }
-        }
-
-        [Fact]
-        public async Task backup_and_restore_encrypted_db_and_encrypted_backup_db_key_1()
-        {
-            var backupPath = NewDataPath(suffix: "BackupFolder");
-            var key = encryptedServer(out X509Certificate2 adminCert, out string dbName);
-
-            using (var store = GetDocumentStore(new Options
-            {
-                AdminCertificate = adminCert,
-                ClientCertificate = adminCert,
-                ModifyDatabaseName = s => dbName,
-                ModifyDatabaseRecord = record => record.Encrypted = true,
-                Path = NewDataPath()
-            }))
-            {
-                using (var session = store.OpenAsyncSession())
-                {
-                    await session.StoreAsync(new User
-                    {
-                        Name = "oren"
-                    }, "users/1");
-                    await session.SaveChangesAsync();
-                }
-
-                var config = new PeriodicBackupConfiguration
-                {
-                    BackupType = BackupType.Backup,
-                    LocalSettings = new LocalSettings
-                    {
-                        FolderPath = backupPath
-                    },
-                    IncrementalBackupFrequency = "0 */6 * * *"
-                };
-
-                var backupTaskId = (await store.Maintenance.SendAsync(new UpdatePeriodicBackupOperation(config))).TaskId;
-                await store.Maintenance.SendAsync(new StartBackupOperation(true, backupTaskId));
-                var operation = new GetPeriodicBackupStatusOperation(backupTaskId);
-
-                var value = WaitForValue(() =>
-                {
-                    var getPeriodicBackupResult = store.Maintenance.Send(operation);
-                    return getPeriodicBackupResult.Status?.LastEtag;
-                }, 1);
-                Assert.Equal(1, value);
-
-                var databaseName = $"restored_database-{Guid.NewGuid()}";
-
-                using (RestoreDatabase(store, new RestoreBackupConfiguration
-                {
-                    BackupLocation = Directory.GetDirectories(backupPath).First(),
-                    DatabaseName = databaseName,
-                    BackupEncryptionSettings = new BackupEncryptionSettings
-                    {
-                        Key = key
-                    }
-                }))
-                {
-                    using (var session = store.OpenSession(dbName))
-                    {
-                        var users = session.Load<User>("users/1");
-                        Assert.NotNull(users);
-                    }
-                }
-            }
-
-        }
-
-        [Fact]
-        public async Task backup_and_restore_encrypted_db_and_encrypted_backup_db_key_2()
-        {
-            var backupPath = NewDataPath(suffix: "BackupFolder");
-            var key = encryptedServer(out X509Certificate2 adminCert, out string dbName);
-
-            using (var store = GetDocumentStore(new Options
-            {
-                AdminCertificate = adminCert,
-                ClientCertificate = adminCert,
-                ModifyDatabaseName = s => dbName,
-                ModifyDatabaseRecord = record => record.Encrypted = true,
-                Path = NewDataPath()
-            }))
-            {
-                using (var session = store.OpenAsyncSession())
-                {
-                    await session.StoreAsync(new User
-                    {
-                        Name = "oren"
-                    }, "users/1");
-                    await session.SaveChangesAsync();
-                }
-
-                var config = new PeriodicBackupConfiguration
-                {
-                    BackupType = BackupType.Backup,
-                    LocalSettings = new LocalSettings
-                    {
-                        FolderPath = backupPath
-                    },
-                    IncrementalBackupFrequency = "0 */6 * * *",
-                    BackupEncryptionSettings = new BackupEncryptionSettings
-                    {
-                        EncryptionMode = EncryptionMode.UseDatabaseKey,
-                    }
-                };
-
-                var backupTaskId = (await store.Maintenance.SendAsync(new UpdatePeriodicBackupOperation(config))).TaskId;
-                await store.Maintenance.SendAsync(new StartBackupOperation(true, backupTaskId));
-                var operation = new GetPeriodicBackupStatusOperation(backupTaskId);
-
-                var value = WaitForValue(() =>
-                {
-                    var getPeriodicBackupResult = store.Maintenance.Send(operation);
-                    return getPeriodicBackupResult.Status?.LastEtag;
-                }, 1);
-                Assert.Equal(1, value);
-
-                var databaseName = $"restored_database-{Guid.NewGuid()}";
-
-                using (RestoreDatabase(store, new RestoreBackupConfiguration
-                {
-                    BackupLocation = Directory.GetDirectories(backupPath).First(),
-                    DatabaseName = databaseName,
-                    BackupEncryptionSettings = new BackupEncryptionSettings
-                    {
-                        Key = key
-                    }
-                }))
-                {
-                    using (var session = store.OpenSession(dbName))
-                    {
-                        var users = session.Load<User>("users/1");
-                        Assert.NotNull(users);
-                    }
-                }
-            }
-
-        }
-
-        [Fact]
-        public async Task backup_and_restore_encrypted_db_and_encrypted_backup_db_key_3()
-        {
-            var backupPath = NewDataPath(suffix: "BackupFolder");
-            var key = encryptedServer(out X509Certificate2 adminCert, out string dbName);
-
-            using (var store = GetDocumentStore(new Options
-            {
-                AdminCertificate = adminCert,
-                ClientCertificate = adminCert,
-                ModifyDatabaseName = s => dbName,
-                ModifyDatabaseRecord = record => record.Encrypted = true,
-                Path = NewDataPath()
-            }))
-            {
-                using (var session = store.OpenAsyncSession())
-                {
-                    await session.StoreAsync(new User
-                    {
-                        Name = "oren"
-                    }, "users/1");
-                    await session.SaveChangesAsync();
-                }
-
-                var config = new PeriodicBackupConfiguration
-                {
-                    BackupType = BackupType.Backup,
-                    LocalSettings = new LocalSettings
-                    {
-                        FolderPath = backupPath
-                    },
-                    IncrementalBackupFrequency = "0 */6 * * *",
-                    BackupEncryptionSettings = new BackupEncryptionSettings
-                    {
-                        EncryptionMode = EncryptionMode.UseDatabaseKey
-                    }
-                };
-
-                var backupTaskId = (await store.Maintenance.SendAsync(new UpdatePeriodicBackupOperation(config))).TaskId;
-                await store.Maintenance.SendAsync(new StartBackupOperation(true, backupTaskId));
-                var operation = new GetPeriodicBackupStatusOperation(backupTaskId);
-
-                var value = WaitForValue(() =>
-                {
-                    var getPeriodicBackupResult = store.Maintenance.Send(operation);
-                    return getPeriodicBackupResult.Status?.LastEtag;
-                }, 1);
-                Assert.Equal(1, value);
-
-                var databaseName = $"restored_database-{Guid.NewGuid()}";
-
-                using (RestoreDatabase(store, new RestoreBackupConfiguration
-                {
-                    BackupLocation = Directory.GetDirectories(backupPath).First(),
-                    DatabaseName = databaseName,
-                    BackupEncryptionSettings = new BackupEncryptionSettings
-                    {
-                        Key = key
-                    }
-                }))
-                {
-                    using (var session = store.OpenSession(dbName))
-                    {
-                        var users = session.Load<User>("users/1");
-                        Assert.NotNull(users);
-                    }
-                }
-            }
-
-        }
-
-        [Fact]
-        public async Task backup_and_restore_encrypted_db_and_encrypted_backup_new_key_1()
-        {
-            var backupPath = NewDataPath(suffix: "BackupFolder");
-            var key = encryptedServer(out X509Certificate2 adminCert, out string dbName);
-
-            using (var store = GetDocumentStore(new Options
-            {
-                AdminCertificate = adminCert,
-                ClientCertificate = adminCert,
-                ModifyDatabaseName = s => dbName,
-                ModifyDatabaseRecord = record => record.Encrypted = true,
-                Path = NewDataPath()
-            }))
-            {
-                using (var session = store.OpenAsyncSession())
-                {
-                    await session.StoreAsync(new User
-                    {
-                        Name = "oren"
-                    }, "users/1");
-                    await session.SaveChangesAsync();
-                }
-
-                var config = new PeriodicBackupConfiguration
-                {
-                    BackupType = BackupType.Backup,
-                    LocalSettings = new LocalSettings
-                    {
-                        FolderPath = backupPath
-                    },
-                    IncrementalBackupFrequency = "0 */6 * * *",
-                    BackupEncryptionSettings = new BackupEncryptionSettings
-                    {
-                        Key = "OI7Vll7DroXdUORtc6Uo64wdAk1W0Db9ExXXgcg5IUs=",
-                        EncryptionMode = EncryptionMode.UseProvidedKey
-                    }
-                };
-
-                var backupTaskId = (await store.Maintenance.SendAsync(new UpdatePeriodicBackupOperation(config))).TaskId;
-                await store.Maintenance.SendAsync(new StartBackupOperation(true, backupTaskId));
-                var operation = new GetPeriodicBackupStatusOperation(backupTaskId);
-
-                var value = WaitForValue(() =>
-                {
-                    var getPeriodicBackupResult = store.Maintenance.Send(operation);
-                    return getPeriodicBackupResult.Status?.LastEtag;
-                }, 1);
-                Assert.Equal(1, value);
-                var databaseName = $"restored_database-{Guid.NewGuid()}";
-
-                using (RestoreDatabase(store, new RestoreBackupConfiguration
-                {
-                    BackupLocation = Directory.GetDirectories(backupPath).First(),
-                    DatabaseName = databaseName,
-                    BackupEncryptionSettings = new BackupEncryptionSettings
-                    {
-                        Key = "OI7Vll7DroXdUORtc6Uo64wdAk1W0Db9ExXXgcg5IUs=",
-                        EncryptionMode = EncryptionMode.UseProvidedKey
-                    }
-                }))
-                {
-                    using (var session = store.OpenSession(dbName))
-                    {
-                        var users = session.Load<User>("users/1");
-                        Assert.NotNull(users);
-                    }
-                }
-            }
-        }
-
-        [Fact]
-        public async Task backup_and_restore_encrypted_db_and_encrypted_backup_new_key_2()
-        {
-            var backupPath = NewDataPath(suffix: "BackupFolder");
-            var key = encryptedServer(out X509Certificate2 adminCert, out string dbName);
-
-            using (var store = GetDocumentStore(new Options
-            {
-                AdminCertificate = adminCert,
-                ClientCertificate = adminCert,
-                ModifyDatabaseName = s => dbName,
-                ModifyDatabaseRecord = record => record.Encrypted = true,
-                Path = NewDataPath()
-            }))
-            {
-                using (var session = store.OpenAsyncSession())
-                {
-                    await session.StoreAsync(new User
-                    {
-                        Name = "oren"
-                    }, "users/1");
-                    await session.SaveChangesAsync();
-                }
-
-                var config = new PeriodicBackupConfiguration
-                {
-                    BackupType = BackupType.Backup,
-                    LocalSettings = new LocalSettings
-                    {
-                        FolderPath = backupPath
-                    },
-                    IncrementalBackupFrequency = "0 */6 * * *",
-                    BackupEncryptionSettings = new BackupEncryptionSettings
-                    {
-                        Key = "OI7Vll7DroXdUORtc6Uo64wdAk1W0Db9ExXXgcg5IUs=",
-                        EncryptionMode = EncryptionMode.UseProvidedKey
-                    }
-                };
-
-                var backupTaskId = (await store.Maintenance.SendAsync(new UpdatePeriodicBackupOperation(config))).TaskId;
-                await store.Maintenance.SendAsync(new StartBackupOperation(true, backupTaskId));
-                var operation = new GetPeriodicBackupStatusOperation(backupTaskId);
-
-                var value = WaitForValue(() =>
-                {
-                    var getPeriodicBackupResult = store.Maintenance.Send(operation);
-                    return getPeriodicBackupResult.Status?.LastEtag;
-                }, 1);
-                Assert.Equal(1, value);
-                var databaseName = $"restored_database-{Guid.NewGuid()}";
-
-                using (RestoreDatabase(store, new RestoreBackupConfiguration
-                {
-                    BackupLocation = Directory.GetDirectories(backupPath).First(),
-                    DatabaseName = databaseName,
-                    BackupEncryptionSettings = new BackupEncryptionSettings
-                    {
-                        Key = "OI7Vll7DroXdUORtc6Uo64wdAk1W0Db9ExXXgcg5IUs=",
-                        EncryptionMode = EncryptionMode.UseProvidedKey
-                    }
-                }))
-                {
-                    using (var session = store.OpenSession(dbName))
-                    {
-                        var users = session.Load<User>("users/1");
-                        Assert.NotNull(users);
-                    }
-                }
-            }
-
-        }
-
-        [Fact]
-        public async Task backup_and_restore_encrypted_db_and_unencrypted_backup()
-        {
-            var backupPath = NewDataPath(suffix: "BackupFolder");
-            var key = encryptedServer(out X509Certificate2 adminCert, out string dbName);
-
-            using (var store = GetDocumentStore(new Options
-            {
-                AdminCertificate = adminCert,
-                ClientCertificate = adminCert,
-                ModifyDatabaseName = s => dbName,
-                ModifyDatabaseRecord = record => record.Encrypted = true,
-                Path = NewDataPath()
-            }))
-            {
-                using (var session = store.OpenAsyncSession())
-                {
-                    await session.StoreAsync(new User
-                    {
-                        Name = "oren"
-                    }, "users/1");
-                    await session.SaveChangesAsync();
-                }
-
-                var config = new PeriodicBackupConfiguration
-                {
-                    BackupType = BackupType.Backup,
-                    LocalSettings = new LocalSettings
-                    {
-                        FolderPath = backupPath
-                    },
-                    IncrementalBackupFrequency = "0 */6 * * *",
-                    BackupEncryptionSettings = new BackupEncryptionSettings
-                    {
-                        EncryptionMode = EncryptionMode.None
-                    }
-                };
-
-                var backupTaskId = (await store.Maintenance.SendAsync(new UpdatePeriodicBackupOperation(config))).TaskId;
-
-                await store.Maintenance.SendAsync(new StartBackupOperation(true, backupTaskId));
-                var operation = new GetPeriodicBackupStatusOperation(backupTaskId);
-                var value = WaitForValue(() =>
-                {
-                    var getPeriodicBackupResult = store.Maintenance.Send(operation);
-                    return getPeriodicBackupResult.Status?.LastEtag;
-                }, 1);
-                Assert.Equal(1, value);
-
-                // restore the database with a different name
-                var databaseName = $"restored_database-{Guid.NewGuid()}";
-
-                using (RestoreDatabase(store, new RestoreBackupConfiguration
-                {
-                    BackupLocation = Directory.GetDirectories(backupPath).First(),
-                    DatabaseName = databaseName
-                }))
-                {
-                    using (var session = store.OpenSession(databaseName))
-                    {
-                        var users = session.Load<User>("users/1");
-                        Assert.NotNull(users);
-                    }
-                }
             }
         }
 
@@ -1212,225 +1567,7 @@ namespace SlowTests.Server.Documents.PeriodicBackup
             }
         }
 
-        [Fact]
-        public async Task backup_and_restore_unencrypted_db_and_encrypted_backup()
-        {
-            var backupPath = NewDataPath(suffix: "BackupFolder");
-
-            using (var store = GetDocumentStore())
-            {
-                using (var session = store.OpenAsyncSession())
-                {
-                    await session.StoreAsync(new User
-                    {
-                        Name = "oren"
-                    }, "users/1");
-                    await session.SaveChangesAsync();
-                }
-
-                var config = new PeriodicBackupConfiguration
-                {
-                    BackupType = BackupType.Backup,
-                    LocalSettings = new LocalSettings
-                    {
-                        FolderPath = backupPath
-                    },
-                    IncrementalBackupFrequency = "0 */6 * * *",
-                    BackupEncryptionSettings = new BackupEncryptionSettings
-                    {
-                        Key = "OI7Vll7DroXdUORtc6Uo64wdAk1W0Db9ExXXgcg5IUs=",
-                        EncryptionMode = EncryptionMode.UseProvidedKey
-                    }
-                };
-
-                var backupTaskId = (await store.Maintenance.SendAsync(new UpdatePeriodicBackupOperation(config))).TaskId;
-
-                await store.Maintenance.SendAsync(new StartBackupOperation(true, backupTaskId));
-                var operation = new GetPeriodicBackupStatusOperation(backupTaskId);
-                var value = WaitForValue(() =>
-                {
-                    var getPeriodicBackupResult = store.Maintenance.Send(operation);
-                    return getPeriodicBackupResult.Status?.LastEtag;
-                }, 1);
-                Assert.Equal(1, value);
-
-                // restore the database with a different name
-                var databaseName = $"restored_database-{Guid.NewGuid()}";
-
-                using (RestoreDatabase(store, new RestoreBackupConfiguration
-                {
-                    BackupLocation = Directory.GetDirectories(backupPath).First(),
-                    DatabaseName = databaseName,
-                    BackupEncryptionSettings = new BackupEncryptionSettings
-                    {
-                        Key = "OI7Vll7DroXdUORtc6Uo64wdAk1W0Db9ExXXgcg5IUs=",
-                        EncryptionMode = EncryptionMode.UseProvidedKey
-                    }
-                }))
-                {
-                    using (var session = store.OpenSession(databaseName))
-                    {
-                        var users = session.Load<User>("users/1");
-                        Assert.NotNull(users);
-                    }
-                }
-            }
-        }
-
-        [Fact]
-        public async Task backup_unencrypted_db_and_encrypted_backup_fail_2()
-        {
-            var backupPath = NewDataPath(suffix: "BackupFolder");
-            using (var store = GetDocumentStore())
-            {
-                using (var session = store.OpenAsyncSession())
-                {
-                    await session.StoreAsync(new User
-                    {
-                        Name = "oren"
-                    }, "users/1");
-                    await session.SaveChangesAsync();
-                }
-
-                var config = new PeriodicBackupConfiguration
-                {
-                    BackupType = BackupType.Backup,
-                    LocalSettings = new LocalSettings
-                    {
-                        FolderPath = backupPath
-                    },
-                    IncrementalBackupFrequency = "0 */6 * * *",
-                    BackupEncryptionSettings = new BackupEncryptionSettings
-                    {
-                        EncryptionMode = EncryptionMode.UseDatabaseKey
-                    }
-                };
-
-                var backupTaskId = (await store.Maintenance.SendAsync(new UpdatePeriodicBackupOperation(config))).TaskId;
-                await store.Maintenance.SendAsync(new StartBackupOperation(true, backupTaskId));
-                var operation = new GetPeriodicBackupStatusOperation(backupTaskId);
-                var value = WaitForValue(() =>
-                {
-                    var getPeriodicBackupResult = store.Maintenance.Send(operation);
-                    var errorException = getPeriodicBackupResult.Status?.Error.Exception.Contains("InvalidOperationException");
-                    return errorException;
-                }, true);
-            }
-        }
-
-        [Fact]
-        public async Task backup_unencrypted_db_and_encrypted_backup_2()
-        {
-            var backupPath = NewDataPath(suffix: "BackupFolder");
-            using (var store = GetDocumentStore())
-            {
-                using (var session = store.OpenAsyncSession())
-                {
-                    await session.StoreAsync(new User
-                    {
-                        Name = "oren"
-                    }, "users/1");
-                    await session.SaveChangesAsync();
-                }
-
-                var config = new PeriodicBackupConfiguration
-                {
-                    BackupType = BackupType.Backup,
-                    LocalSettings = new LocalSettings
-                    {
-                        FolderPath = backupPath
-                    },
-                    IncrementalBackupFrequency = "0 */6 * * *",
-                    BackupEncryptionSettings = new BackupEncryptionSettings
-                    {
-                        EncryptionMode = EncryptionMode.None
-                    }
-                };
-
-                var backupTaskId = (await store.Maintenance.SendAsync(new UpdatePeriodicBackupOperation(config))).TaskId;
-                await store.Maintenance.SendAsync(new StartBackupOperation(true, backupTaskId));
-                var operation = new GetPeriodicBackupStatusOperation(backupTaskId);
-                var value = WaitForValue(() =>
-                {
-                    var getPeriodicBackupResult = store.Maintenance.Send(operation);
-                    return getPeriodicBackupResult.Status?.LastEtag;
-                }, 1);
-                Assert.Equal(1, value);
-
-                // restore the database with a different name
-                var databaseName = $"restored_database-{Guid.NewGuid()}";
-
-                using (RestoreDatabase(store, new RestoreBackupConfiguration
-                {
-                    BackupLocation = Directory.GetDirectories(backupPath).First(),
-                    DatabaseName = databaseName,
-                }))
-                {
-                    using (var session = store.OpenSession(databaseName))
-                    {
-                        var users = session.Load<User>("users/1");
-                        Assert.NotNull(users);
-                    }
-                }
-            }
-        }
-
-        [Fact]
-        public async Task backup_and_restore_unencrypted_db_and_unencrypted_backup()
-        {
-            var backupPath = NewDataPath(suffix: "BackupFolder");
-
-            using (var store = GetDocumentStore())
-            {
-                using (var session = store.OpenSession())
-                {
-                    session.Store(new User
-                    {
-                        Name = "oren"
-                    }, "users/1");
-                    session.SaveChanges();
-                }
-
-                var config = new PeriodicBackupConfiguration
-                {
-                    BackupType = BackupType.Backup,
-                    LocalSettings = new LocalSettings
-                    {
-                        FolderPath = backupPath
-                    },
-                    IncrementalBackupFrequency = "0 */6 * * *"
-                };
-
-                var backupTaskId = (await store.Maintenance.SendAsync(new UpdatePeriodicBackupOperation(config))).TaskId;
-
-                await store.Maintenance.SendAsync(new StartBackupOperation(true, backupTaskId));
-                var operation = new GetPeriodicBackupStatusOperation(backupTaskId);
-                var value = WaitForValue(() =>
-                {
-                    var getPeriodicBackupResult = store.Maintenance.Send(operation);
-                    return getPeriodicBackupResult.Status?.LastEtag;
-                }, 1);
-                Assert.Equal(1, value);
-
-                // restore the database with a different name
-                var databaseName = $"restored_database-{Guid.NewGuid()}";
-
-                using (RestoreDatabase(store, new RestoreBackupConfiguration
-                {
-                    BackupLocation = Directory.GetDirectories(backupPath).First(),
-                    DatabaseName = databaseName,
-                }))
-                {
-                    using (var session = store.OpenSession(databaseName))
-                    {
-                        var users = session.Load<User>("users/1");
-                        Assert.NotNull(users);
-                    }
-                }
-            }
-        }
-
-        private string encryptedServer(out X509Certificate2 adminCert, out string name)
+        private string EncryptedServer(out X509Certificate2 adminCert, out string name)
         {
             var serverCertPath = SetupServerAuthentication();
             var dbName = GetDatabaseName();
