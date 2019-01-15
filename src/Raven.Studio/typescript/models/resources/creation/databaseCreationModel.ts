@@ -9,6 +9,7 @@ import validateNameCommand = require("commands/resources/validateNameCommand");
 import validateOfflineMigration = require("commands/resources/validateOfflineMigration");
 import storageKeyProvider = require("common/storage/storageKeyProvider");
 import setupEncryptionKey = require("viewmodels/resources/setupEncryptionKey");
+import licenseModel = require("models/auth/licenseModel");
 
 class databaseCreationModel {
     static unknownDatabaseName = "Unknown Database";
@@ -63,6 +64,7 @@ class databaseCreationModel {
 
     creationMode: dbCreationMode = null;
     isFromBackupOrFromOfflineMigration: boolean;
+    canCreateEncryptedDatabases: KnockoutObservable<boolean>;
 
     restore = {
         backupDirectory: ko.observable<string>().extend({ throttle: 500 }),
@@ -154,8 +156,9 @@ class databaseCreationModel {
         name: this.name,
     });
 
-    constructor(mode: dbCreationMode) {
+    constructor(mode: dbCreationMode, canCreateEncryptedDatabases: KnockoutObservable<boolean>) {
         this.creationMode = mode;
+        this.canCreateEncryptedDatabases = canCreateEncryptedDatabases;
         this.isFromBackupOrFromOfflineMigration = mode !== "newDatabase";
         
         const legacyMigrationConfig = this.configurationSections.find(x => x.id === "legacyMigration");
@@ -216,20 +219,38 @@ class databaseCreationModel {
         });
         
         this.restore.selectedRestorePoint.subscribe(restorePoint => {
+            const canCreateEncryptedDbs = this.canCreateEncryptedDatabases();
+            
             const encryptionSection = this.getEncryptionConfigSection();
             this.lockActiveTab(true);
             try {
                 if (restorePoint) {
                     if (restorePoint.isEncrypted) {
-                        // turn on encryption
-                        encryptionSection.disableToggle(true);
-                        encryptionSection.enabled(true);
-                    } else if (restorePoint.isSnapshotRestore && !restorePoint.isEncrypted) {
-                        encryptionSection.disableToggle(true);
-                        encryptionSection.enabled(false);
-                    } else {
-                        encryptionSection.disableToggle(false);
-                        encryptionSection.enabled(false);
+                        
+                        if (restorePoint.isSnapshotRestore) {
+                            // encrypted snapshot - we are forced to encrypt newly created database 
+                            // it requires license and https
+                            
+                            encryptionSection.enabled(true);
+                            encryptionSection.disableToggle(true);
+                        } else {
+                            // encrypted backup - we need license and https for encrypted db
+                            
+                            encryptionSection.enabled(canCreateEncryptedDbs);
+                            encryptionSection.disableToggle(!canCreateEncryptedDbs);
+                        }
+                    } else { //backup is not encrypted
+                        if (restorePoint.isSnapshotRestore) {
+                            // not encrypted snapshot - we can not create encrypted db
+                            
+                            encryptionSection.enabled(false);
+                            encryptionSection.disableToggle(true);
+                        } else {
+                            // not encrypted backup - we need license and https for encrypted db
+                            
+                            encryptionSection.enabled(false);
+                            encryptionSection.disableToggle(!canCreateEncryptedDbs); 
+                        }
                     }
                 } else {
                     encryptionSection.disableToggle(false);
@@ -422,7 +443,20 @@ class databaseCreationModel {
         this.restore.selectedRestorePoint.extend({
             required: {
                 onlyIf: () => this.creationMode === "restore"
-            }
+            },
+            validation: [
+                {
+                    validator: (restorePoint: restorePoint) => {
+                        const isEncryptedSnapshot = restorePoint.isEncrypted && restorePoint.isSnapshotRestore;
+                        if (isEncryptedSnapshot) {
+                            // check if license supports that
+                            return licenseModel.licenseStatus() && licenseModel.licenseStatus().HasEncryption;
+                        }
+                        return true;
+                    },
+                    message: "License doesn't support storage encryption"
+                }
+            ]
         });
     }
     
