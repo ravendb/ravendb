@@ -16,6 +16,7 @@ import eventsCollector = require("common/eventsCollector");
 import popoverUtils = require("common/popoverUtils");
 import collectionsTracker = require("common/helpers/database/collectionsTracker");
 import defaultAceCompleter = require("common/defaultAceCompleter");
+import setupEncryptionKey = require("viewmodels/resources/setupEncryptionKey");
 
 class exportDatabase extends viewModelBase {
 
@@ -35,6 +36,8 @@ class exportDatabase extends viewModelBase {
     hasRevisionsConfiguration: KnockoutComputed<boolean>;
 
     exportCommand: KnockoutComputed<string>;
+
+    encryptionSection = ko.observable<setupEncryptionKey>();
 
     constructor() {
         super();
@@ -58,8 +61,17 @@ class exportDatabase extends viewModelBase {
 
         this.initializeObservables();
         
+        const dbName = ko.pureComputed(() => {
+            const db = this.activeDatabase();
+            return db ? db.name : "";
+        });
+
+        this.encryptionSection(setupEncryptionKey.forExport(this.model.encryptionKey, this.model.savedKeyConfirmation, dbName));
+        
         this.setupDefaultExportFilename();
 
+        this.encryptionSection().generateEncryptionKey();
+        
         this.fetchCollections()
             .done((collections: string[]) => {
                 this.collections(collections);
@@ -71,6 +83,14 @@ class exportDatabase extends viewModelBase {
 
         $('[data-toggle="tooltip"]').tooltip();
         this.model.includeRevisionDocuments(this.canExportDocumentRevisions());
+
+        this.encryptionSection().syncQrCode();
+
+        this.model.encryptionKey.subscribe(() => {
+            this.encryptionSection().syncQrCode();
+            // reset confirmation
+            this.model.savedKeyConfirmation(false);
+        });
     }
 
     private fetchCollections(): JQueryPromise<Array<string>> {
@@ -165,6 +185,12 @@ class exportDatabase extends viewModelBase {
     startExport() {
         if (!this.isValid(this.model.validationGroup)) {
             return;
+        }
+        
+        if (this.model.encryptOutput()) {
+            if (!this.isValid(this.model.encryptionValidationGroup)) {
+                return;
+            }
         }
         
         eventsCollector.default.reportEvent("database", "export");

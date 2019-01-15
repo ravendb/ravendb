@@ -175,6 +175,10 @@ abstract class setupEncryptionKey {
     static forBackup(key: KnockoutObservable<string>, keyConfirmation: KnockoutObservable<boolean>, databaseName: KnockoutObservable<string>) {
         return new backupSetupEncryptionKey(key, keyConfirmation, databaseName);
     }
+
+    static forExport(key: KnockoutObservable<string>, keyConfirmation: KnockoutObservable<boolean>, databaseName: KnockoutObservable<string>) {
+        return new exportSetupEncryptionKey(key, keyConfirmation, databaseName);
+    }
 }
 
 class databaseSetupEncryptionKey extends setupEncryptionKey {
@@ -206,6 +210,22 @@ class backupSetupEncryptionKey extends setupEncryptionKey {
         const encryptionKey = this.key();
         const databaseName = this.databaseName();
         return `Backup Encryption Key for database '${databaseName}': ${encryptionKey}\r\n\r\nThis key is used to encrypt backup, it is required for restoring the database.\r\nMake sure you keep it in a private, safe place.`;
+    }
+}
+
+class exportSetupEncryptionKey extends setupEncryptionKey {
+    getContainer() {
+        return document.getElementsByTagName("body")[0];
+    }
+
+    getFileName() {
+        return `Export-key-of-${this.databaseName()}-${moment().format("YYYY-MM-DD-HH-mm")}.txt`;
+    }
+
+    keyDataText(): string {
+        const encryptionKey = this.key();
+        const databaseName = this.databaseName();
+        return `Encryption Key for exported database '${databaseName}': ${encryptionKey}\r\n\r\nThis key is used to encrypt export, it is required for importing the database.\r\nMake sure you keep it in a private, safe place.`;
     }
 }
 

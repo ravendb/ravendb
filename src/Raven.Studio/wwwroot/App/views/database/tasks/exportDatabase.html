@@ -63,7 +63,7 @@
                         </div>
                         <div class="toggle">
                             <input id="toggleConfiguration" type="checkbox" data-bind="checked: includeDatabaseRecord">
-                            <label for="toggleConfiguration">Include Configuration</label>
+                            <label for="toggleConfiguration" class="margin-right margin-right-sm">Include Configuration</label>
                             <a id="configurationPopover"><small><i class="icon-info text-info"></i></small></a>
                         </div>
 
@@ -81,8 +81,26 @@
                         </div>
                     </div>
                 </div>
+                
+                <hr />
+                
+                <div class="row">
+                    <div class="col-lg-6">
+                        <div class="toggle">
+                            <input id="toggleEncryption" type="checkbox" data-bind="checked: encryptOutput">
+                            <label for="toggleEncryption">Encrypt exported file</label>
+                        </div>
+                    </div>
+                </div>
+                <div class="row" data-bind="collapse: encryptOutput">
+                    <div class="col-sm-12 col-lg-6" data-bind="with: $root.encryptionSection">
+                        <div class="margin-left margin-left-lg">
+                            <div data-bind="compose: 'resources/setupEncryptionKey.html'"></div>
+                        </div>
+                    </div>
+                </div>
             </div>
-            <br/>
+            
             <div id="export-advanced" data-bind="collapse: showAdvancedOptions">
                 <!-- TODO: see issue 8493 ! -->
                 <!--<div class="toggle">
