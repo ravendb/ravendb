@@ -90,8 +90,32 @@
                         </div>
                     </div>
                 </div>
-            </div>            
-            <br />
+            </div>
+
+            <hr />
+            <div class="row">
+                <div class="col-lg-6">
+                    <div class="toggle">
+                        <input id="toggleEncryption" type="checkbox" data-bind="checked: model.encryptedInput">
+                        <label for="toggleEncryption">Imported file is encrypted</label>
+                    </div>
+                </div>
+            </div>
+
+            <div class="margin-left margin-left-lg" data-bind="collapse: model.encryptedInput">
+                <div class="row">
+                    <div class="col-lg-6">
+                        <div class="form-group" data-bind="validationElement: model.encryptionKey">
+                            <label class="control-label">
+                                Encryption Key <small class="text-muted">(Base64 Encoding)</small>
+                            </label>
+                            <input type="text" class="form-control" placeholder="Key" autocomplete="off"
+                                   data-bind="textInput: model.encryptionKey">
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
             <div data-bind="collapse: showAdvancedOptions, with: model">
                 <div>
                     <div class="toggle">
