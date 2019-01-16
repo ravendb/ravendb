@@ -2170,39 +2170,37 @@ namespace Raven.Server.Documents.Indexes
         }
 
         public virtual async Task StreamQuery(HttpResponse response, IStreamQueryResultWriter<Document> writer,
-            IndexQueryServerSide query, QueryRunner.QueryMarker queryMarker, DocumentsOperationContext documentsContext, OperationCancelToken token)
+            IndexQueryServerSide query, DocumentsOperationContext documentsContext, OperationCancelToken token)
         {
             var result = new StreamDocumentQueryResult(response, writer, token);
-            await QueryInternal(result, query, queryMarker, documentsContext, token);
+            await QueryInternal(result, query, documentsContext, token);
             result.Flush();
 
             DocumentDatabase.QueryMetadataCache.MaybeAddToCache(query.Metadata, Name);
         }
 
         public virtual async Task StreamIndexEntriesQuery(HttpResponse response, IStreamQueryResultWriter<BlittableJsonReaderObject> writer,
-            IndexQueryServerSide query, QueryRunner.QueryMarker queryMarker, DocumentsOperationContext documentsContext, OperationCancelToken token)
+            IndexQueryServerSide query, DocumentsOperationContext documentsContext, OperationCancelToken token)
         {
             var result = new StreamDocumentIndexEntriesQueryResult(response, writer, token);
-            await IndexEntriesQueryInternal(result, query, queryMarker, documentsContext, token);
+            await IndexEntriesQueryInternal(result, query, documentsContext, token);
             result.Flush();
             DocumentDatabase.QueryMetadataCache.MaybeAddToCache(query.Metadata, Name);
         }
 
         public virtual async Task<DocumentQueryResult> Query(
             IndexQueryServerSide query,
-            QueryRunner.QueryMarker queryMarker,
             DocumentsOperationContext documentsContext,
             OperationCancelToken token)
         {
             var result = new DocumentQueryResult();
-            await QueryInternal(result, query, queryMarker, documentsContext, token);
+            await QueryInternal(result, query, documentsContext, token);
             return result;
         }
 
         private async Task QueryInternal<TQueryResult>(
             TQueryResult resultToFill,
             IndexQueryServerSide query,
-            QueryRunner.QueryMarker queryMarker,
             DocumentsOperationContext documentsContext,
             OperationCancelToken token)
             where TQueryResult : QueryResultServerSide<Document>
@@ -2400,7 +2398,6 @@ namespace Raven.Server.Documents.Indexes
         private async Task IndexEntriesQueryInternal<TQueryResult>(
             TQueryResult resultToFill,
             IndexQueryServerSide query,
-            QueryRunner.QueryMarker queryMarker,
             DocumentsOperationContext documentsContext,
             OperationCancelToken token)
           where TQueryResult : QueryResultServerSide<BlittableJsonReaderObject>
@@ -2505,7 +2502,6 @@ namespace Raven.Server.Documents.Indexes
 
         public virtual async Task<FacetedQueryResult> FacetedQuery(
             FacetQuery facetQuery,
-            QueryRunner.QueryMarker queryMarker,
             DocumentsOperationContext documentsContext,
             OperationCancelToken token)
         {
@@ -2609,7 +2605,6 @@ namespace Raven.Server.Documents.Indexes
 
         public virtual async Task<SuggestionQueryResult> SuggestionQuery(
             IndexQueryServerSide query,
-            QueryRunner.QueryMarker queryMarker,
             DocumentsOperationContext documentsContext,
             OperationCancelToken token)
         {
@@ -2687,12 +2682,11 @@ namespace Raven.Server.Documents.Indexes
 
         public virtual async Task<IndexEntriesQueryResult> IndexEntries(
             IndexQueryServerSide query,
-            QueryRunner.QueryMarker queryMarker,
-            DocumentsOperationContext documentsContext, 
+            DocumentsOperationContext documentsContext,
             OperationCancelToken token)
         {
             var result = new IndexEntriesQueryResult();
-            await IndexEntriesQueryInternal(result, query, queryMarker, documentsContext, token);
+            await IndexEntriesQueryInternal(result, query, documentsContext, token);
             return result;
         }
 

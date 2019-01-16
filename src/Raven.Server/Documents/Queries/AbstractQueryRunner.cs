@@ -24,12 +24,11 @@ namespace Raven.Server.Documents.Queries
     {
         public readonly DocumentDatabase Database;
 
-        protected readonly QueryRunner QueryRunner;
+        protected QueryRunner QueryRunner => Database.QueryRunner;
 
         protected AbstractQueryRunner(DocumentDatabase database)
         {
             Database = database;
-            QueryRunner = database.QueryRunner;
         }
 
         public Index GetIndex(string indexName)
@@ -60,7 +59,6 @@ namespace Raven.Server.Documents.Queries
 
         protected async Task<SuggestionQueryResult> ExecuteSuggestion(
             IndexQueryServerSide query,
-            QueryRunner.QueryMarker queryMarker,
             Index index,
             DocumentsOperationContext documentsContext,
             long? existingResultEtag,
@@ -92,12 +90,12 @@ namespace Raven.Server.Documents.Queries
                     return SuggestionQueryResult.NotModifiedResult;
             }
 
-            return await index.SuggestionQuery(query, queryMarker, documentsContext, token);
+            return await index.SuggestionQuery(query, documentsContext, token);
         }
 
-        protected Task<IOperationResult> ExecuteDelete(IndexQueryServerSide query, QueryRunner.QueryMarker queryMarker, Index index, QueryOperationOptions options, DocumentsOperationContext context, Action<DeterminateProgress> onProgress, OperationCancelToken token)
+        protected Task<IOperationResult> ExecuteDelete(IndexQueryServerSide query, Index index, QueryOperationOptions options, DocumentsOperationContext context, Action<DeterminateProgress> onProgress, OperationCancelToken token)
         {
-            return ExecuteOperation(query, queryMarker, index, options, context, onProgress, (key, retrieveDetails) =>
+            return ExecuteOperation(query, index, options, context, onProgress, (key, retrieveDetails) =>
             {
                 var command = new DeleteDocumentCommand(key, null, Database);
 
@@ -109,10 +107,10 @@ namespace Raven.Server.Documents.Queries
             }, token);
         }
 
-        protected Task<IOperationResult> ExecutePatch(IndexQueryServerSide query, QueryRunner.QueryMarker queryMarker, Index index, QueryOperationOptions options, PatchRequest patch,
+        protected Task<IOperationResult> ExecutePatch(IndexQueryServerSide query, Index index, QueryOperationOptions options, PatchRequest patch,
             BlittableJsonReaderObject patchArgs, DocumentsOperationContext context, Action<DeterminateProgress> onProgress, OperationCancelToken token)
         {
-            return ExecuteOperation(query, queryMarker, index, options, context, onProgress, (key, retrieveDetails) =>
+            return ExecuteOperation(query, index, options, context, onProgress, (key, retrieveDetails) =>
             {
                 var command = new PatchDocumentCommand(context, key,
                     expectedChangeVector: null,
@@ -134,7 +132,7 @@ namespace Raven.Server.Documents.Queries
             }, token);
         }
 
-        private async Task<IOperationResult> ExecuteOperation<T>(IndexQueryServerSide query, QueryRunner.QueryMarker queryMarker, Index index, QueryOperationOptions options,
+        private async Task<IOperationResult> ExecuteOperation<T>(IndexQueryServerSide query, Index index, QueryOperationOptions options,
     DocumentsOperationContext context, Action<DeterminateProgress> onProgress, Func<string, bool, BulkOperationCommand<T>> func, OperationCancelToken token)
     where T : TransactionOperationsMerger.MergedTransactionCommand
         {
@@ -148,7 +146,7 @@ namespace Raven.Server.Documents.Queries
             Queue<string> resultIds;
             try
             {
-                var results = await index.Query(query, queryMarker, context, token).ConfigureAwait(false);
+                var results = await index.Query(query, context, token).ConfigureAwait(false);
                 if (options.AllowStale == false && results.IsStale)
                     throw new InvalidOperationException("Cannot perform bulk operation. Query is stale.");
 

@@ -8,7 +8,6 @@ using Raven.Client.Documents.Queries;
 using Raven.Client.Util;
 using Raven.Server.Documents.Queries;
 using Raven.Server.ServerWide;
-using Sparrow;
 using Sparrow.Json;
 using Sparrow.Json.Parsing;
 using Xunit;
@@ -62,8 +61,9 @@ namespace FastTests.Client.Indexing
 
                     var index = database.IndexStore.GetIndexes().First();
 
-                    var now = SystemTime.UtcNow;
-                    index.CurrentlyRunningQueries.TryAdd(new ExecutingQueryInfo(now, query1, 10, OperationCancelToken.None));
+                    var marker = database.QueryRunner.MarkQueryAsRunning(index.Name, query1, OperationCancelToken.None);
+                    var now = marker.StartTime;
+                    var queryId = marker.QueryId;
 
                     var conventions = new DocumentConventions();
 
@@ -77,22 +77,21 @@ namespace FastTests.Client.Indexing
 
                         foreach (BlittableJsonReaderObject info in array)
                         {
-                            int queryId;
-                            Assert.True(info.TryGet(nameof(ExecutingQueryInfo.QueryId), out queryId));
+                            Assert.True(info.TryGet(nameof(ExecutingQueryInfo.QueryId), out long actualQueryId));
 
-                            string duration;
-                            Assert.True(info.TryGet(nameof(ExecutingQueryInfo.Duration), out duration));
+                            Assert.True(info.TryGet(nameof(ExecutingQueryInfo.Duration), out string duration));
                             Assert.NotNull(duration);
 
-                            string startTimeAsString;
-                            Assert.True(info.TryGet(nameof(ExecutingQueryInfo.StartTime), out startTimeAsString));
+                            Assert.True(info.TryGet(nameof(ExecutingQueryInfo.IndexName), out string indexName));
+                            Assert.Equal(index.Name, indexName);
+
+                            Assert.True(info.TryGet(nameof(ExecutingQueryInfo.StartTime), out string startTimeAsString));
                             Assert.Equal(now, DateTime.Parse(startTimeAsString).ToUniversalTime());
 
-                            object token;
-                            Assert.False(info.TryGetMember(nameof(ExecutingQueryInfo.Token), out token));
+                            Assert.False(info.TryGetMember(nameof(ExecutingQueryInfo.Token), out object token));
                             Assert.Null(token);
 
-                            if (queryId == 10)
+                            if (actualQueryId == queryId)
                             {
                                 BlittableJsonReaderObject queryInfo;
                                 Assert.True(info.TryGet(nameof(ExecutingQueryInfo.QueryInfo), out queryInfo));
