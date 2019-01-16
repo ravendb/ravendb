@@ -52,8 +52,6 @@ namespace Raven.Client.Json
             var newFields = newBlittableProps.Except(oldBlittableProps);
             var removedFields = oldBlittableProps.Except(newBlittableProps);
 
-            var propertiesIds = newBlittable.GetPropertiesByInsertionOrder();
-
             foreach (var field in removedFields)
             {
                 if (changes == null)
@@ -64,9 +62,9 @@ namespace Raven.Client.Json
             var newProp = new BlittableJsonReaderObject.PropertyDetails();
             var oldProp = new BlittableJsonReaderObject.PropertyDetails();
 
-            foreach (var propId in propertiesIds)
+            for (int i = 0; i < newBlittable.Count; i++)
             {
-                newBlittable.GetPropertyByIndex(propId, ref newProp);
+                newBlittable.GetPropertyByIndex(i, ref newProp);
 
                 if (newProp.Name.Equals(LastModified) ||
                     newProp.Name.Equals(Collection) ||

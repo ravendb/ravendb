@@ -1,4 +1,5 @@
-﻿using Raven.Client.Documents.Session;
+﻿using System;
+using Raven.Client.Documents.Session;
 using Raven.Tests.Core.Utils.Entities;
 using Xunit;
 
@@ -277,25 +278,27 @@ namespace FastTests.Client
                     Assert.Equal(1 , changes.Count);
                     Assert.Equal(4 , changes["family/1"].Length);
 
-                    Assert.Equal("Name", changes["family/1"][0].FieldName);
-                    Assert.Equal(DocumentsChanges.ChangeType.FieldChanged, changes["family/1"][0].Change);
-                    Assert.Equal("Hibernating Rhinos", changes["family/1"][0].FieldOldValue.ToString());
-                    Assert.Equal("RavenDB", changes["family/1"][0].FieldNewValue.ToString());
+                    Array.Sort(changes["family/1"], (x, y) => x.FieldFullName.CompareTo(y.FieldFullName));
 
-                    Assert.Equal("Age", changes["family/1"][1].FieldName);
+                    Assert.Equal("Name", changes["family/1"][1].FieldName);
                     Assert.Equal(DocumentsChanges.ChangeType.FieldChanged, changes["family/1"][1].Change);
-                    Assert.Equal(8L, changes["family/1"][1].FieldOldValue);
-                    Assert.Equal(4L, changes["family/1"][1].FieldNewValue);
+                    Assert.Equal("Hibernating Rhinos", changes["family/1"][1].FieldOldValue.ToString());
+                    Assert.Equal("RavenDB", changes["family/1"][1].FieldNewValue.ToString());
 
-                    Assert.Equal("Name", changes["family/1"][2].FieldName);
-                    Assert.Equal(DocumentsChanges.ChangeType.FieldChanged, changes["family/1"][2].Change);
-                    Assert.Equal("RavenDB", changes["family/1"][2].FieldOldValue.ToString());
-                    Assert.Equal("Hibernating Rhinos", changes["family/1"][2].FieldNewValue.ToString());
+                    Assert.Equal("Age", changes["family/1"][0].FieldName);
+                    Assert.Equal(DocumentsChanges.ChangeType.FieldChanged, changes["family/1"][0].Change);
+                    Assert.Equal(8L, changes["family/1"][0].FieldOldValue);
+                    Assert.Equal(4L, changes["family/1"][0].FieldNewValue);
 
-                    Assert.Equal("Age", changes["family/1"][3].FieldName);
+                    Assert.Equal("Name", changes["family/1"][3].FieldName);
                     Assert.Equal(DocumentsChanges.ChangeType.FieldChanged, changes["family/1"][3].Change);
-                    Assert.Equal(4L, changes["family/1"][3].FieldOldValue);
-                    Assert.Equal(8L, changes["family/1"][3].FieldNewValue);
+                    Assert.Equal("RavenDB", changes["family/1"][3].FieldOldValue.ToString());
+                    Assert.Equal("Hibernating Rhinos", changes["family/1"][3].FieldNewValue.ToString());
+
+                    Assert.Equal("Age", changes["family/1"][2].FieldName);
+                    Assert.Equal(DocumentsChanges.ChangeType.FieldChanged, changes["family/1"][2].Change);
+                    Assert.Equal(4L, changes["family/1"][2].FieldOldValue);
+                    Assert.Equal(8L, changes["family/1"][2].FieldNewValue);
 
                     newFamily.Members = new[]
                     {
@@ -316,25 +319,27 @@ namespace FastTests.Client
                     Assert.Equal(1, changes.Count);
                     Assert.Equal(4, changes["family/1"].Length);
 
-                    Assert.Equal("Name", changes["family/1"][0].FieldName);
-                    Assert.Equal(DocumentsChanges.ChangeType.FieldChanged, changes["family/1"][0].Change);
-                    Assert.Equal("Hibernating Rhinos", changes["family/1"][0].FieldOldValue.ToString());
-                    Assert.Equal("Toli", changes["family/1"][0].FieldNewValue.ToString());
+                    Array.Sort(changes["family/1"], (x, y) => x.FieldFullName.CompareTo(y.FieldFullName));
 
-                    Assert.Equal("Age", changes["family/1"][1].FieldName);
+                    Assert.Equal("Name", changes["family/1"][1].FieldName);
                     Assert.Equal(DocumentsChanges.ChangeType.FieldChanged, changes["family/1"][1].Change);
-                    Assert.Equal(8L, changes["family/1"][1].FieldOldValue);
-                    Assert.Equal(5L, changes["family/1"][1].FieldNewValue);
+                    Assert.Equal("Hibernating Rhinos", changes["family/1"][1].FieldOldValue.ToString());
+                    Assert.Equal("Toli", changes["family/1"][1].FieldNewValue.ToString());
 
-                    Assert.Equal("Name", changes["family/1"][2].FieldName);
-                    Assert.Equal(DocumentsChanges.ChangeType.FieldChanged, changes["family/1"][2].Change);
-                    Assert.Equal("RavenDB", changes["family/1"][2].FieldOldValue.ToString());
-                    Assert.Equal("Boki", changes["family/1"][2].FieldNewValue.ToString());
+                    Assert.Equal("Age", changes["family/1"][0].FieldName);
+                    Assert.Equal(DocumentsChanges.ChangeType.FieldChanged, changes["family/1"][0].Change);
+                    Assert.Equal(8L, changes["family/1"][0].FieldOldValue);
+                    Assert.Equal(5L, changes["family/1"][0].FieldNewValue);
 
-                    Assert.Equal("Age", changes["family/1"][3].FieldName);
+                    Assert.Equal("Name", changes["family/1"][3].FieldName);
                     Assert.Equal(DocumentsChanges.ChangeType.FieldChanged, changes["family/1"][3].Change);
-                    Assert.Equal(4L, changes["family/1"][3].FieldOldValue);
-                    Assert.Equal(15L, changes["family/1"][3].FieldNewValue);
+                    Assert.Equal("RavenDB", changes["family/1"][3].FieldOldValue.ToString());
+                    Assert.Equal("Boki", changes["family/1"][3].FieldNewValue.ToString());
+
+                    Assert.Equal("Age", changes["family/1"][2].FieldName);
+                    Assert.Equal(DocumentsChanges.ChangeType.FieldChanged, changes["family/1"][2].Change);
+                    Assert.Equal(4L, changes["family/1"][2].FieldOldValue);
+                    Assert.Equal(15L, changes["family/1"][2].FieldNewValue);
                 }
             }
         }

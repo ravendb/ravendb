@@ -73,12 +73,11 @@ namespace Raven.Client.Json
             {
                 _manualBlittableJsonDocumentBuilder.WritePropertyName(Constants.Documents.Metadata.Key);
                 _manualBlittableJsonDocumentBuilder.StartWriteObject();
-                var ids = _documentInfo.Metadata.GetPropertiesByInsertionOrder();
 
-                foreach (var id in ids)
+                for (int i = 0; i < _documentInfo.Metadata.Count; i++)
                 {
                     var propertyDetails = new BlittableJsonReaderObject.PropertyDetails();
-                    _documentInfo.Metadata.GetPropertyByIndex(id, ref propertyDetails);
+                    _documentInfo.Metadata.GetPropertyByIndex(i, ref propertyDetails);
                     _manualBlittableJsonDocumentBuilder.WritePropertyName(propertyDetails.Name);
 
                     WritePropertyValue(propertyDetails);
@@ -178,10 +177,9 @@ namespace Raven.Client.Json
             var propDetails = new BlittableJsonReaderObject.PropertyDetails();
 
             _manualBlittableJsonDocumentBuilder.StartWriteObject();
-            var propsIndexes = obj.GetPropertiesByInsertionOrder();
-            foreach (var index in propsIndexes)
+            for (int i = 0; i < obj.Count; i++)
             {
-                obj.GetPropertyByIndex(index, ref propDetails);
+                obj.GetPropertyByIndex(i, ref propDetails);
                 _manualBlittableJsonDocumentBuilder.WritePropertyName(propDetails.Name);
                 WritePropertyValue(propDetails);
             }
