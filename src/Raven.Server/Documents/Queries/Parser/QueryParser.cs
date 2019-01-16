@@ -30,10 +30,10 @@ namespace Raven.Server.Documents.Queries.Parser
         private struct SynteticWithQuery
         {
             public FieldExpression Path;
-            public QueryExpression Filter;
-            public FieldExpression Project;
-            public bool IsEdge;
-            public bool ImplicitAlias;
+            public readonly QueryExpression Filter;
+            public readonly FieldExpression Project;
+            public readonly bool IsEdge;
+            public readonly bool ImplicitAlias;
 
             public SynteticWithQuery(FieldExpression path, QueryExpression filter, FieldExpression project, bool isEdge, bool implicitAlias)
             {
@@ -53,13 +53,13 @@ namespace Raven.Server.Documents.Queries.Parser
 
         public Query Parse(QueryType queryType = QueryType.Select, bool recursive = false)
         {
-            if(!TryParse(out var query, out var message, queryType, recursive))
+            if (!TryParse(out var query, out var message, queryType, recursive))
                 ThrowParseException(message);
 
             return query;
         }
 
-        public bool TryParse(out Query query,out string message, QueryType queryType = QueryType.Select, bool recursive = false)
+        public bool TryParse(out Query query, out string message, QueryType queryType = QueryType.Select, bool recursive = false)
         {
             query = new Query
             {
@@ -199,7 +199,7 @@ namespace Raven.Server.Documents.Queries.Parser
                     catch (Exception e)
                     {
                         var msg = AddLineAndColumnNumberToErrorMessage(e, "Update clause contains invalid script");
-                        throw new InvalidQueryException(msg, Scanner.Input, null, e);
+                        ThrowInvalidQueryException(msg, e);
                     }
                     break;
                 default:
@@ -227,12 +227,12 @@ namespace Raven.Server.Documents.Queries.Parser
             if (Scanner.TryScan("LIMIT"))
             {
                 if (Value(out var first) == false)
-                    throw new InvalidQueryException("Limit must contain a value", Scanner.Input, null);
+                    ThrowInvalidQueryException("Limit must contain a value");
 
                 if (Scanner.TryScan(","))
                 {
                     if (Value(out var second) == false)
-                        throw new InvalidQueryException("Limit must contain a second value", Scanner.Input, null);
+                        ThrowInvalidQueryException("Limit must contain a second value");
 
                     offset = first;
                     limit = second;
@@ -246,10 +246,10 @@ namespace Raven.Server.Documents.Queries.Parser
             if (Scanner.TryScan("OFFSET"))
             {
                 if (offset != null)
-                    throw new InvalidQueryException("Cannot use 'offset' after 'limit $skip,$take'", Scanner.Input, null);
+                    ThrowInvalidQueryException("Cannot use 'offset' after 'limit $skip,$take'");
 
                 if (Value(out var second) == false)
-                    throw new InvalidQueryException("Offset must contain a value", Scanner.Input, null);
+                    ThrowInvalidQueryException("Offset must contain a value");
 
                 offset = second;
             }
@@ -297,7 +297,7 @@ namespace Raven.Server.Documents.Queries.Parser
                     return (shortWithEdges, shortAlias.Value);
                 }
 
-                throw new InvalidQueryException("With edges should be followed with '{' ", Scanner.Input, null);
+                ThrowInvalidQueryException("With edges should be followed with '{' ");
             }
 
             QueryExpression qe = null;
@@ -314,8 +314,8 @@ namespace Raven.Server.Documents.Queries.Parser
             if (Scanner.TryScan("SELECT"))
             {
                 var selectClause = SelectClauseExpressions("SELECT", false);
-                if(selectClause.Count != 1 || selectClause[0].Item2 != null)
-                    ThrowParseException("Unable to parse SELECT clause of an 'With Edges' clause, must contain only a singel field and no aliases");
+                if (selectClause.Count != 1 || selectClause[0].Item2 != null)
+                    ThrowParseException("Unable to parse SELECT clause of an 'With Edges' clause, must contain only a single field and no aliases");
                 project = selectClause[0].Item1 as FieldExpression;
                 if (project == null)
                     ThrowParseException("Unable to parse SELECT clause of an 'With Edges' clause, projection must be field reference");
@@ -323,10 +323,10 @@ namespace Raven.Server.Documents.Queries.Parser
 
 
             if (Scanner.TryScan('}') == false)
-                throw new InvalidQueryException("With clause contains invalid body", Scanner.Input, null);
+                ThrowInvalidQueryException("With clause contains invalid body");
 
             if (Alias(true, out var alias) == false || alias.HasValue == false)
-                throw new InvalidQueryException("With clause must contain alias but none was provided", Scanner.Input, null);
+                ThrowInvalidQueryException("With clause must contain alias but none was provided");
 
             var wee = new WithEdgesExpression(qe, edgeField, project, orderBy);
             return (wee, alias.Value);
@@ -338,11 +338,11 @@ namespace Raven.Server.Documents.Queries.Parser
 
         private static void EnsureKey(Dictionary<StringSegment, int> dict, StringSegment key)
         {
-            if(!dict.TryGetValue(key,out _))
-                dict.Add(key,0);
+            if (!dict.TryGetValue(key, out _))
+                dict.Add(key, 0);
         }
 
-        private bool GraphAlias(GraphQuery gq,bool isEdge, StringSegment implicitPrefix, out StringSegment alias)
+        private bool GraphAlias(GraphQuery gq, bool isEdge, StringSegment implicitPrefix, out StringSegment alias)
         {
             // Orders as o where id() 'orders/1-A'
             // Lines where Name = 'Chang' select Product
@@ -359,7 +359,7 @@ namespace Raven.Server.Documents.Queries.Parser
             if (Scanner.TryPeek("INDEX") && TryParseExpressionAfterFromKeyword(out var fromClause, out _))
             {
                 if (isEdge)
-                    throw new InvalidQueryException("Unexpected index query expression - they are forbidden to be inside edge query elements.");
+                    ThrowInvalidQueryException("Unexpected index query expression - they are forbidden to be inside edge query elements.");
 
                 var query = new Query
                 {
@@ -367,12 +367,12 @@ namespace Raven.Server.Documents.Queries.Parser
                 };
 
                 if (Scanner.TryScan("WHERE") && Expression(out query.Where) == false)
-                {                
+                {
                     ThrowParseException("Unable to parse WHERE clause in the nod/edge expression.");
                 }
-                
+
                 if (Scanner.TryScan("ORDER BY"))
-                {                    
+                {
                     ThrowParseException("ORDER BY clause is not supported in the nod/edge expression.");
                 }
 
@@ -380,7 +380,7 @@ namespace Raven.Server.Documents.Queries.Parser
                     query.Load = SelectClauseExpressions("LOAD", false);
 
                 if (Scanner.TryScan("SELECT"))
-                    throw new InvalidQueryException("SELECT clause is allowed only in edge expressions");
+                    ThrowInvalidQueryException("SELECT clause is allowed only in edge expressions");
 
                 alias = fromClause.Alias ?? new StringSegment($"index_{string.Join('_', fromClause.From.Compound).Replace('/', '_')}_{++_counter}");
                 gq.WithDocumentQueries.TryAdd(alias, query);
@@ -391,9 +391,13 @@ namespace Raven.Server.Documents.Queries.Parser
                 {
                     if (isEdge)
                     {
-                        ThrowIfUnexpectedClosingBracket();
+                        if (Scanner.TryPeek(']'))
+                        {
+                            ThrowInvalidQueryException($"Expected to find a field identifier after '{Scanner.Token}', but found ']'. Perhaps this a typo?");
+                        }
+
                         ThrowParseException("Unable to read edge alias");
-                    }                 
+                    }
 
                     if (Scanner.TryPeek(')')) // anonymous alias () accepts everything
                     {
@@ -434,7 +438,7 @@ namespace Raven.Server.Documents.Queries.Parser
                     //by this point we know AS' keyword is not the next token because Alias() checks for that
                     else if (Scanner.TryPeekNextToken(c => c != ')' && c != ']', out var token) && token.IsIdentifier())
                     {
-                        if (isEdge && !token.Equals("where",StringComparison.OrdinalIgnoreCase) && !token.Equals("select",StringComparison.OrdinalIgnoreCase))
+                        if (isEdge && !token.Equals("where", StringComparison.OrdinalIgnoreCase) && !token.Equals("select", StringComparison.OrdinalIgnoreCase))
                         {
                             ThrowInvalidSyntaxMissingAs(isEdge, collection, token); //this will throw
                         }
@@ -464,75 +468,67 @@ namespace Raven.Server.Documents.Queries.Parser
                 {
                     alias = maybeAlias.Value;
                 }
-            
 
-            QueryExpression filter = null;
-            if (Scanner.TryScan("WHERE"))
-            {
-                if (Expression(out filter) == false)
-                    throw new InvalidQueryException($"Failed to parse filter expression after a 'where' clause located next to '{collection.FieldValue}'. The problematic query element alias is '{alias}'", Scanner.Input, null);
 
-                filter.ThrowIfInvalidMethodInvocationInWhere(null,Scanner.Input, collection.FieldValue);
-            }
-
-            FieldExpression project = null;
-            if (Scanner.TryScan("SELECT"))
-            {
-                if (!isEdge)
-                    throw new InvalidQueryException("Select expression is allowed only inside an edge query.");
-
-                if (Scanner.TryPeek("{")) //we cannot allow javascript selects in edges, so we should throw now
+                QueryExpression filter = null;
+                if (Scanner.TryScan("WHERE"))
                 {
-                    var invalidSelectStart = Scanner.Position + 1; //+1 so we don't include the starting '{'
-                    if (!Scanner.SkipUntil('}')) //malformed javascript select, we throw generic error
+                    if (Expression(out filter) == false)
+                        ThrowInvalidQueryException($"Failed to parse filter expression after a 'where' clause located next to '{collection.FieldValue}'. The problematic query element alias is '{alias}'");
+
+                    filter.ThrowIfInvalidMethodInvocationInWhere(null, Scanner.Input, collection.FieldValue);
+                }
+
+                FieldExpression project = null;
+                if (Scanner.TryScan("SELECT"))
+                {
+                    if (!isEdge)
+                        ThrowInvalidQueryException("Select expression is allowed only inside an edge query.");
+
+                    if (Scanner.TryPeek("{")) //we cannot allow javascript selects in edges, so we should throw now
                     {
-                        throw new InvalidQueryException(
-                            "Only simple select expression is allowed inside an edge query, and I see a javascript projection select expression.");
+                        var invalidSelectStart = Scanner.Position + 1; //+1 so we don't include the starting '{'
+                        if (!Scanner.SkipUntil('}')) //malformed javascript select, we throw generic error
+                        {
+                            ThrowInvalidQueryException(
+                                "Only simple select expression is allowed inside an edge query, and I see a javascript projection select expression.");
+                        }
+
+                        var invalidSelectionEnd = Scanner.Position;
+                        ThrowInvalidQueryException(
+                            $"The select expression '{Scanner.Input.Substring(invalidSelectStart, Math.Abs(invalidSelectionEnd - invalidSelectStart))}' is invalid: only simple select expression is allowed inside an edge query.");
                     }
 
-                    var invalidSelectionEnd = Scanner.Position;
-                    throw new InvalidQueryException(
-                        $"The select expression '{Scanner.Input.Substring(invalidSelectStart, Math.Abs(invalidSelectionEnd - invalidSelectStart))}' is invalid: only simple select expression is allowed inside an edge query.");
+                    var fields = SelectClauseExpressions("SELECT", false);
+                    if (fields.Count != 1)
+                        ThrowInvalidQueryException("Select expression inside graph query for '" + alias + "' must have exactly one projected field");
+
+                    if (fields[0].Item2 != null)
+                        ThrowInvalidQueryException("Select expression inside graph query for '" + alias + "' cannot define alias for projected field");
+
+                    project = (FieldExpression)fields[0].Item1;
                 }
 
-                var fields = SelectClauseExpressions("SELECT", false);
-                if (fields.Count != 1)
-                    throw new InvalidQueryException("Select expression inside graph query for '" + alias + "' must have excatly one projected field", Scanner.Input, null);
+                if (gq.HasAlias(alias))
+                    return true;
 
-                if (fields[0].Item2 != null)
-                    throw new InvalidQueryException("Select expression inside graph query for '" + alias + "' cannot define alias for projected field", Scanner.Input, null);
-
-                project = (FieldExpression)fields[0].Item1;
+                AddWithQuery(collection, project, alias, filter, isEdge, start, maybeAlias == null);
             }
-
-            if (gq.HasAlias(alias))
-                return true;
-        
-            AddWithQuery(collection, project, alias, filter, isEdge, start, maybeAlias == null);
-                }
             return true;
-        }
-
-        private void ThrowIfUnexpectedClosingBracket()
-        {
-            if (Scanner.TryPeek(']'))
-            {
-                throw new InvalidQueryException($"Expected to find a field identifier after '{Scanner.Token}', but found ']'. Perhaps this a typo?", Scanner.Input);
-            }
         }
 
         private void ThrowInvalidSyntaxMissingAs(bool isEdge, FieldExpression collection, StringSegment token)
         {
             var msg =
                 $"Inside a {(isEdge ? "edge" : "node")} I found an expression in a form of '{collection.FieldValue} {token}'. This is invalid syntax, perhaps '{token}' is an alias? If so, the correct syntax to specify an alias for an edge or a node is '{collection.FieldValue} as {token}'";
-            throw new InvalidQueryException(msg, Scanner.Input);
+            ThrowInvalidQueryException(msg);
         }
 
         private void ThrowInvalidSyntaxSelectIsForbidden(FieldExpression collection)
         {
             var msg =
                 $"Inside a node I found an expression in a form of '{collection.FieldValue} select <SELECT FIELDS>'. Select clauses are forbidden in node query elements.";
-            throw new InvalidQueryException(msg, Scanner.Input);
+            ThrowInvalidQueryException(msg);
         }
 
         private StringSegment GenerateAlias(StringSegment implicitPrefix, FieldExpression collection)
@@ -564,17 +560,17 @@ namespace Raven.Server.Documents.Queries.Parser
 
                 if (path.Equals(existing.Path) == false)
                 {
-                    if(path.Compound.Count != 0)
+                    if (path.Compound.Count != 0)
                     {
                         ThrowDuplicateAliasWithoutSameBody(start);
                     }
-                    if(existing.Path.Compound.Count == 0)
+                    if (existing.Path.Compound.Count == 0)
                     {
                         existing.Path = path;
                     }
                 }
 
-                if ((filter != null) != (existing.Filter != null) || 
+                if ((filter != null) != (existing.Filter != null) ||
                     (project != null) != (existing.Project != null))
                     ThrowDuplicateAliasWithoutSameBody(start);
 
@@ -590,18 +586,9 @@ namespace Raven.Server.Documents.Queries.Parser
 
         private void ThrowDuplicateAliasWithoutSameBody(int start)
         {
-            throw new InvalidQueryException("Duplicated alias  was found with a different definition than previous defined: " +
-                new StringSegment(Scanner.Input, start, Scanner.Position - start),
-                 Scanner.Input, null);
+            ThrowInvalidQueryException("Duplicated alias  was found with a different definition than previous defined: " +
+                new StringSegment(Scanner.Input, start, Scanner.Position - start));
         }
-
-        private void ThrowRedefineSameAnonymousAlias(string alias, int start)
-        {
-            throw new InvalidQueryException("Implicit alias '" + alias +"' was redefined in the same query, use an explicit '" + alias + " as e', instead. " + 
-                new StringSegment(Scanner.Input, start, Scanner.Position - start),
-                 Scanner.Input, null);
-        }
-
 
         private bool BinaryGraph(GraphQuery gq, out QueryExpression op)
         {
@@ -629,31 +616,32 @@ namespace Raven.Server.Documents.Queries.Parser
         private bool GraphOperation(GraphQuery gq, out QueryExpression op)
         {
             if (Scanner.TryScan('(') == false)
-                throw new InvalidQueryException("MATCH operator expected a '(', but didn't get it.", Scanner.Input, null);
+                ThrowInvalidQueryException("MATCH operator expected a '(', but didn't get it.");
 
 
             if (GraphAlias(gq, false, default, out var alias) == false)
             {
                 if (BinaryGraph(gq, out op) == false)
                 {
-                    throw new InvalidQueryException("Invalid expression in MATCH", Scanner.Input, null);
+                    ThrowInvalidQueryException("Invalid expression in MATCH");
                 }
 
                 if (Scanner.TryScan(')') == false)
-                    throw new InvalidQueryException("Missing ')' in MATCH", Scanner.Input, null);
+                    ThrowInvalidQueryException("Missing ')' in MATCH");
                 return true;
             }
 
             if (Scanner.TryScan(')') == false)
-                throw new InvalidQueryException("MATCH operator expected a ')' after reading: " + alias, Scanner.Input, null);
+                ThrowInvalidQueryException("MATCH operator expected a ')' after reading: " + alias);
 
-            var list = new List<MatchPath>();
-
-            list.Add(new MatchPath
+            var list = new List<MatchPath>
             {
-                Alias = alias,
-                EdgeType = EdgeType.Right
-            });
+                new MatchPath
+                {
+                    Alias = alias,
+                    EdgeType = EdgeType.Right
+                }
+            };
 
             return ProcessEdges(gq, out op, alias, list, allowRecursive: true, foundDash: false);
         }
@@ -662,7 +650,6 @@ namespace Raven.Server.Documents.Queries.Parser
         private bool ProcessEdges(GraphQuery gq, out QueryExpression op, StringSegment alias, List<MatchPath> list, bool allowRecursive, bool foundDash)
         {
             var expectNode = false;
-            MatchPath last;
             var foundLeftArrow = false;
             var lastElementStart = 0;
             var lastElementLength = 0;
@@ -670,6 +657,7 @@ namespace Raven.Server.Documents.Queries.Parser
             {
                 if (Scanner.TryScan(EdgeOps, out var found))
                 {
+                    MatchPath last;
                     switch (found)
                     {
                         case "-":
@@ -678,28 +666,28 @@ namespace Raven.Server.Documents.Queries.Parser
                             continue;
                         case "[":
                             if (foundDash == false)
-                                throw new InvalidQueryException("Got '[' when expected '-', did you forget to add '-[' ?", Scanner.Input, null);
+                                ThrowInvalidQueryException("Got '[' when expected '-', did you forget to add '-[' ?");
 
                             var startingPos = Scanner.Position - 1;
                             lastElementStart = startingPos;
 
                             if (GraphAlias(gq, true, alias, out alias) == false)
-                                throw new InvalidQueryException("MATCH identifier after '-['", Scanner.Input, null);
+                                ThrowInvalidQueryException("MATCH identifier after '-['");
 
                             var endingPos = Scanner.Position + 1;
 
                             if (expectNode)
                             {
-                                ThrowExpectedNodeButFoundEdge(alias, Scanner.Input.Substring(startingPos, endingPos - startingPos),Scanner.Input);
+                                ThrowExpectedNodeButFoundEdge(alias, Scanner.Input.Substring(startingPos, endingPos - startingPos), Scanner.Input);
                             }
 
                             if (Scanner.TryScan(']') == false)
-                                throw new InvalidQueryException("MATCH operator expected a ']' after reading: " + alias, Scanner.Input, null);
+                                ThrowInvalidQueryException("MATCH operator expected a ']' after reading: " + alias);
 
                             if (foundLeftArrow && //before current edge we had '<-' operator
                                 Scanner.TryPeek("->"))
                             {
-                                throw new InvalidQueryException($"The edge with alias '{alias}' has arrow operators ('->') in both left and right directions. This is invalid syntax, edge elements should have either '-[edge expression]->' or '<-[edge expression]-' format.");
+                                ThrowInvalidQueryException($"The edge with alias '{alias}' has arrow operators ('->') in both left and right directions. This is invalid syntax, edge elements should have either '-[edge expression]->' or '<-[edge expression]-' format.");
                             }
 
                             lastElementLength = Scanner.Position - lastElementStart;
@@ -728,10 +716,11 @@ namespace Raven.Server.Documents.Queries.Parser
 
                             continue;
                         case "<":
-                            throw new InvalidQueryException("Got unexpected '<', did you forget to add '->' ?", Scanner.Input, null);
+                            ThrowInvalidQueryException("Got unexpected '<', did you forget to add '->' ?");
+                            break;
                         case ">":
                             if (foundDash == false)
-                                throw new InvalidQueryException("Got '>' when expected '-', did you forget to add '->' ?", Scanner.Input, null);
+                                ThrowInvalidQueryException("Got '>' when expected '-', did you forget to add '->' ?");
                             last = list[list.Count - 1];
                             list[list.Count - 1] = new MatchPath
                             {
@@ -743,13 +732,13 @@ namespace Raven.Server.Documents.Queries.Parser
 
                             if (expectNode && Scanner.TryPeek('['))
                             {
-                                ThrowExpectedNodeButFoundEdge(last.Alias,last.ToString(), Scanner.Input);
+                                ThrowExpectedNodeButFoundEdge(last.Alias, last.ToString(), Scanner.Input);
                             }
-                            
+
                             if (Scanner.TryScan('(') == false)
                             {
                                 var msg = $"({last.Alias})-> is not allowed, you should use ({last.Alias})-[...] instead.";
-                                throw new InvalidQueryException("MATCH operator expected a '(', but didn't get it. " + msg, Scanner.Input, null);
+                                ThrowInvalidQueryException("MATCH operator expected a '(', but didn't get it. " + msg);
                             }
                             expectNode = true;
 
@@ -759,15 +748,15 @@ namespace Raven.Server.Documents.Queries.Parser
                             var start = Scanner.Position - 1;
                             lastElementStart = start;
                             if (GraphAlias(gq, false, default, out alias) == false)
-                                throw new InvalidQueryException("Couldn't get node's alias", Scanner.Input, null);
+                                ThrowInvalidQueryException("Couldn't get node's alias");
                             var end = Scanner.Position + 1;
 
                             if (expectNode == false)
-                                ThrowExpectedEdgeButFoundNode(alias,Scanner.Input.Substring(start, end - start),Scanner.Input);
+                                ThrowExpectedEdgeButFoundNode(alias, Scanner.Input.Substring(start, end - start), Scanner.Input);
 
                             lastElementLength = Scanner.Position - lastElementStart;
                             if (Scanner.TryScan(')') == false)
-                                throw new InvalidQueryException("MATCH operator expected a ')' after reading: " + alias, Scanner.Input, null);                           
+                                ThrowInvalidQueryException("MATCH operator expected a ')' after reading: " + alias);
 
                             list.Add(new MatchPath
                             {
@@ -780,20 +769,20 @@ namespace Raven.Server.Documents.Queries.Parser
                             break;
                         case "recursive":
                             if (allowRecursive == false)
-                                throw new InvalidQueryException("Cannot call 'recusrive' inside another 'recursive', only one level is allowed", Scanner.Input, null);
+                                ThrowInvalidQueryException("Cannot call 'recursive' inside another 'recursive', only one level is allowed");
 
                             if (expectNode)
-                                throw new InvalidQueryException("'recursive' must appear only after a node, not after an edge", Scanner.Input, null);
+                                ThrowInvalidQueryException("'recursive' must appear only after a node, not after an edge");
 
                             if (foundDash == false)
-                                throw new InvalidQueryException("Got 'recursive' when expected '-', recursive must be preceded by a '-'.", Scanner.Input, null);
+                                ThrowInvalidQueryException("Got 'recursive' when expected '-', recursive must be preceded by a '-'.");
 
                             StringSegment recursiveAlias;
 
                             if (Scanner.TryScan("as"))
                             {
                                 if (Scanner.Identifier() == false)
-                                    throw new InvalidQueryException("Missing alias for 'recursive' after 'as'", Scanner.Input, null);
+                                    ThrowInvalidQueryException("Missing alias for 'recursive' after 'as'");
                                 recursiveAlias = Scanner.Token;
                             }
                             else
@@ -818,8 +807,7 @@ namespace Raven.Server.Documents.Queries.Parser
                                         case ValueTokenType.True:
                                         case ValueTokenType.False:
                                         case ValueTokenType.Null:
-                                            throw new InvalidQueryException("'recursive' options must be an integer or a recursive type (all, shortest, longest)", Scanner.Input, null);
-                                        default:
+                                            ThrowInvalidQueryException("'recursive' options must be an integer or a recursive type (all, shortest, longest)");
                                             break;
                                     }
 
@@ -833,11 +821,11 @@ namespace Raven.Server.Documents.Queries.Parser
                                 }
 
                                 if (Scanner.TryScan(")") == false)
-                                    throw new InvalidQueryException("'recursive' missing closing paranthesis for length specification, but one was expected", Scanner.Input, null);
+                                    ThrowInvalidQueryException("'recursive' missing closing parenthesis for length specification, but one was expected");
                             }
 
                             if (Scanner.TryScan("{") == false)
-                                throw new InvalidQueryException("'recursive' must be followed by a '{', but wasn't", Scanner.Input, null);
+                                ThrowInvalidQueryException("'recursive' must be followed by a '{', but wasn't");
 
                             var repeated = new List<MatchPath>();
                             repeated.Add(new MatchPath
@@ -847,8 +835,8 @@ namespace Raven.Server.Documents.Queries.Parser
                                 IsEdge = true
                             });
 
-                            var result = ProcessEdges(gq, out var repeatedPattern, alias, repeated, allowRecursive: false, foundDash: true);
-                            if(repeatedPattern is PatternMatchElementExpression pmee)
+                            ProcessEdges(gq, out var repeatedPattern, alias, repeated, allowRecursive: false, foundDash: true);
+                            if (repeatedPattern is PatternMatchElementExpression pmee)
                             {
                                 if (pmee.Reversed)
                                     repeated.RemoveAt(repeated.Count - 1);
@@ -857,27 +845,27 @@ namespace Raven.Server.Documents.Queries.Parser
                             }
                             else
                             {
-                                throw new InvalidQueryException("'recursive' must contain only a single pattern match, but contained " + repeatedPattern, Scanner.Input, null);
+                                ThrowInvalidQueryException("'recursive' must contain only a single pattern match, but contained " + repeatedPattern);
                             }
 
                             if (Scanner.TryScan("}") == false)
-                                throw new InvalidQueryException("'recursive' must be closed by '}', but wasn't", Scanner.Input, null);
+                                ThrowInvalidQueryException("'recursive' must be closed by '}', but wasn't");
 
                             if (repeated.Count == 0)
                             {
-                                throw new InvalidQueryException("empty recursive {} block is not allowed ", Scanner.Input, null);
+                                ThrowInvalidQueryException("empty recursive {} block is not allowed ");
                             }
 
                             if (repeated.Last().IsEdge)
                             {
-                                throw new InvalidQueryException("'recursive' block cannot end with an end and must close with a node ( recursive { [edge]->(node) } )", Scanner.Input, null);
+                                ThrowInvalidQueryException("'recursive' block cannot end with an end and must close with a node ( recursive { [edge]->(node) } )");
                             }
 
 
                             list.Add(new MatchPath
                             {
                                 Alias = "recursive",
-                                EdgeType = list[list.Count-1].EdgeType,
+                                EdgeType = list[list.Count - 1].EdgeType,
                                 Recursive = new RecursiveMatch
                                 {
                                     Alias = recursiveAlias,
@@ -902,10 +890,10 @@ namespace Raven.Server.Documents.Queries.Parser
                     if (Scanner.TryPeek('.')) //error on possible typo/syntax error
                     {
                         //we have unexpected token in the first query element
-                        if(lastElementStart == 0 && lastElementLength == 0)
-                            throw new InvalidQueryException($"Unexpected '{Scanner.Input[Scanner.Position]}' after the token '{Scanner.Token}{Scanner.Input[Scanner.Position - 1]}'");
+                        if (lastElementStart == 0 && lastElementLength == 0)
+                            ThrowInvalidQueryException($"Unexpected '{Scanner.Input[Scanner.Position]}' after the token '{Scanner.Token}{Scanner.Input[Scanner.Position - 1]}'");
 
-                        throw new InvalidQueryException($"Unexpected '{Scanner.Input[Scanner.Position]}' after '{Scanner.Input.Substring(lastElementStart,lastElementLength)}'");
+                        ThrowInvalidQueryException($"Unexpected '{Scanner.Input[Scanner.Position]}' after '{Scanner.Input.Substring(lastElementStart, lastElementLength)}'");
                     }
                     op = FinalProcessingOfMatchExpression(list);
 
@@ -914,19 +902,24 @@ namespace Raven.Server.Documents.Queries.Parser
             }
         }
 
-        private void ThrowExpectedEdgeButFoundNode(StringSegment alias, string invalidQueryElement, string query)
+        private void ThrowInvalidQueryException(string message, Exception e = null)
+        {
+            throw new InvalidQueryException(message, Scanner.Input, null, e);
+        }
+
+        private static void ThrowExpectedEdgeButFoundNode(StringSegment alias, string invalidQueryElement, string query)
         {
             throw new InvalidQueryException(
                 $@"Expected the alias '{alias}' to refer an edge, but it refers to an node.{Environment.NewLine}This is likely a mistake in the query as the expression '{invalidQueryElement}' should probably be an edge.", query);
         }
 
-        private void ThrowExpectedNodeButFoundEdge(StringSegment alias, string invalidQueryElement, string query)
+        private static void ThrowExpectedNodeButFoundEdge(StringSegment alias, string invalidQueryElement, string query)
         {
             throw new InvalidQueryException(
                 $@"Expected the alias '{alias}' to refer a node, but it refers to an edge.{Environment.NewLine}This is likely a mistake in the query as the expression '{invalidQueryElement}' should probably be a node.", query);
         }
 
-        private static QueryExpression FinalProcessingOfMatchExpression(List<MatchPath> list)
+        private QueryExpression FinalProcessingOfMatchExpression(List<MatchPath> list)
         {
             bool hasIncoming = false, hasOutgoing = false;
 
@@ -959,8 +952,8 @@ namespace Raven.Server.Documents.Queries.Parser
             };
             return op;
         }
-      
-        private static QueryExpression BreakPatternChainToAndClauses(List<MatchPath> matchPaths, out QueryExpression op)
+
+        private QueryExpression BreakPatternChainToAndClauses(List<MatchPath> matchPaths, out QueryExpression op)
         {
             op = null;
             var clauses = new List<PatternMatchElementExpression>();
@@ -980,15 +973,15 @@ namespace Raven.Server.Documents.Queries.Parser
             //the last path element cannot be a "cross-road"
             while (matchPaths.Count > 1)
             {
-                var hasFoundJunction = false;        
-                
+                var hasFoundJunction = false;
+
                 //the first two and the last two cannot have different directions, since 
                 //minimal query with different directions will look like (node1)-[edge1]->(node2)<-[edge2]-(node3)
                 for (var i = 0; i < matchPaths.Count - 2; i++)
                 {
                     if (matchPaths[i].EdgeType == matchPaths[i + 1].EdgeType)
                         continue;
-                    
+
                     hasFoundJunction = true;
 
                     List<MatchPath> subRange = null;
@@ -1030,7 +1023,7 @@ namespace Raven.Server.Documents.Queries.Parser
 
                 if (hasFoundJunction)
                     continue;
-                
+
                 if (matchPaths[0].EdgeType == EdgeType.Left)
                 {
                     matchPaths.Reverse();
@@ -1055,19 +1048,19 @@ namespace Raven.Server.Documents.Queries.Parser
             return op;
         }
 
-        private static void ThrowIfMatchPathIsInvalid(List<MatchPath> matchPaths)
+        private void ThrowIfMatchPathIsInvalid(List<MatchPath> matchPaths)
         {
             var first = matchPaths[0];
             var second = matchPaths[1];
             //since the first element should be a node, we cannot have first and second path element changing directions
             ThrowIfDirectionChanges(matchPaths, first, second, "first");
             if (first.IsEdge)
-                throw new InvalidQueryException($"Expected the first query element '{first}' to be a node, but it is an edge. Graph pattern match queries should start from a node element.");
+                ThrowInvalidQueryException($"Expected the first query element '{first}' to be a node, but it is an edge. Graph pattern match queries should start from a node element.");
 
             var last = matchPaths[matchPaths.Count - 1];
             if (last.IsEdge)
-                throw new InvalidQueryException($"Expected the last query element '{last}' to be a node, but it is an edge. Graph pattern match queries should end with a node element.");
-            
+                ThrowInvalidQueryException($"Expected the last query element '{last}' to be a node, but it is an edge. Graph pattern match queries should end with a node element.");
+
             var beforeLast = matchPaths[matchPaths.Count - 2];
 
             //the last two path elements should not have different directions because it will have the following pattern:
@@ -1075,7 +1068,7 @@ namespace Raven.Server.Documents.Queries.Parser
             ThrowIfDirectionChanges(matchPaths, last, beforeLast, "last");
         }
 
-        private static void ThrowIfDirectionChanges(List<MatchPath> matchPaths, MatchPath elementA, MatchPath elementB, string description)
+        private void ThrowIfDirectionChanges(List<MatchPath> matchPaths, MatchPath elementA, MatchPath elementB, string description)
         {
             if (!elementA.Recursive.HasValue &&
                 !elementB.Recursive.HasValue &&
@@ -1086,7 +1079,7 @@ namespace Raven.Server.Documents.Queries.Parser
                     Path = matchPaths.ToArray(),
                     Type = ExpressionType.Pattern
                 };
-                throw new InvalidQueryException(
+                ThrowInvalidQueryException(
                     $"Pattern match expression that contains '{elementA}' and '{elementB}' is invalid (full expression: '{offendingExpression}'). The {description} two elements (with aliases '{elementB.Alias}' and '{elementA.Alias}') should not change direction.");
             }
         }
@@ -1111,15 +1104,15 @@ namespace Raven.Server.Documents.Queries.Parser
         private (Query Query, StringSegment Allias) With()
         {
             if (Scanner.TryScan('{') == false)
-                throw new InvalidQueryException("With keyword should be followed with either 'edges' or '{' ", Scanner.Input, null);
+                ThrowInvalidQueryException("With keyword should be followed with either 'edges' or '{' ");
 
             var query = Parse(recursive: true);
 
             if (Scanner.TryScan('}') == false)
-                throw new InvalidQueryException("With clause contains invalid body", Scanner.Input, null);
+                ThrowInvalidQueryException("With clause contains invalid body");
 
             if (Alias(true, out var alias) == false || alias.HasValue == false)
-                throw new InvalidQueryException("With clause must contain alias but none was provided", Scanner.Input, null);
+                ThrowInvalidQueryException("With clause must contain alias but none was provided");
 
             return (query, alias.Value);
         }
@@ -1217,7 +1210,8 @@ namespace Raven.Server.Documents.Queries.Parser
             catch (Exception e)
             {
                 var msg = AddLineAndColumnNumberToErrorMessage(e, $"Invalid script inside function {name}");
-                throw new InvalidQueryException(msg, Scanner.Input, null, e);
+                ThrowInvalidQueryException(msg, e);
+                return (null, (null, null)); // not reachable
             }
         }
 
@@ -1444,14 +1438,6 @@ namespace Raven.Server.Documents.Queries.Parser
 
 
             return true;
-        }
-
-        private FromClause FromClause()
-        {
-            if(!TryParseFromClause(out var fromClause, out var msg))
-                ThrowParseException(msg);
-
-            return fromClause;
         }
 
         private static readonly string[] AliasKeywords =
@@ -1687,7 +1673,7 @@ namespace Raven.Server.Documents.Queries.Parser
                     op = field;
                     return fieldOption == OperatorField.Desired;
                 }
-                throw new InvalidQueryException($"Expected operator after '{field?.FieldValue ?? "<failed to fetch field name>"}' field, but found '{Scanner.Input[Scanner.Position]}'. Valid operators are: 'in', 'between', =, <, >, <=, >=, !=");
+                ThrowInvalidQueryException($"Expected operator after '{field?.FieldValue ?? "<failed to fetch field name>"}' field, but found '{Scanner.Input[Scanner.Position]}'. Valid operators are: 'in', 'between', =, <, >, <=, >=, !=");
             }
 
 
@@ -2011,9 +1997,9 @@ namespace Raven.Server.Documents.Queries.Parser
 
                         case null:
                             if (Scanner.TryPeek('.'))
-                                throw new InvalidQueryException("Expected to find closing ']'. If this is an array indexer expression, the correct syntax would be 'collection[].MemberFieldName'", Scanner.Input);
+                                ThrowInvalidQueryException("Expected to find closing ']'. If this is an array indexer expression, the correct syntax would be 'collection[].MemberFieldName'");
                             if (Scanner.TryScan(']') == false)
-                                throw new InvalidQueryException($"Expected to find closing ']' after '{Scanner.Token}['.");
+                                ThrowInvalidQueryException($"Expected to find closing ']' after '{Scanner.Token}['.");
                             parts.Add("[]");
 
                             break;
