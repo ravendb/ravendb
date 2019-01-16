@@ -560,10 +560,11 @@ namespace Raven.Server.ServerWide
                     ? loadedCertificate.SubjectName.Name.Substring(3) 
                     : loadedCertificate.SubjectName.Name;
                 
+                var utcNow = DateTime.UtcNow;
                 var existingCerts = userIntermediateStore.Certificates.Find(X509FindType.FindBySubjectName, cnValue, false);
                 foreach (var c in existingCerts)
                 {
-                    if (c.NotAfter.ToUniversalTime() > DateTime.Now && c.NotBefore.ToUniversalTime() < DateTime.Now)
+                    if (c.NotAfter.ToUniversalTime() > utcNow && c.NotBefore.ToUniversalTime() < utcNow)
                         continue;
                     
                     // Remove all expired certs which have the same subject name as our own
@@ -572,7 +573,7 @@ namespace Raven.Server.ServerWide
 
                     foreach (var element in chain.ChainElements)
                     {
-                        if (element.Certificate.NotAfter.ToUniversalTime() > DateTime.Now && element.Certificate.NotBefore.ToUniversalTime() < DateTime.Now)
+                        if (element.Certificate.NotAfter.ToUniversalTime() > utcNow && element.Certificate.NotBefore.ToUniversalTime() < utcNow)
                             continue;
                         userIntermediateStore.Remove(element.Certificate);                        
                     }

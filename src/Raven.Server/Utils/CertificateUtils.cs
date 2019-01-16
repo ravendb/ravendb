@@ -46,10 +46,11 @@ namespace Raven.Server.Utils
             var storeName = PlatformDetails.RunningOnMacOsx ? StoreName.My : StoreName.CertificateAuthority;
             using (var userIntermediateStore = new X509Store(storeName, StoreLocation.CurrentUser, OpenFlags.ReadWrite))
             {
+                var twoDaysAgo = DateTime.Today.AddDays(-2);
                 var existingCerts = userIntermediateStore.Certificates.Find(X509FindType.FindBySubjectName, commonNameValue, false);
                 foreach (var c in existingCerts)
                 {
-                    if (c.NotBefore.ToUniversalTime() > DateTime.Today.AddDays(-2))
+                    if (c.NotBefore.ToUniversalTime() > twoDaysAgo)
                         continue;
 
                     var chain = new X509Chain();
@@ -57,7 +58,7 @@ namespace Raven.Server.Utils
 
                     foreach (var element in chain.ChainElements)
                     {
-                        if (element.Certificate.NotBefore.ToUniversalTime() > DateTime.Today.AddDays(-2))
+                        if (element.Certificate.NotBefore.ToUniversalTime() > twoDaysAgo)
                             continue;
                         userIntermediateStore.Remove(element.Certificate);
                     }
