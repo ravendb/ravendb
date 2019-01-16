@@ -23,14 +23,14 @@ namespace Tryouts
     {
         public static void Main(string[] args)
         {
-            for (int i = 0; i < 1000; i++)
+            using (var test = new AuthenticationClusterTests())
             {
-                Console.WriteLine(i);
-                using (var test = new RDBC_128())
-                {
-                    test.IndexingOfLoadDocumentWhileChanged();
-                }
+                test.CanReplaceClusterCert().Wait();
             }
+            /*using (var test = new AuthenticationLetsEncryptTests())
+            {
+                test.CanGetLetsEncryptCertificateAndRenewIt().Wait();
+            }*/
         }
     }
 }
