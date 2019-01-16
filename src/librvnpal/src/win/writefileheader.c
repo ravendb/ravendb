@@ -1,12 +1,14 @@
-#include <rvn.h>
-#include <status_codes.h>
 #include <stdint.h>
 #include <Windows.h>
 
+#include "rvn.h"
+#include "status_codes.h"
+#include "internal_win.h"
+
 EXPORT int32_t
 rvn_write_header (const char *path, void *header, int32_t size,
-		  int32_t * detailed_error_code) {
-
+		  int32_t * detailed_error_code) 
+{
 	int32_t rc;
 	HANDLE file = CreateFile(path,
 		GENERIC_WRITE | GENERIC_READ,

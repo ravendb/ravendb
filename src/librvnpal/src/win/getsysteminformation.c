@@ -1,8 +1,10 @@
-#include <rvn.h>
-#include <status_codes.h>
 #include <stdint.h>
 #include <Windows.h>
 #include <VersionHelpers.h>
+
+#include "rvn.h"
+#include "status_codes.h"
+#include "internal_win.h"
 
 int32_t
 rvn_get_system_information(struct SYSTEM_INFORMATION *sys_info, int32_t *detailed_error_code)

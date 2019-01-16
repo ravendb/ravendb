@@ -31,11 +31,13 @@
 #define FAIL_READ_FILE                  22
 #define FAIL_SET_FILE_POINTER           23
 #define FAIL_SET_EOF                    24
+#define FAIL_EOF                        25
+
 #define ERRNO_SPECIAL_CODES_NONE        0
 #define ERRNO_SPECIAL_CODES_ENOMEM      (1 << 0)
 #define ERRNO_SPECIAL_CODES_ENOENT      (1 << 1)
 #define ERRNO_SPECIAL_CODES_ENOSPC      (1 << 2)
-#define FAIL_TRUNCATE                   23
+
 
 #define SYNC_DIR_ALLOWED                0
 #define SYNC_DIR_NOT_ALLOWED            1
