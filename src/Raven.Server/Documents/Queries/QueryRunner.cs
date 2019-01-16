@@ -29,7 +29,7 @@ namespace Raven.Server.Documents.Queries
         private readonly StaticIndexQueryRunner _static;
         private readonly AbstractQueryRunner _dynamic;
         private readonly CollectionQueryRunner _collection;
-        private int _nextQueryId;
+        private long _nextQueryId;
 
         public QueryRunner(DocumentDatabase database) : base(database)
         {
@@ -39,11 +39,11 @@ namespace Raven.Server.Documents.Queries
                 : new DynamicQueryRunner(database);
             _collection = new CollectionQueryRunner(database);
             _graph = new GraphQueryRunner(database);
-            CurrentlyRunningQueries = new ConcurrentSet<ExecutingQueryInfo>();
+            _currentlyRunningQueries = new ConcurrentSet<ExecutingQueryInfo>();
         }
 
-        private long GetNextQueryId() => Interlocked.Increment(ref _nextQueryId);
-        public readonly ConcurrentSet<ExecutingQueryInfo> CurrentlyRunningQueries;
+        private readonly ConcurrentSet<ExecutingQueryInfo> _currentlyRunningQueries;
+        public IEnumerable<ExecutingQueryInfo> CurrentlyRunningQueries => _currentlyRunningQueries;
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public AbstractQueryRunner GetRunner(IndexQueryServerSide query)
@@ -314,11 +314,11 @@ namespace Raven.Server.Documents.Queries
         public QueryMarker MarkQueryAsRunning(string name, IndexQueryServerSide query, OperationCancelToken token)
         {
             var queryStartTime = DateTime.UtcNow;
-            var queryId = GetNextQueryId();
+            var queryId = Interlocked.Increment(ref _nextQueryId);
 
             var executingQueryInfo = new ExecutingQueryInfo(queryStartTime, name, query, queryId, token);
 
-            CurrentlyRunningQueries.TryAdd(executingQueryInfo);
+            _currentlyRunningQueries.TryAdd(executingQueryInfo);
 
             return new QueryMarker(this, executingQueryInfo);
         }
@@ -326,18 +326,26 @@ namespace Raven.Server.Documents.Queries
         public class QueryMarker : IDisposable
         {
             private readonly QueryRunner _queryRunner;
+
             private readonly ExecutingQueryInfo _queryInfo;
+
+            public readonly DateTime StartTime;
+
+            public long QueryId;
 
             public QueryMarker(QueryRunner queryRunner, ExecutingQueryInfo queryInfo)
             {
                 _queryRunner = queryRunner;
                 _queryInfo = queryInfo;
+
+                StartTime = queryInfo.StartTime;
+                QueryId = queryInfo.QueryId;
             }
 
             public void Dispose()
             {
                 if (_queryInfo != null)
-                    _queryRunner.CurrentlyRunningQueries.TryRemove(_queryInfo);
+                    _queryRunner._currentlyRunningQueries.TryRemove(_queryInfo);
             }
         }
     }

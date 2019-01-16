@@ -149,17 +149,17 @@ namespace Raven.Server.Documents.Indexes.Errors
             throw new NotSupportedException($"Index {Name} is in-memory implementation of a faulty index", _e);
         }
 
-        public override Task StreamQuery(HttpResponse response, IStreamQueryResultWriter<Document> writer, IndexQueryServerSide query, QueryRunner.QueryMarker queryMarker, DocumentsOperationContext documentsContext, OperationCancelToken token)
+        public override Task StreamQuery(HttpResponse response, IStreamQueryResultWriter<Document> writer, IndexQueryServerSide query, DocumentsOperationContext documentsContext, OperationCancelToken token)
         {
             throw new NotSupportedException($"Index {Name} is in-memory implementation of a faulty index", _e);
         }
 
-        public override Task<DocumentQueryResult> Query(IndexQueryServerSide query, QueryRunner.QueryMarker queryMarker, DocumentsOperationContext documentsContext, OperationCancelToken token)
+        public override Task<DocumentQueryResult> Query(IndexQueryServerSide query, DocumentsOperationContext documentsContext, OperationCancelToken token)
         {
             throw new NotSupportedException($"Index {Name} is in-memory implementation of a faulty index", _e);
         }
 
-        public override Task<FacetedQueryResult> FacetedQuery(FacetQuery query, QueryRunner.QueryMarker queryMarker, DocumentsOperationContext documentsContext, OperationCancelToken token)
+        public override Task<FacetedQueryResult> FacetedQuery(FacetQuery query, DocumentsOperationContext documentsContext, OperationCancelToken token)
         {
             throw new NotSupportedException($"Index {Name} is in-memory implementation of a faulty index", _e);
         }
