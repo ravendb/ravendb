@@ -32,6 +32,7 @@ namespace Voron.Platform
             FailReadFile = 22,
             FileSetFilePointer = 23,
             FailSetEndOfFile = 24,
+            FailEndOfFile = 25,
         };
 
         [Flags]
@@ -63,7 +64,7 @@ namespace Voron.Platform
         }
 
         [Flags]
-        public enum JOURNAL_MODE
+        public enum JournalMode
         {
             SAFE = 0,
             DANGER = 1,

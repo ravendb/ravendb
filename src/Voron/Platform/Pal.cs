@@ -1,6 +1,7 @@
 using System;
 using System.IO;
 using System.Runtime.InteropServices;
+using Voron.Impl.Journal;
 using static Voron.Platform.PalDefinitions;
 
 namespace Voron.Platform
@@ -61,7 +62,7 @@ namespace Voron.Platform
         private const string LIBRVNPAL = "librvnpal";
 
         [DllImport(LIBRVNPAL, SetLastError = true)]
-        public static extern Int32 rvn_write_header(
+        public static extern PalFlags.FailCodes rvn_write_header(
             string filename,
             void* header,
             Int32 size,
@@ -75,7 +76,7 @@ namespace Voron.Platform
             out Int32 specialErrnoCodes);
 
         [DllImport(LIBRVNPAL, SetLastError = true)]
-        public static extern Int32 rvn_create_and_mmap64_file(
+        public static extern PalFlags.FailCodes rvn_create_and_mmap64_file(
             string filename,
             Int64 initialFileSize,
             PalFlags.MmapOptions flags,
@@ -85,51 +86,51 @@ namespace Voron.Platform
             out Int32 errorCode);
 
         [DllImport(LIBRVNPAL, SetLastError = true)]
-        public static extern Int32 rvn_prefetch_virtual_memory(
+        public static extern PalFlags.FailCodes rvn_prefetch_virtual_memory(
             void *virtualAddress,
             Int64 length,
             out Int32 errorCode);
 
         [DllImport(LIBRVNPAL, SetLastError = true)]
-        private static extern Int32 rvn_get_system_information(
+        private static extern PalFlags.FailCodes rvn_get_system_information(
             out SystemInformation systemInformation,
             out Int32 errorCode);
 
         [DllImport(LIBRVNPAL, SetLastError = true)]
-        public static extern Int32 rvn_memory_sync(
+        public static extern PalFlags.FailCodes rvn_memory_sync(
             void *address,
             Int64 size,
             out Int32 errorCode);
 
         [DllImport(LIBRVNPAL, SetLastError = true)]
-        public static extern Int32 rvn_dispose_handle(
+        public static extern PalFlags.FailCodes rvn_dispose_handle(
             string filepath,
             void* handle,
             PalFlags.FileCloseFlags closeFlag,
             out Int32 errorCode);
 
         [DllImport(LIBRVNPAL, SetLastError = true)]
-        public static extern Int32 rvn_unmap(
+        public static extern PalFlags.FailCodes rvn_unmap(
             void* address,
             Int64 size,
             PalFlags.FileCloseFlags closeFlag,
             out Int32 errorCode);
 
         [DllImport(LIBRVNPAL, SetLastError = true)]
-        public static extern Int32 rvn_prefetch_ranges(
+        public static extern PalFlags.FailCodes rvn_prefetch_ranges(
             PrefetchRanges* list,
             Int32 count,
             out Int32 errorCode);
 
         [DllImport(LIBRVNPAL, SetLastError = true)]
-        public static extern Int32 rvn_protect_range(
+        public static extern PalFlags.FailCodes rvn_protect_range(
             void* start,
             Int64 size,
             PalFlags.ProtectRange protection,
             out Int32 errorCode);
 
         [DllImport(LIBRVNPAL, SetLastError = true)]
-        public static extern Int32 rvn_allocate_more_space(
+        public static extern PalFlags.FailCodes rvn_allocate_more_space(
             string fileNameFullPath,
             Int64 newLengthAfterAdjustment,
             void* handle,
@@ -138,47 +139,53 @@ namespace Voron.Platform
             out Int32 errorCode);
 
         [DllImport(LIBRVNPAL, SetLastError = true)]
-        public static extern Int32 rvn_open_journal(
+        public static extern PalFlags.FailCodes rvn_open_journal_for_writes(
             string fileName,
-            Int32 mode,
+            PalFlags.JournalMode mode,
             Int64 requiredSize,
-            out IntPtr handle,
+            out SafeJournalHandle handle,
             out Int64 actualSize,
             out Int32 errorCode);
 
         [DllImport(LIBRVNPAL, SetLastError = true)]
-        public static extern Int32 rvn_close_journal(
-            IntPtr handle,
+        public static extern PalFlags.FailCodes rvn_close_journal(
+            SafeJournalHandle handle,
             out Int32 errorCode
         );
 
 
         [DllImport(LIBRVNPAL, SetLastError = true)]
-        public static extern Int32 rvn_write_journal(
-            IntPtr handle,
-            IntPtr buffer,
-            UInt64 size,
+        public static extern PalFlags.FailCodes rvn_write_journal(
+            SafeJournalHandle handle,
+            void* buffer,
+            Int64 size,
             Int64 offset,
             out Int32 errorCode
         );
 
         [DllImport(LIBRVNPAL, SetLastError = true)]
-        public static extern Int32 rvn_read_journal(
-            string fileName,
-            ref IntPtr handle,
-            byte* buffer,
-            UInt64 requiredSize,
+        public static extern PalFlags.FailCodes rvn_read_journal(
+            SafeJournalHandle handle,
+            void* buffer,
+            Int64 requiredSize,
             Int64 offset,
-            out UInt64 actualSize,
+            out Int64 actualSize,
             out Int32 errorCode
         );
 
         [DllImport(LIBRVNPAL, SetLastError = true)]
-        public static extern Int32 rvn_truncate_journal(
+        public static extern PalFlags.FailCodes rvn_truncate_journal(
             string fileName,
-            IntPtr handle,
-            UInt64 size,
+            SafeJournalHandle handle,
+            Int64 size,
             out Int32 errorCode
             );
+
+        [DllImport(LIBRVNPAL, SetLastError = true)]
+        public static extern PalFlags.FailCodes rvn_open_journal_for_reads(
+            string fileNameFullPath,
+            out SafeJournalHandle  handle,
+            out Int32 errorCode
+        );
     }
 }

@@ -93,31 +93,37 @@ namespace Voron.Util
             var sw = Stopwatch.StartNew();
             long totalCopied = 0;
 
-            fixed (byte* ptr = _buffer)
+            long pageCount = 0;
+            try
             {
-                while (numberOf4KbsToCopy > 0)
+                fixed (byte* ptr = _buffer)
                 {
-                    cancellationToken.ThrowIfCancellationRequested();
-
-                    var pageCount = Math.Min(maxNumOf4KbsToCopyAtOnce, numberOf4KbsToCopy);
-
-                    if (journal.JournalWriter.Read(ptr, 
-                        pageCount * pageSize, 
-                        page * pageSize) == false)
-                         throw new InvalidOperationException("Could not read from journal #" + journal.Number + " " +
-                                    +pageCount + " pages.");
-                    var bytesCount = (int)(pageCount * (4 * Constants.Size.Kilobyte));
-                    output.Write(_buffer, 0, bytesCount);
-                    page += pageCount;
-                    numberOf4KbsToCopy -= pageCount;
-
-                    totalCopied += bytesCount;
-                    if (sw.ElapsedMilliseconds > 500)
+                    while (numberOf4KbsToCopy > 0)
                     {
-                        infoNotify?.Invoke($"Copied: {new Size(totalCopied, SizeUnit.Bytes)} / {toBeCopied}");
-                        sw.Restart();
+                        cancellationToken.ThrowIfCancellationRequested();
+
+                        pageCount = Math.Min(maxNumOf4KbsToCopyAtOnce, numberOf4KbsToCopy);
+
+                        journal.JournalWriter.Read(ptr, pageCount * pageSize, page * pageSize);
+                        
+                        var bytesCount = (int)(pageCount * (4 * Constants.Size.Kilobyte));
+                        output.Write(_buffer, 0, bytesCount);
+                        page += pageCount;
+                        numberOf4KbsToCopy -= pageCount;
+
+                        totalCopied += bytesCount;
+                        if (sw.ElapsedMilliseconds > 500)
+                        {
+                            infoNotify?.Invoke($"Copied: {new Size(totalCopied, SizeUnit.Bytes)} / {toBeCopied}");
+                            sw.Restart();
+                        }
                     }
                 }
+            }
+            catch (Exception e)
+            {
+                throw new InvalidOperationException(
+                    "Could not read from journal #" + journal.Number + " " + pageCount + " pages.", e);
             }
 
             var totalSecElapsed = Math.Max((double)totalSw.ElapsedMilliseconds / 1000, 0.0001);
