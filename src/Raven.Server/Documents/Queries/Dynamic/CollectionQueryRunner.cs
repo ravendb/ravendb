@@ -41,9 +41,16 @@ namespace Raven.Server.Documents.Queries.Dynamic
                     return Task.FromResult(DocumentQueryResult.NotModifiedResult);
             }
 
-            ExecuteCollectionQuery(result, query, query.Metadata.CollectionName, documentsContext, token.Token);
+            var collection = GetCollectionName(query.Metadata.CollectionName, out var indexName);
 
-            return Task.FromResult(result);
+            using (QueryRunner.MarkQueryAsRunning(indexName, query, token))
+            {
+                result.IndexName = indexName;
+
+                ExecuteCollectionQuery(result, query, collection, documentsContext, token.Token);
+
+                return Task.FromResult(result);
+            }
         }
 
         public override Task ExecuteStreamQuery(IndexQueryServerSide query, DocumentsOperationContext documentsContext, HttpResponse response, IStreamQueryResultWriter<Document> writer,
@@ -54,11 +61,18 @@ namespace Raven.Server.Documents.Queries.Dynamic
 
             FillCountOfResultsAndIndexEtag(result, query.Metadata, documentsContext);
 
-            ExecuteCollectionQuery(result, query, query.Metadata.CollectionName, documentsContext, token.Token);
+            var collection = GetCollectionName(query.Metadata.CollectionName, out var indexName);
 
-            result.Flush();
+            using (QueryRunner.MarkQueryAsRunning(indexName, query, token))
+            {
+                result.IndexName = indexName;
 
-            return Task.CompletedTask;
+                ExecuteCollectionQuery(result, query, collection, documentsContext, token.Token);
+
+                result.Flush();
+
+                return Task.CompletedTask;
+            }
         }
 
         public override Task<IndexEntriesQueryResult> ExecuteIndexEntriesQuery(IndexQueryServerSide query, DocumentsOperationContext context, long? existingResultEtag, OperationCancelToken token)
@@ -111,13 +125,7 @@ namespace Raven.Server.Documents.Queries.Dynamic
                     fillScope = includesScope.For(nameof(QueryTimingsScope.Names.Fill), start: false);
                 }
 
-                if (string.IsNullOrEmpty(collection))
-                    collection = Constants.Documents.Collections.AllDocumentsCollection;
-
-                var isAllDocsCollection = collection == Constants.Documents.Collections.AllDocumentsCollection;
-
                 // we optimize for empty queries without sorting options, appending CollectionIndexPrefix to be able to distinguish index for collection vs. physical index
-                resultToFill.IndexName = isAllDocsCollection ? "AllDocs" : CollectionIndexPrefix + collection;
                 resultToFill.IsStale = false;
                 resultToFill.LastQueryTime = DateTime.MinValue;
                 resultToFill.IndexTimestamp = DateTime.MinValue;
@@ -210,6 +218,18 @@ namespace Raven.Server.Documents.Queries.Dynamic
 
             resultToFill.ResultEtag = (long)Hashing.XXHash64.Calculate((byte*)buffer, sizeof(long) * 3);
             resultToFill.NodeTag = Database.ServerStore.NodeTag;
+        }
+
+        private static string GetCollectionName(string collection, out string indexName)
+        {
+            if (string.IsNullOrEmpty(collection))
+                collection = Constants.Documents.Collections.AllDocumentsCollection;
+
+            indexName = collection == Constants.Documents.Collections.AllDocumentsCollection 
+                ? "AllDocs" 
+                : CollectionIndexPrefix + collection;
+
+            return collection;
         }
     }
 }
