@@ -4,6 +4,7 @@ using System.Diagnostics;
 using System.Linq;
 using System.Threading.Tasks;
 using Microsoft.Extensions.Primitives;
+using Raven.Client.Exceptions;
 using Raven.Server.Documents.Indexes;
 using Raven.Server.Documents.Queries.AST;
 using Raven.Server.ServerWide;
@@ -125,6 +126,7 @@ namespace Raven.Server.Documents.Queries.Graph
         private IGraphQueryStep BuildQueryPlanForPattern(PatternMatchElementExpression patternExpression, int start)
         {
             var prev = BuildQueryPlanForMatchNode(patternExpression.Path[start]);
+            
             for (int i = start + 1; i < patternExpression.Path.Length; i+=2)
             {
                 if (patternExpression.Path[i].Recursive == null)
@@ -188,6 +190,11 @@ namespace Raven.Server.Documents.Queries.Graph
 
             if(index + 1 < patternExpression.Path.Length)
             {
+                if (patternExpression.Path[index + 1].Recursive.HasValue)
+                {
+                    throw new InvalidQueryException("Two adjacent 'recursive' queries are not allowed",GraphQuery.QueryText);
+                }
+
                 if (patternExpression.Path[index + 1].IsEdge)
                 {
                     var nextPlan = BuildQueryPlanForPattern(patternExpression, index + 2);
