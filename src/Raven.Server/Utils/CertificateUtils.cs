@@ -12,6 +12,8 @@ using Org.BouncyCastle.Pkcs;
 using Org.BouncyCastle.Security;
 using Org.BouncyCastle.X509;
 using Org.BouncyCastle.X509.Extension;
+using Raven.Server.ServerWide;
+using Sparrow.Platform;
 using BigInteger = Org.BouncyCastle.Math.BigInteger;
 using X509Certificate = Org.BouncyCastle.X509.X509Certificate;
 
@@ -21,13 +23,46 @@ namespace Raven.Server.Utils
     {
         private const int BitsPerByte = 8; 
 
-        public static byte[] CreateSelfSignedCertificate(string commonNameValue, string issuerName, StringBuilder log = null)
+        public static byte[] CreateSelfSignedTestCertificate(string commonNameValue, string issuerName, StringBuilder log = null)
         {
+            // Note this is for tests only!
             CreateCertificateAuthorityCertificate(commonNameValue + " CA", out var ca, out var caSubjectName, log);
             CreateSelfSignedCertificateBasedOnPrivateKey(commonNameValue, caSubjectName, ca, false, false, 0, out var certBytes, log);
             var selfSignedCertificateBasedOnPrivateKey = new X509Certificate2(certBytes, (string)null, X509KeyStorageFlags.MachineKeySet);
             selfSignedCertificateBasedOnPrivateKey.Verify();
+
+            // We had a problem where we didn't cleanup the user store in Linux (~/.dotnet/corefx/cryptography/x509stores/ca)
+            // and it exploded with thousands of certificates. This caused ssl handshakes to fail on that machine, because it would timeout when
+            // trying to match one of these certs to validate the chain
+            RemoveOldTestCertificatesFromOsStore(commonNameValue);
             return certBytes;
+        }
+
+        private static void RemoveOldTestCertificatesFromOsStore(string commonNameValue)
+        {
+            // We have the same logic in AddCertificateChainToTheUserCertificateAuthorityStoreAndCleanExpiredCerts when the server starts
+            // and when we renew a certificate. There we delete certificates only if expired but here in the tests we delete them all and keep
+            // just the ones from the last couple days
+            var storeName = PlatformDetails.RunningOnMacOsx ? StoreName.My : StoreName.CertificateAuthority;
+            using (var userIntermediateStore = new X509Store(storeName, StoreLocation.CurrentUser, OpenFlags.ReadWrite))
+            {
+                var existingCerts = userIntermediateStore.Certificates.Find(X509FindType.FindBySubjectName, commonNameValue, false);
+                foreach (var c in existingCerts)
+                {
+                    if (c.NotBefore.ToUniversalTime() > DateTime.Today.AddDays(-2))
+                        continue;
+
+                    var chain = new X509Chain();
+                    chain.Build(c);
+
+                    foreach (var element in chain.ChainElements)
+                    {
+                        if (element.Certificate.NotBefore.ToUniversalTime() > DateTime.Today.AddDays(-2))
+                            continue;
+                        userIntermediateStore.Remove(element.Certificate);
+                    }
+                }
+            }
         }
 
         public static X509Certificate2 CreateSelfSignedClientCertificate(string commonNameValue, RavenServer.CertificateHolder certificateHolder, out byte[] certBytes)
