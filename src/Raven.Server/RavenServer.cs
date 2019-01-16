@@ -250,27 +250,7 @@ namespace Raven.Server
                         RedirectsHttpTrafficToHttps();
                     }
 
-                    if (PlatformDetails.RunningOnLinux)
-                    {
-                        // When using Let's Encrypt certs, the full certificate chain is not available in the OS store, so it will download it on every connection.
-                        // We will prevent this by registering the entire certificate chain to the intermediates store during startup.
-                        // That store is used for lookup, but not trust, and will eliminate the network call for future chain builds.
-                        // See: https://github.com/dotnet/corefx/issues/30693#issuecomment-401062377
-                        var chain = new X509Chain();
-                        chain.Build(Certificate.Certificate);
-
-                        using (X509Store intermediates = new X509Store(StoreName.CertificateAuthority, StoreLocation.CurrentUser))
-                        {
-                            // Not supported on macOS:
-                            // https://github.com/bartonjs/corefx/blob/37cacaac178150d6040f3f976f1f335a17e7f13c/Documentation/project-docs/cross-platform-cryptography.md#x509store
-                            intermediates.Open(OpenFlags.ReadWrite);
-
-                            foreach (var element in chain.ChainElements)
-                            {
-                                intermediates.Add(element.Certificate);
-                            }
-                        }
-                    }
+                    SecretProtection.AddCertificateChainToTheUserCertificateAuthorityStoreAndCleanExpiredCerts(Certificate.Certificate, Certificate.Certificate.Export(X509ContentType.Cert), Configuration.Security.CertificatePassword);
                 }
 
                 if (Logger.IsInfoEnabled)
