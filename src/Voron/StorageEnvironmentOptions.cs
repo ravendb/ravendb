@@ -845,7 +845,7 @@ namespace Voron
 
                 var path = GetJournalPath(journalNumber);
 
-                value = new JournalWriter(this, path, journalSize, PalFlags.JOURNAL_MODE.PURE_MEMORY);
+                value = new JournalWriter(this, path, journalSize, PalFlags.JournalMode.PURE_MEMORY);
 
                 _logs[name] = value;
                 return value;
