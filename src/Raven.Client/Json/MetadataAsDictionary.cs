@@ -42,11 +42,10 @@ namespace Raven.Client.Json
         private void Init()
         {
             _metadata = new Dictionary<string, object>();
-            var indexes = _source.GetPropertiesByInsertionOrder();
-            foreach (var index in indexes)
+            for (int i = 0; i < _source.Count; i++)
             {
                 var propDetails = new BlittableJsonReaderObject.PropertyDetails();
-                _source.GetPropertyByIndex(index, ref propDetails);
+                _source.GetPropertyByIndex(i, ref propDetails);
                 _metadata[propDetails.Name] = ConvertValue(propDetails.Name, propDetails.Value);
             }
 
@@ -113,7 +112,7 @@ namespace Raven.Client.Json
 
         public bool Changed => _metadata != null;
 
-        public int Count => _metadata?.Count ?? _source.GetPropertiesByInsertionOrder().Length;
+        public int Count => _metadata?.Count ?? _source.Count;
 
         public bool IsReadOnly => _metadata != null && _metadata.IsReadOnly;
 
@@ -126,10 +125,10 @@ namespace Raven.Client.Json
                 if (_metadata != null)
                     return _metadata.Values;
                 var values = new List<object>();
-                foreach (var prop in _source.GetPropertiesByInsertionOrder())
+                for (int i = 0; i < _source.Count; i++)
                 {
                     var propDetails = new BlittableJsonReaderObject.PropertyDetails();
-                    _source.GetPropertyByIndex(prop, ref propDetails);
+                    _source.GetPropertyByIndex(i, ref propDetails);
                     values.Add(ConvertValue(propDetails.Name, propDetails));
                 }
                 return values;

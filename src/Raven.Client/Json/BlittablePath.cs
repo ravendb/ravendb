@@ -273,12 +273,13 @@ namespace Raven.Client.Json
 
                             return null;
                         }
-                        var trueIndex = b.GetPropertiesByInsertionOrder()[index];
-                        var prop = new BlittableJsonReaderObject.PropertyDetails();
+                        throw new NotSupportedException();
+                        //var trueIndex = b.GetPropertiesByInsertionOrder()[index];
+                        //var prop = new BlittableJsonReaderObject.PropertyDetails();
 
-                        b.GetPropertyByIndex(trueIndex, ref prop);
+                        //b.GetPropertyByIndex(trueIndex, ref prop);
 
-                        current = prop.Value;
+                        //current = prop.Value;
                     }
                 }
             }

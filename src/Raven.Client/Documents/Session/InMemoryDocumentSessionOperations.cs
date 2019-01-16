@@ -1292,9 +1292,9 @@ more responsive application.
                 return;
 
             var propertyDetails = new BlittableJsonReaderObject.PropertyDetails();
-            foreach (var propertyIndex in includes.GetPropertiesByInsertionOrder())
+            for (int i = 0; i < includes.Count; i++)
             {
-                includes.GetPropertyByIndex(propertyIndex, ref propertyDetails);
+                includes.GetPropertyByIndex(i, ref propertyDetails);
 
                 if (propertyDetails.Value == null)
                     continue;
@@ -1393,9 +1393,9 @@ more responsive application.
         private void RegisterCountersInternal(BlittableJsonReaderObject resultCounters, Dictionary<string, string[]> countersToInclude, bool fromQueryResult = true, bool gotAll = false)
         {
             var propertyDetails = new BlittableJsonReaderObject.PropertyDetails();
-            foreach (var propertyIndex in resultCounters.GetPropertiesByInsertionOrder())
+            for (int i = 0; i < resultCounters.Count; i++)
             {
-                resultCounters.GetPropertyByIndex(propertyIndex, ref propertyDetails);
+                resultCounters.GetPropertyByIndex(i, ref propertyDetails);
                 if (propertyDetails.Value == null)
                     continue;
                 if (fromQueryResult)
