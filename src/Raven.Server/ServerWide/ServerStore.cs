@@ -695,10 +695,14 @@ namespace Raven.Server.ServerWide
                     LastClientConfigurationIndex = clientConfigEtag;
             }
 
-            _clusterMaintenanceSetupTask = PoolOfThreads.GlobalRavenThreadPool.LongRunning(x => 
-                ClusterMaintenanceSetupTask(), null, "Cluster Maintenance Setup Task");
-            _updateTopologyChangeNotification = PoolOfThreads.GlobalRavenThreadPool.LongRunning(x => 
-                UpdateTopologyChangeNotification(), null, "Update Topology Change Notification Task");
+            _clusterMaintenanceSetupTask = PoolOfThreads.GlobalRavenThreadPool.LongRunning(x =>
+                ClusterMaintenanceSetupTask() , null, "Cluster Maintenance Setup Task");
+
+            _updateTopologyChangeNotification = PoolOfThreads.GlobalRavenThreadPool.LongRunning(x =>
+            {
+                Thread.CurrentThread.Priority = ThreadPriority.BelowNormal;
+                UpdateTopologyChangeNotification();
+            }, null, "Update Topology Change Notification Task");
         }
 
         private void OnStateChanged(object sender, RachisConsensus.StateTransition state)
