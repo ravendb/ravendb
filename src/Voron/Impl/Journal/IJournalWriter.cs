@@ -1,5 +1,7 @@
 using System;
+using System.Collections.Generic;
 using System.Diagnostics;
+using System.Runtime.InteropServices;
 using System.Threading;
 using Sparrow;
 using Sparrow.Threading;
@@ -18,7 +20,7 @@ namespace Voron.Impl.Journal
         bool Disposed { get; }
         bool DeleteOnClose { get; set; }
         AbstractPager CreatePager();
-        bool Read(byte* buffer, long numOfBytes, long offsetInFile);
+        void Read(byte* buffer, long numOfBytes, long offsetInFile);
         void Truncate(long size);
 
         void AddRef();
@@ -32,11 +34,8 @@ namespace Voron.Impl.Journal
         private readonly SingleUseFlag _disposed = new SingleUseFlag();
         private readonly StorageEnvironmentOptions _options;
 
-        private readonly IntPtr _writeHandle;
-        //TODO Maybe should init handle to invalid value in pal function?
-        //TODO Maybe should move read functionality from this class
-        //TODO OR maybe should to reduce read code to one function that will open and close the read handle
-        private IntPtr _readHandle = new IntPtr(-1);
+        private readonly SafeJournalHandle _writeHandle;
+        private SafeJournalHandle _readHandle = new SafeJournalHandle();
         private int _refs;
 
         public int NumberOfAllocated4Kb { get; }
@@ -44,13 +43,13 @@ namespace Voron.Impl.Journal
         public VoronPathSetting FileName { get; }
         public bool DeleteOnClose { get; set; }
 
-        public JournalWriter(StorageEnvironmentOptions options, VoronPathSetting filename, long size, PalFlags.JOURNAL_MODE mode = PalFlags.JOURNAL_MODE.SAFE)
+        public JournalWriter(StorageEnvironmentOptions options, VoronPathSetting filename, long size, PalFlags.JournalMode mode = PalFlags.JournalMode.SAFE)
         {
             _options = options;
             FileName = filename;
 
-            var result = Pal.rvn_open_journal(filename.FullPath, (int)mode, size, out _writeHandle, out var actualSize, out var error);
-            if (result != (int)PalFlags.FailCodes.Success)
+            var result = Pal.rvn_open_journal_for_writes(filename.FullPath, mode, size, out _writeHandle, out var actualSize, out var error);
+            if (result != PalFlags.FailCodes.Success)
                 PalHelper.ThrowLastError(error, $"Attempted to open journal file - Path:{filename.FullPath} Size:{size}");
 
             NumberOfAllocated4Kb = (int)(actualSize / (4 * Constants.Size.Kilobyte));
@@ -62,8 +61,8 @@ namespace Voron.Impl.Journal
 
             using (var metrics = _options.IoMetrics.MeterIoRate(FileName.FullPath, IoMetrics.MeterType.JournalWrite, (long)numberOf4Kb * 4 * Constants.Size.Kilobyte))
             {
-                var result = Pal.rvn_write_journal(_writeHandle, (IntPtr)p, (ulong)numberOf4Kb * 4 * Constants.Size.Kilobyte, posBy4Kb * 4 * Constants.Size.Kilobyte, out var error);
-                if (result != (int)PalFlags.FailCodes.Success)
+                var result = Pal.rvn_write_journal(_writeHandle, p, numberOf4Kb * 4 * Constants.Size.Kilobyte, posBy4Kb * 4 * Constants.Size.Kilobyte, out var error);
+                if (result != PalFlags.FailCodes.Success)
                     PalHelper.ThrowLastError(error, $"Attempted to write to journal file - Path:{FileName.FullPath} Size:{numberOf4Kb * 4 * Constants.Size.Kilobyte}");
 
                 metrics.SetFileSize(NumberOfAllocated4Kb * (4L * Constants.Size.Kilobyte));
@@ -78,28 +77,40 @@ namespace Voron.Impl.Journal
             return new WindowsMemoryMapPager(_options, FileName);
         }
 
-        public bool Read(byte* buffer, long numOfBytes, long offsetInFile)
+        public void Read(byte* buffer, long numOfBytes, long offsetInFile)
         {
-            var result = Pal.rvn_read_journal(
-                FileName.FullPath,
-                ref _readHandle,
+            int errorCode;
+            long actualSize = 0;
+            PalFlags.FailCodes result;
+            if (_readHandle.IsInvalid)
+            {
+                result = Pal.rvn_open_journal_for_reads(FileName.FullPath, out _readHandle, out errorCode);
+                EnsureValidResult();
+            }
+            
+            result = Pal.rvn_read_journal(
+                _readHandle,
                 buffer,
-                (ulong)numOfBytes,
+                numOfBytes,
                 offsetInFile,
-                out var actualSize,
-                out var error
+                out actualSize,
+                out errorCode
                 );
 
-            if (result != (int)PalFlags.FailCodes.Success)
-                PalHelper.ThrowLastError(error, $"Attempted to read from journal file - Path:{FileName.FullPath} Size:{numOfBytes} Offset:{offsetInFile} ActualSize:{actualSize}");
+            EnsureValidResult();
+            
+            void EnsureValidResult()
+            {
+                if (result != PalFlags.FailCodes.Success)
+                    PalHelper.ThrowLastError(errorCode, $"Attempted to read from journal file - Path:{FileName.FullPath} Size:{numOfBytes} Offset:{offsetInFile} ActualSize:{actualSize}");
 
-            return actualSize >= (ulong)numOfBytes;
+            }
         }
 
         public void Truncate(long size)
         {
-            var result = Pal.rvn_truncate_journal(FileName.FullPath, _writeHandle, (ulong)size, out var error);
-            if (result != (int)PalFlags.FailCodes.Success)
+            var result = Pal.rvn_truncate_journal(FileName.FullPath, _writeHandle, size, out var error);
+            if (result != PalFlags.FailCodes.Success)
                 PalHelper.ThrowLastError(error, $"Attempted to write to journal file - Path:{FileName.FullPath} Size:{size}");
         }
 
@@ -124,34 +135,46 @@ namespace Voron.Impl.Journal
 
             GC.SuppressFinalize(this);
             _options.IoMetrics.FileClosed(FileName.FullPath);
-
-            int error;
-            if (_readHandle != IntPtr.Zero)
+            
+            List<Exception> exceptions = null;
+            
+            TryExecute(() =>
             {
-                var rResult = Pal.rvn_close_journal(_readHandle, out error);
-                if (rResult != (int)PalFlags.FailCodes.Success)
-                    PalHelper.ThrowLastError(rResult,
-                        $"Attempted to close read journal handle - Path:{FileName.FullPath}");
+                _readHandle.Dispose();
+                if (_readHandle.FailCode != PalFlags.FailCodes.Success)
+                    PalHelper.ThrowLastError(_readHandle.ErrorNo,
+                        $"Attempted to close 'read journal handle' - Path:{FileName.FullPath}");
+            });
 
-                _readHandle = IntPtr.Zero;
-            }
-
-            var result = Pal.rvn_close_journal(_writeHandle, out error);
-            if (result != (int)PalFlags.FailCodes.Success)
-                PalHelper.ThrowLastError(error,
-                    $"Attempted to close read journal handle - Path:{FileName.FullPath}");
-
+            TryExecute(() =>
+            {
+                _writeHandle.Dispose();
+                if (_writeHandle.FailCode != PalFlags.FailCodes.Success)
+                    PalHelper.ThrowLastError(_writeHandle.ErrorNo,
+                        $"Attempted to close 'write journal handle' - Path:{FileName.FullPath}");
+            });
+            
+            if (exceptions != null)
+                throw new AggregateException("Failed to dispose journal writer", exceptions);
+            
             if (DeleteOnClose)
             {
                 _options.TryStoreJournalForReuse(FileName);
             }
-        }
-
-        [Conditional("DEBUG")]
-        private static void ValidateNoError(int error, string msg)
-        {
-            if (error != (int)PalFlags.FailCodes.Success)
-                PalHelper.ThrowLastError(error, msg);
+            
+            void TryExecute(Action a)
+            {
+                try
+                {
+                    a();
+                }
+                catch (Exception e)
+                {
+                    if (exceptions == null)
+                        exceptions = new List<Exception>();
+                    exceptions.Add(e);
+                }
+            }
         }
 
         ~JournalWriter()
@@ -163,8 +186,9 @@ namespace Voron.Impl.Journal
             {
                 Dispose();
             }
-            catch (ObjectDisposedException)
+            catch (Exception)
             {
+                // ignored
             }
 
 #if DEBUG
@@ -173,5 +197,24 @@ namespace Voron.Impl.Journal
                 + FileName + ". Number of references: " + _refs);
 #endif
         }
+    }
+    
+    public class SafeJournalHandle : SafeHandle
+    {
+        public PalFlags.FailCodes FailCode; 
+        public int ErrorNo;
+        
+        public SafeJournalHandle() : base(IntPtr.Zero, true)
+        {
+        }
+
+        protected override bool ReleaseHandle()
+        {
+            FailCode = Pal.rvn_close_journal(this, out ErrorNo);
+            
+            return FailCode == PalFlags.FailCodes.Success;
+        }
+
+        public override bool IsInvalid => handle == IntPtr.Zero;
     }
 }
