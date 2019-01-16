@@ -46,12 +46,10 @@ namespace Raven.Server.Extensions
         {
             if (whereCollectionName == null)
             {
-                throw new InvalidQueryException("A 'where' clause cannot contain just an '" + me.Name + "' method", queryText, parameters);
+                throw new InvalidQueryException("A 'where' clause cannot contain just a '" + me.Name + "' method", queryText, parameters);
             }
-            else
-            {
-                throw new InvalidQueryException($"A 'where' clause after '{whereCollectionName}' cannot contain just an '" + me.Name + "' method", queryText, parameters);
-            }
+
+            throw new InvalidQueryException($"A 'where' clause after '{whereCollectionName}' cannot contain just a '" + me.Name + "' method", queryText, parameters);
         }
 
         public static Type ExtractTypeFromPath<T>(this Expression<Func<T, object>> path)

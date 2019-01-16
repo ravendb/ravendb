@@ -391,10 +391,7 @@ namespace Raven.Server.Documents.Queries.Parser
                 {
                     if (isEdge)
                     {
-                        if (Scanner.TryPeek(']'))
-                        {
-                            throw new InvalidQueryException($"Expected to find a field identifier after '{Scanner.Token}', but found ']'. Perhaps this a typo?",Scanner.Input);
-                        }
+                        ThrowIfUnexpectedClosingBracket();
                         ThrowParseException("Unable to read edge alias");
                     }                 
 
@@ -473,7 +470,7 @@ namespace Raven.Server.Documents.Queries.Parser
             if (Scanner.TryScan("WHERE"))
             {
                 if (Expression(out filter) == false)
-                    throw new InvalidQueryException($"There is a 'where' clause after '{collection.FieldValue}', but failed to parse the filter expression that should be after the 'where'. (The alias of the problematic query element is {alias})", Scanner.Input, null);
+                    throw new InvalidQueryException($"Failed to parse filter expression after a 'where' clause located next to '{collection.FieldValue}'. The problematic query element alias is '{alias}'", Scanner.Input, null);
 
                 filter.ThrowIfInvalidMethodInvocationInWhere(null,Scanner.Input, collection.FieldValue);
             }
@@ -514,6 +511,14 @@ namespace Raven.Server.Documents.Queries.Parser
             AddWithQuery(collection, project, alias, filter, isEdge, start, maybeAlias == null);
                 }
             return true;
+        }
+
+        private void ThrowIfUnexpectedClosingBracket()
+        {
+            if (Scanner.TryPeek(']'))
+            {
+                throw new InvalidQueryException($"Expected to find a field identifier after '{Scanner.Token}', but found ']'. Perhaps this a typo?", Scanner.Input);
+            }
         }
 
         private void ThrowInvalidSyntaxMissingAs(bool isEdge, FieldExpression collection, StringSegment token)
@@ -1682,7 +1687,7 @@ namespace Raven.Server.Documents.Queries.Parser
                     op = field;
                     return fieldOption == OperatorField.Desired;
                 }
-                throw new InvalidQueryException($"Expected to a valid operator after '{field?.FieldValue ?? "<failed to fetch field name>"}', but found '{Scanner.Input[Scanner.Position]}'. Valid operators are: 'in', 'between', =, <, >, <=, >=, !=");
+                throw new InvalidQueryException($"Expected operator after '{field?.FieldValue ?? "<failed to fetch field name>"}' field, but found '{Scanner.Input[Scanner.Position]}'. Valid operators are: 'in', 'between', =, <, >, <=, >=, !=");
             }
 
 
@@ -1994,10 +1999,6 @@ namespace Raven.Server.Documents.Queries.Parser
                 }
 
                 bool? hasNextPart = null;
-
-                //if(Scanner.TryScan(']'))
-                //    throw new InvalidQueryException($"Unexpected ']' after '{string.Join(",",parts)}'. Perhaps this is a typo? Or if this is an collection reference expression, the correct syntax would be 'collection[].FieldName'", Scanner.Input);
-
                 while (Scanner.TryScan('['))
                 {
                     switch (Scanner.TryNumber())
