@@ -21,7 +21,7 @@ namespace Raven.Server.Documents.Queries
         {
         }
 
-        public override Task<DocumentQueryResult> ExecuteQuery(IndexQueryServerSide query, DocumentsOperationContext documentsContext, long? existingResultEtag, OperationCancelToken token)
+        public override async Task<DocumentQueryResult> ExecuteQuery(IndexQueryServerSide query, DocumentsOperationContext documentsContext, long? existingResultEtag, OperationCancelToken token)
         {
             var index = GetIndex(query.Metadata.IndexName);
 
@@ -29,27 +29,36 @@ namespace Raven.Server.Documents.Queries
             {
                 var etag = index.GetIndexEtag(query.Metadata);
                 if (etag == existingResultEtag)
-                    return Task.FromResult(DocumentQueryResult.NotModifiedResult);
+                    return DocumentQueryResult.NotModifiedResult;
             }
 
-            return index.Query(query, documentsContext, token);
+            using (var marker = QueryRunner.MarkQueryAsRunning(index.Name, query, token))
+            {
+                return await index.Query(query, marker, documentsContext, token);
+            }
         }
 
-        public override Task ExecuteStreamQuery(IndexQueryServerSide query, DocumentsOperationContext documentsContext, HttpResponse response, IStreamQueryResultWriter<Document> writer, OperationCancelToken token)
+        public override async Task ExecuteStreamQuery(IndexQueryServerSide query, DocumentsOperationContext documentsContext, HttpResponse response, IStreamQueryResultWriter<Document> writer, OperationCancelToken token)
         {
             var index = GetIndex(query.Metadata.IndexName);
 
-            return index.StreamQuery(response, writer, query, documentsContext, token);
+            using (var marker = QueryRunner.MarkQueryAsRunning(index.Name, query, token))
+            {
+                await index.StreamQuery(response, writer, query, marker, documentsContext, token);
+            }
         }
 
-        public override Task ExecuteStreamIndexEntriesQuery(IndexQueryServerSide query, DocumentsOperationContext documentsContext, HttpResponse response, IStreamQueryResultWriter<BlittableJsonReaderObject> writer, OperationCancelToken token)
+        public override async Task ExecuteStreamIndexEntriesQuery(IndexQueryServerSide query, DocumentsOperationContext documentsContext, HttpResponse response, IStreamQueryResultWriter<BlittableJsonReaderObject> writer, OperationCancelToken token)
         {
             var index = GetIndex(query.Metadata.IndexName);
 
-            return index.StreamIndexEntriesQuery(response, writer, query, documentsContext, token);
+            using (var marker = QueryRunner.MarkQueryAsRunning(index.Name, query, token))
+            {
+                await index.StreamIndexEntriesQuery(response, writer, query, marker, documentsContext, token);
+            }
         }
 
-        public override Task<IndexEntriesQueryResult> ExecuteIndexEntriesQuery(IndexQueryServerSide query, DocumentsOperationContext context, long? existingResultEtag, OperationCancelToken token)
+        public override async Task<IndexEntriesQueryResult> ExecuteIndexEntriesQuery(IndexQueryServerSide query, DocumentsOperationContext context, long? existingResultEtag, OperationCancelToken token)
         {
             var index = GetIndex(query.Metadata.IndexName);
 
@@ -57,10 +66,13 @@ namespace Raven.Server.Documents.Queries
             {
                 var etag = index.GetIndexEtag(query.Metadata);
                 if (etag == existingResultEtag)
-                    return Task.FromResult(IndexEntriesQueryResult.NotModifiedResult);
+                    return IndexEntriesQueryResult.NotModifiedResult;
             }
 
-            return index.IndexEntries(query, context, token);
+            using (var marker = QueryRunner.MarkQueryAsRunning(index.Name, query, token))
+            {
+                return await index.IndexEntries(query, marker, context, token);
+            }
         }
 
         public async Task<FacetedQueryResult> ExecuteFacetedQuery(IndexQueryServerSide query, long? existingResultEtag, DocumentsOperationContext documentsContext, OperationCancelToken token)
@@ -78,28 +90,40 @@ namespace Raven.Server.Documents.Queries
                     return FacetedQueryResult.NotModifiedResult;
             }
 
-            return await index.FacetedQuery(fq, documentsContext, token);
+            using (var marker = QueryRunner.MarkQueryAsRunning(index.Name, query, token))
+            {
+                return await index.FacetedQuery(fq, marker, documentsContext, token);
+            }
         }
 
-        public override Task<IOperationResult> ExecuteDeleteQuery(IndexQueryServerSide query, QueryOperationOptions options, DocumentsOperationContext context, Action<IOperationProgress> onProgress, OperationCancelToken token)
+        public override async Task<IOperationResult> ExecuteDeleteQuery(IndexQueryServerSide query, QueryOperationOptions options, DocumentsOperationContext context, Action<IOperationProgress> onProgress, OperationCancelToken token)
         {
             var index = GetIndex(query.Metadata.IndexName);
 
-            return ExecuteDelete(query, index, options, context, onProgress, token);
+            using (var marker = QueryRunner.MarkQueryAsRunning(index.Name, query, token))
+            {
+                return await ExecuteDelete(query, marker, index, options, context, onProgress, token);
+            }
         }
 
-        public override Task<IOperationResult> ExecutePatchQuery(IndexQueryServerSide query, QueryOperationOptions options, PatchRequest patch, BlittableJsonReaderObject patchArgs, DocumentsOperationContext context, Action<IOperationProgress> onProgress, OperationCancelToken token)
+        public override async Task<IOperationResult> ExecutePatchQuery(IndexQueryServerSide query, QueryOperationOptions options, PatchRequest patch, BlittableJsonReaderObject patchArgs, DocumentsOperationContext context, Action<IOperationProgress> onProgress, OperationCancelToken token)
         {
             var index = GetIndex(query.Metadata.IndexName);
 
-            return ExecutePatch(query, index, options, patch, patchArgs, context, onProgress, token);
+            using (var marker = QueryRunner.MarkQueryAsRunning(index.Name, query, token))
+            {
+                return await ExecutePatch(query, marker, index, options, patch, patchArgs, context, onProgress, token);
+            }
         }
 
-        public override Task<SuggestionQueryResult> ExecuteSuggestionQuery(IndexQueryServerSide query, DocumentsOperationContext documentsContext, long? existingResultEtag, OperationCancelToken token)
+        public override async Task<SuggestionQueryResult> ExecuteSuggestionQuery(IndexQueryServerSide query, DocumentsOperationContext documentsContext, long? existingResultEtag, OperationCancelToken token)
         {
             var index = GetIndex(query.Metadata.IndexName);
 
-            return ExecuteSuggestion(query, index, documentsContext, existingResultEtag, token);
+            using (var marker = QueryRunner.MarkQueryAsRunning(index.Name, query, token))
+            {
+                return await ExecuteSuggestion(query, marker, index, documentsContext, existingResultEtag, token);
+            }
         }
     }
 }

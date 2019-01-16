@@ -12,13 +12,13 @@ namespace Raven.Server.Documents.Queries
     {
         private readonly ServerStore _serverStore;
         private readonly HashSet<string> _dbNames;
-        
+
         public LiveRunningQueriesCollector(ServerStore serverStore, HashSet<string> dbNames)
             : base(serverStore.ServerShutdown, "Server")
         {
             _dbNames = dbNames;
             _serverStore = serverStore;
-            
+
             Start();
         }
 
@@ -41,44 +41,32 @@ namespace Raven.Server.Documents.Queries
         protected override List<ExecutingQueryCollection> PreparePerformanceStats()
         {
             var result = new List<ExecutingQueryCollection>();
-            
+
             foreach ((var dbName, Task<DocumentDatabase> value) in _serverStore.DatabasesLandlord.DatabasesCache)
             {
                 if (value.IsCompletedSuccessfully == false)
                     continue;
 
                 var dbNameAsString = dbName.ToString();
-                
+
                 if (_dbNames != null && !_dbNames.Contains(dbNameAsString))
                     continue;
 
                 var database = value.Result;
-                
-                var indexes = database
-                    .IndexStore
-                    .GetIndexes()
-                    .ToList();
-                        
-                foreach (var index in indexes)
-                {
-                    var runningQueries = index.CurrentlyRunningQueries
-                        .Where(x => x.DurationInMs > 100)
-                        .ToList();
 
-                    if (runningQueries.Count == 0)
-                    {
-                        continue;
-                    }
-                            
+                foreach (var group in database.QueryRunner.CurrentlyRunningQueries
+                    .Where(x => x.DurationInMs > 100)
+                    .GroupBy(x => x.IndexName))
+                {
                     result.Add(new ExecutingQueryCollection
                     {
                         DatabaseName = dbNameAsString,
-                        IndexName = index.Name,
-                        RunningQueries = runningQueries
+                        IndexName = group.Key,
+                        RunningQueries = group.ToList()
                     });
                 }
             }
-            
+
             return result;
         }
 
@@ -87,29 +75,29 @@ namespace Raven.Server.Documents.Queries
             writer.WriteStartArray();
 
             var isFirst = true;
-            
+
             foreach (var executingQueryCollection in stats)
             {
                 if (isFirst == false)
                 {
                     writer.WriteComma();
                 }
-                
+
                 writer.WriteStartObject();
 
                 isFirst = false;
                 writer.WritePropertyName(nameof(executingQueryCollection.DatabaseName));
                 writer.WriteString(executingQueryCollection.DatabaseName);
                 writer.WriteComma();
-                
+
                 writer.WritePropertyName(nameof(executingQueryCollection.IndexName));
                 writer.WriteString(executingQueryCollection.IndexName);
                 writer.WriteComma();
-                
+
                 writer.WritePropertyName(nameof(executingQueryCollection.RunningQueries));
                 writer.WriteStartArray();
 
-                var firstInnerQuery = true; 
+                var firstInnerQuery = true;
                 foreach (var executingQueryInfo in executingQueryCollection.RunningQueries)
                 {
                     if (firstInnerQuery == false)
@@ -119,11 +107,11 @@ namespace Raven.Server.Documents.Queries
                     executingQueryInfo.Write(writer, context);
                 }
                 writer.WriteEndArray();
-                
+
                 writer.WriteEndObject();
-                
+
             }
-            
+
             writer.WriteEndArray();
         }
 
@@ -133,6 +121,6 @@ namespace Raven.Server.Documents.Queries
             public string IndexName { get; set; }
             public List<ExecutingQueryInfo> RunningQueries { get; set; }
         }
-        
+
     }
 }

@@ -1,5 +1,4 @@
 ﻿using System;
-using System.Buffers;
 using System.Collections;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
@@ -10,7 +9,6 @@ using System.Runtime.CompilerServices;
 using System.Text.RegularExpressions;
 using System.Threading;
 using System.Threading.Tasks;
-using Lucene.Net.Index;
 using Microsoft.AspNetCore.Http;
 using Raven.Client;
 using Raven.Client.Documents.Changes;
@@ -23,7 +21,6 @@ using Raven.Client.ServerWide.Operations;
 using Raven.Client.Util;
 using Raven.Server.Config.Categories;
 using Raven.Server.Config.Settings;
-using Raven.Server.Documents.Handlers;
 using Raven.Server.Documents.Includes;
 using Raven.Server.Documents.Indexes.Auto;
 using Raven.Server.Documents.Indexes.MapReduce.Auto;
@@ -51,7 +48,6 @@ using Raven.Server.Storage.Schema;
 using Raven.Server.Utils;
 using Raven.Server.Utils.Metrics;
 using Sparrow;
-using Sparrow.Collections;
 using Sparrow.Json;
 using Voron;
 using Sparrow.Logging;
@@ -64,7 +60,6 @@ using Voron.Exceptions;
 using Voron.Impl;
 using Voron.Impl.Compaction;
 using FacetQuery = Raven.Server.Documents.Queries.Facets.FacetQuery;
-using Raven.Server.Json;
 
 namespace Raven.Server.Documents.Indexes
 {
@@ -140,15 +135,11 @@ namespace Raven.Server.Documents.Indexes
 
         private IIndexingWork[] _indexWorkers;
 
-        public readonly ConcurrentSet<ExecutingQueryInfo> CurrentlyRunningQueries =
-            new ConcurrentSet<ExecutingQueryInfo>();
-
         private IndexingStatsAggregator _lastStats;
 
         private readonly ConcurrentQueue<IndexingStatsAggregator> _lastIndexingStats =
             new ConcurrentQueue<IndexingStatsAggregator>();
 
-        private int _numberOfQueries;
         private bool _didWork;
         private bool _isReplacing;
 
@@ -171,6 +162,7 @@ namespace Raven.Server.Documents.Indexes
         internal NativeMemory.ThreadStats _threadAllocations;
         private string _errorStateReason;
         private bool _isCompactionInProgress;
+        public bool _firstQuery = true;
         internal TimeSpan? _firstBatchTimeout;
         private Lazy<Size?> _transactionSizeLimit;
         private bool _scratchSpaceLimitExceeded;
@@ -633,7 +625,7 @@ namespace Raven.Server.Documents.Indexes
 
             _indexingProcessCancellationTokenSource = CancellationTokenSource.CreateLinkedTokenSource(DocumentDatabase.DatabaseShutdown);
             _indexDisabled = false;
-            
+
             _indexingThread = PoolOfThreads.GlobalRavenThreadPool.LongRunning(x =>
             {
                 try
@@ -2178,34 +2170,41 @@ namespace Raven.Server.Documents.Indexes
         }
 
         public virtual async Task StreamQuery(HttpResponse response, IStreamQueryResultWriter<Document> writer,
-            IndexQueryServerSide query, DocumentsOperationContext documentsContext, OperationCancelToken token)
+            IndexQueryServerSide query, QueryRunner.QueryMarker queryMarker, DocumentsOperationContext documentsContext, OperationCancelToken token)
         {
             var result = new StreamDocumentQueryResult(response, writer, token);
-            await QueryInternal(result, query, documentsContext, token);
+            await QueryInternal(result, query, queryMarker, documentsContext, token);
             result.Flush();
 
             DocumentDatabase.QueryMetadataCache.MaybeAddToCache(query.Metadata, Name);
         }
 
         public virtual async Task StreamIndexEntriesQuery(HttpResponse response, IStreamQueryResultWriter<BlittableJsonReaderObject> writer,
-            IndexQueryServerSide query, DocumentsOperationContext documentsContext, OperationCancelToken token)
+            IndexQueryServerSide query, QueryRunner.QueryMarker queryMarker, DocumentsOperationContext documentsContext, OperationCancelToken token)
         {
             var result = new StreamDocumentIndexEntriesQueryResult(response, writer, token);
-            await IndexEntriesQueryInternal(result, query, documentsContext, token);
+            await IndexEntriesQueryInternal(result, query, queryMarker, documentsContext, token);
             result.Flush();
             DocumentDatabase.QueryMetadataCache.MaybeAddToCache(query.Metadata, Name);
         }
 
-        public virtual async Task<DocumentQueryResult> Query(IndexQueryServerSide query,
-            DocumentsOperationContext documentsContext, OperationCancelToken token)
+        public virtual async Task<DocumentQueryResult> Query(
+            IndexQueryServerSide query,
+            QueryRunner.QueryMarker queryMarker,
+            DocumentsOperationContext documentsContext,
+            OperationCancelToken token)
         {
             var result = new DocumentQueryResult();
-            await QueryInternal(result, query, documentsContext, token);
+            await QueryInternal(result, query, queryMarker, documentsContext, token);
             return result;
         }
 
-        private async Task QueryInternal<TQueryResult>(TQueryResult resultToFill, IndexQueryServerSide query,
-            DocumentsOperationContext documentsContext, OperationCancelToken token)
+        private async Task QueryInternal<TQueryResult>(
+            TQueryResult resultToFill,
+            IndexQueryServerSide query,
+            QueryRunner.QueryMarker queryMarker,
+            DocumentsOperationContext documentsContext,
+            OperationCancelToken token)
             where TQueryResult : QueryResultServerSide<Document>
         {
             QueryInternalPreparation(query);
@@ -2226,7 +2225,7 @@ namespace Raven.Server.Documents.Indexes
             if (query.Metadata.HasExplanations && (query.Metadata.HasIntersect || query.Metadata.HasMoreLikeThis))
                 throw new NotSupportedException("Explanations are not supported by this type of query.");
 
-            using (var marker = MarkQueryAsRunning(query, token))
+            using (var marker = MarkQueryAsRunning(query))
             {
                 var queryDuration = Stopwatch.StartNew();
                 AsyncWaitForIndexing wait = null;
@@ -2354,7 +2353,7 @@ namespace Raven.Server.Documents.Indexes
                                         if (query.Offset != null || query.Limit != null)
                                         {
                                             resultToFill.CappedMaxResults = Math.Min(
-                                                query.Limit ?? int.MaxValue, 
+                                                query.Limit ?? int.MaxValue,
                                                 totalResults.Value - (query.Offset ?? 0)
                                                 );
                                         }
@@ -2398,8 +2397,12 @@ namespace Raven.Server.Documents.Indexes
             }
         }
 
-        private async Task IndexEntriesQueryInternal<TQueryResult>(TQueryResult resultToFill, IndexQueryServerSide query,
-          DocumentsOperationContext documentsContext, OperationCancelToken token)
+        private async Task IndexEntriesQueryInternal<TQueryResult>(
+            TQueryResult resultToFill,
+            IndexQueryServerSide query,
+            QueryRunner.QueryMarker queryMarker,
+            DocumentsOperationContext documentsContext,
+            OperationCancelToken token)
           where TQueryResult : QueryResultServerSide<BlittableJsonReaderObject>
         {
             QueryInternalPreparation(query);
@@ -2420,7 +2423,7 @@ namespace Raven.Server.Documents.Indexes
             if (query.Metadata.HasExplanations && (query.Metadata.HasIntersect || query.Metadata.HasMoreLikeThis))
                 throw new NotSupportedException("Explanations are not supported by this type of query.");
 
-            using (var marker = MarkQueryAsRunning(query, token))
+            using (var marker = MarkQueryAsRunning(query))
             {
                 var queryDuration = Stopwatch.StartNew();
                 AsyncWaitForIndexing wait = null;
@@ -2500,7 +2503,11 @@ namespace Raven.Server.Documents.Indexes
             AssertQueryDoesNotContainFieldsThatAreNotIndexed(query.Metadata);
         }
 
-        public virtual async Task<FacetedQueryResult> FacetedQuery(FacetQuery facetQuery, DocumentsOperationContext documentsContext, OperationCancelToken token)
+        public virtual async Task<FacetedQueryResult> FacetedQuery(
+            FacetQuery facetQuery,
+            QueryRunner.QueryMarker queryMarker,
+            DocumentsOperationContext documentsContext,
+            OperationCancelToken token)
         {
             AssertIndexState();
 
@@ -2512,7 +2519,7 @@ namespace Raven.Server.Documents.Indexes
             MarkQueried(DocumentDatabase.Time.GetUtcNow());
             AssertQueryDoesNotContainFieldsThatAreNotIndexed(query.Metadata);
 
-            using (var marker = MarkQueryAsRunning(query, token))
+            using (var marker = MarkQueryAsRunning(query))
             {
                 var result = new FacetedQueryResult();
 
@@ -2600,7 +2607,11 @@ namespace Raven.Server.Documents.Indexes
             }
         }
 
-        public virtual async Task<SuggestionQueryResult> SuggestionQuery(IndexQueryServerSide query, DocumentsOperationContext documentsContext, OperationCancelToken token)
+        public virtual async Task<SuggestionQueryResult> SuggestionQuery(
+            IndexQueryServerSide query,
+            QueryRunner.QueryMarker queryMarker,
+            DocumentsOperationContext documentsContext,
+            OperationCancelToken token)
         {
             AssertIndexState();
 
@@ -2610,7 +2621,7 @@ namespace Raven.Server.Documents.Indexes
             MarkQueried(DocumentDatabase.Time.GetUtcNow());
             AssertQueryDoesNotContainFieldsThatAreNotIndexed(query.Metadata);
 
-            using (var marker = MarkQueryAsRunning(query, token))
+            using (var marker = MarkQueryAsRunning(query))
             {
                 var result = new SuggestionQueryResult();
 
@@ -2674,11 +2685,14 @@ namespace Raven.Server.Documents.Indexes
             }
         }
 
-        public virtual async Task<IndexEntriesQueryResult> IndexEntries(IndexQueryServerSide query,
-            DocumentsOperationContext documentsContext, OperationCancelToken token)
+        public virtual async Task<IndexEntriesQueryResult> IndexEntries(
+            IndexQueryServerSide query,
+            QueryRunner.QueryMarker queryMarker,
+            DocumentsOperationContext documentsContext, 
+            OperationCancelToken token)
         {
             var result = new IndexEntriesQueryResult();
-            await IndexEntriesQueryInternal(result, query, documentsContext, token);
+            await IndexEntriesQueryInternal(result, query, queryMarker, documentsContext, token);
             return result;
         }
 
@@ -2852,30 +2866,27 @@ namespace Raven.Server.Documents.Indexes
             result.NodeTag = DocumentDatabase.ServerStore.NodeTag;
         }
 
-        private QueryDoneRunning MarkQueryAsRunning(IIndexQuery query, OperationCancelToken token)
+        private IndexQueryDoneRunning MarkQueryAsRunning(IIndexQuery query)
         {
-            var queryStartTime = DateTime.UtcNow;
-            var queryId = Interlocked.Increment(ref _numberOfQueries);
-
-            if (queryId == 1 && _didWork == false)
+            if (_firstQuery && _didWork == false)
+            {
                 _firstBatchTimeout = query.WaitForNonStaleResultsTimeout / 2 ?? DefaultWaitForNonStaleResultsTimeout / 2;
+                _firstQuery = false;
+            }
 
-            var executingQueryInfo = new ExecutingQueryInfo(queryStartTime, query, queryId, token);
-            CurrentlyRunningQueries.Add(executingQueryInfo);
-
-            return new QueryDoneRunning(this, executingQueryInfo);
+            return new IndexQueryDoneRunning(this);
         }
 
-        protected QueryDoneRunning CurrentlyInUse(out bool available)
+        protected IndexQueryDoneRunning CurrentlyInUse(out bool available)
         {
-            var queryDoneRunning = new QueryDoneRunning(this, null);
+            var queryDoneRunning = new IndexQueryDoneRunning(this);
             available = queryDoneRunning.TryHoldLock();
             return queryDoneRunning;
         }
 
-        protected QueryDoneRunning CurrentlyInUse()
+        protected IndexQueryDoneRunning CurrentlyInUse()
         {
-            var queryDoneRunning = new QueryDoneRunning(this, null);
+            var queryDoneRunning = new IndexQueryDoneRunning(this);
             queryDoneRunning.HoldLock();
             return queryDoneRunning;
         }
@@ -3654,20 +3665,18 @@ namespace Raven.Server.Documents.Indexes
             return false;
         }
 
-        protected struct QueryDoneRunning : IDisposable
+        protected struct IndexQueryDoneRunning : IDisposable
         {
             private static readonly TimeSpan DefaultLockTimeout = TimeSpan.FromSeconds(3);
 
             private static readonly TimeSpan ExtendedLockTimeout = TimeSpan.FromSeconds(30);
 
             readonly Index _parent;
-            private readonly ExecutingQueryInfo _queryInfo;
             private bool _hasLock;
 
-            public QueryDoneRunning(Index parent, ExecutingQueryInfo queryInfo)
+            public IndexQueryDoneRunning(Index parent)
             {
                 _parent = parent;
-                _queryInfo = queryInfo;
                 _hasLock = false;
             }
 
@@ -3709,14 +3718,12 @@ namespace Raven.Server.Documents.Indexes
             {
                 if (_hasLock)
                     _parent._currentlyRunningQueriesLock.ExitReadLock();
-                if (_queryInfo != null)
-                    _parent.CurrentlyRunningQueries.TryRemove(_queryInfo);
             }
         }
 
         internal struct ExitWriteLock : IDisposable
         {
-            readonly ReaderWriterLockSlim _rwls;
+            private readonly ReaderWriterLockSlim _rwls;
 
             public ExitWriteLock(ReaderWriterLockSlim rwls)
             {

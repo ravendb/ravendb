@@ -8,7 +8,6 @@ using Microsoft.AspNetCore.Http;
 using Raven.Client.Documents.Operations;
 using Raven.Client.Documents.Queries;
 using Raven.Client.Exceptions;
-using Raven.Server.Documents.Handlers;
 using Raven.Server.Documents.Indexes;
 using Raven.Server.Documents.Queries.Dynamic;
 using Raven.Server.Documents.Queries.Facets;
@@ -43,8 +42,8 @@ namespace Raven.Server.Documents.Queries
             CurrentlyRunningQueries = new ConcurrentSet<ExecutingQueryInfo>();
         }
 
-        internal long GetNextQueryId() => Interlocked.Increment(ref _nextQueryId);
-        internal readonly ConcurrentSet<ExecutingQueryInfo> CurrentlyRunningQueries;
+        private long GetNextQueryId() => Interlocked.Increment(ref _nextQueryId);
+        public readonly ConcurrentSet<ExecutingQueryInfo> CurrentlyRunningQueries;
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public AbstractQueryRunner GetRunner(IndexQueryServerSide query)
@@ -310,6 +309,36 @@ namespace Raven.Server.Documents.Queries
         private static Exception CreateRetriesFailedException(Exception inner)
         {
             return new InvalidOperationException($"Could not execute query. Tried {NumberOfRetries} times.", inner);
+        }
+
+        public QueryMarker MarkQueryAsRunning(string name, IndexQueryServerSide query, OperationCancelToken token)
+        {
+            var queryStartTime = DateTime.UtcNow;
+            var queryId = GetNextQueryId();
+
+            var executingQueryInfo = new ExecutingQueryInfo(queryStartTime, name, query, queryId, token);
+
+            CurrentlyRunningQueries.TryAdd(executingQueryInfo);
+
+            return new QueryMarker(this, executingQueryInfo);
+        }
+
+        public class QueryMarker : IDisposable
+        {
+            private readonly QueryRunner _queryRunner;
+            private readonly ExecutingQueryInfo _queryInfo;
+
+            public QueryMarker(QueryRunner queryRunner, ExecutingQueryInfo queryInfo)
+            {
+                _queryRunner = queryRunner;
+                _queryInfo = queryInfo;
+            }
+
+            public void Dispose()
+            {
+                if (_queryInfo != null)
+                    _queryRunner.CurrentlyRunningQueries.TryRemove(_queryInfo);
+            }
         }
     }
 }
