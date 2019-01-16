@@ -182,6 +182,9 @@ namespace Raven.Server.ServerWide
         public ClusterMaintenanceSupervisor ClusterMaintenanceSupervisor;
         private int _serverCertificateChanged;
 
+        private PoolOfThreads.LongRunningWork _clusterMaintenanceSetupTask;
+        private PoolOfThreads.LongRunningWork _updateTopologyChangeNotification;
+
         public Dictionary<string, ClusterNodeStatusReport> ClusterStats()
         {
             if (_engine.LeaderTag != NodeTag)
@@ -690,8 +693,10 @@ namespace Raven.Server.ServerWide
                     LastClientConfigurationIndex = clientConfigEtag;
             }
 
-            PoolOfThreads.GlobalRavenThreadPool.LongRunning(x => ClusterMaintenanceSetupTask().Wait(ServerShutdown), null, "Cluster Maintenance Setup Task");
-            PoolOfThreads.GlobalRavenThreadPool.LongRunning(x => UpdateTopologyChangeNotification().Wait(ServerShutdown), null, "Update Topology Change Notification Task");
+            _clusterMaintenanceSetupTask = PoolOfThreads.GlobalRavenThreadPool.LongRunning(x => 
+                ClusterMaintenanceSetupTask().Wait(ServerShutdown), null, "Cluster Maintenance Setup Task");
+            _updateTopologyChangeNotification = PoolOfThreads.GlobalRavenThreadPool.LongRunning(x => 
+                UpdateTopologyChangeNotification().Wait(ServerShutdown), null, "Update Topology Change Notification Task");
         }
 
         private void OnStateChanged(object sender, RachisConsensus.StateTransition state)
@@ -1584,6 +1589,18 @@ namespace Raven.Server.ServerWide
                     exceptionAggregator.Execute(_shutdownNotification.Dispose);
 
                     exceptionAggregator.Execute(() => _timer?.Dispose());
+
+                    exceptionAggregator.Execute(() =>
+                    {
+                        if (_clusterMaintenanceSetupTask != null && _clusterMaintenanceSetupTask != PoolOfThreads.LongRunningWork.Current)
+                            _clusterMaintenanceSetupTask.Join(int.MaxValue);
+                    });
+
+                    exceptionAggregator.Execute(() =>
+                    {
+                        if (_updateTopologyChangeNotification != null && _updateTopologyChangeNotification != PoolOfThreads.LongRunningWork.Current)
+                            _updateTopologyChangeNotification.Join(int.MaxValue);
+                    });
 
                     exceptionAggregator.ThrowIfNeeded();
                 }
