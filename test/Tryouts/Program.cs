@@ -1,8 +1,12 @@
 using System;
 using System.Threading.Tasks;
+using FastTests;
 using FastTests.Server.Documents.Queries.Parser;
 using FastTests.Voron.Backups;
 using FastTests.Voron.Compaction;
+using RachisTests.DatabaseCluster;
+using Raven.Client.Documents.Queries;
+using Raven.Tests.Core.Utils.Entities;
 using SlowTests.Authentication;
 using SlowTests.Bugs.MapRedue;
 using SlowTests.Client;
@@ -11,32 +15,22 @@ using SlowTests.Issues;
 using SlowTests.MailingList;
 using Sparrow.Logging;
 using StressTests.Client.Attachments;
+using Xunit;
 
 namespace Tryouts
 {
     public static class Program
     {
-        public static async Task Main(string[] args)
+        public static void Main(string[] args)
         {
-            for (int i = 0; i < 1000; i++)
+            using (var test = new AuthenticationClusterTests())
             {
-                Console.WriteLine(i);
-
-                try
-                {
-                    using (var test = new RavenDB_8288())
-                    {
-                        await test.Queries_will_work_during_index_replacements();
-                    }
-                }
-                catch (Exception e)
-                {
-                    Console.WriteLine(e);
-                    Console.ReadLine();
-                }
+                test.CanReplaceClusterCert().Wait();
             }
-
-            return;
+            /*using (var test = new AuthenticationLetsEncryptTests())
+            {
+                test.CanGetLetsEncryptCertificateAndRenewIt().Wait();
+            }*/
         }
     }
 }

@@ -12,6 +12,7 @@ using Org.BouncyCastle.Pkcs;
 using Org.BouncyCastle.Security;
 using Org.BouncyCastle.X509;
 using Org.BouncyCastle.X509.Extension;
+using Raven.Server.ServerWide;
 using Sparrow.Platform;
 using BigInteger = Org.BouncyCastle.Math.BigInteger;
 using X509Certificate = Org.BouncyCastle.X509.X509Certificate;
@@ -22,41 +23,45 @@ namespace Raven.Server.Utils
     {
         private const int BitsPerByte = 8; 
 
-        public static byte[] CreateSelfSignedCertificate(string commonNameValue, string issuerName, StringBuilder log = null)
+        public static byte[] CreateSelfSignedTestCertificate(string commonNameValue, string issuerName, StringBuilder log = null)
         {
+            // Note this is for tests only!
             CreateCertificateAuthorityCertificate(commonNameValue + " CA", out var ca, out var caSubjectName, log);
             CreateSelfSignedCertificateBasedOnPrivateKey(commonNameValue, caSubjectName, ca, false, false, 0, out var certBytes, log);
             var selfSignedCertificateBasedOnPrivateKey = new X509Certificate2(certBytes, (string)null, X509KeyStorageFlags.MachineKeySet);
             selfSignedCertificateBasedOnPrivateKey.Verify();
+
+            // We had a problem where we didn't cleanup the user store in Linux (~/.dotnet/corefx/cryptography/x509stores/ca)
+            // and it exploded with thousands of certificates. This caused ssl handshakes to fail on that machine, because it would timeout when
+            // trying to match one of these certs to validate the chain
+            RemoveOldTestCertificatesFromOsStore(commonNameValue);
             return certBytes;
         }
 
-        public static void RegisterCertificateInOperatingSystem(X509Certificate2 cert)
+        private static void RemoveOldTestCertificatesFromOsStore(string commonNameValue)
         {
-            if (cert.HasPrivateKey) // the check if made anyway, to ensure we never fail on just these environments
-                throw new InvalidOperationException("When registering the certificate for the purpose of TRUSTED_ISSUERS, we don't want the private key");
-
-            if (PlatformDetails.RunningOnPosix == false)
-                return;
-
-            // due to the way TRUSTED_ISSUERS work in Linux and Windows previous to Win 7
-            // we need to register the certificate in the operating system so the SSL impl
-            // will send the appropriate signers.
-            // At least on Linux, this is done by looking at the _issuers_ of certs in the 
-            // root store
-
-            var storeName = PlatformDetails.RunningOnMacOsx ? StoreName.My : StoreName.Root;
-            using (var store = new X509Store(storeName, StoreLocation.CurrentUser))
+            // We have the same logic in AddCertificateChainToTheUserCertificateAuthorityStoreAndCleanExpiredCerts when the server starts
+            // and when we renew a certificate. There we delete certificates only if expired but here in the tests we delete them all and keep
+            // just the ones from the last couple days
+            var storeName = PlatformDetails.RunningOnMacOsx ? StoreName.My : StoreName.CertificateAuthority;
+            using (var userIntermediateStore = new X509Store(storeName, StoreLocation.CurrentUser, OpenFlags.ReadWrite))
             {
-                store.Open(OpenFlags.ReadWrite);
-
-                foreach (var certificate in store.Certificates)
+                var existingCerts = userIntermediateStore.Certificates.Find(X509FindType.FindBySubjectName, commonNameValue, false);
+                foreach (var c in existingCerts)
                 {
-                    if (certificate.Issuer == cert.Issuer)
-                        return; // something with the same issuer is already there, can skip
-                }
+                    if (c.NotBefore.ToUniversalTime() > DateTime.Today.AddDays(-2))
+                        continue;
 
-                store.Add(cert);
+                    var chain = new X509Chain();
+                    chain.Build(c);
+
+                    foreach (var element in chain.ChainElements)
+                    {
+                        if (element.Certificate.NotBefore.ToUniversalTime() > DateTime.Today.AddDays(-2))
+                            continue;
+                        userIntermediateStore.Remove(element.Certificate);
+                    }
+                }
             }
         }
 
@@ -86,7 +91,6 @@ namespace Raven.Server.Utils
             certBytes = memoryStream.ToArray();
 
             var cert = new X509Certificate2(certBytes, (string)null, X509KeyStorageFlags.PersistKeySet | X509KeyStorageFlags.Exportable | X509KeyStorageFlags.MachineKeySet);
-            RegisterCertificateInOperatingSystem(new X509Certificate2(cert.Export(X509ContentType.Cert), (string)null, X509KeyStorageFlags.MachineKeySet));
             return cert;
         }
 
