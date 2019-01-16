@@ -57,31 +57,30 @@
                                 
                                 <ul>
                                     <li>
-                                        Documents created after <strong><em>Point in time</em></strong>:
+                                        Documents <strong><em>modified</em></strong> after Point in time:
                                         <code data-bind="text: pointInTimeFormatted() + ' UTC'"></code>
-                                        will be moved to <strong><em>Revisions&nbsp;Bin</em></strong>.
+                                        will be reverted (by creating new revision) to latest version before
+                                        <code data-bind="text: pointInTimeFormatted() + ' UTC'"></code>.
                                     </li>
                                     <li>
-                                        If collection has maximum revisions limit and all of them were created after
-                                        <strong><em>Point in time</em></strong>:
+                                        If collection has maximum revisions limit and all of them were <strong><em>created</em></strong> after
+                                        Point in time:
                                         <code data-bind="text: pointInTimeFormatted() + ' UTC'"></code>
                                         the oldest revision will be used.
                                     </li>
                                     <li>
-                                        Documents modified after <strong><em>Point in time</em></strong>:
+                                        Documents <strong><em>created</em></strong> after Point in time:
                                         <code data-bind="text: pointInTimeFormatted() + ' UTC'"></code>
-                                        will be reverted (by creating new revision) to latest version before
-                                        <code data-bind="text: pointInTimeFormatted() + ' UTC'"></code>.
-                                        
-                                        
-                                        
+                                        will be moved to <strong><em>Revisions&nbsp;Bin</em></strong>.
                                     </li>
+                                   
                                     <li>
                                         Remaining documents will not be modified.
                                     </li>
                                 </ul>
                             </div>
                         </div>
+                        <div><strong>Window</strong> parameter is used for performance optimization: since revisions are not sorted by date, we stop the revert process when hitting a versioned document outside the window.</div>
                     </div>
                 </div>
             </div>
