@@ -193,14 +193,14 @@ namespace Raven.Server.ServerWide
             return ClusterMaintenanceSupervisor?.GetStats();
         }
 
-        public async Task UpdateTopologyChangeNotification()
+        public void UpdateTopologyChangeNotification()
         {
             try
             {
                 var delay = 500;
                 while (ServerShutdown.IsCancellationRequested == false)
                 {
-                    await _engine.WaitForState(RachisState.Follower, ServerShutdown);
+                    _engine.WaitForState(RachisState.Follower, ServerShutdown).Wait(ServerShutdown);
                     if (ServerShutdown.IsCancellationRequested)
                         return;
 
@@ -211,7 +211,7 @@ namespace Raven.Server.ServerWide
                     {
                         cts = CancellationTokenSource.CreateLinkedTokenSource(ServerShutdown);
                         leaderChangedTask = _engine.WaitForLeaderChange(cts.Token);
-                        if (await Task.WhenAny(NotificationCenter.WaitForAnyWebSocketClient, leaderChangedTask).WithCancellation(ServerShutdown) == leaderChangedTask)
+                        if (Task.WaitAny(new[] {NotificationCenter.WaitForAnyWebSocketClient, leaderChangedTask}, ServerShutdown) == 1)
                         {
                             // leaderChangedTask has completed
                             continue;
@@ -239,10 +239,11 @@ namespace Raven.Server.ServerWide
                                     ws.Options.ClientCertificates.Add(Server.Certificate.Certificate);
                                 }
 
-                                await ws.ConnectAsync(leaderWsUrl, cts.Token);
+                                ws.ConnectAsync(leaderWsUrl, cts.Token).Wait(ServerShutdown);
                                 while (ws.State == WebSocketState.Open || ws.State == WebSocketState.CloseSent)
                                 {
-                                    using (var notification = await context.ReadFromWebSocket(ws, "ws from Leader", cts.Token))
+                                    var readTask = context.ReadFromWebSocket(ws, "ws from Leader", cts.Token);
+                                    using (var notification = readTask.Result)
                                     {
                                         if (notification == null)
                                             break;
@@ -264,7 +265,7 @@ namespace Raven.Server.ServerWide
                                     }
                                 }
 
-                                delay = await ReconnectionBackoff(delay);
+                                delay = ReconnectionBackoff(delay);
                             }
                         }
                     }
@@ -278,11 +279,11 @@ namespace Raven.Server.ServerWide
                             Logger.Info($"Error during receiving topology updates from the leader. Waiting {delay} [ms] before trying again.", e);
                         }
 
-                        delay = await ReconnectionBackoff(delay);
+                        delay = ReconnectionBackoff(delay);
                     }
                     finally
                     {
-                        await WaitForLeaderChangeTaskToComplete(leaderChangedTask, cts);
+                        WaitForLeaderChangeTaskToComplete(leaderChangedTask, cts);
                     }
                 }
             }
@@ -298,7 +299,7 @@ namespace Raven.Server.ServerWide
             }
         }
 
-        private static async Task WaitForLeaderChangeTaskToComplete(Task leaderChangedTask, CancellationTokenSource cts)
+        private void WaitForLeaderChangeTaskToComplete(Task leaderChangedTask, CancellationTokenSource cts)
         {
             using (cts)
             {
@@ -310,7 +311,7 @@ namespace Raven.Server.ServerWide
                     if (leaderChangedTask == null || leaderChangedTask.IsCompleted)
                         return;
 
-                    await leaderChangedTask;
+                    leaderChangedTask.Wait(ServerShutdown);
                 }
                 catch (OperationCanceledException)
                 {
@@ -319,15 +320,15 @@ namespace Raven.Server.ServerWide
             }
         }
 
-        private async Task<int> ReconnectionBackoff(int delay)
+        private int ReconnectionBackoff(int delay)
         {
-            await TimeoutManager.WaitFor(TimeSpan.FromMilliseconds(delay), ServerShutdown);
+            TimeoutManager.WaitFor(TimeSpan.FromMilliseconds(delay), ServerShutdown).Wait(ServerShutdown);
             return Math.Min(15_000, delay * 2);
         }
 
         internal ClusterObserver Observer { get; set; }
 
-        public async Task ClusterMaintenanceSetupTask()
+        public void ClusterMaintenanceSetupTask()
         {
             while (ServerShutdown.IsCancellationRequested == false)
             {
@@ -335,8 +336,8 @@ namespace Raven.Server.ServerWide
                 {
                     if (_engine.LeaderTag != NodeTag)
                     {
-                        await _engine.WaitForState(RachisState.Leader, ServerShutdown)
-                            .WithCancellation(ServerShutdown);
+                        _engine.WaitForState(RachisState.Leader, ServerShutdown)
+                            .Wait(ServerShutdown);
                         continue;
                     }
 
@@ -354,6 +355,7 @@ namespace Raven.Server.ServerWide
                             {
                                 clusterTopology = _engine.GetTopology(context);
                             }
+
                             var newNodes = clusterTopology.AllNodes;
                             var nodesChanges = ClusterTopology.DictionaryDiff(oldNodes, newNodes);
                             oldNodes = newNodes;
@@ -362,6 +364,7 @@ namespace Raven.Server.ServerWide
                             {
                                 ClusterMaintenanceSupervisor.RemoveFromCluster(node.Key);
                             }
+
                             foreach (var node in nodesChanges.AddedValues)
                             {
                                 ClusterMaintenanceSupervisor.AddToCluster(node.Key, clusterTopology.GetUrlFromTag(node.Key));
@@ -370,13 +373,12 @@ namespace Raven.Server.ServerWide
                             if (newNodes.Count > 1)
                             {
                                 // calculate only if we have more than one node
-                                await LicenseManager.CalculateLicenseLimits(forceFetchingNodeInfo: true);
+                                LicenseManager.CalculateLicenseLimits(forceFetchingNodeInfo: true).Wait(ServerShutdown);
                             }
 
                             var leaderChanged = _engine.WaitForLeaveState(RachisState.Leader, ServerShutdown);
 
-                            if (await Task.WhenAny(topologyChangedTask, leaderChanged)
-                                    .WithCancellation(ServerShutdown) == leaderChanged)
+                            if (Task.WaitAny(new[] {topologyChangedTask, leaderChanged}, ServerShutdown) == 1)
                                 break;
                         }
                     }
@@ -695,9 +697,9 @@ namespace Raven.Server.ServerWide
             }
 
             _clusterMaintenanceSetupTask = PoolOfThreads.GlobalRavenThreadPool.LongRunning(x => 
-                ClusterMaintenanceSetupTask().Wait(ServerShutdown), null, "Cluster Maintenance Setup Task");
+                ClusterMaintenanceSetupTask(), null, "Cluster Maintenance Setup Task");
             _updateTopologyChangeNotification = PoolOfThreads.GlobalRavenThreadPool.LongRunning(x => 
-                UpdateTopologyChangeNotification().Wait(ServerShutdown), null, "Update Topology Change Notification Task");
+                UpdateTopologyChangeNotification(), null, "Update Topology Change Notification Task");
         }
 
         private void OnStateChanged(object sender, RachisConsensus.StateTransition state)
