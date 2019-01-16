@@ -8,7 +8,7 @@ class revertRevisionsRequest {
     static defaultWindowValue = 96;
     
     date = ko.observable<string>();
-    windowValue = ko.observable<number>(); //TODO: do we need window here?
+    windowValue = ko.observable<number>();
     windowMagnitude = ko.observable<timeMagnitude>("hours");
 
     pointInTimeFormatted: KnockoutComputed<string>;
