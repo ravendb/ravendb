@@ -1,14 +1,7 @@
-﻿using System;
-using System.Collections.Generic;
-using System.IO;
+﻿using System.Collections.Generic;
 using System.Linq;
 using System.Net;
 using System.Threading.Tasks;
-using Raven.Client;
-using Raven.Client.Exceptions.Documents.Indexes;
-using Raven.Server.Documents.Indexes;
-using Raven.Server.Documents.Queries;
-using Raven.Server.Json;
 using Raven.Server.Routing;
 using Raven.Server.ServerWide.Context;
 using Sparrow.Json;
@@ -21,22 +14,11 @@ namespace Raven.Server.Documents.Handlers.Debugging
         [RavenAction("/databases/*/debug/queries/kill", "POST", AuthorizationStatus.ValidUser)]
         public Task KillQuery()
         {
-            ExecutingQueryInfo query;
             var name = GetQueryStringValueAndAssertIfSingleAndNotEmpty("indexName");
             var id = GetLongQueryString("id");
-            if (name == Constants.Documents.Indexing.DummyGraphIndexName)
-            {
-                query = Database.QueryRunner.CurrentlyRunningQueries.FirstOrDefault(q => q.QueryId == id);
-            }
-            else
-            {
-                var index = Database.IndexStore.GetIndex(name);
-                if (index == null)
-                    IndexDoesNotExistException.ThrowFor(name);
 
-                query = index.CurrentlyRunningQueries
-                    .FirstOrDefault(q => q.QueryId == id);
-            }
+            var query = Database.QueryRunner.CurrentlyRunningQueries
+                .FirstOrDefault(x => x.IndexName == name && x.QueryId == id);
 
             if (query == null)
             {
@@ -48,31 +30,27 @@ namespace Raven.Server.Documents.Handlers.Debugging
 
             return NoContent();
         }
-        
+
         [RavenAction("/databases/*/debug/queries/running", "GET", AuthorizationStatus.ValidUser, IsDebugInformationEndpoint = true)]
         public Task RunningQueries()
         {
-            var indexes = Database
-                .IndexStore
-                .GetIndexes()
-                .ToList();
-
             using (ContextPool.AllocateOperationContext(out DocumentsOperationContext context))
             using (var writer = new AsyncBlittableJsonTextWriter(context, ResponseBodyStream(), Database.DatabaseShutdown))
             {
                 writer.WriteStartObject();
+
                 var isFirst = true;
-                foreach (var index in indexes)
+                foreach (var group in Database.QueryRunner.CurrentlyRunningQueries.GroupBy(x => x.IndexName))
                 {
                     if (isFirst == false)
                         writer.WriteComma();
                     isFirst = false;
 
-                    writer.WritePropertyName(index.Name);
+                    writer.WritePropertyName(group.Key);
                     writer.WriteStartArray();
 
                     var isFirstInternal = true;
-                    foreach (var query in index.CurrentlyRunningQueries)
+                    foreach (var query in group)
                     {
                         if (isFirstInternal == false)
                             writer.WriteComma();
@@ -84,25 +62,7 @@ namespace Raven.Server.Documents.Handlers.Debugging
 
                     writer.WriteEndArray();
                 }
-                if (indexes.Count != 0)
-                    writer.WriteComma();
 
-                writer.WritePropertyName("GraphQueries");
-                writer.WriteStartArray();
-
-                isFirst = true;
-
-                foreach (var query in Database.QueryRunner.CurrentlyRunningQueries)
-                {
-                    if (isFirst == false)
-                        writer.WriteComma();
-
-                    isFirst = false;
-
-                    query.Write(writer, context);
-                }
-
-                writer.WriteEndArray();
                 writer.WriteEndObject();
             }
 

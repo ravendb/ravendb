@@ -6,7 +6,6 @@ using Microsoft.AspNetCore.Http;
 using Raven.Client.Documents.Operations;
 using Raven.Client.Documents.Queries;
 using Raven.Client.Exceptions.Documents.Indexes;
-using Raven.Server.Documents.Handlers;
 using Raven.Server.Documents.Indexes;
 using Raven.Server.Documents.Indexes.Auto;
 using Raven.Server.Documents.Queries.Suggestions;
@@ -34,7 +33,10 @@ namespace Raven.Server.Documents.Queries.Dynamic
         {
             var index = await MatchIndex(query, true, customStalenessWaitTimeout: TimeSpan.FromSeconds(60), documentsContext, token.Token);
 
-            await index.StreamQuery(response, writer, query, documentsContext, token);
+            using (var marker = QueryRunner.MarkQueryAsRunning(index.Name, query, token))
+            {
+                await index.StreamQuery(response, writer, query, marker, documentsContext, token);
+            }
         }
 
         public override async Task<DocumentQueryResult> ExecuteQuery(IndexQueryServerSide query, DocumentsOperationContext documentsContext, long? existingResultEtag, OperationCancelToken token)
@@ -50,7 +52,10 @@ namespace Raven.Server.Documents.Queries.Dynamic
                     return DocumentQueryResult.NotModifiedResult;
             }
 
-            return await index.Query(query, documentsContext, token);
+            using (var marker = QueryRunner.MarkQueryAsRunning(index.Name, query, token))
+            {
+                return await index.Query(query, marker, documentsContext, token);
+            }
         }
 
         public override async Task<IndexEntriesQueryResult> ExecuteIndexEntriesQuery(IndexQueryServerSide query, DocumentsOperationContext context, long? existingResultEtag, OperationCancelToken token)
@@ -67,7 +72,10 @@ namespace Raven.Server.Documents.Queries.Dynamic
                     return IndexEntriesQueryResult.NotModifiedResult;
             }
 
-            return await index.IndexEntries(query, context, token);
+            using (var marker = QueryRunner.MarkQueryAsRunning(index.Name, query, token))
+            {
+                return await index.IndexEntries(query, marker, context, token);
+            }
         }
 
         public override Task ExecuteStreamIndexEntriesQuery(IndexQueryServerSide query, DocumentsOperationContext documentsContext, HttpResponse response,
@@ -80,21 +88,30 @@ namespace Raven.Server.Documents.Queries.Dynamic
         {
             var index = await MatchIndex(query, true, null, context, token.Token);
 
-            return await ExecuteDelete(query, index, options, context, onProgress, token);
+            using (var marker = QueryRunner.MarkQueryAsRunning(index.Name, query, token))
+            {
+                return await ExecuteDelete(query, marker, index, options, context, onProgress, token);
+            }
         }
 
         public override async Task<IOperationResult> ExecutePatchQuery(IndexQueryServerSide query, QueryOperationOptions options, PatchRequest patch, BlittableJsonReaderObject patchArgs, DocumentsOperationContext context, Action<IOperationProgress> onProgress, OperationCancelToken token)
         {
             var index = await MatchIndex(query, true, null, context, token.Token);
 
-            return await ExecutePatch(query, index, options, patch, patchArgs, context, onProgress, token);
+            using (var marker = QueryRunner.MarkQueryAsRunning(index.Name, query, token))
+            {
+                return await ExecutePatch(query, marker, index, options, patch, patchArgs, context, onProgress, token);
+            }
         }
 
         public override async Task<SuggestionQueryResult> ExecuteSuggestionQuery(IndexQueryServerSide query, DocumentsOperationContext documentsContext, long? existingResultEtag, OperationCancelToken token)
         {
             var index = await MatchIndex(query, true, null, documentsContext, token.Token);
 
-            return await ExecuteSuggestion(query, index, documentsContext, existingResultEtag, token);
+            using (var marker = QueryRunner.MarkQueryAsRunning(index.Name, query, token))
+            {
+                return await ExecuteSuggestion(query, marker, index, documentsContext, existingResultEtag, token);
+            }
         }
 
         private async Task<Index> MatchIndex(IndexQueryServerSide query, bool createAutoIndexIfNoMatchIsFound, TimeSpan? customStalenessWaitTimeout, DocumentsOperationContext docsContext,

@@ -117,26 +117,14 @@ namespace Raven.Server.Documents.Queries
             throw new NotImplementedException();
         }
 
-        private GraphQueryDoneRunning MarkQueryAsRunning(IIndexQuery query, OperationCancelToken token)
-        {
-            var queryStartTime = DateTime.UtcNow;
-            var queryId = Database.QueryRunner.GetNextQueryId();
-
-
-            var executingQueryInfo = new ExecutingQueryInfo(queryStartTime, query, queryId, token);
-            Database.QueryRunner.CurrentlyRunningQueries.TryAdd(executingQueryInfo);
-
-            return new GraphQueryDoneRunning(this, executingQueryInfo);
-        }
-
-        private async Task<TResult> ExecuteQuery<TResult>(TResult final,IndexQueryServerSide query, DocumentsOperationContext documentsContext, long? existingResultEtag, OperationCancelToken token) where TResult : QueryResultServerSide<Document>
+        private async Task<TResult> ExecuteQuery<TResult>(TResult final, IndexQueryServerSide query, DocumentsOperationContext documentsContext, long? existingResultEtag, OperationCancelToken token) where TResult : QueryResultServerSide<Document>
         {
             try
             {
                 if (Database.ServerStore.Configuration.Core.FeaturesAvailability == FeaturesAvailability.Stable)
                     FeaturesAvailabilityException.Throw("Graph Queries");
 
-                using (MarkQueryAsRunning(query, token))
+                using (QueryRunner.MarkQueryAsRunning(Constants.Documents.Indexing.DummyGraphIndexName, query, token))
                 using (var timingScope = new QueryTimingsScope())
                 {
                     var qr = await GetQueryResults(query, documentsContext, existingResultEtag, token);
@@ -211,10 +199,10 @@ namespace Raven.Server.Documents.Queries
                     final.ResultEtag = qr.QueryPlan.ResultEtag;
                     return final;
                 }
-            } 
+            }
             catch (OperationCanceledException oce)
             {
-                throw new OperationCanceledException($"Database:{Database} Query:{query.Metadata.Query} has been cancelled ",oce);
+                throw new OperationCanceledException($"Database:{Database} Query:{query.Metadata.Query} has been cancelled ", oce);
             }
         }
 
@@ -284,7 +272,7 @@ namespace Raven.Server.Documents.Queries
 
             if (query.Start > 0)
             {
-                matchResults.RemoveRange(0,Math.Min(query.Start, matchResults.Count));
+                matchResults.RemoveRange(0, Math.Min(query.Start, matchResults.Count));
             }
 
             if (query.PageSize < matchResults.Count)
@@ -320,14 +308,14 @@ namespace Raven.Server.Documents.Queries
                 final.AddResult(result);
             }
         }
-                
+
         public override async Task ExecuteStreamQuery(IndexQueryServerSide query, DocumentsOperationContext documentsContext, HttpResponse response, IStreamQueryResultWriter<Document> writer, OperationCancelToken token)
         {
             var result = new StreamDocumentQueryResult(response, writer, token)
             {
                 IndexName = Constants.Documents.Indexing.DummyGraphIndexName
             };
-            result =  await ExecuteQuery(result, query, documentsContext, null, token);
+            result = await ExecuteQuery(result, query, documentsContext, null, token);
             result.Flush();
         }
 

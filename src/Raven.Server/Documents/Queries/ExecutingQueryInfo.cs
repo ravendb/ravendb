@@ -3,7 +3,6 @@ using System.Diagnostics;
 using Raven.Client.Documents.Queries;
 using Raven.Server.Json;
 using Raven.Server.ServerWide;
-using Raven.Server.ServerWide.Context;
 using Sparrow.Json;
 
 namespace Raven.Server.Documents.Queries
@@ -11,6 +10,8 @@ namespace Raven.Server.Documents.Queries
     public class ExecutingQueryInfo
     {
         public DateTime StartTime { get; }
+
+        public string IndexName { get; set; }
 
         public IIndexQuery QueryInfo { get; }
 
@@ -24,9 +25,10 @@ namespace Raven.Server.Documents.Queries
 
         private readonly Stopwatch _stopwatch;
 
-        public ExecutingQueryInfo(DateTime startTime, IIndexQuery queryInfo, long queryId, OperationCancelToken token)
+        public ExecutingQueryInfo(DateTime startTime, string indexName, IIndexQuery queryInfo, long queryId, OperationCancelToken token)
         {
             StartTime = startTime;
+            IndexName = indexName;
             QueryInfo = queryInfo;
             QueryId = queryId;
             _stopwatch = Stopwatch.StartNew();
@@ -43,6 +45,10 @@ namespace Raven.Server.Documents.Queries
             
             writer.WritePropertyName(nameof(Duration));
             writer.WriteString(Duration.ToString());
+            writer.WriteComma();
+
+            writer.WritePropertyName(nameof(IndexName));
+            writer.WriteString(IndexName);
             writer.WriteComma();
 
             writer.WritePropertyName(nameof(QueryId));
