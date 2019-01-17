@@ -415,11 +415,11 @@ namespace Raven.Server.Documents.Patch
             }
             if (obj.Blittable != null)
             {
-                foreach (var propertyIndex in obj.Blittable.GetPropertiesByInsertionOrder())
+                for (int i = 0; i < obj.Blittable.Count; i++)
                 {
                     var prop = new BlittableJsonReaderObject.PropertyDetails();
 
-                    obj.Blittable.GetPropertyByIndex(propertyIndex, ref prop);
+                    obj.Blittable.GetPropertyByIndex(i, ref prop);
                     
                     var existInObject = obj.OwnValues.TryGetValue(prop.Name, out var modifiedValue);
 

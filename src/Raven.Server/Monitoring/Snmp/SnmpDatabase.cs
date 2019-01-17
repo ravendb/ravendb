@@ -238,9 +238,9 @@ namespace Raven.Server.Monitoring.Snmp
                 return result;
 
             var propertyDetails = new BlittableJsonReaderObject.PropertyDetails();
-            foreach (var index in json.GetPropertiesByInsertionOrder())
+            for (int i = 0; i < json.Count; i++)
             {
-                json.GetPropertyByIndex(index, ref propertyDetails);
+                json.GetPropertyByIndex(i, ref propertyDetails);
 
                 result[propertyDetails.Name] = (long)propertyDetails.Value;
             }

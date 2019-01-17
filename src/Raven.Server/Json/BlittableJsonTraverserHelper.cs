@@ -122,9 +122,9 @@ namespace Raven.Server.Json
                     var property = new BlittableJsonReaderObject.PropertyDetails();
                     var values = new object[obj.Count];
 
-                    foreach (var propertyIndex in obj.GetPropertiesByInsertionOrder())
+                    for (int i = 0; i < obj.Count; i++)
                     {
-                        obj.GetPropertyByIndex(propertyIndex, ref property);
+                        obj.GetPropertyByIndex(i, ref property);
                         var val = isKey ? property.Name : property.Value;
                         values[index++] = TypeConverter.ConvertForIndexing(val);
                     }

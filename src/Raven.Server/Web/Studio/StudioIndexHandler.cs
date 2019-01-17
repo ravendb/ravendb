@@ -93,9 +93,9 @@ namespace Raven.Server.Web.Studio
             var result = new Dictionary<string, string>();
 
             BlittableJsonReaderObject.PropertyDetails propertyDetails = new BlittableJsonReaderObject.PropertyDetails();
-            foreach (var propertyIndex in json.GetPropertiesByInsertionOrder())
+            for (int i = 0; i < json.Count; i++)
             {
-                json.GetPropertyByIndex(propertyIndex, ref propertyDetails);
+                json.GetPropertyByIndex(i, ref propertyDetails);
 
                 result[propertyDetails.Name] = propertyDetails.Value?.ToString();
             }
