@@ -1602,10 +1602,6 @@ namespace Raven.Server.ServerWide
                             }
                         });
 
-                    exceptionAggregator.Execute(_shutdownNotification.Dispose);
-
-                    exceptionAggregator.Execute(() => _timer?.Dispose());
-
                     exceptionAggregator.Execute(() =>
                     {
                         if (_clusterMaintenanceSetupTask != null && _clusterMaintenanceSetupTask != PoolOfThreads.LongRunningWork.Current)
@@ -1617,6 +1613,10 @@ namespace Raven.Server.ServerWide
                         if (_updateTopologyChangeNotification != null && _updateTopologyChangeNotification != PoolOfThreads.LongRunningWork.Current)
                             _updateTopologyChangeNotification.Join(int.MaxValue);
                     });
+
+                    exceptionAggregator.Execute(_shutdownNotification.Dispose);
+
+                    exceptionAggregator.Execute(() => _timer?.Dispose());
 
                     exceptionAggregator.ThrowIfNeeded();
                 }
