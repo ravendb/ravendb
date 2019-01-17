@@ -1,6 +1,7 @@
-#if defined(__unix__) || defined(__APPLE__)
-
+#ifndef _GNU_SOURCE
 #define _GNU_SOURCE
+#endif
+
 #include <unistd.h>
 #include <sys/types.h>
 #include <sys/stat.h>
@@ -11,10 +12,20 @@
 #include <string.h>
 #include <libgen.h>
 #include <sys/mman.h>
+#include <stdio.h>
 
 #include "rvn.h"
 #include "internal_posix.h"
 #include "status_codes.h"
+
+EXPORT int32_t
+rvn_memory_sync(void *address, int64_t size, int32_t *detailed_error_code)
+{
+    int32_t rc = msync(address, size, MS_SYNC);
+    if (rc != 0)
+        *detailed_error_code = errno;
+    return rc;
+}
 
 PRIVATE int32_t
 _sync_directory_for_internal(char *dir_path, int32_t *detailed_error_code)
@@ -47,9 +58,11 @@ _sync_directory_for_internal(char *dir_path, int32_t *detailed_error_code)
     }
 
     rc = SUCCESS;
+    goto cleanup;
 
 error_cleanup:
     *detailed_error_code = errno;
+cleanup:
     if (fd != -1)
         close(fd);
 
@@ -89,7 +102,7 @@ _sync_directory_maybe_symblink(char *dir_path, int32_t depth,
             rc = _sync_directory_for_internal(dir_path, detailed_error_code);
             goto success;
         }
-
+        
         if (len < 0)
         {
             rc = FAIL_STAT_FILE;
@@ -120,6 +133,7 @@ _sync_directory_maybe_symblink(char *dir_path, int32_t depth,
     rc = _sync_directory_maybe_symblink(link_name,
                                         depth - 1,
                                         detailed_error_code);
+    goto success;
 
 error_cleanup:
     *detailed_error_code = errno;
@@ -152,14 +166,3 @@ _sync_directory_for(const char *file_path, int32_t *detailed_error_code)
 
     return rc;
 }
-
-EXPORT int32_t
-rvn_memory_sync(void *address, int64_t size, int32_t *detailed_error_code)
-{    
-    int32_t rc = msync(address, size, MS_SYNC);
-    if (rc != 0)
-        *detailed_error_code = errno;
-    return rc;
-}
-
-#endif

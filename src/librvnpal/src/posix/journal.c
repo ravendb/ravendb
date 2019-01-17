@@ -1,95 +1,83 @@
-#if defined(__unix__) && !defined(__APPLE__)
-
-#define __USE_FILE_OFFSET64
-
 #ifndef _GNU_SOURCE
 #define _GNU_SOURCE
-#endif
+#endif 
 
-#include <stdint.h>
-#include <rvn.h>
-#include <status_codes.h>
 #include <unistd.h>
 #include <sys/types.h>
 #include <sys/stat.h>
 #include <fcntl.h>
 #include <errno.h>
 #include <stdio.h>
+#include <assert.h>
 
-int32_t
-rvn_open_journal(char* file_name, int32_t mode, int64_t required_size, void** handle, int64_t* actual_size, int32_t* error_code)
+#include "rvn.h"
+#include "status_codes.h"
+#include "internal_posix.h"
+
+EXPORT int32_t
+rvn_open_journal_for_writes(const char *file_name, int32_t transaction_mode, int64_t initial_file_size, void **handle, int64_t *actual_size, int32_t *detailed_error_code)
 {
-    int rc;
+    assert(initial_file_size > 0);
+
+    int32_t rc;
     struct stat fs;
-    int flags = O_DSYNC | O_DIRECT;
-    if (mode & JOURNAL_MODE_DANGER)
+    int32_t flags = O_DSYNC | O_DIRECT;
+    if (transaction_mode == JOURNAL_MODE_DANGER)
         flags = 0;
 
-    if (sizeof(void*) == 4) /* 32 bits */
+    if (sizeof(int) == 4) /* 32 bits */
         flags |= O_LARGEFILE;
 
-    struct stat buffer;
-    int exist = stat(file_name, &buffer);
-    int fd = open(file_name, flags | O_WRONLY | O_CREAT, S_IWUSR | S_IRUSR);
-    
-    if (-1 == fd)
+    int32_t fd = open(file_name, flags | O_WRONLY | O_CREAT, S_IWUSR | S_IRUSR);
+    if (fd == -1)
     {
         rc = FAIL_OPEN_FILE;
         goto error_cleanup;
     }
+    *handle = (void*)(int64_t)fd;
 
-#if __APPLE__
-    /* mac doesn't support O_DIRECT, we fcntl instead: */
-    if (!fcntl(fd, F_NOCACHE, 1) && !(flags & JOURNAL_MODE_DANGER))
+    if ((flags & O_DIRECT) == false && _finish_open_file_with_odirect(fd) == -1)
     {
         rc = FAIL_SYNC_FILE;
         goto error_cleanup;
-    }
-#endif
+    } 
 
-    if (fstat(fd, &fs))
+    if (fstat(fd, &fs) == -1)
     {
-        rc = FAIL_SEEK_FILE;
+        rc = FAIL_STAT_FILE;
         goto error_cleanup;
     }
 
-    int remainder = required_size % 4096;
-    required_size = remainder ? required_size + 4096 - remainder : required_size;
-    if (fs.st_size < required_size)
+    if (fs.st_size < initial_file_size)
     {
-        rc = rvn_allocate_file_space(fd, required_size, (int32_t*)error_code);
-        if(rc)
-            goto error_cleanup;
+        rc = _resize_file(*handle, initial_file_size, detailed_error_code);
+        if (rc != SUCCESS)
+            goto error_clean_With_error;
+
+        *actual_size = initial_file_size;
     }
-    
-    *actual_size = required_size;
-    *(int*)handle = fd;
+    else
+    {
+        *actual_size = fs.st_size;
+    }    
     return SUCCESS;
 
 error_cleanup:
-    *(int32_t*)error_code = errno;
+    *detailed_error_code = errno;
+error_clean_With_error:
     if (fd != -1)
-    {
         close(fd);
-        if(-1 == exist)
-        {
-            remove(file_name);
-        }
-    }
-    
+
     return rc;
 }
 
-int32_t
-rvn_close_journal(void* handle, int32_t* error_code)
+EXPORT int32_t
+rvn_close_journal(void *handle, int32_t *detailed_error_code)
 {
-#pragma GCC diagnostic ignored "-Wpointer-to-int-cast"
-    int fd = (int)handle;
-#pragma GCC diagnostic pop
-
-    if(close(fd))
+    int32_t fd = (int32_t)(int64_t)handle;
+    if (close(fd) == -1)
     {
-        *error_code = errno;
+        *detailed_error_code = errno;
         return FAIL_CLOSE;
     }
 
@@ -97,86 +85,42 @@ rvn_close_journal(void* handle, int32_t* error_code)
 }
 
 EXPORT int32_t
-rvn_write_journal(void* handle, char* buffer, uint64_t size, int64_t offset, int32_t* error_code)
+rvn_write_journal(void *handle, void *buffer, int64_t size, int64_t offset, int32_t *detailed_error_code)
 {
-
-    int fd = (int)(long)handle;
-
-    return rvn_pwrite(fd, buffer, size, offset, (int32_t*)error_code);
+    int32_t fd = (int32_t)(int64_t)handle;
+    return _pwrite(fd, buffer, size, offset, detailed_error_code);
 }
 
 EXPORT int32_t
-rvn_read_journal(char* file_name, void** handle, char* buffer, uint64_t required_size, int64_t offset, uint64_t* actual_size, int32_t* error_code)
-{
-    int fd = *(int*)handle;
-    *actual_size = fd;
-    int rc;
-    if (-1 == fd)
-    {
-        fd = open(file_name, O_RDONLY, S_IRUSR);
-
-        if (-1 == fd)
-        {
-            rc = FAIL_OPEN_FILE;
-            goto error_cleanup;
-        }
-        
-        *(int*)handle = fd;
-    }
-    
-    int remain_size = required_size;
-    int already_read;
-    while (remain_size > 0)
-    {
-        already_read = pread(fd, buffer, remain_size, offset);
-        if(-1 == already_read)
-        {
-            rc = FAIL_READ_FILE;
-            goto error_cleanup;
-        }
-        if (0 == already_read) /*eof*/
-            break;
-            
-        remain_size -= already_read;
-        buffer += already_read;
-        offset += already_read;
-    }
-    
-    *actual_size = required_size - remain_size;
-    return SUCCESS;
-    
-    error_cleanup:
-        *error_code = errno;
-        return rc;
+rvn_open_journal_for_reads(const char *file_name, void **handle, int32_t *detailed_error_code){
+    return _open_file_to_read(file_name, handle, detailed_error_code);
 }
 
 EXPORT int32_t
-rvn_truncate_journal(char* file_name, void* handle, uint64_t size, int32_t* error_code)
+rvn_read_journal(void *handle, void *buffer, int64_t required_size, int64_t offset, int64_t *actual_size, int32_t *detailed_error_code)
 {
-    int fd = (int)(long)handle;
+    return _read_file(handle, buffer, required_size, offset, actual_size, detailed_error_code);
+}
 
-    int rc;
-    if (ftruncate(fd, size))
-    {
-        rc = FAIL_TRUNCATE;
-        goto error_cleanup;
-    }
-    
-#if __APPLE__
-    if(fcntl(fd, F_FULLFSYNC, 0)) /*F_FULLFSYNC ignores args*/
-#else
-    if(fsync(fd))
-#endif
+EXPORT int32_t
+rvn_truncate_journal(const char *file_name, void *handle, int64_t size, int32_t *detailed_error_code)
+{
+    int32_t rc;
+    int32_t fd = (int32_t)(int64_t)handle;
+
+    if (_flush_file(fd) == -1)
     {
         rc = FAIL_SYNC_FILE;
         goto error_cleanup;
-    }    
+    }
 
-    return rvn_sync_directory_for(file_name, error_code);
-    
+    rc = _resize_file(handle, size, detailed_error_code);
+    if(rc != SUCCESS)
+        return rc;
+
+    return _sync_directory_for(file_name, detailed_error_code);
+
 error_cleanup:
-    *error_code = errno;
+    *detailed_error_code = errno;
     return rc;
 }
-
-#endif

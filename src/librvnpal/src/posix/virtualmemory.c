@@ -1,6 +1,7 @@
-#if defined(__unix__) || defined(__APPLE__)
-
+#ifndef _GNU_SOURCE
 #define _GNU_SOURCE
+#endif
+
 #include <unistd.h>
 #include <stdlib.h>
 #include <stdio.h>
@@ -12,6 +13,7 @@
 
 #include "rvn.h"
 #include "status_codes.h"
+#include "internal_posix.h"
 
 EXPORT int32_t
 rvn_prefetch_virtual_memory(void *virtualAddress, int64_t length, int32_t *detailed_error_code)
@@ -49,4 +51,3 @@ rvn_protect_range(void *start_address, int64_t size, int32_t protection, int32_t
     return rc;
 }
 
-#endif
