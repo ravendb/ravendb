@@ -743,7 +743,6 @@ namespace Raven.Server.Documents.Replication
                     Base64HashDispose.Dispose();
                 }
                 else if (Type == ReplicationBatchItem.ReplicationItemType.AttachmentTombstone ||
-                         Type == ReplicationBatchItem.ReplicationItemType.CounterTombstone ||
                          Type == ReplicationBatchItem.ReplicationItemType.RevisionTombstone)
                 {
                     KeyDispose.Dispose();
@@ -851,17 +850,6 @@ namespace Raven.Server.Documents.Replication
                     item.DocumentSize = sizeOfData;
 
                     ReadExactly(sizeOfData, ref writeBuffer);
-                }
-                else if (item.Type == ReplicationBatchItem.ReplicationItemType.CounterTombstone)
-                {
-                    var keySize = *(int*)ReadExactly(sizeof(int));
-                    item.KeyDispose = Slice.From(context.Allocator, ReadExactly(keySize), keySize, out item.Key);
-
-                    var collectionSize = *(int*)ReadExactly(sizeof(int));
-                    Debug.Assert(collectionSize > 0);
-                    item.Collection = Encoding.UTF8.GetString(ReadExactly(collectionSize), collectionSize);
-
-                    item.LastModifiedTicks = *(long*)ReadExactly(sizeof(long));
                 }
                 else
                 {
@@ -1151,14 +1139,6 @@ namespace Raven.Server.Documents.Replication
                                 database.DocumentsStorage.CountersStorage.PutCounters(context,
                                     item.Id, item.Collection, item.ChangeVector,
                                     counterValues);
-                            }
-                            else if (item.Type == ReplicationBatchItem.ReplicationItemType.CounterTombstone)
-                            {
-                                database.DocumentsStorage.CountersStorage.DeleteCounter(context, item.Key, item.Collection,
-                                    item.ChangeVector,
-                                    item.LastModifiedTicks,
-                                    // we force the tombstone because we have to replicate it further
-                                    forceTombstone: true);
                             }
                             else
                             {
