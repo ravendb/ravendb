@@ -145,7 +145,8 @@ namespace Raven.Server.Documents.PeriodicBackup
 
                 GenerateFolderNameAndBackupDirectory(now, out var folderName, out var backupDirectory);
                 var startDocumentEtag = _isFullBackup == false ? _previousBackupStatus.LastEtag : null;
-                var fileName = GetFileName(_isFullBackup, backupDirectory.FullPath, now, _configuration.BackupType, out string backupFilePath);
+                var isEncrypted = CheckIfEncrypted(); 
+                var fileName = GetFileName(_isFullBackup, backupDirectory.FullPath, now, _configuration.BackupType, isEncrypted, out string backupFilePath);
                 var lastEtag = CreateLocalBackupOrSnapshot(runningBackupStatus, backupFilePath, startDocumentEtag, onProgress);
 
                 runningBackupStatus.LocalBackup.BackupDirectory = _backupToLocalFolder ? backupDirectory.FullPath : null;
@@ -249,6 +250,15 @@ namespace Raven.Server.Documents.PeriodicBackup
             }
         }
 
+        private bool CheckIfEncrypted()
+        {
+            if ((_database.MasterKey != null) &&
+                (_configuration.BackupEncryptionSettings?.EncryptionMode == EncryptionMode.UseDatabaseKey))
+                return true;
+            return (_configuration.BackupEncryptionSettings != null) &&
+                   (_configuration.BackupEncryptionSettings?.EncryptionMode != EncryptionMode.None);
+        }
+
         private long GetDatabaseEtagForBackup()
         {
             using (_serverStore.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
@@ -339,9 +349,10 @@ namespace Raven.Server.Documents.PeriodicBackup
             string backupFolder,
             string now,
             BackupType backupType,
+            bool isEncrypted,
             out string backupFilePath)
         {
-            var backupExtension = GetBackupExtension(backupType, isFullBackup);
+            var backupExtension = GetBackupExtension(backupType, isFullBackup, isEncrypted);
             var fileName = isFullBackup ?
                 GetFileNameFor(backupExtension, now, backupFolder, out backupFilePath, throwWhenFileExists: true) :
                 GetFileNameFor(backupExtension, now, backupFolder, out backupFilePath);
@@ -349,7 +360,7 @@ namespace Raven.Server.Documents.PeriodicBackup
             return fileName;
         }
 
-        private static string GetBackupExtension(BackupType type, bool isFullBackup)
+        private static string GetBackupExtension(BackupType type, bool isFullBackup, bool isEncrypted)
         {
             if (isFullBackup == false)
                 return Constants.Documents.PeriodicBackup.IncrementalBackupExtension;
@@ -357,9 +368,11 @@ namespace Raven.Server.Documents.PeriodicBackup
             switch (type)
             {
                 case BackupType.Backup:
-                    return Constants.Documents.PeriodicBackup.FullBackupExtension;
+                    return isEncrypted ? 
+                        Constants.Documents.PeriodicBackup.EncryptedFullBackupExtension : Constants.Documents.PeriodicBackup.FullBackupExtension;
                 case BackupType.Snapshot:
-                    return Constants.Documents.PeriodicBackup.SnapshotExtension;
+                    return isEncrypted ? 
+                        Constants.Documents.PeriodicBackup.EncryptedSnapshotExtension : Constants.Documents.PeriodicBackup.SnapshotExtension;
                 default:
                     throw new ArgumentOutOfRangeException(nameof(type), type, null);
             }

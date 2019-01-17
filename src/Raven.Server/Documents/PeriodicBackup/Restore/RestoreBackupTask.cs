@@ -82,18 +82,18 @@ namespace Raven.Server.Documents.PeriodicBackup.Restore
 
                 var extension = Path.GetExtension(firstFile);
                 var snapshotRestore = false;
-                if (extension == Constants.Documents.PeriodicBackup.SnapshotExtension)
+
+                if ((extension == Constants.Documents.PeriodicBackup.SnapshotExtension) ||
+                    (extension == Constants.Documents.PeriodicBackup.EncryptedSnapshotExtension))
                 {
                     onProgress.Invoke(result.Progress);
 
                     snapshotRestore = true;
                     sw = Stopwatch.StartNew();
-                    if (_restoreConfiguration.BackupEncryptionSettings?.Key != null)
+                    if (extension == Constants.Documents.PeriodicBackup.EncryptedSnapshotExtension)
                     {
-                        _hasEncryptionKey = true;
-                        _serverStore.PutSecretKey(_restoreConfiguration.BackupEncryptionSettings?.Key,
-                            databaseName, overwrite: false);
-                        _restoreConfiguration.BackupEncryptionSettings.Key = null;
+                        _hasEncryptionKey = ((_restoreConfiguration.EncryptionKey != null) ||
+                                             (_restoreConfiguration.BackupEncryptionSettings?.Key != null));
                     }
                     // restore the snapshot
                     restoreSettings = SnapshotRestore(firstFile,
@@ -316,8 +316,9 @@ namespace Raven.Server.Documents.PeriodicBackup.Restore
                 OperateOnTypes = DatabaseItemType.CompareExchange | DatabaseItemType.Identities
             };
             var lastPath = Path.Combine(_restoreConfiguration.BackupLocation, lastFile);
-
-            if (Path.GetExtension(lastPath) == Constants.Documents.PeriodicBackup.SnapshotExtension)
+            var extension = Path.GetExtension(lastPath);
+            if ((extension == Constants.Documents.PeriodicBackup.SnapshotExtension) ||
+                (extension == Constants.Documents.PeriodicBackup.EncryptedSnapshotExtension))
             {
                 using (var zip = ZipFile.Open(lastPath, ZipArchiveMode.Read, System.Text.Encoding.UTF8))
                 {
@@ -558,21 +559,13 @@ namespace Raven.Server.Documents.PeriodicBackup.Restore
             using (_serverStore.ContextPool.AllocateOperationContext(out TransactionOperationContext ctx))
             using (ctx.OpenReadTransaction())
             {
-                if (_restoreConfiguration.BackupEncryptionSettings?.Key != null)
-                {
-                    return new DecryptingXChaCha20Oly1305Stream(fileStream, Convert.FromBase64String(_restoreConfiguration.BackupEncryptionSettings.Key));
-                }
                 var key = _serverStore.GetSecretKey(ctx, database);
                 if (key != null)
                 {
                     return new DecryptingXChaCha20Oly1305Stream(fileStream, key);
                 }
-                if (_restoreConfiguration.EncryptionKey != null)
-                {
-                    return new DecryptingXChaCha20Oly1305Stream(fileStream, Convert.FromBase64String(_restoreConfiguration.EncryptionKey));
-                }
-                
             }
+
             return fileStream;
         }
 
@@ -609,7 +602,9 @@ namespace Raven.Server.Documents.PeriodicBackup.Restore
                                 using (var entryStream = zipEntry.Open())
                                 using (_serverStore.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
                                 {
-                                    var stream = _hasEncryptionKey ? GetSnapshotInputStream(entryStream, _restoreConfiguration.DatabaseName) : entryStream; 
+                                    var stream = _restoreConfiguration.BackupEncryptionSettings?.EncryptionMode == EncryptionMode.UseDatabaseKey ?
+                                        new DecryptingXChaCha20Oly1305Stream(entryStream, Convert.FromBase64String(_restoreConfiguration.EncryptionKey)) 
+                                        : entryStream;
 
                                     var json = context.Read(stream, "read database settings for restore");
                                     json.BlittableValidation();

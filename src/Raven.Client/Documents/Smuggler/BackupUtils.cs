@@ -16,6 +16,7 @@ namespace Raven.Client.Documents.Smuggler
             return
                 Constants.Documents.PeriodicBackup.IncrementalBackupExtension.Equals(extension, StringComparison.OrdinalIgnoreCase) ||
                 Constants.Documents.PeriodicBackup.FullBackupExtension.Equals(extension, StringComparison.OrdinalIgnoreCase) ||
+                Constants.Documents.PeriodicBackup.EncryptedFullBackupExtension.Equals(extension, StringComparison.OrdinalIgnoreCase) ||
                 LegacyIncrementalBackupExtension.Equals(extension, StringComparison.OrdinalIgnoreCase) ||
                 LegacyFullBackupExtension.Equals(extension, StringComparison.OrdinalIgnoreCase);
         }

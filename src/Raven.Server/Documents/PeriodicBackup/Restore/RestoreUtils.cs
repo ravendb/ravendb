@@ -54,12 +54,18 @@ namespace Raven.Server.Documents.PeriodicBackup.Restore
             foreach (var filePath in files)
             {
                 var extension = Path.GetExtension(filePath);
-                var isSnapshot = Constants.Documents.PeriodicBackup.SnapshotExtension.Equals(extension, StringComparison.OrdinalIgnoreCase);
+                var isSnapshot = ((Constants.Documents.PeriodicBackup.SnapshotExtension.Equals(extension, StringComparison.OrdinalIgnoreCase)) ||
+                                  (Constants.Documents.PeriodicBackup.EncryptedSnapshotExtension.Equals(extension, StringComparison.OrdinalIgnoreCase)));
                 if (firstFile)
                 {
                     snapshotRestore = isSnapshot;
-                    isEncrypted = ((isSnapshot && CheckIfSnapshotIsEncrypted(filePath, context)) ||
-                                   ((!isSnapshot) && CheckIfBackupIsEncrypted(filePath)));
+                    if ((Constants.Documents.PeriodicBackup.EncryptedSnapshotExtension.Equals(extension, StringComparison.OrdinalIgnoreCase)) ||
+                         (Constants.Documents.PeriodicBackup.EncryptedFullBackupExtension.Equals(extension, StringComparison.OrdinalIgnoreCase)))
+                    {
+                        isEncrypted = true;
+                    }
+                    else
+                        isEncrypted = (isSnapshot && CheckIfSnapshotIsEncrypted(filePath, context));
                 }
                 else if (isSnapshot)
                 {
@@ -91,28 +97,8 @@ namespace Raven.Server.Documents.PeriodicBackup.Restore
             }
         }
 
-        private static bool CheckIfBackupIsEncrypted(string filePath)
-        {
-            //TODO - change with RavenDB-12679
-            try
-            {
-                using (var fileStream = File.Open(filePath, FileMode.Open))
-                using (var gzipStream = new GZipStream(fileStream, CompressionMode.Decompress))
-                {
-                    gzipStream.Read(new byte[1], 0, 1);
-                }
-            }
-            catch (InvalidDataException )
-            {
-                return true;
-            }
-            return false;
-        }
-
-
         private static bool CheckIfSnapshotIsEncrypted(string filePath, TransactionOperationContext context)
         {
-            //TODO - change with RavenDB-12679
             using (var zip = ZipFile.Open(filePath, ZipArchiveMode.Read, System.Text.Encoding.UTF8))
             {
                 foreach (var zipEntry in zip.Entries)
@@ -121,19 +107,11 @@ namespace Raven.Server.Documents.PeriodicBackup.Restore
                     {
                         using (var entryStream = zipEntry.Open())
                         {
-                            try
-                            {
-                                var json = context.Read(entryStream, "read database settings");
-                                json.BlittableValidation();
+                            var json = context.Read(entryStream, "read database settings");
+                            json.BlittableValidation();
 
-                                RestoreSettings restoreSettings = JsonDeserializationServer.RestoreSettings(json);
-                                return restoreSettings.DatabaseRecord.Encrypted;
-                            }
-                            catch (Exception e)
-                            {
-                                return true;
-                            }
-                            
+                            RestoreSettings restoreSettings = JsonDeserializationServer.RestoreSettings(json);
+                            return restoreSettings.DatabaseRecord.Encrypted;
                         }
                     }
                 }
@@ -147,7 +125,8 @@ namespace Raven.Server.Documents.PeriodicBackup.Restore
             var extension = Path.GetExtension(filePath);
             return
                 BackupUtils.IsBackupFile(filePath) ||
-                Constants.Documents.PeriodicBackup.SnapshotExtension.Equals(extension, StringComparison.OrdinalIgnoreCase);
+                Constants.Documents.PeriodicBackup.SnapshotExtension.Equals(extension, StringComparison.OrdinalIgnoreCase) ||
+                Constants.Documents.PeriodicBackup.EncryptedSnapshotExtension.Equals(extension, StringComparison.OrdinalIgnoreCase);
         }
 
         private static DateTime TryExtractDateFromFileName(string fileName, string filePath)
