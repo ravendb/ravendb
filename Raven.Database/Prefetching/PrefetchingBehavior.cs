@@ -1393,7 +1393,7 @@ namespace Raven.Database.Prefetching
         {
             return source.Task.ContinueWith(task =>
             {
-                if (task.Exception != null)
+                if (task.Exception != null && !(task.Exception.InnerException is TaskCanceledException))
                 {
                     log.WarnException("Error happened on discarded future work batch", task.Exception);
                 }
