@@ -726,7 +726,7 @@ if (hasCounter('down')) {
                 else
                     AddEtl(src, dest, "Users", script: null);
 
-                var etlDone = WaitForEtl(src, (n, s) => s.LastProcessedEtag >= 8);
+                var etlDone = WaitForEtl(src, (n, s) => s.LastProcessedEtag >= 10);
 
                 etlDone.Wait(TimeSpan.FromMinutes(1));
 

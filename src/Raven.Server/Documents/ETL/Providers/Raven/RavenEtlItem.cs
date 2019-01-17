@@ -18,15 +18,14 @@ namespace Raven.Server.Documents.ETL.Providers.Raven
             }
         }
 
-        public RavenEtlItem(CounterDetail counter, string collection)
+        public RavenEtlItem(CounterGroupDetail counter, string collection)
         {
-            DocumentId = counter.LazyDocumentId;
+            DocumentId = counter.CounterKey;
             Etag = counter.Etag;
             Collection = collection;
             ChangeVector = counter.ChangeVector;
             Type = EtlItemType.Counter;
-            CounterName = counter.CounterName;
-            CounterValue = counter.TotalValue;
+            CounterGroupDocument = counter.Values;
         }
 
         public LazyStringValue AttachmentTombstoneId { get; protected set; }

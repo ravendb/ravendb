@@ -6,14 +6,14 @@ using Raven.Server.ServerWide.Context;
 
 namespace Raven.Server.Documents.ETL
 {
-    public class FilterCountersEnumerator : IEnumerator<CounterDetail>
+    public class FilterCountersEnumerator : IEnumerator<CounterGroupDetail>
     {
-        private readonly IEnumerator<CounterDetail> _counters;
+        private readonly IEnumerator<CounterGroupDetail> _counters;
         private readonly EtlStatsScope _stats;
         private readonly DocumentsStorage _docsStorage;
         private readonly DocumentsOperationContext _context;
 
-        public FilterCountersEnumerator(IEnumerator<CounterDetail> counters, EtlStatsScope stats, DocumentsStorage docsStorage, DocumentsOperationContext context)
+        public FilterCountersEnumerator(IEnumerator<CounterGroupDetail> counters, EtlStatsScope stats, DocumentsStorage docsStorage, DocumentsOperationContext context)
         {
             _counters = counters;
             _stats = stats;
@@ -29,7 +29,7 @@ namespace Raven.Server.Documents.ETL
             {
                 var current = _counters.Current;
 
-                var doc = _docsStorage.Get(_context, current.DocumentId);
+                var doc = _docsStorage.Get(_context, current.CounterKey);
 
                 if (doc != null && current.Etag > doc.Etag)
                 {
@@ -49,7 +49,7 @@ namespace Raven.Server.Documents.ETL
             throw new System.NotImplementedException();
         }
 
-        public CounterDetail Current { get; private set; }
+        public CounterGroupDetail Current { get; private set; }
 
         object IEnumerator.Current => Current;
 

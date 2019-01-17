@@ -37,16 +37,7 @@ namespace Raven.Server.Documents.ETL
 
                 if (_maxEtag != null)
                 {
-                    switch (_tombstoneType)
-                    {
-                        case Tombstone.TombstoneType.Counter:
-                            if (PreventCountersIteratingTooFarEnumerator<ExtractedItem>.CanMoveNext(current.Etag, _maxEtag.Value) == false)
-                                return false;
-                            break;
-                        default:
-                            ThrowMaxEtagLimitNotSupported(_tombstoneType);
-                            break;
-                    }
+                    ThrowMaxEtagLimitNotSupported(_tombstoneType);
                 }
 
                 if (current.Type == _tombstoneType)
@@ -92,9 +83,6 @@ namespace Raven.Server.Documents.ETL
                     case Tombstone.TombstoneType.Attachment:
                     case Tombstone.TombstoneType.Revision:
                         etlItemType = EtlItemType.Document;
-                        break;
-                    case Tombstone.TombstoneType.Counter:
-                        etlItemType = EtlItemType.Counter;
                         break;
                     default:
                         ThrowFilteringTombstonesOfTypeNotSupported(current.Type);

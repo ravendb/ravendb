@@ -12,6 +12,7 @@ using Raven.Client.Documents.Attachments;
 using Raven.Client.Documents.Commands.Batches;
 using Raven.Client.Documents.Conventions;
 using Raven.Client.Documents.Operations.Attachments;
+using Raven.Client.Documents.Operations.Counters;
 using Raven.Client.Documents.Operations.ETL;
 using Raven.Server.Documents.Patch;
 using Raven.Server.ServerWide.Context;
@@ -160,7 +161,7 @@ namespace Raven.Server.Documents.ETL.Providers.Raven
             if (counterReference.IsString() == false || counterReference.AsString().StartsWith(Transformation.CounterMarker) == false)
             {
                 var message =
-                    $"{Transformation.AddCounter}() method expects to get the reference to an attachment while it got argument of '{counterReference.Type}' type";
+                    $"{Transformation.AddCounter}() method expects to get the reference to a counter while it got argument of '{counterReference.Type}' type";
 
                 if (counterReference.IsString())
                     message += $" (value: '{counterReference.AsString()}')";
@@ -204,24 +205,13 @@ namespace Raven.Server.Documents.ETL.Providers.Raven
 
                             if (_script.HasLoadCounterBehaviors && _script.TryGetLoadCounterBehaviorFunctionFor(item.Collection, out var function))
                             {
-                                var counters = GetCountersFor(Current);
-
-                                if (counters != null && counters.Count > 0)
-                                {
-                                    foreach (var counter in counters)
-                                    {
-                                        using (var result = BehaviorsScript.Run(Context, Context, function, new object[] { item.DocumentId, counter.Name }))
-                                        {
-                                            if (result.BooleanValue == true)
-                                                _currentRun.AddCounter(item.DocumentId, counter.Name, counter.Value);
-                                        }
-                                    }
-                                }
+                                var counterGroupDetail = GetCounterGroupFor(item);
+                                AddCounters(item.DocumentId, counterGroupDetail.Values, function);
                             }
                         }
                         else
                         {
-                            _currentRun.PutFullDocument(item.DocumentId, item.Document.Data, GetAttachmentsFor(item), GetCountersFor(item));
+                            _currentRun.PutFullDocument(item.DocumentId, item.Document.Data, GetAttachmentsFor(item), GetCounterOperationsFor(item));
                         }
 
                         break;
@@ -234,76 +224,42 @@ namespace Raven.Server.Documents.ETL.Providers.Raven
                             if (_script.TryGetLoadCounterBehaviorFunctionFor(item.Collection, out var function) == false)
                                 break;
 
-                            using (var result = BehaviorsScript.Run(Context, Context, function, new object[] {item.DocumentId, item.CounterName}))
-                            {
-                                if (result.BooleanValue == true)
-                                    _currentRun.AddCounter(item.DocumentId, item.CounterName, item.CounterValue);
-                            }
+                            AddCounters(item.DocumentId, item.CounterGroupDocument, function);
                         }
                         else
                         {
-                            _currentRun.AddCounter(item.DocumentId, item.CounterName, item.CounterValue);
+                            AddCounters(item.DocumentId, item.CounterGroupDocument);
                         }
-                        
+
                         break;
                 }
             }
             else
             {
-                switch (item.Type)
+                Debug.Assert(item.Type == EtlItemType.Document);
+
+                if (ShouldFilterOutDeletion() == false)
                 {
-                    case EtlItemType.Document:
+                    if (_script.HasTransformation)
+                    {
+                        Debug.Assert(item.IsAttachmentTombstone == false, "attachment tombstones are tracked only if script is empty");
 
-                        if (ShouldFilterOutDeletion())
-                            break;
-
-                        if (_script.HasTransformation)
+                        ApplyDeleteCommands(item, OperationType.Delete);
+                    }
+                    else
+                    {
+                        if (item.IsAttachmentTombstone == false)
                         {
-                            Debug.Assert(item.IsAttachmentTombstone == false, "attachment tombstones are tracked only if script is empty");
-
-                            ApplyDeleteCommands(item, OperationType.Delete);
+                            _currentRun.Delete(new DeleteCommandData(item.DocumentId, null));
                         }
                         else
                         {
-                            if (item.IsAttachmentTombstone == false)
-                            {
-                                _currentRun.Delete(new DeleteCommandData(item.DocumentId, null));
-                            }
-                            else
-                            {
-                                var (doc, attachmentName) = AttachmentsStorage.ExtractDocIdAndAttachmentNameFromTombstone(Context, item.AttachmentTombstoneId);
+                            var (doc, attachmentName) = AttachmentsStorage.ExtractDocIdAndAttachmentNameFromTombstone(Context, item.AttachmentTombstoneId);
 
-                                _currentRun.DeleteAttachment(doc, attachmentName);
-                            }
+                            _currentRun.DeleteAttachment(doc, attachmentName);
                         }
-                        break;
-                    case EtlItemType.Counter:
+                    }
 
-                        var (docId, counterName) = CountersStorage.ExtractDocIdAndCounterNameFromTombstone(Context, item.CounterTombstoneId);
-
-                        if (_script.HasTransformation)
-                        {
-                            if (_script.HasLoadCounterBehaviors == false)
-                                break;
-
-                            if (_script.TryGetLoadCounterBehaviorFunctionFor(item.Collection, out var function) == false)
-                                break;
-
-                            using (var result = BehaviorsScript.Run(Context, Context, function, new object[] { docId, counterName }))
-                            {
-                                if (result.BooleanValue == true)
-                                    _currentRun.DeleteCounter(docId, counterName);
-                            }
-                        }
-                        else
-                        {
-                            if (ShouldFilterOutDeletion())
-                                break;
-
-                            _currentRun.DeleteCounter(docId, counterName);
-                        }
-
-                        break;
                 }
 
                 bool ShouldFilterOutDeletion()
@@ -326,8 +282,6 @@ namespace Raven.Server.Documents.ETL.Providers.Raven
 
                             collection = Database.DocumentsStorage.ExtractCollectionName(Context, document.Data).Name;
                         }
-                        else if (item.Type == EtlItemType.Counter)
-                            documentId = CountersStorage.ExtractDocIdAndCounterNameFromTombstone(Context, item.CounterTombstoneId).DocId;
 
                         Debug.Assert(collection != null);
 
@@ -354,6 +308,97 @@ namespace Raven.Server.Documents.ETL.Providers.Raven
             }
 
             _commands.AddRange(_currentRun.GetCommands());
+        }
+
+
+
+        private void AddCounters(LazyStringValue docId, BlittableJsonReaderObject counterGroupDocument, string function = null)
+        {
+            if (!counterGroupDocument.TryGet(CountersStorage.Values, out BlittableJsonReaderObject counters))
+                return;
+
+            var prop = new BlittableJsonReaderObject.PropertyDetails();
+            for (var i = 0; i < counters.Count; i++)
+            {
+                counters.GetPropertyByIndex(i, ref prop);
+
+                if (GetCounterValueAndCheckIfShouldSkip(docId, function, prop, out long value, out bool delete))
+                    continue;
+
+                if (delete)
+                    _currentRun.DeleteCounter(docId, prop.Name);
+                else
+                    _currentRun.AddCounter(docId, prop.Name, value);
+            }
+        }
+
+        private List<CounterOperation> GetCounterOperationsFor(RavenEtlItem item)
+        {
+            var cgd = Database.DocumentsStorage.CountersStorage.GetCounterValuesForDocument(Context, item.DocumentId);
+
+            if (!cgd.Values.TryGet(CountersStorage.Values, out BlittableJsonReaderObject counters))
+                return null;
+            var counterOperations = new List<CounterOperation>();
+            var prop = new BlittableJsonReaderObject.PropertyDetails();
+            for (var i = 0; i < counters.Count; i++)
+            {
+                counters.GetPropertyByIndex(i, ref prop);
+
+                if (GetCounterValueAndCheckIfShouldSkip(item.DocumentId, null, prop, out long value, out bool delete))
+                    continue;
+
+                if (delete)
+                {
+                    counterOperations.Add(new CounterOperation
+                    {
+                        Type = CounterOperationType.Delete,
+                        CounterName = prop.Name,
+                    });
+                }
+                else
+                {
+                    counterOperations.Add(new CounterOperation
+                    {
+                        Type = CounterOperationType.Put,
+                        CounterName = prop.Name,
+                        Delta = value
+                    });
+                }
+            }
+
+            return counterOperations;
+        }
+
+        private bool GetCounterValueAndCheckIfShouldSkip(LazyStringValue docId, string function, BlittableJsonReaderObject.PropertyDetails prop, out long value, out bool delete)
+        {
+            value = 0;
+            delete = false;
+
+            if (!(prop.Value is BlittableJsonReaderObject.RawBlob blob))
+                return true;
+
+            delete = blob.Length == 0;
+
+            for (var index = 0; index < blob.Length / CountersStorage.SizeOfCounterValues; index++)
+            {
+                value += CountersStorage.GetPartialValue(index, blob);
+            }
+
+            if (function != null)
+            {
+                using (var result = BehaviorsScript.Run(Context, Context, function, new object[] {docId, prop.Name }))
+                {
+                    if (result.BooleanValue != true)
+                        return true;
+                }
+            }
+
+            return false;
+        }
+
+        private CounterGroupDetail GetCounterGroupFor(RavenEtlItem item)
+        {
+            return Database.DocumentsStorage.CountersStorage.GetCounterValuesForDocument(Context, item.DocumentId);
         }
 
         protected override void AddLoadedAttachment(JsValue reference, string name, Attachment attachment)
@@ -394,38 +439,6 @@ namespace Raven.Server.Documents.ETL.Providers.Raven
 
                     results.Add(attachmentData);
                 }
-            }
-
-            return results;
-        }
-
-        private List<(string Name, long Value)> GetCountersFor(RavenEtlItem item)
-        {
-            if ((Current.Document.Flags & DocumentFlags.HasCounters) != DocumentFlags.HasCounters)
-                return null;
-
-            if (item.Document.TryGetMetadata(out var metadata) == false ||
-                metadata.TryGet(Constants.Documents.Metadata.Counters, out BlittableJsonReaderArray counters) == false)
-            {
-                return null;
-            }
-
-            if (metadata.Modifications == null)
-                metadata.Modifications = new DynamicJsonValue(metadata);
-
-            metadata.Modifications.Remove(Constants.Documents.Metadata.Counters);
-
-            var results = new List<(string Name, long Value)>();
-
-            foreach (var counter in counters)
-            {
-                string counterName = (LazyStringValue)counter;
-
-                var value = Database.DocumentsStorage.CountersStorage.GetCounterValue(Context, item.DocumentId, counterName);
-
-                Debug.Assert(value != null);
-
-                results.Add((counterName, value.Value));
             }
 
             return results;

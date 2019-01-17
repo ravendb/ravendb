@@ -31,19 +31,9 @@ namespace Raven.Server.Documents.ETL
         {
             Etag = tombstone.Etag;
 
-            switch (type)
-            {
-                case EtlItemType.Document:
-                    Debug.Assert(tombstone.Type == Tombstone.TombstoneType.Document || tombstone.Type == Tombstone.TombstoneType.Attachment);
-                    DocumentId = tombstone.LowerId;
-                    Collection = collection;
-                    break;
-                case EtlItemType.Counter:
-                    Debug.Assert(tombstone.Type == Tombstone.TombstoneType.Counter);
-                    Collection = tombstone.Collection;
-                    CounterTombstoneId = tombstone.LowerId;
-                    break;
-            }
+            Debug.Assert(tombstone.Type == Tombstone.TombstoneType.Document || tombstone.Type == Tombstone.TombstoneType.Attachment);
+            DocumentId = tombstone.LowerId;
+            Collection = collection;
 
             IsDelete = true;
             ChangeVector = tombstone.ChangeVector;
@@ -69,9 +59,7 @@ namespace Raven.Server.Documents.ETL
 
         public EtlItemType Type { get; protected set; }
 
-        public string CounterName { get; protected set; }
-
-        public long CounterValue { get; protected set; }
+        public BlittableJsonReaderObject CounterGroupDocument { get; protected set; }
 
         public LazyStringValue CounterTombstoneId { get; protected set; }
     }
