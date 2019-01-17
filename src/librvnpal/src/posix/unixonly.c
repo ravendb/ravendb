@@ -1,9 +1,13 @@
 #if defined(__unix__) && !defined(__APPLE__)
 
+#ifndef _GNU_SOURCE
 #define _GNU_SOURCE
+#endif
+
 #include <unistd.h>
 #include <sys/statfs.h>
 #include <linux/magic.h>
+#include <sys/syscall.h>
 #include <sys/types.h>
 #include <sys/stat.h>
 #include <fcntl.h>
@@ -12,9 +16,17 @@
 #include <assert.h>
 #include <string.h>
 #include <libgen.h>
+#include <unistd.h>
 
 #include "rvn.h"
 #include "status_codes.h"
+#include "internal_posix.h"
+
+EXPORT uint64_t
+rvn_get_current_thread_id(void)
+{
+  return syscall(SYS_gettid);
+}
 
 PRIVATE int32_t
 _flush_file(int32_t fd)
@@ -38,6 +50,19 @@ _sync_directory_allowed(int32_t dir_fd)
   default:
     return SYNC_DIR_ALLOWED;
   }
+}
+
+PRIVATE int32_t
+_finish_open_file_with_odirect(int32_t fd)
+{
+  /* nothing to do in posix, O_DIRECT is supported */
+  return 0;
+}
+
+PRIVATE int32_t
+_rvn_fallocate(int32_t fd, int64_t offset, int64_t size)
+{
+  return posix_fallocate64(fd, offset, size);
 }
 
 #endif

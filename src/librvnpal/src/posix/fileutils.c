@@ -1,10 +1,12 @@
-#if defined(__unix__) || defined(__APPLE__)
-
+#ifndef _GNU_SOURCE
 #define _GNU_SOURCE
+#endif
+
 #include <unistd.h>
 #include <stdlib.h>
 #include <stdio.h>
 #include <sys/types.h>
+#include <sys/stat.h>
 #include <fcntl.h>
 #include <errno.h>
 #include <sys/mman.h>
@@ -13,6 +15,43 @@
 
 #include "rvn.h"
 #include "status_codes.h"
+#include "internal_posix.h"
+
+EXPORT int32_t
+rvn_dispose_handle(const char *filepath, void *handle, int32_t delete_on_close, int32_t *detailed_error_code)
+{
+    int32_t rc = SUCCESS;
+
+    /* the following in two lines to avoid compilation warning */
+    int32_t fd = (int32_t)(int64_t)handle;
+
+    if (fd != -1)
+    {
+        if (delete_on_close == DELETE_ON_CLOSE_YES)
+        {
+            int32_t unlink_rc = unlink(filepath);
+            if (unlink_rc != 0)
+            {
+                /* record the error and continue to close */
+                rc = FAIL_UNLINK;
+                *detailed_error_code = errno;
+            }
+        }
+
+        int32_t close_rc = close(fd);
+        if (close_rc != 0)
+        {
+            if (rc == 0) /* if unlink failed - return unlink's error */
+            {
+                rc = FAIL_CLOSE;
+                *detailed_error_code = errno;
+            }
+        }
+        return rc;
+    }
+
+    return FAIL_INVALID_HANDLE;
+}
 
 PRIVATE int64_t
 _nearest_size_to_page_size(int64_t orig_size, int64_t sys_page_size)
@@ -63,11 +102,8 @@ _allocate_file_space(int32_t fd, int64_t size, int32_t *detailed_error_code)
     int32_t retries;
     for (retries = 0; retries < 1024; retries++)
     {
-#ifndef __APPLE__
-        result = posix_fallocate64(fd, 0, size);
-#else
-        result = EINVAL;
-#endif
+        result = _rvn_fallocate(fd, 0, size);
+
         switch (result)
         {
         case EINVAL:
@@ -89,11 +125,10 @@ _allocate_file_space(int32_t fd, int64_t size, int32_t *detailed_error_code)
             return SUCCESS;
 
         default:
-            *detailed_error_code = errno;
-            return result;
+            *detailed_error_code = result;
+            return FAIL_ALLOC_FILE;
         }
     }
-
     return result; /* return EINTR */
 }
 
@@ -104,40 +139,87 @@ _ensure_path_exists(const char* path)
     return SUCCESS;   
 }
 
-EXPORT int32_t
-rvn_dispose_handle(const char *filepath, void *handle, int32_t delete_on_close, int32_t *detailed_error_code)
+PRIVATE int32_t 
+_open_file_to_read(const char *file_name, void **handle, int32_t *detailed_error_code)
 {
-    int32_t rc = SUCCESS;
-
-    /* the following in two lines to avoid compilation warning */
-    int32_t fd = (int32_t)(int64_t)handle;
-
+    int32_t fd = open(file_name, O_RDONLY, S_IRUSR);
     if (fd != -1)
     {
-        if (delete_on_close == DELETE_ON_CLOSE_YES)
-        {
-            int32_t unlink_rc = unlink(filepath);
-            if (unlink_rc != 0)
-            {
-                /* record the error and continue to close */
-                rc = FAIL_UNLINK;
-                *detailed_error_code = errno;
-            }
-        }
-
-        int32_t close_rc = close(fd);
-        if (close_rc != 0)
-        {
-            if (rc == 0) /* if unlink failed - return unlink's error */
-            {
-                rc = FAIL_CLOSE;
-                *detailed_error_code = errno;
-            }
-        }
-        return rc;
+        *handle = (void*)(int64_t)fd;
+        return SUCCESS;
     }
 
-    return FAIL_INVALID_HANDLE;
+    *detailed_error_code = errno;
+    return FAIL_OPEN_FILE;
 }
 
-#endif
+PRIVATE int32_t
+_read_file(void *handle, void *buffer, int64_t required_size, int64_t offset, int64_t *actual_size, int32_t *detailed_error_code)
+{
+    int32_t rc;
+    int32_t fd = (int32_t)(int64_t)handle;
+    int64_t remain_size = required_size;
+    int64_t already_read;
+    *actual_size = 0;
+     while (remain_size > 0)
+    {
+        already_read = pread64(fd, buffer, remain_size, offset);
+        if (already_read == -1)
+        {
+            rc = FAIL_READ_FILE;
+            goto error_cleanup;
+        }
+        if (already_read == 0)
+        {
+            rc = FAIL_EOF;
+            goto error_cleanup;
+        }
+
+        remain_size -= already_read;
+        buffer += already_read;
+        offset += already_read;
+    }
+
+    *actual_size = required_size;
+    return SUCCESS;
+
+error_cleanup:
+    *detailed_error_code = errno;
+    *actual_size = required_size - remain_size; 
+    return rc;
+}
+
+PRIVATE int32_t
+_resize_file(void *handle, int64_t size, int32_t *detailed_error_code)
+{
+    int32_t fd = (int32_t)(int64_t)handle;
+
+    int32_t rc;
+    struct stat st;
+    if (fstat(fd, &st) == -1)
+    {
+        rc = FAIL_STAT_FILE;
+        goto error_cleanup;
+    }
+
+    if(size > st.st_size)
+    {
+        int32_t rc = _allocate_file_space(fd, size, detailed_error_code);
+        if(rc != SUCCESS)
+            return rc;
+    }
+    else
+    {
+        if(ftruncate64(fd, size) == -1)
+        {
+            rc = FAIL_TRUNCATE_FILE;
+            goto error_cleanup;
+        }
+    }
+
+    return SUCCESS;
+
+error_cleanup:
+    *detailed_error_code = errno;
+    return rc;
+}

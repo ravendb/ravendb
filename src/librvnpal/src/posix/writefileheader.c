@@ -1,12 +1,7 @@
-#if defined(__unix__) || defined(__APPLE__)
-
-#ifdef __APPLE__
-#define rvn_ftruncate ftruncate
-#else
-#define rvn_ftruncate ftruncate64
+#ifndef _GNU_SOURCE
+#define _GNU_SOURCE
 #endif
 
-#define _GNU_SOURCE
 #include <unistd.h>
 #include <stdlib.h>
 #include <sys/types.h>
@@ -16,6 +11,7 @@
 
 #include "rvn.h"
 #include "status_codes.h"
+#include "internal_posix.h"
 
 EXPORT int32_t
 rvn_write_header(const char *path,
@@ -80,12 +76,9 @@ rvn_write_header(const char *path,
     return SUCCESS;
 
 error_cleanup:
-
     *detailed_error_code = errno;
     if (fd != -1)
         close(fd);
 
     return rc;
 }
-
-#endif
