@@ -197,7 +197,7 @@ namespace Raven.Client.Json
             Parts.Add(Convert.ToInt32(indexer, CultureInfo.InvariantCulture));
         }
 
-        internal object Evaluate(BlittableJsonReaderBase root, bool errorWhenNoMatch)
+        internal object Evaluate(BlittableJsonReaderBase root)
         {
             object current = root;
 
@@ -212,8 +212,8 @@ namespace Raven.Client.Json
                         if (o.TryGet(propertyName, out current) == false)
                             current = null;
 
-                        if (current == null && errorWhenNoMatch)
-                            string.Format(CultureInfo.InvariantCulture, "Property '{0}' does not exist on JSON.", propertyName);
+                        if (current == null)
+                            return null;
                     }
                     else
                     {
@@ -229,16 +229,10 @@ namespace Raven.Client.Json
                                     current = array.Length;
                                     break;
                                 default:
-                                    if (errorWhenNoMatch)
-                                        string.Format(CultureInfo.InvariantCulture, "Property '{0}' not valid on {1}.", current.GetType().Name);
-
-                                    break;
+                                    return null;
                             }
                             continue;
                         }
-
-                        if (errorWhenNoMatch)
-                            string.Format(CultureInfo.InvariantCulture, "Property '{0}' not valid on {1}.", current.GetType().Name);
 
                         return null;
                     }
@@ -254,9 +248,6 @@ namespace Raven.Client.Json
                     {
                         if (a.Length <= index)
                         {
-                            if (errorWhenNoMatch)
-                                string.Format(CultureInfo.InvariantCulture, "Index {0} outside the bounds of JSON.", index);
-
                             return null;
                         }
 
@@ -264,22 +255,7 @@ namespace Raven.Client.Json
                     }
                     else
                     {
-                        var b = current as BlittableJsonReaderObject;
-
-                        if (a.Length <= index)
-                        {
-                            if (errorWhenNoMatch)
-                                string.Format(CultureInfo.InvariantCulture, "Index {0} outside the bounds of JSON.", index);
-
-                            return null;
-                        }
-                        throw new NotSupportedException();
-                        //var trueIndex = b.GetPropertiesByInsertionOrder()[index];
-                        //var prop = new BlittableJsonReaderObject.PropertyDetails();
-
-                        //b.GetPropertyByIndex(trueIndex, ref prop);
-
-                        //current = prop.Value;
+                        return null;
                     }
                 }
             }

@@ -51,8 +51,8 @@ namespace Raven.Server.Documents.Queries
                     {
                         xDocument.EnsureMetadata();
                         yDocument.EnsureMetadata();
-                        xObject = _path.Evaluate(xDocument.Data, true);
-                        yObject = _path.Evaluate(yDocument.Data, true);
+                        xObject = _path.Evaluate(xDocument.Data);
+                        yObject = _path.Evaluate(yDocument.Data);
                         _xId = xDocument.Id;
                         _yId = yDocument.Id;
                         break;
@@ -61,8 +61,8 @@ namespace Raven.Server.Documents.Queries
                 case BlittableJsonReaderObject bjroX:
                     if (yResult is BlittableJsonReaderObject bjroY)
                     {
-                        xObject = _path.Evaluate(bjroX, true);
-                        yObject = _path.Evaluate(bjroY, true);
+                        xObject = _path.Evaluate(bjroX);
+                        yObject = _path.Evaluate(bjroY);
                         break;
                     }
                     return LogMissmatchTypesReturnOrder(xResult, yResult);

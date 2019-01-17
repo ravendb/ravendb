@@ -17,7 +17,7 @@ namespace Raven.Client.Json
         public static IEnumerable<Tuple<object, object>> SelectTokenWithRavenSyntaxReturningFlatStructure(this BlittableJsonReaderBase self, string path, bool createSnapshots = false)
         {
             var pathParts = path.Split(new[] { "[]." }, StringSplitOptions.RemoveEmptyEntries);
-            var result = new BlittablePath(pathParts[0]).Evaluate(self, false);
+            var result = new BlittablePath(pathParts[0]).Evaluate(self);
 
             if (pathParts.Length == 1)
             {

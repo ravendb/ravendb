@@ -14,7 +14,7 @@ namespace Raven.Server.Documents.Handlers
 
             foreach ((var property, var path) in GetProperties())
             {
-                var o = new BlittablePath(path).Evaluate(res, false);
+                var o = new BlittablePath(path).Evaluate(res);
                 GetCsvWriter().WriteField(o?.ToString());
             }
 
