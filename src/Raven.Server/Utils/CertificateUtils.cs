@@ -66,6 +66,35 @@ namespace Raven.Server.Utils
             }
         }
 
+        public static void RegisterCertificateInOperatingSystem(X509Certificate2 cert)
+        {
+            if (cert.HasPrivateKey) // the check if made anyway, to ensure we never fail on just these environments
+                throw new InvalidOperationException("When registering the certificate for the purpose of TRUSTED_ISSUERS, we don't want the private key");
+
+            if (PlatformDetails.RunningOnPosix == false)
+                return;
+
+            // due to the way TRUSTED_ISSUERS work in Linux and Windows previous to Win 7
+            // we need to register the certificate in the operating system so the SSL impl
+            // will send the appropriate signers.
+            // At least on Linux, this is done by looking at the _issuers_ of certs in the 
+            // root store
+
+            var storeName = PlatformDetails.RunningOnMacOsx ? StoreName.My : StoreName.Root;
+            using (var store = new X509Store(storeName, StoreLocation.CurrentUser))
+            {
+                store.Open(OpenFlags.ReadWrite);
+
+                foreach (var certificate in store.Certificates)
+                {
+                    if (certificate.Issuer == cert.Issuer)
+                        return; // something with the same issuer is already there, can skip
+                }
+
+                store.Add(cert);
+            }
+        }
+
         public static X509Certificate2 CreateSelfSignedClientCertificate(string commonNameValue, RavenServer.CertificateHolder certificateHolder, out byte[] certBytes)
         {
             var serverCertBytes = certificateHolder.Certificate.Export(X509ContentType.Cert);
@@ -92,6 +121,7 @@ namespace Raven.Server.Utils
             certBytes = memoryStream.ToArray();
 
             var cert = new X509Certificate2(certBytes, (string)null, X509KeyStorageFlags.PersistKeySet | X509KeyStorageFlags.Exportable | X509KeyStorageFlags.MachineKeySet);
+            RegisterCertificateInOperatingSystem(new X509Certificate2(cert.Export(X509ContentType.Cert), (string)null, X509KeyStorageFlags.MachineKeySet));
             return cert;
         }
 
