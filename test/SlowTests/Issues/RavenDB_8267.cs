@@ -39,6 +39,7 @@ namespace SlowTests.Issues
                 GetDocumentsCommand getDocsCommand = new GetDocumentsCommand("things/1", null, false);
                 store.Commands().Execute(getDocsCommand);
                 var res = getDocsCommand.Result.Results[0] as BlittableJsonReaderObject;
+                
                 var propertiesByInsertionOrder = res.GetPropertiesByInsertionOrder();
 
                 var expectedOrder = new[] { "Username", "Password", "OrganizationId", "AgentDutyCode" };
@@ -47,7 +48,7 @@ namespace SlowTests.Issues
                 WaitForUserToContinueTheTest(store);
                 for (var i = 0; i < expectedOrder.Length; i++)
                 {
-                    var matchingPropertyId = propertiesByInsertionOrder[i];
+                    var matchingPropertyId = propertiesByInsertionOrder.Properties.Array[i + propertiesByInsertionOrder.Properties.Offset];
                     BlittableJsonReaderObject.PropertyDetails propDetails = new BlittableJsonReaderObject.PropertyDetails();
 
                     res.GetPropertyByIndex(matchingPropertyId, ref propDetails);

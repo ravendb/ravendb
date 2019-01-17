@@ -12,11 +12,10 @@ namespace Raven.Client.Json
     internal class BlittableJsonReader : JsonReader
     {
         private readonly Stack<CurrentItem> _items = new Stack<CurrentItem>();
-        private readonly Stack<BlittableJsonReaderObject.PropertiesInsertionBuffer> _buffers = new Stack<BlittableJsonReaderObject.PropertiesInsertionBuffer>();
 
         private class CurrentItem
         {
-            public BlittableJsonReaderObject.PropertiesInsertionBuffer Buffers;
+            public BlittableJsonReaderObject.InsertionOrderProperties Buffers;
             public BlittableJsonReaderObject Object;
             public BlittableJsonReaderArray Array;
             public int Position;
@@ -51,16 +50,7 @@ namespace Raven.Client.Json
             });
         }
 
-        private BlittableJsonReaderObject.PropertiesInsertionBuffer GetPropertiesInsertionBuffer()
-        {
-            if (_buffers.Count > 0)
-                return _buffers.Pop();
-            return new BlittableJsonReaderObject.PropertiesInsertionBuffer();
-        }
-
-
         private bool _readAsLazyNumber = false;
-
 
         public override bool Read()
         {
@@ -73,10 +63,9 @@ namespace Raven.Client.Json
             {
                 while (true)
                 {
-                    if (current.Buffers == null)
+                    if (current.Buffers.Offsets == null)
                     {
-                        current.Buffers = GetPropertiesInsertionBuffer();
-                        current.Object.GetPropertiesByInsertionOrder(current.Buffers);
+                        current.Buffers = current.Object.GetPropertiesByInsertionOrder();
                         SetToken(JsonToken.StartObject);
                         return true;
                     }
@@ -96,13 +85,13 @@ namespace Raven.Client.Json
                     if (current.Position == current.Object.Count)
                     {
                         SetToken(JsonToken.EndObject);
-                        _buffers.Push(current.Buffers);
+                        current.Buffers.Dispose();
                         _items.Pop();
                         return true;
                     }
                     if (CurrentState != State.Property)
                     {
-                        int propIndex = current.Buffers.Properties[current.Position];
+                        int propIndex = current.Buffers.Properties.Array[current.Position + current.Buffers.Properties.Offset];
                         current.Object.GetPropertyByIndex(propIndex,
                             ref current.PropertyDetails);
                         if (modifications?.Removals?.Contains(propIndex) == true)
@@ -164,13 +153,13 @@ namespace Raven.Client.Json
                     SetToken(JsonToken.Raw, value);
                     return true;
                 case BlittableJsonToken.StartObject:
+                    var obj = (BlittableJsonReaderObject)value;
                     var newObject = new CurrentItem
                     {
                         Object = (BlittableJsonReaderObject)value,
-                        Buffers = GetPropertiesInsertionBuffer()
+                        Buffers = obj.GetPropertiesByInsertionOrder()
                     };
                     _items.Push(newObject);
-                    newObject.Object.GetPropertiesByInsertionOrder(newObject.Buffers);
 
                     //The value is passed in case the field/property should remains BlittableJsonReaderObject
                     SetToken(JsonToken.StartObject, value);

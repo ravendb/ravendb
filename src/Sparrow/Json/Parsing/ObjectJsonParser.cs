@@ -21,7 +21,7 @@ namespace Sparrow.Json.Parsing
         public const string TypeFieldName = "$type";
 
         public int SourceIndex = -1;
-        public int[] SourceProperties;
+        public BlittableJsonReaderObject.InsertionOrderProperties SourceProperties;
 
         public int ModificationsIndex = 0;
         public readonly List<(string Name, object Value)> Properties = new List<(string Name, object Value)>();
@@ -292,9 +292,9 @@ namespace Sparrow.Json.Parsing
                     var modifications = bjro.Modifications;
                     modifications.SourceIndex++;
                     var propDetails = new BlittableJsonReaderObject.PropertyDetails();
-                    if (modifications.SourceIndex < modifications.SourceProperties.Length)
+                    if (modifications.SourceIndex < modifications.SourceProperties.Properties.Count)
                     {
-                        var propIndex = modifications.SourceProperties[modifications.SourceIndex];
+                        var propIndex = modifications.SourceProperties.Properties.Array[modifications.SourceIndex + modifications.SourceProperties.Properties.Offset];
                         if (modifications.Removals != null && modifications.Removals.Contains(propIndex))
                         {
                             continue;
@@ -305,7 +305,8 @@ namespace Sparrow.Json.Parsing
                         current = propDetails.Name;
                         continue;
                     }
-                    current = modifications;
+                    modifications.SourceProperties.Dispose();
+                   current = modifications;
                     continue;
                 }
 

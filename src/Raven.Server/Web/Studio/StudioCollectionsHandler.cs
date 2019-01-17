@@ -19,12 +19,6 @@ namespace Raven.Server.Web.Studio
 {
     public class StudioCollectionsHandler : DatabaseRequestHandler
     {
-        [ThreadStatic]
-        private static BlittableJsonReaderObject.PropertiesInsertionBuffer _buffers;
-        static StudioCollectionsHandler()
-        {
-            ThreadLocalCleanup.ReleaseThreadLocalState += () => _buffers = null;
-        }
         private const int ColumnsSamplingLimit = 10;
         private const int StringLengthLimit = 255;
 
@@ -130,9 +124,6 @@ namespace Raven.Server.Web.Studio
 
         private void WriteDocument(BlittableJsonTextWriter writer, JsonOperationContext context, Document document, HashSet<string> propertiesPreviewToSend, HashSet<string> fullPropertiesToSend)
         {
-            if (_buffers == null)
-                _buffers = new BlittableJsonReaderObject.PropertiesInsertionBuffer();
-
             writer.WriteStartObject();
 
             document.Data.TryGet(Constants.Documents.Metadata.Key, out BlittableJsonReaderObject metadata);
@@ -143,43 +134,45 @@ namespace Raven.Server.Web.Studio
             var arraysStubs = new HashSet<LazyStringValue>();
             var trimmedValue = new HashSet<LazyStringValue>();
 
-            var size = document.Data.GetPropertiesByInsertionOrder(_buffers);
             var prop = new BlittableJsonReaderObject.PropertyDetails();
 
-            for (int i = 0; i < size; i++)
+            using (var buffers = document.Data.GetPropertiesByInsertionOrder())
             {
-                document.Data.GetPropertyByIndex(_buffers.Properties[i], ref prop);
-                var sendFull = fullPropertiesToSend.Contains(prop.Name);
-                if (sendFull || propertiesPreviewToSend.Contains(prop.Name))
+                for (int i = 0; i < buffers.Properties.Count; i++)
                 {
-                    var strategy = sendFull ? ValueWriteStrategy.Passthrough : FindWriteStrategy(prop.Token & BlittableJsonReaderBase.TypesMask, prop.Value);
-
-                    if (strategy == ValueWriteStrategy.Passthrough || strategy == ValueWriteStrategy.Trim)
+                    document.Data.GetPropertyByIndex(buffers.Properties.Array[i + buffers.Properties.Offset], ref prop);
+                    var sendFull = fullPropertiesToSend.Contains(prop.Name);
+                    if (sendFull || propertiesPreviewToSend.Contains(prop.Name))
                     {
-                        if (first == false)
+                        var strategy = sendFull ? ValueWriteStrategy.Passthrough : FindWriteStrategy(prop.Token & BlittableJsonReaderBase.TypesMask, prop.Value);
+
+                        if (strategy == ValueWriteStrategy.Passthrough || strategy == ValueWriteStrategy.Trim)
                         {
-                            writer.WriteComma();
+                            if (first == false)
+                            {
+                                writer.WriteComma();
+                            }
+                            first = false;
                         }
-                        first = false;
-                    }
 
-                    switch (strategy)
-                    {
-                        case ValueWriteStrategy.Passthrough:
-                            writer.WritePropertyName(prop.Name);
-                            writer.WriteValue(prop.Token & BlittableJsonReaderBase.TypesMask, prop.Value);
-                            break;
-                        case ValueWriteStrategy.SubstituteWithArrayStub:
-                            arraysStubs.Add(prop.Name);
-                            break;
-                        case ValueWriteStrategy.SubstituteWithObjectStub:
-                            objectsStubs.Add(prop.Name);
-                            break;
-                        case ValueWriteStrategy.Trim:
-                            writer.WritePropertyName(prop.Name);
-                            WriteTrimmedValue(writer, prop.Token & BlittableJsonReaderBase.TypesMask, prop.Value);
-                            trimmedValue.Add(prop.Name);
-                            break;
+                        switch (strategy)
+                        {
+                            case ValueWriteStrategy.Passthrough:
+                                writer.WritePropertyName(prop.Name);
+                                writer.WriteValue(prop.Token & BlittableJsonReaderBase.TypesMask, prop.Value);
+                                break;
+                            case ValueWriteStrategy.SubstituteWithArrayStub:
+                                arraysStubs.Add(prop.Name);
+                                break;
+                            case ValueWriteStrategy.SubstituteWithObjectStub:
+                                objectsStubs.Add(prop.Name);
+                                break;
+                            case ValueWriteStrategy.Trim:
+                                writer.WritePropertyName(prop.Name);
+                                WriteTrimmedValue(writer, prop.Token & BlittableJsonReaderBase.TypesMask, prop.Value);
+                                trimmedValue.Add(prop.Name);
+                                break;
+                        }
                     }
                 }
             }
@@ -257,14 +250,11 @@ namespace Raven.Server.Web.Studio
 
         private static HashSet<LazyStringValue> ExtractColumnNames(Document[] documents, DocumentsOperationContext context)
         {
-            if (_buffers == null)
-                _buffers = new BlittableJsonReaderObject.PropertiesInsertionBuffer();
-
             var columns = new HashSet<LazyStringValue>();
 
             foreach (var document in documents)
             {
-                FetchColumnNames(document.Data, columns, _buffers);
+                FetchColumnNames(document.Data, columns);
             }
 
             RemoveMetadata(context, columns);
@@ -272,18 +262,20 @@ namespace Raven.Server.Web.Studio
             return columns;
         }
 
-        public static void FetchColumnNames(BlittableJsonReaderObject data, HashSet<LazyStringValue> columns, BlittableJsonReaderObject.PropertiesInsertionBuffer buffers)
+        public static void FetchColumnNames(BlittableJsonReaderObject data, HashSet<LazyStringValue> columns)
         {
-            var size = data.GetPropertiesByInsertionOrder(buffers);
-            var prop = new BlittableJsonReaderObject.PropertyDetails();
-
-            for (var i = 0; i < size; i++)
+            using (var buffers = data.GetPropertiesByInsertionOrder())
             {
-                data.GetPropertyByIndex(buffers.Properties[i], ref prop);
-                var propName = prop.Name;
-                if (columns.Contains(propName) == false)
+                var prop = new BlittableJsonReaderObject.PropertyDetails();
+
+                for (var i = 0; i < buffers.Properties.Count; i++)
                 {
-                    columns.Add(prop.Name);
+                    data.GetPropertyByIndex(buffers.Properties.Array[i + buffers.Properties.Offset], ref prop);
+                    var propName = prop.Name;
+                    if (columns.Contains(propName) == false)
+                    {
+                        columns.Add(prop.Name);
+                    }
                 }
             }
         }
