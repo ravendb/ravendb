@@ -923,17 +923,7 @@ namespace Raven.Server.Documents
                             smugglerResult = smuggler.Execute();
                         }
 
-                        switch (outputStream)
-                        {
-                            case EncryptingXChaCha20Poly1305Stream encryptedStream:
-                                encryptedStream.Flush(flushToDisk: true);
-                                break;
-                            case Stream stream:
-                                stream.Flush();
-                                break;
-                            default:
-                                throw new InvalidOperationException($" {outputStream.GetType()} not supported");
-                        }
+                        outputStream.Flush();
                     }
 
                     infoNotify?.Invoke(("Backed up Database Record", 1));
@@ -980,17 +970,7 @@ namespace Raven.Server.Documents
 
                         writer.WriteEndObject();
                         writer.Flush();
-                        switch (outputStream)
-                        {
-                            case EncryptingXChaCha20Poly1305Stream encryptedStream:
-                                encryptedStream.Flush(flushToDisk: true);
-                                break;
-                            case Stream stream:
-                                stream.Flush();
-                                break;
-                            default:
-                                throw new InvalidOperationException($" {outputStream.GetType()} not supported");
-                        }
+                        outputStream.Flush();
                     }
                 }
 
