@@ -89,7 +89,6 @@ namespace Raven.Server.Documents.Replication
                     case ReplicationBatchItem.ReplicationItemType.DocumentTombstone:
                     case ReplicationBatchItem.ReplicationItemType.AttachmentTombstone:
                     case ReplicationBatchItem.ReplicationItemType.RevisionTombstone:
-                    case ReplicationBatchItem.ReplicationItemType.CounterTombstone:
                         return _tombstoneRead;
                     default:
                         throw new ArgumentOutOfRangeException();
@@ -461,15 +460,6 @@ namespace Raven.Server.Documents.Replication
                 }
             }
 
-
-            if (item.Type == ReplicationBatchItem.ReplicationItemType.CounterTombstone && 
-                _parent.SupportedFeatures.Replication.Counters == false)
-            {
-                // skip counter tombstones in legacy mode
-                skippedReplicationItemsInfo.Update(item);
-                return false;
-            }
-
             // destination already has it
             if ( (MissingAttachmentsInLastBatch == false || item.Type != ReplicationBatchItem.ReplicationItemType.Attachment) && 
                 ChangeVectorUtils.GetConflictStatus(item.ChangeVector, _parent.LastAcceptedChangeVector) == ConflictStatus.AlreadyMerged)
@@ -595,12 +585,6 @@ namespace Raven.Server.Documents.Replication
             {
                 WriteCounterToServer(context, item);
                 stats.RecordCounterOutput();
-                return;
-            }
-            if (item.Type == ReplicationBatchItem.ReplicationItemType.CounterTombstone)
-            {
-                WriteCounterTombstoneToServer(context, item);
-                stats.RecordCounterTombstoneOutput();
                 return;
             }
 

@@ -6,7 +6,6 @@ using Raven.Client;
 using Raven.Client.Documents.Indexes;
 using Raven.Client.Documents.Operations.Counters;
 using Raven.Client.Exceptions;
-using Raven.Server.Config.Categories;
 using Raven.Tests.Core.Utils.Entities;
 using Xunit;
 
