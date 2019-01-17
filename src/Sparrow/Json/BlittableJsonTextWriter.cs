@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Buffers;
 using System.Diagnostics;
 using System.Globalization;
 using System.IO;
@@ -170,20 +171,25 @@ namespace Sparrow.Json
             }
 
             WriteStartObject();
-            var props = obj.GetPropertiesByInsertionOrder();
+            
             var prop = new BlittableJsonReaderObject.PropertyDetails();
-            for (int i = 0; i < props.Length; i++)
+            using (var buffer = obj.GetPropertiesByInsertionOrder())
             {
-                if (i != 0)
+                var props = buffer.Properties;
+                for (int i = 0; i < props.Count; i++)
                 {
-                    WriteComma();
+                    if (i != 0)
+                    {
+                        WriteComma();
+                    }
+
+                    obj.GetPropertyByIndex(props.Array[i + props.Offset], ref prop);
+                    WritePropertyName(prop.Name);
+
+                    WriteValue(prop.Token & BlittableJsonReaderBase.TypesMask, prop.Value);
                 }
-
-                obj.GetPropertyByIndex(props[i], ref prop);
-                WritePropertyName(prop.Name);
-
-                WriteValue(prop.Token & BlittableJsonReaderBase.TypesMask, prop.Value);
             }
+
 
             WriteEndObject();
         }

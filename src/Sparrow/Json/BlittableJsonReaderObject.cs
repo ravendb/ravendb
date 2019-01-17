@@ -1,4 +1,5 @@
 using System;
+using System.Buffers;
 using System.Buffers.Text;
 using System.Collections.Generic;
 using System.Diagnostics;
@@ -718,38 +719,63 @@ namespace Sparrow.Json
             return comparer.Compare(propertyNameRelativePosition + propertyNameLengthDataLength, size);
         }
 
-        public class PropertiesInsertionBuffer
+        public struct InsertionOrderProperties : IDisposable
         {
-            public int[] Properties;
-            public int[] Offsets;
+            internal int[] PropertiesBuffer;
+            internal int[] Offsets;
+
+            public int Used;
+
+            public ArraySegment<int> Properties;
+
+            public InsertionOrderProperties(int size)
+            {
+                var actual = Bits.NextPowerOf2(size);
+                PropertiesBuffer = ArrayPool<int>.Shared.Rent(actual);
+                Offsets = ArrayPool<int>.Shared.Rent(actual);
+                Used = size;
+                Properties = new ArraySegment<int>(PropertiesBuffer, 0, Used);
+            }
+
+            public void Dispose()
+            {
+                if(PropertiesBuffer != null)
+                {
+                    ArrayPool<int>.Shared.Return(PropertiesBuffer);
+                    PropertiesBuffer = null;
+                }
+                if (Offsets != null)
+                {
+                    ArrayPool<int>.Shared.Return(Offsets);
+                    Offsets = null;
+                }
+                Properties = default;
+                Used = 0;
+            }
         }
 
-        public int GetPropertiesByInsertionOrder(PropertiesInsertionBuffer buffers)
+        public InsertionOrderProperties GetPropertiesByInsertionOrder()
         {
             AssertContextNotDisposed();
 
             if (_metadataPtr == null)
                 ThrowObjectDisposed();
 
-            if (buffers.Properties == null ||
-                buffers.Properties.Length < _propCount)
-            {
-                var size = Bits.NextPowerOf2(_propCount);
-                buffers.Properties = new int[size];
-                buffers.Offsets = new int[size];
-            }
+            var buffers = new InsertionOrderProperties(_propCount);
 
             var metadataSize = _currentOffsetSize + _currentPropertyIdSize + sizeof(byte);
             for (int i = 0; i < _propCount; i++)
             {
                 var propertyIntPtr = _metadataPtr + i * metadataSize;
                 buffers.Offsets[i] = ReadNumber(propertyIntPtr, _currentOffsetSize);
-                buffers.Properties[i] = i;
+                buffers.PropertiesBuffer[i] = i;
             }
 
             Sorter<int, int, NumericDescendingComparer> sorter;
-            sorter.Sort(buffers.Offsets, buffers.Properties, 0, _propCount);
-            return _propCount;
+            sorter.Sort(buffers.Offsets, buffers.PropertiesBuffer, 0, _propCount);
+            buffers.Used = _propCount;
+
+            return buffers;
         }
 
         public ulong GetHashOfPropertyNames()
@@ -769,25 +795,6 @@ namespace Sparrow.Json
                 hash = Hashing.XXHash64.Calculate(_mem + propRelativePos + offset, (ulong)size, hash);
             }
             return hash;
-        }
-
-        public int[] GetPropertiesByInsertionOrder()
-        {
-            AssertContextNotDisposed();
-
-            var props = new int[_propCount];
-            var offsets = new int[_propCount];
-            var metadataSize = _currentOffsetSize + _currentPropertyIdSize + sizeof(byte);
-            for (int i = 0; i < props.Length; i++)
-            {
-                var propertyIntPtr = _metadataPtr + i * metadataSize;
-                offsets[i] = ReadNumber(propertyIntPtr, _currentOffsetSize);
-                props[i] = i;
-            }
-
-            Sorter<int, int, NumericDescendingComparer> sorter;
-            sorter.Sort(offsets, props);
-            return props;
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]

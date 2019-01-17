@@ -14,14 +14,6 @@ namespace Raven.Server.Web.Studio
 {
     public class StudioCollectionFieldsHandler : DatabaseRequestHandler
     {
-        [ThreadStatic]
-        private static BlittableJsonReaderObject.PropertiesInsertionBuffer _buffers;
-
-        static StudioCollectionFieldsHandler()
-        {
-            ThreadLocalCleanup.ReleaseThreadLocalState += () => _buffers = null;
-        }
-
         private const int MaxArrayItemsToFetch = 16;
         
 
@@ -60,21 +52,18 @@ namespace Raven.Server.Web.Studio
                 }
                 HttpContext.Response.Headers["ETag"] = "\"" + etag + "\"";
 
-                if (_buffers == null)
-                    _buffers = new BlittableJsonReaderObject.PropertiesInsertionBuffer();
-
                 var fields = new Dictionary<LazyStringValue, FieldType>(LazyStringValueComparer.Instance);
 
                 if (string.IsNullOrEmpty(collection))
                 {
                     foreach (var collectionStats in Database.DocumentsStorage.GetCollections(context))
                     {
-                        FetchFieldsForCollection(context, collectionStats.Name, prefix, fields, _buffers);
+                        FetchFieldsForCollection(context, collectionStats.Name, prefix, fields);
                     }
                 }
                 else
                 {
-                    FetchFieldsForCollection(context, collection, prefix, fields, _buffers);
+                    FetchFieldsForCollection(context, collection, prefix, fields);
                 }
 
                 using (var writer = new BlittableJsonTextWriter(context, ResponseBodyStream()))
@@ -143,7 +132,7 @@ namespace Raven.Server.Web.Studio
         }
 
         public void FetchFieldsForCollection(DocumentsOperationContext context, string collection, string prefix,
-            Dictionary<LazyStringValue, FieldType> fields, BlittableJsonReaderObject.PropertiesInsertionBuffer buffers)
+            Dictionary<LazyStringValue, FieldType> fields)
         {
             var document = Database.DocumentsStorage.GetDocumentsInReverseEtagOrder(context, collection, 0, 1).FirstOrDefault();
             if (document != null)
@@ -151,7 +140,7 @@ namespace Raven.Server.Web.Studio
                 var data = document.Data;
                 if (string.IsNullOrEmpty(prefix))
                 {
-                    FetchFields(data, fields, _buffers);
+                    FetchFields(data, fields);
                 }
                 else
                 {
@@ -172,7 +161,7 @@ namespace Raven.Server.Web.Studio
                             switch (token)
                             {
                                 case BlittableJsonToken.StartObject:
-                                    FetchFields((BlittableJsonReaderObject)prop.Value, fields, _buffers);
+                                    FetchFields((BlittableJsonReaderObject)prop.Value, fields);
                                     break;
                                 case BlittableJsonToken.StartArray:
                                     var array = (BlittableJsonReaderArray)prop.Value;
@@ -180,7 +169,7 @@ namespace Raven.Server.Web.Studio
                                     {
                                         var item = array[i];
                                         if (item is BlittableJsonReaderObject itemObject)
-                                            FetchFields(itemObject, fields, _buffers);
+                                            FetchFields(itemObject, fields);
                                     }
                                     break;
                             }
@@ -197,25 +186,26 @@ namespace Raven.Server.Web.Studio
             }
         }
 
-        public void FetchFields(BlittableJsonReaderObject data, Dictionary<LazyStringValue, FieldType> fields, BlittableJsonReaderObject.PropertiesInsertionBuffer buffers)
+        public void FetchFields(BlittableJsonReaderObject data, Dictionary<LazyStringValue, FieldType> fields)
         {
-            var size = data.GetPropertiesByInsertionOrder(buffers);
             var prop = new BlittableJsonReaderObject.PropertyDetails();
-
-            for (var i = 0; i < size; i++)
+            using (var buffers = data.GetPropertiesByInsertionOrder())
             {
-                data.GetPropertyByIndex(buffers.Properties[i], ref prop);
-                var type = GetFieldType(prop.Token & BlittableJsonReaderBase.TypesMask, prop.Value);
-                if (fields.TryGetValue(prop.Name, out var token))
+                for (var i = 0; i < buffers.Properties.Count; i++)
                 {
-                    if (token != type)
+                    data.GetPropertyByIndex(buffers.Properties.Array[i + buffers.Properties.Offset], ref prop);
+                    var type = GetFieldType(prop.Token & BlittableJsonReaderBase.TypesMask, prop.Value);
+                    if (fields.TryGetValue(prop.Name, out var token))
                     {
-                        fields[prop.Name] = token | type;
+                        if (token != type)
+                        {
+                            fields[prop.Name] = token | type;
+                        }
                     }
-                }
-                else
-                {
-                    fields[prop.Name] = type;
+                    else
+                    {
+                        fields[prop.Name] = type;
+                    }
                 }
             }
         }
