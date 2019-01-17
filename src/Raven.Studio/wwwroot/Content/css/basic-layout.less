@@ -839,6 +839,26 @@ body {
         }
 
         .database-list {
+
+            li a {
+                display: flex !important;
+                align-items: center;
+
+                & > div {
+                    flex-shrink: 0;
+                }
+
+                .name {
+                    flex-shrink: 1;
+                    overflow: hidden;
+                    text-overflow: ellipsis;
+                }
+
+                .badge {
+                    margin-left: @gutter-xs;
+                }
+            }
+
             .label {
                 text-transform: uppercase;
                 width: 97px;
@@ -908,6 +928,8 @@ body {
 
             .database {
                 flex-grow: 1;
+                overflow: hidden;
+                text-overflow: ellipsis;
             }
 
             &:after {
