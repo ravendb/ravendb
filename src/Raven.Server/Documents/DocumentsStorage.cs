@@ -344,9 +344,14 @@ namespace Raven.Server.Documents
 
         public string GetNewChangeVector(DocumentsOperationContext context, long newEtag)
         {
-            var changeVector = GetDatabaseChangeVector(context);
+            var changeVector = context.LastDatabaseChangeVector ??
+                               (context.LastDatabaseChangeVector = GetDatabaseChangeVector(context));
+
             if (string.IsNullOrEmpty(changeVector))
-                return ChangeVectorUtils.NewChangeVector(DocumentDatabase.ServerStore.NodeTag, newEtag, DocumentDatabase.DbBase64Id);
+            {
+                context.LastDatabaseChangeVector = ChangeVectorUtils.NewChangeVector(DocumentDatabase.ServerStore.NodeTag, newEtag, DocumentDatabase.DbBase64Id);
+                return context.LastDatabaseChangeVector;
+            }
 
             var result = ChangeVectorUtils.TryUpdateChangeVector(DocumentDatabase.ServerStore.NodeTag, Environment.Base64Id, newEtag, changeVector);
             return result.ChangeVector;
