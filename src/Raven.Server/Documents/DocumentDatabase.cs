@@ -928,8 +928,8 @@ namespace Raven.Server.Documents
                             case EncryptingXChaCha20Poly1305Stream encryptedStream:
                                 encryptedStream.Flush(flushToDisk: true);
                                 break;
-                            case Stream fileStream:
-                                fileStream.Flush();
+                            case Stream stream:
+                                stream.Flush();
                                 break;
                             default:
                                 throw new InvalidOperationException($" {outputStream.GetType()} not supported");
@@ -985,8 +985,8 @@ namespace Raven.Server.Documents
                             case EncryptingXChaCha20Poly1305Stream encryptedStream:
                                 encryptedStream.Flush(flushToDisk: true);
                                 break;
-                            case Stream fileStream:
-                                fileStream.Flush();
+                            case Stream stream:
+                                stream.Flush();
                                 break;
                             default:
                                 throw new InvalidOperationException($" {outputStream.GetType()} not supported");
