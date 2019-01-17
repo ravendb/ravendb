@@ -149,7 +149,7 @@ namespace FastTests
                 byte[] certBytes;
                 try
                 {
-                    certBytes = CertificateUtils.CreateSelfSignedCertificate($"{Environment.MachineName}-{Interlocked.Increment(ref Count)}", "RavenTestsServer", log);
+                    certBytes = CertificateUtils.CreateSelfSignedTestCertificate(Environment.MachineName, "RavenTestsServer", log);
                 }
                 catch (Exception e)
                 {
