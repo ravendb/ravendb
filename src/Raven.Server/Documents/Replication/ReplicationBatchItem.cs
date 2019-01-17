@@ -80,10 +80,6 @@ namespace Raven.Server.Documents.Replication
                     item.Type = ReplicationItemType.RevisionTombstone;
                     item.Collection = doc.Collection;
                     break;
-                case Tombstone.TombstoneType.Counter:
-                    item.Type = ReplicationItemType.CounterTombstone;
-                    item.Collection = doc.Collection;
-                    break;
                 default:
                     throw new ArgumentOutOfRangeException(nameof(doc.Type));
             }
@@ -131,8 +127,7 @@ namespace Raven.Server.Documents.Replication
             AttachmentStream = 4,
             AttachmentTombstone = 5,
             RevisionTombstone = 6,
-            Counter = 7,
-            CounterTombstone = 8
+            Counter = 7
         }
     }
 }
