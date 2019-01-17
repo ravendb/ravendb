@@ -1,4 +1,5 @@
 ﻿using FastTests.Voron;
+using Tests.Infrastructure;
 using Voron;
 using Voron.Exceptions;
 using Xunit;
@@ -7,7 +8,7 @@ namespace SlowTests.Issues
 {
     public class RavenDB_12557 : StorageTest
     {
-        [Fact]
+        [Fact64Bit]
         public void ShouldNotAllowToIncreaseFileSizeWhenUsingCopyOnWriteMode()
         {
             // we must not increase file size during the recovery process because we create new MMF view but we don't see the already applied changes
