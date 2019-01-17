@@ -4,14 +4,12 @@
 //  </copyright>
 // -----------------------------------------------------------------------
 
-using System;
 using System.IO;
-using Sparrow;
 using Sparrow.Utils;
 
 namespace Voron.Exceptions
 {
-    public class DiskFullException : Exception
+    public class DiskFullException : IOException
     {
         public DiskFullException()
         {
