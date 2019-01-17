@@ -586,7 +586,7 @@ namespace Raven.Server.Smuggler.Documents
 
         private void SetDocumentFlags(DocumentItem item, BuildVersionType buildType)
         {
-            item.Document.Flags = item.Document.Flags.Strip(DocumentFlags.FromClusterTransaction);
+            item.Document.Flags = item.Document.Flags.Strip(DocumentFlags.FromClusterTransaction | DocumentFlags.FromReplication);
             item.Document.NonPersistentFlags |= NonPersistentDocumentFlags.FromSmuggler;
 
             if (_options.SkipRevisionCreation)
