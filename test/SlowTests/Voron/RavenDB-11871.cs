@@ -15,7 +15,7 @@ namespace SlowTests.Voron
 
             Options.ManualFlushing = true;
             Options.MaxLogFileSize = 1024 * 1024;
-            Options.SyncDisabled = true;
+            Options.ManualSyncing = true;
 
             for (int X = 0; X < 3; X++)
             {
