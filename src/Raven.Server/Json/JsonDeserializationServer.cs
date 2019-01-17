@@ -20,6 +20,7 @@ using Raven.Client.ServerWide.Tcp;
 using Raven.Server.Commercial;
 using Raven.Server.Documents.ETL.Providers.Raven.Test;
 using Raven.Server.Documents.ETL.Providers.SQL.RelationalWriters;
+using Raven.Server.Documents.Handlers;
 using Raven.Server.Documents.Handlers.Admin;
 using Raven.Server.Documents.Handlers.Debugging;
 using Raven.Server.Documents.PeriodicBackup;
@@ -120,6 +121,8 @@ namespace Raven.Server.Json
         public static readonly Func<BlittableJsonReaderObject, ContinueSetupInfo> ContinueSetupInfo = GenerateJsonDeserializationRoutine<ContinueSetupInfo>();
 
         public static readonly Func<BlittableJsonReaderObject, UnsecuredSetupInfo> UnsecuredSetupInfo = GenerateJsonDeserializationRoutine<UnsecuredSetupInfo>();
+
+        public static readonly Func<BlittableJsonReaderObject, PullReplicationHandler.ZippedPullReplication> ZippedPullReplication = GenerateJsonDeserializationRoutine<PullReplicationHandler.ZippedPullReplication>();
 
         public static readonly Func<BlittableJsonReaderObject, SourceSqlDatabase> SourceSqlDatabase = GenerateJsonDeserializationRoutine<SourceSqlDatabase>();
 
