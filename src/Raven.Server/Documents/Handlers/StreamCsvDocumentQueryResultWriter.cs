@@ -20,7 +20,7 @@ namespace Raven.Server.Documents.Handlers
                 }
                 else
                 {
-                    var o = new BlittablePath(path).Evaluate(res.Data, false);
+                    var o = new BlittablePath(path).Evaluate(res.Data);
                     GetCsvWriter().WriteField(o?.ToString());
                 }
             }
