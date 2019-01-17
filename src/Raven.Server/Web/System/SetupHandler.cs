@@ -72,7 +72,7 @@ namespace Raven.Server.Web.System
                         HttpContext.Response.StatusCode = (int)response.StatusCode;
                         responseString = await response.Content.ReadAsStringAsync().ConfigureAwait(false);
 
-                        if (response.StatusCode == HttpStatusCode.InternalServerError)
+                        if ((int)response.StatusCode >= 500 && (int)response.StatusCode <= 599)
                         {
                             error = responseString;
                             errorMessage = GeneralDomainRegistrationError;
