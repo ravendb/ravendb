@@ -359,10 +359,25 @@ namespace Raven.Server.Documents
 
         public static void SetDatabaseChangeVector(DocumentsOperationContext context, string changeVector)
         {
+            ThrowOnNotUpdatedChangeVector(context, changeVector);
+
             var tree = context.Transaction.InnerTransaction.ReadTree(GlobalTreeSlice);
             using (Slice.From(context.Allocator, changeVector, out var slice))
             {
                 tree.Add(GlobalChangeVectorSlice, slice);
+            }
+        }
+
+        [Conditional("DEBUG")]
+        private static void ThrowOnNotUpdatedChangeVector(DocumentsOperationContext context, string changeVector)
+        {
+            var globalChangeVector = GetDatabaseChangeVector(context);
+            if (changeVector != globalChangeVector && 
+                ChangeVectorUtils.GetConflictStatus(changeVector, globalChangeVector) != ConflictStatus.Update)
+            {
+                throw new InvalidOperationException($"Global Change Vector wasn't updated correctly. " +
+                                                    $"Conflict status: {ChangeVectorUtils.GetConflictStatus(changeVector, globalChangeVector)}, " + System.Environment.NewLine +
+                                                    $"Current global Change Vector: {globalChangeVector}, New Change Vector: {changeVector}");
             }
         }
 
