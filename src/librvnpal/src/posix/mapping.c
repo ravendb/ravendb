@@ -1,12 +1,7 @@
-#if defined(__unix__) || defined(__APPLE__)
-
-#ifdef __APPLE__
-#define rvn_mmap mmap
-#else
-#define rvn_mmap mmap64
+#ifndef _GNU_SOURCE
+#define _GNU_SOURCE
 #endif
 
-#define _GNU_SOURCE
 #include <unistd.h>
 #include <stdlib.h>
 #include <stdio.h>
@@ -18,6 +13,7 @@
 
 #include "rvn.h"
 #include "status_codes.h"
+#include "internal_posix.h"
 
 EXPORT int32_t
 rvn_create_and_mmap64_file(const char *path,
@@ -35,9 +31,7 @@ rvn_create_and_mmap64_file(const char *path,
     _ensure_path_exists(path);
 
     int32_t fd = open(path, O_RDWR | O_CREAT, S_IWUSR | S_IRUSR);
-
-    *handle = NULL;
-
+    *(int32_t*)handle = fd;
     if (fd == -1)
     {
         rc = FAIL_OPEN_FILE;
@@ -69,7 +63,7 @@ rvn_create_and_mmap64_file(const char *path,
 
     rc = _allocate_file_space(fd, sz, detailed_error_code);
     if (rc != SUCCESS)
-        goto error_cleanup;
+        goto error_clean_With_error;
 
     *actual_file_size = sz;
 
@@ -77,7 +71,7 @@ rvn_create_and_mmap64_file(const char *path,
     {
         rc = _sync_directory_for(path, detailed_error_code);
         if (rc != SUCCESS)
-            goto error_cleanup;
+            goto error_clean_With_error;
     }
 
     int32_t mmap_flags = 0;
@@ -95,12 +89,13 @@ rvn_create_and_mmap64_file(const char *path,
     }
 
     *base_addr = address;
-    *((int32_t *)handle) = fd;
+    
 
     return rc; /* SUCCESS */
 
 error_cleanup:
     *detailed_error_code = errno;
+error_clean_With_error:
     if (fd != -1)
         close(fd);
 
@@ -113,16 +108,16 @@ rvn_allocate_more_space(const char *filename, int64_t new_length_after_adjustmen
 {
     int32_t fd = (int32_t)(int64_t)handle;
     int32_t rc = SUCCESS;
-
+    
     rc = _allocate_file_space(fd, new_length_after_adjustment, detailed_error_code);
     if (rc != SUCCESS)
-        goto error_cleanup;
+        goto error_clean_With_error;
 
     if (_sync_directory_allowed(fd) == SYNC_DIR_ALLOWED)
     {
         rc = _sync_directory_for(filename, detailed_error_code);
         if (rc != SUCCESS)
-            goto error_cleanup;
+            goto error_clean_With_error;
     }
 
     int32_t mmap_flags = 0;
@@ -144,6 +139,7 @@ rvn_allocate_more_space(const char *filename, int64_t new_length_after_adjustmen
 
 error_cleanup:
     *detailed_error_code = errno;
+error_clean_With_error:
     if (fd != -1)
         close(fd);
 
@@ -162,5 +158,3 @@ rvn_unmap(void *address, int64_t size, int32_t delete_on_close, int32_t *detaile
 
     return rc;
 }
-
-#endif
