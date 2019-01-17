@@ -260,7 +260,7 @@ namespace Raven.Server.ServerWide
                         PutValue<LicenseLimits>(context, type, cmd, index, leader);
                         break;
                     case nameof(PutCertificateCommand):
-                        var cert = PutValue<CertificateDefinition>(context, type, cmd, index, leader);
+                        PutValue<CertificateDefinition>(context, type, cmd, index, leader);
                         // Once the certificate is in the cluster, no need to keep it locally so we delete it.
                         if (cmd.TryGet(nameof(PutCertificateCommand.Name), out string key))
                             DeleteLocalState(context, key);

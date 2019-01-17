@@ -101,7 +101,7 @@ namespace Raven.Server.Utils
             // without the server private key here
             collection.Import(serverCertBytes, (string)null, X509KeyStorageFlags.MachineKeySet);
 
-            if (new X509Certificate2Collection().OfType<X509Certificate2>().FirstOrDefault(x => x.HasPrivateKey) != null)
+            if (new X509Certificate2Collection(collection).OfType<X509Certificate2>().FirstOrDefault(x => x.HasPrivateKey) != null)
                 throw new InvalidOperationException("After export of CERT, still have private key from signer in certificate, should NEVER happen");
         }
 
