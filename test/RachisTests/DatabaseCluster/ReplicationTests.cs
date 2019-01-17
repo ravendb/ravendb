@@ -624,7 +624,7 @@ namespace RachisTests.DatabaseCluster
                     [databaseName] = DatabaseAccess.Admin
                 }, server: leader);
             }
-            DatabaseTopology topology;
+
             var doc = new DatabaseRecord(databaseName);
             using (var store = new DocumentStore()
             {
@@ -638,7 +638,7 @@ namespace RachisTests.DatabaseCluster
             }.Initialize())
             {
                 var databaseResult = await store.Maintenance.Server.SendAsync(new CreateDatabaseOperation(doc, clusterSize));
-                topology = databaseResult.Topology;
+                var topology = databaseResult.Topology;
                 Assert.Equal(clusterSize, topology.AllNodes.Count());
                 foreach (var server in Servers)
                 {
@@ -653,13 +653,21 @@ namespace RachisTests.DatabaseCluster
                     await session.StoreAsync(new User { Name = "Karmel" }, "users/1");
                     await session.SaveChangesAsync();
                 }
-                Assert.True(await WaitForDocumentInClusterAsync<User>(
-                    topology,
-                    databaseName,
-                    "users/1",
-                    u => u.Name.Equals("Karmel"),
-                    TimeSpan.FromSeconds(60),
-                    certificate: adminCertificate));
+
+                // we need to wait for database change vector to be updated
+                // which means that we need to wait for replication to do a full mesh propagation
+                Assert.True(await WaitForValueOnGroupAsync(topology, serverStore =>
+                {
+                    var database = serverStore.DatabasesLandlord.TryGetOrCreateResourceStore(databaseName).Result;
+
+                    using (database.DocumentsStorage.ContextPool.AllocateOperationContext(out DocumentsOperationContext context))
+                    using (context.OpenReadTransaction())
+                    {
+                        var cv = DocumentsStorage.GetDatabaseChangeVector(context);
+
+                        return cv != null && cv.Contains("A:1-") && cv.Contains("B:1-") && cv.Contains("C:1-");
+            }
+                }, expected: true, timeout: 60000));
             }
 
             using (var store = new DocumentStore()
