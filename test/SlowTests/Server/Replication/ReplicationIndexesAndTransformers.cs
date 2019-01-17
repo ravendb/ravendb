@@ -1,13 +1,10 @@
 ﻿using System;
 using System.Diagnostics;
 using System.Linq;
-using System.Runtime.CompilerServices;
 using System.Threading.Tasks;
 using FastTests.Server.Replication;
-using Raven.Client.Documents;
 using Raven.Client.Documents.Indexes;
 using Raven.Client.Documents.Operations.Indexes;
-using Raven.Client.Exceptions.Documents.Indexes;
 using Xunit;
 
 namespace SlowTests.Server.Replication
@@ -70,30 +67,6 @@ namespace SlowTests.Server.Replication
                                    user.Age
                                };
             }
-        }
-
-        public async Task<(DocumentStore source, DocumentStore destination)> CreateDuoCluster([CallerMemberName] string caller = null)
-        {
-            var leader = await CreateRaftClusterAndGetLeader(2);
-            var follower = Servers.First(srv => ReferenceEquals(srv, leader) == false);
-            var source = new DocumentStore
-            {
-                Urls = new[] {leader.WebUrl},
-                Database = caller
-            };
-            var destination = new DocumentStore
-            {
-                Urls = new[] {follower.WebUrl},
-                Database = caller
-            };
-            source.Initialize();
-            destination.Initialize();
-
-            var res  = CreateClusterDatabase(caller, source, 2);
-            //var doc = MultiDatabase.CreateDatabaseDocument(dbName);
-            //var databaseResult = source.Admin.Server.Send(new CreateDatabaseOperation(doc, 2));
-            await WaitForRaftIndexToBeAppliedInCluster(res.RaftCommandIndex, TimeSpan.FromSeconds(5));
-            return (source, destination);
         }
         
         [Fact]
