@@ -33,7 +33,7 @@ namespace Raven.Server.Documents.ETL.Providers.Raven
             _deletes.Add(command);
         }
 
-        public void PutFullDocument(string id, BlittableJsonReaderObject doc, List<Attachment> attachments, List<(string CounterName, long CounterValue)> counters)
+        public void PutFullDocument(string id, BlittableJsonReaderObject doc, List<Attachment> attachments, List<CounterOperation> counterOperations)
         {
             if (_fullDocuments == null)
                 _fullDocuments = new List<ICommandData>();
@@ -48,20 +48,8 @@ namespace Raven.Server.Documents.ETL.Providers.Raven
                 }
             }
 
-            if (counters != null && counters.Count > 0)
+            if (counterOperations?.Count > 0)
             {
-                var counterOperations = new List<CounterOperation>();
-
-                foreach (var counter in counters)
-                {
-                    counterOperations.Add(new CounterOperation()
-                    {
-                        Type = CounterOperationType.Put,
-                        CounterName = counter.CounterName,
-                        Delta = counter.CounterValue
-                    });
-                }
-
                 _fullDocuments.Add(new CountersBatchCommandData(id, counterOperations)
                 {
                     FromEtl = true

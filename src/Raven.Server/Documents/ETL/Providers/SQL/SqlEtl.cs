@@ -39,7 +39,7 @@ namespace Raven.Server.Documents.ETL.Providers.SQL
             return new TombstonesToSqlItems(tombstones, collection);
         }
 
-        protected override IEnumerator<ToSqlItem> ConvertCountersEnumerator(IEnumerator<CounterDetail> counters, string collection)
+        protected override IEnumerator<ToSqlItem> ConvertCountersEnumerator(IEnumerator<CounterGroupDetail> counters, string collection)
         {
             throw new NotSupportedException("Counters aren't supported by SQL ETL");
         }
