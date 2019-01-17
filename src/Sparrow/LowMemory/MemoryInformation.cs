@@ -662,7 +662,7 @@ namespace Sparrow.LowMemory
         public Size SharedCleanMemory;
     }
 
-    public class EarlyOutOfMemoryException : Exception
+    public class EarlyOutOfMemoryException : SystemException
     {
         public EarlyOutOfMemoryException() { }
         public EarlyOutOfMemoryException(string message) : base(message) { }
