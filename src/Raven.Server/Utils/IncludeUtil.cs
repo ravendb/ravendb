@@ -87,9 +87,9 @@ namespace Raven.Server.Utils
                     if (isKey || leftPath == "$Values")
                     {
                         var property = new BlittableJsonReaderObject.PropertyDetails();
-                        foreach (var propertyIndex in json.GetPropertiesByInsertionOrder())
+                        for (int i = 0; i < json.Count; i++)
                         {
-                            json.GetPropertyByIndex(propertyIndex, ref property);
+                            json.GetPropertyByIndex(i, ref property);
                             var val = isKey ? property.Name : property.Value;
                             if (val != null)
                             {

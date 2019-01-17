@@ -1177,9 +1177,9 @@ namespace Raven.Server.ServerWide.Maintenance
                 var deletionInProgress = new Dictionary<string, DeletionInProgressStatus>();
 
                 var propertyDetails = new BlittableJsonReaderObject.PropertyDetails();
-                foreach (var propertyIndex in obj.GetPropertiesByInsertionOrder())
+                for (int i = 0; i < obj.Count; i++)
                 {
-                    obj.GetPropertyByIndex(propertyIndex, ref propertyDetails);
+                    obj.GetPropertyByIndex(i, ref propertyDetails);
 
                     if (propertyDetails.Value == null)
                         continue;
@@ -1206,9 +1206,9 @@ namespace Raven.Server.ServerWide.Maintenance
                     return settings;
 
                 var propertyDetails = new BlittableJsonReaderObject.PropertyDetails();
-                foreach (var propertyIndex in obj.GetPropertiesByInsertionOrder())
+                for (int i = 0; i < obj.Count; i++)
                 {
-                    obj.GetPropertyByIndex(propertyIndex, ref propertyDetails);
+                    obj.GetPropertyByIndex(i, ref propertyDetails);
 
                     settings[propertyDetails.Name] = propertyDetails.Value?.ToString();
                 }
