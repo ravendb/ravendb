@@ -787,7 +787,7 @@ namespace Raven.Server.Documents
                     AttachmentsCount = DocumentsStorage.AttachmentsStorage.GetNumberOfAttachments(documentsContext).AttachmentCount,
                     RevisionsCount = DocumentsStorage.RevisionsStorage.GetNumberOfRevisionDocuments(documentsContext),
                     ConflictsCount = DocumentsStorage.ConflictsStorage.GetNumberOfConflicts(documentsContext),
-                    CountersCount = DocumentsStorage.CountersStorage.GetNumberOfCounterEntries(documentsContext)
+                    CountersCount = DocumentsStorage.CountersStorage.GetNumberOfCounterEntries()
                 };
             }
         }

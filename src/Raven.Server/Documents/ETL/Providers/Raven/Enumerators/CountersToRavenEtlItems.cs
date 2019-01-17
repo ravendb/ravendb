@@ -6,10 +6,10 @@ namespace Raven.Server.Documents.ETL.Providers.Raven.Enumerators
 {
     public class CountersToRavenEtlItems : IEnumerator<RavenEtlItem>
     {
-        private readonly IEnumerator<CounterDetail> _counters;
+        private readonly IEnumerator<CounterGroupDetail> _counters;
         private readonly string _collection;
 
-        public CountersToRavenEtlItems(IEnumerator<CounterDetail> counters, string collection)
+        public CountersToRavenEtlItems(IEnumerator<CounterGroupDetail> counters, string collection)
         {
             _counters = counters;
             _collection = collection;

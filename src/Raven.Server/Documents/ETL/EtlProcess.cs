@@ -157,7 +157,7 @@ namespace Raven.Server.Documents.ETL
 
         protected abstract IEnumerator<TExtracted> ConvertTombstonesEnumerator(IEnumerator<Tombstone> tombstones, string collection, EtlItemType type);
 
-        protected abstract IEnumerator<TExtracted> ConvertCountersEnumerator(IEnumerator<CounterDetail> counters, string collection);
+        protected abstract IEnumerator<TExtracted> ConvertCountersEnumerator(IEnumerator<CounterGroupDetail> counters, string collection);
 
         protected abstract bool ShouldTrackAttachmentTombstones();
         
@@ -219,7 +219,7 @@ namespace Raven.Server.Documents.ETL
 
                         break;
                     case EtlItemType.Counter:
-/* todo aviv RavenDB-12022
+
                         var lastDocEtag = stats.GetLastTransformedOrFilteredEtag(EtlItemType.Document);
 
                         if (Transformation.ApplyToAllDocuments)
@@ -229,16 +229,9 @@ namespace Raven.Server.Documents.ETL
 
                             counters = new FilterCountersEnumerator(counters, stats, Database.DocumentsStorage, context);
 
-                            var counterTombstones = Database.DocumentsStorage.GetTombstonesFrom(context, CountersStorage.CountersTombstones, fromEtag, 0, int.MaxValue)
-                                .GetEnumerator();
-                            scope.EnsureDispose(counterTombstones);
-
-                            counterTombstones = new FilterTombstonesEnumerator(counterTombstones, stats, Tombstone.TombstoneType.Counter, context, maxEtag: lastDocEtag);
-
                             merged.AddEnumerator(
                                 new PreventCountersIteratingTooFarEnumerator<TExtracted>(ConvertCountersEnumerator(counters, null), lastDocEtag));
 
-                            merged.AddEnumerator(ConvertTombstonesEnumerator(counterTombstones, null, EtlItemType.Counter));
                         }
                         else
                         {
@@ -252,19 +245,9 @@ namespace Raven.Server.Documents.ETL
                                 merged.AddEnumerator(new PreventCountersIteratingTooFarEnumerator<TExtracted>(ConvertCountersEnumerator(counters, collection),
                                     lastDocEtag));
                             }
+                        }
 
-                            var counterTombstones = Database.DocumentsStorage.GetTombstonesFrom(context, CountersStorage.CountersTombstones, fromEtag, 0, int.MaxValue)
-                                .GetEnumerator();
-                            scope.EnsureDispose(counterTombstones);
-
-                            counterTombstones = new FilterTombstonesEnumerator(counterTombstones, stats, Tombstone.TombstoneType.Counter, context,
-                                fromCollections: Transformation.Collections, maxEtag: lastDocEtag);
-
-                            merged.AddEnumerator(ConvertTombstonesEnumerator(counterTombstones, null, EtlItemType.Counter));
-                            break;
-
-                        }*/
-                        goto default;
+                        break;
                     default:
                         throw new NotSupportedException($"Invalid ETL item type: {type}");
                 }
@@ -797,9 +780,6 @@ namespace Raven.Server.Documents.ETL
                 lastProcessedTombstones[collection] = lastProcessedEtag;
             }
 
-            if (ShouldTrackCounters())
-                lastProcessedTombstones[CountersStorage.CountersTombstones] = lastProcessedEtag;
-
             if (ShouldTrackAttachmentTombstones())
                 lastProcessedTombstones[AttachmentsStorage.AttachmentsTombstones] = lastProcessedEtag;
 
@@ -1058,6 +1038,7 @@ namespace Raven.Server.Documents.ETL
 
                 if (ShouldTrackCounters())
                 {
+                    //todo aviv RavenDB-12022
                     countersToProcess += Database.DocumentsStorage.CountersStorage.GetNumberOfCountersToProcess(documentsContext, collection, lastProcessedEtag, out total);
                     totalCountersCount += total;
                 }
@@ -1066,11 +1047,11 @@ namespace Raven.Server.Documents.ETL
             long countersTombstonesToProcess = 0;
             long totalCountersTombstonesCount = 0;
 
-            if (ShouldTrackCounters())
+/*            if (ShouldTrackCounters())
             {
                 countersTombstonesToProcess =
                     Database.DocumentsStorage.CountersStorage.GetNumberOfTombstonesToProcess(documentsContext, lastProcessedEtag, out totalCountersTombstonesCount);
-            }
+            }*/
 
             result.NumberOfDocumentsToProcess = docsToProcess;
             result.TotalNumberOfDocuments = totalDocsCount;

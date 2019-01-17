@@ -58,7 +58,7 @@ namespace Raven.Server.Documents.Handlers
                     {
                         HasWrites |= operation.Type != CounterOperationType.Get &&
                                      operation.Type != CounterOperationType.None;
-                        Add(docOps.DocumentId, operation, out _);
+                        Add(docOps.DocumentId, operation);
                     }
                 }
             }
@@ -78,17 +78,15 @@ namespace Raven.Server.Documents.Handlers
                 _dictionary = operationsPreDocument;
             }
 
-            public int Add(string id, CounterOperation op, out bool isNew)
+            private void Add(string id, CounterOperation op)
             {
-                isNew = false;
                 if (_dictionary.TryGetValue(id, out var existing) == false)
                 {
-                    isNew = true;
                     _dictionary[id] = new List<CounterOperation> { op };
-                    return 1;
+                    return;
                 }
+
                 existing.Add(op);
-                return existing.Count;
             }
 
             protected override int ExecuteCmd(DocumentsOperationContext context)
@@ -143,6 +141,9 @@ namespace Raven.Server.Documents.Handlers
                                 }
                                 break;
                             case CounterOperationType.Delete:
+                                if (_fromEtl && doc == null)
+                                    break;
+
                                 LastChangeVector = _database.DocumentsStorage.CountersStorage.DeleteCounter(context, docId, docCollection, operation.CounterName);
 
                                 countersToAdd.Remove(operation.CounterName);
@@ -152,11 +153,7 @@ namespace Raven.Server.Documents.Handlers
                                 if (_fromEtl == false || doc == null)
                                     break;
 
-                                //TODO aviv RavenDB-12022
-/*
-
-                                _database.DocumentsStorage.CountersStorage.PutCounter(context, docId, docCollection,
-                                    operation.CounterName, operation.Delta);*/
+                                _database.DocumentsStorage.CountersStorage.PutCounter(context, docId, docCollection, operation.CounterName, operation.Delta);
 
                                 countersToAdd.Add(operation.CounterName);
                                 countersToRemove.Remove(operation.CounterName);
@@ -257,19 +254,13 @@ namespace Raven.Server.Documents.Handlers
         public class SmugglerCounterBatchCommand : TransactionOperationsMerger.MergedTransactionCommand
         {
             private readonly DocumentDatabase _database;
-            private readonly bool _fromEtl;
-            private readonly bool _fromSmuggler;
-
             private readonly Dictionary<string, CounterGroup> _dictionary;
-
             private Dictionary<string, Dictionary<string, List<(string ChangeVector, long Value)>>> _legacyDictionary;
 
             public SmugglerCounterBatchCommand(DocumentDatabase database)
             {
-                _fromSmuggler = true;
                 _database = database;
                 _dictionary = new Dictionary<string, CounterGroup>();
-                _fromEtl =  false;
             }
 
             public void Add(string id, CounterGroup cg)
@@ -360,9 +351,8 @@ namespace Raven.Server.Documents.Handlers
 
                 if (doc?.Data != null)
                 {
-                    var nonPersistentFlags = NonPersistentDocumentFlags.ByCountersUpdate;
-                    if (_fromSmuggler)
-                        nonPersistentFlags |= NonPersistentDocumentFlags.FromSmuggler;
+                    var nonPersistentFlags = NonPersistentDocumentFlags.ByCountersUpdate |
+                                             NonPersistentDocumentFlags.FromSmuggler;
 
                     _database.DocumentsStorage.CountersStorage.UpdateDocumentCounters(context, doc, counters.DocId, countersToAdd, new HashSet<string>(), nonPersistentFlags);
                     doc.Data?.Dispose(); // we cloned the data, so we can dispose it.
@@ -378,9 +368,6 @@ namespace Raven.Server.Documents.Handlers
                             throwOnConflict: true);
                         if (doc == null)
                         {
-                            if (_fromEtl)
-                                return;
-
                             ThrowMissingDocument(counters.DocId);
                             return; // never hit
                         }
@@ -392,9 +379,6 @@ namespace Raven.Server.Documents.Handlers
                     }
                     catch (DocumentConflictException)
                     {
-                        if (_fromEtl)
-                            return;
-
                         // this is fine, we explicitly support
                         // setting the flag if we are in conflicted state is 
                         // done by the conflict resolver
