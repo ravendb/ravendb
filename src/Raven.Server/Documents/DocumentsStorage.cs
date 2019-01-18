@@ -344,9 +344,14 @@ namespace Raven.Server.Documents
 
         public string GetNewChangeVector(DocumentsOperationContext context, long newEtag)
         {
-            var changeVector = GetDatabaseChangeVector(context);
+            var changeVector = context.LastDatabaseChangeVector ??
+                               (context.LastDatabaseChangeVector = GetDatabaseChangeVector(context));
+
             if (string.IsNullOrEmpty(changeVector))
-                return ChangeVectorUtils.NewChangeVector(DocumentDatabase.ServerStore.NodeTag, newEtag, DocumentDatabase.DbBase64Id);
+            {
+                context.LastDatabaseChangeVector = ChangeVectorUtils.NewChangeVector(DocumentDatabase.ServerStore.NodeTag, newEtag, DocumentDatabase.DbBase64Id);
+                return context.LastDatabaseChangeVector;
+            }
 
             var result = ChangeVectorUtils.TryUpdateChangeVector(DocumentDatabase.ServerStore.NodeTag, Environment.Base64Id, newEtag, changeVector);
             return result.ChangeVector;
@@ -359,10 +364,25 @@ namespace Raven.Server.Documents
 
         public static void SetDatabaseChangeVector(DocumentsOperationContext context, string changeVector)
         {
+            ThrowOnNotUpdatedChangeVector(context, changeVector);
+
             var tree = context.Transaction.InnerTransaction.ReadTree(GlobalTreeSlice);
             using (Slice.From(context.Allocator, changeVector, out var slice))
             {
                 tree.Add(GlobalChangeVectorSlice, slice);
+            }
+        }
+
+        [Conditional("DEBUG")]
+        private static void ThrowOnNotUpdatedChangeVector(DocumentsOperationContext context, string changeVector)
+        {
+            var globalChangeVector = GetDatabaseChangeVector(context);
+            if (changeVector != globalChangeVector && 
+                ChangeVectorUtils.GetConflictStatus(changeVector, globalChangeVector) != ConflictStatus.Update)
+            {
+                throw new InvalidOperationException($"Global Change Vector wasn't updated correctly. " +
+                                                    $"Conflict status: {ChangeVectorUtils.GetConflictStatus(changeVector, globalChangeVector)}, " + System.Environment.NewLine +
+                                                    $"Current global Change Vector: {globalChangeVector}, New Change Vector: {changeVector}");
             }
         }
 

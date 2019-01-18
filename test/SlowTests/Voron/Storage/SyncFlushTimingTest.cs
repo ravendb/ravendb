@@ -17,7 +17,7 @@ namespace SlowTests.Voron.Storage
         protected override void Configure(StorageEnvironmentOptions options)
         {
             options.ManualFlushing = true;
-            options.SyncDisabled = true;
+            options.ManualSyncing = true;
         }
 
         [Fact]

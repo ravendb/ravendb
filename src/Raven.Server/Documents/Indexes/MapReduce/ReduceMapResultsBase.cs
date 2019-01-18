@@ -592,22 +592,26 @@ namespace Raven.Server.Documents.Indexes.MapReduce
                 }
             }
 
-            var message = $"Couldn't find a pre-computed aggregation result for the existing page: {relatedTreePage}. ";
+            var message = $"Couldn't find a pre-computed aggregation result for the existing page: {relatedTreePage.PageNumber}. ";
+
+            var debugDetails = $"Debug details - page: {relatedPage}, ";
 
             if (decompressedDebug != null)
-                message += $"Decompressed: {decompressedDebug}). ";
+                debugDetails += $"decompressed: {decompressedDebug}), ";
 
-            message += $"Tree state: {tree.State}. ";
+            debugDetails += $"tree state: {tree.State}. ";
 
             if (failedAggregatedLeafs != null && failedAggregatedLeafs.TryGetValue(pageNumber, out var exception))
             {
                 message += $"The aggregation of this leaf (#{pageNumber}) has failed so the relevant result doesn't exist. " +
-                           "Check the inner exception for leaf aggregation error details";
+                           "Check the inner exception for leaf aggregation error details. ";
 
-                throw new AggregationResultNotFoundException(message, exception);
+                throw new AggregationResultNotFoundException(message + debugDetails, exception);
             }
 
-            throw new AggregationResultNotFoundException(message);
+            message += "Please check if there are other aggregate failures at earlier phase of the reduce stage. They could lead to this error due to missing intermediate results. ";
+
+            throw new AggregationResultNotFoundException(message + debugDetails);
         }
 
         protected abstract AggregationResult AggregateOn(List<BlittableJsonReaderObject> aggregationBatch, TransactionOperationContext indexContext, IndexingStatsScope stats, CancellationToken token);
