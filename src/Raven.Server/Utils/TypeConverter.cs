@@ -5,12 +5,14 @@ using System.Collections.Generic;
 using System.Globalization;
 using System.Linq;
 using System.Reflection;
+using System.Runtime.CompilerServices;
 using Jint;
 using Jint.Native;
 using Jint.Native.Array;
 using Jint.Native.Object;
 using Jint.Runtime.Interop;
 using Lucene.Net.Documents;
+using Microsoft.Extensions.Primitives;
 using Raven.Server.Documents.Indexes;
 using Raven.Server.Documents.Indexes.Persistence.Lucene.Documents;
 using Raven.Server.Documents.Indexes.Static;
@@ -27,7 +29,7 @@ namespace Raven.Server.Utils
     {
         private const string TypePropertyName = "$type";
 
-        private const string ValuesPropertyName = "$values";
+        private static readonly StringSegment ValuesPropertyName = new StringSegment("$values");
 
         private static readonly string TypeList = typeof(List<>).FullName;
 
@@ -330,85 +332,119 @@ namespace Raven.Server.Utils
 
         public static dynamic ToDynamicType(object value)
         {
-            if (value is DynamicNullObject)
-                return value;
-
             if (value == null)
                 return DynamicNullObject.ExplicitNull;
 
-            BlittableJsonReaderArray jsonArray;
+            if (value is DynamicNullObject)
+                return value;
+
+            if (value is int || value is long || value is double || value is decimal || value is float || value is short || value is byte)
+                return value;
+
+            if (value is string s && TryConvertStringValue(s, out object result))
+                return result;
+
+            LazyStringValue lazyString = null;
+            if (value is LazyCompressedStringValue lazyCompressedStringValue)
+                lazyString = lazyCompressedStringValue.ToLazyStringValue();
+            else if (value is LazyStringValue lsv)
+                lazyString = lsv;
+
+            if (lazyString != null)
+                return ConvertLazyStringValue(lazyString);
+
             if (value is BlittableJsonReaderObject jsonObject)
             {
-                if (jsonObject.TryGetWithoutThrowingOnError("$values", out jsonArray))
-                    return new DynamicArray(jsonArray);
+                if (jsonObject.TryGetWithoutThrowingOnError(ValuesPropertyName, out BlittableJsonReaderArray ja1))
+                    return new DynamicArray(ja1);
 
                 return new DynamicBlittableJson(jsonObject);
             }
 
-            jsonArray = value as BlittableJsonReaderArray;
-            if (jsonArray != null)
-                return new DynamicArray(jsonArray);
+            if (value is BlittableJsonReaderArray ja2)
+                return new DynamicArray(ja2);
 
-            return ConvertForIndexing(value);
+            return value;
         }
 
-        public static unsafe object ConvertForIndexing(object value)
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        private static unsafe object ConvertLazyStringValue(LazyStringValue value)
+        {
+            var buffer = value.Buffer;
+            var size = value.Size;
+
+            var result = LazyStringParser.TryParseDateTime(buffer, size, out DateTime dt, out DateTimeOffset dto);
+            if (result == LazyStringParser.Result.DateTime)
+                return dt;
+            if (result == LazyStringParser.Result.DateTimeOffset)
+                return dto;
+
+            if (LazyStringParser.TryParseTimeSpan(buffer, size, out TimeSpan ts))
+                return ts;
+
+            return value; // ensure that the decompressed lazy string value is returned
+        }
+
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        private static object ConvertBlittableJsonReaderObject(BlittableJsonReaderObject value)
+        {
+            if (value.TryGet(TypePropertyName, out string type) == false)
+                return value;
+
+            if (type == null)
+                return value;
+
+            if (type.StartsWith(TypeList) == false)
+                return value;
+
+            if (value.TryGet(ValuesPropertyName, out BlittableJsonReaderArray values))
+                return values;
+
+            throw new NotSupportedException($"Detected list type '{type}' but could not extract '{values}'.");
+        }
+
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        private static unsafe bool TryConvertStringValue(string value, out object output)
+        {
+            output = null;
+
+            fixed (char* str = value)
+            {
+                var result = LazyStringParser.TryParseDateTime(str, value.Length, out DateTime dt, out DateTimeOffset dto);
+                if (result == LazyStringParser.Result.DateTime)
+                    output = dt;
+                if (result == LazyStringParser.Result.DateTimeOffset)
+                    output = dto;
+
+                if (LazyStringParser.TryParseTimeSpan(str, value.Length, out var ts))
+                    output = ts;
+            }
+
+            return output != null;
+        }
+
+        public static object ConvertForIndexing(object value)
         {
             if (value == null)
                 return null;
 
-            if (value is BlittableJsonReaderObject blittableJsonObject)
-            {
-                if (blittableJsonObject.TryGet(TypePropertyName, out string type) == false)
-                    return blittableJsonObject;
+            if (value is int || value is long || value is double || value is decimal || value is float || value is short || value is byte)
+                return value;
 
-                if (type == null)
-                    return blittableJsonObject;
+            if (value is string s && TryConvertStringValue(s, out object result))
+                return result;
 
-                if (type.StartsWith(TypeList) == false)
-                    return blittableJsonObject;
-
-                if (blittableJsonObject.TryGet(ValuesPropertyName, out BlittableJsonReaderArray values))
-                    return values;
-
-                throw new NotSupportedException($"Detected list type '{type}' but could not extract '{values}'.");
-            }
-
-            var lazyString = value as LazyStringValue;
-            if (lazyString == null)
-            {
-                if (value is LazyCompressedStringValue lazyCompressedStringValue)
-                    lazyString = lazyCompressedStringValue.ToLazyStringValue();
-            }
+            LazyStringValue lazyString = null;
+            if (value is LazyCompressedStringValue lazyCompressedStringValue)
+                lazyString = lazyCompressedStringValue.ToLazyStringValue();
+            else if (value is LazyStringValue lsv)
+                lazyString = lsv;
 
             if (lazyString != null)
-            {
-                var result = LazyStringParser.TryParseDateTime(lazyString.Buffer, lazyString.Size, out DateTime dt, out DateTimeOffset dto);
-                if (result == LazyStringParser.Result.DateTime)
-                    return dt;
-                if (result == LazyStringParser.Result.DateTimeOffset)
-                    return dto;
+                return ConvertLazyStringValue(lazyString);
 
-                if (LazyStringParser.TryParseTimeSpan(lazyString.Buffer, lazyString.Size, out TimeSpan ts))
-                    return ts;
-
-                return lazyString; // ensure that the decompressed lazy string value is returned
-            }
-
-            if (value is string s)
-            {
-                fixed (char* str = s)
-                {
-                    var result = LazyStringParser.TryParseDateTime(str, s.Length, out DateTime dt, out DateTimeOffset dto);
-                    if (result == LazyStringParser.Result.DateTime)
-                        return dt;
-                    if (result == LazyStringParser.Result.DateTimeOffset)
-                        return dto;
-
-                    if (LazyStringParser.TryParseTimeSpan(str, s.Length, out var ts))
-                        return ts;
-                }
-            }
+            if (value is BlittableJsonReaderObject bjo)
+                return ConvertBlittableJsonReaderObject(bjo);
 
             return value;
         }
