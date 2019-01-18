@@ -1,6 +1,7 @@
 using System;
 using System.Buffers.Text;
 using System.Collections.Generic;
+using System.ComponentModel;
 using System.Diagnostics;
 using System.Globalization;
 using System.IO;
@@ -253,21 +254,13 @@ namespace Sparrow.Json
 
         public bool TryGetWithoutThrowingOnError<T>(string name, out T obj)
         {
-            try
-            {
-                return TryGet<T>(name, out obj);
-            }
-            catch
+            if (TryGetMember(name, out object result) == false)
             {
                 obj = default(T);
                 return false;
             }
-#if DEBUG
-            finally
-            {
-                AssertContextNotDisposed();
-            }
-#endif
+
+            return TryConvertType(result, out obj);
         }
 
         public bool TryGet<T>(StringSegment name, out T obj)
@@ -291,6 +284,102 @@ namespace Sparrow.Json
         private static void ThrowFormatException(object value, string fromType, string toType, Exception e)
         {
             throw new FormatException($"Could not convert {fromType} ('{value}') to {toType}", e);
+        }
+
+        internal static bool TryConvertType<T>(object result, out T obj)
+        {
+            obj = default(T);
+            if (result == null)
+                return true;
+
+            if (result is T)
+            {
+                obj = (T)result;
+            }
+            //just in case -> have better exception in this use-case
+            else if (typeof(T) == typeof(BlittableJsonReaderObject) && result.GetType() == typeof(BlittableJsonReaderArray))
+            {
+                return false;
+            }
+            //just in case -> have better exception in this use-case
+            else if (typeof(T) == typeof(BlittableJsonReaderArray) && result.GetType() == typeof(BlittableJsonReaderObject))
+            {
+                return false;
+            }
+            else
+            {
+                var type = Nullable.GetUnderlyingType(typeof(T)) ?? typeof(T);
+
+                try
+                {
+                    if (type.GetTypeInfo().IsEnum)
+                    {
+                        obj = (T)Enum.Parse(type, result.ToString());
+                    }
+                    else if (type == typeof(DateTime))
+                    {
+                        if (ChangeTypeToString(result, out string dateTimeString) == false)
+                            return false;
+                        if (DateTime.TryParseExact(dateTimeString, DefaultFormat.DateTimeFormatsToRead, CultureInfo.InvariantCulture, DateTimeStyles.RoundtripKind, out DateTime time) == false)
+                            return false;
+
+                        obj = (T)(object)time;
+                    }
+                    else if (type == typeof(DateTimeOffset))
+                    {
+                        if (ChangeTypeToString(result, out string dateTimeOffsetString) == false)
+                            return false;
+                        if (DateTimeOffset.TryParseExact(dateTimeOffsetString, DefaultFormat.DateTimeFormatsToRead, CultureInfo.InvariantCulture,
+                                DateTimeStyles.RoundtripKind, out DateTimeOffset time) == false)
+                            return false;
+
+                        obj = (T)(object)time;
+                    }
+                    else if (type == typeof(TimeSpan))
+                    {
+                        if (ChangeTypeToString(result, out string timeSpanString) == false)
+                            return false;
+                        if (TimeSpan.TryParseExact(timeSpanString, "c", CultureInfo.InvariantCulture, out TimeSpan timeSpan) == false)
+                            return false;
+                        obj = (T)(object)timeSpan;
+                    }
+                    else if (type == typeof(Guid))
+                    {
+                        if (ChangeTypeToString(result, out string guidString) == false)
+                            return false;
+                        if (Guid.TryParse(guidString, out Guid guid) == false)
+                            return false;
+                        obj = (T)(object)guid;
+                    }
+                    else if (result is LazyStringValue lazyStringValue)
+                    {
+                        obj = (T)Convert.ChangeType(lazyStringValue.ToString(), type);
+                        // TODO: Try
+                        // obj = (T)TypeDescriptor.GetConverter(typeof(T)).ConvertFromString(lazyStringValue.ToString());
+                    }
+                    else if (result is LazyNumberValue lnv)
+                    {
+                        obj = (T)Convert.ChangeType(lnv, type);
+                    }
+                    else if (result is LazyCompressedStringValue lazyCompressStringValue)
+                    {
+                        if (type == typeof(LazyStringValue))
+                            obj = (T)(object)lazyCompressStringValue.ToLazyStringValue();
+                        else
+                            obj = (T)Convert.ChangeType(lazyCompressStringValue.ToString(), type);
+                    }
+                    else
+                    { 
+                        obj = (T)Convert.ChangeType(result, type);
+                    }
+                }
+                catch
+                {
+                    return false;
+                }                
+            }
+
+            return true;
         }
 
         internal static void ConvertType<T>(object result, out T obj)
@@ -709,10 +798,8 @@ namespace Sparrow.Json
             var propertyNameRelativePosition = _propNames - propertyNameOffset;
             var position = propertyNameRelativePosition - _mem;
 
-            byte propertyNameLengthDataLength;
-
             // Get the property name size
-            var size = ReadVariableSizeInt((int)position, out propertyNameLengthDataLength);
+            var size = ReadVariableSizeInt((int)position, out byte propertyNameLengthDataLength);
 
             // Return result of comparison between property name and received comparer
             return comparer.Compare(propertyNameRelativePosition + propertyNameLengthDataLength, size);
