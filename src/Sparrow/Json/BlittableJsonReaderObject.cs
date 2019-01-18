@@ -263,10 +263,20 @@ namespace Sparrow.Json
             return TryConvertType(result, out obj);
         }
 
+        public bool TryGetWithoutThrowingOnError<T>(StringSegment name, out T obj)
+        {
+            if (TryGetMember(name, out object result) == false)
+            {
+                obj = default(T);
+                return false;
+            }
+
+            return TryConvertType(result, out obj);
+        }
+
         public bool TryGet<T>(StringSegment name, out T obj)
         {
-            object result;
-            if (TryGetMember(name, out result) == false)
+            if (TryGetMember(name, out object result) == false)
             {
                 obj = default(T);
                 return false;
