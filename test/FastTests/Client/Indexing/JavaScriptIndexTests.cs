@@ -1,14 +1,10 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
-using System.Security.Cryptography.X509Certificates;
 using FastTests.Server.Basic.Entities;
-using Microsoft.CodeAnalysis.CSharp.Syntax;
 using Raven.Client;
 using Raven.Client.Documents;
 using Raven.Client.Documents.Indexes;
-using Raven.Client.Exceptions.Documents.Indexes;
-using Raven.Server.Config.Categories;
 using Xunit;
 
 namespace FastTests.Client.Indexing
@@ -227,7 +223,7 @@ namespace FastTests.Client.Indexing
         [Fact]
         public void CanUseJavaScriptIndexWithLoadDocument()
         {
-            CanUseJavaScriptIndexWithLoadInternal<UsersWithProductsByName>();            
+            CanUseJavaScriptIndexWithLoadInternal<UsersWithProductsByName>();
         }
 
         [Fact]
@@ -482,7 +478,7 @@ namespace FastTests.Client.Indexing
                 store.ExecuteIndex(new Users_ByAddress());
                 using (var session = store.OpenSession())
                 {
-                    session.Store(new User{Name = "Foo", Address = address });
+                    session.Store(new User { Name = "Foo", Address = address });
                     session.SaveChanges();
                     WaitForIndexing(store);
                     var user = session.Query<User>("Users/ByAddress").Single(u => u.Address == address);
@@ -501,7 +497,7 @@ namespace FastTests.Client.Indexing
         {
             using (var store = GetDocumentStore())
             {
-                store.ExecuteIndex(new ProductsWarrenty());                
+                store.ExecuteIndex(new ProductsWarrenty());
                 using (var session = store.OpenSession())
                 {
                     session.Store(new Product

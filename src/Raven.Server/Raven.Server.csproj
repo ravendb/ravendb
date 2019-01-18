@@ -75,10 +75,10 @@
   <ItemGroup>
     <PackageReference Include="CsvHelper" Version="12.1.1" />
     <PackageReference Include="DasMulli.Win32.ServiceUtils.Signed" Version="1.1.0" />
-    <PackageReference Include="JetBrains.Annotations" Version="2018.2.1">
+    <PackageReference Include="JetBrains.Annotations" Version="2018.3.0">
       <PrivateAssets>All</PrivateAssets>
     </PackageReference>
-    <PackageReference Include="Jint" Version="3.0.18-ravendb" />
+    <PackageReference Include="Jint" Version="3.0.19-ravendb" />
     <PackageReference Include="Lextm.SharpSnmpLib" Version="10.0.11" />
     <PackageReference Include="Lucene.Net" Version="3.0.20" />
     <PackageReference Include="Lucene.Net.Contrib.Spatial.NTS" Version="3.0.17" />

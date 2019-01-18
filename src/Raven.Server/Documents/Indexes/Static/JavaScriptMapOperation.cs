@@ -103,7 +103,7 @@ namespace Raven.Server.Documents.Indexes.Static
             if (!(MapFunc is ScriptFunctionInstance sfi))
                 return;
 
-            var theFuncAst = sfi.GetFunctionAst();
+            var theFuncAst = sfi.FunctionDeclaration;
 
             var res = CheckIfSimpleMapExpression(engine, theFuncAst);
             if (res != null)
@@ -162,7 +162,7 @@ namespace Raven.Server.Documents.Indexes.Static
 
                     if (!(arg is ScriptFunctionInstance sfi))
                         continue;
-                    var moreFuncAst = sfi.GetFunctionAst();
+                    var moreFuncAst = sfi.FunctionDeclaration;
                     field = moreFuncAst.TryGetFieldFromSimpleLambdaExpression();
                     if (field != null)
                     {
