@@ -278,7 +278,7 @@ namespace Raven.Server.Documents
             BlittableJsonReaderObject document, string changeVector, string expectedChangeVector, DocumentFlags flags, TableValueReader oldValue)
         {
             var nonPersistentFlags = NonPersistentDocumentFlags.None;
-            var fromReplication = (flags & DocumentFlags.FromReplication) == DocumentFlags.FromReplication;
+            var fromReplication = flags.Contain(DocumentFlags.FromReplication);
 
             if (_documentsStorage.ConflictsStorage.ConflictsCount != 0)
             {
