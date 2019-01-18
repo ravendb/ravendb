@@ -13,6 +13,8 @@ namespace SlowTests.Issues
         [Fact]
         public async Task CanGetLogsConfigurationAndChangeMode()
         {
+            UseNewLocalServer();
+
             using (var store = GetDocumentStore())
             {
                 using (var cts = new CancellationTokenSource(TimeSpan.FromSeconds(15)))
