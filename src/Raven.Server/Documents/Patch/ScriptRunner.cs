@@ -1068,7 +1068,7 @@ namespace Raven.Server.Documents.Patch
                     if (secondParam.IsObject() && secondParam.AsObject() is ScriptFunctionInstance lambda)
                     {
 
-                        var functionAst = lambda.GetFunctionAst();
+                        var functionAst = lambda.FunctionDeclaration;
                         var propName = functionAst.TryGetFieldFromSimpleLambdaExpression();
 
                         if (selfInstance.OwnValues.TryGetValue(propName, out var existingValue))

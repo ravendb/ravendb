@@ -304,7 +304,7 @@ namespace Raven.Server.Documents.Indexes.Static
             if (_groupByFields != null)
                 return _groupByFields;
 
-            var ast = Key.GetFunctionAst();
+            var ast = Key.FunctionDeclaration;
             var body = ast.Body.Body;
 
             if (body.Count != 1)
