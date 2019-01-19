@@ -373,6 +373,7 @@ namespace Raven.Server.Documents.Queries.Results
                     value = InvokeFunction(
                         fieldToFetch.QueryField.Name,
                         _query.Metadata.Query,
+                        document?.Id,
                         args);
 
                     return true;
@@ -625,13 +626,13 @@ namespace Raven.Server.Documents.Queries.Results
             }
         }
 
-        public object InvokeFunction(string methodName, Query query, object[] args)
+        public object InvokeFunction(string methodName, Query query, string documentId, object[] args)
         {
             var key = new QueryKey(query.DeclaredFunctions);
             using (_database.Scripts.GetScriptRunner(key, readOnly: true, patchRun: out var run))
             using (var result = run.Run(_context, _context as DocumentsOperationContext, methodName, args))
             {
-                _includeDocumentsCommand?.AddRange(run.Includes);
+                _includeDocumentsCommand?.AddRange(run.Includes, documentId);
 
                 if (result.IsNull)
                     return null;
