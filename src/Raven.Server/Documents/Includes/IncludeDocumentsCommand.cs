@@ -1,11 +1,11 @@
 ﻿using System;
 using System.Collections.Generic;
-using Microsoft.Extensions.Primitives;
+using System.Runtime.CompilerServices;
 using Raven.Client;
 using Raven.Client.Exceptions.Documents;
 using Raven.Server.ServerWide.Context;
 using Raven.Server.Utils;
-using StringSegment = Sparrow.StringSegment;
+using Sparrow;
 
 namespace Raven.Server.Documents.Includes
 {
@@ -17,6 +17,8 @@ namespace Raven.Server.Documents.Includes
 
         private HashSet<string> _includedIds;
 
+        private HashSet<string> _idsToIgnore;
+
         public IncludeDocumentsCommand(DocumentsStorage storage, DocumentsOperationContext context, string[] includes)
         {
             _storage = storage;
@@ -24,8 +26,10 @@ namespace Raven.Server.Documents.Includes
             _includes = includes;
         }
 
-        public void AddRange(HashSet<string> ids)
+        public void AddRange(HashSet<string> ids, string documentId)
         {
+            AddToIgnore(documentId);
+
             if (ids == null)
                 return;
 
@@ -33,14 +37,6 @@ namespace Raven.Server.Documents.Includes
                 _includedIds = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
 
             _includedIds.UnionWith(ids);
-        }
-
-        public void Add(string id)
-        {
-            if (_includedIds == null)
-                _includedIds = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
-
-            _includedIds.Add(id);
         }
 
         public void Gather(Document document)
@@ -54,6 +50,8 @@ namespace Raven.Server.Documents.Includes
             if (_includedIds == null)
                 _includedIds = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
 
+            AddToIgnore(document.Id);
+
             foreach (var include in _includes)
             {
                 if (include == Constants.Documents.Indexing.Fields.DocumentIdFieldName)
@@ -63,7 +61,6 @@ namespace Raven.Server.Documents.Includes
                 }
                 IncludeUtil.GetDocIdFromInclude(document.Data, new StringSegment(include), _includedIds);
             }
-
         }
 
         public void Fill(List<Document> result)
@@ -73,7 +70,10 @@ namespace Raven.Server.Documents.Includes
 
             foreach (var includedDocId in _includedIds)
             {
-                if (string.IsNullOrEmpty(includedDocId)) 
+                if (string.IsNullOrEmpty(includedDocId))
+                    continue;
+
+                if (_idsToIgnore != null && _idsToIgnore.Contains(includedDocId))
                     continue;
 
                 Document includedDoc;
@@ -95,6 +95,18 @@ namespace Raven.Server.Documents.Includes
         private static Document CreateConflictDocument(DocumentConflictException exception)
         {
             return new ConflictDocument(exception.DocId);
+        }
+
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        private void AddToIgnore(string documentId)
+        {
+            if (documentId == null)
+                return;
+
+            if (_idsToIgnore == null)
+                _idsToIgnore = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+
+            _idsToIgnore.Add(documentId);
         }
 
         public class ConflictDocument : Document

@@ -45,7 +45,7 @@ namespace Raven.Client.Documents.Queries
         /// The size of the request which were sent from the server.
         /// This value is the _uncompressed_ size. 
         /// </summary>
-        [Obsolete("QueryStatistics.ResultSize is not supported anymore. Will be removed in next major version of the product.")]
+        [Obsolete("QueryResult.ResultSize is not supported anymore. Will be removed in next major version of the product.")]
         public long ResultSize { get; set; }
     }
 
