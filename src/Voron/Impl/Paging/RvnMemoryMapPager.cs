@@ -19,7 +19,7 @@ namespace Voron.Impl.Paging
     {
         public override long TotalAllocationSize => _totalAllocationSize;
         public override int CopyPage(I4KbBatchWrites destwI4KbBatchWrites, long p, PagerState pagerState) => CopyPageImpl(destwI4KbBatchWrites, p, pagerState);
-        public override string ToString() => FileName.FullPath;
+        public override string ToString() => FileName?.FullPath;
         protected override string GetSourceName() => $"mmf64: {FileName?.FullPath}";
         private long _totalAllocationSize;
         private readonly bool _copyOnWriteMode;
@@ -50,11 +50,11 @@ namespace Voron.Impl.Paging
                 out _totalAllocationSize,
                 out var errorCode);
 
-            if (rc != 0)
+            if (rc != FailCodes.Success)
             {
                 try
                 {
-                    PalHelper.ThrowLastError(errorCode, $"rvn_create_and_mmap64_file failed on {(FailCodes)rc}");
+                    PalHelper.ThrowLastError(rc, errorCode, $"rvn_create_and_mmap64_file failed on {(FailCodes)rc}");
                 }
                 catch (DiskFullException dfEx)
                 {
@@ -101,8 +101,9 @@ namespace Voron.Impl.Paging
                     foreach (var alloc in currentState.AllocationInfos)
                     {
                         metric.IncrementFileSize(alloc.Size);
-                        if (rvn_memory_sync(alloc.BaseAddress, alloc.Size, out var errorCode) != 0)
-                            PalHelper.ThrowLastError(errorCode,$"Failed to memory sync at ${new IntPtr(alloc.BaseAddress).ToInt64():X}. TotalUnsynced = ${totalUnsynced}");
+                        var rc = rvn_memory_sync(alloc.BaseAddress, alloc.Size, out var errorCode);
+                        if (rc != FailCodes.Success)
+                            PalHelper.ThrowLastError(rc, errorCode,$"Failed to memory sync at ${new IntPtr(alloc.BaseAddress).ToInt64():X}. TotalUnsynced = ${totalUnsynced}");
                     }
                     metric.IncrementSize(totalUnsynced);
                 }
@@ -118,8 +119,8 @@ namespace Voron.Impl.Paging
             base.ReleaseAllocationInfo(baseAddress, size);
 
             var rc = rvn_unmap(baseAddress, size, IsDeleteOnClose, out var errorCode);
-            if (rc != 0)
-                PalHelper.ThrowLastError(errorCode,
+            if (rc != FailCodes.Success)
+                PalHelper.ThrowLastError(rc, errorCode,
                     $"Failed to unmap {FileName.FullPath}. DeleteOnClose={DeleteOnClose}");
 
             NativeMemory.UnregisterFileMapping(FileName?.FullPath, new IntPtr(baseAddress), size);
@@ -131,10 +132,10 @@ namespace Voron.Impl.Paging
             if (rc == 0) 
                 return;
             
-            // ignore results.. but warn! we cannot delete the file probably
-            // rc contains either FAIL_UNLINK, FAIL_CLOSE or both of them    (or FAIL_INVALID_HANDLE)
+            // rc != success, we cannot delete the file probably, and there's nothing much we can do here.
+            // just add to log and continue            
             if (_logger.IsInfoEnabled)
-                _logger.Info($"Unable to dispose handle for {FileName.FullPath} (ignoring). rc={(FailCodes)rc}. DeleteOnClose={DeleteOnClose}, "
+                _logger.Info($"Unable to dispose handle for {FileName.FullPath} (ignoring). rc={rc}. DeleteOnClose={DeleteOnClose}, "
                              + $"errorCode={PalHelper.GetNativeErrorString(errorCode, "Unable to dispose handle for {FileName.FullPath} (ignoring).", out _)}",
                     new IOException($"Unable to dispose handle for {FileName.FullPath} (ignoring)."));
         }
@@ -176,8 +177,8 @@ namespace Voron.Impl.Paging
             var rc = rvn_allocate_more_space(FileName.FullPath, newLengthAfterAdjustment, _handle,
                 _copyOnWriteMode ? MmapOptions.CopyOnWrite : MmapOptions.None,out var newAddress, out var errorCode);
 
-            if (rc != 0)
-                PalHelper.ThrowLastError(errorCode, $"can't allocate more pages (rc={(FailCodes)rc}). Requested {newLength} (adjusted to {newLengthAfterAdjustment})");
+            if (rc != FailCodes.Success)
+                PalHelper.ThrowLastError(rc, errorCode, $"can't allocate more pages (rc={(FailCodes)rc}). Requested {newLength} (adjusted to {newLengthAfterAdjustment})");
 
             // TODO : Get rid of allocation info
             var allocationInfo = new PagerState.AllocationInfo
