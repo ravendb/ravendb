@@ -59,7 +59,7 @@ EXPORT int32_t
 rvn_memory_sync(void *address, int64_t size, int32_t *detailed_error_code);
 
 EXPORT int32_t
-rvn_dispose_handle(const char *filepath, void *handle, int32_t delete_on_close, int32_t *detailed_error_code);
+rvn_mmap_dispose_handle(const char *filepath, void *handle, int32_t delete_on_close, int32_t *detailed_error_code);
 
 EXPORT int32_t
 rvn_unmap(void *address, int64_t size, int32_t delete_on_close, int32_t *detailed_error_code);
