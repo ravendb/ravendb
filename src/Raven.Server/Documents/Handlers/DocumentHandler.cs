@@ -208,7 +208,7 @@ namespace Raven.Server.Documents.Handlers
             var includePaths = GetStringValuesQueryString("include", required: false);
             var documents = new List<Document>(ids.Count);
             var includes = new List<Document>(includePaths.Count * ids.Count);
-            var includeDocs = new IncludeDocumentsCommand(Database.DocumentsStorage, context, includePaths);
+            var includeDocs = new IncludeDocumentsCommand(Database.DocumentsStorage, context, includePaths, isProjection: false);
 
             GetCountersQueryString(Database, context, out var includeCounters);
 

@@ -59,6 +59,36 @@ namespace SlowTests.Issues
                     Assert.Equal(2, results.Length);
                     Assert.Equal(0, includes.Count);
 
+                    // when we are doing a projection
+                    // then we need to include the document in Includes
+                    result = commands.Query(new IndexQuery
+                    {
+                        Query = "from Employees as e where e.FirstName != 'Jessie' select { FirstName : e.FirstName, ReportsTo : e.ReportsTo } include ReportsTo"
+                    });
+
+                    results = result.Results;
+                    includes = result.Includes;
+
+                    Assert.Equal(2, results.Length);
+                    Assert.Equal(1, includes.Count);
+
+                    // when we are doing a projection
+                    // then we need to include the document in Includes
+                    result = commands.Query(new IndexQuery
+                    {
+                        Query = "from Employees as e select { FirstName : e.FirstName, ReportsTo : e.ReportsTo } include ReportsTo"
+                    });
+
+                    results = result.Results;
+                    includes = result.Includes;
+
+                    Assert.Equal(2, results.Length);
+                    Assert.Equal(1, includes.Count);
+
+                    // cannot be optimized
+                    // we do not know what will be in the function
+                    // do not want to compare the input and output
+                    // to much cost
                     result = commands.Query(new IndexQuery
                     {
                         Query = @"
@@ -73,7 +103,7 @@ from Employees as e select f(e)"
                     includes = result.Includes;
 
                     Assert.Equal(2, results.Length);
-                    Assert.Equal(0, includes.Count);
+                    Assert.Equal(1, includes.Count);
                 }
             }
         }
