@@ -103,7 +103,7 @@ rvn_read_journal(void *handle, void *buffer, int64_t required_size, int64_t offs
 }
 
 EXPORT int32_t
-rvn_truncate_journal(const char *file_name, void *handle, int64_t size, int32_t *detailed_error_code)
+rvn_truncate_journal(void *handle, int64_t size, int32_t *detailed_error_code)
 {
     int32_t rc;
     int32_t fd = (int32_t)(int64_t)handle;
@@ -117,6 +117,13 @@ rvn_truncate_journal(const char *file_name, void *handle, int64_t size, int32_t 
     rc = _resize_file(handle, size, detailed_error_code);
     if(rc != SUCCESS)
         return rc;
+
+    char file_name[PATH_MAX];
+    if (fcntl(fd, F_GETPATH, filePath) == -1)
+    {
+        rc = FAIL_GET_FILE_PATH;
+        goto error_cleanup;
+    }
 
     return _sync_directory_for(file_name, detailed_error_code);
 

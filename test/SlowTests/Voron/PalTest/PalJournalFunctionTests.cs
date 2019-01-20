@@ -255,7 +255,7 @@ namespace SlowTests.Voron.PalTest
                 PalHelper.ThrowLastError(ret, errno, "");
 
             const long truncateSize = 4096L;
-            ret = Pal.rvn_truncate_journal(file, handle, truncateSize, out errno);
+            ret = Pal.rvn_truncate_journal(handle, truncateSize, out errno);
             if (ret != PalFlags.FailCodes.Success)
                 PalHelper.ThrowLastError(ret, errno, "");
 
