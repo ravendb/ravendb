@@ -1,7 +1,5 @@
 #include <windows.h>
-#include <stdint.h>
 #include <assert.h>
-#include <stdio.h>
 
 #include "rvn.h"
 #include "status_codes.h"
@@ -101,7 +99,7 @@ rvn_read_journal(void* handle, void* buffer, int64_t required_size, int64_t offs
 }
 
 EXPORT int32_t
-rvn_truncate_journal(const char* file_name, void* handle, int64_t size, int32_t* detailed_error_code)
+rvn_truncate_journal(void* handle, int64_t size, int32_t* detailed_error_code)
 {
     /*TODO Should size be aligned to 4K?*/
     /*TODO Should check the function doesn't try to make the file bigger?*/

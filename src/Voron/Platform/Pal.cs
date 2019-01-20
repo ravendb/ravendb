@@ -193,7 +193,6 @@ namespace Voron.Platform
 
         [DllImport(LIBRVNPAL, SetLastError = true)]
         public static extern PalFlags.FailCodes rvn_truncate_journal(
-            string fileName,
             SafeJournalHandle handle,
             Int64 size,
             out Int32 errorCode
