@@ -14,16 +14,18 @@ namespace Raven.Server.Documents.Includes
         private readonly DocumentsStorage _storage;
         private readonly DocumentsOperationContext _context;
         private readonly string[] _includes;
+        private readonly bool _isProjection;
 
         private HashSet<string> _includedIds;
 
         private HashSet<string> _idsToIgnore;
 
-        public IncludeDocumentsCommand(DocumentsStorage storage, DocumentsOperationContext context, string[] includes)
+        public IncludeDocumentsCommand(DocumentsStorage storage, DocumentsOperationContext context, string[] includes, bool isProjection)
         {
             _storage = storage;
             _context = context;
             _includes = includes;
+            _isProjection = isProjection;
         }
 
         public void AddRange(HashSet<string> ids, string documentId)
@@ -100,6 +102,9 @@ namespace Raven.Server.Documents.Includes
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         private void AddToIgnore(string documentId)
         {
+            if (_isProjection)
+                return;
+
             if (documentId == null)
                 return;
 
