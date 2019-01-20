@@ -20,9 +20,9 @@ using Voron.Util.Settings;
 using static Voron.Platform.Win32.Win32NativeMethods;
 
 namespace Voron.Platform.Win32
-{    
+{
     public unsafe class WindowsMemoryMapPager : AbstractPager
-    {        
+    {
         public const int AllocationGranularity = 64 * Constants.Size.Kilobyte;
         private long _totalAllocationSize;
         private readonly FileInfo _fileInfo;
@@ -54,7 +54,7 @@ namespace Voron.Platform.Win32
             Win32NativeFileAccess access = Win32NativeFileAccess.GenericRead | Win32NativeFileAccess.GenericWrite,
             bool usePageProtection = false)
             : base(options, !fileAttributes.HasFlag(Win32NativeFileAttributes.Temporary), usePageProtection)
-        {                        
+        {
             SYSTEM_INFO systemInfo;
             GetSystemInfo(out systemInfo);
             FileName = file;
@@ -143,18 +143,9 @@ namespace Voron.Platform.Win32
             // We need to decide what pager we are going to use right now or risk inconsistencies when performing prefetches from disk.
             var state = pagerState ?? _pagerState;
 
-            if (PlatformDetails.CanPrefetch)
-            {
-                if (this._pagerState.ShouldPrefetchSegment(pageNumber, out void* virtualAddress, out long bytes))
-                {
-                    Win32MemoryMapNativeMethods.WIN32_MEMORY_RANGE_ENTRY entry;
-                    entry.NumberOfBytes = (IntPtr)bytes;
-                    entry.VirtualAddress = virtualAddress;
+            if (Pal.SysInfo.CanPrefetch && this._pagerState.ShouldPrefetchSegment(pageNumber, out void* virtualAddress, out long bytes))
+                Pal.rvn_prefetch_virtual_memory(virtualAddress, bytes, out _);
 
-                    Win32MemoryMapNativeMethods.PrefetchVirtualMemory(Win32Helper.CurrentProcess, (UIntPtr)1, &entry, 0);
-                }
-            }
-           
             return base.AcquirePagePointer(tx, pageNumber, state);
         }
 
@@ -224,7 +215,7 @@ namespace Voron.Platform.Win32
             NumberOfAllocatedPages = _totalAllocationSize / Constants.Storage.PageSize;
 
             return newPagerState;
-        }        
+        }
 
         private PagerState CreatePagerState()
         {
@@ -354,9 +345,10 @@ namespace Voron.Platform.Win32
             return CopyPageImpl(destwI4KbBatchWrites, p, pagerState);
         }
 
-        protected internal override unsafe void PrefetchRanges(Win32MemoryMapNativeMethods.WIN32_MEMORY_RANGE_ENTRY* list, int count)
+        protected internal override void PrefetchRanges(PalDefinitions.PrefetchRanges* list, int count)
         {
-            Win32MemoryMapNativeMethods.PrefetchVirtualMemory(Win32Helper.CurrentProcess, (UIntPtr)count, list, 0);
+            Pal.rvn_prefetch_ranges(list, count, out _);
+            // we explicitly ignore the return code here, this is optimization only
         }
 
         internal override void ProtectPageRange(byte* start, ulong size, bool force = false)
