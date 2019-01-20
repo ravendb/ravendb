@@ -246,13 +246,17 @@ namespace Raven.Server.Documents
 
                     data.TryGet(Values, out BlittableJsonReaderObject counters);
 
-                    if (counters.TryGet(name, out BlittableJsonReaderObject.RawBlob existingCounter) == false || overrideExisting)
+
+                    if (counters.TryGetMember(name, out object existingCounter) == false || 
+                        existingCounter is LazyStringValue ||
+                        !(existingCounter is BlittableJsonReaderObject.RawBlob blob) ||
+                        overrideExisting)
                     {
                         CreateNewCounterOrOverrideExisting(context, name, dbIdIndex, value, newETag, counters, existingCounter != null);
                     }
                     else
                     {
-                        IncrementExistingCounter(context, documentId, name, delta, ref exists, existingCounter, dbIdIndex, newETag, counters, value);
+                        IncrementExistingCounter(context, documentId, name, delta, ref exists, blob, dbIdIndex, newETag, counters, value);
                     }
 
                     if (counters.Modifications != null)
@@ -266,7 +270,7 @@ namespace Raven.Server.Documents
                 else
                 {
                     // no counters at all
-                    data = WriteNewCountersDocument(context, documentId, name, value, newETag);
+                    data = WriteNewCountersDocument(context, name, value, newETag);
                 }
 
                 var etag = _documentsStorage.GenerateNextEtag();
@@ -392,7 +396,7 @@ namespace Raven.Server.Documents
             }
         }
 
-        private BlittableJsonReaderObject WriteNewCountersDocument(DocumentsOperationContext context, string documentId, string name, long value, long newETag)
+        private BlittableJsonReaderObject WriteNewCountersDocument(DocumentsOperationContext context, string name, long value, long newETag)
         {
             _countersCount++;
 
@@ -471,39 +475,127 @@ namespace Raven.Server.Documents
 
                             sourceData.TryGet(DbIds, out BlittableJsonReaderArray sourceDbIds);
 
+
                             var prop = new BlittableJsonReaderObject.PropertyDetails();
                             for (var i = 0; i< sourceCounters.Count; i++)
                             {
                                 sourceCounters.GetPropertyByIndex(i, ref prop);
 
                                 var counterName = prop.Name;
-
-                                var source = (BlittableJsonReaderObject.RawBlob)prop.Value;
-
-                                long value = 0;
-                                bool modified;
+                                var modified = false;
                                 var changeType = CounterChangeTypes.Put;
+                                long value = 0;
 
-                                if (source.Length == 0)
+                                LazyStringValue deletedLocalCounter = null;
+                                BlittableJsonReaderObject.RawBlob loaclCounterValues = null;
+
+                                if (localCounters.TryGet(counterName, out object existingCounter))
                                 {
-                                    // Delete
-                                    modified = true;
-                                    changeType = CounterChangeTypes.Delete;
-                                    localCounters.Modifications = localCounters.Modifications ?? new DynamicJsonValue(localCounters);
-                                    localCounters.Modifications[counterName] = new BlittableJsonReaderObject.RawBlob();
-                                    _countersCount--;
+                                    if (existingCounter is LazyStringValue lsv)
+                                    {
+                                        deletedLocalCounter = lsv;
+                                    }
+                                    else
+                                    {
+                                        loaclCounterValues = existingCounter as BlittableJsonReaderObject.RawBlob;
+                                    }
                                 }
 
-                                else
+
+                                if (prop.Value is LazyStringValue deletedSourceCounter)
                                 {
-                                    if (localCounters.TryGet(counterName, out BlittableJsonReaderObject.RawBlob existingCounter) == false)
+                                    if (deletedLocalCounter != null)
                                     {
+                                        // delete + delete => merger change vectors
+
+                                        var mergedCv = ChangeVectorUtils.MergeVectors(deletedLocalCounter, deletedSourceCounter);
+                                        // todo add local dbId+etag to deleted change vector
+
+                                        localCounters.Modifications = localCounters.Modifications ?? new DynamicJsonValue(localCounters);
+                                        localCounters.Modifications[counterName] = mergedCv;
+                                        continue;
+
+                                    }
+                                    if (loaclCounterValues != null)
+                                    {
+                                        // delete + blob => resolve conflict
+
+                                        using (var localValuesAsCv = RawBlobToChangeVector(context, data, loaclCounterValues, existingChangeVector))
+                                        {
+                                            var conflictStatus = ChangeVectorUtils.GetConflictStatus(deletedSourceCounter, localValuesAsCv);
+
+                                            switch (conflictStatus)
+                                            {
+                                                case ConflictStatus.Update:
+                                                    //delete is more up do date
+                                                    modified = true;
+                                                    changeType = CounterChangeTypes.Delete;
+                                                    localCounters.Modifications = localCounters.Modifications ?? new DynamicJsonValue(localCounters);
+                                                    localCounters.Modifications[counterName] = deletedSourceCounter;
+                                                    break;
+                                                case ConflictStatus.Conflict:
+                                                // conflict => resolve to raw blob (no change)
+                                                case ConflictStatus.AlreadyMerged:
+                                                    // raw blob is more up to date (no change)
+                                                    continue;
+                                            }
+                                        }                                       
+                                    }
+                                    else
+                                    {
+                                        // put deleted counter
+
+                                        modified = true;
+                                        changeType = CounterChangeTypes.Delete;
+                                        localCounters.Modifications = localCounters.Modifications ?? new DynamicJsonValue(localCounters);
+                                        // todo add local dbId + etag ? 
+                                        localCounters.Modifications[counterName] = deletedSourceCounter;
+                                        _countersCount--;
+                                    }
+                                }
+
+                                if (prop.Value is BlittableJsonReaderObject.RawBlob sourceBlob)
+                                {
+                                    if (deletedLocalCounter != null)
+                                    {
+                                        // blob + delete => resolve conflict
+
+                                        var sourceValuesAsCv= RawBlobToChangeVector(context, data, sourceBlob, changeVector);
+
+                                        var conflictStatus = ChangeVectorUtils.GetConflictStatus(sourceValuesAsCv, deletedLocalCounter);
+
+                                        sourceValuesAsCv.Dispose();
+
+                                        switch (conflictStatus)
+                                        {
+                                            case ConflictStatus.Update:
+                                                //delete is more up do date (no change)
+                                                continue;
+                                            case ConflictStatus.Conflict: 
+                                                // conflict => resolve to raw blob 
+                                            case ConflictStatus.AlreadyMerged:
+                                                // raw blob is more up to date => put counter
+
+                                                _countersCount++;
+                                                loaclCounterValues = new BlittableJsonReaderObject.RawBlob();
+                                                break;
+                                        }
+
+
+                                    }
+                                    else if (loaclCounterValues == null)
+                                    {
+                                        // put new counter
+
                                         _countersCount++;
-                                        existingCounter = new BlittableJsonReaderObject.RawBlob();
+                                        loaclCounterValues = new BlittableJsonReaderObject.RawBlob();
                                     }
 
-                                    value = InternalPutCounter(context, localCounters, counterName, dbIds, sourceDbIds, localDbIdsList, existingCounter, source, out modified);
+                                    // blob + blob => merge
+                                    value = InternalPutCounter(context, localCounters, counterName, dbIds, sourceDbIds, localDbIdsList, loaclCounterValues, sourceBlob, out modified);
+
                                 }
+
 
                                 if (modified == false)
                                     continue;
@@ -733,9 +825,8 @@ namespace Raven.Server.Documents
                 for (var i=0; i < counters.Count; i++)
                 {
                     counters.GetPropertyByIndex(i, ref prop);
-                    var blob = (BlittableJsonReaderObject.RawBlob)prop.Value;
-                    if (blob.Length == 0)
-                        continue;
+                    if (prop.Value is LazyStringValue)
+                        continue; //deleted
 
                     yield return prop.Name;
                 }
@@ -749,28 +840,39 @@ namespace Raven.Server.Documents
 
         public long? GetCounterValue(DocumentsOperationContext context, string docId, string counterName)
         {
+            if (TryGetRawBlob(context, docId, counterName, out var blob) == false)
+                return null;
+
+            var existingCount = blob.Length / SizeOfCounterValues;
+
+            long value = 0;
+            for (var i = 0; i < existingCount; i++)
+            {
+                value += GetPartialValue(i, blob);
+            }
+
+            return value;
+        }
+
+        private static bool TryGetRawBlob(DocumentsOperationContext context, string docId, string counterName, out BlittableJsonReaderObject.RawBlob blob)
+        {
+            blob = null;
             var table = new Table(CountersSchema, context.Transaction.InnerTransaction);
 
             using (DocumentIdWorker.GetLowerIdSliceAndStorageKey(context, docId, out Slice key, out _))
             {
                 if (table.ReadByKey(key, out var tvr) == false)
-                    return null;
+                    return false;
 
                 var data = GetData(context, ref tvr);
                 if (data.TryGet(Values, out BlittableJsonReaderObject counters) == false ||
-                    counters.TryGet(counterName, out BlittableJsonReaderObject.RawBlob counterValues) == false ||
-                    counterValues.Length == 0)
-                    return null;
+                    counters.TryGetMember(counterName, out object counterValues) == false ||
+                    counterValues is LazyStringValue || // deleted
+                    !(counterValues is BlittableJsonReaderObject.RawBlob counterValuesAsRawBlob))
+                    return false;
 
-                var existingCount = counterValues.Length / SizeOfCounterValues;
-
-                long value = 0;
-                for (var i= 0; i < existingCount; i++) 
-                {
-                    value += GetPartialValue(i, counterValues);
-                }
-
-                return value;
+                blob = counterValuesAsRawBlob;
+                return true;
             }
         }
 
@@ -786,15 +888,17 @@ namespace Raven.Server.Documents
                 var data = GetData(context, ref tvr);
                 if (data.TryGet(DbIds, out BlittableJsonReaderArray dbIds) == false ||
                     data.TryGet(Values, out BlittableJsonReaderObject counters) == false ||
-                    counters.TryGet(counterName, out BlittableJsonReaderObject.RawBlob counterValues) == false ||
-                    counterValues.Length == 0)                  
+                    counters.TryGetMember(counterName, out object counterValues) == false ||
+                    counterValues is LazyStringValue || // deleted
+                    !(counterValues is BlittableJsonReaderObject.RawBlob blob))
                     yield break;
 
-                var existingCount = counterValues.Length / SizeOfCounterValues;
+                var existingCount = blob.Length / SizeOfCounterValues;
+                
 
                 for (var dbIdIndex = 0; dbIdIndex < existingCount; dbIdIndex ++)
                 {
-                    var val = GetPartialValue(dbIdIndex, counterValues);
+                    var val = GetPartialValue(dbIdIndex, blob);
                     yield return (dbIds[dbIdIndex].ToString(), val);
                 }
             }
@@ -861,33 +965,43 @@ namespace Raven.Server.Documents
                 var data = GetData(context, ref existing);
 
                 if (data.TryGet(Values, out BlittableJsonReaderObject counters) == false ||
-                    counters.TryGet(counterName, out BlittableJsonReaderObject.RawBlob counterToDelete) == false ||
-                    counterToDelete.Length == 0)                
+                    counters.TryGetMember(counterName, out object counterToDelete) == false)                
                     return null;
-                
-                RemoveCounterFromBlittableAndUpdateTable(context, counterName, data, counters, collectionName, table, lowerId, out var cv);
 
+                if (counterToDelete is LazyStringValue || // already deleted
+                    !(counterToDelete is BlittableJsonReaderObject.RawBlob blob))
+                    return null;
+                var oldCv = TableValueToString(context, (int)CountersTable.ChangeVector, ref existing);
+
+                RemoveCounterFromBlittableAndUpdateTable(context, counterName, data, counters, blob, collectionName, table, lowerId, oldCv, out var cv);
                 _countersCount--;
 
                 return cv;
+
+
             }
         }
 
         private void RemoveCounterFromBlittableAndUpdateTable(DocumentsOperationContext context, string counterName, BlittableJsonReaderObject data,
-            BlittableJsonReaderObject counters, CollectionName collectionName, Table table,
-            Slice lowerId, out string newChangeVector)
+            BlittableJsonReaderObject counters, BlittableJsonReaderObject.RawBlob counterToDelete, CollectionName collectionName, Table table,
+            Slice lowerId, string oldChangeVector, out string newChangeVector)
         {
-            counters.Modifications = new DynamicJsonValue(counters)
+            var newEtag = _documentsStorage.GenerateNextEtag();
+            using (var cvLsv = RawBlobToChangeVector(context, data, counterToDelete, oldChangeVector, true))
             {
-                [counterName] = new BlittableJsonReaderObject.RawBlob()
-            };
+                counters.Modifications = new DynamicJsonValue(counters)
+                {
+                    // [counterName] = sb
+                    [counterName] = cvLsv
+                };
 
-            using (data)
-            {
-                data = context.ReadObject(data, null, BlittableJsonDocumentBuilder.UsageMode.ToDisk);
+
+                using (data)
+                {
+                    data = context.ReadObject(data, null, BlittableJsonDocumentBuilder.UsageMode.ToDisk);
+                }
             }
 
-            var newEtag = _documentsStorage.GenerateNextEtag();
             newChangeVector = ChangeVectorUtils.NewChangeVector(_documentDatabase.ServerStore.NodeTag, newEtag, _documentsStorage.Environment.Base64Id);
             using (Slice.From(context.Allocator, newChangeVector, out var cv))
             using (DocumentIdWorker.GetStringPreserveCase(context, collectionName.Name, out Slice collectionSlice))
@@ -902,6 +1016,67 @@ namespace Raven.Server.Documents
 
                 table.Set(tvb);
             }
+        }
+
+        private static LazyStringValue RawBlobToChangeVector(DocumentsOperationContext context, BlittableJsonReaderObject data, BlittableJsonReaderObject.RawBlob counterToDelete, string changeVector,
+            bool addLocal = false)
+        {
+            data.TryGet(DbIds, out BlittableJsonReaderArray dbIds);
+            var dbIdIndex = GetDbIdIndex(context, data);
+            var count = counterToDelete.Length / SizeOfCounterValues;
+            var sb = new StringBuilder();
+
+            for (int i = 0; i < count; i++)
+            {
+                if (i > 0)
+                {
+                    sb.Append(", ");
+                }
+                if (i != dbIdIndex)
+                {
+                    var etag = ((CounterValues*)counterToDelete.Ptr + i)->Etag;
+                    var nodeTag = ChangeVectorUtils.GetNodeTagById(changeVector, dbIds[i].ToString());
+
+                    sb.Append(nodeTag ?? "Z")
+                        .Append(":")
+                        .Append(etag)
+                        .Append("-")
+                        .Append(dbIds[i]);
+
+                    continue;
+                }
+
+                AddLocalNodeToChangeVector(context, sb);
+
+            }
+
+
+            if (count < dbIdIndex && addLocal)
+            {
+                AddLocalNodeToChangeVector(context, sb);
+            }
+
+            /*            var size = Encoding.UTF8.GetMaxByteCount(sb.Length);
+                        var cvMem = context.GetMemory(size);
+                        var span = new Span<char>(cvMem.Address, sb.Length);
+                        sb.CopyTo(0, span, sb.Length);
+
+                        return new LazyStringValue(null, cvMem.Address, sb.Length, context);*/
+
+            var mem = context.GetMemory(sb.Length);
+            return new LazyStringValue(sb.ToString(), mem.Address, sb.Length, context);
+
+        }
+
+        private static void AddLocalNodeToChangeVector(DocumentsOperationContext context, StringBuilder sb)
+        {
+            var newEtag = context.DocumentDatabase.DocumentsStorage.GenerateNextEtag();
+            var localNodeTag = context.DocumentDatabase.ServerStore.NodeTag;
+            sb.Append(localNodeTag)
+                .Append(":")
+                .Append(newEtag)
+                .Append("-")
+                .Append(context.Environment.Base64Id);
         }
 
         private static (LazyStringValue Doc, LazyStringValue Name) ExtractDocIdAndName(JsonOperationContext context, Slice counterKey)
