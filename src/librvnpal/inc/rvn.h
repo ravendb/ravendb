@@ -29,13 +29,13 @@ EXPORT struct SYSTEM_INFORMATION
     int32_t prefetch_status;
 
     /* can_prefetch => prefetch_status == true */
-};
+} SYSTEM_INFORMATION;
 
 EXPORT struct RVN_RANGE_LIST
 {
     void *virtual_address;
-    int32_t number_of_bytes;
-};
+    size_t number_of_bytes;
+} RVN_RANGE_LIST;
 
 EXPORT uint64_t
 rvn_get_current_thread_id(void);

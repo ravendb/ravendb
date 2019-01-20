@@ -23,12 +23,12 @@ namespace Voron.Platform.Posix
             return CopyPageImpl(destwI4KbBatchWrites, p, pagerState);
         }
 
-        protected internal override unsafe void PrefetchRanges(Win32MemoryMapNativeMethods.WIN32_MEMORY_RANGE_ENTRY* list, int count)
+        protected internal override unsafe void PrefetchRanges(PalDefinitions.PrefetchRanges* list, int count)
         {
             for (int i = 0; i < count; i++)
             {
                 // we explicitly ignore the return code here, this is optimization only
-                Syscall.madvise(new IntPtr(list[i].VirtualAddress), (UIntPtr)list[i].NumberOfBytes.ToPointer(), MAdvFlags.MADV_WILLNEED);
+                Syscall.madvise(new IntPtr(list[i].VirtualAddress), (UIntPtr)list[i].NumberOfBytes, MAdvFlags.MADV_WILLNEED);
             }
         }
 
