@@ -2,6 +2,7 @@ using System;
 using System.IO;
 using System.Runtime.InteropServices;
 using Voron.Impl.Journal;
+using Voron.Impl.Paging;
 using static Voron.Platform.PalDefinitions;
 
 namespace Voron.Platform
@@ -77,14 +78,30 @@ namespace Voron.Platform
             out Int32 specialErrnoCodes);
 
         [DllImport(LIBRVNPAL, SetLastError = true)]
-        public static extern PalFlags.FailCodes rvn_create_and_mmap64_file(
+        private static extern PalFlags.FailCodes rvn_create_and_mmap64_file(
             string filename,
             Int64 initialFileSize,
             PalFlags.MmapOptions flags,
-            out void* handle,
+            out SafeMmapHandle handle,
             out void* baseAddress,
             out Int64 actualFileSize,
             out Int32 errorCode);
+
+        public static PalFlags.FailCodes RvnCreateAndMmap64File(
+            string filename,
+            Int64 initialFileSize,
+            PalFlags.MmapOptions flags,
+            out SafeMmapHandle handle,
+            out void* baseAddress,
+            out Int64 actualFileSize,
+            out Int32 errorCode,
+            RvnMemoryMapPager pager)
+        {
+            var rc = rvn_create_and_mmap64_file(filename, initialFileSize, flags, out handle, out baseAddress, out actualFileSize, out errorCode);
+            if (handle.IsInvalid == false)
+                handle.Pager = pager;
+            return rc;
+        }
 
         [DllImport(LIBRVNPAL, SetLastError = true)]
         public static extern PalFlags.FailCodes rvn_prefetch_virtual_memory(
@@ -104,9 +121,9 @@ namespace Voron.Platform
             out Int32 errorCode);
 
         [DllImport(LIBRVNPAL, SetLastError = true)]
-        public static extern PalFlags.FailCodes rvn_dispose_handle(
+        public static extern PalFlags.FailCodes rvn_dispose_mmap_handle(
             string filepath,
-            void* handle,
+            SafeMmapHandle handle,
             PalFlags.FileCloseFlags closeFlag,
             out Int32 errorCode);
 
@@ -134,7 +151,7 @@ namespace Voron.Platform
         public static extern PalFlags.FailCodes rvn_allocate_more_space(
             string fileNameFullPath,
             Int64 newLengthAfterAdjustment,
-            void* handle,
+            SafeMmapHandle handle,
             PalFlags.MmapOptions mmapOptions,
             out void* newAddress,
             out Int32 errorCode);
