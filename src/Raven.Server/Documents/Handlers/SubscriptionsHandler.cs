@@ -50,7 +50,7 @@ namespace Raven.Server.Documents.Handlers
                 var fetcher = new SubscriptionDocumentsFetcher(Database, pageSize, -0x42,
                     new IPEndPoint(HttpContext.Connection.RemoteIpAddress, HttpContext.Connection.RemotePort), sub.Collection, sub.Revisions, state, patch);
 
-                var includeCmd = new IncludeDocumentsCommand(Database.DocumentsStorage, context, sub.Includes, isProjection: true);
+                var includeCmd = new IncludeDocumentsCommand(Database.DocumentsStorage, context, sub.Includes, isProjection: patch != null);
 
                 if (Enum.TryParse(
                     tryout.ChangeVector,
