@@ -89,7 +89,7 @@ EXPORT int32_t
 rvn_read_journal(void* handle, void* buffer, int64_t required_size, int64_t offset, int64_t* actual_size, int32_t* detailed_error_code);
 
 EXPORT int32_t
-rvn_truncate_journal(const char* file_name, void* handle, int64_t size, int32_t* detailed_error_code);
+rvn_truncate_journal(void* handle, int64_t size, int32_t* detailed_error_code);
 
 /* For internal use: */
 PRIVATE int64_t
