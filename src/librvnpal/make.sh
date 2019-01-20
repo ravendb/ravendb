@@ -3,6 +3,7 @@ echo ""
 LIBFILE="librvnpal"
 CLEAN=0
 C_COMPILER=c89
+C_ADDITIONAL_FLAGS=""
 C_SHARED_FLAG="-shared"
 IS_CROSS=0
 
@@ -51,7 +52,8 @@ elif [ $# -gt 1 ]; then
 		if [[ "$2" == "osx-x64" ]]; then
 			IS_CROSS=1
 			IS_MAC=1
-			C_COMPILER="o64-clang -Wno-ignored-attributes"
+			C_COMPILER="o64-clang"
+		        C_ADDITIONAL_FLAGS="-Wno-ignored-attributes"
 		elif [[ "$2" == "linux-arm" ]]; then
                         IS_CROSS=1
                         IS_ARM=1
@@ -135,7 +137,8 @@ if [ ${IS_MAC} -eq 1 ]; then
        	FILTERS+=(src/mac)
 	LINKFILE=${LIBFILE}.mac
 	if [ ${IS_CROSS} -eq 0 ]; then
-		C_COMPILER="clang -std=c89 -Wno-ignored-attributes"
+		C_COMPILER="clang"
+	        C_ADDITIONAL_FLAGS="-std=c89 -Wno-ignored-attributes"
 	fi
 	C_SHARED_FLAG="-dynamiclib"
 	if [ ${IS_32BIT} -eq 1 ]; then
@@ -171,7 +174,7 @@ for SRCPATH in "${FILTERS[@]}"; do
 	for SRCFILE in $(find ${SRCPATH} | grep "^${SRCPATH}" | grep "\.c$"); do
 		SRCFILE_O=$(echo ${SRCFILE} | sed -e "s|\.c$|\.o|g")
 		if [ ${CLEAN} -eq 0 ]; then
-			CMD="${C_COMPILER} -fPIC -Iinc -O2 -Wall -c -o ${SRCFILE_O} ${SRCFILE}"
+			CMD="${C_COMPILER} ${C_ADDITIONAL_FLAGS} -fPIC -Iinc -O2 -Wall -c -o ${SRCFILE_O} ${SRCFILE}"
 		else
 			if [ -f ${LINKFILE} ]; then 
 				CMD="rm ${SRCFILE_O}"
