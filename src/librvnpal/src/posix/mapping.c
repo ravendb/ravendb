@@ -158,3 +158,39 @@ rvn_unmap(void *address, int64_t size, int32_t delete_on_close, int32_t *detaile
 
     return rc;
 }
+
+EXPORT int32_t
+rvn_mmap_dispose_handle(const char *filepath, void *handle, int32_t delete_on_close, int32_t *detailed_error_code)
+{
+    int32_t rc = SUCCESS;
+
+    /* the following in two lines to avoid compilation warning */
+    int32_t fd = (int32_t)(int64_t)handle;
+
+    if (fd != -1)
+    {
+        if (delete_on_close == DELETE_ON_CLOSE_YES)
+        {
+            int32_t unlink_rc = unlink(filepath);
+            if (unlink_rc != 0)
+            {
+                /* record the error and continue to close */
+                rc = FAIL_UNLINK;
+                *detailed_error_code = errno;
+            }
+        }
+
+        int32_t close_rc = close(fd);
+        if (close_rc != 0)
+        {
+            if (rc == 0) /* if unlink failed - return unlink's error */
+            {
+                rc = FAIL_CLOSE;
+                *detailed_error_code = errno;
+            }
+        }
+        return rc;
+    }
+
+    return FAIL_INVALID_HANDLE;
+}
