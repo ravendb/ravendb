@@ -32,23 +32,23 @@ error_cleanup:
 }
 
 PRIVATE int32_t
-_write_file_incrementally(void* handle, char** buffer, int64_t* size, int64_t* offset, int64_t increment_size, int32_t* detailed_error_code)
+write_file_in_sections(void* handle, const char* buffer, int64_t size, int64_t offset, uint32_t section_size, int32_t* detailed_error_code)
 {
     OVERLAPPED overlapped;
     memset(&overlapped, 0, sizeof(overlapped));
-    overlapped.Offset = (int)(*offset & 0xffffffff);
-    overlapped.OffsetHigh = (int)(*offset >> 32);
+    overlapped.Offset = (int)(offset & 0xffffffff);
+    overlapped.OffsetHigh = (int)(offset >> 32);
 
     DWORD actual_size_to_write;
-    while (*size > 0)
+    while (size > 0)
     {
-        if(*size < increment_size)
+        if (size < section_size)
         {
-            actual_size_to_write = *size;
+            actual_size_to_write = (DWORD)size;
         }
         else
         {
-            actual_size_to_write = increment_size;
+            actual_size_to_write = section_size;
         }
 
         if (WriteFile(handle, buffer, actual_size_to_write, NULL, &overlapped) == FALSE)
@@ -57,12 +57,12 @@ _write_file_incrementally(void* handle, char** buffer, int64_t* size, int64_t* o
             return FAIL_WRITE_FILE;
         }
 
-        *buffer += actual_size_to_write;
-        *size -= actual_size_to_write;
+        buffer += actual_size_to_write;
+        size -= actual_size_to_write;
 
-        *offset += actual_size_to_write;
-        overlapped.Offset = (int)(*offset & 0xffffffff);
-        overlapped.OffsetHigh = (int)(*offset >> 32);
+        offset += actual_size_to_write;
+        overlapped.Offset = (int)(offset & 0xffffffff);
+        overlapped.OffsetHigh = (int)(offset >> 32);
     }
 
     return SUCCESS;
@@ -76,7 +76,7 @@ _write_file(void* handle, const void* buffer, int64_t size, int64_t offset, int3
     assert(size % WRITE_INCREMENT == 0);
     assert((int64_t)buffer % WRITE_INCREMENT == 0);
 
-    int32_t rc = _write_file_incrementally(handle, (char**)&buffer, &size, &offset, UINT32_MAX, detailed_error_code);
+    int32_t rc = write_file_in_sections(handle, (char*)buffer, size, offset, UINT32_MAX, detailed_error_code);
     if (rc == SUCCESS)
         return SUCCESS;
 
@@ -85,13 +85,12 @@ _write_file(void* handle, const void* buffer, int64_t size, int64_t offset, int3
 
     // this error can happen under low memory conditions, instead of trying to write the whole thing in a single shot
     // we'll write it in 4KB increments. This is likely to be much slower, but failing here will fail the entire DB
-    return _write_file_incrementally(handle, (char**)&buffer, &size, &offset, WRITE_INCREMENT, detailed_error_code);
+    return write_file_in_sections(handle, (char*)buffer, size, offset, WRITE_INCREMENT, detailed_error_code);
 }
 
 PRIVATE int32_t
 _open_file_to_read(const char *file_name, void **handle, int32_t *detailed_error_code)
 {
-    int32_t rc;
     HANDLE hfile = CreateFile(
         file_name,
         GENERIC_READ,
