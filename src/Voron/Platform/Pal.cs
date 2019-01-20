@@ -55,8 +55,9 @@ namespace Voron.Platform
                     e);
             }
 
-            if (rvn_get_system_information(out SysInfo, out var errorCode) != 0)
-                PalHelper.ThrowLastError(errorCode, "Cannot get system information");
+            var rc = rvn_get_system_information(out SysInfo, out var errorCode);
+            if (rc != PalFlags.FailCodes.Success)
+                PalHelper.ThrowLastError(rc, errorCode, "Cannot get system information");
         }
 
         private const string LIBRVNPAL = "librvnpal";

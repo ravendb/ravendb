@@ -44,9 +44,9 @@ namespace SlowTests.Voron.PalTest
             var fileSize = 4096L;
             PalFlags.FailCodes ret;
             
-            ret = Pal.rvn_open_journal_for_writes(file, (int)PalFlags.JournalMode.SAFE, fileSize, out var handle, out var actualSize, out var errno);
+            ret = Pal.rvn_open_journal_for_writes(file, (int)PalFlags.JournalMode.Safe, fileSize, out var handle, out var actualSize, out var errno);
             if (ret != PalFlags.FailCodes.Success)
-                PalHelper.ThrowLastError(errno, "");
+                PalHelper.ThrowLastError(ret, errno, "");
 
             Assert.Equal(PalFlags.FailCodes.Success, ret);
 
@@ -55,7 +55,7 @@ namespace SlowTests.Voron.PalTest
 
             ret = Pal.rvn_close_journal(handle, out errno);
             if (ret != PalFlags.FailCodes.Success)
-                PalHelper.ThrowLastError(errno, "");
+                PalHelper.ThrowLastError(ret, errno, "");
 
             var length = new FileInfo(file).Length;
             Assert.True(length >= 4096L);
@@ -69,9 +69,9 @@ namespace SlowTests.Voron.PalTest
             var fileSize = 4096L;
             PalFlags.FailCodes ret;
 
-            ret = Pal.rvn_open_journal_for_writes(file, (int)PalFlags.JournalMode.SAFE, fileSize, out var handle, out var actualSize, out var errno);
+            ret = Pal.rvn_open_journal_for_writes(file, (int)PalFlags.JournalMode.Safe, fileSize, out var handle, out var actualSize, out var errno);
             if (ret != PalFlags.FailCodes.Success)
-                PalHelper.ThrowLastError(errno, "");
+                PalHelper.ThrowLastError(ret, errno, "");
 
             var buffer = NativeMemory.Allocate4KbAlignedMemory(4096, out var stats);
             for (var i = 0; i < 4096 / sizeof(int); i++)
@@ -84,7 +84,7 @@ namespace SlowTests.Voron.PalTest
             {
                 ret = Pal.rvn_write_journal(handle, buffer, 4096, 0, out errno);
                 if (ret != PalFlags.FailCodes.Success)
-                    PalHelper.ThrowLastError(errno, "");
+                    PalHelper.ThrowLastError(ret, errno, "");
             }
             finally
             {
@@ -93,7 +93,7 @@ namespace SlowTests.Voron.PalTest
 
             ret = Pal.rvn_close_journal(handle, out errno);
             if (ret != PalFlags.FailCodes.Success)
-                PalHelper.ThrowLastError(errno, "");
+                PalHelper.ThrowLastError(ret, errno, "");
 
             var bytesFromFile = File.ReadAllBytes(file);
 
@@ -107,9 +107,9 @@ namespace SlowTests.Voron.PalTest
             var fileSize = 3 * 4096L;
             PalFlags.FailCodes ret;
 
-            ret = Pal.rvn_open_journal_for_writes(file, (int)PalFlags.JournalMode.SAFE, fileSize, out var handle, out var actualSize, out var errno);
+            ret = Pal.rvn_open_journal_for_writes(file, (int)PalFlags.JournalMode.Safe, fileSize, out var handle, out var actualSize, out var errno);
             if (ret != PalFlags.FailCodes.Success)
-                PalHelper.ThrowLastError(errno, "");
+                PalHelper.ThrowLastError(ret, errno, "");
 
             var buffer = NativeMemory.Allocate4KbAlignedMemory(4096, out var stats);
             for (var i = 0; i < 4096 / sizeof(int); i++)
@@ -122,7 +122,7 @@ namespace SlowTests.Voron.PalTest
             {
                 ret = Pal.rvn_write_journal(handle, buffer, 4096, 4096, out errno);
                 if (ret != PalFlags.FailCodes.Success)
-                    PalHelper.ThrowLastError(errno, "");
+                    PalHelper.ThrowLastError(ret, errno, "");
             }
             finally
             {
@@ -131,7 +131,7 @@ namespace SlowTests.Voron.PalTest
 
             ret = Pal.rvn_close_journal(handle, out errno);
             if (ret != PalFlags.FailCodes.Success)
-                PalHelper.ThrowLastError(errno, "");
+                PalHelper.ThrowLastError(ret, errno, "");
 
             var bytesFromFile = File.ReadAllBytes(file);
 
@@ -147,9 +147,9 @@ namespace SlowTests.Voron.PalTest
             const int length = 4096;
             PalFlags.FailCodes ret;
             
-            ret = Pal.rvn_open_journal_for_writes(file, (int)PalFlags.JournalMode.SAFE, fileSize, out var handle, out var actualSize, out var errno);
+            ret = Pal.rvn_open_journal_for_writes(file, (int)PalFlags.JournalMode.Safe, fileSize, out var handle, out var actualSize, out var errno);
             if (ret != PalFlags.FailCodes.Success)
-                PalHelper.ThrowLastError(errno, "");
+                PalHelper.ThrowLastError(ret, errno, "");
 
             var buffer = NativeMemory.Allocate4KbAlignedMemory(4096, out var stats);
             for (var i = 0; i < 4096 / sizeof(int); i++)
@@ -162,7 +162,7 @@ namespace SlowTests.Voron.PalTest
             {
                 ret = Pal.rvn_write_journal(handle, buffer, length, offset, out errno);
                 if (ret != PalFlags.FailCodes.Success)
-                    PalHelper.ThrowLastError(errno, "");
+                    PalHelper.ThrowLastError(ret, errno, "");
             }
             finally
             {
@@ -171,18 +171,18 @@ namespace SlowTests.Voron.PalTest
 
             ret = Pal.rvn_close_journal(handle, out errno);
             if (ret != PalFlags.FailCodes.Success)
-                PalHelper.ThrowLastError(errno, "");
+                PalHelper.ThrowLastError(ret, errno, "");
 
             var actual = new byte[length];
             fixed (byte* pActual = actual)
             {
                 ret = Pal.rvn_open_journal_for_reads(file, out var rHandle, out errno);
                 if (ret != PalFlags.FailCodes.Success)
-                    PalHelper.ThrowLastError(errno, "");
+                    PalHelper.ThrowLastError(ret, errno, "");
                 
                 ret = Pal.rvn_read_journal(rHandle, pActual, length, offset, out var readActualSize, out errno);
                 if (ret != PalFlags.FailCodes.Success)
-                    PalHelper.ThrowLastError(errno, "");
+                    PalHelper.ThrowLastError(ret, errno, "");
 
                 Assert.Equal(length, readActualSize);
             }
@@ -199,9 +199,9 @@ namespace SlowTests.Voron.PalTest
             const int readLength = 1000;
             PalFlags.FailCodes ret;
 
-            ret = Pal.rvn_open_journal_for_writes(file, PalFlags.JournalMode.SAFE, fileSize, out var handle, out var actualSize, out var errno);
+            ret = Pal.rvn_open_journal_for_writes(file, PalFlags.JournalMode.Safe, fileSize, out var handle, out var actualSize, out var errno);
             if (ret != PalFlags.FailCodes.Success)
-                PalHelper.ThrowLastError(errno, "");
+                PalHelper.ThrowLastError(ret, errno, "");
 
             var buffer = NativeMemory.Allocate4KbAlignedMemory(4096, out var stats);
             for (var i = 0; i < 4096 / sizeof(int); i++)
@@ -214,7 +214,7 @@ namespace SlowTests.Voron.PalTest
             {
                 ret = Pal.rvn_write_journal(handle, buffer, fileSize, 0, out errno);
                 if (ret != PalFlags.FailCodes.Success)
-                    PalHelper.ThrowLastError(errno, "");
+                    PalHelper.ThrowLastError(ret, errno, "");
             }
             finally
             {
@@ -223,19 +223,19 @@ namespace SlowTests.Voron.PalTest
 
             ret = Pal.rvn_close_journal(handle, out errno);
             if (ret != PalFlags.FailCodes.Success)
-                PalHelper.ThrowLastError(errno, "");
+                PalHelper.ThrowLastError(ret, errno, "");
 
             var actual = new byte[readLength];
             fixed (byte* pActual = actual)
             {
                 ret = Pal.rvn_open_journal_for_reads(file, out var rHandle, out errno);
                 if (ret != PalFlags.FailCodes.Success)
-                    PalHelper.ThrowLastError(errno, "");
+                    PalHelper.ThrowLastError(ret, errno, "");
                 
                 ret = Pal.rvn_read_journal(rHandle, pActual, 1000, offset, out var readActualSize, out errno);
                 
                 if (ret != PalFlags.FailCodes.FailEndOfFile)
-                    PalHelper.ThrowLastError(errno, "");
+                    PalHelper.ThrowLastError(ret, errno, "");
                 
                 Assert.Equal(500, readActualSize);
             }
@@ -250,21 +250,21 @@ namespace SlowTests.Voron.PalTest
             PalFlags.FailCodes ret;
             
             const long initSize = 2 * 4096L;
-            ret = Pal.rvn_open_journal_for_writes(file, (int)PalFlags.JournalMode.SAFE, initSize, out var handle, out var actualSize, out var errno);
+            ret = Pal.rvn_open_journal_for_writes(file, (int)PalFlags.JournalMode.Safe, initSize, out var handle, out var actualSize, out var errno);
             if (ret != PalFlags.FailCodes.Success)
-                PalHelper.ThrowLastError(errno, "");
+                PalHelper.ThrowLastError(ret, errno, "");
 
             const long truncateSize = 4096L;
             ret = Pal.rvn_truncate_journal(file, handle, truncateSize, out errno);
             if (ret != PalFlags.FailCodes.Success)
-                PalHelper.ThrowLastError(errno, "");
+                PalHelper.ThrowLastError(ret, errno, "");
 
             var actual = new FileInfo(file).Length;
             Assert.Equal(truncateSize, actual);
 
             ret = Pal.rvn_close_journal(handle, out errno);
             if (ret != PalFlags.FailCodes.Success)
-                PalHelper.ThrowLastError(errno, "");
+                PalHelper.ThrowLastError(ret, errno, "");
         }
     }
 }
