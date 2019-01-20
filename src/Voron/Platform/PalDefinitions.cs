@@ -1,4 +1,5 @@
 using System;
+using System.Runtime.InteropServices;
 using Voron.Global;
 
 namespace Voron.Platform
@@ -14,10 +15,11 @@ namespace Voron.Platform
             public bool CanPrefetch => PrefetchOption == 1;
         }
 
+        [StructLayout(LayoutKind.Sequential, Pack = 1)]
         public struct PrefetchRanges
         {
             public void* VirtualAddress;
-            public Int32 NumberOfBytes;
+            public void* NumberOfBytes;
         }
     }
 }

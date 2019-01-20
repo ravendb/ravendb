@@ -142,10 +142,9 @@ namespace Voron.Impl.Paging
                     new IOException($"Unable to dispose handle for {FileName.FullPath} (ignoring)."));
         }
 
-        protected internal override void PrefetchRanges(Win32MemoryMapNativeMethods.WIN32_MEMORY_RANGE_ENTRY* list, int count)
+        protected internal override void PrefetchRanges(PrefetchRanges* list, int count)
         {
-            // TODO : Get rid of WIN32_MEMORY_RANGE_ENTRY and use Pal's PrefetchRanges instead
-            rvn_prefetch_ranges((PrefetchRanges*)list, count, out _);
+            rvn_prefetch_ranges(list, count, out _);
             // we explicitly ignore the return code here, this is optimization only
         }
 
