@@ -109,7 +109,7 @@ namespace Voron.Impl.Journal
 
         public void Truncate(long size)
         {
-            var result = Pal.rvn_truncate_journal(FileName.FullPath, _writeHandle, size, out var error);
+            var result = Pal.rvn_truncate_journal(_writeHandle, size, out var error);
             if (result != PalFlags.FailCodes.Success)
                 PalHelper.ThrowLastError(result, error, $"Attempted to write to journal file - Path:{FileName.FullPath} Size:{size}");
         }
