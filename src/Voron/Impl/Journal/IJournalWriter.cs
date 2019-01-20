@@ -43,14 +43,14 @@ namespace Voron.Impl.Journal
         public VoronPathSetting FileName { get; }
         public bool DeleteOnClose { get; set; }
 
-        public JournalWriter(StorageEnvironmentOptions options, VoronPathSetting filename, long size, PalFlags.JournalMode mode = PalFlags.JournalMode.SAFE)
+        public JournalWriter(StorageEnvironmentOptions options, VoronPathSetting filename, long size, PalFlags.JournalMode mode = PalFlags.JournalMode.Safe)
         {
             _options = options;
             FileName = filename;
 
             var result = Pal.rvn_open_journal_for_writes(filename.FullPath, mode, size, out _writeHandle, out var actualSize, out var error);
             if (result != PalFlags.FailCodes.Success)
-                PalHelper.ThrowLastError(error, $"Attempted to open journal file - Path:{filename.FullPath} Size:{size}");
+                PalHelper.ThrowLastError(result, error, $"Attempted to open journal file - Path:{filename.FullPath} Size:{size}");
 
             NumberOfAllocated4Kb = (int)(actualSize / (4 * Constants.Size.Kilobyte));
         }
@@ -63,7 +63,7 @@ namespace Voron.Impl.Journal
             {
                 var result = Pal.rvn_write_journal(_writeHandle, p, numberOf4Kb * 4 * Constants.Size.Kilobyte, posBy4Kb * 4 * Constants.Size.Kilobyte, out var error);
                 if (result != PalFlags.FailCodes.Success)
-                    PalHelper.ThrowLastError(error, $"Attempted to write to journal file - Path:{FileName.FullPath} Size:{numberOf4Kb * 4 * Constants.Size.Kilobyte}");
+                    PalHelper.ThrowLastError(result, error, $"Attempted to write to journal file - Path:{FileName.FullPath} Size:{numberOf4Kb * 4 * Constants.Size.Kilobyte}");
 
                 metrics.SetFileSize(NumberOfAllocated4Kb * (4L * Constants.Size.Kilobyte));
             }
@@ -102,7 +102,7 @@ namespace Voron.Impl.Journal
             void EnsureValidResult()
             {
                 if (result != PalFlags.FailCodes.Success)
-                    PalHelper.ThrowLastError(errorCode, $"Attempted to read from journal file - Path:{FileName.FullPath} Size:{numOfBytes} Offset:{offsetInFile} ActualSize:{actualSize}");
+                    PalHelper.ThrowLastError(result, errorCode, $"Attempted to read from journal file - Path:{FileName.FullPath} Size:{numOfBytes} Offset:{offsetInFile} ActualSize:{actualSize}");
 
             }
         }
@@ -111,7 +111,7 @@ namespace Voron.Impl.Journal
         {
             var result = Pal.rvn_truncate_journal(FileName.FullPath, _writeHandle, size, out var error);
             if (result != PalFlags.FailCodes.Success)
-                PalHelper.ThrowLastError(error, $"Attempted to write to journal file - Path:{FileName.FullPath} Size:{size}");
+                PalHelper.ThrowLastError(result, error, $"Attempted to write to journal file - Path:{FileName.FullPath} Size:{size}");
         }
 
         public void AddRef()
@@ -142,7 +142,7 @@ namespace Voron.Impl.Journal
             {
                 _readHandle.Dispose();
                 if (_readHandle.FailCode != PalFlags.FailCodes.Success)
-                    PalHelper.ThrowLastError(_readHandle.ErrorNo,
+                    PalHelper.ThrowLastError(_readHandle.FailCode, _readHandle.ErrorNo,
                         $"Attempted to close 'read journal handle' - Path:{FileName.FullPath}");
             });
 
@@ -150,7 +150,7 @@ namespace Voron.Impl.Journal
             {
                 _writeHandle.Dispose();
                 if (_writeHandle.FailCode != PalFlags.FailCodes.Success)
-                    PalHelper.ThrowLastError(_writeHandle.ErrorNo,
+                    PalHelper.ThrowLastError(_writeHandle.FailCode, _writeHandle.ErrorNo,
                         $"Attempted to close 'write journal handle' - Path:{FileName.FullPath}");
             });
             

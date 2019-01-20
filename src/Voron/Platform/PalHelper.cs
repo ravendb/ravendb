@@ -8,12 +8,12 @@ namespace Voron.Platform
 {
     public static class PalHelper
     {
-        public static void ThrowLastError(int lastError, string msg)
+        public static void ThrowLastError(FailCodes rc, int lastError, string msg)
         {
             string txt;
             try
             {
-                txt = GetNativeErrorString(lastError, msg, out var specialErrnoCodes);
+                txt = $"{GetNativeErrorString(lastError, msg, out var specialErrnoCodes)}. FailCode={rc}.";
 
                 if ((specialErrnoCodes & ErrnoSpecialCodes.NoMem) != 0)
                     throw new OutOfMemoryException(txt);

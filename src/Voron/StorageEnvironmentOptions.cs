@@ -620,8 +620,8 @@ namespace Voron
             {
                 var path = _basePath.Combine(filename);
                 var rc = Pal.rvn_write_header(path.FullPath, header, sizeof(FileHeader), out var errorCode);
-                if (rc != 0)
-                    PalHelper.ThrowLastError(errorCode, $"Failed to rvn_write_header '{filename}', reason : {((PalFlags.FailCodes)rc).ToString()}");
+                if (rc != PalFlags.FailCodes.Success)
+                    PalHelper.ThrowLastError(rc, errorCode, $"Failed to rvn_write_header '{filename}', reason : {((PalFlags.FailCodes)rc).ToString()}");
             }
 
             public void DeleteAllTempBuffers()
@@ -852,7 +852,7 @@ namespace Voron
 
                 var path = GetJournalPath(journalNumber);
 
-                value = new JournalWriter(this, path, journalSize, PalFlags.JournalMode.PURE_MEMORY);
+                value = new JournalWriter(this, path, journalSize, PalFlags.JournalMode.PureMemory);
 
                 _logs[name] = value;
                 return value;
