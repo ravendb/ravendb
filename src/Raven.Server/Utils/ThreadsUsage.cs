@@ -129,7 +129,7 @@ namespace Raven.Server.Utils
             }
         }
 
-        private static IEnumerable<ProcessThread> GetProcessThreads(Process process)
+        private static List<ProcessThread> GetProcessThreads(Process process)
         {
             try
             {
@@ -137,7 +137,7 @@ namespace Raven.Server.Utils
             }
             catch (PlatformNotSupportedException)
             {
-                return Enumerable.Empty<ProcessThread>();
+                return new List<ProcessThread>();
             }
         }
 
