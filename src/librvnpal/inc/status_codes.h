@@ -32,6 +32,7 @@
 #define FAIL_SET_FILE_POINTER           23
 #define FAIL_SET_EOF                    24
 #define FAIL_EOF                        25
+#define FAIL_PREFETCH                   26
 
 #define ERRNO_SPECIAL_CODES_NONE        0
 #define ERRNO_SPECIAL_CODES_ENOMEM      (1 << 0)
