@@ -66,9 +66,9 @@ namespace Voron.Platform
         [Flags]
         public enum JournalMode
         {
-            SAFE = 0,
-            DANGER = 1,
-            PURE_MEMORY = 2
+            Safe = 0,
+            Danger = 1,
+            PureMemory = 2
         }
     }
 }
