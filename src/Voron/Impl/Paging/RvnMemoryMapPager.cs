@@ -130,7 +130,7 @@ namespace Voron.Impl.Paging
 
         protected override void DisposeInternal()
         {
-            var rc = rvn_dispose_mmap_handle(FileName.FullPath, _handle, IsDeleteOnClose, out var errorCode);
+            var rc = rvn_mmap_dispose_handle(FileName.FullPath, _handle, IsDeleteOnClose, out var errorCode);
             if (rc == 0) 
                 return;
             
@@ -244,7 +244,7 @@ namespace Voron.Impl.Paging
 
         protected override bool ReleaseHandle()
         {
-            FailCode = Pal.rvn_dispose_mmap_handle(Pager.FileName.FullPath, this, Pager.IsDeleteOnClose, out var ErrorNo);
+            FailCode = Pal.rvn_mmap_dispose_handle(Pager.FileName.FullPath, this, Pager.IsDeleteOnClose, out var ErrorNo);
 
             return FailCode == FailCodes.Success;
         }
