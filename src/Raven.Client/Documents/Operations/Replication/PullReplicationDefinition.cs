@@ -23,6 +23,7 @@ namespace Raven.Client.Documents.Operations.Replication
             {
                 Url = request.SourceUrl,
                 Database = request.Database,
+                Name = request.PullReplicationSinkTaskName,
                 DelayReplicationFor = DelayReplicationFor,
                 MentorNode = MentorNode,
                 TaskId = taskId

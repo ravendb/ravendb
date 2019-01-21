@@ -18,6 +18,8 @@ namespace Raven.Client.Documents.Replication.Messages
     public class ReplicationInitialRequest
     {
         public string PullReplicationDefinitionName { get; set; }
+        
+        public string PullReplicationSinkTaskName { get; set; }
 
         public TcpConnectionInfo Info { get; set; }
 

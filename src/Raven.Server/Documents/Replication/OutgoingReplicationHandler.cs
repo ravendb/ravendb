@@ -227,6 +227,7 @@ namespace Raven.Server.Documents.Replication
                 request[nameof(ReplicationInitialRequest.SourceUrl)] = _parent._server.GetNodeHttpServerUrl(); 
                 request[nameof(ReplicationInitialRequest.Info)] = _parent._server.GetTcpInfoAndCertificates(null); // my connection info
                 request[nameof(ReplicationInitialRequest.PullReplicationDefinitionName)] = destination.HubDefinitionName;
+                request[nameof(ReplicationInitialRequest.PullReplicationSinkTaskName)] = destination.GetTaskName();
             }
 
             using (_database.DocumentsStorage.ContextPool.AllocateOperationContext(out DocumentsOperationContext documentsContext))
