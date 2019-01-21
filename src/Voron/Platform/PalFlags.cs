@@ -33,6 +33,8 @@ namespace Voron.Platform
             FileSetFilePointer = 23,
             FailSetEndOfFile = 24,
             FailEndOfFile = 25,
+            FailPrefetch = 26,
+            FailGetFilePath = 27,
         };
 
         [Flags]

@@ -31,7 +31,7 @@ rvn_create_and_mmap64_file(const char *path,
     _ensure_path_exists(path);
 
     int32_t fd = open(path, O_RDWR | O_CREAT, S_IWUSR | S_IRUSR);
-    *(int32_t*)handle = fd;
+    *handle = (void*)(int64_t)fd;
     if (fd == -1)
     {
         rc = FAIL_OPEN_FILE;
@@ -58,7 +58,7 @@ rvn_create_and_mmap64_file(const char *path,
 
     if (sz <= initial_file_size || sz % sys_page_size != 0)
     {
-        sz = _nearest_size_to_page_size(max(initial_file_size, sz), allocation_granularity);
+        sz = _nearest_size_to_page_size(rvn_max(initial_file_size, sz), allocation_granularity);
     }
 
     rc = _allocate_file_space(fd, sz, detailed_error_code);
@@ -103,7 +103,7 @@ error_clean_With_error:
 }
 
 EXPORT int32_t
-rvn_allocate_more_space(const char *filename, int64_t new_length_after_adjustment, void *handle, int32_t flags,
+rvn_allocate_more_space(const char *file_name, int64_t new_length_after_adjustment, void *handle, int32_t flags,
                         void **new_address, int32_t *detailed_error_code)
 {
     int32_t fd = (int32_t)(int64_t)handle;
@@ -149,7 +149,7 @@ error_clean_With_error:
 EXPORT int32_t
 rvn_unmap(void *address, int64_t size, int32_t delete_on_close, int32_t *detailed_error_code)
 {    
-    if (delete_on_close == DELETE_ON_CLOSE_YES)
+    if (delete_on_close == FILE_CLOSE_OPT_DELETE_ON_CLOSE)
         madvise(address, size, MADV_DONTNEED); /* ignore error */        
 
     int32_t rc = munmap(address, size);
@@ -160,7 +160,7 @@ rvn_unmap(void *address, int64_t size, int32_t delete_on_close, int32_t *detaile
 }
 
 EXPORT int32_t
-rvn_mmap_dispose_handle(const char *filepath, void *handle, int32_t delete_on_close, int32_t *detailed_error_code)
+rvn_mmap_dispose_handle(const char *file_path, void *handle, int32_t delete_on_close, int32_t *detailed_error_code)
 {
     int32_t rc = SUCCESS;
 
@@ -169,7 +169,7 @@ rvn_mmap_dispose_handle(const char *filepath, void *handle, int32_t delete_on_cl
 
     if (fd != -1)
     {
-        if (delete_on_close == DELETE_ON_CLOSE_YES)
+        if (delete_on_close == FILE_CLOSE_OPT_DELETE_ON_CLOSE)
         {
             int32_t unlink_rc = unlink(filepath);
             if (unlink_rc != 0)
