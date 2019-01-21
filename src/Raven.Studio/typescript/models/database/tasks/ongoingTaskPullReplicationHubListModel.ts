@@ -7,6 +7,8 @@ class ongoingTaskPullReplicationHubListModel extends ongoingTaskListModel {
     destinationDB = ko.observable<string>();
     destinationURL = ko.observable<string>();
     
+    uniqueName: string;
+    
     constructor(dto: Raven.Client.Documents.Operations.OngoingTasks.OngoingTaskPullReplicationAsHub) {
         super();
 
@@ -19,10 +21,16 @@ class ongoingTaskPullReplicationHubListModel extends ongoingTaskListModel {
 
         this.destinationDB(dto.DestinationDatabase);
         this.destinationURL(dto.DestinationUrl || 'N/A');
+        
+        this.uniqueName = ongoingTaskPullReplicationHubListModel.generateUniqueName(dto);
     }
     
     toggleDetails(): void {
         throw new Error("Use toggleDetails on pullReplicationHub definition level");
+    }
+    
+    static generateUniqueName(dto: Raven.Client.Documents.Operations.OngoingTasks.OngoingTaskPullReplicationAsHub) { 
+        return dto.TaskName + ":" + dto.DestinationDatabase + ":" + dto.DestinationUrl;
     }
 }
 

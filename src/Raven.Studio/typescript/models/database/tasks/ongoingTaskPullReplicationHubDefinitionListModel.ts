@@ -56,7 +56,25 @@ class ongoingTaskPullReplicationHubDefinitionListModel {
     }
 
     updateChildren(ongoingTasks: Array<Raven.Client.Documents.Operations.OngoingTasks.OngoingTaskPullReplicationAsHub>) {
-        this.ongoingHubs(ongoingTasks.map(x => new ongoingTaskPullReplicationHubListModel(x))); //TODO: use in place update
+        const existingNames = this.ongoingHubs().map(x => x.uniqueName);
+        
+        ongoingTasks.forEach(incomingTask => {
+           const uniqueName = ongoingTaskPullReplicationHubListModel.generateUniqueName(incomingTask); 
+           const existingItem = this.ongoingHubs().find(x => x.uniqueName === uniqueName);
+           if (existingItem) {
+               existingItem.update(incomingTask);
+               _.pull(existingNames, uniqueName);
+           } else {
+               this.ongoingHubs.push(new ongoingTaskPullReplicationHubListModel(incomingTask));
+           }
+        });
+        
+        existingNames.forEach(toDelete => {
+            const item = this.ongoingHubs().find(x => x.uniqueName === toDelete);
+            if (item) {
+                this.ongoingHubs.remove(item);
+            }
+        });
     }
 
     toggleDetails() {
