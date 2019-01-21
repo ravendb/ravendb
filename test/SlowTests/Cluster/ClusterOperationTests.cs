@@ -142,13 +142,15 @@ namespace SlowTests.Cluster
                 }
 
                 WaitForDocument(store, "users/1");
-                Assert.Equal(list.Count, 1);
 
-                var currnetUrl = store.GetRequestExecutor().Url;
+                var value = WaitForValue(() => list.Count, 1);
+                Assert.Equal(1, value);
+
+                var currentUrl = store.GetRequestExecutor().Url;
                 RavenServer toDispose = null;
                 RavenServer workingServer = null;
 
-                DisposeCurrentServer(currnetUrl, ref toDispose, ref workingServer);
+                DisposeCurrentServer(currentUrl, ref toDispose, ref workingServer);
 
                 await taskObservable.EnsureConnectedNow();
 
@@ -159,10 +161,11 @@ namespace SlowTests.Cluster
                     await session.StoreAsync(new User(), "users/1");
                     await session.SaveChangesAsync();
                 }
-                Assert.Equal(list.Count, 2);
+                value = WaitForValue(() => list.Count, 2);
+                Assert.Equal(2, value);
 
-                currnetUrl = store.GetRequestExecutor().Url;
-                DisposeCurrentServer(currnetUrl, ref toDispose, ref workingServer);
+                currentUrl = store.GetRequestExecutor().Url;
+                DisposeCurrentServer(currentUrl, ref toDispose, ref workingServer);
 
                 await taskObservable.EnsureConnectedNow();
 
@@ -173,8 +176,8 @@ namespace SlowTests.Cluster
                     session.Store(new User(), "users/1");
                     session.SaveChanges();
                 }
-
-                Assert.Equal(list.Count, 3);
+                value = WaitForValue(() => list.Count, 3);
+                Assert.Equal(3, value);
             }
         }
 
@@ -204,8 +207,8 @@ namespace SlowTests.Cluster
                 }
                 string url1 = store.GetRequestExecutor().Url;
                 Assert.True(WaitForDocument(store, "users/1"));
-
-                Assert.Equal(list.Count, 1);
+                var value = WaitForValue(() => list.Count, 1);
+                Assert.Equal(1, value);
 
 
                 await ReverseOrderSuccessfully(store, db);
@@ -215,7 +218,8 @@ namespace SlowTests.Cluster
                      session.Store(new User(), "users/1");
                      session.SaveChanges();
                 }
-                Assert.Equal(list.Count, 2);
+                value = WaitForValue(() => list.Count, 2);
+                Assert.Equal(2, value);
                 string url2 = store.GetRequestExecutor().Url;
                 Assert.NotEqual(url1, url2);
             }
