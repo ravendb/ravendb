@@ -1,10 +1,11 @@
 using System;
+using System.Runtime.CompilerServices;
 using Sparrow.Compression;
 
 namespace Sparrow.Json
 {
-    public unsafe class LazyCompressedStringValue 
-    {
+    public unsafe class LazyCompressedStringValue
+    { 
         private readonly JsonOperationContext _context;
         public readonly byte* Buffer;
         public readonly int UncompressedSize;
@@ -117,7 +118,7 @@ namespace Sparrow.Json
             return sizeOfEscapePositions;
         }
 
-        public override string ToString()
+      public override string ToString()
         {
             return (string) this;
         }
@@ -125,6 +126,53 @@ namespace Sparrow.Json
         public string Substring(int startIndex, int length)
         {
             return ToString().Substring(startIndex, length);
+        }
+
+        public override bool Equals(object obj)
+        {
+            var item = obj as LazyCompressedStringValue;
+
+            if (item == null)
+                return false;
+
+            return Equals(item);
+        }
+
+        public override int GetHashCode()
+        {
+            if (IntPtr.Size == 4)
+                return (int)Hashing.XXHash32.CalculateInline(Buffer, CompressedSize);
+
+            return (int)Hashing.XXHash64.CalculateInline(Buffer, (ulong)CompressedSize);
+        }
+
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public bool Equals(LazyCompressedStringValue other)
+        {
+            if (other.UncompressedSize != UncompressedSize)
+                return false;
+
+            if (other.CompressedSize == CompressedSize)
+                return Memory.Compare(Buffer, other.Buffer, CompressedSize) == 0;
+
+            AllocatedMemoryData otherAllocated = null;
+            AllocatedMemoryData allocated = null;
+
+            try
+            {
+                var otherTempBuffer = other.DecompressToTempBuffer(out otherAllocated);
+                var tempBuffer = DecompressToTempBuffer(out allocated);
+
+                return Memory.Compare(tempBuffer, otherTempBuffer, UncompressedSize) == 0;
+            }
+            finally
+            {
+                if (otherAllocated != null)
+                    other._context.ReturnMemory(otherAllocated);
+
+                if (allocated != null)
+                    _context.ReturnMemory(allocated);
+            }
         }
     }
 }

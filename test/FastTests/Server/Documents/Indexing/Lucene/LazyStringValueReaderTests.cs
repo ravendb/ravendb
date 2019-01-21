@@ -1,6 +1,5 @@
 ﻿using System;
-using System.Collections.Generic;
-using System.Linq;
+using System.IO;
 using System.Text;
 using Raven.Server.Json;
 using Sparrow.Json;
@@ -71,7 +70,32 @@ namespace FastTests.Server.Documents.Indexing.Lucene
                 Assert.Equal(expected, readerResult.ReadToEnd());
                 _ctx.ReturnMemory(lazyString.AllocatedMemoryData);
             }
-            
+        }
+
+        [Fact]
+        public void CompareLazyCompressedStringValue()
+        {
+            using (var context = JsonOperationContext.ShortTermSingleUse())
+            using (var ms = new MemoryStream())
+            using (var writer = new BlittableJsonTextWriter(context, ms))
+            {
+                writer.WriteStartObject();
+                writer.WritePropertyName("Test");
+                writer.WriteString(new string('c', 1024 * 1024));
+                writer.WriteEndObject();
+                writer.Flush();
+                ms.Flush();
+
+                ms.Position = 0;
+                var json = context.Read(ms, "test");
+
+                ms.Position = 0;
+                var json2 = context.Read(ms, "test");
+
+                Assert.IsType<LazyCompressedStringValue>(json["Test"]);
+                Assert.IsType<LazyCompressedStringValue>(json2["Test"]);
+                Assert.Equal(json["Test"], json2["Test"]);
+            }
         }
 
         public byte[] RandomString(int length)

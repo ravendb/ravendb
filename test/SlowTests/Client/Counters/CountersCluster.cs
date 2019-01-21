@@ -18,6 +18,67 @@ namespace SlowTests.Client.Counters
     public class CountersCluster : ClusterTestBase
     {
         [Fact]
+        public async Task IncrementCounterShouldNotCreateRevisions()
+        {
+            var leader = await CreateRaftClusterAndGetLeader(3);
+            var dbName = GetDatabaseName();
+            var db = await CreateDatabaseInCluster(dbName, 3, leader.WebUrl);
+            var stores = db.Servers.Select(s => new DocumentStore
+            {
+                Database = dbName,
+                Urls = new[] { s.WebUrl },
+                Conventions = new DocumentConventions
+                {
+                    DisableTopologyUpdates = true
+                }
+            }.Initialize())
+            .ToList();
+
+            try
+            {
+                using (var s = stores[0].OpenSession())
+                {
+                    s.Advanced.WaitForReplicationAfterSaveChanges(replicas: 2);
+                    s.Store(new User { Name = "Aviv", AddressId = new string('c', 1024 * 128) }, "users/1");
+                    s.SaveChanges();
+                }
+                var tasks = new List<Task>();
+
+                foreach (var store in stores)
+                {
+                    var task = Task.Run(async () =>
+                    {
+                        for (var i = 0; i < 100; i++)
+                        {
+                            using (var s = store.OpenAsyncSession())
+                            {
+                                s.CountersFor("users/1").Increment($"likes/{i}", 10);
+                                await s.SaveChangesAsync();
+                            }
+                        }
+                    });
+
+                    tasks.Add(task);
+                }
+
+                Task.WaitAll(tasks.ToArray());
+
+                using (var session = stores[0].OpenSession())
+                {
+                    Assert.Equal(0, session.Advanced.Revisions.GetFor<User>("users/1").Count);
+                }
+
+            }
+            finally
+            {
+                foreach (var item in stores)
+                {
+                    item.Dispose();
+                }
+            }
+        }
+
+        [Fact]
         public async Task IncrementCounter()
         {
             var leader = await CreateRaftClusterAndGetLeader(3);

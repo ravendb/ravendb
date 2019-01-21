@@ -251,9 +251,7 @@ namespace Raven.Server.Documents
 
                     if (changeVector == null)
                     {
-                        changeVector = ChangeVectorUtils
-                            .TryUpdateChangeVector(_documentDatabase.ServerStore.NodeTag, _documentsStorage.Environment.Base64Id, etag, string.Empty)
-                            .ChangeVector;
+                        changeVector = $"{_documentDatabase.ServerStore.NodeTag}:{etag}-{_documentsStorage.Environment.Base64Id}";
                     }
 
                     using (Slice.From(context.Allocator, changeVector, out var cv))
@@ -370,9 +368,9 @@ namespace Raven.Server.Documents
                 RemoveTombstoneIfExists(context, documentId, name);
 
                 var etag = _documentsStorage.GenerateNextEtag();
-                var result = ChangeVectorUtils.TryUpdateChangeVector(_documentDatabase.ServerStore.NodeTag, _documentsStorage.Environment.Base64Id, etag, string.Empty);
+                var changeVector = $"{_documentDatabase.ServerStore.NodeTag}:{etag}-{_documentsStorage.Environment.Base64Id}";
 
-                using (Slice.From(context.Allocator, result.ChangeVector, out var cv))
+                using (Slice.From(context.Allocator, changeVector, out var cv))
                 using (DocumentIdWorker.GetStringPreserveCase(context, name, out Slice nameSlice))
                 using (DocumentIdWorker.GetStringPreserveCase(context, collectionName.Name, out Slice collectionSlice))
                 using (table.Allocate(out TableValueBuilder tvb))
@@ -388,18 +386,18 @@ namespace Raven.Server.Documents
                     table.Set(tvb);
                 }
 
-                UpdateMetrics(counterKey, name, result.ChangeVector, collection);
+                UpdateMetrics(counterKey, name, changeVector, collection);
 
                 context.Transaction.AddAfterCommitNotification(new CounterChange
                 {
-                    ChangeVector = result.ChangeVector,
+                    ChangeVector = changeVector,
                     DocumentId = documentId,
                     Name = name,
                     Type = exists ? CounterChangeTypes.Increment : CounterChangeTypes.Put,
                     Value = value
                 });
 
-                return result.ChangeVector;
+                return changeVector;
             }
         }
 

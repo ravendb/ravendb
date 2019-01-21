@@ -1091,10 +1091,7 @@ namespace Raven.Server.Documents.Replication
 
                     var database = _incoming._database;
 
-                    var currentDatabaseChangeVector = context.LastDatabaseChangeVector ??
-                               (context.LastDatabaseChangeVector = DocumentsStorage.GetDatabaseChangeVector(context));
-
-                    var maxReceivedChangeVectorByDatabase = currentDatabaseChangeVector;
+                    context.LastDatabaseChangeVector = context.LastDatabaseChangeVector ?? DocumentsStorage.GetDatabaseChangeVector(context);
 
                     foreach (var item in _incoming._replicatedItems)
                     {
@@ -1105,8 +1102,8 @@ namespace Raven.Server.Documents.Replication
                             Debug.Assert(item.Flags.Contain(DocumentFlags.Artificial) == false);
 
                             var rcvdChangeVector = item.ChangeVector;
-                            maxReceivedChangeVectorByDatabase =
-                                ChangeVectorUtils.MergeVectors(item.ChangeVector, maxReceivedChangeVectorByDatabase);
+
+                            context.LastDatabaseChangeVector = ChangeVectorUtils.MergeVectors(item.ChangeVector, context.LastDatabaseChangeVector);
 
                             if (item.Type == ReplicationBatchItem.ReplicationItemType.Attachment)
                             {
@@ -1295,9 +1292,6 @@ namespace Raven.Server.Documents.Replication
 
                     Debug.Assert(_incoming._replicatedAttachmentStreams.Count == 0, "We should handle all attachment streams during WriteAttachment.");
                     Debug.Assert(context.LastDatabaseChangeVector != null);
-
-                    // instead of : SetDatabaseChangeVector -> maxReceivedChangeVectorByDatabase , we will store in context and write once right before commit (one time instead of repeating on all docs in the same Tx)
-                    context.LastDatabaseChangeVector = maxReceivedChangeVectorByDatabase;
 
                     // instead of : SetLastReplicatedEtagFrom -> _incoming.ConnectionInfo.SourceDatabaseId, _lastEtag , we will store in context and write once right before commit (one time instead of repeating on all docs in the same Tx)
                     if (context.LastReplicationEtagFrom == null)
