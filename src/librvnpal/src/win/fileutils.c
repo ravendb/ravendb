@@ -119,13 +119,14 @@ _read_file(void* handle, void* buffer, int64_t required_size, int64_t offset, in
 
     OVERLAPPED overlapped;
     memset(&overlapped, 0, sizeof(overlapped));
-    overlapped.Offset = (int)(offset & 0xffffffff);
-    overlapped.OffsetHigh = (int)(offset >> 32);
-
+    
     DWORD internal_actual_size;
     DWORD internal_required_size;
     while(required_size > 0 )
     {
+        overlapped.Offset = (int)(offset & 0xffffffff);
+        overlapped.OffsetHigh = (int)(offset >> 32);
+
         if(required_size > UINT_MAX)
         {
             internal_required_size = UINT_MAX;
@@ -137,18 +138,21 @@ _read_file(void* handle, void* buffer, int64_t required_size, int64_t offset, in
 
         if (ReadFile(handle, buffer, internal_required_size, &internal_actual_size, &overlapped) == FALSE)
         {
-            rc = FAIL_READ_FILE;
+            if (GetLastError() == ERROR_HANDLE_EOF)
+            {
+                rc = FAIL_EOF;
+            }
+            else
+            {
+                rc = FAIL_READ_FILE;
+            }
             goto error_cleanup;
         }
         *actual_size += internal_actual_size;
 
-        if (internal_actual_size < internal_required_size)
-        {
-            rc = FAIL_EOF;
-            goto error_cleanup;
-        }
-
-        required_size -= internal_required_size;
+        buffer = (char*)buffer + internal_actual_size;
+        offset += internal_actual_size;
+        required_size -= internal_actual_size;
     }
 
     return SUCCESS;
