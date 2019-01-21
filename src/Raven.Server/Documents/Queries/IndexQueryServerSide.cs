@@ -74,11 +74,11 @@ namespace Raven.Server.Documents.Queries
             Metadata = new QueryMetadata(Query, queryParameters, 0);
         }
 
-        public static IndexQueryServerSide Create(
-            HttpContext httpContext,
+        public static IndexQueryServerSide Create(HttpContext httpContext,
             BlittableJsonReaderObject json,
             QueryMetadataCache cache,
             RequestTimeTracker tracker,
+            DocumentDatabase database = null,
             QueryType queryType = QueryType.Select)
         {
             IndexQueryServerSide result = null;
@@ -98,7 +98,7 @@ namespace Raven.Server.Documents.Queries
                     return result;
                 }
 
-                result.Metadata = new QueryMetadata(result.Query, result.QueryParameters, metadataHash, queryType);
+                result.Metadata = new QueryMetadata(result.Query, result.QueryParameters, metadataHash, queryType, database);
                 if (result.Metadata.HasTimings)
                     result.Timings = new QueryTimingsScope(start: false);
 

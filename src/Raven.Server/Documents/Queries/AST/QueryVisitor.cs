@@ -92,10 +92,10 @@ namespace Raven.Server.Documents.Queries.AST
                 VisitSelectFunctionBody(q.SelectFunctionBody.FunctionText);
         }
 
-        public virtual void VisitWithClauses(Dictionary<StringSegment, Query> expression)
+        public virtual void VisitWithClauses(Dictionary<StringSegment, (bool isImplicitAlias, Query withQuery)> expression)
         {
             foreach (var withClause in expression)
-                Visit(withClause.Value);
+                Visit(withClause.Value.withQuery);
         }
         public virtual void VisitWithEdgePredicates(Dictionary<StringSegment, WithEdgesExpression> expression)
         {

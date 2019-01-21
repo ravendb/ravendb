@@ -22,7 +22,6 @@ using Raven.Server.Documents.Queries.Highlightings;
 using Raven.Server.Documents.Queries.Parser;
 using Raven.Server.Documents.Queries.Suggestions;
 using Raven.Server.Extensions;
-using Sparrow;
 using Sparrow.Json;
 using Sparrow.Utils;
 using BinaryExpression = Raven.Server.Documents.Queries.AST.BinaryExpression;
@@ -37,16 +36,16 @@ namespace Raven.Server.Documents.Queries
 
         public readonly Dictionary<StringSegment, (string PropertyPath, bool Array, bool Parameter, bool Quoted, string LoadFromAlias)> RootAliasPaths = new Dictionary<StringSegment, (string, bool, bool, bool, string)>();
 
-        public QueryMetadata(string query, BlittableJsonReaderObject parameters, ulong cacheKey, QueryType queryType = QueryType.Select)
-            : this(ParseQuery(query, queryType), parameters, cacheKey)
+        public QueryMetadata(string query, BlittableJsonReaderObject parameters, ulong cacheKey, QueryType queryType = QueryType.Select, DocumentDatabase database = null)
+            : this(ParseQuery(query, queryType, database), parameters, cacheKey)
         {
 
         }
 
-        private static Query ParseQuery(string q, QueryType queryType)
+        private static Query ParseQuery(string q, QueryType queryType, DocumentDatabase database = null)
         {
             var qp = new QueryParser();
-            qp.Init(q);
+            qp.Init(q, database?.DocumentsStorage);
             return qp.Parse(queryType);
         }
 

@@ -68,7 +68,6 @@ namespace SlowTests.Issues
             using (var store = GetDocumentStore())
             {
                 CreateData(store);
-                WaitForUserToContinueTheTest(store);
                 using (var session = store.OpenSession())
                 {
                     var result = session.Advanced.RawQuery<JObject>(@"

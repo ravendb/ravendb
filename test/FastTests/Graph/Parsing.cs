@@ -243,8 +243,8 @@ match (Movies as m)<-[Rated as r]-( Users as u where City='Hadera' )
                 Assert.Equal("m", p.Path[2].Alias);
                 Assert.Equal(EdgeType.Right, p.Path[2].EdgeType);
 
-                Assert.Equal("FROM Users WHERE City = 'Hadera'", query.GraphQuery.WithDocumentQueries["u"].ToString().Trim());
-                Assert.Equal("FROM Movies", query.GraphQuery.WithDocumentQueries["m"].ToString().Trim());
+                Assert.Equal("FROM Users WHERE City = 'Hadera'", query.GraphQuery.WithDocumentQueries["u"].withQuery.ToString().Trim());
+                Assert.Equal("FROM Movies", query.GraphQuery.WithDocumentQueries["m"].withQuery.ToString().Trim());
                 Assert.Equal("WITH EDGES (Rated)", query.GraphQuery.WithEdgePredicates["r"].ToString().Trim());
             }
             else

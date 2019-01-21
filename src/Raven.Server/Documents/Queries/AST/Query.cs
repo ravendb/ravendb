@@ -41,7 +41,7 @@ namespace Raven.Server.Documents.Queries.AST
             return sb.ToString();
         }
 
-        public void TryAddWithClause(Query query, StringSegment alias)
+        public void TryAddWithClause(Query query, StringSegment alias, bool implicitAlias)
         {
             if (GraphQuery == null)
             {
@@ -53,18 +53,17 @@ namespace Raven.Server.Documents.Queries.AST
                 if (query.From.From.Compound.Count == 0)
                     return; // reusing an alias defined explicitly before
 
-                if(existing.From.From.Compound.Count == 0)
+                if(existing.withQuery.From.From.Compound.Count == 0)
                 {
                     // using an alias that is defined _later_ in the query
-                    GraphQuery.WithDocumentQueries[alias] = query;
+                    GraphQuery.WithDocumentQueries[alias] = (implicitAlias, query);
                     return;
                 }
 
-                throw new InvalidQueryException($"Allias {alias} is already in use on a diffrent 'With' clause",
-                    QueryText, null);
+                throw new InvalidQueryException($"Alias {alias} is already in use on a different 'With' clause", QueryText);
             }
 
-            GraphQuery.WithDocumentQueries.Add(alias, query);
+            GraphQuery.WithDocumentQueries.Add(alias, (implicitAlias, query));
         }
 
         public void TryAddWithEdgePredicates(WithEdgesExpression expr, StringSegment alias)

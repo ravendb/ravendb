@@ -9,7 +9,7 @@ namespace Raven.Server.Documents.Queries.AST
     {
         public HashSet<StringSegment> RecursiveMatches = new HashSet<StringSegment>(StringSegmentComparer.Ordinal);
 
-        public Dictionary<StringSegment, Query> WithDocumentQueries = new Dictionary<StringSegment, Query>();
+        public Dictionary<StringSegment, (bool implicitAlias, Query withQuery)> WithDocumentQueries = new Dictionary<StringSegment, (bool implicitAlias, Query)>();
 
         public Dictionary<StringSegment, WithEdgesExpression> WithEdgePredicates = new Dictionary<StringSegment, WithEdgesExpression>();
 
