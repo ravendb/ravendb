@@ -44,7 +44,7 @@ namespace SlowTests.Voron.PalTest
             var fileSize = 4096L;
             PalFlags.FailCodes ret;
             
-            ret = Pal.rvn_open_journal_for_writes(file, (int)PalFlags.JournalMode.Safe, fileSize, out var handle, out var actualSize, out var errno);
+            ret = Pal.rvn_open_journal_for_writes(file, PalFlags.JournalMode.Safe, fileSize, out var handle, out var actualSize, out var errno);
             if (ret != PalFlags.FailCodes.Success)
                 PalHelper.ThrowLastError(ret, errno, "");
 
@@ -69,7 +69,7 @@ namespace SlowTests.Voron.PalTest
             var fileSize = 4096L;
             PalFlags.FailCodes ret;
 
-            ret = Pal.rvn_open_journal_for_writes(file, (int)PalFlags.JournalMode.Safe, fileSize, out var handle, out var actualSize, out var errno);
+            ret = Pal.rvn_open_journal_for_writes(file, PalFlags.JournalMode.Safe, fileSize, out var handle, out var actualSize, out var errno);
             if (ret != PalFlags.FailCodes.Success)
                 PalHelper.ThrowLastError(ret, errno, "");
 
@@ -107,7 +107,7 @@ namespace SlowTests.Voron.PalTest
             var fileSize = 3 * 4096L;
             PalFlags.FailCodes ret;
 
-            ret = Pal.rvn_open_journal_for_writes(file, (int)PalFlags.JournalMode.Safe, fileSize, out var handle, out var actualSize, out var errno);
+            ret = Pal.rvn_open_journal_for_writes(file, PalFlags.JournalMode.Safe, fileSize, out var handle, out var actualSize, out var errno);
             if (ret != PalFlags.FailCodes.Success)
                 PalHelper.ThrowLastError(ret, errno, "");
 
@@ -147,7 +147,7 @@ namespace SlowTests.Voron.PalTest
             const int length = 4096;
             PalFlags.FailCodes ret;
             
-            ret = Pal.rvn_open_journal_for_writes(file, (int)PalFlags.JournalMode.Safe, fileSize, out var handle, out var actualSize, out var errno);
+            ret = Pal.rvn_open_journal_for_writes(file, PalFlags.JournalMode.Safe, fileSize, out var handle, out var actualSize, out var errno);
             if (ret != PalFlags.FailCodes.Success)
                 PalHelper.ThrowLastError(ret, errno, "");
 
@@ -250,7 +250,7 @@ namespace SlowTests.Voron.PalTest
             PalFlags.FailCodes ret;
             
             const long initSize = 2 * 4096L;
-            ret = Pal.rvn_open_journal_for_writes(file, (int)PalFlags.JournalMode.Safe, initSize, out var handle, out var actualSize, out var errno);
+            ret = Pal.rvn_open_journal_for_writes(file, PalFlags.JournalMode.Safe, initSize, out var handle, out var actualSize, out var errno);
             if (ret != PalFlags.FailCodes.Success)
                 PalHelper.ThrowLastError(ret, errno, "");
 

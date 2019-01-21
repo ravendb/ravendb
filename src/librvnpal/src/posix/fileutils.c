@@ -44,7 +44,7 @@ _pwrite(int32_t fd, void *buffer, uint64_t count, uint64_t offset, int32_t *deta
                 lets give it few retries with short pauses between them - RavenDB-11954 */
                 struct timespec ts;
                 ts.tv_sec = 0;
-                ts.tv_nsec = 100000000L * cifs_retries; /* 100mSec * retries..*/
+                ts.tv_nsec = 200000000L; /* 200mSec /
                 nanosleep(&ts, NULL);
                 continue; /* retry cifs */
             }
@@ -156,6 +156,8 @@ error_cleanup:
 PRIVATE int32_t
 _resize_file(void *handle, int64_t size, int32_t *detailed_error_code)
 {
+    assert(size % 4096 == 0);
+
     int32_t fd = (int32_t)(int64_t)handle;
 
     int32_t rc;
