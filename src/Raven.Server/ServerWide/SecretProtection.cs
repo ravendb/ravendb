@@ -575,7 +575,16 @@ namespace Raven.Server.ServerWide
                     {
                         if (element.Certificate.NotAfter.ToUniversalTime() > utcNow && element.Certificate.NotBefore.ToUniversalTime() < utcNow)
                             continue;
-                        userIntermediateStore.Remove(element.Certificate);                        
+                        try
+                        {
+                            userIntermediateStore.Remove(element.Certificate);
+                        }
+                        catch (CryptographicException e)
+                        {
+                            // Access denied?
+                            if (Logger.IsOperationsEnabled)
+                                Logger.Operations($"Tried to clean expired certificates from the OS user intermediate store but got an exception when removing a certificate with subject name: {element.Certificate.SubjectName.Name}.", e);
+                        }
                     }
                 }
             }
