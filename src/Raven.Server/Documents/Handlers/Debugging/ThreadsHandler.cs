@@ -45,12 +45,8 @@ namespace Raven.Server.Documents.Handlers.Debugging
 
                         // need to wait to get a correct measure of the cpu
                         await Task.Delay(100);
-                        threadsUsage.Calculate();
 
-                        // need to wait to get the result for the threads
-                        await Task.Delay(100);
                         var result = threadsUsage.Calculate();
-
                         context.Write(writer,
                                             new DynamicJsonValue
                                             {

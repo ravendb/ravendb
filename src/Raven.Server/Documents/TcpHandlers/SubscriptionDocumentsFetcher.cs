@@ -102,7 +102,7 @@ namespace Raven.Server.Documents.TcpHandlers
                         else
                         {
                             if (includesCmd != null && run != null)
-                                includesCmd.AddRange(run.Includes);
+                                includesCmd.AddRange(run.Includes, doc.Id);
 
                             using (transformResult)
                             {
@@ -152,7 +152,7 @@ namespace Raven.Server.Documents.TcpHandlers
                     if (ShouldSendDocumentWithRevisions(_subscription, run, _patch, docsContext, item, revisionTuple, out var transformResult, out var exception) == false)
                     {
                         if (includesCmd != null && run != null)
-                            includesCmd.AddRange(run.Includes);
+                            includesCmd.AddRange(run.Includes, item.Id);
 
                         if (exception != null)
                         {

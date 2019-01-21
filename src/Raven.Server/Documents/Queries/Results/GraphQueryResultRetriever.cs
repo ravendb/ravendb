@@ -107,7 +107,7 @@ namespace Raven.Server.Documents.Queries.Results
                     }
 
                     key = fieldToFetch.ProjectedName;
-                    fieldVal = GetFunctionValue(fieldToFetch, args);
+                    fieldVal = GetFunctionValue(fieldToFetch, null, args);
 
                     var immediateResult = AddProjectionToResult(item, 1f, FieldsToFetch, result, key, fieldVal);
                     if (immediateResult != null)

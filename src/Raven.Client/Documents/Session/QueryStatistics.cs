@@ -61,6 +61,7 @@ namespace Raven.Client.Documents.Session
         /// The size of the request which were sent from the server.
         /// This value is the _uncompressed_ size. 
         /// </summary>
+        [Obsolete("QueryStatistics.ResultSize is not supported anymore. Will be removed in next major version of the product.")]
         public long ResultSize { get; set; }
 
         /// <summary>
@@ -81,7 +82,6 @@ namespace Raven.Client.Documents.Session
             IndexName = qr.IndexName;
             IndexTimestamp = qr.IndexTimestamp;
             LastQueryTime = qr.LastQueryTime;
-            ResultSize = qr.ResultSize;
             ResultEtag = qr.ResultEtag;
             NodeTag = qr.NodeTag;
         }

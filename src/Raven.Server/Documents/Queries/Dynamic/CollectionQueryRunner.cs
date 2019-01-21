@@ -131,8 +131,8 @@ namespace Raven.Server.Documents.Queries.Dynamic
                 resultToFill.IndexTimestamp = DateTime.MinValue;
                 resultToFill.IncludedPaths = query.Metadata.Includes;
 
-                var includeDocumentsCommand = new IncludeDocumentsCommand(Database.DocumentsStorage, context, query.Metadata.Includes);
                 var fieldsToFetch = new FieldsToFetch(query, null);
+                var includeDocumentsCommand = new IncludeDocumentsCommand(Database.DocumentsStorage, context, query.Metadata.Includes, fieldsToFetch.IsProjection);
                 var totalResults = new Reference<int>();
                 var documents = new CollectionQueryEnumerable(Database, Database.DocumentsStorage, fieldsToFetch, collection, query, queryScope, context, includeDocumentsCommand, totalResults);
                 IncludeCountersCommand includeCountersCommand = null;

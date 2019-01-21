@@ -7,7 +7,6 @@ using System.Collections.Generic;
 using Raven.Client.Documents.Indexes;
 using Raven.Server.Documents.Indexes.Persistence.Lucene.Documents;
 using Raven.Server.Json;
-using System.IO;
 using Jint.Native;
 using Jint.Native.Object;
 using Jint.Runtime;
@@ -20,7 +19,6 @@ using Raven.Server.Documents.Queries.AST;
 using Raven.Server.Documents.Queries.Timings;
 using Raven.Server.ServerWide.Context;
 using Raven.Server.Utils;
-using Sparrow;
 using Microsoft.Extensions.Primitives;
 
 namespace Raven.Server.Documents.Queries.Results
@@ -350,7 +348,7 @@ namespace Raven.Server.Documents.Queries.Results
 
             if (fieldType.IsJson == false)
                 return stringValue;
-            
+
             return context.ReadForMemory(stringValue, field.Name);
         }
 
@@ -379,7 +377,7 @@ namespace Raven.Server.Documents.Queries.Results
                         args[i] = Tuple.Create(document, luceneDoc, state);
                     }
                 }
-                value = GetFunctionValue(fieldToFetch, args);
+                value = GetFunctionValue(fieldToFetch, document?.Id, args);
                 return true;
             }
 
@@ -480,7 +478,7 @@ namespace Raven.Server.Documents.Queries.Results
 
                 else if (fieldToFetch.CanExtractFromIndex)
                 {
-                    if(luceneDoc != null)
+                    if (luceneDoc != null)
                     {
                         var field = luceneDoc.GetField(fieldToFetch.QueryField.SourceAlias);
                         if (field != null)
@@ -575,7 +573,7 @@ namespace Raven.Server.Documents.Queries.Results
             return false;
         }
 
-        protected object GetFunctionValue(FieldsToFetch.FieldToFetch fieldToFetch, object[] args)
+        protected object GetFunctionValue(FieldsToFetch.FieldToFetch fieldToFetch, string documentId, object[] args)
         {
             using (_functionScope = _functionScope?.Start() ?? _projectionScope?.For(nameof(QueryTimingsScope.Names.JavaScript)))
             {
@@ -584,6 +582,7 @@ namespace Raven.Server.Documents.Queries.Results
                 var value = InvokeFunction(
                     fieldToFetch.QueryField.Name,
                     _query.Metadata.Query,
+                    documentId,
                     args);
 
                 return value;
@@ -647,13 +646,13 @@ namespace Raven.Server.Documents.Queries.Results
             }
         }
 
-        public object InvokeFunction(string methodName, Query query, object[] args)
+        public object InvokeFunction(string methodName, Query query, string documentId, object[] args)
         {
             var key = new QueryKey(query.DeclaredFunctions);
             using (_database.Scripts.GetScriptRunner(key, readOnly: true, patchRun: out var run))
             using (var result = run.Run(_context, _context as DocumentsOperationContext, methodName, args))
             {
-                _includeDocumentsCommand?.AddRange(run.Includes);
+                _includeDocumentsCommand?.AddRange(run.Includes, documentId);
 
                 if (result.IsNull)
                     return null;
@@ -674,7 +673,7 @@ namespace Raven.Server.Documents.Queries.Results
                 {
                     if (field.ProjectedName == null)
                         return false;
-                    if(BlittableJsonTraverserHelper.TryRead(_blittableTraverser, document, field.ProjectedName, out value) == false)
+                    if (BlittableJsonTraverserHelper.TryRead(_blittableTraverser, document, field.ProjectedName, out value) == false)
                         return false;
                 }
             }
