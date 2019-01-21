@@ -1,7 +1,6 @@
 ﻿using System.Collections.Generic;
 using System.Text;
 using Microsoft.Extensions.Primitives;
-using Sparrow;
 
 namespace Raven.Server.Documents.Queries.AST
 {
@@ -18,6 +17,8 @@ namespace Raven.Server.Documents.Queries.AST
         public StringSegment EdgeAlias;
 
         public FieldExpression Project;
+
+        public bool ImplicitAlias;
 
         public WithEdgesExpression(QueryExpression @where, FieldExpression path, FieldExpression project, List<(QueryExpression Expression, OrderByFieldType FieldType, bool Ascending)> orderBy)
         {

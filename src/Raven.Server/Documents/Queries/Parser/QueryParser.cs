@@ -18,7 +18,6 @@ namespace Raven.Server.Documents.Queries.Parser
         private static readonly string[] OrderByOptions = { "ASC", "DESC", "ASCENDING", "DESCENDING" };
         private static readonly string[] OrderByAsOptions = { "string", "long", "double", "alphaNumeric" };
 
-
         private int _counter;
         private int _depth;
         private NextTokenOptions _state = NextTokenOptions.Parenthesis;
@@ -45,8 +44,9 @@ namespace Raven.Server.Documents.Queries.Parser
             }
         }
 
-        public void Init(string q)
+        public void Init(string q, DocumentsStorage documentsStorage = null)
         {
+            _documentsStorage = documentsStorage;
             _depth = 0;
             Scanner.Init(q);
         }
@@ -66,7 +66,7 @@ namespace Raven.Server.Documents.Queries.Parser
                 QueryText = Scanner.Input
             };
             message = string.Empty;
-
+            
             while (Scanner.TryScan("DECLARE"))
             {
                 var (name, func) = DeclaredFunction();
@@ -130,7 +130,10 @@ namespace Raven.Server.Documents.Queries.Parser
                     {
                         if (sq.IsEdge)
                         {
-                            var with = new WithEdgesExpression(sq.Filter, sq.Path, sq.Project, null);
+                            var with = new WithEdgesExpression(sq.Filter, sq.Path, sq.Project, null)
+                            {
+                                ImplicitAlias = sq.ImplicitAlias
+                            };
                             query.TryAddWithEdgePredicates(with, alias);
                         }
                         else
@@ -142,7 +145,7 @@ namespace Raven.Server.Documents.Queries.Parser
                                     From = sq.Path,
                                 },
                                 Where = sq.Filter
-                            }, alias);
+                            }, alias, sq.ImplicitAlias);
                         }
                     }
                     _synteticWithQueries.Clear();
@@ -267,7 +270,7 @@ namespace Raven.Server.Documents.Queries.Parser
             else
             {
                 var (expr, alias) = With();
-                q.TryAddWithClause(expr, alias);
+                q.TryAddWithClause(expr, alias, false);
             }
         }
 
@@ -335,6 +338,7 @@ namespace Raven.Server.Documents.Queries.Parser
         public static readonly string[] EdgeOps = new[] { "<-", ">", "[", "-", "<", "(", "recursive" };
 
         private readonly Dictionary<StringSegment, int> _duplicateImplicitAliasCount = new Dictionary<StringSegment, int>();
+        private readonly Dictionary<StringSegment, int> _duplicateImplicitNodeAliasCount = new Dictionary<StringSegment, int>();
 
         private static void EnsureKey(Dictionary<StringSegment, int> dict, StringSegment key)
         {
@@ -342,13 +346,15 @@ namespace Raven.Server.Documents.Queries.Parser
                 dict.Add(key, 0);
         }
 
-        private bool GraphAlias(GraphQuery gq, bool isEdge, StringSegment implicitPrefix, out StringSegment alias)
+        private bool GraphAlias(GraphQuery gq, bool isEdge, StringSegment implicitPrefix, out StringSegment alias, out FieldExpression field, out bool isImplicit)
         {
             // Orders as o where id() 'orders/1-A'
             // Lines where Name = 'Chang' select Product
 
+            isImplicit = false;
             SynteticWithQuery prev = default;
             alias = default;
+            field = null;
             var start = Scanner.Position;
 
             if (Scanner.TryScan("from"))
@@ -383,12 +389,12 @@ namespace Raven.Server.Documents.Queries.Parser
                     ThrowInvalidQueryException("SELECT clause is allowed only in edge expressions");
 
                 alias = fromClause.Alias ?? new StringSegment($"index_{string.Join('_', fromClause.From.Compound).Replace('/', '_')}_{++_counter}");
-                gq.WithDocumentQueries.TryAdd(alias, query);
+                gq.WithDocumentQueries.TryAdd(alias, (false, query));
             }
             else
             {
                 if (Field(out var collection) == false)
-                {
+                {                    
                     if (isEdge)
                     {
                         if (Scanner.TryPeek(']'))
@@ -401,7 +407,7 @@ namespace Raven.Server.Documents.Queries.Parser
 
                     if (Scanner.TryPeek(')')) // anonymous alias () accepts everything
                     {
-                        alias = "__alias" + (++_counter);
+                        alias = "__alias" + (++_counter);                        
                         AddWithQuery(new FieldExpression(new List<StringSegment>()), null, alias, null, false, start, false);
                         return true;
                     }
@@ -410,14 +416,17 @@ namespace Raven.Server.Documents.Queries.Parser
                     return false;
                 }
 
+                field = collection;
+
                 if (Scanner.TryPeek(')'))
                 {
+                    isImplicit = true;
                     alias = GenerateAlias(implicitPrefix, collection);
 
                     if (gq.HasAlias(alias))
                         return true;
 
-                    if (_synteticWithQueries?.TryGetValue(collection.FieldValue, out prev) == true && !prev.IsEdge)
+                    if (_synteticWithQueries?.TryGetValue(alias, out prev) == true && !prev.IsEdge)
                         return true;
 
                     AddWithQuery(collection, null, alias, null, isEdge, start, true);
@@ -429,6 +438,7 @@ namespace Raven.Server.Documents.Queries.Parser
 
                 if (Alias(true, out var maybeAlias) == false)
                 {
+                    isImplicit = true;
                     if (gq.HasAlias(collection.FieldValue) ||
                         isEdge == false && _synteticWithQueries?.ContainsKey(collection.FieldValue) == true
                     )
@@ -466,7 +476,7 @@ namespace Raven.Server.Documents.Queries.Parser
                 }
                 else
                 {
-                    alias = maybeAlias.Value;
+                    alias = maybeAlias.Value;                    
                 }
 
 
@@ -536,15 +546,31 @@ namespace Raven.Server.Documents.Queries.Parser
             StringSegment alias;
             if (implicitPrefix.Length > 0)
             {
-                EnsureKey(_duplicateImplicitAliasCount, implicitPrefix);
-                var duplicateCount = ++_duplicateImplicitAliasCount[implicitPrefix];
-                alias = implicitPrefix + "_" + collection.FieldValue + (duplicateCount >= 2 ? "_" + duplicateCount : string.Empty);
+                alias = GetImplicitAlias(implicitPrefix, collection);
             }
             else
             {
-                alias = collection.FieldValue;
+                if (_documentsStorage != null && _documentsStorage.GetCollection(collection.FieldValue,false) != null)
+                {
+                    EnsureKey(_duplicateImplicitNodeAliasCount, collection.FieldValue);
+                    var duplicateCount = ++_duplicateImplicitNodeAliasCount[collection.FieldValue];
+                    alias = collection.FieldValue + (duplicateCount >= 2 ? "_" + duplicateCount : string.Empty);
+                }
+                else //as a precaution, keep the old code path
+                {
+                    alias = collection.FieldValue;
+                }
             }
 
+            return alias;
+        }
+
+        private StringSegment GetImplicitAlias(StringSegment implicitPrefix, FieldExpression collection)
+        {
+            StringSegment alias;
+            EnsureKey(_duplicateImplicitAliasCount, implicitPrefix);
+            var duplicateCount = ++_duplicateImplicitAliasCount[implicitPrefix];
+            alias = implicitPrefix + "_" + collection.FieldValue + (duplicateCount >= 2 ? "_" + duplicateCount : string.Empty);
             return alias;
         }
 
@@ -618,8 +644,7 @@ namespace Raven.Server.Documents.Queries.Parser
             if (Scanner.TryScan('(') == false)
                 ThrowInvalidQueryException("MATCH operator expected a '(', but didn't get it.");
 
-
-            if (GraphAlias(gq, false, default, out var alias) == false)
+            if (GraphAlias(gq, false, default, out var alias, out var field, out var isImplicit) == false)
             {
                 if (BinaryGraph(gq, out op) == false)
                 {
@@ -639,7 +664,9 @@ namespace Raven.Server.Documents.Queries.Parser
                 new MatchPath
                 {
                     Alias = alias,
-                    EdgeType = EdgeType.Right
+                    EdgeType = EdgeType.Right,                    
+                    Field = field,
+                    IsImplicit = isImplicit
                 }
             };
 
@@ -658,6 +685,8 @@ namespace Raven.Server.Documents.Queries.Parser
                 if (Scanner.TryScan(EdgeOps, out var found))
                 {
                     MatchPath last;
+                    FieldExpression field = null;
+                    bool isImplicit = false;
                     switch (found)
                     {
                         case "-":
@@ -671,7 +700,7 @@ namespace Raven.Server.Documents.Queries.Parser
                             var startingPos = Scanner.Position - 1;
                             lastElementStart = startingPos;
 
-                            if (GraphAlias(gq, true, alias, out alias) == false)
+                            if (GraphAlias(gq, true, alias, out alias, out field, out isImplicit) == false)
                                 ThrowInvalidQueryException("MATCH identifier after '-['");
 
                             var endingPos = Scanner.Position + 1;
@@ -695,7 +724,9 @@ namespace Raven.Server.Documents.Queries.Parser
                             {
                                 Alias = alias,
                                 EdgeType = list[list.Count - 1].EdgeType,
-                                IsEdge = true
+                                IsEdge = true,
+                                Field = field,
+                                IsImplicit = isImplicit
                             });
                             foundLeftArrow = false;
                             expectNode = true; //after each edge we expect a node
@@ -708,6 +739,7 @@ namespace Raven.Server.Documents.Queries.Parser
                                 Alias = last.Alias,
                                 IsEdge = last.IsEdge,
                                 EdgeType = EdgeType.Left,
+                                Field = last.Field,
                                 Recursive = last.Recursive
                             };
 
@@ -727,7 +759,9 @@ namespace Raven.Server.Documents.Queries.Parser
                                 Alias = last.Alias,
                                 IsEdge = last.IsEdge,
                                 EdgeType = EdgeType.Right,
-                                Recursive = last.Recursive
+                                Field = last.Field,
+                                Recursive = last.Recursive,
+                                IsImplicit = last.IsImplicit
                             };
 
                             if (expectNode && Scanner.TryPeek('['))
@@ -747,7 +781,7 @@ namespace Raven.Server.Documents.Queries.Parser
                         case "(":
                             var start = Scanner.Position - 1;
                             lastElementStart = start;
-                            if (GraphAlias(gq, false, default, out alias) == false)
+                            if (GraphAlias(gq, false, default, out alias, out field, out isImplicit) == false)
                                 ThrowInvalidQueryException("Couldn't get node's alias");
                             var end = Scanner.Position + 1;
 
@@ -761,7 +795,9 @@ namespace Raven.Server.Documents.Queries.Parser
                             list.Add(new MatchPath
                             {
                                 Alias = alias,
-                                EdgeType = list[list.Count - 1].EdgeType
+                                EdgeType = list[list.Count - 1].EdgeType,
+                                Field = field,
+                                IsImplicit = isImplicit
                             });
 
                             expectNode = false; //the next should be an edge
@@ -832,7 +868,9 @@ namespace Raven.Server.Documents.Queries.Parser
                             {
                                 Alias = alias,
                                 EdgeType = list[list.Count - 1].EdgeType,
-                                IsEdge = true
+                                IsEdge = true,
+                                IsImplicit = isImplicit,
+                                Field = field
                             });
 
                             ProcessEdges(gq, out var repeatedPattern, alias, repeated, allowRecursive: false, foundDash: true);
@@ -860,7 +898,6 @@ namespace Raven.Server.Documents.Queries.Parser
                             {
                                 ThrowInvalidQueryException("'recursive' block cannot end with an end and must close with a node ( recursive { [edge]->(node) } )");
                             }
-
 
                             list.Add(new MatchPath
                             {
@@ -1003,7 +1040,7 @@ namespace Raven.Server.Documents.Queries.Parser
                             subRange.Reverse();
 
                         for (var r = 0; r < subRange.Count; r++)
-                            subRange[r] = subRange[r].CloneWithDifferentEdgeType(EdgeType.Right);
+                            subRange[r] = subRange[r].CloneWithDifferentEdgeType(EdgeType.Right, false);
 
                         clauses.Add(new PatternMatchElementExpression
                         {
@@ -1015,7 +1052,7 @@ namespace Raven.Server.Documents.Queries.Parser
 
                     if (matchPaths[0].EdgeType == EdgeType.Left && matchPaths[1].EdgeType == EdgeType.Right)
                     {
-                        matchPaths[0] = matchPaths[0].CloneWithDifferentEdgeType(EdgeType.Right);
+                        matchPaths[0] = matchPaths[0].CloneWithDifferentEdgeType(EdgeType.Right, false);
                     }
 
                     break;
@@ -1028,7 +1065,7 @@ namespace Raven.Server.Documents.Queries.Parser
                 {
                     matchPaths.Reverse();
                     for (var r = 0; r < matchPaths.Count; r++)
-                        matchPaths[r] = matchPaths[r].CloneWithDifferentEdgeType(EdgeType.Right);
+                        matchPaths[r] = matchPaths[r].CloneWithDifferentEdgeType(EdgeType.Right, false);
                 }
 
                 clauses.Add(new PatternMatchElementExpression
@@ -1453,6 +1490,8 @@ namespace Raven.Server.Documents.Queries.Parser
             "OFFSET",
             "LIMIT"
         };
+
+        private DocumentsStorage _documentsStorage;
 
         private bool Alias(bool aliasAsRequired, out StringSegment? alias)
         {

@@ -36,12 +36,13 @@ namespace SlowTests.Issues
             using (var store = GetDocumentStore())
             {
                 CreateData(store);
+
                 using (var session = store.OpenSession())
                 {
                     var intersectionResults = session.Advanced.RawQuery<JObject>(
                         @"
                             match (Beers as beer)-[Style]->(BeerStyles as beerStyle) and
-                                  (Beers as beer)-[Brewery]->(Breweries as brewery)
+                                  (beer)-[Brewery]->(Breweries as brewery)
                         ").ToArray();
 
                     var unifiedIntersectionResults = session.Advanced.RawQuery<JObject>(
@@ -66,7 +67,7 @@ namespace SlowTests.Issues
                         @"
                             match 
                                   (Beers as beer)-[Style]->(BeerStyles as beerStyle) and
-                                  (Beers as anotherBeer)-[Style]->(BeerStyles as beerStyle)
+                                  (Beers as anotherBeer)-[Style]->(beerStyle)
                             where beer != anotherBeer
                         ").ToArray();
 
@@ -140,9 +141,9 @@ namespace SlowTests.Issues
                         @"
                             match 
                                 (Beers as anotherBeer)-[Brewery]->(Breweries as otherBrewery) and 
-                                (Beers as anotherBeer)-[Style]->(BeerStyles as beerStyle) and 
-                                (Beers as beer)-[Style]->(BeerStyles as beerStyle) and 
-                                (Beers as beer)-[Brewery]->(Breweries as brewery)
+                                (anotherBeer)-[Style]->(BeerStyles as beerStyle) and 
+                                (Beers as beer)-[Style]->(beerStyle) and 
+                                (beer)-[Brewery]->(Breweries as brewery)
                             where beer != anotherBeer
                         ").ToArray();
 

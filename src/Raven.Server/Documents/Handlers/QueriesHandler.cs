@@ -195,7 +195,7 @@ namespace Raven.Server.Documents.Handlers
 
             var json = await context.ReadForMemoryAsync(RequestBodyStream(), "index/query");
 
-            return IndexQueryServerSide.Create(HttpContext, json, Database.QueryMetadataCache, tracker);
+            return IndexQueryServerSide.Create(HttpContext, json, Database.QueryMetadataCache, tracker, Database);
         }
 
         private async Task SuggestQuery(IndexQueryServerSide indexQuery, DocumentsOperationContext context, OperationCancelToken token)
@@ -377,7 +377,7 @@ namespace Raven.Server.Documents.Handlers
                 if (reader.TryGet("Query", out BlittableJsonReaderObject queryJson) == false || queryJson == null)
                     throw new BadRequestException("Missing 'Query' property.");
 
-                var query = IndexQueryServerSide.Create(HttpContext, queryJson, Database.QueryMetadataCache, null, QueryType.Update);
+                var query = IndexQueryServerSide.Create(HttpContext, queryJson, Database.QueryMetadataCache, null, queryType: QueryType.Update);
 
                 if (TrafficWatchManager.HasRegisteredClients)
                     TrafficWatchQuery(query);
@@ -471,7 +471,7 @@ namespace Raven.Server.Documents.Handlers
                 if (reader.TryGet("Query", out BlittableJsonReaderObject queryJson) == false || queryJson == null)
                     throw new BadRequestException("Missing 'Query' property.");
 
-                var query = IndexQueryServerSide.Create(HttpContext, queryJson, Database.QueryMetadataCache, null, QueryType.Update);
+                var query = IndexQueryServerSide.Create(HttpContext, queryJson, Database.QueryMetadataCache, null, queryType: QueryType.Update);
 
                 if (TrafficWatchManager.HasRegisteredClients)
                     TrafficWatchQuery(query);

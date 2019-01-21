@@ -40,10 +40,9 @@ namespace Raven.Server.Documents.Queries.Graph
             _token = token;
         }
 
-
         public void BuildQueryPlan()
-        {
-            GraphQuerySyntaxValidatorVisitor.Instance.Visit(_query.Metadata.Query); //this will throw if the syntax will be bad
+        {            
+            new GraphQuerySyntaxValidatorVisitor(GraphQuery).Visit(_query.Metadata.Query); //this will throw if the syntax will be bad
             RootQueryStep = BuildQueryPlanForExpression(_query.Metadata.Query.GraphQuery.MatchClause);
             ClearUniqueQueriesFromIdenticalQueries();
         }
@@ -221,8 +220,8 @@ namespace Raven.Server.Documents.Queries.Graph
             }
             // TODO: we can tell at this point if it is a collection query or not,
             // TODO: in the future, we want to build a diffrent step for collection queries in the future.        
-            var queryMetadata = new QueryMetadata(query, _query.QueryParameters, 0);
-            var qqs = new QueryQueryStep(_database.QueryRunner, alias, query, queryMetadata, _query.QueryParameters, _context, _resultEtag, this, _token)
+            var queryMetadata = new QueryMetadata(query.withQuery, _query.QueryParameters, 0);
+            var qqs = new QueryQueryStep(_database.QueryRunner, alias, query.withQuery, queryMetadata, _query.QueryParameters, _context, _resultEtag, this, _token)
             {
                 CollectIntermediateResults = CollectIntermediateResults
             };

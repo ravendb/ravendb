@@ -352,14 +352,14 @@ namespace Raven.Server.Documents.Queries.AST
             }
         }
 
-        public override void VisitWithClauses(Dictionary<StringSegment, Query> expression)
+        public override void VisitWithClauses(Dictionary<StringSegment, (bool isImplicitAlias, Query withQuery)> expression)
         {
             foreach (var withClause in expression)
             {
                 EnsureLine();
                 _sb.Append("WITH {");
                 _indent++;
-                Visit(withClause.Value);
+                Visit(withClause.Value.withQuery);
                 _indent--;
                 EnsureLine();
                 _sb.Append("} AS ").Append(withClause.Key.Value);

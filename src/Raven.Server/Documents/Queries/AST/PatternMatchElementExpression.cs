@@ -233,19 +233,23 @@ namespace Raven.Server.Documents.Queries.AST
 
     public struct MatchPath
     {
+        public FieldExpression Field;
         public StringSegment Alias;
         public EdgeType EdgeType;
         public bool IsEdge;
         public RecursiveMatch? Recursive;
+        public bool IsImplicit;
 
-        public MatchPath CloneWithDifferentEdgeType(EdgeType type)
+        public MatchPath CloneWithDifferentEdgeType(EdgeType type, bool cloneWithField = true)
         {
             return new MatchPath
             {
                 Alias = Alias,
                 EdgeType = type,
                 IsEdge = IsEdge,
-                Recursive = Recursive
+                Recursive = Recursive,
+                Field = cloneWithField ? Field : null,
+                IsImplicit = IsImplicit
             };
         }
 

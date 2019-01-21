@@ -53,8 +53,9 @@ namespace SlowTests.Issues
                 {
                    var e = Assert.Throws<InvalidQueryException>(() => session.Advanced.RawQuery<JObject>(
                         @"match (Employees as e) 
-                            -recursive as r1 { [ReportsTo]->(Employees as manager) }
-                            -recursive as r2 { [ReportsTo]->(Employees as manager) }").ToList());
+                            -recursive as r1 { [ReportsTo]->(Employees as m1) }
+                            -recursive as r2 { [ReportsTo]->(Employees as m2) }").ToList());
+
                     Assert.True(e.Message.Contains("recursive") && e.Message.Contains("adjacent"));
                 }
             }
