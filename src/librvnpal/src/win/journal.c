@@ -48,7 +48,7 @@ rvn_open_journal_for_writes(const char* file_name, int32_t transaction_mode, int
         goto error_cleanup;
     }
 
-    if (size.QuadPart < initial_file_size)
+    if (size.QuadPart <= initial_file_size)
     {
         rc = _resize_file(h_file, initial_file_size, detailed_error_code);
         if (rc != SUCCESS)
@@ -101,8 +101,6 @@ rvn_read_journal(void* handle, void* buffer, int64_t required_size, int64_t offs
 EXPORT int32_t
 rvn_truncate_journal(void* handle, int64_t size, int32_t* detailed_error_code)
 {
-    /*TODO Should size be aligned to 4K?*/
-    /*TODO Should check the function doesn't try to make the file bigger?*/
     if (FlushFileBuffers(handle) == FALSE)
     {
         *detailed_error_code = GetLastError();

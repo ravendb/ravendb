@@ -36,7 +36,7 @@ rvn_open_journal_for_writes(const char *file_name, int32_t transaction_mode, int
     }
     *handle = (void*)(int64_t)fd;
 
-    if ((flags & O_DIRECT) == false && _finish_open_file_with_odirect(fd) == -1)
+    if ((flags & O_DIRECT) && _finish_open_file_with_odirect(fd) == -1)
     {
         rc = FAIL_SYNC_FILE;
         goto error_cleanup;

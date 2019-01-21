@@ -18,8 +18,8 @@ typedef int32_t bool;
 #define true 1
 #define false 0
 
-#define max(x, y) ((x) >= (y)) ? (x) : (y)
-#define min(x, y) ((x) <= (y)) ? (x) : (y)
+#define rvn_max(x, y) ((x) >= (y)) ? (x) : (y)
+#define rvn_min(x, y) ((x) <= (y)) ? (x) : (y)
 
 #define ALLOCATION_GRANULARITY (64*1024)
 
@@ -50,7 +50,7 @@ EXPORT int32_t
 rvn_create_and_mmap64_file(const char *path, int64_t initial_file_size, int32_t flags, void **handle, void **base_addr, int64_t *actual_file_size, int32_t *detailed_error_code);
 
 EXPORT int32_t
-rvn_prefetch_virtual_memory(void *virtualAddress, int64_t length, int32_t *detailed_error_code);
+rvn_prefetch_virtual_memory(void *virtual_address, int64_t length, int32_t *detailed_error_code);
 
 EXPORT int32_t
 rvn_get_system_information(struct SYSTEM_INFORMATION *sys_info, int32_t *detailed_error_code);
@@ -59,7 +59,7 @@ EXPORT int32_t
 rvn_memory_sync(void *address, int64_t size, int32_t *detailed_error_code);
 
 EXPORT int32_t
-rvn_mmap_dispose_handle(const char *filepath, void *handle, int32_t delete_on_close, int32_t *detailed_error_code);
+rvn_mmap_dispose_handle(const char *file_path, void *handle, int32_t delete_on_close, int32_t *detailed_error_code);
 
 EXPORT int32_t
 rvn_unmap(void *address, int64_t size, int32_t delete_on_close, int32_t *detailed_error_code);

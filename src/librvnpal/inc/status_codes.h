@@ -46,8 +46,8 @@
 #define MMOPTIONS_NONE                  0
 #define MMOPTIONS_COPY_ON_WRITE         1
 
-#define DELETE_ON_CLOSE_NO              0
-#define DELETE_ON_CLOSE_YES             1
+#define FILE_CLOSE_OPT_NONE             0
+#define FILE_CLOSE_OPT_DELETE_ON_CLOSE  1
 
 #define PROTECT_RANGE_NONE              0
 #define PROTECT_RANGE_PROTECT           1
