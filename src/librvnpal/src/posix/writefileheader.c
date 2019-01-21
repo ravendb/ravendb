@@ -38,7 +38,14 @@ rvn_write_header(const char *path,
     }
 
     if (buf.st_size != remaining)
+    {
         sync_is_needed = true;
+        if (rvn_ftruncate(fd, size) == -1)
+        {
+            rc = FAIL_TRUNCATE_FILE;
+            goto error_cleanup;
+        }
+    }
 
     while (remaining > 0)
     {
@@ -51,15 +58,6 @@ rvn_write_header(const char *path,
 
         remaining -= (int)written;
         header += written;
-    }
-
-    if (sync_is_needed == true)
-    {
-        if (rvn_ftruncate(fd, size) == -1)
-        {
-            rc = FAIL_TRUNCATE_FILE;
-            goto error_cleanup;
-        }
     }
 
     if (_flush_file(fd) == -1)

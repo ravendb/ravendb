@@ -9,6 +9,8 @@
 PRIVATE int32_t
 _resize_file(void *handle, int64_t size, int32_t *detailed_error_code)
 {
+    assert(size % 4096 == 0);
+
     int32_t rc;
     LARGE_INTEGER distance_to_move;
     distance_to_move.QuadPart = size;
