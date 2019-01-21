@@ -135,6 +135,8 @@ namespace Raven.Client.Documents.Operations.OngoingTasks
             TaskType = OngoingTaskType.PullReplicationAsSink;
         }
 
+        public string HubDefinitionName { get; set; }
+        
         public string DestinationUrl { get; set; }
         public string[] TopologyDiscoveryUrls { get; set; }
         public string DestinationDatabase { get; set; }
@@ -148,6 +150,7 @@ namespace Raven.Client.Documents.Operations.OngoingTasks
             json[nameof(TopologyDiscoveryUrls)] = TopologyDiscoveryUrls;
             json[nameof(DestinationDatabase)] = DestinationDatabase;
             json[nameof(MentorNode)] = MentorNode;
+            json[nameof(HubDefinitionName)] = HubDefinitionName;
             json[nameof(ConnectionStringName)] = ConnectionStringName;
             return json;
         }

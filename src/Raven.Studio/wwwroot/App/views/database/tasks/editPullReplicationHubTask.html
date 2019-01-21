@@ -1,0 +1,86 @@
+<div class="content-margin edit-pull-replication-hub-task">
+    <form class="flex-form" data-bind="submit: savePullReplication">
+        <div class="row flex-row absolute-fill">
+            <div class="col-xs-12 col-lg-6 flex-vertical">
+                <div class="flex-header">
+                    <button type="submit" class="btn btn-primary" data-bind="disable: $root.spinners.save() || !$root.dirtyFlag().isDirty(), css: { 'btn-spinner': $root.spinners.save }">
+                        <i class="icon-save"></i><span>Save</span>
+                    </button>
+                    <button data-bind="click: cancelOperation" class="btn btn-default" title="Return to Ongoing Tasks View">
+                        <i class="icon-cancel"></i><span>Cancel</span>
+                    </button>
+                </div>
+                <div class="panel">
+                    <div class="panel-body" data-bind="with: editedItem">                      
+                        <h3 data-bind="text: $parent.isAddingNewTask() ? `New Pull Replication Hub` : `Edit Pull Replication Hub`"></h3>
+                        <div class="form-group" data-bind="validationElement: taskName">
+                            <label for="taskName" class="control-label">Task Name</label>
+                            <div class="flex-grow">
+                                <input type="text" class="form-control" data-bind="textInput: taskName" id="taskName" autocomplete="off" placeholder="Enter a descriptive name for the pull replication task">
+                            </div>
+                        </div>
+                        <div class="form-group">
+                            <label class="control-label">&nbsp;</label>
+                            <div class="toggle" data-placement="left" data-toggle="tooltip" title="Set a delay time for the task" data-animation="true">
+                                <input id="setDelayTime" type="checkbox" data-bind="checked: showDelayReplication">
+                                <label for="setDelayTime">Set Replication Delay Time</label>
+                            </div>
+                        </div>                      
+                        <div data-bind="validationElement: delayReplicationTime, collapse: showDelayReplication">
+                            <div class="form-group">
+                                <div>
+                                    <label class="control-label">Delay Time</label>
+                                </div>
+                                <div class="flex-grow">
+                                    <input type="text" class="form-control" data-bind="durationPicker: delayReplicationTime, durationPickerOptions: { showDays: true, showSeconds: true }" />                                   
+                                </div>
+                            </div>
+                        </div>
+                        <div class="form-group" data-bind="visible: humaneDelayDescription">
+                            <label class="control-label">&nbsp;</label>
+                            <div class="bg-info padding padding-sm small flex-horizontal">
+                                <div><i class="icon-info"></i></div>
+                                <div data-bind="html: humaneDelayDescription"></div>
+                            </div>
+                        </div>
+                        <div class="form-group">
+                            <label class="control-label">&nbsp;</label>
+                            <div class="toggle" data-placement="left" data-toggle="tooltip" title="Mentor node is responsible for the ongoing task" data-animation="true">
+                                <input id="manualMentorNode" type="checkbox" data-bind="checked: manualChooseMentor">
+                                <label for="manualMentorNode">Choose preferred mentor node manually</label>
+                            </div>
+                        </div>
+                        <div data-bind="validationElement: preferredMentor, collapse: manualChooseMentor">
+                            <div class="form-group">
+                                <div>
+                                    <label class="control-label">Preferred Mentor</label>
+                                </div>
+                                <div class="flex-grow">
+                                    <button class="btn btn-block dropdown-toggle text-left" data-toggle="dropdown">
+                                        <span data-bind="text: preferredMentor() ? 'Node ' + preferredMentor() : 'Select preferred mentor'"></span>
+                                        <span class="caret"></span>
+                                    </button>
+                                    <ul class="dropdown-menu" data-bind="foreach: $root.possibleMentors">
+                                        <li><a href="#" data-bind="text: 'Node ' + $data, click: $parent.preferredMentor.bind($parent.preferredMentor, $data)"></a></li>
+                                    </ul>
+                                    <span class="help-block" data-bind="validationMessage: preferredMentor"></span>
+                                </div>
+                            </div>
+                        </div>  
+                        
+                    </div>
+                    <div class="panel-addon">
+                        <div class="padding">
+                            <h3>TODO</h3>
+                            <ul>
+                                <li>certificates</li>
+                                <li>exporter to zip file</li>
+                                <li>generate key pair button</li>
+                            </ul>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </form>
+</div>

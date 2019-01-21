@@ -1,4 +1,5 @@
 ﻿using System.Diagnostics;
+using System.Linq;
 using Raven.Client.Documents.Operations.OngoingTasks;
 using Raven.Client.ServerWide;
 using Raven.Server.Utils;
@@ -64,6 +65,24 @@ namespace Raven.Server.ServerWide.Commands
                     {
                         ravenEtl.Disabled = Disable;
                     }
+                    break;
+                
+                case OngoingTaskType.PullReplicationAsHub:
+                    var pullAsHub = record?.HubPullReplications?.Values.First(x => x.TaskId == TaskId);
+                    if (pullAsHub != null)
+                    {
+                        pullAsHub.Disabled = Disable;
+                    }
+
+                    break;
+                
+                case OngoingTaskType.PullReplicationAsSink:
+                    var pullAsSink = record?.SinkPullReplications?.First(x => x.TaskId == TaskId);
+                    if (pullAsSink != null)
+                    {
+                        pullAsSink.Disabled = Disable;
+                    }
+
                     break;
             }
 

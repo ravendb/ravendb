@@ -108,7 +108,7 @@
                                             </li>
                                             <li>
                                                 <span>Destination Database:</span>
-                                                <span class="text-details" data-bind="text:  destinationDB" title="Destination database"></span>
+                                                <span class="text-details" data-bind="text: destinationDB" title="Destination database"></span>
                                             </li>
                                             <li>
                                                 <span>Actual Destination URL:</span>
@@ -343,6 +343,147 @@
                         </div>
                     </div>
                 </div>
+
+                <!-- Pull Replication Hub -->
+
+                <div data-bind="if: showPullReplicationHubSection">
+                    <div class="hr-title">
+                        <h5 class="tasks-list-item pull-replication-hub no-text-transform"><i class="icon-pull-replication-hub"></i><span>Pull Replication Hub</span></h5><hr>
+                    </div>
+                    <div data-bind="foreach: pullReplicationHubTasks">
+                        <div class="panel destination-item pull-replication-hub">
+                            <div data-bind="attr: { 'data-state-text': $root.pluralize(ongoingHubs().length, 'sink', 'sinks'), class: 'state state-default' }"></div>
+                            <div class="padding padding-sm destination-info flex-vertical">
+                                <div class="flex-horizontal">
+                                    <div class="checkbox panel-checkbox hide">
+                                        <input type="checkbox" class="styled">
+                                        <label></label>
+                                    </div>
+                                    <div class="panel-name flex-grow" data-bind="template: { name: 'name-template' }"></div>
+                                    <div class="status" data-bind="template: { name: 'state-template' }"></div>
+                                    <div data-bind="template: { name: 'actions-template' }"></div>
+                                </div>
+                            </div>
+                            <div class="collapse panel-addon" data-bind="collapse: showDetails">
+                                <div class="padding padding-sm flex-horizontal" data-bind="visible: showDelayReplication">
+                                    <div class="flex-grow">
+                                        <ul class="properties">
+                                            <li data-bind="visible: showDelayReplication">
+                                                <span>Replication Delay Time:</span>
+                                                <span class="text-details" data-bind="text: delayHumane" title="Replication Delay Time"></span>
+                                            </li>
+                                        </ul>
+                                    </div>
+                                </div>
+
+                                <div data-bind="foreach: ongoingHubs">
+                                    <div class="panel destination-item external-replication">
+                                        <div data-bind="attr: { 'data-state-text': badgeText, class: 'state ' + badgeClass() }"></div>
+                                        <div class="padding padding-sm destination-info flex-vertical">
+                                            <div class="flex-horizontal">
+                                                <div class="panel-name flex-grow">
+                                                    <h3 data-bind="text: taskName"></h3>
+                                                </div>
+                                                <div class="node" data-bind="template: { name: 'responsible-node-template' }"></div>
+                                            </div>
+                                        </div>
+                                        <div class="panel-addon">
+                                            <div class="padding padding-sm flex-horizontal">
+                                                <div class="flex-grow">
+                                                    <ul class="properties">
+                                                        <li>
+                                                            <span>Task Status:</span>
+                                                            <span class="text-details" data-bind="text: badgeText"></span>
+                                                        </li>
+                                                        <li>
+                                                            <span>Destination Database:</span>
+                                                            <span class="text-details" data-bind="text: destinationDB" title="Destination database"></span>
+                                                        </li>
+                                                        <li>
+                                                            <span>Actual Destination URL:</span>
+                                                            <span title="Actual Destination Url">
+                                                            <a target="_blank" data-bind="attr: { href: destinationURL() === 'N/A' ? null : destinationURL }, text: destinationURL()"></a>
+                                                        </span>
+                                                        </li>
+                                                    </ul>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                                <div class="panel-addon padding padding-sm" data-bind="visible: !ongoingHubs().length">
+                                    <h5 class="text-warning">
+                                        <i class="icon-empty-set"></i> 
+                                        <span>No sinks connected</span>
+                                    </h5>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Pull Replication Sink -->
+
+                <div data-bind="if: showPullReplicationSinkSection">
+                    <div class="hr-title">
+                        <h5 class="tasks-list-item pull-replication-sink no-text-transform"><i class="icon-pull-replication-agent"></i><span>Pull Replication Sink</span></h5><hr>
+                    </div>
+                    <div data-bind="foreach: pullReplicationSinkTasks">
+                        <div class="panel destination-item pull-replication-sink" data-bind="if: responsibleNode().NodeTag === $parent.selectedNode() || $parent.selectedNode() === 'All nodes'">
+                            <div data-bind="attr: { 'data-state-text': badgeText, class: 'state ' + badgeClass() }"></div>
+                            <div class="padding padding-sm destination-info flex-vertical">
+                                <div class="flex-horizontal">
+                                    <div class="checkbox panel-checkbox hide">
+                                        <input type="checkbox" class="styled">
+                                        <label></label>
+                                    </div>
+                                    <div class="panel-name flex-grow" data-bind="template: { name: 'name-template' }"></div>
+                                    <div class="node" data-bind="template: { name: 'responsible-node-template' }"></div>
+                                    <div class="status" data-bind="template: { name: 'state-template' }"></div>
+                                    <div data-bind="template: { name: 'actions-template' }"></div>
+                                </div>
+                            </div>
+                            <div class="collapse panel-addon" data-bind="collapse: showDetails">
+                                <div class="padding padding-sm flex-horizontal">
+                                    <div class="flex-grow">
+                                        <ul class="properties">
+                                            <li>
+                                                <span>Hub Definition Name:</span>
+                                                <span class="text-details" data-bind="text: hubDefinitionName"></span>
+                                            </li>
+                                            <li>
+                                                <span>Task Status:</span>
+                                                <span class="text-details" data-bind="text: badgeText"></span>
+                                            </li>
+                                            <li>
+                                                <span>Connection String:</span>
+                                                <span title="Connection string name">
+                                                    <a target="_blank" data-bind="attr: { href: connectionStringsUrl }, text: connectionStringName"></a>
+                                                </span>
+                                            </li>
+                                            <li>
+                                                <span>Destination Database:</span>
+                                                <span class="text-details" data-bind="text:  destinationDB" title="Destination database"></span>
+                                            </li>
+                                            <li>
+                                                <span>Actual Destination URL:</span>
+                                                <span title="Actual Destination Url">
+                                                    <a target="_blank" data-bind="attr: { href: destinationURL() === 'N/A' ? null : destinationURL }, text: destinationURL()"></a>
+                                                </span>
+                                            </li>
+                                            <!-- ko foreach: topologyDiscoveryUrls -->
+                                            <li>
+                                                <span data-bind="text: $data === $parent.topologyDiscoveryUrls()[0] ? 'Topology Discovery URLs:' : ''"></span>
+                                                <span class="text-details" data-bind="text: $data" title="Discovery Url"></span>
+                                            </li>
+                                            <!-- /ko -->
+                                        </ul>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
             </div>
         </div>
 
@@ -372,33 +513,7 @@
                     <span>Exit full screen</span>
                 </button>
             </div>
-            <div class="legend">
-                <div class="row">
-                    <div class="col-sm-4">
-                        <h5>TASK TYPE</h5>
-                        <div class="row">
-                            <div class="col-xs-12"><i class="task-rect task-external-replication"></i><span>External Replication</span></div>
-                            <div class="col-xs-12"><i class="task-rect task-ravendb-etl"></i><span>RavenDB ETL</span></div>
-                            <div class="col-xs-12"><i class="task-rect task-sql-etl"></i><span>SQL ETL</span></div>
-                            <div class="col-xs-12"><i class="task-rect task-periodic-backup"></i><span>Backup</span></div> <!-- todo: change class name to just backup ..-->
-                            <div class="col-xs-12"><i class="task-rect task-subscriptions"></i><span>Subscription</span></div>
-                        </div>
-                    </div>
-                    <div class="col-sm-4">
-                        <h5>NODE TYPE</h5>
-                        <div><i class="icon-dbgroup-member"></i><span>Member</span></div>
-                        <div><i class="icon-dbgroup-promotable"></i><span>Promotable</span></div>
-                        <div><i class="icon-dbgroup-rehab"></i><span>Rehab</span></div>
-                    </div>
-                    <div class="col-sm-4">
-                        <h5>CONNECTION STATUS</h5>
-                        <div><i class="icon-arrow"></i><span>Connection</span></div>
-                        <div><i class="icon-arrow-dashed"></i><span>Partial Connection (ETL)</span></div>
-                        <div><i class="icon-arrow-dashed text-warning"></i><span>Disabled Connection</span></div>
-                        <div><i class="icon-arrow-dashed text-danger"></i><span>Broken Connection</span></div>
-                    </div>
-                </div>
-            </div>
+            <div data-bind="compose: 'partial/databaseGroupLegend.html'"></div>
         </div>
     </div>
 </div>

@@ -5,6 +5,8 @@ import endpoints = require("endpoints");
 class getOngoingTaskInfoCommand<T extends Raven.Client.Documents.Operations.OngoingTasks.OngoingTaskReplication |
                                           Raven.Client.Documents.Subscriptions.SubscriptionStateWithNodeDetails |
                                           Raven.Client.Documents.Operations.OngoingTasks.OngoingTaskBackup |
+                                          Raven.Client.Documents.Operations.Replication.PullReplicationDefinitionAndCurrentConnections |
+                                          Raven.Client.Documents.Operations.OngoingTasks.OngoingTaskPullReplicationAsSink |
                                           Raven.Client.Documents.Operations.OngoingTasks.OngoingTaskRavenEtlDetails |
                                           Raven.Client.Documents.Operations.OngoingTasks.OngoingTaskSqlEtlDetails> extends commandBase {
 
@@ -31,6 +33,14 @@ class getOngoingTaskInfoCommand<T extends Raven.Client.Documents.Operations.Ongo
 
     static forExternalReplication(db: database, taskId: number) {
         return new getOngoingTaskInfoCommand<Raven.Client.Documents.Operations.OngoingTasks.OngoingTaskReplication>(db, "Replication", taskId);
+    }
+    
+    static forPullReplicationSink(db: database, taskId: number) {
+        return new getOngoingTaskInfoCommand<Raven.Client.Documents.Operations.OngoingTasks.OngoingTaskPullReplicationAsSink>(db, "PullReplicationAsSink", taskId);
+    }
+
+    static forPullReplicationHub(db: database, taskId: number) {
+        return new getOngoingTaskInfoCommand<Raven.Client.Documents.Operations.Replication.PullReplicationDefinitionAndCurrentConnections>(db, "PullReplicationAsHub", taskId);
     }
 
     static forSubscription(db: database, taskId: number, taskName: string) {

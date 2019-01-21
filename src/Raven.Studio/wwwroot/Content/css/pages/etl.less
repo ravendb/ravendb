@@ -2,6 +2,14 @@
 @external-replication-color-dark: @brand-primary-dark;
 @external-replication-color-light: @brand-primary-light;
 
+@pull-replication-hub-color: @color-3-2; //TODO: review me!
+@pull-replication-hub-color-dark: darken(@pull-replication-hub-color, 10%);
+@pull-replication-hub-color-light: lighten(@pull-replication-hub-color, 5%);
+
+@pull-replication-sink-color: @color-3-3; //TODO: review me!
+@pull-replication-sink-color-dark: darken(@pull-replication-sink-color, 10%);
+@pull-replication-sink-color-light:lighten(@pull-replication-sink-color, 5%);
+
 @sql-etl-color: @color-4;
 @sql-etl-color-dark: darken(@color-4, 10%);
 @sql-etl-color-light: lighten(@color-4, 5%);
@@ -39,7 +47,7 @@
 }
 
 #destinationModal {
-    .external-replication, .sql-etl, .ravendb-etl, .periodic-backup, .subscription {
+    .external-replication, .sql-etl, .ravendb-etl, .periodic-backup, .subscription, .pull-replication-hub, .pull-replication-sink {
         display: block;
         padding: 10px;
         transition: background-color .2s ease, color .1s;
@@ -49,6 +57,14 @@
         }
     }
 
+    .pull-replication-hub {
+        .bigbtn-variant (@pull-replication-hub-color, @pull-replication-hub-color-dark);
+    } 
+    
+    .pull-replication-sink {
+        .bigbtn-variant (@pull-replication-sink-color, @pull-replication-sink-color-dark);
+    }
+    
     .external-replication {
         .bigbtn-variant (@external-replication-color, @external-replication-color-dark);
     }
@@ -144,6 +160,22 @@
 
         .task-external-replication {
             background-color: @external-replication-color;
+        }
+        
+        .pull-replication-hub {
+            color: @pull-replication-hub-color;
+        }
+ 
+        .task-pull-replication-hub {
+            background-color: @pull-replication-hub-color;
+        }
+
+        .pull-replication-sink {
+            color: @pull-replication-sink-color;
+        }
+
+        .task-pull-replication-sink {
+            background-color: @pull-replication-sink-color;
         }
 
         .sql-etl {

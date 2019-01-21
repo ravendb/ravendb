@@ -65,7 +65,7 @@ namespace Raven.Client.Documents.Operations.Replication
 
         public override string GetDefaultTaskName()
         {
-            return $"Pull Replication as Edge from {HubDefinitionName}";
+            return $"Pull Replication Sink from {HubDefinitionName}";
         }
     }
 }
