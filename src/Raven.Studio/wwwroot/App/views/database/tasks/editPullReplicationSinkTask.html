@@ -1,0 +1,142 @@
+<div class="content-margin edit-pull-replication-sink-task">
+    <form class="flex-form" data-bind="submit: saveTask">
+        <div class="row flex-row absolute-fill">
+            <div class="col-xs-12 col-lg-6 flex-vertical">
+                <div class="flex-header">
+                    <button type="submit" class="btn btn-primary" data-bind="disable: $root.spinners.save() || !$root.dirtyFlag().isDirty(), css: { 'btn-spinner': $root.spinners.save }">
+                        <i class="icon-save"></i><span>Save</span>
+                    </button>
+                    <button data-bind="click: cancelOperation" class="btn btn-default" title="Return to Ongoing Tasks View">
+                        <i class="icon-cancel"></i><span>Cancel</span>
+                    </button>
+                </div>
+                <div class="panel">
+                    <div class="panel-body" data-bind="with: editedReplication">                      
+                        <h3 data-bind="text: $parent.isAddingNewTask() ? `New Pull Replication Sink` : `Edit Pull Replication Sink`"></h3>
+                        <div class="form-group" data-bind="validationElement: taskName">
+                            <label for="taskName" class="control-label">Local Task Name</label>
+                            <div class="flex-grow">
+                                <input type="text" class="form-control" data-bind="textInput: taskName" id="taskName" autocomplete="off" placeholder="Enter a descriptive name for the pull replication task (optional)">
+                            </div>
+                        </div>
+                        <div class="form-group" data-bind="validationElement: hubDefinitionName">
+                            <label for="taskName" class="control-label">Hub Task Definition Name</label>
+                            <div class="flex-grow">
+                                <input type="text" class="form-control" data-bind="textInput: hubDefinitionName" autocomplete="off" placeholder="Enter a pull replication task name defined on hub">
+                            </div>
+                        </div>
+                        <div class="form-group">
+                            <label class="control-label">&nbsp;</label>
+                            <div class="toggle" data-placement="left" data-toggle="tooltip" title="Mentor node is responsible for the ongoing task" data-animation="true">
+                                <input id="manualMentorNode" type="checkbox" data-bind="checked: manualChooseMentor">
+                                <label for="manualMentorNode">Choose preferred mentor node manually</label>
+                            </div>
+                        </div>
+                        <div data-bind="validationElement: preferredMentor, collapse: manualChooseMentor">
+                            <div class="form-group">
+                                <div>
+                                    <label class="control-label">Preferred Mentor</label>
+                                </div>
+                                <div class="flex-grow">
+                                    <button class="btn btn-block dropdown-toggle text-left" data-toggle="dropdown">
+                                        <span data-bind="text: preferredMentor() ? 'Node ' + preferredMentor() : 'Select preferred mentor'"></span>
+                                        <span class="caret"></span>
+                                    </button>
+                                    <ul class="dropdown-menu" data-bind="foreach: $root.possibleMentors">
+                                        <li><a href="#" data-bind="text: 'Node ' + $data, click: $parent.preferredMentor.bind($parent.preferredMentor, $data)"></a></li>
+                                    </ul>
+                                    <span class="help-block" data-bind="validationMessage: preferredMentor"></span>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="form-group">
+                            <label class="control-label">&nbsp;</label>
+                            <div class="toggle">
+                                <input id="createNewString" type="checkbox" data-bind="checked: $root.createNewConnectionString">
+                                <label for="createNewString">Create a new RavenDB connection string</label>
+                            </div>
+                        </div>
+                        <div data-bind="collapse: $root.createNewConnectionString, with: $root.newConnectionString"> 
+                            <div class="form-group">
+                                <div class="flex-grow" data-bind="compose: 'database/settings/connectionStringRaven.html'"></div>
+                            </div>
+                        </div>
+                        <div class="form-group" data-bind="validationOptions: { insertMessages: false }, validationElement: connectionStringName, visible: !$root.createNewConnectionString()">
+                            <label class="control-label">Connection String</label>
+                            <div class="flex-grow">
+                                <button class="btn btn-block dropdown-toggle text-left" type="button" data-toggle="dropdown"
+                                        data-bind="textInput: connectionStringName, disable: $root.ravenEtlConnectionStringsDetails().length === 0,
+                                                   attr: { 'title': $root.ravenEtlConnectionStringsDetails().length === 0 ? 'No connection strings were defined' : 'Select a connection string' }">
+                                    <span data-bind="text: connectionStringName() || 'Select a connection string'"></span>
+                                    <span class="caret dropdown-toggle" data-toggle="dropdown"></span>
+                                </button>
+                                <ul class="dropdown-menu max-height"
+                                    data-bind="foreach: $root.ravenEtlConnectionStringsDetails">
+                                    <li data-bind="click: _.partial($root.useConnectionString, $data.Name)">                                       
+                                        <a href="#">
+                                            <div class="row">                                               
+                                                <strong class="col-xs-7" data-bind="text: $data.Name"></strong>                                                
+                                                <small class="col-xs-2">Destination DB:</small>
+                                                <small class="col-xs-3" data-bind="text: $data.Database"></small>
+                                            </div>
+                                        </a>
+                                    </li>
+                                </ul>
+                                <span class="help-block" data-bind="validationMessage: connectionStringName"></span>
+                            </div>
+                        </div>
+                    </div>
+                    <div>
+                        <div data-bind="if: createNewConnectionString">
+                            <div class="panel-addon" data-bind="with: testConnectionResult">
+                                <div class="padding bg-success small" data-bind="visible: Success">
+                                    <div>Successfully connected to node</div>
+                                </div>
+                                <div data-bind="if: !Success">
+                                    <div class="padding bg-danger small">
+                                        <h2>Connection test failed!</h2>
+                                        <span data-bind="text: $root.fullErrorDetailsVisible() ? Error : $root.shortErrorText()"></span>
+                                        <div>
+                                            <a href="#" data-bind="click: $root.fullErrorDetailsVisible.toggle.bind($root.fullErrorDetailsVisible), text: $root.fullErrorDetailsVisible() ? 'hide details' : 'show details'"></a>
+                                        </div>
+                                    </div>
+                                    <div class="padding bg-info small">
+                                        <h2>About this error</h2>
+                                        <div>Each RavenDB server has both HTTP and TCP endpoints. While the first one is used for system management and client-server rest request, the second is used for inter-server and advanced client-server communications.</div>
+                                        <div>The connection tests the TCP endpoint only after a successful HTTP connection.</div>
+                                        <div data-bind="visible: HTTPSuccess">It appears that the current server was able to connect to the desired server through HTTP, but failed connecting to it using TCP.</div>
+                                        <div data-bind="visible: !HTTPSuccess">It appears that the current server could not connect to the desired node through HTTP.</div>
+                                        <div>
+                                            Please verify that:
+                                            <ul>
+                                                <li>The URL is correct</li>
+                                                <li>Both RavenDB and the target machine are up and running</li>
+                                                <li>There is no firewall settings on either machine blocking usage of that URL</li>
+                                                <li>There is no network configurations that prevent communication</li>
+                                            </ul>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>    
+                        <div class="panel-addon" data-bind="visible: ravenEtlConnectionStringsDetails().length === 0 && !createNewConnectionString()">
+                            <div class="padding bg-warning small">
+                                <i class="icon-warning"></i>&nbsp;&nbsp;No connection strings have been defined yet
+                            </div>
+                        </div>
+                        <div class="panel-addon">
+                            <div class="padding">
+                                <h3>TODO</h3>
+                                <ul>
+                                    <li>certificates</li>
+                                    <li>import</li>
+                                    <li>hub definition name</li>
+                                </ul>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </form>
+</div>

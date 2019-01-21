@@ -57,12 +57,13 @@ class databaseNode extends layoutable {
 }
 
 class taskNode extends layoutable {
-    static readonly maxWidth = 250;
-    static readonly minWidth = 130;
+    static readonly maxWidth = 270;
+    static readonly minWidth = 170;
     static readonly textLeftPadding = 45;
     
     type: Raven.Client.Documents.Operations.OngoingTasks.OngoingTaskType;
     taskId: number;
+    uniqueId: string;
     name: string;
     state: Raven.Client.Documents.Operations.OngoingTasks.OngoingTaskState;
 
@@ -80,6 +81,7 @@ class taskNode extends layoutable {
 
     updateWith(dto: Raven.Client.Documents.Operations.OngoingTasks.OngoingTask, responsibleNode: databaseNode) {
         this.type = dto.TaskType;
+        this.uniqueId = databaseGroupGraph.getUniqueTaskId(dto);
         this.taskId = dto.TaskId;
         this.state = dto.TaskState;
         this.name = dto.TaskName;
@@ -87,16 +89,13 @@ class taskNode extends layoutable {
     }
 
     getId() {
-        return `t_${this.type}_${this.taskId}`;
+        return `t_${this.type}_${this.uniqueId}`;
     }
-    
 }
 
 interface taskNodeWithCache extends taskNode {
     trimmedName: string;
 }
-
-//TODO: introduce taskgroupnode
 
 class databaseGroupGraph {
 
@@ -562,6 +561,10 @@ class databaseGroupGraph {
                     return "&#xe9b9;";
                 case "Subscription":
                     return "&#xe9b5;";
+                case "PullReplicationAsHub":
+                    return "&#xea1c;";
+                case "PullReplicationAsSink":
+                    return "&#xea1b;";
             }
             return "";
         };
@@ -678,14 +681,26 @@ class databaseGroupGraph {
             }
         });
     }
+    
+    static getUniqueTaskId(task: Raven.Client.Documents.Operations.OngoingTasks.OngoingTask): string {
+        if (task.TaskType === "PullReplicationAsHub") {
+            const hubTask = task as Raven.Client.Documents.Operations.OngoingTasks.OngoingTaskPullReplicationAsHub;
+            // since hub is generic definition we need to differentiate between instances
+            return hubTask.TaskId + ":" + hubTask.DestinationDatabase + "@" + hubTask.DestinationUrl;
+        }
+        
+        return task.TaskId.toString();
+    }
 
     private updateTasks() {
-        const newTasksIds = this.ongoingTasksCache.OngoingTasksList.map(x => x.TaskId);
-
+        const newTasksIds = this.ongoingTasksCache.OngoingTasksList.map(x => databaseGroupGraph.getUniqueTaskId(x));
+        
         this.ongoingTasksCache.OngoingTasksList.forEach(taskDto => {
             const responsibleNode = taskDto.ResponsibleNode ? this.data.databaseNodes.find(x => x.tag === taskDto.ResponsibleNode.NodeTag) : null;
             
-            const existing = this.data.tasks.find(x => x.taskId === taskDto.TaskId);
+            const taskUniqueId = databaseGroupGraph.getUniqueTaskId(taskDto);
+            
+            const existing = this.data.tasks.find(x => x.uniqueId === taskUniqueId);
             if (existing) {
                 existing.updateWith(taskDto, responsibleNode);
             } else {
@@ -693,7 +708,7 @@ class databaseGroupGraph {
             }
         });
 
-        const tasksToDelete = this.data.tasks.filter(x => !_.includes(newTasksIds, x.taskId));
+        const tasksToDelete = this.data.tasks.filter(x => !_.includes(newTasksIds, x.uniqueId));
         _.pullAll(this.data.tasks, tasksToDelete);
     }
      

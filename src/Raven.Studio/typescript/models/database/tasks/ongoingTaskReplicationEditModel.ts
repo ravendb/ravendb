@@ -4,8 +4,7 @@ import ongoingTaskEditModel = require("models/database/tasks/ongoingTaskEditMode
 
 class ongoingTaskReplicationEditModel extends ongoingTaskEditModel {
        
-    destinationDB = ko.observable<string>();          // Read-only data. Input data is through the connection string.   
-    connectionStringName = ko.observable<string>();   // The connection string contains a list of discovery urls in the targeted cluster. The task communicates with these urls.
+    connectionStringName = ko.observable<string>();
     
     delayReplicationTime = ko.observable<number>();
     showDelayReplication = ko.observable<boolean>(false);   
@@ -35,7 +34,6 @@ class ongoingTaskReplicationEditModel extends ongoingTaskEditModel {
         super.update(dto);
 
         this.connectionStringName(dto.ConnectionStringName); 
-        this.destinationDB(dto.DestinationDatabase);
         this.manualChooseMentor(!!dto.MentorNode);
         this.preferredMentor(dto.MentorNode);
 
@@ -47,7 +45,6 @@ class ongoingTaskReplicationEditModel extends ongoingTaskEditModel {
     toDto(taskId: number): Raven.Client.Documents.Operations.Replication.ExternalReplication {
         return {
             Name: this.taskName(),
-            Database: this.destinationDB(),
             MentorNode: this.manualChooseMentor() ? this.preferredMentor() : undefined,
             ConnectionStringName: this.connectionStringName(),
             TaskId: taskId,

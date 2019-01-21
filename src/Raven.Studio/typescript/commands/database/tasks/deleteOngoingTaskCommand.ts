@@ -11,13 +11,13 @@ class deleteOngoingTaskCommand extends commandBase {
     execute(): JQueryPromise<Raven.Client.Documents.Operations.OngoingTasks.ModifyOngoingTaskResult> {
         const args = { id: this.taskId, type: this.taskType, taskName: this.taskName };
 
-        // Subscription is the only task that needs only *User* authenication for delete task
+        // Subscription is the only task that needs only *User* authentication for delete task
         // All others use *Admin* authentication
         const url = this.taskType === "Subscription" ? endpoints.databases.ongoingTasks.subscriptionTasks :
                                                        endpoints.databases.ongoingTasks.adminTasks;
 
         return this.del<Raven.Client.Documents.Operations.OngoingTasks.ModifyOngoingTaskResult>(url + this.urlEncodeArgs(args), null, this.db)
-            .done(() => this.reportSuccess(`successfully deleted ${this.taskType} task`))
+            .done(() => this.reportSuccess(`Successfully deleted ${this.taskType} task`))
             .fail((response: JQueryXHR) => this.reportError(`Failed to delete ${this.taskType}`, response.responseText));
     }
 }

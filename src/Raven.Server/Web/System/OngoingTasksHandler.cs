@@ -96,6 +96,8 @@ namespace Raven.Server.Web.System
 
                 ongoingTasksResult.SubscriptionsCount = (int)Database.SubscriptionStorage.GetAllSubscriptionsCount();
 
+                ongoingTasksResult.PullReplicationDefinitions = databaseRecord.HubPullReplications.Values.ToList();
+
                 return ongoingTasksResult;
             }
         }
@@ -147,7 +149,8 @@ namespace Raven.Server.Web.System
                 ResponsibleNode = new NodeId {NodeTag = tag, NodeUrl = clusterTopology.GetUrlFromTag(tag)},
                 ConnectionStringName = sinkReplication.ConnectionStringName,
                 TaskState = sinkReplication.Disabled ? OngoingTaskState.Disabled : OngoingTaskState.Enabled,
-                DestinationDatabase = handler?.ConnectionInfo.SourceDatabaseName,
+                DestinationDatabase = connectionStrings[sinkReplication.ConnectionStringName].Database,
+                HubDefinitionName = sinkReplication.HubDefinitionName,
                 DestinationUrl = res.Url,
                 TopologyDiscoveryUrls = connectionStrings[sinkReplication.ConnectionStringName].TopologyDiscoveryUrls,
                 MentorNode = sinkReplication.MentorNode,
@@ -974,18 +977,31 @@ namespace Raven.Server.Web.System
                             WriteResult(context, taskInfo);
 
                             break;
+                        
+                        // hub is special case 
+                        // this task type can contains multiple incoming connections
+                        // so we sent to user information about pull replication hub definition
+                        // and information about currently connected clients (sinks)
                         case OngoingTaskType.PullReplicationAsHub:
-                            watcher =
-                                Database.ReplicationLoader.OutgoingHandlers.SingleOrDefault(o => o.Destination is ExternalReplication ex && ex.TaskId == key)
-                                    ?.Destination as ExternalReplication;
-                            if (watcher == null)
+                            var hubReplicationDefinition = record.HubPullReplications?.Values.FirstOrDefault(x => x.TaskId == key);
+
+                            if (hubReplicationDefinition == null)
                             {
                                 HttpContext.Response.StatusCode = (int)HttpStatusCode.NotFound;
                                 break;
                             }
-                            var pullAsHubTaskInfo = GetPullReplicationAsHubTaskInfo(clusterTopology, watcher);
+                            
+                            var currentHandlers = Database.ReplicationLoader.OutgoingHandlers.Where(o => o.Destination is ExternalReplication ex && ex.TaskId == key)
+                                .Select(x => GetPullReplicationAsHubTaskInfo(clusterTopology, x.Destination as ExternalReplication))
+                                .ToList();
 
-                            WriteResult(context, pullAsHubTaskInfo);
+                            var response = new PullReplicationDefinitionAndCurrentConnections
+                            {
+                                Definition = hubReplicationDefinition,
+                                OngoingTasks = currentHandlers
+                            };
+                            
+                            WriteResult(context, response.ToJson());
                             break;
 
                         case OngoingTaskType.PullReplicationAsSink:
@@ -1023,7 +1039,7 @@ namespace Raven.Server.Web.System
                                 break;
                             }
 
-                            WriteResult(context, new OngoingTaskSqlEtlDetails()
+                            WriteResult(context, new OngoingTaskSqlEtlDetails
                             {
                                 TaskId = sqlEtl.TaskId,
                                 TaskName = sqlEtl.Name,
@@ -1050,7 +1066,7 @@ namespace Raven.Server.Web.System
 
                             var process = Database.EtlLoader.Processes.OfType<RavenEtl>().FirstOrDefault(x => x.ConfigurationName == ravenEtl.Name);
 
-                            WriteResult(context, new OngoingTaskRavenEtlDetails()
+                            WriteResult(context, new OngoingTaskRavenEtlDetails
                             {
                                 TaskId = ravenEtl.TaskId,
                                 TaskName = ravenEtl.Name,
@@ -1113,7 +1129,7 @@ namespace Raven.Server.Web.System
             return Task.CompletedTask;
         }
 
-        private void WriteResult(JsonOperationContext context, OngoingTask taskInfo)
+        private void WriteResult(JsonOperationContext context, IDynamicJson taskInfo)
         {
             HttpContext.Response.StatusCode = (int)HttpStatusCode.OK;
 
@@ -1134,7 +1150,7 @@ namespace Raven.Server.Web.System
                 writer.Flush();
             }
         }
-
+        
         [RavenAction("/databases/*/subscription-tasks/state", "POST", AuthorizationStatus.ValidUser)]
         public async Task ToggleSubscriptionTaskState()
         {
@@ -1189,8 +1205,6 @@ namespace Raven.Server.Web.System
         {
             if (ResourceNameValidator.IsValidResourceName(Database.Name, ServerStore.Configuration.Core.DataDirectory.FullPath, out string errorMessage) == false)
                 throw new BadRequestException(errorMessage);
-
-            var isPullReplication = GetBoolValueQueryString("pull", required: false) ?? false;
 
             using (ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
             {
@@ -1338,10 +1352,13 @@ namespace Raven.Server.Web.System
     {
         public List<OngoingTask> OngoingTasksList { get; set; }
         public int SubscriptionsCount { get; set; }
+        
+        public List<PullReplicationDefinition> PullReplicationDefinitions { get; set; }
 
         public OngoingTasksResult()
         {
             OngoingTasksList = new List<OngoingTask>();
+            PullReplicationDefinitions = new List<PullReplicationDefinition>();
         }
 
         public DynamicJsonValue ToJson()
@@ -1349,7 +1366,8 @@ namespace Raven.Server.Web.System
             return new DynamicJsonValue
             {
                 [nameof(OngoingTasksList)] = new DynamicJsonArray(OngoingTasksList.Select(x => x.ToJson())),
-                [nameof(SubscriptionsCount)] = SubscriptionsCount
+                [nameof(SubscriptionsCount)] = SubscriptionsCount,
+                [nameof(PullReplicationDefinitions)] = new DynamicJsonArray(PullReplicationDefinitions.Select(x => x.ToJson()))
             };
         }
     }

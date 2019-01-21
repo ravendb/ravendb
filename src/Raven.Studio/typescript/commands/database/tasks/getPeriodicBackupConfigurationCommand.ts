@@ -11,12 +11,11 @@ class getPeriodicBackupConfigurationCommand extends commandBase {
         const url = endpoints.global.backupDatabase.periodicBackup +
             this.urlEncodeArgs({ name: this.db.name, taskId: this.taskId });
 
-        const getTask = this.query(url, null);
-        getTask.fail((response: JQueryXHR) => {
-            this.reportError(`Failed to get periodic backup configuration for task: ${this.taskId}`,
-                response.responseText, response.statusText);
-        });
-        return this.query(url, null);
+        return this.query<Raven.Client.Documents.Operations.Backups.PeriodicBackupConfiguration>(url, null)
+            .fail((response: JQueryXHR) => {
+                this.reportError(`Failed to get periodic backup configuration for task: ${this.taskId}`,
+                    response.responseText, response.statusText);
+            });
     }
 }
 

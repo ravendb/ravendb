@@ -39,6 +39,8 @@ class appUrl {
         newIndex: ko.pureComputed(() => appUrl.forNewIndex(appUrl.currentDatabase())),
         editIndex: (indexName?: string) => ko.pureComputed(() => appUrl.forEditIndex(indexName, appUrl.currentDatabase())),
         editExternalReplication: (taskId?: number) => ko.pureComputed(() => appUrl.forEditExternalReplication(appUrl.currentDatabase(), taskId)),
+        editPullReplicationHub: (taskId?: number) => ko.pureComputed(() => appUrl.forEditPullReplicationHub(appUrl.currentDatabase(), taskId)),
+        editPullReplicationSink: (taskId?: number) => ko.pureComputed(() => appUrl.forEditPullReplicationSink(appUrl.currentDatabase(), taskId)),
         editPeriodicBackupTask: (taskId?: number) => ko.pureComputed(() => appUrl.forEditPeriodicBackupTask(appUrl.currentDatabase(), taskId)),
         editSubscription: (taskId?: number, taskName?: string) => ko.pureComputed(() => appUrl.forEditSubscription(appUrl.currentDatabase(), taskId, taskName)),
         editRavenEtl: (taskId?: number, taskName?: string) => ko.pureComputed(() => appUrl.forEditRavenEtl(appUrl.currentDatabase(), taskId)),
@@ -54,6 +56,8 @@ class appUrl {
         sampleDataUrl: ko.pureComputed(() => appUrl.forSampleData(appUrl.currentDatabase())),
         ongoingTasksUrl: ko.pureComputed(() => appUrl.forOngoingTasks(appUrl.currentDatabase())),
         editExternalReplicationTaskUrl: ko.pureComputed(() => appUrl.forEditExternalReplication(appUrl.currentDatabase())),
+        editPullReplicationHubTaskUrl: ko.pureComputed(() => appUrl.forEditPullReplicationHub(appUrl.currentDatabase())),
+        editPullReplicationSinkTaskUrl: ko.pureComputed(() => appUrl.forEditPullReplicationSink(appUrl.currentDatabase())),
         editSubscriptionTaskUrl: ko.pureComputed(() => appUrl.forEditSubscription(appUrl.currentDatabase())),
         editRavenEtlTaskUrl: ko.pureComputed(() => appUrl.forEditRavenEtl(appUrl.currentDatabase())),
         editSqlEtlTaskUrl: ko.pureComputed(() => appUrl.forEditSqlEtl(appUrl.currentDatabase())),
@@ -410,6 +414,18 @@ class appUrl {
         const databasePart = appUrl.getEncodedDbPart(db);
         const taskPart = taskId ? "&taskId=" + taskId : "";
         return "#databases/tasks/editExternalReplicationTask?" + databasePart + taskPart;
+    }
+    
+    static forEditPullReplicationHub(db: database | databaseInfo, taskId?: number): string {
+        const databasePart = appUrl.getEncodedDbPart(db);
+        const taskPart = taskId ? "&taskId=" + taskId : "";
+        return "#databases/tasks/editPullReplicationHubTask?" + databasePart + taskPart;
+    }
+    
+    static forEditPullReplicationSink(db: database | databaseInfo, taskId?: number): string {
+        const databasePart = appUrl.getEncodedDbPart(db);
+        const taskPart = taskId ? "&taskId=" + taskId : "";
+        return "#databases/tasks/editPullReplicationSinkTask?" + databasePart + taskPart;
     }
 
     static forEditPeriodicBackupTask(db: database | databaseInfo, taskId?: number): string {

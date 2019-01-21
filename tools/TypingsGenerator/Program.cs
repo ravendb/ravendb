@@ -311,6 +311,13 @@ namespace TypingsGenerator
             // ongoing tasks - replication
             scripter.AddType(typeof(OngoingTaskReplication));
             scripter.AddType(typeof(ExternalReplication));
+            
+            // ongoing tasks - pull replication
+            scripter.AddType(typeof(PullReplicationDefinition));
+            scripter.AddType(typeof(PullReplicationDefinitionAndCurrentConnections));
+            scripter.AddType(typeof(PullReplicationAsSink));
+            scripter.AddType(typeof(OngoingTaskPullReplicationAsSink));
+            scripter.AddType(typeof(OngoingTaskPullReplicationAsHub));
 
             // ongoing tasks - backup
             scripter.AddType(typeof(OngoingTaskBackup));

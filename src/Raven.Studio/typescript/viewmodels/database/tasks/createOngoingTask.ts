@@ -10,7 +10,7 @@ class createOngoingTask extends dialogViewModelBase {
         super.compositionComplete();
     }
 
-    newReplicationTask(task: createOngoingTask) {
+    newReplicationTask() {
         eventsCollector.default.reportEvent("ExternalReplication", "new");
         const url = appUrl.forEditExternalReplication(this.activeDatabase());
         router.navigate(url);
@@ -24,7 +24,7 @@ class createOngoingTask extends dialogViewModelBase {
         this.close();
     }
 
-    newSubscriptionTask(task: createOngoingTask) {
+    newSubscriptionTask() {
         eventsCollector.default.reportEvent("Subscription", "new");
         const url = appUrl.forEditSubscription(this.activeDatabase());
         router.navigate(url);
@@ -41,6 +41,20 @@ class createOngoingTask extends dialogViewModelBase {
     newSqlEtlTask() {
         eventsCollector.default.reportEvent("SqlETL", "new");
         const url = appUrl.forEditSqlEtl(this.activeDatabase());
+        router.navigate(url);
+        this.close();
+    }
+
+    newPullReplicationHubTask() {
+        eventsCollector.default.reportEvent("PullReplicationHub", "new");
+        const url = appUrl.forEditPullReplicationHub(this.activeDatabase());
+        router.navigate(url);
+        this.close();
+    }
+    
+    newPullReplicationSinkTask() {
+        eventsCollector.default.reportEvent("PullReplicationSink", "new");
+        const url = appUrl.forEditPullReplicationSink(this.activeDatabase());
         router.navigate(url);
         this.close();
     }

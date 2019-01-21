@@ -16,6 +16,8 @@ interface computedAppUrls {
     newIndex: KnockoutComputed<string>;
     editIndex: (indexName?: string) => KnockoutComputed<string>;
     editExternalReplication: (taskId?: number) => KnockoutComputed<string>;
+    editPullReplicationHub: (taskId?: number) => KnockoutComputed<string>;
+    editPullReplicationSink: (taskId?: number) => KnockoutComputed<string>;
     editPeriodicBackupTask: (taskId?: number) => KnockoutComputed<string>;
     editSubscription: (taskId?: number, taskName?: string) => KnockoutComputed<string>;
     editRavenEtl: (taskId?: number, taskName?: string) => KnockoutComputed<string>;
@@ -31,6 +33,8 @@ interface computedAppUrls {
     sampleDataUrl: KnockoutComputed<string>;
     ongoingTasksUrl: KnockoutComputed<string>;
     editExternalReplicationTaskUrl: KnockoutComputed<string>;
+    editPullReplicationHubTaskUrl: KnockoutComputed<string>;
+    editPullReplicationSinkTaskUrl: KnockoutComputed<string>;
     editSubscriptionTaskUrl: KnockoutComputed<string>;
     editRavenEtlTaskUrl: KnockoutComputed<string>;
     editSqlEtlTaskUrl: KnockoutComputed<string>;

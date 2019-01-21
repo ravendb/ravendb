@@ -1,20 +1,20 @@
 import appUrl = require("common/appUrl");
 import viewModelBase = require("viewmodels/viewModelBase");
 import router = require("plugins/router");
-import saveExternalReplicationTaskCommand = require("commands/database/tasks/saveExternalReplicationTaskCommand");
-import ongoingTaskReplicationEditModel = require("models/database/tasks/ongoingTaskReplicationEditModel");
-import ongoingTaskInfoCommand = require("commands/database/tasks/getOngoingTaskInfoCommand");
+import savePullReplicationSinkTaskCommand = require("commands/database/tasks/savePullReplicationSinkTaskCommand");
+import ongoingTaskPullReplicationSinkEditModel = require("models/database/tasks/ongoingTaskPullReplicationSinkEditModel");
 import eventsCollector = require("common/eventsCollector");
 import generalUtils = require("common/generalUtils");
 import getConnectionStringsCommand = require("commands/database/settings/getConnectionStringsCommand");
 import getPossibleMentorsCommand = require("commands/database/tasks/getPossibleMentorsCommand");
 import connectionStringRavenEtlModel = require("models/database/settings/connectionStringRavenEtlModel");
 import jsonUtil = require("common/jsonUtil");
+import getOngoingTaskInfoCommand = require("commands/database/tasks/getOngoingTaskInfoCommand");
 
-class editExternalReplicationTask extends viewModelBase {
+class editPullReplicationSinkTask extends viewModelBase {
 
-    editedExternalReplication = ko.observable<ongoingTaskReplicationEditModel>();
-    isAddingNewReplicationTask = ko.observable<boolean>(true);
+    editedReplication = ko.observable<ongoingTaskPullReplicationSinkEditModel>();
+    isAddingNewTask = ko.observable<boolean>(true);
     private taskId: number = null;
     
     possibleMentors = ko.observableArray<string>([]);
@@ -47,13 +47,13 @@ class editExternalReplicationTask extends viewModelBase {
 
         if (args.taskId) {
             // 1. Editing an existing task
-            this.isAddingNewReplicationTask(false);
+            this.isAddingNewTask(false);
             this.taskId = args.taskId;
 
-            ongoingTaskInfoCommand.forExternalReplication(this.activeDatabase(), this.taskId)
+            getOngoingTaskInfoCommand.forPullReplicationSink(this.activeDatabase(), this.taskId)
                 .execute()
-                .done((result: Raven.Client.Documents.Operations.OngoingTasks.OngoingTaskReplication) => { 
-                    this.editedExternalReplication(new ongoingTaskReplicationEditModel(result));
+                .done((result: Raven.Client.Documents.Operations.OngoingTasks.OngoingTaskPullReplicationAsSink) => { 
+                    this.editedReplication(new ongoingTaskPullReplicationSinkEditModel(result));
                     deferred.resolve();
                 })
                 .fail(() => {
@@ -63,8 +63,8 @@ class editExternalReplicationTask extends viewModelBase {
                 });
         } else {
             // 2. Creating a new task
-            this.isAddingNewReplicationTask(true);
-            this.editedExternalReplication(ongoingTaskReplicationEditModel.empty());
+            this.isAddingNewTask(true);
+            this.editedReplication(ongoingTaskPullReplicationSinkEditModel.empty());
             deferred.resolve();
         }
 
@@ -97,16 +97,15 @@ class editExternalReplicationTask extends viewModelBase {
             return generalUtils.trimMessage(result.Error);
         });
         
-        const model = this.editedExternalReplication();
+        const model = this.editedReplication();
         
         this.dirtyFlag = new ko.DirtyFlag([
                 model.taskName,
                 model.manualChooseMentor,
                 model.preferredMentor,
                 model.connectionStringName,
-                model.delayReplicationTime,
-                model.showDelayReplication,
-                this.createNewConnectionString                
+                model.hubDefinitionName,
+                this.createNewConnectionString
             ], false, jsonUtil.newLineNormalizingHashFunction);
 
         this.newConnectionString(connectionStringRavenEtlModel.empty());
@@ -123,10 +122,10 @@ class editExternalReplicationTask extends viewModelBase {
         super.compositionComplete();
         document.getElementById('taskName').focus();
         
-        $('.edit-replication-task [data-toggle="tooltip"]').tooltip();
+        $('.edit-pull-replication-sink-task [data-toggle="tooltip"]').tooltip();
     }
 
-    saveExternalReplication() {
+    saveTask() {
         let hasAnyErrors = false;
         
         // 0. Save discovery URL if user forgot to hit 'add url' button
@@ -142,12 +141,12 @@ class editExternalReplicationTask extends viewModelBase {
                 hasAnyErrors = true;
             } else {
                 // Use the new connection string
-                this.editedExternalReplication().connectionStringName(this.newConnectionString().connectionStringName());
+                this.editedReplication().connectionStringName(this.newConnectionString().connectionStringName());
             }
         }
 
         // 2. Validate *general form*
-        if (!this.isValid(this.editedExternalReplication().validationGroup)) {
+        if (!this.isValid(this.editedReplication().validationGroup)) {
             hasAnyErrors = true;
         }
        
@@ -174,12 +173,12 @@ class editExternalReplicationTask extends viewModelBase {
         
         // 4. All is well, Save Replication task
         savingNewStringAction.done(() => {
-            const dto = this.editedExternalReplication().toDto(this.taskId);
-            this.taskId = this.isAddingNewReplicationTask() ? 0 : this.taskId;
+            const dto = this.editedReplication().toDto(this.taskId);
+            this.taskId = this.isAddingNewTask() ? 0 : this.taskId;
 
-            eventsCollector.default.reportEvent("external-replication", "save");
-                        
-            new saveExternalReplicationTaskCommand(this.activeDatabase(), dto)
+            eventsCollector.default.reportEvent("pull-replication-sink", "save");
+            
+            new savePullReplicationSinkTaskCommand(this.activeDatabase(), dto)
                 .execute()
                 .done(() => {
                     this.dirtyFlag().reset();
@@ -198,11 +197,11 @@ class editExternalReplicationTask extends viewModelBase {
     }
 
     useConnectionString(connectionStringToUse: string) {
-        this.editedExternalReplication().connectionStringName(connectionStringToUse);
+        this.editedReplication().connectionStringName(connectionStringToUse);
     }
     
     onTestConnectionRaven(urlToTest: string) {
-        eventsCollector.default.reportEvent("external-replication", "test-connection");
+        eventsCollector.default.reportEvent("pull-replication-sink", "test-connection");
         this.spinners.test(true);
         this.newConnectionString().selectedUrlToTest(urlToTest);
         this.testConnectionResult(null);
@@ -217,4 +216,4 @@ class editExternalReplicationTask extends viewModelBase {
     }
 }
 
-export = editExternalReplicationTask;
+export = editPullReplicationSinkTask;
