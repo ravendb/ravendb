@@ -251,7 +251,7 @@ namespace Raven.Server.Documents
 
                     if (changeVector == null)
                     {
-                        changeVector = $"{_documentDatabase.ServerStore.NodeTag}:{etag}-{_documentsStorage.Environment.Base64Id}";
+                        changeVector = ChangeVectorUtils.NewChangeVector(_documentDatabase.ServerStore.NodeTag, etag, _documentsStorage.Environment.Base64Id);
                     }
 
                     using (Slice.From(context.Allocator, changeVector, out var cv))
@@ -368,7 +368,7 @@ namespace Raven.Server.Documents
                 RemoveTombstoneIfExists(context, documentId, name);
 
                 var etag = _documentsStorage.GenerateNextEtag();
-                var changeVector = $"{_documentDatabase.ServerStore.NodeTag}:{etag}-{_documentsStorage.Environment.Base64Id}";
+                var changeVector = ChangeVectorUtils.NewChangeVector(_documentDatabase.ServerStore.NodeTag, etag, _documentsStorage.Environment.Base64Id);
 
                 using (Slice.From(context.Allocator, changeVector, out var cv))
                 using (DocumentIdWorker.GetStringPreserveCase(context, name, out Slice nameSlice))
