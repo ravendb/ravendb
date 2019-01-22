@@ -275,7 +275,8 @@
     </div>
     <div class="row settings-item">
         <div class="col-xs-offset-1 col-xs-6">
-            <div class="control-label">Show the raw index entries instead of matching documents</div>
+            <div class="control-label" data-bind="visible: !isMapReduceIndex()">Show the raw index entries instead of matching documents</div>
+            <div class="control-label" data-bind="visible: isMapReduceIndex">Show the raw index entries instead of index results</div>
         </div>
         <div class="col-xs-5">
             <div class="toggle">

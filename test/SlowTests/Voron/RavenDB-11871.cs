@@ -1,7 +1,5 @@
 ﻿using System;
-using System.Collections.Generic;
 using System.IO;
-using System.Text;
 using FastTests.Voron;
 using Voron.Impl.Journal;
 using Xunit;
@@ -17,6 +15,7 @@ namespace SlowTests.Voron
 
             Options.ManualFlushing = true;
             Options.MaxLogFileSize = 1024 * 1024;
+            Options.ManualSyncing = true;
 
             for (int X = 0; X < 3; X++)
             {

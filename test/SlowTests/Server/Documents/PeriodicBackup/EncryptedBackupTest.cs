@@ -639,7 +639,7 @@ namespace SlowTests.Server.Documents.PeriodicBackup
                     EncryptionKey = key,
                     BackupEncryptionSettings = new BackupEncryptionSettings
                     {
-                        Key = key
+                        EncryptionMode = EncryptionMode.UseDatabaseKey
                     }
                 }))
                 {
@@ -710,7 +710,7 @@ namespace SlowTests.Server.Documents.PeriodicBackup
                     EncryptionKey = key,
                     BackupEncryptionSettings = new BackupEncryptionSettings
                     {
-                        Key = key
+                        EncryptionMode = EncryptionMode.UseDatabaseKey
                     }
                 }))
                 {
@@ -1066,6 +1066,7 @@ namespace SlowTests.Server.Documents.PeriodicBackup
 
                 var lastEtag = store.Maintenance.Send(new GetStatisticsOperation()).LastDocEtag;
                 await store.Maintenance.SendAsync(new StartBackupOperation(false, backupTaskId));
+                operation = new GetPeriodicBackupStatusOperation(backupTaskId);
                 value = WaitForValue(() => store.Maintenance.Send(operation).Status.LastEtag, lastEtag);
                 Assert.Equal(lastEtag, value);
 
@@ -1083,15 +1084,21 @@ namespace SlowTests.Server.Documents.PeriodicBackup
                     }
                 }))
                 {
-                    using (var session = store.OpenAsyncSession(databaseName))
+                    using (var session = store.OpenSession(databaseName))
                     {
-                        var users = await session.LoadAsync<User>(new[] { "users/1", "users/2" });
+                        Dictionary<string, User> users = new Dictionary<string, User>();
+                        var value2 = WaitForValue(() =>
+                        {
+                            users = session.Load<User>(new[] { "users/2", "users/1" });
+                            return users.Count == 2 && users.All(x => x.Value != null);
+                        }, true);
+
                         Assert.True(users.Any(x => x.Value.Name == "oren"));
                         Assert.True(users.Any(x => x.Value.Name == "ayende"));
 
-                        var val = await session.CountersFor("users/1").GetAsync("likes");
+                        var val = session.CountersFor("users/1").Get("likes");
                         Assert.Equal(100, val);
-                        val = await session.CountersFor("users/2").GetAsync("downloads");
+                        val = session.CountersFor("users/2").Get("downloads");
                         Assert.Equal(200, val);
                     }
                 }
@@ -1250,69 +1257,9 @@ namespace SlowTests.Server.Documents.PeriodicBackup
                         {
                             Key = Convert.ToBase64String(key)
                         }
-                    }));
-                });
-                Assert.IsType<CryptographicException>(e.InnerException);
-            }
-        }
-
-        [Fact]
-        public unsafe void failed_to_restore_snapshot_wrong_key()
-        {
-            var backupPath = NewDataPath(suffix: "BackupFolder");
-            using (var store = GetDocumentStore())
-            {
-                using (var session = store.OpenSession())
-                {
-                    session.Store(new User { Name = "oren" }, "users/1");
-                    session.CountersFor("users/1").Increment("likes", 100);
-                    session.SaveChanges();
-                }
-
-                var config = new PeriodicBackupConfiguration
-                {
-                    BackupType = BackupType.Snapshot,
-                    LocalSettings = new LocalSettings
+                    }))
                     {
-                        FolderPath = backupPath
-                    },
-                    IncrementalBackupFrequency = "0 */6 * * *",
-                    BackupEncryptionSettings = new BackupEncryptionSettings
-                    {
-                        Key = "OI7Vll7DroXdUORtc6Uo64wdAk1W0Db9ExXXgcg5IUs="
                     }
-                };
-
-                var backupTaskId = (store.Maintenance.Send(new UpdatePeriodicBackupOperation(config))).TaskId;
-                store.Maintenance.Send(new StartBackupOperation(true, backupTaskId));
-                var operation = new GetPeriodicBackupStatusOperation(backupTaskId);
-                var value = WaitForValue(() =>
-                {
-                    var status = store.Maintenance.Send(operation).Status;
-                    return status?.LastEtag;
-                }, 3);
-                Assert.Equal(3, value);
-
-                // restore the database with a different name
-                var databaseName = $"restored_database-{Guid.NewGuid()}";
-
-                var key = new byte[(int)Sodium.crypto_secretstream_xchacha20poly1305_keybytes()];
-                fixed (byte* pKey = key)
-                {
-                    Sodium.crypto_secretstream_xchacha20poly1305_keygen(pKey);
-                }
-
-                var e = Assert.Throws<RavenException>(() =>
-                {
-                    using (RestoreDatabase(store, new RestoreBackupConfiguration
-                    {
-                        BackupLocation = Directory.GetDirectories(backupPath).First(),
-                        DatabaseName = databaseName,
-                        BackupEncryptionSettings = new BackupEncryptionSettings
-                        {
-                            Key = Convert.ToBase64String(key)
-                        }
-                    }));
                 });
                 Assert.IsType<CryptographicException>(e.InnerException);
             }

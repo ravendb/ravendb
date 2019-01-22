@@ -86,7 +86,7 @@ class runningQueries extends viewModelBase {
         grid.setDefaultSortBy(3, "desc");
         grid.init(() => this.fetchData(), () =>
             [
-                new actionColumn<ExecutingQueryInfoWithCache>(grid, x => this.killQuery(x), "Kill", `<i class="icon-bug"></i>`, "70px",
+                new actionColumn<ExecutingQueryInfoWithCache>(grid, x => this.killQuery(x), "Kill", `<i class="icon-force"></i>`, "70px",
                     {
                         title: () => 'Kill this query'
                     }),

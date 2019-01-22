@@ -2296,7 +2296,9 @@ namespace Raven.Server.Documents.Indexes
 
                                 var includeDocumentsCommand = new IncludeDocumentsCommand(
                                     DocumentDatabase.DocumentsStorage, documentsContext,
-                                    query.Metadata.Includes);
+                                    query.Metadata.Includes,
+                                    fieldsToFetch.IsProjection);
+
                                 if (query.Metadata.HasCounters)
                                 {
                                     includeCountersCommand = new IncludeCountersCommand(

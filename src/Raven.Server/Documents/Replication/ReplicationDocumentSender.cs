@@ -339,19 +339,7 @@ namespace Raven.Server.Documents.Replication
                     return true;
                 }
                 finally
-                {                    
-                    foreach (var item in _orderedReplicaItems)
-                    {
-                        var value = item.Value;
-                        if (value.Type == ReplicationBatchItem.ReplicationItemType.Attachment)
-                        {
-                            value.Stream.Dispose();
-                        }
-                        else
-                        {
-                            value.Data?.Dispose(); //item.Value.Data is null if tombstone
-                        }
-                    }
+                {
                     _orderedReplicaItems.Clear();
                     _replicaAttachmentStreams.Clear();
                 }

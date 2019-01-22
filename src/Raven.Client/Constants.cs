@@ -274,6 +274,10 @@ namespace Raven.Client
 
                 public const string SnapshotExtension = ".ravendb-snapshot";
 
+                public const string EncryptedFullBackupExtension = ".ravendb-encrypted-full-backup";
+
+                public const string EncryptedSnapshotExtension = ".ravendb-encrypted-snapshot";
+
                 public const string IncrementalBackupExtension = ".ravendb-incremental-backup";
 
                 public class Folders

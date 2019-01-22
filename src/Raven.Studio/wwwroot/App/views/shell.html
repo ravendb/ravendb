@@ -53,30 +53,30 @@
                             <ul class="database-list">
                                 <!-- ko foreach: filteredDatabases-->
                                 <li data-bind="visible: !disabled() && relevant()">
-                                    <a href="#" data-bind="click: $parent.selectDatabase.bind($parent)" class="database">
-                                        <span data-bind="text: name"></span>
-                                        <span data-bind="text: environment, visible: environment, attr: { class: 'label text-uppercase ' + environmentClass() }"></span>
-                                        <span data-bind="visible: errored" class="badge badge-danger">Errored</span>
+                                    <a href="#" data-bind="click: $parent.selectDatabase.bind($parent), attr: {title: name}" class="database">
+                                        <div class="name" data-bind="text: name"></div>
+                                        <div data-bind="text: environment, visible: environment, attr: { class: 'label text-uppercase ' + environmentClass() }"></div>
+                                        <div data-bind="visible: errored" class="badge badge-danger">Errored</div>
                                     </a>
                                 </li>
                                 <!-- /ko -->
                                 <!-- ko foreach: filteredDatabases-->
                                 <li data-bind="visible: !relevant()">
-                                    <a class="database non-relevant">
-                                        <span data-bind="text: name"></span>
-                                        <span data-bind="text: environment, visible: environment, attr: { class: 'label text-uppercase ' + environmentClass() }"></span>
-                                        <span class="label label-default">Non-relevant</span>
-                                        <span data-bind="visible: errored" class="label label-danger">Errored</span>
+                                    <a class="database non-relevant" data-bind="attr: {title: name}">
+                                        <div class="name" data-bind="text: name"></div>
+                                        <div data-bind="text: environment, visible: environment, attr: { class: 'label text-uppercase ' + environmentClass() }"></div>
+                                        <div class="label label-default">Non-relevant</div>
+                                        <div data-bind="visible: errored" class="label label-danger">Errored</div>
                                     </a>
                                 </li>
                                 <!-- /ko -->
                                 <!-- ko foreach: filteredDatabases-->
                                 <li data-bind="visible: disabled">
-                                    <a class="database disabled">
-                                        <span data-bind="text: name"></span>
-                                        <span data-bind="text: environment, visible: environment, attr: { class: 'label text-uppercase ' + environmentClass() }"></span>
-                                        <span class="label label-default">Disabled</span>
-                                        <span data-bind="visible: errored" class="label label-danger">Errored</span>
+                                    <a class="database disabled"  data-bind="attr: {title: name}">
+                                        <div class="name" data-bind="text: name"></div>
+                                        <div data-bind="text: environment, visible: environment, attr: { class: 'label text-uppercase ' + environmentClass() }"></div>
+                                        <div class="label label-default">Disabled</div>
+                                        <div data-bind="visible: errored" class="label label-danger">Errored</div>
                                     </a>
                                 </li>
                                 <!-- /ko -->

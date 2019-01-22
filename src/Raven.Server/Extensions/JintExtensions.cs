@@ -1,10 +1,5 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Reflection;
-using System.Text;
+﻿using System.Linq;
 using Esprima.Ast;
-using Jint.Native.Function;
 
 namespace Raven.Server.Extensions
 {
@@ -23,15 +18,6 @@ namespace Raven.Server.Extensions
             if ((!(me.Object is Identifier reference) || reference.Name != identifier.Name))
                 return null;
             return property.Name;
-        }
-
-        private static FieldInfo _funcDeclarationFieldInfo = typeof(ScriptFunctionInstance).GetField("_functionDeclaration", BindingFlags.Instance | BindingFlags.NonPublic);
-
-        public static IFunction GetFunctionAst(this ScriptFunctionInstance scriptFunctionInstance)
-        {
-            //TODO: expose this in Jint directly instead of reflection            
-            var theFuncAst = (IFunction)_funcDeclarationFieldInfo.GetValue(scriptFunctionInstance);
-            return theFuncAst;
         }
     }
 }

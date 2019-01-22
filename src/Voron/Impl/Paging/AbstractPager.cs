@@ -326,6 +326,9 @@ namespace Voron.Impl.Paging
                 allocationSize = GetNewLength(allocationSize, minRequested);
             }
 
+            if (_options.CopyOnWriteMode && FileName.FullPath.EndsWith(Constants.DatabaseFilename))
+                ThrowIncreasingDataFileInCopyOnWriteModeException(FileName.FullPath, allocationSize);
+
             return AllocateMorePages(allocationSize);
         }
 
@@ -439,7 +442,6 @@ namespace Voron.Impl.Paging
             throw new ObjectDisposedException("The pager is already disposed");
         }
 
-
         protected void ThrowOnInvalidPageNumber(long pageNumber)
         {
             // this is a separate method because we don't want to have an exception throwing in the hot path
@@ -447,6 +449,11 @@ namespace Voron.Impl.Paging
             VoronUnrecoverableErrorException.Raise(_options,
                 "The page " + pageNumber + " was not allocated, allocated pages: " + NumberOfAllocatedPages + " in " +
                 GetSourceName());
+        }
+
+        public static void ThrowIncreasingDataFileInCopyOnWriteModeException(string dataFilePath, long requestedSize)
+        {
+            throw new IncreasingDataFileInCopyOnWriteModeException(dataFilePath, requestedSize);
         }
 
         public virtual void ReleaseAllocationInfo(byte* baseAddress, long size)

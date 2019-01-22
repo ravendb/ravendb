@@ -177,7 +177,9 @@ class databaseCreationModel {
         pathConfig.validationGroup = this.pathValidationGroup;
 
         encryptionConfig.enabled.subscribe(() => {
-           this.replication.replicationFactor(this.replication.nodes().length); 
+            if (this.creationMode === "newDatabase") {
+                this.replication.replicationFactor(this.replication.nodes().length);
+            }
         });
         
         this.replication.nodes.subscribe(nodes => {
