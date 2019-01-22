@@ -383,12 +383,12 @@ namespace Raven.Server.Rachis
                         // this is a rachis protocol violation exception, we must close this ambassador. 
                         throw;
                     }
-                    catch (AggregateException ae) when (IsExpectedException(ae.InnerException))
+                    catch (AggregateException ae) when (RachisConsensus.IsExpectedException(ae.InnerException))
                     {
                         // Those are expected exceptions which indicate that this ambassador is shutting down.
                         throw;
                     }
-                    catch (Exception e) when (IsExpectedException(e))
+                    catch (Exception e) when (RachisConsensus.IsExpectedException(e))
                     {
                         // Those are expected exceptions which indicate that this ambassador is shutting down.
                         throw;
@@ -422,12 +422,12 @@ namespace Raven.Server.Rachis
                 StatusMessage = $"Reached an erroneous state due to :{Environment.NewLine}{e.Message}";
                 Status = AmbassadorStatus.Error;
             }
-            catch (AggregateException ae) when (IsExpectedException(ae.InnerException))
+            catch (AggregateException ae) when (RachisConsensus.IsExpectedException(ae.InnerException))
             {
                 StatusMessage = "Closed";
                 Status = AmbassadorStatus.Closed;
             }
-            catch (Exception e) when (IsExpectedException(e))
+            catch (Exception e) when (RachisConsensus.IsExpectedException(e))
             {
                 StatusMessage = "Closed";
                 Status = AmbassadorStatus.Closed;
@@ -450,12 +450,6 @@ namespace Raven.Server.Rachis
                 }
                 _connection?.Dispose();
             }
-        }
-
-        private static bool IsExpectedException(Exception e)
-        {
-            // those are expected exceptions which indicate that this ambassador is shutting down
-            return e is LockAlreadyDisposedException || e is OperationCanceledException || e is ObjectDisposedException;
         }
 
         private void NotifyOnException(ref bool hadConnectionFailure, Exception e)
