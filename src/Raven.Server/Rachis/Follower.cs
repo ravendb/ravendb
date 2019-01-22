@@ -226,11 +226,7 @@ namespace Raven.Server.Rachis
                     {
                         break;
                     }
-                    catch (OperationCanceledException)
-                    {
-                        break;
-                    }
-                    catch (ObjectDisposedException)
+                    catch (Exception e) when (RachisConsensus.IsExpectedException(e))
                     {
                         break;
                     }
@@ -852,18 +848,13 @@ namespace Raven.Server.Rachis
                         {
                             NegotiateWithLeader(context, (LogLengthNegotiation)obj);
                         }
+
                         FollowerSteadyState();
                     }
-                    catch (OperationCanceledException)
+                    catch (Exception e) when (RachisConsensus.IsExpectedException(e))
                     {
                     }
-                    catch (ObjectDisposedException)
-                    {
-                    }
-                    catch (AggregateException ae)
-                        when (
-                            ae.InnerException is OperationCanceledException ||
-                            ae.InnerException is ObjectDisposedException)
+                    catch (AggregateException ae) when (RachisConsensus.IsExpectedException(ae))
                     {
                     }
                     catch (Exception e)
@@ -873,6 +864,7 @@ namespace Raven.Server.Rachis
                         {
                             _connection.Send(context, e);
                         }
+
                         if (_engine.Log.IsInfoEnabled)
                         {
                             _engine.Log.Info($"{ToString()}: Failed to talk to leader", e);
@@ -880,11 +872,14 @@ namespace Raven.Server.Rachis
                     }
                 }
             }
+            catch (Exception e) when (RachisConsensus.IsExpectedException(e))
+            {
+            }
             catch (Exception e)
             {
                 if (_engine.Log.IsInfoEnabled)
                 {
-                    _engine.Log.Info("Failed to dispose follower when talking leader: " + _engine.Tag, e);
+                    _engine.Log.Info("Failed to dispose follower when talking to the leader: " + _engine.Tag, e);
                 }
             }
         }
