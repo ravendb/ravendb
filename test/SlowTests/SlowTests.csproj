@@ -69,4 +69,21 @@
     <Folder Include="Server\Basic" />
     <Folder Include="Server\Documents\Notifications" />
   </ItemGroup>
+  <ItemGroup>
+    <None Update="SchemaUpgrade\Issues\DocumentsVersion\schema_9\headers.one">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </None>
+    <None Update="SchemaUpgrade\Issues\DocumentsVersion\schema_9\headers.two">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </None>
+    <None Update="SchemaUpgrade\Issues\DocumentsVersion\schema_9\Journals\0000000000000000000.journal">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </None>
+    <None Update="SchemaUpgrade\Issues\DocumentsVersion\schema_9\Journals\0000000000000000001.journal">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </None>
+    <None Update="SchemaUpgrade\Issues\DocumentsVersion\schema_9\Raven.voron">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </None>
+  </ItemGroup>
 </Project>
