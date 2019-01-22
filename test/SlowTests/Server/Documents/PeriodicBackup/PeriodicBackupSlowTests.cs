@@ -703,7 +703,6 @@ namespace SlowTests.Server.Documents.PeriodicBackup
 
                     var stats = await store2.Maintenance.SendAsync(new GetStatisticsOperation());
                     Assert.Equal(2, stats.CountOfDocuments);
-                    Assert.Equal(2, stats.CountOfCounters);
 
                     using (var session = store2.OpenAsyncSession())
                     {
@@ -747,7 +746,6 @@ namespace SlowTests.Server.Documents.PeriodicBackup
 
                     var stats = await store3.Maintenance.SendAsync(new GetStatisticsOperation());
                     Assert.Equal(1, stats.CountOfDocuments);
-                    Assert.Equal(1, stats.CountOfCounters);
 
                     using (var session = store3.OpenAsyncSession())
                     {
