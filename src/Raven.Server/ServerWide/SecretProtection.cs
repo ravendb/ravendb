@@ -580,8 +580,8 @@ namespace Raven.Server.ServerWide
                         catch (CryptographicException e)
                         {
                             // Access denied?
-                            if (Logger.IsOperationsEnabled)
-                                Logger.Operations($"Tried to clean expired certificates from the OS user intermediate store but got an exception when removing a certificate with subject name: {element.Certificate.SubjectName.Name}.", e);
+                            if (Logger.IsInfoEnabled)
+                                Logger.Info($"Tried to clean expired certificates from the OS user intermediate store but got an exception when removing a certificate with subject name '{element.Certificate.SubjectName.Name}' and thumbprint '{element.Certificate.Thumbprint}'.", e);
                         }
                     }
                 }
