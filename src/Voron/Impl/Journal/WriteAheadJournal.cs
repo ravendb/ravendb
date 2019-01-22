@@ -163,6 +163,10 @@ namespace Voron.Impl.Journal
             }
 
             var oldestLogFileStillInUse = logInfo.CurrentJournal - logInfo.JournalFilesCount + 1;
+
+            if (logInfo.LastSyncedJournal != -1) 
+                oldestLogFileStillInUse = Math.Min(oldestLogFileStillInUse, logInfo.LastSyncedJournal);
+
             if (_env.Options.IncrementalBackupEnabled == false && _env.Options.CopyOnWriteMode == false)
             {
                 // we want to check that we cleanup old log files if they aren't needed
@@ -175,9 +179,6 @@ namespace Voron.Impl.Journal
                         break;
                 }
             }
-
-            var lastSyncedTransactionId = logInfo.LastSyncedTransactionId;
-
 
             var modifiedPages = new HashSet<long>();
 
@@ -195,7 +196,7 @@ namespace Voron.Impl.Journal
                     RecoverCurrentJournalSize(pager);
 
                     var transactionHeader = txHeader->TransactionId == 0 ? null : txHeader;
-                    using (var journalReader = new JournalReader(pager, _dataPager, recoveryPager, modifiedPages, lastSyncedTransactionId, transactionHeader))
+                    using (var journalReader = new JournalReader(pager, _dataPager, recoveryPager, modifiedPages, logInfo, transactionHeader))
                     {
                         var transactionHeaders = journalReader.RecoverAndValidate(_env.Options);
 
@@ -889,6 +890,8 @@ namespace Voron.Impl.Journal
 
                 public Task Task => _tcs.Task;
 
+                internal Action AfterGatherInformationAction;
+
                 public bool SyncDataFile()
                 {
                     _fsyncLockTaken = _parent._fsyncLock.Wait(0);
@@ -901,6 +904,8 @@ namespace Voron.Impl.Journal
 
                     if (_parent._flushLockTaskResponsible.WaitForTaskToBeDone(GatherInformationToStartSync) == false)
                         return false;
+
+                    AfterGatherInformationAction?.Invoke();
 
                     if (_parent._waj._env.Disposed)
                         return false;
