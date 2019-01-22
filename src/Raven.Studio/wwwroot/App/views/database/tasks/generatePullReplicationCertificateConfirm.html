@@ -1,0 +1,41 @@
+<div class="modal-dialog" role="document">
+    <div class="modal-content" tabindex="-1">
+        <div class="modal-header">
+            <button type="button" class="close" data-bind="click: cancel" aria-hidden="true">
+                <i class="icon-cancel"></i>
+            </button>
+            <h4 class="modal-title">Generate Pull Replication Certificate</h4>
+        </div>
+        <div class="modal-body">
+            <p>
+                This option allows to generate new certificate for pull replication.
+            </p>
+            <p>
+                After generation process you can either <strong>export certificate</strong> as PFX file, or
+                use <strong>Export Configuration for Sink</strong> to save configuration along with private key 
+                which can be imported on 'Pull Replication' sink side.
+            </p>
+            <p class="text-info">
+                <i class="icon-info"></i> <span>Primary key won't be saved on current node.</span>
+            </p>
+
+            <p>
+                Please provide validity period for generated certificate:
+            </p>
+            
+            <div class="flex-form">
+                <div class="form-group" data-bind="validationElement: validityInYears">
+                    <label class="control-label">Validity in years</label>
+                    <div class="flex-grow">
+                        <input type="text" class="form-control" data-bind="numericInput: validityInYears" />
+                    </div>
+                </div>    
+            </div>
+            
+        </div>
+        <div class="modal-footer">
+            <button type="button" class="btn btn-default" data-bind="click: cancel">Cancel</button>
+            <button type="button" class="btn btn-danger" data-bind="click: generate">Generate</button>
+        </div>
+    </div>
+</div>

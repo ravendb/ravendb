@@ -1,0 +1,34 @@
+﻿.edit-pull-replication-hub-task {
+    
+    .certificates-actions {
+        align-items: flex-start;
+        
+        & > * + * {
+            margin-left: @grid-gutter-width / 4;
+        }
+    }
+    .certificate-item {
+        .flex-horizontal {
+            flex-wrap: wrap;
+        }
+
+        .thumbprint {
+            font-size: 12px;
+        }
+
+        h3 {
+            margin: 0;
+        }
+
+        .panel-addon {
+            font-size: 13px;
+        }
+
+        .notBefore, .expiration {
+            margin-top: 0;
+            line-height: 18px;
+            margin-right: @grid-gutter-width/2;
+            white-space: nowrap;
+        }
+    }
+}

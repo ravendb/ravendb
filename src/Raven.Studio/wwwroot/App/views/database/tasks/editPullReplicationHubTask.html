@@ -2,12 +2,19 @@
     <form class="flex-form" data-bind="submit: savePullReplication">
         <div class="row flex-row absolute-fill">
             <div class="col-xs-12 col-lg-6 flex-vertical">
-                <div class="flex-header">
-                    <button type="submit" class="btn btn-primary" data-bind="disable: $root.spinners.save() || !$root.dirtyFlag().isDirty(), css: { 'btn-spinner': $root.spinners.save }">
-                        <i class="icon-save"></i><span>Save</span>
-                    </button>
-                    <button data-bind="click: cancelOperation" class="btn btn-default" title="Return to Ongoing Tasks View">
-                        <i class="icon-cancel"></i><span>Cancel</span>
+                <div class="flex-header flex-horizontal">
+                    <div>
+                        <button type="submit" class="btn btn-primary" data-bind="disable: $root.spinners.save() || !$root.dirtyFlag().isDirty(), css: { 'btn-spinner': $root.spinners.save }">
+                            <i class="icon-save"></i><span>Save</span>
+                        </button>
+                        <button data-bind="click: cancelOperation" class="btn btn-default" title="Return to Ongoing Tasks View">
+                            <i class="icon-cancel"></i><span>Cancel</span>
+                        </button>
+                    </div>
+                    <div class="flex-separator"></div>
+                    <button class="btn btn-default" data-bind="click: exportConfiguration">
+                        <i class="icon-export"></i>
+                        <span>Export Configuration for Sink</span>
                     </button>
                 </div>
                 <div class="panel">
@@ -67,16 +74,76 @@
                                 </div>
                             </div>
                         </div>  
-                        
-                    </div>
-                    <div class="panel-addon">
-                        <div class="padding">
-                            <h3>TODO</h3>
-                            <ul>
-                                <li>certificates</li>
-                                <li>exporter to zip file</li>
-                                <li>generate key pair button</li>
-                            </ul>
+                        <div data-bind="if: $root.canDefineCertificates">
+                            <div class="form-group">
+                                <label class="control-label">Certificates</label>
+                                <div class="flex-grow">
+                                    <div data-bind="validationElement: certificates">
+                                        <div class="help-block" data-bind="validationMessage: certificates"></div>
+                                    </div>
+                                    <div data-bind="foreach: certificates">
+                                        <div class="panel certificate-item">
+                                            <div class="padding padding-sm flex-horizontal">
+                                                <div title="Certificate thumbprint">
+                                                    <i class="icon-certificate"></i> <span data-bind="text: thumbprint"></span>    
+                                                </div>
+                                                <div class="flex-separator"></div>
+                                                <button type="button" class="btn btn-danger" title="Delete certificate" data-bind="click: _.partial($root.deleteCertificate, $data)">
+                                                    <i class="icon-trash"></i>
+                                                </button>
+                                            </div>
+                                            <div class="panel-addon padding padding-sm">
+                                                <div class="flex-horizontal">
+                                                    <div class="notBefore">
+                                                        <h5><i class="icon-clock"></i> VALID FROM</h5>
+                                                        <strong data-bind="text: validFromText">
+                                                        </strong>
+                                                    </div>
+                                                    <div class="expiration">
+                                                        <h5><i data-bind="attr: { class: expirationIcon }"></i> EXPIRATION</h5>
+                                                        <strong data-bind="attr: { class: expirationClass }, text: expirationText">
+                                                        </strong>
+                                                    </div>
+                                                    <div class="flex-separator"></div>
+                                                    <div data-bind="if: certificate">
+                                                        <button class="btn btn-primary" data-bind="click: $root.downloadPfx">
+                                                            <i class="icon-export"></i>
+                                                            <span>Download certificate</span>
+                                                        </button>
+
+                                                        <div data-bind="validationElement: $parent.certificateExported">
+                                                            <div class="help-block" data-bind="validationMessage: $parent.certificateExported"></div>
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                               
+                                                <div data-bind="if: certificate">
+                                                    <small class="text-info">
+                                                        <i class="icon-info"></i>
+                                                        <span>This certificate will be included in exported configuration</span>
+                                                    </small>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+
+                                    <div class="input-group file-input" title="Import certificate from file">
+                                        <input type="file" id="certificateFilePicker" data-bind="event: { change: $root.certificateSelected }" tabindex="-1" accept=".crt,.pem">
+                                    </div>
+                                    
+                                    <div class="flex-horizontal certificates-actions">
+                                        <label for="certificateFilePicker" class="btn btn-default">
+                                            <i class="icon-import"></i><span>Import certificate from file</span>
+                                        </label>
+
+                                        <button type="button" class="btn btn-default"
+                                                data-bind="click: $root.generateCertificate, visible: !certificateGenerated(), disable: $root.spinners.generateCertificate(), css: { 'btn-spinner' : $root.spinners.generateCertificate }">
+                                            <i class="icon-plus"></i>
+                                            <span>Generate new certificate</span>
+                                        </button>
+                                    </div>
+                                </div>
+                            </div>
                         </div>
                     </div>
                 </div>

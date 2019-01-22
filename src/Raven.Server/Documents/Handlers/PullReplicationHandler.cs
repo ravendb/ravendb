@@ -70,21 +70,9 @@ namespace Raven.Server.Documents.Handlers
             }
         }
 
-        [RavenAction("/databases/*/admin/pull-replication/generate-hub-zip", "POST", AuthorizationStatus.Operator)]
-        public async Task GeneratePullReplicationZip()
+        [RavenAction("/databases/*/admin/pull-replication/generate-certificate", "POST", AuthorizationStatus.Operator)]
+        public Task GeneratePullReplicationCertificate()
         {
-            ServerStore.LicenseManager.AssertCanAddPullReplication();
-
-            var name = GetStringQueryString("name");
-            var mentor = GetStringQueryString("mentor", required: false);
-            var delay = GetTimeSpanQueryString("delay", required: false);
-
-            var definition = new PullReplicationDefinition(name, delay ?? default, mentor);
-            var zipped = new ZippedPullReplication
-            {
-                Name = definition.Name
-            };
-
             if (ServerStore.Server.Certificate?.Certificate != null)
             {
                 var validYears = GetIntValueQueryString("validYears", required: false) ?? 0; // 0 yr. will set the expiration to 3 months
@@ -96,90 +84,45 @@ namespace Raven.Server.Documents.Handlers
                 var certificateWithPrivateKey = new X509Certificate2(certBytes, (string)null, X509KeyStorageFlags.MachineKeySet | X509KeyStorageFlags.Exportable);
                 certificateWithPrivateKey.Verify();
 
-                definition.Certificates[certificateWithPrivateKey.Thumbprint] = Convert.ToBase64String(certificateWithPrivateKey.Export(X509ContentType.Cert));
-
-                zipped.Certificate = Convert.ToBase64String(certificateWithPrivateKey.Export(X509ContentType.Pfx));
-            }
-
-            var updatePullReplication = new UpdatePullReplicationAsHubCommand(Database.Name)
-            {
-                Definition = definition
-            };
-            await ServerStore.SendToLeaderAsync(updatePullReplication);
-
-            HttpContext.Response.Headers["Content-Disposition"] = "attachment; filename=PullReplication.zip";
-            HttpContext.Response.ContentType = "application/octet-stream";
-
-            using (var zip = new ZipArchive(ResponseBodyStream(), ZipArchiveMode.Create))
-            using (var ctx = JsonOperationContext.ShortTermSingleUse())
-            {
-                var pullReplicationEntry = zip.CreateEntry(ZippedEntryName);
-                using (var zipStream = pullReplicationEntry.Open())
+                var keyPairInfo = new PullReplicationCertificate
                 {
-                    ctx.Write(zipStream, ctx.ReadObject(zipped.ToJson(Database), "zip-pull-replication"));
+                    PublicKey = Convert.ToBase64String(certificateWithPrivateKey.Export(X509ContentType.Cert)),
+                    Thumbprint = certificateWithPrivateKey.Thumbprint,
+                    Certificate = Convert.ToBase64String(certificateWithPrivateKey.Export(X509ContentType.Pfx))
+                };
+                
+                using (ContextPool.AllocateOperationContext(out DocumentsOperationContext context))
+                using (var writer = new BlittableJsonTextWriter(context, ResponseBodyStream()))
+                {
+                    writer.WriteStartObject();
+                    
+                    writer.WritePropertyName(nameof(keyPairInfo.PublicKey));
+                    writer.WriteString(keyPairInfo.PublicKey);
+                    writer.WriteComma();
+                    
+                    writer.WritePropertyName(nameof(keyPairInfo.Certificate));
+                    writer.WriteString(keyPairInfo.Certificate);
+                    writer.WriteComma();
+                    
+                    writer.WritePropertyName(nameof(keyPairInfo.Thumbprint));
+                    writer.WriteString(keyPairInfo.Thumbprint);
+                    
+                    writer.WriteEndObject();
                 }
             }
-        }
-
-        [RavenAction("/databases/*/admin/pull-replication/unpack-sink-zip", "POST", AuthorizationStatus.Operator)]
-        public async Task UnpackPullReplicationZip()
-        {
-            ZippedPullReplication pullReplicationInfo;
-            using (ServerStore.ContextPool.AllocateOperationContext(out JsonOperationContext context))
-            using (var zip = new ZipArchive(RequestBodyStream(), ZipArchiveMode.Read))
+            else
             {
-                var entry = zip.GetEntry(ZippedEntryName);
-                if (entry == null)
-                    throw new InvalidOperationException($"The zip doesn't contain {ZippedEntryName} file.");
-
-                using (var zippedPullReplication = context.ReadForMemory(entry.Open(), "read-zipped-pull-replication"))
-                {
-                    pullReplicationInfo = JsonDeserializationServer.ZippedPullReplication(zippedPullReplication);
-                }
+                throw new BadRequestException("This endpoint requires secured server.");
             }
-
-            var connectionStringCommand = new PutRavenConnectionStringCommand(pullReplicationInfo.ConnectionString, Database.Name);
-            await ServerStore.SendToLeaderAsync(connectionStringCommand);
-
-            var sink = new PullReplicationAsSink(pullReplicationInfo.ConnectionString.Database, pullReplicationInfo.ConnectionString.Name, pullReplicationInfo.Name)
-            {
-                Name = pullReplicationInfo.ConnectionString.Name,
-                CertificateWithPrivateKey = pullReplicationInfo.Certificate
-            };
-            var replicationAsSinkCommand = new UpdatePullReplicationAsSinkCommand(Database.Name)
-            {
-                PullReplicationAsSink = sink
-            };
-
-            await ServerStore.SendToLeaderAsync(replicationAsSinkCommand);
+            
+            return Task.CompletedTask;
         }
 
-        private const string ZippedEntryName = "PullReplication.json";
-
-        internal class ZippedPullReplication
+        public class PullReplicationCertificate
         {
-            public string Name;
-            public string Certificate;
-            public RavenConnectionString ConnectionString;
-
-            public DynamicJsonValue ToJson(DocumentDatabase database)
-            {
-                ConnectionString = new RavenConnectionString
-                {
-                    Database = database.Name,
-                    TopologyDiscoveryUrls = database.ServerStore.GetClusterTopology().AllNodes.Select(node => node.Value).ToArray()
-                };
-
-                ConnectionString.Name = $"Pull Replication '{Name}' from database '{database.Name}' on {string.Join(", ", ConnectionString.TopologyDiscoveryUrls)}";
-
-                return new DynamicJsonValue
-                {
-                    [nameof(Name)] = Name,
-                    [nameof(Certificate)] = Certificate,
-                    [nameof(ConnectionString)] = ConnectionString.ToJson()
-                };
-            }
+            public string PublicKey { get; set; }
+            public string Certificate { get; set; }
+            public string Thumbprint { get; set; }
         }
-
     }
 }
