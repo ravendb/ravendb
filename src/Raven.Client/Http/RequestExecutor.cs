@@ -28,6 +28,7 @@ using Raven.Client.Properties;
 using Raven.Client.ServerWide.Commands;
 using Raven.Client.Util;
 using Sparrow;
+using Sparrow.Collections;
 using Sparrow.Json;
 using Sparrow.Logging;
 using Sparrow.Threading;
@@ -182,6 +183,8 @@ namespace Raven.Client.Http
                 GetCachedOrCreateHttpClient(httpClientCache) : lazyClient.Value;
 
             TopologyHash = Http.TopologyHash.GetTopologyHash(initialUrls);
+
+            UpdateConnectionLimit(initialUrls);
         }
 
         public static RequestExecutor Create(string[] initialUrls, string databaseName, X509Certificate2 certificate, DocumentConventions conventions)
@@ -305,6 +308,10 @@ namespace Raven.Client.Http
                     }
 
                     TopologyEtag = _nodeSelector.Topology.Etag;
+
+                    var urls = _nodeSelector.Topology.Nodes.Select(x => x.Url);
+                    UpdateConnectionLimit(urls);
+
                     OnTopologyUpdated(topology);
                 }
             }
@@ -1325,6 +1332,28 @@ namespace Raven.Client.Http
 
             if (supported == false)
                 throw new InvalidOperationException("Client certificate " + certificate.FriendlyName + " must be defined with the following 'Enhanced Key Usage': Client Authentication (Oid 1.3.6.1.5.5.7.3.2)");
+        }
+
+        private static readonly ConcurrentSet<string> UpdatedConnectionLimitUrls = new ConcurrentSet<string>(StringComparer.OrdinalIgnoreCase);
+
+        private static void UpdateConnectionLimit(IEnumerable<string> urls)
+        {
+            foreach (var url in urls)
+            {
+                if (UpdatedConnectionLimitUrls.TryAdd(url) == false)
+                    continue;
+
+                try
+                {
+                    var servicePoint = ServicePointManager.FindServicePoint(new Uri(url));
+                    servicePoint.ConnectionLimit = Math.Max(servicePoint.ConnectionLimit, 1024 * 10);
+                }
+                catch (Exception e)
+                {
+                    if (Logger.IsInfoEnabled)
+                        Logger.Info($"Failed to set the connection limit for url: {url}", e);
+                }
+            }
         }
 
         private static RemoteCertificateValidationCallback[] _serverCertificateCustomValidationCallback = Array.Empty<RemoteCertificateValidationCallback>();
