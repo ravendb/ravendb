@@ -305,14 +305,7 @@ namespace Raven.Server.Rachis
                             }
                         }
                     }
-                    catch (AggregateException ae)
-                        when (ae.InnerException is OperationCanceledException || ae.InnerException is LockAlreadyDisposedException)
-                    {
-                        NotifyAboutAmbassadorClosing(_connection, currentElectionTerm, ae.InnerException);
-                        break;
-                    }
-                    catch (Exception e)
-                        when (e is OperationCanceledException || e is LockAlreadyDisposedException || e is RachisConcurrencyException)
+                    catch (Exception e) when (RachisConsensus.IsExpectedException(e) || e is RachisConcurrencyException)
                     {
                         NotifyAboutAmbassadorClosing(_connection, currentElectionTerm, e);
                         break;
