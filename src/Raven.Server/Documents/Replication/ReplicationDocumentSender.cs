@@ -261,7 +261,7 @@ namespace Raven.Server.Documents.Replication
                                 foreach (var attachment in _parent._database.DocumentsStorage.AttachmentsStorage.GetAttachmentsForDocument(documentsContext, type, item.Id))
                                 {
                                     //We need to filter attachments that are been sent in the same batch as the document
-                                    if(attachment.Etag >= prevLastEtag)
+                                    if (attachment.Etag >= prevLastEtag)
                                         continue;
                                     var stream = _parent._database.DocumentsStorage.AttachmentsStorage.GetAttachmentStream(documentsContext, attachment.Base64Hash);
                                     attachment.Stream = stream;
@@ -296,7 +296,7 @@ namespace Raven.Server.Documents.Replication
                         _log.Info($"Found {_orderedReplicaItems.Count:#,#;;0} documents and {_replicaAttachmentStreams.Count} attachment's streams to replicate to {_parent.Node.FromString()}.");
                     }
 
-                    if (_orderedReplicaItems.Count == 0)
+                    if (_orderedReplicaItems.Count == 0 && _countersToReplicate.Count == 0)
                     {
                         var hasModification = _lastEtag != _parent._lastSentDocumentEtag;
 
