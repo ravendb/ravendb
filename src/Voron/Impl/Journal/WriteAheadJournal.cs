@@ -184,7 +184,7 @@ namespace Voron.Impl.Journal
 
             var journalFiles = new List<JournalFile>();
             long lastSyncedTxId = -1;
-            long lastSyncedJournal = logInfo.LastSyncedJournal;
+            long lastFlushedJournal = logInfo.LastSyncedJournal;
             for (var journalNumber = oldestLogFileStillInUse; journalNumber <= logInfo.CurrentJournal; journalNumber++)
             {
                 addToInitLog?.Invoke($"Recovering journal {journalNumber} (upto last journal {logInfo.CurrentJournal})");
@@ -206,7 +206,7 @@ namespace Voron.Impl.Journal
                         {
                             *txHeader = *lastReadHeaderPtr;
                             lastSyncedTxId = txHeader->TransactionId;
-                            lastSyncedJournal = journalNumber;
+                            lastFlushedJournal = journalNumber;
                         }
 
                         pager.Dispose(); // need to close it before we open the journal writer
@@ -275,22 +275,21 @@ namespace Voron.Impl.Journal
                     "First transaction initializing the structure of Voron database is corrupted. Cannot access internal database metadata. Create a new database to recover.");
 
             Debug.Assert(lastSyncedTxId >= 0);
-            Debug.Assert(lastSyncedJournal >= 0);
+            Debug.Assert(lastFlushedJournal >= 0);
 
-            _journalIndex = lastSyncedJournal;
+            _journalIndex = lastFlushedJournal;
 
             if (_env.Options.CopyOnWriteMode == false)
             {
                 _headerAccessor.Modify(
                     header =>
                     {
-                        header->Journal.CurrentJournal = lastSyncedJournal;
+                        header->Journal.CurrentJournal = lastFlushedJournal;
                         header->Journal.JournalFilesCount = _files.Count;
                         header->IncrementalBackup.LastCreatedJournal = _journalIndex;
                     });
 
-                CleanupInvalidJournalFiles(lastSyncedJournal);
-                CleanupUnusedJournalFiles(oldestLogFileStillInUse, lastSyncedJournal);
+                CleanupInvalidJournalFiles(lastFlushedJournal);
             }
 
             if (_files.Count > 0)
@@ -302,16 +301,6 @@ namespace Voron.Impl.Journal
             }
 
             return requireHeaderUpdate;
-        }
-
-        private void CleanupUnusedJournalFiles(long oldestLogFileStillInUse, long lastSyncedJournal)
-        {
-            var logFile = oldestLogFileStillInUse;
-            while (logFile < lastSyncedJournal)
-            {
-                _env.Options.TryDeleteJournal(logFile);
-                logFile++;
-            }
         }
 
         private void CleanupInvalidJournalFiles(long lastSyncedJournal)
