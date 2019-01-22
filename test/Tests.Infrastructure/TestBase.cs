@@ -136,8 +136,6 @@ namespace FastTests
             return tmp;
         }
 
-        private static int Count;
-
         private static void GenerateSelfSignedCertFileName(bool createNew = false)
         {
             lock (typeof(TestBase))

@@ -19,6 +19,11 @@ namespace Raven.Server.Utils
         {
             using (var process = Process.GetCurrentProcess())
             {
+                foreach (var thread in GetProcessThreads(process))
+                {
+                    _threadTimesInfo[thread.Id] = thread.TotalProcessorTime.Ticks;
+                }
+
                 _processTimes = CpuHelper.GetProcessTimes(process);
             }
         }
@@ -33,6 +38,7 @@ namespace Raven.Server.Utils
 
             using (var process = Process.GetCurrentProcess())
             {
+                var processThreads = GetProcessThreads(process);
                 var previousProcessTimes = _processTimes;
                 _processTimes = CpuHelper.GetProcessTimes(process);
 
@@ -49,7 +55,7 @@ namespace Raven.Server.Utils
 
                 var threadTimesInfo = new Dictionary<int, long>();
                 double totalCpuUsage = 0;
-                foreach (var thread in GetProcessThreads(process))
+                foreach (var thread in processThreads)
                 {
                     try
                     {
@@ -123,15 +129,15 @@ namespace Raven.Server.Utils
             }
         }
 
-        private static IEnumerable<ProcessThread> GetProcessThreads(Process process)
+        private static List<ProcessThread> GetProcessThreads(Process process)
         {
             try
             {
-                return process.Threads.Cast<ProcessThread>();
+                return process.Threads.Cast<ProcessThread>().ToList();
             }
             catch (PlatformNotSupportedException)
             {
-                return Enumerable.Empty<ProcessThread>();
+                return new List<ProcessThread>();
             }
         }
 

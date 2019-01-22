@@ -626,7 +626,7 @@ namespace Raven.Server.Documents.TcpHandlers
                 {
                     IncludeDocumentsCommand includeCmd = null;
                     if (_supportedFeatures.Subscription.Includes)
-                        includeCmd = new IncludeDocumentsCommand(TcpConnection.DocumentDatabase.DocumentsStorage, docsContext, Subscription.Includes);
+                        includeCmd = new IncludeDocumentsCommand(TcpConnection.DocumentDatabase.DocumentsStorage, docsContext, Subscription.Includes, isProjection: _filterAndProjectionScript != null);
 
                     foreach (var result in _documentsFetcher.GetDataToSend(docsContext, includeCmd, _startEtag))
                     {

@@ -79,7 +79,7 @@
       <PrivateAssets>All</PrivateAssets>
     </PackageReference>
     <PackageReference Include="Jint" Version="3.0.19-ravendb" />
-    <PackageReference Include="Lextm.SharpSnmpLib" Version="10.0.11" />
+    <PackageReference Include="Lextm.SharpSnmpLib.Engine" Version="11.0.0" />
     <PackageReference Include="Lucene.Net" Version="3.0.20" />
     <PackageReference Include="Lucene.Net.Contrib.Spatial.NTS" Version="3.0.17" />
     <PackageReference Include="Microsoft.AspNetCore.ResponseCompression" Version="2.2.0" />

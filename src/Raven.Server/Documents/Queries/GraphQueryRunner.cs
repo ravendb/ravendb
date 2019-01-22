@@ -136,8 +136,7 @@ namespace Raven.Server.Documents.Queries
                     var q = query.Metadata.Query;
 
                     //TODO: handle order by, load,  clauses
-                    var idc = new IncludeDocumentsCommand(Database.DocumentsStorage, documentsContext, query.Metadata.Includes);
-
+                    IncludeDocumentsCommand idc = null;
                     if (q.Select == null && q.SelectFunctionBody.FunctionText == null)
                     {
                         HandleResultsWithoutSelect(documentsContext, qr.Matches, final);
@@ -145,6 +144,8 @@ namespace Raven.Server.Documents.Queries
                     else if (q.Select != null)
                     {
                         var fieldsToFetch = new FieldsToFetch(query.Metadata.SelectFields, null);
+                        idc = new IncludeDocumentsCommand(Database.DocumentsStorage, documentsContext, query.Metadata.Includes, fieldsToFetch.IsProjection);
+
                         var resultRetriever = new GraphQueryResultRetriever(
                             q.GraphQuery,
                             Database,
@@ -173,6 +174,9 @@ namespace Raven.Server.Documents.Queries
                         }
 
                     }
+
+                    if (idc == null)
+                        idc = new IncludeDocumentsCommand(Database.DocumentsStorage, documentsContext, query.Metadata.Includes, isProjection: false);
 
                     if (query.Metadata.Includes?.Length > 0)
                     {
