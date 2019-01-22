@@ -854,9 +854,6 @@ namespace Raven.Server.Rachis
                     catch (Exception e) when (RachisConsensus.IsExpectedException(e))
                     {
                     }
-                    catch (AggregateException ae) when (RachisConsensus.IsExpectedException(ae))
-                    {
-                    }
                     catch (Exception e)
                     {
                         _debugRecorder.Record($"Sending error: {e}");

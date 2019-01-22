@@ -383,11 +383,6 @@ namespace Raven.Server.Rachis
                         // this is a rachis protocol violation exception, we must close this ambassador. 
                         throw;
                     }
-                    catch (AggregateException ae) when (RachisConsensus.IsExpectedException(ae.InnerException))
-                    {
-                        // Those are expected exceptions which indicate that this ambassador is shutting down.
-                        throw;
-                    }
                     catch (Exception e) when (RachisConsensus.IsExpectedException(e))
                     {
                         // Those are expected exceptions which indicate that this ambassador is shutting down.
@@ -421,11 +416,6 @@ namespace Raven.Server.Rachis
             {
                 StatusMessage = $"Reached an erroneous state due to :{Environment.NewLine}{e.Message}";
                 Status = AmbassadorStatus.Error;
-            }
-            catch (AggregateException ae) when (RachisConsensus.IsExpectedException(ae.InnerException))
-            {
-                StatusMessage = "Closed";
-                Status = AmbassadorStatus.Closed;
             }
             catch (Exception e) when (RachisConsensus.IsExpectedException(e))
             {
