@@ -12,6 +12,7 @@ using Raven.Server.Documents;
 using Raven.Server.Documents.Expiration;
 using Raven.Server.Documents.Indexes.Auto;
 using Raven.Server.Documents.Indexes.MapReduce.Auto;
+using Raven.Server.ServerWide.Context;
 using Raven.Server.Smuggler.Documents.Data;
 using Raven.Server.Smuggler.Documents.Processors;
 using Sparrow.Json;
@@ -498,6 +499,20 @@ namespace Raven.Server.Smuggler.Documents
 
                     item.Document.NonPersistentFlags |= NonPersistentDocumentFlags.FromSmuggler;
 
+                    if (item.Document.NonPersistentFlags.Contain(NonPersistentDocumentFlags.FromSmuggler))
+                    {
+                        using (_database.DocumentsStorage.ContextPool.AllocateOperationContext(out DocumentsOperationContext context))
+                        using (context.OpenReadTransaction())
+                        {
+                            if ((_database.DocumentsStorage.Get(context, item.Document.Id) == null) &&
+                                (item.Document.Flags & DocumentFlags.DeleteRevision) == 0)
+                            {
+                                result.RevisionDocuments.ErroredCount++;
+                                continue;
+                            }
+                        }
+                    }
+
                     actions.WriteDocument(item, result.RevisionDocuments);
 
                     result.RevisionDocuments.LastEtag = item.Document.Etag;
@@ -659,6 +674,16 @@ namespace Raven.Server.Smuggler.Documents
                     if (result.Counters.ReadCount % 1000 == 0)
                         AddInfoToSmugglerResult(result, $"Read {result.Counters.ReadCount:#,#;;0} counters.");
 
+                    using (_database.DocumentsStorage.ContextPool.AllocateOperationContext(out DocumentsOperationContext context))
+                    using (context.OpenReadTransaction())
+                    {
+                        if (_database.DocumentsStorage.Get(context, counterDetail.DocumentId) == null)
+                        {
+                            result.Counters.ErroredCount++;
+                            continue;
+                        }
+                    }
+
                     actions.WriteCounter(counterDetail);
 
                     result.Counters.LastEtag = counterDetail.Etag;
@@ -683,6 +708,7 @@ namespace Raven.Server.Smuggler.Documents
 
                     if (item.Document.Id == null)
                         ThrowInvalidData();
+
 
                     item.Document.NonPersistentFlags |= NonPersistentDocumentFlags.FromSmuggler;
 
