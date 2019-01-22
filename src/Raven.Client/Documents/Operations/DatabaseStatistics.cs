@@ -67,11 +67,6 @@ namespace Raven.Client.Documents.Operations
         public long CountOfAttachments { get; set; }
 
         /// <summary>
-        /// Total number of counters in database.
-        /// </summary>
-        public long CountOfCounters { get; set; }
-
-        /// <summary>
         /// Total number of attachments in database.
         /// </summary>
         public long CountOfUniqueAttachments { get; set; }

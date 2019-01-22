@@ -595,7 +595,6 @@ namespace SlowTests.Smuggler
 
                     var stats = await store2.Maintenance.SendAsync(new GetStatisticsOperation());
                     Assert.Equal(2, stats.CountOfDocuments);
-                    Assert.Equal(3, stats.CountOfCounters);
 
                     using (var session = store2.OpenAsyncSession())
                     {
