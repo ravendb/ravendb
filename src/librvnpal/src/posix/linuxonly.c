@@ -65,4 +65,10 @@ _rvn_fallocate(int32_t fd, int64_t offset, int64_t size)
   return posix_fallocate64(fd, offset, size);
 }
 
+PRIVATE char*
+_get_strerror_r(int32_t error, char* tmp_buff, int32_t buf_size)
+{
+  return strerror_r(error, tmp_buff, buf_size);
+}
+
 #endif
