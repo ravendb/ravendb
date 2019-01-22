@@ -357,8 +357,10 @@ namespace Raven.Server.Documents
                     if (string.IsNullOrEmpty(deleteAttachmentChangeVector))
                     {
                         var newEtag = _documentsStorage.GenerateNextEtag();
-                        deleteAttachmentChangeVector = _documentsStorage.GetNewChangeVector(context, newEtag);
-                        context.LastDatabaseChangeVector = conflicted.ChangeVector;
+                        var currentChangeVector = context.LastDatabaseChangeVector ?? GetDatabaseChangeVector(context);
+                        deleteAttachmentChangeVector = ChangeVectorUtils
+                            .TryUpdateChangeVector(_documentDatabase.ServerStore.NodeTag, _documentDatabase.DbBase64Id, newEtag, currentChangeVector).ChangeVector;
+                        context.LastDatabaseChangeVector = deleteAttachmentChangeVector;
                     }
                     nonPersistentFlags |= DeleteAttachmentConflicts(context, lowerId, document, conflictDocument, deleteAttachmentChangeVector);
                 });
