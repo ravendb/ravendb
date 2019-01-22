@@ -349,7 +349,7 @@ namespace Voron.Impl.Backup
             {
                 TransactionHeader* lastTxHeader = null;
                 var lastTxHeaderStackLocation = stackalloc TransactionHeader[1];
-                
+                long lastTxId = env.HeaderAccessor.Get(x => x->TransactionId);
                 long journalNumber = -1;
                 foreach (var entry in entries)
                 {
@@ -381,7 +381,7 @@ namespace Voron.Impl.Backup
 
                             using (var reader = new JournalReader(pager, env.Options.DataPager, recoveryPager, new HashSet<long>(), new JournalInfo
                             {
-                                LastSyncedTransactionId = 0
+                                LastSyncedTransactionId = lastTxId
                             }, lastTxHeader))
                             {
                                 while (reader.ReadOneTransactionToDataFile(env.Options))
@@ -393,6 +393,7 @@ namespace Voron.Impl.Backup
                                 {
                                     *lastTxHeaderStackLocation = *lastTxHeader;
                                     lastTxHeader = lastTxHeaderStackLocation;
+                                    lastTxId = lastTxHeader->TransactionId;
                                 }
                             }
 
