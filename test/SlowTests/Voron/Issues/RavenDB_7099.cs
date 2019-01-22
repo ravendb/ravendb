@@ -4,6 +4,7 @@ using System.Threading;
 using FastTests.Voron;
 using SlowTests.Utils;
 using Voron;
+using Voron.Impl.Journal;
 using Xunit;
 
 namespace SlowTests.Voron.Issues
@@ -13,6 +14,7 @@ namespace SlowTests.Voron.Issues
         protected override void Configure(StorageEnvironmentOptions options)
         {
             options.ManualFlushing = true;
+            options.ManualSyncing = true;
         }
 
         [Theory]
@@ -37,13 +39,15 @@ namespace SlowTests.Voron.Issues
                 }
             }
 
-            var journalsForReuse = new DirectoryInfo(DataDir).GetFiles($"{StorageEnvironmentOptions.RecyclableJournalFileNamePrefix}*");
+            var journalPath = ((StorageEnvironmentOptions.DirectoryStorageEnvironmentOptions)Env.Options).JournalPath.FullPath;
+
+            var journalsForReuse = new DirectoryInfo(journalPath).GetFiles($"{StorageEnvironmentOptions.RecyclableJournalFileNamePrefix}*");
 
             Assert.Equal(0, journalsForReuse.Length);
 
             RestartDatabase();
 
-            journalsForReuse = new DirectoryInfo(DataDir).GetFiles($"{StorageEnvironmentOptions.RecyclableJournalFileNamePrefix}*");
+            journalsForReuse = new DirectoryInfo(journalPath).GetFiles($"{StorageEnvironmentOptions.RecyclableJournalFileNamePrefix}*");
 
             Assert.Equal(0, journalsForReuse.Length);
         }
@@ -71,10 +75,18 @@ namespace SlowTests.Voron.Issues
             }
 
             Env.FlushLogToDataFile();
-            Env.ForceSyncDataFile();
 
-            SpinWait.SpinUntil(() => new DirectoryInfo(DataDir).GetFiles($"{StorageEnvironmentOptions.RecyclableJournalFileNamePrefix}*").Length > 0,
-                TimeSpan.FromSeconds(30));
+            using (var operation = new WriteAheadJournal.JournalApplicator.SyncOperation(Env.Journal.Applicator))
+            {
+                var result = operation.SyncDataFile();
+
+                Assert.True(result);
+            }
+
+            var journalPath = ((StorageEnvironmentOptions.DirectoryStorageEnvironmentOptions)Env.Options).JournalPath.FullPath;
+
+            Assert.True(SpinWait.SpinUntil(() => new DirectoryInfo(journalPath).GetFiles($"{StorageEnvironmentOptions.RecyclableJournalFileNamePrefix}*").Length > 0,
+                TimeSpan.FromSeconds(30)));
         }
     }
 }

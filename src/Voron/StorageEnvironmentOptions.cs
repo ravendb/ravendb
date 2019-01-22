@@ -583,6 +583,13 @@ namespace Voron
                 }
             }
 
+            public override bool JournalExists(long number)
+            {
+                var name = JournalName(number);
+                var file = JournalPath.Combine(name);
+                return File.Exists(file.FullPath);
+            }
+
             public override bool TryDeleteJournal(long number)
             {
                 var name = JournalName(number);
@@ -749,13 +756,13 @@ namespace Voron
                 return new WindowsMemoryMapPager(options, file, initialSize, attributes, usePageProtection: usePageProtection);
             }
 
-            public override AbstractPager OpenJournalPager(long journalNumber)
+            public override AbstractPager OpenJournalPager(long journalNumber, JournalInfo journalInfo)
             {
                 var name = JournalName(journalNumber);
                 var path = JournalPath.Combine(name);
                 var fileInfo = new FileInfo(path.FullPath);
                 if (fileInfo.Exists == false)
-                    throw new InvalidJournalException(journalNumber, path.FullPath);
+                    throw new InvalidJournalException(journalNumber, path.FullPath, journalInfo);
 
                 if (fileInfo.Length < InitialLogFileSize)
                 {
@@ -902,6 +909,12 @@ namespace Voron
                 _headers.Clear();
             }
 
+            public override bool JournalExists(long number)
+            {
+                var name = JournalName(number);
+                return _logs.ContainsKey(name);
+            }
+
             public override bool TryDeleteJournal(long number)
             {
                 var name = JournalName(number);
@@ -1013,13 +1026,13 @@ namespace Voron
                 return new WindowsMemoryMapPager(this, filename);
             }
 
-            public override AbstractPager OpenJournalPager(long journalNumber)
+            public override AbstractPager OpenJournalPager(long journalNumber, JournalInfo journalInfo)
             {
                 var name = JournalName(journalNumber);
                 IJournalWriter value;
                 if (_logs.TryGetValue(name, out value))
                     return value.CreatePager();
-                throw new InvalidJournalException(journalNumber);
+                throw new InvalidJournalException(journalNumber, journalInfo);
             }
         }
 
@@ -1062,6 +1075,8 @@ namespace Voron
 
         protected abstract void Disposing();
 
+        public abstract bool JournalExists(long number);
+
         public abstract bool TryDeleteJournal(long number);
 
         public abstract unsafe bool ReadHeader(string filename, FileHeader* header);
@@ -1073,7 +1088,7 @@ namespace Voron
         // Used for special temporary pagers (compression, recovery, lazyTX...) which should not be wrapped by the crypto pager.
         public abstract AbstractPager CreateTemporaryBufferPager(string name, long initialSize);
 
-        public abstract AbstractPager OpenJournalPager(long journalNumber);
+        public abstract AbstractPager OpenJournalPager(long journalNumber, JournalInfo journalInfo);
 
         public abstract AbstractPager OpenPager(VoronPathSetting filename);
 
