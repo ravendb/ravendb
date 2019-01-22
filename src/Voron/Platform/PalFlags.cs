@@ -46,16 +46,12 @@ namespace Voron.Platform
             NoSpc = (1 << 2)
         }
 
+        [Flags]
         public enum MmapOptions
         {
             None = 0,
-            CopyOnWrite = 1
-        }
-
-        public enum FileCloseFlags
-        {
-            None = 0,
-            DeleteOnClose = 1
+            CopyOnWrite = (1 << 0),
+            DeleteOnClose = (1 << 1),
         }
 
         public enum ProtectRange

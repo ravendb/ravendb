@@ -19,7 +19,7 @@ namespace Voron.Platform
         public struct PrefetchRanges
         {
             public void* VirtualAddress;
-            public void* NumberOfBytes;
+            public IntPtr NumberOfBytes;
         }
     }
 }
