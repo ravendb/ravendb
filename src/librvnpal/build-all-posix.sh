@@ -14,8 +14,8 @@ if [ "$1" == "setup" ]; then
 	sudo apt-get install -y crossbuild-essential-armhf cmake clang libxml2-dev fuse libbz2-dev libfuse-dev fuse >> ${LOG} 2>&1
 	if [ $? -ne 0 ]; then echo "Failed. See ${LOG}";  exit 1; fi
 	echo "`date`: Cloning osxcross..."
-#	rm -rf osxcross > /dev/null 2>&1
-#	git clone --single-branch --branch pointintime https://github.com/aviviadi/osxcross >> ${LOG} 2>&1
+	rm -rf osxcross > /dev/null 2>&1
+	git clone --single-branch --branch pointintime https://github.com/aviviadi/osxcross >> ${LOG} 2>&1
 	if [ $? -ne 0 ]; then echo "Failed. See ${LOG}";  exit 1; fi
 	echo "`date`: Copying MacOSX 10.11 SDK..."
 	cp MacOSX10.11.sdk.tar.xz osxcross/tarballs/ >> ${LOG} 2>&1
@@ -36,7 +36,7 @@ fi
 STAT=0
 rm -rf artifacts > /dev/null 2>&1
 mkdir artifacts
-for arch in linux-x64 linux-arm osx-x64 ; do
+for arch in linux-x64 linux-arm linux-arm64 osx-x64 ; do
 	./make.sh cross $arch skip-copy
 	STATUS_C=$?
 	STAT=$(expr ${STAT} + ${STATUS_C})
@@ -51,4 +51,5 @@ if [ ${STAT} -ne 0 ]; then
 	exit 1
 fi
 echo "Build Success!"
+rm ${LOG} > /dev/null 2>&1
 exit 0
