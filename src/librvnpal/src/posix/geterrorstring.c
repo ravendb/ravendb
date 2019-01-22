@@ -37,7 +37,7 @@ rvn_get_error_string(int32_t error,
 	if(tmp_buf == NULL)
 		goto error_cleanup;
 
-	char* err = strerror_r(error, tmp_buf, buf_size);
+	char* err = _get_strerror_r(error, tmp_buf, buf_size);
 	if(err == NULL)
 		goto error_cleanup;
 
