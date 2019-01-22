@@ -49,6 +49,8 @@ using Raven.Server.Utils;
 using Raven.Server.Web.Studio;
 using Sparrow.Logging;
 using Sparrow;
+using Sparrow.Platform;
+using Sparrow.Utils;
 using Voron.Util.Settings;
 using Constants = Raven.Client.Constants;
 using DatabaseSmuggler = Raven.Server.Smuggler.Documents.DatabaseSmuggler;
@@ -530,6 +532,39 @@ namespace Raven.Server.Web.System
 
                 if (ResourceNameValidator.IsValidResourceName(databaseName, ServerStore.Configuration.Core.DataDirectory.FullPath, out string errorMessage) == false)
                     throw new BadRequestException(errorMessage);
+
+                var extension = Path.GetExtension(restoreConfigurationJson.LastFileNameToRestore);
+                if (extension == Constants.Documents.PeriodicBackup.SnapshotExtension || extension == Constants.Documents.PeriodicBackup.EncryptedSnapshotExtension)
+                {
+                    long backupSizeInBytes;
+                    try
+                    {
+                        using (var zip = ZipFile.OpenRead(Path.Combine(restoreConfigurationJson.BackupLocation, restoreConfigurationJson.LastFileNameToRestore)))
+                            backupSizeInBytes = zip.Entries.Sum(entry => entry.Length);
+                    }
+                    catch
+                    {
+                        throw new IOException($"Could not open the backup file, provided file : {Path.Combine(restoreConfigurationJson.BackupLocation, restoreConfigurationJson.LastFileNameToRestore)} Please provide a valid backup file.");
+                    }
+
+                    var destinationPath = string.IsNullOrWhiteSpace(restoreConfigurationJson.DataDirectory)
+                        ? Path.Combine(ServerStore.Configuration.Core.DataDirectory.FullPath, restoreConfigurationJson.DatabaseName)
+                        : Directory.Exists(restoreConfigurationJson.DataDirectory)
+                            ? restoreConfigurationJson.DataDirectory
+                            : Path.Combine(ServerStore.Configuration.Core.DataDirectory.FullPath, restoreConfigurationJson.DataDirectory);
+
+                    var drivesInfo = PlatformDetails.RunningOnPosix ? DriveInfo.GetDrives() : null;
+                    var destinationDirInfo = DiskSpaceChecker.GetDriveInfo(destinationPath, drivesInfo, out _);
+                    var destinationDriveInfo = DiskSpaceChecker.GetDiskSpaceInfo(destinationDirInfo.DriveName);
+
+                    if (destinationDriveInfo == null)
+                        throw new ArgumentException($"Provided path starts with an invalid drive name. Please use a proper path. Drive name provided: {destinationDirInfo.DriveName}.");
+
+                    var desiredFreeSpace = Size.Min(new Size(512, SizeUnit.Megabytes), destinationDriveInfo.TotalSize * 0.01) + new Size(backupSizeInBytes, SizeUnit.Bytes);
+
+                    if (destinationDriveInfo.TotalFreeSpace <= desiredFreeSpace)
+                        throw new ArgumentException($"No enough free space to restore a backup. Required space {desiredFreeSpace}, available space: {destinationDriveInfo.TotalFreeSpace}");
+                }
 
                 using (context.OpenReadTransaction())
                 {
