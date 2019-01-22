@@ -58,7 +58,6 @@ namespace FastTests.Voron
             ptr->Root.RootPageNumber = (long)rnd.NextDouble();
 
             ptr->Journal.CurrentJournal = (long)rnd.NextDouble();
-            ptr->Journal.JournalFilesCount = rnd.Next();
             ptr->Journal.LastSyncedJournal = (long)rnd.NextDouble();
             ptr->Journal.LastSyncedTransactionId = (long)rnd.NextDouble();
 
@@ -89,7 +88,6 @@ namespace FastTests.Voron
             Assert.Equal(ptr->Root.RootPageNumber, (long)rnd.NextDouble());
 
             Assert.Equal(ptr->Journal.CurrentJournal, (long)rnd.NextDouble());
-            Assert.Equal(ptr->Journal.JournalFilesCount, rnd.Next());
             Assert.Equal(ptr->Journal.LastSyncedJournal, (long)rnd.NextDouble());
             Assert.Equal(ptr->Journal.LastSyncedTransactionId, (long)rnd.NextDouble());
 

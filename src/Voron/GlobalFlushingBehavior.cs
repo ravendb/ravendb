@@ -296,6 +296,9 @@ namespace Voron
 
         public void MaybeSyncEnvironment(StorageEnvironment env)
         {
+            if (env.Options.ManualSyncing)
+                return;
+
             _maybeNeedToSync.Enqueue(new EnvSyncReq
             {
                 Reference = env.SelfReference,

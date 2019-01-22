@@ -15,7 +15,7 @@ namespace Voron.Exceptions
         {
             try
             {
-                throw new VoronUnrecoverableErrorException(message);
+                throw new VoronUnrecoverableErrorException(message + Environment.NewLine + " @ " + env.Options.DataPager.FileName.FullPath);
             }
             catch (Exception e)
             {
@@ -28,7 +28,8 @@ namespace Voron.Exceptions
         {
             try
             {
-                throw new VoronUnrecoverableErrorException(message);
+                throw new VoronUnrecoverableErrorException(message
+                    + Environment.NewLine + " @ " + options.DataPager.FileName.FullPath);
             }
             catch (Exception e)
             {
@@ -41,7 +42,8 @@ namespace Voron.Exceptions
         {
             try
             {
-                throw new VoronUnrecoverableErrorException(message, inner);
+                throw new VoronUnrecoverableErrorException(message
+                    + Environment.NewLine + " @ " + env.Options.DataPager.FileName.FullPath, inner);
             }
             catch (Exception e)
             {
@@ -54,7 +56,8 @@ namespace Voron.Exceptions
         {
             try
             {
-                throw new VoronUnrecoverableErrorException(message, inner);
+                throw new VoronUnrecoverableErrorException(message
+                    + Environment.NewLine + " @ " + options.DataPager.FileName.FullPath, inner);
             }
             catch (Exception e)
             {
