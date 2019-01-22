@@ -1066,6 +1066,7 @@ namespace SlowTests.Server.Documents.PeriodicBackup
 
                 var lastEtag = store.Maintenance.Send(new GetStatisticsOperation()).LastDocEtag;
                 await store.Maintenance.SendAsync(new StartBackupOperation(false, backupTaskId));
+                operation = new GetPeriodicBackupStatusOperation(backupTaskId);
                 value = WaitForValue(() => store.Maintenance.Send(operation).Status.LastEtag, lastEtag);
                 Assert.Equal(lastEtag, value);
 
@@ -1083,15 +1084,21 @@ namespace SlowTests.Server.Documents.PeriodicBackup
                     }
                 }))
                 {
-                    using (var session = store.OpenAsyncSession(databaseName))
+                    using (var session = store.OpenSession(databaseName))
                     {
-                        var users = await session.LoadAsync<User>(new[] { "users/1", "users/2" });
+                        Dictionary<string, User> users = new Dictionary<string, User>();
+                        var value2 = WaitForValue(() =>
+                        {
+                            users = session.Load<User>(new[] { "users/2", "users/1" });
+                            return users.Count == 2 && users.All(x => x.Value != null);
+                        }, true);
+
                         Assert.True(users.Any(x => x.Value.Name == "oren"));
                         Assert.True(users.Any(x => x.Value.Name == "ayende"));
 
-                        var val = await session.CountersFor("users/1").GetAsync("likes");
+                        var val = session.CountersFor("users/1").Get("likes");
                         Assert.Equal(100, val);
-                        val = await session.CountersFor("users/2").GetAsync("downloads");
+                        val = session.CountersFor("users/2").Get("downloads");
                         Assert.Equal(200, val);
                     }
                 }
