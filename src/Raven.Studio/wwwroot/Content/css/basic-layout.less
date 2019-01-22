@@ -303,8 +303,10 @@ body {
     display: flex;
     align-items: center;
 
-    & > div + div {
-        margin-left: @grid-gutter-width/4;
+    &:not(.nospacing) {
+        & > div + div {
+            margin-left: @grid-gutter-width/4;
+        }
     }
 }
 

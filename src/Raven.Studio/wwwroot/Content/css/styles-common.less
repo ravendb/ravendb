@@ -1403,12 +1403,27 @@ input[type=file] + .form-control {
         background-color: darken(@panel-bg,3%);
     }
 
+    .properties-container {
+        display: flex;
+        flex-wrap: wrap;
+        margin: @grid-gutter-width/4;
+
+        & > .property {
+            padding: @grid-gutter-width/4 @grid-gutter-width/4;
+            margin: 0;
+        }
+    }
+
     .property {
-        margin-right: @grid-gutter-width/2;
         line-height: 15px;
 
         h4 {
             margin: 0;
+        }
+
+        h5 {
+            font-size: 12px;
+            text-transform: uppercase;
         }
 
         h6 {
