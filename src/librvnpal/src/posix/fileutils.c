@@ -127,7 +127,7 @@ _read_file(void *handle, void *buffer, int64_t required_size, int64_t offset, in
     *actual_size = 0;
      while (remain_size > 0)
     {
-        already_read = pread64(fd, buffer, remain_size, offset);
+        already_read = rvn_pread(fd, buffer, remain_size, offset);
         if (already_read == -1)
         {
             rc = FAIL_READ_FILE;
@@ -176,7 +176,7 @@ _resize_file(void *handle, int64_t size, int32_t *detailed_error_code)
     }
     else
     {
-        if(ftruncate64(fd, size) == -1)
+        if(rvn_ftruncate(fd, size) == -1)
         {
             rc = FAIL_TRUNCATE_FILE;
             goto error_cleanup;
