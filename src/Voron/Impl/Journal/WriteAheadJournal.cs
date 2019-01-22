@@ -211,16 +211,13 @@ namespace Voron.Impl.Journal
 
                         pager.Dispose(); // need to close it before we open the journal writer
 
-                        if (lastSyncedTxId != -1 && (journalReader.RequireHeaderUpdate || journalNumber == logInfo.CurrentJournal))
-                        {
-                            var jrnlWriter = _env.Options.CreateJournalWriter(journalNumber,
-                                pager.NumberOfAllocatedPages * Constants.Storage.PageSize);
-                            var jrnlFile = new JournalFile(_env, jrnlWriter, journalNumber);
-                            jrnlFile.InitFrom(journalReader, transactionHeaders);
-                            jrnlFile.AddRef(); // creator reference - write ahead log
+                        var jrnlWriter = _env.Options.CreateJournalWriter(journalNumber,
+                               pager.NumberOfAllocatedPages * Constants.Storage.PageSize);
+                        var jrnlFile = new JournalFile(_env, jrnlWriter, journalNumber);
+                        jrnlFile.InitFrom(journalReader, transactionHeaders);
+                        jrnlFile.AddRef(); // creator reference - write ahead log
 
-                            journalFiles.Add(jrnlFile);
-                        }
+                        journalFiles.Add(jrnlFile);
 
                         if (journalReader.RequireHeaderUpdate) //this should prevent further loading of transactions
                         {
