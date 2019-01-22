@@ -420,7 +420,7 @@ namespace Raven.Server.Config
 
             public override void Load()
             {
-                Data = new Dictionary<string, string>();
+                Data = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
 
                 var envs = Environment.GetEnvironmentVariables().Cast<DictionaryEntry>();
                 foreach (var env in envs)
