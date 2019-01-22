@@ -537,21 +537,28 @@ namespace Raven.Server.Web.System
                 if (extension == Constants.Documents.PeriodicBackup.SnapshotExtension || extension == Constants.Documents.PeriodicBackup.EncryptedSnapshotExtension)
                 {
                     long backupSizeInBytes;
+                    var zipPath = Path.Combine(restoreConfigurationJson.BackupLocation, restoreConfigurationJson.LastFileNameToRestore);
+
                     try
                     {
-                        using (var zip = ZipFile.OpenRead(Path.Combine(restoreConfigurationJson.BackupLocation, restoreConfigurationJson.LastFileNameToRestore)))
+                        using (var zip = ZipFile.OpenRead(zipPath))
                             backupSizeInBytes = zip.Entries.Sum(entry => entry.Length);
                     }
-                    catch
+                    catch (Exception e)
                     {
-                        throw new IOException($"Could not open the backup file, provided file : {Path.Combine(restoreConfigurationJson.BackupLocation, restoreConfigurationJson.LastFileNameToRestore)} Please provide a valid backup file.");
+                        if (e is InvalidDataException)
+                            throw new InvalidDataException($"Invalid snapshot file: {restoreConfigurationJson.LastFileNameToRestore} at path : {zipPath}");
+                        if (e is FileNotFoundException)
+                            throw new FileNotFoundException($"Could not find file: {restoreConfigurationJson.LastFileNameToRestore} at path: {zipPath}");
+
+                        throw new IOException($"Error reading snapshot file: {restoreConfigurationJson.LastFileNameToRestore}, at path: {zipPath}. Please provide a valid snapshot file.");
                     }
 
-                    var destinationPath = string.IsNullOrWhiteSpace(restoreConfigurationJson.DataDirectory)
-                        ? Path.Combine(ServerStore.Configuration.Core.DataDirectory.FullPath, restoreConfigurationJson.DatabaseName)
-                        : Directory.Exists(restoreConfigurationJson.DataDirectory)
-                            ? restoreConfigurationJson.DataDirectory
-                            : Path.Combine(ServerStore.Configuration.Core.DataDirectory.FullPath, restoreConfigurationJson.DataDirectory);
+                    var baseDataDirectory = ServerStore.Configuration.Core.DataDirectory.FullPath;
+
+                    var destinationPath = string.IsNullOrEmpty(restoreConfigurationJson.DataDirectory) == false 
+                        ? PathUtil.ToFullPath(restoreConfigurationJson.DataDirectory, baseDataDirectory) 
+                        : RavenConfiguration.GetDataDirectoryPath(ServerStore.Configuration.Core, databaseName, ResourceType.Database);
 
                     var drivesInfo = PlatformDetails.RunningOnPosix ? DriveInfo.GetDrives() : null;
                     var destinationDirInfo = DiskSpaceChecker.GetDriveInfo(destinationPath, drivesInfo, out _);
