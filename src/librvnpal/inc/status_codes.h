@@ -33,6 +33,7 @@
 #define FAIL_SET_EOF                    24
 #define FAIL_EOF                        25
 #define FAIL_PREFETCH                   26
+#define FAIL_CALLOC                     27
 
 #define ERRNO_SPECIAL_CODES_NONE        0
 #define ERRNO_SPECIAL_CODES_ENOMEM      (1 << 0)
@@ -44,7 +45,8 @@
 #define SYNC_DIR_NOT_ALLOWED            1
 
 #define MMOPTIONS_NONE                  0
-#define MMOPTIONS_COPY_ON_WRITE         1
+#define MMOPTIONS_COPY_ON_WRITE         (1 << 0)
+#define MMOPTIONS_DELETE_ON_CLOSE       (1 << 1)
 
 #define FILE_CLOSE_OPT_NONE             0
 #define FILE_CLOSE_OPT_DELETE_ON_CLOSE  1

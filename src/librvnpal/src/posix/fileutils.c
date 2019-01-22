@@ -44,7 +44,7 @@ _pwrite(int32_t fd, void *buffer, uint64_t count, uint64_t offset, int32_t *deta
                 lets give it few retries with short pauses between them - RavenDB-11954 */
                 struct timespec ts;
                 ts.tv_sec = 0;
-                ts.tv_nsec = 200000000L; /* 200mSec /
+                ts.tv_nsec = 200000000L; /* 200mSec */
                 nanosleep(&ts, NULL);
                 continue; /* retry cifs */
             }
