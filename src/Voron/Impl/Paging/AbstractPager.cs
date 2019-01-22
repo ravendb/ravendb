@@ -7,6 +7,7 @@ using System.Linq;
 using System.Runtime.CompilerServices;
 using Sparrow;
 using Sparrow.Binary;
+using Sparrow.Logging;
 using Sparrow.LowMemory;
 using Sparrow.Platform;
 using Sparrow.Threading;
@@ -21,6 +22,7 @@ namespace Voron.Impl.Paging
 {
     public abstract unsafe class AbstractPager : IDisposable, ILowMemoryHandler
     {
+        public readonly Logger Log = LoggingSource.Instance.GetLogger<AbstractPager>("AbstractPager");
         private readonly StorageEnvironmentOptions _options;
 
         public static ConcurrentDictionary<string, uint> PhysicalDrivePerMountCache = new ConcurrentDictionary<string, uint>();
@@ -545,7 +547,7 @@ namespace Voron.Impl.Paging
                 if (this._pagerState.ShouldPrefetchSegment(pageNumber, out void* virtualAddress, out long bytes))
                 {
                     // Prepare the segment information. 
-                    toPrefetch[prefetchIdx].NumberOfBytes = (void*)bytes; // _prefetchSegmentSize;
+                    toPrefetch[prefetchIdx].NumberOfBytes = (IntPtr)bytes; // _prefetchSegmentSize;
                     toPrefetch[prefetchIdx].VirtualAddress = virtualAddress; // baseAddress + segmentNumber * _prefetchSegmentSize;
                     prefetchIdx++;
 
@@ -616,10 +618,11 @@ namespace Voron.Impl.Paging
             var pagerState = PagerState;
             Debug.Assert(pagerState.AllocationInfos.Length == 1);
             // we will change the array into a single value in next version
-            var allocationInfo = pagerState.AllocationInfos.First();
+            var allocationInfo = pagerState.AllocationInfos.Single();
 
-            //Todo In the previous implementation there were no check. Should it remain the same?
-            Pal.rvn_prefetch_virtual_memory(allocationInfo.BaseAddress, allocationInfo.Size, out _);
+            var rc = Pal.rvn_prefetch_virtual_memory(allocationInfo.BaseAddress, allocationInfo.Size, out var errorCode);
+            if(rc != PalFlags.FailCodes.Success)
+                Log.Info(PalHelper.GetNativeErrorString(errorCode, $"Tried to prefetch whole file. Result:{rc} FileName:${FileName.FullPath} Size:{allocationInfo.Size}", out _));
         }
 
 
