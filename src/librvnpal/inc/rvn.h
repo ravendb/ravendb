@@ -59,10 +59,10 @@ EXPORT int32_t
 rvn_memory_sync(void *address, int64_t size, int32_t *detailed_error_code);
 
 EXPORT int32_t
-rvn_mmap_dispose_handle(const char *file_path, void *handle, int32_t delete_on_close, int32_t *detailed_error_code);
+rvn_mmap_dispose_handle(void *handle, int32_t *detailed_error_code);
 
 EXPORT int32_t
-rvn_unmap(void *address, int64_t size, int32_t delete_on_close, int32_t *detailed_error_code);
+rvn_unmap(void *handle, void *address, int64_t size, int32_t *detailed_error_code);
 
 EXPORT int32_t
 rvn_prefetch_ranges(struct RVN_RANGE_LIST *range_list, int32_t count, int32_t *detailed_error_code);
@@ -71,7 +71,7 @@ EXPORT int32_t
 rvn_protect_range(void *start_address, int64_t size, int32_t protection, int32_t *detailed_error_code);
 
 EXPORT int32_t
-rvn_allocate_more_space(const char *filename, int64_t new_length_after_adjustment, void *handle, int32_t flags, void **new_address, int32_t *detailed_error_code);
+rvn_allocate_more_space(int64_t new_length_after_adjustment, void *handle, void **new_address, int32_t *detailed_error_code);
 
 EXPORT int32_t
 rvn_open_journal_for_writes(const char *file_name, int32_t transaction_mode, int64_t initial_file_size, void **handle, int64_t *actual_size, int32_t *detailed_error_code);

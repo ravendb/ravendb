@@ -28,7 +28,7 @@ namespace Voron.Platform.Posix
             for (int i = 0; i < count; i++)
             {
                 // we explicitly ignore the return code here, this is optimization only
-                Syscall.madvise(new IntPtr(list[i].VirtualAddress), (UIntPtr)list[i].NumberOfBytes, MAdvFlags.MADV_WILLNEED);
+                Syscall.madvise(new IntPtr(list[i].VirtualAddress), (UIntPtr)list[i].NumberOfBytes.ToPointer(), MAdvFlags.MADV_WILLNEED);
             }
         }
 
