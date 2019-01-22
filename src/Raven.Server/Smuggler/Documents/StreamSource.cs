@@ -339,6 +339,9 @@ namespace Raven.Server.Smuggler.Documents
                 {
                     counterValues.GetPropertyByIndex(i, ref prop);
 
+                    if (prop.Value is LazyStringValue)
+                        continue; //deleted counter
+
                     var arr = (BlittableJsonReaderArray)prop.Value;
                     var sizeToAllocate = CountersStorage.SizeOfCounterValues * arr.Length / 2;
 
