@@ -20,7 +20,9 @@ namespace Raven.Client.Documents.Smuggler
         DatabaseRecord = 1 << 11,
         Unknown = 1 << 12,
 
+        [Obsolete]
         Counters = 1 << 13,
+
         Attachments = 1 << 14,
         CountersBatch = 1 << 15
 
