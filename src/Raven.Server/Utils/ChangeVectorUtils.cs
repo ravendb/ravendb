@@ -256,21 +256,5 @@ namespace Raven.Server.Utils
 
             return long.Parse(changeVector.Substring(start, end - start + 1));
         }
-
-
-        public static string GetNodeTagById(string changeVector, string id)
-        {
-            if (changeVector == null)
-                return null;
-
-            var index = changeVector.IndexOf("-" + id, StringComparison.Ordinal);
-            if (index == -1)
-                return null;
-
-            var end = index - 1;
-            var start = changeVector.LastIndexOf(":", end, StringComparison.Ordinal) + 1;
-
-            return changeVector[start-1].ToString();
-        }
     }
 }

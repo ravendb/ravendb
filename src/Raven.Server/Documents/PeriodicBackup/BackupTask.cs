@@ -515,7 +515,6 @@ namespace Raven.Server.Documents.PeriodicBackup
             _backupResult.Documents.Attachments.Processed = true;
             _backupResult.Documents.Attachments.ReadCount = databaseSummary.AttachmentsCount;
             _backupResult.Counters.Processed = true;
-            _backupResult.Counters.ReadCount = databaseSummary.CountersCount;
             _backupResult.RevisionDocuments.Processed = true;
             _backupResult.RevisionDocuments.ReadCount = databaseSummary.RevisionsCount;
             _backupResult.Conflicts.Processed = true;
