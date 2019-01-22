@@ -583,3 +583,16 @@ type etlScriptDefinitionCacheItem = {
 
 type addressType = "ipv4" | "ipv6" | "hostname" | "invalid";
 type timeMagnitude = "minutes" | "hours" | "days";
+
+interface pullReplicationExportFileFormat {
+    Database: string;
+    Certificate?: string;
+    HubDefinitionName: string;
+    TopologyUrls: Array<string>;
+}
+
+interface certificateInfo {
+    thumbprint: string;
+    expiration: Date;
+    notBefore: Date;
+}

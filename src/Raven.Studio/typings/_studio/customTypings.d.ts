@@ -16,6 +16,23 @@ declare module "jszip-utils" {
     export = JSZipUtils;
 }
 
+
+/// forge 
+
+declare module "node-forge" {
+    namespace pki {
+        function certificateFromPem(certificate: string): pki.Certificate;
+        
+        function certificateToAsn1(certifivcate: pki.Certificate): asn1.Asn1;
+    }
+    
+    namespace md {
+        namespace sha1 {
+            function create(): any;
+        }
+    }
+}
+
 /// Cola.js
 
 declare module 'cola' {

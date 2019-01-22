@@ -18,6 +18,7 @@ requirejs.config({
           "toastr": "../lib/toastr/toastr",
           "quickselect": "../Content/rbush/quickselect",
           "moment": "../lib/moment/moment",
+          "node-forge": "../lib/forge/dist/forge.min",
           "plugins/bootstrapModal": "../App/plugins/bootstrapModal"
       }  
     },
