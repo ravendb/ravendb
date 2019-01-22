@@ -372,24 +372,31 @@ namespace Raven.Server.Documents.ETL.Providers.Raven
         private bool GetCounterValueAndCheckIfShouldSkip(LazyStringValue docId, string function, BlittableJsonReaderObject.PropertyDetails prop, out long value, out bool delete)
         {
             value = 0;
-            delete = false;
 
-            if (!(prop.Value is BlittableJsonReaderObject.RawBlob blob))
-                return true;
-
-            delete = blob.Length == 0;
-
-            for (var index = 0; index < blob.Length / CountersStorage.SizeOfCounterValues; index++)
+            if (prop.Value is LazyStringValue)
             {
-                value += CountersStorage.GetPartialValue(index, blob);
+                delete = true;
             }
 
-            if (function != null)
+            else
             {
-                using (var result = BehaviorsScript.Run(Context, Context, function, new object[] {docId, prop.Name }))
+                delete = false;
+                var blob = prop.Value as BlittableJsonReaderObject.RawBlob;
+
+                Debug.Assert(blob != null);
+
+                for (var index = 0; index < blob.Length / CountersStorage.SizeOfCounterValues; index++)
                 {
-                    if (result.BooleanValue != true)
-                        return true;
+                    value += CountersStorage.GetPartialValue(index, blob);
+                }
+
+                if (function != null)
+                {
+                    using (var result = BehaviorsScript.Run(Context, Context, function, new object[] { docId, prop.Name }))
+                    {
+                        if (result.BooleanValue != true)
+                            return true;
+                    }
                 }
             }
 
