@@ -880,123 +880,149 @@ namespace Raven.Server.Web.Authentication
             return Task.CompletedTask;
         }
 
+        [RavenAction("/admin/certificates/letsencrypt/force-renew", "OPTIONS", AuthorizationStatus.ClusterAdmin)]
+        [RavenAction("/admin/certificates/refresh", "OPTIONS", AuthorizationStatus.ClusterAdmin)]
+        [RavenAction("/admin/certificates/replace-cluster-cert", "OPTIONS", AuthorizationStatus.ClusterAdmin)]
+
         [RavenAction("/admin/certificates/letsencrypt/force-renew", "POST", AuthorizationStatus.ClusterAdmin)]
         public Task ForceRenew()
         {
-            if (ServerStore.Configuration.Core.SetupMode != SetupMode.LetsEncrypt)
-                throw new InvalidOperationException("Cannot force renew for this server certificate. This server wasn't set up using the Let's Encrypt setup mode.");
+            SetupCORSHeaders();
 
-            if (Server.Certificate.Certificate == null)
-                throw new InvalidOperationException("Cannot force renew this Let's Encrypt server certificate. The server certificate is not loaded.");
-
-            try
+            if (ServerStore.IsLeader())
             {
-                var success = Server.RefreshClusterCertificate(true);
-                using (ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
-                using (var writer = new BlittableJsonTextWriter(context, ResponseBodyStream()))
+                if (ServerStore.Configuration.Core.SetupMode != SetupMode.LetsEncrypt)
+                    throw new InvalidOperationException("Cannot force renew for this server certificate. This server wasn't set up using the Let's Encrypt setup mode.");
+
+                if (Server.Certificate.Certificate == null)
+                    throw new InvalidOperationException("Cannot force renew this Let's Encrypt server certificate. The server certificate is not loaded.");
+
+                try
                 {
-                    writer.WriteStartObject();
-                    writer.WritePropertyName(nameof(ForceRenewResult.Success));
-                    writer.WriteBool(success);
-                    writer.WriteEndObject();
-                }
+                    var success = Server.RefreshClusterCertificate(true);
+                    using (ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
+                    using (var writer = new BlittableJsonTextWriter(context, ResponseBodyStream()))
+                    {
+                        writer.WriteStartObject();
+                        writer.WritePropertyName(nameof(ForceRenewResult.Success));
+                        writer.WriteBool(success);
+                        writer.WriteEndObject();
+                    }
 
-                return Task.CompletedTask;
+                    return Task.CompletedTask;
+                }
+                catch (Exception e)
+                {
+                    throw new InvalidOperationException($"Failed to force renew the Let's Encrypt server certificate for domain: {Server.Certificate.Certificate.GetNameInfo(X509NameType.SimpleName, false)}", e);
+                }
             }
-            catch (Exception e)
-            {
-                throw new InvalidOperationException($"Failed to force renew the Let's Encrypt server certificate for domain: {Server.Certificate.Certificate.GetNameInfo(X509NameType.SimpleName, false)}", e);
-            }
+            RedirectToLeader();
+            return Task.CompletedTask;
         }
 
         [RavenAction("/admin/certificates/refresh", "POST", AuthorizationStatus.ClusterAdmin)]
         public Task TriggerCertificateRefresh()
         {
-            // What we do here is trigger the refresh cycle which normally happens once an hour.
+            SetupCORSHeaders();
 
-            // The difference between this and /admin/certificates/letsencrypt/force-renew is that here we also allow it for non-LetsEncrypt setups
-            // in which case we'll check if the certificate changed on disk and if so we'll update it immediately on the local node (only)
-            
-            var replaceImmediately = GetBoolValueQueryString("replaceImmediately", required: false) ?? false;
-
-            if (Server.Certificate.Certificate == null)
-                throw new InvalidOperationException("Failed to trigger a certificate refresh cycle. The server certificate is not loaded.");
-
-            try
+            if (ServerStore.IsLeader() || ServerStore.Configuration.Core.SetupMode != SetupMode.LetsEncrypt)
             {
-                Server.RefreshClusterCertificate(replaceImmediately);
+                // What we do here is trigger the refresh cycle which normally happens once an hour.
+
+                // The difference between this and /admin/certificates/letsencrypt/force-renew is that here we also allow it for non-LetsEncrypt setups
+                // in which case we'll check if the certificate changed on disk and if so we'll update it immediately on the local node (only)
+
+                var replaceImmediately = GetBoolValueQueryString("replaceImmediately", required: false) ?? false;
+
+                if (Server.Certificate.Certificate == null)
+                    throw new InvalidOperationException("Failed to trigger a certificate refresh cycle. The server certificate is not loaded.");
+
+                try
+                {
+                    Server.RefreshClusterCertificate(replaceImmediately);
+                }
+                catch (Exception e)
+                {
+                    throw new InvalidOperationException("Failed to trigger a certificate refresh cycle", e);
+                }
+
+                return NoContent();
             }
-            catch (Exception e)
-            {
-                throw new InvalidOperationException("Failed to trigger a certificate refresh cycle", e);
-            }
-            
-            return NoContent();
+            RedirectToLeader();
+            return Task.CompletedTask;
         }
 
         [RavenAction("/admin/certificates/replace-cluster-cert", "POST", AuthorizationStatus.ClusterAdmin)]
         public async Task ReplaceClusterCert()
         {
-            var replaceImmediately = GetBoolValueQueryString("replaceImmediately", required: false) ?? false;
+            SetupCORSHeaders();
 
-            ServerStore.EnsureNotPassive();
-            using (ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext ctx))
-            using (var certificateJson = ctx.ReadForDisk(RequestBodyStream(), "replace-cluster-cert"))
+            if (ServerStore.IsLeader())
             {
-                try
+                var replaceImmediately = GetBoolValueQueryString("replaceImmediately", required: false) ?? false;
+
+                ServerStore.EnsureNotPassive();
+                using (ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext ctx))
+                using (var certificateJson = ctx.ReadForDisk(RequestBodyStream(), "replace-cluster-cert"))
                 {
-                    var certificate = JsonDeserializationServer.CertificateDefinition(certificateJson);
-
-                    if (string.IsNullOrWhiteSpace(certificate.Certificate))
-                        throw new ArgumentException($"{nameof(certificate.Certificate)} is a required field in the certificate definition.");
-
-                    // Load the password protected certificate and export it without a password, to send it through the cluster.
-                    if (string.IsNullOrWhiteSpace(certificate.Password) == false)
+                    try
                     {
+                        var certificate = JsonDeserializationServer.CertificateDefinition(certificateJson);
+
+                        if (string.IsNullOrWhiteSpace(certificate.Certificate))
+                            throw new ArgumentException($"{nameof(certificate.Certificate)} is a required field in the certificate definition.");
+
+                        // Load the password protected certificate and export it without a password, to send it through the cluster.
+                        if (string.IsNullOrWhiteSpace(certificate.Password) == false)
+                        {
+                            try
+                            {
+                                var cert = new X509Certificate2Collection();
+                                var certBytes = Convert.FromBase64String(certificate.Certificate);
+                                cert.Import(certBytes, certificate.Password, X509KeyStorageFlags.Exportable | X509KeyStorageFlags.MachineKeySet);
+                                // Exporting with the private key, but without the password
+                                certificate.Certificate = Convert.ToBase64String(cert.Export(X509ContentType.Pkcs12));
+                            }
+                            catch (Exception e)
+                            {
+                                throw new ArgumentException("Failed to load the password protected certificate and export it back. Is the password correct?", e);
+                            }
+                        }
+
+                        // Ensure we'll be able to load the certificate
                         try
                         {
-                            var cert = new X509Certificate2Collection();
                             var certBytes = Convert.FromBase64String(certificate.Certificate);
-                            cert.Import(certBytes, certificate.Password, X509KeyStorageFlags.Exportable | X509KeyStorageFlags.MachineKeySet);
-                            // Exporting with the private key, but without the password
-                            certificate.Certificate = Convert.ToBase64String(cert.Export(X509ContentType.Pkcs12));
+                            var _ = new X509Certificate2(certBytes, (string)null, X509KeyStorageFlags.Exportable | X509KeyStorageFlags.MachineKeySet);
                         }
                         catch (Exception e)
                         {
-                            throw new ArgumentException("Failed to load the password protected certificate and export it back. Is the password correct?", e);
+                            throw new ArgumentException("Unable to load the provided certificate.", e);
                         }
-                    }
 
-                    // Ensure we'll be able to load the certificate
-                    try
-                    {
-                        var certBytes = Convert.FromBase64String(certificate.Certificate);
-                        var _ = new X509Certificate2(certBytes, (string)null, X509KeyStorageFlags.Exportable | X509KeyStorageFlags.MachineKeySet);
+                        if (IsClusterAdmin() == false)
+                            throw new InvalidOperationException("Cannot replace the server certificate. Only a ClusterAdmin can do this.");
+
+                        var timeoutTask = TimeoutManager.WaitFor(TimeSpan.FromSeconds(60), ServerStore.ServerShutdown);
+
+                        var replicationTask = Server.StartCertificateReplicationAsync(certificate.Certificate, replaceImmediately);
+
+                        await Task.WhenAny(replicationTask, timeoutTask);
+                        if (replicationTask.IsCompleted == false)
+                            throw new TimeoutException("Timeout when trying to replace the server certificate.");
                     }
                     catch (Exception e)
                     {
-                        throw new ArgumentException("Unable to load the provided certificate.", e);
+                        throw new InvalidOperationException("Failed to replace the server certificate.", e);
                     }
-
-                    if (IsClusterAdmin() == false)
-                        throw new InvalidOperationException("Cannot replace the server certificate. Only a ClusterAdmin can do this.");
-
-                    var timeoutTask = TimeoutManager.WaitFor(TimeSpan.FromSeconds(60), ServerStore.ServerShutdown);
-
-                    var replicationTask = Server.StartCertificateReplicationAsync(certificate.Certificate, replaceImmediately);
-
-                    await Task.WhenAny(replicationTask, timeoutTask);
-                    if (replicationTask.IsCompleted == false)
-                        throw new TimeoutException("Timeout when trying to replace the server certificate.");
                 }
-                catch (Exception e)
-                {
-                    throw new InvalidOperationException("Failed to replace the server certificate.", e);
-                }
+
+                NoContentStatus();
+                HttpContext.Response.StatusCode = (int)HttpStatusCode.Created;
+                return;
             }
-
-            NoContentStatus();
-            HttpContext.Response.StatusCode = (int)HttpStatusCode.Created;
+            
+            RedirectToLeader();
         }
 
         public static void ValidateCertificateDefinition(CertificateDefinition certificate, ServerStore serverStore)
