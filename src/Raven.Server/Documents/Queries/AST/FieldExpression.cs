@@ -19,6 +19,20 @@ namespace Raven.Server.Documents.Queries.AST
             Type = ExpressionType.Field;
         }
 
+        public bool HasCollectionOperator
+        {
+            get
+            {
+                for (int i = 1; i < Compound.Count; i++)
+                {
+                    if (Compound[i] == "[]")
+                        return true;
+                }
+
+                return false;
+            }
+        }
+
         public string FieldValue
         {
             get
@@ -36,6 +50,8 @@ namespace Raven.Server.Documents.Queries.AST
             var sb = new StringBuilder();
             for (int i = start; i < Compound.Count; i++)
             {
+                if(Compound[i].Value == "[]")
+                    continue;
                 sb.Append(Compound[i].Value);
                 if (i + 1 < Compound.Count && Compound[i + 1] != "[]")
                 {
@@ -45,16 +61,8 @@ namespace Raven.Server.Documents.Queries.AST
             return sb.ToString();
         }
 
-
-        public string FieldValueWithoutAlias
-        {
-            get
-            {
-                if (_fieldWithoutAlias == null)
-                    _fieldWithoutAlias = JoinCompoundFragments(1);
-                return _fieldWithoutAlias;
-            }
-        }
+        public string FieldValueWithoutAlias => 
+            _fieldWithoutAlias ?? (_fieldWithoutAlias = JoinCompoundFragments(1));
 
         public override string ToString()
         {

@@ -944,8 +944,18 @@ namespace Raven.Server.Documents.Queries
                     SelectFields[index] = selectField;
 
                     var finalAlias = selectField.Alias ?? selectField.Name?.Value;
+
                     if (finalAlias != null && _duplicateAliasHelper.Add(finalAlias) == false)
-                        ThrowInvalidDuplicateAliasInSelectClause(parameters, finalAlias);
+                    {
+                        if (finalAlias == selectField.Function)
+                        {
+                            ThrowDuplicateFunctionAliasInSelectClause(parameters, finalAlias);
+                        }
+                        else
+                        {
+                            ThrowInvalidDuplicateAliasInSelectClause(parameters, finalAlias);
+                        }
+                    }
 
                     if (selectField.Alias != null)
                     {
@@ -966,6 +976,11 @@ namespace Raven.Server.Documents.Queries
             {
                 _duplicateAliasHelper.Clear();
             }
+        }
+
+        private void ThrowDuplicateFunctionAliasInSelectClause(BlittableJsonReaderObject parameters, string finalAlias)
+        {
+            throw new InvalidQueryException($"Duplicate function call '{finalAlias}' in 'select' clause is detected. Function calls in 'select' without aliases implicitly consider function name as alias. In order to fix it, use explicit aliases - 'select id(employee) as EmployeeId, id(manager) as ManagerId'", QueryText, parameters);
         }
 
         private void ThrowInvalidDuplicateAliasInSelectClause(BlittableJsonReaderObject parameters, string finalAlias)
@@ -1295,6 +1310,7 @@ namespace Raven.Server.Documents.Queries
         private SelectField GetSelectValue(string alias, FieldExpression expressionField, BlittableJsonReaderObject parameters)
         {
             (string Path, bool Array, bool Parameter, bool Quoted, string LoadFromAlias) sourceAlias;
+            //TODO : handle here the case where expressionField has "[]" in the middle
             var name = new QueryFieldName(expressionField.FieldValue, expressionField.IsQuoted);
             bool hasSourceAlias = false;
             bool array = false;

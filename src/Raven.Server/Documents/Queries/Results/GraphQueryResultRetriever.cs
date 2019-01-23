@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq;
 using Lucene.Net.Store;
+using Microsoft.Extensions.Primitives;
 using Raven.Client;
 using Raven.Client.Extensions;
 using Raven.Server.Documents.Includes;
@@ -75,7 +76,16 @@ namespace Raven.Server.Documents.Queries.Results
             foreach (var fieldToFetch in FieldsToFetch.Fields.Values)
             {
                 object fieldVal;
-                string key = fieldToFetch.ProjectedName ?? fieldToFetch.Name.Value;
+                string key;
+                if (fieldToFetch.QueryField?.ExpressionField?.Compound?.Contains("[]") ?? false)
+                {
+                    key = fieldToFetch.QueryField.ExpressionField.Compound.LastOrDefault().Value;
+                }
+                else
+                {
+                    key = fieldToFetch.ProjectedName ?? fieldToFetch.Name.Value;
+                }
+
                 if (fieldToFetch.QueryField.Function != null)
                 {
                     var args = new object[fieldToFetch.FunctionArgs.Length + 1];
@@ -106,7 +116,7 @@ namespace Raven.Server.Documents.Queries.Results
                         }
                     }
 
-                    key = fieldToFetch.ProjectedName;
+                    key = fieldToFetch.ProjectedName ?? (fieldToFetch.ProjectedName ?? fieldToFetch.Name.Value);
                     fieldVal = GetFunctionValue(fieldToFetch, null, args);
 
                     var immediateResult = AddProjectionToResult(item, 1f, FieldsToFetch, result, key, fieldVal);

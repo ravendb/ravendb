@@ -143,6 +143,7 @@ namespace Raven.Server.Documents.Queries
                     }
                     else if (q.Select != null)
                     {
+                        //TODO : investigate fields to fetch
                         var fieldsToFetch = new FieldsToFetch(query.Metadata.SelectFields, null);
                         idc = new IncludeDocumentsCommand(Database.DocumentsStorage, documentsContext, query.Metadata.Includes, fieldsToFetch.IsProjection);
 

@@ -54,11 +54,13 @@ namespace Raven.Server.Documents.Queries
         {
             selectFieldKey = selectField.Alias ?? selectField.Name;
             var selectFieldName = selectField.Name;
+
             if (selectField.ValueTokenType != null)
             {
                 return new FieldToFetch(string.Empty, selectField, selectField.Alias,
                     canExtractFromIndex: false, isDocumentId: false);
             }
+
             if (selectField.Function != null)
             {
                 var fieldToFetch = new FieldToFetch(selectField.Name, selectField, selectField.Alias,
@@ -68,7 +70,7 @@ namespace Raven.Server.Documents.Queries
                 };
                 for (int j = 0; j < selectField.FunctionArgs.Length; j++)
                 {
-                    bool ignored = false;
+                    var ignored = false;
                     fieldToFetch.FunctionArgs[j] = GetFieldToFetch(indexDefinition,
                         selectField.FunctionArgs[j],
                         null,
@@ -110,10 +112,12 @@ namespace Raven.Server.Documents.Queries
                     return new FieldToFetch(selectFieldKey, selectField.GroupByKeyNames);
                 }
             }
+
             if (indexDefinition == null)
             {
                 return new FieldToFetch(selectFieldName, selectField, selectField.Alias, canExtractFromIndex: false, isDocumentId: false);
             }
+
             if (selectFieldName.Value.Length > 0)
             {
                 if (selectFieldName == Constants.Documents.Indexing.Fields.DocumentIdFieldName)
