@@ -641,7 +641,7 @@ namespace Raven.Server.Documents.Handlers
             public Queue<AttachmentStream> AttachmentStreams;
             public StreamsTempFile AttachmentStreamsTempFile;
 
-            private HashSet<string> _documentsToUpdateAfterAttachmentChange;
+            private Dictionary<string, List<(DynamicJsonValue Reply, string FieldName)>> _documentsToUpdateAfterAttachmentChange;
             private readonly List<IDisposable> _disposables = new List<IDisposable>();
             public ExceptionDispatchInfo ExceptionDispatchInfo;
 
@@ -806,11 +806,7 @@ namespace Raven.Server.Documents.Handlers
                                 cmd.ContentType, attachmentStream.Hash, cmd.ChangeVector, stream, updateDocument: false);
                             LastChangeVector = attachmentPutResult.ChangeVector;
 
-                            if (_documentsToUpdateAfterAttachmentChange == null)
-                                _documentsToUpdateAfterAttachmentChange = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
-                            _documentsToUpdateAfterAttachmentChange.Add(docId);
-
-                            Reply.Add(new DynamicJsonValue
+                            var apReply = new DynamicJsonValue
                             {
                                 [nameof(BatchRequestParser.CommandData.Id)] = attachmentPutResult.DocumentId,
                                 [nameof(BatchRequestParser.CommandData.Type)] = nameof(CommandType.AttachmentPUT),
@@ -819,22 +815,36 @@ namespace Raven.Server.Documents.Handlers
                                 [nameof(AttachmentDetails.Hash)] = attachmentPutResult.Hash,
                                 [nameof(BatchRequestParser.CommandData.ContentType)] = attachmentPutResult.ContentType,
                                 [nameof(AttachmentDetails.Size)] = attachmentPutResult.Size
-                            });
+                            };
+
+                            if (_documentsToUpdateAfterAttachmentChange == null)
+                                _documentsToUpdateAfterAttachmentChange = new Dictionary<string, List<(DynamicJsonValue Reply, string FieldName)>>(StringComparer.OrdinalIgnoreCase);
+
+                            if (_documentsToUpdateAfterAttachmentChange.TryGetValue(docId, out var apReplies) == false)
+                                _documentsToUpdateAfterAttachmentChange[docId] = apReplies = new List<(DynamicJsonValue Reply, string FieldName)>();
+
+                            apReplies.Add((apReply, nameof(Constants.Fields.CommandData.DocumentChangeVector)));
+                            Reply.Add(apReply);
 
                             break;
                         case CommandType.AttachmentDELETE:
                             Database.DocumentsStorage.AttachmentsStorage.DeleteAttachment(context, cmd.Id, cmd.Name, cmd.ChangeVector, updateDocument: false);
 
-                            if (_documentsToUpdateAfterAttachmentChange == null)
-                                _documentsToUpdateAfterAttachmentChange = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
-                            _documentsToUpdateAfterAttachmentChange.Add(cmd.Id);
-
-                            Reply.Add(new DynamicJsonValue
+                            var adReply = new DynamicJsonValue
                             {
                                 ["Type"] = nameof(CommandType.AttachmentDELETE),
                                 [Constants.Documents.Metadata.Id] = cmd.Id,
                                 ["Name"] = cmd.Name
-                            });
+                            };
+
+                            if (_documentsToUpdateAfterAttachmentChange == null)
+                                _documentsToUpdateAfterAttachmentChange = new Dictionary<string, List<(DynamicJsonValue Reply, string FieldName)>>(StringComparer.OrdinalIgnoreCase);
+
+                            if (_documentsToUpdateAfterAttachmentChange.TryGetValue(cmd.Id, out var adReplies) == false)
+                                _documentsToUpdateAfterAttachmentChange[cmd.Id] = adReplies = new List<(DynamicJsonValue Reply, string FieldName)>();
+
+                            adReplies.Add((adReply, nameof(Constants.Fields.CommandData.DocumentChangeVector)));
+                            Reply.Add(adReply);
 
                             break;
                         case CommandType.AttachmentMOVE:
@@ -842,12 +852,7 @@ namespace Raven.Server.Documents.Handlers
 
                             LastChangeVector = attachmentMoveResult.ChangeVector;
 
-                            if (_documentsToUpdateAfterAttachmentChange == null)
-                                _documentsToUpdateAfterAttachmentChange = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
-                            _documentsToUpdateAfterAttachmentChange.Add(cmd.Id);
-                            _documentsToUpdateAfterAttachmentChange.Add(cmd.DestinationId);
-
-                            Reply.Add(new DynamicJsonValue
+                            var amReply = new DynamicJsonValue
                             {
                                 [nameof(BatchRequestParser.CommandData.Id)] = cmd.Id,
                                 [nameof(BatchRequestParser.CommandData.Type)] = nameof(CommandType.AttachmentMOVE),
@@ -858,7 +863,22 @@ namespace Raven.Server.Documents.Handlers
                                 [nameof(AttachmentDetails.Hash)] = attachmentMoveResult.Hash,
                                 [nameof(BatchRequestParser.CommandData.ContentType)] = attachmentMoveResult.ContentType,
                                 [nameof(AttachmentDetails.Size)] = attachmentMoveResult.Size
-                            });
+                            };
+
+                            if (_documentsToUpdateAfterAttachmentChange == null)
+                                _documentsToUpdateAfterAttachmentChange = new Dictionary<string, List<(DynamicJsonValue Reply, string FieldName)>>(StringComparer.OrdinalIgnoreCase);
+
+                            if (_documentsToUpdateAfterAttachmentChange.TryGetValue(cmd.Id, out var amReplies) == false)
+                                _documentsToUpdateAfterAttachmentChange[cmd.Id] = amReplies = new List<(DynamicJsonValue Reply, string FieldName)>();
+
+                            amReplies.Add((amReply, nameof(Constants.Fields.CommandData.DocumentChangeVector)));
+
+                            if (_documentsToUpdateAfterAttachmentChange.TryGetValue(cmd.DestinationId, out amReplies) == false)
+                                _documentsToUpdateAfterAttachmentChange[cmd.DestinationId] = amReplies = new List<(DynamicJsonValue Reply, string FieldName)>();
+
+                            amReplies.Add((amReply, nameof(Constants.Fields.CommandData.DestinationDocumentChangeVector)));
+
+                            Reply.Add(amReply);
                             break;
                         case CommandType.AttachmentCOPY:
                             if (cmd.AttachmentType == 0)
@@ -870,11 +890,7 @@ namespace Raven.Server.Documents.Handlers
 
                             LastChangeVector = attachmentCopyResult.ChangeVector;
 
-                            if (_documentsToUpdateAfterAttachmentChange == null)
-                                _documentsToUpdateAfterAttachmentChange = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
-                            _documentsToUpdateAfterAttachmentChange.Add(cmd.DestinationId);
-
-                            Reply.Add(new DynamicJsonValue
+                            var acReply = new DynamicJsonValue
                             {
                                 [nameof(BatchRequestParser.CommandData.Id)] = attachmentCopyResult.DocumentId,
                                 [nameof(BatchRequestParser.CommandData.Type)] = nameof(CommandType.AttachmentCOPY),
@@ -883,7 +899,17 @@ namespace Raven.Server.Documents.Handlers
                                 [nameof(AttachmentDetails.Hash)] = attachmentCopyResult.Hash,
                                 [nameof(BatchRequestParser.CommandData.ContentType)] = attachmentCopyResult.ContentType,
                                 [nameof(AttachmentDetails.Size)] = attachmentCopyResult.Size
-                            });
+                            };
+
+                            if (_documentsToUpdateAfterAttachmentChange == null)
+                                _documentsToUpdateAfterAttachmentChange = new Dictionary<string, List<(DynamicJsonValue Reply, string FieldName)>>(StringComparer.OrdinalIgnoreCase);
+
+                            if (_documentsToUpdateAfterAttachmentChange.TryGetValue(cmd.DestinationId, out var acReplies) == false)
+                                _documentsToUpdateAfterAttachmentChange[cmd.DestinationId] = acReplies = new List<(DynamicJsonValue Reply, string FieldName)>();
+
+                            acReplies.Add((acReply, nameof(Constants.Fields.CommandData.DocumentChangeVector)));
+                            Reply.Add(acReply);
+
                             break;
                         case CommandType.Counters:
 
@@ -929,11 +955,21 @@ namespace Raven.Server.Documents.Handlers
 
                 if (_documentsToUpdateAfterAttachmentChange != null)
                 {
-                    foreach (var documentId in _documentsToUpdateAfterAttachmentChange)
+                    foreach (var kvp in _documentsToUpdateAfterAttachmentChange)
                     {
+                        var documentId = kvp.Key;
                         var changeVector = Database.DocumentsStorage.AttachmentsStorage.UpdateDocumentAfterAttachmentChange(context, documentId);
-                        if (changeVector != null)
-                            LastChangeVector = changeVector;
+
+                        if (changeVector == null)
+                            continue;
+
+                        LastChangeVector = changeVector;
+
+                        if (kvp.Value == null)
+                            continue;
+
+                        foreach (var tpl in kvp.Value)
+                            tpl.Reply[tpl.FieldName] = changeVector;
                     }
                 }
                 return Reply.Count;

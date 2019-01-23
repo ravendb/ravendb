@@ -156,8 +156,10 @@ namespace Raven.Client.Json
                     }
                     break;
                 case BlittableJsonToken.String:
+                    _manualBlittableJsonDocumentBuilder.WriteValue((LazyStringValue)prop.Value);
+                    break;
                 case BlittableJsonToken.CompressedString:
-                    _manualBlittableJsonDocumentBuilder.WriteValue(prop.Value.ToString());
+                    _manualBlittableJsonDocumentBuilder.WriteValue((LazyCompressedStringValue)prop.Value);
                     break;
                 case BlittableJsonToken.Boolean:
                     _manualBlittableJsonDocumentBuilder.WriteValue((bool)prop.Value);

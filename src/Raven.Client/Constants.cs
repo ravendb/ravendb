@@ -306,5 +306,23 @@ namespace Raven.Client
                 public const string DatabasesMappingKey = "monitoring/snmp/databases/mapping";
             }
         }
+
+        internal class Fields
+        {
+            private Fields()
+            {
+            }
+
+            internal class CommandData
+            {
+                private CommandData()
+                {
+                }
+
+                public string DocumentChangeVector;
+
+                public string DestinationDocumentChangeVector;
+            }
+        }
     }
 }
