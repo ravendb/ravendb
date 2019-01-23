@@ -1108,7 +1108,7 @@ namespace Raven.Server.Documents.Replication
                             if (item.Type == ReplicationBatchItem.ReplicationItemType.Attachment)
                             {
                                 database.DocumentsStorage.AttachmentsStorage.PutDirect(context, item.Key, item.Name,
-                                    item.ContentType, item.Base64Hash);
+                                    item.ContentType, item.Base64Hash, item.ChangeVector);
 
                                 if (_incoming._replicatedAttachmentStreams.TryGetValue(item.Base64Hash, out ReplicationAttachmentStream attachmentStream))
                                 {
