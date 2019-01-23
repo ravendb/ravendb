@@ -106,7 +106,7 @@ namespace Voron.Platform
 
         [DllImport(LIBRVNPAL, SetLastError = true)]
         public static extern PalFlags.FailCodes rvn_mmap_dispose_handle(
-            SafeMmapHandle handle,
+            IntPtr handle,
             out Int32 errorCode);
 
         [DllImport(LIBRVNPAL, SetLastError = true)]
@@ -147,7 +147,7 @@ namespace Voron.Platform
 
         [DllImport(LIBRVNPAL, SetLastError = true)]
         public static extern PalFlags.FailCodes rvn_close_journal(
-            SafeJournalHandle handle,
+            IntPtr handle,
             out Int32 errorCode
         );
 
