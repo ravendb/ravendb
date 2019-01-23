@@ -72,10 +72,22 @@ namespace Voron.Impl.Journal
             _headerAccessor = env.HeaderAccessor;
             _updateLogInfo = header =>
             {
-                var journalFilesCount = _files.Count;
-                var currentJournal = journalFilesCount > 0 ? _journalIndex : -1;
-                header->Journal.CurrentJournal = currentJournal;
+                var currentJournal = _journalIndex;
+
+                int journalFilesCount;
+
+                if (header->Journal.LastSyncedJournal == -1 || header->Journal.LastSyncedJournal == currentJournal)
+                {
+                    journalFilesCount = _files.Count;
+                }
+                else
+                {
+                    journalFilesCount = (int)(currentJournal - header->Journal.LastSyncedJournal + 1);
+                }
+
                 header->Journal.JournalFilesCount = journalFilesCount;
+                header->Journal.CurrentJournal = journalFilesCount > 0 ? _journalIndex : -1;
+
                 header->IncrementalBackup.LastCreatedJournal = _journalIndex;
             };
 
@@ -163,9 +175,6 @@ namespace Voron.Impl.Journal
             }
 
             var oldestLogFileStillInUse = logInfo.CurrentJournal - logInfo.JournalFilesCount + 1;
-
-            if (logInfo.LastSyncedJournal != -1) 
-                oldestLogFileStillInUse = Math.Min(oldestLogFileStillInUse, logInfo.LastSyncedJournal);
 
             if (_env.Options.IncrementalBackupEnabled == false && _env.Options.CopyOnWriteMode == false)
             {
