@@ -54,6 +54,41 @@ namespace SlowTests.Issues
 
                 session.SaveChanges();
             }
+
+            using (var session = store.OpenSession())
+            {
+                var ent = new EntAttachment { Name = "ent" };
+                var ent2 = new EntAttachment { Name = "ent2" };
+
+                session.Store(ent);
+                session.Store(ent2);
+
+                session.CountersFor(ent).Increment("Likes");
+                session.CountersFor(ent).Increment("Dislikes");
+
+                session.CountersFor(ent2).Increment("Likes");
+                session.CountersFor(ent2).Increment("Dislikes");
+
+                session.SaveChanges();
+
+                ent.Name = "ent-new";
+                ent2.Name = "ent2-new";
+
+                session.SaveChanges();
+
+                session.CountersFor(ent).Increment("Likes");
+                session.CountersFor(ent).Increment("Dislikes");
+
+                session.CountersFor(ent2).Increment("Likes");
+                session.CountersFor(ent2).Increment("Dislikes");
+
+                session.SaveChanges();
+
+                ent.Name = "ent-new-new";
+                ent2.Name = "ent2-new-new";
+
+                session.SaveChanges();
+            }
         }
 
         private class EntAttachment
