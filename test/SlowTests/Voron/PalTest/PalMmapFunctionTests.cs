@@ -18,6 +18,10 @@ namespace SlowTests.Voron.PalTest
         [Fact]
         public unsafe void MapFile_WhenCalled_ShouldSuccess()
         {
+            //TODO To remove when mmap functions are implemented in windows
+            if (RuntimeInformation.IsOSPlatform(OSPlatform.Linux) == false)
+                return;
+
             var path = Path.Combine(NewDataPath(forceCreateDir: true), $"test_journal.{Guid.NewGuid()}");
             var initFileSize = 4096L;
             var mmapOptions = PalFlags.MmapOptions.CopyOnWrite;
@@ -36,6 +40,10 @@ namespace SlowTests.Voron.PalTest
         [Fact]
         public unsafe void MapFileAndAllocateMoreSpace_WhenCalled_ShouldSuccess()
         {
+            //TODO To remove when mmap functions are implemented in windows
+            if (RuntimeInformation.IsOSPlatform(OSPlatform.Linux) == false)
+                return;
+
             var path = Path.Combine(NewDataPath(forceCreateDir: true), $"test_journal.{Guid.NewGuid()}");
             var initFileSize = 4096L;
             var mmapOptions = PalFlags.MmapOptions.CopyOnWrite;

@@ -179,9 +179,6 @@ namespace Voron.Impl.Journal
 
         ~JournalWriter()
         {
-            if (_disposed.IsRaised())
-                return;
-
             try
             {
                 Dispose();
