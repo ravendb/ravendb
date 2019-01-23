@@ -142,7 +142,8 @@ namespace Raven.Client.Documents.Operations.OngoingTasks
         public string DestinationDatabase { get; set; }
         public string MentorNode { get; set; }
         public string ConnectionStringName { get; set; }
-
+        
+        public string CertificatePublicKey { get; set; }
         public override DynamicJsonValue ToJson()
         {
             var json = base.ToJson();
@@ -152,6 +153,7 @@ namespace Raven.Client.Documents.Operations.OngoingTasks
             json[nameof(MentorNode)] = MentorNode;
             json[nameof(HubDefinitionName)] = HubDefinitionName;
             json[nameof(ConnectionStringName)] = ConnectionStringName;
+            json[nameof(CertificatePublicKey)] = CertificatePublicKey;
             return json;
         }
     }

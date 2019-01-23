@@ -144,7 +144,7 @@ class editPullReplicationHubTask extends viewModelBase {
     }
 
     exportConfiguration() {
-        if (!this.isValid(this.editedItem().validationGroup)) {
+        if (!this.isValid(this.editedItem().exportValidationGroup)) {
             return;
         }
         
@@ -193,8 +193,7 @@ class editPullReplicationHubTask extends viewModelBase {
 
     certificateImported(cert: string) {
         try {
-            const parsedCertificate = pullReplicationCertificate.tryParse(cert);
-            this.editedItem().certificates.push(parsedCertificate);
+            this.editedItem().certificates.push(new pullReplicationCertificate(cert));
         } catch ($e) {
             messagePublisher.reportError("Unable to import certificate", $e);
         }

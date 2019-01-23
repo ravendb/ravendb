@@ -12,10 +12,12 @@ class pullReplicationCertificate {
     validFromText = ko.observable<string>();
 
     certificate = ko.observable<string>();
+    certificatePassphrase = ko.observable<string>();
     
-    constructor(publicKey: string, certificate: string = undefined) {
+    constructor(publicKey: string, certificate: string = undefined, password: string = undefined) {
         this.publicKey(publicKey);
         this.certificate(certificate);
+        this.certificatePassphrase(password);
         
         const certInfo = certificateUtils.extractCertificateInfo(publicKey);
         this.thumbprint(certInfo.thumbprint);
@@ -38,13 +40,13 @@ class pullReplicationCertificate {
         this.validFromText(notBeforeMoment.format("YYYY-MM-DD"));
     }
     
-    static tryParse(cert: string) {
-        if (!cert.includes("----")) {
-            // looks like --- BEGIN CERTIFICATE IS MISSING try to append this
-            cert = certificateUtils.certificatePrefix + "\r\n" + cert + "\r\n" + certificateUtils.certificatePostfix;
-        }
-        
-        return new pullReplicationCertificate(cert);
+    static fromPublicKey(certificate: string) {
+        return new pullReplicationCertificate(certificate, null);
+    }
+    
+    static fromPkcs12(certificate: string, password: string = undefined) {
+        const publicKey = certificateUtils.extractCertificateFromPkcs12(certificate, password);
+        return new pullReplicationCertificate(publicKey, certificate, password);
     }
     
 }

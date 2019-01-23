@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Net;
+using System.Security.Cryptography.X509Certificates;
 using System.Threading.Tasks;
 using NCrontab.Advanced;
 using Raven.Client.Documents.Operations.Backups;
@@ -31,6 +32,7 @@ using Raven.Server.Documents.PeriodicBackup.Aws;
 using Raven.Server.Documents.PeriodicBackup.Azure;
 using Raven.Server.Documents.Replication;
 using Raven.Server.Web.Studio;
+using Sparrow.Extensions;
 using Voron.Util.Settings;
 
 namespace Raven.Server.Web.System
@@ -141,8 +143,9 @@ namespace Raven.Server.Web.System
             {
                 res.Status = OngoingTaskConnectionStatus.NotOnThisNode;
             }
+            
 
-            return new OngoingTaskPullReplicationAsSink
+            var sinkInfo = new OngoingTaskPullReplicationAsSink
             {
                 TaskId = sinkReplication.TaskId,
                 TaskName = sinkReplication.Name,
@@ -156,6 +159,19 @@ namespace Raven.Server.Web.System
                 MentorNode = sinkReplication.MentorNode,
                 TaskConnectionStatus = res.Status,
             };
+
+            if (sinkReplication.CertificateWithPrivateKey != null)
+            {
+                // fetch public key of certificate
+                var certBytes = Convert.FromBase64String(sinkReplication.CertificateWithPrivateKey);
+                var certificate = new X509Certificate2(certBytes, 
+                    sinkReplication.CertificatePassword, 
+                    X509KeyStorageFlags.Exportable | X509KeyStorageFlags.MachineKeySet);
+
+                sinkInfo.CertificatePublicKey = Convert.ToBase64String(certificate.Export(X509ContentType.Cert));
+            }
+
+            return sinkInfo;
         }
 
         private IEnumerable<OngoingTask> CollectPullReplicationAsHubTasks(ClusterTopology clusterTopology)

@@ -23,6 +23,7 @@ class pullReplicationDefinition {
     certificateExported = ko.observable<boolean>(false);
      
     validationGroup: KnockoutValidationGroup;
+    exportValidationGroup: KnockoutValidationGroup;
 
     constructor(dto: Raven.Client.Documents.Operations.Replication.PullReplicationDefinition, requiresCertificates: boolean) {
         this.update(dto); 
@@ -127,6 +128,13 @@ class pullReplicationDefinition {
             delayReplicationTime: this.delayReplicationTime,
             certificates: this.certificates,
             certificateExported: this.certificateExported
+        });
+
+        this.exportValidationGroup = ko.validatedObservable({
+            taskName: this.taskName,
+            preferredMentor: this.preferredMentor,
+            delayReplicationTime: this.delayReplicationTime,
+            certificates: this.certificates
         });
     }
 
