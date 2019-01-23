@@ -18,7 +18,10 @@ namespace Raven.Client.Documents.Session.Tokens
 
         public override void WriteTo(StringBuilder writer)
         {
-            writer.Append($"with {{{_query}}} as {alias}");
+            writer.Append("with {");
+            writer.Append(_query);
+            writer.Append("} as ");
+            writer.Append(alias);
         }
     }
 }

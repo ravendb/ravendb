@@ -55,7 +55,7 @@ namespace FastTests.Graph
                         "Foozy"
                     };
                     FooBar res = await session.Advanced.AsyncGraphQuery<FooBar>("match (Foo)-[Bars as _]->(Bars as Bar)")
-                        .With("Foo", session.Query<Foo>().Where(f=> f.Name.In(names)))
+                        .With("Foo", builder => builder.AsyncDocumentQuery<Foo>().WhereIn(x=>x.Name, names))
                         .With("Bar",session.Query<Bar>().Where(x=>x.Age >= 18)).SingleAsync();
                     Assert.Equal(res.Foo.Name, "Foozy");
                     Assert.Equal(res.Bar.Name, "Barvazon");

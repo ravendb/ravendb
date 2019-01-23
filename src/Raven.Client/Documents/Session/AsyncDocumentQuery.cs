@@ -6,6 +6,7 @@ using System.Linq.Expressions;
 using System.Reflection;
 using System.Threading;
 using System.Threading.Tasks;
+using Raven.Client.Documents.Indexes;
 using Raven.Client.Documents.Linq;
 using Raven.Client.Documents.Queries;
 using Raven.Client.Documents.Queries.Explanation;
@@ -1083,11 +1084,45 @@ namespace Raven.Client.Documents.Session
             return CreateDocumentQueryInternal<TResult>();
         }
 
-        public IAsyncGraphQuery<T> With<TOther>(string alias, IRavenQueryable<TOther> query, CancellationToken token = default)
+        public IAsyncGraphQuery<T> With<TOther>(string alias, IRavenQueryable<TOther> query)
         {
-            //TODO:Find a proper way of do this extraction
             var queryInspector = (RavenQueryInspector<TOther>)query;
             var docQuery = (AsyncDocumentQuery<TOther>)queryInspector.GetAsyncDocumentQuery(x => x.ParameterPrefix = $"w{WithTokens.Count}p");
+            return WithInternal(alias, docQuery);
+        }
+
+        public IAsyncGraphQuery<T> With<TOther>(string alias, Func<IAsyncDocumentBuilder, IAsyncDocumentQuery<TOther>> queryFactory)
+        {            
+            var docQuery = (AsyncDocumentQuery<TOther>)queryFactory(new AsyncDocumentBuilder(AsyncSession, $"w{WithTokens.Count}p"));
+            return WithInternal(alias, docQuery);
+        }
+
+        private class AsyncDocumentBuilder : IAsyncDocumentBuilder
+        {
+            private IAsyncDocumentSession _session;
+            private string _parameterPrefix;
+
+            public AsyncDocumentBuilder(IAsyncDocumentSession session, string parameterPrefix)
+            {
+                _session = session;
+                _parameterPrefix = parameterPrefix;
+            }
+            public IAsyncDocumentQuery<T1> AsyncDocumentQuery<T1, TIndexCreator>() where TIndexCreator : AbstractIndexCreationTask, new()
+            {
+                var query = (AsyncDocumentQuery<T1>)_session.Advanced.AsyncDocumentQuery<T1, TIndexCreator>();
+                query.ParameterPrefix = _parameterPrefix;
+                return query;
+            }
+
+            public IAsyncDocumentQuery<T1> AsyncDocumentQuery<T1>(string indexName = null, string collectionName = null, bool isMapReduce = false)
+            {
+                var query = (AsyncDocumentQuery<T1>)_session.Advanced.AsyncDocumentQuery<T1>(indexName, collectionName, isMapReduce);
+                query.ParameterPrefix = _parameterPrefix;
+                return query;
+            }
+        }
+        private IAsyncGraphQuery<T> WithInternal<TOther>(string alias, AsyncDocumentQuery<TOther> docQuery)
+        {            
             if (docQuery.SelectTokens?.Count > 0)
             {
                 throw new NotSupportedException($"Select is not premitted in a 'With' clause in query:{docQuery}");
