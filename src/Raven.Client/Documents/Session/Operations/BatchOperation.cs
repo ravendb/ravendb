@@ -198,21 +198,21 @@ namespace Raven.Client.Documents.Session.Operations
 
         private void HandleAttachmentCopy(BlittableJsonReaderObject batchResult)
         {
-            HandleAttachmentPutInternal(batchResult, CommandType.AttachmentCOPY, nameof(CopyAttachmentCommandData.Id), nameof(CopyAttachmentCommandData.Name));
+            HandleAttachmentPutInternal(batchResult, CommandType.AttachmentCOPY, nameof(CopyAttachmentCommandData.Id), nameof(CopyAttachmentCommandData.Name), nameof(Constants.Fields.CommandData.DocumentChangeVector));
         }
 
         private void HandleAttachmentMove(BlittableJsonReaderObject batchResult)
         {
-            HandleAttachmentDeleteInternal(batchResult, CommandType.AttachmentMOVE, nameof(MoveAttachmentCommandData.Id), nameof(MoveAttachmentCommandData.Name));
-            HandleAttachmentPutInternal(batchResult, CommandType.AttachmentMOVE, nameof(MoveAttachmentCommandData.DestinationId), nameof(MoveAttachmentCommandData.DestinationName));
+            HandleAttachmentDeleteInternal(batchResult, CommandType.AttachmentMOVE, nameof(MoveAttachmentCommandData.Id), nameof(MoveAttachmentCommandData.Name), nameof(Constants.Fields.CommandData.DocumentChangeVector));
+            HandleAttachmentPutInternal(batchResult, CommandType.AttachmentMOVE, nameof(MoveAttachmentCommandData.DestinationId), nameof(MoveAttachmentCommandData.DestinationName), nameof(Constants.Fields.CommandData.DestinationDocumentChangeVector));
         }
 
         private void HandleAttachmentDelete(BlittableJsonReaderObject batchResult)
         {
-            HandleAttachmentDeleteInternal(batchResult, CommandType.AttachmentDELETE, Constants.Documents.Metadata.Id, nameof(DeleteAttachmentCommandData.Name));
+            HandleAttachmentDeleteInternal(batchResult, CommandType.AttachmentDELETE, Constants.Documents.Metadata.Id, nameof(DeleteAttachmentCommandData.Name), nameof(Constants.Fields.CommandData.DocumentChangeVector));
         }
 
-        private void HandleAttachmentDeleteInternal(BlittableJsonReaderObject batchResult, CommandType type, string idFieldName, string attachmentNameFieldName)
+        private void HandleAttachmentDeleteInternal(BlittableJsonReaderObject batchResult, CommandType type, string idFieldName, string attachmentNameFieldName, string documentChangeVectorFieldName)
         {
             var id = GetLazyStringField(batchResult, type, idFieldName);
 
@@ -220,6 +220,10 @@ namespace Raven.Client.Documents.Session.Operations
                 return;
 
             var documentInfo = GetOrAddModifications(id, sessionDocumentInfo, applyModifications: true);
+
+            var documentChangeVector = GetLazyStringField(batchResult, type, documentChangeVectorFieldName, throwOnMissing: false);
+            if (documentChangeVector != null)
+                documentInfo.ChangeVector = documentChangeVector;
 
             if (documentInfo.Metadata.TryGet(Constants.Documents.Metadata.Attachments, out BlittableJsonReaderArray attachmentsJson) == false || attachmentsJson == null ||
                 attachmentsJson.Length == 0)
@@ -246,10 +250,10 @@ namespace Raven.Client.Documents.Session.Operations
 
         private void HandleAttachmentPut(BlittableJsonReaderObject batchResult)
         {
-            HandleAttachmentPutInternal(batchResult, CommandType.AttachmentPUT, nameof(PutAttachmentCommandData.Id), nameof(PutAttachmentCommandData.Name));
+            HandleAttachmentPutInternal(batchResult, CommandType.AttachmentPUT, nameof(PutAttachmentCommandData.Id), nameof(PutAttachmentCommandData.Name), nameof(Constants.Fields.CommandData.DocumentChangeVector));
         }
 
-        private void HandleAttachmentPutInternal(BlittableJsonReaderObject batchResult, CommandType type, string idFieldName, string attachmentNameFieldName)
+        private void HandleAttachmentPutInternal(BlittableJsonReaderObject batchResult, CommandType type, string idFieldName, string attachmentNameFieldName, string documentChangeVectorFieldName)
         {
             var id = GetLazyStringField(batchResult, type, idFieldName);
 
@@ -257,6 +261,10 @@ namespace Raven.Client.Documents.Session.Operations
                 return;
 
             var documentInfo = GetOrAddModifications(id, sessionDocumentInfo, applyModifications: false);
+
+            var documentChangeVector = GetLazyStringField(batchResult, type, documentChangeVectorFieldName, throwOnMissing: false);
+            if (documentChangeVector != null)
+                documentInfo.ChangeVector = documentChangeVector;
 
             if (documentInfo.Metadata.Modifications == null)
                 documentInfo.Metadata.Modifications = new DynamicJsonValue(documentInfo.Metadata);
@@ -426,9 +434,9 @@ namespace Raven.Client.Documents.Session.Operations
             }
         }
 
-        private static LazyStringValue GetLazyStringField(BlittableJsonReaderObject json, CommandType type, string fieldName)
+        private static LazyStringValue GetLazyStringField(BlittableJsonReaderObject json, CommandType type, string fieldName, bool throwOnMissing = true)
         {
-            if (json.TryGet(fieldName, out LazyStringValue value) == false || value == null)
+            if ((json.TryGet(fieldName, out LazyStringValue value) == false || value == null) && throwOnMissing)
                 ThrowMissingField(type, fieldName);
 
             return value;

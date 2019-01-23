@@ -24,12 +24,18 @@ namespace Raven.Server.Documents
             TransactionOperationContext<TTransaction> context, string id, out Slice idSlice)
             where TTransaction : RavenTransaction
         {
-            var byteCount = Encoding.GetMaxByteCount(id.Length);
+            if (_jsonParserState == null)
+                _jsonParserState = new JsonParserState();
+
+            _jsonParserState.Reset();
+
+            var strLength = id.Length;
+            var maxStrSize = Encoding.GetMaxByteCount(strLength);
+            int escapePositionsSize = JsonParserState.FindEscapePositionsMaxSize(id);
 
             var buffer = context.GetMemory(
-                byteCount // this buffer is allocated to also serve the GetSliceFromUnicodeKey
+                maxStrSize  // this buffer is allocated to also serve the GetSliceFromUnicodeKey
                 + sizeof(char) * id.Length);
-
 
             if (id.Length > 512)
                 ThrowDocumentIdTooBig(id);
@@ -45,10 +51,12 @@ namespace Raven.Server.Documents
                     buffer.Address[i] = (byte)ch;
             }
 
-            return Slice.External(context.Allocator, buffer.Address, (ushort)id.Length, out idSlice);
+            _jsonParserState.FindEscapePositionsIn(buffer.Address, ref strLength, escapePositionsSize);
 
-            UnlikelyUnicode:
-            return GetSliceFromUnicodeKey(context, id, out idSlice, buffer.Address, byteCount);
+            return Slice.External(context.Allocator, buffer.Address, strLength, out idSlice);
+
+        UnlikelyUnicode:
+            return GetSliceFromUnicodeKey(context, id, out idSlice, buffer.Address, maxStrSize);
         }
 
         private static ByteStringContext.ExternalScope GetSliceFromUnicodeKey<TTransaction>(
@@ -83,7 +91,7 @@ namespace Raven.Server.Documents
         {
             return GetLower(byteStringContext, str.Buffer, str.Size, out loweredKey);
         }
-        public static ByteStringContext.InternalScope GetLower(ByteStringContext byteStringContext,  byte* str, int size, out Slice loweredKey)
+        public static ByteStringContext.InternalScope GetLower(ByteStringContext byteStringContext, byte* str, int size, out Slice loweredKey)
         {
             var release = byteStringContext.Allocate(size, out var ptr);
 
@@ -94,7 +102,7 @@ namespace Raven.Server.Documents
 
                 // PERF: Trick to avoid multiple compare instructions on hot loops. 
                 //       This is the same as (ch >= 65 && ch <= 90)
-                if (ch - 65 <= 90 - 65) 
+                if (ch - 65 <= 90 - 65)
                 {
                     ch = (byte)(ch | 0x20);
                 }
@@ -108,8 +116,8 @@ namespace Raven.Server.Documents
             }
             loweredKey = new Slice(ptr);
             return release;
-            
-            UnlikelyUnicode:
+
+        UnlikelyUnicode:
             release.Dispose();
             return UnlikelyGetLowerUnicode(byteStringContext, str, size, out loweredKey);
         }
@@ -117,7 +125,7 @@ namespace Raven.Server.Documents
         private static ByteStringContext.InternalScope UnlikelyGetLowerUnicode(ByteStringContext byteStringContext, byte* str, int size, out Slice loweredKey)
         {
             var maxCharCount = Encoding.GetMaxCharCount(size);
-            var bufferSize = maxCharCount* sizeof(char);
+            var bufferSize = maxCharCount * sizeof(char);
             using (byteStringContext.Allocate(bufferSize, out var ptr))
             {
                 var chars = (char*)ptr.Ptr;
@@ -158,7 +166,8 @@ namespace Raven.Server.Documents
 
             _jsonParserState.Reset();
 
-            int strLength = str.Length;
+            int originalStrLength = str.Length;
+            int strLength = originalStrLength;
             int maxStrSize = Encoding.GetMaxByteCount(strLength);
 
             int idSize = JsonParserState.VariableSizeIntSize(strLength);
@@ -174,7 +183,7 @@ namespace Raven.Server.Documents
             byte* ptr = buffer.Ptr;
 
             fixed (char* pChars = str)
-            {                
+            {
                 for (var i = 0; i < strLength; i++)
                 {
                     uint ch = pChars[i];
@@ -197,8 +206,18 @@ namespace Raven.Server.Documents
                 }
 
                 _jsonParserState.FindEscapePositionsIn(ptr, ref strLength, escapePositionsSize);
+                if (strLength != originalStrLength)
+                {
+                    var anotherStrLength = originalStrLength;
+                    _jsonParserState.FindEscapePositionsIn(ptr + idSize + maxStrSize, ref anotherStrLength, escapePositionsSize);
+
+#if DEBUG
+                    if (strLength != anotherStrLength)
+                        throw new InvalidOperationException($"String length mismatch between Id ({str}) and it's lowercased counterpart after finding escape positions. Original: {anotherStrLength}. Lowercased: {strLength}");
+#endif
+                }
             }
-            
+
             var writePos = ptr + maxStrSize;
 
             JsonParserState.WriteVariableSizeInt(ref writePos, strLength);
@@ -206,10 +225,10 @@ namespace Raven.Server.Documents
             idSize = escapePositionsSize + strLength + idSize;
 
             Slice.External(context.Allocator, ptr + maxStrSize, idSize, out idSlice);
-            Slice.External(context.Allocator, ptr, str.Length, out lowerIdSlice);
+            Slice.External(context.Allocator, ptr, strLength, out lowerIdSlice);
             return scope;
 
-            UnlikelyUnicode:
+        UnlikelyUnicode:
             scope.Dispose();
             return UnicodeGetLowerIdAndStorageKey(context, str, out lowerIdSlice, out idSlice, maxStrSize, escapePositionsSize);
         }
