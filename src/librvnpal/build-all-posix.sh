@@ -34,8 +34,7 @@ elif [ "$1" != "build" ]; then
 fi
 
 STAT=0
-rm -rf artifacts > /dev/null 2>&1
-mkdir artifacts
+[ -d artifacts ] || mkdir artifacts
 for arch in linux-x64 linux-arm linux-arm64 osx-x64 ; do
 	./make.sh cross $arch skip-copy
 	STATUS_C=$?
