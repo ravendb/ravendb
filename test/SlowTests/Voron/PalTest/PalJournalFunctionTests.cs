@@ -53,9 +53,7 @@ namespace SlowTests.Voron.PalTest
             Assert.True(File.Exists(file));
             Assert.False(handle.IsInvalid);
 
-            ret = Pal.rvn_close_journal(handle, out errno);
-            if (ret != PalFlags.FailCodes.Success)
-                PalHelper.ThrowLastError(ret, errno, "");
+            handle.Dispose();
 
             var length = new FileInfo(file).Length;
             Assert.True(length >= 4096L);
@@ -91,9 +89,7 @@ namespace SlowTests.Voron.PalTest
                 NativeMemory.Free4KbAlignedMemory(buffer, 4096, stats);
             }
 
-            ret = Pal.rvn_close_journal(handle, out errno);
-            if (ret != PalFlags.FailCodes.Success)
-                PalHelper.ThrowLastError(ret, errno, "");
+            handle.Dispose();
 
             var bytesFromFile = File.ReadAllBytes(file);
 
@@ -129,9 +125,7 @@ namespace SlowTests.Voron.PalTest
                 NativeMemory.Free4KbAlignedMemory(buffer, 4096, stats);
             }
 
-            ret = Pal.rvn_close_journal(handle, out errno);
-            if (ret != PalFlags.FailCodes.Success)
-                PalHelper.ThrowLastError(ret, errno, "");
+            handle.Dispose();
 
             var bytesFromFile = File.ReadAllBytes(file);
 
@@ -169,9 +163,7 @@ namespace SlowTests.Voron.PalTest
                 NativeMemory.Free4KbAlignedMemory(buffer, 4096, stats);
             }
 
-            ret = Pal.rvn_close_journal(handle, out errno);
-            if (ret != PalFlags.FailCodes.Success)
-                PalHelper.ThrowLastError(ret, errno, "");
+            handle.Dispose();
 
             var actual = new byte[length];
             fixed (byte* pActual = actual)
@@ -221,9 +213,7 @@ namespace SlowTests.Voron.PalTest
                 NativeMemory.Free4KbAlignedMemory(buffer, 4096, stats);
             }
 
-            ret = Pal.rvn_close_journal(handle, out errno);
-            if (ret != PalFlags.FailCodes.Success)
-                PalHelper.ThrowLastError(ret, errno, "");
+            handle.Dispose();
 
             var actual = new byte[readLength];
             fixed (byte* pActual = actual)
@@ -262,9 +252,7 @@ namespace SlowTests.Voron.PalTest
             var actual = new FileInfo(file).Length;
             Assert.Equal(truncateSize, actual);
 
-            ret = Pal.rvn_close_journal(handle, out errno);
-            if (ret != PalFlags.FailCodes.Success)
-                PalHelper.ThrowLastError(ret, errno, "");
+            handle.Dispose();
         }
     }
 }

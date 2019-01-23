@@ -135,10 +135,11 @@ namespace Voron.Impl.Paging
             _handle.Dispose();
             // _handle.FailCode != success, we cannot delete the file probably, and there's nothing much we can do here.
             // just add to log and continue            
-            if (_logger.IsInfoEnabled)
-                _logger.Info($"Unable to dispose handle for {FileName.FullPath} (ignoring). rc={_handle.FailCode}. DeleteOnClose={DeleteOnClose}, "
-                             + $"errorCode={PalHelper.GetNativeErrorString(_handle.ErrorNo, "Unable to dispose handle for {FileName.FullPath} (ignoring).", out _)}",
-                    new IOException($"Unable to dispose handle for {FileName.FullPath} (ignoring)."));
+            if (_handle.FailCode != PalFlags.FailCodes.Success)
+                if (_logger.IsInfoEnabled)
+                    _logger.Info($"Unable to dispose handle for {FileName.FullPath} (ignoring). rc={_handle.FailCode}. DeleteOnClose={DeleteOnClose}, "
+                                 + $"errorCode={PalHelper.GetNativeErrorString(_handle.ErrorNo, "Unable to dispose handle for {FileName.FullPath} (ignoring).", out _)}",
+                        new IOException($"Unable to dispose handle for {FileName.FullPath} (ignoring)."));
         }
 
         protected internal override void PrefetchRanges(PrefetchRanges* list, int count)
@@ -240,7 +241,7 @@ namespace Voron.Impl.Paging
 
         protected override bool ReleaseHandle()
         {
-            FailCode = Pal.rvn_mmap_dispose_handle(this,  out ErrorNo);
+            FailCode = Pal.rvn_mmap_dispose_handle(handle, out ErrorNo);
 
             return FailCode == FailCodes.Success;
         }

@@ -30,9 +30,7 @@ namespace SlowTests.Voron.PalTest
             if (ret != PalFlags.FailCodes.Success)
                 PalHelper.ThrowLastError(ret, errorCode, "");
             
-            ret = Pal.rvn_mmap_dispose_handle(handle, out errorCode);
-            if (ret != PalFlags.FailCodes.Success)
-                PalHelper.ThrowLastError(ret, errorCode, "");
+            handle.Dispose();
         }
 
         [Fact]
@@ -58,9 +56,7 @@ namespace SlowTests.Voron.PalTest
             if (ret != PalFlags.FailCodes.Success)
                 PalHelper.ThrowLastError(ret, errorCode, "");
             
-            ret = Pal.rvn_mmap_dispose_handle(handle, out errorCode);
-            if (ret != PalFlags.FailCodes.Success)
-                PalHelper.ThrowLastError(ret, errorCode, "");
+            handle.Dispose();
         }
     }
 }
