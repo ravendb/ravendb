@@ -210,7 +210,7 @@ namespace Voron.Impl.Journal
 
         protected override bool ReleaseHandle()
         {
-            FailCode = Pal.rvn_close_journal(this, out ErrorNo);
+            FailCode = Pal.rvn_close_journal(handle, out ErrorNo);
             
             return FailCode == PalFlags.FailCodes.Success;
         }
