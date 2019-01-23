@@ -583,6 +583,13 @@ namespace Voron
                 }
             }
 
+            public override bool JournalExists(long number)
+            {
+                var name = JournalName(number);
+                var file = JournalPath.Combine(name);
+                return File.Exists(file.FullPath);
+            }
+
             public override bool TryDeleteJournal(long number)
             {
                 var name = JournalName(number);
@@ -902,6 +909,12 @@ namespace Voron
                 _headers.Clear();
             }
 
+            public override bool JournalExists(long number)
+            {
+                var name = JournalName(number);
+                return _logs.ContainsKey(name);
+            }
+
             public override bool TryDeleteJournal(long number)
             {
                 var name = JournalName(number);
@@ -1061,6 +1074,8 @@ namespace Voron
         }
 
         protected abstract void Disposing();
+
+        public abstract bool JournalExists(long number);
 
         public abstract bool TryDeleteJournal(long number);
 

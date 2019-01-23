@@ -430,7 +430,8 @@ namespace Voron.Impl.Backup
                     header->Root = lastTxHeader->Root;
 
                     header->Journal.CurrentJournal = journalNumber + 1;
-                    header->Journal.JournalFilesCount = 0;
+                    Sparrow.Memory.Set(header->Journal.Reserved, 0, 3);
+                    header->Journal.Flags = JournalInfoFlags.None;
                 });
             }
             finally

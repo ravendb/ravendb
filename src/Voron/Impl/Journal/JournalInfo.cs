@@ -4,12 +4,13 @@
 //  </copyright>
 // -----------------------------------------------------------------------
 
+using System;
 using System.Runtime.InteropServices;
 
 namespace Voron.Impl.Journal
 {
 	[StructLayout(LayoutKind.Explicit, Pack = 1)]
-	public struct JournalInfo
+	public unsafe struct JournalInfo
 	{
 		[FieldOffset(0)]
 		public long CurrentJournal;
@@ -21,6 +22,16 @@ namespace Voron.Impl.Journal
 		public long LastSyncedTransactionId;
 
         [FieldOffset(24)]
-        public int JournalFilesCount;
+        public fixed byte Reserved[3];
+
+        [FieldOffset(27)]
+        public JournalInfoFlags Flags;
+    }
+
+    [Flags]
+    public enum JournalInfoFlags : byte
+    {
+        None,
+        IgnoreMissingLastSyncJournal
     }
 }

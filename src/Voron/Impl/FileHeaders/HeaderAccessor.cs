@@ -165,7 +165,7 @@ namespace Voron.Impl.FileHeaders
 
 
                 modifyAction(_theHeader);
-
+          
                 _revision++;
                 _theHeader->HeaderRevision = _revision;
 
@@ -190,7 +190,8 @@ namespace Voron.Impl.FileHeaders
             header->LastPageNumber = 1;
             header->Root.RootPageNumber = -1;
             header->Journal.CurrentJournal = -1;
-            header->Journal.JournalFilesCount = 0;
+            Memory.Set(header->Journal.Reserved, 0, 3);
+            header->Journal.Flags = Journal.JournalInfoFlags.None;
             header->Journal.LastSyncedJournal = -1;
             header->Journal.LastSyncedTransactionId = -1;
             header->IncrementalBackup.LastBackedUpJournal = -1;
@@ -199,8 +200,9 @@ namespace Voron.Impl.FileHeaders
             header->PageSize = _env.Options.PageSize;
         }
 
-        private bool IsEmptyHeader(FileHeader* header)
+        private  bool IsEmptyHeader(FileHeader* header)
         {
+            var zeroed = stackalloc byte[3];
             return header->MagicMarker == Constants.MagicMarker &&
                    header->Version == Constants.CurrentVersion &&
                    header->HeaderRevision == -1 &&
@@ -208,7 +210,8 @@ namespace Voron.Impl.FileHeaders
                    header->LastPageNumber == 1 &&
                    header->Root.RootPageNumber == -1 &&
                    header->Journal.CurrentJournal == -1 &&
-                   header->Journal.JournalFilesCount == 0 &&
+                   header->Journal.Flags == Journal.JournalInfoFlags.None &&
+                   Memory.Compare(header->Journal.Reserved, zeroed, 3) == 0 &&
                    header->Journal.LastSyncedJournal == -1 &&
                    header->Journal.LastSyncedTransactionId == -1 &&
                    header->IncrementalBackup.LastBackedUpJournal == -1 &&

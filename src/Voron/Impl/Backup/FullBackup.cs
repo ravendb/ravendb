@@ -81,8 +81,8 @@ namespace Voron.Impl.Backup
         }
 
         private static void Backup(
-            StorageEnvironment env, CompressionLevel compression, AbstractPager dataPager, 
-            ZipArchive package, string basePath, DataCopier copier, 
+            StorageEnvironment env, CompressionLevel compression, AbstractPager dataPager,
+            ZipArchive package, string basePath, DataCopier copier,
             Action<(string Message, int FilesCount)> infoNotify,
             CancellationToken cancellationToken = default)
         {
@@ -110,7 +110,15 @@ namespace Voron.Impl.Backup
                     var files = env.Journal.Files; // thread safety copy
 
                     JournalInfo journalInfo = env.HeaderAccessor.Get(ptr => ptr->Journal);
-                    for (var journalNum = journalInfo.CurrentJournal - journalInfo.JournalFilesCount + 1;
+                    var startingJournal = journalInfo.LastSyncedJournal;
+                    if (env.Options.JournalExists(startingJournal) == false && 
+                        journalInfo.Flags.HasFlag(JournalInfoFlags.IgnoreMissingLastSyncJournal) || 
+                        startingJournal == -1)
+                    {
+                        startingJournal++;
+                    }
+
+                    for (var journalNum = startingJournal;
                         journalNum <= journalInfo.CurrentJournal;
                         journalNum++)
                     {
