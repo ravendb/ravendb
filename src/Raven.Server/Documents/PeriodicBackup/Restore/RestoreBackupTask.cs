@@ -181,6 +181,7 @@ namespace Raven.Server.Documents.PeriodicBackup.Restore
                         var summary = database.GetDatabaseSummary();
                         result.Documents.ReadCount += summary.DocumentsCount;
                         result.Documents.Attachments.ReadCount += summary.AttachmentsCount;
+                        result.Counters.ReadCount += summary.CounterEntriesCount;
                         result.RevisionDocuments.ReadCount += summary.RevisionsCount;
                         result.Conflicts.ReadCount += summary.ConflictsCount;
                         result.Indexes.ReadCount += databaseRecord.GetIndexesCount();

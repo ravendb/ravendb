@@ -68,6 +68,7 @@ namespace Raven.Server.Documents.Handlers
                 stats.SizeOnDisk = size.Data;
                 stats.NumberOfTransactionMergerQueueOperations = Database.TxMerger.NumberOfQueuedOperations;
                 stats.TempBuffersSizeOnDisk = size.TempBuffers;
+                stats.CountOfCounterEntries = Database.DocumentsStorage.CountersStorage.GetNumberOfCounterEntries(context);
 
                 var attachments = Database.DocumentsStorage.AttachmentsStorage.GetNumberOfAttachments(context);
                 stats.CountOfAttachments = attachments.AttachmentCount;

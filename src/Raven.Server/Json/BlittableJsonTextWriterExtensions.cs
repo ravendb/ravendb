@@ -817,6 +817,10 @@ namespace Raven.Server.Json
             writer.WriteInteger(statistics.CountOfAttachments);
             writer.WriteComma();
 
+            writer.WritePropertyName(nameof(statistics.CountOfCounterEntries));
+            writer.WriteInteger(statistics.CountOfCounterEntries);
+            writer.WriteComma();
+
             writer.WritePropertyName(nameof(statistics.CountOfUniqueAttachments));
             writer.WriteInteger(statistics.CountOfUniqueAttachments);
             writer.WriteComma();
