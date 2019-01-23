@@ -25,7 +25,7 @@ namespace Raven.Client.ServerWide.Commands
         {
             url = $"{node.Url}/topology?name={node.Database}";
             if (_debugTag != null)
-                url += "?" + _debugTag;
+                url += "&" + _debugTag;
 
             if (node.Url.IndexOf(".fiddler", StringComparison.OrdinalIgnoreCase) != -1)
             {
