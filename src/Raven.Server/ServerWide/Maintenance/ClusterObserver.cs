@@ -437,7 +437,7 @@ namespace Raven.Server.ServerWide.Maintenance
             });
         }
 
-        private const string ThingsToCheck = "Things you may check: verify node is working, check for ports being blocked by firewall or similar software.";
+        private const string ThingsToCheck = "Things you may check: verify the remote node is working and check for ports (HTTP and TCP) being blocked by the firewall or similar software. If ServerUrl.Tcp is *not* configured, RavenDB is using port 38888 for TCP communications and it should be allowed in the firewall.";
 
         private void RaiseNoLivingNodesAlert(string alertMsg, string dbName)
         {
