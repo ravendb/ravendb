@@ -38,8 +38,6 @@ namespace Raven.Server.Documents
         public const string DbIds = "@dbIds";
         public const string Values = "@vals";
 
-        private readonly string _localNodeTagAndDbId;
-
         private readonly List<ByteStringContext<ByteStringMemoryCache>.InternalScope> _counterModificationMemoryScopes =
             new List<ByteStringContext<ByteStringMemoryCache>.InternalScope>();
 
@@ -138,7 +136,6 @@ namespace Raven.Server.Documents
         {
             _documentDatabase = documentDatabase;
             _documentsStorage = documentDatabase.DocumentsStorage;
-            _localNodeTagAndDbId = $"{documentDatabase.ServerStore.NodeTag}:{documentDatabase.DbBase64Id}";
 
             tx.CreateTree(CounterKeysSlice);
         }
@@ -366,7 +363,7 @@ namespace Raven.Server.Documents
             int dbIdIndex;
             for (dbIdIndex = 0; dbIdIndex < dbIds.Length; dbIdIndex++)
             {
-                if (dbIds[dbIdIndex].Equals(_localNodeTagAndDbId))
+                if (dbIds[dbIdIndex].Equals(_documentDatabase.DbBase64Id))
                     break;
             }
 
@@ -374,7 +371,7 @@ namespace Raven.Server.Documents
             {
                 dbIds.Modifications = new DynamicJsonArray
                 {
-                    _localNodeTagAndDbId
+                    _documentDatabase.DbBase64Id
                 };
             }
 
@@ -458,7 +455,7 @@ namespace Raven.Server.Documents
                     builder.WritePropertyName(DbIds);
 
                     builder.StartWriteArray();
-                    builder.WriteValue(_localNodeTagAndDbId);
+                    builder.WriteValue(_documentDatabase.DbBase64Id);
                     builder.WriteArrayEnd();
 
                     builder.WritePropertyName(Values);
@@ -564,7 +561,7 @@ namespace Raven.Server.Documents
 
                                         if (deletedLocalCounter == deletedSourceCounter == false)
                                         {
-                                            var mergedCv = ChangeVectorUtils.MergeVectors(deletedLocalCounter, deletedSourceCounter);
+                                            var mergedCv = MergeDeletedCounterVectors(deletedLocalCounter, deletedSourceCounter);
 
                                             localCounters.Modifications = localCounters.Modifications ?? new DynamicJsonValue(localCounters);
                                             localCounters.Modifications[counterName] = mergedCv;
@@ -986,7 +983,7 @@ namespace Raven.Server.Documents
                 if (counterToDelete is LazyStringValue) // already deleted
                     return null;
 
-                var deleteCv = RawBlobToChangeVector(context, data, counterToDelete as BlittableJsonReaderObject.RawBlob);
+                var deleteCv = GenerateDeleteChangeVectorFromRawBlob(data, counterToDelete as BlittableJsonReaderObject.RawBlob);
                 counters.Modifications = new DynamicJsonValue(counters)
                 {
                     [counterName] = deleteCv
@@ -1017,7 +1014,7 @@ namespace Raven.Server.Documents
             }
         }
 
-        private string RawBlobToChangeVector(DocumentsOperationContext context, BlittableJsonReaderObject data,
+        private string GenerateDeleteChangeVectorFromRawBlob(BlittableJsonReaderObject data,
             BlittableJsonReaderObject.RawBlob counterToDelete)
         {
             data.TryGet(DbIds, out BlittableJsonReaderArray dbIds);
@@ -1035,53 +1032,30 @@ namespace Raven.Server.Documents
                 if (i != dbIdIndex)
                 {
                     var etag = ((CounterValues*)counterToDelete.Ptr + i)->Etag;
-                    var nodeTagAndDbId = dbIds[i].ToString();
-                    var nodeTag = nodeTagAndDbId[0];
-                    var dbId = nodeTagAndDbId.Substring(2);
+                    var dbId = dbIds[i].ToString();
 
-                    sb.Append(nodeTag)
+                    sb.Append(dbId)
                         .Append(":")
-                        .Append(etag)
-                        .Append("-")
-                        .Append(dbId);
+                        .Append(etag);
 
                     continue;
                 }
 
-                AddLocalNodeToChangeVector(context, sb);
-
+                var newEtag = _documentDatabase.DocumentsStorage.GenerateNextEtag();
+                sb.Append(_documentDatabase.DbBase64Id)
+                    .Append(":")
+                    .Append(newEtag);
             }
 
             if (count < dbIdIndex)
             {
-                AddLocalNodeToChangeVector(context, sb);
+                var newEtag = _documentDatabase.DocumentsStorage.GenerateNextEtag();
+                sb.Append(_documentDatabase.DbBase64Id)
+                    .Append(":")
+                    .Append(newEtag);
             }
 
-
-/*            if (count < dbIdIndex && addLocal)
-            {
-                AddLocalNodeToChangeVector(context, sb);
-            }*/
-
-/*            var size = Encoding.UTF8.GetMaxByteCount(sb.Length);
-            var cvMem = context.GetMemory(size);
-            var span = new Span<char>(cvMem.Address, sb.Length);
-            sb.CopyTo(0, span, sb.Length);
-
-            return new LazyStringValue(null, cvMem.Address, sb.Length, context);*/
-
             return sb.ToString();
-        }
-
-        private static void AddLocalNodeToChangeVector(DocumentsOperationContext context, StringBuilder sb)
-        {
-            var newEtag = context.DocumentDatabase.DocumentsStorage.GenerateNextEtag();
-            var localNodeTag = context.DocumentDatabase.ServerStore.NodeTag;
-            sb.Append(localNodeTag)
-                .Append(":")
-                .Append(newEtag)
-                .Append("-")
-                .Append(context.Environment.Base64Id);
         }
 
         private static (LazyStringValue Doc, LazyStringValue Name) ExtractDocIdAndName(JsonOperationContext context, Slice counterKey)
@@ -1254,25 +1228,24 @@ namespace Raven.Server.Documents
             //any missing entries from a change vector are assumed to have zero value
             var blobHasLargerEntries = false;
             var deleteHasLargerEntries = false;
-
-            var deletedCv = deletedCounter.ToChangeVector();
+             
+            var deletedCv = DeletedCounterToChangeVectorEntries(deletedCounter);
 
             var sizeOfValues = counterValues.Length / SizeOfCounterValues;
 
             int numOfMatches = 0;
             for (int i = 0; i < sizeOfValues; i++)
             {
-                bool found = false;
+                var found = false;
 
                 var current = (CounterValues*)counterValues.Ptr + i;
                 var etag = current->Etag;
                 if (etag == 0)
                     continue;
 
-                var dbId = dbIds[i].Substring(2);
                 for (int j = 0; j < deletedCv.Length; j++)
                 {
-                    if (dbId == deletedCv[j].DbId)
+                    if (dbIds[i] == deletedCv[j].DbId)
                     {
                         found = true;
                         numOfMatches++;
@@ -1317,6 +1290,119 @@ namespace Raven.Server.Documents
                 : blobHasLargerEntries
                     ? ConflictStatus.Update
                     : ConflictStatus.AlreadyMerged;
+        }
+
+        private static ChangeVectorEntry[] DeletedCounterToChangeVectorEntries(string changeVector)
+        {
+            if (string.IsNullOrEmpty(changeVector))
+                return Array.Empty<ChangeVectorEntry>();
+
+            var list = new List<ChangeVectorEntry>();
+            var current = changeVector;
+            while (current.Length > 23)
+            {
+                var dbId = current.Substring(0, 22);
+                current = current.Substring(23);
+
+                var etagStr = current;
+                var next = current.IndexOf(',');
+                if (next > 0)
+                {
+                    etagStr = current.Substring(0, next);
+                }
+
+                if (long.TryParse(etagStr, out var etag) == false)
+                    throw new InvalidDataException("Invalid deleted counter string: " + changeVector);
+
+                list.Add(new ChangeVectorEntry
+                {
+                    Etag = etag,
+                    DbId = dbId
+                });
+
+                if (next == -1)
+                    break;
+
+                current = current.Substring(next + 2);
+            }
+
+            return list.ToArray();            
+        }
+
+        private static string MergeDeletedCounterVectors(string deletedA, string deletedB)
+        {
+            var mergeVectorBuffer = new List<ChangeVectorEntry>();
+
+            MergeDeletedCounterVector(deletedA, mergeVectorBuffer);
+            MergeDeletedCounterVector(deletedB, mergeVectorBuffer);
+
+            var sb = new StringBuilder();
+            for (int i = 0; i < mergeVectorBuffer.Count; i++)
+            {
+                if (i > 0)
+                    sb.Append(", ");
+
+                sb.Append(mergeVectorBuffer[i].DbId)
+                    .Append(":")
+                    .Append(mergeVectorBuffer[i].Etag);
+            }
+
+            return sb.ToString();
+        }
+
+        private static void MergeDeletedCounterVector(string deletedCounterVector, List<ChangeVectorEntry> entries)
+        {
+            if (string.IsNullOrEmpty(deletedCounterVector))
+                return;
+
+            var current = deletedCounterVector;
+            while (current.Length > 23)
+            {
+                var dbId = current.Substring(0, 22);
+                current = current.Substring(23);
+
+                var etagStr = current;
+                var next = current.IndexOf(',');
+
+                if (next > 0)
+                {
+                    etagStr = current.Substring(0, next - 1);
+                }
+
+                if (long.TryParse(etagStr, out var etag) == false)
+                    throw new InvalidDataException("Invalid deleted counter string: " + deletedCounterVector);
+
+                var found = false;
+                for (int i = 0; i < entries.Count; i++)
+                {
+                    if (entries[i].DbId == dbId)
+                    {
+                        if (entries[i].Etag < etag)
+                        {
+                            entries[i] = new ChangeVectorEntry
+                            {
+                                Etag = etag,
+                                DbId = dbId
+                            };
+                        }
+                        found = true;
+                        break;
+                    }
+                }
+                if (found == false)
+                {
+                    entries.Add(new ChangeVectorEntry
+                    {
+                        Etag = etag,
+                        DbId = dbId
+                    });
+                }
+
+                if (next == -1)
+                    break;
+                
+                current = current.Substring(next + 1);
+            }
         }
     }
 }
