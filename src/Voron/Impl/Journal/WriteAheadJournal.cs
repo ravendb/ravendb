@@ -408,30 +408,7 @@ namespace Voron.Impl.Journal
                 }
             }
         }
-
-        public void Clear(LowLevelTransaction tx)
-        {
-            if (tx.Flags != TransactionFlags.ReadWrite)
-                throw new InvalidOperationException("Clearing of write ahead journal should be called only from a write transaction");
-
-            foreach (var journalFile in _files)
-            {
-                journalFile.Release();
-            }
-            _files = ImmutableAppendOnlyList<JournalFile>.Empty;
-            CurrentFile = null;
-        }
-
-        public class JournalSyncEventArgs : EventArgs
-        {
-            public long OldestTransactionId { get; private set; }
-
-            public JournalSyncEventArgs(long oldestTransactionId)
-            {
-                OldestTransactionId = oldestTransactionId;
-            }
-        }
-
+        
         public sealed class JournalApplicator : IDisposable
         {
             private readonly ConcurrentDictionary<long, JournalFile> _journalsToDelete = new ConcurrentDictionary<long, JournalFile>();

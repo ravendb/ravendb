@@ -349,7 +349,8 @@ namespace Voron.Impl.Backup
             {
                 TransactionHeader* lastTxHeader = null;
                 var lastTxHeaderStackLocation = stackalloc TransactionHeader[1];
-                
+                long lastTxId = env.HeaderAccessor.Get(x => x->TransactionId);
+
                 long journalNumber = -1;
                 foreach (var entry in entries)
                 {
@@ -381,18 +382,20 @@ namespace Voron.Impl.Backup
 
                             using (var reader = new JournalReader(pager, env.Options.DataPager, recoveryPager, new HashSet<long>(), new JournalInfo
                             {
-                                LastSyncedTransactionId = 0
+                                LastSyncedTransactionId = lastTxId
                             }, lastTxHeader))
                             {
                                 while (reader.ReadOneTransactionToDataFile(env.Options))
                                 {
                                     lastTxHeader = reader.LastTransactionHeader;
                                 }
+
                                 reader.ZeroRecoveryBufferIfNeeded(reader, env.Options);
                                 if (lastTxHeader != null)
                                 {
                                     *lastTxHeaderStackLocation = *lastTxHeader;
                                     lastTxHeader = lastTxHeaderStackLocation;
+                                    lastTxId = lastTxHeader->TransactionId;
                                 }
                             }
 
@@ -415,21 +418,17 @@ namespace Voron.Impl.Backup
 
                 txw.State.NextPageNumber = lastTxHeader->LastPageNumber + 1;
 
-                env.Journal.Clear(txw);
-
                 txw.Commit();
 
                 env.HeaderAccessor.Modify(header =>
                 {
                     header->TransactionId = lastTxHeader->TransactionId;
                     header->LastPageNumber = lastTxHeader->LastPageNumber;
-
-                    header->Journal.LastSyncedJournal = journalNumber;
+                    
                     header->Journal.LastSyncedTransactionId = lastTxHeader->TransactionId;
 
                     header->Root = lastTxHeader->Root;
-
-                    header->Journal.CurrentJournal = journalNumber + 1;
+                    
                     Sparrow.Memory.Set(header->Journal.Reserved, 0, 3);
                     header->Journal.Flags = JournalInfoFlags.None;
                 });
