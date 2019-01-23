@@ -1282,6 +1282,15 @@ namespace Voron.Impl.Journal
                 _waj._headerAccessor.Modify(header =>
                 {
                     header->Journal.CurrentJournal = -1;
+
+                    if (current.Number != header->Journal.LastSyncedJournal)
+                    {
+                        throw new InvalidOperationException($"Attempted to remove a journal ({current.Number}) that hasn't been synced yet (last synced journal: {header->Journal.LastSyncedJournal})");
+                    }
+
+                    Memory.Set(header->Journal.Reserved, 0, 3);
+                    header->Journal.Flags = JournalInfoFlags.IgnoreMissingLastSyncJournal;
+
                 });
 
                 current.DeleteOnClose = true;
