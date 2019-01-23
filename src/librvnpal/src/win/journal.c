@@ -10,17 +10,19 @@ rvn_open_journal_for_writes(const char* file_name, int32_t transaction_mode, int
 {
     assert(initial_file_size > 0);
 
-    DWORD flags;
+    DWORD access_flags;
+    DWORD share_flags = FILE_SHARE_READ;
     switch (transaction_mode)
     {
         case JOURNAL_MODE_DANGER :
-            flags = 0;
+            access_flags = 0;
             break;
         case JOURNAL_MODE_PURE_MEMORY:
-            flags = FILE_ATTRIBUTE_TEMPORARY | FILE_FLAG_DELETE_ON_CLOSE;
+            access_flags = FILE_ATTRIBUTE_TEMPORARY | FILE_FLAG_DELETE_ON_CLOSE;
+            share_flags |= FILE_SHARE_WRITE | FILE_SHARE_DELETE;
             break;
         default:
-            flags = FILE_FLAG_NO_BUFFERING | FILE_FLAG_WRITE_THROUGH;
+            access_flags = FILE_FLAG_NO_BUFFERING | FILE_FLAG_WRITE_THROUGH;
             break;
     }
 
@@ -28,10 +30,10 @@ rvn_open_journal_for_writes(const char* file_name, int32_t transaction_mode, int
     HANDLE h_file = CreateFile(
         file_name,
         GENERIC_WRITE,
-        FILE_SHARE_READ,
+        share_flags,
         NULL,
         OPEN_ALWAYS,
-        flags,
+        access_flags,
         NULL);
 
     if (h_file == INVALID_HANDLE_VALUE)
