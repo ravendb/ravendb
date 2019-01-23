@@ -778,16 +778,26 @@ namespace Raven.Server.Documents.Queries.Parser
                                 ThrowInvalidQueryException("Got 'recursive' when expected '-', recursive must be preceded by a '-'.");
 
                             StringSegment recursiveAlias;
-
+                            var hasExplicitAlias = false;
                             if (Scanner.TryScan("as"))
                             {
                                 if (Scanner.Identifier() == false)
                                     ThrowInvalidQueryException("Missing alias for 'recursive' after 'as'");
                                 recursiveAlias = Scanner.Token;
+                                hasExplicitAlias = true;
                             }
                             else
                             {
                                 recursiveAlias = "__alias" + (++_counter);
+                            }
+
+                            if (hasExplicitAlias && !Scanner.TryScan("[]")) //optional qualifier on recursive alias
+                            {
+                                //perhaps we have some bad syntax?
+                                if(Scanner.TryScan('['))
+                                    ThrowInvalidQueryException("Expected to find the start of recursive clause or recursive clause options but found '['. Note that '[]' is an optional qualifier on the alias of the recursive clause.");
+                                if(Scanner.TryScan(']'))
+                                    ThrowInvalidQueryException("Expected to find the start of recursive clause or recursive clause options but found ']'. Note that '[]' is an optional qualifier on the alias of the recursive clause.");
                             }
 
                             gq.RecursiveMatches.Add(recursiveAlias);
@@ -823,6 +833,7 @@ namespace Raven.Server.Documents.Queries.Parser
                                 if (Scanner.TryScan(")") == false)
                                     ThrowInvalidQueryException("'recursive' missing closing parenthesis for length specification, but one was expected");
                             }
+
 
                             if (Scanner.TryScan("{") == false)
                                 ThrowInvalidQueryException("'recursive' must be followed by a '{', but wasn't");
