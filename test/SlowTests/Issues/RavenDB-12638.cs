@@ -33,8 +33,8 @@ namespace SlowTests.Issues
                 {
                     var results = session.Advanced.RawQuery<JObject>(
                         @"match (Employees as e) 
-                            -recursive as r1 { [ReportsTo]->(Employees as manager) }-[ReportsTo]->(Employees as manager)
-                            -recursive as r2 { [ReportsTo]->(Employees as manager) }").ToList();
+                            -recursive as r1 { [ReportsTo]->(Employees as manager) }-[ReportsTo]->(Employees as finalManager)
+                            -recursive as r2 { [ReportsTo]->(Employees as manager2) }").ToList();
 
                     Assert.Equal(7, results.Count);
                 }
