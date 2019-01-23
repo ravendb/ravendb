@@ -76,10 +76,6 @@ namespace Voron.Impl.Journal
                 var currentJournal = journalFilesCount > 0 ? _journalIndex : -1;
                 header->Journal.CurrentJournal = currentJournal;
                 header->Journal.JournalFilesCount = journalFilesCount;
-                if(journalFilesCount == 0)
-                {
-                    header->Journal.LastSyncedJournal = -1;
-                }
                 header->IncrementalBackup.LastCreatedJournal = _journalIndex;
             };
 
