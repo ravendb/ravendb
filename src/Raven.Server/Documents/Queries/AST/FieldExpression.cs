@@ -33,24 +33,22 @@ namespace Raven.Server.Documents.Queries.AST
             }
         }
 
-        public string FieldValue
+        public string FieldValue => GetFieldValue(false);
+
+        private string GetFieldValue(bool ignoreArrayQualifier)
         {
-            get
-            {
-                if (Compound.Count == 1)
-                    return Compound[0].Value;
-                if (_field == null)
-                    _field = JoinCompoundFragments(0);
-                return _field;
-            }
+            if (Compound.Count == 1)
+                return Compound[0].Value;
+            return _field ?? (_field = JoinCompoundFragments(0, ignoreArrayQualifier));
         }
 
-        private string JoinCompoundFragments(int start)
+
+        private string JoinCompoundFragments(int start, bool ignoreArrayQualifier = false)
         {
             var sb = new StringBuilder();
             for (int i = start; i < Compound.Count; i++)
             {
-                if(Compound[i].Value == "[]")
+                if(ignoreArrayQualifier && Compound[i].Value == "[]")
                     continue;
                 sb.Append(Compound[i].Value);
                 if (i + 1 < Compound.Count && Compound[i + 1] != "[]")
@@ -62,7 +60,7 @@ namespace Raven.Server.Documents.Queries.AST
         }
 
         public string FieldValueWithoutAlias => 
-            _fieldWithoutAlias ?? (_fieldWithoutAlias = JoinCompoundFragments(1));
+            _fieldWithoutAlias ?? (_fieldWithoutAlias = JoinCompoundFragments(1,true));
 
         public override string ToString()
         {
