@@ -883,6 +883,12 @@ namespace Raven.Server.Web.Authentication
         [RavenAction("/admin/certificates/letsencrypt/force-renew", "OPTIONS", AuthorizationStatus.ClusterAdmin)]
         [RavenAction("/admin/certificates/refresh", "OPTIONS", AuthorizationStatus.ClusterAdmin)]
         [RavenAction("/admin/certificates/replace-cluster-cert", "OPTIONS", AuthorizationStatus.ClusterAdmin)]
+        public Task AllowPreflightRequest()
+        {
+            SetupCORSHeaders();
+            HttpContext.Response.Headers.Remove("Content-Type");
+            return Task.CompletedTask;
+        }
 
         [RavenAction("/admin/certificates/letsencrypt/force-renew", "POST", AuthorizationStatus.ClusterAdmin)]
         public Task ForceRenew()
