@@ -71,7 +71,8 @@ namespace Raven.Client.Documents.Session
         IQueryBase<T, IAsyncGraphQuery<T>>,
         IAsyncDocumentQueryBase<T>
     {
-        IAsyncGraphQuery<T> With<TOther>(string alias, IRavenQueryable<TOther> query, CancellationToken token = default);
+        IAsyncGraphQuery<T> With<TOther>(string alias, IRavenQueryable<TOther> query);
+        IAsyncGraphQuery<T> With<TOther>(string alias, Func<IAsyncDocumentBuilder,IAsyncDocumentQuery<TOther>> queryFactory);
     }
 
     /// <summary>
