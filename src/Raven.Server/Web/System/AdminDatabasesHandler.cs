@@ -11,7 +11,6 @@ using System.IO;
 using System.IO.Compression;
 using System.Linq;
 using System.Net;
-using System.Net.Http;
 using System.Threading;
 using System.Threading.Tasks;
 using Microsoft.AspNetCore.Http.Features.Authentication;
@@ -40,10 +39,10 @@ using Raven.Server.Smuggler.Documents;
 using Raven.Client.Extensions;
 using Raven.Client.ServerWide.Operations.Migration;
 using Raven.Server.Config;
+using Raven.Server.Config.Settings;
 using Raven.Server.Documents.Indexes;
 using Raven.Server.Documents.Indexes.Auto;
 using Raven.Server.Documents.PeriodicBackup.Restore;
-using Raven.Server.Extensions;
 using Raven.Server.ServerWide.Commands.Indexes;
 using Raven.Server.Utils;
 using Raven.Server.Web.Studio;
@@ -547,17 +546,29 @@ namespace Raven.Server.Web.System
                     catch (Exception e)
                     {
                         if (e is InvalidDataException)
-                            throw new InvalidDataException($"Invalid snapshot file: {restoreConfigurationJson.LastFileNameToRestore} at path : {zipPath}");
-                        if (e is FileNotFoundException)
-                            throw new FileNotFoundException($"Could not find file: {restoreConfigurationJson.LastFileNameToRestore} at path: {zipPath}");
+                        {
+                            if (Logger.IsOperationsEnabled)
+                                Logger.Operations($"Restore database from snapshot operation failed. Invalid snapshot file {restoreConfigurationJson.LastFileNameToRestore}", e);
+                            throw new InvalidDataException($"Invalid snapshot file {restoreConfigurationJson.LastFileNameToRestore} at {zipPath}", e);
+                        }
 
-                        throw new IOException($"Error reading snapshot file: {restoreConfigurationJson.LastFileNameToRestore}, at path: {zipPath}. Please provide a valid snapshot file.");
+                        if (e is FileNotFoundException)
+                        {
+                            if (Logger.IsOperationsEnabled)
+                                Logger.Operations($"Restore database from snapshot operation failed. Could not find file {restoreConfigurationJson.LastFileNameToRestore}", e);
+                            throw new FileNotFoundException($"Could not find file {restoreConfigurationJson.LastFileNameToRestore} at {zipPath}", e);
+                        }
+
+                        if (Logger.IsOperationsEnabled)
+                            Logger.Operations($"Restore database from snapshot operation failed. Error reading snapshot file {restoreConfigurationJson.LastFileNameToRestore}", e);
+
+                        throw new IOException($"Error reading snapshot file {restoreConfigurationJson.LastFileNameToRestore}, at {zipPath}. Please provide a valid snapshot file.", e);
                     }
 
                     var baseDataDirectory = ServerStore.Configuration.Core.DataDirectory.FullPath;
 
                     var destinationPath = string.IsNullOrEmpty(restoreConfigurationJson.DataDirectory) == false 
-                        ? PathUtil.ToFullPath(restoreConfigurationJson.DataDirectory, baseDataDirectory) 
+                        ? new PathSetting(restoreConfigurationJson.DataDirectory, baseDataDirectory).FullPath
                         : RavenConfiguration.GetDataDirectoryPath(ServerStore.Configuration.Core, databaseName, ResourceType.Database);
 
                     var drivesInfo = PlatformDetails.RunningOnPosix ? DriveInfo.GetDrives() : null;
@@ -569,7 +580,7 @@ namespace Raven.Server.Web.System
 
                     var desiredFreeSpace = Size.Min(new Size(512, SizeUnit.Megabytes), destinationDriveInfo.TotalSize * 0.01) + new Size(backupSizeInBytes, SizeUnit.Bytes);
 
-                    if (destinationDriveInfo.TotalFreeSpace <= desiredFreeSpace)
+                    if (destinationDriveInfo.TotalFreeSpace < desiredFreeSpace)
                         throw new ArgumentException($"No enough free space to restore a backup. Required space {desiredFreeSpace}, available space: {destinationDriveInfo.TotalFreeSpace}");
                 }
 
