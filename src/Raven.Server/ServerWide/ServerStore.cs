@@ -200,15 +200,15 @@ namespace Raven.Server.ServerWide
                 var delay = 500;
                 while (ServerShutdown.IsCancellationRequested == false)
                 {
-                    _engine.WaitForState(RachisState.Follower, ServerShutdown).Wait(ServerShutdown);
-                    if (ServerShutdown.IsCancellationRequested)
-                        return;
-
                     CancellationTokenSource cts = null;
                     Task leaderChangedTask = null;
 
                     try
                     {
+                        _engine.WaitForState(RachisState.Follower, ServerShutdown).Wait(ServerShutdown);
+                        if (ServerShutdown.IsCancellationRequested)
+                            return;
+                    
                         cts = CancellationTokenSource.CreateLinkedTokenSource(ServerShutdown);
                         leaderChangedTask = _engine.WaitForLeaderChange(cts.Token);
                         if (Task.WaitAny(new[] {NotificationCenter.WaitForAnyWebSocketClient, leaderChangedTask}, ServerShutdown) == 1)
@@ -292,9 +292,9 @@ namespace Raven.Server.ServerWide
             }
             catch (Exception e)
             {
-                if (Logger.IsInfoEnabled)
+                if (Logger.IsOperationsEnabled)
                 {
-                    Logger.Info($"Failed to execute {nameof(UpdateTopologyChangeNotification)} task", e);
+                    Logger.Operations($"Failed to execute {nameof(UpdateTopologyChangeNotification)} task", e);
                 }
             }
         }
