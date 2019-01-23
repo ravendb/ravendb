@@ -504,7 +504,7 @@ namespace Voron.Platform.Posix
             return FileName.FullPath;
         }
 
-        protected internal override void PrefetchRanges(Win32MemoryMapNativeMethods.WIN32_MEMORY_RANGE_ENTRY* list, int count)
+        protected internal override void PrefetchRanges(PalDefinitions.PrefetchRanges* list, int count)
         {
             // we never want to do this here
         }

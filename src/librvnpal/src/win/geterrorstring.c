@@ -1,10 +1,12 @@
-#include <rvn.h>
-#include <status_codes.h>
 #include <stdint.h>
 #include <Windows.h>
 
+#include "rvn.h"
+#include "status_codes.h"
+#include "internal_win.h"
 
-int32_t rvn_get_error_string(int32_t error, char* buf, int32_t buf_size, int32_t* special_errno_flags) {
+EXPORT int32_t 
+rvn_get_error_string(int32_t error, char* buf, int32_t buf_size, int32_t* special_errno_flags) {
 	
 	switch (error) {
 		case ERROR_NOT_ENOUGH_MEMORY:

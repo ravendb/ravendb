@@ -8,6 +8,7 @@ using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Runtime.InteropServices;
+using System.Text;
 using Sparrow;
 using Sparrow.Platform.Posix;
 using Sparrow.Utils;
@@ -19,7 +20,7 @@ namespace Voron.Platform.Posix
 {
     public class PosixHelper
     {
-        public static void AllocateFileSpace(StorageEnvironmentOptions options, int fd, long size, string file)
+        public static unsafe void AllocateFileSpace(StorageEnvironmentOptions options, int fd, long size, string file)
         {
             bool usingLseek;
             var result = Syscall.AllocateFileSpace(fd, size, file, out usingLseek);
@@ -27,7 +28,11 @@ namespace Voron.Platform.Posix
             if (result == (int)Errno.ENOSPC)
             {
                 var diskSpaceResult = DiskSpaceChecker.GetDiskSpaceInfo(file);
-                throw new DiskFullException(file, size, diskSpaceResult?.TotalFreeSpace.GetValue(SizeUnit.Bytes));
+
+                // Use Pal's detailed error string (until PosixHelper will be entirely removed)
+                var nativeMsg = PalHelper.GetNativeErrorString(result, "Failed to AllocateFileSpace (PosixHelper)", out _);
+
+                throw new DiskFullException(file, size, diskSpaceResult?.TotalFreeSpace.GetValue(SizeUnit.Bytes), nativeMsg);
             }
             if (result != 0)
                 Syscall.ThrowLastError(result, $"posix_fallocate(\"{file}\", {size})");

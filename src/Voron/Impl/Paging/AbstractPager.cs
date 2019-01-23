@@ -7,6 +7,7 @@ using System.Linq;
 using System.Runtime.CompilerServices;
 using Sparrow;
 using Sparrow.Binary;
+using Sparrow.Logging;
 using Sparrow.LowMemory;
 using Sparrow.Platform;
 using Sparrow.Threading;
@@ -14,13 +15,14 @@ using Sparrow.Utils;
 using Voron.Data;
 using Voron.Exceptions;
 using Voron.Global;
-using Voron.Platform.Win32;
+using Voron.Platform;
 using Voron.Util.Settings;
 
 namespace Voron.Impl.Paging
 {
     public abstract unsafe class AbstractPager : IDisposable, ILowMemoryHandler
     {
+        public readonly Logger Log = LoggingSource.Instance.GetLogger<AbstractPager>("AbstractPager");
         private readonly StorageEnvironmentOptions _options;
 
         public static ConcurrentDictionary<string, uint> PhysicalDrivePerMountCache = new ConcurrentDictionary<string, uint>();
@@ -479,7 +481,7 @@ namespace Voron.Impl.Paging
             return true;
         }
 
-        protected internal abstract unsafe void PrefetchRanges(Win32MemoryMapNativeMethods.WIN32_MEMORY_RANGE_ENTRY* list, int count);
+        protected internal abstract unsafe void PrefetchRanges(PalDefinitions.PrefetchRanges* list, int count);
 
         private struct PageIterator : IEnumerator<long>
         {
@@ -538,7 +540,7 @@ namespace Voron.Impl.Paging
             const int StackSpace = 16;
 
             int prefetchIdx = 0;
-            var toPrefetch = stackalloc Win32MemoryMapNativeMethods.WIN32_MEMORY_RANGE_ENTRY[StackSpace];
+            var toPrefetch = stackalloc PalDefinitions.PrefetchRanges[StackSpace];
             do
             {
                 long pageNumber = pagesToPrefetch.Current;
@@ -608,41 +610,19 @@ namespace Voron.Impl.Paging
             }            
         }
 
-        public unsafe void TryPrefetchingWholeFile()
+        public void TryPrefetchingWholeFile()
         {
             if (PlatformDetails.CanPrefetch == false || _canPrefetchAhead == false)
                 return; // not supported
 
-            long size = 0;
-            void* baseAddress = null;
             var pagerState = PagerState;
             Debug.Assert(pagerState.AllocationInfos.Length == 1);
             // we will change the array into a single value in next version
-            var ranges = stackalloc Win32MemoryMapNativeMethods.WIN32_MEMORY_RANGE_ENTRY[pagerState.AllocationInfos.Length];
-            for (int i = 0; i < pagerState.AllocationInfos.Length; i++)
-            {
-                var allocInfo = pagerState.AllocationInfos[i];
-                size += allocInfo.Size;
+            var allocationInfo = pagerState.AllocationInfos.Single();
 
-                if (baseAddress == null)
-                    baseAddress = allocInfo.BaseAddress;
-
-                if (i != pagerState.AllocationInfos.Length - 1 &&
-                    pagerState.AllocationInfos[i + 1].BaseAddress == allocInfo.BaseAddress + allocInfo.Size)
-                {
-                    continue; // if adjacent ranges make one syscall
-                }
-
-                ranges[i] = new Win32MemoryMapNativeMethods.WIN32_MEMORY_RANGE_ENTRY
-                {
-                    VirtualAddress = baseAddress,
-                    NumberOfBytes = new IntPtr(size)
-                };
-
-                size = 0;
-                baseAddress = null;
-            }
-            PrefetchRanges(ranges, pagerState.AllocationInfos.Length);
+            var rc = Pal.rvn_prefetch_virtual_memory(allocationInfo.BaseAddress, allocationInfo.Size, out var errorCode);
+            if(rc != PalFlags.FailCodes.Success)
+                Log.Info(PalHelper.GetNativeErrorString(errorCode, $"Tried to prefetch whole file. Result:{rc} FileName:${FileName.FullPath} Size:{allocationInfo.Size}", out _));
         }
 
 

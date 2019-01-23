@@ -6,7 +6,7 @@ using Sparrow;
 using Sparrow.Utils;
 using Voron.Data;
 using Voron.Global;
-using Voron.Platform.Win32;
+using Voron.Platform;
 
 namespace Voron.Impl.Paging
 {
@@ -91,7 +91,7 @@ namespace Voron.Impl.Paging
             Inner.DiscardWholeFile();
         }
 
-        protected internal override unsafe void PrefetchRanges(Win32MemoryMapNativeMethods.WIN32_MEMORY_RANGE_ENTRY* list, int count)
+        protected internal override void PrefetchRanges(PalDefinitions.PrefetchRanges* list, int count)
         {
             Inner.PrefetchRanges(list, count);
         }

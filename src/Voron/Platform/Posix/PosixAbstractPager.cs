@@ -23,7 +23,7 @@ namespace Voron.Platform.Posix
             return CopyPageImpl(destwI4KbBatchWrites, p, pagerState);
         }
 
-        protected internal override unsafe void PrefetchRanges(Win32MemoryMapNativeMethods.WIN32_MEMORY_RANGE_ENTRY* list, int count)
+        protected internal override unsafe void PrefetchRanges(PalDefinitions.PrefetchRanges* list, int count)
         {
             for (int i = 0; i < count; i++)
             {
