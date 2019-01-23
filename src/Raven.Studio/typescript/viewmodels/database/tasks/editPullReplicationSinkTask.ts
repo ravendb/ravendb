@@ -10,6 +10,9 @@ import getPossibleMentorsCommand = require("commands/database/tasks/getPossibleM
 import connectionStringRavenEtlModel = require("models/database/settings/connectionStringRavenEtlModel");
 import jsonUtil = require("common/jsonUtil");
 import getOngoingTaskInfoCommand = require("commands/database/tasks/getOngoingTaskInfoCommand");
+import messagePublisher = require("common/messagePublisher");
+import discoveryUrl = require("models/database/settings/discoveryUrl");
+import pullReplicationCertificate = require("models/database/tasks/pullReplicationCertificate");
 
 class editPullReplicationSinkTask extends viewModelBase {
 
@@ -36,9 +39,17 @@ class editPullReplicationSinkTask extends viewModelBase {
     createNewConnectionString = ko.observable<boolean>(false);
     newConnectionString = ko.observable<connectionStringRavenEtlModel>();
 
+    canDefineCertificates = location.protocol === "https:";
+    
+    importedFileName = ko.observable<string>();
+    
+    validationGroup = ko.validatedObservable({
+        importedFileName: this.importedFileName
+    });
+
     constructor() {
         super();
-        this.bindToCurrentInstance("useConnectionString", "onTestConnectionRaven");
+        this.bindToCurrentInstance("useConnectionString", "onTestConnectionRaven", "onConfigurationFileSelected", "deleteCertificate", "certFileSelected");
     }
 
     activate(args: any) { 
@@ -88,7 +99,18 @@ class editPullReplicationSinkTask extends viewModelBase {
             });
     }
 
-    private initObservables() {        
+    private initObservables() {
+        if (this.canDefineCertificates) {
+            this.importedFileName.extend({
+                validation: [
+                    {
+                        validator: () => !!this.editedReplication().certificate(),
+                        message: "Certificate is required"
+                    }
+                ]
+            });
+        }
+        
         this.shortErrorText = ko.pureComputed(() => {
             const result = this.testConnectionResult();
             if (!result || result.Success) {
@@ -105,6 +127,7 @@ class editPullReplicationSinkTask extends viewModelBase {
                 model.preferredMentor,
                 model.connectionStringName,
                 model.hubDefinitionName,
+                model.certificate,
                 this.createNewConnectionString
             ], false, jsonUtil.newLineNormalizingHashFunction);
 
@@ -116,6 +139,10 @@ class editPullReplicationSinkTask extends viewModelBase {
         // Discard test connection result when needed
         this.createNewConnectionString.subscribe(() => this.testConnectionResult(null));
         this.newConnectionString().inputUrl().discoveryUrlName.subscribe(() => this.testConnectionResult(null));
+        
+        const readDebounced = _.debounce(() => this.tryReadCertificate(), 1500);
+        
+        model.certificatePassphrase.subscribe(() => readDebounced());
     }
 
     compositionComplete() {
@@ -128,14 +155,14 @@ class editPullReplicationSinkTask extends viewModelBase {
     saveTask() {
         let hasAnyErrors = false;
         
-        // 0. Save discovery URL if user forgot to hit 'add url' button
+        // Save discovery URL if user forgot to hit 'add url' button
         if (this.createNewConnectionString() &&
             this.newConnectionString().inputUrl().discoveryUrlName() &&
             this.isValid(this.newConnectionString().inputUrl().validationGroup)) {
                 this.newConnectionString().addDiscoveryUrlWithBlink();
         }
         
-        // 1. Validate *new connection string* (if relevant..) 
+        // Validate *new connection string* (if relevant..) 
         if (this.createNewConnectionString()) {
             if (!this.isValid(this.newConnectionString().validationGroup)) {
                 hasAnyErrors = true;
@@ -145,8 +172,13 @@ class editPullReplicationSinkTask extends viewModelBase {
             }
         }
 
-        // 2. Validate *general form*
+        // Validate *general form*
         if (!this.isValid(this.editedReplication().validationGroup)) {
+            hasAnyErrors = true;
+        }
+        
+        // Validate *local* form
+        if (!this.isValid(this.validationGroup)) {
             hasAnyErrors = true;
         }
        
@@ -156,7 +188,7 @@ class editPullReplicationSinkTask extends viewModelBase {
 
         this.spinners.save(true);
 
-        // 3. All is well, Save connection string (if relevant..) 
+        // All is well, Save connection string (if relevant..) 
         let savingNewStringAction = $.Deferred<void>();
         if (this.createNewConnectionString()) {
             this.newConnectionString()
@@ -171,7 +203,7 @@ class editPullReplicationSinkTask extends viewModelBase {
             savingNewStringAction.resolve();
         }
         
-        // 4. All is well, Save Replication task
+        // All is well, Save Replication task
         savingNewStringAction.done(() => {
             const dto = this.editedReplication().toDto(this.taskId);
             this.taskId = this.isAddingNewTask() ? 0 : this.taskId;
@@ -214,6 +246,97 @@ class editPullReplicationSinkTask extends viewModelBase {
                 this.newConnectionString().selectedUrlToTest(null);
             });
     }
+
+    onConfigurationFileSelected() {
+        const fileInput = <HTMLInputElement>document.querySelector("#configurationFilePicker");
+        const self = this;
+        if (fileInput.files.length === 0) {
+            return;
+        }
+
+        const file = fileInput.files[0];
+        const reader = new FileReader();
+        reader.onload = function() {
+// ReSharper disable once SuspiciousThisUsage
+            self.importUsingFile(this.result as string);
+        };
+        reader.onerror = function(error: any) {
+            alert(error);
+        };
+        reader.readAsText(file);
+
+        const $input = $("#configurationFilePicker");
+        $input.val(null);
+    }
+    
+    private importUsingFile(contents: string) {
+        
+        try {
+            const config = JSON.parse(contents) as pullReplicationExportFileFormat;
+            
+            if (!config.Database || !config.HubDefinitionName || !config.TopologyUrls) {
+                messagePublisher.reportError("Invalid configuration format");
+                return;
+            }
+            
+            const model = this.editedReplication();
+            model.hubDefinitionName(config.HubDefinitionName);
+            
+            if (config.Certificate) {
+                model.certificate(pullReplicationCertificate.fromPkcs12(config.Certificate));
+            }
+            
+            this.createNewConnectionString(true);
+            const connectionString = this.newConnectionString();
+            connectionString.database(config.Database);
+            connectionString.connectionStringName("Pull replication from " + config.Database);
+            connectionString.topologyDiscoveryUrls(config.TopologyUrls.map(x => new discoveryUrl(x)));
+            
+        } catch (e) {
+            messagePublisher.reportError("Can't parse configuration");
+        }
+    }
+    
+    deleteCertificate() {
+        this.editedReplication().certificate(null);
+    }
+
+    certFileSelected(fileInput: HTMLInputElement) {
+        const self = this;
+        if (fileInput.files.length === 0) {
+            return;
+        }
+
+        const file = fileInput.files[0];
+
+        const fileName = fileInput.value;
+        const isFileSelected = fileName ? !!fileName.trim() : false;
+        this.importedFileName(isFileSelected ? fileName.split(/(\\|\/)/g).pop() : null);
+        
+        const reader = new FileReader();
+        reader.onload = function() {
+// ReSharper disable once SuspiciousThisUsage
+            self.onCertificateLoaded(this.result as string);
+        };
+        reader.onerror = function(error: any) {
+            alert(error);
+        };
+        reader.readAsText(file);
+    }
+    
+    onCertificateLoaded(cert: string) {
+        this.editedReplication().certificateAsBase64(cert);
+     
+        this.tryReadCertificate();
+    }
+    
+    tryReadCertificate() {
+        if (this.editedReplication().tryReadCertificate()) {
+            this.importedFileName(undefined);
+        }
+    }
+    
+   
 }
 
 export = editPullReplicationSinkTask;

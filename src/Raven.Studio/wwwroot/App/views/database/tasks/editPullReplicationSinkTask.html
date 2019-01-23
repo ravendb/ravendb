@@ -2,13 +2,24 @@
     <form class="flex-form" data-bind="submit: saveTask">
         <div class="row flex-row absolute-fill">
             <div class="col-xs-12 col-lg-6 flex-vertical">
-                <div class="flex-header">
-                    <button type="submit" class="btn btn-primary" data-bind="disable: $root.spinners.save() || !$root.dirtyFlag().isDirty(), css: { 'btn-spinner': $root.spinners.save }">
-                        <i class="icon-save"></i><span>Save</span>
-                    </button>
-                    <button data-bind="click: cancelOperation" class="btn btn-default" title="Return to Ongoing Tasks View">
-                        <i class="icon-cancel"></i><span>Cancel</span>
-                    </button>
+                <div class="flex-header flex-horizontal">
+                    <div>
+                        <button type="submit" class="btn btn-primary" data-bind="disable: $root.spinners.save() || !$root.dirtyFlag().isDirty(), css: { 'btn-spinner': $root.spinners.save }">
+                            <i class="icon-save"></i><span>Save</span>
+                        </button>
+                        <button data-bind="click: cancelOperation" class="btn btn-default" title="Return to Ongoing Tasks View">
+                            <i class="icon-cancel"></i><span>Cancel</span>
+                        </button>    
+                    </div>
+                    <div class="flex-separator"></div>
+                    <div>
+                        <div class="input-group file-input" title="Import configuration from file">
+                            <input type="file" id="configurationFilePicker" data-bind="event: { change: $root.onConfigurationFileSelected }" tabindex="-1" accept=".json">
+                        </div>
+                    </div>
+                    <label for="configurationFilePicker" class="btn btn-default">
+                        <i class="icon-import"></i><span>Import configuration from file</span>
+                    </label>
                 </div>
                 <div class="panel">
                     <div class="panel-body" data-bind="with: editedReplication">                      
@@ -85,6 +96,61 @@
                                 <span class="help-block" data-bind="validationMessage: connectionStringName"></span>
                             </div>
                         </div>
+                        <div data-bind="if: $root.canDefineCertificates && !certificate()">
+                            <div class="form-group">
+                                <label class="control-label certificate-file-label">
+                                    Certificate File
+                                </label>
+                                <div class="input-group file-input" data-bind="validationElement: $root.importedFileName">
+                                    <input type="file" tabindex="-1" name="importFile" id="importFile" accept="" data-bind="event: { change: _.partial($root.certFileSelected, $element) }">
+                                    <span class="static-name form-control" data-bind="text: $root.importedFileName() || 'Select .pfx file...'"></span>
+                                    <span class="input-group-btn">
+                                        <label for="importFile" class="btn btn-default">
+                                            <i class="icon-document"></i>
+                                            <span>Browse</span>
+                                        </label>
+                                    </span>
+                                    <p class="help-block" data-bind="validationMessage: $root.importedFileName"></p>
+                                </div>
+                            </div>
+                            <div class="form-group">
+                                <label class="control-label">
+                                    Certificate Passphrase
+                                </label>
+                                <input class="form-control" type="password" data-bind="textInput: $root.certificatePassphrase">
+                            </div>
+                        </div>
+                            
+                        <div class="form-group" data-bind="with: certificate, visible: $root.canDefineCertificates && certificate()">
+                            <label class="control-label">Certificate</label>
+                            <div class="flex-grow">
+                                <div class="panel certificate-item">
+                                    <div class="padding padding-sm flex-horizontal">
+                                        <div title="Certificate thumbprint">
+                                            <i class="icon-certificate"></i> <span data-bind="text: thumbprint"></span>
+                                        </div>
+                                        <div class="flex-separator"></div>
+                                        <button type="button" class="btn btn-danger" title="Delete certificate" data-bind="click: _.partial($root.deleteCertificate, $data)">
+                                            <i class="icon-trash"></i>
+                                        </button>
+                                    </div>
+                                    <div class="panel-addon padding padding-sm">
+                                        <div class="flex-horizontal">
+                                            <div class="notBefore">
+                                                <h5><i class="icon-clock"></i> VALID FROM</h5>
+                                                <strong data-bind="text: validFromText">
+                                                </strong>
+                                            </div>
+                                            <div class="expiration">
+                                                <h5><i data-bind="attr: { class: expirationIcon }"></i> EXPIRATION</h5>
+                                                <strong data-bind="attr: { class: expirationClass }, text: expirationText">
+                                                </strong>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>    
                     </div>
                     <div>
                         <div data-bind="if: createNewConnectionString">
@@ -122,16 +188,6 @@
                         <div class="panel-addon" data-bind="visible: ravenEtlConnectionStringsDetails().length === 0 && !createNewConnectionString()">
                             <div class="padding bg-warning small">
                                 <i class="icon-warning"></i>&nbsp;&nbsp;No connection strings have been defined yet
-                            </div>
-                        </div>
-                        <div class="panel-addon">
-                            <div class="padding">
-                                <h3>TODO</h3>
-                                <ul>
-                                    <li>certificates</li>
-                                    <li>import</li>
-                                    <li>hub definition name</li>
-                                </ul>
                             </div>
                         </div>
                     </div>
