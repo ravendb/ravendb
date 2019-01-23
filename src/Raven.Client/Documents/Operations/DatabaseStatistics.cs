@@ -72,6 +72,11 @@ namespace Raven.Client.Documents.Operations
         public long CountOfUniqueAttachments { get; set; }
 
         /// <summary>
+        /// Total number of counter-group entries in database.
+        /// </summary>
+        public long CountOfCounterEntries { get; set; }
+
+        /// <summary>
         /// List of stale index names in database..
         /// </summary>
         public string[] StaleIndexes => Indexes?.Where(x => x.IsStale).Select(x => x.Name).ToArray();
