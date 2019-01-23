@@ -424,6 +424,10 @@ namespace Raven.Client.Documents.Session.Operations
                 _session.CountersByDocId.Add(docId, cache);
             }
 
+            var changeVector = GetLazyStringField(batchResult, CommandType.Counters, nameof(Constants.Fields.CommandData.DocumentChangeVector), throwOnMissing: false);
+            if (changeVector != null && _session.DocumentsById.TryGetValue(docId, out var documentInfo))
+                documentInfo.ChangeVector = changeVector;
+
             foreach (BlittableJsonReaderObject counter in counters)
             {
                 if (counter.TryGet(nameof(CounterDetail.CounterName), out string name) == false ||

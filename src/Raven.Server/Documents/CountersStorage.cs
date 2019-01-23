@@ -714,11 +714,11 @@ namespace Raven.Server.Documents
             return fst.NumberOfEntries;
         }
 
-        public void UpdateDocumentCounters(DocumentsOperationContext context, Document doc, string docId,
+        public string UpdateDocumentCounters(DocumentsOperationContext context, Document doc, string docId,
             SortedSet<string> countersToAdd, HashSet<string> countersToRemove, NonPersistentDocumentFlags nonPersistentDocumentFlags)
         {
             if (countersToRemove.Count == 0 && countersToAdd.Count == 0)
-                return;
+                return null;
 
             var data = doc.Data;
             BlittableJsonReaderArray metadataCounters = null;
@@ -729,7 +729,7 @@ namespace Raven.Server.Documents
 
             var counters = GetCountersForDocument(metadataCounters, countersToAdd, countersToRemove, out var hadModifications);
             if (hadModifications == false)
-                return;
+                return null;
 
             var flags = doc.Flags.Strip(DocumentFlags.FromClusterTransaction);
             if (counters.Count == 0)
@@ -767,7 +767,8 @@ namespace Raven.Server.Documents
             }
 
             var newDocumentData = context.ReadObject(doc.Data, docId, BlittableJsonDocumentBuilder.UsageMode.ToDisk);
-            _documentDatabase.DocumentsStorage.Put(context, docId, null, newDocumentData, flags: flags, nonPersistentFlags: nonPersistentDocumentFlags);
+            var putResult = _documentDatabase.DocumentsStorage.Put(context, docId, null, newDocumentData, flags: flags, nonPersistentFlags: nonPersistentDocumentFlags);
+            return putResult.ChangeVector;
         }
 
         private static SortedSet<string> GetCountersForDocument(BlittableJsonReaderArray metadataCounters, SortedSet<string> countersToAdd, HashSet<string> countersToRemove, out bool modified)

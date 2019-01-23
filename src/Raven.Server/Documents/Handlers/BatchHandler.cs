@@ -942,12 +942,14 @@ namespace Raven.Server.Documents.Handlers
                             }
 
                             LastChangeVector = counterBatchCmd.LastChangeVector;
+
                             Reply.Add(new DynamicJsonValue
                             {
                                 [nameof(BatchRequestParser.CommandData.Id)] = cmd.Id,
                                 [nameof(BatchRequestParser.CommandData.ChangeVector)] = counterBatchCmd.LastChangeVector,
                                 [nameof(BatchRequestParser.CommandData.Type)] = nameof(CommandType.Counters),
                                 [nameof(CountersDetail)] = counterBatchCmd.CountersDetail.ToJson(),
+                                [nameof(Constants.Fields.CommandData.DocumentChangeVector)] = counterBatchCmd.LastDocumentChangeVector
                             });
                             break;
                     }

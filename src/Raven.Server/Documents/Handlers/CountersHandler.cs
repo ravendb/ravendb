@@ -7,7 +7,6 @@
 using System;
 using System.Collections.Generic;
 using System.Net;
-using System.Text;
 using System.Threading.Tasks;
 using Microsoft.Extensions.Primitives;
 using Raven.Client.Documents.Changes;
@@ -15,8 +14,6 @@ using Raven.Client.Documents.Operations.Counters;
 using Raven.Client.Exceptions.Documents;
 using Raven.Client.Exceptions.Documents.Counters;
 using Raven.Client.Json.Converters;
-using Raven.Server.Config.Categories;
-using Raven.Server.Exceptions;
 using Raven.Server.Routing;
 using Raven.Server.ServerWide.Context;
 using Raven.Server.TrafficWatch;
@@ -30,6 +27,8 @@ namespace Raven.Server.Documents.Handlers
         {
             public bool HasWrites;
             public string LastChangeVector;
+            public string LastDocumentChangeVector;
+
             public CountersDetail CountersDetail = new CountersDetail
             {
                 Counters = new List<CounterDetail>()
@@ -45,7 +44,7 @@ namespace Raven.Server.Documents.Handlers
             {
                 _database = database;
                 _dictionary = new Dictionary<string, List<CounterOperation>>();
-                _replyWithAllNodesValues = counterBatch?.ReplyWithAllNodesValues?? false;
+                _replyWithAllNodesValues = counterBatch?.ReplyWithAllNodesValues ?? false;
                 _fromEtl = counterBatch?.FromEtl ?? false;
 
                 if (counterBatch == null)
@@ -155,7 +154,7 @@ namespace Raven.Server.Documents.Handlers
                                 if (_fromEtl)
                                 {
                                     _database.DocumentsStorage.CountersStorage.PutCounter(context, docId, docCollection,
-                                        operation.CounterName,  operation.Delta);
+                                        operation.CounterName, operation.Delta);
                                 }
                                 else
                                 {
@@ -183,7 +182,14 @@ namespace Raven.Server.Documents.Handlers
                         if (_fromSmuggler)
                             nonPersistentFlags |= NonPersistentDocumentFlags.FromSmuggler;
 
-                        _database.DocumentsStorage.CountersStorage.UpdateDocumentCounters(context, doc, docId, countersToAdd, countersToRemove, nonPersistentFlags);
+                        var changeVector = _database
+                            .DocumentsStorage
+                            .CountersStorage
+                            .UpdateDocumentCounters(context, doc, docId, countersToAdd, countersToRemove, nonPersistentFlags);
+
+                        if (changeVector != null)
+                            LastDocumentChangeVector = LastChangeVector = changeVector;
+
                         doc.Data.Dispose(); // we cloned the data, so we can dispose it.
                     }
 
@@ -256,7 +262,7 @@ namespace Raven.Server.Documents.Handlers
         [RavenAction("/databases/*/counters", "GET", AuthorizationStatus.ValidUser)]
         public Task Get()
         {
-            var docId = GetStringValuesQueryString("docId"); 
+            var docId = GetStringValuesQueryString("docId");
             var full = GetBoolValueQueryString("full", required: false) ?? false;
             var counters = GetStringValuesQueryString("counter", required: false);
 
@@ -281,8 +287,8 @@ namespace Raven.Server.Documents.Handlers
         public static CountersDetail GetInternal(DocumentDatabase database, DocumentsOperationContext context, StringValues counters, string docId, bool full)
         {
             var result = new CountersDetail();
-            var names = counters.Count != 0 
-                ? counters 
+            var names = counters.Count != 0
+                ? counters
                 : database.DocumentsStorage.CountersStorage.GetCountersForDocument(context, docId);
 
             foreach (var counter in names)
