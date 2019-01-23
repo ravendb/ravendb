@@ -571,7 +571,7 @@ namespace Raven.Client.Documents.Changes
                                 if ((json.TryGet(nameof(TopologyChange), out bool supports)) && (supports))
                                 {
                                     GetOrAddConnectionState("Topology", "watch-topology-change", "", "");
-                                    await _requestExecutor.UpdateTopologyAsync(_serverNode, 0, true).ConfigureAwait(false);
+                                    await _requestExecutor.UpdateTopologyAsync(_serverNode, 0, true, debugTag: "watch-topology-change").ConfigureAwait(false);
                                     continue;
                                 }
 
@@ -646,7 +646,7 @@ namespace Raven.Client.Documents.Changes
                     {
                         Url = topologyChange.Url,
                         Database = topologyChange.Database
-                    }, 0, true).ConfigureAwait(false);
+                    }, 0, true, "topology-change-notification").ConfigureAwait(false);
                     break;
                 default:
                     throw new NotSupportedException(type);

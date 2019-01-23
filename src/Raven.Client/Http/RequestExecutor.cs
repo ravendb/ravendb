@@ -265,7 +265,7 @@ namespace Raven.Client.Http
             }
         }
 
-        public virtual async Task<bool> UpdateTopologyAsync(ServerNode node, int timeout, bool forceUpdate = false)
+        public virtual async Task<bool> UpdateTopologyAsync(ServerNode node, int timeout, bool forceUpdate = false, string debugTag = null)
         {
             if (Disposed)
                 return false;
@@ -283,7 +283,7 @@ namespace Raven.Client.Http
 
                 using (ContextPool.AllocateOperationContext(out JsonOperationContext context))
                 {
-                    var command = new GetDatabaseTopologyCommand();
+                    var command = new GetDatabaseTopologyCommand(debugTag);
                     await ExecuteAsync(node, null, context, command, shouldRetry: false, sessionInfo: null, token: CancellationToken.None).ConfigureAwait(false);
                     var topology = command.Result;
 
@@ -446,7 +446,7 @@ namespace Raven.Client.Http
             {
                 try
                 {
-                    await UpdateTopologyAsync(serverNode, 0).ConfigureAwait(false);
+                    await UpdateTopologyAsync(serverNode, 0, debugTag: "timer-callback").ConfigureAwait(false);
                 }
                 catch (Exception e)
                 {
@@ -471,7 +471,7 @@ namespace Raven.Client.Http
                         Database = _databaseName
                     };
 
-                    await UpdateTopologyAsync(serverNode, Timeout.Infinite).ConfigureAwait(false);
+                    await UpdateTopologyAsync(serverNode, Timeout.Infinite, debugTag: "first-topology-update").ConfigureAwait(false);
 
                     InitializeUpdateTopologyTimer();
                     _topologyTakenFromNode = serverNode;
@@ -815,7 +815,7 @@ namespace Raven.Client.Http
                             {
                                 Url = chosenNode.Url,
                                 Database = _databaseName
-                            }, 0)
+                            }, 0, debugTag: refreshTopology ? "refresh-topology-header" : refreshClientConfiguration ? "refresh-client-configuration-header" : null)
                             : Task.CompletedTask;
 
                         tasks[1] = refreshClientConfiguration
@@ -1017,7 +1017,7 @@ namespace Raven.Client.Http
                     if (shouldRetry == false)
                         return false;
 
-                    await UpdateTopologyAsync(chosenNode, Timeout.Infinite, forceUpdate: true).ConfigureAwait(false);
+                    await UpdateTopologyAsync(chosenNode, Timeout.Infinite, forceUpdate: true, debugTag: "handle-unsuccessful-response").ConfigureAwait(false);
                     var (index, node) = ChooseNodeForRequest(command, sessionInfo);
                     await ExecuteAsync(node, index, context, command, shouldRetry: false, sessionInfo: sessionInfo, token: token).ConfigureAwait(false);
                     return true;
@@ -1106,7 +1106,7 @@ namespace Raven.Client.Http
             SpawnHealthChecks(chosenNode, nodeIndex);
             _nodeSelector?.OnFailedRequest(nodeIndex);
             var (_, serverNode) = await GetPreferredNode().ConfigureAwait(false);
-            await UpdateTopologyAsync(serverNode, 0, true).ConfigureAwait(false);
+            await UpdateTopologyAsync(serverNode, 0, true, debugTag: "handle-server-not-responsive").ConfigureAwait(false);
             OnFailedRequest(url, e);
             return serverNode;
         }
