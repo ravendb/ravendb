@@ -73,7 +73,7 @@ namespace SlowTests.Issues
                             -recursive as RecursiveLikes (all) 
                                 { [Likes as PathElement] -> 
                                     (Dogs as TravelStep)
-                                } -[Likes as PathElement] -> 
+                                } -[Likes] -> 
                                     (Dogs as TraversalDestination where id() = 'dogs/8')
                         select 
                         {
