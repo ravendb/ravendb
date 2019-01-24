@@ -76,11 +76,12 @@ namespace SlowTests.Server.Replication
                 Assert.Equal(hub.Urls[0], sinkResult.DestinationUrl);
                 Assert.Equal(OngoingTaskConnectionStatus.Active, sinkResult.TaskConnectionStatus);
 
-                var hubResult = (OngoingTaskPullReplicationAsHub)await hub.Maintenance.SendAsync(new GetOngoingTaskInfoOperation(hubTask.TaskId, OngoingTaskType.PullReplicationAsHub));
+                var hubResult = await hub.Maintenance.SendAsync(new GetPullReplicationTasksInfoOperation(hubTask.TaskId));
 
-                Assert.Equal(sink.Database, hubResult.DestinationDatabase);
-                Assert.Equal(sink.Urls[0], hubResult.DestinationUrl);
-                Assert.Equal(OngoingTaskConnectionStatus.Active, hubResult.TaskConnectionStatus);
+                var ongoing = hubResult.OngoingTasks[0];
+                Assert.Equal(sink.Database, ongoing.DestinationDatabase);
+                Assert.Equal(sink.Urls[0], ongoing.DestinationUrl);
+                Assert.Equal(OngoingTaskConnectionStatus.Active, ongoing.TaskConnectionStatus);
             }
         }
 
@@ -140,7 +141,7 @@ namespace SlowTests.Server.Replication
             using (var sink = GetDocumentStore())
             using (var hub = GetDocumentStore())
             {
-                await hub.Maintenance.ForDatabase(hub.Database).SendAsync(new PutPullReplicationAsHubOperation(definitionName));
+                var saveResult = await hub.Maintenance.ForDatabase(hub.Database).SendAsync(new PutPullReplicationAsHubOperation(definitionName));
 
                 using (var main = hub.OpenSession())
                 {
@@ -152,7 +153,8 @@ namespace SlowTests.Server.Replication
 
                 await hub.Maintenance.ForDatabase(hub.Database).SendAsync(new PutPullReplicationAsHubOperation(new PullReplicationDefinition(definitionName)
                 {
-                    DelayReplicationFor = TimeSpan.FromDays(1)
+                    DelayReplicationFor = TimeSpan.FromDays(1),
+                    TaskId = saveResult.TaskId
                 }));
 
                 using (var main = hub.OpenSession())
@@ -162,7 +164,10 @@ namespace SlowTests.Server.Replication
                 }
                 Assert.False(WaitForDocument(sink, "users/2", timeout), sink.Identifier);
 
-                await hub.Maintenance.ForDatabase(hub.Database).SendAsync(new PutPullReplicationAsHubOperation(definitionName));
+                await hub.Maintenance.ForDatabase(hub.Database).SendAsync(new PutPullReplicationAsHubOperation(new PullReplicationDefinition(definitionName)
+                {
+                    TaskId = saveResult.TaskId
+                }));
                 Assert.True(WaitForDocument(sink, "users/2", timeout), sink.Identifier);
             }
         }
@@ -226,7 +231,7 @@ namespace SlowTests.Server.Replication
             using (var hub = GetDocumentStore())
             {
                 var pullDefinition = new PullReplicationDefinition(definitionName);
-                await hub.Maintenance.ForDatabase(hub.Database).SendAsync(new PutPullReplicationAsHubOperation(pullDefinition));
+                var saveResult = await hub.Maintenance.ForDatabase(hub.Database).SendAsync(new PutPullReplicationAsHubOperation(pullDefinition));
 
                 using (var main = hub.OpenSession())
                 {
@@ -237,6 +242,7 @@ namespace SlowTests.Server.Replication
                 Assert.True(WaitForDocument(sink, "users/1", timeout), sink.Identifier);
 
                 pullDefinition.Disabled = true;
+                pullDefinition.TaskId = saveResult.TaskId;
                 await hub.Maintenance.ForDatabase(hub.Database).SendAsync(new PutPullReplicationAsHubOperation(pullDefinition));
 
                 using (var main = hub.OpenSession())
@@ -247,6 +253,7 @@ namespace SlowTests.Server.Replication
                 Assert.False(WaitForDocument(sink, "users/2", timeout), sink.Identifier);
 
                 pullDefinition.Disabled = false;
+                pullDefinition.TaskId = saveResult.TaskId;
                 await hub.Maintenance.ForDatabase(hub.Database).SendAsync(new PutPullReplicationAsHubOperation(pullDefinition));
 
                 Assert.True(WaitForDocument(sink, "users/2", timeout), sink.Identifier);

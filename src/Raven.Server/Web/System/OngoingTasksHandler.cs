@@ -87,8 +87,8 @@ namespace Raven.Server.Web.System
                 foreach (var tasks in new[]
                 {
                     CollectPullReplicationAsHubTasks(clusterTopology),
-                    CollectPullReplicationAsSinkTasks(databaseRecord.SinkPullReplications, dbTopology,clusterTopology,databaseRecord.RavenConnectionStrings),
-                    CollectExternalReplicationTasks(databaseRecord.ExternalReplications, dbTopology,clusterTopology,databaseRecord.RavenConnectionStrings),
+                    CollectPullReplicationAsSinkTasks(databaseRecord.SinkPullReplications, dbTopology, clusterTopology, databaseRecord.RavenConnectionStrings),
+                    CollectExternalReplicationTasks(databaseRecord.ExternalReplications, dbTopology, clusterTopology, databaseRecord.RavenConnectionStrings),
                     CollectEtlTasks(databaseRecord, dbTopology, clusterTopology),
                     CollectBackupTasks(databaseRecord, dbTopology, clusterTopology)
                 })
@@ -994,31 +994,8 @@ namespace Raven.Server.Web.System
 
                             break;
                         
-                        // hub is special case 
-                        // this task type can contains multiple incoming connections
-                        // so we sent to user information about pull replication hub definition
-                        // and information about currently connected clients (sinks)
                         case OngoingTaskType.PullReplicationAsHub:
-                            var hubReplicationDefinition = record.HubPullReplications?.FirstOrDefault(x => x.TaskId == key);
-
-                            if (hubReplicationDefinition == null)
-                            {
-                                HttpContext.Response.StatusCode = (int)HttpStatusCode.NotFound;
-                                break;
-                            }
-                            
-                            var currentHandlers = Database.ReplicationLoader.OutgoingHandlers.Where(o => o.Destination is ExternalReplication ex && ex.TaskId == key)
-                                .Select(x => GetPullReplicationAsHubTaskInfo(clusterTopology, x.Destination as ExternalReplication))
-                                .ToList();
-
-                            var response = new PullReplicationDefinitionAndCurrentConnections
-                            {
-                                Definition = hubReplicationDefinition,
-                                OngoingTasks = currentHandlers
-                            };
-                            
-                            WriteResult(context, response.ToJson());
-                            break;
+                            throw new BadRequestException("Getting task info for " + OngoingTaskType.PullReplicationAsHub + " is not supported");
 
                         case OngoingTaskType.PullReplicationAsSink:
                             var edge = record.SinkPullReplications.Find(x => x.TaskId == key);
@@ -1139,6 +1116,48 @@ namespace Raven.Server.Web.System
                             HttpContext.Response.StatusCode = (int)HttpStatusCode.NotFound;
                             break;
                     }
+                }
+            }
+
+            return Task.CompletedTask;
+        }
+        
+        [RavenAction("/databases/*/tasks/hub-pull-replication", "GET", AuthorizationStatus.ValidUser)]
+        public Task GetHubTasksInfo()
+        {
+            if (ResourceNameValidator.IsValidResourceName(Database.Name, ServerStore.Configuration.Core.DataDirectory.FullPath, out string errorMessage) == false)
+                throw new BadRequestException(errorMessage);
+
+            var key = GetLongQueryString("key");
+
+            using (ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
+            {
+                using (context.OpenReadTransaction())
+                {
+                    var clusterTopology = ServerStore.GetClusterTopology(context);
+                    var record = ServerStore.Cluster.ReadDatabase(context, Database.Name);
+                    if (record == null)
+                        throw new DatabaseDoesNotExistException(Database.Name);
+
+                    var hubReplicationDefinition = record.HubPullReplications?.FirstOrDefault(x => x.TaskId == key);
+
+                    if (hubReplicationDefinition == null)
+                    {
+                        HttpContext.Response.StatusCode = (int)HttpStatusCode.NotFound;
+                        return Task.CompletedTask;
+                    }
+                            
+                    var currentHandlers = Database.ReplicationLoader.OutgoingHandlers.Where(o => o.Destination is ExternalReplication ex && ex.TaskId == key)
+                        .Select(x => GetPullReplicationAsHubTaskInfo(clusterTopology, x.Destination as ExternalReplication))
+                        .ToList();
+
+                    var response = new PullReplicationDefinitionAndCurrentConnections
+                    {
+                        Definition = hubReplicationDefinition,
+                        OngoingTasks = currentHandlers
+                    };
+                            
+                    WriteResult(context, response.ToJson());
                 }
             }
 

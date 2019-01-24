@@ -28,7 +28,7 @@ namespace SlowTests.Issues
                 
                 await store.Maintenance.SendAsync(new UpdateExternalReplicationOperation(new ExternalReplication(dbName, csName)));
                 await store.Maintenance.SendAsync(new UpdateExternalReplicationOperation(new ExternalReplication(dbName, csName)));
-
+                
                 var backupConfig = new PeriodicBackupConfiguration
                 {
                     LocalSettings = new LocalSettings
@@ -47,7 +47,7 @@ namespace SlowTests.Issues
                 await store.Maintenance.SendAsync(new UpdatePeriodicBackupOperation(backupConfig));
                 await store.Maintenance.SendAsync(new UpdatePeriodicBackupOperation(backupConfig));
 
-                var etlConfiguration = new RavenEtlConfiguration()
+                var etlConfiguration = new RavenEtlConfiguration
                 {
                     ConnectionStringName = csName,
                     Transforms =

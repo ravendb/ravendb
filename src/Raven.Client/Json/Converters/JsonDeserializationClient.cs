@@ -73,6 +73,8 @@ namespace Raven.Client.Json.Converters
         public static readonly Func<BlittableJsonReaderObject, OngoingTaskPullReplicationAsSink> OngoingTaskPullReplicationAsSinkResult = GenerateJsonDeserializationRoutine<OngoingTaskPullReplicationAsSink>();
 
         public static readonly Func<BlittableJsonReaderObject, OngoingTaskPullReplicationAsHub> OngoingTaskPullReplicationAsHubResult = GenerateJsonDeserializationRoutine<OngoingTaskPullReplicationAsHub>();
+        
+        public static readonly Func<BlittableJsonReaderObject, PullReplicationDefinitionAndCurrentConnections> PullReplicationDefinitionAndCurrentConnectionsResult = GenerateJsonDeserializationRoutine<PullReplicationDefinitionAndCurrentConnections>();
 
         public static readonly Func<BlittableJsonReaderObject, OngoingTaskReplication> GetOngoingTaskReplicationResult = GenerateJsonDeserializationRoutine<OngoingTaskReplication>();
 
