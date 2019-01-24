@@ -11,11 +11,11 @@ namespace Raven.Client.Documents.Session
     /// <summary>
     ///     Advanced async session operations
     /// </summary>
-    public partial interface IAsyncAdvancedSessionOperations : IAsyncDocumentBuilder
+    public partial interface IAsyncAdvancedSessionOperations : IAsyncDocumentQueryBuilder
     {
     }
 
-    public interface IAsyncDocumentBuilder
+    public interface IAsyncDocumentQueryBuilder
     {
         /// <summary>
         ///     Queries the index specified by <typeparamref name="TIndexCreator" /> using lucene syntax.

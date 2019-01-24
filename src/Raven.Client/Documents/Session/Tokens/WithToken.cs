@@ -5,14 +5,14 @@ using Raven.Client.Documents.Linq;
 
 namespace Raven.Client.Documents.Session.Tokens
 {
-    public class WithToken<T>: QueryToken
+    public class WithToken: QueryToken
     {
-        private string alias;
+        private readonly string _alias;
         private readonly string _query;
 
         public WithToken(string alias, string query)
         {
-            this.alias = alias;
+            _alias = alias;
             _query = query;
         }
 
@@ -21,7 +21,7 @@ namespace Raven.Client.Documents.Session.Tokens
             writer.Append("with {");
             writer.Append(_query);
             writer.Append("} as ");
-            writer.Append(alias);
+            writer.Append(_alias);
         }
     }
 }

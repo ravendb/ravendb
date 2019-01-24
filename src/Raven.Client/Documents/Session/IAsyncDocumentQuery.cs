@@ -72,7 +72,9 @@ namespace Raven.Client.Documents.Session
         IAsyncDocumentQueryBase<T>
     {
         IAsyncGraphQuery<T> With<TOther>(string alias, IRavenQueryable<TOther> query);
-        IAsyncGraphQuery<T> With<TOther>(string alias, Func<IAsyncDocumentBuilder,IAsyncDocumentQuery<TOther>> queryFactory);
+        IAsyncGraphQuery<T> With<TOther>(string alias, string rawQuery);
+        IAsyncGraphQuery<T> With<TOther>(string alias, Func<IAsyncDocumentQueryBuilder,IAsyncDocumentQuery<TOther>> queryFactory);
+        IAsyncGraphQuery<T> WithEdges(string alias, string edgeSelector);
     }
 
     /// <summary>
