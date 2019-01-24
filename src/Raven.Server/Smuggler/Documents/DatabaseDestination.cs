@@ -933,18 +933,14 @@ namespace Raven.Server.Smuggler.Documents
                 _cmd = new CountersHandler.SmugglerCounterBatchCommand(_database);
             }
 
-            private void AddToBatch(CounterGroupDetail counter)
+            private void AddToBatch(CounterGroupDetail counterGroupDetail)
             {
-                _cmd.Add(counter.CounterKey, new CounterGroup
-                {
-                    ChangeVector = counter.ChangeVector,
-                    Values = counter.Values
-                });
+                _cmd.Add(counterGroupDetail);
 
                 _docCount++;
 
-                _countersPerDoc += counter.Values.Count - 1;
-
+                counterGroupDetail.Values.TryGet(CountersStorage.Values, out BlittableJsonReaderObject counters);
+                _countersPerDoc += counters?.Count ?? 0;
             }
 
             private void AddToBatch(CounterDetail counter)

@@ -254,18 +254,18 @@ namespace Raven.Server.Documents.Handlers
         public class SmugglerCounterBatchCommand : TransactionOperationsMerger.MergedTransactionCommand
         {
             private readonly DocumentDatabase _database;
-            private readonly Dictionary<string, CounterGroup> _dictionary;
+            private readonly List<CounterGroupDetail> _list;
             private Dictionary<string, Dictionary<string, List<(string ChangeVector, long Value)>>> _legacyDictionary;
 
             public SmugglerCounterBatchCommand(DocumentDatabase database)
             {
                 _database = database;
-                _dictionary = new Dictionary<string, CounterGroup>();
+                _list = new List<CounterGroupDetail>();
             }
 
-            public void Add(string id, CounterGroup cg)
+            public void Add(CounterGroupDetail cgd)
             {
-                _dictionary.Add(id, cg);
+                _list.Add(cgd);
             }
 
             public void AddLegacy(string id, CounterDetail counterDetail, out bool isNew)
@@ -313,37 +313,42 @@ namespace Raven.Server.Documents.Handlers
                     foreach (var kvp in _legacyDictionary)
                     {
                         var values = ToCounterGroup(context, kvp.Value, out var cv);
-                        PutCounters(context, (kvp.Key, new CounterGroup
+                        using (var cvLsv = context.GetLazyString(cv))
+                        using (var keyLsv = context.GetLazyString(kvp.Key))
                         {
-                            ChangeVector = cv,
-                            Values = values
-                        }), countersToAdd);
+                            PutCounters(context, new CounterGroupDetail
+                            {
+                                ChangeVector = cvLsv,
+                                CounterKey = keyLsv,
+                                Values = values
+                            }, countersToAdd);
+                        }
                     }
 
                     return _legacyDictionary.Count;
                 }
 
-                foreach (var kvp in _dictionary)
+                foreach (var cgd in _list)
                 {
-                    PutCounters(context, (kvp.Key, kvp.Value), countersToAdd);
+                    PutCounters(context, cgd, countersToAdd);
                 }
 
-                return _dictionary.Count;
+                return _list.Count;
             }
 
-            private void PutCounters(DocumentsOperationContext context, (string DocId, CounterGroup CounterGroup) counters, SortedSet<string> countersToAdd)
+            private void PutCounters(DocumentsOperationContext context, CounterGroupDetail counterGroupDetail, SortedSet<string> countersToAdd)
             {
-                Document doc = null;
+                Document doc;
                 string docCollection = null;
                 LoadDocument();
 
                 if (doc != null)
                     docCollection = CollectionName.GetCollectionName(doc.Data);
 
-                _database.DocumentsStorage.CountersStorage.PutCounters(context, counters.DocId, docCollection,
-                    counters.CounterGroup.ChangeVector, counters.CounterGroup.Values);
+                _database.DocumentsStorage.CountersStorage.PutCounters(context, counterGroupDetail.CounterKey, docCollection,
+                    counterGroupDetail.ChangeVector, counterGroupDetail.Values);
 
-                counters.CounterGroup.Values.TryGet(CountersStorage.Values, out BlittableJsonReaderObject values);
+                counterGroupDetail.Values.TryGet(CountersStorage.Values, out BlittableJsonReaderObject values);
                 foreach (var counter in values.GetPropertyNames())
                 {
                     countersToAdd.Add(counter);
@@ -354,7 +359,7 @@ namespace Raven.Server.Documents.Handlers
                     var nonPersistentFlags = NonPersistentDocumentFlags.ByCountersUpdate |
                                              NonPersistentDocumentFlags.FromSmuggler;
 
-                    _database.DocumentsStorage.CountersStorage.UpdateDocumentCounters(context, doc, counters.DocId, countersToAdd, new HashSet<string>(), nonPersistentFlags);
+                    _database.DocumentsStorage.CountersStorage.UpdateDocumentCounters(context, doc, counterGroupDetail.CounterKey, countersToAdd, new HashSet<string>(), nonPersistentFlags);
                     doc.Data?.Dispose(); // we cloned the data, so we can dispose it.
                 }
 
@@ -364,11 +369,11 @@ namespace Raven.Server.Documents.Handlers
                 {
                     try
                     {
-                        doc = _database.DocumentsStorage.Get(context, counters.DocId,
+                        doc = _database.DocumentsStorage.Get(context, counterGroupDetail.CounterKey,
                             throwOnConflict: true);
                         if (doc == null)
                         {
-                            ThrowMissingDocument(counters.DocId);
+                            ThrowMissingDocument(counterGroupDetail.CounterKey);
                             return; // never hit
                         }
 
@@ -385,7 +390,7 @@ namespace Raven.Server.Documents.Handlers
 
                         // avoid loading same document again, we validate write using the metadata instance
                         doc = new Document();
-                        docCollection = _database.DocumentsStorage.ConflictsStorage.GetCollection(context, counters.DocId);
+                        docCollection = _database.DocumentsStorage.ConflictsStorage.GetCollection(context, counterGroupDetail.CounterKey);
                     }
                 }
 
