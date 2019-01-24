@@ -1672,8 +1672,8 @@ namespace Voron.Impl.Journal
 
         public void ReduceSizeOfCompressionBufferIfNeeded(bool forceReduce = false)
         {
-            var initialSize = _env.Options.InitialFileSize ?? _env.Options.InitialLogFileSize;
-            if (ShouldReduceSizeOfCompressionPager(initialSize, forceReduce) == false)
+            var maxSize = _env.Options.MaxScratchBufferSize;
+            if (ShouldReduceSizeOfCompressionPager(maxSize, forceReduce) == false)
                 return;
 
             // the compression pager is too large, we probably had a big transaction and now can
@@ -1681,15 +1681,15 @@ namespace Voron.Impl.Journal
             if (forceReduce == false && _logger.IsOperationsEnabled)
             {
                 _logger.Operations(
-                    $"Compression buffer: {_compressionPager} has reached size {new Size(_compressionPager.NumberOfAllocatedPages * Constants.Storage.PageSize, SizeUnit.Bytes)} which is more than the initial size " +
-                    $"of {new Size(initialSize, SizeUnit.Bytes)}. Will trim it now to the max size allowed. If this is happen on a regular basis," +
+                    $"Compression buffer: {_compressionPager} has reached size {new Size(_compressionPager.NumberOfAllocatedPages * Constants.Storage.PageSize, SizeUnit.Bytes)} which is more than the maximum size " +
+                    $"of {new Size(maxSize, SizeUnit.Bytes)}. Will trim it now to the max size allowed. If this is happen on a regular basis," +
                     " consider raising the limit (MaxScratchBufferSize option control it), since it can cause performance issues");
             }
 
             _lastCompressionBufferReduceCheck = DateTime.UtcNow;
 
             _compressionPager.Dispose();
-            _compressionPager = CreateCompressionPager(initialSize);
+            _compressionPager = CreateCompressionPager(maxSize);
         }
 
         public void ZeroCompressionBufferIfNeeded(IPagerLevelTransactionState tx)
@@ -1703,10 +1703,10 @@ namespace Voron.Impl.Journal
             Sodium.sodium_memzero(pagePointer, (UIntPtr)compressionBufferSize);
         }
 
-        private bool ShouldReduceSizeOfCompressionPager(long initialSize, bool forceReduce)
+        private bool ShouldReduceSizeOfCompressionPager(long maxSize, bool forceReduce)
         {
             var compressionBufferSize = _compressionPager.NumberOfAllocatedPages * Constants.Storage.PageSize;
-            if (compressionBufferSize <= initialSize)
+            if (compressionBufferSize <= maxSize)
                 return false;
 
             if (forceReduce)
@@ -1714,7 +1714,6 @@ namespace Voron.Impl.Journal
 
             if ((DateTime.UtcNow - _lastCompressionBufferReduceCheck).TotalMinutes < 5)
                 return false;
-
             
             // prevent resize if we recently used at least half of the compression buffer
             var preventResize = _maxNumberOfPagesRequiredForCompressionBuffer > _compressionPager.NumberOfAllocatedPages / 2;
