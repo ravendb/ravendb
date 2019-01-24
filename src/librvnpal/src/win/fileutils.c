@@ -76,7 +76,7 @@ _write_file(void* handle, const void* buffer, int64_t size, int64_t offset, int3
     const int32_t WRITE_INCREMENT = 4096;
 
     assert(size % WRITE_INCREMENT == 0);
-    assert((int64_t)buffer % WRITE_INCREMENT == 0);
+    assert((size_t)buffer % WRITE_INCREMENT == 0);
 
     int32_t rc = write_file_in_sections(handle, (char*)buffer, size, offset, UINT32_MAX, detailed_error_code);
     if (rc == SUCCESS)
