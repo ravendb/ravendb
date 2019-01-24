@@ -19,6 +19,7 @@
     "mocha": "registry:dt/mocha#2.2.5+20160720003353",
     "moment": "registry:dt/moment#2.8.0+20160316155526",
     "moment-node": "registry:dt/moment-node#2.11.1+20160511043338",
+    "node-forge": "registry:dt/node-forge#0.6.43+20170322163133",
     "prismjs": "registry:dt/prismjs#1.4.4+20160510002910",
     "q": "registry:dt/q#0.0.0+20160613154756",
     "rbush": "registry:dt/rbush#2.0.1+20160907114301",
