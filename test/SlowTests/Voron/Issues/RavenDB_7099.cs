@@ -37,13 +37,15 @@ namespace SlowTests.Voron.Issues
                 }
             }
 
-            var journalsForReuse = new DirectoryInfo(DataDir).GetFiles($"{StorageEnvironmentOptions.RecyclableJournalFileNamePrefix}*");
+            var journalPath = ((StorageEnvironmentOptions.DirectoryStorageEnvironmentOptions)Env.Options).JournalPath.FullPath;
+
+            var journalsForReuse = new DirectoryInfo(journalPath).GetFiles($"{StorageEnvironmentOptions.RecyclableJournalFileNamePrefix}*");
 
             Assert.Equal(0, journalsForReuse.Length);
 
             RestartDatabase();
 
-            journalsForReuse = new DirectoryInfo(DataDir).GetFiles($"{StorageEnvironmentOptions.RecyclableJournalFileNamePrefix}*");
+            journalsForReuse = new DirectoryInfo(journalPath).GetFiles($"{StorageEnvironmentOptions.RecyclableJournalFileNamePrefix}*");
 
             Assert.Equal(0, journalsForReuse.Length);
         }
@@ -73,8 +75,10 @@ namespace SlowTests.Voron.Issues
             Env.FlushLogToDataFile();
             Env.ForceSyncDataFile();
 
-            SpinWait.SpinUntil(() => new DirectoryInfo(DataDir).GetFiles($"{StorageEnvironmentOptions.RecyclableJournalFileNamePrefix}*").Length > 0,
-                TimeSpan.FromSeconds(30));
+            var journalPath = ((StorageEnvironmentOptions.DirectoryStorageEnvironmentOptions)Env.Options).JournalPath.FullPath;
+
+            Assert.True(SpinWait.SpinUntil(() => new DirectoryInfo(journalPath).GetFiles($"{StorageEnvironmentOptions.RecyclableJournalFileNamePrefix}*").Length > 0,
+                TimeSpan.FromSeconds(30)));
         }
     }
 }
