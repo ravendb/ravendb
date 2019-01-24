@@ -46,7 +46,7 @@ namespace Voron.Platform
 
             try
             {
-                if (File.Exists(toFilename) == false)
+                if (File.Exists(fromFilename))
                     File.Move(fromFilename, toFilename);
             }
             catch (IOException e)
@@ -111,7 +111,7 @@ namespace Voron.Platform
 
         [DllImport(LIBRVNPAL, SetLastError = true)]
         public static extern PalFlags.FailCodes rvn_unmap(
-            SafeMmapHandle handle,
+            PalFlags.MmapOptions flags,
             void* address,
             Int64 size,
             out Int32 errorCode);

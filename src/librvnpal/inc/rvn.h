@@ -62,7 +62,7 @@ EXPORT int32_t
 rvn_mmap_dispose_handle(void *handle, int32_t *detailed_error_code);
 
 EXPORT int32_t
-rvn_unmap(void *handle, void *address, int64_t size, int32_t *detailed_error_code);
+rvn_unmap(int32_t flags, void *address, int64_t size, int32_t *detailed_error_code);
 
 EXPORT int32_t
 rvn_prefetch_ranges(struct RVN_RANGE_LIST *range_list, int32_t count, int32_t *detailed_error_code);
