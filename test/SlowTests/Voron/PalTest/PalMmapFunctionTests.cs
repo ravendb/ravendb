@@ -30,7 +30,7 @@ namespace SlowTests.Voron.PalTest
             if (ret != PalFlags.FailCodes.Success)
                 PalHelper.ThrowLastError(ret, errorCode, "");
             
-            ret = Pal.rvn_unmap(handle, baseAddress, actualFileSize, out errorCode);
+            ret = Pal.rvn_unmap(mmapOptions, baseAddress, actualFileSize, out errorCode);
             if (ret != PalFlags.FailCodes.Success)
                 PalHelper.ThrowLastError(ret, errorCode, "");
             
@@ -56,11 +56,11 @@ namespace SlowTests.Voron.PalTest
             if (ret != PalFlags.FailCodes.Success)
                 PalHelper.ThrowLastError(ret, errorCode, "");
             
-            ret = Pal.rvn_unmap(handle, baseAddress, actualFileSize, out errorCode);
+            ret = Pal.rvn_unmap(mmapOptions, baseAddress, actualFileSize, out errorCode);
             if (ret != PalFlags.FailCodes.Success)
                 PalHelper.ThrowLastError(ret, errorCode, "");
             
-            ret = Pal.rvn_unmap(handle, newAddress, initFileSize, out errorCode);
+            ret = Pal.rvn_unmap(mmapOptions, newAddress, initFileSize, out errorCode);
             if (ret != PalFlags.FailCodes.Success)
                 PalHelper.ThrowLastError(ret, errorCode, "");
             
