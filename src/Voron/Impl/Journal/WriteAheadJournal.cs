@@ -1195,9 +1195,11 @@ namespace Voron.Impl.Journal
                     header->Journal.LastSyncedTransactionId = lastSyncedTransactionId;
 
                     Memory.Set(header->Journal.Reserved, 0, 3);
-                    header->Journal.Flags = ignoreLastSyncJournalMissing ?
-                     JournalInfoFlags.IgnoreMissingLastSyncJournal :
-                     JournalInfoFlags.None;
+
+                    if (ignoreLastSyncJournalMissing)
+                        header->Journal.Flags |= JournalInfoFlags.IgnoreMissingLastSyncJournal;
+                    else
+                        header->Journal.Flags &= ~JournalInfoFlags.IgnoreMissingLastSyncJournal;
 
                     header->Root = treeRootHeader;
                 });
@@ -1289,8 +1291,7 @@ namespace Voron.Impl.Journal
                     }
 
                     Memory.Set(header->Journal.Reserved, 0, 3);
-                    header->Journal.Flags = JournalInfoFlags.IgnoreMissingLastSyncJournal;
-
+                    header->Journal.Flags |= JournalInfoFlags.IgnoreMissingLastSyncJournal;
                 });
 
                 current.DeleteOnClose = true;
