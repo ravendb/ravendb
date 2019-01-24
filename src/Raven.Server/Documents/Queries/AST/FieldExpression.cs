@@ -40,16 +40,16 @@ namespace Raven.Server.Documents.Queries.AST
         {
             if (Compound.Count == 1)
                 return Compound[0].Value;
-            return _field ?? (_field = JoinCompoundFragments(0, ignoreArrayQualifier));
+            return _field ?? (_field = JoinCompoundFragments(0));
         }
 
 
-        private string JoinCompoundFragments(int start, bool ignoreArrayQualifier = false)
+        private string JoinCompoundFragments(int start)
         {
             var sb = new StringBuilder();
             for (int i = start; i < Compound.Count; i++)
             {
-                if(ignoreArrayQualifier && Compound[i].Value == "[]")
+                if(i == start && Compound[i].Value == "[]") //field name starting from '[]' makes no sense
                     continue;
                 sb.Append(Compound[i].Value);
                 if (i + 1 < Compound.Count && Compound[i + 1] != "[]")
@@ -61,7 +61,7 @@ namespace Raven.Server.Documents.Queries.AST
         }
 
         public string FieldValueWithoutAlias => 
-            _fieldWithoutAlias ?? (_fieldWithoutAlias = JoinCompoundFragments(1,true));
+            _fieldWithoutAlias ?? (_fieldWithoutAlias = JoinCompoundFragments(1));
 
         public override string ToString()
         {
