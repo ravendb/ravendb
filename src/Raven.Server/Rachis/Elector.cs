@@ -259,14 +259,7 @@ namespace Raven.Server.Rachis
                     }
                 }
             }
-            catch (OperationCanceledException)
-            {
-            }
-            catch (ObjectDisposedException)
-            {
-            }
-            catch (AggregateException ae)
-                when (ae.InnerException is OperationCanceledException || ae.InnerException is ObjectDisposedException)
+            catch (Exception e) when (IsExpectedException(e))
             {
             }
             catch (Exception e)
@@ -283,6 +276,14 @@ namespace Raven.Server.Rachis
                     _connection.Dispose();
                 }
             }
+        }
+
+        private static bool IsExpectedException(Exception e)
+        {
+            if (e is AggregateException)
+                return IsExpectedException(e.InnerException);
+
+            return e is OperationCanceledException || e is ObjectDisposedException;
         }
 
         private class HandleVoteResult

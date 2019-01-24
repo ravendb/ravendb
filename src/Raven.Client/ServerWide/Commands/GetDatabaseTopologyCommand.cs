@@ -8,13 +8,24 @@ namespace Raven.Client.ServerWide.Commands
 {
     public class GetDatabaseTopologyCommand : RavenCommand<Topology>
     {
+        private readonly string _debugTag;
+
         public GetDatabaseTopologyCommand()
         {
             CanCacheAggressively = false;
         }
+
+        public GetDatabaseTopologyCommand(string debugTag)
+        {
+            _debugTag = debugTag;
+            CanCacheAggressively = false;
+        }
+
         public override HttpRequestMessage CreateRequest(JsonOperationContext ctx, ServerNode node, out string url)
         {
             url = $"{node.Url}/topology?name={node.Database}";
+            if (_debugTag != null)
+                url += "&" + _debugTag;
 
             if (node.Url.IndexOf(".fiddler", StringComparison.OrdinalIgnoreCase) != -1)
             {

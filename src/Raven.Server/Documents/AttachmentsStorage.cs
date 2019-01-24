@@ -11,6 +11,7 @@ using Raven.Server.Documents.Replication;
 using Raven.Client.Exceptions.Documents;
 using Raven.Client.Exceptions.Documents.Indexes;
 using Raven.Server.ServerWide.Context;
+using Raven.Server.Utils;
 using Voron;
 using Voron.Data.Tables;
 using Voron.Impl;
@@ -175,9 +176,12 @@ namespace Raven.Server.Documents
 
                     DeleteTombstoneIfNeeded(context, keySlice);
 
-                    var changeVector = _documentsStorage.GetNewChangeVector(context, attachmentEtag);
+                    var changeVector = ChangeVectorUtils.TryUpdateChangeVector(_documentDatabase.ServerStore.NodeTag, _documentDatabase.DbBase64Id, attachmentEtag,
+                        context.LastDatabaseChangeVector ?? GetDatabaseChangeVector(context)).ChangeVector;
                     Debug.Assert(changeVector != null);
                     context.LastDatabaseChangeVector = changeVector;
+
+                    Debug.Assert(changeVector != null);
 
                     var table = context.Transaction.InnerTransaction.OpenTable(AttachmentsSchema, AttachmentsMetadataSlice);
                     void SetTableValue(TableValueBuilder tvb, Slice cv)
@@ -285,17 +289,19 @@ namespace Raven.Server.Documents
         /// <summary>
         /// Should be used only from replication or smuggler.
         /// </summary>
-        public void PutDirect(DocumentsOperationContext context, Slice key, Slice name, Slice contentType, Slice base64Hash, string changeVector)
+        public void PutDirect(DocumentsOperationContext context, Slice key, Slice name, Slice contentType, Slice base64Hash, string changeVector = null)
         {
             Debug.Assert(base64Hash.Size == 44, $"Hash size should be 44 but was: {key.Size}");
 
             var newEtag = _documentsStorage.GenerateNextEtag();
+
             if (string.IsNullOrEmpty(changeVector))
             {
-                changeVector = _documentsStorage.GetNewChangeVector(context, newEtag);
+                changeVector = ChangeVectorUtils.TryUpdateChangeVector(_documentDatabase.ServerStore.NodeTag, _documentDatabase.DbBase64Id, newEtag,
+                    context.LastDatabaseChangeVector ?? GetDatabaseChangeVector(context)).ChangeVector;
                 context.LastDatabaseChangeVector = changeVector;
             }
-
+            Debug.Assert(changeVector != null);
             DeleteTombstoneIfNeeded(context, key);
 
             var table = context.Transaction.InnerTransaction.OpenTable(AttachmentsSchema, AttachmentsMetadataSlice);
@@ -371,7 +377,7 @@ namespace Raven.Server.Documents
                 }
 
                 data = context.ReadObject(data, documentId, BlittableJsonDocumentBuilder.UsageMode.ToDisk);
-                return _documentsStorage.Put(context, documentId, null, data, null, changeVector, flags, NonPersistentDocumentFlags.ByAttachmentUpdate).ChangeVector;
+                return _documentsStorage.Put(context, documentId, null, data, null, null, flags, NonPersistentDocumentFlags.ByAttachmentUpdate).ChangeVector;
             }
             finally
             {

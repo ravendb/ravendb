@@ -373,7 +373,6 @@ namespace Raven.Server.Rachis
                             _debugRecorder.Start();
                         }
                     }
-
                     catch (RachisConcurrencyException)
                     {
                         // our term is no longer valid
@@ -384,12 +383,7 @@ namespace Raven.Server.Rachis
                         // this is a rachis protocol violation exception, we must close this ambassador. 
                         throw;
                     }
-                    catch (AggregateException ae) when (ae.InnerException is OperationCanceledException || ae.InnerException is LockAlreadyDisposedException)
-                    {
-                        // Those are expected exceptions which indicate that this ambassador is shutting down.
-                        throw;
-                    }
-                    catch (Exception e) when (e is LockAlreadyDisposedException || e is OperationCanceledException)
+                    catch (Exception e) when (RachisConsensus.IsExpectedException(e))
                     {
                         // Those are expected exceptions which indicate that this ambassador is shutting down.
                         throw;
@@ -418,21 +412,15 @@ namespace Raven.Server.Rachis
                     }
                 }
             }
-            catch (AggregateException ae)
-                when (ae.InnerException is OperationCanceledException || ae.InnerException is LockAlreadyDisposedException)
-            {
-                StatusMessage = "Closed";
-                Status = AmbassadorStatus.Closed;
-            }
-            catch (Exception e) when (e is LockAlreadyDisposedException || e is OperationCanceledException)
-            {
-                StatusMessage = "Closed";
-                Status = AmbassadorStatus.Closed;
-            }
             catch (RachisException e)
             {
                 StatusMessage = $"Reached an erroneous state due to :{Environment.NewLine}{e.Message}";
                 Status = AmbassadorStatus.Error;
+            }
+            catch (Exception e) when (RachisConsensus.IsExpectedException(e))
+            {
+                StatusMessage = "Closed";
+                Status = AmbassadorStatus.Closed;
             }
             catch (Exception e)
             {

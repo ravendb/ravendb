@@ -1896,6 +1896,14 @@ namespace Raven.Server.Rachis
                 table.DeleteByPrimaryKey(key, _ => true);
             }
         }
+
+        public static bool IsExpectedException(Exception e)
+        {
+            if (e is AggregateException)
+                return IsExpectedException(e.InnerException);
+
+            return e is OperationCanceledException || e is LockAlreadyDisposedException;
+        }
     }
 
     public class TopologyMismatchException : Exception

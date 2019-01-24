@@ -77,7 +77,7 @@ namespace Raven.Client.Http
             return ExecuteAsync(serverNode, nodeIndex, context, new GetTcpInfoCommand("health-check"), shouldRetry: false, sessionInfo: null, token: CancellationToken.None);
         }
 
-        public override async Task<bool> UpdateTopologyAsync(ServerNode node, int timeout, bool forceUpdate = false)
+        public override async Task<bool> UpdateTopologyAsync(ServerNode node, int timeout, bool forceUpdate = false, string debugTag = null)
         {
             if (Disposed)
                 return false;
@@ -91,7 +91,7 @@ namespace Raven.Client.Http
 
                 using (ContextPool.AllocateOperationContext(out JsonOperationContext context))
                 {
-                    var command = new GetClusterTopologyCommand();
+                    var command = new GetClusterTopologyCommand(debugTag);
                     await ExecuteAsync(node, null, context, command, shouldRetry: false, sessionInfo: null, token: CancellationToken.None).ConfigureAwait(false);
 
                     ClusterTopologyLocalCache.TrySaving(TopologyHash, command.Result, Conventions, context);
@@ -130,7 +130,7 @@ namespace Raven.Client.Http
                     OnTopologyUpdated(newTopology);
                 }
             }
-            catch(Exception)
+            catch (Exception)
             {
                 if (Disposed == false)
                     throw;
