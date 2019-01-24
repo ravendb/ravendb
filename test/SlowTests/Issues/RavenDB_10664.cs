@@ -5,6 +5,7 @@ using Raven.Client.Documents.Operations.Backups;
 using Raven.Client.Documents.Operations.ConnectionStrings;
 using Raven.Client.Documents.Operations.ETL;
 using Raven.Client.Documents.Operations.Replication;
+using Raven.Server.ServerWide.Commands;
 using Xunit;
 
 namespace SlowTests.Issues
@@ -19,12 +20,14 @@ namespace SlowTests.Issues
                 var dbName = $"db/{Guid.NewGuid()}";
                 var csName = $"cs/{Guid.NewGuid()}";
 
-                await store.Maintenance.SendAsync(new PutConnectionStringOperation<RavenConnectionString>(new RavenConnectionString
+                var connectionString = new RavenConnectionString
                 {
                     Name = csName,
                     Database = dbName,
-                    TopologyDiscoveryUrls = new[] { "http://127.0.0.1:12345" }
-                }));
+                    TopologyDiscoveryUrls = new[] {"http://127.0.0.1:12345"}
+                };
+                
+                await store.Maintenance.SendAsync(new PutConnectionStringOperation<RavenConnectionString>(connectionString));
                 
                 await store.Maintenance.SendAsync(new UpdateExternalReplicationOperation(new ExternalReplication(dbName, csName)));
                 await store.Maintenance.SendAsync(new UpdateExternalReplicationOperation(new ExternalReplication(dbName, csName)));
@@ -63,6 +66,18 @@ namespace SlowTests.Issues
 
                 await store.Maintenance.SendAsync(new AddEtlOperation<RavenConnectionString>(etlConfiguration));
                 await store.Maintenance.SendAsync(new AddEtlOperation<RavenConnectionString>(etlConfiguration));
+
+
+                // for Pull Replication Hub name is required - no need to test
+
+                var sink = new PullReplicationAsSink
+                {
+                    HubDefinitionName = "aa",
+                    ConnectionString = connectionString
+                };
+
+                await store.Maintenance.SendAsync(new UpdatePullReplicationAsSinkOperation(sink));
+                await store.Maintenance.SendAsync(new UpdatePullReplicationAsSinkOperation(sink));
             }
         } 
     }

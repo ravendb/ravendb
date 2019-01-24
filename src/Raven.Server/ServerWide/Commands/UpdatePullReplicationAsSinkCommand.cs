@@ -29,6 +29,19 @@ namespace Raven.Server.ServerWide.Commands
             }
             else
             {
+                // if new definition doesn't have certificate but there is old one with cert 
+                // it means we want to use existing cert
+                if (PullReplicationAsSink.CertificateWithPrivateKey == null)
+                {
+                    var existingDefinition = record.SinkPullReplications.Find(x => x.TaskId == PullReplicationAsSink.TaskId);
+                    if (existingDefinition?.CertificateWithPrivateKey != null)
+                    {
+                        // retain existing certificate
+                        PullReplicationAsSink.CertificateWithPrivateKey = existingDefinition.CertificateWithPrivateKey;
+                        PullReplicationAsSink.CertificatePassword = existingDefinition.CertificatePassword;
+                    }
+                }
+                
                 ExternalReplication.RemoveExternalReplication(record.SinkPullReplications, PullReplicationAsSink.TaskId);
             }
 
