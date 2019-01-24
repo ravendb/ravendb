@@ -11,6 +11,7 @@ fi
 if [ "$1" == "setup" ]; then
 	echo "`date`" > $LOG
 	echo "`date`: Installing packages..."
+	sudo apt-get update >> ${LOG} 2>&1
 	sudo apt-get install -y crossbuild-essential-armhf crossbuild-essential-arm64 cmake clang libxml2-dev fuse libbz2-dev libfuse-dev fuse >> ${LOG} 2>&1
 	if [ $? -ne 0 ]; then echo "Failed. See ${LOG}";  exit 1; fi
 	echo "`date`: Cloning osxcross..."
