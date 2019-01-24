@@ -185,7 +185,7 @@ namespace Raven.Server.Documents
             }
         }
 
-        public long GetNumberOfCountersToProcess(DocumentsOperationContext context, string collection, long afterEtag, out long totalCount)
+        public long GetNumberOfCounterGroupsToProcess(DocumentsOperationContext context, string collection, long afterEtag, out long totalCount)
         {
             var collectionName = _documentsStorage.GetCollection(collection, throwIfDoesNotExist: false);
             if (collectionName == null)
@@ -223,7 +223,7 @@ namespace Raven.Server.Documents
             var data = GetCounterValuesData(context, ref tvh.Reader);
             return new ReplicationBatchItem
             {
-                Type = ReplicationItemType.Counter,
+                Type = ReplicationItemType.CounterBatch,
 
                 Id = TableValueToString(context, (int)CountersTable.CounterKey, ref tvh.Reader),
                 ChangeVector = TableValueToChangeVector(context, (int)CountersTable.ChangeVector, ref tvh.Reader),
