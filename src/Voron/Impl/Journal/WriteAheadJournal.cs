@@ -1715,16 +1715,13 @@ namespace Voron.Impl.Journal
             if ((DateTime.UtcNow - _lastCompressionBufferReduceCheck).TotalMinutes < 5)
                 return false;
 
-            if (_maxNumberOfPagesRequiredForCompressionBuffer > _compressionPager.NumberOfAllocatedPages / 2)
-            {
-                // we recently used at least half of the compression buffer,
-                // no point in reducing size yet, we'll try to do it again next time
-                return false;
-            }
+            
+            // prevent resize if we recently used at least half of the compression buffer
+            var preventResize = _maxNumberOfPagesRequiredForCompressionBuffer > _compressionPager.NumberOfAllocatedPages / 2;
 
             _maxNumberOfPagesRequiredForCompressionBuffer = 0;
             _lastCompressionBufferReduceCheck = DateTime.UtcNow;
-            return true;
+            return !preventResize;
         }
 
         public void TryReduceSizeOfCompressionBufferIfNeeded()
