@@ -4,6 +4,7 @@ using System.Threading;
 using FastTests.Voron;
 using SlowTests.Utils;
 using Voron;
+using Voron.Impl.Journal;
 using Xunit;
 
 namespace SlowTests.Voron.Issues
@@ -13,6 +14,7 @@ namespace SlowTests.Voron.Issues
         protected override void Configure(StorageEnvironmentOptions options)
         {
             options.ManualFlushing = true;
+            options.ManualSyncing = true;
         }
 
         [Theory]
@@ -73,7 +75,13 @@ namespace SlowTests.Voron.Issues
             }
 
             Env.FlushLogToDataFile();
-            Env.ForceSyncDataFile();
+
+            using (var operation = new WriteAheadJournal.JournalApplicator.SyncOperation(Env.Journal.Applicator))
+            {
+                var result = operation.SyncDataFile();
+
+                Assert.True(result);
+            }
 
             var journalPath = ((StorageEnvironmentOptions.DirectoryStorageEnvironmentOptions)Env.Options).JournalPath.FullPath;
 
