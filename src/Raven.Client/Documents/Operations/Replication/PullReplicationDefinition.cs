@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Collections.Generic;
 using Raven.Client.Documents.Replication.Messages;
 using Sparrow.Json.Parsing;
 
@@ -36,6 +37,17 @@ namespace Raven.Client.Documents.Operations.Replication
             djv[nameof(MentorNode)] = MentorNode;
             djv[nameof(DelayReplicationFor)] = DelayReplicationFor;
             return djv;
+        }
+        
+        public static void RemoveHub<T>(List<T> hubTasks, long taskId) where T : PullReplicationDefinition
+        {
+            foreach (var task in hubTasks)
+            {
+                if (task.TaskId != taskId)
+                    continue;
+                hubTasks.Remove(task);
+                return;
+            }
         }
     }
     
