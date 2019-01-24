@@ -286,7 +286,7 @@
                             <span data-bind="text: restorePoints().length === 0 ? 'Select backup directory' : ( selectedRestorePointText() || 'Select restore point... (' + restorePointsCount().toLocaleString() + ' options)' ), textInput: selectedRestorePoint"></span>
                             <span class="caret"></span>
                         </button>
-                        <div class="dropdown-menu has-info">
+                        <div class="dropdown-menu has-info restore-point-dropdown">
                             <ul class="menu max-height" role="menu" data-bind="foreach: restorePoints">
                                 <!-- ko if: $index() !== 0 -->
                                 <li class="divider"></li>
@@ -298,11 +298,12 @@
                                 <!-- ko foreach: $data.restorePoints -->
                                 <li>
                                     <a href="#" data-bind="click: _.partial($root.databaseModel.useRestorePoint, $data)" title="">
-                                        <div class="row">
-                                            <strong class="col-xs-5" data-bind="text: dateTime"></strong>
-                                            <small class="col-xs-3" data-bind="text: backupType"></small>
-                                            <small class="col-xs-2 text-center" data-bind="text: nodeTag"></small>
-                                            <small class="col-xs-2 text-center" data-bind="text: filesToRestore.toLocaleString()"></small>
+                                        <div class="restore-point-row">
+                                            <div class="date" data-bind="text: dateTime"></div>
+                                            <div class="type" data-bind="text: backupType"></div>
+                                            <div class="node" data-bind="text: nodeTag"></div>
+                                            <div class="files" data-bind="text: filesToRestore.toLocaleString()"></div>
+                                            <div class="encryption" data-toggle="tooltip" title="" data-placement="top" data-original-title="Encrypted backup" > <span class="text-info"><i class="icon-encryption"></i> Encrypted</span></div>
                                         </div>
                                     </a>
                                 </li>
@@ -311,11 +312,12 @@
 
                             <div class="divider"></div>
                             <div class="dropdown-header header bg-info" title="">
-                                <div class="row">
-                                    <span class="col-xs-5">Date</span>
-                                    <span class="col-xs-3">Backup Type</span>
-                                    <span class="col-xs-2">Node Tag</span>
-                                    <span class="col-xs-2">Files to Restore</span>
+                                <div class="restore-point-row">
+                                    <div class="date">Date</div>
+                                    <div class="type">Backup Type</div>
+                                    <div class="node">Node Tag</div>
+                                    <div class="files">Files to Restore</div>
+                                    <div class="encryption"></div>
                                 </div>
                             </div>
                         </div>
