@@ -7,7 +7,7 @@ import pullReplicationDefinition = require("models/database/tasks/pullReplicatio
 import eventsCollector = require("common/eventsCollector");
 import getPossibleMentorsCommand = require("commands/database/tasks/getPossibleMentorsCommand");
 import jsonUtil = require("common/jsonUtil");
-import getOngoingTaskInfoCommand = require("commands/database/tasks/getOngoingTaskInfoCommand");
+import getPullReplicationHubTasksInfoCommand = require("commands/database/tasks/getPullReplicationHubTasksInfoCommand");
 import pullReplicationGenerateCertificateCommand = require("commands/database/tasks/pullReplicationGenerateCertificateCommand");
 import pullReplicationCertificate = require("models/database/tasks/pullReplicationCertificate");
 import messagePublisher = require("common/messagePublisher");
@@ -45,7 +45,7 @@ class editPullReplicationHubTask extends viewModelBase {
             this.isAddingNewTask(false);
             this.taskId = args.taskId;
 
-            getOngoingTaskInfoCommand.forPullReplicationHub(this.activeDatabase(), this.taskId)
+            new getPullReplicationHubTasksInfoCommand(this.activeDatabase(), this.taskId)
                 .execute()
                 .done((result: Raven.Client.Documents.Operations.Replication.PullReplicationDefinitionAndCurrentConnections) => { 
                     this.editedItem(new pullReplicationDefinition(result.Definition, this.canDefineCertificates));

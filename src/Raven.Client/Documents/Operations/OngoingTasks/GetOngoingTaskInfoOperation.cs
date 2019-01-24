@@ -3,6 +3,7 @@ using System.Net.Http;
 using Raven.Client.Documents.Conventions;
 using Raven.Client.Http;
 using Raven.Client.Json.Converters;
+using Raven.Client.ServerWide.Operations;
 using Sparrow.Json;
 
 namespace Raven.Client.Documents.Operations.OngoingTasks
@@ -16,6 +17,11 @@ namespace Raven.Client.Documents.Operations.OngoingTasks
         {
             _taskId = taskId;
             _type = type;
+
+            if (type == OngoingTaskType.PullReplicationAsHub)
+            {
+                throw new ArgumentException(nameof(OngoingTaskType.PullReplicationAsHub) + " type is not supported. Please use " + nameof(GetPullReplicationTasksInfoOperation) + " instead.");
+            }
         }
 
         public RavenCommand<OngoingTask> GetCommand(DocumentConventions conventions, JsonOperationContext ctx)
@@ -66,9 +72,6 @@ namespace Raven.Client.Documents.Operations.OngoingTasks
                             break;
                         case OngoingTaskType.Subscription:
                             Result = JsonDeserializationClient.GetOngoingTaskSubscriptionResult(response);
-                            break;
-                        case OngoingTaskType.PullReplicationAsHub:
-                            Result = JsonDeserializationClient.OngoingTaskPullReplicationAsHubResult(response);
                             break;
                         case OngoingTaskType.PullReplicationAsSink:
                             Result = JsonDeserializationClient.OngoingTaskPullReplicationAsSinkResult(response);
