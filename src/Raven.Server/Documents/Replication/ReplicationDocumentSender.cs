@@ -15,7 +15,6 @@ using Sparrow.Json.Parsing;
 using Sparrow.Logging;
 using Raven.Server.ServerWide.Context;
 using Raven.Server.Utils;
-using Sparrow.Json;
 using Voron;
 
 namespace Raven.Server.Documents.Replication
@@ -84,7 +83,7 @@ namespace Raven.Server.Documents.Replication
                         return _documentRead;
                     case ReplicationBatchItem.ReplicationItemType.Attachment:
                         return _attachmentRead;
-                    case ReplicationBatchItem.ReplicationItemType.Counter:
+                    case ReplicationBatchItem.ReplicationItemType.CounterBatch:
                         return _countersRead;
                     case ReplicationBatchItem.ReplicationItemType.DocumentTombstone:
                     case ReplicationBatchItem.ReplicationItemType.AttachmentTombstone:
@@ -164,7 +163,7 @@ namespace Raven.Server.Documents.Replication
                 mergedInEnumerator.AddEnumerator(ReplicationBatchItem.ReplicationItemType.Document, conflictsIt);
                 mergedInEnumerator.AddEnumerator(ReplicationBatchItem.ReplicationItemType.Document, versionsIt);
                 mergedInEnumerator.AddEnumerator(ReplicationBatchItem.ReplicationItemType.Attachment, attachmentsIt);
-                mergedInEnumerator.AddEnumerator(ReplicationBatchItem.ReplicationItemType.Counter, countersIt);
+                mergedInEnumerator.AddEnumerator(ReplicationBatchItem.ReplicationItemType.CounterBatch, countersIt);
 
                 while (mergedInEnumerator.MoveNext())
                 {
@@ -218,7 +217,7 @@ namespace Raven.Server.Documents.Replication
                                 }
                                 lastTransactionMarker = item.TransactionMarker;
 
-                                if (_parent.SupportedFeatures.Replication.Counters == false)
+                                if (_parent.SupportedFeatures.Replication.CountersBatch == false)
                                 {                                    
                                     AssertNotCounterForLegacyReplication(item);
                                 }
@@ -350,13 +349,20 @@ namespace Raven.Server.Documents.Replication
 
         private void AssertNotCounterForLegacyReplication(ReplicationBatchItem item)
         {
-            if (item.Type == ReplicationBatchItem.ReplicationItemType.Counter)
+            if (item.Type == ReplicationBatchItem.ReplicationItemType.CounterBatch)
             {
                 // the other side doesn't support counters, stopping replication
-                var message = $"{_parent.Node.FromString()} found an item of type `Counter` to replicate to {_parent.Destination.FromString()}, " +
-                              "while we are in legacy mode (downgraded our replication version to match the destination). " +
-                              $"Can't send Counters in legacy mode, destination {_parent.Destination.FromString()} does not support Counters feature. " +
-                              "Stopping replication. " + item;
+                var message =
+                    $"{_parent.Node.FromString()} found an item of type `{nameof(ReplicationBatchItem.ReplicationItemType.CounterBatch)}` " +
+                    $"to replicate to {_parent.Destination.FromString()}, " +
+                    "while we are in legacy mode (downgraded our replication version to match the destination). " +
+                    $"Can't send Counters in legacy mode, destination {_parent.Destination.FromString()} ";
+
+                message += _parent.SupportedFeatures.Replication.Counters == false
+                    ? "does not support Counters feature. "
+                    : "uses the old structure of counters (legacy counters). ";
+
+                message += "Stopping replication. " + item;
 
                 if (_log.IsInfoEnabled)
                     _log.Info(message);
@@ -481,7 +487,7 @@ namespace Raven.Server.Documents.Replication
 
             if (item.Type == ReplicationBatchItem.ReplicationItemType.Attachment)
                 _replicaAttachmentStreams[item.Base64Hash] = item;
-            if (item.Type == ReplicationBatchItem.ReplicationItemType.Counter)
+            if (item.Type == ReplicationBatchItem.ReplicationItemType.CounterBatch)
             {
                 _countersToReplicate.Add(item);
                 return true;
@@ -581,7 +587,7 @@ namespace Raven.Server.Documents.Replication
                 return;
             }
 
-            if (item.Type == ReplicationBatchItem.ReplicationItemType.Counter)
+            if (item.Type == ReplicationBatchItem.ReplicationItemType.CounterBatch)
             {
                 WriteCounterToServer(context, item);
                 stats.RecordCounterOutput();

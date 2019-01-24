@@ -127,7 +127,8 @@ namespace Raven.Server.Documents.Replication
             AttachmentStream = 4,
             AttachmentTombstone = 5,
             RevisionTombstone = 6,
-            Counter = 7
+            LegacyCounter = 7,
+            CounterBatch = 8
         }
     }
 }

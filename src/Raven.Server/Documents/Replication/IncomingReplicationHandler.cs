@@ -27,6 +27,7 @@ using Sparrow.Json.Parsing;
 using Sparrow.Logging;
 using Sparrow.Utils;
 using Voron;
+using Raven.Server.ServerWide;
 
 namespace Raven.Server.Documents.Replication
 {
@@ -833,7 +834,7 @@ namespace Raven.Server.Documents.Replication
                         item.Collection = Encoding.UTF8.GetString(ReadExactly(collectionSize), collectionSize);
                     }
                 }
-                else if (item.Type == ReplicationBatchItem.ReplicationItemType.Counter)
+                else if (item.Type == ReplicationBatchItem.ReplicationItemType.CounterBatch)
                 {
                     var keySize = *(int*)ReadExactly(sizeof(int));
                     item.Id = Encoding.UTF8.GetString(ReadExactly(keySize), keySize);
@@ -846,6 +847,11 @@ namespace Raven.Server.Documents.Replication
                     item.DocumentSize = sizeOfData;
 
                     ReadExactly(sizeOfData, ref writeBuffer);
+                }
+                else if (item.Type == ReplicationBatchItem.ReplicationItemType.LegacyCounter)
+                {
+                    throw new InvalidOperationException($"Received an item of type {nameof(ReplicationBatchItem.ReplicationItemType.LegacyCounter)}. " +
+                                                        $"Replication of counters between 4.1.x and {ServerVersion.Version} is not supported.");
                 }
                 else
                 {
@@ -1127,7 +1133,7 @@ namespace Raven.Server.Documents.Replication
                             {
                                 database.DocumentsStorage.RevisionsStorage.DeleteRevision(context, item.Key, item.Collection, rcvdChangeVector, item.LastModifiedTicks);
                             }
-                            else if (item.Type == ReplicationBatchItem.ReplicationItemType.Counter)
+                            else if (item.Type == ReplicationBatchItem.ReplicationItemType.CounterBatch)
                             {
                                 var counterValues = new BlittableJsonReaderObject(_buffer + item.Position, item.DocumentSize, context);
                                 counterValues.BlittableValidation();

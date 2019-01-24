@@ -208,6 +208,7 @@ namespace Raven.Client.ServerWide.Tcp
                 public bool BaseLine = true;
                 public bool MissingAttachments;
                 public bool Counters;
+                public bool CountersBatch;
                 public bool ClusterTransaction;
                 public bool PullReplication;
             }
@@ -299,7 +300,7 @@ namespace Raven.Client.ServerWide.Tcp
                     {
                         Replication = new SupportedFeatures.ReplicationFeatures
                         {
-                            Counters = true,
+                            CountersBatch = true,
                             ClusterTransaction = true,
                             MissingAttachments = true,
                             PullReplication = true
@@ -309,7 +310,13 @@ namespace Raven.Client.ServerWide.Tcp
                     {
                         Replication = new SupportedFeatures.ReplicationFeatures
                         {
+
+                            // 'ReplicationFeatures.Counters' feature is NOT supported in v4.2 (and above),
+                            // it was replaced by 'ReplicationFeatures.CountersBatch'.
+                            // However, when negotiating with v4.1.x we want to agree
+                            // on a replication version that supports ClusterTransactions.
                             Counters = true,
+
                             ClusterTransaction = true,
                             MissingAttachments = true
                         }
