@@ -210,7 +210,10 @@ namespace Raven.Server.Documents.Replication
 
                 // no real conflict here, both documents have identical content
                 var mergedChangeVector = ChangeVectorUtils.MergeVectors(incomingChangeVector, existingDoc.ChangeVector);
-                var nonPersistentFlags = compareResult.HasFlag(DocumentCompareResult.AttachmentsNotEqual)
+
+                var nonPersistentFlags = NonPersistentDocumentFlags.FromResolver;
+
+                nonPersistentFlags |= compareResult.HasFlag(DocumentCompareResult.AttachmentsNotEqual)
                     ? NonPersistentDocumentFlags.ResolveAttachmentsConflict : NonPersistentDocumentFlags.None;
                 
                 if (compareResult.HasFlag(DocumentCompareResult.CountersNotEqual))                

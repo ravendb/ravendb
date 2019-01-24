@@ -17,7 +17,7 @@ namespace Voron.Impl.Journal
         private readonly AbstractPager _dataPager;
         private readonly AbstractPager _recoveryPager;
         private readonly HashSet<long> _modifiedPages;
-        private readonly long _lastSyncedTransactionId;
+        private readonly JournalInfo _journalInfo;
         private long _readAt4Kb;
         private readonly DiffApplier _diffApplier = new DiffApplier();
         private readonly long _journalPagerNumberOfAllocated4Kb;
@@ -27,14 +27,14 @@ namespace Voron.Impl.Journal
 
         public long Next4Kb => _readAt4Kb;
 
-        public JournalReader(AbstractPager journalPager, AbstractPager dataPager, AbstractPager recoveryPager, HashSet<long> modifiedPages, long lastSyncedTransactionId, TransactionHeader* previous)
+        public JournalReader(AbstractPager journalPager, AbstractPager dataPager, AbstractPager recoveryPager, HashSet<long> modifiedPages, JournalInfo journalInfo, TransactionHeader* previous)
         {
             RequireHeaderUpdate = false;
             _journalPager = journalPager;
             _dataPager = dataPager;
             _recoveryPager = recoveryPager;
             _modifiedPages = modifiedPages;
-            _lastSyncedTransactionId = lastSyncedTransactionId;
+            _journalInfo = journalInfo;
             _readAt4Kb = 0;
             LastTransactionHeader = previous;
             _journalPagerNumberOfAllocated4Kb = 
@@ -78,7 +78,7 @@ namespace Voron.Impl.Journal
                 ((size + sizeof(TransactionHeader)) % (4*Constants.Size.Kilobyte) == 0 ? 0 : 1);
 
 
-            if (current->TransactionId <= _lastSyncedTransactionId)
+            if (current->TransactionId <= _journalInfo.LastSyncedTransactionId)
             {
                 _readAt4Kb += transactionSizeIn4Kb;
                 LastTransactionHeader = current;
@@ -379,10 +379,23 @@ namespace Voron.Impl.Journal
                 hashIsValid = ValidatePagesHash(options, current);
             }
 
-            if (LastTransactionHeader == null)
-                return hashIsValid;
+            long lastTxId;
 
-            var txIdDiff = current->TransactionId - LastTransactionHeader->TransactionId;
+            if (LastTransactionHeader != null)
+            {
+                lastTxId = LastTransactionHeader->TransactionId;
+            }
+            else
+            {
+                // this is first transaction being processed in the recovery process
+
+                if (_journalInfo.LastSyncedTransactionId == -1 || current->TransactionId <= _journalInfo.LastSyncedTransactionId)
+                    return hashIsValid;
+
+                lastTxId = _journalInfo.LastSyncedTransactionId;
+            }
+
+            var txIdDiff = current->TransactionId - lastTxId;
 
             // 1 is a first storage transaction which does not increment transaction counter after commit
             if (current->TransactionId != 1)
@@ -395,9 +408,17 @@ namespace Voron.Impl.Journal
                     if (hashIsValid)
                     {
                         // TxId is bigger then the last one by nore the '1' but has valid hash which mean we lost transactions in the middle
+
+                        if (LastTransactionHeader != null)
+                        {
+                            throw new InvalidDataException(
+                                $"Transaction has valid(!) hash with invalid transaction id {current->TransactionId}, the last valid transaction id is {LastTransactionHeader->TransactionId}." +
+                                $" Journal file {_journalPager.FileName} might be corrupted");
+                        }
+
                         throw new InvalidDataException(
-                            $"Transaction has valid(!) hash with invalid transaction id {current->TransactionId}, the last valid transaction id is {LastTransactionHeader->TransactionId}." +
-                            $" Journal file {_journalPager.FileName} might be corrupted");
+                            $"The last synced transaction id was {_journalInfo.LastSyncedTransactionId} (in journal: {_journalInfo.LastSyncedJournal}) but the first transaction being read in the recovery process is {current->TransactionId} (transaction has valid hash). " +
+                            $"Some journals are missing. Current journal file {_journalPager.FileName}.");
                     }
                 }
 

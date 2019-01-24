@@ -685,6 +685,7 @@ namespace Raven.Server.Documents
             }
         }
 
+        [Conditional("DEBUG")]
         public static void AssertCounters(BlittableJsonReaderObject document, DocumentFlags flags)
         {
             if ((flags & DocumentFlags.HasCounters) == DocumentFlags.HasCounters)
