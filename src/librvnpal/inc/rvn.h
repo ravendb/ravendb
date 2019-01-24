@@ -91,6 +91,9 @@ rvn_read_journal(void* handle, void* buffer, int64_t required_size, int64_t offs
 EXPORT int32_t
 rvn_truncate_journal(void* handle, int64_t size, int32_t* detailed_error_code);
 
+EXPORT int32_t
+rvn_discard_virtual_memory(void* address, int64_t size, int32_t* detailed_error_code);
+
 /* For internal use: */
 PRIVATE int64_t
 _nearest_size_to_page_size(int64_t orig_size, int64_t sys_page_size);

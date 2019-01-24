@@ -6,6 +6,7 @@ using System.Threading;
 using Sparrow.Binary;
 using Voron.Global;
 using Voron.Impl.Paging;
+using Voron.Platform;
 
 
 namespace Voron.Impl
@@ -292,9 +293,7 @@ namespace Voron.Impl
         public void DiscardDataOnDisk()
         {
             if (AllocationInfos != null)
-            {
-                Sparrow.Memory.Discard(AllocationInfos[0].BaseAddress, AllocationInfos[0].Size);
-            }            
-       }
+                Pal.rvn_discard_virtual_memory(AllocationInfos[0].BaseAddress, AllocationInfos[0].Size, out _);
+        }
     }
 }

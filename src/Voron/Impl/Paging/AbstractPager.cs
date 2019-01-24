@@ -579,7 +579,7 @@ namespace Voron.Impl.Paging
             byte* baseAddress = allocInfo.BaseAddress;
             long offset = pageNumber * Constants.Storage.PageSize;
 
-            Memory.Discard(baseAddress + offset, numberOfPages * Constants.Storage.PageSize);
+            Pal.rvn_discard_virtual_memory(baseAddress + offset, numberOfPages * Constants.Storage.PageSize, out _);
         }
 
         public virtual void DiscardWholeFile()
@@ -603,7 +603,7 @@ namespace Voron.Impl.Paging
                     continue; // if adjacent ranges make one syscall
                 }
 
-                Memory.Discard(baseAddress, size);
+                Pal.rvn_discard_virtual_memory(baseAddress, size, out _);
 
                 size = 0;
                 baseAddress = null;
