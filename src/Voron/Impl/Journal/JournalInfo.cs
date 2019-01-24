@@ -12,6 +12,8 @@ namespace Voron.Impl.Journal
     [StructLayout(LayoutKind.Explicit, Pack = 1)]
     public unsafe struct JournalInfo
     {
+        public const int NumberOfReservedBytes = 3;
+
         [FieldOffset(0)]
         public long CurrentJournal;
 
@@ -22,7 +24,7 @@ namespace Voron.Impl.Journal
         public long LastSyncedTransactionId;
 
         [FieldOffset(24)]
-        public fixed byte Reserved[3];
+        public fixed byte Reserved[NumberOfReservedBytes];
 
         [FieldOffset(27)]
         public JournalInfoFlags Flags;

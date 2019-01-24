@@ -11,6 +11,7 @@ using System.Threading;
 using Sparrow.Utils;
 using Voron.Exceptions;
 using Voron.Global;
+using Voron.Impl.Journal;
 using Voron.Schema;
 
 namespace Voron.Impl.FileHeaders
@@ -207,7 +208,7 @@ namespace Voron.Impl.FileHeaders
             header->LastPageNumber = 1;
             header->Root.RootPageNumber = -1;
             header->Journal.CurrentJournal = -1;
-            Memory.Set(header->Journal.Reserved, 0, 3);
+            Memory.Set(header->Journal.Reserved, 0, JournalInfo.NumberOfReservedBytes);
             header->Journal.Flags = Journal.JournalInfoFlags.None;
             header->Journal.LastSyncedJournal = -1;
             header->Journal.LastSyncedTransactionId = -1;
@@ -219,7 +220,7 @@ namespace Voron.Impl.FileHeaders
 
         private  bool IsEmptyHeader(FileHeader* header)
         {
-            var zeroed = stackalloc byte[3];
+            var zeroed = stackalloc byte[JournalInfo.NumberOfReservedBytes];
             return header->MagicMarker == Constants.MagicMarker &&
                    header->Version == Constants.CurrentVersion &&
                    header->HeaderRevision == -1 &&

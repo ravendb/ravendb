@@ -1194,7 +1194,7 @@ namespace Voron.Impl.Journal
                     header->Journal.LastSyncedJournal = lastSyncedJournal;
                     header->Journal.LastSyncedTransactionId = lastSyncedTransactionId;
 
-                    Memory.Set(header->Journal.Reserved, 0, 3);
+                    Memory.Set(header->Journal.Reserved, 0, JournalInfo.NumberOfReservedBytes);
 
                     if (ignoreLastSyncJournalMissing)
                         header->Journal.Flags |= JournalInfoFlags.IgnoreMissingLastSyncJournal;
@@ -1290,7 +1290,7 @@ namespace Voron.Impl.Journal
                         throw new InvalidOperationException($"Attempted to remove a journal ({current.Number}) that hasn't been synced yet (last synced journal: {header->Journal.LastSyncedJournal})");
                     }
 
-                    Memory.Set(header->Journal.Reserved, 0, 3);
+                    Memory.Set(header->Journal.Reserved, 0, JournalInfo.NumberOfReservedBytes);
                     header->Journal.Flags |= JournalInfoFlags.IgnoreMissingLastSyncJournal;
                 });
 

@@ -432,7 +432,7 @@ namespace Voron.Impl.Backup
 
                     header->Root = lastTxHeader->Root;
                     
-                    Sparrow.Memory.Set(header->Journal.Reserved, 0, 3);
+                    Sparrow.Memory.Set(header->Journal.Reserved, 0, JournalInfo.NumberOfReservedBytes);
                     header->Journal.Flags = JournalInfoFlags.None;
                 });
             }

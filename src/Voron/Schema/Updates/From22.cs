@@ -10,7 +10,7 @@ namespace Voron.Schema.Updates
         {
             headerAccessor.Modify(header =>
             {
-                Memory.Set(header->Journal.Reserved, 0, 3);
+                Memory.Set(header->Journal.Reserved, 0, JournalInfo.NumberOfReservedBytes);
                 
                 if (options.JournalExists(header->Journal.LastSyncedJournal))
                     header->Journal.Flags = JournalInfoFlags.None;
