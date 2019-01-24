@@ -8,7 +8,6 @@ using Sparrow.Utils;
 using Voron.Exceptions;
 using Voron.Global;
 using Voron.Platform;
-using Voron.Platform.Win32;
 using Voron.Util.Settings;
 using static Voron.Platform.Pal;
 using static Voron.Platform.PalDefinitions;
@@ -20,7 +19,7 @@ namespace Voron.Impl.Paging
     {
         public override long TotalAllocationSize => _totalAllocationSize;
         public override int CopyPage(I4KbBatchWrites destwI4KbBatchWrites, long p, PagerState pagerState) => CopyPageImpl(destwI4KbBatchWrites, p, pagerState);
-        public override string ToString() => FileName?.FullPath;
+        public override string ToString() => FileName?.FullPath ?? "";
         protected override string GetSourceName() => $"mmf64: {FileName?.FullPath}";
         private long _totalAllocationSize;
         private readonly Logger _logger;
@@ -122,7 +121,8 @@ namespace Voron.Impl.Paging
         {
             base.ReleaseAllocationInfo(baseAddress, size);
 
-            var rc = rvn_unmap(_handle, baseAddress, size, out var errorCode);
+            var rc = rvn_unmap(DeleteOnClose ? MmapOptions.DeleteOnClose : MmapOptions.None,
+                baseAddress, size, out var errorCode);
             if (rc != FailCodes.Success)
                 PalHelper.ThrowLastError(rc, errorCode,
                     $"Failed to unmap {FileName.FullPath}. DeleteOnClose={DeleteOnClose}");
@@ -135,7 +135,7 @@ namespace Voron.Impl.Paging
             _handle.Dispose();
             // _handle.FailCode != success, we cannot delete the file probably, and there's nothing much we can do here.
             // just add to log and continue            
-            if (_handle.FailCode != PalFlags.FailCodes.Success)
+            if (_handle.FailCode != FailCodes.Success)
                 if (_logger.IsInfoEnabled)
                     _logger.Info($"Unable to dispose handle for {FileName.FullPath} (ignoring). rc={_handle.FailCode}. DeleteOnClose={DeleteOnClose}, "
                                  + $"errorCode={PalHelper.GetNativeErrorString(_handle.ErrorNo, "Unable to dispose handle for {FileName.FullPath} (ignoring).", out _)}",
@@ -241,8 +241,8 @@ namespace Voron.Impl.Paging
 
         protected override bool ReleaseHandle()
         {
-            FailCode = Pal.rvn_mmap_dispose_handle(handle, out ErrorNo);
-
+            FailCode = rvn_mmap_dispose_handle(handle, out ErrorNo);
+            handle = IntPtr.Zero;
             return FailCode == FailCodes.Success;
         }
 

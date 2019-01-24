@@ -183,14 +183,14 @@ error_cleanup:
 }
 
 EXPORT int32_t
-rvn_unmap(void *handle, void *address, int64_t size, int32_t *detailed_error_code)
-{
-    struct map_file_handle *mfh = (struct map_file_handle *)handle;
+rvn_unmap(int32_t flags, void *address, int64_t size, int32_t *detailed_error_code)
+{    
     int32_t _;
-    if (mfh->flags & MMOPTIONS_DELETE_ON_CLOSE)
+    if (flags & MMOPTIONS_DELETE_ON_CLOSE)
         rvn_discard_virtual_memory(address, size, &_); /* ignore error */
 
     int32_t rc = munmap(address, size);
+
     if (rc != 0)
         *detailed_error_code = errno;
 
