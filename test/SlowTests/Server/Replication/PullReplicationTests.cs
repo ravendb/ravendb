@@ -7,6 +7,7 @@ using System.Threading.Tasks;
 using Esprima.Ast;
 using FastTests.Server.Replication;
 using Raven.Client.Documents;
+using Raven.Client.Documents.Operations.ETL;
 using Raven.Client.Documents.Operations.OngoingTasks;
 using Raven.Client.Documents.Operations.Replication;
 using Raven.Client.Documents.Session;
@@ -307,7 +308,7 @@ namespace SlowTests.Server.Replication
             var pullReplicationCertificate = new X509Certificate2(dummy, (string)null, X509KeyStorageFlags.MachineKeySet | X509KeyStorageFlags.Exportable);
             Assert.True(pullReplicationCertificate.HasPrivateKey);
 
-            await PutCertificateInhub(pullReplicationName, hubServer, hubAdminCert, hubDB, pullReplicationCertificate);
+            await PutCertificateInHub(pullReplicationName, hubServer, hubAdminCert, hubDB, pullReplicationCertificate);
 
             using (var hubStore = GetDocumentStore(new Options
             {
@@ -323,7 +324,8 @@ namespace SlowTests.Server.Replication
                 ModifyDatabaseName = _ => sinkDB
             }))
             {
-                await SetupPullReplicationAsync(pullReplicationName, sinkStore, pullReplicationCertificate, hubStore);
+                var configurationResult = await SetupPullReplicationAsync(pullReplicationName, sinkStore, pullReplicationCertificate, hubStore);
+                var sinkTaskId = configurationResult[0].TaskId;
                 using (var hubSession = hubStore.OpenSession())
                 {
                     hubSession.Store(new User(), "foo/bar");
@@ -332,10 +334,29 @@ namespace SlowTests.Server.Replication
 
                 var timeout = 3000;
                 Assert.True(WaitForDocument(sinkStore, "foo/bar", timeout), sinkStore.Identifier);
+                
+                // test if certificate is retained when we don't send one
+                // sending null as cert - but it should copy old one
+                await sinkStore.Maintenance.SendAsync(new UpdatePullReplicationAsSinkOperation(new PullReplicationAsSink
+                {
+                    TaskId = sinkTaskId,
+                    Name = pullReplicationName,
+                    HubDefinitionName = pullReplicationName,
+                    ConnectionStringName = "ConnectionString-" + hubStore.Database
+                }));
+                
+                using (var hubSession = hubStore.OpenSession())
+                {
+                    hubSession.Store(new User(), "foo/bar2");
+                    hubSession.SaveChanges();
+                }
+
+                Assert.True(WaitForDocument(sinkStore, "foo/bar2", timeout), sinkStore.Identifier);
+                
             }
         }
-
-        private async Task PutCertificateInhub(string pullReplicationName, RavenServer server, X509Certificate2 hubAdminCert, string hubDB,
+        
+        private async Task PutCertificateInHub(string pullReplicationName, RavenServer server, X509Certificate2 hubAdminCert, string hubDB,
             X509Certificate2 certificate)
         {
             using (var store = GetDocumentStore(new Options
@@ -533,6 +554,8 @@ namespace SlowTests.Server.Replication
                 Assert.Equal("Karmel2", user.Name);
             }
         }
+        
+        //TODO write test for deletion! - make sure replication is stopped after we delete hub!
 
         public Task<List<ModifyOngoingTaskResult>> SetupPullReplicationAsync(string remoteName, DocumentStore sink, params DocumentStore[] hub)
         {

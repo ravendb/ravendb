@@ -36,6 +36,7 @@ namespace Raven.Server.Documents.Handlers
             await DatabaseConfigurations((_, databaseName, blittableJson) =>
                 {
                     pullReplication = JsonDeserializationClient.PullReplicationDefinition(blittableJson);
+                    
                     pullReplication.Validate(ServerStore.Server.Certificate?.Certificate != null);
                     var updatePullReplication = new UpdatePullReplicationAsHubCommand(databaseName)
                     {
