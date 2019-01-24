@@ -6,6 +6,7 @@ using System.Threading;
 using Raven.Client.Documents.Indexes;
 using Raven.Client.Documents.Operations;
 using Raven.Client.Documents.Smuggler;
+using Raven.Client.Exceptions.Documents;
 using Raven.Client.ServerWide;
 using Raven.Client.Util;
 using Raven.Server.Documents;
@@ -499,21 +500,15 @@ namespace Raven.Server.Smuggler.Documents
 
                     item.Document.NonPersistentFlags |= NonPersistentDocumentFlags.FromSmuggler;
 
-                    if (item.Document.NonPersistentFlags.Contain(NonPersistentDocumentFlags.FromSmuggler))
+                    try
                     {
-                        using (_database.DocumentsStorage.ContextPool.AllocateOperationContext(out DocumentsOperationContext context))
-                        using (context.OpenReadTransaction())
-                        {
-                            if ((_database.DocumentsStorage.Get(context, item.Document.Id) == null) &&
-                                (item.Document.Flags & DocumentFlags.DeleteRevision) == 0)
-                            {
-                                result.RevisionDocuments.ErroredCount++;
-                                continue;
-                            }
-                        }
+                        actions.WriteDocument(item, result.RevisionDocuments);
                     }
-
-                    actions.WriteDocument(item, result.RevisionDocuments);
+                    catch (DocumentDoesNotExistException )
+                    {
+                        result.RevisionDocuments.ErroredCount++;
+                        continue;
+                    }
 
                     result.RevisionDocuments.LastEtag = item.Document.Etag;
                 }
@@ -674,17 +669,15 @@ namespace Raven.Server.Smuggler.Documents
                     if (result.Counters.ReadCount % 1000 == 0)
                         AddInfoToSmugglerResult(result, $"Read {result.Counters.ReadCount:#,#;;0} counters.");
 
-                    using (_database.DocumentsStorage.ContextPool.AllocateOperationContext(out DocumentsOperationContext context))
-                    using (context.OpenReadTransaction())
+                    try
                     {
-                        if (_database.DocumentsStorage.Get(context, counterDetail.DocumentId) == null)
-                        {
-                            result.Counters.ErroredCount++;
-                            continue;
-                        }
+                        actions.WriteCounter(counterDetail);
                     }
-
-                    actions.WriteCounter(counterDetail);
+                    catch (DocumentDoesNotExistException)
+                    {
+                        result.Counters.ErroredCount++;
+                        continue;
+                    }
 
                     result.Counters.LastEtag = counterDetail.Etag;
                 }

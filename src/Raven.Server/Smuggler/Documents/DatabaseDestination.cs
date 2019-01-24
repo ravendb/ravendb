@@ -9,6 +9,7 @@ using Raven.Client.Documents.Indexes;
 using Raven.Client.Documents.Operations.Attachments;
 using Raven.Client.Documents.Operations.Counters;
 using Raven.Client.Documents.Smuggler;
+using Raven.Client.Exceptions.Documents;
 using Raven.Client.ServerWide;
 using Raven.Client.Util;
 using Raven.Server.Documents;
@@ -150,6 +151,21 @@ namespace Raven.Server.Smuggler.Documents
 
             public void WriteDocument(DocumentItem item, SmugglerProgressBase.CountsWithLastEtag progress)
             {
+                if (item.Document.NonPersistentFlags.Contain(NonPersistentDocumentFlags.FromSmuggler) &&
+                     ((item.Document.Flags & DocumentFlags.HasRevisions) != 0) &&
+                    ((item.Document.Flags & DocumentFlags.Revision) !=0) || 
+                     ((item.Document.Flags & DocumentFlags.DeleteRevision) != 0))
+                {
+                    using (_database.DocumentsStorage.ContextPool.AllocateOperationContext(out DocumentsOperationContext context))
+                    using (context.OpenReadTransaction())
+                    {
+                        if (_database.DocumentsStorage.Get(context, item.Document.Id) == null)
+                        {
+                            throw new DocumentDoesNotExistException();
+                        }
+                    }
+                }
+
                 if (item.Attachments != null)
                 {
                     if(_options.OperateOnTypes.HasFlag(DatabaseItemType.Attachments))
@@ -710,6 +726,14 @@ namespace Raven.Server.Smuggler.Documents
 
             public void WriteCounter(CounterDetail counterDetail)
             {
+                using (_database.DocumentsStorage.ContextPool.AllocateOperationContext(out DocumentsOperationContext context))
+                using (context.OpenReadTransaction())
+                {
+                    if (_database.DocumentsStorage.Get(context, counterDetail.DocumentId) == null)
+                    {
+                        throw new DocumentDoesNotExistException();
+                    }
+                }
                 AddToBatch(counterDetail);
                 HandleBatchOfCountersIfNecessary();
             }
