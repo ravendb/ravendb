@@ -338,6 +338,10 @@ namespace FastTests
             {
                 var configuration = RavenConfiguration.CreateForServer(Guid.NewGuid().ToString(), customConfigPath);
 
+                configuration.SetSetting(RavenConfiguration.GetKey(x => x.Replication.ReplicationMinimalHeartbeat), "1");
+                configuration.SetSetting(RavenConfiguration.GetKey(x => x.Replication.RetryReplicateAfter), "3");
+                configuration.SetSetting(RavenConfiguration.GetKey(x => x.Cluster.AddReplicaTimeout), "10");
+
                 if (customSettings != null)
                 {
                     foreach (var setting in customSettings)
@@ -345,7 +349,7 @@ namespace FastTests
                         configuration.SetSetting(setting.Key, setting.Value);
                     }
                 }
-
+             
                 configuration.Initialize();
                 configuration.Logs.Mode = LogMode.None;
                 if (customSettings == null || customSettings.ContainsKey(RavenConfiguration.GetKey(x => x.Core.ServerUrls)) == false)
@@ -357,9 +361,6 @@ namespace FastTests
                 configuration.Core.DataDirectory =
                     configuration.Core.DataDirectory.Combine(partialPath ?? $"Tests{Interlocked.Increment(ref _serverCounter)}");
                 configuration.Server.MaxTimeForTaskToWaitForDatabaseToLoad = new TimeSetting(60, TimeUnit.Seconds);
-                configuration.Replication.ReplicationMinimalHeartbeat = new TimeSetting(100, TimeUnit.Milliseconds);
-                configuration.Replication.RetryReplicateAfter = new TimeSetting(3, TimeUnit.Seconds);
-                configuration.Cluster.AddReplicaTimeout = new TimeSetting(10, TimeUnit.Seconds);
                 configuration.Licensing.EulaAccepted = true;
                 if (customSettings == null || customSettings.ContainsKey(RavenConfiguration.GetKey(x => x.Core.FeaturesAvailability)) == false)
                 {
