@@ -1023,8 +1023,8 @@ namespace Raven.Server.Documents.ETL
             long docsTombstonesToProcess = 0;
             long totalDocsTombstonesCount = 0;
 
-            long countersToProcess = 0;
-            long totalCountersCount = 0;
+            long counterGroupsToProcess = 0;
+            long totalCounterGroupsCount = 0;
 
             var lastProcessedEtag = _lastProcessState.GetLastProcessedEtagForNode(_serverStore.NodeTag);
 
@@ -1038,20 +1038,10 @@ namespace Raven.Server.Documents.ETL
 
                 if (ShouldTrackCounters())
                 {
-                    //todo aviv RavenDB-12022
-                    countersToProcess += Database.DocumentsStorage.CountersStorage.GetNumberOfCountersToProcess(documentsContext, collection, lastProcessedEtag, out total);
-                    totalCountersCount += total;
+                    counterGroupsToProcess += Database.DocumentsStorage.CountersStorage.GetNumberOfCounterGroupsToProcess(documentsContext, collection, lastProcessedEtag, out total);
+                    totalCounterGroupsCount += total;
                 }
             }
-
-            long countersTombstonesToProcess = 0;
-            long totalCountersTombstonesCount = 0;
-
-/*            if (ShouldTrackCounters())
-            {
-                countersTombstonesToProcess =
-                    Database.DocumentsStorage.CountersStorage.GetNumberOfTombstonesToProcess(documentsContext, lastProcessedEtag, out totalCountersTombstonesCount);
-            }*/
 
             result.NumberOfDocumentsToProcess = docsToProcess;
             result.TotalNumberOfDocuments = totalDocsCount;
@@ -1059,14 +1049,11 @@ namespace Raven.Server.Documents.ETL
             result.NumberOfDocumentTombstonesToProcess = docsTombstonesToProcess;
             result.TotalNumberOfDocumentTombstones = totalDocsTombstonesCount;
 
-            result.NumberOfCountersToProcess = countersToProcess;
-            result.TotalNumberOfCounters = totalCountersCount;
-
-            result.NumberOfCounterTombstonesToProcess = countersTombstonesToProcess;
-            result.TotalNumberOfCounterTombstones = totalCountersTombstonesCount;
+            result.NumberOfCounterGroupsToProcess = counterGroupsToProcess;
+            result.TotalNumberOfCounterGroups = totalCounterGroupsCount;
 
             result.Completed = (result.NumberOfDocumentsToProcess > 0 || result.NumberOfDocumentTombstonesToProcess > 0 ||
-                                result.NumberOfCountersToProcess > 0 || result.NumberOfCounterTombstonesToProcess > 0) == false;
+                                result.NumberOfCounterGroupsToProcess > 0) == false;
 
             var performance = _lastStats?.ToPerformanceLiveStats();
 
@@ -1082,14 +1069,11 @@ namespace Raven.Server.Documents.ETL
                 if (result.NumberOfDocumentTombstonesToProcess > 0)
                     result.NumberOfDocumentTombstonesToProcess -= performance.NumberOfTransformedTombstones[EtlItemType.Document];
 
-                if (result.NumberOfCountersToProcess > 0)
-                    result.NumberOfCountersToProcess -= performance.NumberOfTransformedItems[EtlItemType.Counter];
-
-                if (result.NumberOfCounterTombstonesToProcess > 0)
-                    result.NumberOfCounterTombstonesToProcess -= performance.NumberOfTransformedTombstones[EtlItemType.Counter];
+                if (result.NumberOfCounterGroupsToProcess > 0)
+                    result.NumberOfCounterGroupsToProcess -= performance.NumberOfTransformedItems[EtlItemType.Counter];
 
                 result.Completed = (result.NumberOfDocumentsToProcess > 0 || result.NumberOfDocumentTombstonesToProcess > 0 ||
-                                    result.NumberOfCountersToProcess > 0 || result.NumberOfCounterTombstonesToProcess > 0) == false;
+                                    result.NumberOfCounterGroupsToProcess > 0) == false;
 
                 if (result.Completed && performance.Completed == null)
                 {

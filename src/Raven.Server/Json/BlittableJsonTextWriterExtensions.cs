@@ -136,20 +136,12 @@ namespace Raven.Server.Json
                     wp.WriteInteger(processProgress.TotalNumberOfDocumentTombstones);
                     wp.WriteComma();
 
-                    wp.WritePropertyName(nameof(processProgress.NumberOfCountersToProcess));
-                    wp.WriteInteger(processProgress.NumberOfCountersToProcess);
+                    wp.WritePropertyName(nameof(processProgress.NumberOfCounterGroupsToProcess));
+                    wp.WriteInteger(processProgress.NumberOfCounterGroupsToProcess);
                     wp.WriteComma();
 
-                    wp.WritePropertyName(nameof(processProgress.TotalNumberOfCounters));
-                    wp.WriteInteger(processProgress.TotalNumberOfCounters);
-                    wp.WriteComma();
-
-                    wp.WritePropertyName(nameof(processProgress.NumberOfCounterTombstonesToProcess));
-                    wp.WriteInteger(processProgress.NumberOfCounterTombstonesToProcess);
-                    wp.WriteComma();
-
-                    wp.WritePropertyName(nameof(processProgress.TotalNumberOfCounterTombstones));
-                    wp.WriteInteger(processProgress.TotalNumberOfCounterTombstones);
+                    wp.WritePropertyName(nameof(processProgress.TotalNumberOfCounterGroups));
+                    wp.WriteInteger(processProgress.TotalNumberOfCounterGroups);
 
                     wp.WriteEndObject();
                 });

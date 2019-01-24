@@ -29,12 +29,8 @@ namespace Raven.Server.Documents.ETL.Stats
 
         public long TotalNumberOfDocumentTombstones { get; set; }
 
-        public long NumberOfCountersToProcess { get; set; }
+        public long NumberOfCounterGroupsToProcess { get; set; }
 
-        public long TotalNumberOfCounters { get; set; }
-
-        public long NumberOfCounterTombstonesToProcess { get; set; }
-
-        public long TotalNumberOfCounterTombstones { get; set; }
+        public long TotalNumberOfCounterGroups { get; set; }
     }
 }
