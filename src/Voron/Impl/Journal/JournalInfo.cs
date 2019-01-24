@@ -33,7 +33,7 @@ namespace Voron.Impl.Journal
     [Flags]
     public enum JournalInfoFlags : byte
     {
-        None,
-        IgnoreMissingLastSyncJournal
+        None = 0,
+        IgnoreMissingLastSyncJournal = 1
     }
 }
