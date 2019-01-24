@@ -538,8 +538,9 @@ namespace Raven.Server.Documents.Replication
                 if (instance.PullReplicationDefinitionName == null)
                     continue;
 
-                if (newRecord.HubPullReplications.TryGetValue(instance.PullReplicationDefinitionName, out var pullReplication) && 
-                    pullReplication.Disabled == false)
+                var pullReplication = newRecord.HubPullReplications.Find(x => x.Name == instance.PullReplicationDefinitionName);
+                
+                if (pullReplication != null && pullReplication.Disabled == false)
                 {
                     // update the destination
                     var current = instance.Destination as ExternalReplication;
@@ -975,6 +976,7 @@ namespace Raven.Server.Documents.Replication
                     var cmd = new GetTcpInfoForRemoteTaskCommand(database, remoteTask);
                     requestExecutor.Execute(cmd, ctx);
                     pullReplicationAsSink.Url = requestExecutor.Url;
+                    pullReplicationAsSink.Database = database;
                     return cmd.Result;
                 }
             }

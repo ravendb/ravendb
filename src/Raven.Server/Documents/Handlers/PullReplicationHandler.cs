@@ -30,10 +30,12 @@ namespace Raven.Server.Documents.Handlers
             if (ResourceNameValidator.IsValidResourceName(Database.Name, ServerStore.Configuration.Core.DataDirectory.FullPath, out string errorMessage) == false)
                 throw new BadRequestException(errorMessage);
 
+            PullReplicationDefinition pullReplication = null;
+            
             ServerStore.LicenseManager.AssertCanAddPullReplication();
             await DatabaseConfigurations((_, databaseName, blittableJson) =>
                 {
-                    var pullReplication = JsonDeserializationClient.PullReplicationDefinition(blittableJson);
+                    pullReplication = JsonDeserializationClient.PullReplicationDefinition(blittableJson);
                     pullReplication.Validate(ServerStore.Server.Certificate?.Certificate != null);
                     var updatePullReplication = new UpdatePullReplicationAsHubCommand(databaseName)
                     {
@@ -43,7 +45,7 @@ namespace Raven.Server.Documents.Handlers
                 }, "update-hub-pull-replication",
                 fillJson: (json, _, index) =>
                 {
-                    json[nameof(OngoingTask.TaskId)] = index;
+                    json[nameof(OngoingTask.TaskId)] = pullReplication.TaskId == 0 ? index : pullReplication.TaskId;
                 }, statusCode: HttpStatusCode.Created);
         }
 

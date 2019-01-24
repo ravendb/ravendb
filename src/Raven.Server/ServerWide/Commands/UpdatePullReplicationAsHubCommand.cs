@@ -17,10 +17,17 @@ namespace Raven.Server.ServerWide.Commands
 
         public override string UpdateDatabaseRecord(DatabaseRecord record, long etag)
         {
-            Definition.TaskId = etag;
-            record.HubPullReplications.Remove(Definition.Name);
+            if (Definition.TaskId == 0)
+            {
+                Definition.TaskId = etag;
+            }
+            else
+            {
+                PullReplicationDefinition.RemoveHub(record.HubPullReplications, Definition.TaskId);
+            }
+            
             record.EnsureTaskNameIsNotUsed(Definition.Name);
-            record.HubPullReplications[Definition.Name] = Definition;
+            record.HubPullReplications.Add(Definition);
             return null;
         }
 

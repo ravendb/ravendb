@@ -294,7 +294,7 @@ namespace FastTests.Server.Replication
         {
             foreach (var node in toNodes)
             {
-                var databaseWatcher = new ExternalReplication(node.Database, "connectin");
+                var databaseWatcher = new ExternalReplication(node.Database, "connection");
                 await AddWatcherToReplicationTopology(fromStore, databaseWatcher, new[] { node.Url });
             }
         }

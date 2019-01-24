@@ -98,7 +98,7 @@ namespace Raven.Server.Web.System
 
                 ongoingTasksResult.SubscriptionsCount = (int)Database.SubscriptionStorage.GetAllSubscriptionsCount();
 
-                ongoingTasksResult.PullReplicationDefinitions = databaseRecord.HubPullReplications.Values.ToList();
+                ongoingTasksResult.PullReplicationDefinitions = databaseRecord.HubPullReplications.ToList();
 
                 return ongoingTasksResult;
             }
@@ -999,7 +999,7 @@ namespace Raven.Server.Web.System
                         // so we sent to user information about pull replication hub definition
                         // and information about currently connected clients (sinks)
                         case OngoingTaskType.PullReplicationAsHub:
-                            var hubReplicationDefinition = record.HubPullReplications?.Values.FirstOrDefault(x => x.TaskId == key);
+                            var hubReplicationDefinition = record.HubPullReplications?.FirstOrDefault(x => x.TaskId == key);
 
                             if (hubReplicationDefinition == null)
                             {

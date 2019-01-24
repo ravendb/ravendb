@@ -68,7 +68,7 @@ namespace Raven.Server.ServerWide.Commands
                     break;
                 
                 case OngoingTaskType.PullReplicationAsHub:
-                    var pullAsHub = record?.HubPullReplications?.Values.First(x => x.TaskId == TaskId);
+                    var pullAsHub = record?.HubPullReplications?.First(x => x.TaskId == TaskId);
                     if (pullAsHub != null)
                     {
                         pullAsHub.Disabled = Disable;
