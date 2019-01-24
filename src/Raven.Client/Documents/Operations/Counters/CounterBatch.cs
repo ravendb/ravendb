@@ -146,10 +146,4 @@ namespace Raven.Client.Documents.Operations.Counters
             };
         }
     }
-
-    public class CounterGroup
-    {
-        public string ChangeVector;
-        public BlittableJsonReaderObject Values;
-    }
 }

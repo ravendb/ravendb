@@ -99,7 +99,7 @@ namespace InterversionTests
                     countOfIndexes = stats.CountOfIndexes;
                     countOfRevisions = stats.CountOfRevisionDocuments;
 
-                    Assert.Equal(1, stats.CountOfCounters);
+                    Assert.Equal(1, stats.CountOfCounterEntries);
                 }
 
                 using (var store40 = await GetDocumentStoreAsync("4.0.6-patch-40047"))
@@ -119,7 +119,7 @@ namespace InterversionTests
                     Assert.Equal(countOfIndexes, stats.CountOfIndexes);
                     Assert.Equal(countOfRevisions, stats.CountOfRevisionDocuments);
 
-                    Assert.Equal(0, stats.CountOfCounters);
+                    Assert.Equal(0, stats.CountOfCounterEntries);
 
                 }
             }
