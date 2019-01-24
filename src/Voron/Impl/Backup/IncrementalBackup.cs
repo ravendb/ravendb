@@ -99,10 +99,13 @@ namespace Voron.Impl.Backup
             long lastWrittenLog4kb = -1;
             bool backupSuccess = true;
             IncrementalBackupInfo backupInfo;
+            JournalInfo journalInfo;
+
             var transactionPersistentContext = new TransactionPersistentContext(true);
             using (var txw = env.NewLowLevelTransaction(transactionPersistentContext, TransactionFlags.ReadWrite))
             {
                 backupInfo = env.HeaderAccessor.Get(ptr => ptr->IncrementalBackup);
+                journalInfo = env.HeaderAccessor.Get(ptr => ptr->Journal);
 
                 if (env.Journal.CurrentFile != null)
                 {
@@ -136,7 +139,7 @@ namespace Voron.Impl.Backup
                     {
                         var num = journalNum;
 
-                        var journalFile = GetJournalFile(env, journalNum, backupInfo);
+                        var journalFile = GetJournalFile(env, journalNum, backupInfo, journalInfo);
 
                         journalFile.AddRef();
 
@@ -219,7 +222,7 @@ namespace Voron.Impl.Backup
             return numberOfBackedUpPages;
         }
 
-        internal static JournalFile GetJournalFile(StorageEnvironment env, long journalNum, IncrementalBackupInfo backupInfo)
+        internal static JournalFile GetJournalFile(StorageEnvironment env, long journalNum, IncrementalBackupInfo backupInfo, JournalInfo journalInfo)
         {
             var journalFile = env.Journal.Files.FirstOrDefault(x => x.Number == journalNum); // first check journal files currently being in use
             if (journalFile != null)
@@ -229,7 +232,7 @@ namespace Voron.Impl.Backup
             }
             try
             {
-                using (var pager = env.Options.OpenJournalPager(journalNum))
+                using (var pager = env.Options.OpenJournalPager(journalNum, journalInfo))
                 {
                     long journalSize = Bits.NextPowerOf2(pager.NumberOfAllocatedPages * Constants.Storage.PageSize);
                     journalFile = new JournalFile(env, env.Options.CreateJournalWriter(journalNum, journalSize), journalNum);

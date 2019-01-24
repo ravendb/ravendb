@@ -184,7 +184,7 @@ namespace Voron.Impl.Journal
                 var initialSize = _env.Options.InitialFileSize ?? _env.Options.InitialLogFileSize;
                 var journalRecoveryName = StorageEnvironmentOptions.JournalRecoveryName(journalNumber);
                 using (var recoveryPager = _env.Options.CreateTemporaryBufferPager(journalRecoveryName, initialSize))
-                using (var pager = _env.Options.OpenJournalPager(journalNumber))
+                using (var pager = _env.Options.OpenJournalPager(journalNumber, logInfo))
                 {
                     RecoverCurrentJournalSize(pager);
 
