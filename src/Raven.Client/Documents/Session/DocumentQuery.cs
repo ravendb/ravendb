@@ -4,6 +4,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Linq.Expressions;
 using System.Reflection;
+using Raven.Client.Documents.Indexes;
 using Raven.Client.Documents.Linq;
 using Raven.Client.Documents.Queries;
 using Raven.Client.Documents.Queries.Explanation;
@@ -844,14 +845,60 @@ namespace Raven.Client.Documents.Session
             return this;
         }
 
-        IGraphQuery<T> IGraphQuery<T>.With<TOther>(string alias, IRavenQueryable<TOther> query)
+        public IGraphQuery<T> WithEdges(string alias, string edgeSelector)
         {
-            //TODO:Find a proper way of do this extraction
+            WithTokens.AddLast(new WithToken(alias, edgeSelector));
+            return this;
+        }
+
+        public IGraphQuery<T> With<TOther>(string alias, string rawQuery)
+        {
+            return WithInternal(alias, (DocumentQuery<TOther>)Session.Advanced.RawQuery<TOther>(rawQuery));
+        }
+
+        public IGraphQuery<T> With<TOther>(string alias, IRavenQueryable<TOther> query)
+        {
             var queryInspector = (RavenQueryInspector<TOther>)query;
             var docQuery = (DocumentQuery<TOther>)queryInspector.GetDocumentQuery(x => x.ParameterPrefix = $"w{WithTokens.Count}p");
+            return WithInternal(alias, docQuery);
+        }
+
+        public IGraphQuery<T> With<TOther>(string alias, Func<IDocumentQueryBuilder, IDocumentQuery<TOther>> queryFactory)
+        {
+            var docQuery = (DocumentQuery<TOther>)queryFactory(new DocumentQueryBuilder(Session, $"w{WithTokens.Count}p"));
+            return WithInternal(alias, docQuery);
+        }
+
+        private class DocumentQueryBuilder : IDocumentQueryBuilder
+        {
+            private readonly IDocumentSession _session;
+            private readonly string _parameterPrefix;
+
+            public DocumentQueryBuilder(IDocumentSession session, string parameterPrefix)
+            {
+                _session = session;
+                _parameterPrefix = parameterPrefix;
+            }
+
+            public IDocumentQuery<T1> DocumentQuery<T1, TIndexCreator>() where TIndexCreator : AbstractIndexCreationTask, new()
+            {
+                var query = (DocumentQuery<T1>)_session.Advanced.DocumentQuery<T1, TIndexCreator>();
+                query.ParameterPrefix = _parameterPrefix;
+                return query;
+            }
+
+            public IDocumentQuery<T1> DocumentQuery<T1>(string indexName = null, string collectionName = null, bool isMapReduce = false)
+            {
+                var query = (DocumentQuery<T1>)_session.Advanced.DocumentQuery<T1>(indexName, collectionName, isMapReduce);
+                query.ParameterPrefix = _parameterPrefix;
+                return query;
+            }
+        }
+        private IGraphQuery<T> WithInternal<TOther>(string alias, DocumentQuery<TOther> docQuery)
+        {
             if (docQuery.SelectTokens?.Count > 0)
             {
-                throw new NotSupportedException($"Select is not premitted in a 'With' clause in query:{docQuery}");
+                throw new NotSupportedException($"Select is not permitted in a 'With' clause in query:{docQuery}");
             }
 
 
@@ -860,10 +907,9 @@ namespace Raven.Client.Documents.Session
                 QueryParameters.Add(keyValue.Key, keyValue.Value);
             }
 
-            WithTokens.AddLast(new WithToken<TOther>(alias, docQuery.ToString()));
+            WithTokens.AddLast(new WithToken(alias, docQuery.ToString()));
             return this;
         }
-
         /// <inheritdoc />
         IEnumerator IEnumerable.GetEnumerator()
         {

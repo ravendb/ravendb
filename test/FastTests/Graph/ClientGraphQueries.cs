@@ -33,30 +33,30 @@ namespace FastTests.Graph
         }
 
         [Fact]
-        public async Task CanAggregateQueryParametersProperlyAsync()
+        public void CanAggregateQueryParametersProperly()
         {
             using (var store = GetDocumentStore())
             {
-                using (var session = store.OpenAsyncSession())
+                using (var session = store.OpenSession())
                 {
                     var bar = new Bar { Name = "Barvazon", Age = 19};
                     var barId = "Bars/1";
-                    await session.StoreAsync(bar, barId);
-                    await session.StoreAsync(new Foo
+                    session.Store(bar, barId);
+                    session.Store(new Foo
                     {
                         Name = "Foozy",
                         Bars = new List<string> { barId }
                     });
-                    await session.SaveChangesAsync();
+                    session.SaveChanges();
                     var names = new[]
                     {
                         "Fi",
                         "Fah",
                         "Foozy"
                     };
-                    FooBar res = await session.Advanced.AsyncGraphQuery<FooBar>("match (Foo)-[Bars as _]->(Bars as Bar)")
-                        .With("Foo", builder => builder.AsyncDocumentQuery<Foo>().WhereIn(x=>x.Name, names))
-                        .With("Bar",session.Query<Bar>().Where(x=>x.Age >= 18)).SingleAsync();
+                    FooBar res = session.Advanced.GraphQuery<FooBar>("match (Foo)-[Bars as _]->(Bars as Bar)")
+                        .With("Foo", builder => builder.DocumentQuery<Foo>().WhereIn(x=>x.Name, names))
+                        .With("Bar",session.Query<Bar>().Where(x=>x.Age >= 18)).Single();
                     Assert.Equal(res.Foo.Name, "Foozy");
                     Assert.Equal(res.Bar.Name, "Barvazon");
                 }

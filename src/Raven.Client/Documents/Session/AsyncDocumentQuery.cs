@@ -1084,6 +1084,17 @@ namespace Raven.Client.Documents.Session
             return CreateDocumentQueryInternal<TResult>();
         }
 
+        public IAsyncGraphQuery<T> With<TOther>(string alias, string rawQuery)
+        {
+            return WithInternal(alias, (AsyncDocumentQuery<TOther>)AsyncSession.Advanced.AsyncRawQuery<TOther>(rawQuery));
+        }
+
+        public IAsyncGraphQuery<T> WithEdges(string alias, string edgeSelector)
+        {
+            WithTokens.AddLast(new WithToken(alias, edgeSelector));
+            return this;
+        }
+
         public IAsyncGraphQuery<T> With<TOther>(string alias, IRavenQueryable<TOther> query)
         {
             var queryInspector = (RavenQueryInspector<TOther>)query;
@@ -1091,18 +1102,18 @@ namespace Raven.Client.Documents.Session
             return WithInternal(alias, docQuery);
         }
 
-        public IAsyncGraphQuery<T> With<TOther>(string alias, Func<IAsyncDocumentBuilder, IAsyncDocumentQuery<TOther>> queryFactory)
+        public IAsyncGraphQuery<T> With<TOther>(string alias, Func<IAsyncDocumentQueryBuilder, IAsyncDocumentQuery<TOther>> queryFactory)
         {            
-            var docQuery = (AsyncDocumentQuery<TOther>)queryFactory(new AsyncDocumentBuilder(AsyncSession, $"w{WithTokens.Count}p"));
+            var docQuery = (AsyncDocumentQuery<TOther>)queryFactory(new AsyncDocumentQueryBuilder(AsyncSession, $"w{WithTokens.Count}p"));
             return WithInternal(alias, docQuery);
         }
 
-        private class AsyncDocumentBuilder : IAsyncDocumentBuilder
+        private class AsyncDocumentQueryBuilder : IAsyncDocumentQueryBuilder
         {
-            private IAsyncDocumentSession _session;
-            private string _parameterPrefix;
+            private readonly IAsyncDocumentSession _session;
+            private readonly string _parameterPrefix;
 
-            public AsyncDocumentBuilder(IAsyncDocumentSession session, string parameterPrefix)
+            public AsyncDocumentQueryBuilder(IAsyncDocumentSession session, string parameterPrefix)
             {
                 _session = session;
                 _parameterPrefix = parameterPrefix;
@@ -1125,7 +1136,7 @@ namespace Raven.Client.Documents.Session
         {            
             if (docQuery.SelectTokens?.Count > 0)
             {
-                throw new NotSupportedException($"Select is not premitted in a 'With' clause in query:{docQuery}");
+                throw new NotSupportedException($"Select is not permitted in a 'With' clause in query:{docQuery}");
             }
 
 
@@ -1134,7 +1145,7 @@ namespace Raven.Client.Documents.Session
                 QueryParameters.Add(keyValue.Key, keyValue.Value);
             }
 
-            WithTokens.AddLast(new WithToken<TOther>(alias, docQuery.ToString()));
+            WithTokens.AddLast(new WithToken(alias, docQuery.ToString()));
             return this;
         }
     }
