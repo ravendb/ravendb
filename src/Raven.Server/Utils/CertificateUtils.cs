@@ -1,6 +1,7 @@
 ﻿using System;
 using System.IO;
 using System.Linq;
+using System.Security.Cryptography;
 using System.Security.Cryptography.X509Certificates;
 using System.Text;
 using Org.BouncyCastle.Asn1.X509;
@@ -60,7 +61,14 @@ namespace Raven.Server.Utils
                     {
                         if (element.Certificate.NotBefore.ToUniversalTime() > twoDaysAgo)
                             continue;
-                        userIntermediateStore.Remove(element.Certificate);
+                        try
+                        {
+                            userIntermediateStore.Remove(element.Certificate);
+                        }
+                        catch (CryptographicException)
+                        {
+                            // Access denied?
+                        }
                     }
                 }
             }

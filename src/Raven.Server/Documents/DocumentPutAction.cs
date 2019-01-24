@@ -101,6 +101,8 @@ namespace Raven.Server.Documents
 
                     if (nonPersistentFlags.Contain(NonPersistentDocumentFlags.FromReplication) == false)
                     {
+                        flags = flags.Strip(DocumentFlags.FromReplication);
+
                         if (nonPersistentFlags.Contain(NonPersistentDocumentFlags.ByAttachmentUpdate) == false &&
                             oldFlags .Contain(DocumentFlags.HasAttachments))
                         {
@@ -223,7 +225,9 @@ namespace Raven.Server.Documents
                     _documentsStorage.ExpirationStorage.Put(context, lowerId, document);
                 }
 
-                context.LastDatabaseChangeVector = changeVector;
+                if (flags.Contain(DocumentFlags.FromReplication) == false)
+                    context.LastDatabaseChangeVector = changeVector;
+
                 _documentDatabase.Metrics.Docs.PutsPerSec.MarkSingleThreaded(1);
                 _documentDatabase.Metrics.Docs.BytesPutsPerSec.MarkSingleThreaded(document.Size);
 
@@ -294,7 +298,7 @@ namespace Raven.Server.Documents
                 else
                 {
                     var result = _documentsStorage.ConflictsStorage.MergeConflictChangeVectorIfNeededAndDeleteConflicts(changeVector, context, id, newEtag, document);
-                    changeVector = result.ChangeVector;
+                    changeVector = ChangeVectorUtils.MergeVectors(context.LastDatabaseChangeVector ?? GetDatabaseChangeVector(context), result.ChangeVector);
                     nonPersistentFlags = result.NonPersistentFlags;
                 }
             }

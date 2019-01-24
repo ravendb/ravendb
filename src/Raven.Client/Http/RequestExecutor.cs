@@ -28,6 +28,7 @@ using Raven.Client.Properties;
 using Raven.Client.ServerWide.Commands;
 using Raven.Client.Util;
 using Sparrow;
+using Sparrow.Collections;
 using Sparrow.Json;
 using Sparrow.Logging;
 using Sparrow.Threading;
@@ -184,6 +185,8 @@ namespace Raven.Client.Http
                 GetCachedOrCreateHttpClient(httpClientCache) : lazyClient.Value;
 
             TopologyHash = Http.TopologyHash.GetTopologyHash(initialUrls);
+
+            UpdateConnectionLimit(initialUrls);
         }
 
         public static RequestExecutor Create(string[] initialUrls, string databaseName, X509Certificate2 certificate, DocumentConventions conventions)
@@ -286,7 +289,7 @@ namespace Raven.Client.Http
             }
         }
 
-        public virtual async Task<bool> UpdateTopologyAsync(ServerNode node, int timeout, bool forceUpdate = false)
+        public virtual async Task<bool> UpdateTopologyAsync(ServerNode node, int timeout, bool forceUpdate = false, string debugTag = null)
         {
             if (Disposed)
                 return false;
@@ -304,7 +307,7 @@ namespace Raven.Client.Http
 
                 using (ContextPool.AllocateOperationContext(out JsonOperationContext context))
                 {
-                    var command = new GetDatabaseTopologyCommand();
+                    var command = new GetDatabaseTopologyCommand(debugTag);
                     await ExecuteAsync(node, null, context, command, shouldRetry: false, sessionInfo: null, token: CancellationToken.None).ConfigureAwait(false);
                     var topology = command.Result;
 
@@ -329,6 +332,10 @@ namespace Raven.Client.Http
                     }
 
                     TopologyEtag = _nodeSelector.Topology.Etag;
+
+                    var urls = _nodeSelector.Topology.Nodes.Select(x => x.Url);
+                    UpdateConnectionLimit(urls);
+
                     OnTopologyUpdated(topology);
                 }
             }
@@ -463,7 +470,7 @@ namespace Raven.Client.Http
             {
                 try
                 {
-                    await UpdateTopologyAsync(serverNode, 0).ConfigureAwait(false);
+                    await UpdateTopologyAsync(serverNode, 0, debugTag: "timer-callback").ConfigureAwait(false);
                 }
                 catch (Exception e)
                 {
@@ -488,7 +495,7 @@ namespace Raven.Client.Http
                         Database = _databaseName
                     };
 
-                    await UpdateTopologyAsync(serverNode, Timeout.Infinite).ConfigureAwait(false);
+                    await UpdateTopologyAsync(serverNode, Timeout.Infinite, debugTag: "first-topology-update").ConfigureAwait(false);
 
                     InitializeUpdateTopologyTimer();
                     _topologyTakenFromNode = serverNode;
@@ -838,7 +845,7 @@ namespace Raven.Client.Http
                             {
                                 Url = chosenNode.Url,
                                 Database = _databaseName
-                            }, 0)
+                            }, 0, debugTag: refreshTopology ? "refresh-topology-header" : refreshClientConfiguration ? "refresh-client-configuration-header" : null)
                             : Task.CompletedTask;
 
                         tasks[1] = refreshClientConfiguration
@@ -1052,7 +1059,7 @@ namespace Raven.Client.Http
                     if (shouldRetry == false)
                         return false;
 
-                    await UpdateTopologyAsync(chosenNode, Timeout.Infinite, forceUpdate: true).ConfigureAwait(false);
+                    await UpdateTopologyAsync(chosenNode, Timeout.Infinite, forceUpdate: true, debugTag: "handle-unsuccessful-response").ConfigureAwait(false);
                     var (index, node) = ChooseNodeForRequest(command, sessionInfo);
                     await ExecuteAsync(node, index, context, command, shouldRetry: false, sessionInfo: sessionInfo, token: token).ConfigureAwait(false);
                     return true;
@@ -1141,7 +1148,7 @@ namespace Raven.Client.Http
             SpawnHealthChecks(chosenNode, nodeIndex);
             _nodeSelector?.OnFailedRequest(nodeIndex);
             var (_, serverNode) = await GetPreferredNode().ConfigureAwait(false);
-            await UpdateTopologyAsync(serverNode, 0, true).ConfigureAwait(false);
+            await UpdateTopologyAsync(serverNode, 0, true, debugTag: "handle-server-not-responsive").ConfigureAwait(false);
             OnFailedRequest(url, e);
             return serverNode;
         }
@@ -1368,6 +1375,28 @@ namespace Raven.Client.Http
 
             if (supported == false)
                 throw new InvalidOperationException("Client certificate " + certificate.FriendlyName + " must be defined with the following 'Enhanced Key Usage': Client Authentication (Oid 1.3.6.1.5.5.7.3.2)");
+        }
+
+        private static readonly ConcurrentSet<string> UpdatedConnectionLimitUrls = new ConcurrentSet<string>(StringComparer.OrdinalIgnoreCase);
+
+        private static void UpdateConnectionLimit(IEnumerable<string> urls)
+        {
+            foreach (var url in urls)
+            {
+                if (UpdatedConnectionLimitUrls.TryAdd(url) == false)
+                    continue;
+
+                try
+                {
+                    var servicePoint = ServicePointManager.FindServicePoint(new Uri(url));
+                    servicePoint.ConnectionLimit = Math.Max(servicePoint.ConnectionLimit, 1024 * 10);
+                }
+                catch (Exception e)
+                {
+                    if (Logger.IsInfoEnabled)
+                        Logger.Info($"Failed to set the connection limit for url: {url}", e);
+                }
+            }
         }
 
         private static RemoteCertificateValidationCallback[] _serverCertificateCustomValidationCallback = Array.Empty<RemoteCertificateValidationCallback>();

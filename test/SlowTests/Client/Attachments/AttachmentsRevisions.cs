@@ -229,11 +229,11 @@ namespace SlowTests.Client.Attachments
                     if (name == names[0])
                     {
                         if (expectedCount == 1)
-                            Assert.Contains("A:3", attachment.Details.ChangeVector);
+                            Assert.Contains("A:4", attachment.Details.ChangeVector);
                         else if (expectedCount == 2)
-                            Assert.Contains("A:7", attachment.Details.ChangeVector);
+                            Assert.Contains("A:8", attachment.Details.ChangeVector);
                         else if (expectedCount == 3)
-                            Assert.Contains("A:12", attachment.Details.ChangeVector);
+                            Assert.Contains("A:13", attachment.Details.ChangeVector);
                         else
                             throw new ArgumentOutOfRangeException(nameof(i));
                         Assert.Equal(new byte[] {1, 2, 3}, readBuffer.Take(3));
@@ -244,9 +244,9 @@ namespace SlowTests.Client.Attachments
                     else if (name == names[1])
                     {
                         if (expectedCount == 2)
-                            Assert.Contains("A:7", attachment.Details.ChangeVector);
+                            Assert.Contains("A:8", attachment.Details.ChangeVector);
                         else if (expectedCount == 3)
-                            Assert.Contains("A:12", attachment.Details.ChangeVector);
+                            Assert.Contains("A:13", attachment.Details.ChangeVector);
                         else
                             throw new ArgumentOutOfRangeException(nameof(i));
                         Assert.Equal(new byte[] {10, 20, 30, 40, 50}, readBuffer.Take(5));
@@ -257,7 +257,7 @@ namespace SlowTests.Client.Attachments
                     else if (name == names[2])
                     {
                         if (expectedCount == 3)
-                            Assert.Contains("A:12", attachment.Details.ChangeVector);
+                            Assert.Contains("A:13", attachment.Details.ChangeVector);
                         else
                             throw new ArgumentOutOfRangeException(nameof(i));
                         Assert.Equal(new byte[] {1, 2, 3, 4, 5}, readBuffer.Take(5));

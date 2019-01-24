@@ -340,7 +340,7 @@ namespace Raven.Server.Documents
                             conflicted.LastModified.Ticks,
                             collectionName: collection, configuration: RevisionsStorage.ConflictConfiguration.Default);
                     }
-                    else if(conflicted.Flags.Contain(DocumentFlags.FromReplication) == false)
+                    else if (conflicted.Flags.Contain(DocumentFlags.FromReplication) == false)
                     {
                         using (Slice.External(context.Allocator, conflicted.LowerId, out var key))
                         {
@@ -357,8 +357,10 @@ namespace Raven.Server.Documents
                     if (string.IsNullOrEmpty(deleteAttachmentChangeVector))
                     {
                         var newEtag = _documentsStorage.GenerateNextEtag();
-                        deleteAttachmentChangeVector = _documentsStorage.GetNewChangeVector(context, newEtag);
-                        context.LastDatabaseChangeVector = conflicted.ChangeVector;
+                        var currentChangeVector = context.LastDatabaseChangeVector ?? GetDatabaseChangeVector(context);
+                        deleteAttachmentChangeVector = ChangeVectorUtils
+                            .TryUpdateChangeVector(_documentDatabase.ServerStore.NodeTag, _documentDatabase.DbBase64Id, newEtag, currentChangeVector).ChangeVector;
+                        context.LastDatabaseChangeVector = deleteAttachmentChangeVector;
                     }
                     nonPersistentFlags |= DeleteAttachmentConflicts(context, lowerId, document, conflictDocument, deleteAttachmentChangeVector);
                 });
@@ -565,9 +567,6 @@ namespace Raven.Server.Documents
             }
             if (string.IsNullOrEmpty(documentChangeVector) == false)
                 mergedChangeVectorEntries = ChangeVectorUtils.MergeVectors(mergedChangeVectorEntries, documentChangeVector);
-            var newChangeVector =
-                ChangeVectorUtils.NewChangeVector(_documentDatabase.ServerStore.NodeTag, newEtag, _documentDatabase.DbBase64Id);
-            mergedChangeVectorEntries = ChangeVectorUtils.MergeVectors(mergedChangeVectorEntries, newChangeVector);
 
             return (mergedChangeVectorEntries, result.NonPersistentFlags);
         }

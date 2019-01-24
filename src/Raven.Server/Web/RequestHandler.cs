@@ -16,6 +16,7 @@ using Microsoft.AspNetCore.WebUtilities;
 using Microsoft.Extensions.Primitives;
 using Raven.Client;
 using Raven.Client.Exceptions;
+using Raven.Client.Exceptions.Cluster;
 using Raven.Client.Extensions;
 using Raven.Client.Http;
 using Raven.Client.ServerWide.Commands;
@@ -584,6 +585,28 @@ namespace Raven.Server.Web
         protected void SetupCORSHeaders()
         {
             SetupCORSHeaders(HttpContext);
+        }
+
+        protected void RedirectToLeader()
+        {
+            if (ServerStore.LeaderTag == null)
+                throw new NoLeaderException();
+
+            ClusterTopology topology;
+            using (ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
+            using (context.OpenReadTransaction())
+            {
+                topology = ServerStore.GetClusterTopology(context);
+            }
+            var url = topology.GetUrlFromTag(ServerStore.LeaderTag);
+            if (string.Equals(url, ServerStore.GetNodeHttpServerUrl(), StringComparison.OrdinalIgnoreCase))
+            {
+                throw new NoLeaderException($"This node is not the leader, but the current topology does mark it as the leader. Such confusion is usually an indication of a network or configuration problem.");
+            }
+            var leaderLocation = url + HttpContext.Request.Path + HttpContext.Request.QueryString;
+            HttpContext.Response.StatusCode = (int)HttpStatusCode.TemporaryRedirect;
+            HttpContext.Response.Headers.Remove("Content-Type");
+            HttpContext.Response.Headers.Add("Location", leaderLocation);
         }
     }
 }
