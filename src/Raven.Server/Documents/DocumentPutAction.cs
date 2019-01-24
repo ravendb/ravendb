@@ -45,12 +45,8 @@ namespace Raven.Server.Documents
                 return default; // never hit
             }
 
-#if DEBUG
             var documentDebugHash = document.DebugHash;
-            document.BlittableValidation();
-            BlittableJsonReaderObject.AssertNoModifications(document, id, assertChildren: true);
-            AssertMetadataWasFiltered(document);
-#endif
+            ValidateDocument(id, document);
 
             var newEtag = _documentsStorage.GenerateNextEtag();
             var modifiedTicks = _documentsStorage.GetOrCreateLastModifiedTicks(lastModifiedTicks);
@@ -143,40 +139,18 @@ namespace Raven.Server.Documents
                 {
                     if (ShouldRecreateAttachments(context, lowerId, oldDoc, document, ref flags, nonPersistentFlags))
                     {
-#if DEBUG
-                        if (document.DebugHash != documentDebugHash)
-                        {
-                            throw new InvalidDataException("The incoming document " + id + " has changed _during_ the put process, " +
-                                                           "this is likely because you are trying to save a document that is already stored and was moved");
-                        }
-#endif
+                        ValidateDocumentHash(id, document, documentDebugHash);
                         document = context.ReadObject(document, id, BlittableJsonDocumentBuilder.UsageMode.ToDisk);
-#if DEBUG
-                        documentDebugHash = document.DebugHash;
-                        document.BlittableValidation();
-                        BlittableJsonReaderObject.AssertNoModifications(document, id, assertChildren: true);
-                        AssertMetadataWasFiltered(document);
+                        ValidateDocument(id, document);
                         AttachmentsStorage.AssertAttachments(document, flags);
-#endif
                     }
 
                     if (ShouldRecreateCounters(context, id, oldDoc, document, ref flags, nonPersistentFlags))
                     {
-#if DEBUG
-                        if (document.DebugHash != documentDebugHash)
-                        {
-                            throw new InvalidDataException("The incoming document " + id + " has changed _during_ the put process, " +
-                                                           "this is likely because you are trying to save a document that is already stored and was moved");
-                        }
-#endif
+                        ValidateDocumentHash(id, document, documentDebugHash);
                         document = context.ReadObject(document, id, BlittableJsonDocumentBuilder.UsageMode.ToDisk);
-#if DEBUG
-                        documentDebugHash = document.DebugHash;
-                        document.BlittableValidation();
-                        BlittableJsonReaderObject.AssertNoModifications(document, id, assertChildren: true);
-                        AssertMetadataWasFiltered(document);
+                        ValidateDocument(id, document);
                         CountersStorage.AssertCounters(document, flags);
-#endif
                     }
 
                     var shouldVersion = _documentDatabase.DocumentsStorage.RevisionsStorage.ShouldVersionDocument(collectionName, nonPersistentFlags, oldDoc, document,
@@ -225,8 +199,7 @@ namespace Raven.Server.Documents
                     _documentsStorage.ExpirationStorage.Put(context, lowerId, document);
                 }
 
-                if (flags.Contain(DocumentFlags.FromReplication) == false)
-                    context.LastDatabaseChangeVector = changeVector;
+                UpdateLastDatabaseChangeVector(context, changeVector, nonPersistentFlags);
 
                 _documentDatabase.Metrics.Docs.PutsPerSec.MarkSingleThreaded(1);
                 _documentDatabase.Metrics.Docs.BytesPutsPerSec.MarkSingleThreaded(document.Size);
@@ -239,17 +212,9 @@ namespace Raven.Server.Documents
                     Type = DocumentChangeTypes.Put,
                 });
 
-#if DEBUG
-                if (document.DebugHash != documentDebugHash)
-                {
-                    throw new InvalidDataException("The incoming document " + id + " has changed _during_ the put process, " +
-                                                   "this is likely because you are trying to save a document that is already stored and was moved");
-                }
-                document.BlittableValidation();
-                BlittableJsonReaderObject.AssertNoModifications(document, id, assertChildren: true);
-                AssertMetadataWasFiltered(document);
-                AttachmentsStorage.AssertAttachments(document, flags);
-#endif
+                ValidateDocumentHash(id, document, documentDebugHash);
+                ValidateDocument(id, document);
+
                 return new PutOperationResults
                 {
                     Etag = newEtag,
@@ -259,6 +224,24 @@ namespace Raven.Server.Documents
                     Flags = flags,
                     LastModified = new DateTime(modifiedTicks)
                 };
+            }
+        }
+
+        [Conditional("DEBUG")]
+        private static void ValidateDocument(string id, BlittableJsonReaderObject document)
+        {
+            document.BlittableValidation();
+            BlittableJsonReaderObject.AssertNoModifications(document, id, assertChildren: true);
+            AssertMetadataWasFiltered(document);
+        }
+
+        [Conditional("DEBUG")]
+        private static void ValidateDocumentHash(string id, BlittableJsonReaderObject document, ulong documentDebugHash)
+        {
+            if (document.DebugHash != documentDebugHash)
+            {
+                throw new InvalidDataException("The incoming document " + id + " has changed _during_ the put process, " +
+                                               "this is likely because you are trying to save a document that is already stored and was moved");
             }
         }
 
@@ -319,6 +302,23 @@ namespace Raven.Server.Documents
             }
             changeVector = SetDocumentChangeVectorForLocalChange(context, lowerId, oldChangeVector, newEtag);
             return (changeVector, nonPersistentFlags);
+        }
+
+        private void UpdateLastDatabaseChangeVector(DocumentsOperationContext context, string changeVector, NonPersistentDocumentFlags nonPersistentFlags)
+        {
+            if (nonPersistentFlags.Contain(NonPersistentDocumentFlags.FromResolver))
+            {
+                // the resolved document must preserve the original change vector (without the global change vector) to avoid ping-pong replication.
+                context.LastDatabaseChangeVector = ChangeVectorUtils.MergeVectors(context.LastDatabaseChangeVector ?? GetDatabaseChangeVector(context), changeVector);
+                return;
+            }
+
+            // if arrived from replication we keep the document with its original change vector
+            // in that case the updating of the global change vector should happened upper in the stack
+            if (nonPersistentFlags.Contain(NonPersistentDocumentFlags.FromReplication))
+                return;
+
+            context.LastDatabaseChangeVector = changeVector;
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]

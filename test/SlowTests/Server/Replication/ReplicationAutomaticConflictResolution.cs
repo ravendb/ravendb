@@ -388,7 +388,6 @@ return out;
                 {
                     var user = session.Load<User>("users/1");
                     Assert.Null(user);
-                    WaitForUserToContinueTheTest(slave);
                     VerifyRevisionsAfterConflictResolving(session);
                 }
             }

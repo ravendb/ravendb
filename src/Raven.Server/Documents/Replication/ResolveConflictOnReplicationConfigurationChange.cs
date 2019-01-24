@@ -253,14 +253,14 @@ namespace Raven.Server.Documents.Replication
                 if (incoming.Doc != null)
                 {
                     _database.DocumentsStorage.RevisionsStorage.Put(context, incoming.Id, incoming.Doc, incoming.Flags.Strip(DocumentFlags.FromClusterTransaction) | DocumentFlags.Conflicted | DocumentFlags.HasRevisions,
-                        NonPersistentDocumentFlags.None, newChangeVector, incoming.LastModified.Ticks);
+                        NonPersistentDocumentFlags.FromResolver, newChangeVector, incoming.LastModified.Ticks);
                 }
                 else
                 {
                     using (Slice.External(context.Allocator, incoming.LowerId, out var lowerId))
                     {
                         _database.DocumentsStorage.RevisionsStorage.Delete(context, incoming.Id, lowerId, new CollectionName(incoming.Collection), newChangeVector,
-                            incoming.LastModified.Ticks, NonPersistentDocumentFlags.None, incoming.Flags | DocumentFlags.Conflicted | DocumentFlags.HasRevisions);
+                            incoming.LastModified.Ticks, NonPersistentDocumentFlags.FromResolver, incoming.Flags | DocumentFlags.Conflicted | DocumentFlags.HasRevisions);
                     }
                 }
             }
@@ -272,14 +272,14 @@ namespace Raven.Server.Documents.Replication
                 {
                     _database.DocumentsStorage.RevisionsStorage.Put(context, existing.Document.Id, existing.Document.Data,
                         existing.Document.Flags | DocumentFlags.Conflicted | DocumentFlags.HasRevisions,
-                        NonPersistentDocumentFlags.None, existing.Document.ChangeVector, existing.Document.LastModified.Ticks);
+                        NonPersistentDocumentFlags.FromResolver, existing.Document.ChangeVector, existing.Document.LastModified.Ticks);
                 }
                 else if (existing.Tombstone != null)
                 {
                     using (Slice.External(context.Allocator, existing.Tombstone.LowerId, out var key))
                     {
                         _database.DocumentsStorage.RevisionsStorage.Delete(context, existing.Tombstone.LowerId, key, new CollectionName(existing.Tombstone.Collection), existing.Tombstone.ChangeVector,
-                            existing.Tombstone.LastModified.Ticks, NonPersistentDocumentFlags.None, existing.Tombstone.Flags | DocumentFlags.Conflicted | DocumentFlags.HasRevisions);
+                            existing.Tombstone.LastModified.Ticks, NonPersistentDocumentFlags.FromResolver, existing.Tombstone.Flags | DocumentFlags.Conflicted | DocumentFlags.HasRevisions);
                     }
                 }
             }
@@ -289,7 +289,8 @@ namespace Raven.Server.Documents.Replication
                 using (Slice.External(context.Allocator, resolved.LowerId, out var lowerId))
                 {
                     _database.DocumentsStorage.Delete(context, lowerId, resolved.Id, null,
-                        _database.Time.GetUtcNow().Ticks, resolved.ChangeVector, new CollectionName(resolved.Collection), documentFlags: resolved.Flags | DocumentFlags.Resolved | DocumentFlags.HasRevisions);
+                        _database.Time.GetUtcNow().Ticks, resolved.ChangeVector, new CollectionName(resolved.Collection),
+                        documentFlags: resolved.Flags | DocumentFlags.Resolved | DocumentFlags.HasRevisions, nonPersistentFlags: NonPersistentDocumentFlags.FromResolver);
                     return;
                 }
             }
@@ -307,7 +308,7 @@ namespace Raven.Server.Documents.Replication
 
                 ReplicationUtils.EnsureCollectionTag(clone, resolved.Collection);
                 // we always want to merge the counters and attachments, even if the user specified a script
-                var nonPersistentFlags = NonPersistentDocumentFlags.ResolveCountersConflict | NonPersistentDocumentFlags.ResolveAttachmentsConflict;
+                var nonPersistentFlags = NonPersistentDocumentFlags.ResolveCountersConflict | NonPersistentDocumentFlags.ResolveAttachmentsConflict | NonPersistentDocumentFlags.FromResolver;
                 _database.DocumentsStorage.Put(context, resolved.Id, null, clone, null, resolved.ChangeVector, resolved.Flags | DocumentFlags.Resolved, nonPersistentFlags: nonPersistentFlags);
             }
         }
