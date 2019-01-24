@@ -433,6 +433,8 @@ namespace Voron.Impl.Journal
                     Journal = journal;
                     JournalsToDelete = journalsToDelete;
                 }
+
+                public bool IsValid => Journal != null && JournalsToDelete != null;
             }
 
             private LastFlushState _lastFlushed = new LastFlushState(0, 0, null, null);
@@ -934,6 +936,10 @@ namespace Voron.Impl.Journal
                         return false; // we have already disposed, nothing to do here
 
                     _lastFlushed = _parent._lastFlushed;
+
+                    if (_lastFlushed.IsValid == false)
+                        return false;
+
                     if (_lastFlushed.DoneFlag.IsRaised())
                         // nothing was flushed since we last synced, nothing to do
                         return false;
