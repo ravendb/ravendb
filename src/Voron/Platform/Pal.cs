@@ -184,5 +184,11 @@ namespace Voron.Platform
             out SafeJournalHandle  handle,
             out Int32 errorCode
         );
+
+        [DllImport(LIBRVNPAL, SetLastError = true)]
+        public static extern Int32 rvn_discard_virtual_memory(
+            void* address,
+            Int64 size,
+            out Int32 errorCode);
     }
 }
