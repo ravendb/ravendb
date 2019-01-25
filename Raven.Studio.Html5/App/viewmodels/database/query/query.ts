@@ -631,7 +631,7 @@ class query extends viewModelBase {
     }
 
     promptDeleteDocsMatchingQuery(resultCount: number) {
-        var viewModel = new deleteDocumentsMatchingQueryConfirm(this.selectedIndex(), this.queryText(), resultCount, this.activeDatabase());
+        var viewModel = new deleteDocumentsMatchingQueryConfirm(this.selectedIndex(), this.queryText(), resultCount, this.isDefaultOperatorOr() ? "Or" : "And", this.activeDatabase());
         app
             .showDialog(viewModel)
             .done(() => this.runQuery());
