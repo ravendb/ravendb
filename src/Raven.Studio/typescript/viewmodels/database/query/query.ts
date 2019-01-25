@@ -630,6 +630,13 @@ class query extends viewModelBase {
                     })
                     .done((queryResults: pagedResultExtended<document>) => {
                         this.hasMoreUnboundedResults(false);
+                        
+                        if (queryResults.items.length < take + 1) {
+                            // we get less items than requested. I assume the distinct operation was used. 
+                            // let's try to handle that. I assuming that we reach the end of results.
+                            queryResults.totalResultCount = skip + queryResults.items.length;
+                            queryResults.additionalResultInfo.TotalResults = queryResults.totalResultCount;
+                        }
                     
                         if (queryResults.totalResultCount === -1) {
                             // unbounded result set
@@ -637,11 +644,11 @@ class query extends viewModelBase {
                                 // returned all or have more
                                 this.hasMoreUnboundedResults(true);
                                 queryResults.totalResultCount = skip + take + 30;
+                                queryResults.additionalResultInfo.TotalResults = skip + take;
                             } else {
                                 queryResults.totalResultCount = skip + queryResults.items.length;
+                                queryResults.additionalResultInfo.TotalResults = queryResults.totalResultCount;
                             }
-                            
-                            queryResults.additionalResultInfo.TotalResults = queryResults.totalResultCount;
                         }
                         
                         if (queryResults.additionalResultInfo.SkippedResults) {
