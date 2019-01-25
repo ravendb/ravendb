@@ -195,7 +195,8 @@ gulp.task('z_release:package', function () {
 gulp.task('z_release:durandal', function () {
     var extraModules = [
         'transitions/fadeIn',
-        'ace/ace'
+        'ace/ace',
+        '../lib/forge/js/forge.js'
     ];
 
     var aceFileNames = fs.readdirSync(PATHS.aceDir)

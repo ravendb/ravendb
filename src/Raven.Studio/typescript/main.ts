@@ -5,7 +5,8 @@ requirejs.config({
         text: "../lib/requirejs-text/text",
         durandal: "../lib/Durandal/js",
         plugins: "../lib/Durandal/js/plugins",
-        ace: "../Content/ace"
+        ace: "../Content/ace",
+        forge: "../lib/forge/js"
     },
 
     map: {
@@ -18,7 +19,6 @@ requirejs.config({
           "toastr": "../lib/toastr/toastr",
           "quickselect": "../Content/rbush/quickselect",
           "moment": "../lib/moment/moment",
-          "node-forge": "../lib/forge/dist/forge.min",
           "plugins/bootstrapModal": "../App/plugins/bootstrapModal"
       }  
     },
