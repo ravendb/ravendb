@@ -23,6 +23,23 @@ declare module "forge/forge" {
     
     namespace util {
         function decode64(encoded: Base64): Bytes;
+        function encode64(bytes: Bytes, maxline?: number): Base64;
+
+        namespace binary {
+            namespace raw {
+                function encode(x: Uint8Array): Bytes;
+                function decode(str: Bytes, output?: Uint8Array, offset?: number): Uint8Array;
+            }
+            namespace hex {
+                function encode(bytes: Bytes | ArrayBuffer | ArrayBufferView | ByteStringBuffer): Hex;
+                function decode(hex: Hex, output?: Uint8Array, offset?: number): Uint8Array;
+            }
+            namespace base64 {
+                function encode(input: Uint8Array, maxline?: number): Base64;
+                function decode(input: Base64, output?: Uint8Array, offset?: number): Uint8Array;
+            }
+        }
+        
     }
 
     namespace pkcs12 {

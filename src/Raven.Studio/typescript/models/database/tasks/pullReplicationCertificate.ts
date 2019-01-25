@@ -14,9 +14,9 @@ class pullReplicationCertificate {
     certificate = ko.observable<string>();
     certificatePassphrase = ko.observable<string>();
     
-    constructor(publicKey: string, certificate: string = undefined, password: string = undefined) {
+    constructor(publicKey: string, base64EncodedCertificate: string = undefined, password: string = undefined) {
         this.publicKey(publicKey);
-        this.certificate(certificate);
+        this.certificate(base64EncodedCertificate);
         this.certificatePassphrase(password);
         
         const certInfo = certificateUtils.extractCertificateInfo(publicKey);
@@ -44,9 +44,9 @@ class pullReplicationCertificate {
         return new pullReplicationCertificate(certificate, null);
     }
     
-    static fromPkcs12(certificate: string, password: string = undefined) {
-        const publicKey = certificateUtils.extractCertificateFromPkcs12(certificate, password);
-        return new pullReplicationCertificate(publicKey, certificate, password);
+    static fromPkcs12(base64EncodedCertificate: string, password: string = undefined) {
+        const publicKey = certificateUtils.extractCertificateFromPkcs12(base64EncodedCertificate, password);
+        return new pullReplicationCertificate(publicKey, base64EncodedCertificate, password);
     }
     
 }

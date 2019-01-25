@@ -13,6 +13,7 @@ import getOngoingTaskInfoCommand = require("commands/database/tasks/getOngoingTa
 import messagePublisher = require("common/messagePublisher");
 import discoveryUrl = require("models/database/settings/discoveryUrl");
 import pullReplicationCertificate = require("models/database/tasks/pullReplicationCertificate");
+import forge = require("forge/forge");
 
 class editPullReplicationSinkTask extends viewModelBase {
 
@@ -316,16 +317,17 @@ class editPullReplicationSinkTask extends viewModelBase {
         const reader = new FileReader();
         reader.onload = function() {
 // ReSharper disable once SuspiciousThisUsage
-            self.onCertificateLoaded(this.result as string);
+            const asBase64 = forge.util.encode64(this.result);
+            self.onCertificateLoaded(asBase64);
         };
         reader.onerror = function(error: any) {
             alert(error);
         };
-        reader.readAsText(file);
+        reader.readAsBinaryString(file);
     }
     
-    onCertificateLoaded(cert: string) {
-        this.editedReplication().certificateAsBase64(cert);
+    onCertificateLoaded(certAsBase64: string) {
+        this.editedReplication().certificateAsBase64(certAsBase64);
      
         this.tryReadCertificate();
     }
