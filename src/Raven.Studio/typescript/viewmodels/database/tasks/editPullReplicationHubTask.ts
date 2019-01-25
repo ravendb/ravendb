@@ -12,6 +12,7 @@ import pullReplicationGenerateCertificateCommand = require("commands/database/ta
 import pullReplicationCertificate = require("models/database/tasks/pullReplicationCertificate");
 import messagePublisher = require("common/messagePublisher");
 import fileDownloader = require("common/fileDownloader");
+import forge = require("forge/forge");
 import clusterTopologyManager = require("common/shell/clusterTopologyManager");
 import generatePullReplicationCertificateConfirm = require("viewmodels/database/tasks/generatePullReplicationCertificateConfirm");
 
@@ -203,8 +204,8 @@ class editPullReplicationHubTask extends viewModelBase {
         const certificate = this.editedItem().certificates().find(x => !!x.certificate());
         
         if (certificate) {
-            const pfx = certificate.certificate();
-
+            const pfx = forge.util.binary.base64.decode(certificate.certificate());
+            
             const fileName = "pullReplication-" + certificate.thumbprint().substr(0, 8) + ".pfx";
 
             this.editedItem().certificateExported(true);

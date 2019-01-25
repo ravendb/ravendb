@@ -20,8 +20,8 @@ class fileDownloader {
             a.click();
         }
     }
-
-    static downloadAsTxt(buffer: string, filename: string, domCacheElementName: string = "link") {
+    
+    static downloadAsTxt(buffer: string | Uint8Array, filename: string, domCacheElementName: string = "link") {
         domCacheElementName = _.snakeCase(domCacheElementName);
         fileDownloader.cleanup(domCacheElementName);
         const blob = new Blob([buffer], { type: 'text/plain' });
