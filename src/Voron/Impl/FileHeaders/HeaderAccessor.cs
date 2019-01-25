@@ -7,11 +7,12 @@
 using Sparrow;
 using System;
 using System.IO;
-using System.Runtime.InteropServices;
 using System.Threading;
 using Sparrow.Utils;
 using Voron.Exceptions;
 using Voron.Global;
+using Voron.Impl.Journal;
+using Voron.Schema;
 
 namespace Voron.Impl.FileHeaders
 {
@@ -83,13 +84,8 @@ namespace Voron.Impl.FileHeaders
                     *f2 = *f1;
                 }
 
-                if (f1->Version != Constants.CurrentVersion)
-                    throw new SchemaErrorException(
-                        $"The db file is for version {f1->Version}, which is not compatible with the current version {Constants.CurrentVersion} on {_env.Options.BasePath}");
-
                 if (f1->TransactionId < 0)
                     throw new InvalidDataException("The transaction number cannot be negative on " + _env.Options.BasePath);
-
 
                 if (f1->HeaderRevision > f2->HeaderRevision)
                 {
@@ -100,6 +96,28 @@ namespace Voron.Impl.FileHeaders
                     Memory.Copy((byte*)_theHeader, (byte*)f2, sizeof(FileHeader));
                 }
                 _revision = _theHeader->HeaderRevision;
+
+                if (_theHeader->Version != Constants.CurrentVersion)
+                {
+                    _locker.ExitWriteLock();
+                    try
+                    {
+                        var updater = new VoronSchemaUpdater(this, _env.Options);
+
+                        updater.Update();
+                    }
+                    finally
+                    {
+                        _locker.EnterWriteLock();
+
+                    }
+
+                    if (_theHeader->Version != Constants.CurrentVersion)
+                    {
+                        throw new SchemaErrorException(
+                            $"The db file is for version {_theHeader->Version}, which is not compatible with the current version {Constants.CurrentVersion} on {_env.Options.BasePath}");
+                    }
+                }
 
                 if (_theHeader->PageSize != Constants.Storage.PageSize)
                 {
@@ -165,7 +183,7 @@ namespace Voron.Impl.FileHeaders
 
 
                 modifyAction(_theHeader);
-
+          
                 _revision++;
                 _theHeader->HeaderRevision = _revision;
 
@@ -190,7 +208,8 @@ namespace Voron.Impl.FileHeaders
             header->LastPageNumber = 1;
             header->Root.RootPageNumber = -1;
             header->Journal.CurrentJournal = -1;
-            header->Journal.JournalFilesCount = 0;
+            Memory.Set(header->Journal.Reserved, 0, JournalInfo.NumberOfReservedBytes);
+            header->Journal.Flags = Journal.JournalInfoFlags.None;
             header->Journal.LastSyncedJournal = -1;
             header->Journal.LastSyncedTransactionId = -1;
             header->IncrementalBackup.LastBackedUpJournal = -1;
@@ -199,8 +218,9 @@ namespace Voron.Impl.FileHeaders
             header->PageSize = _env.Options.PageSize;
         }
 
-        private bool IsEmptyHeader(FileHeader* header)
+        private  bool IsEmptyHeader(FileHeader* header)
         {
+            var zeroed = stackalloc byte[JournalInfo.NumberOfReservedBytes];
             return header->MagicMarker == Constants.MagicMarker &&
                    header->Version == Constants.CurrentVersion &&
                    header->HeaderRevision == -1 &&
@@ -208,7 +228,8 @@ namespace Voron.Impl.FileHeaders
                    header->LastPageNumber == 1 &&
                    header->Root.RootPageNumber == -1 &&
                    header->Journal.CurrentJournal == -1 &&
-                   header->Journal.JournalFilesCount == 0 &&
+                   header->Journal.Flags == Journal.JournalInfoFlags.None &&
+                   Memory.Compare(header->Journal.Reserved, zeroed, 3) == 0 &&
                    header->Journal.LastSyncedJournal == -1 &&
                    header->Journal.LastSyncedTransactionId == -1 &&
                    header->IncrementalBackup.LastBackedUpJournal == -1 &&

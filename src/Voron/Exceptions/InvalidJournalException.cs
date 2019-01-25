@@ -1,4 +1,5 @@
 ﻿using System;
+using Voron.Impl.Journal;
 
 namespace Voron.Exceptions
 {
@@ -6,12 +7,20 @@ namespace Voron.Exceptions
     {
         public long Number { get; }
 
-        public InvalidJournalException(long number, string path) : base($"No such journal '{path}'")
+        public InvalidJournalException(long number, string path, JournalInfo journalInfo) : base($"No such journal '{path}'. Journal details: " +
+                                                                                                 $"{nameof(journalInfo.CurrentJournal)} - {journalInfo.CurrentJournal}, " +
+                                                                                                 $"{nameof(journalInfo.LastSyncedJournal)} - {journalInfo.LastSyncedJournal}, " +
+                                                                                                 $"{nameof(journalInfo.LastSyncedTransactionId)} - {journalInfo.LastSyncedTransactionId}" +
+                                                                                                 $"{nameof(journalInfo.Flags)} - {journalInfo.Flags}")
         {
             Number = number;
         }
 
-        public InvalidJournalException(long number) : base($"No such journal '{number}'")
+        public InvalidJournalException(long number, JournalInfo journalInfo) : base($"No such journal '{number}'. Journal details: " +
+                                                                                    $"{nameof(journalInfo.CurrentJournal)} - {journalInfo.CurrentJournal}, " +
+                                                                                    $"{nameof(journalInfo.LastSyncedJournal)} - {journalInfo.LastSyncedJournal}, " +
+                                                                                    $"{nameof(journalInfo.LastSyncedTransactionId)} - {journalInfo.LastSyncedTransactionId}" +
+                                                                                    $"{nameof(journalInfo.Flags)} - {journalInfo.Flags}")
         {
             Number = number;
         }

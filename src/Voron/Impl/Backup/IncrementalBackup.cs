@@ -99,10 +99,13 @@ namespace Voron.Impl.Backup
             long lastWrittenLog4kb = -1;
             bool backupSuccess = true;
             IncrementalBackupInfo backupInfo;
+            JournalInfo journalInfo;
+
             var transactionPersistentContext = new TransactionPersistentContext(true);
             using (var txw = env.NewLowLevelTransaction(transactionPersistentContext, TransactionFlags.ReadWrite))
             {
                 backupInfo = env.HeaderAccessor.Get(ptr => ptr->IncrementalBackup);
+                journalInfo = env.HeaderAccessor.Get(ptr => ptr->Journal);
 
                 if (env.Journal.CurrentFile != null)
                 {
@@ -136,7 +139,7 @@ namespace Voron.Impl.Backup
                     {
                         var num = journalNum;
 
-                        var journalFile = GetJournalFile(env, journalNum, backupInfo);
+                        var journalFile = GetJournalFile(env, journalNum, backupInfo, journalInfo);
 
                         journalFile.AddRef();
 
@@ -219,7 +222,7 @@ namespace Voron.Impl.Backup
             return numberOfBackedUpPages;
         }
 
-        internal static JournalFile GetJournalFile(StorageEnvironment env, long journalNum, IncrementalBackupInfo backupInfo)
+        internal static JournalFile GetJournalFile(StorageEnvironment env, long journalNum, IncrementalBackupInfo backupInfo, JournalInfo journalInfo)
         {
             var journalFile = env.Journal.Files.FirstOrDefault(x => x.Number == journalNum); // first check journal files currently being in use
             if (journalFile != null)
@@ -229,7 +232,7 @@ namespace Voron.Impl.Backup
             }
             try
             {
-                using (var pager = env.Options.OpenJournalPager(journalNum))
+                using (var pager = env.Options.OpenJournalPager(journalNum, journalInfo))
                 {
                     long journalSize = Bits.NextPowerOf2(pager.NumberOfAllocatedPages * Constants.Storage.PageSize);
                     journalFile = new JournalFile(env, env.Options.CreateJournalWriter(journalNum, journalSize), journalNum);
@@ -349,7 +352,8 @@ namespace Voron.Impl.Backup
             {
                 TransactionHeader* lastTxHeader = null;
                 var lastTxHeaderStackLocation = stackalloc TransactionHeader[1];
-                
+                long lastTxId = env.HeaderAccessor.Get(x => x->TransactionId);
+
                 long journalNumber = -1;
                 foreach (var entry in entries)
                 {
@@ -379,17 +383,22 @@ namespace Voron.Impl.Backup
                                     env.Options.InitialFileSize ?? env.Options.InitialLogFileSize);
                             toDispose.Add(recoveryPager);
 
-                            using (var reader = new JournalReader(pager, env.Options.DataPager, recoveryPager, new HashSet<long>(), 0, lastTxHeader))
+                            using (var reader = new JournalReader(pager, env.Options.DataPager, recoveryPager, new HashSet<long>(), new JournalInfo
+                            {
+                                LastSyncedTransactionId = lastTxId
+                            }, lastTxHeader))
                             {
                                 while (reader.ReadOneTransactionToDataFile(env.Options))
                                 {
                                     lastTxHeader = reader.LastTransactionHeader;
                                 }
+
                                 reader.ZeroRecoveryBufferIfNeeded(reader, env.Options);
                                 if (lastTxHeader != null)
                                 {
                                     *lastTxHeaderStackLocation = *lastTxHeader;
                                     lastTxHeader = lastTxHeaderStackLocation;
+                                    lastTxId = lastTxHeader->TransactionId;
                                 }
                             }
 
@@ -412,22 +421,19 @@ namespace Voron.Impl.Backup
 
                 txw.State.NextPageNumber = lastTxHeader->LastPageNumber + 1;
 
-                env.Journal.Clear(txw);
-
                 txw.Commit();
 
                 env.HeaderAccessor.Modify(header =>
                 {
                     header->TransactionId = lastTxHeader->TransactionId;
                     header->LastPageNumber = lastTxHeader->LastPageNumber;
-
-                    header->Journal.LastSyncedJournal = journalNumber;
+                    
                     header->Journal.LastSyncedTransactionId = lastTxHeader->TransactionId;
 
                     header->Root = lastTxHeader->Root;
-
-                    header->Journal.CurrentJournal = journalNumber + 1;
-                    header->Journal.JournalFilesCount = 0;
+                    
+                    Sparrow.Memory.Set(header->Journal.Reserved, 0, JournalInfo.NumberOfReservedBytes);
+                    header->Journal.Flags = JournalInfoFlags.None;
                 });
             }
             finally

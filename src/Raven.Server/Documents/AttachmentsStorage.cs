@@ -1119,7 +1119,7 @@ namespace Raven.Server.Documents
             return (doc, name);
         }
 
-#if DEBUG
+        [Conditional("DEBUG")]
         public static void AssertAttachments(BlittableJsonReaderObject document, DocumentFlags flags)
         {
             if ((flags & DocumentFlags.HasAttachments) == DocumentFlags.HasAttachments)
@@ -1139,6 +1139,5 @@ namespace Raven.Server.Documents
                 }
             }
         }
-#endif
     }
 }
