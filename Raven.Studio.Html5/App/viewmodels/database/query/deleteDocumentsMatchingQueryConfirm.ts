@@ -4,7 +4,7 @@ import deleteDocsMatchingQueryCommand = require("commands/database/documents/del
 import database = require("models/resources/database");
 
 class deleteDocumentsMatchingQueryConfirm extends dialogViewModelBase {
-    constructor(private indexName: string, private queryText: string, private totalDocCount: number, private db: database) {
+    constructor(private indexName: string, private queryText: string, private totalDocCount: number, private defaultOperator: string, private db: database) {
         super();
     }
 
@@ -13,7 +13,7 @@ class deleteDocumentsMatchingQueryConfirm extends dialogViewModelBase {
     }
 
     deleteDocs() {
-        new deleteDocsMatchingQueryCommand(this.indexName, this.queryText, this.db).execute();
+        new deleteDocsMatchingQueryCommand(this.indexName, this.queryText, this.defaultOperator, this.db).execute();
         dialog.close(this);
     }
 }
