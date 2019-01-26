@@ -10,7 +10,7 @@ class pullReplicationDefinition {
     responsibleNode = ko.observable<Raven.Client.ServerWide.Operations.NodeId>();
     
     manualChooseMentor = ko.observable<boolean>(false);
-    preferredMentor = ko.observable<string>();
+    mentorNode = ko.observable<string>();
     nodeTag: string = null;
     
     delayReplicationTime = ko.observable<number>();
@@ -50,7 +50,7 @@ class pullReplicationDefinition {
         this.taskId = dto.TaskId;
 
         this.manualChooseMentor(!!dto.MentorNode);
-        this.preferredMentor(dto.MentorNode);
+        this.mentorNode(dto.MentorNode);
 
         const delayTime = generalUtils.timeSpanToSeconds(dto.DelayReplicationFor);
         this.showDelayReplication(dto.DelayReplicationFor != null && delayTime !== 0);
@@ -69,7 +69,7 @@ class pullReplicationDefinition {
         
         return {
             Name: this.taskName(),
-            MentorNode: this.manualChooseMentor() ? this.preferredMentor() : undefined,
+            MentorNode: this.manualChooseMentor() ? this.mentorNode() : undefined,
             TaskId: taskId,
             DelayReplicationFor: this.showDelayReplication() ? generalUtils.formatAsTimeSpan(this.delayReplicationTime() * 1000) : null,
             Certificates: certificates
@@ -86,7 +86,7 @@ class pullReplicationDefinition {
             required: true
         });
         
-        this.preferredMentor.extend({
+        this.mentorNode.extend({
             required: {
                 onlyIf: () => this.manualChooseMentor()
             }
@@ -124,7 +124,7 @@ class pullReplicationDefinition {
         
         this.validationGroup = ko.validatedObservable({
             taskName: this.taskName,
-            preferredMentor: this.preferredMentor,
+            mentorNode: this.mentorNode,
             delayReplicationTime: this.delayReplicationTime,
             certificates: this.certificates,
             certificateExported: this.certificateExported
@@ -132,7 +132,7 @@ class pullReplicationDefinition {
 
         this.exportValidationGroup = ko.validatedObservable({
             taskName: this.taskName,
-            preferredMentor: this.preferredMentor,
+            mentorNode: this.mentorNode,
             delayReplicationTime: this.delayReplicationTime,
             certificates: this.certificates
         });

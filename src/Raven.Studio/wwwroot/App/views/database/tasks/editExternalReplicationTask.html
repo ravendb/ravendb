@@ -50,20 +50,20 @@
                                 <label for="manualMentorNode">Choose preferred mentor node manually</label>
                             </div>
                         </div>
-                        <div data-bind="validationElement: preferredMentor, collapse: manualChooseMentor">
+                        <div data-bind="validationElement: mentorNode, collapse: manualChooseMentor">
                             <div class="form-group">
                                 <div>
                                     <label class="control-label">Preferred Mentor</label>
                                 </div>
                                 <div class="flex-grow">
                                     <button class="btn btn-block dropdown-toggle text-left" data-toggle="dropdown">
-                                        <span data-bind="text: preferredMentor() ? 'Node ' + preferredMentor() : 'Select preferred mentor'"></span>
+                                        <span data-bind="text: mentorNode() ? 'Node ' + mentorNode() : 'Select preferred mentor'"></span>
                                         <span class="caret"></span>
                                     </button>
                                     <ul class="dropdown-menu" data-bind="foreach: $root.possibleMentors">
-                                        <li><a href="#" data-bind="text: 'Node ' + $data, click: $parent.preferredMentor.bind($parent.preferredMentor, $data)"></a></li>
+                                        <li><a href="#" data-bind="text: 'Node ' + $data, click: $parent.mentorNode.bind($parent.mentorNode, $data)"></a></li>
                                     </ul>
-                                    <span class="help-block" data-bind="validationMessage: preferredMentor"></span>
+                                    <span class="help-block" data-bind="validationMessage: mentorNode"></span>
                                 </div>
                             </div>
                         </div>                        

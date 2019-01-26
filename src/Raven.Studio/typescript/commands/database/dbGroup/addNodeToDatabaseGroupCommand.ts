@@ -3,7 +3,7 @@ import endpoints = require("endpoints");
 
 class addNodeToDatabaseGroupCommand extends commandBase {
 
-    constructor(private databaseName: string, private nodeTagToAdd: string, private preferredMentor: string = undefined) {
+    constructor(private databaseName: string, private nodeTagToAdd: string, private mentorNode: string = undefined) {
         super();
     }
 
@@ -11,12 +11,12 @@ class addNodeToDatabaseGroupCommand extends commandBase {
         const args = {
             name: this.databaseName,
             node: this.nodeTagToAdd,
-            mentor: this.preferredMentor
+            mentor: this.mentorNode
         };
         const url = endpoints.global.adminDatabases.adminDatabasesNode + this.urlEncodeArgs(args);
 
         return this.put<Raven.Client.ServerWide.Operations.DatabasePutResult>(url, null)
-            .done(() => this.reportSuccess("Node " + this.nodeTagToAdd +" was added to database group " + this.databaseName))
+            .done(() => this.reportSuccess("Node " + this.nodeTagToAdd + " was added to database group " + this.databaseName))
             .fail((response: JQueryXHR) => this.reportError("Failed to add node to database group", response.responseText, response.statusText));
     }
 }

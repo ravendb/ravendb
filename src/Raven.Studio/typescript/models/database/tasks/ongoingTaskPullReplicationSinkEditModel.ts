@@ -27,7 +27,6 @@ class ongoingTaskPullReplicationSinkEditModel extends ongoingTaskEditModel {
 
         this.connectionStringName(dto.ConnectionStringName);
         this.manualChooseMentor(!!dto.MentorNode);
-        this.preferredMentor(dto.MentorNode);
         this.hubDefinitionName(dto.HubDefinitionName);
         this.certificate(dto.CertificatePublicKey ? new pullReplicationCertificate(dto.CertificatePublicKey) : null);
     }
@@ -37,7 +36,7 @@ class ongoingTaskPullReplicationSinkEditModel extends ongoingTaskEditModel {
         const certificatePassphrase = this.certificate() ? this.certificate().certificatePassphrase() : undefined;
         return {
             Name: this.taskName(),
-            MentorNode: this.manualChooseMentor() ? this.preferredMentor() : undefined,
+            MentorNode: this.manualChooseMentor() ? this.mentorNode() : undefined,
             ConnectionStringName: this.connectionStringName(),
             TaskId: taskId,
             HubDefinitionName: this.hubDefinitionName(),
@@ -59,7 +58,7 @@ class ongoingTaskPullReplicationSinkEditModel extends ongoingTaskEditModel {
 
         this.validationGroup = ko.validatedObservable({
             connectionStringName: this.connectionStringName,
-            preferredMentor: this.preferredMentor,
+            mentorNode: this.mentorNode,
             hubDefinitionName: this.hubDefinitionName,
             certificate: this.certificate
         });

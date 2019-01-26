@@ -8,10 +8,18 @@ abstract class ongoingTaskModel {
     responsibleNode = ko.observable<Raven.Client.ServerWide.Operations.NodeId>();
     taskState = ko.observable<Raven.Client.Documents.Operations.OngoingTasks.OngoingTaskState>();
     taskConnectionStatus = ko.observable<Raven.Client.Documents.Operations.OngoingTasks.OngoingTaskConnectionStatus>();
+    mentorNode = ko.observable<string>();
     
     badgeText: KnockoutComputed<string>;
     badgeClass: KnockoutComputed<string>;
     stateText: KnockoutComputed<string>;
+    
+    usingNotPreferredNode = ko.pureComputed(() => {
+        const preferredMentor = this.mentorNode();
+        const currentNode = this.responsibleNode() ? this.responsibleNode().NodeTag : null;
+        
+        return (preferredMentor && currentNode) ? preferredMentor !== currentNode : false;
+    });
 
     protected initializeObservables() {
         
@@ -78,6 +86,7 @@ abstract class ongoingTaskModel {
         this.responsibleNode(dto.ResponsibleNode);
         this.taskState(dto.TaskState);
         this.taskConnectionStatus(dto.TaskConnectionStatus);
+        this.mentorNode(dto.MentorNode);
     }
 }
 
