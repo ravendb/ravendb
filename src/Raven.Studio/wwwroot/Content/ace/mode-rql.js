@@ -865,6 +865,9 @@ ace.define("ace/mode/rql_highlight_rules",["require","exports","module","ace/lib
         }, "identifier", true);
 
         var curelyBracesCount = 0;
+        var lastPreBracketTokenSeen = null; 
+        
+        var preBracketTokens = ["select", "update", "with"];
 
         var commonRules = [ {
             token : "comment",
@@ -888,9 +891,10 @@ ace.define("ace/mode/rql_highlight_rules",["require","exports","module","ace/lib
         }, {
             token : "paren.lparen",
             regex : /{/,
-            next: function (currentState, stack) {
+            next: function (currentState) {
                 curelyBracesCount++;
-                return "js-start";
+                
+                return lastPreBracketTokenSeen === "with" ? currentState : "js-start";
             }
         }, {
             token : "paren.lparen",
@@ -911,7 +915,13 @@ ace.define("ace/mode/rql_highlight_rules",["require","exports","module","ace/lib
             regex : whereFunctions,
             next: "whereFunction"
         }, {
-            token : keywordMapper,
+            token : function (token, state, stack) {
+                if (preBracketTokens.indexOf(token) !== -1) {
+                    lastPreBracketTokenSeen = token;
+                }
+                
+                return keywordMapper(token);
+            },
             regex : keywordRegex
         }, {
             token : "operator.where",
