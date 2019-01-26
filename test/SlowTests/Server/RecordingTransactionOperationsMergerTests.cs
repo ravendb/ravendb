@@ -34,6 +34,7 @@ using Raven.Server.Documents.Handlers;
 using Raven.Server.Documents.Handlers.Admin;
 using Raven.Server.Documents.Queries;
 using Raven.Server.Documents.Replication;
+using Raven.Server.ServerWide;
 using Raven.Server.ServerWide.Context;
 using Raven.Tests.Core.Utils.Entities;
 using Sparrow;
@@ -1321,7 +1322,7 @@ namespace SlowTests.Server
                 }
 
                 var db = await GetDocumentDatabaseInstanceFor(store);
-                var result = await db.DocumentsStorage.RevisionsStorage.RevertRevisions(last, TimeSpan.FromMinutes(60));
+                var result = await db.DocumentsStorage.RevisionsStorage.RevertRevisions(last, TimeSpan.FromMinutes(60), onProgress: null, token: OperationCancelToken.None);
 
                 store.Maintenance.Send(new StopTransactionsRecordingOperation());
             }
