@@ -30,7 +30,7 @@ class ongoingTaskSubscriptionEditModel extends ongoingTaskEditModel {
         
         this.dirtyFlag = new ko.DirtyFlag([
             this.taskName,
-            this.preferredMentor,
+            this.mentorNode,
             this.manualChooseMentor,
             this.query,
             this.startingPointType,
@@ -65,6 +65,7 @@ class ongoingTaskSubscriptionEditModel extends ongoingTaskEditModel {
             TaskConnectionStatus: 'Active',
             TaskId: dtoEditModel.SubscriptionId,
             TaskName: dtoEditModel.SubscriptionName,
+            MentorNode: dtoEditModel.MentorNode,
             TaskState: state,
             TaskType: 'Subscription',
             Error: null
@@ -73,7 +74,6 @@ class ongoingTaskSubscriptionEditModel extends ongoingTaskEditModel {
         super.update(dtoListModel);
         
         this.manualChooseMentor(!!dto.MentorNode);
-        this.preferredMentor(dto.MentorNode);
 
         this.query(dto.Query);
         this.changeVectorForNextBatchStartingPoint(dto.ChangeVectorForNextBatchStartingPoint);
@@ -112,7 +112,7 @@ class ongoingTaskSubscriptionEditModel extends ongoingTaskEditModel {
         return {
             Name: this.taskName(),
             Query: query,
-            MentorNode: this.manualChooseMentor() ? this.preferredMentor() : undefined,
+            MentorNode: this.manualChooseMentor() ? this.mentorNode() : undefined,
             ChangeVector: this.serializeChangeVector()
         }
     }
@@ -141,7 +141,7 @@ class ongoingTaskSubscriptionEditModel extends ongoingTaskEditModel {
         this.validationGroup = ko.validatedObservable({
             query: this.query,
             startingChangeVector: this.startingChangeVector,
-            preferredMentor: this.preferredMentor
+            mentorNode: this.mentorNode
             
         });
     }

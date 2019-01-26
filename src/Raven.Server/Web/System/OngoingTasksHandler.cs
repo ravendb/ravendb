@@ -236,6 +236,7 @@ namespace Raven.Server.Web.System
                     },
                     TaskName = subscriptionState.SubscriptionName,
                     TaskState = subscriptionState.Disabled ? OngoingTaskState.Disabled : OngoingTaskState.Enabled,
+                    MentorNode = subscriptionState.MentorNode,
                     TaskId = subscriptionState.SubscriptionId,
                     Query = subscriptionState.Query,
                     TaskConnectionStatus = connectionStatus
@@ -642,6 +643,7 @@ namespace Raven.Server.Web.System
                 BackupType = backupConfiguration.BackupType,
                 TaskName = backupConfiguration.Name,
                 TaskState = backupConfiguration.Disabled ? OngoingTaskState.Disabled : OngoingTaskState.Enabled,
+                MentorNode = backupConfiguration.MentorNode,
                 LastFullBackup = backupStatus.LastFullBackup,
                 LastIncrementalBackup = backupStatus.LastIncrementalBackup,
                 OnGoingBackup = onGoingBackup,
@@ -870,6 +872,7 @@ namespace Raven.Server.Web.System
                         TaskId = ravenEtl.TaskId,
                         TaskName = ravenEtl.Name,
                         TaskState = taskState,
+                        MentorNode = ravenEtl.MentorNode,
                         ResponsibleNode = new NodeId
                         {
                             NodeTag = tag,
@@ -907,6 +910,7 @@ namespace Raven.Server.Web.System
                         TaskName = sqlEtl.Name,
                         TaskConnectionStatus = connectionStatus,
                         TaskState = taskState,
+                        MentorNode = sqlEtl.MentorNode,
                         ResponsibleNode = new NodeId
                         {
                             NodeTag = tag,
@@ -1036,6 +1040,7 @@ namespace Raven.Server.Web.System
                             {
                                 TaskId = sqlEtl.TaskId,
                                 TaskName = sqlEtl.Name,
+                                MentorNode = sqlEtl.MentorNode,
                                 Configuration = sqlEtl,
                                 TaskState = GetEtlTaskState(sqlEtl),
                                 TaskConnectionStatus = GetEtlTaskConnectionStatus(record, sqlEtl, out var sqlNode, out var sqlEtlError),
@@ -1065,6 +1070,7 @@ namespace Raven.Server.Web.System
                                 TaskName = ravenEtl.Name,
                                 Configuration = ravenEtl,
                                 TaskState = GetEtlTaskState(ravenEtl),
+                                MentorNode = ravenEtl.MentorNode,
                                 DestinationUrl = process?.Url,
                                 TaskConnectionStatus = GetEtlTaskConnectionStatus(record, ravenEtl, out var node, out var ravenEtlError),
                                 ResponsibleNode = new NodeId

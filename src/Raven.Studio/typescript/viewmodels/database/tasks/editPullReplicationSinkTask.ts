@@ -125,7 +125,7 @@ class editPullReplicationSinkTask extends viewModelBase {
         this.dirtyFlag = new ko.DirtyFlag([
                 model.taskName,
                 model.manualChooseMentor,
-                model.preferredMentor,
+                model.mentorNode,
                 model.connectionStringName,
                 model.hubDefinitionName,
                 model.certificate,

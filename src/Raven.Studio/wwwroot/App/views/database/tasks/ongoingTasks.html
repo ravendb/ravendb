@@ -540,9 +540,15 @@
 </script>
 
 <script type="text/html" id="responsible-node-template">
-    <div data-bind="with: responsibleNode().NodeTag" title="Cluster node that is responsible for this task">
+    <div data-bind="with: responsibleNode().NodeTag, visible: !usingNotPreferredNode()" title="Cluster node that is responsible for this task">
         <i class="icon-cluster-node"></i>
         <span data-bind="text: $data"></span>
+    </div>
+    <div data-bind="with: responsibleNode().NodeTag, visible: usingNotPreferredNode()">
+        <i class="icon-cluster-node"></i>
+        <span class="text-danger pulse" data-bind="text: $parent.mentorNode" title="User preferred node for this task"></span>
+        <i class="icon-arrow-right pulse text-danger"></i>
+        <span class="text-success" data-bind="text: $data" title="Cluster node that is temporary responsible for this task"></span>
     </div>
     <div data-bind="if: !responsibleNode().NodeTag" title="No node is currently handling this task">
         <i class="icon-cluster-node"></i> N/A

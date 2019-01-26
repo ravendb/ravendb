@@ -35,7 +35,6 @@ class ongoingTaskReplicationEditModel extends ongoingTaskEditModel {
 
         this.connectionStringName(dto.ConnectionStringName); 
         this.manualChooseMentor(!!dto.MentorNode);
-        this.preferredMentor(dto.MentorNode);
 
         const delayTime = generalUtils.timeSpanToSeconds(dto.DelayReplicationFor);
         this.showDelayReplication(dto.DelayReplicationFor != null && delayTime !== 0);
@@ -45,7 +44,7 @@ class ongoingTaskReplicationEditModel extends ongoingTaskEditModel {
     toDto(taskId: number): Raven.Client.Documents.Operations.Replication.ExternalReplication {
         return {
             Name: this.taskName(),
-            MentorNode: this.manualChooseMentor() ? this.preferredMentor() : undefined,
+            MentorNode: this.manualChooseMentor() ? this.mentorNode() : undefined,
             ConnectionStringName: this.connectionStringName(),
             TaskId: taskId,
             DelayReplicationFor: this.showDelayReplication() ? generalUtils.formatAsTimeSpan(this.delayReplicationTime() * 1000) : null,
@@ -69,7 +68,7 @@ class ongoingTaskReplicationEditModel extends ongoingTaskEditModel {
         
         this.validationGroup = ko.validatedObservable({         
             connectionStringName: this.connectionStringName,
-            preferredMentor: this.preferredMentor,
+            mentorNode: this.mentorNode,
             delayReplicationTime: this.delayReplicationTime            
         });
     }

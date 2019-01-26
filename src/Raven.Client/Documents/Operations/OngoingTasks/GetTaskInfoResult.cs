@@ -44,6 +44,8 @@ namespace Raven.Client.Documents.Operations.OngoingTasks
         public OngoingTaskConnectionStatus TaskConnectionStatus { get; set; }
         public string TaskName { get; set; }
         public string Error { get; set; }
+        
+        public string MentorNode { get; set; }
 
         public virtual DynamicJsonValue ToJson()
         {
@@ -55,6 +57,7 @@ namespace Raven.Client.Documents.Operations.OngoingTasks
                 [nameof(TaskState)] = TaskState,
                 [nameof(TaskConnectionStatus)] = TaskConnectionStatus,
                 [nameof(TaskName)] = TaskName,
+                [nameof(MentorNode)] = MentorNode,
                 [nameof(Error)] = Error
             };
         }
@@ -88,7 +91,6 @@ namespace Raven.Client.Documents.Operations.OngoingTasks
         public string DestinationUrl { get; set; }
         public string[] TopologyDiscoveryUrls { get; set; }
         public string DestinationDatabase { get; set; }
-        public string MentorNode { get; set; }
         public string ConnectionStringName { get; set; }
         public TimeSpan DelayReplicationFor { get; set; } 
         
@@ -98,7 +100,6 @@ namespace Raven.Client.Documents.Operations.OngoingTasks
             json[nameof(DestinationUrl)] = DestinationUrl;
             json[nameof(TopologyDiscoveryUrls)] = TopologyDiscoveryUrls;
             json[nameof(DestinationDatabase)] = DestinationDatabase;
-            json[nameof(MentorNode)] = MentorNode;
             json[nameof(ConnectionStringName)] = ConnectionStringName;
             json[nameof(DelayReplicationFor)] = DelayReplicationFor;
             return json;
@@ -114,7 +115,6 @@ namespace Raven.Client.Documents.Operations.OngoingTasks
 
         public string DestinationUrl { get; set; }
         public string DestinationDatabase { get; set; }
-        public string MentorNode { get; set; }
         public TimeSpan DelayReplicationFor { get; set; }
 
         public override DynamicJsonValue ToJson()
@@ -122,7 +122,6 @@ namespace Raven.Client.Documents.Operations.OngoingTasks
             var json = base.ToJson();
             json[nameof(DestinationUrl)] = DestinationUrl;
             json[nameof(DestinationDatabase)] = DestinationDatabase;
-            json[nameof(MentorNode)] = MentorNode;
             json[nameof(DelayReplicationFor)] = DelayReplicationFor;
             return json;
         }
@@ -140,7 +139,6 @@ namespace Raven.Client.Documents.Operations.OngoingTasks
         public string DestinationUrl { get; set; }
         public string[] TopologyDiscoveryUrls { get; set; }
         public string DestinationDatabase { get; set; }
-        public string MentorNode { get; set; }
         public string ConnectionStringName { get; set; }
         
         public string CertificatePublicKey { get; set; }
@@ -150,7 +148,6 @@ namespace Raven.Client.Documents.Operations.OngoingTasks
             json[nameof(DestinationUrl)] = DestinationUrl;
             json[nameof(TopologyDiscoveryUrls)] = TopologyDiscoveryUrls;
             json[nameof(DestinationDatabase)] = DestinationDatabase;
-            json[nameof(MentorNode)] = MentorNode;
             json[nameof(HubDefinitionName)] = HubDefinitionName;
             json[nameof(ConnectionStringName)] = ConnectionStringName;
             json[nameof(CertificatePublicKey)] = CertificatePublicKey;
@@ -190,7 +187,7 @@ namespace Raven.Client.Documents.Operations.OngoingTasks
         {
             TaskType = OngoingTaskType.RavenEtl;
         }
-
+        
         public RavenEtlConfiguration Configuration { get; set; }
 
         public override DynamicJsonValue ToJson()

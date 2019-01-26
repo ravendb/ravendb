@@ -4,7 +4,7 @@ import ongoingTaskModel = require("models/database/tasks/ongoingTaskModel");
 
 abstract class ongoingTaskEditModel extends ongoingTaskModel {
     manualChooseMentor = ko.observable<boolean>(false);
-    preferredMentor = ko.observable<string>();
+    
     nodeTag: string = null;
 
     update(dto: Raven.Client.Documents.Operations.OngoingTasks.OngoingTask) {
@@ -14,7 +14,7 @@ abstract class ongoingTaskEditModel extends ongoingTaskModel {
     }
     
     protected initializeMentorValidation() {
-        this.preferredMentor.extend({
+        this.mentorNode.extend({
             required: {
                 onlyIf: () => this.manualChooseMentor()
             }

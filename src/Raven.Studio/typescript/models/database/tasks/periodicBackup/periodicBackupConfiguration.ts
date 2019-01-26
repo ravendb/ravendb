@@ -43,7 +43,7 @@ class periodicBackupConfiguration {
     canDisplayNextIncrementalBackupOccurrenceLocalTime: KnockoutComputed<boolean>; 
 
     manualChooseMentor = ko.observable<boolean>(false);
-    preferredMentor = ko.observable<string>();
+    mentorNode = ko.observable<string>();
 
     validationGroup: KnockoutValidationGroup;
     backupOptions = ["Backup", "Snapshot"];
@@ -82,7 +82,7 @@ class periodicBackupConfiguration {
         this.ftpSettings(!dto.FtpSettings ? ftpSettings.empty() : new ftpSettings(dto.FtpSettings));
         
         this.manualChooseMentor(!!dto.MentorNode);
-        this.preferredMentor(dto.MentorNode);
+        this.mentorNode(dto.MentorNode);
 
         const folderPath = this.localSettings().folderPath();
         if (folderPath) {
@@ -181,7 +181,7 @@ class periodicBackupConfiguration {
             this.fullBackupFrequency,
             this.incrementalBackupFrequency,
             this.manualChooseMentor,
-            this.preferredMentor,
+            this.mentorNode,
             anyBackupTypeIsDirty
         ], false, jsonUtil.newLineNormalizingHashFunction);
     }
@@ -290,7 +290,7 @@ class periodicBackupConfiguration {
             ]
         });
 
-        this.preferredMentor.extend({
+        this.mentorNode.extend({
             required: {
                 onlyIf: () => this.manualChooseMentor()
             }
@@ -300,7 +300,7 @@ class periodicBackupConfiguration {
             backupType: this.backupType,
             fullBackupFrequency: this.fullBackupFrequency,
             incrementalBackupFrequency: this.incrementalBackupFrequency,
-            preferredMentor: this.preferredMentor
+            mentorNode: this.mentorNode
         });
     }
 
@@ -394,7 +394,7 @@ class periodicBackupConfiguration {
             GlacierSettings: this.glacierSettings().toDto(),
             AzureSettings: this.azureSettings().toDto(),
             FtpSettings: this.ftpSettings().toDto(),
-            MentorNode: this.manualChooseMentor() ? this.preferredMentor() : undefined,
+            MentorNode: this.manualChooseMentor() ? this.mentorNode() : undefined,
             BackupEncryptionSettings: this.encryptionSettings().toDto()
         };
     }

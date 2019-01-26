@@ -34,7 +34,7 @@ class ongoingTaskSqlEtlEditModel extends ongoingTaskEditModel {
         this.dirtyFlag = new ko.DirtyFlag([
             this.taskName,
             this.connectionStringName,
-            this.preferredMentor,
+            this.mentorNode,
             this.manualChooseMentor,
             this.parameterizedDeletes,
             this.forceRecompileQuery,
@@ -77,7 +77,7 @@ class ongoingTaskSqlEtlEditModel extends ongoingTaskEditModel {
             connectionStringName: this.connectionStringName,
             sqlTables: this.sqlTables,
             transformationScripts: this.transformationScripts,
-            preferredMentor: this.preferredMentor,
+            mentorNode: this.mentorNode,
             commandTimeout: this.commandTimeout
         });
         
@@ -98,7 +98,6 @@ class ongoingTaskSqlEtlEditModel extends ongoingTaskEditModel {
             this.commandTimeout(dto.Configuration.CommandTimeout);
             
             this.manualChooseMentor(!!dto.Configuration.MentorNode);
-            this.preferredMentor(dto.Configuration.MentorNode);
             
             this.transformationScripts(dto.Configuration.Transforms.map(x => new ongoingTaskSqlEtlTransformationModel(x, false, false)));
             this.sqlTables(dto.Configuration.SqlTables.map(x => new ongoingTaskSqlEtlTableModel(x, false)));            
@@ -113,7 +112,7 @@ class ongoingTaskSqlEtlEditModel extends ongoingTaskEditModel {
             ConnectionStringName: this.connectionStringName(),
             AllowEtlOnNonEncryptedChannel: this.allowEtlOnNonEncryptedChannel(),
             Disabled: false,                     
-            MentorNode: this.manualChooseMentor() ? this.preferredMentor() : undefined, 
+            MentorNode: this.manualChooseMentor() ? this.mentorNode() : undefined, 
             FactoryName: "System.Data.SqlClient",
             ForceQueryRecompile: this.forceRecompileQuery(),
             ParameterizeDeletes: this.parameterizedDeletes(),

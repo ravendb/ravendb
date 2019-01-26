@@ -48,7 +48,7 @@ class ongoingTaskRavenEtlEditModel extends ongoingTaskEditModel {
         this.dirtyFlag = new ko.DirtyFlag([
                 innerDirtyFlag,
                 this.taskName,
-                this.preferredMentor,
+                this.mentorNode,
                 this.manualChooseMentor,
                 this.connectionStringName,
                 this.allowEtlOnNonEncryptedChannel,
@@ -76,7 +76,7 @@ class ongoingTaskRavenEtlEditModel extends ongoingTaskEditModel {
 
         this.validationGroup = ko.validatedObservable({
             connectionStringName: this.connectionStringName,
-            preferredMentor: this.preferredMentor,
+            mentorNode: this.mentorNode,
             transformationScripts: this.transformationScripts
         });
     }
@@ -88,7 +88,6 @@ class ongoingTaskRavenEtlEditModel extends ongoingTaskEditModel {
             this.connectionStringName(dto.Configuration.ConnectionStringName);
             this.transformationScripts(dto.Configuration.Transforms.map(x => new ongoingTaskRavenEtlTransformationModel(x, false, false)));
             this.manualChooseMentor(!!dto.Configuration.MentorNode);
-            this.preferredMentor(dto.Configuration.MentorNode);
         }
     }
 
@@ -100,7 +99,7 @@ class ongoingTaskRavenEtlEditModel extends ongoingTaskEditModel {
             Disabled: false,
             Transforms: this.transformationScripts().map(x => x.toDto()),
             EtlType: "Raven",
-            MentorNode: this.manualChooseMentor() ? this.preferredMentor() : undefined,
+            MentorNode: this.manualChooseMentor() ? this.mentorNode() : undefined,
             TaskId: this.taskId,
         } as Raven.Client.Documents.Operations.ETL.RavenEtlConfiguration;
     }

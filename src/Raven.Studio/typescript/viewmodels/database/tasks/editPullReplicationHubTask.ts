@@ -81,7 +81,7 @@ class editPullReplicationHubTask extends viewModelBase {
         this.dirtyFlag = new ko.DirtyFlag([
             model.taskName,
             model.manualChooseMentor,
-            model.preferredMentor,
+            model.mentorNode,
             model.delayReplicationTime,
             model.showDelayReplication,
             model.certificates

@@ -11,7 +11,7 @@ class addNewNodeToDatabaseGroup extends dialogViewModelBase {
     private isEncrypted: boolean;
     
     nodeTag = ko.observable<string>();
-    preferredMentor = ko.observable<string>();
+    mentorNode = ko.observable<string>();
     manualChooseMentor = ko.observable<boolean>(false);
     
     key = ko.observable<string>();
@@ -62,7 +62,7 @@ class addNewNodeToDatabaseGroup extends dialogViewModelBase {
             required: true
         });
         
-        this.preferredMentor.extend({
+        this.mentorNode.extend({
             required: {
                 onlyIf: () => this.manualChooseMentor()
             }
@@ -77,7 +77,7 @@ class addNewNodeToDatabaseGroup extends dialogViewModelBase {
             key: this.key,
             confirmation: this.confirmation,
             nodeTag: this.nodeTag,
-            preferredMentor: this.preferredMentor
+            mentorNode: this.mentorNode
         });
     }
     
@@ -111,7 +111,7 @@ class addNewNodeToDatabaseGroup extends dialogViewModelBase {
             
             this.distributeSecretIfNeeded()
                 .done(() => {
-                    new addNodeToDatabaseGroupCommand(this.databaseInfo.name, this.nodeTag(), this.manualChooseMentor() ? this.preferredMentor() : undefined)
+                    new addNodeToDatabaseGroupCommand(this.databaseInfo.name, this.nodeTag(), this.manualChooseMentor() ? this.mentorNode() : undefined)
                         .execute()
                         .done(() => {
                             this.close();
@@ -136,7 +136,7 @@ class addNewNodeToDatabaseGroup extends dialogViewModelBase {
     }
 
     selectedMentor(tag: string) {
-        this.preferredMentor(tag);
+        this.mentorNode(tag);
     }
 }
 
