@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq;
 using System.Runtime.CompilerServices;
+using System.Threading;
 using System.Threading.Tasks;
 using Raven.Client;
 using Raven.Client.Documents.Linq;
@@ -13,6 +14,7 @@ using Raven.Client.Extensions;
 using Raven.Client.ServerWide;
 using Raven.Server.Documents.Handlers;
 using Raven.Server.NotificationCenter.Notifications;
+using Raven.Server.ServerWide;
 using Raven.Server.ServerWide.Context;
 using Raven.Server.Utils;
 using Sparrow;
@@ -998,10 +1000,10 @@ namespace Raven.Server.Documents.Revisions
             public long EtagBarrier;
             public long LastScannedEtag;
             public readonly HashSet<string> ScannedIds = new HashSet<string>();
-            public Action<IOperationProgress> OnProgressAction;
+            public Action<IOperationProgress> OnProgress;
         }
 
-        public async Task<IOperationResult> RevertRevisions(DateTime before, TimeSpan window, Action<IOperationProgress> onProgressAction = null)
+        public async Task<IOperationResult> RevertRevisions(DateTime before, TimeSpan window, Action<IOperationProgress> onProgress, OperationCancelToken token)
         {
             var list = new List<Document>();
             var result = new RevertResult();
@@ -1011,37 +1013,39 @@ namespace Raven.Server.Documents.Revisions
                 Before = before,
                 MinimalDate = before.Add(-window), // since the documents/revisions are not sorted by date, stop searching if we reached this date.
                 EtagBarrier = _documentsStorage.GenerateNextEtag(), // every change after this etag, will _not_ be reverted.
-                OnProgressAction = onProgressAction
+                OnProgress = onProgress
             };
             parameters.LastScannedEtag = parameters.EtagBarrier;
 
             // send initial progress
-            parameters.OnProgressAction?.Invoke(result);
+            parameters.OnProgress?.Invoke(result);
             
             var hasMore = true;
             while (hasMore)
             {
+                token.Delay();
+
                 using (_database.DocumentsStorage.ContextPool.AllocateOperationContext(out DocumentsOperationContext writeCtx))
                 {
-                    hasMore = PrepareRevertedRevisions(writeCtx, parameters, result, list);
-                    await WriteRevertedRevisions(list);
+                    hasMore = PrepareRevertedRevisions(writeCtx, parameters, result, list, token);
+                    await WriteRevertedRevisions(list, token);
                 }
             }
 
             return result;
         }
 
-        private async Task WriteRevertedRevisions(List<Document> list)
+        private async Task WriteRevertedRevisions(List<Document> list, OperationCancelToken token)
         {
             if (list.Count == 0)
                 return;
 
-            await _database.TxMerger.Enqueue(new RevertDocumentsCommand(list));
+            await _database.TxMerger.Enqueue(new RevertDocumentsCommand(list, token));
 
             list.Clear();
         }
 
-        private bool PrepareRevertedRevisions(DocumentsOperationContext writeCtx, RevertParameters parameters, RevertResult result, List<Document> list)
+        private bool PrepareRevertedRevisions(DocumentsOperationContext writeCtx, RevertParameters parameters, RevertResult result, List<Document> list, OperationCancelToken token)
         {
             using (_database.DocumentsStorage.ContextPool.AllocateOperationContext(out DocumentsOperationContext readCtx))
             using (readCtx.OpenReadTransaction())
@@ -1050,6 +1054,8 @@ namespace Raven.Server.Documents.Revisions
                 foreach (var tvr in revisions.SeekBackwardFrom(RevisionsSchema.FixedSizeIndexes[AllRevisionsEtagsSlice],
                     parameters.LastScannedEtag))
                 {
+                    token.ThrowIfCancellationRequested();
+
                     result.ScannedRevisions++;
 
                     var id = TableValueToId(readCtx, (int)RevisionsTable.Id, ref tvr.Reader);
@@ -1080,7 +1086,7 @@ namespace Raven.Server.Documents.Revisions
                     RestoreRevision(readCtx, writeCtx, parameters, id, result, list);
 
                     if (result.ScannedDocuments % 1024 == 0)
-                        parameters.OnProgressAction?.Invoke(result);
+                        parameters.OnProgress?.Invoke(result);
 
                     if (readCtx.AllocatedMemory + writeCtx.AllocatedMemory > SizeLimit)
                     {
@@ -1115,10 +1121,12 @@ namespace Raven.Server.Documents.Revisions
         internal class RevertDocumentsCommand : TransactionOperationsMerger.MergedTransactionCommand
         {
             private readonly List<Document> _list;
+            private readonly CancellationToken _token;
 
-            public RevertDocumentsCommand(List<Document> list)
+            public RevertDocumentsCommand(List<Document> list, OperationCancelToken token)
             {
                 _list = list;
+                _token = token.Token;
             }
 
             protected override int ExecuteCmd(DocumentsOperationContext context)
@@ -1126,6 +1134,8 @@ namespace Raven.Server.Documents.Revisions
                 var documentsStorage = context.DocumentDatabase.DocumentsStorage;
                 foreach (var document in _list)
                 {
+                    _token.ThrowIfCancellationRequested();
+
                     if (document.Data != null)
                     {
                         documentsStorage.Put(context, document.Id, null, document.Data, flags: DocumentFlags.Reverted);
@@ -1161,7 +1171,7 @@ namespace Raven.Server.Documents.Revisions
 
             public RevertDocumentsCommand ToCommand(DocumentsOperationContext context, DocumentDatabase database)
             {
-                return new RevertDocumentsCommand(List);
+                return new RevertDocumentsCommand(List, OperationCancelToken.None);
             }
         }
 
