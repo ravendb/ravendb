@@ -81,6 +81,14 @@ define(function(require, exports, module) {
         }, "identifier", true);
 
         var curelyBracesCount = 0;
+        
+        // we hold here last token like: with, update, select 
+        // so after we reach '{' we know if context should be
+        // changed to js (in case of 'update', 'select'
+        // or to RQL (in case of 'with')
+        var lastPreBracketTokenSeen = null; 
+        
+        var preBracketTokens = ["select", "update", "with"];
 
         var commonRules = [ {
             token : "comment",
@@ -104,9 +112,10 @@ define(function(require, exports, module) {
         }, {
             token : "paren.lparen",
             regex : /{/,
-            next: function (currentState, stack) {
+            next: function (currentState) {
                 curelyBracesCount++;
-                return "js-start";
+                
+                return lastPreBracketTokenSeen === "with" ? currentState : "js-start";
             }
         }, {
             token : "paren.lparen",
@@ -127,7 +136,13 @@ define(function(require, exports, module) {
             regex : whereFunctions,
             next: "whereFunction"
         }, {
-            token : keywordMapper,
+            token : function (token, state, stack) {
+                if (preBracketTokens.indexOf(token) !== -1) {
+                    lastPreBracketTokenSeen = token;
+                }
+                
+                return keywordMapper(token);
+            },
             regex : keywordRegex
         }, {
             token : "operator.where",
