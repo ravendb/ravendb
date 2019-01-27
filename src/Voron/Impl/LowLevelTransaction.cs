@@ -64,14 +64,12 @@ namespace Voron.Impl
             public int ScratchPagesTablePoolIndex = 0;
             public Dictionary<long, PageFromScratchBuffer> ScratchPagesInUse = new Dictionary<long, PageFromScratchBuffer>(NumericEqualityComparer.BoxedInstanceInt64);
             public Dictionary<long, PageFromScratchBuffer> ScratchPagesReadyForNextTx = new Dictionary<long, PageFromScratchBuffer>(NumericEqualityComparer.BoxedInstanceInt64);
-            public readonly Dictionary<long, long> DirtyOverflowPagesPool = new Dictionary<long, long>(NumericEqualityComparer.BoxedInstanceInt64);
             public readonly HashSet<long> DirtyPagesPool = new HashSet<long>(NumericEqualityComparer.BoxedInstanceInt64);
 
             public void Reset()
             {
                 ScratchPagesReadyForNextTx.Clear();
                 ScratchPagesInUse.Clear();
-                DirtyOverflowPagesPool.Clear();
                 DirtyPagesPool.Clear();
                 TableValueBuilder.Reset();
             }
@@ -79,7 +77,6 @@ namespace Voron.Impl
 
         // BEGIN: Structures that are safe to pool.
         private readonly HashSet<long> _dirtyPages;
-        private readonly Dictionary<long, long> _dirtyOverflowPages;
         private readonly Stack<long> _pagesToFreeOnCommit;
         private readonly Dictionary<long, PageFromScratchBuffer> _scratchPagesTable;
         private readonly HashSet<PagerState> _pagerStates;
@@ -193,8 +190,6 @@ namespace Voron.Impl
 
             // we can reuse those instances, not calling Reset on the pool
             // because we are going to need to scratch buffer pool
-            _dirtyOverflowPages = previous._dirtyOverflowPages;
-            _dirtyOverflowPages.Clear();
 
             _scratchPagesTable = _env.WriteTransactionPool.ScratchPagesReadyForNextTx;
 
@@ -278,7 +273,6 @@ namespace Voron.Impl
                 journalFile.AddRef();
             }
             _env.WriteTransactionPool.Reset();
-            _dirtyOverflowPages = _env.WriteTransactionPool.DirtyOverflowPagesPool;
             _scratchPagesTable = _env.WriteTransactionPool.ScratchPagesInUse;
             _dirtyPages = _env.WriteTransactionPool.DirtyPagesPool;
             _freedPages = new HashSet<long>(NumericEqualityComparer.BoxedInstanceInt64);
@@ -586,9 +580,6 @@ namespace Voron.Impl
 
                 TrackDirtyPage(pageNumber);
 
-                if (numberOfPages > 1)
-                    _dirtyOverflowPages.Add(pageNumber + 1, numberOfPages - 1);
-
                 if (numberOfPages != 1)
                 {
                     _env.ScratchBufferPool.EnsureMapped(this,
@@ -656,7 +647,6 @@ namespace Voron.Impl
                 var pageFromScratchBuffer = new PageFromScratchBuffer(value.ScratchFileNumber, value.PositionInScratchBuffer + i, 1, 1);
                 _transactionPages.Add(pageFromScratchBuffer);
                 _scratchPagesTable[pageNumber + i] = pageFromScratchBuffer;
-                _dirtyOverflowPages.Remove(pageNumber + i);
                 _dirtyPages.Add(pageNumber + i);
                 TrackDirtyPage(pageNumber + i);
                 var newPage = _env.ScratchBufferPool.ReadPage(this, value.ScratchFileNumber, value.PositionInScratchBuffer + i);
@@ -692,12 +682,6 @@ namespace Voron.Impl
             for (int i = lowerNumberOfPages; i < prevNumberOfPages; i++)
             {
                 FreePage(page.PageNumber + i);
-            }
-
-            if (lowerNumberOfPages > 1)
-            {
-                // if we aren't freeing pages of the overflow from the beginning we need to manually change the range
-                _dirtyOverflowPages[pageNumber + 1] = lowerNumberOfPages - 1;
             }
 
             // need to set the proper number of pages in the scratch page
@@ -780,6 +764,19 @@ namespace Voron.Impl
             _pagesToFreeOnCommit.Push(pageNumber);
         }
 
+        internal void DiscardScratchModificationOn(long pageNumber)
+        {
+            if (_scratchPagesTable.TryGetValue(pageNumber, out var scratchPage))
+            {
+                if (_transactionPages.Remove(scratchPage))
+                    _unusedScratchPages.Add(scratchPage);
+
+                _scratchPagesTable.Remove(pageNumber);
+            }
+
+            _dirtyPages.Remove(pageNumber);
+        }
+
         internal void FreePage(long pageNumber)
         {
             if (_disposed != TxState.None)
@@ -803,14 +800,7 @@ namespace Voron.Impl
                     _scratchPagesTable.Remove(pageNumber);
                 }
 
-                if (_dirtyPages.Remove(pageNumber) == false &&
-                    _dirtyOverflowPages.TryGetValue(pageNumber, out long numberOfOverflowPages))
-                {
-                    _dirtyOverflowPages.Remove(pageNumber);
-
-                    if (numberOfOverflowPages > 1) // prevent adding range which length is 0
-                        _dirtyOverflowPages.Add(pageNumber + 1, numberOfOverflowPages - 1); // change the range of the overflow page
-                }
+                _dirtyPages.Remove(pageNumber);
 
                 UntrackDirtyPage(pageNumber);
             }
@@ -962,7 +952,6 @@ namespace Voron.Impl
         private bool WriteToJournalIsRequired()
         {
             return _dirtyPages.Count > 0
-                   || _dirtyOverflowPages.Count > 0
                    || _freedPages.Count > 0
                    // nothing changed in this transaction
                    // allow call to writeToJournal for flushing lazy tx
