@@ -38,7 +38,13 @@ namespace SlowTests.Server.Documents.Revisions
                 }
 
                 var db = await GetDocumentDatabaseInstanceFor(store);
-                var result = (RevertResult) await db.DocumentsStorage.RevisionsStorage.RevertRevisions(last, TimeSpan.FromMinutes(60), onProgress: null, token: OperationCancelToken.None);
+
+                RevertResult result;
+                using (var token = new OperationCancelToken(db.Configuration.Databases.OperationTimeout.AsTimeSpan, db.DatabaseShutdown))
+                {
+                    result = (RevertResult)await db.DocumentsStorage.RevisionsStorage.RevertRevisions(last, TimeSpan.FromMinutes(60), onProgress: null,
+                        token: token);
+                }
 
                 Assert.Equal(2, result.ScannedRevisions);
                 Assert.Equal(1, result.ScannedDocuments);
@@ -72,7 +78,13 @@ namespace SlowTests.Server.Documents.Revisions
                 }
 
                 var db = await GetDocumentDatabaseInstanceFor(store);
-                var result = (RevertResult)await db.DocumentsStorage.RevisionsStorage.RevertRevisions(last, TimeSpan.FromMinutes(60), onProgress: null, token: OperationCancelToken.None);
+
+                RevertResult result;
+                using (var token = new OperationCancelToken(db.Configuration.Databases.OperationTimeout.AsTimeSpan, db.DatabaseShutdown))
+                {
+                    result = (RevertResult)await db.DocumentsStorage.RevisionsStorage.RevertRevisions(last, TimeSpan.FromMinutes(60), onProgress: null,
+                        token: token);
+                }
 
                 Assert.Equal(1, result.ScannedRevisions);
                 Assert.Equal(1, result.ScannedDocuments);
@@ -126,7 +138,13 @@ namespace SlowTests.Server.Documents.Revisions
                 await Task.Delay(2000);
 
                 var db = await GetDocumentDatabaseInstanceFor(store);
-                var result = (RevertResult)await db.DocumentsStorage.RevisionsStorage.RevertRevisions(last, TimeSpan.FromSeconds(1), onProgress: null, token: OperationCancelToken.None);
+
+                RevertResult result;
+                using (var token = new OperationCancelToken(db.Configuration.Databases.OperationTimeout.AsTimeSpan, db.DatabaseShutdown))
+                {
+                    result = (RevertResult)await db.DocumentsStorage.RevisionsStorage.RevertRevisions(last, TimeSpan.FromSeconds(1), onProgress: null,
+                        token: token);
+                }
 
                 Assert.Equal(3, result.ScannedRevisions);
                 Assert.Equal(1, result.ScannedDocuments);
@@ -167,7 +185,13 @@ namespace SlowTests.Server.Documents.Revisions
                 }
 
                 var db = await GetDocumentDatabaseInstanceFor(store);
-                var result = (RevertResult)await db.DocumentsStorage.RevisionsStorage.RevertRevisions(last, TimeSpan.FromMinutes(60), onProgress: null, token: OperationCancelToken.None);
+
+                RevertResult result;
+                using (var token = new OperationCancelToken(db.Configuration.Databases.OperationTimeout.AsTimeSpan, db.DatabaseShutdown))
+                {
+                    result = (RevertResult)await db.DocumentsStorage.RevisionsStorage.RevertRevisions(last, TimeSpan.FromMinutes(60), onProgress: null,
+                        token: token);
+                }
 
                 Assert.Equal(5, result.ScannedRevisions);
                 Assert.Equal(1, result.ScannedDocuments);
@@ -209,7 +233,13 @@ namespace SlowTests.Server.Documents.Revisions
                 DateTime last = DateTime.UtcNow;
 
                 var db = await GetDocumentDatabaseInstanceFor(store);
-                var result = (RevertResult) await db.DocumentsStorage.RevisionsStorage.RevertRevisions(last, TimeSpan.FromMinutes(60), onProgress: null, token: OperationCancelToken.None);
+
+                RevertResult result;
+                using (var token = new OperationCancelToken(db.Configuration.Databases.OperationTimeout.AsTimeSpan, db.DatabaseShutdown))
+                {
+                    result = (RevertResult)await db.DocumentsStorage.RevisionsStorage.RevertRevisions(last, TimeSpan.FromMinutes(60), onProgress: null,
+                        token: token);
+                }
 
                 Assert.Equal(2, result.ScannedRevisions);
                 Assert.Equal(1, result.ScannedDocuments);
@@ -241,7 +271,13 @@ namespace SlowTests.Server.Documents.Revisions
                 }
 
                 var db = await GetDocumentDatabaseInstanceFor(store);
-                var result = (RevertResult)await db.DocumentsStorage.RevisionsStorage.RevertRevisions(last.Add(TimeSpan.FromMinutes(1)), TimeSpan.FromMinutes(60), onProgress: null, token: OperationCancelToken.None);
+
+                RevertResult result;
+                using (var token = new OperationCancelToken(db.Configuration.Databases.OperationTimeout.AsTimeSpan, db.DatabaseShutdown))
+                {
+                    result = (RevertResult)await db.DocumentsStorage.RevisionsStorage.RevertRevisions(last.Add(TimeSpan.FromMinutes(1)), TimeSpan.FromMinutes(60),
+                        onProgress: null, token: token);
+                }
 
                 Assert.Equal(1, result.ScannedRevisions);
                 Assert.Equal(1, result.ScannedDocuments);
@@ -275,7 +311,13 @@ namespace SlowTests.Server.Documents.Revisions
                 }
 
                 var db = await GetDocumentDatabaseInstanceFor(store);
-                var result = (RevertResult)await db.DocumentsStorage.RevisionsStorage.RevertRevisions(last, TimeSpan.FromMinutes(60), onProgress: null, token: OperationCancelToken.None);
+
+                RevertResult result;
+                using (var token = new OperationCancelToken(db.Configuration.Databases.OperationTimeout.AsTimeSpan, db.DatabaseShutdown))
+                {
+                    result = (RevertResult)await db.DocumentsStorage.RevisionsStorage.RevertRevisions(last, TimeSpan.FromMinutes(60), onProgress: null,
+                        token: token);
+                }
 
                 Assert.Equal(2, result.ScannedRevisions);
                 Assert.Equal(1, result.ScannedDocuments);
@@ -316,7 +358,13 @@ namespace SlowTests.Server.Documents.Revisions
                 }
 
                 var db = await GetDocumentDatabaseInstanceFor(store);
-                var result = (RevertResult)await db.DocumentsStorage.RevisionsStorage.RevertRevisions(last, TimeSpan.FromMinutes(60), onProgress: null, token: OperationCancelToken.None);
+
+                RevertResult result;
+                using (var token = new OperationCancelToken(db.Configuration.Databases.OperationTimeout.AsTimeSpan, db.DatabaseShutdown))
+                {
+                    result = (RevertResult)await db.DocumentsStorage.RevisionsStorage.RevertRevisions(last, TimeSpan.FromMinutes(60), onProgress: null,
+                        token: token);
+                }
 
                 Assert.Equal(3, result.ScannedRevisions);
                 Assert.Equal(1, result.ScannedDocuments);
@@ -400,7 +448,13 @@ namespace SlowTests.Server.Documents.Revisions
                 }
 
                 var db = await GetDocumentDatabaseInstanceFor(store1);
-                var result = (RevertResult)await db.DocumentsStorage.RevisionsStorage.RevertRevisions(last.Add(TimeSpan.FromMinutes(1)), TimeSpan.FromMinutes(60), onProgress: null, token: OperationCancelToken.None);
+
+                RevertResult result;
+                using (var token = new OperationCancelToken(db.Configuration.Databases.OperationTimeout.AsTimeSpan, db.DatabaseShutdown))
+                {
+                    result = (RevertResult)await db.DocumentsStorage.RevisionsStorage.RevertRevisions(last.Add(TimeSpan.FromMinutes(1)), TimeSpan.FromMinutes(60),
+                        onProgress: null, token: token);
+                }
 
                 Assert.Equal(3, result.ScannedRevisions);
                 Assert.Equal(1, result.ScannedDocuments);
@@ -450,7 +504,7 @@ namespace SlowTests.Server.Documents.Revisions
                     await session.StoreAsync(company, "foo/bar");
                     await session.SaveChangesAsync();
 
-                   
+
                     await session.StoreAsync(new Company(), "marker");
                     await session.SaveChangesAsync();
                 }
@@ -459,7 +513,13 @@ namespace SlowTests.Server.Documents.Revisions
                 WaitForDocument(store1, "marker");
 
                 var db = await GetDocumentDatabaseInstanceFor(store1);
-                var result = (RevertResult)await db.DocumentsStorage.RevisionsStorage.RevertRevisions(last, TimeSpan.FromMinutes(60), onProgress: null, token: OperationCancelToken.None);
+
+                RevertResult result;
+                using (var token = new OperationCancelToken(db.Configuration.Databases.OperationTimeout.AsTimeSpan, db.DatabaseShutdown))
+                {
+                    result = (RevertResult)await db.DocumentsStorage.RevisionsStorage.RevertRevisions(last, TimeSpan.FromMinutes(60), onProgress: null,
+                        token: token);
+                }
 
                 Assert.Equal(3, result.ScannedRevisions);
                 Assert.Equal(1, result.ScannedDocuments);
@@ -539,7 +599,13 @@ namespace SlowTests.Server.Documents.Revisions
                 WaitForDocument(store1, "marker");
 
                 var db = await GetDocumentDatabaseInstanceFor(store1);
-                var result = (RevertResult)await db.DocumentsStorage.RevisionsStorage.RevertRevisions(last, TimeSpan.FromMinutes(60), onProgress: null, token: OperationCancelToken.None);
+
+                RevertResult result;
+                using (var token = new OperationCancelToken(db.Configuration.Databases.OperationTimeout.AsTimeSpan, db.DatabaseShutdown))
+                {
+                    result = (RevertResult)await db.DocumentsStorage.RevisionsStorage.RevertRevisions(last, TimeSpan.FromMinutes(60), onProgress: null,
+                        token: token);
+                }
 
                 Assert.Equal(3, result.ScannedRevisions);
                 Assert.Equal(1, result.ScannedDocuments);
@@ -616,7 +682,13 @@ namespace SlowTests.Server.Documents.Revisions
                 WaitForDocument(store1, "marker");
 
                 var db = await GetDocumentDatabaseInstanceFor(store1);
-                var result = (RevertResult)await db.DocumentsStorage.RevisionsStorage.RevertRevisions(last, TimeSpan.FromMinutes(60), onProgress: null, token: OperationCancelToken.None);
+
+                RevertResult result;
+                using (var token = new OperationCancelToken(db.Configuration.Databases.OperationTimeout.AsTimeSpan, db.DatabaseShutdown))
+                {
+                    result = (RevertResult)await db.DocumentsStorage.RevisionsStorage.RevertRevisions(last, TimeSpan.FromMinutes(60), onProgress: null,
+                        token: token);
+                }
 
                 Assert.Equal(4, result.ScannedRevisions);
                 Assert.Equal(1, result.ScannedDocuments);
@@ -696,7 +768,7 @@ namespace SlowTests.Server.Documents.Revisions
 
                     last = DateTime.UtcNow;
                 }
-               
+
 
                 await SetupReplicationAsync(store2, store1);
                 WaitForDocument(store1, "marker");
@@ -708,7 +780,13 @@ namespace SlowTests.Server.Documents.Revisions
                 }
 
                 var db = await GetDocumentDatabaseInstanceFor(store1);
-                var result = (RevertResult)await db.DocumentsStorage.RevisionsStorage.RevertRevisions(last, TimeSpan.FromMinutes(60), onProgress: null, token: OperationCancelToken.None);
+
+                RevertResult result;
+                using (var token = new OperationCancelToken(db.Configuration.Databases.OperationTimeout.AsTimeSpan, db.DatabaseShutdown))
+                {
+                    result = (RevertResult)await db.DocumentsStorage.RevisionsStorage.RevertRevisions(last, TimeSpan.FromMinutes(60), onProgress: null,
+                        token: token);
+                }
 
                 Assert.Equal(4, result.ScannedRevisions);
                 Assert.Equal(1, result.ScannedDocuments);
@@ -730,7 +808,7 @@ namespace SlowTests.Server.Documents.Revisions
                     Assert.Equal("Name2", companiesRevisions[3].Name);
                     metadata = session.Advanced.GetMetadataFor(companiesRevisions[3]);
                     Assert.Equal((DocumentFlags.HasRevisions | DocumentFlags.Revision | DocumentFlags.FromReplication | DocumentFlags.Conflicted).ToString(), metadata.GetString(Constants.Documents.Metadata.Flags));
-                    
+
                     Assert.Equal(null, companiesRevisions[2].Name);
                     metadata = session.Advanced.GetMetadataFor(companiesRevisions[2]);
                     Assert.Equal((DocumentFlags.HasRevisions | DocumentFlags.DeleteRevision | DocumentFlags.Conflicted).ToString(), metadata.GetString(Constants.Documents.Metadata.Flags));
