@@ -31,11 +31,12 @@ namespace Raven.Server.Documents
 
             var strLength = id.Length;
             var maxStrSize = Encoding.GetMaxByteCount(strLength);
-            int escapePositionsSize = JsonParserState.FindEscapePositionsMaxSize(id);
+            var escapePositionsSize = JsonParserState.FindEscapePositionsMaxSize(id);
 
             var buffer = context.GetMemory(
                 maxStrSize  // this buffer is allocated to also serve the GetSliceFromUnicodeKey
-                + sizeof(char) * id.Length);
+                + sizeof(char) * id.Length
+                + escapePositionsSize);
 
             if (id.Length > 512)
                 ThrowDocumentIdTooBig(id);
