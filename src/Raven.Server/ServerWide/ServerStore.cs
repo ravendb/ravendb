@@ -200,90 +200,91 @@ namespace Raven.Server.ServerWide
                 var delay = 500;
                 while (ServerShutdown.IsCancellationRequested == false)
                 {
-                    CancellationTokenSource cts = null;
                     Task leaderChangedTask = null;
-
-                    try
+                    using (var cts = CancellationTokenSource.CreateLinkedTokenSource(ServerShutdown))
                     {
-                        _engine.WaitForState(RachisState.Follower, ServerShutdown).Wait(ServerShutdown);
-                        if (ServerShutdown.IsCancellationRequested)
-                            return;
-                    
-                        cts = CancellationTokenSource.CreateLinkedTokenSource(ServerShutdown);
-                        leaderChangedTask = _engine.WaitForLeaderChange(cts.Token);
-                        if (Task.WaitAny(new[] {NotificationCenter.WaitForAnyWebSocketClient, leaderChangedTask}, ServerShutdown) == 1)
+                        try
                         {
-                            // leaderChangedTask has completed
-                            continue;
-                        }
+                            _engine.WaitForState(RachisState.Follower, cts.Token).Wait(cts.Token);
+                            if (cts.IsCancellationRequested)
+                                return;
 
-                        var cancelTask = Task.WhenAny(NotificationCenter.WaitForRemoveAllWebSocketClients, leaderChangedTask);
-
-                        while (cancelTask.IsCompleted == false)
-                        {
-                            var topology = GetClusterTopology();
-                            var leaderUrl = topology.GetUrlFromTag(_engine.LeaderTag);
-                            if (leaderUrl == null)
-                                break; // will continue from the top of the loop
-
-                            if (IsLeader())
-                                break;
-
-                            using (var ws = new ClientWebSocket())
-                            using (ContextPool.AllocateOperationContext(out JsonOperationContext context))
+                            leaderChangedTask = _engine.WaitForLeaderChange(cts.Token);
+                            if (Task.WaitAny(new[] { NotificationCenter.WaitForAnyWebSocketClient, leaderChangedTask }, cts.Token) == 1)
                             {
-                                var leaderWsUrl = new Uri($"{leaderUrl.Replace("http", "ws", StringComparison.OrdinalIgnoreCase)}/server/notification-center/watch");
+                                // leaderChangedTask has completed
+                                continue;
+                            }
 
-                                if (Server.Certificate?.Certificate != null)
-                                {
-                                    ws.Options.ClientCertificates.Add(Server.Certificate.Certificate);
-                                }
+                            var cancelTask = Task.WhenAny(NotificationCenter.WaitForRemoveAllWebSocketClients, leaderChangedTask);
 
-                                ws.ConnectAsync(leaderWsUrl, cts.Token).Wait(ServerShutdown);
-                                while (ws.State == WebSocketState.Open || ws.State == WebSocketState.CloseSent)
+                            while (cancelTask.IsCompleted == false)
+                            {
+                                var topology = GetClusterTopology();
+                                var leaderUrl = topology.GetUrlFromTag(_engine.LeaderTag);
+                                if (leaderUrl == null)
+                                    break; // will continue from the top of the loop
+
+                                if (IsLeader())
+                                    break;
+
+                                using (var ws = new ClientWebSocket())
+                                using (ContextPool.AllocateOperationContext(out JsonOperationContext context))
                                 {
-                                    var readTask = context.ReadFromWebSocket(ws, "ws from Leader", cts.Token);
-                                    using (var notification = readTask.Result)
+                                    var leaderWsUrl = new Uri($"{leaderUrl.Replace("http", "ws", StringComparison.OrdinalIgnoreCase)}/server/notification-center/watch");
+
+                                    if (Server.Certificate?.Certificate != null)
                                     {
-                                        if (notification == null)
-                                            break;
-
-                                        if (notification.TryGet(nameof(ClusterTopologyChanged.Type), out NotificationType notificationType) == false ||
-                                            notificationType != NotificationType.ClusterTopologyChanged)
-                                            continue;
-
-                                        var topologyNotification = JsonDeserializationServer.ClusterTopologyChanged(notification);
-                                        if (topologyNotification == null)
-                                            continue;
-
-                                        if (_engine.LeaderTag != topologyNotification.Leader)
-                                            break;
-
-                                        delay = 500; // on successful read, reset the delay
-                                        topologyNotification.NodeTag = _engine.Tag;
-                                        NotificationCenter.Add(topologyNotification);
+                                        ws.Options.ClientCertificates.Add(Server.Certificate.Certificate);
                                     }
-                                }
 
-                                delay = ReconnectionBackoff(delay);
+                                    ws.ConnectAsync(leaderWsUrl, cts.Token).Wait(cts.Token);
+                                    while (ws.State == WebSocketState.Open || ws.State == WebSocketState.CloseSent)
+                                    {
+                                        var readTask = context.ReadFromWebSocket(ws, "ws from Leader", cts.Token);
+                                        using (var notification = readTask.Result)
+                                        {
+                                            if (notification == null)
+                                                break;
+
+                                            if (notification.TryGet(nameof(ClusterTopologyChanged.Type), out NotificationType notificationType) == false ||
+                                                notificationType != NotificationType.ClusterTopologyChanged)
+                                                continue;
+
+                                            var topologyNotification = JsonDeserializationServer.ClusterTopologyChanged(notification);
+                                            if (topologyNotification == null)
+                                                continue;
+
+                                            if (_engine.LeaderTag != topologyNotification.Leader)
+                                                break;
+
+                                            delay = 500; // on successful read, reset the delay
+                                            topologyNotification.NodeTag = _engine.Tag;
+                                            NotificationCenter.Add(topologyNotification);
+                                        }
+                                    }
+
+                                    delay = ReconnectionBackoff(delay);
+                                }
                             }
                         }
-                    }
-                    catch (OperationCanceledException)
-                    {
-                    }
-                    catch (Exception e)
-                    {
-                        if (Logger.IsInfoEnabled)
+                        catch (OperationCanceledException)
                         {
-                            Logger.Info($"Error during receiving topology updates from the leader. Waiting {delay} [ms] before trying again.", e);
                         }
+                        catch (Exception e)
+                        {
+                            if (Logger.IsInfoEnabled)
+                            {
+                                Logger.Info($"Error during receiving topology updates from the leader. Waiting {delay} [ms] before trying again.", e);
+                            }
 
-                        delay = ReconnectionBackoff(delay);
-                    }
-                    finally
-                    {
-                        WaitForLeaderChangeTaskToComplete(leaderChangedTask, cts);
+                            delay = ReconnectionBackoff(delay);
+                        }
+                        finally
+                        {
+                            cts.Cancel();
+                            WaitForLeaderChangeTaskToComplete(leaderChangedTask);
+                        }
                     }
                 }
             }
@@ -299,27 +300,19 @@ namespace Raven.Server.ServerWide
             }
         }
 
-        private void WaitForLeaderChangeTaskToComplete(Task leaderChangedTask, CancellationTokenSource cts)
+        private void WaitForLeaderChangeTaskToComplete(Task leaderChangedTask)
         {
-            if (cts == null)
-                return;
-
-            using (cts)
+            // wait for leader change task to complete
+            try
             {
-                cts.Cancel();
+                if (leaderChangedTask == null || leaderChangedTask.IsCompleted)
+                    return;
 
-                // wait for leader change task to complete
-                try
-                {
-                    if (leaderChangedTask == null || leaderChangedTask.IsCompleted)
-                        return;
-
-                    leaderChangedTask.Wait(ServerShutdown);
-                }
-                catch (OperationCanceledException)
-                {
-                    // ignored
-                }
+                leaderChangedTask.Wait(ServerShutdown);
+            }
+            catch (OperationCanceledException)
+            {
+                // ignored
             }
         }
 
@@ -381,7 +374,7 @@ namespace Raven.Server.ServerWide
 
                             var leaderChanged = _engine.WaitForLeaveState(RachisState.Leader, ServerShutdown);
 
-                            if (Task.WaitAny(new[] {topologyChangedTask, leaderChanged}, ServerShutdown) == 1)
+                            if (Task.WaitAny(new[] { topologyChangedTask, leaderChanged }, ServerShutdown) == 1)
                                 break;
                         }
                     }
@@ -700,7 +693,7 @@ namespace Raven.Server.ServerWide
             }
 
             _clusterMaintenanceSetupTask = PoolOfThreads.GlobalRavenThreadPool.LongRunning(x =>
-                ClusterMaintenanceSetupTask() , null, "Cluster Maintenance Setup Task");
+                ClusterMaintenanceSetupTask(), null, "Cluster Maintenance Setup Task");
 
             _updateTopologyChangeNotification = PoolOfThreads.GlobalRavenThreadPool.LongRunning(x =>
             {
