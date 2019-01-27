@@ -40,6 +40,7 @@ namespace Raven.Server.Documents.Handlers
             private readonly bool _fromEtl;
             private readonly bool _fromSmuggler;
             private readonly Dictionary<string, List<CounterOperation>> _dictionary;
+            public DocumentsOperationContext Context;
 
             public ExecuteCounterBatchCommand(DocumentDatabase database, CounterBatch counterBatch)
             {
@@ -83,6 +84,8 @@ namespace Raven.Server.Documents.Handlers
                 _fromSmuggler = true;
                 _database = database;
                 _dictionary = new Dictionary<string, List<CounterOperation>>();
+                _database.DocumentsStorage.ContextPool.AllocateOperationContext(out Context);
+                Context.OpenReadTransaction();
             }
 
             public int Add(string id, CounterOperation op, out bool isNew)

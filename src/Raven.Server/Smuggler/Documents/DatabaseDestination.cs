@@ -156,13 +156,9 @@ namespace Raven.Server.Smuggler.Documents
                     ((item.Document.Flags & DocumentFlags.Revision) !=0) || 
                      ((item.Document.Flags & DocumentFlags.DeleteRevision) != 0))
                 {
-                    using (_database.DocumentsStorage.ContextPool.AllocateOperationContext(out DocumentsOperationContext context))
-                    using (context.OpenReadTransaction())
+                    if (_database.DocumentsStorage.Get(_command.Context, item.Document.Id) == null)
                     {
-                        if (_database.DocumentsStorage.Get(context, item.Document.Id) == null)
-                        {
-                            throw new DocumentDoesNotExistException();
-                        }
+                        throw new DocumentDoesNotExistException(item.Document.Id);
                     }
                 }
 
@@ -228,7 +224,7 @@ namespace Raven.Server.Smuggler.Documents
 
                 if (currentReachedLimit == false && prevDoneAndHasEnough == false)
                     return;
-
+                _command.Context.CloseTransaction();
                 var prevCommand = _prevCommand;
                 var prevCommandTask = _prevCommandTask;
 
@@ -457,6 +453,7 @@ namespace Raven.Server.Smuggler.Documents
                 _buildType = buildType;
                 _log = log;
                 _resetContext = _database.DocumentsStorage.ContextPool.AllocateOperationContext(out _context);
+                _context.OpenReadTransaction();
             }
 
             public DocumentsOperationContext Context => _context;
@@ -726,14 +723,11 @@ namespace Raven.Server.Smuggler.Documents
 
             public void WriteCounter(CounterDetail counterDetail)
             {
-                using (_database.DocumentsStorage.ContextPool.AllocateOperationContext(out DocumentsOperationContext context))
-                using (context.OpenReadTransaction())
+                if (_database.DocumentsStorage.Get(_cmd.Context, counterDetail.DocumentId) == null)
                 {
-                    if (_database.DocumentsStorage.Get(context, counterDetail.DocumentId) == null)
-                    {
-                        throw new DocumentDoesNotExistException();
-                    }
+                    throw new DocumentDoesNotExistException(counterDetail.DocumentId);
                 }
+
                 AddToBatch(counterDetail);
                 HandleBatchOfCountersIfNecessary();
             }
@@ -752,7 +746,7 @@ namespace Raven.Server.Smuggler.Documents
                 var prevCommandTask = _prevCommandTask;
 
                 var commandTask = _database.TxMerger.Enqueue(_cmd);
-
+                _cmd.Context.CloseTransaction();
                 _prevCommand = _cmd;
                 _prevCommandTask = commandTask;
 

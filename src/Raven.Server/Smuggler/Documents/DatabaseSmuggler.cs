@@ -506,6 +506,7 @@ namespace Raven.Server.Smuggler.Documents
                     }
                     catch (DocumentDoesNotExistException )
                     {
+                        result.AddError("Trying to process revision documents but base document doesn't exit");
                         result.RevisionDocuments.ErroredCount++;
                         continue;
                     }
@@ -668,13 +669,13 @@ namespace Raven.Server.Smuggler.Documents
 
                     if (result.Counters.ReadCount % 1000 == 0)
                         AddInfoToSmugglerResult(result, $"Read {result.Counters.ReadCount:#,#;;0} counters.");
-
                     try
                     {
                         actions.WriteCounter(counterDetail);
                     }
                     catch (DocumentDoesNotExistException)
                     {
+                        result.AddError("Trying to process counters but base document doesn't exit");
                         result.Counters.ErroredCount++;
                         continue;
                     }
