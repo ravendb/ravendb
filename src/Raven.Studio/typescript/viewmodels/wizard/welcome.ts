@@ -6,10 +6,12 @@ import genUtils = require("common/generalUtils");
 
 class welcome extends setupStep {
    
+    disableLetEncrypt = ko.observable<boolean>(false);
+    
     activate(args: any) {
         super.activate(args, true);
         return $.when<any>(this.fetchLocalNodeIps(), this.fetchSetupParameters())
-            .done((localIpsResult, setupParamsResult) => {
+            .done((localIpsResult, setupParamsResult: [Raven.Server.Commercial.SetupParameters]) => {
                 this.model.init(setupParamsResult[0]);
 
                 const ipV4 = _.filter(localIpsResult[0], (ip: string) => _.split(ip,  '.').length === 4);
@@ -17,11 +19,19 @@ class welcome extends setupStep {
                
                 this.model.localIps(_.uniq(_.concat(["0.0.0.0"], ipV4, ipV6)));
                 
+                this.disableLetEncrypt(setupParamsResult[0].RunningOnMacOsx);
+                
                 // Remove localhost IPs if running on Docker
                 if (setupParamsResult[0].IsDocker) {
                     this.model.localIps(_.filter(this.model.localIps(), (ip: string) => { return !genUtils.isLocalhostIpAddress(ip); }));
-                }                
+                }
             });
+    }
+    
+    compositionComplete() {
+        super.compositionComplete();
+        
+        this.setupDisableReasons();
     }
 
     private fetchLocalNodeIps() {

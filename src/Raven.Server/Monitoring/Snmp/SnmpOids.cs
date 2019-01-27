@@ -175,6 +175,9 @@ namespace Raven.Server.Monitoring.Snmp
             [Description("Number of performance hints")]
             public const string PerformanceHints = "5.2.{0}.1.15";
 
+            [Description("Number of indexing errors")]
+            public const string IndexingErrors = "5.2.{0}.1.16";
+
             [Description("Documents storage allocated size in MB")]
             public const string DocumentsStorageAllocatedSize = "5.2.{0}.2.1";
 

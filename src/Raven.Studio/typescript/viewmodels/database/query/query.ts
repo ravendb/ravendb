@@ -653,26 +653,33 @@ class query extends viewModelBase {
                     .done((queryResults: pagedResultExtended<document>) => {
                         this.hasMoreUnboundedResults(false);
                         
+                        if (queryResults.items.length < take + 1) {
+                            // we get less items than requested. I assume the distinct operation was used. 
+                            // let's try to handle that. I assuming that we reach the end of results.
+                            queryResults.totalResultCount = skip + queryResults.items.length;
+                            queryResults.additionalResultInfo.TotalResults = queryResults.totalResultCount;
+                        }
+
                         const totalFromQuery = queryResults.totalResultCount || 0;
                         
                         itemsSoFar += queryResults.items.length;
                         
                         this.totalResultsForUi(totalFromQuery);
                     
-                        if (queryResults.additionalResultInfo.TotalResults === -1) {
-                            // unbounded result set - startsWith() on collection 
+                        if (queryResults.totalResultCount === -1) {
+                            // unbounded result set
                             if (queryResults.items.length === take + 1) {
                                 // returned all or have more
                                 const returnedLimit = queryResults.additionalResultInfo.CappedMaxResults || Number.MAX_SAFE_INTEGER;
                                 this.hasMoreUnboundedResults(returnedLimit > itemsSoFar);
                                 queryResults.totalResultCount = Math.min(skip + take + 30, returnedLimit - 1 /* subtract one since we fetch n+1 records */);
+                                queryResults.additionalResultInfo.TotalResults = skip + take;
                             } else {
                                 queryResults.totalResultCount = skip + queryResults.items.length;
-                            }
-                            
                             queryResults.additionalResultInfo.TotalResults = queryResults.totalResultCount;
                             
                             this.totalResultsForUi(this.hasMoreUnboundedResults() ? itemsSoFar - 1 : itemsSoFar);
+                        }
                         }
                         
                         if (queryResults.additionalResultInfo.SkippedResults) {
