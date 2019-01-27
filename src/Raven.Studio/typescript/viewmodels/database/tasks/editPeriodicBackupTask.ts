@@ -71,7 +71,10 @@ class editPeriodicBackupTask extends viewModelBase {
                     this.dirtyFlag = this.configuration().dirtyFlag;
                     
                     if (!encryptionSettings.key()) {
-                        return this.encryptionSection.generateEncryptionKey();
+                        return this.encryptionSection.generateEncryptionKey()
+                            .done(() => {
+                                encryptionSettings.dirtyFlag().reset();
+                            });
                     }
                 });
         };
