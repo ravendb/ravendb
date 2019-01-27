@@ -74,7 +74,7 @@ namespace Raven.Client.Documents.Session
         IGraphQuery<T> With<TOther>(string alias, IRavenQueryable<TOther> query);
         IGraphQuery<T> With<TOther>(string alias, string rawQuery);
         IGraphQuery<T> With<TOther>(string alias, Func<IDocumentQueryBuilder, IDocumentQuery<TOther>> queryFactory);
-        IGraphQuery<T> WithEdges(string alias, string edgeSelector);
+        IGraphQuery<T> WithEdges(string alias, string edgeSelector, string query);
     }
 
     /// <summary>
