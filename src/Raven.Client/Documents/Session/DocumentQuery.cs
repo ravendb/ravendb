@@ -845,9 +845,9 @@ namespace Raven.Client.Documents.Session
             return this;
         }
 
-        public IGraphQuery<T> WithEdges(string alias, string edgeSelector)
+        public IGraphQuery<T> WithEdges(string alias, string edgeSelector, string query)
         {
-            WithTokens.AddLast(new WithToken(alias, edgeSelector));
+            WithTokens.AddLast(new WithEdgesToken(alias, edgeSelector, query));
             return this;
         }
 

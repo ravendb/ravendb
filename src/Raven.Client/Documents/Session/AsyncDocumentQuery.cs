@@ -1089,9 +1089,9 @@ namespace Raven.Client.Documents.Session
             return WithInternal(alias, (AsyncDocumentQuery<TOther>)AsyncSession.Advanced.AsyncRawQuery<TOther>(rawQuery));
         }
 
-        public IAsyncGraphQuery<T> WithEdges(string alias, string edgeSelector)
+        public IAsyncGraphQuery<T> WithEdges(string alias, string edgeSelector, string query)
         {
-            WithTokens.AddLast(new WithToken(alias, edgeSelector));
+            WithTokens.AddLast(new WithEdgesToken(alias, edgeSelector, query));
             return this;
         }
 

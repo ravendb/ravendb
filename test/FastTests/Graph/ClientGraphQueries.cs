@@ -62,6 +62,118 @@ namespace FastTests.Graph
                 }
             }
         }
+
+        [Fact]
+        public void CanUseWithEdges()
+        {
+            using (var store = GetDocumentStore())
+            {
+                using (var session = store.OpenSession())
+                {
+                    session.Store(
+                        new Friend
+                        {
+                            Name="F1",
+                            Age = 21,
+                            Friends = new[]
+                            {
+                                new FriendDescriptor
+                                {
+                                    FriendId = "Friend/2",
+                                    FriendsSince = DateTime.UtcNow - TimeSpan.FromDays(1024)
+                                },
+                                new FriendDescriptor
+                                {
+                                    FriendId = "Friend/3",
+                                    FriendsSince = DateTime.UtcNow - TimeSpan.FromDays(678)
+                                },
+                                new FriendDescriptor
+                                {
+                                    FriendId = "Friend/4",
+                                    FriendsSince = DateTime.UtcNow - TimeSpan.FromDays(345)
+                                }
+                            }
+                        }, "Friend/1");
+                    session.Store(
+                        new Friend
+                        {
+                            Name = "F2",
+                            Age = 19,
+                            Friends = new[]
+                            {
+                                new FriendDescriptor
+                                {
+                                    FriendId = "Friend/1",
+                                    FriendsSince = DateTime.UtcNow - TimeSpan.FromDays(1024)
+                                },
+                                new FriendDescriptor
+                                {
+                                    FriendId = "Friend/4",
+                                    FriendsSince = DateTime.UtcNow - TimeSpan.FromDays(304)
+                                }
+                            }
+                        }, "Friend/2");
+                    session.Store(
+                        new Friend
+                        {
+                            Name = "F3",
+                            Age = 41,
+                            Friends = new[]
+                            {
+                                new FriendDescriptor
+                                {
+                                    FriendId = "Friend/1",
+                                    FriendsSince = DateTime.UtcNow - TimeSpan.FromDays(678)
+                                }
+                            }
+                        }, "Friend/3");
+                    session.Store(
+                        new Friend
+                        {
+                            Name = "F4",
+                            Age = 32,
+                            Friends = new[]
+                            {
+                                new FriendDescriptor
+                                {
+                                    FriendId = "Friend/2",
+                                    FriendsSince = DateTime.UtcNow - TimeSpan.FromDays(304)
+                                },
+                                new FriendDescriptor
+                                {
+                                    FriendId = "Friend/1",
+                                    FriendsSince = DateTime.UtcNow -  TimeSpan.FromDays(345)
+                                }
+                            }
+                        }, "Friend/4");
+                    session.SaveChanges();
+                    var res = session.Advanced.GraphQuery<FriendsTuple>("match (F1)-[L1]->(F2)")
+                        .With("F1", session.Query<Friend>())
+                        .With("F2", session.Query<Friend>())
+                        .WithEdges("L1", "Friends","where FriendsSince >= \'2018-03-29T11:54:49.0095205Z\' select FriendId")
+                        .OrderByDescending(x => x.F1.Age)
+                        .Select(x=> x.F1)
+                        .ToList();
+                    Assert.Equal(res.Count, 2);
+                    Assert.Equal(res[0].Name, "F4");
+                    Assert.Equal(res[1].Name, "F2");
+                }
+            }
+        }
+
+        private class FriendsTuple
+        {
+            public Friend F1 { get; set; }
+            public FriendDescriptor L1 { get; set; }
+            public Friend F2 { get; set; }
+        }
+
+        private class Friend
+        {
+            public string Name { get; set; }
+            public int Age { get; set; }
+            public FriendDescriptor[] Friends { get; set; }
+        }
         private class FooBar
         {
             public Foo Foo { get; set; }
@@ -78,5 +190,11 @@ namespace FastTests.Graph
             public string Name { get; set; }
             public int Age { get; set; }
         }
+    }
+
+    internal class FriendDescriptor
+    {
+        public DateTime FriendsSince { get; set; }
+        public string FriendId { get; set; }
     }
 }
