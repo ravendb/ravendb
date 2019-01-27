@@ -301,6 +301,9 @@ namespace Raven.Server.ServerWide
 
         private void WaitForLeaderChangeTaskToComplete(Task leaderChangedTask, CancellationTokenSource cts)
         {
+            if (cts == null)
+                return;
+
             using (cts)
             {
                 cts.Cancel();
