@@ -47,7 +47,11 @@ namespace Voron.Platform
             try
             {
                 if (File.Exists(fromFilename))
+                {
+                    if (File.Exists(toFilename))
+                        File.Delete(toFilename);
                     File.Move(fromFilename, toFilename);
+                }
             }
             catch (IOException e)
             {
