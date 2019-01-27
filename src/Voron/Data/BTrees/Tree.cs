@@ -1268,6 +1268,8 @@ namespace Voron.Data.BTrees
                         _llt.FreePage(readOnlyOverflowPage.PageNumber + requestedOverflows + i);
                     }
 
+                    _llt.DiscardScratchModificationOn(readOnlyOverflowPage.PageNumber);
+
                     State.RecordFreedPage(readOnlyOverflowPage, overflowsToFree);
 
                     var page = _llt.AllocatePage(requestedOverflows, updatedNode->PageNumber);
