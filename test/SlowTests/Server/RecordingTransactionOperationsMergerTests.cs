@@ -1322,7 +1322,11 @@ namespace SlowTests.Server
                 }
 
                 var db = await GetDocumentDatabaseInstanceFor(store);
-                var result = await db.DocumentsStorage.RevisionsStorage.RevertRevisions(last, TimeSpan.FromMinutes(60), onProgress: null, token: OperationCancelToken.None);
+                using (var token = new OperationCancelToken(db.Configuration.Databases.OperationTimeout.AsTimeSpan, db.DatabaseShutdown))
+                {
+                    var result = await db.DocumentsStorage.RevisionsStorage.RevertRevisions(last, TimeSpan.FromMinutes(60), onProgress: null,
+                        token: token);
+                }
 
                 store.Maintenance.Send(new StopTransactionsRecordingOperation());
             }
