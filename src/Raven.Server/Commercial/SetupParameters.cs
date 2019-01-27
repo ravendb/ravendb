@@ -17,10 +17,12 @@ namespace Raven.Server.Commercial
         public bool IsDocker { get; set; }
         public string DockerHostname { get; set; }
 
+        
         public bool IsAws { get; set; }
         public bool IsAzure { get; set; }
         
         public bool RunningOnPosix { get; set; }
+        public bool RunningOnMacOsx { get; set; }
 
         private const string AzureUrl = "http://169.254.169.254/metadata/instance?api-version=2017-04-02";
         private const string AwsUrl = "http://instance-data.ec2.internal";
@@ -37,6 +39,7 @@ namespace Raven.Server.Commercial
 
             result.IsDocker = PlatformDetails.RunningOnDocker;
             result.DockerHostname = result.IsDocker ? new Uri(serverStore.GetNodeHttpServerUrl()).Host : null;
+            result.RunningOnMacOsx = PlatformDetails.RunningOnMacOsx;
 
             result.IsAws = await DetectIfRunningInAws();
             if (result.IsAws == false)

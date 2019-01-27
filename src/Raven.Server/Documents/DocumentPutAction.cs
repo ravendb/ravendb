@@ -45,8 +45,8 @@ namespace Raven.Server.Documents
                 return default; // never hit
             }
 
-            var documentDebugHash = document.DebugHash;
-            ValidateDocument(id, document);
+            var documentDebugHash = 0UL;
+            ValidateDocument(id, document, ref documentDebugHash);
 
             var newEtag = _documentsStorage.GenerateNextEtag();
             var modifiedTicks = _documentsStorage.GetOrCreateLastModifiedTicks(lastModifiedTicks);
@@ -140,16 +140,18 @@ namespace Raven.Server.Documents
                     if (ShouldRecreateAttachments(context, lowerId, oldDoc, document, ref flags, nonPersistentFlags))
                     {
                         ValidateDocumentHash(id, document, documentDebugHash);
+
                         document = context.ReadObject(document, id, BlittableJsonDocumentBuilder.UsageMode.ToDisk);
-                        ValidateDocument(id, document);
+                        ValidateDocument(id, document, ref documentDebugHash);
                         AttachmentsStorage.AssertAttachments(document, flags);
                     }
 
                     if (ShouldRecreateCounters(context, id, oldDoc, document, ref flags, nonPersistentFlags))
                     {
                         ValidateDocumentHash(id, document, documentDebugHash);
+
                         document = context.ReadObject(document, id, BlittableJsonDocumentBuilder.UsageMode.ToDisk);
-                        ValidateDocument(id, document);
+                        ValidateDocument(id, document, ref documentDebugHash);
                         CountersStorage.AssertCounters(document, flags);
                     }
 
@@ -213,7 +215,7 @@ namespace Raven.Server.Documents
                 });
 
                 ValidateDocumentHash(id, document, documentDebugHash);
-                ValidateDocument(id, document);
+                ValidateDocument(id, document, ref documentDebugHash);
 
                 return new PutOperationResults
                 {
@@ -228,11 +230,12 @@ namespace Raven.Server.Documents
         }
 
         [Conditional("DEBUG")]
-        private static void ValidateDocument(string id, BlittableJsonReaderObject document)
+        private static void ValidateDocument(string id, BlittableJsonReaderObject document, ref ulong documentDebugHash)
         {
             document.BlittableValidation();
             BlittableJsonReaderObject.AssertNoModifications(document, id, assertChildren: true);
             AssertMetadataWasFiltered(document);
+            documentDebugHash = document.DebugHash;
         }
 
         [Conditional("DEBUG")]

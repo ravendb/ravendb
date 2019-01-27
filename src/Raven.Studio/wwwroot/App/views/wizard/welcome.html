@@ -11,8 +11,8 @@ Let's start with choosing your desired level of security. Select the security op
             <div class="padding padding-lg flex-grow">
                 <h2 class="text-center margin-bottom margin-lg text-success">SECURE</h2>
                 <div class="row">
-                    <div class="col-sm-6">
-                        <button data-bind="click: chooseGenerate" class="btn btn-icon btn-default">
+                    <div class="col-sm-6 has-disable-reason" data-bind="attr: { 'data-original-title': disableLetEncrypt() ? 'Not available on Mac OS' : '' }">
+                        <button data-bind="click: chooseGenerate, enable: !disableLetEncrypt()" class="btn btn-icon btn-default">
                             <i class="icon-lets-encrypt icon-xl"></i>
                             <p class="lead">Generate <br />Let's Encrypt Certificate</p>
                         </button>
