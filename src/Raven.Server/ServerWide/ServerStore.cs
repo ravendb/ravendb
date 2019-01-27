@@ -268,7 +268,7 @@ namespace Raven.Server.ServerWide
                                 }
                             }
                         }
-                        catch (OperationCanceledException)
+                        catch (Exception e) when (IsOperationCanceled(e))
                         {
                         }
                         catch (Exception e)
@@ -288,7 +288,7 @@ namespace Raven.Server.ServerWide
                     }
                 }
             }
-            catch (OperationCanceledException)
+            catch (Exception e) when (IsOperationCanceled(e))
             {
             }
             catch (Exception e)
@@ -310,10 +310,16 @@ namespace Raven.Server.ServerWide
 
                 leaderChangedTask.Wait(ServerShutdown);
             }
-            catch (OperationCanceledException)
+            catch (Exception e) when (IsOperationCanceled(e))
             {
                 // ignored
             }
+        }
+
+        private static bool IsOperationCanceled(Exception e)
+        {
+            var inner = e.ExtractSingleInnerException();
+            return inner is OperationCanceledException;
         }
 
         private int ReconnectionBackoff(int delay)
@@ -379,7 +385,7 @@ namespace Raven.Server.ServerWide
                         }
                     }
                 }
-                catch (OperationCanceledException)
+                catch (Exception e) when (IsOperationCanceled(e))
                 {
                     return;
                 }
