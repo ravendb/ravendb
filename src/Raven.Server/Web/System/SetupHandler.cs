@@ -26,6 +26,7 @@ using Raven.Server.ServerWide.Commands;
 using Raven.Server.ServerWide.Context;
 using Sparrow.Json;
 using Sparrow.Json.Parsing;
+using Sparrow.Utils;
 using StudioConfiguration = Raven.Client.Documents.Operations.Configuration.StudioConfiguration;
 
 namespace Raven.Server.Web.System
@@ -310,6 +311,10 @@ namespace Raven.Server.Web.System
 
                 writer.WritePropertyName(nameof(SetupParameters.IsDocker));
                 writer.WriteBool(setupParameters.IsDocker);
+                writer.WriteComma();
+                
+                writer.WritePropertyName(nameof(SetupParameters.RunningOnMacOsx));
+                writer.WriteBool(setupParameters.RunningOnMacOsx);
 
                 writer.WriteEndObject();
             }

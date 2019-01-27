@@ -13,6 +13,8 @@ namespace Raven.Server.Commercial
         
         public bool IsDocker { get; set; }
         public string DockerHostname { get; set; }
+        
+        public bool RunningOnMacOsx { get; set; }
 
         public static SetupParameters Get(ServerStore serverStore)
         {
@@ -22,7 +24,8 @@ namespace Raven.Server.Commercial
 
             result.IsDocker = PlatformDetails.RunningOnDocker;
             result.DockerHostname = result.IsDocker ? new Uri(serverStore.GetNodeHttpServerUrl()).Host : null;
-
+            result.RunningOnMacOsx = PlatformDetails.RunningOnMacOsx;
+            
             return result;
         }
 
