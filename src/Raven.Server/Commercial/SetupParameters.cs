@@ -21,6 +21,8 @@ namespace Raven.Server.Commercial
         public bool IsAzure { get; set; }
         
         public bool RunningOnPosix { get; set; }
+        
+        public bool RunningOnMacOsx { get; set; }
 
         private const string AzureUrl = "http://169.254.169.254/metadata/instance?api-version=2017-04-02";
         private const string AwsUrl = "http://instance-data.ec2.internal";
@@ -43,6 +45,7 @@ namespace Raven.Server.Commercial
                 result.IsAzure = await DetectIfRunningInAzure();
 
             result.RunningOnPosix = PlatformDetails.RunningOnPosix;
+            result.RunningOnMacOsx = PlatformDetails.RunningOnMacOsx;
             
             return result;
         }
