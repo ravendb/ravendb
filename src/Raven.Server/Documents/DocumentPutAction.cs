@@ -150,8 +150,8 @@ namespace Raven.Server.Documents
                         CountersStorage.AssertCounters(document, flags);
                     }
 
-                    var shouldVersion = _documentDatabase.DocumentsStorage.RevisionsStorage.ShouldVersionDocument(collectionName, nonPersistentFlags, oldDoc, document,
-                        ref flags, out var configuration);
+                    var shouldVersion = _documentDatabase.DocumentsStorage.RevisionsStorage.ShouldVersionDocument(
+                        collectionName, nonPersistentFlags, oldDoc, document, context, id, ref flags, out var configuration);
                     if (shouldVersion)
                     {
                         if (ShouldVersionOldDocument(flags, oldDoc))

@@ -250,9 +250,11 @@ namespace Raven.Server.Documents.Revisions
             return Configuration.Default ?? _emptyConfiguration;
         }
 
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public bool ShouldVersionDocument(CollectionName collectionName, NonPersistentDocumentFlags nonPersistentFlags,
-            BlittableJsonReaderObject existingDocument, BlittableJsonReaderObject document, ref DocumentFlags documentFlags,
-            out RevisionsCollectionConfiguration configuration)
+            BlittableJsonReaderObject existingDocument, BlittableJsonReaderObject document, 
+            DocumentsOperationContext context, string id, 
+            ref DocumentFlags documentFlags, out RevisionsCollectionConfiguration configuration)
         {
             configuration = GetRevisionsConfiguration(collectionName.Name);
 
@@ -285,6 +287,7 @@ namespace Raven.Server.Documents.Revisions
 
             if (configuration.MinimumRevisionsToKeep == 0)
             {
+                DeleteRevisionsFor(context, id);
                 documentFlags = documentFlags.Strip(DocumentFlags.HasRevisions);
                 return false;
             }
@@ -318,6 +321,7 @@ namespace Raven.Server.Documents.Revisions
             return true;
         }
 
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public void Put(DocumentsOperationContext context, string id, BlittableJsonReaderObject document,
             DocumentFlags flags, NonPersistentDocumentFlags nonPersistentFlags, string changeVector, long lastModifiedTicks,
             RevisionsCollectionConfiguration configuration = null, CollectionName collectionName = null)
