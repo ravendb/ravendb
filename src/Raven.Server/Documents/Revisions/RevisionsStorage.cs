@@ -280,8 +280,14 @@ namespace Raven.Server.Documents.Revisions
             if (Configuration == null)
                 return false;
 
-            if (configuration.Disabled || configuration.MinimumRevisionsToKeep == 0)
+            if (configuration.Disabled)
                 return false;
+
+            if (configuration.MinimumRevisionsToKeep == 0)
+            {
+                documentFlags = documentFlags.Strip(DocumentFlags.HasRevisions);
+                return false;
+            }
 
             if (existingDocument == null)
             {
