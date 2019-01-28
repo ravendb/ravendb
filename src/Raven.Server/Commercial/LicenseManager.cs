@@ -146,16 +146,16 @@ namespace Raven.Server.Commercial
             {
                 // license is not active
                 ResetLicense(error: null);
-                
+
                 CreateAgplAlert();
-                
+
                 return;
             }
 
             try
             {
                 SetLicense(license.Id, LicenseValidator.Validate(license, RSAParameters));
-                
+
                 RemoveAgplAlert();
             }
             catch (Exception e)
@@ -421,7 +421,7 @@ namespace Raven.Server.Commercial
             if (forceActivate == false)
             {
                 if (await ContinueActivatingLicense(
-                        license, skipLeaseLicense, ensureNotPassive, 
+                        license, skipLeaseLicense, ensureNotPassive,
                         newLicenseStatus).ConfigureAwait(false) == false)
                     return;
             }
@@ -463,7 +463,7 @@ namespace Raven.Server.Commercial
             };
         }
 
-        private void SetLicense(Guid id, Dictionary<string, object>  attributes)
+        private void SetLicense(Guid id, Dictionary<string, object> attributes)
         {
             _licenseStatus = new LicenseStatus
             {
@@ -540,12 +540,12 @@ namespace Raven.Server.Commercial
             });
         }
 
-        public void TryActivateLicense()
+        public void TryActivateLicense(bool throwOnActivationFailure)
         {
             if (_licenseStatus.Type != LicenseType.None)
                 return;
 
-            var license = TryGetLicenseFromString() ?? TryGetLicenseFromPath();
+            var license = TryGetLicenseFromString(throwOnActivationFailure) ?? TryGetLicenseFromPath(throwOnActivationFailure);
             if (license == null)
                 return;
 
@@ -557,10 +557,13 @@ namespace Raven.Server.Commercial
             {
                 if (Logger.IsInfoEnabled)
                     Logger.Info("Failed to activate license", e);
+
+                if (throwOnActivationFailure)
+                    throw new LicenseActivationException("Failed to activate license", e);
             }
         }
 
-        private License TryGetLicenseFromPath()
+        private License TryGetLicenseFromPath(bool throwOnActivationFailure)
         {
             var path = _serverStore.Configuration.Licensing.LicensePath;
 
@@ -573,14 +576,19 @@ namespace Raven.Server.Commercial
             }
             catch (Exception e)
             {
+                var msg = $"Failed to read license from '{path.FullPath}' path.";
+
                 if (Logger.IsInfoEnabled)
-                    Logger.Info($"Failed to read license from '{path.FullPath}' path", e);
+                    Logger.Info(msg, e);
+
+                if (throwOnActivationFailure)
+                    throw new LicenseActivationException(msg, e);
             }
 
             return null;
         }
 
-        private License TryGetLicenseFromString()
+        private License TryGetLicenseFromString(bool throwOnActivationFailure)
         {
             var licenseString = _serverStore.Configuration.Licensing.License;
             if (string.IsNullOrWhiteSpace(licenseString))
@@ -595,8 +603,13 @@ namespace Raven.Server.Commercial
             }
             catch (Exception e)
             {
+                var msg = $"Failed to read license from '{RavenConfiguration.GetKey(x => x.Licensing.License)}' configuration.";
+
                 if (Logger.IsInfoEnabled)
-                    Logger.Info($"Failed to read license from '{RavenConfiguration.GetKey(x => x.Licensing.License)}' configuration", e);
+                    Logger.Info(msg, e);
+
+                if (throwOnActivationFailure)
+                    throw new LicenseActivationException(msg, e);
             }
 
             return null;
@@ -612,8 +625,8 @@ namespace Raven.Server.Commercial
         }
 
         public async Task<License> GetUpdatedLicense(
-            License currentLicense, 
-            Func<HttpResponseMessage, Task> onFailure = null, 
+            License currentLicense,
+            Func<HttpResponseMessage, Task> onFailure = null,
             Func<LeasedLicense, License> onSuccess = null)
         {
             var leaseLicenseInfo = new LeaseLicenseInfo
@@ -635,7 +648,7 @@ namespace Raven.Server.Commercial
                 {
                     await onFailure(response).ConfigureAwait(false);
                 }
-                
+
                 return null;
             }
 
@@ -671,7 +684,7 @@ namespace Raven.Server.Commercial
                         if (string.IsNullOrWhiteSpace(leasedLicense.Message) == false)
                         {
                             var severity =
-                                leasedLicense.NotificationSeverity == NotificationSeverity.None 
+                                leasedLicense.NotificationSeverity == NotificationSeverity.None
                                     ? NotificationSeverity.Info : leasedLicense.NotificationSeverity;
                             var alert = AlertRaised.Create(
                                 null,
@@ -817,7 +830,7 @@ namespace Raven.Server.Commercial
                         nodeDetails.UsableMemoryInGb.Equals(usableMemoryInGb) &&
                         nodeDetails.InstalledMemoryInGb.Equals(installedMemoryInGb) &&
                         // using static method here to avoid null checks 
-                        object.Equals(nodeDetails.BuildInfo,buildInfo))
+                        object.Equals(nodeDetails.BuildInfo, buildInfo))
                     {
                         // nodes hardware didn't change
                         continue;
@@ -1052,7 +1065,7 @@ namespace Raven.Server.Commercial
                 Logger.Info($"Failed to set affinity for {cores} cores, error code: {Marshal.GetLastWin32Error()}", e);
             }
         }
-       
+
         private static void SetMaxWorkingSet(Process process, double ramInGb)
         {
             try
@@ -1342,7 +1355,7 @@ namespace Raven.Server.Commercial
                 return true;
 
             const string message = "Your current license doesn't include the dynamic database distribution feature";
-            GenerateLicenseLimit(LimitType.DynamicNodeDistribution, message, addNotification: true); 
+            GenerateLicenseLimit(LimitType.DynamicNodeDistribution, message, addNotification: true);
             return false;
         }
 

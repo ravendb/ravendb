@@ -88,6 +88,8 @@ namespace Raven.Server
 
         public event EventHandler ServerCertificateChanged;
 
+        internal bool ThrowOnLicenseActivationFailure;
+
         public RavenServer(RavenConfiguration configuration)
         {
             JsonDeserializationValidator.Validate();
