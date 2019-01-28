@@ -34,7 +34,7 @@ namespace Raven.Client.Documents.Operations.OngoingTasks
 
             public override HttpRequestMessage CreateRequest(JsonOperationContext ctx, ServerNode node, out string url)
             {
-                url = $"{node.Url}/databases/{node.Database}/tasks/hub-pull-replication?key={_taskId}";
+                url = $"{node.Url}/databases/{node.Database}/tasks/pull-replication/hub?key={_taskId}";
 
                 var request = new HttpRequestMessage
                 {

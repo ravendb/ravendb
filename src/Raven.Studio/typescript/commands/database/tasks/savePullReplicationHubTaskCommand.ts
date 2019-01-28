@@ -9,7 +9,7 @@ class savePullReplicationHubTaskCommand extends commandBase {
     }
 
     execute(): JQueryPromise<Raven.Client.Documents.Operations.OngoingTasks.ModifyOngoingTaskResult> {
-        const url = endpoints.databases.pullReplication.adminTasksHubPullReplication;
+        const url = endpoints.databases.pullReplication.adminTasksPullReplicationHub;
 
         return this.put<Raven.Client.Documents.Operations.OngoingTasks.ModifyOngoingTaskResult>(url, JSON.stringify(this.replicationSettings), this.db)
             .fail((response: JQueryXHR) => {

@@ -24,7 +24,7 @@ namespace Raven.Server.Documents.Handlers
 {
     public class PullReplicationHandler : DatabaseRequestHandler
     {
-        [RavenAction("/databases/*/admin/tasks/hub-pull-replication", "PUT", AuthorizationStatus.Operator)]
+        [RavenAction("/databases/*/admin/tasks/pull-replication/hub", "PUT", AuthorizationStatus.Operator)]
         public async Task DefineHub()
         {
             if (ResourceNameValidator.IsValidResourceName(Database.Name, ServerStore.Configuration.Core.DataDirectory.FullPath, out string errorMessage) == false)
