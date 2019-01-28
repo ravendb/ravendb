@@ -1029,14 +1029,13 @@ namespace Raven.Server.Documents.Replication
                     operationsCount++;
                 }
 
-                var current = DocumentsStorage.GetDatabaseChangeVector(context);
+                var current = context.LastDatabaseChangeVector ?? DocumentsStorage.GetDatabaseChangeVector(context);
                 var conflictStatus = ChangeVectorUtils.GetConflictStatus(_changeVector, current);
                 if (conflictStatus != ConflictStatus.Update)
                     return operationsCount;
 
                 operationsCount++;
-                var merged = ChangeVectorUtils.MergeVectors(current, _changeVector);
-                DocumentsStorage.SetDatabaseChangeVector(context, merged);
+                context.LastDatabaseChangeVector = ChangeVectorUtils.MergeVectors(current, _changeVector);
                 context.Transaction.InnerTransaction.LowLevelTransaction.OnDispose += _ =>
                 {
                     try
@@ -1092,7 +1091,6 @@ namespace Raven.Server.Documents.Replication
                     var database = _incoming._database;
 
                     context.LastDatabaseChangeVector = context.LastDatabaseChangeVector ?? DocumentsStorage.GetDatabaseChangeVector(context);
-
                     foreach (var item in _incoming._replicatedItems)
                     {
                         context.TransactionMarkerOffset = item.TransactionMarker;
@@ -1104,7 +1102,6 @@ namespace Raven.Server.Documents.Replication
                             var rcvdChangeVector = item.ChangeVector;
 
                             context.LastDatabaseChangeVector = ChangeVectorUtils.MergeVectors(item.ChangeVector, context.LastDatabaseChangeVector);
-
                             if (item.Type == ReplicationBatchItem.ReplicationItemType.Attachment)
                             {
                                 database.DocumentsStorage.AttachmentsStorage.PutDirect(context, item.Key, item.Name,

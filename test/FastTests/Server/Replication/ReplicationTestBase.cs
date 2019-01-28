@@ -238,7 +238,7 @@ namespace FastTests.Server.Replication
             {
                 var databaseWatcher = new ExternalReplication(store.Database, $"ConnectionString-{store.Identifier}");
                 ModifyReplicationDestination(databaseWatcher);
-                tasks.Add(AddWatcherToReplicationTopology(fromStore, databaseWatcher));
+                tasks.Add(AddWatcherToReplicationTopology(fromStore, databaseWatcher, store.Urls));
             }
             await Task.WhenAll(tasks);
             foreach (var task in tasks)

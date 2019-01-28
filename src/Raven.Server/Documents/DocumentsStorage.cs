@@ -353,8 +353,8 @@ namespace Raven.Server.Documents
                 return context.LastDatabaseChangeVector;
             }
 
-            var result = ChangeVectorUtils.TryUpdateChangeVector(DocumentDatabase.ServerStore.NodeTag, Environment.Base64Id, newEtag, changeVector);
-            return result.ChangeVector;
+            context.LastDatabaseChangeVector = ChangeVectorUtils.TryUpdateChangeVector(DocumentDatabase.ServerStore.NodeTag, Environment.Base64Id, newEtag, changeVector).ChangeVector;
+            return context.LastDatabaseChangeVector;
         }
 
         public string GetNewChangeVector(DocumentsOperationContext context)
