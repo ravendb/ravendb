@@ -1709,7 +1709,7 @@ namespace Raven.Server.ServerWide
                 return;
 
             _engine.Bootstrap(publicServerUrl ?? _server.ServerStore.GetNodeHttpServerUrl());
-            LicenseManager.TryActivateLicense();
+            LicenseManager.TryActivateLicense(Server.ThrowOnLicenseActivationFailure);
 
             // we put a certificate in the local state to tell the server who to trust, and this is done before
             // the cluster exists (otherwise the server won't be able to receive initial requests). Only when we 

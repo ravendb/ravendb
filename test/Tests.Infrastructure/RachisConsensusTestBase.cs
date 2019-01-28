@@ -136,7 +136,7 @@ namespace Tests.Infrastructure
             configuration.Initialize();
             configuration.Core.RunInMemory = true;
             configuration.Cluster.ElectionTimeout = new TimeSetting(electionTimeout, TimeUnit.Milliseconds);
-            var serverStore = new RavenServer(configuration).ServerStore;
+            var serverStore = new RavenServer(configuration) { ThrowOnLicenseActivationFailure = true }.ServerStore;
             serverStore.Initialize();
             var rachis = new RachisConsensus<CountingStateMachine>(serverStore, seed);
             var storageEnvironment = new StorageEnvironment(server);
