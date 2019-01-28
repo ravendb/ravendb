@@ -250,17 +250,13 @@ namespace Raven.Server.Documents.Revisions
             return Configuration.Default ?? _emptyConfiguration;
         }
 
-        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public bool ShouldVersionDocument(CollectionName collectionName, NonPersistentDocumentFlags nonPersistentFlags,
             BlittableJsonReaderObject existingDocument, BlittableJsonReaderObject document, 
             DocumentsOperationContext context, string id, 
             ref DocumentFlags documentFlags, out RevisionsCollectionConfiguration configuration)
         {
             configuration = GetRevisionsConfiguration(collectionName.Name);
-
-            if (nonPersistentFlags.Contain(NonPersistentDocumentFlags.FromReplication))
-                return false; // no need, since we put the revision directly from replication
-
+            
             if (nonPersistentFlags.Contain(NonPersistentDocumentFlags.FromSmuggler))
             {
                 if (nonPersistentFlags.Contain(NonPersistentDocumentFlags.ByCountersUpdate))
@@ -273,11 +269,11 @@ namespace Raven.Server.Documents.Revisions
                     return false;
             }
 
-            if (nonPersistentFlags.Contain(NonPersistentDocumentFlags.FromResolver))
-            {
-                if (documentFlags.Contain(DocumentFlags.Resolved))
-                    return true;
-            }
+            if (documentFlags.Contain(DocumentFlags.Resolved))
+                return true;
+
+            if (nonPersistentFlags.Contain(NonPersistentDocumentFlags.FromReplication))
+                return false; // no need, since we put the revision directly from replication
 
             if (Configuration == null)
                 return false;
@@ -321,7 +317,6 @@ namespace Raven.Server.Documents.Revisions
             return true;
         }
 
-        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public void Put(DocumentsOperationContext context, string id, BlittableJsonReaderObject document,
             DocumentFlags flags, NonPersistentDocumentFlags nonPersistentFlags, string changeVector, long lastModifiedTicks,
             RevisionsCollectionConfiguration configuration = null, CollectionName collectionName = null)
@@ -381,8 +376,10 @@ namespace Raven.Server.Documents.Revisions
                     document = context.ReadObject(document, id, BlittableJsonDocumentBuilder.UsageMode.ToDisk);
                 }
 
-                if (nonPersistentFlags.Contain(NonPersistentDocumentFlags.FromReplication) && 
-                    flags.Contain(DocumentFlags.Conflicted) == false) // conflicted revision can't overwrite the document
+                if (nonPersistentFlags.Contain(NonPersistentDocumentFlags.FromReplication) &&
+                    flags.Contain(DocumentFlags.Revision) && // only revision can overwrite the document
+                    flags.Contain(DocumentFlags.Conflicted) == false // but, conflicted revision can't
+                    ) 
                 {
                     void PutFromRevisionIfChangeVectorIsGreater()
                     {
@@ -411,7 +408,7 @@ namespace Raven.Server.Documents.Revisions
                         void PutFromRevision()
                         {
                             _documentsStorage.Put(context, id, null, document, lastModifiedTicks, changeVector,
-                                flags & ~DocumentFlags.Revision, nonPersistentFlags | NonPersistentDocumentFlags.FromRevision);
+                                flags.Strip(DocumentFlags.Revision), nonPersistentFlags | NonPersistentDocumentFlags.FromRevision);
                         }
                     }
 

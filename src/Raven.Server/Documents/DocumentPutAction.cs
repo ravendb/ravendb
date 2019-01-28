@@ -169,6 +169,8 @@ namespace Raven.Server.Documents
                     }
                 }
 
+                UpdateChangeVectorIfNeeded(context, nonPersistentFlags, ref changeVector, ref newEtag);
+
                 using (Slice.From(context.Allocator, changeVector, out var cv))
                 using (table.Allocate(out TableValueBuilder tvb))
                 {
@@ -219,6 +221,19 @@ namespace Raven.Server.Documents
                     Flags = flags,
                     LastModified = new DateTime(modifiedTicks)
                 };
+            }
+        }
+
+        private void UpdateChangeVectorIfNeeded(DocumentsOperationContext context, NonPersistentDocumentFlags nonPersistentFlags, ref string changeVector, ref long newEtag)
+        {
+            // when having an external replication we must generate a new change vector for the resolved conflict.
+            // in internal replication it will generate a small ping-pong, but will be settled due to the identical content.
+            if (nonPersistentFlags.Contain(NonPersistentDocumentFlags.FromResolver) &&
+                nonPersistentFlags.Contain(NonPersistentDocumentFlags.Resolved))
+            {
+                newEtag = _documentsStorage.GenerateNextEtag();
+                changeVector = ChangeVectorUtils.MergeVectors(changeVector, _documentsStorage.GetNewChangeVector(context, newEtag));
+                context.LastDatabaseChangeVector = changeVector;
             }
         }
 
