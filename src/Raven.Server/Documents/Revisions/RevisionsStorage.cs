@@ -264,24 +264,24 @@ namespace Raven.Server.Documents.Revisions
                 if (nonPersistentFlags.Contain(NonPersistentDocumentFlags.ByCountersUpdate))
                     return false;
 
+                if (nonPersistentFlags.Contain(NonPersistentDocumentFlags.ByAttachmentUpdate))
+                    return false;
+
                 if (configuration == ConflictConfiguration.Default || configuration.Disabled)
                     return false;
             }
 
-            if (documentFlags.Contain(DocumentFlags.Resolved))
-                return true;
+            if (nonPersistentFlags.Contain(NonPersistentDocumentFlags.FromResolver))
+            {
+                if (documentFlags.Contain(DocumentFlags.Resolved))
+                    return true;
+            }
 
             if (Configuration == null)
-            {
-                documentFlags = documentFlags.Strip(DocumentFlags.HasRevisions);
                 return false;
-            }
 
             if (configuration.Disabled || configuration.MinimumRevisionsToKeep == 0)
-            {
-                documentFlags = documentFlags.Strip(DocumentFlags.HasRevisions);
                 return false;
-            }
 
             if (existingDocument == null)
             {
@@ -371,7 +371,8 @@ namespace Raven.Server.Documents.Revisions
                     document = context.ReadObject(document, id, BlittableJsonDocumentBuilder.UsageMode.ToDisk);
                 }
 
-                if (nonPersistentFlags.Contain(NonPersistentDocumentFlags.FromReplication))
+                if (nonPersistentFlags.Contain(NonPersistentDocumentFlags.FromReplication) && 
+                    flags.Contain(DocumentFlags.Conflicted) == false) // conflicted revision can't overwrite the document
                 {
                     void PutFromRevisionIfChangeVectorIsGreater()
                     {

@@ -10,12 +10,14 @@ using Raven.Client.Documents.Queries;
 using Raven.Client.Documents.Replication;
 using Raven.Client.Exceptions.Documents;
 using Raven.Client.ServerWide;
+using Raven.Server.Documents;
 using Raven.Server.Documents.Indexes.Persistence.Lucene.Analyzers;
 using Raven.Server.NotificationCenter;
 using Raven.Server.Utils;
 using Xunit;
 using Constants = Raven.Client.Constants;
 using Raven.Server.Documents.Replication;
+using Raven.Server.ServerWide.Context;
 
 namespace SlowTests.Server.Replication
 {
@@ -1051,6 +1053,225 @@ namespace SlowTests.Server.Replication
 
                     var metadata = session.Advanced.GetMetadataFor(user);
                     Assert.False(metadata.Keys.Contains(Constants.Documents.Metadata.Flags));
+                }
+            }
+        }
+
+        [Fact]
+        public async Task BackgroundResolveToLatestInCluster()
+        {
+            var leader1 = await CreateRaftClusterAndGetLeader(3);
+
+            using (var store1 = GetDocumentStore(new Options
+            {
+                Server = leader1,
+                ReplicationFactor = 3,
+                ModifyDatabaseRecord = record =>
+                {
+                    record.ConflictSolverConfig = new ConflictSolver
+                    {
+                        ResolveToLatest = false,
+                        ResolveByCollection = new Dictionary<string, ScriptResolver>()
+                    };
+                }
+            }))
+            using (var store2 = GetDocumentStore(new Options
+            {
+                Server = leader1,
+                ReplicationFactor = 1
+            }))
+            {
+                await SetupReplicationAsync(store2, store1);
+
+                using (var session = store1.OpenAsyncSession())
+                {
+                    await session.StoreAsync(new User
+                    {
+                        Name = "Karmel"
+                    }, "foo/bar");
+                    await session.SaveChangesAsync();
+                }
+
+                using (var session = store2.OpenAsyncSession())
+                {
+                    await session.StoreAsync(new User
+                    {
+                        Name = "Grisha"
+                    }, "foo/bar");
+                    await session.SaveChangesAsync();
+                }
+
+                Assert.Equal(2, WaitUntilHasConflict(store1, "foo/bar").Length);
+
+                await SetReplicationConflictResolutionAsync(store1, StraightforwardConflictResolution.ResolveToLatest);
+
+                Assert.True(WaitForDocument<User>(store1, "foo/bar", u => u.Name == "Grisha"));
+                
+                var database = Servers.Single(s => s.WebUrl == store1.Urls[0]).ServerStore.DatabasesLandlord.TryGetOrCreateResourceStore(store1.Database).Result;
+                using (database.DocumentsStorage.ContextPool.AllocateOperationContext(out DocumentsOperationContext context))
+                using (context.OpenReadTransaction())
+                {
+                    var count = database.DocumentsStorage.RevisionsStorage.GetNumberOfRevisionDocuments(context);
+                    Assert.Equal(3, count);
+                }
+            }
+        }
+
+        [Fact]
+        public async Task ResolveToLatestInClusterOnTheFly()
+        {
+            var leader1 = await CreateRaftClusterAndGetLeader(3);
+
+            using (var store1 = GetDocumentStore(new Options
+            {
+                Server = leader1,
+                ReplicationFactor = 3
+            }))
+            using (var store2 = GetDocumentStore(new Options
+            {
+                Server = leader1,
+                ReplicationFactor = 1
+            }))
+            {
+                await SetupReplicationAsync(store2, store1);
+
+                using (var session = store1.OpenAsyncSession())
+                {
+                    await session.StoreAsync(new User
+                    {
+                        Name = "Karmel"
+                    }, "foo/bar");
+                    await session.SaveChangesAsync();
+                }
+
+                using (var session = store2.OpenAsyncSession())
+                {
+                    await session.StoreAsync(new User
+                    {
+                        Name = "Grisha"
+                    }, "foo/bar");
+                    await session.SaveChangesAsync();
+                }
+                WaitForUserToContinueTheTest(store1);
+                Assert.True(WaitForDocument<User>(store1, "foo/bar", u => u.Name == "Grisha"));
+
+                var database = Servers.Single(s => s.WebUrl == store1.Urls[0]).ServerStore.DatabasesLandlord.TryGetOrCreateResourceStore(store1.Database).Result;
+                using (database.DocumentsStorage.ContextPool.AllocateOperationContext(out DocumentsOperationContext context))
+                using (context.OpenReadTransaction())
+                {
+                    var count = database.DocumentsStorage.RevisionsStorage.GetNumberOfRevisionDocuments(context);
+                    Assert.Equal(3, count);
+                }
+
+            }
+        }
+
+        [Fact]
+        public async Task ResolveToLatestInClusterWithCounter()
+        {
+            using (var store1 = GetDocumentStore())
+            using (var store2 = GetDocumentStore())
+            {
+                await SetupReplicationAsync(store2, store1);
+
+                using (var session = store1.OpenAsyncSession())
+                {
+                    await session.StoreAsync(new User
+                    {
+                        Name = "Karmel"
+                    }, "foo/bar");
+                    await session.SaveChangesAsync();
+                }
+
+                using (var session = store2.OpenAsyncSession())
+                {
+                    await session.StoreAsync(new User
+                    {
+                        Name = "Grisha"
+                    }, "foo/bar");
+                    await session.SaveChangesAsync();
+                }
+                Assert.True(WaitForDocument<User>(store1, "foo/bar", u => u.Name == "Grisha"));
+                var database = Servers.Single(s => s.WebUrl == store1.Urls[0]).ServerStore.DatabasesLandlord.TryGetOrCreateResourceStore(store1.Database).Result;
+
+                using (database.DocumentsStorage.ContextPool.AllocateOperationContext(out DocumentsOperationContext context))
+                using (context.OpenReadTransaction())
+                {
+                    var count = database.DocumentsStorage.RevisionsStorage.GetNumberOfRevisionDocuments(context);
+                    Assert.Equal(3, count);
+                }
+
+                WaitForUserToContinueTheTest(store1);
+
+                using (var session = store1.OpenAsyncSession())
+                {
+                    session.CountersFor("foo/bar").Increment("likes",10);
+                    await session.SaveChangesAsync();
+                }
+
+                using (database.DocumentsStorage.ContextPool.AllocateOperationContext(out DocumentsOperationContext context))
+                using (context.OpenReadTransaction())
+                {
+                    var count = database.DocumentsStorage.RevisionsStorage.GetNumberOfRevisionDocuments(context);
+                    Assert.Equal(3, count);
+                }
+            }
+        }
+
+        [Fact]
+        public async Task ModifyResolvedDocumentShouldKeepTheRevisions()
+        {
+            using (var store1 = GetDocumentStore())
+            using (var store2 = GetDocumentStore())
+            {
+                await SetupReplicationAsync(store2, store1);
+
+                using (var session = store1.OpenAsyncSession())
+                {
+                    await session.StoreAsync(new User
+                    {
+                        Name = "Karmel"
+                    }, "foo/bar");
+                    await session.SaveChangesAsync();
+                }
+
+                using (var session = store2.OpenAsyncSession())
+                {
+                    await session.StoreAsync(new User
+                    {
+                        Name = "Grisha"
+                    }, "foo/bar");
+                    await session.SaveChangesAsync();
+                }
+
+                Assert.True(WaitForDocument<User>(store1, "foo/bar", u => u.Name == "Grisha"));
+                using (var session = store1.OpenAsyncSession())
+                {
+                    var doc = await session.LoadAsync<User>("foo/bar");
+                    var metadata = session.Advanced.GetMetadataFor(doc);
+                    var flags = metadata.GetString(Constants.Documents.Metadata.Flags);
+                    Assert.Contains(DocumentFlags.HasRevisions.ToString(), flags);
+
+                    var revisions = await session.Advanced.Revisions.GetForAsync<User>("foo/bar");
+                    Assert.Equal(3, revisions.Count);
+                }
+
+                using (var session = store1.OpenAsyncSession())
+                {
+                    var doc = await session.LoadAsync<User>("foo/bar");
+                    doc.Age = 33;
+                    await session.SaveChangesAsync();
+                }
+
+                using (var session = store1.OpenAsyncSession())
+                {
+                    var doc = await session.LoadAsync<User>("foo/bar");
+                    var metadata = session.Advanced.GetMetadataFor(doc);
+                    var flags = metadata.GetString(Constants.Documents.Metadata.Flags);
+                    Assert.Contains(DocumentFlags.HasRevisions.ToString(), flags);
+
+                    var revisions = await session.Advanced.Revisions.GetForAsync<User>("foo/bar");
+                    Assert.Equal(3, revisions.Count);
                 }
             }
         }
