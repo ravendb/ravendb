@@ -548,12 +548,12 @@ namespace Raven.Server.Commercial
             });
         }
 
-        public void TryActivateLicense()
+        public void TryActivateLicense(bool throwOnActivationFailure)
         {
             if (_licenseStatus.Type != LicenseType.None)
                 return;
 
-            var license = TryGetLicenseFromString() ?? TryGetLicenseFromPath();
+            var license = TryGetLicenseFromString(throwOnActivationFailure) ?? TryGetLicenseFromPath(throwOnActivationFailure);
             if (license == null)
                 return;
 
@@ -565,10 +565,13 @@ namespace Raven.Server.Commercial
             {
                 if (Logger.IsInfoEnabled)
                     Logger.Info("Failed to activate license", e);
+
+                if (throwOnActivationFailure)
+                    throw new LicenseActivationException("Failed to activate license", e);
             }
         }
 
-        private License TryGetLicenseFromPath()
+        private License TryGetLicenseFromPath(bool throwOnActivationFailure)
         {
             var path = _serverStore.Configuration.Licensing.LicensePath;
 
@@ -581,14 +584,19 @@ namespace Raven.Server.Commercial
             }
             catch (Exception e)
             {
+                var msg = $"Failed to read license from '{path.FullPath}' path.";
+
                 if (Logger.IsInfoEnabled)
-                    Logger.Info($"Failed to read license from '{path.FullPath}' path", e);
+                    Logger.Info(msg, e);
+
+                if (throwOnActivationFailure)
+                    throw new LicenseActivationException(msg, e);
             }
 
             return null;
         }
 
-        private License TryGetLicenseFromString()
+        private License TryGetLicenseFromString(bool throwOnActivationFailure)
         {
             var licenseString = _serverStore.Configuration.Licensing.License;
             if (string.IsNullOrWhiteSpace(licenseString))
@@ -603,8 +611,13 @@ namespace Raven.Server.Commercial
             }
             catch (Exception e)
             {
+                var msg = $"Failed to read license from '{RavenConfiguration.GetKey(x => x.Licensing.License)}' configuration.";
+
                 if (Logger.IsInfoEnabled)
-                    Logger.Info($"Failed to read license from '{RavenConfiguration.GetKey(x => x.Licensing.License)}' configuration", e);
+                    Logger.Info(msg, e);
+
+                if (throwOnActivationFailure)
+                    throw new LicenseActivationException(msg, e);
             }
 
             return null;

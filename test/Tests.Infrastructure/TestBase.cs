@@ -370,7 +370,7 @@ namespace FastTests
                 if (deletePrevious)
                     IOExtensions.DeleteDirectory(configuration.Core.DataDirectory.FullPath);
 
-                var server = new RavenServer(configuration);
+                var server = new RavenServer(configuration) { ThrowOnLicenseActivationFailure = true };
                 server.Initialize();
 
                 return server;
