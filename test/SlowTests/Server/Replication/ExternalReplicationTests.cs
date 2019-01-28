@@ -16,15 +16,18 @@ namespace SlowTests.Server.Replication
         {
             using (var store1 = GetDocumentStore(new Options
             {
-                ModifyDatabaseName = s => $"{s}_FooBar-1"
+                ModifyDatabaseName = s => $"{s}_FooBar-1",
+                EnsureServerLicenseIsActivated = true
             }))
             using (var store2 = GetDocumentStore(new Options
             {
-                ModifyDatabaseName = s => $"{s}_FooBar-2"
+                ModifyDatabaseName = s => $"{s}_FooBar-2",
+                EnsureServerLicenseIsActivated = true
             }))
             using (var store3 = GetDocumentStore(new Options
             {
-                ModifyDatabaseName = s => $"{s}_FooBar-3"
+                ModifyDatabaseName = s => $"{s}_FooBar-3",
+                EnsureServerLicenseIsActivated = true
             }))
             {
                 await SetupReplicationAsync(store1, store2, store3);
@@ -44,8 +47,14 @@ namespace SlowTests.Server.Replication
         [Fact]
         public async Task DelayedExternalReplication()
         {
-            using (var store1 = GetDocumentStore())
-            using (var store2 = GetDocumentStore())
+            using (var store1 = GetDocumentStore(new Options
+            {
+                EnsureServerLicenseIsActivated = true
+            }))
+            using (var store2 = GetDocumentStore(new Options
+            {
+                EnsureServerLicenseIsActivated = true
+            }))
             {
                 var delay = TimeSpan.FromSeconds(5);
                 var externalTask = new ExternalReplication(store2.Database, "DelayedExternalReplication")

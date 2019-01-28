@@ -181,6 +181,15 @@ namespace FastTests
                             await WaitForRaftIndexToBeAppliedInCluster(result.RaftCommandIndex, timeout);
                         });
                     }
+                    
+                    if (options.EnsureServerLicenseIsActivated)
+                    {
+                        var activation = Server.ServerStore.LicenseManager.TryActivateLicense();
+                        if (activation.Success == false)
+                        {
+                            throw new InvalidOperationException($"Was requested to ensure license is activated in, Test:{GetType().Name}, but failed to activate it because {activation.Reason}.");
+                        }
+                    }
 
                     store.BeforeDispose += (sender, args) =>
                     {
@@ -735,6 +744,7 @@ namespace FastTests
                 }
             }
 
+            public bool EnsureServerLicenseIsActivated { get; set; }
             private void AssertNotFrozen()
             {
                 if (_frozen)

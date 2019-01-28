@@ -540,14 +540,14 @@ namespace Raven.Server.Commercial
             });
         }
 
-        public void TryActivateLicense()
+        public (bool Success, string Reason) TryActivateLicense()
         {
             if (_licenseStatus.Type != LicenseType.None)
-                return;
+                return (true,null);
 
             var license = TryGetLicenseFromString() ?? TryGetLicenseFromPath();
             if (license == null)
-                return;
+                return (false, "No license from either string or path.");
 
             try
             {
@@ -557,7 +557,11 @@ namespace Raven.Server.Commercial
             {
                 if (Logger.IsInfoEnabled)
                     Logger.Info("Failed to activate license", e);
+
+                return (false, e.ToString());
             }
+
+            return (true, null);
         }
 
         private License TryGetLicenseFromPath()
@@ -1279,7 +1283,7 @@ namespace Raven.Server.Commercial
             if (_licenseStatus.HasExternalReplication)
                 return;
 
-            var details = $"Your current license ({_licenseStatus.Type}) does not allow adding external replication";
+            var details = $"Your current license (Type:{_licenseStatus.Type} Id:{_licenseStatus.Id}) does not allow adding external replication";
             throw GenerateLicenseLimit(LimitType.ExternalReplication, details);
         }
 
