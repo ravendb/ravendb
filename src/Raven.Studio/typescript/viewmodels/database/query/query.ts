@@ -666,20 +666,19 @@ class query extends viewModelBase {
                         
                         this.totalResultsForUi(totalFromQuery);
                     
-                        if (queryResults.totalResultCount === -1) {
-                            // unbounded result set
+                        if (queryResults.additionalResultInfo.TotalResults === -1) {
+                            // unbounded result set - startsWith() on collection 
                             if (queryResults.items.length === take + 1) {
                                 // returned all or have more
                                 const returnedLimit = queryResults.additionalResultInfo.CappedMaxResults || Number.MAX_SAFE_INTEGER;
                                 this.hasMoreUnboundedResults(returnedLimit > itemsSoFar);
                                 queryResults.totalResultCount = Math.min(skip + take + 30, returnedLimit - 1 /* subtract one since we fetch n+1 records */);
-                                queryResults.additionalResultInfo.TotalResults = skip + take;
                             } else {
                                 queryResults.totalResultCount = skip + queryResults.items.length;
+                            }
                             queryResults.additionalResultInfo.TotalResults = queryResults.totalResultCount;
                             
                             this.totalResultsForUi(this.hasMoreUnboundedResults() ? itemsSoFar - 1 : itemsSoFar);
-                        }
                         }
                         
                         if (queryResults.additionalResultInfo.SkippedResults) {
