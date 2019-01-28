@@ -693,7 +693,7 @@ namespace Raven.Server.Documents
             if (hadModifications == false)
                 return;
 
-            var flags = doc.Flags.Strip(DocumentFlags.FromClusterTransaction);
+            var flags = doc.Flags.Strip(DocumentFlags.FromClusterTransaction | DocumentFlags.Resolved);
             if (counters.Count == 0)
             {
                 flags = flags.Strip(DocumentFlags.HasCounters);
