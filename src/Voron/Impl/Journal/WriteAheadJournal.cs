@@ -706,11 +706,18 @@ namespace Voron.Impl.Journal
                     _journalsToDelete[unused.Number] = unused;
                 }
 
+                List<JournalFile> journalsToDelete = _journalsToDelete.Values.ToList();
+
+                if (journalsToDelete.Any(x => x.Number > lastProcessedJournal))
+                {
+                    VoronUnrecoverableErrorException.Raise(txw, "THIS IS VERY BAD!!!! We must not delete journal that we might not sync yet");
+                }
+
                 var lastFlushState = new LastFlushState(
                     lastFlushedTransactionId,
                     lastProcessedJournal,
                     _waj._files.First(x => x.Number == lastProcessedJournal),
-                    _journalsToDelete.Values.ToList());
+                    journalsToDelete);
                 
                 Interlocked.Exchange(ref _lastFlushed, lastFlushState);
 
