@@ -98,7 +98,7 @@ namespace Raven.Server.Web.System
 
                 ongoingTasksResult.SubscriptionsCount = (int)Database.SubscriptionStorage.GetAllSubscriptionsCount();
 
-                ongoingTasksResult.PullReplicationDefinitions = databaseRecord.HubPullReplications.ToList();
+                ongoingTasksResult.PullReplication = databaseRecord.HubPullReplications.ToList();
 
                 return ongoingTasksResult;
             }
@@ -1122,7 +1122,7 @@ namespace Raven.Server.Web.System
             return Task.CompletedTask;
         }
         
-        [RavenAction("/databases/*/tasks/hub-pull-replication", "GET", AuthorizationStatus.ValidUser)]
+        [RavenAction("/databases/*/tasks/pull-replication/hub", "GET", AuthorizationStatus.ValidUser)]
         public Task GetHubTasksInfo()
         {
             if (ResourceNameValidator.IsValidResourceName(Database.Name, ServerStore.Configuration.Core.DataDirectory.FullPath, out string errorMessage) == false)
@@ -1388,12 +1388,12 @@ namespace Raven.Server.Web.System
         public List<OngoingTask> OngoingTasksList { get; set; }
         public int SubscriptionsCount { get; set; }
         
-        public List<PullReplicationDefinition> PullReplicationDefinitions { get; set; }
+        public List<PullReplicationDefinition> PullReplication { get; set; }
 
         public OngoingTasksResult()
         {
             OngoingTasksList = new List<OngoingTask>();
-            PullReplicationDefinitions = new List<PullReplicationDefinition>();
+            PullReplication = new List<PullReplicationDefinition>();
         }
 
         public DynamicJsonValue ToJson()
@@ -1402,7 +1402,7 @@ namespace Raven.Server.Web.System
             {
                 [nameof(OngoingTasksList)] = new DynamicJsonArray(OngoingTasksList.Select(x => x.ToJson())),
                 [nameof(SubscriptionsCount)] = SubscriptionsCount,
-                [nameof(PullReplicationDefinitions)] = new DynamicJsonArray(PullReplicationDefinitions.Select(x => x.ToJson()))
+                [nameof(PullReplication)] = new DynamicJsonArray(PullReplication.Select(x => x.ToJson()))
             };
         }
     }

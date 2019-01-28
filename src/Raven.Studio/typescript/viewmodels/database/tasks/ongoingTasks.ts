@@ -263,7 +263,7 @@ class ongoingTasks extends viewModelBase {
         const oldTaskIds = oldTasks.map(x => x.taskId);
         
         const newTaskIds = result.OngoingTasksList.map(x => x.TaskId);
-        newTaskIds.push(...result.PullReplicationDefinitions.map(x => x.TaskId));
+        newTaskIds.push(...result.PullReplication.map(x => x.TaskId));
 
         const toDeleteIds = _.without(oldTaskIds, ...newTaskIds);
 
@@ -295,10 +295,10 @@ class ongoingTasks extends viewModelBase {
             (dto: Raven.Client.Documents.Operations.OngoingTasks.OngoingTaskPullReplicationAsSink) => new ongoingTaskPullReplicationSinkListModel(dto));
         
         const hubOngoingTasks = groupedTasks['PullReplicationAsHub' as Raven.Client.Documents.Operations.OngoingTasks.OngoingTaskType] as Raven.Client.Documents.Operations.OngoingTasks.OngoingTaskPullReplicationAsHub[];
-        this.mergePullReplicationHubs(result.PullReplicationDefinitions, hubOngoingTasks || [], toDeleteIds);
+        this.mergePullReplicationHubs(result.PullReplication, hubOngoingTasks || [], toDeleteIds);
         
         const taskTypes = Object.keys(groupedTasks); 
-        if ((hubOngoingTasks || []).length === 0 && result.PullReplicationDefinitions.length) {
+        if ((hubOngoingTasks || []).length === 0 && result.PullReplication.length) {
             // we have any pull replication definitions but no incoming connections, so append PullReplicationAsHub task type
             taskTypes.push("PullReplicationAsHub" as Raven.Client.Documents.Operations.OngoingTasks.OngoingTaskType);
         }

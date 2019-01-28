@@ -13,7 +13,7 @@ class getPullReplicationHubTasksInfoCommand extends commandBase {
             key: this.taskId
         };
         
-        const url = endpoints.databases.ongoingTasks.tasksHubPullReplication + this.urlEncodeArgs(args);
+        const url = endpoints.databases.ongoingTasks.tasksPullReplicationHub + this.urlEncodeArgs(args);
         
         return this.query<Raven.Client.Documents.Operations.Replication.PullReplicationDefinitionAndCurrentConnections>(url, null, this.db)
             .fail((response: JQueryXHR) => {
