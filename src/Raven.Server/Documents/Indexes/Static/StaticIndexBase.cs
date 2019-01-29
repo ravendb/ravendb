@@ -217,6 +217,9 @@ namespace Raven.Server.Documents.Indexes.Static
         public dynamic MetadataFor(dynamic doc)
         {
             var json = (DynamicBlittableJson)doc;
+            if (json == null)
+                return DynamicNullObject.Null;
+
             json.EnsureMetadata();
             return doc[Constants.Documents.Metadata.Key];
         }
@@ -231,7 +234,9 @@ namespace Raven.Server.Documents.Indexes.Static
         public dynamic AttachmentsFor(dynamic doc)
         {
             var metadata = MetadataFor(doc);
-            var attachments = metadata[Constants.Documents.Metadata.Attachments];
+            var attachments = metadata == DynamicNullObject.Null
+                ? null : metadata[Constants.Documents.Metadata.Attachments];
+
             return attachments != null
                 ? attachments
                 : new DynamicArray(Enumerable.Empty<object>());
@@ -240,7 +245,9 @@ namespace Raven.Server.Documents.Indexes.Static
         public dynamic CounterNamesFor(dynamic doc)
         {
             var metadata = MetadataFor(doc);
-            var counters = metadata[Constants.Documents.Metadata.Counters];
+            var counters = metadata == DynamicNullObject.Null 
+                ? null : metadata[Constants.Documents.Metadata.Counters];
+
             return counters != null
                 ? counters
                 : new DynamicArray(Enumerable.Empty<object>());
