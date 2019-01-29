@@ -21,7 +21,7 @@ namespace Voron.Exceptions
         public DiskFullException(string filePath, long requestedFileSize, long? freeSpace, string msg)
             : base(
                 $"There is not enough space to set the size of file {filePath} to {Sizes.Humane(requestedFileSize)}. " +
-                $"Currently available space: {Sizes.Humane(freeSpace) ?? "N/A"}. Error Message:{msg}"
+                $"Currently available space: {Sizes.Humane(freeSpace) ?? "N/A"}. Error Message: {msg}"
             )
         {
             DirectoryPath = Path.GetDirectoryName(filePath);

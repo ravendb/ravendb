@@ -47,6 +47,14 @@ _sync_directory_maybe_symblink(char *dir_path, int32_t depth, int32_t *detailed_
 PRIVATE int32_t
 _allocate_file_space(int32_t fd, int64_t size, int32_t *detailed_error_code);
 
+PRIVATE int32_t
+_open_file_to_read(const char* file_name, int32_t *fd, int32_t* detailed_error_code);
+
+PRIVATE int32_t
+_resize_file(int32_t *fd, int64_t size, int32_t *detailed_error_code);
+
+PRIVATE int32_t
+_read_file(int32_t *fd, void* buffer, int64_t required_size, int64_t offset, int64_t* actual_size, int32_t* detailed_error_code);
 
 
 #endif

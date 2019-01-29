@@ -7,6 +7,8 @@ namespace Voron.Platform
     public unsafe class PalDefinitions
     {
         public const int AllocationGranularity = 64 * Constants.Size.Kilobyte;
+
+        [StructLayout(LayoutKind.Sequential, Pack = 1)]
         public struct SystemInformation
         {
             public Int32 PageSize;
