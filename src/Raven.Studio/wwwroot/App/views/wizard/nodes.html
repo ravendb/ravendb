@@ -74,7 +74,7 @@
                         <div class="flex-grow">
                             <input type="text" autocomplete="off" class="form-control" id="port"
                                    placeholder="Default: 443"
-                                   data-bind="textInput: port, disable: $root.model.fixPortNumberOnLocalNode() && $root.model.createIsLocalNodeObservable($data)(), attr: { title: $root.model.fixPortNumberOnLocalNode() && isLocal() ? 'Fixed by startup parameter' : '' }">
+                                   data-bind="textInput: port, disable: $root.model.fixPortNumberOnLocalNode() && $root.model.createIsLocalNodeObservable($data)(), attr: { title: $root.model.fixPortNumberOnLocalNode() && $root.model.createIsLocalNodeObservable($data)() ? 'Fixed by startup parameter' : '' }">
                         </div>
                     </div>
                     <div class="form-group" data-bind="validationElement: tcpPort">
@@ -85,7 +85,7 @@
                         <div class="flex-grow">
                             <input type="text" autocomplete="off" class="form-control" id="tcpPort"
                                    placeholder="Default: 38888"
-                                   data-bind="textInput: tcpPort, disable: $root.model.fixTcpPortNumberOnLocalNode() && $root.model.createIsLocalNodeObservable($data)(), attr: { title: $root.model.fixTcpPortNumberOnLocalNode() && isLocal() ? 'Fixed by startup parameter' : '' }">
+                                   data-bind="textInput: tcpPort, disable: $root.model.fixTcpPortNumberOnLocalNode() && $root.model.createIsLocalNodeObservable($data)(), attr: { title: $root.model.fixTcpPortNumberOnLocalNode() && $root.model.createIsLocalNodeObservable($data)() ? 'Fixed by startup parameter' : '' }">
                         </div>
                     </div>
                     <div data-bind="foreach: ips">
