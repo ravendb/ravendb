@@ -1,10 +1,15 @@
 using System;
 using System.Collections.Generic;
+using System.Diagnostics;
+using System.IO;
 using System.Linq;
+using System.Threading;
 using System.Threading.Tasks;
 using BenchmarkDotNet.Attributes;
 using BenchmarkDotNet.Running;
 using FastTests.Graph;
+using FastTests.Server.Basic;
+using Newtonsoft.Json.Linq;
 using Raven.Server.Documents;
 using Raven.Server.Documents.Queries.AST;
 using Raven.Server.Documents.Queries.Parser;
@@ -16,44 +21,79 @@ namespace Tryouts
    
     public static class Program
     {
-       
-        public static void Main(string[] args)
+        private static Process CreateServerProcess()
         {
-            using (var test = new BasicGraphQueries())
+            var jsonSettings = new JObject
             {
-                //test.CanProjectSameDocumentTwice();
-            }
-            return;
-            /*
-                The AST for 
-
-                with { from Movies where Name = “Star Wars Episode 1” } as lovedMovie
-                with { from Movies } as recommendedMovie
-                with edges(HasGenre) { order by Weight desc limit 1 } as dominantGenre
-                match (lovedMovie)-[dominantGenre]->(Genre)<-[HasGenre(Weight > 0.8)]-(recommendedMovie)<-(u)
-                select recommendedMovie           
-             */
-
-            //Console.WriteLine(graphQuery.ToString());
-
-            using(var parsing = new FastTests.Graph.Parsing())
+                ["RunInMemory"] = false,
+                ["Testing.ParentProcessId"] = Process.GetCurrentProcess().Id,
+                ["Setup.Mode"] = "None",
+                ["License.Eula.Accepted"] = true,
+                ["Security.UnsecuredAccessAllowed"] = "PublicNetwork"
+            };
+            var path = @"C:\Work\ravendb4\src\Raven.Server\bin\Release\netcoreapp2.2\win-x64\publish\";
+            File.WriteAllText(Path.Combine(path , "settings.json"), jsonSettings.ToString());
+            var process = new Process()
             {
-                 parsing.CanRoundTripQueries(@"with { from Movies where Genre = $genre } as m
-match (u:Users)<-[r:Rated]-(m)->(a:Actor)", @"WITH {
-    FROM Movies WHERE Genre = $genre
-} AS m
-WITH {
-    FROM Users
-} AS u
-WITH {
-    FROM Actor
-} AS a
-WITH EDGES(Rated) AS r
-MATCH ((m)-[r]->(u) AND (m)->(a))");
-            }
-
+                StartInfo = new ProcessStartInfo
+                {
+                    FileName = Path.Combine(path , "Raven.Server.exe"),
+                    Arguments = $"-c=\"{Path.Combine(path , "settings.json")}\"",
+                    CreateNoWindow = true,
+                    ErrorDialog = false,
+                    UseShellExecute = false,
+                    RedirectStandardOutput = true,
+                    RedirectStandardError = true,
+                    RedirectStandardInput = true
+                }
+            };
+            return process;
         }
 
-        
+        public static void Main(string[] args)
+        {
+            var mre = new ManualResetEventSlim();
+           
+            var t2 = Task.Run(() =>
+            {
+                using (var ravenProcess = CreateServerProcess())
+                {                    
+                    ravenProcess.OutputDataReceived += RavenProcess_OutputDataReceived;
+                    ravenProcess.ErrorDataReceived += RavenProcess_ErrorDataReceived;
+                    ravenProcess.EnableRaisingEvents = true;
+                    ravenProcess.Start();
+
+                    ravenProcess.BeginOutputReadLine();
+                    ravenProcess.BeginErrorReadLine();
+
+                    ravenProcess.StandardInput.WriteLine("DELIMITER:ContinuePrinting");
+                    ravenProcess.StandardInput.WriteLine("DELIMITER:ReadLine");
+                    //ravenProcess.StandardInput.WriteLine("ReadLine");
+                    mre.Wait();
+                    ravenProcess.Kill();
+                }
+
+                Console.WriteLine("WTF?");
+            });
+            GC.SuppressFinalize(t2);
+            AppDomain.CurrentDomain.ProcessExit += (sender, eventArgs) => mre.Set();
+            
+
+            Console.WriteLine("Hello!!");            
+            Thread.Sleep(15000);
+            Console.WriteLine("Bye!!");
+            mre.Set();
+            Task.WaitAll(t2);
+        }
+
+        private static void RavenProcess_ErrorDataReceived(object sender, DataReceivedEventArgs e)
+        {
+            Console.Out.WriteLine(e.Data);
+        }
+
+        private static void RavenProcess_OutputDataReceived(object sender, DataReceivedEventArgs e)
+        {
+            Console.Out.WriteLine(e.Data);
+        }
     }
 }
