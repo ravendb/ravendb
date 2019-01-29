@@ -227,6 +227,9 @@ namespace Raven.Server.Documents.Indexes.Static
         public dynamic AsJson(dynamic doc)
         {
             var json = (DynamicBlittableJson)doc;
+            if (json == null)
+                return DynamicNullObject.Null;
+
             json.EnsureMetadata();
             return json;
         }

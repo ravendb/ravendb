@@ -57,6 +57,26 @@ namespace SlowTests.Issues
             }
         }
 
+        [Fact]
+        public void Can_access_asjson_of_a_missing_loaded_document()
+        {
+            using (var store = GetDocumentStore())
+            {
+                new AsJsonIndex().Execute(store);
+
+                using (var session = store.OpenSession())
+                {
+                    session.Store(new User());
+                    session.SaveChanges();
+                }
+
+                WaitForIndexing(store);
+
+                var stats = store.Maintenance.Send(new GetIndexErrorsOperation(new[] { "AsJsonIndex" }));
+                Assert.Empty(stats[0].Errors);
+            }
+        }
+
         private class MetadataIndex : AbstractIndexCreationTask<User>
         {
             public MetadataIndex()
@@ -70,6 +90,19 @@ namespace SlowTests.Issues
                         Attachments2 = AttachmentsFor((string)null).Count(),
                         Counters1 = CounterNamesFor(LoadDocument<Address>(user.AddressId)),
                         Counters2 = CounterNamesFor((string)null)
+                    };
+            }
+        }
+
+        private class AsJsonIndex : AbstractIndexCreationTask<User>
+        {
+            public AsJsonIndex()
+            {
+                Map = users => from user in users
+                    select new
+                    {
+                        AsJson1 = AsJson(LoadDocument<Address>(user.AddressId)).Value<string>("Name"),
+                        AsJson2 = AsJson((string)null).Value<string>("Name"),
                     };
             }
         }
