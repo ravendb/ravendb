@@ -58,7 +58,7 @@ namespace Raven.Server.Documents.Indexes.Static
         public dynamic Id(dynamic doc)
         {
             var json = (DynamicBlittableJson)doc;
-            return json.GetId();
+            return json == null ? DynamicNullObject.Null : json.GetId();
         }
 
         public IEnumerable<dynamic> Recurse(object item, Func<dynamic, dynamic> func)
