@@ -57,9 +57,8 @@ rvn_open_journal_for_writes(const char *file_name, int32_t transaction_mode, int
         goto error_cleanup;
     }
 
-    jfh->delete_on_close = false;
-    if (transaction_mode == JOURNAL_MODE_PURE_MEMORY)
-        jfh->delete_on_close = true;
+    jfh->delete_on_close = transaction_mode == JOURNAL_MODE_PURE_MEMORY;
+
 
     jfh->path = strdup(file_name);
     if (jfh->path == NULL)
@@ -90,7 +89,7 @@ rvn_open_journal_for_writes(const char *file_name, int32_t transaction_mode, int
 
     if (fs.st_size < initial_file_size)
     {
-        rc = _resize_file(&(jfh->fd), initial_file_size, detailed_error_code);
+        rc = _resize_file(jfh->fd, initial_file_size, detailed_error_code);
         if (rc != SUCCESS)
             goto error_clean_With_error;
 
@@ -210,7 +209,7 @@ EXPORT int32_t
 rvn_read_journal(void *handle, void *buffer, int64_t required_size, int64_t offset, int64_t *actual_size, int32_t *detailed_error_code)
 {
     struct journal_handle *jfh = (struct journal_handle *)handle;
-    return _read_file(&(jfh->fd), buffer, required_size, offset, actual_size, detailed_error_code);
+    return _read_file(jfh->fd, buffer, required_size, offset, actual_size, detailed_error_code);
 }
 
 EXPORT int32_t
@@ -225,7 +224,7 @@ rvn_truncate_journal(void *handle, int64_t size, int32_t *detailed_error_code)
         goto error_cleanup;
     }
 
-    rc = _resize_file(&(jfh->fd), size, detailed_error_code);
+    rc = _resize_file(jfh->fd, size, detailed_error_code);
     if(rc != SUCCESS)
         return rc;
 

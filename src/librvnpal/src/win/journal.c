@@ -91,7 +91,7 @@ rvn_write_journal(void* handle, void* buffer, int64_t size, int64_t offset, int3
 EXPORT int32_t
 rvn_open_journal_for_reads(const char *file_name, void **handle, int32_t *detailed_error_code)
 {
-    return _open_file_to_read(file_name, (HANDLE *)handle, detailed_error_code);
+    return _open_file_to_read(file_name, handle, detailed_error_code);
 }
 
 EXPORT int32_t
