@@ -1181,13 +1181,20 @@ class ongoingTasksStats extends viewModelBase {
         throw new Error("Unable to find color for: " + operationName);
     }
 
-    private getTaskTypeDescription(taskName: string): string {
-        const type = this.tracksInfo().find(x => x.name === taskName).type;
+    private getTaskType(taskName: string): ongoingTaskStatType {
+        return this.tracksInfo().find(x => x.name === taskName).type;
+    }
+    
+    private getTaskTypeDescription(type: ongoingTaskStatType): string {
         switch (type) {
-            case "Incoming":
-                return "Incoming replication";
-            case "Outgoing":
-                return "Outgoing replication";
+            case "IncomingPush":
+                return "Incoming External Replication";
+            case "IncomingPull":
+                return "Incoming Pull Replication";
+            case "OutgoingPush":
+                return "Outgoing External Replication";
+            case "OutgoingPull":
+                return "Outgoing Pull Replication";
             case "Raven":
                 return "Raven ETL";
             case "Sql":
@@ -1248,7 +1255,8 @@ class ongoingTasksStats extends viewModelBase {
 
         this.filteredTrackNames().forEach(trackName => {
             context.font = "bold 12px Lato";
-            const trackDescription = this.getTaskTypeDescription(trackName);
+            const trackType = this.getTaskType(trackName);
+            const trackDescription = this.getTaskTypeDescription(trackType);
 
             const directionTextWidth = context.measureText(trackDescription).width;
             let restOfText = ": " + trackName;
@@ -1340,17 +1348,16 @@ class ongoingTasksStats extends viewModelBase {
 
         if (currentDatum !== context.item) {
             const type = context.rootStats.Type;
-            const isReplication = type === "Outgoing" || type === "Incoming";
+            const isReplication = type === "OutgoingPull"
+                || type === "OutgoingPush"    
+                || type === "IncomingPull"
+                || type === "IncomingPush";
             const isEtl = type === "Raven" || type === "Sql";
             const isRootItem = context.rootStats.Details === context.item;
             
             let sectionName = context.item.Name;
             if (isRootItem) {
-                if (type === "Outgoing") {
-                    sectionName = "Outgoing Replication";
-                } else if (type === "Incoming") {
-                    sectionName = "Incoming Replication";
-                }
+                sectionName = this.getTaskTypeDescription(type);
             }
             
             let tooltipHtml = `<strong>*** ${sectionName} ***</strong><br/>`;
@@ -1358,7 +1365,8 @@ class ongoingTasksStats extends viewModelBase {
             
             if (isRootItem) {
                 switch (type) {
-                    case "Incoming": {
+                    case "IncomingPush":
+                    case "IncomingPull": {
                         const elementWithData = context.rootStats as any as Raven.Client.Documents.Replication.IncomingReplicationPerformanceStats;
                         tooltipHtml += `Received last Etag: ${elementWithData.ReceivedLastEtag}<br/>`;
                         tooltipHtml += `Network input count: ${elementWithData.Network.InputCount}<br/>`;
@@ -1366,7 +1374,8 @@ class ongoingTasksStats extends viewModelBase {
                         tooltipHtml += `Attachments read count: ${elementWithData.Network.AttachmentReadCount}<br/>`;
                     }
                         break;
-                    case "Outgoing": {
+                    case "OutgoingPush":
+                    case "OutgoingPull": {
                         const elementWithData = context.rootStats as any as Raven.Client.Documents.Replication.OutgoingReplicationPerformanceStats;
                         tooltipHtml += `Sent last Etag: ${elementWithData.SendLastEtag}<br/>`;
                         tooltipHtml += `Storage input count: ${elementWithData.Storage.InputCount}<br/>`;

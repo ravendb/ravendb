@@ -59,6 +59,8 @@ namespace Raven.Server.Documents.Replication
 
         public readonly string PullReplicationName;
 
+        public bool PullReplication => PullReplicationName != null;
+
         public IncomingReplicationHandler(
             TcpConnectionOptions options,
             ReplicationLatestEtagRequest replicatedLastEtag,
