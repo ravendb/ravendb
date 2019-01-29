@@ -20,8 +20,6 @@ namespace FastTests.Voron.FixedSize
         [Fact]
         public void DeleteRangeShouldModifyPage()
         {
-            RequireFileBasedPager();
-
             Slice treeId;
             Slice.From(Allocator, "test", out treeId);
             using (var tx = Env.WriteTransaction())
