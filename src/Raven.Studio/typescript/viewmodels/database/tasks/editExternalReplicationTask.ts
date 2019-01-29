@@ -88,7 +88,7 @@ class editExternalReplicationTask extends viewModelBase {
             });
     }
 
-    private initObservables() {        
+    private initObservables() {
         this.shortErrorText = ko.pureComputed(() => {
             const result = this.testConnectionResult();
             if (!result || result.Success) {
@@ -110,6 +110,8 @@ class editExternalReplicationTask extends viewModelBase {
             ], false, jsonUtil.newLineNormalizingHashFunction);
 
         this.newConnectionString(connectionStringRavenEtlModel.empty());
+        
+        this.newConnectionString().setNameUniquenessValidator(name => !this.ravenEtlConnectionStringsDetails().find(x => x.Name.toLocaleLowerCase() === name.toLocaleLowerCase()));
 
         // Open the 'Create new conn. str.' area if no connection strings are yet defined 
         this.ravenEtlConnectionStringsDetails.subscribe((value) => { this.createNewConnectionString(!value.length) }); 

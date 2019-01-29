@@ -133,6 +133,7 @@ class editPullReplicationSinkTask extends viewModelBase {
             ], false, jsonUtil.newLineNormalizingHashFunction);
 
         this.newConnectionString(connectionStringRavenEtlModel.empty());
+        this.newConnectionString().setNameUniquenessValidator(name => !this.ravenEtlConnectionStringsDetails().find(x => x.Name.toLocaleLowerCase() === name.toLocaleLowerCase()));
 
         // Open the 'Create new conn. str.' area if no connection strings are yet defined 
         this.ravenEtlConnectionStringsDetails.subscribe((value) => { this.createNewConnectionString(!value.length) }); 

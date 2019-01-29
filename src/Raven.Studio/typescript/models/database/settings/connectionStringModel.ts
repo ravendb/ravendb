@@ -19,8 +19,19 @@ abstract class connectionStringModel {
     initValidation() {
         this.connectionStringName.extend({
             required: true
-        });        
-    }   
+        });
+    }
+
+    setNameUniquenessValidator(validator: (name: string) => boolean) {
+        this.connectionStringName.extend({
+            validation: [
+                {
+                    validator: (name: string) => validator(name),
+                    message: "Connection string name is already used"
+                }
+            ]
+        })
+    }
 }
 
 export = connectionStringModel;

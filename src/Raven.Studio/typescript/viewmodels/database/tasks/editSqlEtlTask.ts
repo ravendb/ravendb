@@ -311,6 +311,7 @@ class editSqlEtlTask extends viewModelBase {
         this.initDirtyFlag();
 
         this.newConnectionString(connectionStringSqlEtlModel.empty());
+        this.newConnectionString().setNameUniquenessValidator(name => !this.sqlEtlConnectionStringsNames().find(x => x.toLocaleLowerCase() === name.toLocaleLowerCase()));
 
         // Open the 'Create new conn. str.' area if no connection strings are yet defined 
         this.sqlEtlConnectionStringsNames.subscribe((value) => { this.createNewConnectionString(!value.length) });
