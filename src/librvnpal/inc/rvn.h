@@ -101,12 +101,4 @@ _nearest_size_to_page_size(int64_t orig_size, int64_t sys_page_size);
 PRIVATE int32_t
 _ensure_path_exists(const char* path);
 
-PRIVATE int32_t
-_open_file_to_read(const char* file_name, void** handle, int32_t* detailed_error_code);
-
-PRIVATE int32_t
-_read_file(void* handle, void* buffer, int64_t required_size, int64_t offset, int64_t* actual_size, int32_t* detailed_error_code);
-
-PRIVATE int32_t
-_resize_file(void *handle, int64_t size, int32_t *detailed_error_code);
 #endif

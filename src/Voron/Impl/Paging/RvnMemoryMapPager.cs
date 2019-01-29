@@ -57,7 +57,7 @@ namespace Voron.Impl.Paging
             {
                 try
                 {
-                    PalHelper.ThrowLastError(rc, errorCode, $"rvn_create_and_mmap64_file failed on {rc}");
+                    PalHelper.ThrowLastError(rc, errorCode, $"rvn_create_and_mmap64_file failed on {rc} for '{file.FullPath}'");
                 }
                 catch (DiskFullException dfEx)
                 {
@@ -106,7 +106,7 @@ namespace Voron.Impl.Paging
                         metric.IncrementFileSize(alloc.Size);
                         var rc = rvn_memory_sync(alloc.BaseAddress, alloc.Size, out var errorCode);
                         if (rc != FailCodes.Success)
-                            PalHelper.ThrowLastError(rc, errorCode,$"Failed to memory sync at ${new IntPtr(alloc.BaseAddress).ToInt64():X}. TotalUnsynced = ${totalUnsynced}");
+                            PalHelper.ThrowLastError(rc, errorCode,$"Failed to memory sync at ${new IntPtr(alloc.BaseAddress).ToInt64():X} for for '{FileName.FullPath}'. TotalUnsynced = ${totalUnsynced}");
                     }
                     metric.IncrementSize(totalUnsynced);
                 }
@@ -135,11 +135,15 @@ namespace Voron.Impl.Paging
             _handle.Dispose();
             // _handle.FailCode != success, we cannot delete the file probably, and there's nothing much we can do here.
             // just add to log and continue            
-            if (_handle.FailCode != FailCodes.Success)
-                if (_logger.IsInfoEnabled)
-                    _logger.Info($"Unable to dispose handle for {FileName.FullPath} (ignoring). rc={_handle.FailCode}. DeleteOnClose={DeleteOnClose}, "
-                                 + $"errorCode={PalHelper.GetNativeErrorString(_handle.ErrorNo, "Unable to dispose handle for {FileName.FullPath} (ignoring).", out _)}",
-                        new IOException($"Unable to dispose handle for {FileName.FullPath} (ignoring)."));
+            if (_handle.FailCode == FailCodes.Success)
+                return;
+
+            if (_logger.IsInfoEnabled)
+            {
+                _logger.Info($"Unable to dispose handle for {FileName.FullPath} (ignoring). rc={_handle.FailCode}. DeleteOnClose={DeleteOnClose}, "
+                             + $"errorCode={PalHelper.GetNativeErrorString(_handle.ErrorNo, "Unable to dispose handle for {FileName.FullPath} (ignoring).", out _)}",
+                    new IOException($"Unable to dispose handle for {FileName.FullPath} (ignoring)."));
+            }
         }
 
         protected internal override void PrefetchRanges(PrefetchRanges* list, int count)
@@ -178,7 +182,7 @@ namespace Voron.Impl.Paging
             var rc = rvn_allocate_more_space(newLengthAfterAdjustment, _handle, out var newAddress, out var errorCode);
 
             if (rc != FailCodes.Success)
-                PalHelper.ThrowLastError(rc, errorCode, $"can't allocate more pages (rc={rc}). Requested {newLength} (adjusted to {newLengthAfterAdjustment})");
+                PalHelper.ThrowLastError(rc, errorCode, $"can't allocate more pages (rc={rc}) for '{FileName.FullPath}'. Requested {newLength} (adjusted to {newLengthAfterAdjustment})");
 
             // TODO : Get rid of allocation info
             var allocationInfo = new PagerState.AllocationInfo
@@ -211,8 +215,7 @@ namespace Voron.Impl.Paging
                 return;
 
             if (_logger.IsInfoEnabled)
-                _logger.Info($"Unable to protect page range. start={new IntPtr(start).ToInt64():X}, size={size}, PROT_READ, errorCode={errorCode}");
-            Debugger.Break();
+                _logger.Info($"Unable to protect page range for '{FileName.FullPath}'. start={new IntPtr(start).ToInt64():X}, size={size}, ProtectRange = Protect, errorCode={errorCode}");
         }
 
         internal override void UnprotectPageRange(byte* start, ulong size, bool force = false)
@@ -225,8 +228,7 @@ namespace Voron.Impl.Paging
                 return;
 
             if (_logger.IsInfoEnabled)
-                _logger.Info($"Unable to un-protect page range. start={new IntPtr(start).ToInt64():X}, size={size}, PROT_READ | PROT_WRITE, errorCode={errorCode}");
-            Debugger.Break();
+                _logger.Info($"Unable to un-protect page range for '{FileName.FullPath}'. start={new IntPtr(start).ToInt64():X}, size={size}, ProtectRange = Unprotect, errorCode={errorCode}");
         }
     }
 

@@ -622,7 +622,7 @@ namespace Voron.Impl.Paging
 
             var rc = Pal.rvn_prefetch_virtual_memory(allocationInfo.BaseAddress, allocationInfo.Size, out var errorCode);
             if(rc != PalFlags.FailCodes.Success)
-                Log.Info(PalHelper.GetNativeErrorString(errorCode, $"Tried to prefetch whole file. Result:{rc} FileName:${FileName.FullPath} Size:{allocationInfo.Size}", out _));
+                Log.Info(PalHelper.GetNativeErrorString(errorCode, $"Tried to prefetch whole file. Result: {rc} FileName: {FileName.FullPath} Size: {allocationInfo.Size}", out _));
         }
 
 

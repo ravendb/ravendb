@@ -20,9 +20,11 @@ struct journal_handle
 {
     int fd;
     const char *path;
+    bool delete_on_close;
 };
 
-PRIVATE void free_journal_handle(struct journal_handle* handle)
+PRIVATE void 
+_free_journal_handle(struct journal_handle* handle)
 {
     if (handle->path != NULL)
     {
@@ -42,18 +44,23 @@ rvn_open_journal_for_writes(const char *file_name, int32_t transaction_mode, int
     
     int32_t flags = O_DSYNC | O_DIRECT;
     if (transaction_mode == JOURNAL_MODE_DANGER)
-        flags = 0;
-
+        flags = 0;    
     if (sizeof(int) == 4) /* 32 bits */
         flags |= O_LARGEFILE;
 
     struct journal_handle *jfh = calloc(1, sizeof(struct journal_handle));
+    
     *handle = jfh;
     if (jfh == NULL)
     {
         rc = FAIL_CALLOC;
         goto error_cleanup;
     }
+
+    jfh->delete_on_close = false;
+    if (transaction_mode == JOURNAL_MODE_PURE_MEMORY)
+        jfh->delete_on_close = true;
+
     jfh->path = strdup(file_name);
     if (jfh->path == NULL)
     {
@@ -83,7 +90,7 @@ rvn_open_journal_for_writes(const char *file_name, int32_t transaction_mode, int
 
     if (fs.st_size < initial_file_size)
     {
-        rc = _resize_file((void*)(int64_t)jfh->fd, initial_file_size, detailed_error_code);
+        rc = _resize_file(&(jfh->fd), initial_file_size, detailed_error_code);
         if (rc != SUCCESS)
             goto error_clean_With_error;
 
@@ -101,9 +108,21 @@ error_clean_With_error:
     if (jfh != NULL)
     {
         if (jfh->fd != -1)
+        {
+            if (jfh->delete_on_close == true)
+            {
+                int32_t unlink_rc = unlink(jfh->path);
+                if (unlink_rc != 0)
+                {
+                    /* record the error and continue to close */
+                    rc = FAIL_UNLINK;
+                    *detailed_error_code = errno;
+                }
+            }
             close(jfh->fd);
+        }
 
-        free_journal_handle(*handle);
+        _free_journal_handle(*handle);
         *handle = NULL;
     }
 
@@ -115,6 +134,17 @@ rvn_close_journal(void *handle, int32_t *detailed_error_code)
 {
     int32_t rc;
     struct journal_handle* jfh = (struct journal_handle*)handle;
+    if (jfh->delete_on_close == true)
+    {
+        int32_t unlink_rc = unlink(jfh->path);
+        if (unlink_rc != 0)
+        {
+            /* record the error and continue to close */
+            rc = FAIL_UNLINK;
+            *detailed_error_code = errno;
+        }
+    }
+
     if (close(jfh->fd) == -1)
     {
         rc = FAIL_CLOSE;
@@ -127,7 +157,7 @@ rvn_close_journal(void *handle, int32_t *detailed_error_code)
 error_cleanup :
     *detailed_error_code = errno;
 cleanup:
-    free_journal_handle(jfh);
+    _free_journal_handle(jfh);
     return rc;
 }
 
@@ -151,13 +181,25 @@ rvn_open_journal_for_reads(const char *file_name, void **handle, int32_t *detail
     }
 
     jfh->path = NULL;
-    rc = _open_file_to_read(file_name, (void**)&(jfh->fd), detailed_error_code);
+    rc = _open_file_to_read(file_name, &(jfh->fd), detailed_error_code);
     if(rc != SUCCESS)
     {
         if (jfh->fd != -1)
+        {
+            if (jfh->delete_on_close == true)
+            {
+                int32_t unlink_rc = unlink(jfh->path);
+                if (unlink_rc != 0)
+                {
+                    /* record the error and continue to close */
+                    rc = FAIL_UNLINK;
+                    *detailed_error_code = errno;
+                }
+            }
             close(jfh->fd);
+        }
 
-        free_journal_handle(jfh);
+        _free_journal_handle(jfh);
         *handle = NULL;
     }
 
@@ -168,7 +210,7 @@ EXPORT int32_t
 rvn_read_journal(void *handle, void *buffer, int64_t required_size, int64_t offset, int64_t *actual_size, int32_t *detailed_error_code)
 {
     struct journal_handle *jfh = (struct journal_handle *)handle;
-    return _read_file((void*)(int64_t)(jfh->fd), buffer, required_size, offset, actual_size, detailed_error_code);
+    return _read_file(&(jfh->fd), buffer, required_size, offset, actual_size, detailed_error_code);
 }
 
 EXPORT int32_t
@@ -183,7 +225,7 @@ rvn_truncate_journal(void *handle, int64_t size, int32_t *detailed_error_code)
         goto error_cleanup;
     }
 
-    rc = _resize_file((void *)(int64_t)(jfh->fd), size, detailed_error_code);
+    rc = _resize_file(&(jfh->fd), size, detailed_error_code);
     if(rc != SUCCESS)
         return rc;
 
