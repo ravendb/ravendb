@@ -320,6 +320,10 @@ class shell extends viewModelBase {
     urlForCertificates() {
         return appUrl.forCertificates();
     }
+    
+    urlForCluster() {
+        return appUrl.forCluster();
+    }
 
     private getIndexingDisbaledValue(indexingDisabledString: string) {
         if (indexingDisabledString === undefined || indexingDisabledString == null)
