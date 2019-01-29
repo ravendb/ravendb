@@ -222,7 +222,6 @@ namespace Raven.Server.Documents
             }
         }
 
-        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         private void UpdateChangeVectorIfNeeded(DocumentsOperationContext context, NonPersistentDocumentFlags nonPersistentFlags, ref string changeVector, ref long newEtag)
         {
             // when having an external replication we must generate a new change vector for the resolved conflict.

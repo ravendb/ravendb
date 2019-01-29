@@ -1,11 +1,13 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.IO;
 using System.Linq;
 using System.Threading.Tasks;
 using FastTests;
 using FastTests.Server.Replication;
 using Raven.Client.Documents.Indexes;
 using Raven.Client.Documents.Operations;
+using Raven.Client.Documents.Operations.Attachments;
 using Raven.Client.Documents.Queries;
 using Raven.Client.Documents.Replication;
 using Raven.Client.Exceptions.Documents;
@@ -1207,6 +1209,57 @@ namespace SlowTests.Server.Replication
                 {
                     session.CountersFor("foo/bar").Increment("likes",10);
                     await session.SaveChangesAsync();
+                }
+
+                using (database.DocumentsStorage.ContextPool.AllocateOperationContext(out DocumentsOperationContext context))
+                using (context.OpenReadTransaction())
+                {
+                    var count = database.DocumentsStorage.RevisionsStorage.GetNumberOfRevisionDocuments(context);
+                    Assert.Equal(3, count);
+                }
+            }
+        }
+
+        [Fact]
+        public async Task ResolveToLatestInClusterWithAttachment()
+        {
+            using (var store1 = GetDocumentStore())
+            using (var store2 = GetDocumentStore())
+            {
+                await SetupReplicationAsync(store2, store1);
+
+                using (var session = store1.OpenAsyncSession())
+                {
+                    await session.StoreAsync(new User
+                    {
+                        Name = "Karmel"
+                    }, "foo/bar");
+                    await session.SaveChangesAsync();
+                }
+
+                using (var session = store2.OpenAsyncSession())
+                {
+                    await session.StoreAsync(new User
+                    {
+                        Name = "Grisha"
+                    }, "foo/bar");
+                    await session.SaveChangesAsync();
+                }
+                Assert.True(WaitForDocument<User>(store1, "foo/bar", u => u.Name == "Grisha"));
+                var database = Servers.Single(s => s.WebUrl == store1.Urls[0]).ServerStore.DatabasesLandlord.TryGetOrCreateResourceStore(store1.Database).Result;
+
+                using (database.DocumentsStorage.ContextPool.AllocateOperationContext(out DocumentsOperationContext context))
+                using (context.OpenReadTransaction())
+                {
+                    var count = database.DocumentsStorage.RevisionsStorage.GetNumberOfRevisionDocuments(context);
+                    Assert.Equal(3, count);
+                }
+
+                WaitForUserToContinueTheTest(store1);
+
+                using (var a1 = new MemoryStream(new byte[] { 1, 2, 3 }))
+                {
+                    store1.Operations.Send(new PutAttachmentOperation("foo/bar", "a1", a1, "a2/jpeg"));
                 }
 
                 using (database.DocumentsStorage.ContextPool.AllocateOperationContext(out DocumentsOperationContext context))
