@@ -57,6 +57,8 @@ namespace Raven.Server.Documents.Indexes.Static
 
         public dynamic Id(dynamic doc)
         {
+            if (doc == null)
+                return DynamicNullObject.Null;
             var json = (DynamicBlittableJson)doc;
             return json.GetId();
         }
