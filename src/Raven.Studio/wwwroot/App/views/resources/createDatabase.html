@@ -303,7 +303,7 @@
                                             <div class="type" data-bind="text: backupType"></div>
                                             <div class="node" data-bind="text: nodeTag"></div>
                                             <div class="files" data-bind="text: filesToRestore.toLocaleString()"></div>
-                                            <div class="encryption" data-toggle="tooltip" title="" data-placement="top" data-original-title="Encrypted backup" > <span class="text-info"><i class="icon-encryption"></i> Encrypted</span></div>
+                                            <div class="encryption" data-bind="text: isEncrypted ? 'Yes' : 'No'"></div>
                                         </div>
                                     </a>
                                 </li>
@@ -317,7 +317,7 @@
                                     <div class="type">Backup Type</div>
                                     <div class="node">Node Tag</div>
                                     <div class="files">Files to Restore</div>
-                                    <div class="encryption"></div>
+                                    <div class="encryption">Encrypted</div>
                                 </div>
                             </div>
                         </div>
