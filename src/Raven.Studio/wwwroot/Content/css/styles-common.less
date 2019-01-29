@@ -1017,7 +1017,7 @@ input[type=file] + .form-control {
     bottom: 0;
     z-index: @zindex-loading-overlay;
     transition: opacity 0.3s 0.3s cubic-bezier(0.6, 0, 1, 0.6), height 0.0s 0.5s cubic-bezier(0.6, 0, 1, 0.6);
-    background-image: url('../img/loading_bkg.png');
+    background-image: @loading-bg-img;
     background-position: center;
     background-size: cover;
     //transform: translateY(-20px);
@@ -1034,7 +1034,7 @@ input[type=file] + .form-control {
         pointer-events: none;
 
         .raven-logo {
-            color: @brand-primary;
+            color: @gray-lighter;
             font-size: 100px;
         }
 
