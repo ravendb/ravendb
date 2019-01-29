@@ -132,16 +132,18 @@ namespace Raven.Server.Web.System
                     if (databaseRecord.Topology.RelevantFor(node))
                         throw new InvalidOperationException($"Can't add node {node} to {name} topology because it is already part of it");
 
+                    var databaseIsBeenDeleted = databaseRecord.DeletionInProgress != null &&
+                                                databaseRecord.DeletionInProgress.TryGetValue(node, out var deletionInProgress) &&
+                                                deletionInProgress != DeletionInProgressStatus.No;
+                    if (databaseIsBeenDeleted)
+                        throw new InvalidOperationException($"Can't add node {node} to database '{name}' topology because the it is currently being deleted from node '{node}'");
+
                     var url = clusterTopology.GetUrlFromTag(node);
                     if (url == null)
-                        throw new InvalidOperationException($"Can't add node {node} to {name} topology because node {node} is not part of the cluster");
+                        throw new InvalidOperationException($"Can't add node {node} to database '{name}' topology because node {node} is not part of the cluster");
 
                     if (databaseRecord.Encrypted && NotUsingHttps(url))
-                        throw new InvalidOperationException($"Can't add node {node} to database {name} topology because database {name} is encrypted but node {node} doesn't have an SSL certificate.");
-
-                    databaseRecord.Topology.Promotables.Add(node);
-                    databaseRecord.Topology.DemotionReasons[node] = "Joined the DB-Group as a new promotable node";
-                    databaseRecord.Topology.PromotablesStatus[node] = DatabasePromotionStatus.WaitingForFirstPromotion;
+                        throw new InvalidOperationException($"Can't add node {node} to database '{name}' topology because database {name} is encrypted but node {node} doesn't have an SSL certificate.");
                 }
 
                 //The case were we don't care where the database will be added to
@@ -162,11 +164,11 @@ namespace Raven.Server.Web.System
 
                     var rand = new Random().Next();
                     node = allNodes[rand % allNodes.Count];
-
-                    databaseRecord.Topology.Promotables.Add(node);
-                    databaseRecord.Topology.DemotionReasons[node] = "Joined the DB-Group as a new promotable node";
-                    databaseRecord.Topology.PromotablesStatus[node] = DatabasePromotionStatus.WaitingForFirstPromotion;
                 }
+
+                databaseRecord.Topology.Promotables.Add(node);
+                databaseRecord.Topology.DemotionReasons[node] = "Joined the DB-Group as a new promotable node";
+                databaseRecord.Topology.PromotablesStatus[node] = DatabasePromotionStatus.WaitingForFirstPromotion;
 
                 if (mentor != null)
                 {
