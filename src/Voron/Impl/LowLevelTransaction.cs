@@ -775,6 +775,8 @@ namespace Voron.Impl
             }
 
             _dirtyPages.Remove(pageNumber);
+
+            UntrackDirtyPage(pageNumber);
         }
 
         internal void FreePage(long pageNumber)
@@ -800,9 +802,7 @@ namespace Voron.Impl
                     _scratchPagesTable.Remove(pageNumber);
                 }
 
-                _dirtyPages.Remove(pageNumber);
-
-                UntrackDirtyPage(pageNumber);
+                DiscardScratchModificationOn(pageNumber);
             }
             catch
             {
