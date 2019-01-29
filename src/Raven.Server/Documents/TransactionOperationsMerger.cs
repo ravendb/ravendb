@@ -12,6 +12,7 @@ using Raven.Server.Utils;
 using Sparrow;
 using Sparrow.Logging;
 using Sparrow.LowMemory;
+using Sparrow.Platform;
 using Sparrow.Utils;
 using Voron.Debugging;
 using Voron.Exceptions;
@@ -613,7 +614,7 @@ namespace Raven.Server.Documents
                 var modifiedSize = llt.NumberOfModifiedPages * Constants.Storage.PageSize;
 
                 var canCloseCurrentTx = previousOperation == null || previousOperation.IsCompleted;
-                if (canCloseCurrentTx)
+                if (canCloseCurrentTx || llt.Environment.Options.ForceUsing32BitsPager || PlatformDetails.Is32Bits)
                 {
                     if (_operations.IsEmpty)
                         break; // nothing remaining to do, let's us close this work

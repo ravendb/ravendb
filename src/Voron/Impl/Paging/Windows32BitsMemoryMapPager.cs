@@ -342,9 +342,18 @@ namespace Voron.Impl.Paging
                 if (result == null)
                 {
                     var lastWin32Error = Marshal.GetLastWin32Error();
-                    throw new Win32Exception(
-                        $"Unable to map {size / Constants.Size.Kilobyte:#,#0} kb starting at {startPage} on {FileName}",
-                        new Win32Exception(lastWin32Error));
+
+                    const int ERROR_NOT_ENOUGH_MEMORY = 8;
+                    if (lastWin32Error == ERROR_NOT_ENOUGH_MEMORY)
+                    {
+                        throw new OutOfMemoryException($"Unable to map {size / Constants.Size.Kilobyte:#,#0} kb starting at {startPage} on {FileName}", new Win32Exception(lastWin32Error));
+                    }
+                    else
+                    {
+                        throw new Win32Exception(
+                            $"Unable to map {size / Constants.Size.Kilobyte:#,#0} kb starting at {startPage} on {FileName}",
+                            new Win32Exception(lastWin32Error));
+                    }                    
                 }
 
                 if (LockMemory && size > 0)
