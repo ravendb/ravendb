@@ -165,12 +165,19 @@ namespace FastTests.Server.Documents.Revisions
                     await session.StoreAsync(company);
                     await session.SaveChangesAsync();
                 }
+
                 using (var session = store.OpenAsyncSession())
                 {
                     var company3 = await session.LoadAsync<Company>(company.Id);
                     var metadata = session.Advanced.GetMetadataFor(company3);
 
                     Assert.False(metadata.TryGetValue(Constants.Documents.Metadata.Flags, out _));
+                }
+
+                using (var session = store.OpenAsyncSession())
+                {
+                    var companiesList = await session.Advanced.Revisions.GetForAsync<Company>(company.Id);
+                    Assert.Equal(0, companiesList.Count);
                 }
             }
         }
