@@ -98,7 +98,7 @@ namespace Raven.Server.Web.System
 
                 ongoingTasksResult.SubscriptionsCount = (int)Database.SubscriptionStorage.GetAllSubscriptionsCount();
 
-                ongoingTasksResult.PullReplication = databaseRecord.HubPullReplications.ToList();
+                ongoingTasksResult.PullReplications = databaseRecord.HubPullReplications.ToList();
 
                 return ongoingTasksResult;
             }
@@ -1388,12 +1388,12 @@ namespace Raven.Server.Web.System
         public List<OngoingTask> OngoingTasksList { get; set; }
         public int SubscriptionsCount { get; set; }
         
-        public List<PullReplicationDefinition> PullReplication { get; set; }
+        public List<PullReplicationDefinition> PullReplications { get; set; }
 
         public OngoingTasksResult()
         {
             OngoingTasksList = new List<OngoingTask>();
-            PullReplication = new List<PullReplicationDefinition>();
+            PullReplications = new List<PullReplicationDefinition>();
         }
 
         public DynamicJsonValue ToJson()
@@ -1402,7 +1402,7 @@ namespace Raven.Server.Web.System
             {
                 [nameof(OngoingTasksList)] = new DynamicJsonArray(OngoingTasksList.Select(x => x.ToJson())),
                 [nameof(SubscriptionsCount)] = SubscriptionsCount,
-                [nameof(PullReplication)] = new DynamicJsonArray(PullReplication.Select(x => x.ToJson()))
+                [nameof(PullReplications)] = new DynamicJsonArray(PullReplications.Select(x => x.ToJson()))
             };
         }
     }
