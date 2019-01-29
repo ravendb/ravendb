@@ -135,7 +135,7 @@ _read_file(HANDLE handle, void* buffer, int64_t required_size, int64_t offset, i
             internal_required_size = (DWORD)required_size;
         }
 
-        if (ReadFile(*handle, buffer, internal_required_size, &internal_actual_size, &overlapped) == FALSE)
+        if (ReadFile(handle, buffer, internal_required_size, &internal_actual_size, &overlapped) == FALSE)
         {
             if (GetLastError() == ERROR_HANDLE_EOF)
             {
