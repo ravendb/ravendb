@@ -1,4 +1,5 @@
-﻿using FastTests;
+﻿using System.Linq;
+using FastTests;
 using Raven.Client.Documents.Indexes;
 using Raven.Client.Documents.Operations.Indexes;
 using Raven.Tests.Core.Utils.Entities;
@@ -28,11 +29,48 @@ namespace SlowTests.Issues
                     session.Store(new User());
                     session.SaveChanges();
                 }
-                WaitForUserToContinueTheTest(store);
+
                 WaitForIndexing(store);
 
                 var stats = store.Maintenance.Send(new GetIndexErrorsOperation(new[] { "IdIndex" }));
                 Assert.Empty(stats[0].Errors);
+            }
+        }
+
+        [Fact]
+        public void Can_access_metadata_of_a_missing_loaded_document()
+        {
+            using (var store = GetDocumentStore())
+            {
+                new MetadataIndex().Execute(store);
+
+                using (var session = store.OpenSession())
+                {
+                    session.Store(new User());
+                    session.SaveChanges();
+                }
+
+                WaitForIndexing(store);
+
+                var stats = store.Maintenance.Send(new GetIndexErrorsOperation(new[] { "MetadataIndex" }));
+                Assert.Empty(stats[0].Errors);
+            }
+        }
+
+        private class MetadataIndex : AbstractIndexCreationTask<User>
+        {
+            public MetadataIndex()
+            {
+                Map = users => from user in users
+                    select new
+                    {
+                        Metadata1 = MetadataFor(LoadDocument<Address>(user.AddressId)).Value<string>("Name"),
+                        Metadata2 = MetadataFor((string)null).Value<string>("Name"),
+                        Attachments1 = AttachmentsFor(LoadDocument<Address>(user.AddressId)).Count(),
+                        Attachments2 = AttachmentsFor((string)null).Count(),
+                        Counters1 = CounterNamesFor(LoadDocument<Address>(user.AddressId)),
+                        Counters2 = CounterNamesFor((string)null)
+                    };
             }
         }
     }
