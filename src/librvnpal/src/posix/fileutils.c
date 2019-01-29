@@ -104,7 +104,7 @@ _open_file_to_read(const char *file_name, int32_t *fd, int32_t *detailed_error_c
 }
 
 PRIVATE int32_t
-_read_file(int32_t *fd, void *buffer, int64_t required_size, int64_t offset, int64_t *actual_size, int32_t *detailed_error_code)
+_read_file(int32_t fd, void *buffer, int64_t required_size, int64_t offset, int64_t *actual_size, int32_t *detailed_error_code)
 {
     int32_t rc;
     int64_t remain_size = required_size;
@@ -112,7 +112,7 @@ _read_file(int32_t *fd, void *buffer, int64_t required_size, int64_t offset, int
     *actual_size = 0;
      while (remain_size > 0)
     {
-        already_read = rvn_pread(*fd, buffer, remain_size, offset);
+        already_read = rvn_pread(fd, buffer, remain_size, offset);
         if (already_read == -1)
         {
             rc = FAIL_READ_FILE;
@@ -139,13 +139,13 @@ error_cleanup:
 }
 
 PRIVATE int32_t
-_resize_file(int32_t *fd, int64_t size, int32_t *detailed_error_code)
+_resize_file(int32_t fd, int64_t size, int32_t *detailed_error_code)
 {
     assert(size % 4096 == 0);
 
     int32_t rc;
     struct stat st;
-    if (fstat(*fd, &st) == -1)
+    if (fstat(fd, &st) == -1)
     {
         rc = FAIL_STAT_FILE;
         goto error_cleanup;
@@ -153,13 +153,13 @@ _resize_file(int32_t *fd, int64_t size, int32_t *detailed_error_code)
 
     if(size > st.st_size)
     {
-        int32_t rc = _allocate_file_space(*fd, size, detailed_error_code);
+        int32_t rc = _allocate_file_space(fd, size, detailed_error_code);
         if(rc != SUCCESS)
             return rc;
     }
     else
     {
-        if(rvn_ftruncate(*fd, size) == -1)
+        if(rvn_ftruncate(fd, size) == -1)
         {
             rc = FAIL_TRUNCATE_FILE;
             goto error_cleanup;

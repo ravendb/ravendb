@@ -7,20 +7,20 @@
 #include "internal_win.h"
 
 PRIVATE int32_t
-_resize_file(HANDLE *handle, int64_t size, int32_t *detailed_error_code)
+_resize_file(HANDLE handle, int64_t size, int32_t *detailed_error_code)
 {
     assert(size % 4096 == 0);
 
     int32_t rc;
     LARGE_INTEGER distance_to_move;
     distance_to_move.QuadPart = size;
-    if (SetFilePointerEx(*handle, distance_to_move, NULL, FILE_BEGIN) == FALSE)
+    if (SetFilePointerEx(handle, distance_to_move, NULL, FILE_BEGIN) == FALSE)
     {
         rc = FAIL_SET_FILE_POINTER;
         goto error_cleanup;
     }
 
-    if (SetEndOfFile(*handle) == FALSE)
+    if (SetEndOfFile(handle) == FALSE)
     {
         rc = FAIL_SET_EOF;
         goto error_cleanup;
@@ -112,7 +112,7 @@ _open_file_to_read(const char *file_name, HANDLE *handle, int32_t *detailed_erro
 }
 
 PRIVATE int32_t 
-_read_file(HANDLE *handle, void* buffer, int64_t required_size, int64_t offset, int64_t* actual_size, int32_t* detailed_error_code)
+_read_file(HANDLE handle, void* buffer, int64_t required_size, int64_t offset, int64_t* actual_size, int32_t* detailed_error_code)
 {
     int32_t rc;
 
