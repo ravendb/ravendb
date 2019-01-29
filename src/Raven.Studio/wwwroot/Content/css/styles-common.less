@@ -1194,9 +1194,11 @@ input[type=file] + .form-control {
     }
 }
 
-.properties-container {
+.edit-index .properties-container, .indexes .properties-container, .databases .properties-container {
+    margin: 0 !important;
+
     @media (min-width: @screen-sm) {
-        display: grid;
+        display: grid !important;
         justify-items: stretch;
         grid-template-columns: 1fr 1fr;
     }
