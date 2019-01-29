@@ -7,20 +7,20 @@
 #include "internal_win.h"
 
 PRIVATE int32_t
-_resize_file(void *handle, int64_t size, int32_t *detailed_error_code)
+_resize_file(HANDLE *handle, int64_t size, int32_t *detailed_error_code)
 {
     assert(size % 4096 == 0);
 
     int32_t rc;
     LARGE_INTEGER distance_to_move;
     distance_to_move.QuadPart = size;
-    if (SetFilePointerEx(handle, distance_to_move, NULL, FILE_BEGIN) == FALSE)
+    if (SetFilePointerEx(*handle, distance_to_move, NULL, FILE_BEGIN) == FALSE)
     {
         rc = FAIL_SET_FILE_POINTER;
         goto error_cleanup;
     }
 
-    if (SetEndOfFile(handle) == FALSE)
+    if (SetEndOfFile(*handle) == FALSE)
     {
         rc = FAIL_SET_EOF;
         goto error_cleanup;
@@ -34,7 +34,7 @@ error_cleanup:
 }
 
 PRIVATE int32_t
-write_file_in_sections(void* handle, const char* buffer, int64_t size, int64_t offset, uint32_t section_size, int32_t* detailed_error_code)
+_write_file_in_sections(void* handle, const char* buffer, int64_t size, int64_t offset, uint32_t section_size, int32_t* detailed_error_code)
 {
     OVERLAPPED overlapped;
     memset(&overlapped, 0, sizeof(overlapped));
@@ -78,7 +78,7 @@ _write_file(void* handle, const void* buffer, int64_t size, int64_t offset, int3
     assert(size % WRITE_INCREMENT == 0);
     assert((size_t)buffer % WRITE_INCREMENT == 0);
 
-    int32_t rc = write_file_in_sections(handle, (char*)buffer, size, offset, UINT32_MAX, detailed_error_code);
+    int32_t rc = _write_file_in_sections(handle, (char*)buffer, size, offset, UINT32_MAX, detailed_error_code);
     if (rc == SUCCESS)
         return SUCCESS;
 
@@ -87,13 +87,13 @@ _write_file(void* handle, const void* buffer, int64_t size, int64_t offset, int3
 
     // this error can happen under low memory conditions, instead of trying to write the whole thing in a single shot
     // we'll write it in 4KB increments. This is likely to be much slower, but failing here will fail the entire DB
-    return write_file_in_sections(handle, (char*)buffer, size, offset, WRITE_INCREMENT, detailed_error_code);
+    return _write_file_in_sections(handle, (char*)buffer, size, offset, WRITE_INCREMENT, detailed_error_code);
 }
 
 PRIVATE int32_t
-_open_file_to_read(const char *file_name, void **handle, int32_t *detailed_error_code)
+_open_file_to_read(const char *file_name, HANDLE *handle, int32_t *detailed_error_code)
 {
-    HANDLE hfile = CreateFile(
+    *handle = CreateFile(
         file_name,
         GENERIC_READ,
         FILE_SHARE_WRITE | FILE_SHARE_READ | FILE_SHARE_DELETE,
@@ -102,18 +102,17 @@ _open_file_to_read(const char *file_name, void **handle, int32_t *detailed_error
         FILE_ATTRIBUTE_NORMAL,
         0);
 
-    if (hfile == INVALID_HANDLE_VALUE)
+    if (*handle == INVALID_HANDLE_VALUE)
     {
         *detailed_error_code = GetLastError();
         return FAIL_OPEN_FILE;
     }
 
-    *handle = hfile;
     return SUCCESS;
 }
 
 PRIVATE int32_t 
-_read_file(void* handle, void* buffer, int64_t required_size, int64_t offset, int64_t* actual_size, int32_t* detailed_error_code)
+_read_file(HANDLE *handle, void* buffer, int64_t required_size, int64_t offset, int64_t* actual_size, int32_t* detailed_error_code)
 {
     int32_t rc;
 
@@ -136,7 +135,7 @@ _read_file(void* handle, void* buffer, int64_t required_size, int64_t offset, in
             internal_required_size = (DWORD)required_size;
         }
 
-        if (ReadFile(handle, buffer, internal_required_size, &internal_actual_size, &overlapped) == FALSE)
+        if (ReadFile(*handle, buffer, internal_required_size, &internal_actual_size, &overlapped) == FALSE)
         {
             if (GetLastError() == ERROR_HANDLE_EOF)
             {

@@ -11,6 +11,8 @@
 #include <sys/mman.h>
 #include <string.h>
 #include <assert.h>
+#include <sys/stat.h>
+#include <unistd.h>
 
 #include "rvn.h"
 #include "status_codes.h"
@@ -71,12 +73,15 @@ rvn_create_and_mmap64_file(
         goto error_cleanup;
     }
 
-    int64_t sz = lseek(mfh->fd, 0, SEEK_END);
-    if (sz == -1)
+
+    struct stat st;
+    if (fstat(mfh->fd, &st) == -1)
     {
-        rc = FAIL_SEEK_FILE;
+        rc = FAIL_STAT_FILE;
         goto error_cleanup;
     }
+
+    int64_t sz = st.st_size;
 
     int64_t sys_page_size = sysconf(_SC_PAGE_SIZE);
     if (sys_page_size == -1)
@@ -94,18 +99,20 @@ rvn_create_and_mmap64_file(
         sz = _nearest_size_to_page_size(rvn_max(initial_file_size, sz), allocation_granularity);
     }
 
-    rc = _allocate_file_space(mfh->fd, sz, detailed_error_code);
-    if (rc != SUCCESS)
-        goto error_clean_With_error;
-
-    *actual_file_size = sz;
-
-    if (_sync_directory_allowed(mfh->fd) == SYNC_DIR_ALLOWED)
+    if(sz != st.st_size)
     {
-        rc = _sync_directory_for(path, detailed_error_code);
+        rc = _allocate_file_space(mfh->fd, sz, detailed_error_code);
         if (rc != SUCCESS)
             goto error_clean_With_error;
+        if (_sync_directory_allowed(mfh->fd) == SYNC_DIR_ALLOWED)
+        {
+            rc = _sync_directory_for(path, detailed_error_code);
+            if (rc != SUCCESS)
+                goto error_clean_With_error;
+        }
     }
+
+    *actual_file_size = sz;
 
     int32_t mmap_flags = 0;
     if (flags & MMOPTIONS_COPY_ON_WRITE)

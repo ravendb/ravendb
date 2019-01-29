@@ -176,8 +176,9 @@ fi
 
 echo -e "${C_L_YELLOW}FILTER:   ${C_YELLOW}${FILTERS[@]}${NC}"
 FILES=()
+FILTERS+=(src)
 for SRCPATH in "${FILTERS[@]}"; do
-	for SRCFILE in $(find ${SRCPATH} | grep "^${SRCPATH}" | grep "\.c$"); do
+	for SRCFILE in $(find ${SRCPATH} -maxdepth 1 | grep "^${SRCPATH}" | grep "\.c$"); do
 		SRCFILE_O=$(echo ${SRCFILE} | sed -e "s|\.c$|\.o|g")
 		if [ ${CLEAN} -eq 0 ]; then
 			CMD="${C_COMPILER} ${C_ADDITIONAL_FLAGS} -fPIC -Iinc -O2 -Wall -c -o ${SRCFILE_O} ${SRCFILE}"

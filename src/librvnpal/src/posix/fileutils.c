@@ -18,17 +18,6 @@
 #include "internal_posix.h"
 
 PRIVATE int64_t
-_nearest_size_to_page_size(int64_t orig_size, int64_t sys_page_size)
-{
-    int64_t mod = orig_size % sys_page_size;
-    if (mod == 0)
-    {
-        return orig_size;
-    }
-    return ((orig_size / sys_page_size) + 1) * sys_page_size;
-}
-
-PRIVATE int64_t
 _pwrite(int32_t fd, void *buffer, uint64_t count, uint64_t offset, int32_t *detailed_error_code)
 {
     uint64_t actually_written = 0;
@@ -65,7 +54,7 @@ _allocate_file_space(int32_t fd, int64_t size, int32_t *detailed_error_code)
     int32_t result;
     int32_t retries;
     for (retries = 0; retries < 1024; retries++)
-    {
+    {        
         result = _rvn_fallocate(fd, 0, size);
 
         switch (result)
@@ -104,30 +93,26 @@ _ensure_path_exists(const char* path)
 }
 
 PRIVATE int32_t 
-_open_file_to_read(const char *file_name, void **handle, int32_t *detailed_error_code)
+_open_file_to_read(const char *file_name, int32_t *fd, int32_t *detailed_error_code)
 {
-    int32_t fd = open(file_name, O_RDONLY, S_IRUSR);
-    if (fd != -1)
-    {
-        *handle = (void*)(int64_t)fd;
-        return SUCCESS;
-    }
+    *fd = open(file_name, O_RDONLY, S_IRUSR);
+    if (*fd != -1)
+        return SUCCESS;    
 
     *detailed_error_code = errno;
     return FAIL_OPEN_FILE;
 }
 
 PRIVATE int32_t
-_read_file(void *handle, void *buffer, int64_t required_size, int64_t offset, int64_t *actual_size, int32_t *detailed_error_code)
+_read_file(int32_t *fd, void *buffer, int64_t required_size, int64_t offset, int64_t *actual_size, int32_t *detailed_error_code)
 {
     int32_t rc;
-    int32_t fd = (int32_t)(int64_t)handle;
     int64_t remain_size = required_size;
     int64_t already_read;
     *actual_size = 0;
      while (remain_size > 0)
     {
-        already_read = rvn_pread(fd, buffer, remain_size, offset);
+        already_read = rvn_pread(*fd, buffer, remain_size, offset);
         if (already_read == -1)
         {
             rc = FAIL_READ_FILE;
@@ -154,15 +139,13 @@ error_cleanup:
 }
 
 PRIVATE int32_t
-_resize_file(void *handle, int64_t size, int32_t *detailed_error_code)
+_resize_file(int32_t *fd, int64_t size, int32_t *detailed_error_code)
 {
     assert(size % 4096 == 0);
 
-    int32_t fd = (int32_t)(int64_t)handle;
-
     int32_t rc;
     struct stat st;
-    if (fstat(fd, &st) == -1)
+    if (fstat(*fd, &st) == -1)
     {
         rc = FAIL_STAT_FILE;
         goto error_cleanup;
@@ -170,13 +153,13 @@ _resize_file(void *handle, int64_t size, int32_t *detailed_error_code)
 
     if(size > st.st_size)
     {
-        int32_t rc = _allocate_file_space(fd, size, detailed_error_code);
+        int32_t rc = _allocate_file_space(*fd, size, detailed_error_code);
         if(rc != SUCCESS)
             return rc;
     }
     else
     {
-        if(rvn_ftruncate(fd, size) == -1)
+        if(rvn_ftruncate(*fd, size) == -1)
         {
             rc = FAIL_TRUNCATE_FILE;
             goto error_cleanup;
