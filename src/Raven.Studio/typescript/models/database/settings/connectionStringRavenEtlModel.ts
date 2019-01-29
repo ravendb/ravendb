@@ -21,7 +21,7 @@ class connectionStringRavenEtlModel extends connectionStringModel {
     constructor(dto: Raven.Client.Documents.Operations.ETL.RavenConnectionString, isNew: boolean, tasks: { taskName: string; taskId: number }[]) {
         super(isNew, tasks);
         
-        this.update(dto);       
+        this.update(dto);
         this.initValidation(); 
         
         const urlsCount = ko.pureComputed(() => this.topologyDiscoveryUrls().length);
@@ -50,29 +50,25 @@ class connectionStringRavenEtlModel extends connectionStringModel {
         
         this.connectionStringName(dto.Name); 
         this.database(dto.Database);
-        this.topologyDiscoveryUrls(dto.TopologyDiscoveryUrls.map((x) => new discoveryUrl(x)));        
+        this.topologyDiscoveryUrls(dto.TopologyDiscoveryUrls.map((x) => new discoveryUrl(x)));
     }
 
     initValidation() {
         super.initValidation();
         
-        this.connectionStringName.extend({
-            required: true
-        });
-
         this.database.extend({
             required: true,
-            validDatabaseName: true            
+            validDatabaseName: true
         });
 
-        this.topologyDiscoveryUrls.extend({            
+        this.topologyDiscoveryUrls.extend({
             validation: [
                 {
                     validator: () => this.topologyDiscoveryUrls().length > 0,
                     message: "All least one discovery url is required"
                 }
             ]
-        });     
+        });
        
         this.validationGroup = ko.validatedObservable({
             connectionStringName: this.connectionStringName,
