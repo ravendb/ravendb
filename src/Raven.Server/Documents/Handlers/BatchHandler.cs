@@ -459,8 +459,8 @@ namespace Raven.Server.Documents.Handlers
         public class ClusterTransactionMergedCommand : TransactionMergedCommand
         {
             private readonly List<ClusterTransactionCommand.SingleClusterDatabaseCommand> _batch;
-            public Dictionary<long, DynamicJsonArray> Replies = new Dictionary<long, DynamicJsonArray>();
-            public Dictionary<long, ClusterTransactionCommand.ClusterTransactionOptions> Options = new Dictionary<long, ClusterTransactionCommand.ClusterTransactionOptions>();
+            public readonly Dictionary<long, DynamicJsonArray> Replies = new Dictionary<long, DynamicJsonArray>();
+            public readonly Dictionary<long, ClusterTransactionCommand.ClusterTransactionOptions> Options = new Dictionary<long, ClusterTransactionCommand.ClusterTransactionOptions>();
 
             public ClusterTransactionMergedCommand(DocumentDatabase database, List<ClusterTransactionCommand.SingleClusterDatabaseCommand> batch) : base(database)
             {
@@ -475,6 +475,9 @@ namespace Raven.Server.Documents.Handlers
                              (context.LastDatabaseChangeVector = DocumentsStorage.GetDatabaseChangeVector(context));
                 var dbGrpId = Database.DatabaseGroupId;
                 var current = ChangeVectorUtils.GetEtagById(global, dbGrpId);
+
+                Replies.Clear();
+                Options.Clear();
 
                 foreach (var command in _batch)
                 {
