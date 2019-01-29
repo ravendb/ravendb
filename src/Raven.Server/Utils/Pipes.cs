@@ -77,7 +77,7 @@ namespace Raven.Server.Utils
                     try
                     {
                         var cli = new RavenCli();
-                        var restart = cli.Start(ravenServer, writer, reader, false);
+                        var restart = cli.Start(ravenServer, writer, reader, false, true);
                         if (restart)
                         {
                             writer.WriteLine("Restarting Server...<DELIMETER_RESTART>");
