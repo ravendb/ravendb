@@ -29,5 +29,48 @@ namespace SlowTests.Issues
                 tx.Commit();
             }
         }
+
+
+        [Fact]
+        public void CanOverwriteBigValueInSameTx_Decrease()
+        {
+            var r = new Random();
+
+            using (var tx = Env.WriteTransaction())
+            {
+                Tree tree = tx.CreateTree("tree");
+
+                var bytes = new byte[32 * 1024];
+                r.NextBytes(bytes);
+                tree.Add("key", bytes);
+
+                bytes = new byte[16 * 1024];
+                r.NextBytes(bytes);
+                tree.Add("key", bytes);
+
+                tx.Commit();
+            }
+        }
+
+        [Fact]
+        public void CanOverwriteBigValueInSameTx_Increase()
+        {
+            var r = new Random();
+
+            using (var tx = Env.WriteTransaction())
+            {
+                Tree tree = tx.CreateTree("tree");
+
+                var bytes = new byte[32 * 1024];
+                r.NextBytes(bytes);
+                tree.Add("key", bytes);
+
+                bytes = new byte[48 * 1024];
+                r.NextBytes(bytes);
+                tree.Add("key", bytes);
+
+                tx.Commit();
+            }
+        }
     }
 }
