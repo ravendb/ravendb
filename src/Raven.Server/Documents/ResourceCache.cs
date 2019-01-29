@@ -126,7 +126,7 @@ namespace Raven.Server.Documents
             Task<TResource> current = null;
             lock (this)
             {
-                var task = Task.FromException<TResource>(new DatabaseDisabledException("The database " + databaseName + " has been unloaded and locked by " + caller)
+                var task = Task.FromException<TResource>(new DatabaseDisabledException($"The database '{databaseName}' has been unloaded and locked by {caller}")
                 {
                     Data =
                     {

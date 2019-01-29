@@ -69,8 +69,8 @@ namespace Raven.Server.Documents
                 var record = _serverStore.LoadDatabaseRecord(databaseName, out long _);
                 if (record == null)
                 {
-                    // was removed, need to make sure that it isn't loaded 
-                    DatabasesCache.RemoveLockAndReturn(databaseName, CompleteDatabaseUnloading, out var _).Dispose();
+                    // was removed, need to make sure that it isn't loaded
+                    UnloadDatabase(databaseName);
                     return;
                 }
 
@@ -82,7 +82,7 @@ namespace Raven.Server.Documents
 
                 if (record.Disabled)
                 {
-                    DatabasesCache.RemoveLockAndReturn(databaseName, CompleteDatabaseUnloading, out var _).Dispose();
+                    UnloadDatabase(databaseName);
                     return;
                 }
 
@@ -166,6 +166,18 @@ namespace Raven.Server.Documents
             }
         }
 
+        private void UnloadDatabase(string databaseName)
+        {
+            try
+            {
+                DatabasesCache.RemoveLockAndReturn(databaseName, CompleteDatabaseUnloading, out _).Dispose();
+            }
+            catch (AggregateException ae) when (nameof(DeleteDatabase).Equals(ae.InnerException.Data["Source"]))
+            {
+                // this is already in the process of being deleted, we can just exit and let the other thread handle it
+            }
+        }
+
         public void NotifyPendingClusterTransaction(string name, Task<DocumentDatabase> task)
         {
             try
@@ -196,6 +208,7 @@ namespace Raven.Server.Documents
                 DeleteDatabase(dbName, deletionInProgress, record);
                 return true;
             }
+
             return false;
         }
 
