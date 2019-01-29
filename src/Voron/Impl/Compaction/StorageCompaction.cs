@@ -8,8 +8,10 @@ using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
 using System.Linq;
+using System.Runtime.CompilerServices;
 using System.Runtime.ExceptionServices;
 using System.Threading;
+using Sparrow.Platform;
 using Sparrow.Utils;
 using Voron.Data;
 using Voron.Data.BTrees;
@@ -504,7 +506,7 @@ namespace Voron.Impl.Compaction
 
                                 // The transaction has surpassed the allowed
                                 // size before a flush
-                                if (lastSlice.Equals(tvr.Key) == false && transactionSize >= compactedEnv.Options.MaxScratchBufferSize / 2)
+                                if (lastSlice.Equals(tvr.Key) == false && transactionSize >= compactedEnv.Options.MaxScratchBufferSize / 2 || ShouldCloseTxFor32Bit(transactionSize, compactedEnv))
                                 {
                                     lastSlice = tvr.Key.Clone(txr.Allocator);
                                     break;
@@ -531,7 +533,7 @@ namespace Voron.Impl.Compaction
 
                                 // The transaction has surpassed the allowed
                                 // size before a flush
-                                if (transactionSize >= compactedEnv.Options.MaxScratchBufferSize / 2)
+                                if (transactionSize >= compactedEnv.Options.MaxScratchBufferSize / 2 || ShouldCloseTxFor32Bit(transactionSize, compactedEnv))
                                 {
                                     lastFixedIndex = fixedSizeIndex.GetValue(ref entry.Reader);
                                     break;
@@ -552,7 +554,7 @@ namespace Voron.Impl.Compaction
 
                             // The transaction has surpassed the allowed
                             // size before a flush
-                            if (transactionSize >= compactedEnv.Options.MaxScratchBufferSize / 2)
+                            if (transactionSize >= compactedEnv.Options.MaxScratchBufferSize / 2 || ShouldCloseTxFor32Bit(transactionSize, compactedEnv))
                             {
                                 schema.Key.GetSlice(txr.Allocator, ref entry.Reader, out lastSlice);
                                 break;
@@ -573,6 +575,12 @@ namespace Voron.Impl.Compaction
             }
 
             return copiedTrees;
+        }
+        
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        private static bool ShouldCloseTxFor32Bit(long transactionSize, StorageEnvironment env)
+        {
+            return (env.Options.ForceUsing32BitsPager || PlatformDetails.Is32Bits) && transactionSize > 4 * Constants.Size.Megabyte;
         }
 
         private static void ReportIfNeeded(Stopwatch sp, long globalProgress, long globalTotal, long objectProgress, 
