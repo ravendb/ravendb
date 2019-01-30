@@ -12,6 +12,7 @@ namespace Voron.Recovery
         public int InitialContextLongLivedSizeInKB { get; set; } = 16;
         public int ProgressIntervalInSec { get; set; } = 5;
         public bool DisableCopyOnWriteMode { get; set; }
+        public bool? IgnoreInvalidJournalErrors { get; set; }
         public LogMode LoggingMode { get; set; } = LogMode.Operations;
     }
 }

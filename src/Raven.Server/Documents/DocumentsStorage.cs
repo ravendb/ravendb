@@ -233,6 +233,7 @@ namespace Raven.Server.Documents
             options.DoNotConsiderMemoryLockFailureAsCatastrophicError = DocumentDatabase.Configuration.Security.DoNotConsiderMemoryLockFailureAsCatastrophicError;
             if (DocumentDatabase.Configuration.Storage.MaxScratchBufferSize.HasValue)
                 options.MaxScratchBufferSize = DocumentDatabase.Configuration.Storage.MaxScratchBufferSize.Value.GetValue(SizeUnit.Bytes);
+            options.IgnoreInvalidJournalErrors = DocumentDatabase.Configuration.Storage.IgnoreInvalidJournalErrors;
             try
             {
                 Initialize(options);
@@ -270,7 +271,7 @@ namespace Raven.Server.Documents
             try
             {
                 ContextPool = new DocumentsContextPool(DocumentDatabase);
-                Environment = LayoutUpdater.OpenEnvironment(options);
+                Environment = StorageLoader.OpenEnvironment(options, StorageEnvironmentWithType.StorageEnvironmentType.Documents);
 
                 using (var tx = Environment.WriteTransaction())
                 {

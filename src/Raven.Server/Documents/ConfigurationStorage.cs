@@ -42,6 +42,7 @@ namespace Raven.Server.Documents
             options.TimeToSyncAfterFlashInSec = (int)db.Configuration.Storage.TimeToSyncAfterFlash.AsTimeSpan.TotalSeconds;
             options.NumOfConcurrentSyncsPerPhysDrive = db.Configuration.Storage.NumberOfConcurrentSyncsPerPhysicalDrive;
             options.MasterKey = db.MasterKey?.ToArray();
+            options.IgnoreInvalidJournalErrors = db.Configuration.Storage.IgnoreInvalidJournalErrors;
             options.DoNotConsiderMemoryLockFailureAsCatastrophicError = db.Configuration.Security.DoNotConsiderMemoryLockFailureAsCatastrophicError;
             if (db.Configuration.Storage.MaxScratchBufferSize.HasValue)
                 options.MaxScratchBufferSize = db.Configuration.Storage.MaxScratchBufferSize.Value.GetValue(SizeUnit.Bytes);
@@ -50,7 +51,7 @@ namespace Raven.Server.Documents
 
             OperationsStorage = new OperationsStorage();
 
-            Environment = LayoutUpdater.OpenEnvironment(options);
+            Environment = StorageLoader.OpenEnvironment(options, StorageEnvironmentWithType.StorageEnvironmentType.Configuration);
 
             ContextPool = new TransactionContextPool(Environment);
         }

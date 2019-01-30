@@ -495,13 +495,14 @@ namespace Raven.Server.ServerWide
             options.ForceUsing32BitsPager = Configuration.Storage.ForceUsing32BitsPager;
             if (Configuration.Storage.MaxScratchBufferSize.HasValue)
                 options.MaxScratchBufferSize = Configuration.Storage.MaxScratchBufferSize.Value.GetValue(SizeUnit.Bytes);
+            options.IgnoreInvalidJournalErrors = Configuration.Storage.IgnoreInvalidJournalErrors;
             try
             {
                 StorageEnvironment.MaxConcurrentFlushes = Configuration.Storage.MaxConcurrentFlushes;
 
                 try
                 {
-                    _env = LayoutUpdater.OpenEnvironment(options);
+                    _env = StorageLoader.OpenEnvironment(options, StorageEnvironmentWithType.StorageEnvironmentType.System);
                 }
                 catch (Exception e)
                 {

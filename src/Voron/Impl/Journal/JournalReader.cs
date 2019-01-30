@@ -6,6 +6,7 @@ using System.IO;
 using Sparrow.Compression;
 using Sparrow.Utils;
 using Voron.Data;
+using Voron.Exceptions;
 using Voron.Global;
 using Voron.Impl.Paging;
 
@@ -409,14 +410,14 @@ namespace Voron.Impl.Journal
 
                         if (LastTransactionHeader != null)
                         {
-                            throw new InvalidDataException(
+                            throw new InvalidJournalException(
                                 $"Transaction has valid(!) hash with invalid transaction id {current->TransactionId}, the last valid transaction id is {LastTransactionHeader->TransactionId}." +
-                                $" Journal file {_journalPager.FileName} might be corrupted");
+                                $" Journal file {_journalPager.FileName} might be corrupted", _journalInfo);
                         }
 
-                        throw new InvalidDataException(
+                        throw new InvalidJournalException(
                             $"The last synced transaction id was {_journalInfo.LastSyncedTransactionId} (in journal: {_journalInfo.LastSyncedJournal}) but the first transaction being read in the recovery process is {current->TransactionId} (transaction has valid hash). " +
-                            $"Some journals are missing. Current journal file {_journalPager.FileName}.");
+                            $"Some journals are missing. Current journal file {_journalPager.FileName}.", _journalInfo);
                     }
                 }
 

@@ -1235,7 +1235,8 @@ namespace Raven.Server.Documents
         {
             Documents,
             Index,
-            Configuration
+            Configuration,
+            System
         }
     }
 }

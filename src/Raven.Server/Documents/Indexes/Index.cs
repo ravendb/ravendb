@@ -275,7 +275,7 @@ namespace Raven.Server.Documents.Indexes
             {
                 InitializeOptions(options, documentDatabase, name);
 
-                environment = LayoutUpdater.OpenEnvironment(options);
+                environment = StorageLoader.OpenEnvironment(options, StorageEnvironmentWithType.StorageEnvironmentType.Index);
 
                 IndexType type;
                 try
@@ -401,7 +401,7 @@ namespace Raven.Server.Documents.Indexes
                 StorageEnvironment storageEnvironment = null;
                 try
                 {
-                    storageEnvironment = LayoutUpdater.OpenEnvironment(options);
+                    storageEnvironment = StorageLoader.OpenEnvironment(options, StorageEnvironmentWithType.StorageEnvironmentType.Index);
                     Initialize(storageEnvironment, documentDatabase, configuration, performanceHints);
                 }
                 catch (Exception)
@@ -444,6 +444,7 @@ namespace Raven.Server.Documents.Indexes
             options.DoNotConsiderMemoryLockFailureAsCatastrophicError = documentDatabase.Configuration.Security.DoNotConsiderMemoryLockFailureAsCatastrophicError;
             if (documentDatabase.Configuration.Storage.MaxScratchBufferSize.HasValue)
                 options.MaxScratchBufferSize = documentDatabase.Configuration.Storage.MaxScratchBufferSize.Value.GetValue(SizeUnit.Bytes);
+            options.IgnoreInvalidJournalErrors = documentDatabase.Configuration.Storage.IgnoreInvalidJournalErrors;
 
             if (schemaUpgrader)
             {
@@ -3077,7 +3078,7 @@ namespace Raven.Server.Documents.Indexes
                 var options = CreateStorageEnvironmentOptions(DocumentDatabase, Configuration);
                 try
                 {
-                    _environment = LayoutUpdater.OpenEnvironment(options);
+                    _environment = StorageLoader.OpenEnvironment(options, StorageEnvironmentWithType.StorageEnvironmentType.Index);
                     InitializeComponentsUsingEnvironment(DocumentDatabase, _environment);
                 }
                 catch

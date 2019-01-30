@@ -50,5 +50,10 @@ namespace Raven.Server.Config.Categories
         [SizeUnit(SizeUnit.Megabytes)]
         [ConfigurationEntry("Storage.MaxScratchBufferSizeInMb", ConfigurationEntryScope.ServerWideOrPerDatabase)]
         public Size? MaxScratchBufferSize { get; set; }
+
+        [Description("EXPERT: Allows to load a database regardless journal errors that can be thrown during the recovery operation on startup. Since journals are mandatory to properly start a database, the usage of this option is dangerous")]
+        [DefaultValue(null)]
+        [ConfigurationEntry("Storage.Dangerous.IgnoreInvalidJournalErrors", ConfigurationEntryScope.ServerWideOnly)]
+        public bool? IgnoreInvalidJournalErrors { get; set; }
     }
 }
