@@ -658,7 +658,7 @@ namespace Raven.Server.Smuggler.Documents
         {
             using (var actions = _destination.Counters())
             {
-                foreach (var counterGroup in _source.GetCounterValues())
+                foreach (var counterGroup in _source.GetCounterValues(actions))
                 {
                     _token.ThrowIfCancellationRequested();
                     result.Counters.ReadCount+= counterGroup.Values.Count - 1;
