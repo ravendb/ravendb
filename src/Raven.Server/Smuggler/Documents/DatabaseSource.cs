@@ -265,7 +265,7 @@ namespace Raven.Server.Smuggler.Documents
             return _database.ServerStore.Cluster.GetCompareExchangeValuesStartsWith(_serverContext, _database.Name, CompareExchangeCommandBase.GetActualKey(_database.Name, null), 0, int.MaxValue);
         }
 
-        public IEnumerable<CounterGroupDetail> GetCounterValues()
+        public IEnumerable<CounterGroupDetail> GetCounterValues(ICounterActions actions)
         {
             Debug.Assert(_context != null);
 

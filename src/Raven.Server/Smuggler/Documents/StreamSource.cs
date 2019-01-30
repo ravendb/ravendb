@@ -225,9 +225,9 @@ namespace Raven.Server.Smuggler.Documents
             return InternalGetCompareExchangeValues();
         }
 
-        public IEnumerable<CounterGroupDetail> GetCounterValues()
+        public IEnumerable<CounterGroupDetail> GetCounterValues(ICounterActions actions)
         {
-            return InternalGetCounterValues();
+            return InternalGetCounterValues(actions);
         }
 
         public IEnumerable<CounterDetail> GetLegacyCounterValues()
@@ -297,31 +297,31 @@ namespace Raven.Server.Smuggler.Documents
             }
         }
         
-        private IEnumerable<CounterGroupDetail> InternalGetCounterValues()
+        private IEnumerable<CounterGroupDetail> InternalGetCounterValues(ICounterActions actions)
         {
-            foreach (var reader in ReadArray())
+            foreach (var reader in ReadArray(actions))
             {
-                using (reader)
+                if (reader.TryGet(nameof(CounterItem.Batch.CounterKey), out LazyStringValue counterKey) == false ||
+                    reader.TryGet(nameof(CounterItem.Batch.Values), out BlittableJsonReaderObject values) == false ||
+                    reader.TryGet(nameof(CounterItem.ChangeVector), out LazyStringValue cv) == false)
                 {
-                    if (reader.TryGet(nameof(CounterItem.Batch.CounterKey), out LazyStringValue counterKey) == false ||                        
-                        reader.TryGet(nameof(CounterItem.Batch.Values), out BlittableJsonReaderObject values) == false ||
-                        reader.TryGet(nameof(CounterItem.ChangeVector), out LazyStringValue cv) == false)
-                    {
-                        _result.Counters.ErroredCount++;
-                        _result.AddWarning("Could not read counter entry.");
-                        continue;
-                    }
+                    _result.Counters.ErroredCount++;
+                    _result.AddWarning("Could not read counter entry.");
 
-                    values = ConvertToBlob(values);
-
-                    yield return new CounterGroupDetail
-                    {
-                        CounterKey = counterKey,
-                        ChangeVector = cv,
-                        Values = values
-                    };
+                    continue;
                 }
-            }
+
+                values = ConvertToBlob(values);
+
+                yield return new CounterGroupDetail
+                {
+                    CounterKey = counterKey,
+                    ChangeVector = cv,
+                    Values = values
+                };
+                
+                actions.RegisterForDisposal(reader);
+            }           
         }
 
         private unsafe BlittableJsonReaderObject ConvertToBlob(BlittableJsonReaderObject values)
@@ -608,7 +608,10 @@ namespace Raven.Server.Smuggler.Documents
             if (_state.CurrentTokenType != JsonParserToken.StartArray)
                 UnmanagedJsonParserHelper.ThrowInvalidJson("Expected start array, got " + _state.CurrentTokenType, _peepingTomStream, _parser);
 
-            var builder = CreateBuilder(_context);
+
+            var context = actions != null ? actions.GetContextForNewDocument() : _context;
+            var builder = CreateBuilder(context);
+
             try
             {
                 while (true)
@@ -618,19 +621,10 @@ namespace Raven.Server.Smuggler.Documents
 
                     if (_state.CurrentTokenType == JsonParserToken.EndArray)
                         break;
-                    if (actions != null)
-                    {
-                        var oldContext = _context;
-                        var context = actions.GetContextForNewDocument();
-                        if (_context != oldContext)
-                        {
-                            builder.Dispose();
-                            builder = CreateBuilder(context);
-                        }
-                    }
+
                     builder.Renew("import/object", BlittableJsonDocumentBuilder.UsageMode.ToDisk);
 
-                    _context.CachedProperties.NewDocument();
+                    context.CachedProperties.NewDocument();
 
                     ReadObject(builder);
 
