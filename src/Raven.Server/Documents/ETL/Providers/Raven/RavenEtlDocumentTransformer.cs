@@ -381,14 +381,7 @@ namespace Raven.Server.Documents.ETL.Providers.Raven
             else
             {
                 delete = false;
-                var blob = prop.Value as BlittableJsonReaderObject.RawBlob;
-
-                Debug.Assert(blob != null);
-
-                for (var index = 0; index < blob.Length / CountersStorage.SizeOfCounterValues; index++)
-                {
-                    value += CountersStorage.GetPartialValue(index, blob);
-                }
+                value = CountersStorage.InternalGetCounterValue(prop.Value as BlittableJsonReaderObject.RawBlob);
 
                 if (function != null)
                 {
