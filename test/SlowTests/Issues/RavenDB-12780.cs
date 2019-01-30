@@ -77,6 +77,90 @@ namespace SlowTests.Issues
             }
         }
 
+        [Fact]
+        public void Will_throw_when_null_passed_in_Id_extension_method()
+        {
+            using (var store = GetDocumentStore())
+            {
+                store.Maintenance.Send(new PutIndexesOperation(new IndexDefinition
+                {
+                    Maps = { @"from doc in docs.Users
+                        select new{
+                            Id = Id((string)null)
+                        }" },
+                    Name = "Index"
+                }));
+
+                using (var session = store.OpenSession())
+                {
+                    session.Store(new User());
+                    session.SaveChanges();
+                }
+
+                WaitForIndexing(store);
+
+                var stats = store.Maintenance.Send(new GetIndexErrorsOperation(new[] { "Index" }));
+                Assert.NotEmpty(stats[0].Errors);
+                Assert.True(stats[0].Errors[0].Error.Contains("Id may only be called with a document"));
+            }
+        }
+
+        [Fact]
+        public void Will_throw_when_null_passed_in_MetadataFor_extension_method()
+        {
+            using (var store = GetDocumentStore())
+            {
+                store.Maintenance.Send(new PutIndexesOperation(new IndexDefinition
+                {
+                    Maps = { @"from doc in docs.Users
+                        select new{
+                            MetadataFor = MetadataFor((string)null)
+                        }" },
+                    Name = "Index"
+                }));
+
+                using (var session = store.OpenSession())
+                {
+                    session.Store(new User());
+                    session.SaveChanges();
+                }
+
+                WaitForIndexing(store);
+
+                var stats = store.Maintenance.Send(new GetIndexErrorsOperation(new[] { "Index" }));
+                Assert.NotEmpty(stats[0].Errors);
+                Assert.True(stats[0].Errors[0].Error.Contains("MetadataFor may only be called with a document"));
+            }
+        }
+
+        [Fact]
+        public void Will_throw_when_null_passed_in_AsJson_extension_method()
+        {
+            using (var store = GetDocumentStore())
+            {
+                store.Maintenance.Send(new PutIndexesOperation(new IndexDefinition
+                {
+                    Maps = { @"from doc in docs.Users
+                        select new{
+                            AsJson = AsJson((string)null)
+                        }" },
+                    Name = "Index"
+                }));
+
+                using (var session = store.OpenSession())
+                {
+                    session.Store(new User());
+                    session.SaveChanges();
+                }
+
+                WaitForIndexing(store);
+
+                var stats = store.Maintenance.Send(new GetIndexErrorsOperation(new[] { "Index" }));
+                Assert.NotEmpty(stats[0].Errors);
+                Assert.True(stats[0].Errors[0].Error.Contains("AsJson may only be called with a document"));
+            }
+        }
+
         private class MetadataIndex : AbstractIndexCreationTask<User>
         {
             public MetadataIndex()
