@@ -184,8 +184,8 @@ namespace Raven.Server
                                     "are mandatory to properly load the storage. " +
                                     "This switch is meant to be use only for recovery purposes. Please make sure that you won't use it on regular basis. ";
 
-                                if (Logger.IsInfoEnabled)
-                                    Logger.Info(message);
+                                if (Logger.IsOperationsEnabled)
+                                    Logger.Operations(message);
 
                                 prevColor = Console.ForegroundColor;
                                 Console.ForegroundColor = ConsoleColor.Red;
