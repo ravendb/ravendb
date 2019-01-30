@@ -35,6 +35,13 @@ namespace Raven.Server.ServerWide.Commands
                         record.ExternalReplications.Remove(replicationTask);
                     }
                     break;
+                case OngoingTaskType.PullReplicationAsHub:
+                    var hubDefinition = record.HubPullReplications.Find(x => x.TaskId == TaskId);
+                    if (hubDefinition != null)
+                    {
+                        record.HubPullReplications.Remove(hubDefinition);
+                    }
+                    break;
                 case OngoingTaskType.PullReplicationAsSink:
                     var pullTask = record.SinkPullReplications?.Find(x => x.TaskId == TaskId);
                     if (pullTask != null)
