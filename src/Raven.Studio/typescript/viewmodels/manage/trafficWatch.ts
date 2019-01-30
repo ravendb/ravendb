@@ -202,7 +202,7 @@ class trafficWatch extends viewModelBase {
                     extraClass: rowHighlightRules,
                     sortable: "string"
                 }),
-                new textColumn<Raven.Client.Documents.Changes.TrafficWatchChange>(grid, x => x.CustomInfo, "CustomInfo", "8%", {
+                new textColumn<Raven.Client.Documents.Changes.TrafficWatchChange>(grid, x => x.CustomInfo, "Custom Info", "8%", {
                     extraClass: rowHighlightRules
                 }),
                 new textColumn<Raven.Client.Documents.Changes.TrafficWatchChange>(grid, x => x.RequestUri, "URI", "35%", {
@@ -219,7 +219,7 @@ class trafficWatch extends viewModelBase {
                 onValue(item.RequestUri);
             } else if (column.header === "Timestamp") {
                 onValue(moment.utc(item.TimeStamp), item.TimeStamp); 
-            } else if (column.header === "CustomInfo") {
+            } else if (column.header === "Custom Info") {
                 onValue(item.CustomInfo);
             }
         });
