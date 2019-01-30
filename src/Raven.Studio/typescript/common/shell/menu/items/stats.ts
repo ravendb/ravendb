@@ -38,7 +38,7 @@ function getStatsMenuItem(appUrls: computedAppUrls) {
             moduleId: "virtual",
             title: 'Running queries',
             nav: true,
-            css: 'icon-running-queries',
+            css: 'icon-stats-running-queries',
             dynamicHash: appUrls.runningQueries
         }),
         new leafMenuItem({

@@ -100,7 +100,7 @@ function getManageServerMenuItem() {
             moduleId: 'viewmodels/manage/runningQueries',
             title: 'Running Queries',
             nav: true,
-            css: 'icon-running-queries',
+            css: 'icon-manage-server-running-queries',
             dynamicHash: appUrl.forRunningQueries
         }),
         new leafMenuItem({

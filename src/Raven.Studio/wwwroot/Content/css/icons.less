@@ -66,7 +66,6 @@
 
 [class*=" icon-addon-"],
 [class^="icon-addon-"] {
-    
 }
 
 .icon-lg {
@@ -76,7 +75,7 @@
 .icon-xl {
     display: block;
     text-align: center;
-    padding-top:40px;
+    padding-top: 40px;
     padding-bottom: 40px;
 
     &:before {
@@ -99,13 +98,14 @@
     .icon-@{name}::before {
         content: @glyph;
     }
+
     .icon-@{name}::after {
         content: @addon-glyph;
     }
 }
 
 .make-icon-color (@name, @color-before, @color-after) {
-	.icon-@{name}::before {
+    .icon-@{name}::before {
         color: @color-before;
     }
 
@@ -370,8 +370,10 @@
 .make-icon(help, "\e92b");
 .make-icon(indent, "\e92c");
 .make-icon(index, "\e92d");
-.make-icon(info, "\e92e");.make-icon(icon-details, "\e92e");
-.make-icon(link, "\e92f");.make-icon(list, "\e930");
+.make-icon(info, "\e92e");
+.make-icon(icon-details, "\e92e");
+.make-icon(link, "\e92f");
+.make-icon(list, "\e930");
 .make-icon(menu, "\e931");
 .make-icon(menu-collapse, "\e932");
 .make-icon(menu-expand, "\e933");
@@ -413,6 +415,8 @@
 .make-icon(pull-replication-hub, "\ea1c");
 .make-icon(revert-revisions, "\ea1d");
 .make-icon(running-queries, "\ea1f");
+.make-icon(stats-running-queries, "\ea1f");
+.make-icon(manage-server-running-queries, "\ea1f");
 
 /* ONLY MENU ICON COLORS */
 #main-menu {
@@ -450,15 +454,17 @@
     .make-icon-color(database-studio-configuration, @color-2, @color-2);
     .make-icon-color(revisions, @color-2-1, @color-2-1);
     .make-icon-color(document-expiration, @color-2-2, @color-2-2);
-    .make-icon-color(manage-dbgroup, @color-2-3, @color-2-3);
-    .make-icon-color(import-database, @color-3, @color-3);
-    .make-icon-color(export-database, @color-3-1, @color-3-1);
-    .make-icon-color(create-sample-data, @color-3-2, @color-3-2);
-    .make-icon-color(manage-ongoing-tasks, @color-3-3, @color-3-3);
+    .make-icon-color(custom-sorters, @color-2-3, @color-2-3);
+    .make-icon-color(manage-dbgroup, @color-3, @color-3);
+    .make-icon-color(import-database, @color-3-1, @color-3-1);
+    .make-icon-color(export-database, @color-3-2, @color-3-2);
+    .make-icon-color(create-sample-data, @color-3-3, @color-3-3);
+    .make-icon-color(manage-ongoing-tasks, @color-4, @color-4);
     //Stats section
     .make-icon-color(io-test, @color-2-1, @color-2-1);
     .make-icon-color(storage, @color-2-2, @color-2-2);
-    .make-icon-color(replication-stats, @color-2-3, @color-2-3);
+    .make-icon-color(stats-running-queries, @color-2-3, @color-2-3);
+    .make-icon-color(replication-stats, @color-3, @color-3);
     //Manage server section
     .make-icon-color(cluster, @color-3-2, @color-3-2);
     .make-icon-color(client-configuration, @color-3-3, @color-3-3);
@@ -468,7 +474,8 @@
     .make-icon-color(admin-logs, @color-4-3, @color-4-3);
     .make-icon-color(traffic-watch, @color-5, @color-5);
     .make-icon-color(gather-debug-information, @color-5-1, @color-5-1);
-    .make-icon-color(debug-advanced, @color-5-2, @color-5-2);
+    .make-icon-color(manage-server-running-queries, @color-5-2, @color-5-2);
+    .make-icon-color(debug-advanced, @color-5-3, @color-5-3);
     //other
     .make-icon-color(system, #3c6fb4, #3c6fb4);
     .make-icon-color(plus, #b0d47d, #b0d47d);
