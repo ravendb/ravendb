@@ -183,41 +183,54 @@ namespace Voron.Impl.Journal
                 addToInitLog?.Invoke($"Recovering journal {journalNumber} (upto last journal {logInfo.CurrentJournal})");
                 var initialSize = _env.Options.InitialFileSize ?? _env.Options.InitialLogFileSize;
                 var journalRecoveryName = StorageEnvironmentOptions.JournalRecoveryName(journalNumber);
-                using (var recoveryPager = _env.Options.CreateTemporaryBufferPager(journalRecoveryName, initialSize))
-                using (var pager = _env.Options.OpenJournalPager(journalNumber, logInfo))
+                try
                 {
-                    RecoverCurrentJournalSize(pager);
-
-                    var transactionHeader = txHeader->TransactionId == 0 ? null : txHeader;
-                    using (var journalReader = new JournalReader(pager, _dataPager, recoveryPager, modifiedPages, logInfo, transactionHeader))
+                    using (var recoveryPager = _env.Options.CreateTemporaryBufferPager(journalRecoveryName, initialSize))
+                    using (var pager = _env.Options.OpenJournalPager(journalNumber, logInfo))
                     {
-                        var transactionHeaders = journalReader.RecoverAndValidate(_env.Options);
+                        RecoverCurrentJournalSize(pager);
 
-                        var lastReadHeaderPtr = journalReader.LastTransactionHeader;
-
-                        if (lastReadHeaderPtr != null)
+                        var transactionHeader = txHeader->TransactionId == 0 ? null : txHeader;
+                        using (var journalReader = new JournalReader(pager, _dataPager, recoveryPager, modifiedPages, logInfo, transactionHeader))
                         {
-                            *txHeader = *lastReadHeaderPtr;
-                            lastSyncedTxId = txHeader->TransactionId;
-                            lastSyncJournal = journalNumber;
-                        }
+                            var transactionHeaders = journalReader.RecoverAndValidate(_env.Options);
 
-                        pager.Dispose(); // need to close it before we open the journal writer
+                            var lastReadHeaderPtr = journalReader.LastTransactionHeader;
 
-                        var jrnlWriter = _env.Options.CreateJournalWriter(journalNumber,
-                               pager.NumberOfAllocatedPages * Constants.Storage.PageSize);
-                        var jrnlFile = new JournalFile(_env, jrnlWriter, journalNumber);
-                        jrnlFile.InitFrom(journalReader, transactionHeaders);
-                        jrnlFile.AddRef(); // creator reference - write ahead log
+                            if (lastReadHeaderPtr != null)
+                            {
+                                *txHeader = *lastReadHeaderPtr;
+                                lastSyncedTxId = txHeader->TransactionId;
+                                lastSyncJournal = journalNumber;
+                            }
 
-                        journalFiles.Add(jrnlFile);
+                            pager.Dispose(); // need to close it before we open the journal writer
 
-                        if (journalReader.RequireHeaderUpdate) //this should prevent further loading of transactions
-                        {
-                            requireHeaderUpdate = true;
-                            break;
+                            var jrnlWriter = _env.Options.CreateJournalWriter(journalNumber,
+                                pager.NumberOfAllocatedPages * Constants.Storage.PageSize);
+                            var jrnlFile = new JournalFile(_env, jrnlWriter, journalNumber);
+                            jrnlFile.InitFrom(journalReader, transactionHeaders);
+                            jrnlFile.AddRef(); // creator reference - write ahead log
+
+                            journalFiles.Add(jrnlFile);
+
+                            if (journalReader.RequireHeaderUpdate) //this should prevent further loading of transactions
+                            {
+                                requireHeaderUpdate = true;
+                                break;
+                            }
                         }
                     }
+                }
+                catch (InvalidJournalException)
+                {
+                    if (_env.Options.IgnoreInvalidJournalErrors == true)
+                    {
+                        addToInitLog?.Invoke($"Encountered invalid journal {journalNumber} @ {_env.Options}. Skipping this journal and keep going the recovery operation because '{nameof(_env.Options.IgnoreInvalidJournalErrors)}' options is set");
+                        continue;
+                    }
+                    
+                    throw;
                 }
             }
 

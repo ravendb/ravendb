@@ -553,6 +553,7 @@ namespace Raven.Server.ServerWide
             options.PrefetchSegmentSize = Configuration.Storage.PrefetchBatchSize.GetValue(SizeUnit.Bytes);
             options.PrefetchResetThreshold = Configuration.Storage.PrefetchResetThreshold.GetValue(SizeUnit.Bytes);
             options.SyncJournalsCountThreshold = Configuration.Storage.SyncJournalsCountThreshold;
+            options.IgnoreInvalidJournalErrors = Configuration.Storage.IgnoreInvalidJournalErrors;
 
             DirectoryExecUtils.SubscribeToOnDirectoryInitializeExec(options, Configuration.Storage, nameof(DirectoryExecUtils.EnvironmentType.System), DirectoryExecUtils.EnvironmentType.System, Logger);
 
@@ -562,7 +563,7 @@ namespace Raven.Server.ServerWide
 
                 try
                 {
-                    _env = LayoutUpdater.OpenEnvironment(options);
+                    _env = StorageLoader.OpenEnvironment(options, StorageEnvironmentWithType.StorageEnvironmentType.System);
                 }
                 catch (Exception e)
                 {
