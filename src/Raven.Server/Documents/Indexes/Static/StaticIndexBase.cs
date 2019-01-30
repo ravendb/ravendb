@@ -57,8 +57,16 @@ namespace Raven.Server.Documents.Indexes.Static
 
         public dynamic Id(dynamic doc)
         {
-            var json = (DynamicBlittableJson)doc;
-            return json == null ? DynamicNullObject.Null : json.GetId();
+            if (doc is DynamicBlittableJson json)
+                return json.GetId();
+
+            if (doc is DynamicNullObject)
+                return doc;
+
+            ThrowInvalidDocType(doc, nameof(Id));
+
+            // never hit
+            return null;
         }
 
         public IEnumerable<dynamic> Recurse(object item, Func<dynamic, dynamic> func)
@@ -216,28 +224,42 @@ namespace Raven.Server.Documents.Indexes.Static
 
         public dynamic MetadataFor(dynamic doc)
         {
-            var json = (DynamicBlittableJson)doc;
-            if (json == null)
-                return DynamicNullObject.Null;
+            if (doc is DynamicBlittableJson json)
+            {
+                json.EnsureMetadata();
+                return doc[Constants.Documents.Metadata.Key];
+            }
 
-            json.EnsureMetadata();
-            return doc[Constants.Documents.Metadata.Key];
+            if (doc is DynamicNullObject)
+                return doc;
+
+            ThrowInvalidDocType(doc, nameof(MetadataFor));
+
+            // never hit
+            return null;
         }
 
         public dynamic AsJson(dynamic doc)
         {
-            var json = (DynamicBlittableJson)doc;
-            if (json == null)
-                return DynamicNullObject.Null;
+            if (doc is DynamicBlittableJson json)
+            {
+                json.EnsureMetadata();
+                return doc[Constants.Documents.Metadata.Key];
+            }
 
-            json.EnsureMetadata();
-            return json;
+            if (doc is DynamicNullObject)
+                return doc;
+
+            ThrowInvalidDocType(doc, nameof(AsJson));
+
+            // never hit
+            return null;
         }
 
         public dynamic AttachmentsFor(dynamic doc)
         {
             var metadata = MetadataFor(doc);
-            var attachments = metadata == DynamicNullObject.Null
+            var attachments = metadata is DynamicNullObject
                 ? null : metadata[Constants.Documents.Metadata.Attachments];
 
             return attachments != null
@@ -248,12 +270,19 @@ namespace Raven.Server.Documents.Indexes.Static
         public dynamic CounterNamesFor(dynamic doc)
         {
             var metadata = MetadataFor(doc);
-            var counters = metadata == DynamicNullObject.Null 
+            var counters = metadata is DynamicNullObject 
                 ? null : metadata[Constants.Documents.Metadata.Counters];
 
             return counters != null
                 ? counters
                 : new DynamicArray(Enumerable.Empty<object>());
+        }
+
+        private static void ThrowInvalidDocType(dynamic doc, string funcName)
+        {
+            throw new InvalidOperationException(
+                $"{funcName} may only be called with a document, " +
+                $"but was called with a parameter of type {doc.GetType().FullName}: {doc}");
         }
 
         private struct StaticIndexLuceneDocumentWrapper : ILuceneDocumentWrapper

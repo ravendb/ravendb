@@ -19,7 +19,7 @@ namespace SlowTests.Issues
                     Maps = { @"from doc in docs.Users
                         select new{
                             Id1 = Id(LoadDocument(""users/2"", ""users"")),
-                            Id2 = Id((string)null).Name
+                            Id2 = Id(doc.AddressId).Name
                         }" },
                     Name = "IdIndex"
                 }));
@@ -85,11 +85,11 @@ namespace SlowTests.Issues
                     select new
                     {
                         Metadata1 = MetadataFor(LoadDocument<Address>(user.AddressId)).Value<string>("Name"),
-                        Metadata2 = MetadataFor((string)null).Value<string>("Name"),
+                        Metadata2 = MetadataFor(user.AddressId).Value<string>("Name"),
                         Attachments1 = AttachmentsFor(LoadDocument<Address>(user.AddressId)).Count(),
-                        Attachments2 = AttachmentsFor((string)null).Count(),
+                        Attachments2 = AttachmentsFor(user.AddressId).Count(),
                         Counters1 = CounterNamesFor(LoadDocument<Address>(user.AddressId)),
-                        Counters2 = CounterNamesFor((string)null)
+                        Counters2 = CounterNamesFor(user.AddressId)
                     };
             }
         }
@@ -102,7 +102,7 @@ namespace SlowTests.Issues
                     select new
                     {
                         AsJson1 = AsJson(LoadDocument<Address>(user.AddressId)).Value<string>("Name"),
-                        AsJson2 = AsJson((string)null).Value<string>("Name"),
+                        AsJson2 = AsJson(user.AddressId).Value<string>("Name"),
                     };
             }
         }
