@@ -73,8 +73,8 @@ namespace Raven.Server.Storage.Layout
                                     "You can load a database by starting the server in dangerous mode temporary so it will ignore invalid journals on startup but you need to " +
                                     $"export and import database immediately afterwards: {Environment.NewLine}" +
                                     $"{ravenServer} --{RavenConfiguration.GetKey(x => x.Storage.IgnoreInvalidJournalErrors)}=true{Environment.NewLine}" +
-                                    "If you won't be able to export the database successfully you need to use Voron.Recovery tool";
-                                
+                                    "This switch is meant to be use only for recovery purposes. Please make sure that you won't use it after you manage to recover your data. " +
+                                    "If you won't be able to export the database successfully you need to use Voron.Recovery tool. ";
                                 break;
                             case StorageEnvironmentWithType.StorageEnvironmentType.Configuration:
                                 message += $"You can delete the configuration storage folder at '{basePath.FullPath}' and restart the server. It will be recreated on database startup.";
@@ -82,6 +82,7 @@ namespace Raven.Server.Storage.Layout
                             case StorageEnvironmentWithType.StorageEnvironmentType.System:
                                 message += "You can start the server in dangerous mode temporary so it will ignore invalid journals on startup:" +
                                            $"{ravenServer} --{RavenConfiguration.GetKey(x => x.Storage.IgnoreInvalidJournalErrors)}=true{Environment.NewLine}" +
+                                           "This switch is meant to be use only for recovery purposes. Please make sure that you won't use it after you manage to recover your data. " +
                                            $"Eventually you should delete the storage configuration at '{basePath.FullPath}' and create your databases again with the usage of existing data.";
                                 break;
                             default:
