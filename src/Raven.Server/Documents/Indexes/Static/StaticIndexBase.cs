@@ -282,7 +282,7 @@ namespace Raven.Server.Documents.Indexes.Static
         {
             throw new InvalidOperationException(
                 $"{funcName} may only be called with a document, " +
-                $"but was called with a parameter of type {doc.GetType().FullName}: {doc}");
+                $"but was called with a parameter of type {doc?.GetType().FullName}: {doc}");
         }
 
         private struct StaticIndexLuceneDocumentWrapper : ILuceneDocumentWrapper
