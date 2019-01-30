@@ -161,7 +161,7 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene
                 foreach (var property in _index.OutputReduceToCollectionPropertyAccessor.GetPropertiesInOrder(reduceObject))
                 {
                     var value = property.Value;
-                    djv[property.Key] = TypeConverter.ToBlittableSupportedType(value);
+                    djv[property.Key] = TypeConverter.ToBlittableSupportedType(value, context: _indexContext);
                 }
                 djv[Constants.Documents.Metadata.Key] = new DynamicJsonValue
                 {
