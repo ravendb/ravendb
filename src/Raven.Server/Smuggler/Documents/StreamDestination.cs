@@ -420,7 +420,7 @@ namespace Raven.Server.Smuggler.Documents
                 Writer.WriteStartObject();
 
                 Writer.WritePropertyName(nameof(CounterItem.Batch.CounterKey));
-                Writer.WriteString(counterDetail.CounterKey);
+                Writer.WriteString(counterDetail.CounterKey, true);
                 Writer.WriteComma();
 
                 Writer.WritePropertyName(nameof(CounterItem.ChangeVector));
@@ -440,9 +440,25 @@ namespace Raven.Server.Smuggler.Documents
                                                 "it is only supported when writing to Database destination. Shouldn't happen.");
             }
 
+            public void RegisterForDisposal(IDisposable data)
+            {
+                throw new NotSupportedException("RegisterForDisposal is never used in StreamCounterActions. Shouldn't happen.");
+            }
+
             public StreamCounterActions(BlittableJsonTextWriter writer, DocumentsOperationContext context, string propertyName) : base(writer, propertyName)
             {
                 _context = context;
+            }
+
+            public DocumentsOperationContext GetContextForNewDocument()
+            {
+                _context.CachedProperties.NewDocument();
+                return _context;
+            }
+
+            public Stream GetTempStream()
+            {
+                throw new NotSupportedException("GetTempStream is never used in StreamCounterActions. Shouldn't happen");
             }
         }
 

@@ -739,6 +739,11 @@ namespace Raven.Server.Smuggler.Documents
                 HandleBatchOfCountersIfNecessary();
             }
 
+            public void RegisterForDisposal(IDisposable data)
+            {
+                _cmd.RegisterForDisposal(data);
+            }
+
             public void Dispose()
             {
                 FinishBatchOfCounters();
@@ -759,7 +764,8 @@ namespace Raven.Server.Smuggler.Documents
 
                 if (prevCommand != null)
                 {
-                    AsyncHelpers.RunSync(() => prevCommandTask);
+                    using (prevCommand)
+                        AsyncHelpers.RunSync(() => prevCommandTask);
                 }
 
                 _cmd = new CountersHandler.SmugglerCounterBatchCommand(_database);
@@ -772,16 +778,30 @@ namespace Raven.Server.Smuggler.Documents
             {
                 if (_prevCommand != null)
                 {
-                    AsyncHelpers.RunSync(() => _prevCommandTask);
+                    using (_prevCommand)
+                        AsyncHelpers.RunSync(() => _prevCommandTask);
+
                     _prevCommand = null;
                 }
 
                 if (_docCount > 0)
                 {
-                    AsyncHelpers.RunSync(() => _database.TxMerger.Enqueue(_cmd));
+                    using (_cmd)
+                        AsyncHelpers.RunSync(() => _database.TxMerger.Enqueue(_cmd));
                 }
 
                 _cmd = null;
+            }
+
+            public DocumentsOperationContext GetContextForNewDocument()
+            {
+                _cmd.Context.CachedProperties.NewDocument();
+                return _cmd.Context;
+            }
+
+            public Stream GetTempStream()
+            {
+                throw new NotSupportedException("GetTempStream is never used in CounterActions. Shouldn't happen");
             }
         }
     }

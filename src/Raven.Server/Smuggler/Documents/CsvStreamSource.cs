@@ -352,7 +352,7 @@ namespace Raven.Server.Smuggler.Documents
             return Enumerable.Empty<(string key, long index, BlittableJsonReaderObject value)>();
         }
 
-        public IEnumerable<CounterGroupDetail> GetCounterValues()
+        public IEnumerable<CounterGroupDetail> GetCounterValues(ICounterActions actions)
         {
             return Enumerable.Empty<CounterGroupDetail>();
         }

@@ -239,21 +239,33 @@ namespace Raven.Server.Documents.Handlers
             }
         }
 
-        public class SmugglerCounterBatchCommand : TransactionOperationsMerger.MergedTransactionCommand
+        public class SmugglerCounterBatchCommand : TransactionOperationsMerger.MergedTransactionCommand, IDisposable
         {
             private readonly DocumentDatabase _database;
-            private readonly List<CounterGroupDetail> _list;
+            private readonly List<CounterGroupDetail> _counterGroups;
             private Dictionary<string, Dictionary<string, List<(string ChangeVector, long Value)>>> _legacyDictionary;
+
+            private readonly DocumentsOperationContext _context;
+
+            private IDisposable _resetContext;
+            private bool _isDisposed;
+
+            private readonly List<IDisposable> _toDispose;
+
+            public DocumentsOperationContext Context => _context;
 
             public SmugglerCounterBatchCommand(DocumentDatabase database)
             {
                 _database = database;
-                _list = new List<CounterGroupDetail>();
+                _counterGroups = new List<CounterGroupDetail>();
+
+                _toDispose = new List<IDisposable>();
+                _resetContext = _database.DocumentsStorage.ContextPool.AllocateOperationContext(out _context);
             }
 
             public void Add(CounterGroupDetail cgd)
             {
-                _list.Add(cgd);
+                _counterGroups.Add(cgd);
             }
 
             public void AddLegacy(string id, CounterDetail counterDetail, out bool isNew)
@@ -292,6 +304,11 @@ namespace Raven.Server.Documents.Handlers
 
             }
 
+            public void RegisterForDisposal(IDisposable data)
+            {
+                _toDispose.Add(data);
+            }
+
             protected override int ExecuteCmd(DocumentsOperationContext context)
             {
                 var countersToAdd = new SortedSet<string>(StringComparer.OrdinalIgnoreCase);
@@ -316,12 +333,12 @@ namespace Raven.Server.Documents.Handlers
                     return _legacyDictionary.Count;
                 }
 
-                foreach (var cgd in _list)
+                foreach (var cgd in _counterGroups)
                 {
                     PutCounters(context, cgd, countersToAdd);
                 }
 
-                return _list.Count;
+                return _counterGroups.Count;
             }
 
             private void PutCounters(DocumentsOperationContext context, CounterGroupDetail counterGroupDetail, SortedSet<string> countersToAdd)
@@ -438,6 +455,32 @@ namespace Raven.Server.Documents.Handlers
                         scope.Dispose();
                     }
                 }
+            }
+
+            public void Dispose()
+            {
+                if (_isDisposed)
+                    return;
+
+                _isDisposed = true;
+
+                foreach (var cgd in _counterGroups)
+                {
+                    cgd.Values?.Dispose();
+                }
+                _counterGroups.Clear();
+
+                foreach (var disposable in _toDispose)
+                {
+                    disposable.Dispose();
+                }
+                _toDispose.Clear();
+
+                _legacyDictionary?.Clear();
+
+                _resetContext?.Dispose();
+                _resetContext = null;
+
             }
 
             public override TransactionOperationsMerger.IReplayableCommandDto<TransactionOperationsMerger.MergedTransactionCommand> ToDto(JsonOperationContext context)

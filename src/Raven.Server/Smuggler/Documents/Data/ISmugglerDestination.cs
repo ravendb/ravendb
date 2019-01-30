@@ -46,10 +46,11 @@ namespace Raven.Server.Smuggler.Documents.Data
         void WriteIndex(IndexDefinition indexDefinition);
     }
 
-    public interface ICounterActions : IDisposable
+    public interface ICounterActions : IDisposable, INewDocumentActions
     {
         void WriteCounter(CounterGroupDetail counterDetail);
         void WriteLegacyCounter(CounterDetail counterDetail);
+        void RegisterForDisposal(IDisposable data);
     }
 
     public interface IKeyValueActions<in T> : IDisposable
