@@ -609,9 +609,16 @@ class query extends viewModelBase {
             // we declare this variable here, if any result returns skippedResults <> 0 we enter infinite scroll mode 
             let totalSkippedResults = 0;
             
-            this.rawJsonUrl(appUrl.forDatabaseQuery(database) + queryCmd.getUrl());
-            this.csvUrl(queryCmd.getCsvUrl());
-
+            try {
+                this.rawJsonUrl(appUrl.forDatabaseQuery(database) + queryCmd.getUrl());
+                this.csvUrl(queryCmd.getCsvUrl());    
+            } catch (error) {
+                // it may throw when unable to compute query parameters, etc.
+                messagePublisher.reportError("Unable to run the query", error.message, null, false);
+                this.isLoading(false);
+                return;
+            }
+            
             const resultsFetcher = (skip: number, take: number) => {
                 const command = new queryCommand(database, skip + totalSkippedResults, take + 1, this.criteria(), !this.cacheEnabled());
                 
