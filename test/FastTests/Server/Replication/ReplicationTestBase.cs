@@ -34,7 +34,7 @@ namespace FastTests.Server.Replication
                 s.Store(new { }, id);
                 s.SaveChanges();
             }
-            WaitForDocumentToReplicate<object>(dst, id, 15 * 1000);
+            Assert.NotNull(WaitForDocumentToReplicate<object>(dst, id, 15 * 1000));
         }
 
         protected Dictionary<string, string[]> GetConnectionFailures(DocumentStore store)

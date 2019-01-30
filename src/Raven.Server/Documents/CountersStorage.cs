@@ -252,6 +252,8 @@ namespace Raven.Server.Documents
                     if (changeVector == null)
                     {
                         changeVector = ChangeVectorUtils.NewChangeVector(_documentDatabase.ServerStore.NodeTag, etag, _documentsStorage.Environment.Base64Id);
+                        context.LastDatabaseChangeVector =
+                            ChangeVectorUtils.MergeVectors(context.LastDatabaseChangeVector ?? GetDatabaseChangeVector(context), changeVector);
                     }
 
                     using (Slice.From(context.Allocator, changeVector, out var cv))
@@ -580,13 +582,13 @@ namespace Raven.Server.Documents
             using (GetCounterPartialKey(context, documentId, counterName, out var keyPrefix))
             {
                 var lastModifiedTicks = _documentDatabase.Time.GetUtcNow().Ticks;
-                return DeleteCounter(context, keyPrefix, collection, lastModifiedTicks,
+                return DeleteCounter(context, keyPrefix, collection, null, lastModifiedTicks,
                     // let's avoid creating a tombstone for missing counter if writing locally
                     forceTombstone: false);
             }
         }
 
-        public string DeleteCounter(DocumentsOperationContext context, Slice key, string collection, long lastModifiedTicks, bool forceTombstone)
+        public string DeleteCounter(DocumentsOperationContext context, Slice key, string collection, string changeVector, long lastModifiedTicks, bool forceTombstone)
         {
             var collectionName = _documentsStorage.ExtractCollectionName(context, collection);
             var table = GetCountersTable(context.Transaction.InnerTransaction, collectionName);
@@ -613,19 +615,22 @@ namespace Raven.Server.Documents
             var newEtag = _documentsStorage.GenerateNextEtag();
             _documentsStorage.EnsureLastEtagIsPersisted(context, newEtag);
 
-            var newChangeVector = ChangeVectorUtils.NewChangeVector(_documentDatabase.ServerStore.NodeTag, newEtag, _documentsStorage.Environment.Base64Id);
+            if (changeVector == null)
+            {
+                changeVector = ChangeVectorUtils.NewChangeVector(_documentDatabase.ServerStore.NodeTag, newEtag, _documentsStorage.Environment.Base64Id);
+                context.LastDatabaseChangeVector = ChangeVectorUtils.MergeVectors(context.LastDatabaseChangeVector ?? GetDatabaseChangeVector(context), changeVector);
+            }
 
-            CreateTombstone(context, key, collection, deletedEtag, lastModifiedTicks, newEtag, newChangeVector);
-
+            CreateTombstone(context, key, collection, deletedEtag, lastModifiedTicks, newEtag, changeVector);
             context.Transaction.AddAfterCommitNotification(new CounterChange
             {
-                ChangeVector = newChangeVector,
+                ChangeVector = changeVector,
                 DocumentId = documentId,
                 Name = name,
                 Type = CounterChangeTypes.Delete
             });
 
-            return newChangeVector;
+            return changeVector;
         }
 
         private void CreateTombstone(DocumentsOperationContext context, Slice keySlice, string collectionName, long deletedEtag, long lastModifiedTicks, long newEtag, string newChangeVector)

@@ -306,6 +306,49 @@ namespace SlowTests.Client.Counters
         }
 
         [Fact]
+        public async Task CounterTombstonesReplication()
+        {
+            using (var storeA = GetDocumentStore())
+            using (var storeB = GetDocumentStore())
+            {
+                await SetupReplicationAsync(storeA, storeB);
+                await SetupReplicationAsync(storeB, storeA);
+
+                using (var session = storeA.OpenAsyncSession())
+                {
+                    await session.StoreAsync(new User
+                    {
+                        Name = "Aviv1"
+                    }, "users/1-A");
+
+                    session.CountersFor("users/1-A").Increment("likes", 10);
+
+                    await session.SaveChangesAsync();
+                }
+
+                WaitForDocument(storeB, "users/1-A");
+
+                using (var session = storeB.OpenAsyncSession())
+                {
+                    session.CountersFor("users/1-A").Delete("likes");
+
+                    await session.SaveChangesAsync();
+                }
+
+                EnsureReplicating(storeA, storeB);
+                EnsureReplicating(storeB, storeA);
+
+                Assert.Equal(0, storeB.Operations
+                    .Send(new GetCountersOperation("users/1-A", new[] { "likes" }))
+                    .Counters.Count);
+
+                Assert.Equal(0, storeA.Operations
+                    .Send(new GetCountersOperation("users/1-A", new[] { "likes" }))
+                    .Counters.Count);
+            }
+        }
+
+        [Fact]
         public async Task CounterTombstonesReplication1()
         {
             using (var storeA = GetDocumentStore())
