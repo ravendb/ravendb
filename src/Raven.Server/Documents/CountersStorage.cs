@@ -85,9 +85,8 @@ namespace Raven.Server.Documents
                 for (dbIdIndex = 0; dbIdIndex < dbIdsList.Count; dbIdIndex++)
                 {
                     var current = dbIdsList[dbIdIndex];
-                    if (current.Equals(dbId) == false)
-                        continue;
-                    break;
+                    if (current.Equals(dbId))
+                        break;
                 }
 
                 if (dbIdIndex == dbIdsList.Count)
@@ -516,7 +515,6 @@ namespace Raven.Server.Documents
                             {
                                 throw new InvalidDataException($"Local Counter-Group document '{counterKey}' is missing '{DbIds}' property. Shouldn't happen");
                             }
-                            //var localDbIdsList = DbIdsToList(dbIds);
                             var dbIdsHolder = new DbIdsHolder(dbIds);
 
                             if (data.TryGet(Values, out BlittableJsonReaderObject localCounters) == false)
@@ -557,7 +555,7 @@ namespace Raven.Server.Documents
                                 {
                                     if (deletedLocalCounter != null)
                                     {
-                                        // delete + delete => merger change vectors
+                                        // delete + delete => merge change vectors
 
                                         if (deletedLocalCounter == deletedSourceCounter == false)
                                         {
@@ -640,14 +638,13 @@ namespace Raven.Server.Documents
                                 if (modified == false)
                                     continue;
 
-                                // todo sum up new value 
-
+                                var value = InternalGetCounterValue(localCounterValues);
                                 context.Transaction.AddAfterCommitNotification(new CounterChange
                                 {
                                     ChangeVector = changeVector,
                                     DocumentId = documentId,
                                     Name = counterName,
-                                    //Value = value,
+                                    Value = value,
                                     Type = changeType
                                 });
 
@@ -700,6 +697,21 @@ namespace Raven.Server.Documents
 
                 _counterModificationMemoryScopes.Clear();
             }
+        }
+
+        internal static long InternalGetCounterValue(BlittableJsonReaderObject.RawBlob localCounterValues)
+        {
+            Debug.Assert(localCounterValues != null);
+
+            var count = localCounterValues.Length / SizeOfCounterValues;
+            long value = 0;
+
+            for (int index = 0; index < count; index++)
+            {
+                value += ((CounterValues*)localCounterValues.Ptr)[index].Value;
+            }
+
+            return value;
         }
 
         private static List<LazyStringValue> DbIdsToList(BlittableJsonReaderArray dbIds)
@@ -856,15 +868,7 @@ namespace Raven.Server.Documents
             if (TryGetRawBlob(context, docId, counterName, out var blob) == false)
                 return null;
 
-            var existingCount = blob.Length / SizeOfCounterValues;
-
-            long value = 0;
-            for (var i = 0; i < existingCount; i++)
-            {
-                value += GetPartialValue(i, blob);
-            }
-
-            return value;
+            return InternalGetCounterValue(blob);
         }
 
         private static bool TryGetRawBlob(DocumentsOperationContext context, string docId, string counterName, out BlittableJsonReaderObject.RawBlob blob)
@@ -1297,18 +1301,16 @@ namespace Raven.Server.Documents
                 return Array.Empty<ChangeVectorEntry>();
 
             var list = new List<ChangeVectorEntry>();
-            var current = changeVector;
-            while (current.Length > 23)
+            var currentPos = 0;
+            while (currentPos < changeVector.Length)
             {
-                var dbId = current.Substring(0, 22);
-                current = current.Substring(23);
+                var dbId = changeVector.Substring(currentPos, DbIdAsBase64Size);
+                currentPos += DbIdAsBase64Size + 1;
 
-                var etagStr = current;
-                var next = current.IndexOf(',');
-                if (next > 0)
-                {
-                    etagStr = current.Substring(0, next);
-                }
+                var next = changeVector.IndexOf(',', currentPos);
+                var etagStr = next > 0 
+                    ? changeVector.Substring(currentPos, next - currentPos) 
+                    : changeVector.Substring(currentPos);
 
                 if (long.TryParse(etagStr, out var etag) == false)
                     throw new InvalidDataException("Invalid deleted counter string: " + changeVector);
@@ -1322,7 +1324,7 @@ namespace Raven.Server.Documents
                 if (next == -1)
                     break;
 
-                current = current.Substring(next + 2);
+                currentPos = next + 2;
             }
 
             return list.ToArray();            
@@ -1354,19 +1356,16 @@ namespace Raven.Server.Documents
             if (string.IsNullOrEmpty(deletedCounterVector))
                 return;
 
-            var current = deletedCounterVector;
-            while (current.Length > 23)
+            var currentPos = 0;
+            while (currentPos < deletedCounterVector.Length)
             {
-                var dbId = current.Substring(0, 22);
-                current = current.Substring(23);
+                var dbId = deletedCounterVector.Substring(currentPos, DbIdAsBase64Size);
+                currentPos += DbIdAsBase64Size + 1;
 
-                var etagStr = current;
-                var next = current.IndexOf(',');
-
-                if (next > 0)
-                {
-                    etagStr = current.Substring(0, next - 1);
-                }
+                var next = deletedCounterVector.IndexOf(',', currentPos);
+                var etagStr = next > 0
+                    ? deletedCounterVector.Substring(currentPos, next - currentPos)
+                    : deletedCounterVector.Substring(currentPos);
 
                 if (long.TryParse(etagStr, out var etag) == false)
                     throw new InvalidDataException("Invalid deleted counter string: " + deletedCounterVector);
@@ -1399,8 +1398,8 @@ namespace Raven.Server.Documents
 
                 if (next == -1)
                     break;
-                
-                current = current.Substring(next + 1);
+
+                currentPos = next + 2;
             }
         }
 
