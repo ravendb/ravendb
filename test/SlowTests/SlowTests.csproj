@@ -16,6 +16,9 @@
     <Compile Include="..\..\src\CommonAssemblyInfo.Linux.cs" Link="Properties\CommonAssemblyInfo.Linux.cs" />
   </ItemGroup>
   <ItemGroup>
+    <None Remove="Data\RavenDB-12785.ravendbdump" />
+  </ItemGroup>
+  <ItemGroup>
     <Compile Include="..\..\src\CommonAssemblyInfo.cs" Link="Properties\CommonAssemblyInfo.cs" />
   </ItemGroup>
   <ItemGroup>
@@ -30,6 +33,7 @@
     <EmbeddedResource Include="Data\oraclesql.basic.insert.sql" />
     <EmbeddedResource Include="Data\oraclesql.northwind.create.sql" />
     <EmbeddedResource Include="Data\oraclesql.northwind.insert.sql" />
+    <EmbeddedResource Include="Data\RavenDB-12785.ravendbdump" />
     <EmbeddedResource Include="Data\RavenDB_10958.txt" />
     <EmbeddedResource Include="Data\RavenDB_10958.json" />
     <EmbeddedResource Include="Data\mssql.northwind.create.sql" />
