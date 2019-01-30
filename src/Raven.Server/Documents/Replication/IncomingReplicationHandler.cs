@@ -1131,6 +1131,7 @@ namespace Raven.Server.Documents.Replication
                             else if (item.Type == ReplicationBatchItem.ReplicationItemType.CounterTombstone)
                             {
                                 database.DocumentsStorage.CountersStorage.DeleteCounter(context, item.Key, item.Collection,
+                                    item.ChangeVector,
                                     item.LastModifiedTicks,
                                     // we force the tombstone because we have to replicate it further
                                     forceTombstone: true);
