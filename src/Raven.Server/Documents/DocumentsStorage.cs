@@ -237,6 +237,7 @@ namespace Raven.Server.Documents
             options.PrefetchSegmentSize = DocumentDatabase.Configuration.Storage.PrefetchBatchSize.GetValue(SizeUnit.Bytes);
             options.PrefetchResetThreshold = DocumentDatabase.Configuration.Storage.PrefetchResetThreshold.GetValue(SizeUnit.Bytes);
             options.SyncJournalsCountThreshold = DocumentDatabase.Configuration.Storage.SyncJournalsCountThreshold;
+            options.IgnoreInvalidJournalErrors = DocumentDatabase.Configuration.Storage.IgnoreInvalidJournalErrors;
 
             try
             {
@@ -277,7 +278,7 @@ namespace Raven.Server.Documents
                 DirectoryExecUtils.SubscribeToOnDirectoryInitializeExec(options, DocumentDatabase.Configuration.Storage, DocumentDatabase.Name, DirectoryExecUtils.EnvironmentType.Database, _logger);
 
                 ContextPool = new DocumentsContextPool(DocumentDatabase);
-                Environment = LayoutUpdater.OpenEnvironment(options);
+                Environment = StorageLoader.OpenEnvironment(options, StorageEnvironmentWithType.StorageEnvironmentType.Documents);
 
                 using (var tx = Environment.WriteTransaction())
                 {

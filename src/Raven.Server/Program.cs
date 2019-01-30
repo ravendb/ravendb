@@ -178,6 +178,24 @@ namespace Raven.Server
                             Console.WriteLine("TIP: type 'help' to list the available commands.");
                             Console.ForegroundColor = prevColor;
 
+                            if (configuration.Storage.IgnoreInvalidJournalErrors == true)
+                            {
+                                var message =
+                                    $"Server is running in dangerous mode because {RavenConfiguration.GetKey(x => x.Storage.IgnoreInvalidJournalErrors)} was set. " +
+                                    "It means that storages of databases, indexes and system one will be loaded regardless missing or corrupted journal files which " +
+                                    "are mandatory to properly load the storage. " +
+                                    "This switch is meant to be use only for recovery purposes. Please make sure that you won't use it on regular basis. ";
+
+                                if (Logger.IsInfoEnabled)
+                                    Logger.Info(message);
+
+                                prevColor = Console.ForegroundColor;
+                                Console.ForegroundColor = ConsoleColor.Red;
+                                Console.WriteLine(message);
+                                Console.ForegroundColor = prevColor;
+
+                            }
+
                             IsRunningNonInteractive = false;
                             rerun = CommandLineSwitches.NonInteractive ||
                                     configuration.Core.SetupMode == SetupMode.Initial
