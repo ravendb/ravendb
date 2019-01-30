@@ -244,7 +244,7 @@ namespace Raven.Server.Documents.Indexes.Static
             if (doc is DynamicBlittableJson json)
             {
                 json.EnsureMetadata();
-                return doc[Constants.Documents.Metadata.Key];
+                return json;
             }
 
             if (doc is DynamicNullObject)
