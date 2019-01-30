@@ -155,6 +155,9 @@ namespace Voron
 
                 if (_options.ManualFlushing == false)
                     Task.Run(IdleFlushTimer);
+
+                if (isNew == false && _options.ManualSyncing == false)
+                    SuggestSyncDataFile(); // let's suggest syncing data file after the recovery
             }
             catch (Exception)
             {
