@@ -61,6 +61,7 @@ namespace Voron.Recovery
             var result = StorageEnvironmentOptions.ForPath(_config.DataFileDirectory, null, null, null, null);
             result.CopyOnWriteMode = _copyOnWrite;
             result.ManualFlushing = true;
+            result.IgnoreInvalidJournalErrors = _config.IgnoreInvalidJournalErrors;
 
             return result;
         }
@@ -77,6 +78,14 @@ namespace Voron.Recovery
 
         public RecoveryStatus Execute(TextWriter writer, CancellationToken ct)
         {
+            void PrintRecoveryProgress(long startOffset, byte* mem, byte* eof, DateTime now)
+            {
+                var currPos = GetFilePosition(startOffset, mem);
+                var eofPos = GetFilePosition(startOffset, eof);
+                writer.WriteLine(
+                    $"{now:hh:MM:ss}: Recovering page at position {currPos:#,#;;0}/{eofPos:#,#;;0} ({(double)currPos / eofPos:p}) - Last recovered doc is {_lastRecoveredDocumentKey}");
+            }
+
             StorageEnvironment se = null;
             try
             {
@@ -119,7 +128,9 @@ namespace Voron.Recovery
                     catch (Exception e)
                     {
                         se?.Dispose();
-                        writer.WriteLine($"Journal recovery failed, reason:{Environment.NewLine}{e}");
+                        writer.WriteLine("Journal recovery failed, don't worry we will continue with data recovery.");
+                        writer.WriteLine("The reason for the Jornal recovery failure was:");
+                        writer.WriteLine(e);
                     }
                     finally
                     {
@@ -178,10 +189,7 @@ namespace Voron.Recovery
                                     writer.WriteLine("Press 'q' to quit the recovery process");
                                 }
                                 lastProgressReport = now;
-                                var currPos = GetFilePosition(startOffset, mem);
-                                var eofPos = GetFilePosition(startOffset, eof);
-                                writer.WriteLine(
-                                    $"{now:hh:MM:ss}: Recovering page at position {currPos:#,#;;0}/{eofPos:#,#;;0} ({(double)currPos / eofPos:p}) - Last recovered doc is {_lastRecoveredDocumentKey}");
+                                PrintRecoveryProgress(startOffset, mem, eof, now);
                             }
 
                             var pageHeader = (PageHeader*)mem;
@@ -396,6 +404,8 @@ namespace Voron.Recovery
                             mem = PrintErrorAndAdvanceMem(message, mem);
                         }
                     }
+
+                    PrintRecoveryProgress(startOffset, mem, eof, DateTime.UtcNow);
 
                     ReportOrphanAttachmentsAndMissingAttachments(writer, documentsWriter, ct);
                     //This will only be the case when we don't have orphan attachments and we wrote the last attachment after we wrote the 

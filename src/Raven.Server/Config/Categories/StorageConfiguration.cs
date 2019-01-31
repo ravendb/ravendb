@@ -97,5 +97,10 @@ namespace Raven.Server.Config.Categories
         [ConfigurationEntry("Storage.OnCreateDirectory.Exec.TimeoutInSec", ConfigurationEntryScope.ServerWideOrPerDatabase)]
         [ConfigurationEntry("Storage.OnDirectoryInitialize.Exec.TimeoutInSec", ConfigurationEntryScope.ServerWideOrPerDatabase)]
         public TimeSetting OnDirectoryInitializeExecTimeout { get; set; }
+
+        [Description("EXPERT: Allows to load a database regardless journal errors that can be thrown during the recovery operation on startup. Since journals are mandatory to properly start a database, the usage of this option is dangerous")]
+        [DefaultValue(null)]
+        [ConfigurationEntry("Storage.Dangerous.IgnoreInvalidJournalErrors", ConfigurationEntryScope.ServerWideOnly)]
+        public bool? IgnoreInvalidJournalErrors { get; set; }
     }
 }

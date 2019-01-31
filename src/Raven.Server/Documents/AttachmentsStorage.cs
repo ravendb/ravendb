@@ -341,6 +341,7 @@ namespace Raven.Server.Documents
                 var attachments = GetAttachmentsMetadataForDocument(context, lowerDocumentId);
 
                 var flags = TableValueToFlags((int)DocumentsTable.Flags, ref copyTvr);
+                flags = flags.Strip(DocumentFlags.FromClusterTransaction | DocumentFlags.Resolved);
 
                 data.Modifications = new DynamicJsonValue(data);
                 if (data.TryGet(Constants.Documents.Metadata.Key, out BlittableJsonReaderObject metadata))

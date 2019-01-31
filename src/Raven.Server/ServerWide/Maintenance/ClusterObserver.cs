@@ -121,6 +121,9 @@ namespace Raven.Server.ServerWide.Maintenance
                         prevStats = newStats;
                     }
                 }
+                catch (OperationCanceledException)
+                {
+                }
                 catch (Exception e)
                 {
                     LogMessage($"An error occurred while analyzing maintenance stats on node {_nodeTag}.", e);

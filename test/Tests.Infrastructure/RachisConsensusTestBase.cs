@@ -137,7 +137,7 @@ namespace Tests.Infrastructure
             configuration.Core.RunInMemory = true;
             configuration.Core.PublicServerUrl = new UriSetting($"http://localhost:{((IPEndPoint)tcpListener.LocalEndpoint).Port}");
             configuration.Cluster.ElectionTimeout = new TimeSetting(electionTimeout, TimeUnit.Milliseconds);
-            var serverStore = new RavenServer(configuration).ServerStore;
+            var serverStore = new RavenServer(configuration) { ThrowOnLicenseActivationFailure = true }.ServerStore;
             serverStore.Initialize();
             var rachis = new RachisConsensus<CountingStateMachine>(serverStore, seed);
             var storageEnvironment = new StorageEnvironment(server);
