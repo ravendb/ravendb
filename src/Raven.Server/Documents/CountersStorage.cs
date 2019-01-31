@@ -41,6 +41,8 @@ namespace Raven.Server.Documents
         private readonly List<ByteStringContext<ByteStringMemoryCache>.InternalScope> _counterModificationMemoryScopes =
             new List<ByteStringContext<ByteStringMemoryCache>.InternalScope>();
 
+        public static int SizeOfCounterValues = sizeof(CounterValues);
+
         private static readonly TableSchema CountersSchema = new TableSchema
         {
             TableType = (byte)TableType.Counters
@@ -305,9 +307,9 @@ namespace Raven.Server.Documents
                     }
 
                     var groupEtag = _documentsStorage.GenerateNextEtag();
-                    var result = ChangeVectorUtils.TryUpdateChangeVector(_documentDatabase.ServerStore.NodeTag, _documentsStorage.Environment.Base64Id, groupEtag, string.Empty);
+                    var changeVector = ChangeVectorUtils.NewChangeVector(_documentDatabase.ServerStore.NodeTag, groupEtag, _documentsStorage.Environment.Base64Id);
 
-                    using (Slice.From(context.Allocator, result.ChangeVector, out var cv))
+                    using (Slice.From(context.Allocator, changeVector, out var cv))
                     using (DocumentIdWorker.GetStringPreserveCase(context, collectionName.Name, out Slice collectionSlice))
                     using (table.Allocate(out TableValueBuilder tvb))
                     {
@@ -328,18 +330,18 @@ namespace Raven.Server.Documents
                         }
                     }
 
-                    UpdateMetrics(counterKey, name, result.ChangeVector, collection);
+                    UpdateMetrics(counterKey, name, changeVector, collection);
 
                     context.Transaction.AddAfterCommitNotification(new CounterChange
                     {
-                        ChangeVector = result.ChangeVector,
+                        ChangeVector = changeVector,
                         DocumentId = documentId,
                         Name = name,
                         Type = exists ? CounterChangeTypes.Increment : CounterChangeTypes.Put,
                         Value = value
                     });
 
-                    return result.ChangeVector;
+                    return changeVector;
                 }
             }
 
@@ -802,7 +804,6 @@ namespace Raven.Server.Documents
         }
 
         private HashSet<string> _tableCreated = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
-        public static int SizeOfCounterValues = sizeof(CounterValues);
 
         public Table GetCountersTable(Transaction tx, CollectionName collection)
         {

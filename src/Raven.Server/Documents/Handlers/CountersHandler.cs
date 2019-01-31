@@ -171,14 +171,10 @@ namespace Raven.Server.Documents.Handlers
 
                     if (doc?.Data != null)
                     {
-                        var nonPersistentFlags = NonPersistentDocumentFlags.ByCountersUpdate;
-                        if (_fromSmuggler)
-                            nonPersistentFlags |= NonPersistentDocumentFlags.FromSmuggler;
-
                         var changeVector = _database
                             .DocumentsStorage
                             .CountersStorage
-                            .UpdateDocumentCounters(context, doc, docId, countersToAdd, countersToRemove, nonPersistentFlags);
+                            .UpdateDocumentCounters(context, doc, docId, countersToAdd, countersToRemove, NonPersistentDocumentFlags.ByCountersUpdate);
 
                         if (changeVector != null)
                             LastDocumentChangeVector = LastChangeVector = changeVector;
