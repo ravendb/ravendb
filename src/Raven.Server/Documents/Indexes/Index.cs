@@ -1523,13 +1523,11 @@ namespace Raven.Server.Documents.Indexes
 
             // we exceeded the number of db unloads due to corruption error, let's error the index
 
-            _errorStateReason = $"State was changed due to data corruption with message '{e.Message}'";
-
             try
             {
                 using (_environment.Options.SkipCatastrophicFailureAssertion()) // we really want to store Error state
                 {
-                    SetState(IndexState.Error);
+                    SetErrorState($"State was changed due to data corruption with message '{e.Message}'");
                 }
             }
             catch (Exception exception)
@@ -1550,8 +1548,7 @@ namespace Raven.Server.Documents.Indexes
             if (_logger.IsOperationsEnabled)
                 _logger.Operations(message);
 
-            _errorStateReason = message;
-            SetState(IndexState.Error);
+            SetErrorState(message);
         }
 
         public void ErrorIndexIfCriticalException(Exception e)
@@ -1784,11 +1781,20 @@ namespace Raven.Server.Documents.Indexes
                 if (State == state)
                     return;
 
+                var message = $"Changing state for '{Name}' from '{State}' to '{state}'.";
+
                 if (state != IndexState.Error)
+                {
                     _errorStateReason = null;
 
-                if (_logger.IsInfoEnabled)
-                    _logger.Info($"Changing state for '{Name})' from '{State}' to '{state}'.");
+                    if (_logger.IsInfoEnabled)
+                        _logger.Info(message);
+                }
+                else
+                {
+                    if (_logger.IsOperationsEnabled)
+                        _logger.Operations(message + $" Error state reason: {_errorStateReason}");
+                }
 
                 var oldState = State;
                 State = state;
