@@ -1,3 +1,4 @@
+#define _WIN32_WINNT 0x0603
 #include <windows.h>
 #include <processthreadsapi.h>
 #include <errhandlingapi.h>

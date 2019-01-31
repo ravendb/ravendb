@@ -5,7 +5,7 @@
 #define EXPORT __attribute__((visibility("default")))
 #define PRIVATE __attribute__((visibility("hidden")))
 #elif _WIN32
-#define EXPORT _declspec(dllexport)
+#define EXPORT 
 #define PRIVATE
 #else
 #define EXPORT __attribute__((visibility("default")))

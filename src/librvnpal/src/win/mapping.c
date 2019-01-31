@@ -1,5 +1,6 @@
+#define _WIN32_WINNT 0x0603
 #include <windows.h>
-#include <VersionHelpers.h>
+#include <versionhelpers.h>
 
 #include "rvn.h"
 #include "status_codes.h"

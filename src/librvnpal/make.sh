@@ -37,6 +37,7 @@ IS_LINUX=0
 IS_ARM=0
 IS_MAC=0
 IS_32BIT=0
+IS_WIN=0
 
 if [ $# -eq 1 ]; then
 	if [[ "$1" == "clean" ]]; then
@@ -69,6 +70,17 @@ elif [ $# -gt 1 ]; then
 		elif [[ "$2" == "linux-x64" ]]; then
 			IS_CROSS=1
 			IS_LINUX=1
+		elif [[ "$2" == "win-x64" ]]; then
+			IS_CROSS=1
+			IS_WIN=1
+			C_COMPILER=x86_64-w64-mingw32-gcc-win32
+			C_ADDITIONAL_FLAGS="-I/home/scratch/Sources/mingw-w64/mingw-w64-headers/include"
+		elif [[ "$2" == "win-x86" ]]; then
+			IS_CROSS=1
+			IS_WIN=1
+			IS_32BIT=1
+			C_COMPILER=i686-w64-mingw32-gcc-win32
+			C_ADDITIONAL_FLAGS="-I/home/scratch/Sources/mingw-w64/mingw-w64-headers/include"
 		else
 			echo -e "${ERR_STRING}Invalid architecture for cross compiling${NC}"
 			exit 1
@@ -118,13 +130,13 @@ else
 	echo -e "${C_MAGENTA}${T_UL}Cross Compilation${NC}${NT}"
         echo ""
 fi
-
 if [ ${IS_COMPILER} -ne 1 ]; then
 	echo -e "${ERR_STRING}Unable to determine if ${C_COMPILER} compiler exists."
         echo -e "${C_D_YELLOW}    Consider installing :"
         echo -e "                                       linux-x64 / linux-arm     - clang-3.9 and/or c89"
 	echo -e "                                       cross compiling linux-arm - gcc make gcc-arm-linux-gnueabi binutils-arm-linux-gnueabi, crossbuild-essential-armhf"
 	echo -e "                                       cross compiling osx-x64   - libc6-dev-i386 cmake libxml2-dev fuse clang libbz2-1.0 libbz2-dev libbz2-ocaml libbz2-ocaml-dev libfuse-dev + download Xcode_7.3, and follow https://github.com/tpoechtrager/osxcross instructions"
+	echo -e "					cross compiling win-x64 / win-x86 - clang g++ binutils bison flex gperf coreutils make gmpc perl gcc mingw-w64, then download mingw-w64 v6.0.0 and : ./configure --host=x86_64-w64-mingw32 --enable-targets=x86_64-w64-mingw32,i686-w64-mingw32, then make and sudo make install"
 	echo -e "${NC}"
 	exit 1
 fi
@@ -163,6 +175,16 @@ if [ ${IS_ARM} -eq 1 ]; then
                 LINKFILE=${LINKFILE}.64.so
         fi
 fi
+if [ ${IS_WIN} -eq 1 ]; then
+	FILTERS=(src/win);
+	LINKFILE=${LIBFILE}.win
+	if [ ${IS_32BIT} -eq 1 ]; then
+                LINKFILE=${LINKFILE}.x86.dll
+        else
+                LINKFILE=${LINKFILE}.x64.dll
+        fi
+fi
+	
 
 if [[ "${FILTERS[0]}" == "-1" ]]; then 
 	echo -e "${ERR_STRING}Not supported platform. Execute on either linux-x64, linux-arm, linux-arm64 or osx-x64${NC}"

@@ -36,7 +36,7 @@ fi
 
 STAT=0
 [ -d artifacts ] || mkdir artifacts
-for arch in linux-x64 linux-arm linux-arm64 osx-x64 ; do
+for arch in linux-x64 linux-arm linux-arm64 osx-x64 win-x64 win-x86; do
 	./make.sh cross $arch skip-copy
 	STATUS_C=$?
 	STAT=$(expr ${STAT} + ${STATUS_C})

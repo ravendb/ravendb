@@ -1,6 +1,6 @@
 #include <stdint.h>
-#include <Windows.h>
-#include <VersionHelpers.h>
+#include <windows.h>
+#include <versionhelpers.h>
 
 #include "rvn.h"
 #include "status_codes.h"

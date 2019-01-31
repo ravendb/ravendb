@@ -1,5 +1,5 @@
 #include <stdint.h>
-#include <Windows.h>
+#include <windows.h>
 
 #include "rvn.h"
 #include "status_codes.h"
