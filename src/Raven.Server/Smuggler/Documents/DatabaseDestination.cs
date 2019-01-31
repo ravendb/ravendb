@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
+using System.Linq;
 using System.Runtime.CompilerServices;
 using System.Threading.Tasks;
 using Raven.Client.Documents.Attachments;
@@ -26,6 +27,7 @@ using Sparrow.Logging;
 using Voron;
 using Voron.Global;
 using Sparrow;
+using Sparrow.Platform;
 using Sparrow.Utils;
 
 namespace Raven.Server.Smuggler.Documents
@@ -152,7 +154,7 @@ namespace Raven.Server.Smuggler.Documents
             {
                 if (item.Attachments != null)
                 {
-                    if(_options.OperateOnTypes.HasFlag(DatabaseItemType.Attachments))
+                    if (_options.OperateOnTypes.HasFlag(DatabaseItemType.Attachments))
                         progress.Attachments.ReadCount += item.Attachments.Count;
                     else
                         progress.Attachments.Skipped = true;
@@ -207,8 +209,9 @@ namespace Raven.Server.Smuggler.Documents
 
             private void HandleBatchOfDocumentsIfNecessary()
             {
-                var prevDoneAndHasEnough = _command.Context.AllocatedMemory > Constants.Size.Megabyte && _prevCommandTask.IsCompleted;
-                var currentReachedLimit = _command.Context.AllocatedMemory > _enqueueThreshold.GetValue(SizeUnit.Bytes);
+                var commandSize = _command.GetCommandAllocationSize();
+                var prevDoneAndHasEnough = commandSize > Constants.Size.Megabyte && _prevCommandTask.IsCompleted;
+                var currentReachedLimit = commandSize > _enqueueThreshold.GetValue(SizeUnit.Bytes);
 
                 if (currentReachedLimit == false && prevDoneAndHasEnough == false)
                     return;
@@ -420,7 +423,6 @@ namespace Raven.Server.Smuggler.Documents
         public class MergedBatchPutCommand : TransactionOperationsMerger.MergedTransactionCommand, IDisposable
         {
             public bool IsRevision;
-
             private readonly DocumentDatabase _database;
             private readonly BuildVersionType _buildType;
             private readonly Logger _log;
@@ -434,6 +436,7 @@ namespace Raven.Server.Smuggler.Documents
             public bool IsDisposed => _isDisposed;
 
             private readonly DocumentsOperationContext _context;
+            private long _attachmentsStreamSizeOverhead;
 
             public MergedBatchPutCommand(DocumentDatabase database, BuildVersionType buildType, Logger log)
             {
@@ -441,6 +444,15 @@ namespace Raven.Server.Smuggler.Documents
                 _buildType = buildType;
                 _log = log;
                 _resetContext = _database.DocumentsStorage.ContextPool.AllocateOperationContext(out _context);
+                Is32Bit = _database.DocumentsStorage.Environment.Options.ForceUsing32BitsPager || PlatformDetails.Is32Bits;
+                if (Is32Bit)
+                {
+                    using (var ctx = DocumentsOperationContext.ShortTermSingleUse(database))
+                    using (ctx.OpenReadTransaction())
+                    {
+                        _collectionNames = new HashSet<string>(_database.DocumentsStorage.GetCollections(ctx).Select(x => x.Name));
+                    }
+                }
             }
 
             public DocumentsOperationContext Context => _context;
@@ -480,7 +492,7 @@ namespace Raven.Server.Smuggler.Documents
                                     break;
                                 case Tombstone.TombstoneType.Counter:
                                     _database.DocumentsStorage.CountersStorage.DeleteCounter(context, key, tombstone.Collection, null,
-                                        tombstone.LastModified.Ticks, forceTombstone: true);
+                                       tombstone.LastModified.Ticks, forceTombstone: true);
                                     break;
                             }
                         }
@@ -629,11 +641,50 @@ namespace Raven.Server.Smuggler.Documents
                 AttachmentStreamsTempFile = null;
             }
 
+            /// <summary>
+            /// Return the actual size this command allocates including the stream sizes
+            /// </summary>
+            /// <returns></returns>
+            public long GetCommandAllocationSize()
+            {
+                return Context.AllocatedMemory + _attachmentsStreamSizeOverhead + _schemaOverHeadSize;
+            }
+
+            private HashSet<string> _collectionNames;
+            private int _schemaOverHeadSize;
+            private bool Is32Bit { get; }
+
             public void Add(DocumentItem document)
             {
                 Documents.Add(document);
+                if (document.Attachments != null)
+                {
+                    if (document.Document.TryGetMetadata(out var metadata)
+                        && metadata.TryGet(Client.Constants.Documents.Metadata.Attachments, out BlittableJsonReaderArray attachments))
+                    {
+                        foreach (BlittableJsonReaderObject attachment in attachments)
+                        {
+                            if (attachment.TryGet("Size", out long size))
+                            {
+                                _attachmentsStreamSizeOverhead += size;
+                            }
+
+                        }
+                    }
+                }
+
+                if (Is32Bit)
+                {
+                    if (document.Document.TryGetMetadata(out var metadata)
+                        && metadata.TryGet(Client.Constants.Documents.Metadata.Collection, out string collectionName)
+                        && _collectionNames.Add(collectionName))
+                    {
+                        _schemaOverHeadSize += SchemaSize;
+                    }
+                }
             }
 
+            private const int SchemaSize = 2 * 1024 * 1024;
             public override TransactionOperationsMerger.IReplayableCommandDto<TransactionOperationsMerger.MergedTransactionCommand> ToDto(JsonOperationContext context)
             {
                 return new MergedBatchPutCommandDto
