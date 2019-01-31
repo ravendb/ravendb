@@ -450,7 +450,11 @@ namespace Raven.Server.Smuggler.Documents
                     using (var ctx = DocumentsOperationContext.ShortTermSingleUse(database))
                     using (ctx.OpenReadTransaction())
                     {
-                        _collectionNames = new HashSet<string>(_database.DocumentsStorage.GetCollections(ctx).Select(x => x.Name));
+                        _collectionNames = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+                        foreach (var collection in _database.DocumentsStorage.GetCollections(ctx))
+                        {
+                            _collectionNames.Add(collection.Name);
+                        }
                     }
                 }
             }
@@ -664,7 +668,7 @@ namespace Raven.Server.Smuggler.Documents
                     {
                         foreach (BlittableJsonReaderObject attachment in attachments)
                         {
-                            if (attachment.TryGet("Size", out long size))
+                            if (attachment.TryGet(nameof(Attachment.Size), out long size))
                             {
                                 _attachmentsStreamSizeOverhead += size;
                             }
