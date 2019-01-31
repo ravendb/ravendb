@@ -18,15 +18,15 @@ class clusterNode {
     usableMemory = ko.pureComputed(() => this.getNumber(this.usableMemoryInGb()));
     errorDetails = ko.observable<string>();
     isLeader = ko.observable<boolean>();
-    isPassive: KnockoutComputed<boolean>;
+    isPassive: KnockoutObservable<boolean>;
     nodeServerVersion = ko.observable<string>();
     osInfo = ko.observable<Raven.Client.ServerWide.Operations.OsInfo>();
     osFullName: KnockoutComputed<string>;
     osTitle: KnockoutComputed<string>;
     osIcon: KnockoutComputed<string>;
 
-    constructor() {
-        this.isPassive = ko.pureComputed(() => this.tag() === "?");
+    constructor(isPassive: KnockoutObservable<boolean>) {
+        this.isPassive = isPassive;
 
         this.osFullName = ko.pureComputed(() => {
             const osInfo = this.osInfo();
@@ -128,8 +128,8 @@ class clusterNode {
         this.osInfo(incoming.osInfo());
     }
 
-    static for(tag: string, serverUrl: string, type: clusterNodeType, connected: boolean, errorDetails?: string) {
-        const node = new clusterNode();
+    static for(tag: string, serverUrl: string, type: clusterNodeType, connected: boolean, isPassive: KnockoutObservable<boolean>, errorDetails?: string) {
+        const node = new clusterNode(isPassive);
         node.tag(tag);
         node.serverUrl(serverUrl);
         node.type(type);

@@ -237,6 +237,7 @@ namespace Raven.Server.Documents
             options.PrefetchSegmentSize = DocumentDatabase.Configuration.Storage.PrefetchBatchSize.GetValue(SizeUnit.Bytes);
             options.PrefetchResetThreshold = DocumentDatabase.Configuration.Storage.PrefetchResetThreshold.GetValue(SizeUnit.Bytes);
             options.SyncJournalsCountThreshold = DocumentDatabase.Configuration.Storage.SyncJournalsCountThreshold;
+            options.IgnoreInvalidJournalErrors = DocumentDatabase.Configuration.Storage.IgnoreInvalidJournalErrors;
 
             try
             {
@@ -277,7 +278,7 @@ namespace Raven.Server.Documents
                 DirectoryExecUtils.SubscribeToOnDirectoryInitializeExec(options, DocumentDatabase.Configuration.Storage, DocumentDatabase.Name, DirectoryExecUtils.EnvironmentType.Database, _logger);
 
                 ContextPool = new DocumentsContextPool(DocumentDatabase);
-                Environment = LayoutUpdater.OpenEnvironment(options);
+                Environment = StorageLoader.OpenEnvironment(options, StorageEnvironmentWithType.StorageEnvironmentType.Documents);
 
                 using (var tx = Environment.WriteTransaction())
                 {
@@ -353,8 +354,8 @@ namespace Raven.Server.Documents
                 return context.LastDatabaseChangeVector;
             }
 
-            var result = ChangeVectorUtils.TryUpdateChangeVector(DocumentDatabase.ServerStore.NodeTag, Environment.Base64Id, newEtag, changeVector);
-            return result.ChangeVector;
+            context.LastDatabaseChangeVector = ChangeVectorUtils.TryUpdateChangeVector(DocumentDatabase.ServerStore.NodeTag, Environment.Base64Id, newEtag, changeVector).ChangeVector;
+            return context.LastDatabaseChangeVector;
         }
 
         public string GetNewChangeVector(DocumentsOperationContext context)

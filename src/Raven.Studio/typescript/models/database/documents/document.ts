@@ -13,7 +13,7 @@ class document implements documentBase {
     }
 
     getCollection() {
-        return this.__metadata.collection;
+        return this.__metadata.collection || "@empty";
     }
 
     getId() {

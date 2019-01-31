@@ -213,7 +213,7 @@ namespace SlowTests.Voron
 
             CorruptJournal(lastJournal - 3, lastJournalPosition + 1);
 
-            Assert.Throws<InvalidDataException>(() => StartDatabase());
+            Assert.Throws<InvalidJournalException>(() => StartDatabase());
         }
 
         [Fact]
@@ -306,7 +306,7 @@ namespace SlowTests.Voron
                 CorruptJournal(middleJournal, pos);
             }
 
-            Assert.Throws<InvalidDataException>(() => StartDatabase());
+            Assert.Throws<InvalidJournalException>(() => StartDatabase());
         }
 
         private void CorruptJournal(long journal, long posOf4KbInJrnl)

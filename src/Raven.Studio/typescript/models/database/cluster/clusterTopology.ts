@@ -4,7 +4,10 @@ import clusterNode = require("models/database/cluster/clusterNode");
 class clusterTopology {
     leader = ko.observable<string>();
     nodeTag = ko.observable<string>();
+    currentState = ko.observable<Raven.Client.ServerWide.RachisState>();
     currentTerm = ko.observable<number>();
+    
+    isPassive = ko.pureComputed(() => this.currentState() === "Passive");
     
     nodes = ko.observableArray<clusterNode>([]);
     
@@ -18,6 +21,7 @@ class clusterTopology {
         this.leader(dto.Leader);
         this.nodeTag(dto.NodeTag);
         this.currentTerm(dto.CurrentTerm);
+        this.currentState(dto.CurrentState);
 
         const topologyDto = dto.Topology;
 
@@ -62,7 +66,7 @@ class clusterTopology {
                 this.anyErrorsEncountered(true);
             }
             
-            return clusterNode.for(k, v, type, connected, errorDetails);
+            return clusterNode.for(k, v, type, connected, this.isPassive, errorDetails);
         });
     }
 
@@ -97,6 +101,7 @@ class clusterTopology {
         this.nodeTag(incomingChanges.NodeTag);
         this.leader(incomingChanges.Leader);
         this.currentTerm(incomingChanges.CurrentTerm);
+        this.currentState(incomingChanges.CurrentState);
     }
 
     private updateNodeDetails(nodeLicenseDetails: { [key: string]: Raven.Server.Commercial.DetailsPerNode; }) {
