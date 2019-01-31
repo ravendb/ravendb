@@ -280,7 +280,7 @@ namespace Raven.Server.Utils.Cli
 
         private static bool CommandOpenBrowser(List<string> args, RavenCli cli)
         {
-            if (cli._usingNamedPipes == false)
+            if (cli._usingNamedPipes)
             {
                 WriteText("'openBrowser' command not supported on remote pipe connection", WarningColor, cli);
                 return true;
@@ -308,7 +308,7 @@ namespace Raven.Server.Utils.Cli
 
         private static bool CommandStats(List<string> args, RavenCli cli)
         {
-            if (cli._usingNamedPipes == false)
+            if (cli._usingNamedPipes)
             {
                 // beware not to allow this from remote - will disable local console!                
                 WriteText("'stats' command not supported on remote pipe connection. Use `info` or `prompt %M` instead", TextColor, cli);
@@ -328,7 +328,7 @@ namespace Raven.Server.Utils.Cli
 
         private static bool CommandTopThreads(List<string> args, RavenCli cli)
         {
-            if (cli._usingNamedPipes == false)
+            if (cli._usingNamedPipes)
             {
                 // beware not to allow this from remote - will disable local console!                
                 WriteText("'topThreads' command not supported on remote pipe connection.", TextColor, cli);
