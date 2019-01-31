@@ -67,6 +67,8 @@ namespace Voron.Recovery
                 var initialContextLongLivedSizeInKbArg = cmd.Option("--InitialContextLongLivedSizeInKB", "Will set the recovery tool to use a long lived context size of the provided size in KB.", CommandOptionType.SingleValue);
                 var progressIntervalInSecArg = cmd.Option("--ProgressIntervalInSec", "Will set the recovery tool refresh to console rate interval in seconds.", CommandOptionType.SingleValue);
                 var disableCopyOnWriteModeArg = cmd.Option("--DisableCopyOnWriteMode", "Default is false.", CommandOptionType.SingleValue);
+                var ignoreInvalidJournalErrorsArg = cmd.Option("--IgnoreInvalidJournalErrors", "Default is false.", CommandOptionType.SingleValue);
+
                 var loggingModeArg = cmd.Option("--LoggingMode", "Logging mode: Operations or Information.", CommandOptionType.SingleValue);
 
                 cmd.OnExecute(() =>
@@ -142,6 +144,15 @@ namespace Voron.Recovery
                         if (bool.TryParse(value, out var disableCopyOnWriteMode) == false)
                             return ExitWithError($"{nameof(config.DisableCopyOnWriteMode)} argument value ({value}) is invalid", cmd);
                         config.DisableCopyOnWriteMode = disableCopyOnWriteMode;
+                    }
+
+                    if (ignoreInvalidJournalErrorsArg.HasValue())
+                    {
+                        var value = ignoreInvalidJournalErrorsArg.Value();
+                        if (bool.TryParse(value, out var ignoreInvalidJournalErrors) == false)
+                            return ExitWithError($"{nameof(config.IgnoreInvalidJournalErrors)} argument value ({value}) is invalid", cmd);
+
+                        config.IgnoreInvalidJournalErrors = ignoreInvalidJournalErrors;
                     }
 
                     if (loggingModeArg.HasValue())

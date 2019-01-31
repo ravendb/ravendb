@@ -43,6 +43,10 @@ class changesApi extends eventsWebSocketClient<changesApiEventDto[]> {
         const eventType = eventDto.Type;
         const value = eventDto.Value;
 
+        if (!eventType) {
+            return;
+        }
+        
         switch (eventType) {
             case "DocumentChange":
                 this.fireEvents<Raven.Client.Documents.Changes.DocumentChange>(this.allDocsHandlers(), value, () => true);

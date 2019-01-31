@@ -87,6 +87,64 @@ namespace SlowTests.Server.Replication
         }
 
         [Fact]
+        public async Task DeletePullReplicationFromHub()
+        {
+            var name = $"pull-replication {GetDatabaseName()}";
+            using (var sink = GetDocumentStore())
+            using (var hub = GetDocumentStore())
+            {
+                var hubResult = await hub.Maintenance.ForDatabase(hub.Database).SendAsync(new PutPullReplicationAsHubOperation(name));
+                using (var session = hub.OpenSession())
+                {
+                    session.Store(new User(), "foo/bar");
+                    session.SaveChanges();
+                }
+
+                await SetupPullReplicationAsync(name, sink, hub);
+
+                var timeout = 3000;
+                Assert.True(WaitForDocument(sink, "foo/bar", timeout), sink.Identifier);
+
+                await DeleteOngoingTask(hub, hubResult.TaskId, OngoingTaskType.PullReplicationAsHub);
+                using (var session = hub.OpenSession())
+                {
+                    session.Store(new User(), "foo/bar2");
+                    session.SaveChanges();
+                }
+                Assert.False(WaitForDocument(sink, "foo/bar2", timeout), sink.Identifier);
+            }
+        }
+
+        [Fact]
+        public async Task DeletePullReplicationFromSink()
+        {
+            var name = $"pull-replication {GetDatabaseName()}";
+            using (var sink = GetDocumentStore())
+            using (var hub = GetDocumentStore())
+            {
+                await hub.Maintenance.ForDatabase(hub.Database).SendAsync(new PutPullReplicationAsHubOperation(name));
+                using (var session = hub.OpenSession())
+                {
+                    session.Store(new User(), "foo/bar");
+                    session.SaveChanges();
+                }
+
+                var sinkResult = await SetupPullReplicationAsync(name, sink, hub);
+
+                var timeout = 3000;
+                Assert.True(WaitForDocument(sink, "foo/bar", timeout), sink.Identifier);
+
+                await DeleteOngoingTask(sink, sinkResult[0].TaskId, OngoingTaskType.PullReplicationAsSink);
+                using (var session = hub.OpenSession())
+                {
+                    session.Store(new User(), "foo/bar2");
+                    session.SaveChanges();
+                }
+                Assert.False(WaitForDocument(sink, "foo/bar2", timeout), sink.Identifier);
+            }
+        }
+
+        [Fact]
         public async Task UpdatePullReplicationOnSink()
         {
             var definitionName1 = $"pull-replication {GetDatabaseName()}";

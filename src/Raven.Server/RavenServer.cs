@@ -92,6 +92,8 @@ namespace Raven.Server
 
         public ICpuUsageCalculator CpuUsageCalculator;
 
+        internal bool ThrowOnLicenseActivationFailure;
+
         public RavenServer(RavenConfiguration configuration)
         {
             JsonDeserializationValidator.Validate();

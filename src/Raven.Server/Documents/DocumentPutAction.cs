@@ -1,5 +1,4 @@
 using System;
-using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
 using System.Runtime.CompilerServices;
@@ -13,7 +12,6 @@ using Sparrow.Json.Parsing;
 using Voron;
 using Voron.Data.Tables;
 using System.Linq;
-using Raven.Client.Documents.Operations.Revisions;
 using Raven.Client.Exceptions;
 using Sparrow;
 using static Raven.Server.Documents.DocumentsStorage;
@@ -120,13 +118,8 @@ namespace Raven.Server.Documents
 
                 var result = BuildChangeVectorAndResolveConflicts(context, id, lowerId, newEtag, document, changeVector, expectedChangeVector, flags, oldValue);
 
-                if (flags.Contain(DocumentFlags.FromClusterTransaction) == false)
-                {
-                    if (string.IsNullOrEmpty(result.ChangeVector))
-                        ChangeVectorUtils.ThrowConflictingEtag(id, changeVector, newEtag, _documentsStorage.Environment.Base64Id, _documentDatabase.ServerStore.NodeTag);
-
+                if (UpdateLastDatabaseChangeVector(context, result.ChangeVector, flags, nonPersistentFlags))
                     changeVector = result.ChangeVector;
-                }
 
                 nonPersistentFlags |= result.NonPersistentFlags;
                 if (nonPersistentFlags.Contain(NonPersistentDocumentFlags.Resolved))
@@ -155,8 +148,8 @@ namespace Raven.Server.Documents
                         CountersStorage.AssertCounters(document, flags);
                     }
 
-                    var shouldVersion = _documentDatabase.DocumentsStorage.RevisionsStorage.ShouldVersionDocument(collectionName, nonPersistentFlags, oldDoc, document,
-                        ref flags, out var configuration);
+                    var shouldVersion = _documentDatabase.DocumentsStorage.RevisionsStorage.ShouldVersionDocument(
+                        collectionName, nonPersistentFlags, oldDoc, document, context, id, ref flags, out var configuration);
                     if (shouldVersion)
                     {
                         if (ShouldVersionOldDocument(flags, oldDoc))
@@ -173,6 +166,8 @@ namespace Raven.Server.Documents
                         _documentDatabase.DocumentsStorage.RevisionsStorage.Put(context, id, document, flags, nonPersistentFlags, changeVector, modifiedTicks, configuration, collectionName);
                     }
                 }
+
+                UpdateChangeVectorIfNeeded(context, nonPersistentFlags, ref changeVector, ref newEtag);
 
                 using (Slice.From(context.Allocator, changeVector, out var cv))
                 using (table.Allocate(out TableValueBuilder tvb))
@@ -201,8 +196,6 @@ namespace Raven.Server.Documents
                     _documentsStorage.ExpirationStorage.Put(context, lowerId, document);
                 }
 
-                UpdateLastDatabaseChangeVector(context, changeVector, nonPersistentFlags);
-
                 _documentDatabase.Metrics.Docs.PutsPerSec.MarkSingleThreaded(1);
                 _documentDatabase.Metrics.Docs.BytesPutsPerSec.MarkSingleThreaded(document.Size);
 
@@ -226,6 +219,19 @@ namespace Raven.Server.Documents
                     Flags = flags,
                     LastModified = new DateTime(modifiedTicks)
                 };
+            }
+        }
+
+        private void UpdateChangeVectorIfNeeded(DocumentsOperationContext context, NonPersistentDocumentFlags nonPersistentFlags, ref string changeVector, ref long newEtag)
+        {
+            // when having an external replication we must generate a new change vector for the resolved conflict.
+            // in internal replication it will generate a small ping-pong, but will be settled due to the identical content.
+            if (nonPersistentFlags.Contain(NonPersistentDocumentFlags.FromResolver) &&
+                nonPersistentFlags.Contain(NonPersistentDocumentFlags.Resolved))
+            {
+                newEtag = _documentsStorage.GenerateNextEtag();
+                changeVector = ChangeVectorUtils.MergeVectors(changeVector, _documentsStorage.GetNewChangeVector(context, newEtag));
+                context.LastDatabaseChangeVector = changeVector;
             }
         }
 
@@ -307,21 +313,29 @@ namespace Raven.Server.Documents
             return (changeVector, nonPersistentFlags);
         }
 
-        private void UpdateLastDatabaseChangeVector(DocumentsOperationContext context, string changeVector, NonPersistentDocumentFlags nonPersistentFlags)
+        private static bool UpdateLastDatabaseChangeVector(DocumentsOperationContext context, string changeVector, DocumentFlags flags, NonPersistentDocumentFlags nonPersistentFlags)
         {
+            // this is raft created document, so it must contain only the RAFT element 
+            if (flags.Contain(DocumentFlags.FromClusterTransaction))
+            {
+                context.LastDatabaseChangeVector = ChangeVectorUtils.MergeVectors(context.LastDatabaseChangeVector ?? GetDatabaseChangeVector(context), changeVector);
+                return false;
+            }
+
+            // the resolved document must preserve the original change vector (without the global change vector) to avoid ping-pong replication.
             if (nonPersistentFlags.Contain(NonPersistentDocumentFlags.FromResolver))
             {
-                // the resolved document must preserve the original change vector (without the global change vector) to avoid ping-pong replication.
                 context.LastDatabaseChangeVector = ChangeVectorUtils.MergeVectors(context.LastDatabaseChangeVector ?? GetDatabaseChangeVector(context), changeVector);
-                return;
+                return false;
             }
 
             // if arrived from replication we keep the document with its original change vector
             // in that case the updating of the global change vector should happened upper in the stack
             if (nonPersistentFlags.Contain(NonPersistentDocumentFlags.FromReplication))
-                return;
+                return false;
 
             context.LastDatabaseChangeVector = changeVector;
+            return true;
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
@@ -515,7 +529,7 @@ namespace Raven.Server.Documents
         private bool ShouldRecreateCounters(DocumentsOperationContext context, string id, BlittableJsonReaderObject oldDoc,
             BlittableJsonReaderObject document, ref DocumentFlags flags, NonPersistentDocumentFlags nonPersistentFlags)
         {
-            if ((nonPersistentFlags & NonPersistentDocumentFlags.ResolveCountersConflict) == NonPersistentDocumentFlags.ResolveCountersConflict)
+            if (nonPersistentFlags.Contain(NonPersistentDocumentFlags.ResolveCountersConflict))
             {
                 document.TryGet(Constants.Documents.Metadata.Key, out BlittableJsonReaderObject metadata);
                 RecreateCounters(context, id, document, metadata, ref flags);

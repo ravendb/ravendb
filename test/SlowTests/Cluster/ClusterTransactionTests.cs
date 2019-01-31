@@ -108,7 +108,10 @@ namespace SlowTests.Cluster
                                         LastName = RandomString(2048),
                                         Age = i
                                     };
-                                    await session.StoreAsync(user, "users/" + (docsPerSession * j + i + 1));
+                                    using (var cts = new CancellationTokenSource(TimeSpan.FromMinutes(numberOfNodes)))
+                                    {
+                                        await session.StoreAsync(user, "users/" + (docsPerSession * j + i + 1), cts.Token);
+                                    }
                                 }
 
                                 if (numberOfNodes > 1)
@@ -117,7 +120,10 @@ namespace SlowTests.Cluster
                                         l.ServerStore.Engine.CurrentLeader?.StepDown();
                                         return Task.CompletedTask;
                                     });
-                                await session.SaveChangesAsync();
+                                using (var cts = new CancellationTokenSource(TimeSpan.FromMinutes(numberOfNodes)))
+                                {
+                                    await session.SaveChangesAsync(cts.Token);
+                                }
                                 trys = 5;
                             }
                         }
@@ -129,10 +135,13 @@ namespace SlowTests.Cluster
 
                     Assert.True(trys > 0, $"Couldn't save a document after 5 retries.");
                 }
-                using (var session = store.OpenSession())
+                using (var session = store.OpenAsyncSession())
                 {
-                    var res = session.Query<User>().Customize(q => q.WaitForNonStaleResults()).ToArray();
-                    Assert.Equal(numOfSessions * docsPerSession, res.Length);
+                    using (var cts = new CancellationTokenSource(TimeSpan.FromMinutes(numberOfNodes)))
+                    {
+                        var res = await session.Query<User>().Customize(q => q.WaitForNonStaleResults()).ToListAsync(cts.Token);
+                        Assert.Equal(numOfSessions * docsPerSession, res.Count);
+                    }
                 }
             }
         }

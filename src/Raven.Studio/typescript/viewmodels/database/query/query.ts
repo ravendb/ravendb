@@ -631,9 +631,16 @@ class query extends viewModelBase {
             let totalSkippedResults = 0;
             let itemsSoFar = 0;
             
-            this.rawJsonUrl(appUrl.forDatabaseQuery(database) + queryCmd.getUrl());
-            this.csvUrl(queryCmd.getCsvUrl());
-
+            try {
+                this.rawJsonUrl(appUrl.forDatabaseQuery(database) + queryCmd.getUrl());
+                this.csvUrl(queryCmd.getCsvUrl());    
+            } catch (error) {
+                // it may throw when unable to compute query parameters, etc.
+                messagePublisher.reportError("Unable to run the query", error.message, null, false);
+                this.isLoading(false);
+                return;
+            }
+            
             const resultsFetcher = (skip: number, take: number) => {
                 const command = new queryCommand(database, skip + totalSkippedResults, take + 1, this.criteria(), disableCache);
                 
