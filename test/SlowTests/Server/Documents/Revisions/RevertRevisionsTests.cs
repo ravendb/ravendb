@@ -484,28 +484,28 @@ namespace SlowTests.Server.Documents.Revisions
 
                 using (var session = store1.OpenAsyncSession())
                 {
-                    var company = new Company
+                    var person = new Person
                     {
                         Name = "Name1"
                     };
-                    await session.StoreAsync(company, "foo/bar");
+                    await session.StoreAsync(person, "foo/bar");
                     await session.SaveChangesAsync();
-                    last = session.Advanced.GetLastModifiedFor(company).Value;
-                    var companiesRevisions = await session.Advanced.Revisions.GetForAsync<Company>("foo/bar");
+                    last = session.Advanced.GetLastModifiedFor(person).Value;
+                    var companiesRevisions = await session.Advanced.Revisions.GetForAsync<Person>("foo/bar");
                     Assert.Equal(1, companiesRevisions.Count);
                 }
 
                 using (var session = store2.OpenAsyncSession())
                 {
-                    var company = new Company
+                    var person = new Person
                     {
                         Name = "Name2"
                     };
-                    await session.StoreAsync(company, "foo/bar");
+                    await session.StoreAsync(person, "foo/bar");
                     await session.SaveChangesAsync();
 
 
-                    await session.StoreAsync(new Company(), "marker");
+                    await session.StoreAsync(new Person(), "marker");
                     await session.SaveChangesAsync();
                 }
 
@@ -521,30 +521,34 @@ namespace SlowTests.Server.Documents.Revisions
                         token: token);
                 }
 
-                Assert.Equal(3, result.ScannedRevisions);
+                Assert.Equal(4, result.ScannedRevisions);
                 Assert.Equal(1, result.ScannedDocuments);
                 Assert.Equal(1, result.RevertedDocuments);
 
                 using (var session = store1.OpenAsyncSession())
                 {
-                    var companiesRevisions = await session.Advanced.Revisions.GetForAsync<Company>("foo/bar");
-                    Assert.Equal(4, companiesRevisions.Count);
+                    var persons = await session.Advanced.Revisions.GetForAsync<Person>("foo/bar");
+                    Assert.Equal(5, persons.Count);
 
-                    Assert.Equal("Name1", companiesRevisions[0].Name);
-                    var metadata = session.Advanced.GetMetadataFor(companiesRevisions[0]);
+                    Assert.Equal("Name1", persons[0].Name);
+                    var metadata = session.Advanced.GetMetadataFor(persons[0]);
                     Assert.Equal((DocumentFlags.HasRevisions | DocumentFlags.Revision | DocumentFlags.Reverted).ToString(), metadata.GetString(Constants.Documents.Metadata.Flags));
 
-                    Assert.Equal("Name2", companiesRevisions[1].Name);
-                    metadata = session.Advanced.GetMetadataFor(companiesRevisions[1]);
-                    Assert.Equal((DocumentFlags.HasRevisions | DocumentFlags.Revision | DocumentFlags.FromReplication | DocumentFlags.Resolved).ToString(), metadata.GetString(Constants.Documents.Metadata.Flags));
+                    Assert.Equal("Name2", persons[1].Name);
+                    metadata = session.Advanced.GetMetadataFor(persons[1]);
+                    Assert.Equal((DocumentFlags.HasRevisions | DocumentFlags.Revision | DocumentFlags.Resolved).ToString(), metadata.GetString(Constants.Documents.Metadata.Flags));
 
-                    Assert.Equal("Name1", companiesRevisions[2].Name);
-                    metadata = session.Advanced.GetMetadataFor(companiesRevisions[2]);
+                    Assert.Equal("Name1", persons[2].Name);
+                    metadata = session.Advanced.GetMetadataFor(persons[2]);
                     Assert.Equal((DocumentFlags.HasRevisions | DocumentFlags.Revision | DocumentFlags.Conflicted).ToString(), metadata.GetString(Constants.Documents.Metadata.Flags));
 
-                    Assert.Equal("Name2", companiesRevisions[3].Name);
-                    metadata = session.Advanced.GetMetadataFor(companiesRevisions[2]);
-                    Assert.Equal((DocumentFlags.HasRevisions | DocumentFlags.Revision | DocumentFlags.Conflicted).ToString(), metadata.GetString(Constants.Documents.Metadata.Flags));
+                    Assert.Equal("Name2", persons[3].Name);
+                    metadata = session.Advanced.GetMetadataFor(persons[3]);
+                    Assert.Equal((DocumentFlags.HasRevisions | DocumentFlags.Revision | DocumentFlags.FromReplication | DocumentFlags.Conflicted).ToString(), metadata.GetString(Constants.Documents.Metadata.Flags));
+
+                    Assert.Equal("Name1", persons[4].Name);
+                    metadata = session.Advanced.GetMetadataFor(persons[4]);
+                    Assert.Equal((DocumentFlags.HasRevisions | DocumentFlags.Revision).ToString(), metadata.GetString(Constants.Documents.Metadata.Flags));
                 }
             }
         }
@@ -565,33 +569,33 @@ namespace SlowTests.Server.Documents.Revisions
 
                 using (var session = store2.OpenAsyncSession())
                 {
-                    await session.StoreAsync(new Company(), "keep-conflicted-revision-insert-order");
+                    await session.StoreAsync(new Person(), "keep-conflicted-revision-insert-order");
                     await session.SaveChangesAsync();
 
-                    var company = new Company
+                    var person = new Person
                     {
                         Name = "Name2"
                     };
-                    await session.StoreAsync(company, "foo/bar");
+                    await session.StoreAsync(person, "foo/bar");
                     await session.SaveChangesAsync();
                 }
 
                 using (var session = store1.OpenAsyncSession())
                 {
-                    var company = new Company
+                    var person = new Person
                     {
                         Name = "Name1"
                     };
-                    await session.StoreAsync(company, "foo/bar");
+                    await session.StoreAsync(person, "foo/bar");
                     await session.SaveChangesAsync();
-                    last = session.Advanced.GetLastModifiedFor(company).Value;
-                    var companiesRevisions = await session.Advanced.Revisions.GetForAsync<Company>("foo/bar");
+                    last = session.Advanced.GetLastModifiedFor(person).Value;
+                    var companiesRevisions = await session.Advanced.Revisions.GetForAsync<Person>("foo/bar");
                     Assert.Equal(1, companiesRevisions.Count);
                 }
 
                 using (var session = store2.OpenAsyncSession())
                 {
-                    await session.StoreAsync(new Company(), "marker");
+                    await session.StoreAsync(new Person(), "marker");
                     await session.SaveChangesAsync();
                 }
 
@@ -607,30 +611,35 @@ namespace SlowTests.Server.Documents.Revisions
                         token: token);
                 }
 
-                Assert.Equal(3, result.ScannedRevisions);
+                Assert.Equal(4, result.ScannedRevisions);
                 Assert.Equal(1, result.ScannedDocuments);
                 Assert.Equal(1, result.RevertedDocuments);
 
                 using (var session = store1.OpenAsyncSession())
                 {
-                    var companiesRevisions = await session.Advanced.Revisions.GetForAsync<Company>("foo/bar");
-                    Assert.Equal(4, companiesRevisions.Count);
+                    var persons = await session.Advanced.Revisions.GetForAsync<Person>("foo/bar");
+                    Assert.Equal(5, persons.Count);
 
-                    Assert.Equal("Name1", companiesRevisions[0].Name);
-                    var metadata = session.Advanced.GetMetadataFor(companiesRevisions[0]);
+                    Assert.Equal("Name1", persons[0].Name);
+                    var metadata = session.Advanced.GetMetadataFor(persons[0]);
                     Assert.Equal((DocumentFlags.HasRevisions | DocumentFlags.Revision | DocumentFlags.Reverted).ToString(), metadata.GetString(Constants.Documents.Metadata.Flags));
 
-                    Assert.Equal("Name1", companiesRevisions[1].Name);
-                    metadata = session.Advanced.GetMetadataFor(companiesRevisions[1]);
+                    Assert.Equal("Name1", persons[1].Name);
+                    metadata = session.Advanced.GetMetadataFor(persons[1]);
                     Assert.Equal((DocumentFlags.HasRevisions | DocumentFlags.Revision | DocumentFlags.Resolved).ToString(), metadata.GetString(Constants.Documents.Metadata.Flags));
 
-                    Assert.Equal("Name1", companiesRevisions[2].Name);
-                    metadata = session.Advanced.GetMetadataFor(companiesRevisions[2]);
+                    Assert.Equal("Name1", persons[2].Name);
+                    metadata = session.Advanced.GetMetadataFor(persons[2]);
                     Assert.Equal((DocumentFlags.HasRevisions | DocumentFlags.Revision | DocumentFlags.Conflicted).ToString(), metadata.GetString(Constants.Documents.Metadata.Flags));
 
-                    Assert.Equal("Name2", companiesRevisions[3].Name);
-                    metadata = session.Advanced.GetMetadataFor(companiesRevisions[3]);
+                    Assert.Equal("Name2", persons[3].Name);
+                    metadata = session.Advanced.GetMetadataFor(persons[3]);
                     Assert.Equal((DocumentFlags.HasRevisions | DocumentFlags.Revision | DocumentFlags.FromReplication | DocumentFlags.Conflicted).ToString(), metadata.GetString(Constants.Documents.Metadata.Flags));
+
+                    Assert.Equal("Name1", persons[4].Name);
+                    metadata = session.Advanced.GetMetadataFor(persons[4]);
+                    Assert.Equal((DocumentFlags.HasRevisions | DocumentFlags.Revision).ToString(), metadata.GetString(Constants.Documents.Metadata.Flags));
+
                 }
             }
         }
@@ -651,30 +660,29 @@ namespace SlowTests.Server.Documents.Revisions
 
                 using (var session = store1.OpenAsyncSession())
                 {
-                    var company = new Company
+                    var person = new Person
                     {
                         Name = "Name1"
                     };
-                    await session.StoreAsync(company, "foo/bar");
+                    await session.StoreAsync(person, "foo/bar");
                     await session.SaveChangesAsync();
 
                     session.Delete("foo/bar");
                     await session.SaveChangesAsync();
-
                     last = DateTime.UtcNow;
                 }
 
                 using (var session = store2.OpenAsyncSession())
                 {
-                    var company = new Company
+                    var person = new Person
                     {
                         Name = "Name2"
                     };
-                    await session.StoreAsync(company, "foo/bar");
+                    await session.StoreAsync(person, "foo/bar");
                     await session.SaveChangesAsync();
 
 
-                    await session.StoreAsync(new Company(), "marker");
+                    await session.StoreAsync(new Person(), "marker");
                     await session.SaveChangesAsync();
                 }
 
@@ -690,35 +698,38 @@ namespace SlowTests.Server.Documents.Revisions
                         token: token);
                 }
 
-                Assert.Equal(4, result.ScannedRevisions);
+                Assert.Equal(5, result.ScannedRevisions);
                 Assert.Equal(1, result.ScannedDocuments);
                 Assert.Equal(1, result.RevertedDocuments);
 
                 using (var session = store1.OpenAsyncSession())
                 {
-                    var companiesRevisions = await session.Advanced.Revisions.GetForAsync<Company>("foo/bar");
-                    Assert.Equal(5, companiesRevisions.Count);
+                    var persons = await session.Advanced.Revisions.GetForAsync<Person>("foo/bar");
+                    Assert.Equal(6, persons.Count);
 
-                    Assert.Equal(null, companiesRevisions[0].Name);
-                    var metadata = session.Advanced.GetMetadataFor(companiesRevisions[0]);
+                    Assert.Equal(null, persons[0].Name);
+                    var metadata = session.Advanced.GetMetadataFor(persons[0]);
                     Assert.Equal((DocumentFlags.HasRevisions | DocumentFlags.DeleteRevision | DocumentFlags.Reverted).ToString(), metadata.GetString(Constants.Documents.Metadata.Flags));
 
-                    Assert.Equal("Name2", companiesRevisions[1].Name);
-                    metadata = session.Advanced.GetMetadataFor(companiesRevisions[1]);
+                    Assert.Equal("Name2", persons[1].Name);
+                    metadata = session.Advanced.GetMetadataFor(persons[1]);
                     Assert.Equal((DocumentFlags.HasRevisions | DocumentFlags.Revision | DocumentFlags.FromReplication | DocumentFlags.Resolved).ToString(), metadata.GetString(Constants.Documents.Metadata.Flags));
 
-                    Assert.Equal(null, companiesRevisions[2].Name);
-                    metadata = session.Advanced.GetMetadataFor(companiesRevisions[2]);
+                    Assert.Equal(null, persons[2].Name);
+                    metadata = session.Advanced.GetMetadataFor(persons[2]);
                     Assert.Equal((DocumentFlags.HasRevisions | DocumentFlags.DeleteRevision | DocumentFlags.Conflicted).ToString(), metadata.GetString(Constants.Documents.Metadata.Flags));
 
-                    Assert.Equal("Name2", companiesRevisions[3].Name);
-                    metadata = session.Advanced.GetMetadataFor(companiesRevisions[3]);
+                    Assert.Equal("Name2", persons[3].Name);
+                    metadata = session.Advanced.GetMetadataFor(persons[3]);
                     Assert.Equal((DocumentFlags.HasRevisions | DocumentFlags.Revision | DocumentFlags.FromReplication | DocumentFlags.Conflicted).ToString(), metadata.GetString(Constants.Documents.Metadata.Flags));
 
-                    Assert.Equal("Name1", companiesRevisions[4].Name);
-                    metadata = session.Advanced.GetMetadataFor(companiesRevisions[4]);
-                    Assert.Equal((DocumentFlags.HasRevisions | DocumentFlags.Revision).ToString(), metadata.GetString(Constants.Documents.Metadata.Flags));
+                    Assert.Equal(null, persons[4].Name);
+                    metadata = session.Advanced.GetMetadataFor(persons[4]);
+                    Assert.Equal((DocumentFlags.HasRevisions | DocumentFlags.DeleteRevision).ToString(), metadata.GetString(Constants.Documents.Metadata.Flags));
 
+                    Assert.Equal("Name1", persons[5].Name);
+                    metadata = session.Advanced.GetMetadataFor(persons[5]);
+                    Assert.Equal((DocumentFlags.HasRevisions | DocumentFlags.Revision).ToString(), metadata.GetString(Constants.Documents.Metadata.Flags));
                 }
             }
         }
@@ -739,7 +750,7 @@ namespace SlowTests.Server.Documents.Revisions
 
                 using (var session = store2.OpenAsyncSession())
                 {
-                    var company = new Company
+                    var company = new Person
                     {
                         Name = "Name2"
                     };
@@ -753,7 +764,7 @@ namespace SlowTests.Server.Documents.Revisions
 
                 using (var session = store1.OpenAsyncSession())
                 {
-                    var company = new Company
+                    var company = new Person
                     {
                         Name = "Name1"
                     };
@@ -763,7 +774,7 @@ namespace SlowTests.Server.Documents.Revisions
                     session.Delete("foo/bar");
                     await session.SaveChangesAsync();
 
-                    var companiesRevisions = await session.Advanced.Revisions.GetForAsync<Company>("foo/bar");
+                    var companiesRevisions = await session.Advanced.Revisions.GetForAsync<Person>("foo/bar");
                     Assert.Equal(2, companiesRevisions.Count);
 
                     last = DateTime.UtcNow;
@@ -775,8 +786,8 @@ namespace SlowTests.Server.Documents.Revisions
 
                 using (var session = store1.OpenAsyncSession())
                 {
-                    var companiesRevisions = await session.Advanced.Revisions.GetForAsync<Company>("foo/bar");
-                    Assert.Equal(4, companiesRevisions.Count);
+                    var companiesRevisions = await session.Advanced.Revisions.GetForAsync<Person>("foo/bar");
+                    Assert.Equal(5, companiesRevisions.Count);
                 }
 
                 var db = await GetDocumentDatabaseInstanceFor(store1);
@@ -788,35 +799,38 @@ namespace SlowTests.Server.Documents.Revisions
                         token: token);
                 }
 
-                Assert.Equal(4, result.ScannedRevisions);
+                Assert.Equal(5, result.ScannedRevisions);
                 Assert.Equal(1, result.ScannedDocuments);
                 Assert.Equal(1, result.RevertedDocuments);
 
                 using (var session = store1.OpenAsyncSession())
                 {
-                    var companiesRevisions = await session.Advanced.Revisions.GetForAsync<Company>("foo/bar");
-                    Assert.Equal(5, companiesRevisions.Count);
+                    var persons = await session.Advanced.Revisions.GetForAsync<Person>("foo/bar");
+                    Assert.Equal(6, persons.Count);
 
-                    Assert.Equal(null, companiesRevisions[0].Name);
-                    var metadata = session.Advanced.GetMetadataFor(companiesRevisions[0]);
+                    Assert.Equal(null, persons[0].Name);
+                    var metadata = session.Advanced.GetMetadataFor(persons[0]);
                     Assert.Equal((DocumentFlags.HasRevisions | DocumentFlags.DeleteRevision | DocumentFlags.Reverted).ToString(), metadata.GetString(Constants.Documents.Metadata.Flags));
 
-                    Assert.Equal(null, companiesRevisions[1].Name);
-                    metadata = session.Advanced.GetMetadataFor(companiesRevisions[1]);
+                    Assert.Equal(null, persons[1].Name);
+                    metadata = session.Advanced.GetMetadataFor(persons[1]);
                     Assert.Equal((DocumentFlags.HasRevisions | DocumentFlags.DeleteRevision | DocumentFlags.Resolved).ToString(), metadata.GetString(Constants.Documents.Metadata.Flags));
 
-                    Assert.Equal("Name2", companiesRevisions[3].Name);
-                    metadata = session.Advanced.GetMetadataFor(companiesRevisions[3]);
-                    Assert.Equal((DocumentFlags.HasRevisions | DocumentFlags.Revision | DocumentFlags.FromReplication | DocumentFlags.Conflicted).ToString(), metadata.GetString(Constants.Documents.Metadata.Flags));
-
-                    Assert.Equal(null, companiesRevisions[2].Name);
-                    metadata = session.Advanced.GetMetadataFor(companiesRevisions[2]);
+                    Assert.Equal(null, persons[2].Name);
+                    metadata = session.Advanced.GetMetadataFor(persons[2]);
                     Assert.Equal((DocumentFlags.HasRevisions | DocumentFlags.DeleteRevision | DocumentFlags.Conflicted).ToString(), metadata.GetString(Constants.Documents.Metadata.Flags));
 
-                    Assert.Equal("Name1", companiesRevisions[4].Name);
-                    metadata = session.Advanced.GetMetadataFor(companiesRevisions[4]);
-                    Assert.Equal((DocumentFlags.HasRevisions | DocumentFlags.Revision).ToString(), metadata.GetString(Constants.Documents.Metadata.Flags));
+                    Assert.Equal("Name2", persons[3].Name);
+                    metadata = session.Advanced.GetMetadataFor(persons[3]);
+                    Assert.Equal((DocumentFlags.HasRevisions | DocumentFlags.Revision | DocumentFlags.FromReplication | DocumentFlags.Conflicted).ToString(), metadata.GetString(Constants.Documents.Metadata.Flags));
 
+                    Assert.Equal(null, persons[4].Name);
+                    metadata = session.Advanced.GetMetadataFor(persons[4]);
+                    Assert.Equal((DocumentFlags.HasRevisions | DocumentFlags.DeleteRevision).ToString(), metadata.GetString(Constants.Documents.Metadata.Flags));
+
+                    Assert.Equal("Name1", persons[5].Name);
+                    metadata = session.Advanced.GetMetadataFor(persons[5]);
+                    Assert.Equal((DocumentFlags.HasRevisions | DocumentFlags.Revision).ToString(), metadata.GetString(Constants.Documents.Metadata.Flags));
                 }
             }
         }

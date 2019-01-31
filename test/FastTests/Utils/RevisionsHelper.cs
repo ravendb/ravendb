@@ -42,6 +42,11 @@ namespace FastTests.Utils
                         PurgeOnDelete = true,
                         MinimumRevisionsToKeep = 123
                     },
+                    ["People"] = new RevisionsCollectionConfiguration
+                    {
+                        Disabled = false,
+                        MinimumRevisionsToKeep = 10
+                    },
                     ["Comments"] = new RevisionsCollectionConfiguration
                     {
                         Disabled = true
