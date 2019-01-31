@@ -351,7 +351,7 @@ namespace Voron.Impl.Paging
                     else
                     {
                         throw new Win32Exception(
-                            $"Unable to map {size / Constants.Size.Kilobyte:#,#0} kb starting at {startPage} on {FileName}",
+                            $"Unable to map {size / Constants.Size.Kilobyte:#,#0} kb starting at {startPage} on {FileName} (lastWin32Error={lastWin32Error})",
                             new Win32Exception(lastWin32Error));
                     }                    
                 }
