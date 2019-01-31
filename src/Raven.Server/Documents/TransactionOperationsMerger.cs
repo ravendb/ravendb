@@ -57,6 +57,7 @@ namespace Raven.Server.Documents
             _maxTimeToWaitForPreviousTxInMs = _parent.Configuration.TransactionMergerConfiguration.MaxTimeToWaitForPreviousTx.AsTimeSpan.TotalMilliseconds;
             _maxTxSizeInBytes = _parent.Configuration.TransactionMergerConfiguration.MaxTxSize.GetValue(SizeUnit.Bytes);
             _maxTimeToWaitForPreviousTxBeforeRejectingInMs = _parent.Configuration.TransactionMergerConfiguration.MaxTimeToWaitForPreviousTxBeforeRejecting.AsTimeSpan.TotalMilliseconds;
+            Is32Bits = parent.DocumentsStorage.Environment.Options.ForceUsing32BitsPager || PlatformDetails.Is32Bits;
         }
 
         public DatabasePerformanceMetrics GeneralWaitPerformanceMetrics = new DatabasePerformanceMetrics(MetricType.GeneralWait, 256, 1);
@@ -827,7 +828,7 @@ namespace Raven.Server.Documents
                 var modifiedSize = llt.NumberOfModifiedPages * Constants.Storage.PageSize;
 
                 var canCloseCurrentTx = previousOperation == null || previousOperation.IsCompleted;
-                if (canCloseCurrentTx || llt.Environment.Options.ForceUsing32BitsPager || PlatformDetails.Is32Bits)
+                if (canCloseCurrentTx || Is32Bits)
                 {
                     if (_operations.IsEmpty)
                         break; // nothing remaining to do, let's us close this work
@@ -862,6 +863,8 @@ namespace Raven.Server.Documents
             }
             return status;
         }
+
+        public bool Is32Bits { get;}
 
         private void UnlikelyRejectOperations(IAsyncResult previousOperation, Stopwatch sp, LowLevelTransaction llt, long modifiedSize)
         {
