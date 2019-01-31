@@ -1,6 +1,7 @@
-#if defined(__unix__) && !defined(__APPLE__)
-
+#ifndef _GNU_SOURCE
 #define _GNU_SOURCE
+#endif
+
 #include <unistd.h>
 #include <errno.h>
 #include <string.h>
@@ -8,8 +9,14 @@
 
 #include "rvn.h"
 #include "status_codes.h"
+#include "internal_posix.h"
 
-int32_t rvn_get_error_string(int32_t error, char* buf, int32_t buf_size, int32_t* special_errno_flags) {
+EXPORT int32_t
+rvn_get_error_string(int32_t error, 
+					 char* buf, 
+					 int32_t buf_size, 
+					 int32_t* special_errno_flags) 
+{
 	char* tmp_buf = NULL;
 	switch (error) {
 		case ENOMEM:
@@ -17,6 +24,9 @@ int32_t rvn_get_error_string(int32_t error, char* buf, int32_t buf_size, int32_t
 			break;
 		case ENOENT:
 			*special_errno_flags = ERRNO_SPECIAL_CODES_ENOENT;
+			break;
+		case ENOSPC:
+			*special_errno_flags = ERRNO_SPECIAL_CODES_ENOSPC;
 			break;
 		default:
 			*special_errno_flags = ERRNO_SPECIAL_CODES_NONE;
@@ -27,7 +37,7 @@ int32_t rvn_get_error_string(int32_t error, char* buf, int32_t buf_size, int32_t
 	if(tmp_buf == NULL)
 		goto error_cleanup;
 
-	char* err = strerror_r(error, tmp_buf, buf_size);
+	char* err = _get_strerror_r(error, tmp_buf, buf_size);
 	if(err == NULL)
 		goto error_cleanup;
 
@@ -45,7 +55,5 @@ int32_t rvn_get_error_string(int32_t error, char* buf, int32_t buf_size, int32_t
 error_cleanup:
 	if(tmp_buf != NULL)
 		free(tmp_buf);
-	return -1;
+	return FAIL;
 }
-
-#endif

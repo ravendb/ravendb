@@ -128,7 +128,7 @@ namespace Voron.Platform.Win32
                 if (lastError == (int) Win32NativeFileErrors.ERROR_DISK_FULL)
                 {
                     var driveInfo = DiskSpaceChecker.GetDiskSpaceInfo(filePath);
-                    throw new DiskFullException(filePath, length, driveInfo?.TotalFreeSpace.GetValue(SizeUnit.Bytes));
+                    throw new DiskFullException(filePath, length, driveInfo?.TotalFreeSpace.GetValue(SizeUnit.Bytes), new Win32Exception(lastError).Message);
                 }
 
                 var exception = new Win32Exception(lastError);
@@ -339,19 +339,6 @@ namespace Voron.Platform.Win32
 
     public static unsafe class Win32MemoryMapNativeMethods
     {
-        public static readonly IntPtr INVALID_HANDLE_VALUE = new IntPtr(-1);
-
-        // ReSharper disable once InconsistentNaming - Win32
-        public struct WIN32_MEMORY_RANGE_ENTRY
-        {
-            public void* VirtualAddress;
-            public IntPtr NumberOfBytes;
-        }
-
-        [DllImport("kernel32.dll", SetLastError = true,CallingConvention = CallingConvention.Winapi)]
-        public extern static bool PrefetchVirtualMemory(IntPtr hProcess, UIntPtr NumberOfEntries,
-            WIN32_MEMORY_RANGE_ENTRY* VirtualAddresses, ulong Flags);
-
         [Flags]
         public enum FileMapProtection : uint
         {

@@ -449,13 +449,8 @@ namespace Voron
                 if (File.Exists(path.FullPath) == false)
                     AttemptToReuseJournal(path, journalSize);
 
-                var result = _journals.GetOrAdd(name, _ => new Lazy<IJournalWriter>(() =>
-                {
-                    if (RunningOnPosix)
-                        return new PosixJournalWriter(this, path, journalSize);
-
-                    return new Win32FileJournalWriter(this, path, journalSize);
-                }));
+                var result = _journals.GetOrAdd(name, _ => 
+                    new Lazy<IJournalWriter>(() => new JournalWriter(this, path, journalSize)));
 
                 bool createJournal;
                 try
@@ -471,13 +466,7 @@ namespace Voron
 
                 if (createJournal)
                 {
-                    var newWriter = new Lazy<IJournalWriter>(() =>
-                    {
-                        if (RunningOnPosix)
-                            return new PosixJournalWriter(this, path, journalSize);
-
-                        return new Win32FileJournalWriter(this, path, journalSize);
-                    });
+                    var newWriter = new Lazy<IJournalWriter>(() => new JournalWriter(this, path, journalSize));
                     if (_journals.TryUpdate(name, newWriter, result) == false)
                         throw new InvalidOperationException("Could not update journal pager");
                     result = newWriter;
@@ -631,8 +620,8 @@ namespace Voron
             {
                 var path = _basePath.Combine(filename);
                 var rc = Pal.rvn_write_header(path.FullPath, header, sizeof(FileHeader), out var errorCode);
-                if (rc != 0)
-                    PalHelper.ThrowLastError(errorCode, $"Failed to rvn_write_header '{filename}', reason : {((PalFlags.FAIL_CODES)rc).ToString()}");
+                if (rc != PalFlags.FailCodes.Success)
+                    PalHelper.ThrowLastError(rc, errorCode, $"Failed to rvn_write_header '{filename}', reason : {((PalFlags.FailCodes)rc).ToString()}");
             }
 
             public void DeleteAllTempBuffers()
@@ -740,7 +729,8 @@ namespace Voron
                             DeleteOnClose = deleteOnClose
                         };
                     }
-                    return new PosixMemoryMapPager(options, file, initialSize, usePageProtection: usePageProtection)
+
+                    return new RvnMemoryMapPager(options, file, initialSize, usePageProtection: usePageProtection)
                     {
                         DeleteOnClose = deleteOnClose
                     };
@@ -773,7 +763,7 @@ namespace Voron
                 {
                     if (RunningOn32Bits)
                         return new Posix32BitsMemoryMapPager(this, path);
-                    return new PosixMemoryMapPager(this, path);
+                    return new RvnMemoryMapPager(this, path);
                 }
 
                 if (RunningOn32Bits)
@@ -862,17 +852,7 @@ namespace Voron
 
                 var path = GetJournalPath(journalNumber);
 
-                if (RunningOnPosix)
-                {
-                    value = new PosixJournalWriter(this, path, journalSize);
-                }
-                else
-                {
-                    value = new Win32FileJournalWriter(this, path, journalSize,
-                        Win32NativeFileAccess.GenericWrite,
-                        Win32NativeFileShare.Read | Win32NativeFileShare.Write | Win32NativeFileShare.Delete
-                        );
-                }
+                value = new JournalWriter(this, path, journalSize, PalFlags.JournalMode.PureMemory);
 
                 _logs[name] = value;
                 return value;
@@ -1017,7 +997,7 @@ namespace Voron
                 {
                     if (RunningOn32Bits)
                         return new Posix32BitsMemoryMapPager(this, filename);
-                    return new PosixMemoryMapPager(this, filename);
+                    return new RvnMemoryMapPager(this, filename);
                 }
 
                 if (RunningOn32Bits)

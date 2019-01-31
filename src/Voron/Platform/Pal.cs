@@ -1,24 +1,23 @@
 using System;
-using System.Diagnostics.CodeAnalysis;
 using System.IO;
 using System.Runtime.InteropServices;
-using System.Text;
-using Sparrow.Platform;
-
-// ReSharper disable SwitchStatementMissingSomeCases
-// ReSharper disable InconsistentNaming
+using Voron.Impl.Journal;
+using Voron.Impl.Paging;
+using static Voron.Platform.PalDefinitions;
 
 namespace Voron.Platform
 {
     public static unsafe class Pal
     {
+        public static SystemInformation SysInfo;
+
         static Pal()
         {
             var toFilename = LIBRVNPAL;
             string fromFilename;
             if (RuntimeInformation.IsOSPlatform(OSPlatform.Linux))
             {
-                if (RuntimeInformation.ProcessArchitecture != Architecture.Arm && 
+                if (RuntimeInformation.ProcessArchitecture != Architecture.Arm &&
                     RuntimeInformation.ProcessArchitecture != Architecture.Arm64)
                 {
                     fromFilename = Environment.Is64BitProcess ? $"{toFilename}.linux.x64.so" : $"{toFilename}.linux.x86.so";
@@ -46,11 +45,14 @@ namespace Voron.Platform
             }
 
             try
-            {
+            {                
+                var toTime = DateTime.MinValue.Ticks;
                 if (File.Exists(toFilename))
-                    return;
+                    toTime = new FileInfo(toFilename).CreationTime.Ticks;
 
-                File.Move(fromFilename, toFilename);
+                if (File.Exists(fromFilename) && 
+                    new FileInfo(fromFilename).CreationTime.Ticks > toTime)
+                        File.Copy(fromFilename, toFilename, overwrite: true);
             }
             catch (IOException e)
             {
@@ -58,13 +60,16 @@ namespace Voron.Platform
                     $"Cannot copy {fromFilename} to {toFilename}, make sure appropriate {toFilename} to your platform architecture exists in Raven.Server executable folder",
                     e);
             }
+
+            var rc = rvn_get_system_information(out SysInfo, out var errorCode);
+            if (rc != PalFlags.FailCodes.Success)
+                PalHelper.ThrowLastError(rc, errorCode, "Cannot get system information");
         }
-        
-        [SuppressMessage("ReSharper", "InconsistentNaming")]
+
         private const string LIBRVNPAL = "librvnpal";
 
         [DllImport(LIBRVNPAL, SetLastError = true)]
-        public static extern Int32 rvn_write_header(
+        public static extern PalFlags.FailCodes rvn_write_header(
             string filename,
             void* header,
             Int32 size,
@@ -75,7 +80,120 @@ namespace Voron.Platform
             Int32 errorCode,
             void* sb,
             Int32 capacity,
-            out Int32 specialErrnoCodes
+            out Int32 specialErrnoCodes);
+
+        [DllImport(LIBRVNPAL, SetLastError = true)]
+        public static extern PalFlags.FailCodes rvn_create_and_mmap64_file(
+            string filename,
+            Int64 initialFileSize,
+            PalFlags.MmapOptions flags,
+            out SafeMmapHandle handle,
+            out void* baseAddress,
+            out Int64 actualFileSize,
+            out Int32 errorCode);
+
+        [DllImport(LIBRVNPAL, SetLastError = true)]
+        public static extern PalFlags.FailCodes rvn_prefetch_virtual_memory(
+            void *virtualAddress,
+            Int64 length,
+            out Int32 errorCode);
+
+        [DllImport(LIBRVNPAL, SetLastError = true)]
+        private static extern PalFlags.FailCodes rvn_get_system_information(
+            out SystemInformation systemInformation,
+            out Int32 errorCode);
+
+        [DllImport(LIBRVNPAL, SetLastError = true)]
+        public static extern PalFlags.FailCodes rvn_memory_sync(
+            void *address,
+            Int64 size,
+            out Int32 errorCode);
+
+        [DllImport(LIBRVNPAL, SetLastError = true)]
+        public static extern PalFlags.FailCodes rvn_mmap_dispose_handle(
+            IntPtr handle,
+            out Int32 errorCode);
+
+        [DllImport(LIBRVNPAL, SetLastError = true)]
+        public static extern PalFlags.FailCodes rvn_unmap(
+            PalFlags.MmapOptions flags,
+            void* address,
+            Int64 size,
+            out Int32 errorCode);
+
+        [DllImport(LIBRVNPAL, SetLastError = true)]
+        public static extern PalFlags.FailCodes rvn_prefetch_ranges(
+            PrefetchRanges* list,
+            Int32 count,
+            out Int32 errorCode);
+
+        [DllImport(LIBRVNPAL, SetLastError = true)]
+        public static extern PalFlags.FailCodes rvn_protect_range(
+            void* start,
+            Int64 size,
+            PalFlags.ProtectRange protection,
+            out Int32 errorCode);
+
+        [DllImport(LIBRVNPAL, SetLastError = true)]
+        public static extern PalFlags.FailCodes rvn_allocate_more_space(
+            Int64 newLengthAfterAdjustment,
+            SafeMmapHandle handle,
+            out void* newAddress,
+            out Int32 errorCode);
+
+        [DllImport(LIBRVNPAL, SetLastError = true)]
+        public static extern PalFlags.FailCodes rvn_open_journal_for_writes(
+            string fileName,
+            PalFlags.JournalMode mode,
+            Int64 requiredSize,
+            out SafeJournalHandle handle,
+            out Int64 actualSize,
+            out Int32 errorCode);
+
+        [DllImport(LIBRVNPAL, SetLastError = true)]
+        public static extern PalFlags.FailCodes rvn_close_journal(
+            IntPtr handle,
+            out Int32 errorCode
+        );
+
+
+        [DllImport(LIBRVNPAL, SetLastError = true)]
+        public static extern PalFlags.FailCodes rvn_write_journal(
+            SafeJournalHandle handle,
+            void* buffer,
+            Int64 size,
+            Int64 offset,
+            out Int32 errorCode
+        );
+
+        [DllImport(LIBRVNPAL, SetLastError = true)]
+        public static extern PalFlags.FailCodes rvn_read_journal(
+            SafeJournalHandle handle,
+            void* buffer,
+            Int64 requiredSize,
+            Int64 offset,
+            out Int64 actualSize,
+            out Int32 errorCode
+        );
+
+        [DllImport(LIBRVNPAL, SetLastError = true)]
+        public static extern PalFlags.FailCodes rvn_truncate_journal(
+            SafeJournalHandle handle,
+            Int64 size,
+            out Int32 errorCode
             );
+
+        [DllImport(LIBRVNPAL, SetLastError = true)]
+        public static extern PalFlags.FailCodes rvn_open_journal_for_reads(
+            string fileNameFullPath,
+            out SafeJournalHandle  handle,
+            out Int32 errorCode
+        );
+
+        [DllImport(LIBRVNPAL, SetLastError = true)]
+        public static extern Int32 rvn_discard_virtual_memory(
+            void* address,
+            Int64 size,
+            out Int32 errorCode);
     }
 }
