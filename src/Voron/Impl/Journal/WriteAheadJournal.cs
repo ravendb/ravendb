@@ -950,6 +950,9 @@ namespace Voron.Impl.Journal
 
                         foreach (var toDelete in _journalsToDelete)
                         {
+                            if (toDelete.Value.Number > _lastSyncedJournal) // precaution
+                                continue;
+
                             if (_parent._waj._env.Options.IncrementalBackupEnabled == false)
                                 toDelete.Value.DeleteOnClose = true;
 
