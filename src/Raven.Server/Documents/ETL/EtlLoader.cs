@@ -258,7 +258,7 @@ namespace Raven.Server.Documents.ETL
                         $"{_database.Name} is encrypted and connection to ETL destination {config.GetDestination()} does not use encryption, " +
                         $"but {nameof(config.AllowEtlOnNonEncryptedChannel)} is set to true, so ETL is allowed"
                     });
-                return false;
+                return true;
             }
 
             if (uniqueNames.Add(config.Name) == false)
