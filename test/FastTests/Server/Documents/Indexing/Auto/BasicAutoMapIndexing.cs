@@ -415,8 +415,14 @@ namespace FastTests.Server.Documents.Indexing.Auto
                         new[] { new AutoIndexField { Name = "Name", Storage = FieldStorage.No } }),
                     database))
                 {
+                    var mre = new ManualResetEvent(false);
+
+                    database.IndexStore.IndexBatchCompleted = x => { mre.Set(); };
+
                     index.Start();
                     Assert.Equal(IndexRunningStatus.Running, index.Status);
+
+                    Assert.True(mre.WaitOne(TimeSpan.FromSeconds(15)));
 
                     IndexStats stats;
                     var batchStats = new IndexingRunStats();
