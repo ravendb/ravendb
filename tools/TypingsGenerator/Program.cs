@@ -425,6 +425,9 @@ namespace TypingsGenerator
             scripter.AddType(typeof(StudioConfiguration));
 
             scripter.AddType(typeof(StudioTasksHandler.OfflineMigrationValidation));
+            
+            scripter.AddType(typeof(StartTransactionsRecordingOperation.Parameters));
+            scripter.AddType(typeof(TransactionsRecordingHandler.RecordingDetails));
 
             return scripter;
         }

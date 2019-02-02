@@ -4,6 +4,8 @@ import durandalRouter = require("plugins/router");
 
 class debugAdvanced extends viewModelBase {
     router: DurandalRootRouter;
+    
+    growContainer = ko.observable<boolean>(true);
 
     constructor() {
         super();
@@ -32,10 +34,31 @@ class debugAdvanced extends viewModelBase {
                     title: 'Cluster Observer Log',
                     tabName: "Cluster Observer Log",
                     nav: true,
-                    hash: appUrl.forDebugAdvancedObserverLog(),                  
+                    hash: appUrl.forDebugAdvancedObserverLog()
+                },
+                {
+                    route: 'admin/settings/debug/advanced/recordTransactionCommands',
+                    moduleId: 'viewmodels/manage/debugAdvancedRecordTransactionCommands',
+                    title: 'Record Transaction Commands',
+                    tabName: "Record Transaction Commands",
+                    nav: true,
+                    hash: appUrl.forDebugAdvancedRecordTransactionCommands()
+                },
+                {
+                    route: 'admin/settings/debug/advanced/replayTransactionCommands',
+                    moduleId: 'viewmodels/manage/debugAdvancedReplayTransactionCommands',
+                    title: 'Replay Transaction Commands',
+                    tabName: "Replay Transaction Commands",
+                    nav: true,
+                    hash: appUrl.forDebugAdvancedReplayTransactionCommands()
                 }
             ])
             .buildNavigationModel();
+
+        this.router.on("router:navigation:attached", (viewModel: viewModelBase) => {
+            const preventGrow = !!(viewModel.constructor as any).preventParentGrow;
+            this.growContainer(!preventGrow);
+        });
     }
 }
 

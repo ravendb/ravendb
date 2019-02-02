@@ -1,0 +1,82 @@
+<div class="padding">
+
+    <form class="flex-form" data-bind="submit: startRecording">
+        <h3>Record Transaction Commands</h3>
+
+        <div class="bg-warning inline-block padding padding-xs small"><i class="icon-warning"></i>&nbsp;
+            WARNING! Unless you know what you are doing, recording transaction commands <strong>might affect server performance!</strong>
+        </div>
+        
+        <div class="row margin-top">
+            <div class="col-lg-6 col-sm-8">
+                <div class="form-group" data-bind="validationElement: databaseName">
+                    <label class="control-label">Database Name</label>
+                    <div class="flex-grow">
+                        <button class="btn btn-block dropdown-toggle text-left" data-toggle="dropdown">
+                            <span data-bind="text: databaseName() || 'Select database name'"></span>
+                            <span class="caret"></span>
+                        </button>
+                        <ul class="dropdown-menu" data-bind="foreach: databaseNames">
+                            <li><a href="#" data-bind="text: $data, click: _.partial($root.databaseName, $data)"></a></li>
+                        </ul>
+                        <span class="help-block" data-bind="validationMessage: databaseName"></span>
+                    </div>
+                </div>
+
+                <div class="form-group" data-bind="validationElement: outputFile">
+                    <label class="control-label">Output File Path<br /><small>(server side path)</small></label>
+                    <div class="flex-grow">
+                        <input data-bind="textInput: outputFile" type="text" class="form-control" placeholder="Path to save output file" />
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <hr />
+        <button type="submit" class="btn btn-primary">
+            <i class="icon-transaction-record"></i>
+            <span>Start recording</span>
+        </button>
+
+        <div class="margin-top" data-bind="if: runningTasks().length, visible: runningTasks().length">
+            <h3>Transaction commands recordings:</h3>
+
+            <div class="row">
+                <div class="col-lg-6 col-sm-8">
+                    <table class="table table-striped table-condensed table-bordered">
+                        <thead>
+                            <tr>
+                                <th>Status</th>
+                                <th>Database</th>
+                                <th>Output File Path</th>
+                            </tr>
+                        </thead>
+                        <tbody data-bind="foreach: runningTasks">
+                            <tr data-bind="css: { 'blink-style': highlight }">
+                                <td>
+                                    <div class="text-success" data-bind="visible: !inProgress()">
+                                        <i class="icon-check"></i>
+                                        <span>Completed</span>
+                                    </div>    
+                                    <div class="flex-horizontal" data-bind="visible: inProgress()">
+                                        <span class="btn-spinner margin-left margin-left-sm">
+                                            <i class=""></i> <span>Running</span>
+                                        </span>
+                                        <div class="flex-separator"></div>
+    
+                                        <button class="btn btn-danger btn-sm" data-bind="click: _.partial($root.stopRecording, databaseName)">
+                                            <i class="icon-stop"></i>
+                                            <span>Stop</span>
+                                        </button>
+                                    </div>
+                                </td>
+                                <td data-bind="text: databaseName"></td>
+                                <td data-bind="text: filePath"></td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </form>
+</div>

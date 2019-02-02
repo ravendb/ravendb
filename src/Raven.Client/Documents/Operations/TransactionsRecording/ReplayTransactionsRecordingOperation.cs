@@ -41,10 +41,15 @@ namespace Raven.Client.Documents.Operations.TransactionsRecording
             {
                 url = $"{node.Url}/databases/{node.Database}/transactions/replay?operationId={_operationId}";
 
+                var form = new MultipartFormDataContent
+                {
+                    {new StreamContent(_replayStream), "file", "name"}
+                };
+                
                 var request = new HttpRequestMessage
                 {
                     Method = HttpMethod.Post,
-                    Content = new StreamContent(_replayStream)
+                    Content = form
                 };
                 _replayStream.Position = 0;
                 return request;

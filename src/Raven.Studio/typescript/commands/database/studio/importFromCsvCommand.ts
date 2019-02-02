@@ -18,7 +18,6 @@ class importFromCsvCommand extends commandBase {
         const url = endpoints.databases.smuggler.smugglerImportCsv + this.urlEncodeArgs(urlArgs);
 
         const formData = new FormData();
-
         formData.append("file", this.file);
 
         return this.post(url, formData, this.db, commandBase.getOptionsForImport(this.isUploading, this.uploadStatus), 0)
