@@ -1,10 +1,12 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Linq;
 using System.Net;
 using System.Threading.Tasks;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Http.Features.Authentication;
 using Raven.Client.Util;
+using Raven.Server.NotificationCenter.Notifications;
 using Raven.Server.Routing;
 using Raven.Server.Web;
 
@@ -33,6 +35,13 @@ namespace Raven.Server.NotificationCenter.Handlers
 
                             await writer.WriteToWebSocket(action.Json);
                         }
+                    }
+                    
+                    foreach (var operation in ServerStore.Operations.GetActive().OrderBy(x => x.Description.StartTime))
+                    {
+                        var action = OperationChanged.Create(null, operation.Id, operation.Description, operation.State, operation.Killable);
+
+                        await writer.WriteToWebSocket(action.ToJson());
                     }
 
                     await writer.WriteNotifications(isValidFor);

@@ -1086,9 +1086,10 @@ namespace Raven.Server.Documents
         {
             public RecordingState State;
             public Stream Stream;
+            public Action StopAction;
         }
 
-        public void StartRecording(string filePath)
+        public void StartRecording(string filePath, Action stopAction)
         {
             var recordingFileStream = new FileStream(filePath, FileMode.Create);
             if (null != Interlocked.CompareExchange(ref _recording.State, new RecordingState.BeforeEnabledRecordingState(this), null))
@@ -1097,8 +1098,11 @@ namespace Raven.Server.Documents
                 File.Delete(filePath);
             }
             _recording.Stream = new GZipStream(recordingFileStream, CompressionMode.Compress);
+            _recording.StopAction = stopAction;
         }
-
+        
+        public bool RecordingEnabled => _recording.State != null;
+        
         public void StopRecording()
         {
             var recordingState = _recording.State;
@@ -1106,6 +1110,8 @@ namespace Raven.Server.Documents
             {
                 recordingState.Shutdown();
                 _waitHandle.Set();
+                _recording.StopAction?.Invoke();
+                _recording.StopAction = null;
             }
         }
     }

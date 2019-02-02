@@ -51,7 +51,8 @@ namespace SlowTests.Server
             {
                 typeof(TransactionOperationsMerger.MergedTransactionCommand),
                 typeof(ExecuteRateLimitedOperations<>),
-                typeof(TransactionsRecordingCommand),
+                typeof(StartTransactionsRecordingCommand),
+                typeof(StopTransactionsRecordingCommand),
                 typeof(BatchHandler.TransactionMergedCommand),
                 typeof(AbstractQueryRunner.BulkOperationCommand<>)
             };

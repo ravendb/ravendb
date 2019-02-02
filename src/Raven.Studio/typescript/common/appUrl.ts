@@ -107,6 +107,15 @@ class appUrl {
     static forDebugAdvancedObserverLog(): string {
         return "#admin/settings/debug/advanced/observerLog";
     }
+
+    static forDebugAdvancedRecordTransactionCommands(databaseToHighlight: string = undefined): string {
+        const dbPart = _.isUndefined(databaseToHighlight) ? "" : "?highlight=" + encodeURIComponent(databaseToHighlight);
+        return "#admin/settings/debug/advanced/recordTransactionCommands" + dbPart;
+    }
+
+    static forDebugAdvancedReplayTransactionCommands(): string {
+        return "#admin/settings/debug/advanced/replayTransactionCommands";
+    }
     
     static forDebugAdvancedMemoryMappedFiles(): string {
         return "#admin/settings/debug/advanced/memoryMappedFiles";

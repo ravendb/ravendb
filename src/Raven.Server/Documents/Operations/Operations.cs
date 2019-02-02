@@ -397,6 +397,9 @@ namespace Raven.Server.Documents.Operations
 
             [Description("Replay Transaction Commands")]
             ReplayTransactionCommands,
+            
+            [Description("Record Transaction Commands")]
+            RecordTransactionCommands,
 
             [Description("Certificate generation")]
             CertificateGeneration,
