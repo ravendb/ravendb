@@ -11,7 +11,7 @@
     "google.analytics/ga": "registry:dt/google.analytics/ga#0.0.0+20160317120654",
     "jquery": "registry:dt/jquery#1.10.0+20160704162008",
     "jquery.blockui": "registry:dt/jquery.blockui#0.0.0+20160316155526",
-    "jszip": "github:DefinitelyTyped/DefinitelyTyped/jszip/jszip.d.ts#56295f5058cac7ae458540423c50ac2dcf9fc711",
+    "jszip": "registry:dt/jszip#0.0.0+20170110193107",
     "knockout": "registry:dt/knockout#3.4.0+20170311010955",
     "knockout-postbox": "registry:dt/knockout-postbox#0.0.0+20160316155526",
     "knockout.validation": "registry:dt/knockout.validation#0.0.0+20160501154149",

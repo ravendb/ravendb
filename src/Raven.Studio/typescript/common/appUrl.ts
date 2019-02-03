@@ -142,6 +142,10 @@ class appUrl {
         let databasePart = appUrl.getEncodedDbPart(db);
         return "#admin/settings/runningQueries?" + databasePart;
     }
+    
+    static forCaptureStackTraces(): string {
+        return "#admin/settings/captureStackTraces";
+    }
 
     static forAdminJsConsole(): string {
         return "#admin/settings/adminJsConsole";

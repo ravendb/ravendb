@@ -235,16 +235,13 @@ namespace Raven.Server.Documents.Handlers.Debugging
                 }
                 catch (Exception e)
                 {
-                    using (var writer = new StreamWriter(stackTraceStream))
-                    {
-                        var jsonSerializer = DocumentConventions.Default.CreateSerializer();
-                        jsonSerializer.Formatting = Formatting.Indented;
+                    var jsonSerializer = DocumentConventions.Default.CreateSerializer();
+                    jsonSerializer.Formatting = Formatting.Indented;
 
-                        jsonSerializer.Serialize(writer, new
-                        {
-                            Error = e.Message
-                        });
-                    }
+                    jsonSerializer.Serialize(sw, new
+                    {
+                        Error = e.Message
+                    });
                 }
             }
         }

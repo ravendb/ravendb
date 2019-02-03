@@ -9,7 +9,7 @@ declare const Sortable: any;
 ///
 
 declare const JSZipUtils: {
-    getBinaryContent: any;
+    getBinaryContent: (url: string, handler: (error: any, data: any) => void) => void;
 };
 
 declare module "jszip-utils" {
