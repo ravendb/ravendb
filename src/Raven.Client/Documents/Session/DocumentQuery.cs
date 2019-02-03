@@ -4,6 +4,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Linq.Expressions;
 using System.Reflection;
+using System.Runtime.CompilerServices;
 using Raven.Client.Documents.Indexes;
 using Raven.Client.Documents.Linq;
 using Raven.Client.Documents.Queries;
@@ -176,7 +177,7 @@ namespace Raven.Client.Documents.Session
             AfterQueryExecuted(action);
         }
 
-         void IQueryBase<T, IGraphQuery<T>>.AfterQueryExecuted(Action<QueryResult> action)
+        void IQueryBase<T, IGraphQuery<T>>.AfterQueryExecuted(Action<QueryResult> action)
         {
             AfterQueryExecuted(action);
         }
@@ -962,12 +963,18 @@ namespace Raven.Client.Documents.Session
 
         private List<T> ExecuteQueryOperation(int? take)
         {
+            ExecuteQueryOperationInternal(take);
+
+            return QueryOperation.Complete<T>();
+        }
+
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        private void ExecuteQueryOperationInternal(int? take)
+        {
             if (take.HasValue && (PageSize.HasValue == false || PageSize > take))
                 Take(take.Value);
 
             InitSync();
-
-            return QueryOperation.Complete<T>();
         }
 
         /// <inheritdoc />
