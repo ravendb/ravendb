@@ -314,6 +314,19 @@ namespace Raven.Client.Documents
         }
 
         /// <summary>
+        /// Returns an array of results for a query asynchronously. 
+        /// </summary>
+        public static Task<T[]> ToArrayAsync<T>(this IQueryable<T> source, CancellationToken token = default)
+        {
+            var provider = source.Provider as IRavenQueryProvider;
+            if (provider == null)
+                throw new ArgumentException("You can only use Raven Queryable with ToArrayAsync");
+
+            var documentQuery = provider.ToAsyncDocumentQuery<T>(source.Expression);
+            return documentQuery.ToArrayAsync(token);
+        }
+
+        /// <summary>
         /// Determines whether a sequence contains any elements.
         /// </summary>
         /// 

@@ -771,7 +771,14 @@ namespace Raven.Client.Documents.Session
         }
 
         /// <inheritdoc />
-        Task<List<T>> IAsyncDocumentQueryBase<T>.ToListAsync(CancellationToken token)
+        async Task<List<T>> IAsyncDocumentQueryBase<T>.ToListAsync(CancellationToken token)
+        {
+            var items = await ExecuteQueryOperation(null, token).ConfigureAwait(false);
+            return items.ToList();
+        }
+
+        /// <inheritdoc />
+        Task<T[]> IAsyncDocumentQueryBase<T>.ToArrayAsync(CancellationToken token)
         {
             return ExecuteQueryOperation(null, token);
         }
@@ -819,7 +826,7 @@ namespace Raven.Client.Documents.Session
             return result.TotalResults > 0;
         }
 
-        private async Task<List<T>> ExecuteQueryOperation(int? take, CancellationToken token)
+        private async Task<T[]> ExecuteQueryOperation(int? take, CancellationToken token)
         {
             if (take.HasValue && (PageSize.HasValue == false || PageSize > take))
                 Take(take.Value);

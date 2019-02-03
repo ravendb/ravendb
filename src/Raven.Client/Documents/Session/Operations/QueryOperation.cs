@@ -96,7 +96,7 @@ namespace Raven.Client.Documents.Session.Operations
             return _session.DocumentStore.DisableAggressiveCaching(_session.DatabaseName);
         }
 
-        public List<T> Complete<T>()
+        public T[] Complete<T>()
         {
             _session.AssertNotDisposed(); // ensure that the user didn't do an async query then closed the session early
             var queryResult = _currentQueryResults.CreateSnapshot();
@@ -105,14 +105,15 @@ namespace Raven.Client.Documents.Session.Operations
             if (NoTracking == false)
                 _session.RegisterIncludes(queryResult.Includes);
 
-            var list = new List<T>();
-            foreach (BlittableJsonReaderObject document in queryResult.Results)
+            var result = new T[queryResult.TotalResults];
+            for (int i = 0; i < queryResult.TotalResults; i++)
             {
+                var document = (BlittableJsonReaderObject)queryResult.Results[i];
                 var metadata = document.GetMetadata();
 
                 metadata.TryGetId(out var id);
 
-                list.Add(Deserialize<T>(id, document, metadata, _fieldsToFetch, NoTracking, _session));
+                result[i] = Deserialize<T>(id, document, metadata, _fieldsToFetch, NoTracking, _session);
             }
 
             if (NoTracking == false)
@@ -126,7 +127,7 @@ namespace Raven.Client.Documents.Session.Operations
                 }
             }
 
-            return list;
+            return result;
         }
 
         internal static T Deserialize<T>(string id, BlittableJsonReaderObject document, BlittableJsonReaderObject metadata, FieldsToFetchToken fieldsToFetch, bool disableEntitiesTracking, InMemoryDocumentSessionOperations session)
