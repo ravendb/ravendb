@@ -1340,45 +1340,23 @@ namespace Raven.Server.Commercial
                 // We need to make sure that the currently used data dir will be the one written (or not written) in the resulting settings.json
                 var dataDirKey = RavenConfiguration.GetKey(x => x.Core.DataDirectory);
                 var currentDataDir = serverStore.Configuration.GetServerWideSetting(dataDirKey) ?? serverStore.Configuration.GetSetting(dataDirKey);
+                var currentHasKey = string.IsNullOrWhiteSpace(currentDataDir) == false;
 
-                if (settingsJsonObject.TryGet(dataDirKey, out string dataDirFromZip))
+                if (currentHasKey)
                 {
-                    var dataDirFromZipPath = new PathSetting(dataDirFromZip ?? "");
+                    settingsJsonObject.Modifications = new DynamicJsonValue(settingsJsonObject)
+                    {
+                        [dataDirKey] = currentDataDir
+                    };
+                }
+                else if (settingsJsonObject.TryGet(dataDirKey, out string _))
+                {
+                    settingsJsonObject.Modifications = new DynamicJsonValue(settingsJsonObject);
+                    settingsJsonObject.Modifications.Remove(dataDirKey);
+                }
 
-                    if (string.IsNullOrEmpty(currentDataDir))
-                    {
-                        settingsJsonObject.Modifications = new DynamicJsonValue(settingsJsonObject);
-                        settingsJsonObject.Modifications.Remove(dataDirKey);
-                        settingsJsonObject = context.ReadObject(settingsJsonObject, "removingDataDir");
-                    }
-                    else
-                    {
-                        var currentDataDirPath = new PathSetting(currentDataDir);
-                        if (currentDataDirPath.Equals(dataDirFromZipPath) == false)
-                        {
-                            settingsJsonObject.Modifications = new DynamicJsonValue(settingsJsonObject)
-                            {
-                                [dataDirKey] = currentDataDir
-                            };
-                            settingsJsonObject = context.ReadObject(settingsJsonObject, "fixingDataDir");
-                        }
-                    }
-                }
-                else
-                {
-                    if (string.IsNullOrEmpty(currentDataDir))
-                    {
-                        // nothing to do, neither has a data dir defined
-                    }
-                    else
-                    {
-                        settingsJsonObject.Modifications = new DynamicJsonValue(settingsJsonObject)
-                        {
-                            [dataDirKey] = currentDataDir
-                        };
-                        settingsJsonObject = context.ReadObject(settingsJsonObject, "addingDataDir");
-                    }
-                }
+                if (settingsJsonObject.Modifications != null)
+                    settingsJsonObject = context.ReadObject(settingsJsonObject, "settings.json");
             }
             catch (Exception e)
             {
