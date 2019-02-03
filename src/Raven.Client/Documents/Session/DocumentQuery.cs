@@ -908,6 +908,16 @@ namespace Raven.Client.Documents.Session
             }
 
             WithTokens.AddLast(new WithToken(alias, docQuery.ToString()));
+
+            if (docQuery.TheWaitForNonStaleResults)
+            {
+                TheWaitForNonStaleResults = true;
+                if (Timeout == null || Timeout < docQuery.Timeout)
+                {
+                    Timeout = docQuery.Timeout;
+                }
+            }      
+            
             return this;
         }
         /// <inheritdoc />
