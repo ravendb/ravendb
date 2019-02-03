@@ -26,22 +26,6 @@ namespace Sparrow.Json
 
         private class ContextStack : StackHeader<T>, IDisposable
         {
-            ~ContextStack()
-            {
-                if (Environment.HasShutdownStarted)
-                    return; // let the OS clean this up
-
-                try
-                {
-                    DisposeOfContexts();
-                }
-                catch (ObjectDisposedException)
-                {
-                    // This is expected, we might be calling the finalizer on an object that
-                    // was already disposed, we don't want to error here because of this
-                }
-            }
-
             public void Dispose()
             {
                 GC.SuppressFinalize(this);
