@@ -939,6 +939,9 @@ namespace Sparrow.Json
 
         protected internal virtual void Renew()
         {
+            if (Disposed)
+                ThrowObjectDisposed();
+
             _arenaAllocator.RenewArena();
             if (_arenaAllocatorForLongLivedValues == null)
             {
@@ -968,7 +971,7 @@ namespace Sparrow.Json
                 {
                     _arenaAllocatorForLongLivedValues.Return(mem.AllocatedMemoryData);
                     mem.AllocatedMemoryData = null;
-                    mem.Dispose();
+                    mem.IsDisposed = true;                    
                 }
 
                 _arenaAllocatorForLongLivedValues = null;

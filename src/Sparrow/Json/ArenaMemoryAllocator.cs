@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Runtime.CompilerServices;
+using System.Threading;
 using Sparrow.Binary;
 using Sparrow.Global;
 using Sparrow.LowMemory;
@@ -309,10 +310,17 @@ namespace Sparrow.Json
 
         public void Dispose()
         {
+            Dispose(true);
+        }
+        public void Dispose(bool disposing)
+        {
             if (!_isDisposed.Raise())
                 return;
 
-            lock (this)
+            if (disposing)
+                Monitor.Enter(this);
+
+            try
             {
                 if (_olderBuffers != null)
                 {
@@ -330,7 +338,13 @@ namespace Sparrow.Json
 
                 GC.SuppressFinalize(this);
             }
+            finally
+            {
+                if (disposing)
+                    Monitor.Exit(this);
+            }
         }
+
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public void Return(AllocatedMemoryData allocation)

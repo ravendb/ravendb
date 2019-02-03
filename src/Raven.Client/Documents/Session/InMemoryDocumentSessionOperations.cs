@@ -1087,22 +1087,7 @@ more responsive application.
         public virtual void Dispose()
         {
             Dispose(true);
-        }
-
-        ~InMemoryDocumentSessionOperations()
-        {
-            try
-            {
-                Dispose(false);
-            }
-            catch (ObjectDisposedException)
-            {
-                // nothing can be done here
-            }
-#if DEBUG
-            Debug.WriteLine("Disposing a session for finalizer! It should be disposed by calling session.Dispose()!");
-#endif
-        }
+        }      
 
         public void RegisterMissing(string id)
         {
