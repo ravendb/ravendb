@@ -44,6 +44,8 @@ namespace Raven.Server.Documents
         private readonly long _maxTxSizeInBytes;
         private readonly double _maxTimeToWaitForPreviousTxBeforeRejectingInMs;
 
+        private readonly bool _is32Bits;
+
         public TransactionOperationsMerger(DocumentDatabase parent, CancellationToken shutdown)
         {
             _parent = parent;
@@ -53,6 +55,7 @@ namespace Raven.Server.Documents
             _maxTimeToWaitForPreviousTxInMs = _parent.Configuration.TransactionMergerConfiguration.MaxTimeToWaitForPreviousTx.AsTimeSpan.TotalMilliseconds;
             _maxTxSizeInBytes = _parent.Configuration.TransactionMergerConfiguration.MaxTxSize.GetValue(SizeUnit.Bytes);
             _maxTimeToWaitForPreviousTxBeforeRejectingInMs = _parent.Configuration.TransactionMergerConfiguration.MaxTimeToWaitForPreviousTxBeforeRejecting.AsTimeSpan.TotalMilliseconds;
+            _is32Bits = _parent.Configuration.Storage.ForceUsing32BitsPager || PlatformDetails.Is32Bits;
         }
 
         public DatabasePerformanceMetrics GeneralWaitPerformanceMetrics = new DatabasePerformanceMetrics(MetricType.GeneralWait, 256, 1);
@@ -64,7 +67,6 @@ namespace Raven.Server.Documents
 
         public void Start()
         {
-            Is32Bits = _parent.DocumentsStorage.Environment.Options.ForceUsing32BitsPager || PlatformDetails.Is32Bits;
             _txLongRunningOperation = PoolOfThreads.GlobalRavenThreadPool.LongRunning(x => MergeOperationThreadProc(), null, TransactionMergerThreadName);
         }
 
@@ -451,7 +453,7 @@ namespace Raven.Server.Documents
 
                         return;
                     }
-                    
+
                     var currentPendingOps = GetBufferForPendingOps();
                     PendingOperations result;
                     bool calledCompletePreviousTx = false;
@@ -615,7 +617,7 @@ namespace Raven.Server.Documents
                 var modifiedSize = llt.NumberOfModifiedPages * Constants.Storage.PageSize;
 
                 var canCloseCurrentTx = previousOperation == null || previousOperation.IsCompleted;
-                if (canCloseCurrentTx || Is32Bits)
+                if (canCloseCurrentTx || _is32Bits)
                 {
                     if (_operations.IsEmpty)
                         break; // nothing remaining to do, let's us close this work
@@ -650,8 +652,6 @@ namespace Raven.Server.Documents
             }
             return status;
         }
-
-        public bool Is32Bits { get; set; }
 
         private void UnlikelyRejectOperations(IAsyncResult previousOperation, Stopwatch sp, LowLevelTransaction llt, long modifiedSize)
         {
@@ -805,7 +805,7 @@ namespace Raven.Server.Documents
                         }
                         catch (Exception e)
                         {
-                            if(alreadyRetried == false && op.RetryOnError)
+                            if (alreadyRetried == false && op.RetryOnError)
                             {
                                 alreadyRetried = true;
                                 continue;
