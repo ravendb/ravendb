@@ -596,3 +596,15 @@ interface certificateInfo {
     expiration: Date;
     notBefore: Date;
 }
+
+interface clusterWideStackTraceResponseItem {
+    NodeTag: string;
+    Stacks: Array<rawStackTraceResponseItem>;
+    NodeUrl: string;
+}
+
+interface rawStackTraceResponseItem {
+    ThreadIds: number[],
+    NativeThreads: boolean,
+    StackTrace: string[];
+}

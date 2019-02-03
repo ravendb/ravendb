@@ -96,6 +96,15 @@ function getManageServerMenuItem() {
             enabled: access.enableGatherDebugInfoMenuItem
         }),
         new leafMenuItem({
+            route: 'admin/settings/captureStackTraces',
+            moduleId: 'viewmodels/manage/captureStackTraces',
+            title: 'Stack Traces',
+            nav: true,
+            css: 'icon-parallel-stacks', 
+            dynamicHash: appUrl.forCaptureStackTraces,
+            enabled: access.enableCaptureStackTraces,
+        }),
+        new leafMenuItem({
             route: 'admin/settings/runningQueries',
             moduleId: 'viewmodels/manage/runningQueries',
             title: 'Running Queries',

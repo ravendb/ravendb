@@ -1,0 +1,94 @@
+﻿.capture-stack-traces {
+    .overlay {
+        fill: none;
+        pointer-events: all;
+    }
+
+    .threadContainer {
+        fill: @gray-dark;
+    }
+
+    .header {
+        fill: @gray-darker;
+    }
+
+    .link {
+        fill:none;
+        stroke-width:2;
+        stroke-miterlimit: 10;
+        vector-effect: non-scaling-stroke;
+
+        &.level-1 {
+            stroke: @color-3;
+        }
+
+        &.level-2 {
+            stroke: @color-3-2;
+        }
+
+        &.level-3 {
+            stroke: @color-4;
+        }
+
+        &.level-4 {
+            stroke: @color-4-2;
+        }
+
+        &.level-5 {
+            stroke: @color-5;
+        }
+
+        &.level-6 {
+            stroke: @color-5-2;
+        }
+
+        &.level-7 {
+            stroke: @color-1;
+        }
+    }
+
+    .wireframe {
+        fill-opacity: 0;
+        transition: fill-opacity .2s ease;
+        fill: @gray-light;
+        
+        &.own {
+            fill: @gray-lighter;
+        }
+    }
+    
+    .frame {
+        fill-opacity: 1;
+        transition: fill-opacity .2s ease;
+        
+        fill: @gray-light;
+        font-size: 12px;
+        alignment-baseline: middle;
+
+        &.own {
+            fill: @gray-lighter;
+            font-weight: 900;
+        }
+    }
+    
+    .wireframes {
+        .wireframe {
+            fill-opacity: 1;
+        }
+        
+        .frame {
+            fill-opacity: 0;
+        }
+    }
+
+    .count {
+        font-size:26px;
+        font-weight: bold;
+        fill: @gray-lighter;
+    }
+
+    .title {
+        font-size:20px;
+        fill: @gray-light;
+    }
+}

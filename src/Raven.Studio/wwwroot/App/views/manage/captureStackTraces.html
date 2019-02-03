@@ -1,0 +1,45 @@
+<div class="flex-vertical absolute-fill content-margin capture-stack-traces">
+    <div class="flex-horizontal flex-noshrink toolbar">
+        <div>
+            Capture Stack Traces for:
+
+            <div class="btn-group">
+                <button class="btn btn-default dropdown-toggle" data-toggle="dropdown">
+                    <span data-bind="text: clusterWide() ? 'entire cluster' : 'current server only'"></span>
+                    <span class="caret"></span>
+                </button>
+                <ul class="dropdown-menu">
+                    <li><a href="#" data-bind="click: _.partial(clusterWide, false)">current server only</a></li>
+                    <li><a href="#" data-bind="click: _.partial(clusterWide, true)">entire cluster</a></li>
+                </ul>
+            </div>
+            
+            <div class="btn btn-primary" data-bind="click: captureStacks, css: { 'btn-spinner': spinners.loading }, disable: spinners.loading">
+                <i class="icon-parallel-stacks"></i> <!-- TODO: change icon! -->
+                <span>Capture</span>
+            </div>
+        </div>
+         
+        <div class="flex-separator"></div>
+        <div data-bind="if: clusterWideData().length && selectedClusterWideData()">
+            Show stack traces for: 
+
+            <div class="btn-group">
+                <button class="btn btn-default dropdown-toggle" data-toggle="dropdown">
+                    <span data-bind="text: 'Node ' + selectedClusterWideData().NodeTag + ' (' + selectedClusterWideData().NodeUrl + ')'"></span>
+                    <span class="caret"></span>
+                </button>
+                <ul class="dropdown-menu" data-bind="foreach: clusterWideData">
+                    <li><a href="#" data-bind="text: 'Node ' + NodeTag + ' (' + NodeUrl + ')', click: _.partial($root.selectedClusterWideData, $data)"></a></li>
+                </ul>
+            </div>
+        </div>
+    </div>
+    <div class="flex-grow" id="js-tracks-container">
+    </div>
+</div>
+
+
+<style type="text/css">
+
+</style>

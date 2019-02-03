@@ -24,7 +24,7 @@ namespace Raven.Server.Documents.Handlers.Debugging
             var threadIds = GetStringValuesQueryString("threadId", required: false);
             var includeStackObjects = GetBoolValueQueryString("includeStackObjects", required: false) ?? false;
 
-            using (var sw = new StreamWriter(ResponseBodyStream()))
+            using (var sw = new StreamWriter(ResponseBodyStream(), Encoding.UTF8,1024, true))
             {
                 OutputResultToStream(sw, threadIds.ToHashSet(), includeStackObjects);
             }
