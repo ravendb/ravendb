@@ -1343,7 +1343,7 @@ namespace Raven.Server.Commercial
 
                 if (settingsJsonObject.TryGet(dataDirKey, out string dataDirFromZip))
                 {
-                    var dataDirFromZipPath = new PathSetting(dataDirFromZip);
+                    var dataDirFromZipPath = new PathSetting(dataDirFromZip ?? "");
 
                     if (string.IsNullOrEmpty(currentDataDir))
                     {
@@ -1358,7 +1358,7 @@ namespace Raven.Server.Commercial
                         {
                             settingsJsonObject.Modifications = new DynamicJsonValue(settingsJsonObject)
                             {
-                                [dataDirKey] = currentDataDirPath.FullPath
+                                [dataDirKey] = currentDataDir
                             };
                             settingsJsonObject = context.ReadObject(settingsJsonObject, "fixingDataDir");
                         }
@@ -1372,11 +1372,9 @@ namespace Raven.Server.Commercial
                     }
                     else
                     {
-                        var currentDataDirPath = new PathSetting(currentDataDir);
-                        
                         settingsJsonObject.Modifications = new DynamicJsonValue(settingsJsonObject)
                         {
-                            [dataDirKey] = currentDataDirPath.FullPath
+                            [dataDirKey] = currentDataDir
                         };
                         settingsJsonObject = context.ReadObject(settingsJsonObject, "addingDataDir");
                     }
