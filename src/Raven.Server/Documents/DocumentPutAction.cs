@@ -289,8 +289,13 @@ namespace Raven.Server.Documents
                 }
                 else
                 {
-                    var result = _documentsStorage.ConflictsStorage.MergeConflictChangeVectorIfNeededAndDeleteConflicts(changeVector, context, id, newEtag, document);
+                    var result = _documentsStorage.ConflictsStorage.MergeConflictChangeVectorIfNeededAndDeleteConflicts(changeVector, context, id, document);
                     changeVector = ChangeVectorUtils.MergeVectors(context.LastDatabaseChangeVector ?? GetDatabaseChangeVector(context), result.ChangeVector);
+                    var updateResult = ChangeVectorUtils.TryUpdateChangeVector(_documentDatabase.ServerStore.NodeTag, _documentDatabase.DbBase64Id, newEtag, changeVector);
+                    Debug.Assert(updateResult.IsValid, $"Failed to update {changeVector} with node tag {_documentDatabase.ServerStore.NodeTag} and new etag {newEtag}");
+                    if (updateResult.IsValid)
+                        changeVector = updateResult.ChangeVector;
+
                     nonPersistentFlags = result.NonPersistentFlags;
                 }
             }
