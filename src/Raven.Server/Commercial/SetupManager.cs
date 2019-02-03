@@ -32,6 +32,7 @@ using Raven.Client.ServerWide.Operations.Certificates;
 using Raven.Client.ServerWide.Operations.Configuration;
 using Raven.Server.Config;
 using Raven.Server.Config.Categories;
+using Raven.Server.Config.Settings;
 using Raven.Server.Extensions;
 using Raven.Server.Https;
 using Raven.Server.Json;
@@ -245,7 +246,7 @@ namespace Raven.Server.Commercial
                     try
                     {
                         await CompleteConfigurationForNewNode(onProgress, progress, continueSetupInfo, settingsJsonObject, serverCertBytes, serverCert, 
-                            clientCert, serverStore, firstNodeTag, otherNodesUrls, license);
+                            clientCert, serverStore, firstNodeTag, otherNodesUrls, license, context);
                     }
                     catch (Exception e)
                     {
@@ -1226,7 +1227,8 @@ namespace Raven.Server.Commercial
             ServerStore serverStore,
             string firstNodeTag,
             Dictionary<string, string> otherNodesUrls,
-            License license)
+            License license,
+            JsonOperationContext context)
         {
             try
             {
@@ -1330,6 +1332,28 @@ namespace Raven.Server.Commercial
             catch (Exception e)
             {
                 throw new InvalidOperationException($"Failed to save server certificate at {certPath}.", e);
+            }
+
+            try
+            {
+                var currentDataDir = serverStore.Configuration.Core.DataDirectory;
+                var dataDirProp = RavenConfiguration.GetKey(x => x.Core.DataDirectory);
+                settingsJsonObject.TryGet(dataDirProp, out string dataDirFromZip);
+
+                var dataDirFromZipPath = new PathSetting(dataDirFromZip);
+                
+                if (currentDataDir.Equals(dataDirFromZipPath) == false)
+                {
+                    settingsJsonObject.Modifications = new DynamicJsonValue(settingsJsonObject)
+                    {
+                        [dataDirProp] = currentDataDir.FullPath
+                    };
+                    settingsJsonObject = context.ReadObject(settingsJsonObject, "fixingDataDir");
+                }
+            }
+            catch (Exception e)
+            {
+                throw new InvalidOperationException($"Failed to extract the data directory from settings.json.", e);
             }
 
             try
