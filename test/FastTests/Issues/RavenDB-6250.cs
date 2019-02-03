@@ -41,6 +41,7 @@ namespace FastTests.Issues
                 Operations.OperationType.CollectionImportFromCsv,
                 Operations.OperationType.DatabaseBackup,
                 Operations.OperationType.MigrationFromSql,
+                Operations.OperationType.RecordTransactionCommands,
                 Operations.OperationType.ReplayTransactionCommands
             };
 
