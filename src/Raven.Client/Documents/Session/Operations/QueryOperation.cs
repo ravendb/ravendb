@@ -96,23 +96,55 @@ namespace Raven.Client.Documents.Session.Operations
             return _session.DocumentStore.DisableAggressiveCaching(_session.DatabaseName);
         }
 
+        internal T[] CompleteAsArray<T>()
+        {
+            _session.AssertNotDisposed(); // ensure that the user didn't do an async query then closed the session early
+            var queryResult = _currentQueryResults.CreateSnapshot();
+
+            var result = new T[queryResult.Results.Length];
+
+            CompleteInternal<T>(queryResult, Add);
+
+            return result;
+
+            void Add(int index, T r)
+            {
+                result[index] = r;
+            }
+        }
+
         public List<T> Complete<T>()
         {
             _session.AssertNotDisposed(); // ensure that the user didn't do an async query then closed the session early
             var queryResult = _currentQueryResults.CreateSnapshot();
+
+            var result = new List<T>(queryResult.Results.Length);
+
+            CompleteInternal<T>(queryResult, Add);
+
+            return result;
+
+            void Add(int index, T r)
+            {
+                result.Add(r);
+            }
+        }
+
+        private void CompleteInternal<T>(QueryResult queryResult, Action<int, T> addToResult)
+        {
             queryResult.Results.BlittableValidation();
 
             if (NoTracking == false)
                 _session.RegisterIncludes(queryResult.Includes);
 
-            var list = new List<T>();
-            foreach (BlittableJsonReaderObject document in queryResult.Results)
+            for (int i = 0; i < queryResult.Results.Length; i++)
             {
+                var document = (BlittableJsonReaderObject)queryResult.Results[i];
                 var metadata = document.GetMetadata();
 
                 metadata.TryGetId(out var id);
 
-                list.Add(Deserialize<T>(id, document, metadata, _fieldsToFetch, NoTracking, _session));
+                addToResult(i, Deserialize<T>(id, document, metadata, _fieldsToFetch, NoTracking, _session));
             }
 
             if (NoTracking == false)
@@ -125,8 +157,6 @@ namespace Raven.Client.Documents.Session.Operations
                         queryResult.IncludedCounterNames);
                 }
             }
-
-            return list;
         }
 
         internal static T Deserialize<T>(string id, BlittableJsonReaderObject document, BlittableJsonReaderObject metadata, FieldsToFetchToken fieldsToFetch, bool disableEntitiesTracking, InMemoryDocumentSessionOperations session)

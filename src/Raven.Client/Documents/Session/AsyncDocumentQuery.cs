@@ -4,6 +4,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Linq.Expressions;
 using System.Reflection;
+using System.Runtime.CompilerServices;
 using System.Threading;
 using System.Threading.Tasks;
 using Raven.Client.Documents.Indexes;
@@ -863,6 +864,12 @@ namespace Raven.Client.Documents.Session
         }
 
         /// <inheritdoc />
+        Task<T[]> IAsyncDocumentQueryBase<T>.ToArrayAsync(CancellationToken token)
+        {
+            return ExecuteQueryOperationAsArray(null, token);
+        }
+
+        /// <inheritdoc />
         async Task<T> IAsyncDocumentQueryBase<T>.FirstAsync(CancellationToken token)
         {
             var operation = await ExecuteQueryOperation(1, token).ConfigureAwait(false);
@@ -907,12 +914,25 @@ namespace Raven.Client.Documents.Session
 
         private async Task<List<T>> ExecuteQueryOperation(int? take, CancellationToken token)
         {
+            await ExecuteQueryOperationInternal(take, token).ConfigureAwait(false);
+
+            return QueryOperation.Complete<T>();
+        }
+
+        private async Task<T[]> ExecuteQueryOperationAsArray(int? take, CancellationToken token)
+        {
+            await ExecuteQueryOperationInternal(take, token).ConfigureAwait(false);
+
+            return QueryOperation.CompleteAsArray<T>();
+        }
+
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        private async Task ExecuteQueryOperationInternal(int? take, CancellationToken token)
+        {
             if (take.HasValue && (PageSize.HasValue == false || PageSize > take))
                 Take(take.Value);
 
             await InitAsync(token).ConfigureAwait(false);
-
-            return QueryOperation.Complete<T>();
         }
 
         /// <inheritdoc />

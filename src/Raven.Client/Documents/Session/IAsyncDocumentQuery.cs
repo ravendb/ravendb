@@ -23,6 +23,11 @@ namespace Raven.Client.Documents.Session
         Task<List<T>> ToListAsync(CancellationToken token = default);
 
         /// <summary>
+        ///     Executed the query and returns the results.
+        /// </summary>
+        Task<T[]> ToArrayAsync(CancellationToken token = default);
+
+        /// <summary>
         ///     Returns first element or throws if sequence is empty.
         /// </summary>
         Task<T> FirstAsync(CancellationToken token = default);
