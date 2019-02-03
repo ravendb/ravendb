@@ -1336,24 +1336,55 @@ namespace Raven.Server.Commercial
 
             try
             {
-                var currentDataDir = serverStore.Configuration.Core.DataDirectory;
-                var dataDirProp = RavenConfiguration.GetKey(x => x.Core.DataDirectory);
-                settingsJsonObject.TryGet(dataDirProp, out string dataDirFromZip);
+                // During setup we use the System database to store cluster configurations as well as the trusted certificates.
+                // We need to make sure that the currently used data dir will be the one written (or not written) in the resulting settings.json
+                var dataDirKey = RavenConfiguration.GetKey(x => x.Core.DataDirectory);
+                var currentDataDir = serverStore.Configuration.GetServerWideSetting(dataDirKey) ?? serverStore.Configuration.GetSetting(dataDirKey);
 
-                var dataDirFromZipPath = new PathSetting(dataDirFromZip);
-                
-                if (currentDataDir.Equals(dataDirFromZipPath) == false)
+                if (settingsJsonObject.TryGet(dataDirKey, out string dataDirFromZip))
                 {
-                    settingsJsonObject.Modifications = new DynamicJsonValue(settingsJsonObject)
+                    var dataDirFromZipPath = new PathSetting(dataDirFromZip);
+
+                    if (string.IsNullOrEmpty(currentDataDir))
                     {
-                        [dataDirProp] = currentDataDir.FullPath
-                    };
-                    settingsJsonObject = context.ReadObject(settingsJsonObject, "fixingDataDir");
+                        settingsJsonObject.Modifications = new DynamicJsonValue(settingsJsonObject);
+                        settingsJsonObject.Modifications.Remove(dataDirKey);
+                        settingsJsonObject = context.ReadObject(settingsJsonObject, "removingDataDir");
+                    }
+                    else
+                    {
+                        var currentDataDirPath = new PathSetting(currentDataDir);
+                        if (currentDataDirPath.Equals(dataDirFromZipPath) == false)
+                        {
+                            settingsJsonObject.Modifications = new DynamicJsonValue(settingsJsonObject)
+                            {
+                                [dataDirKey] = currentDataDirPath.FullPath
+                            };
+                            settingsJsonObject = context.ReadObject(settingsJsonObject, "fixingDataDir");
+                        }
+                    }
+                }
+                else
+                {
+                    if (string.IsNullOrEmpty(currentDataDir))
+                    {
+                        // nothing to do, neither has a data dir defined
+                    }
+                    else
+                    {
+                        var currentDataDirPath = new PathSetting(currentDataDir);
+                        
+                        settingsJsonObject.Modifications = new DynamicJsonValue(settingsJsonObject)
+                        {
+                            [dataDirKey] = currentDataDirPath.FullPath
+                        };
+                        settingsJsonObject = context.ReadObject(settingsJsonObject, "addingDataDir");
+                    }
                 }
             }
             catch (Exception e)
             {
-                throw new InvalidOperationException($"Failed to extract the data directory from settings.json.", e);
+                throw new InvalidOperationException("Failed to determine the data directory", e);
             }
 
             try
