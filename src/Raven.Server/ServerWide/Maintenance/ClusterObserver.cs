@@ -151,11 +151,11 @@ namespace Raven.Server.ServerWide.Maintenance
                 }
                 _lastLogs[message] = _iteration;
 
-                if (info)
+                if (_logger.IsInfoEnabled && info)
                 {
                     _logger.Info(message, e);
                 }
-                else
+                else if (_logger.IsOperationsEnabled)
                 {
                     _logger.Operations(message, e);
                 }
