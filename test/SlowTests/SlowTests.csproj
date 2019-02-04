@@ -51,6 +51,7 @@
     <EmbeddedResource Include="Data\places.txt" />
     <EmbeddedResource Include="Data\RavenDB_10404\northwind.4.0.0.ravendb-snapshot" />
     <EmbeddedResource Include="Data\RavenDB_11664\1.ravendbdump" />
+    <EmbeddedResource Include="Data\RavenDB_12022\counters.4.1.4.ravendb-snapshot" />
     <EmbeddedResource Include="Data\RavenDB_8355\MySorter.cs" />
     <EmbeddedResource Include="Data\RavenDB_8355\MySorterWithDiagnostics.cs" />
     <EmbeddedResource Include="Data\RavenDB_9912\1.ravendbdump" />

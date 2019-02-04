@@ -1819,6 +1819,7 @@ namespace Raven.Server.Documents
         Documents = 1,
         Revisions = 2,
         Conflicts = 3,
-        Counters = 4
+        LegacyCounter = 4,
+        Counters = 5
     }
 }

@@ -570,12 +570,12 @@ namespace Tests.Infrastructure
                 throw new TimeoutException(GetLastStatesFromAllServersOrderedByTime());
         }
 
-        protected override Task<DocumentDatabase> GetDocumentDatabaseInstanceFor(IDocumentStore store)
+        protected override Task<DocumentDatabase> GetDocumentDatabaseInstanceFor(IDocumentStore store, string database = null)
         {
             //var index = FindStoreIndex(store);
             //Assert.False(index == -1, "Didn't find store index, most likely it doesn't belong to the cluster. Did you setup Raft cluster properly?");
             //return Servers[index].ServerStore.DatabasesLandlord.TryGetOrCreateResourceStore(store.Database);
-            return Server.ServerStore.DatabasesLandlord.TryGetOrCreateResourceStore(store.Database);
+            return Server.ServerStore.DatabasesLandlord.TryGetOrCreateResourceStore(database ?? store.Database);
         }
 
         public async Task<(long Index, List<RavenServer> Servers)> CreateDatabaseInCluster(DatabaseRecord record, int replicationFactor, string leadersUrl, X509Certificate2 certificate = null)

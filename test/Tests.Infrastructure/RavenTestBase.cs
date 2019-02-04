@@ -43,9 +43,9 @@ namespace FastTests
     {
         protected readonly ConcurrentSet<DocumentStore> CreatedStores = new ConcurrentSet<DocumentStore>();
 
-        protected virtual Task<DocumentDatabase> GetDocumentDatabaseInstanceFor(IDocumentStore store)
+        protected virtual Task<DocumentDatabase> GetDocumentDatabaseInstanceFor(IDocumentStore store, string database = null)
         {
-            return Server.ServerStore.DatabasesLandlord.TryGetOrCreateResourceStore(store.Database);
+            return Server.ServerStore.DatabasesLandlord.TryGetOrCreateResourceStore(database ?? store.Database);
         }
 
         protected static void CreateNorthwindDatabase(DocumentStore store)
@@ -603,7 +603,7 @@ namespace FastTests
             var restoreOperation = new RestoreBackupOperation(config);
 
             var operation = store.Maintenance.Server.Send(restoreOperation);
-            operation.WaitForCompletion(timeout ?? TimeSpan.FromSeconds(30));
+            operation.WaitForCompletion(timeout ?? TimeSpan.FromSeconds(55530)); //todo revert
 
             return EnsureDatabaseDeletion(config.DatabaseName, store);
         }
