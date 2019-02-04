@@ -23,6 +23,7 @@ namespace Raven.Server.Smuggler.Documents.Data
         IIndexActions Indexes();
         IKeyValueActions<long> Identities();
         IKeyValueActions<BlittableJsonReaderObject> CompareExchange(JsonOperationContext context);
+        IKeyActions<long> CompareExchangeTombstones(JsonOperationContext context);
         ICounterActions Counters();
     }
 
@@ -54,6 +55,11 @@ namespace Raven.Server.Smuggler.Documents.Data
     public interface IKeyValueActions<in T> : IDisposable
     {
         void WriteKeyValue(string key, T value);
+    }
+
+    public interface IKeyActions<in T> : IDisposable
+    {
+        void WriteKey(string key);
     }
 
     public interface IDatabaseRecordActions : IDisposable

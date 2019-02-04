@@ -86,6 +86,11 @@ namespace Raven.Server.Smuggler.Documents
             return new DatabaseCompareExchangeActions(_database, context);
         }
 
+        public IKeyActions<long> CompareExchangeTombstones(JsonOperationContext context)
+        {
+            return new DatabaseCompareExchangeTombstonesActions(_database, context, true);
+        }
+
         public ICounterActions Counters()
         {
             return new CounterActions(_database);
@@ -312,6 +317,54 @@ namespace Raven.Server.Smuggler.Documents
             private void SendCommands(JsonOperationContext context)
             {
                 AsyncHelpers.RunSync(async () => await _database.ServerStore.SendToLeaderAsync(new AddOrUpdateCompareExchangeBatchCommand(_compareExchangeCommands, context)));
+
+                _compareExchangeCommands.Clear();
+            }
+        }
+
+        private class DatabaseCompareExchangeTombstonesActions : IKeyActions<long>
+        {
+            private readonly DocumentDatabase _database;
+            private readonly JsonOperationContext _context;
+            private bool _fromBackup;
+            private readonly List<RemoveCompareExchangeCommand> _compareExchangeCommands = new List<RemoveCompareExchangeCommand>();
+
+            public DatabaseCompareExchangeTombstonesActions(DocumentDatabase database, JsonOperationContext context)
+            {
+                _database = database;
+                _context = context;
+            }
+
+            public DatabaseCompareExchangeTombstonesActions(DocumentDatabase database, JsonOperationContext context, bool fromBackup)
+            {
+                _database = database;
+                _context = context;
+                _fromBackup = fromBackup;
+            }
+
+            public void WriteKey(string key)
+            {
+                const int batchSize = 1024;
+                var index = _database.ServerStore.LastRaftCommitIndex;
+                _compareExchangeCommands.Add(new RemoveCompareExchangeCommand(_database.Name, key, index, _context, _fromBackup));
+
+                if (_compareExchangeCommands.Count < batchSize)
+                    return;
+
+                SendCommands(_context);
+            }
+
+            public void Dispose()
+            {
+                if (_compareExchangeCommands.Count == 0)
+                    return;
+
+                SendCommands(_context);
+            }
+
+            private void SendCommands(JsonOperationContext context)
+            {
+                AsyncHelpers.RunSync(async () => await _database.ServerStore.SendToLeaderAsync(new RemoveCompareExchangeBatchCommand(_compareExchangeCommands, context)));
 
                 _compareExchangeCommands.Clear();
             }

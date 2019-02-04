@@ -95,6 +95,11 @@ namespace Raven.Server.Smuggler.Documents
             return new StreamKeyValueActions<BlittableJsonReaderObject>(_writer, nameof(DatabaseItemType.CompareExchange));
         }
 
+        public IKeyActions<long> CompareExchangeTombstones(JsonOperationContext context)
+        {
+            return new StreamKeyActions<long>(_writer, nameof(DatabaseItemType.CompareExchangeTombstones));
+        }
+
         public ICounterActions Counters()
         {
             return new StreamCounterActions(_writer, nameof(DatabaseItemType.Counters));
@@ -617,6 +622,26 @@ namespace Raven.Server.Smuggler.Documents
                 Writer.WriteComma();
                 Writer.WritePropertyName("Value");
                 Writer.WriteString(value.ToString());
+                Writer.WriteEndObject();
+            }
+        }
+
+        private class StreamKeyActions<T> : StreamActionsBase, IKeyActions<T>
+        {
+            public StreamKeyActions(BlittableJsonTextWriter writer, string name)
+                : base(writer, name)
+            {
+            }
+
+            public void WriteKey(string key)
+            {
+                if (First == false)
+                    Writer.WriteComma();
+                First = false;
+
+                Writer.WriteStartObject();
+                Writer.WritePropertyName("Key");
+                Writer.WriteString(key);
                 Writer.WriteEndObject();
             }
         }

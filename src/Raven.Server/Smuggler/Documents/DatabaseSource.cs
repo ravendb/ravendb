@@ -27,7 +27,7 @@ namespace Raven.Server.Smuggler.Documents
         private TransactionOperationContext _serverContext;
 
         private readonly long _startDocumentEtag;
-
+        private readonly long _startCompareExchangeIndex;
         private IDisposable _returnContext;
         private IDisposable _returnServerContext;
         private DocumentsTransaction _disposeTransaction;
@@ -45,16 +45,19 @@ namespace Raven.Server.Smuggler.Documents
             DatabaseItemType.Indexes,
             DatabaseItemType.Identities,
             DatabaseItemType.CompareExchange,
+            DatabaseItemType.CompareExchangeTombstones,
             DatabaseItemType.Counters,
             DatabaseItemType.None
         };
 
         public long LastEtag { get; private set; }
+        public long LastCompareExchangeIndex { get; private set; }
 
-        public DatabaseSource(DocumentDatabase database, long startDocumentEtag)
+        public DatabaseSource(DocumentDatabase database, long startDocumentEtag, long startCompareExchangeIndex)
         {
             _database = database;
             _startDocumentEtag = startDocumentEtag;
+            _startCompareExchangeIndex = startCompareExchangeIndex;
         }
 
         public IDisposable Initialize(DatabaseSmugglerOptions options, SmugglerResult result, out long buildVersion)
@@ -70,10 +73,12 @@ namespace Raven.Server.Smuggler.Documents
                 _returnContext = _database.DocumentsStorage.ContextPool.AllocateOperationContext(out _context);
                 _disposeTransaction = _context.OpenReadTransaction();
                 LastEtag = DocumentsStorage.ReadLastEtag(_disposeTransaction.InnerTransaction);
+                LastCompareExchangeIndex = _database.ReadDatabaseRecord().IndexForCompareExchange;
             }
 
             if (options.OperateOnTypes.HasFlag(DatabaseItemType.CompareExchange) ||
-                options.OperateOnTypes.HasFlag(DatabaseItemType.Identities))
+                options.OperateOnTypes.HasFlag(DatabaseItemType.Identities) ||
+                options.OperateOnTypes.HasFlag(DatabaseItemType.CompareExchangeTombstones))
             {
                 _returnServerContext = _database.ServerStore.ContextPool.AllocateOperationContext(out _serverContext);
                 _disposeServerTransaction = _serverContext.OpenReadTransaction();
@@ -262,7 +267,14 @@ namespace Raven.Server.Smuggler.Documents
         {
             Debug.Assert(_serverContext != null);
 
-            return _database.ServerStore.Cluster.GetCompareExchangeValuesStartsWith(_serverContext, _database.Name, CompareExchangeCommandBase.GetActualKey(_database.Name, null), 0, int.MaxValue);
+            return _database.ServerStore.Cluster.GetCompareExchangeFromPrefix(_serverContext, _database.Name, _startCompareExchangeIndex, int.MaxValue);
+        }
+
+        public IEnumerable<string> GetCompareExchangeTombstones()
+        {
+            Debug.Assert(_serverContext != null);
+
+            return _database.ServerStore.Cluster.GetCompareExchangeTombstonesByKey(_serverContext, _database.Name);
         }
 
         public IEnumerable<CounterDetail> GetCounterValues()

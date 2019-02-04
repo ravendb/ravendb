@@ -1,7 +1,10 @@
 ﻿using System;
 using System.IO;
+using System.Text;
 using Raven.Server.Rachis;
 using Raven.Server.ServerWide.Context;
+using Sparrow;
+using Sparrow.Binary;
 using Sparrow.Json;
 using Sparrow.Json.Parsing;
 using Voron;
@@ -43,7 +46,57 @@ namespace Raven.Server.ServerWide.Commands
             ContextToWriteResult = context;
         }
 
-        public abstract (long Index, object Value) Execute(TransactionOperationContext context, Table items, long index);
+        public abstract (long Index, object Value) Execute(TransactionOperationContext context, Table items, long index, Table tombstoneItems = null, bool fromBackup = false);
+
+        public static unsafe void GetKeyAndPrefixIndexSlices<TTransaction>(
+            TransactionOperationContext<TTransaction> context, string db, string key, long index,
+            out (ByteString Buffer, ByteStringContext<ByteStringMemoryCache>.InternalScope Scope) finalKey,
+            out (ByteString Buffer, ByteStringContext<ByteStringMemoryCache>.InternalScope Scope) finalIndex)
+            where TTransaction : RavenTransaction
+        {
+            var reservedSpace = Encoding.UTF8.GetMaxByteCount(db.Length + key.Length) + 1;
+            var keyScope = context.Allocator.Allocate(reservedSpace, out ByteString keyBuffer);
+            var indexScope = context.Allocator.Allocate(Encoding.UTF8.GetMaxByteCount(db.Length) + sizeof(long), out ByteString indexBuffer);
+            fixed (char* pDb = db, pKey = key)
+            {
+                var len = Encoding.UTF8.GetBytes(pDb, db.Length, keyBuffer.Ptr, keyBuffer.Length);
+
+                keyBuffer.Ptr[len++] = (byte)'/';
+                len += Encoding.UTF8.GetBytes(pKey, key.Length, keyBuffer.Ptr + len, keyBuffer.Length - len);
+                keyBuffer.Truncate(len);
+
+                context.Allocator.ToLowerCase(ref keyBuffer);
+
+                len = Encoding.UTF8.GetBytes(pDb, db.Length, indexBuffer.Ptr, indexBuffer.Length);
+                indexBuffer.Truncate(len);
+                context.Allocator.ToLowerCase(ref indexBuffer);
+                indexBuffer.Truncate(indexBuffer.Length + sizeof(long));
+
+                *(long*)(indexBuffer.Ptr + len) = Bits.SwapBytes(index);
+
+                finalIndex = (indexBuffer, indexScope);
+                finalKey = (keyBuffer, keyScope);
+            }
+        }
+
+        public static unsafe void GetPrefixIndexSlices<TTransaction>(
+            TransactionOperationContext<TTransaction> context, string db, long index,
+            out (ByteString Buffer, ByteStringContext<ByteStringMemoryCache>.InternalScope Scope) finalIndex)
+            where TTransaction : RavenTransaction
+        {
+            var indexScope = context.Allocator.Allocate(Encoding.UTF8.GetMaxByteCount(db.Length) + sizeof(long), out ByteString indexBuffer);
+            fixed (char* pDb = db)
+            {
+                var len = Encoding.UTF8.GetBytes(pDb, db.Length, indexBuffer.Ptr, indexBuffer.Length);
+                indexBuffer.Truncate(len);
+                context.Allocator.ToLowerCase(ref indexBuffer);
+                indexBuffer.Truncate(indexBuffer.Length + sizeof(long));
+
+                *(long*)(indexBuffer.Ptr + len) = Bits.SwapBytes(index);
+
+                finalIndex = (indexBuffer, indexScope);
+            }
+        }
 
         public unsafe bool Validate(TransactionOperationContext context, Table items, long index, out long currentIndex)
         {
@@ -112,28 +165,69 @@ namespace Raven.Server.ServerWide.Commands
 
     public class RemoveCompareExchangeCommand : CompareExchangeCommandBase
     {
-        public RemoveCompareExchangeCommand() { }
-        public RemoveCompareExchangeCommand(string key, string database, long index, JsonOperationContext contextToReturnResult) : base(key, database, index, contextToReturnResult) { }
+        private bool _fromBackup;
 
-        public override unsafe (long Index, object Value) Execute(TransactionOperationContext context, Table items, long index)
+        public RemoveCompareExchangeCommand() { }
+        public RemoveCompareExchangeCommand(string database, string key, long index, JsonOperationContext contextToReturnResult) : base(database, key, index, contextToReturnResult) { }
+
+        public RemoveCompareExchangeCommand(string database, string key, long index, JsonOperationContext contextToReturnResult, bool fromBackup) : base(database, key,
+            index, contextToReturnResult)
+        {
+            _fromBackup = fromBackup;
+        }
+
+        public override unsafe (long Index, object Value) Execute(TransactionOperationContext context, Table items, long index, Table tombstoneItems, bool fromBackup = false)
         {
             using (Slice.From(context.Allocator, ActualKey, out Slice keySlice))
             {
                 if (items.ReadByKey(keySlice, out var reader))
                 {
+                    if (fromBackup)
+                    {
+                        items.Delete(reader.Id);
+                        return (index, null);
+                    }
                     var itemIndex = *(long*)reader.Read((int)ClusterStateMachine.UniqueItems.Index, out var _);
                     var storeValue = reader.Read((int)ClusterStateMachine.UniqueItems.Value, out var size);
                     var result = new BlittableJsonReaderObject(storeValue, size, context);
+
                     if (Index == itemIndex)
                     {
                         result = result.Clone(context);
                         items.Delete(reader.Id);
+                        WriteCompareExchangeTombstone(context, tombstoneItems, index);
                         return (index, result);
                     }
                     return (itemIndex, result);
                 }
             }
             return (index, null);
+        }
+
+        private unsafe void WriteCompareExchangeTombstone(TransactionOperationContext context, Table tombstoneItems, long index)
+        {
+            GetKeyAndPrefixIndexSlices(context, Database, Key, index, out var keyTuple, out var indexTuple);
+
+            using (keyTuple.Scope)
+            using (indexTuple.Scope)
+            using (Slice.External(context.Allocator, keyTuple.Buffer.Ptr, keyTuple.Buffer.Length, out var keySlice))
+            using (Slice.External(context.Allocator, indexTuple.Buffer.Ptr, indexTuple.Buffer.Length, out var indexSlice))
+            using (tombstoneItems.Allocate(out var tvb))
+            {
+                tvb.Add(keySlice.Content.Ptr, keySlice.Size);
+                tvb.Add(indexSlice);
+                tombstoneItems.Set(tvb);
+            }
+        }
+
+        public override DynamicJsonValue ToJson(JsonOperationContext context)
+        {
+            var json = base.ToJson(context);
+            json[nameof(Key)] = Key;
+            json[nameof(Index)] = Index;
+            json[nameof(Database)] = Database;
+            json["FromBackup"] = _fromBackup;
+            return json;
         }
     }
 
@@ -149,18 +243,24 @@ namespace Raven.Server.ServerWide.Commands
             Value = value;
         }
 
-        public override unsafe (long Index, object Value) Execute(TransactionOperationContext context, Table items, long index)
+        public override unsafe (long Index, object Value) Execute(TransactionOperationContext context, Table items, long index, Table tombstoneItems, bool fromBackup)
         {
             // We have to clone the Value because we might have gotten this command from another node
             // and it was serialized. In that case, it is an _internal_ object, not a full document,
             // so we have to clone it to get it into a standalone mode.
             Value = Value.Clone(context);
-            using (Slice.From(context.Allocator, ActualKey, out Slice keySlice))
-            using (items.Allocate(out TableValueBuilder tvb))
+            GetKeyAndPrefixIndexSlices(context, Database, Key, index, out var keyTuple, out var indexTuple);
+
+            using (keyTuple.Scope)
+            using (indexTuple.Scope)
+            using (Slice.External(context.Allocator, keyTuple.Buffer.Ptr, keyTuple.Buffer.Length, out var keySlice))
+            using (Slice.External(context.Allocator, indexTuple.Buffer.Ptr, indexTuple.Buffer.Length, out var indexSlice))
+            using (items.Allocate(out var tvb))
             {
                 tvb.Add(keySlice.Content.Ptr, keySlice.Size);
                 tvb.Add(index);
                 tvb.Add(Value.BasePointer, Value.Size);
+                tvb.Add(indexSlice);
 
                 if (items.ReadByKey(keySlice, out var reader))
                 {
@@ -182,7 +282,7 @@ namespace Raven.Server.ServerWide.Commands
             }
             return (index, Value);
         }
-        
+
         public override DynamicJsonValue ToJson(JsonOperationContext context)
         {
             var json = base.ToJson(context);

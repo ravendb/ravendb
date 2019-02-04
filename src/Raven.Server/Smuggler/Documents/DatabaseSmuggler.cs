@@ -104,6 +104,7 @@ namespace Raven.Server.Smuggler.Documents
             EnsureStepProcessed(result.Indexes);
             EnsureStepProcessed(result.Identities);
             EnsureStepProcessed(result.CompareExchange);
+            EnsureStepProcessed(result.CompareExchangeTombstones);
         }
 
         private static void EnsureStepProcessed(SmugglerProgressBase.Counts counts)
@@ -181,6 +182,9 @@ namespace Raven.Server.Smuggler.Documents
                 case DatabaseItemType.Counters:
                     counts = ProcessCounters(result);
                     break;
+                case DatabaseItemType.CompareExchangeTombstones:
+                    counts = ProcessCompareExchangeTombstones(result);
+                    break;
                 default:
                     throw new ArgumentOutOfRangeException(nameof(type), type, null);
             }
@@ -233,6 +237,9 @@ namespace Raven.Server.Smuggler.Documents
                     break;
                 case DatabaseItemType.Counters:
                     counts = result.Counters;
+                    break;
+                case DatabaseItemType.CompareExchangeTombstones:
+                    counts = result.CompareExchangeTombstones;
                     break;
                 case DatabaseItemType.LegacyDocumentDeletions:
                     counts = new SmugglerProgressBase.Counts();
@@ -635,6 +642,7 @@ namespace Raven.Server.Smuggler.Documents
                     try
                     {
                         actions.WriteKeyValue(kvp.key, kvp.value);
+                        result.CompareExchange.LastEtag = kvp.index;
                     }
                     catch (Exception e)
                     {
@@ -778,6 +786,37 @@ namespace Raven.Server.Smuggler.Documents
             }
 
             return result.Tombstones;
+        }
+
+        private SmugglerProgressBase.Counts ProcessCompareExchangeTombstones(SmugglerResult result)
+        {
+            using (_database.DocumentsStorage.ContextPool.AllocateOperationContext(out JsonOperationContext context))
+            using (var actions = _destination.CompareExchangeTombstones(context))
+            {
+                foreach (var key in _source.GetCompareExchangeTombstones())
+                {
+                    _token.ThrowIfCancellationRequested();
+                    result.CompareExchangeTombstones.ReadCount++;
+
+                    if (key.Equals(default))
+                    {
+                        result.CompareExchangeTombstones.ErroredCount++;
+                        continue;
+                    }
+
+                    try
+                    {
+                        actions.WriteKey(key);
+                    }
+                    catch (Exception e)
+                    {
+                        result.CompareExchangeTombstones.ErroredCount++;
+                        result.AddError($"Could not write compare exchange '{key}: {e.Message}");
+                    }
+                }
+            }
+
+            return result.CompareExchangeTombstones;
         }
 
         private SmugglerProgressBase.Counts ProcessConflicts(SmugglerResult result)

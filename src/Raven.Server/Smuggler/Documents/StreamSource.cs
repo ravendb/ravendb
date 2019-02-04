@@ -223,6 +223,11 @@ namespace Raven.Server.Smuggler.Documents
             return InternalGetCompareExchangeValues();
         }
 
+        public IEnumerable<string> GetCompareExchangeTombstones()
+        {
+            return InternalGetCompareExchangeTombstones();
+        }
+
         public IEnumerable<CounterDetail> GetCounterValues()
         {
             return InternalGetCounterValues();
@@ -263,6 +268,25 @@ namespace Raven.Server.Smuggler.Documents
 
                         builder.Renew("import/cmpxchg", BlittableJsonDocumentBuilder.UsageMode.ToDisk);
                     }
+                }
+            }
+        }
+
+        private IEnumerable<string> InternalGetCompareExchangeTombstones()
+        {
+            foreach (var reader in ReadArray())
+            {
+                using (reader)
+                {
+                    if (reader.TryGet("Key", out string key) == false)
+                    {
+                        _result.CompareExchange.ErroredCount++;
+                        _result.AddWarning("Could not read compare exchange tombstone.");
+
+                        continue;
+                    }
+
+                    yield return key;
                 }
             }
         }
@@ -312,6 +336,7 @@ namespace Raven.Server.Smuggler.Documents
                 case DatabaseItemType.LegacyDocumentDeletions:
                 case DatabaseItemType.LegacyAttachmentDeletions:
                 case DatabaseItemType.Counters:
+                case DatabaseItemType.CompareExchangeTombstones:
                     return SkipArray(onSkipped, token);
                 case DatabaseItemType.DatabaseRecord:
                     return SkipObject(onSkipped);
@@ -1118,6 +1143,9 @@ namespace Raven.Server.Smuggler.Documents
 
             if (type.Equals(nameof(DatabaseItemType.Counters), StringComparison.OrdinalIgnoreCase))
                 return DatabaseItemType.Counters;
+
+            if (type.Equals(nameof(DatabaseItemType.CompareExchangeTombstones), StringComparison.OrdinalIgnoreCase))
+                return DatabaseItemType.CompareExchangeTombstones;
 
             if (type.Equals("Attachments", StringComparison.OrdinalIgnoreCase))
                 return DatabaseItemType.LegacyAttachments;

@@ -50,8 +50,11 @@ namespace Raven.Server.Documents.Handlers.Admin
                     var command = CommandBase.CreateFrom(commandJson);
                     switch (command)
                     {
-                        case AddOrUpdateCompareExchangeBatchCommand batchCmpExchange:
-                            batchCmpExchange.ContextToWriteResult = context;
+                        case AddOrUpdateCompareExchangeBatchCommand addOrUpdateBatchCmpExchange:
+                            addOrUpdateBatchCmpExchange.ContextToWriteResult = context;
+                            break;
+                        case RemoveCompareExchangeBatchCommand removeBatchCmpExchange:
+                            removeBatchCmpExchange.ContextToWriteResult = context;
                             break;
                         case CompareExchangeCommandBase cmpExchange:
                             cmpExchange.ContextToWriteResult = context;

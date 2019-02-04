@@ -161,7 +161,7 @@ namespace Raven.Client.Documents.Smuggler
             // as the previous files can hold indexes and identities which were deleted and shouldn't be imported
             var oldOperateOnTypes = options.OperateOnTypes;
             options.OperateOnTypes = options.OperateOnTypes &
-                                     ~(DatabaseItemType.Indexes | DatabaseItemType.CompareExchange | DatabaseItemType.Identities);
+                                     ~(DatabaseItemType.Indexes | DatabaseItemType.Identities);
             return oldOperateOnTypes;
         }
 
