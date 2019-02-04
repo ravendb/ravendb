@@ -5,10 +5,9 @@
 #include "status_codes.h"
 #include "internal_win.h"
 
-typedef unsigned long 
-(__cdecl *DISCARD_VIRTUAL_MEMORY_FUNC_PTR)(void *, int64_t);
+typedef DWORD (WINAPI *pDiscardVirtualMemory)(PVOID, SIZE_T);
 
-PRIVATE DISCARD_VIRTUAL_MEMORY_FUNC_PTR 
+PRIVATE pDiscardVirtualMemory 
 _discard_virtual_memory_func;
 
 PRIVATE bool
@@ -18,11 +17,11 @@ EXPORT int32_t
 rvn_discard_virtual_memory(void* address, int64_t size, int32_t* detailed_error_code)
 {    
     if (_init_discard_virtual_memory_flag == false)
-    {
-        _init_discard_virtual_memory_flag = true;
-        _discard_virtual_memory_func = (DISCARD_VIRTUAL_MEMORY_FUNC_PTR) GetProcAddress(
+    {        
+        _discard_virtual_memory_func = (pDiscardVirtualMemory) GetProcAddress(
                 GetModuleHandle(TEXT("kernel32.dll")),
                 "DiscardVirtualMemory");
+        _init_discard_virtual_memory_flag = true;
     }
 
     if (_discard_virtual_memory_func != NULL)
