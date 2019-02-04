@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Diagnostics;
 using System.Linq;
 using System.Threading;
 using FastTests;
@@ -39,10 +40,26 @@ namespace SlowTests.Issues
                 }
 
                 WaitForIndexing(store, allowErrors: true);
-                
-                SpinWait.SpinUntil(() => store.Maintenance.Send(new GetIndexStatisticsOperation(failingIndex.IndexName)).State == IndexState.Error, TimeSpan.FromSeconds(15));
 
-                Assert.True(store.Maintenance.Send(new GetIndexStatisticsOperation(failingIndex.IndexName)).IsInvalidIndex);
+                IndexStats indexStats = null;
+
+                Assert.True(SpinWait.SpinUntil(() =>
+                {
+                    // index stats are updated in different transaction so we might need to wait a bit for error state,
+                    // note that index state is taken directly from memory so we need to wait for the stats that have some attempts and errors
+
+                    indexStats = store.Maintenance.Send(new GetIndexStatisticsOperation(failingIndex.IndexName));
+
+                    if (indexStats.State == IndexState.Error && indexStats.MapAttempts > 0)
+                        return true;
+
+                    Thread.Sleep(10);
+
+                    return false;
+                }, TimeSpan.FromSeconds(15)), "index state was not set to Error");
+
+                Assert.True(indexStats.IsInvalidIndex,
+                    $"{(indexStats != null ? $"attempts: {indexStats.MapAttempts}, successes:{indexStats.MapSuccesses}, errors:{indexStats.MapErrors}, errors count: {indexStats.ErrorsCount}" : "index stats is null")}");
 
                 using (var session = store.OpenSession())
                 {
@@ -74,13 +91,30 @@ namespace SlowTests.Issues
                     }
 
                     session.SaveChanges();
-                }                               
+                }
 
                 //we wait until the index is corrupted or 15 seconds pass
                 //-> no need to WaitForIndexing() because either the index is corrupted or not, 15 seconds for 10 docs is A LOT
-                SpinWait.SpinUntil(() => store.Maintenance.Send(new GetIndexStatisticsOperation(failingIndex.IndexName)).State == IndexState.Error, TimeSpan.FromSeconds(15));
+                IndexStats indexStats = null;
 
-                Assert.True(store.Maintenance.Send(new GetIndexStatisticsOperation(failingIndex.IndexName)).IsInvalidIndex);
+                Assert.True(SpinWait.SpinUntil(() =>
+                {
+                    // index stats are updated in different transaction so we might need to wait a bit for error state,
+                    // note that index state is taken directly from memory so we need to wait for the stats that have some attempts and errors
+
+                    indexStats = store.Maintenance.Send(new GetIndexStatisticsOperation(failingIndex.IndexName));
+
+                    if (indexStats.State == IndexState.Error && indexStats.MapAttempts > 0)
+                        return true;
+
+                    Thread.Sleep(10);
+
+                    return false;
+                }, TimeSpan.FromSeconds(15)), "index state was not set to Error");
+
+                Assert.True(indexStats.IsInvalidIndex,
+                    $"{(indexStats != null ? $"attempts: {indexStats.MapAttempts}, successes:{indexStats.MapSuccesses}, errors:{indexStats.MapErrors}, errors count: {indexStats.ErrorsCount}" : "index stats is null")}");
+
 
                 using (var session = store.OpenSession())
                 {
