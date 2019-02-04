@@ -20,11 +20,12 @@ namespace Raven.Server.ServerWide.Commands
         {
         }
 
-        public UpdateClusterIdentityCommand(string databaseName, Dictionary<string, long> identities, bool force)
+        public UpdateClusterIdentityCommand(string databaseName, Dictionary<string, long> identities, bool force, bool fromBackup = false)
             : base(databaseName)
         {
             Identities = new Dictionary<string, long>(identities);
             Force = force;
+            FromBackup = fromBackup;
         }
 
         public bool Force { get; set; }
@@ -39,43 +40,63 @@ namespace Raven.Server.ServerWide.Commands
             throw new NotSupportedException();
         }
 
-        public override void Execute(TransactionOperationContext context, Table items, long index, DatabaseRecord record, RachisState state, out object result)
+        public override unsafe void Execute(TransactionOperationContext context, Table items, long index, DatabaseRecord record, RachisState state, out object result)
         {
             var resultDict = new Dictionary<string, long>();
-            var identities = context.Transaction.InnerTransaction.ReadTree(ClusterStateMachine.Identities);
+            var identitiesItems = context.Transaction.InnerTransaction.OpenTable(ClusterStateMachine.IdentitiesSchema, ClusterStateMachine.Identities);
 
             foreach (var kvp in Identities)
             {
-                var itemKey = GetStorageKey(DatabaseName, kvp.Key);
+                CompareExchangeCommandBase.GetKeyAndPrefixIndexSlices(context.Allocator, DatabaseName, kvp.Key, index, out var keyTuple, out var indexTuple);
 
-                using (Slice.From(context.Allocator, itemKey, out var key))
+                using (keyTuple.Scope)
+                using (indexTuple.Scope)
+                using (Slice.External(context.Allocator, keyTuple.Buffer.Ptr, keyTuple.Buffer.Length, out var keySlice))
+                using (Slice.External(context.Allocator, indexTuple.Buffer.Ptr, indexTuple.Buffer.Length, out var prefixIndexSlice))
                 {
                     bool isSet;
                     if (Force == false)
                     {
-                        isSet = identities.AddMax(key, kvp.Value);                        
+                        isSet = false;
+                        if (identitiesItems.SeekOnePrimaryKeyPrefix(keySlice, out var tvr))
+                        {
+                            var value = GetValue(tvr);
+                            if (value < kvp.Value)
+                                isSet = true;
+                        }
+                        else
+                        {
+                            using (identitiesItems.Allocate(out var tvb))
+                            {
+                                tvb.Add(keySlice);
+                                tvb.Add(kvp.Value);
+                                tvb.Add(index);
+                                tvb.Add(prefixIndexSlice);
+
+                                identitiesItems.Set(tvb);
+                            }
+                        }
+
                     }
                     else
-                    {
-                        identities.Add(key, kvp.Value);
                         isSet = true;
-                    }
-                    
-                    long newVal;
+
+                    var keyString = keySlice.ToString().ToLowerInvariant();
+                    resultDict.TryGetValue(keyString, out var oldVal);
+                    long newVar;
+
                     if (isSet)
                     {
-                        newVal = kvp.Value;
+                        UpdateTableRow(index, identitiesItems, kvp.Value, keySlice, prefixIndexSlice);
+                        newVar = kvp.Value;
                     }
                     else
                     {
-                        var rc = identities.ReadLong(key);
-                        newVal = rc ?? -1; // '-1' should not happen
+                        identitiesItems.SeekOnePrimaryKeyPrefix(keySlice, out var tvr);
+                        newVar = GetValue(tvr);
                     }
 
-                    var keyString = key.ToString().ToLowerInvariant();
-
-                    resultDict.TryGetValue(keyString, out var oldVal);
-                    resultDict[keyString] = Math.Max(oldVal, newVal);
+                    resultDict[keyString] = Math.Max(oldVal, newVar);
                 }
             }
 
@@ -116,6 +137,7 @@ namespace Raven.Server.ServerWide.Commands
         public override void FillJson(DynamicJsonValue json)
         {
             json[nameof(Identities)] = (Identities ?? new Dictionary<string, long>()).ToJson();
+            json[nameof(FromBackup)] = FromBackup;
             if (Force)
             {
                 json[nameof(Force)] = true;

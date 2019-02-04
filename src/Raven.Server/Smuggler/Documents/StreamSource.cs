@@ -405,9 +405,14 @@ namespace Raven.Server.Smuggler.Documents
             return InternalGetCompareExchangeValues();
         }
 
+        public IEnumerable<string> GetCompareExchangeTombstones()
+        {
+            return InternalGetCompareExchangeTombstones();
+        }
+
         public IEnumerable<CounterGroupDetail> GetCounterValues(ICounterActions actions)
         {
-            return InternalGetCounterValues(actions);
+            return InternalGetCounterValues();
         }
 
         public IEnumerable<CounterDetail> GetLegacyCounterValues()
@@ -513,6 +518,26 @@ namespace Raven.Server.Smuggler.Documents
                 }
             }
         }
+
+        private IEnumerable<string> InternalGetCompareExchangeTombstones()
+        {
+            foreach (var reader in ReadArray())
+            {
+                using (reader)
+                {
+                    if (reader.TryGet("Key", out string key) == false)
+                    {
+                        _result.CompareExchange.ErroredCount++;
+                        _result.AddWarning("Could not read compare exchange tombstone.");
+
+                        continue;
+                    }
+
+                    yield return key;
+                }
+            }
+        }
+
         
         private IEnumerable<CounterGroupDetail> InternalGetCounterValues(ICounterActions actions)
         {
@@ -603,6 +628,7 @@ namespace Raven.Server.Smuggler.Documents
                 case DatabaseItemType.Identities:
                 case DatabaseItemType.CompareExchange:
                 case DatabaseItemType.Subscriptions:
+                case DatabaseItemType.CompareExchangeTombstones:
                 case DatabaseItemType.LegacyDocumentDeletions:
                 case DatabaseItemType.LegacyAttachmentDeletions:
 #pragma warning disable 618
@@ -683,12 +709,12 @@ namespace Raven.Server.Smuggler.Documents
             }
         }
 
-        public IEnumerable<(string Prefix, long Value)> GetIdentities()
+        public IEnumerable<(string Prefix, long Value, long Index)> GetIdentities()
         {
             return InternalGetIdentities();
         }
 
-        private IEnumerable<(string Prefix, long Value)> InternalGetIdentities()
+        private IEnumerable<(string Prefix, long Value, long Index)> InternalGetIdentities()
         {
             foreach (var reader in ReadArray())
             {
@@ -704,7 +730,7 @@ namespace Raven.Server.Smuggler.Documents
                         continue;
                     }
 
-                    yield return (identityKey, identityValue);
+                    yield return (identityKey, identityValue, 0);
                 }
             }
         }
@@ -1431,6 +1457,9 @@ namespace Raven.Server.Smuggler.Documents
             if (type.Equals(nameof(DatabaseItemType.Counters), StringComparison.OrdinalIgnoreCase))
                 return DatabaseItemType.Counters;
 #pragma warning restore 618
+
+            if (type.Equals(nameof(DatabaseItemType.CompareExchangeTombstones), StringComparison.OrdinalIgnoreCase))
+                return DatabaseItemType.CompareExchangeTombstones;
 
             if (type.Equals("Attachments", StringComparison.OrdinalIgnoreCase))
                 return DatabaseItemType.LegacyAttachments;

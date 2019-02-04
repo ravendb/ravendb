@@ -10,5 +10,6 @@ namespace Raven.Server.Storage.Schema
         public Transaction WriteTx;
         public ConfigurationStorage ConfigurationStorage;
         public DocumentsStorage DocumentsStorage;
+        public ClusterStateMachine ClusterStateMachine;
     }
 }

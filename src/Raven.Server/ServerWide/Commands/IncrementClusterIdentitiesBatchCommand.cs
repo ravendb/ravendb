@@ -25,18 +25,31 @@ namespace Raven.Server.ServerWide.Commands
             DatabaseName = databaseName;
         }
 
-        public override void Execute(TransactionOperationContext context, Table items, long index, DatabaseRecord record, RachisState state, out object result)
+        public override unsafe void Execute(TransactionOperationContext context, Table items, long index, DatabaseRecord record, RachisState state, out object result)
         {
-            var identitiesTree = context.Transaction.InnerTransaction.ReadTree(ClusterStateMachine.Identities);
+            var identitiesItems = context.Transaction.InnerTransaction.OpenTable(ClusterStateMachine.IdentitiesSchema, ClusterStateMachine.Identities);
             var listResult = new List<long>();
             foreach (var identity in Identities)
             {
-                using (Slice.From(context.Allocator, GetStorageKey(DatabaseName, identity), out var key))
+                CompareExchangeCommandBase.GetKeyAndPrefixIndexSlices(context.Allocator, DatabaseName, identity, index, out var keyTuple, out var indexTuple);
+
+                using (keyTuple.Scope)
+                using (indexTuple.Scope)
+                using (Slice.External(context.Allocator, keyTuple.Buffer.Ptr, keyTuple.Buffer.Length, out var keySlice))
+                using (Slice.External(context.Allocator, indexTuple.Buffer.Ptr, indexTuple.Buffer.Length, out var prefixIndexSlice))
                 {
-                    var newVal = identitiesTree.Increment(key, 1);
-                    // we assume this is single thread task and therefor we return the first identity of each id. 
-                    // The 'client' of this task sent amount of each id, and therefor the created identities are first identity to first + amount
-                    listResult.Add(newVal);
+                    long value;
+                    if (identitiesItems.ReadByKey(keySlice, out var reader))
+                    {
+                        value = GetValue(reader);
+                        value += 1;
+                    }
+                    else
+                        value = 1;
+
+                    UpdateTableRow(index, identitiesItems, value, keySlice, prefixIndexSlice);
+
+                    listResult.Add(value);
                 }
             }
 
