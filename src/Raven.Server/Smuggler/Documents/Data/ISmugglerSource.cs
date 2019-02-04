@@ -1,4 +1,5 @@
 using System;
+using System.Collections;
 using System.Collections.Generic;
 using System.Threading;
 using Raven.Client.Documents.Indexes;
@@ -24,13 +25,14 @@ namespace Raven.Server.Smuggler.Documents.Data
         IEnumerable<Tombstone> GetTombstones(List<string> collectionsToExport, INewDocumentActions actions);
         IEnumerable<DocumentConflict> GetConflicts(List<string> collectionsToExport, INewDocumentActions actions);
         IEnumerable<IndexDefinitionAndType> GetIndexes();
-        IEnumerable<(string Prefix, long Value)> GetIdentities();
+        IEnumerable<(string Prefix, long Value, long Index)> GetIdentities();
         IEnumerable<(string key, long index, BlittableJsonReaderObject value)> GetCompareExchangeValues();
         IEnumerable<CounterGroupDetail> GetCounterValues(ICounterActions actions);
         IEnumerable<CounterDetail> GetLegacyCounterValues();
         IEnumerable<SubscriptionState> GetSubscriptions();
 
         long SkipType(DatabaseItemType type, Action<long> onSkipped, CancellationToken token);
+        IEnumerable<string> GetCompareExchangeTombstones();
     }
 
     public class IndexDefinitionAndType

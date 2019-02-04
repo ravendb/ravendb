@@ -52,7 +52,7 @@ namespace Raven.Client.Documents.Operations.Backups
 
     public class LastRaftIndex
     {
-        public long LastEtag { get; set; }
+        public long? LastEtag { get; set; }
 
         public virtual DynamicJsonValue ToJson()
         {

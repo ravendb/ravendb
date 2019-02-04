@@ -754,8 +754,10 @@ namespace Raven.Server.Rachis
         {
             switch (cmd)
             {
-                case AddOrUpdateCompareExchangeBatchCommand batchCmpExchange:
-                    return new ConvertResultAction(batchCmpExchange.ContextToWriteResult, CompareExchangeCommandBase.ConvertResult);
+                case AddOrUpdateCompareExchangeBatchCommand addOrUpdateBatchCmpExchange:
+                    return new ConvertResultAction(addOrUpdateBatchCmpExchange.ContextToWriteResult, CompareExchangeCommandBase.ConvertResult);
+                case RemoveCompareExchangeBatchCommand removeBatchCmpExchange:
+                    return new ConvertResultAction(removeBatchCmpExchange.ContextToWriteResult, CompareExchangeCommandBase.ConvertResult);
                 case CompareExchangeCommandBase cmpExchange:
                     return new ConvertResultAction(cmpExchange.ContextToWriteResult, CompareExchangeCommandBase.ConvertResult);
                 default:

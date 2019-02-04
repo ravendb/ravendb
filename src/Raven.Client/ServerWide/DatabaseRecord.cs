@@ -40,6 +40,8 @@ namespace Raven.Client.ServerWide
 
         public long EtagForBackup;
 
+        public long CompareExchangeIndexForBackup;
+
         public Dictionary<string, DeletionInProgressStatus> DeletionInProgress;
 
         public DatabaseTopology Topology;

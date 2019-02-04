@@ -92,9 +92,14 @@ namespace Raven.Server.Smuggler.Documents
             return new DatabaseKeyValueActions(_database);
         }
 
-        public IKeyValueActions<BlittableJsonReaderObject> CompareExchange(JsonOperationContext context)
+        public ICompareExchangeActions CompareExchange(JsonOperationContext context)
         {
             return new DatabaseCompareExchangeActions(_database, context);
+        }
+
+        public ICompareExchangeActions CompareExchangeTombstones(JsonOperationContext context)
+        {
+            return new DatabaseCompareExchangeActions(_database, context, true);
         }
 
         public ICounterActions Counters()
@@ -441,23 +446,39 @@ namespace Raven.Server.Smuggler.Documents
             }
         }
 
-        private class DatabaseCompareExchangeActions : IKeyValueActions<BlittableJsonReaderObject>
+        private class DatabaseCompareExchangeActions : ICompareExchangeActions
         {
             private readonly DocumentDatabase _database;
             private readonly JsonOperationContext _context;
-            private readonly List<AddOrUpdateCompareExchangeCommand> _compareExchangeCommands = new List<AddOrUpdateCompareExchangeCommand>();
-            public DatabaseCompareExchangeActions(DocumentDatabase database, JsonOperationContext context)
+            private bool _fromBackup;
+            private readonly List<RemoveCompareExchangeCommand> _compareExchangeRemoveCommands = new List<RemoveCompareExchangeCommand>();
+            private readonly List<AddOrUpdateCompareExchangeCommand> _compareExchangeAddOrUpdateCommands = new List<AddOrUpdateCompareExchangeCommand>();
+
+            public DatabaseCompareExchangeActions(DocumentDatabase database, JsonOperationContext context, bool fromBackup = false)
             {
                 _database = database;
                 _context = context;
+                _fromBackup = fromBackup;
             }
 
             public void WriteKeyValue(string key, BlittableJsonReaderObject value)
             {
                 const int batchSize = 1024;
-                _compareExchangeCommands.Add(new AddOrUpdateCompareExchangeCommand(_database.Name, key, value, 0, _context));
+                _compareExchangeAddOrUpdateCommands.Add(new AddOrUpdateCompareExchangeCommand(_database.Name, key, value, 0, _context));
 
-                if (_compareExchangeCommands.Count < batchSize)
+                if (_compareExchangeAddOrUpdateCommands.Count < batchSize)
+                    return;
+
+                SendCommands(_context);
+            }
+
+            public void WriteTombstoneKey(string key)
+            {
+                const int batchSize = 1024;
+                var index = _database.ServerStore.LastRaftCommitIndex;
+                _compareExchangeRemoveCommands.Add(new RemoveCompareExchangeCommand(_database.Name, key, index, _context, _fromBackup));
+
+                if (_compareExchangeRemoveCommands.Count < batchSize)
                     return;
 
                 SendCommands(_context);
@@ -465,7 +486,7 @@ namespace Raven.Server.Smuggler.Documents
 
             public void Dispose()
             {
-                if (_compareExchangeCommands.Count == 0)
+                if (_compareExchangeAddOrUpdateCommands.Count == 0 && _compareExchangeRemoveCommands.Count == 0)
                     return;
 
                 SendCommands(_context);
@@ -473,9 +494,17 @@ namespace Raven.Server.Smuggler.Documents
 
             private void SendCommands(JsonOperationContext context)
             {
-                AsyncHelpers.RunSync(async () => await _database.ServerStore.SendToLeaderAsync(new AddOrUpdateCompareExchangeBatchCommand(_compareExchangeCommands, context)));
+                if (_compareExchangeAddOrUpdateCommands.Count > 0)
+                {
+                    AsyncHelpers.RunSync(async () => await _database.ServerStore.SendToLeaderAsync(new AddOrUpdateCompareExchangeBatchCommand(_compareExchangeAddOrUpdateCommands, context)));
+                    _compareExchangeAddOrUpdateCommands.Clear();
+                }
+                if (_compareExchangeRemoveCommands.Count > 0)
+                {
+                    AsyncHelpers.RunSync(async () => await _database.ServerStore.SendToLeaderAsync(new RemoveCompareExchangeBatchCommand(_compareExchangeRemoveCommands, context)));
 
-                _compareExchangeCommands.Clear();
+                    _compareExchangeRemoveCommands.Clear();
+                }
             }
         }
 
@@ -513,7 +542,7 @@ namespace Raven.Server.Smuggler.Documents
             private void SendIdentities()
             {
                 //fire and forget, do not hold-up smuggler operations waiting for Raft command
-                AsyncHelpers.RunSync(() => _database.ServerStore.SendToLeaderAsync(new UpdateClusterIdentityCommand(_database.Name, _identities, false)));
+                AsyncHelpers.RunSync(() => _database.ServerStore.SendToLeaderAsync(new UpdateClusterIdentityCommand(_database.Name, _identities, false, true)));
 
                 _identities.Clear();
             }
