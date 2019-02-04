@@ -1,6 +1,7 @@
 using System;
 using System.IO;
 using System.Runtime.InteropServices;
+using Sparrow.Platform;
 using Voron.Impl.Journal;
 using Voron.Impl.Paging;
 using static Voron.Platform.PalDefinitions;
@@ -45,14 +46,14 @@ namespace Voron.Platform
             }
 
             try
-            {                
+            {
                 var toTime = DateTime.MinValue.Ticks;
                 if (File.Exists(toFilename))
                     toTime = new FileInfo(toFilename).CreationTime.Ticks;
 
-                if (File.Exists(fromFilename) && 
+                if (File.Exists(fromFilename) &&
                     new FileInfo(fromFilename).CreationTime.Ticks > toTime)
-                        File.Copy(fromFilename, toFilename, overwrite: true);
+                    File.Copy(fromFilename, toFilename, overwrite: true);
             }
             catch (IOException e)
             {
@@ -61,7 +62,21 @@ namespace Voron.Platform
                     e);
             }
 
-            var rc = rvn_get_system_information(out SysInfo, out var errorCode);
+            PalFlags.FailCodes rc = PalFlags.FailCodes.None;
+            int errorCode = 0;
+            try
+            {
+                rc = rvn_get_system_information(out SysInfo, out errorCode);
+            }
+            catch (Exception ex)
+            {
+                var ErrString =
+                    "'Microsoft Visual C++ 2015 Redistributable Package' (or newer). It can be downloaded from https://support.microsoft.com/en-us/help/2977003/the-latest-supported-visual-c-downloads";
+                throw new IncorrectDllException(
+                    $"{LIBRVNPAL} version might be invalid or not usable on current platform. Initialization error could also be caused by missing {ErrString}",
+                    ex);
+            }
+
             if (rc != PalFlags.FailCodes.Success)
                 PalHelper.ThrowLastError(rc, errorCode, "Cannot get system information");
         }
