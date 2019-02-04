@@ -600,8 +600,8 @@ namespace Raven.Server.Smuggler.Documents
                                     _database.DocumentsStorage.RevisionsStorage.DeleteRevision(context, key, tombstone.Collection, changeVector, tombstone.LastModified.Ticks);
                                     break;
                                 case Tombstone.TombstoneType.Counter:
-                                    _database.DocumentsStorage.CountersStorage.DeleteCounter(context, key, tombstone.Collection, null,
-                                       tombstone.LastModified.Ticks, forceTombstone: true);
+                                    _database.DocumentsStorage.CountersStorage.DeleteCounter(context, key.ToString(), tombstone.Collection, null,
+                                        forceTombstone: true, tombstone.LastModified.Ticks);
                                     break;
                             }
                         }

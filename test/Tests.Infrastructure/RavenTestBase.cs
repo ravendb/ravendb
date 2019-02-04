@@ -43,9 +43,9 @@ namespace FastTests
     {
         protected readonly ConcurrentSet<DocumentStore> CreatedStores = new ConcurrentSet<DocumentStore>();
 
-        protected virtual Task<DocumentDatabase> GetDocumentDatabaseInstanceFor(IDocumentStore store)
+        protected virtual Task<DocumentDatabase> GetDocumentDatabaseInstanceFor(IDocumentStore store, string database = null)
         {
-            return Server.ServerStore.DatabasesLandlord.TryGetOrCreateResourceStore(store.Database);
+            return Server.ServerStore.DatabasesLandlord.TryGetOrCreateResourceStore(database ?? store.Database);
         }
 
         protected static void CreateNorthwindDatabase(DocumentStore store)
