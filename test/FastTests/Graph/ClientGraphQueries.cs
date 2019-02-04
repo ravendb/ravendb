@@ -1,8 +1,10 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Reflection;
 using System.Threading.Tasks;
 using Raven.Client.Documents.Linq;
+using Raven.Client.Documents.Session;
 using Xunit;
 
 namespace FastTests.Graph
@@ -16,7 +18,7 @@ namespace FastTests.Graph
             {
                 using (var session = store.OpenSession())
                 {
-                    var bar = new Bar {Name = "Barvazon"};
+                    var bar = new Bar { Name = "Barvazon" };
                     var barId = "Bars/1";
                     session.Store(bar, barId);
                     session.Store(new Foo
@@ -25,7 +27,7 @@ namespace FastTests.Graph
                         Bars = new List<string> { barId }
                     });
                     session.SaveChanges();
-                    FooBar res = session.Advanced.GraphQuery<FooBar>("match (Foo)-[Bars as _]->(Bars as Bar)").With("Foo",session.Query<Foo>()).Single();
+                    FooBar res = session.Advanced.GraphQuery<FooBar>("match (Foo)-[Bars as _]->(Bars as Bar)").With("Foo", session.Query<Foo>()).Single();
                     Assert.Equal(res.Foo.Name, "Foozy");
                     Assert.Equal(res.Bar.Name, "Barvazon");
                 }
@@ -39,7 +41,7 @@ namespace FastTests.Graph
             {
                 using (var session = store.OpenSession())
                 {
-                    var bar = new Bar { Name = "Barvazon", Age = 19};
+                    var bar = new Bar { Name = "Barvazon", Age = 19 };
                     var barId = "Bars/1";
                     session.Store(bar, barId);
                     session.Store(new Foo
@@ -55,10 +57,49 @@ namespace FastTests.Graph
                         "Foozy"
                     };
                     FooBar res = session.Advanced.GraphQuery<FooBar>("match (Foo)-[Bars as _]->(Bars as Bar)")
-                        .With("Foo", builder => builder.DocumentQuery<Foo>().WhereIn(x=>x.Name, names))
-                        .With("Bar",session.Query<Bar>().Where(x=>x.Age >= 18)).Single();
+                        .With("Foo", builder => builder.DocumentQuery<Foo>().WhereIn(x => x.Name, names))
+                        .With("Bar", session.Query<Bar>().Where(x => x.Age >= 18)).Single();
                     Assert.Equal(res.Foo.Name, "Foozy");
                     Assert.Equal(res.Bar.Name, "Barvazon");
+                }
+            }
+        }
+
+        [Fact]
+        public void WaitForNonStaleResultsOnGraphQueriesWithClauseShouldWork()
+        {
+            using (var store = GetDocumentStore())
+            {
+                var names = new[]
+                {
+                    "Fi",
+                    "Fah",
+                    "Foozy"
+                };
+
+
+                using (var session = store.OpenSession())
+                {
+                    var query = session.Advanced.GraphQuery<FooBar>("match (Foo)-[Bars as _]->(Bars as Bar)")
+                        .With("Foo", builder => builder.DocumentQuery<Foo>().WhereIn(x => x.Name, names).WaitForNonStaleResults(TimeSpan.FromMinutes(3)))
+                        .With("Bar", session.Query<Bar>().Customize(x => x.WaitForNonStaleResults(TimeSpan.FromMinutes(5))).Where(x => x.Age >= 18))
+                        .WaitForNonStaleResults()
+                        .GetIndexQuery();
+
+                    Assert.True(query.WaitForNonStaleResults);
+                    Assert.Equal(TimeSpan.FromMinutes(5), query.WaitForNonStaleResultsTimeout);
+                }
+
+                using (var session = store.OpenAsyncSession())
+                {
+                    var query = session.Advanced.AsyncGraphQuery<FooBar>("match (Foo)-[Bars as _]->(Bars as Bar)")
+                        .With("Foo", builder => builder.AsyncDocumentQuery<Foo>().WhereIn(x => x.Name, names).WaitForNonStaleResults(TimeSpan.FromMinutes(3)))
+                        .With("Bar", session.Query<Bar>().Customize(x => x.WaitForNonStaleResults(TimeSpan.FromMinutes(5))).Where(x => x.Age >= 18))
+                        .WaitForNonStaleResults()
+                        .GetIndexQuery();
+
+                    Assert.True(query.WaitForNonStaleResults);
+                    Assert.Equal(TimeSpan.FromMinutes(5), query.WaitForNonStaleResultsTimeout);
                 }
             }
         }
@@ -73,7 +114,7 @@ namespace FastTests.Graph
                     session.Store(
                         new Friend
                         {
-                            Name="F1",
+                            Name = "F1",
                             Age = 21,
                             Friends = new[]
                             {
@@ -150,9 +191,9 @@ namespace FastTests.Graph
                     var res = session.Advanced.GraphQuery<FriendsTuple>("match (F1)-[L1]->(F2)")
                         .With("F1", session.Query<Friend>())
                         .With("F2", session.Query<Friend>())
-                        .WithEdges("L1", "Friends","where FriendsSince >= \'2018-03-29T11:54:49.0095205Z\' select FriendId")
+                        .WithEdges("L1", "Friends", "where FriendsSince >= \'2018-03-29T11:54:49.0095205Z\' select FriendId")
                         .OrderByDescending(x => x.F1.Age)
-                        .Select(x=> x.F1)
+                        .Select(x => x.F1)
                         .ToList();
                     Assert.Equal(res.Count, 2);
                     Assert.Equal(res[0].Name, "F4");

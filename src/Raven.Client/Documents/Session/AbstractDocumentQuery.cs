@@ -205,6 +205,15 @@ namespace Raven.Client.Documents.Session
         /// <param name = "waitTimeout">Maximum time to wait for index query results to become non-stale before exception is thrown. Default: 15 seconds.</param>
         public void WaitForNonStaleResults(TimeSpan? waitTimeout = null)
         {
+            //Graph queries may set this property multiple times
+            if (TheWaitForNonStaleResults)
+            {
+                if (Timeout == null || waitTimeout.HasValue && Timeout < waitTimeout.Value)
+                {
+                    Timeout = waitTimeout;                    
+                }
+                return;
+            }
             TheWaitForNonStaleResults = true;
             Timeout = waitTimeout ?? DefaultTimeout;
         }
