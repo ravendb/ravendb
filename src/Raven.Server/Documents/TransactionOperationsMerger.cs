@@ -16,6 +16,7 @@ using Sparrow;
 using Sparrow.Json;
 using Sparrow.Logging;
 using Sparrow.LowMemory;
+using Sparrow.Platform;
 using Sparrow.Utils;
 using Voron.Debugging;
 using Voron.Global;
@@ -47,6 +48,8 @@ namespace Raven.Server.Documents
         private readonly long _maxTxSizeInBytes;
         private readonly double _maxTimeToWaitForPreviousTxBeforeRejectingInMs;
 
+        private readonly bool _is32Bits;
+
         public TransactionOperationsMerger(DocumentDatabase parent, CancellationToken shutdown)
         {
             _parent = parent;
@@ -56,6 +59,7 @@ namespace Raven.Server.Documents
             _maxTimeToWaitForPreviousTxInMs = _parent.Configuration.TransactionMergerConfiguration.MaxTimeToWaitForPreviousTx.AsTimeSpan.TotalMilliseconds;
             _maxTxSizeInBytes = _parent.Configuration.TransactionMergerConfiguration.MaxTxSize.GetValue(SizeUnit.Bytes);
             _maxTimeToWaitForPreviousTxBeforeRejectingInMs = _parent.Configuration.TransactionMergerConfiguration.MaxTimeToWaitForPreviousTxBeforeRejecting.AsTimeSpan.TotalMilliseconds;
+            _is32Bits = _parent.Configuration.Storage.ForceUsing32BitsPager || PlatformDetails.Is32Bits;
         }
 
         public DatabasePerformanceMetrics GeneralWaitPerformanceMetrics = new DatabasePerformanceMetrics(MetricType.GeneralWait, 256, 1);
@@ -653,7 +657,7 @@ namespace Raven.Server.Documents
 
                         return;
                     }
-                    
+
                     var currentPendingOps = GetBufferForPendingOps();
                     PendingOperations result;
                     bool calledCompletePreviousTx = false;
@@ -826,7 +830,7 @@ namespace Raven.Server.Documents
                 var modifiedSize = llt.NumberOfModifiedPages * Constants.Storage.PageSize;
 
                 var canCloseCurrentTx = previousOperation == null || previousOperation.IsCompleted;
-                if (canCloseCurrentTx)
+                if (canCloseCurrentTx || _is32Bits)
                 {
                     if (_operations.IsEmpty)
                         break; // nothing remaining to do, let's us close this work
@@ -1086,9 +1090,10 @@ namespace Raven.Server.Documents
         {
             public RecordingState State;
             public Stream Stream;
+            public Action StopAction;
         }
 
-        public void StartRecording(string filePath)
+        public void StartRecording(string filePath, Action stopAction)
         {
             var recordingFileStream = new FileStream(filePath, FileMode.Create);
             if (null != Interlocked.CompareExchange(ref _recording.State, new RecordingState.BeforeEnabledRecordingState(this), null))
@@ -1097,8 +1102,11 @@ namespace Raven.Server.Documents
                 File.Delete(filePath);
             }
             _recording.Stream = new GZipStream(recordingFileStream, CompressionMode.Compress);
+            _recording.StopAction = stopAction;
         }
-
+        
+        public bool RecordingEnabled => _recording.State != null;
+        
         public void StopRecording()
         {
             var recordingState = _recording.State;
@@ -1106,6 +1114,8 @@ namespace Raven.Server.Documents
             {
                 recordingState.Shutdown();
                 _waitHandle.Set();
+                _recording.StopAction?.Invoke();
+                _recording.StopAction = null;
             }
         }
     }

@@ -97,7 +97,7 @@ namespace SlowTests.Issues
                     session.SaveChanges();
                 }
 
-                WaitForIndexing(store);
+                WaitForIndexingErrors(store);
 
                 var stats = store.Maintenance.Send(new GetIndexErrorsOperation(new[] { "Index" }));
                 Assert.NotEmpty(stats[0].Errors);
@@ -125,7 +125,7 @@ namespace SlowTests.Issues
                     session.SaveChanges();
                 }
 
-                WaitForIndexing(store);
+                WaitForIndexingErrors(store);
 
                 var stats = store.Maintenance.Send(new GetIndexErrorsOperation(new[] { "Index" }));
                 Assert.NotEmpty(stats[0].Errors);
@@ -153,7 +153,7 @@ namespace SlowTests.Issues
                     session.SaveChanges();
                 }
 
-                WaitForIndexing(store);
+                WaitForIndexingErrors(store);
 
                 var stats = store.Maintenance.Send(new GetIndexErrorsOperation(new[] { "Index" }));
                 Assert.NotEmpty(stats[0].Errors);
@@ -166,15 +166,15 @@ namespace SlowTests.Issues
             public MetadataIndex()
             {
                 Map = users => from user in users
-                    select new
-                    {
-                        Metadata1 = MetadataFor(LoadDocument<Address>(user.AddressId)).Value<string>("Name"),
-                        Metadata2 = MetadataFor(user.AddressId).Value<string>("Name"),
-                        Attachments1 = AttachmentsFor(LoadDocument<Address>(user.AddressId)).Count(),
-                        Attachments2 = AttachmentsFor(user.AddressId).Count(),
-                        Counters1 = CounterNamesFor(LoadDocument<Address>(user.AddressId)),
-                        Counters2 = CounterNamesFor(user.AddressId)
-                    };
+                               select new
+                               {
+                                   Metadata1 = MetadataFor(LoadDocument<Address>(user.AddressId)).Value<string>("Name"),
+                                   Metadata2 = MetadataFor(user.AddressId).Value<string>("Name"),
+                                   Attachments1 = AttachmentsFor(LoadDocument<Address>(user.AddressId)).Count(),
+                                   Attachments2 = AttachmentsFor(user.AddressId).Count(),
+                                   Counters1 = CounterNamesFor(LoadDocument<Address>(user.AddressId)),
+                                   Counters2 = CounterNamesFor(user.AddressId)
+                               };
             }
         }
 
@@ -183,11 +183,11 @@ namespace SlowTests.Issues
             public AsJsonIndex()
             {
                 Map = users => from user in users
-                    select new
-                    {
-                        AsJson1 = AsJson(LoadDocument<Address>(user.AddressId)).Value<string>("Name"),
-                        AsJson2 = AsJson(user.AddressId).Value<string>("Name"),
-                    };
+                               select new
+                               {
+                                   AsJson1 = AsJson(LoadDocument<Address>(user.AddressId)).Value<string>("Name"),
+                                   AsJson2 = AsJson(user.AddressId).Value<string>("Name"),
+                               };
             }
         }
     }

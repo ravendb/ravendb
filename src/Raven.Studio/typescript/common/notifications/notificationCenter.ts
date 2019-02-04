@@ -43,11 +43,12 @@ import recentErrorDetails = require("viewmodels/common/notificationCenter/detail
 import notificationCenterSettings = require("common/notifications/notificationCenterSettings");
 import licenseLimitDetails = require("viewmodels/common/notificationCenter/detailViewer/licenseLimitDetails");
 import requestLatencyDetails = require("viewmodels/common/notificationCenter/detailViewer/performanceHint/requestLatencyDetails");
+import transactionCommandsDetails = require("viewmodels/common/notificationCenter/detailViewer/operations/transactionCommandsDetails");
 
 
 interface detailsProvider {
     supportsDetailsFor(notification: abstractNotification): boolean;
-    showDetailsFor(notification: abstractNotification, notificationCenter: notificationCenter): JQueryPromise<void>;
+    showDetailsFor(notification: abstractNotification, notificationCenter: notificationCenter): JQueryPromise<void> | void;
 }
 
 interface customOperationMerger {
@@ -129,6 +130,7 @@ class notificationCenter {
             revertRevisionsDetails,
             compactDatabaseDetails,
             replayTransactionCommandsDetails,
+            transactionCommandsDetails,
             
             // virtual operations:
             virtualBulkInsertDetails,
@@ -156,6 +158,7 @@ class notificationCenter {
         this.customOperationHandler.push(bulkInsertDetails);
         this.customOperationHandler.push(patchDocumentsDetails);
         this.customOperationHandler.push(deleteDocumentsDetails);
+        this.customOperationHandler.push(transactionCommandsDetails);
 
         this.allNotifications = ko.pureComputed(() => {
             const globalNotifications = this.globalNotifications();

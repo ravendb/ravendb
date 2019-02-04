@@ -93,7 +93,7 @@ namespace Raven.Client.Documents.Session
             return this;
         }
 
-        IGraphQuery<T> IQueryBase<T, IGraphQuery<T>>.WaitForNonStaleResults(TimeSpan? waitTimeout = null)
+        IGraphQuery<T> IQueryBase<T, IGraphQuery<T>>.WaitForNonStaleResults(TimeSpan? waitTimeout)
         {
             WaitForNonStaleResults(waitTimeout);
             return this;

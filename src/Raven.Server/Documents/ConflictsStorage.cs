@@ -544,7 +544,7 @@ namespace Raven.Server.Documents
         }
 
         public (string ChangeVector, NonPersistentDocumentFlags NonPersistentFlags) MergeConflictChangeVectorIfNeededAndDeleteConflicts(
-            string documentChangeVector, DocumentsOperationContext context, string id, long newEtag, BlittableJsonReaderObject document)
+            string documentChangeVector, DocumentsOperationContext context, string id, BlittableJsonReaderObject document)
         {
             var result = DeleteConflictsFor(context, id, document);
             if (result.ChangeVectors == null ||
@@ -587,7 +587,7 @@ namespace Raven.Server.Documents
             var tx = context.Transaction.InnerTransaction;
             var conflictsTable = tx.OpenTable(ConflictsSchema, ConflictsSlice);
 
-            var fromSmuggler = (nonPersistentFlags & NonPersistentDocumentFlags.FromSmuggler) == NonPersistentDocumentFlags.FromSmuggler;
+            var fromSmuggler = nonPersistentFlags.Contain(NonPersistentDocumentFlags.FromSmuggler);
 
             using (DocumentIdWorker.GetLowerIdSliceAndStorageKey(context, id, out Slice lowerId, out Slice idPtr))
             {
@@ -668,6 +668,8 @@ namespace Raven.Server.Documents
                     using (GetConflictsIdPrefix(context, lowerId, out Slice prefixSlice))
                     {
                         var conflicts = GetConflictsFor(context, prefixSlice);
+                        Debug.Assert(conflicts.Count > 0);
+
                         foreach (var conflict in conflicts)
                         {
                             var conflictStatus = ChangeVectorUtils.GetConflictStatus(incomingChangeVector, conflict.ChangeVector);
@@ -682,7 +684,7 @@ namespace Raven.Server.Documents
                                     {
                                         return; // we already have a conflict with equal content, no need to create another one
                                     }
-                                    break; // we'll add this conflict if no one else also includes it
+                                    continue; // we'll add this conflict if no one else also includes it
                                 case ConflictStatus.AlreadyMerged:
                                     return; // we already have a conflict that includes this version
                                 default:
@@ -693,12 +695,6 @@ namespace Raven.Server.Documents
                 }
 
                 var etag = _documentsStorage.GenerateNextEtag();
-                if (context.LastDatabaseChangeVector == null)
-                    context.LastDatabaseChangeVector = GetDatabaseChangeVector(context);
-                
-                var result = ChangeVectorUtils.TryUpdateChangeVector(_documentDatabase.ServerStore.NodeTag, _documentDatabase.DbBase64Id, etag, context.LastDatabaseChangeVector);
-                if (result.IsValid)
-                    context.LastDatabaseChangeVector = result.ChangeVector;
 
                 byte* doc = null;
                 var docSize = 0;
@@ -853,7 +849,7 @@ namespace Raven.Server.Documents
                     if (status == ConflictStatus.Conflict)
                     {
                         conflictingVector = existingConflict.ChangeVector;
-                        return status;
+                        return ConflictStatus.Conflict;
                     }
                 }
                 // this document will resolve the conflicts when putted

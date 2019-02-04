@@ -46,10 +46,15 @@ namespace Raven.Client.Documents.Session.Operations.Lazy
                 return;
             }
 
-            var queryResult = JsonDeserializationClient.QueryResult((BlittableJsonReaderObject)response.Result);
+            QueryResult queryResult = null;
 
-            if (response.StatusCode == HttpStatusCode.NotModified)
-                queryResult.DurationInMs = -1; // taken from cache
+            if (response.Result != null)
+            {
+                queryResult = JsonDeserializationClient.QueryResult((BlittableJsonReaderObject)response.Result);
+
+                if (response.StatusCode == HttpStatusCode.NotModified)
+                    queryResult.DurationInMs = -1; // taken from cache
+            }
 
             HandleResponse(queryResult);
         }

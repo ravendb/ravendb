@@ -32,6 +32,7 @@ using Raven.Client.ServerWide.Operations.Certificates;
 using Raven.Client.ServerWide.Operations.Configuration;
 using Raven.Server.Config;
 using Raven.Server.Config.Categories;
+using Raven.Server.Config.Settings;
 using Raven.Server.Extensions;
 using Raven.Server.Https;
 using Raven.Server.Json;
@@ -245,7 +246,7 @@ namespace Raven.Server.Commercial
                     try
                     {
                         await CompleteConfigurationForNewNode(onProgress, progress, continueSetupInfo, settingsJsonObject, serverCertBytes, serverCert, 
-                            clientCert, serverStore, firstNodeTag, otherNodesUrls, license);
+                            clientCert, serverStore, firstNodeTag, otherNodesUrls, license, context);
                     }
                     catch (Exception e)
                     {
@@ -1226,7 +1227,8 @@ namespace Raven.Server.Commercial
             ServerStore serverStore,
             string firstNodeTag,
             Dictionary<string, string> otherNodesUrls,
-            License license)
+            License license,
+            JsonOperationContext context)
         {
             try
             {
@@ -1330,6 +1332,35 @@ namespace Raven.Server.Commercial
             catch (Exception e)
             {
                 throw new InvalidOperationException($"Failed to save server certificate at {certPath}.", e);
+            }
+
+            try
+            {
+                // During setup we use the System database to store cluster configurations as well as the trusted certificates.
+                // We need to make sure that the currently used data dir will be the one written (or not written) in the resulting settings.json
+                var dataDirKey = RavenConfiguration.GetKey(x => x.Core.DataDirectory);
+                var currentDataDir = serverStore.Configuration.GetServerWideSetting(dataDirKey) ?? serverStore.Configuration.GetSetting(dataDirKey);
+                var currentHasKey = string.IsNullOrWhiteSpace(currentDataDir) == false;
+
+                if (currentHasKey)
+                {
+                    settingsJsonObject.Modifications = new DynamicJsonValue(settingsJsonObject)
+                    {
+                        [dataDirKey] = currentDataDir
+                    };
+                }
+                else if (settingsJsonObject.TryGet(dataDirKey, out string _))
+                {
+                    settingsJsonObject.Modifications = new DynamicJsonValue(settingsJsonObject);
+                    settingsJsonObject.Modifications.Remove(dataDirKey);
+                }
+
+                if (settingsJsonObject.Modifications != null)
+                    settingsJsonObject = context.ReadObject(settingsJsonObject, "settings.json");
+            }
+            catch (Exception e)
+            {
+                throw new InvalidOperationException("Failed to determine the data directory", e);
             }
 
             try
