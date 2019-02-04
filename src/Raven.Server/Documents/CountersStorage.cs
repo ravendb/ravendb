@@ -107,9 +107,9 @@ namespace Raven.Server.Documents
         {
             using (StorageEnvironment.GetStaticContext(out var ctx))
             {
-                Slice.From(ctx, "AllCountersEtags", ByteStringType.Immutable, out AllCountersEtagSlice);
-                Slice.From(ctx, "CollectionCountersEtags", ByteStringType.Immutable, out CollectionCountersEtagsSlice);
-                Slice.From(ctx, "CounterKeys", ByteStringType.Immutable, out CounterKeysSlice);
+                Slice.From(ctx, "AllCounterGroupsEtags", ByteStringType.Immutable, out AllCountersEtagSlice);
+                Slice.From(ctx, "CollectionCounterGroupsEtags", ByteStringType.Immutable, out CollectionCountersEtagsSlice);
+                Slice.From(ctx, "CounterGroupKeys", ByteStringType.Immutable, out CounterKeysSlice);
             }
             CountersSchema.DefineKey(new TableSchema.SchemaIndexDef
             {
@@ -807,7 +807,7 @@ namespace Raven.Server.Documents
 
         public Table GetCountersTable(Transaction tx, CollectionName collection)
         {
-            var tableName = collection.GetTableName(CollectionTableType.Counters);
+            var tableName = collection.GetTableName(CollectionTableType.CounterGroups);
 
             if (tx.IsWriteTransaction && _tableCreated.Contains(collection.Name) == false)
             {
@@ -1018,7 +1018,7 @@ namespace Raven.Server.Documents
             }
         }
 
-        private string GenerateDeleteChangeVectorFromRawBlob(BlittableJsonReaderObject data,
+        internal string GenerateDeleteChangeVectorFromRawBlob(BlittableJsonReaderObject data,
             BlittableJsonReaderObject.RawBlob counterToDelete)
         {
             data.TryGet(DbIds, out BlittableJsonReaderArray dbIds);
@@ -1081,7 +1081,9 @@ namespace Raven.Server.Documents
             var name = context.AllocateStringValue(null, p, sizeOfName);
             return (doc, name);
         }
-        [Conditional("DEBUG")]        public static void AssertCounters(BlittableJsonReaderObject document, DocumentFlags flags)
+
+        [Conditional("DEBUG")]
+        public static void AssertCounters(BlittableJsonReaderObject document, DocumentFlags flags)
         {
             if ((flags & DocumentFlags.HasCounters) == DocumentFlags.HasCounters)
             {
