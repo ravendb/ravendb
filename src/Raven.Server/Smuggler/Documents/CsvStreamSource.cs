@@ -342,14 +342,19 @@ namespace Raven.Server.Smuggler.Documents
             return Enumerable.Empty<IndexDefinitionAndType>();
         }
 
-        public IEnumerable<(string Prefix, long Value)> GetIdentities()
+        public IEnumerable<(string Prefix, long Value, long Index)> GetIdentities()
         {
-            return Enumerable.Empty<(string Prefix, long Value)>();
+            return Enumerable.Empty<(string Prefix, long Value, long Index)>();
         }
 
         public IEnumerable<(string key, long index, BlittableJsonReaderObject value)> GetCompareExchangeValues()
         {
             return Enumerable.Empty<(string key, long index, BlittableJsonReaderObject value)>();
+        }
+
+        public IEnumerable<string> GetCompareExchangeTombstones()
+        {
+            return Enumerable.Empty<string>();
         }
 
         public IEnumerable<CounterDetail> GetCounterValues()

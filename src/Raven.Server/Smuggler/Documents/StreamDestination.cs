@@ -90,9 +90,14 @@ namespace Raven.Server.Smuggler.Documents
             return new StreamKeyValueActions<long>(_writer, nameof(DatabaseItemType.Identities));
         }
 
-        public IKeyValueActions<BlittableJsonReaderObject> CompareExchange(JsonOperationContext context)
+        public ICompareExchangeActions CompareExchange(JsonOperationContext context)
         {
-            return new StreamKeyValueActions<BlittableJsonReaderObject>(_writer, nameof(DatabaseItemType.CompareExchange));
+            return new StreamCompareExchangeActions(_writer, nameof(DatabaseItemType.CompareExchange));
+        }
+
+        public ICompareExchangeActions CompareExchangeTombstones(JsonOperationContext context)
+        {
+            return new StreamCompareExchangeActions(_writer, nameof(DatabaseItemType.CompareExchangeTombstones));
         }
 
         public ICounterActions Counters()
@@ -617,6 +622,41 @@ namespace Raven.Server.Smuggler.Documents
                 Writer.WriteComma();
                 Writer.WritePropertyName("Value");
                 Writer.WriteString(value.ToString());
+                Writer.WriteEndObject();
+            }
+        }
+
+        private class StreamCompareExchangeActions : StreamActionsBase, ICompareExchangeActions
+        {
+            public StreamCompareExchangeActions(BlittableJsonTextWriter writer, string name)
+                : base(writer, name)
+            {
+            }
+
+            public void WriteKeyValue(string key, BlittableJsonReaderObject value)
+            {
+                if (First == false)
+                    Writer.WriteComma();
+                First = false;
+
+                Writer.WriteStartObject();
+                Writer.WritePropertyName("Key");
+                Writer.WriteString(key);
+                Writer.WriteComma();
+                Writer.WritePropertyName("Value");
+                Writer.WriteString(value.ToString());
+                Writer.WriteEndObject();
+            }
+
+            public void WriteTombstoneKey(string key)
+            {
+                if (First == false)
+                    Writer.WriteComma();
+                First = false;
+
+                Writer.WriteStartObject();
+                Writer.WritePropertyName("Key");
+                Writer.WriteString(key);
                 Writer.WriteEndObject();
             }
         }

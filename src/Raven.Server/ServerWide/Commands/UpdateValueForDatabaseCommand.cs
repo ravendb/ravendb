@@ -11,7 +11,7 @@ namespace Raven.Server.ServerWide.Commands
     public abstract class UpdateValueForDatabaseCommand : CommandBase
     {
         public string DatabaseName { get; set; }
-
+        public bool FromBackup = false;
         public abstract string GetItemId();
 
         public abstract void FillJson(DynamicJsonValue json);
@@ -21,7 +21,7 @@ namespace Raven.Server.ServerWide.Commands
 
         public static string GetStorageKey(string databaseName, string prefix)
         {
-            return $"{Constants.Documents.Prefix}{databaseName.ToLowerInvariant()}/identities/{prefix?.ToLowerInvariant()}";
+            return $"{databaseName.ToLowerInvariant()}/{prefix?.ToLowerInvariant()}";
         }
 
         public virtual unsafe void Execute(TransactionOperationContext context, Table items, long index, DatabaseRecord record, RachisState state, out object result)
@@ -62,6 +62,25 @@ namespace Raven.Server.ServerWide.Commands
         public virtual object GetResult()
         {
             return null;
+        }
+
+        public static unsafe long GetValue(TableValueReader tvr)
+        {
+            return *(long*)tvr.Read((int)ClusterStateMachine.UniqueIdentitiesItems.Value, out _);
+        }
+
+        public static void UpdateTableRow(long index, Table identitiesItems, long value, Slice keySlice, Slice prefixIndexSlice)
+        {
+            using (identitiesItems.Allocate(out var tvb))
+            {
+                tvb.Add(keySlice);
+                tvb.Add(value);
+                tvb.Add(index);
+                tvb.Add(prefixIndexSlice);
+
+                identitiesItems.DeleteByKey(keySlice);  // delete old row by key
+                identitiesItems.Set(tvb);
+            }
         }
 
         protected UpdateValueForDatabaseCommand(string databaseName)

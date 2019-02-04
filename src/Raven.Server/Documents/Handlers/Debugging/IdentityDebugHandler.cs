@@ -21,7 +21,7 @@ namespace Raven.Server.Documents.Handlers.Debugging
                     writer.WriteStartObject();
 
                     var first = true;
-                    foreach (var identity in Database.ServerStore.Cluster.ReadIdentities(context, Database.Name, start, pageSize))
+                    foreach (var identity in Database.ServerStore.Cluster.GetIdentitiesFrom(context, Database.Name, start, pageSize))
                     {
                         if (first == false)
                             writer.WriteComma();

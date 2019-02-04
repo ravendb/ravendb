@@ -522,6 +522,7 @@ namespace Raven.Server.Web.System
         [RavenAction("/admin/restore/database", "POST", AuthorizationStatus.Operator)]
         public async Task RestoreDatabase()
         {
+            ServerStore.EnsureNotPassive();
             using (ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
             {
                 var restoreConfiguration = await context.ReadForMemoryAsync(RequestBodyStream(), "database-restore");

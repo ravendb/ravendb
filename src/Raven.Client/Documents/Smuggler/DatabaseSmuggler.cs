@@ -156,12 +156,13 @@ namespace Raven.Client.Documents.Smuggler
         internal static DatabaseItemType ConfigureOptionsForIncrementalImport(DatabaseSmugglerOptions options)
         {
             options.OperateOnTypes |= DatabaseItemType.Tombstones;
+            options.OperateOnTypes |= DatabaseItemType.CompareExchangeTombstones;
 
-            // we import the indexes and identities from the last file only, 
+            // we import the indexes from the last file only, 
             // as the previous files can hold indexes and identities which were deleted and shouldn't be imported
             var oldOperateOnTypes = options.OperateOnTypes;
             options.OperateOnTypes = options.OperateOnTypes &
-                                     ~(DatabaseItemType.Indexes | DatabaseItemType.CompareExchange | DatabaseItemType.Identities);
+                                     ~(DatabaseItemType.Indexes);
             return oldOperateOnTypes;
         }
 

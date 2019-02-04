@@ -36,14 +36,26 @@ namespace Raven.Server.ServerWide.Commands
             throw new NotImplementedException();
         }
 
-        public override void Execute(TransactionOperationContext context, Table items, long index, DatabaseRecord record, RachisState state, out object result)
+        public override unsafe void Execute(TransactionOperationContext context, Table items, long index, DatabaseRecord record, RachisState state, out object result)
         {
-            var identities = context.Transaction.InnerTransaction.ReadTree(ClusterStateMachine.Identities);
-            var itemKey = GetItemId();
+            var identitiesItems = context.Transaction.InnerTransaction.OpenTable(ClusterStateMachine.IdentitiesSchema, ClusterStateMachine.Identities);
 
-            using (Slice.From(context.Allocator, itemKey, out var key))
+            CompareExchangeCommandBase.GetKeyAndPrefixIndexSlices(context.Allocator, DatabaseName, Prefix, index, out var keyTuple, out var indexTuple);
+
+            using (keyTuple.Scope)
+            using (indexTuple.Scope)
+            using (Slice.External(context.Allocator, keyTuple.Buffer.Ptr, keyTuple.Buffer.Length, out var keySlice))
+            using (Slice.External(context.Allocator, indexTuple.Buffer.Ptr, indexTuple.Buffer.Length, out var prefixIndexSlice))
             {
-                result = identities.Increment(key, 1);
+                if(identitiesItems.SeekOnePrimaryKeyPrefix(keySlice, out var entry))
+                {
+                    var value = GetValue(entry);
+                    value++;
+                    UpdateTableRow(index, identitiesItems, value, keySlice, prefixIndexSlice);
+                    result = value;
+                }
+                else
+                    result = null;
             }
         }
 

@@ -31,10 +31,11 @@ namespace Raven.Client.Documents.Smuggler
             RevisionDocuments = new CountsWithLastEtag();
             Tombstones = new CountsWithLastEtag();
             Conflicts = new CountsWithLastEtag();
-            Identities = new Counts();
+            Identities = new CountsWithLastEtag();
             Indexes = new Counts();
-            CompareExchange = new Counts();
+            CompareExchange = new CountsWithLastEtag();
             Counters = new CountsWithLastEtag();
+            CompareExchangeTombstones = new Counts();
 
             _progress = new SmugglerProgress(this);
         }
@@ -113,6 +114,7 @@ namespace Raven.Client.Documents.Smuggler
                 Indexes = _result?.Indexes;
                 CompareExchange = _result?.CompareExchange;
                 Counters = _result?.Counters;
+                CompareExchangeTombstones = _result?.CompareExchangeTombstones;
             }
 
             private string Message { get; set; }
@@ -143,6 +145,16 @@ namespace Raven.Client.Documents.Smuggler
 
             return lastEtag;
         }
+
+        public long GetLastRaftIndex()
+        {
+            var lastEtag = Identities.LastEtag;
+
+            if (CompareExchange.LastEtag > lastEtag)
+                lastEtag = CompareExchange.LastEtag;
+
+            return lastEtag;
+        }
     }
 
     public abstract class SmugglerProgressBase
@@ -157,13 +169,15 @@ namespace Raven.Client.Documents.Smuggler
 
         public CountsWithLastEtag Conflicts { get; set; }
 
-        public Counts Identities { get; set; }
+        public CountsWithLastEtag Identities { get; set; }
 
         public Counts Indexes { get; set; }
 
-        public Counts CompareExchange { get; set; }
+        public CountsWithLastEtag CompareExchange { get; set; }
 
         public CountsWithLastEtag Counters { get; set; }
+
+        public Counts CompareExchangeTombstones { get; set; }
 
         public virtual DynamicJsonValue ToJson()
         {
@@ -178,6 +192,7 @@ namespace Raven.Client.Documents.Smuggler
                 [nameof(Indexes)] = Indexes.ToJson(),
                 [nameof(CompareExchange)] = CompareExchange.ToJson(),
                 [nameof(Counters)] = Counters.ToJson()
+                [nameof(CompareExchangeTombstones)] = CompareExchangeTombstones.ToJson()
             };
         }
 

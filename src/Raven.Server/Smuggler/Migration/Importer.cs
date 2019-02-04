@@ -131,7 +131,10 @@ namespace Raven.Server.Smuggler.Migration
             };
 
             if (importInfo != null)
+            {
                 databaseSmugglerOptionsServerSide.OperateOnTypes |= DatabaseItemType.Tombstones;
+                databaseSmugglerOptionsServerSide.OperateOnTypes |= DatabaseItemType.CompareExchangeTombstones;
+            }
 
             var json = JsonConvert.SerializeObject(databaseSmugglerOptionsServerSide);
             var content = new StringContent(json, Encoding.UTF8, "application/json");

@@ -21,6 +21,7 @@ namespace Raven.Client.Documents.Smuggler
         Unknown = 1 << 12,
 
         Counters = 1 << 13,
-        Attachments = 1 << 14
+        Attachments = 1 << 14,
+        CompareExchangeTombstones = 1 << 15,
     }
 }

@@ -903,7 +903,7 @@ namespace Raven.Server.Documents
                     using (var zipStream = zipArchiveEntry.Open())
                     using (var outputStream = GetOutputStream(zipStream))
                     {
-                        var smugglerSource = new DatabaseSource(this, 0);
+                        var smugglerSource = new DatabaseSource(this, 0, 0);
                         using (DocumentsStorage.ContextPool.AllocateOperationContext(out DocumentsOperationContext documentsContext))
                         {
                             var smugglerDestination = new StreamDestination(outputStream, documentsContext, smugglerSource);

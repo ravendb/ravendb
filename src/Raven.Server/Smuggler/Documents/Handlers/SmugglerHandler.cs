@@ -89,6 +89,7 @@ namespace Raven.Server.Smuggler.Documents.Handlers
             {
                 var operationId = GetLongQueryString("operationId", false) ?? Database.Operations.GetNextOperationId();
                 var startDocumentEtag = GetLongQueryString("startEtag", false) ?? 0;
+                var startRaftIndex = GetLongQueryString("startRaftIndex", false) ?? 0;
 
                 var stream = TryGetRequestFromStream("DownloadOptions") ?? RequestBodyStream();
 
@@ -130,7 +131,7 @@ namespace Raven.Server.Smuggler.Documents.Handlers
                             Database,
                             "Export database: " + Database.Name,
                             Operations.OperationType.DatabaseExport,
-                            onProgress => Task.Run(() => ExportDatabaseInternal(options, startDocumentEtag, onProgress, context, token), token.Token), operationId, token: token);
+                            onProgress => Task.Run(() => ExportDatabaseInternal(options, startDocumentEtag, startRaftIndex, onProgress, context, token), token.Token), operationId, token: token);
                 }
                 catch (Exception)
                 {
@@ -161,13 +162,14 @@ namespace Raven.Server.Smuggler.Documents.Handlers
         private IOperationResult ExportDatabaseInternal(
             DatabaseSmugglerOptionsServerSide options,
             long startDocumentEtag,
+            long startRaftIndex,
             Action<IOperationProgress> onProgress,
             DocumentsOperationContext context,
             OperationCancelToken token)
         {
             using (token)
             {
-                var source = new DatabaseSource(Database, startDocumentEtag);
+                var source = new DatabaseSource(Database, startDocumentEtag, startRaftIndex);
                 using (var outputStream = GetOutputStream(ResponseBodyStream(), options))
                 {
                     var destination = new StreamDestination(outputStream, context, source);

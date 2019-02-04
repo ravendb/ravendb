@@ -462,7 +462,6 @@ namespace Raven.Server.Documents.PeriodicBackup.Restore
             var options = new DatabaseSmugglerOptionsServerSide
             {
                 AuthorizationStatus = AuthorizationStatus.DatabaseAdmin,
-                OperateOnTypes = ~(DatabaseItemType.CompareExchange | DatabaseItemType.Identities),
                 SkipRevisionCreation = true
             };
 
