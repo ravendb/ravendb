@@ -740,7 +740,7 @@ namespace Raven.Server.Rachis
 
         public void RemoveAndDispose(IDisposable parentState, IDisposable disposable)
         {
-            if(disposable == null)
+            if (disposable == null)
                 return;
 
             using (ContextPool.AllocateOperationContext(out TransactionOperationContext context))
@@ -748,7 +748,7 @@ namespace Raven.Server.Rachis
             using (disposable)
             {
                 if (_disposables.Count == 0 || ReferenceEquals(_disposables[0], parentState) == false)
-                    throw new ConcurrencyException(
+                    throw new RachisConcurrencyException(
                         "Could not remove the disposable because by the time we did it the parent state has changed");
                 _disposables.Remove(disposable);
             }

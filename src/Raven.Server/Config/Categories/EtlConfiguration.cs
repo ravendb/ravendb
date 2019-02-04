@@ -13,18 +13,18 @@ namespace Raven.Server.Config.Categories
         public TimeSetting? SqlCommandTimeout { get; set; }
 
         [Description("Number of seconds after which extraction and transformation will end and loading will start.")]
-        [DefaultValue(60)]
+        [DefaultValue(30)]
         [TimeUnit(TimeUnit.Seconds)]
         [ConfigurationEntry("ETL.ExtractAndTransformTimeoutInSec", ConfigurationEntryScope.ServerWideOrPerDatabase)]
         public TimeSetting ExtractAndTransformTimeout { get; protected set; }
 
         [Description("Max number of extracted documents in ETL batch")]
-        [DefaultValue(null)]
+        [DefaultValue(8192)]
         [ConfigurationEntry("ETL.MaxNumberOfExtractedDocuments", ConfigurationEntryScope.ServerWideOrPerDatabase)]
         public int? MaxNumberOfExtractedDocuments { get; protected set; }
 
         [Description("Max number of extracted items in ETL batch")]
-        [DefaultValue(null)]
+        [DefaultValue(8192)]
         [ConfigurationEntry("ETL.MaxNumberOfExtractedItems", ConfigurationEntryScope.ServerWideOrPerDatabase)]
         public int? MaxNumberOfExtractedItems { get; protected set; }
 

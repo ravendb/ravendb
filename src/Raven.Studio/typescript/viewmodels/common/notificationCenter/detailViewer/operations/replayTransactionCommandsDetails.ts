@@ -15,10 +15,9 @@ class replayTransactionCommandsDetails extends abstractOperationDetails {
 
         this.initObservables();
     }
-
+    
     initObservables() {
         super.initObservables();
-
 
         this.progress = ko.pureComputed(() => {
             return this.op.progress() as Raven.Client.Documents.Operations.IndeterminateProgressCount;

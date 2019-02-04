@@ -76,7 +76,7 @@ namespace Raven.Client.Documents.Session
             return this;
         }
 
-        IAsyncGraphQuery<T> IQueryBase<T, IAsyncGraphQuery<T>>.WaitForNonStaleResults(TimeSpan? waitTimeout = null)
+        IAsyncGraphQuery<T> IQueryBase<T, IAsyncGraphQuery<T>>.WaitForNonStaleResults(TimeSpan? waitTimeout)
         {
             WaitForNonStaleResults(waitTimeout);
             return this;

@@ -594,7 +594,7 @@ namespace Raven.Server.Documents.Indexes.MapReduce
 
             var message = $"Couldn't find a pre-computed aggregation result for the existing page: {relatedTreePage.PageNumber}. ";
 
-            var debugDetails = $"Debug details - page: {relatedPage}, ";
+            var debugDetails = $"Debug details - page: {relatedTreePage}, ";
 
             if (decompressedDebug != null)
                 debugDetails += $"decompressed: {decompressedDebug}), ";

@@ -257,6 +257,65 @@ namespace SlowTests.Server.Replication
         }
 
         [Fact]
+        public async Task DatabaseChangeVectorShouldBeIdentical()
+        {
+            using (var store1 = GetDocumentStore(new Options
+            {
+                ModifyDatabaseRecord = record =>
+                {
+                    record.ConflictSolverConfig = new ConflictSolver
+                    {
+                        ResolveToLatest = false,
+                        ResolveByCollection = new Dictionary<string, ScriptResolver>()
+                    };
+                }
+            }))
+            using (var store2 = GetDocumentStore(new Options
+            {
+                ModifyDatabaseRecord = record =>
+                {
+                    record.ConflictSolverConfig = new ConflictSolver
+                    {
+                        ResolveToLatest = false,
+                        ResolveByCollection = new Dictionary<string, ScriptResolver>()
+                    };
+                }
+            }))
+            {
+                using (var s1 = store1.OpenSession())
+                {
+                    s1.Store(new User { Name = "test" }, "foo/bar");
+                    s1.SaveChanges();
+                }
+                using (var s2 = store2.OpenSession())
+                {
+                    s2.Store(new User { Name = "test2" }, "foo/bar");
+                    s2.SaveChanges();
+                }
+
+                await SetupReplicationAsync(store1, store2);
+                var conflicts = WaitUntilHasConflict(store2, "foo/bar");
+                Assert.Equal(2, conflicts.Length);
+
+                await SetupReplicationAsync(store2, store1);
+                conflicts = WaitUntilHasConflict(store1, "foo/bar");
+                Assert.Equal(2, conflicts.Length);
+
+                var db1 = await GetDatabase(store1.Database);
+                var db2 = await GetDatabase(store2.Database);
+                using (db1.DocumentsStorage.ContextPool.AllocateOperationContext(out DocumentsOperationContext ctx1))
+                using (db2.DocumentsStorage.ContextPool.AllocateOperationContext(out DocumentsOperationContext ctx2))
+                using (ctx1.OpenReadTransaction())
+                using (ctx2.OpenReadTransaction())
+                {
+                    var cv1 = DocumentsStorage.GetDatabaseChangeVector(ctx1).ToChangeVector().OrderByDescending(x => x);
+                    var cv2 = DocumentsStorage.GetDatabaseChangeVector(ctx2).ToChangeVector().OrderByDescending(x => x);
+                    Assert.True(cv1.SequenceEqual(cv2));
+                }
+            }
+        }
+
+        [Fact]
         public async Task Conflict_insensitive_check()
         {
             using (var store1 = GetDocumentStore(new Options

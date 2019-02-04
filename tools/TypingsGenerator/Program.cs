@@ -440,6 +440,10 @@ namespace TypingsGenerator
             scripter.AddType(typeof(StudioConfiguration));
 
             scripter.AddType(typeof(StudioTasksHandler.OfflineMigrationValidation));
+
+            scripter.AddType(typeof(StartTransactionsRecordingOperation.Parameters));
+            scripter.AddType(typeof(TransactionsRecordingHandler.RecordingDetails));
+
             scripter.AddType(typeof(FolderPathOptions));
             scripter.AddType(typeof(DataDirectoryResult));
 

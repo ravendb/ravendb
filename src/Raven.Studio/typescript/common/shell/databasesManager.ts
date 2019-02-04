@@ -108,10 +108,20 @@ class databasesManager {
         return task;
     }
 
-    activate(db: database): JQueryPromise<void> {
+    activate(db: database, opts: { waitForNotificationCenterWebSocket: boolean } = undefined): JQueryPromise<void> {
         this.changesContext.changeDatabase(db);
 
-        return this.activeDatabaseTracker.onActivation(db);
+        const basicTask = this.activeDatabaseTracker.onActivation(db);
+        
+        const waitForNotificationCenter = opts ? opts.waitForNotificationCenterWebSocket : false;
+        
+        if (waitForNotificationCenter) {
+            return basicTask.then(() => {
+                return this.changesContext.databaseNotifications().connectToWebSocketTask;
+            });
+        } else {
+            return basicTask;
+        }
     }
 
     private updateDatabases(incomingData: Raven.Client.ServerWide.Operations.DatabasesInfo) {

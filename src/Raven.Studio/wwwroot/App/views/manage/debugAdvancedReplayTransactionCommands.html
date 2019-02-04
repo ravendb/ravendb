@@ -1,0 +1,50 @@
+<div class="padding">
+
+    <form class="flex-form" data-bind="submit: startReplay">
+        <h3>Replay Transaction Commands</h3>
+
+        <div class="row margin-top">
+            <div class="col-lg-6 col-sm-8">
+                <div class="form-group" data-bind="validationElement: databaseName">
+                    <label class="control-label">Database Name</label>
+                    <div class="flex-grow">
+                        <button class="btn btn-block dropdown-toggle text-left" data-toggle="dropdown">
+                            <span data-bind="text: databaseName() || 'Select database name'"></span>
+                            <span class="caret"></span>
+                        </button>
+                        <ul class="dropdown-menu" data-bind="foreach: databaseNames">
+                            <li><a href="#" data-bind="text: $data, click: _.partial($root.databaseName, $data)"></a></li>
+                        </ul>
+                        <span class="help-block" data-bind="validationMessage: databaseName"></span>
+                    </div>
+                </div>
+
+                <div class="form-group" data-bind="validationElement: importedFileName">
+                    <label class="control-label">Input File</label>
+                    <div class="flex-grow">
+                        <div class="input-group file-input" data-bind="validationElement: importedFileName">
+                            <input type="file" id="transactionCommandsFilePicker" data-bind="event: { change: _.partial(fileSelected, $element.value) }" tabindex="-1">
+                            <span class="static-name form-control" data-bind="text: importedFileName() || 'Select file...'"></span>
+                            <span class="input-group-btn">
+                                <label for="transactionCommandsFilePicker" class="btn btn-default">
+                                    <i class="icon-document"></i><span>Browse</span>
+                                </label>
+                            </span>
+                            <p class="help-block" data-bind="validationMessage: importedFileName"></p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="progress" data-bind="visible: isUploading()">
+            <div class="progress-bar progress-bar-primary progress-bar-striped" role="progressbar" data-bind="style: { width: uploadStatus() + '%' }"> <span class="sr-only" data-bind="text: uploadStatus() + '%'"></span> </div>
+        </div>
+
+        <hr />
+        <button type="submit" class="btn btn-primary">
+            <i class="icon-transaction-record-replay"></i>
+            <span>Start replay</span>
+        </button>
+    </form>
+</div>
