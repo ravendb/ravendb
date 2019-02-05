@@ -378,7 +378,10 @@ namespace Raven.Server.Documents
         private static void ThrowOnNotUpdatedChangeVector(DocumentsOperationContext context, string changeVector)
         {
             var globalChangeVector = GetDatabaseChangeVector(context);
-            if (changeVector != globalChangeVector && 
+
+            if (globalChangeVector != changeVector && 
+                globalChangeVector != null &&
+                globalChangeVector.ToChangeVector().OrderByDescending(x => x).SequenceEqual(changeVector.ToChangeVector().OrderByDescending(x => x)) == false && 
                 ChangeVectorUtils.GetConflictStatus(changeVector, globalChangeVector) != ConflictStatus.Update)
             {
                 throw new InvalidOperationException($"Global Change Vector wasn't updated correctly. " +
