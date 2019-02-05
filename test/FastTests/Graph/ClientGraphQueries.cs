@@ -44,23 +44,31 @@ namespace FastTests.Graph
                     var bar = new Bar { Name = "Barvazon", Age = 19 };
                     var barId = "Bars/1";
                     session.Store(bar, barId);
+
                     session.Store(new Foo
                     {
                         Name = "Foozy",
                         Bars = new List<string> { barId }
                     });
                     session.SaveChanges();
+
                     var names = new[]
                     {
                         "Fi",
                         "Fah",
                         "Foozy"
                     };
-                    FooBar res = session.Advanced.GraphQuery<FooBar>("match (Foo)-[Bars as _]->(Bars as Bar)")
-                        .With("Foo", builder => builder.DocumentQuery<Foo>().WhereIn(x => x.Name, names))
-                        .With("Bar", session.Query<Bar>().Where(x => x.Age >= 18)).Single();
-                    Assert.Equal(res.Foo.Name, "Foozy");
-                    Assert.Equal(res.Bar.Name, "Barvazon");
+
+                    var res = session.Advanced.GraphQuery<FooBar>("match (Foo)-[Bars as _]->(Bars as Bar)")
+                        .With("Foo", builder => builder.DocumentQuery<Foo>().WhereIn(x=>x.Name, names))
+                        .With("Bar", session.Query<Bar>().Where(x=>x.Age >= 18))
+						.WaitForNonStaleResults()
+                        .ToList();
+                        
+
+                    Assert.Single(res);
+                    Assert.Equal(res[0].Foo.Name, "Foozy");
+                    Assert.Equal(res[0].Bar.Name, "Barvazon");
                 }
             }
         }
@@ -202,38 +210,40 @@ namespace FastTests.Graph
             }
         }
 
-        private class FriendsTuple
+        public class FriendsTuple
         {
             public Friend F1 { get; set; }
             public FriendDescriptor L1 { get; set; }
             public Friend F2 { get; set; }
         }
 
-        private class Friend
+        public class Friend
         {
             public string Name { get; set; }
             public int Age { get; set; }
             public FriendDescriptor[] Friends { get; set; }
         }
-        private class FooBar
+
+        public class FooBar
         {
             public Foo Foo { get; set; }
             public Bar Bar { get; set; }
         }
-        private class Foo
+
+        public class Foo
         {
             public string Name { get; set; }
             public List<string> Bars { get; set; }
         }
 
-        private class Bar
+        public class Bar
         {
             public string Name { get; set; }
             public int Age { get; set; }
         }
     }
 
-    internal class FriendDescriptor
+    public class FriendDescriptor
     {
         public DateTime FriendsSince { get; set; }
         public string FriendId { get; set; }
