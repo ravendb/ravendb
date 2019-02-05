@@ -15,6 +15,7 @@ namespace Raven.Client.Documents.Smuggler
             var extension = Path.GetExtension(filePath);
             return
                 Constants.Documents.PeriodicBackup.IncrementalBackupExtension.Equals(extension, StringComparison.OrdinalIgnoreCase) ||
+                Constants.Documents.PeriodicBackup.EncryptedIncrementalBackupExtension.Equals(extension, StringComparison.OrdinalIgnoreCase) ||
                 Constants.Documents.PeriodicBackup.FullBackupExtension.Equals(extension, StringComparison.OrdinalIgnoreCase) ||
                 Constants.Documents.PeriodicBackup.EncryptedFullBackupExtension.Equals(extension, StringComparison.OrdinalIgnoreCase) ||
                 LegacyIncrementalBackupExtension.Equals(extension, StringComparison.OrdinalIgnoreCase) ||
@@ -25,6 +26,7 @@ namespace Raven.Client.Documents.Smuggler
         {
             return
                 Constants.Documents.PeriodicBackup.IncrementalBackupExtension.Equals(extension, StringComparison.OrdinalIgnoreCase) ||
+                Constants.Documents.PeriodicBackup.EncryptedIncrementalBackupExtension.Equals(extension, StringComparison.OrdinalIgnoreCase) ||
                 LegacyIncrementalBackupExtension.Equals(extension, StringComparison.OrdinalIgnoreCase);
         }
 

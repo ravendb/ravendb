@@ -363,7 +363,8 @@ namespace Raven.Server.Documents.PeriodicBackup
         private static string GetBackupExtension(BackupType type, bool isFullBackup, bool isEncrypted)
         {
             if (isFullBackup == false)
-                return Constants.Documents.PeriodicBackup.IncrementalBackupExtension;
+                return isEncrypted ? Constants.Documents.PeriodicBackup.EncryptedIncrementalBackupExtension : 
+                    Constants.Documents.PeriodicBackup.IncrementalBackupExtension;
 
             switch (type)
             {
