@@ -3,6 +3,13 @@ import d3 = require("d3");
 import captureLocalStackTracesCommand = require("commands/maintenance/captureLocalStackTracesCommand");
 import captureClusterStackTracesCommand = require("commands/maintenance/captureClusterStackTracesCommand");
 import clusterTopologyManager = require("common/shell/clusterTopologyManager");
+import copyToClipboard = require("common/copyToClipboard");
+import fileDownloader = require("common/fileDownloader");
+
+type stackFrame = {
+    short: string;
+    full: string;
+}
 
 class stackInfo {
     static boxPadding = 15;
@@ -29,6 +36,7 @@ class stackInfo {
     y: number;
 
     children: stackInfo[];
+    parent: stackInfo;
     depth: number;
 
     boxHeight() {
@@ -40,7 +48,7 @@ class stackInfo {
             return {
                 short: stackInfo.shortName(v),
                 full: v
-            }
+            } as stackFrame;
         });
     }
     
@@ -62,9 +70,13 @@ class captureStackTraces extends viewModelBase {
     clusterWide = ko.observable<boolean>(false); 
     
     error = ko.observable<string>();
+
+    isImport = ko.observable<boolean>(false);
+    hasAnyData = ko.observable<boolean>(false);
     
     static maxBoxWidth = 280;
     static boxVerticalPadding = 100;
+    static btnSize = 34;
     
     constructor() {
         super();
@@ -86,7 +98,7 @@ class captureStackTraces extends viewModelBase {
         })
     }
     
-    private static splitAndCollateStacks(stacks: stackInfo[]): stackInfo[] {
+    private static splitAndCollateStacks(stacks: stackInfo[], parent: stackInfo): stackInfo[] {
         if (stacks.length === 1) {
             return stacks;
         }
@@ -112,8 +124,9 @@ class captureStackTraces extends viewModelBase {
                 .map(s => new stackInfo(s.threadIds, s.stackTrace.slice(depth)))
                 .filter(s => s.stackTrace.length > 0);
             
-            sharedStack.children = captureStackTraces.splitAndCollateStacks(strippedStacks);
+            sharedStack.children = captureStackTraces.splitAndCollateStacks(strippedStacks, sharedStack);
             sharedStack.threadIds = d3.merge(sharedStacks.map(s => s.threadIds));
+            sharedStack.parent = parent;
             
             return sharedStack;
         });
@@ -231,6 +244,7 @@ class captureStackTraces extends viewModelBase {
         const enteringNodes = nodeSelectorWithData
             .enter()
             .append("g") 
+            .attr("class", "threadGroup")
             .attr("transform", d => "translate(" + xScale(d.x) + "," + yScale(yDepthScale(d.depth)) + ")");
 
         enteringNodes
@@ -290,6 +304,33 @@ class captureStackTraces extends viewModelBase {
             .attr("x", 3)
             .text(d => this.pluralize(d.threadIds.length, "THREAD", "THREADS", true));
         
+        const buttonGroup = enteringNodes
+            .append("g")
+            .attr("transform", d => "translate(" + (captureStackTraces.maxBoxWidth / 2) + "," + (-1 * d.boxHeight() - stackInfo.headerSize/2) + ")")
+            .attr("class", "button");
+        
+        buttonGroup
+            .append("rect")
+            .attr("class", "btn-copy")
+            .attr({
+                x: -(stackInfo.headerSize - captureStackTraces.btnSize) / 2 - captureStackTraces.btnSize,
+                y: -captureStackTraces.btnSize / 2,
+                width: captureStackTraces.btnSize,
+                height: captureStackTraces.btnSize
+            })
+            .on("click", d => this.onCopyStack(d))
+            .append("title")
+            .text("Copy stack to clipboard");
+            
+        
+        buttonGroup
+            .append("text")
+            .attr("class", "icon-style copy")
+            .html("&#xe943;")
+            .attr("text-anchor", "middle")
+            .attr("x", -stackInfo.headerSize / 2)
+            .attr("y", 0);
+        
         enteringNodes.filter(d => d.depth > 0).each(function (d: stackInfo, index: number) {
             const threadContainer = this;
             const offsetTop = d.boxHeight() - stackInfo.boxPadding - stackInfo.lineHeight/2;
@@ -337,7 +378,7 @@ class captureStackTraces extends viewModelBase {
             .attr("class", d => "link level-" + d.source.depth)
             .attr("d", d => lineFunction([[d.source.x, d.source.y], [d.target.x, d.source.y], [d.target.x, d.target.y]]));
     }
-
+    
     zoom(container: d3.Selection<void>) {
         const event = d3.event as d3.ZoomEvent;
         container.classed("wireframes", event.scale < 0.4);
@@ -360,6 +401,7 @@ class captureStackTraces extends viewModelBase {
         this.spinners.loading(true);
         this.clusterWideData([]);
         this.error(null);
+        this.hasAnyData(false);
         
         const tagMapping = this.nodeTagToServerUrlMap();
         
@@ -377,6 +419,7 @@ class captureStackTraces extends viewModelBase {
                     });
                     this.clusterWideData(stacks);
                     this.selectedClusterWideData(stacks[0]);
+                    this.hasAnyData(true);
                 })
                 .always(() => this.spinners.loading(false));
         } else {
@@ -384,6 +427,7 @@ class captureStackTraces extends viewModelBase {
                 .execute()
                 .done(stacks => {
                     this.data = stacks;
+                    this.hasAnyData(true);
                     this.reverseStacks(stacks);
                     this.draw();
                 })
@@ -392,7 +436,7 @@ class captureStackTraces extends viewModelBase {
     }
     
     draw() {
-        const collatedStacks = captureStackTraces.splitAndCollateStacks(this.data.filter(x => x.StackTrace.length).map(x => stackInfo.for(x)));
+        const collatedStacks = captureStackTraces.splitAndCollateStacks(this.data.filter(x => x.StackTrace.length).map(x => stackInfo.for(x)), null);
         this.updateGraph(collatedStacks);
     }
     
@@ -408,9 +452,48 @@ class captureStackTraces extends viewModelBase {
         });
     }
     
-    //TODO: save as json ? - import from json ?
-    //TODO: add an option to copy current stack ?
-   
+    private onCopyStack(data: stackInfo) {
+        const stackFrames = [] as Array<string>;
+        
+        do {
+            stackFrames.push(...data.stackTrace);
+            data = data.parent;
+        } while (data);
+     
+        copyToClipboard.copy(stackFrames.join("\r\n"), "Stack trace was copied to clipboard");
+    }
+    
+    exportAsJson() {
+        fileDownloader.downloadAsJson(this.data, "stacks.json");
+    }
+
+    fileSelected() {
+        const fileInput = <HTMLInputElement>document.querySelector("#importStacksFilePicker");
+        const self = this;
+        if (fileInput.files.length === 0) {
+            return;
+        }
+
+        const file = fileInput.files[0];
+        const reader = new FileReader();
+        reader.onload = function() {
+// ReSharper disable once SuspiciousThisUsage
+            self.dataImported(this.result as string);
+        };
+        reader.onerror = function(error: any) {
+            alert(error);
+        };
+        reader.readAsText(file);
+
+        // Must clear the filePicker element value so that user will be able to import the -same- file after closing the imported view...
+        const $input = $("#importStacksFilePicker");
+        $input.val(null);
+    }
+
+    private dataImported(result: string) {
+        this.data = JSON.parse(result);
+        this.draw();
+    }
 }
 
 export = captureStackTraces;

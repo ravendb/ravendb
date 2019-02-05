@@ -18,6 +18,18 @@
                 <i class="icon-parallel-stacks"></i> 
                 <span>Capture</span>
             </div>
+            
+            <button class="btn btn-default margin-left margin-left-lg" data-bind="click: exportAsJson, enable: hasAnyData, visible: !isImport()" title="Export current stack traces to a file">
+                <i class="icon-export"></i><span>Export</span>
+            </button>
+
+            <label for="importStacksFilePicker" class="btn btn-default">
+                <i class="icon-import"></i><span>Import</span>
+            </label>
+
+            <div class="input-group file-input" title="Import stack traces from file">
+                <input type="file" id="importStacksFilePicker" data-bind="event: { change: fileSelected }" tabindex="-1" accept=".json">
+            </div>
         </div>
          
         <div class="flex-separator"></div>

@@ -72,6 +72,32 @@
         }
     }
     
+    .copy {
+        fill: @btn-primary-color;
+        alignment-baseline: central;
+        pointer-events: none;
+        opacity: 0;
+        transition: opacity .4s ease;
+    }
+    
+    .btn-copy {
+        cursor: pointer;
+        fill: @btn-primary-bg;
+        opacity: 0;
+        transition: opacity .4s ease;
+    }
+
+    .threadGroup {
+        &:hover {
+            .btn-copy {
+                opacity: 1;
+            }
+            .copy {
+                opacity: 1;
+            }
+        }
+    }
+    
     .wireframes {
         .wireframe {
             fill-opacity: 1;
