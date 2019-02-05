@@ -82,86 +82,95 @@ namespace Raven.Server.Storage.Schema.Updates.Documents
 
         public bool Update(UpdateStep step)
         {
-            step.ReadTx.CreateTree(CounterKeysSlice);
-            TombstonesSchema.Create(step.ReadTx, CountersTombstonesSlice, 16);
-
             step.DocumentsStorage.CountersStorage = new CountersStorage(step.DocumentsStorage.DocumentDatabase, step.WriteTx);
 
-            _dbId = ReadDbId(step);
-
-            using (step.DocumentsStorage.ContextPool.AllocateOperationContext(out DocumentsOperationContext context))
+            var readTable = new Table(LegacyCountersSchema, step.ReadTx);
+            if (readTable.GetTree(LegacyCountersSchema.Key) != null)
             {
-                string currentDocId = null;
-                var batch = new Dictionary<string, List<CounterDetail>>();
-                var dbIds = new HashSet<string>();
-
-                var readTable = new Table(LegacyCountersSchema, step.ReadTx);
-
-                foreach (var counterDetail in GetAllCounters(readTable, context))
+                _dbId = ReadDbId(step);
+                using (step.DocumentsStorage.ContextPool.AllocateOperationContext(out DocumentsOperationContext context))
                 {
-                    if (currentDocId == counterDetail.DocumentId)
-                    {
-                        if (batch.TryGetValue(counterDetail.CounterName, out var list) == false)
-                        {
-                            list = new List<CounterDetail>();
-                            batch.Add(counterDetail.CounterName, list);
-                        }
-                        list.Add(counterDetail);
-                    }
-                    else
-                    {
-                        if (currentDocId != null)
-                        {
-                            PutCounters(step, context, dbIds, batch, currentDocId);
-                        }
+                    string currentDocId = null;
+                    var batch = new Dictionary<string, List<CounterDetail>>();
+                    var dbIds = new HashSet<string>();
 
-                        currentDocId = counterDetail.DocumentId;
-                        batch = new Dictionary<string, List<CounterDetail>>
+                    foreach (var counterDetail in GetAllCounters(readTable, context))
+                    {
+                        if (currentDocId == counterDetail.DocumentId)
                         {
+                            if (batch.TryGetValue(counterDetail.CounterName, out var list) == false)
                             {
-                                counterDetail.CounterName, new List<CounterDetail>
-                                {
-                                    counterDetail
-                                }
+                                list = new List<CounterDetail>();
+                                batch.Add(counterDetail.CounterName, list);
                             }
-                        };
+                            list.Add(counterDetail);
+                        }
+                        else
+                        {
+                            if (currentDocId != null)
+                            {
+                                PutCounters(step, context, dbIds, batch, currentDocId);
+                            }
+
+                            currentDocId = counterDetail.DocumentId;
+                            batch = new Dictionary<string, List<CounterDetail>>
+                            {
+                                {
+                                    counterDetail.CounterName, new List<CounterDetail>
+                                    {
+                                        counterDetail
+                                    }
+                                }
+                            };
+                        }
+
+                        var dbId = ExtractDbId(context, counterDetail.CounterKey);
+                        dbIds.Add(dbId);
+
                     }
 
-                    var dbId = ExtractDbId(context, counterDetail.CounterKey);
-                    dbIds.Add(dbId);
-
-                }
-
-                PutCounters(step, context, dbIds, batch, currentDocId);
-
-                // for each counter tombstone, delete the matching
-                // counter from the new table (if exists)
-
-                foreach (var result in step.ReadTx.OpenTable(TombstonesSchema, CountersTombstonesSlice).SeekByPrimaryKeyPrefix(Slices.BeforeAllKeys, Slices.Empty, 0))
-                {
-                    var t = new Tombstone
+                    if (batch.Count > 0)
                     {
-                        LowerId = TableValueToString(context, (int)TombstoneTable.LowerId, ref result.Value.Reader),
-                        Type = *(Tombstone.TombstoneType*)result.Value.Reader.Read((int)TombstoneTable.Type, out _),
-                    };
-
-                    if (t.Type != Tombstone.TombstoneType.Counter)
-                        continue;
-
-                    DeleteCounter(step, t.LowerId, context);
+                        PutCounters(step, context, dbIds, batch, currentDocId);
+                    }
                 }
 
                 // delete all data from LegacyCounters table
-                step.WriteTx.DeleteTree(CounterKeysSlice); 
+                step.WriteTx.DeleteTree(CounterKeysSlice);
 
-                // delete counter-tombstones from Tombstones table
-                var countersTombstoneTable = step.WriteTx.OpenTable(TombstonesSchema, CountersTombstonesSlice);
-                DeleteFromTable(context, countersTombstoneTable, TombstonesSchema.Key, tvh =>
-                {
-                    var type = *(Tombstone.TombstoneType*)tvh.Reader.Read((int)TombstoneTable.Type, out _);
-                    return type != Tombstone.TombstoneType.Counter;
-                });
             }
+
+            var counterTombstones = step.ReadTx.OpenTable(TombstonesSchema, CountersTombstonesSlice);
+            if (counterTombstones != null)
+            {
+                // for each counter tombstone, delete the matching
+                // counter from the new table (if exists)
+                using (step.DocumentsStorage.ContextPool.AllocateOperationContext(out DocumentsOperationContext context))
+                {
+                    foreach (var result in counterTombstones.SeekByPrimaryKeyPrefix(Slices.BeforeAllKeys, Slices.Empty, 0))
+                    {
+                        var t = new Tombstone
+                        {
+                            LowerId = TableValueToString(context, (int)TombstoneTable.LowerId, ref result.Value.Reader),
+                            Type = *(Tombstone.TombstoneType*)result.Value.Reader.Read((int)TombstoneTable.Type, out _),
+                        };
+
+                        if (t.Type != Tombstone.TombstoneType.Counter)
+                            continue;
+
+                        DeleteCounter(step, t.LowerId, context);
+                    }
+
+                    // delete counter-tombstones from Tombstones table
+                    var countersTombstoneTable = step.WriteTx.OpenTable(TombstonesSchema, CountersTombstonesSlice);
+                    DeleteFromTable(context, countersTombstoneTable, TombstonesSchema.Key, tvh =>
+                    {
+                        var type = *(Tombstone.TombstoneType*)tvh.Reader.Read((int)TombstoneTable.Type, out _);
+                        return type != Tombstone.TombstoneType.Counter;
+                    });
+                }
+            }
+
 
             return true;
         }

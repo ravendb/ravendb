@@ -218,7 +218,7 @@ namespace Raven.Server.Documents.ETL
                         }
 
                         break;
-                    case EtlItemType.Counter:
+                    case EtlItemType.CounterGroup:
 
                         var lastDocEtag = stats.GetLastTransformedOrFilteredEtag(EtlItemType.Document);
 
@@ -406,7 +406,7 @@ namespace Raven.Server.Documents.ETL
 
         public bool CanContinueBatch(EtlStatsScope stats, TExtracted currentItem, int batchSize, JsonOperationContext ctx)
         {
-            if (currentItem.Type == EtlItemType.Counter)
+            if (currentItem.Type == EtlItemType.CounterGroup)
             {
                 // we have special counters enumerator which ensures that we iterate counters up to last processed doc etag
 
@@ -618,7 +618,7 @@ namespace Raven.Server.Documents.ETL
 
                                     if (ShouldTrackCounters())
                                     {
-                                        typesToWorkOn.Add(EtlItemType.Counter);
+                                        typesToWorkOn.Add(EtlItemType.CounterGroup);
                                     }
 
                                     foreach (var type in typesToWorkOn)
@@ -1070,7 +1070,7 @@ namespace Raven.Server.Documents.ETL
                     result.NumberOfDocumentTombstonesToProcess -= performance.NumberOfTransformedTombstones[EtlItemType.Document];
 
                 if (result.NumberOfCounterGroupsToProcess > 0)
-                    result.NumberOfCounterGroupsToProcess -= performance.NumberOfTransformedItems[EtlItemType.Counter];
+                    result.NumberOfCounterGroupsToProcess -= performance.NumberOfTransformedItems[EtlItemType.CounterGroup];
 
                 result.Completed = (result.NumberOfDocumentsToProcess > 0 || result.NumberOfDocumentTombstonesToProcess > 0 ||
                                     result.NumberOfCounterGroupsToProcess > 0) == false;

@@ -35,7 +35,7 @@ namespace SlowTests.Issues
 
                 var stats = store.Maintenance.Send(new GetStatisticsOperation());
 
-                Assert.Equal(30, stats.LastDocEtag);
+                Assert.Equal(40, stats.LastDocEtag);
             }
         }
     }

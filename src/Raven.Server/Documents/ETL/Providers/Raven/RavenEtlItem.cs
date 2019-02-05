@@ -24,7 +24,7 @@ namespace Raven.Server.Documents.ETL.Providers.Raven
             Etag = counter.Etag;
             Collection = collection;
             ChangeVector = counter.ChangeVector;
-            Type = EtlItemType.Counter;
+            Type = EtlItemType.CounterGroup;
             CounterGroupDocument = counter.Values;
         }
 

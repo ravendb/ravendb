@@ -4,6 +4,6 @@
     {
         None = 0,
         Document = 1,
-        Counter = 2
+        CounterGroup = 2
     }
 }

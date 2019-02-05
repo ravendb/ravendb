@@ -38,7 +38,7 @@ namespace Raven.Server.Documents.ETL
                 }
 
                 _stats.RecordChangeVector(current.ChangeVector);
-                _stats.RecordLastFilteredOutEtag(current.Etag, EtlItemType.Counter);
+                _stats.RecordLastFilteredOutEtag(current.Etag, EtlItemType.CounterGroup);
             }
 
             return false;

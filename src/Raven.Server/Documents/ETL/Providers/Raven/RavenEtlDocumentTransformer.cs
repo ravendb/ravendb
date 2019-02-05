@@ -215,7 +215,7 @@ namespace Raven.Server.Documents.ETL.Providers.Raven
                         }
 
                         break;
-                    case EtlItemType.Counter:
+                    case EtlItemType.CounterGroup:
                         if (_script.HasTransformation)
                         {
                             if (_script.HasLoadCounterBehaviors == false)
