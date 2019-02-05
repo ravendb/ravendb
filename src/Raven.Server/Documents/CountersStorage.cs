@@ -1000,7 +1000,10 @@ namespace Raven.Server.Documents
                 }
 
                 var newEtag = _documentsStorage.GenerateNextEtag();
+
                 var newChangeVector = ChangeVectorUtils.NewChangeVector(_documentDatabase.ServerStore.NodeTag, newEtag, _documentsStorage.Environment.Base64Id);
+                context.LastDatabaseChangeVector = ChangeVectorUtils.MergeVectors(context.LastDatabaseChangeVector ?? GetDatabaseChangeVector(context), newChangeVector);
+
                 using (Slice.From(context.Allocator, newChangeVector, out var cv))
                 using (DocumentIdWorker.GetStringPreserveCase(context, collectionName.Name, out Slice collectionSlice))
                 using (table.Allocate(out TableValueBuilder tvb))
@@ -1014,6 +1017,14 @@ namespace Raven.Server.Documents
 
                     table.Set(tvb);
                 }
+
+                context.Transaction.AddAfterCommitNotification(new CounterChange
+                {
+                    ChangeVector = newChangeVector,
+                    DocumentId = documentId,
+                    Name = counterName,
+                    Type = CounterChangeTypes.Delete
+                });
 
                 return newChangeVector;
             }

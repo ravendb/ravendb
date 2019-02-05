@@ -53,7 +53,7 @@ namespace SlowTests.Server.Documents.Indexing.MapReduce
                 Assert.False(collectionStatistics.Collections.ContainsKey("DailyInvoices"));
                 Assert.Equal(32, collectionStatistics.CountOfDocuments);
 
-                // Check that we do not replicate tombstones of aritifical documents
+                // Check that we do not replicate tombstones of artificial documents
                 var database = await GetDocumentDatabaseInstanceFor(store1);
                 var database2 = await GetDocumentDatabaseInstanceFor(store2);
                 database.TombstoneCleaner.Subscribe(this);
@@ -82,7 +82,7 @@ namespace SlowTests.Server.Documents.Indexing.MapReduce
                     var dailyInvoicesTombstones = database.DocumentsStorage.GetTombstonesFrom(context, "DailyInvoices", 0, 0, 128).Count();
                     Assert.Equal(0, dailyInvoicesTombstones);
                     var collections = database.DocumentsStorage.GetTombstoneCollections(tx.InnerTransaction).ToList();
-                    Assert.Equal(6, collections.Count);
+                    Assert.Equal(5, collections.Count);
                     Assert.DoesNotContain("DailyInvoices", collections, StringComparer.OrdinalIgnoreCase);
                 }
             }
