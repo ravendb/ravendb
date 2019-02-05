@@ -184,7 +184,7 @@ namespace Raven.Server.Documents.Replication
                 var merged = ChangeVectorUtils.MergeVectors(conflicts.Select(c => c.ChangeVector).ToList());
                 mergedChangeVector = ChangeVectorUtils.MergeVectors(merged, changeVector);
             }
-            _database.DocumentsStorage.Put(context, id, null, resolvedHiLoDoc,changeVector: mergedChangeVector);
+            _database.DocumentsStorage.Put(context, id, null, resolvedHiLoDoc,changeVector: mergedChangeVector, nonPersistentFlags: NonPersistentDocumentFlags.FromResolver);
         }
 
         private static void InvalidConflictWhenThereIsNone(string id)

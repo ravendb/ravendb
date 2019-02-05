@@ -526,8 +526,8 @@ namespace Raven.Server.Documents
                 "Get conflict information and try resolving again.");
         }
 
-        public (string ChangeVector, NonPersistentDocumentFlags NonPersistentFlags) MergeConflictChangeVectorIfNeededAndDeleteConflicts(
-            string documentChangeVector, DocumentsOperationContext context, string id, BlittableJsonReaderObject document)
+        public (string ChangeVector, NonPersistentDocumentFlags NonPersistentFlags) MergeConflictChangeVectorIfNeededAndDeleteConflicts(string documentChangeVector,
+            DocumentsOperationContext context, string id, long newEtag, BlittableJsonReaderObject document)
         {
             var result = DeleteConflictsFor(context, id, document);
             if (result.ChangeVectors == null ||
@@ -536,22 +536,15 @@ namespace Raven.Server.Documents
                 return (documentChangeVector, result.NonPersistentFlags);
             }
 
-            string mergedChangeVectorEntries = null;
-            var firstTime = true;
-            foreach (var changeVector in result.ChangeVectors)
+            var changeVectorList = new List<string>
             {
-                if (firstTime)
-                {
-                    mergedChangeVectorEntries = changeVector;
-                    firstTime = false;
-                    continue;
-                }
-                mergedChangeVectorEntries = ChangeVectorUtils.MergeVectors(mergedChangeVectorEntries, changeVector);
-            }
-            if (string.IsNullOrEmpty(documentChangeVector) == false)
-                mergedChangeVectorEntries = ChangeVectorUtils.MergeVectors(mergedChangeVectorEntries, documentChangeVector);
+                documentChangeVector,
+                context.LastDatabaseChangeVector ?? GetDatabaseChangeVector(context),
+                ChangeVectorUtils.NewChangeVector(_documentDatabase.ServerStore.NodeTag, newEtag, _documentsStorage.Environment.Base64Id)
+            };
+            changeVectorList.AddRange(result.ChangeVectors);
 
-            return (mergedChangeVectorEntries, result.NonPersistentFlags);
+            return (ChangeVectorUtils.MergeVectors(changeVectorList), result.NonPersistentFlags);
         }
 
         public void AddConflict(
