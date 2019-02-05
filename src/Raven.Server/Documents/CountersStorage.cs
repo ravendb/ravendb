@@ -289,8 +289,8 @@ namespace Raven.Server.Documents
                         }
                         else
                         {
-                            IncrementExistingCounter(context, documentId, name, delta, ref exists,
-                                existingCounter as BlittableJsonReaderObject.RawBlob, dbIdIndex, counterEtag, counters, value);
+                            exists = IncrementExistingCounter(context, documentId, name, delta, 
+                                existingCounter as BlittableJsonReaderObject.RawBlob, dbIdIndex, counterEtag, counters, ref value);
                         }
 
                         if (counters.Modifications != null)
@@ -401,38 +401,39 @@ namespace Raven.Server.Documents
             };
         }
 
-        private void IncrementExistingCounter(DocumentsOperationContext context, string documentId, string name, long delta, ref bool exists,
+        private bool IncrementExistingCounter(DocumentsOperationContext context, string documentId, string name, long delta, 
             BlittableJsonReaderObject.RawBlob existingCounter,
-            int dbIdIndex, long newETag, BlittableJsonReaderObject counters, long value)
+            int dbIdIndex, long newETag, BlittableJsonReaderObject counters, ref long value)
         {
             var existingCount = existingCounter.Length / SizeOfCounterValues;
 
             if (dbIdIndex < existingCount)
             {
-                exists = true;
                 var counter = (CounterValues*)existingCounter.Ptr + dbIdIndex;
                 try
                 {
-                    counter->Value = checked(counter->Value + delta); //inc
+                    value = checked(counter->Value + delta); //inc
+                    counter->Value = value; 
                     counter->Etag = newETag;
                 }
                 catch (OverflowException e)
                 {
                     CounterOverflowException.ThrowFor(documentId, name, counter->Value, delta, e);
                 }
-            }
-            else
-            {
-                // counter exists , but not with local DbId
 
-                AddPartialValueToExistingCounter(context, existingCounter, dbIdIndex, value, newETag);
-                
-                counters.Modifications = new DynamicJsonValue(counters)
-                {
-                    [name] = existingCounter
-                };
-                
+                return true;
             }
+
+            // counter exists , but not with local DbId
+
+            AddPartialValueToExistingCounter(context, existingCounter, dbIdIndex, value, newETag);
+
+            counters.Modifications = new DynamicJsonValue(counters)
+            {
+                [name] = existingCounter
+            };
+
+            return false;
         }
 
         private BlittableJsonReaderObject WriteNewCountersDocument(DocumentsOperationContext context, string name, long value)
