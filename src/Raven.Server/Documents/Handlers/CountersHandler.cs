@@ -39,7 +39,7 @@ namespace Raven.Server.Documents.Handlers
             private readonly bool _fromEtl;
             private readonly bool _fromSmuggler;
             private readonly Dictionary<string, List<CounterOperation>> _dictionary;
-
+            public long ErrorCount;
             public ExecuteCounterBatchCommand(DocumentDatabase database, CounterBatch counterBatch)
             {
                 _database = database;
@@ -82,6 +82,7 @@ namespace Raven.Server.Documents.Handlers
                 _fromSmuggler = true;
                 _database = database;
                 _dictionary = new Dictionary<string, List<CounterOperation>>();
+                ErrorCount = 0;
             }
 
             public int Add(string id, CounterOperation op, out bool isNew)
@@ -116,7 +117,20 @@ namespace Raven.Server.Documents.Handlers
                             case CounterOperationType.Increment:
                             case CounterOperationType.Delete:
                             case CounterOperationType.Put:
-                                LoadDocument();
+                                try
+                                {
+                                    LoadDocument();
+                                }
+                                catch (DocumentDoesNotExistException)
+                                {
+                                    if (_fromSmuggler)
+                                    {
+                                        ErrorCount++;
+                                        continue;
+                                    }
+                                    throw;
+                                }
+
                                 break;
                         }
 
@@ -208,7 +222,6 @@ namespace Raven.Server.Documents.Handlers
                             {
                                 if (_fromEtl)
                                     return;
-
                                 ThrowMissingDocument(docId);
                                 return; // never hit
                             }
