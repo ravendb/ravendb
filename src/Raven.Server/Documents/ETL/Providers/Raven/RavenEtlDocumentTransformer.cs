@@ -336,8 +336,9 @@ namespace Raven.Server.Documents.ETL.Providers.Raven
         {
             var cgd = Database.DocumentsStorage.CountersStorage.GetCounterValuesForDocument(Context, item.DocumentId);
 
-            if (!cgd.Values.TryGet(CountersStorage.Values, out BlittableJsonReaderObject counters))
+            if (cgd == null || cgd.Values.TryGet(CountersStorage.Values, out BlittableJsonReaderObject counters) == false)
                 return null;
+
             var counterOperations = new List<CounterOperation>();
             var prop = new BlittableJsonReaderObject.PropertyDetails();
             for (var i = 0; i < counters.Count; i++)
@@ -375,6 +376,9 @@ namespace Raven.Server.Documents.ETL.Providers.Raven
 
             if (prop.Value is LazyStringValue)
             {
+                // a deleted counter is marked
+                // with a change-vector string 
+
                 delete = true;
             }
 
