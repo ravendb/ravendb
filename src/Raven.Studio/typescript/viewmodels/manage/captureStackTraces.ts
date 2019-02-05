@@ -10,7 +10,7 @@ class stackInfo {
     static headerSize = 50;
 
     static shortName(v: string) {
-        const withoutArgs = v.replace(/\(.*?\)/g, ''); //TODO: verify this logic!
+        const withoutArgs = v.replace(/\(.*?\)/g, '');
         if (withoutArgs.includes('+')) {
             return withoutArgs.replace(/.*\.(.*\+.*)/, '$1');
         } else {
@@ -61,6 +61,8 @@ class captureStackTraces extends viewModelBase {
     selectedClusterWideData = ko.observable<clusterWideStackTraceResponseItem>();
     clusterWide = ko.observable<boolean>(false); 
     
+    error = ko.observable<string>();
+    
     static maxBoxWidth = 280;
     static boxVerticalPadding = 100;
     
@@ -73,8 +75,14 @@ class captureStackTraces extends viewModelBase {
     
     private initObservables() {
         this.selectedClusterWideData.subscribe(data => {
-            this.data = data.Stacks;
-            this.draw();
+            this.error(data.Error);
+            
+            if (data.Error) {
+                this.clearGraph();
+            } else {
+                this.data = data.Stacks;
+                this.draw(); 
+            }
         })
     }
     
@@ -123,9 +131,9 @@ class captureStackTraces extends viewModelBase {
     }
     
     private updateGraph(roots: stackInfo[]) {
-        const $container = $("#js-tracks-container");
+        this.clearGraph();
         
-        $container.empty();
+        const $container = $("#js-tracks-container");
         
         const svg = d3.select("#js-tracks-container")
             .append("svg")
@@ -351,6 +359,7 @@ class captureStackTraces extends viewModelBase {
     captureStacks() {
         this.spinners.loading(true);
         this.clusterWideData([]);
+        this.error(null);
         
         const tagMapping = this.nodeTagToServerUrlMap();
         
@@ -359,7 +368,10 @@ class captureStackTraces extends viewModelBase {
                 .execute()
                 .done(stacks => {
                     stacks.forEach(stack => {
-                        this.reverseStacks(stack.Stacks);
+                        if (stack.Stacks) {
+                            this.reverseStacks(stack.Stacks);    
+                        }
+                        
                         const serverUrl = tagMapping[stack.NodeTag];
                         stack.NodeUrl = serverUrl || "<Unknown URL>";
                     });
@@ -382,6 +394,12 @@ class captureStackTraces extends viewModelBase {
     draw() {
         const collatedStacks = captureStackTraces.splitAndCollateStacks(this.data.filter(x => x.StackTrace.length).map(x => stackInfo.for(x)));
         this.updateGraph(collatedStacks);
+    }
+    
+    private clearGraph() {
+        const $container = $("#js-tracks-container");
+
+        $container.empty();
     }
     
     private reverseStacks(data: rawStackTraceResponseItem[]) {

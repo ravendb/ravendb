@@ -15,7 +15,7 @@
             </div>
             
             <div class="btn btn-primary" data-bind="click: captureStacks, css: { 'btn-spinner': spinners.loading }, disable: spinners.loading">
-                <i class="icon-parallel-stacks"></i> <!-- TODO: change icon! -->
+                <i class="icon-parallel-stacks"></i> 
                 <span>Capture</span>
             </div>
         </div>
@@ -34,6 +34,15 @@
                 </ul>
             </div>
         </div>
+    </div>
+    <div class="panel panel-default absolute-center" data-bind="visible: $root.error">
+        <div class="padding">
+            <div class="flex-horizontal text-warning">
+                <i class="icon-warning"></i>
+                <span data-bind="text: $root.error"></span>
+            </div>    
+        </div>
+        
     </div>
     <div class="flex-grow" id="js-tracks-container">
     </div>
