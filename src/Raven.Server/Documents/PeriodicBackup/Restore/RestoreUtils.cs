@@ -60,7 +60,8 @@ namespace Raven.Server.Documents.PeriodicBackup.Restore
                 {
                     snapshotRestore = isSnapshot;
                     if ((Constants.Documents.PeriodicBackup.EncryptedSnapshotExtension.Equals(extension, StringComparison.OrdinalIgnoreCase)) ||
-                         (Constants.Documents.PeriodicBackup.EncryptedFullBackupExtension.Equals(extension, StringComparison.OrdinalIgnoreCase)))
+                        (Constants.Documents.PeriodicBackup.EncryptedIncrementalBackupExtension.Equals(extension, StringComparison.OrdinalIgnoreCase)) ||
+                        (Constants.Documents.PeriodicBackup.EncryptedFullBackupExtension.Equals(extension, StringComparison.OrdinalIgnoreCase)))
                     {
                         isEncrypted = true;
                     }

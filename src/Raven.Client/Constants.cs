@@ -280,6 +280,8 @@ namespace Raven.Client
 
                 public const string IncrementalBackupExtension = ".ravendb-incremental-backup";
 
+                public const string EncryptedIncrementalBackupExtension = ".ravendb-encrypted-incremental-backup";
+
                 public class Folders
                 {
                     public const string Indexes = "Indexes";
