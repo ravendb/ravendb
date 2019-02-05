@@ -62,13 +62,19 @@ class captureClusterStackTracesCommand extends commandBase {
                                             resolve({
                                                 NodeTag: nodeTag,
                                                 Stacks: stacksAsJson.Results,
-                                                NodeUrl: null
+                                                NodeUrl: null,
+                                                Error: undefined
                                             })
                                         }
                                     })
                                     .catch(e => reject(e));
                             } else {
-                                reject("Unable to find stack traces file. This operation is only supported on Windows platform.");
+                                resolve({
+                                    NodeTag: nodeTag,
+                                    Stacks: null,
+                                    NodeUrl: null,
+                                    Error: "Unable to find stack traces for given node. This operation is only supported on Windows nodes."
+                                });
                             }
                         })
                         .catch(e => reject(e));

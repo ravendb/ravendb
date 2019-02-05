@@ -601,6 +601,7 @@ interface clusterWideStackTraceResponseItem {
     NodeTag: string;
     Stacks: Array<rawStackTraceResponseItem>;
     NodeUrl: string;
+    Error: string;
 }
 
 interface rawStackTraceResponseItem {
