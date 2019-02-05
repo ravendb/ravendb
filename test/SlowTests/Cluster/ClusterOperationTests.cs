@@ -213,6 +213,12 @@ namespace SlowTests.Cluster
 
                 await ReverseOrderSuccessfully(store, db);
 
+                var value2 = WaitForValue(() =>
+                {
+                    string url2 = store.GetRequestExecutor().Url;
+                    return (url1 != url2);
+                }, true);
+
                 using (var session = store.OpenSession())
                 {
                      session.Store(new User(), "users/1");
@@ -220,8 +226,6 @@ namespace SlowTests.Cluster
                 }
                 value = WaitForValue(() => list.Count, 2);
                 Assert.Equal(2, value);
-                string url2 = store.GetRequestExecutor().Url;
-                Assert.NotEqual(url1, url2);
             }
         }
 
