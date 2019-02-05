@@ -5,10 +5,6 @@ using System.Threading.Tasks;
 using Raven.Client.Documents;
 using Raven.Client.Documents.Conventions;
 using Raven.Client.Documents.Operations.Counters;
-using Raven.Client.ServerWide;
-using Raven.Server.Config;
-using Raven.Server.Documents;
-using Raven.Server.ServerWide.Context;
 using Raven.Tests.Core.Utils.Entities;
 using Tests.Infrastructure;
 using Xunit;
@@ -142,7 +138,7 @@ namespace SlowTests.Client.Counters
 
                         if (val == 30)
                             break;
-                        Thread.Sleep(150);
+                        Thread.Sleep(250);
                     }
 
                     Assert.Equal(30, val);

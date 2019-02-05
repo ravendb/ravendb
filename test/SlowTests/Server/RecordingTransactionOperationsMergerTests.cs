@@ -165,7 +165,7 @@ namespace SlowTests.Server
                     },
                     new CounterOperation
                     {
-                        Type = CounterOperationType.Put,
+                        Type = CounterOperationType.Increment,
                         CounterName = putCounter,
                         Delta = 30,
                     }

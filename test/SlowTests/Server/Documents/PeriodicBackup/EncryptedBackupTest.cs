@@ -1044,8 +1044,8 @@ namespace SlowTests.Server.Documents.PeriodicBackup
                 {
                     var status = store.Maintenance.Send(operation).Status;
                     return status?.LastEtag;
-                }, 3);
-                Assert.Equal(3, value);
+                }, 4);
+                Assert.Equal(4, value);
 
                 var backupStatus = store.Maintenance.Send(operation);
                 var backupOperationId = backupStatus.Status.LastOperationId;
@@ -1235,8 +1235,8 @@ namespace SlowTests.Server.Documents.PeriodicBackup
                 {
                     var status = store.Maintenance.Send(operation).Status;
                     return status?.LastEtag;
-                }, 3);
-                Assert.Equal(3, value);
+                }, 4);
+                Assert.Equal(4, value);
 
                 // restore the database with a different name
                 var databaseName = $"restored_database-{Guid.NewGuid()}";

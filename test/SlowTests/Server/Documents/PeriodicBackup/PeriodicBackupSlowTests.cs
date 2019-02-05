@@ -691,8 +691,8 @@ namespace SlowTests.Server.Documents.PeriodicBackup
                 {
                     var status = store.Maintenance.Send(operation).Status;
                     return status?.LastEtag;
-                }, 6);
-                Assert.Equal(6, value);
+                }, 8);
+                Assert.Equal(8, value);
 
                 var exportPath = GetBackupPath(store, backupTaskId, incremental: false);
 
