@@ -6,6 +6,7 @@ using FastTests;
 using FastTests.Utils;
 using Raven.Client;
 using Raven.Client.Documents;
+using Raven.Client.Documents.Commands;
 using Raven.Client.Documents.Indexes;
 using Raven.Client.Documents.Operations;
 using Raven.Client.Documents.Operations.Expiration;
@@ -17,6 +18,7 @@ using Raven.Server.ServerWide.Context;
 using Raven.Tests.Core.Utils.Entities;
 using SlowTests.Issues;
 using Sparrow;
+using Sparrow.Json;
 using Xunit;
 
 namespace SlowTests.Smuggler
@@ -295,6 +297,137 @@ namespace SlowTests.Smuggler
                     var stats = await store2.Maintenance.SendAsync(new GetStatisticsOperation());
                     Assert.Equal(4, stats.CountOfDocuments);
                     Assert.Equal(10, stats.CountOfRevisionDocuments);
+                }
+            }
+            finally
+            {
+                File.Delete(file);
+            }
+        }
+
+        [Fact]
+        public async Task ImportCountersWithoutDocuments()
+        {
+            var file = Path.Combine(NewDataPath(forceCreateDir: true), Guid.NewGuid().ToString());
+            try
+            {
+                using (var store1 = GetDocumentStore())
+                using (var store2 = GetDocumentStore())
+                {
+                    using (var session = store1.OpenAsyncSession())
+                    {
+                        await session.StoreAsync(new User { Name = "Name1" }, "users/1");
+                        await session.StoreAsync(new User { Name = "Name2" }, "users/2");
+
+                        await session.SaveChangesAsync();
+                    }
+
+                    using (var session = store1.OpenAsyncSession())
+                    {
+                        session.CountersFor("users/1").Increment("likes", 100);
+                        session.CountersFor("users/1").Increment("dislikes", 200);
+                        session.CountersFor("users/2").Increment("downloads", 500);
+
+                        await session.SaveChangesAsync();
+                    }
+                    var stats = await store1.Maintenance.SendAsync(new GetStatisticsOperation());
+                    Assert.Equal(2, stats.CountOfDocuments);
+                    Assert.Equal(3, stats.CountOfCounters);
+
+                    var operation = await store1.Smuggler.ExportAsync(new DatabaseSmugglerExportOptions
+                    {
+                        OperateOnTypes = DatabaseItemType.Counters | DatabaseItemType.DatabaseRecord
+
+                    }, file);
+                    await operation.WaitForCompletionAsync(TimeSpan.FromMinutes(1));
+
+                    operation = await store2.Smuggler.ImportAsync(new DatabaseSmugglerImportOptions(), file);
+                    await operation.WaitForCompletionAsync(TimeSpan.FromMinutes(1));
+
+                    stats = await store2.Maintenance.SendAsync(new GetStatisticsOperation());
+                    Assert.Equal(0, stats.CountOfDocuments);
+                    Assert.Equal(0, stats.CountOfCounters);
+
+                }
+            }
+            finally
+            {
+                File.Delete(file);
+            }
+        }
+
+
+        [Fact]
+        public async Task ImportRevisionDocumentsWithoutDocuments()
+        {
+            var file = Path.Combine(NewDataPath(forceCreateDir: true), Guid.NewGuid().ToString());
+            try
+            {
+                using (var store1 = GetDocumentStore(new Options
+                {
+                    ModifyDatabaseName = s => $"{s}_store1"
+                }))
+                {
+                    using (var session = store1.OpenAsyncSession())
+                    {
+                        await RevisionsHelper.SetupRevisions(Server.ServerStore, store1.Database);
+
+                        await session.StoreAsync(new Person { Name = "Name1" });
+                        await session.StoreAsync(new Person { Name = "Name2" });
+                        await session.StoreAsync(new Company { Name = "Hibernating Rhinos " });
+                        await session.SaveChangesAsync();
+                    }
+
+                    for (int i = 0; i < 2; i++)
+                    {
+                        using (var session = store1.OpenAsyncSession())
+                        {
+                            var company = await session.LoadAsync<Company>("companies/1-A");
+                            var person = await session.LoadAsync<Person>("people/1-A");
+                            company.Name += " update " + i;
+                            person.Name += " update " + i;
+                            await session.StoreAsync(company);
+                            await session.StoreAsync(person);
+                            await session.SaveChangesAsync();
+                        }
+                    }
+
+                    using (var session = store1.OpenAsyncSession())
+                    {
+                        var person = await session.LoadAsync<Person>("people/2-A");
+                        Assert.NotNull(person);
+                        session.Delete(person);
+                        await session.SaveChangesAsync();
+                    }
+                    var operation = await store1.Smuggler.ExportAsync(new DatabaseSmugglerExportOptions
+                    {
+                        OperateOnTypes =  DatabaseItemType.RevisionDocuments | DatabaseItemType.DatabaseRecord
+
+                    }, file);
+                    await operation.WaitForCompletionAsync(TimeSpan.FromMinutes(1));
+
+                    var stats = await store1.Maintenance.SendAsync(new GetStatisticsOperation());
+                    Assert.Equal(4, stats.CountOfDocuments);
+                    Assert.Equal(8, stats.CountOfRevisionDocuments);
+                }
+
+                using (var store2 = GetDocumentStore(new Options
+                {
+                    ModifyDatabaseName = s => $"{s}_store2"
+                }))
+                {
+                    var operation = await store2.Smuggler.ImportAsync(new DatabaseSmugglerImportOptions(), file);
+                    await operation.WaitForCompletionAsync(TimeSpan.FromMinutes(1));
+
+                    var stats = await store2.Maintenance.SendAsync(new GetStatisticsOperation());
+                    Assert.Equal(0, stats.CountOfDocuments);
+                    Assert.Equal(10, stats.CountOfRevisionDocuments);
+                    using (Server.ServerStore.ContextPool.AllocateOperationContext(out JsonOperationContext context))
+                    {
+                        var command = new GetRevisionsBinEntryCommand(long.MaxValue, 5);
+                        await store2.GetRequestExecutor().ExecuteAsync(command, context);
+                        Assert.Equal(3, command.Result.Results.Length);
+                    }
                 }
             }
             finally
