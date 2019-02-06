@@ -165,6 +165,7 @@ namespace Raven.Server.Commercial
                 setupInfo,
                 acmeClient,
                 challengeResult,
+                serverStore,
                 token);
 
             if (Logger.IsOperationsEnabled)
@@ -459,6 +460,7 @@ namespace Raven.Server.Commercial
                     setupInfo,
                     acmeClient,
                     challengeResult,
+                    serverStore,
                     token);
 
                 progress.Processed++;
@@ -543,7 +545,7 @@ namespace Raven.Server.Commercial
         }
 
         private static async Task<X509Certificate2> CompleteAuthorizationAndGetCertificate(Action onValidationSuccessful, SetupInfo setupInfo,  LetsEncryptClient client, 
-            (string Challange, LetsEncryptClient.CachedCertificateResult Cache) challengeResult,  CancellationToken token)
+            (string Challange, LetsEncryptClient.CachedCertificateResult Cache) challengeResult, ServerStore serverStore, CancellationToken token)
         {
             if (challengeResult.Challange == null && challengeResult.Cache != null)
             {
@@ -561,11 +563,11 @@ namespace Raven.Server.Commercial
 
             onValidationSuccessful();
 
-
             (X509Certificate2 Cert, RSA PrivateKey) result;
             try
             {
-                result = await client.GetCertificate(token);
+                var existingPrivateKey = serverStore.Server.Certificate?.Certificate?.GetRSAPrivateKey();
+                result = await client.GetCertificate(existingPrivateKey, token);
             }
             catch (Exception e)
             {
