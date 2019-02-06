@@ -348,6 +348,33 @@ namespace Raven.Server.Web.Authentication
             }
         }
 
+        [RavenAction("/admin/certificates/purge", "DELETE", AuthorizationStatus.Operator)]
+        public async Task PurgeExpired()
+        {
+            var feature = HttpContext.Features.Get<IHttpAuthenticationFeature>() as RavenServer.AuthenticateConnection;
+            var clientCert = feature?.Certificate;
+
+            using (ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
+            using (context.OpenReadTransaction())
+            {
+                var allCerts = new Dictionary<string, BlittableJsonReaderObject>();
+
+                GetAllRegisteredCertificates(context, allCerts, false);
+
+                var keysToDelete = new List<string>();
+
+                foreach (var cert in allCerts)
+                {
+                    if (cert.Value.TryGet(nameof(CertificateDefinition.NotAfter), out DateTime notAfter) && DateTime.UtcNow > notAfter)
+                            keysToDelete.Add(cert.Key);
+                }
+
+                await DeleteInternal(keysToDelete);
+            }
+
+            HttpContext.Response.StatusCode = (int)HttpStatusCode.NoContent;
+        }
+
         [RavenAction("/admin/certificates", "DELETE", AuthorizationStatus.Operator)]
         public async Task Delete()
         {
@@ -431,10 +458,7 @@ namespace Raven.Server.Web.Authentication
         public Task GetCertificates()
         {
             var thumbprint = GetStringQueryString("thumbprint", required: false);
-            var showSecondary = GetBoolValueQueryString("secondary", required: false) ?? false;
-
-            var start = GetStart();
-            var pageSize = GetPageSize();
+            var includeSecondary = GetBoolValueQueryString("secondary", required: false) ?? false;
 
             using (ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
             using (context.OpenReadTransaction())
@@ -464,41 +488,7 @@ namespace Raven.Server.Web.Authentication
                             certificateList.TryAdd(serverCertKey, serverCert);
                         }
 
-                        // If we are passive, we take the certs from the local state
-                        if (ServerStore.CurrentRachisState == RachisState.Passive)
-                        {
-                            List<string> localCertKeys;
-
-                            localCertKeys = ServerStore.Cluster.GetCertificateKeysFromLocalState(context).ToList();
-                            
-                            foreach (var localCertKey in localCertKeys)
-                            {
-                                var localCertificate = ServerStore.Cluster.GetLocalState(context, localCertKey);
-                                if (localCertificate == null)
-                                    continue;
-
-                                var def = JsonDeserializationServer.CertificateDefinition(localCertificate);
-
-                                if (showSecondary || string.IsNullOrEmpty(def.CollectionPrimaryKey))
-                                    certificateList.TryAdd(localCertKey, localCertificate);
-                                else
-                                    localCertificate.Dispose();
-                            }
-                            
-                        }
-                        // If we are not passive, we take the certs from the cluster
-                        else
-                        {
-                            foreach (var item in ServerStore.Cluster.ItemsStartingWith(context, Constants.Certificates.Prefix, start, pageSize))
-                            {
-                                var def = JsonDeserializationServer.CertificateDefinition(item.Value);
-
-                                if (showSecondary || string.IsNullOrEmpty(def.CollectionPrimaryKey))
-                                    certificateList.TryAdd(item.ItemName, item.Value);
-                                else
-                                    item.Value.Dispose();
-                            }
-                        }
+                        GetAllRegisteredCertificates(context, certificateList, includeSecondary);
                     }
                     else
                     {
@@ -554,6 +544,42 @@ namespace Raven.Server.Web.Authentication
             }
 
             return Task.CompletedTask;
+        }
+
+        private void GetAllRegisteredCertificates(TransactionOperationContext context, Dictionary<string, BlittableJsonReaderObject> certificates, bool includeSecondary)
+        {
+            // If we are passive, we take the certs from the local state
+            if (ServerStore.CurrentRachisState == RachisState.Passive)
+            {
+                var localCertKeys = ServerStore.Cluster.GetCertificateKeysFromLocalState(context).ToList();
+
+                foreach (var localCertKey in localCertKeys)
+                {
+                    var localCertificate = ServerStore.Cluster.GetLocalState(context, localCertKey);
+                    if (localCertificate == null)
+                        continue;
+
+                    var def = JsonDeserializationServer.CertificateDefinition(localCertificate);
+
+                    if (includeSecondary || string.IsNullOrEmpty(def.CollectionPrimaryKey))
+                        certificates.TryAdd(localCertKey, localCertificate);
+                    else
+                        localCertificate.Dispose();
+                }
+            }
+            // If we are not passive, we take the certs from the cluster
+            else
+            {
+                foreach (var item in ServerStore.Cluster.ItemsStartingWith(context, Constants.Certificates.Prefix, GetStart(), GetPageSize()))
+                {
+                    var def = JsonDeserializationServer.CertificateDefinition(item.Value);
+
+                    if (includeSecondary || string.IsNullOrEmpty(def.CollectionPrimaryKey))
+                        certificates.TryAdd(item.ItemName, item.Value);
+                    else
+                        item.Value.Dispose();
+                }
+            }
         }
 
         [RavenAction("/certificates/whoami", "GET", AuthorizationStatus.ValidUser)]
