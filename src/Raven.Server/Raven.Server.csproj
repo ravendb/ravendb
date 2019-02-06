@@ -136,6 +136,5 @@
     <ServerGarbageCollection>true</ServerGarbageCollection>
     <ConcurrentGarbageCollection>true</ConcurrentGarbageCollection>
     <RetainVMGarbageCollection>true</RetainVMGarbageCollection>
-    <LangVersion>7.3</LangVersion>
   </PropertyGroup>
 </Project>
