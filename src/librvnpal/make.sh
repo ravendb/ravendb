@@ -119,7 +119,7 @@ else
         echo ""
 fi
 
-if [ ${IS_COMPILER} -ne 1 ]; then
+if [ ${CLEAN} -eq 0 ] && [ ${IS_COMPILER} -ne 1 ]; then
 	echo -e "${ERR_STRING}Unable to determine if ${C_COMPILER} compiler exists."
         echo -e "${C_D_YELLOW}    Consider installing :"
         echo -e "                                       linux-x64 / linux-arm     - clang-3.9 and/or c89"
@@ -182,11 +182,18 @@ for SRCPATH in "${FILTERS[@]}"; do
 		SRCFILE_O=$(echo ${SRCFILE} | sed -e "s|\.c$|\.o|g")
 		if [ ${CLEAN} -eq 0 ]; then
 			CMD="${C_COMPILER} ${C_ADDITIONAL_FLAGS} -fPIC -Iinc -O2 -Wall -c -o ${SRCFILE_O} ${SRCFILE}"
+			echo -e "${C_L_GREEN}${CMD}${NC}${NT}"
+			eval ${CMD}
 		else
-				CMD="rm ${SRCFILE_O}"
+			CMD="rm ${SRCFILE_O} >& /dev/null"
+			eval ${CMD}
+			STATUS=$?
+			if [ ${STATUS} -eq 0 ]; then
+				echo -e "${NC}[${C_GREEN} DELETED ${NC}] ${C_L_GRAY}${SRCFILE_O}${NC}${NT}"
+			else
+				echo -e "${NC}[${C_RED}NOT FOUND${NC}] ${C_L_GRAY}${SRCFILE_O}${NC}${NT}"
+			fi
 		fi
-		echo -e "${C_L_GREEN}${CMD}${NC}${NT}"
-		${CMD}
 		FILES+=(${SRCFILE_O})
 	done
 done

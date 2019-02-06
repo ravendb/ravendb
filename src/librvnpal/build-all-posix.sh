@@ -42,7 +42,7 @@ for arch in linux-x64 linux-arm linux-arm64 osx-x64 ; do
 	STAT=$(expr ${STAT} + ${STATUS_C})
 	mv *.so artifacts/ > /dev/null 2>&1
 	mv *.dylib artifacts/ > /dev/null 2>&1
-	./make.sh cross linux-x64 clean
+	./make.sh cross $arch clean
 done
 echo ""
 echo ""
