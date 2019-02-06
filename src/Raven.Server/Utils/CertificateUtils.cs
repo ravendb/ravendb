@@ -287,5 +287,124 @@ namespace Raven.Server.Utils
         {
             return new SecureRandom(new CryptoApiRandomGenerator());
         }
+
+        public static string GetPublicKeyPinningHash(X509Certificate2 cert)
+        {
+            //Get the SubjectPublicKeyInfo member of the certificate
+            var subjectPublicKeyInfo = GetSubjectPublicKeyInfoRaw(cert);
+
+            //Take the SHA2-256 hash of the DER ASN.1 encoded value
+            byte[] digest;
+            using (var sha2 = new SHA256Managed())
+            {
+                digest = sha2.ComputeHash(subjectPublicKeyInfo);
+            }
+
+            //Convert hash to base64
+            var hash = Convert.ToBase64String(digest);
+
+            return hash;
+        }
+
+        public static byte[] GetSubjectPublicKeyInfoRaw(X509Certificate2 cert)
+        {
+            //Public domain: No attribution required.
+            var rawCert = cert.GetRawCertData();
+
+            /*
+             Certificate is, by definition:
+
+                Certificate  ::=  SEQUENCE  {
+                    tbsCertificate       TBSCertificate,
+                    signatureAlgorithm   AlgorithmIdentifier,
+                    signatureValue       BIT STRING  
+                }
+
+               TBSCertificate  ::=  SEQUENCE  {
+                    version         [0]  EXPLICIT Version DEFAULT v1,
+                    serialNumber         CertificateSerialNumber,
+                    signature            AlgorithmIdentifier,
+                    issuer               Name,
+                    validity             Validity,
+                    subject              Name,
+                    subjectPublicKeyInfo SubjectPublicKeyInfo,
+                    issuerUniqueID  [1]  IMPLICIT UniqueIdentifier OPTIONAL, -- If present, version MUST be v2 or v3
+                    subjectUniqueID [2]  IMPLICIT UniqueIdentifier OPTIONAL, -- If present, version MUST be v2 or v3
+                    extensions      [3]  EXPLICIT Extensions       OPTIONAL  -- If present, version MUST be v3
+                }
+
+            So we walk to ASN.1 DER tree in order to drill down to the SubjectPublicKeyInfo item
+            */
+            var list = AsnNext(ref rawCert, true); //unwrap certificate sequence
+            var tbsCertificate = AsnNext(ref list, false); //get next item; which is tbsCertificate
+            list = AsnNext(ref tbsCertificate, true); //unwap tbsCertificate sequence
+
+            var version = AsnNext(ref list, false); //tbsCertificate.Version
+            var serialNumber = AsnNext(ref list, false); //tbsCertificate.SerialNumber
+            var signature = AsnNext(ref list, false); //tbsCertificate.Signature
+            var issuer = AsnNext(ref list, false); //tbsCertificate.Issuer
+            var validity = AsnNext(ref list, false); //tbsCertificate.Validity
+            var subject = AsnNext(ref list, false); //tbsCertificate.Subject        
+            var subjectPublicKeyInfo = AsnNext(ref list, false); //tbsCertificate.SubjectPublicKeyInfo        
+
+            return subjectPublicKeyInfo;
+        }
+
+        private static byte[] AsnNext(ref byte[] buffer, bool unwrap)
+        {
+            //Public domain: No attribution required.
+            byte[] result;
+
+            if (buffer.Length < 2)
+            {
+                result = buffer;
+                buffer = new byte[0];
+                return result;
+            }
+
+            var index = 0;
+            var entityType = buffer[index];
+            index += 1;
+
+            int length = buffer[index];
+            index += 1;
+
+            var lengthBytes = 1;
+            if (length >= 0x80)
+            {
+                lengthBytes = length & 0x0F; //low nibble is number of length bytes to follow
+                length = 0;
+
+                for (var i = 0; i < lengthBytes; i++)
+                {
+                    length = (length << 8) + (int)buffer[2 + i];
+                    index += 1;
+                }
+                lengthBytes++;
+            }
+
+            int copyStart;
+            int copyLength;
+            if (unwrap)
+            {
+                copyStart = 1 + lengthBytes;
+                copyLength = length;
+            }
+            else
+            {
+                copyStart = 0;
+                copyLength = 1 + lengthBytes + length;
+            }
+            result = new byte[copyLength];
+            Array.Copy(buffer, copyStart, result, 0, copyLength);
+
+            var remaining = new byte[buffer.Length - (copyStart + copyLength)];
+            if (remaining.Length > 0)
+                Array.Copy(buffer, copyStart + copyLength, remaining, 0, remaining.Length);
+            buffer = remaining;
+
+            return result;
+        }
+
     }
 }
