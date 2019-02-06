@@ -329,9 +329,10 @@ namespace Raven.Server.Commercial
             }
         }
 
-        public async Task<(X509Certificate2 Cert, RSA PrivateKey)> GetCertificate(CancellationToken token = default(CancellationToken))
+        public async Task<(X509Certificate2 Cert, RSA PrivateKey)> GetCertificate(RSA existingKey = null, CancellationToken token = default(CancellationToken))
         {
-            var key = new RSACryptoServiceProvider(4096);
+            var key = existingKey ?? new RSACryptoServiceProvider(4096);
+
             var csr = new CertificateRequest("CN=" + _currentOrder.Identifiers[0].Value,
                 key, HashAlgorithmName.SHA256, RSASignaturePadding.Pkcs1);
 
@@ -370,10 +371,25 @@ namespace Raven.Server.Commercial
 
             var cert = new X509Certificate2(Encoding.UTF8.GetBytes(pem), (string)null, X509KeyStorageFlags.MachineKeySet);
 
+            byte[] blob = null;
+            switch (key)
+            {
+                case RSACng rsaCng:
+                    var parameters = rsaCng.ExportParameters(true);
+                    var newRsaCsp = new RSACryptoServiceProvider();
+                    newRsaCsp.ImportParameters(parameters);
+                    blob = newRsaCsp.ExportCspBlob(true);
+                    break;
+                case RSACryptoServiceProvider rsaCsp:
+                    blob = rsaCsp.ExportCspBlob(true);
+                    break;
+            }
+                
+
             _cache.CachedCerts[_currentOrder.Identifiers[0].Value] = new CertificateCache
             {
                 Cert = pem,
-                Private = key.ExportCspBlob(true)
+                Private = blob
             };
 
             lock (Locker)
