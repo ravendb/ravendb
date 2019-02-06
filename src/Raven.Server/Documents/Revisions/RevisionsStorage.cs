@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq;
 using System.Runtime.CompilerServices;
+using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
 using Raven.Client;
@@ -275,7 +276,7 @@ namespace Raven.Server.Documents.Revisions
                     return false;
             }
 
-            if (documentFlags.Contain(DocumentFlags.Resolved))
+            if (nonPersistentFlags.Contain(NonPersistentDocumentFlags.Resolved))
                 return true;
 
             if (nonPersistentFlags.Contain(NonPersistentDocumentFlags.FromReplication))

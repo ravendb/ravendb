@@ -661,7 +661,8 @@ namespace Raven.Server.Documents
                     using (GetConflictsIdPrefix(context, lowerId, out Slice prefixSlice))
                     {
                         var conflicts = GetConflictsFor(context, prefixSlice);
-                        Debug.Assert(conflicts.Count > 0);
+
+                        ThrowIfNoConflictsWereFound(fromSmuggler, conflicts.Count, id);
 
                         foreach (var conflict in conflicts)
                         {
@@ -728,6 +729,13 @@ namespace Raven.Server.Documents
                     Type = DocumentChangeTypes.Conflict,
                 });
             }
+        }
+
+        [Conditional("DEBUG")]
+        private static void ThrowIfNoConflictsWereFound(bool fromSmuggler, int conflictsCount, string id)
+        {
+            if (fromSmuggler == false && conflictsCount == 0)
+                throw new InvalidOperationException($"No existing conflict or document was found for '{id}'.");
         }
 
         public DeleteOperationResult? DeleteConflicts(DocumentsOperationContext context, Slice lowerId,
