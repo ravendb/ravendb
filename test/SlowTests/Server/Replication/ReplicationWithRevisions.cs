@@ -1,10 +1,15 @@
-﻿using System.Collections.Generic;
+﻿using System;
+using System.Collections.Generic;
+using System.IO;
 using System.Threading.Tasks;
 using FastTests.Server.Documents.Revisions;
 using FastTests.Server.Replication;
 using FastTests.Utils;
+using Raven.Client;
 using Raven.Client.Documents;
+using Raven.Client.Documents.Smuggler;
 using Raven.Client.ServerWide;
+using Raven.Server.Documents;
 using Raven.Tests.Core.Utils.Entities;
 using Xunit;
 
@@ -238,6 +243,77 @@ namespace SlowTests.Server.Replication
                 {
                     Assert.Equal(3, WaitForValue(() => session.Advanced.Revisions.GetMetadataFor("foo/bar").Count, 3));
                 }
+            }
+        }
+
+        [Fact]
+        public async Task ResolvedDocumentShouldNotGenerateRevision()
+        {
+            var file = Path.GetTempFileName();
+            try
+            {
+                using (var storeA = GetDocumentStore())
+                using (var storeB = GetDocumentStore())
+                {
+                    var user = new User { Name = "Name" };
+                    var user2 = new User { Name = "Name2" };
+
+                    using (var session = storeA.OpenAsyncSession())
+                    {
+                        await session.StoreAsync(user, "foo/bar");
+                        await session.SaveChangesAsync();
+                    }
+
+                    using (var session = storeB.OpenAsyncSession())
+                    {
+                        await session.StoreAsync(user2, "foo/bar");
+                        await session.SaveChangesAsync();
+                    }
+
+                    await SetupReplicationAsync(storeA, storeB);
+                    using (var sessionB = storeB.OpenSession())
+                    {
+                        Assert.Equal(3, WaitForValue(() => sessionB.Advanced.Revisions.GetMetadataFor("foo/bar").Count, 3));
+                    }
+
+                    await SetupReplicationAsync(storeB, storeA);
+                    using (var sessionA = storeA.OpenSession())
+                    {
+                        Assert.Equal(3, WaitForValue(() => sessionA.Advanced.Revisions.GetMetadataFor("foo/bar").Count, 3));
+                    }
+
+                    var exportOp = await storeA.Smuggler.ExportAsync(new DatabaseSmugglerExportOptions
+                    {
+                        OperateOnTypes = DatabaseItemType.Documents | DatabaseItemType.RevisionDocuments
+                    }, file);
+                    await exportOp.WaitForCompletionAsync(TimeSpan.FromMinutes(1));
+                }
+
+                using (var src = GetDocumentStore())
+                using (var dst = GetDocumentStore())
+                {
+                    var importOp = await src.Smuggler.ImportAsync(new DatabaseSmugglerImportOptions
+                    {
+                        OperateOnTypes = DatabaseItemType.Documents | DatabaseItemType.RevisionDocuments
+                    }, file);
+                    await importOp.WaitForCompletionAsync(TimeSpan.FromMinutes(1));
+
+                    await SetupReplicationAsync(src, dst);
+                    WaitForDocument(dst, "foo/bar");
+
+                    WaitForUserToContinueTheTest(src);
+
+                    using (var session1 = src.OpenSession())
+                    using (var session2 = dst.OpenSession())
+                    {
+                        Assert.Equal(0, session1.Advanced.Revisions.GetMetadataFor("foo/bar").Count);
+                        Assert.Equal(0, session2.Advanced.Revisions.GetMetadataFor("foo/bar").Count);
+                    }
+                }
+            }
+            finally
+            {
+                File.Delete(file);
             }
         }
 
