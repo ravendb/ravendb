@@ -393,11 +393,11 @@ namespace SlowTests.Smuggler
                     }
                     var stats = await store1.Maintenance.SendAsync(new GetStatisticsOperation());
                     Assert.Equal(2, stats.CountOfDocuments);
-                    Assert.Equal(3, stats.CountOfCounters);
+                    Assert.Equal(2, stats.CountOfCounterEntries);
 
                     var operation = await store1.Smuggler.ExportAsync(new DatabaseSmugglerExportOptions
                     {
-                        OperateOnTypes = DatabaseItemType.Counters | DatabaseItemType.DatabaseRecord
+                        OperateOnTypes = DatabaseItemType.CountersBatch | DatabaseItemType.DatabaseRecord
 
                     }, file);
                     await operation.WaitForCompletionAsync(TimeSpan.FromMinutes(1));
@@ -407,7 +407,7 @@ namespace SlowTests.Smuggler
 
                     stats = await store2.Maintenance.SendAsync(new GetStatisticsOperation());
                     Assert.Equal(0, stats.CountOfDocuments);
-                    Assert.Equal(0, stats.CountOfCounters);
+                    Assert.Equal(0, stats.CountOfCounterEntries);
 
                 }
             }

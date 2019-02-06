@@ -41,7 +41,6 @@ namespace Raven.Server.Documents.Handlers
             private readonly bool _replyWithAllNodesValues;
             private readonly bool _fromEtl;
             private readonly Dictionary<string, List<CounterOperation>> _dictionary;
-            public long ErrorCount;
             public ExecuteCounterBatchCommand(DocumentDatabase database, CounterBatch counterBatch)
             {
                 _database = database;
@@ -109,20 +108,7 @@ namespace Raven.Server.Documents.Handlers
                             case CounterOperationType.Increment:
                             case CounterOperationType.Delete:
                             case CounterOperationType.Put:
-                                try
-                                {
-                                    LoadDocument();
-                                }
-                                catch (DocumentDoesNotExistException)
-                                {
-                                    if (_fromSmuggler)
-                                    {
-                                        ErrorCount++;
-                                        continue;
-                                    }
-                                    throw;
-                                }
-
+                                LoadDocument();
                                 break;
                         }
 
@@ -262,6 +248,8 @@ namespace Raven.Server.Documents.Handlers
 
             public DocumentsOperationContext Context => _context;
 
+            public long ErrorCount;
+
             public SmugglerCounterBatchCommand(DocumentDatabase database)
             {
                 _database = database;
@@ -353,7 +341,18 @@ namespace Raven.Server.Documents.Handlers
             {
                 Document doc;
                 string docCollection = null;
-                LoadDocument();
+                BlittableJsonReaderObject values;
+
+                try
+                {
+                    LoadDocument();
+                }
+                catch (DocumentDoesNotExistException)
+                {
+                    counterGroupDetail.Values.TryGet(CountersStorage.Values, out values);
+                    ErrorCount+= values?.Count ?? 0;
+                    return;
+                }
 
                 if (doc != null)
                     docCollection = CollectionName.GetCollectionName(doc.Data);
@@ -361,7 +360,7 @@ namespace Raven.Server.Documents.Handlers
                 _database.DocumentsStorage.CountersStorage.PutCounters(context, counterGroupDetail.CounterKey, docCollection,
                     counterGroupDetail.ChangeVector, counterGroupDetail.Values);
 
-                counterGroupDetail.Values.TryGet(CountersStorage.Values, out BlittableJsonReaderObject values);
+                counterGroupDetail.Values.TryGet(CountersStorage.Values, out values);
                 foreach (var counter in values.GetPropertyNames())
                 {
                     countersToAdd.Add(counter);
