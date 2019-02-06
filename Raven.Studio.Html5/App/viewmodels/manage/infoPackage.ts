@@ -374,6 +374,11 @@ class infoPackage extends viewModelBase {
                 if (stacks) {
                     var stacksText = stacks.asText();
                     var stacksJson = JSON.parse(stacksText);
+
+                    stacksJson.forEach(item => {
+                        item.StackTrace = item.StackTrace.reverse();
+                    });
+
                     this.packageCreated(stacksJson);
                 }
             })
