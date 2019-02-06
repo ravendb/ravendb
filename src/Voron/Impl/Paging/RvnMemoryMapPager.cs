@@ -42,7 +42,7 @@ namespace Voron.Impl.Paging
 
             var mmapOptions = copyOnWriteMode ? MmapOptions.CopyOnWrite : MmapOptions.None;
             if (DeleteOnClose)
-                mmapOptions &= MmapOptions.DeleteOnClose;
+                mmapOptions |= MmapOptions.DeleteOnClose;
 
             var rc = rvn_create_and_mmap64_file(
                 file.FullPath,
@@ -244,6 +244,7 @@ namespace Voron.Impl.Paging
         protected override bool ReleaseHandle()
         {
             FailCode = rvn_mmap_dispose_handle(handle, out ErrorNo);
+
             handle = IntPtr.Zero;
             return FailCode == FailCodes.Success;
         }

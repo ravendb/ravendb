@@ -730,10 +730,7 @@ namespace Voron
                         };
                     }
 
-                    return new RvnMemoryMapPager(options, file, initialSize, usePageProtection: usePageProtection)
-                    {
-                        DeleteOnClose = deleteOnClose
-                    };
+                    return new RvnMemoryMapPager(options, file, initialSize, usePageProtection: usePageProtection, deleteOnClose: deleteOnClose);
                 }
 
                 var attributes = deleteOnClose
