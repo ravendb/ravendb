@@ -254,7 +254,7 @@ namespace Raven.Server.Documents.Replication
                 {
                     _database.DocumentsStorage.Delete(context, lowerId, resolved.Id, null,
                         _database.Time.GetUtcNow().Ticks, resolved.ChangeVector, new CollectionName(resolved.Collection),
-                        documentFlags: resolved.Flags | DocumentFlags.Resolved | DocumentFlags.HasRevisions, nonPersistentFlags: NonPersistentDocumentFlags.FromResolver);
+                        documentFlags: resolved.Flags | DocumentFlags.Resolved | DocumentFlags.HasRevisions, nonPersistentFlags: NonPersistentDocumentFlags.FromResolver | NonPersistentDocumentFlags.Resolved);
                     return;
                 }
             }
@@ -272,7 +272,8 @@ namespace Raven.Server.Documents.Replication
 
                 ReplicationUtils.EnsureCollectionTag(clone, resolved.Collection);
                 // we always want to merge the counters and attachments, even if the user specified a script
-                var nonPersistentFlags = NonPersistentDocumentFlags.ResolveCountersConflict | NonPersistentDocumentFlags.ResolveAttachmentsConflict | NonPersistentDocumentFlags.FromResolver;
+                var nonPersistentFlags = NonPersistentDocumentFlags.ResolveCountersConflict | NonPersistentDocumentFlags.ResolveAttachmentsConflict |
+                                         NonPersistentDocumentFlags.FromResolver | NonPersistentDocumentFlags.Resolved;
                 _database.DocumentsStorage.Put(context, resolved.Id, null, clone, null, resolved.ChangeVector, resolved.Flags | DocumentFlags.Resolved, nonPersistentFlags: nonPersistentFlags);
             }
         }
