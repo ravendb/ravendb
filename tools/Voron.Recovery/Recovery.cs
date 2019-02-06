@@ -61,6 +61,7 @@ namespace Voron.Recovery
             var result = StorageEnvironmentOptions.ForPath(_config.DataFileDirectory, null, null, null, null);
             result.CopyOnWriteMode = _copyOnWrite;
             result.ManualFlushing = true;
+            result.ManualSyncing = true;
             result.IgnoreInvalidJournalErrors = _config.IgnoreInvalidJournalErrors;
 
             return result;
