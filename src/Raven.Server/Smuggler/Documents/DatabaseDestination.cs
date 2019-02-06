@@ -183,7 +183,7 @@ namespace Raven.Server.Smuggler.Documents
             {
                 if (item.Attachments != null)
                 {
-                    if(_options.OperateOnTypes.HasFlag(DatabaseItemType.Attachments))
+                    if (_options.OperateOnTypes.HasFlag(DatabaseItemType.Attachments))
                         progress.Attachments.ReadCount += item.Attachments.Count;
                     else
                         progress.Attachments.Skipped = true;
@@ -448,7 +448,7 @@ namespace Raven.Server.Smuggler.Documents
             public void WriteDatabaseRecord(DatabaseRecord databaseRecord, SmugglerProgressBase.DatabaseRecordProgress progress, AuthorizationStatus authorizationStatus)
             {
                 var currentDatabaseRecord = _database.ReadDatabaseRecord();
-                var tasks = new List<Task>();
+                var tasks = new List<Task<(long Index, object Result)>>();
 
                 if (currentDatabaseRecord?.Revisions == null &&
                     databaseRecord?.Revisions != null)
@@ -501,10 +501,18 @@ namespace Raven.Server.Smuggler.Documents
                     progress.ClientConfigurationUpdated = true;
                 }
 
+                if (tasks.Count == 0)
+                    return;
+
+                long maxIndex = 0;
                 foreach (var task in tasks)
                 {
-                    AsyncHelpers.RunSync(() => task);
+                    var (index, _) = AsyncHelpers.RunSync(() => task);
+                    if (index > maxIndex)
+                        maxIndex = index;
                 }
+
+                AsyncHelpers.RunSync(() => _database.RachisLogIndexNotifications.WaitForIndexNotification(maxIndex, _database.ServerStore.Engine.OperationTimeout));
 
                 tasks.Clear();
             }
@@ -631,10 +639,10 @@ namespace Raven.Server.Smuggler.Documents
                         if ((document.NonPersistentFlags.Contain(NonPersistentDocumentFlags.FromSmuggler)) &&
                             (_missingDocumentsForRevisions != null))
                         {
-                            if (_database.DocumentsStorage.Get(context,document.Id) == null)
+                            if (_database.DocumentsStorage.Get(context, document.Id) == null)
                             {
                                 var collection = _database.DocumentsStorage.ExtractCollectionName(context, document.Data);
-                                _missingDocumentsForRevisions.TryAdd(document.Id.ToString(), collection); 
+                                _missingDocumentsForRevisions.TryAdd(document.Id.ToString(), collection);
                             }
                         }
 

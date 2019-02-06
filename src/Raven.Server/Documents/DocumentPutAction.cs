@@ -98,7 +98,7 @@ namespace Raven.Server.Documents
                         flags = flags.Strip(DocumentFlags.FromReplication);
 
                         if (nonPersistentFlags.Contain(NonPersistentDocumentFlags.ByAttachmentUpdate) == false &&
-                            oldFlags .Contain(DocumentFlags.HasAttachments))
+                            oldFlags.Contain(DocumentFlags.HasAttachments))
                         {
                             flags |= DocumentFlags.HasAttachments;
                         }
@@ -117,18 +117,17 @@ namespace Raven.Server.Documents
                 }
 
                 var result = BuildChangeVectorAndResolveConflicts(context, id, lowerId, newEtag, document, changeVector, expectedChangeVector, flags, oldValue);
+                nonPersistentFlags |= result.NonPersistentFlags;
 
                 if (UpdateLastDatabaseChangeVector(context, result.ChangeVector, flags, nonPersistentFlags))
                     changeVector = result.ChangeVector;
 
-                nonPersistentFlags |= result.NonPersistentFlags;
                 if (nonPersistentFlags.Contain(NonPersistentDocumentFlags.Resolved))
                 {
                     flags |= DocumentFlags.Resolved;
                 }
 
-                if (collectionName.IsHiLo == false &&
-                    (flags & DocumentFlags.Artificial) != DocumentFlags.Artificial)
+                if (collectionName.IsHiLo == false && flags.Contain(DocumentFlags.Artificial) == false)
                 {
                     if (ShouldRecreateAttachments(context, lowerId, oldDoc, document, ref flags, nonPersistentFlags))
                     {
@@ -289,14 +288,11 @@ namespace Raven.Server.Documents
                 }
                 else
                 {
-                    var result = _documentsStorage.ConflictsStorage.MergeConflictChangeVectorIfNeededAndDeleteConflicts(changeVector, context, id, document);
-                    changeVector = ChangeVectorUtils.MergeVectors(context.LastDatabaseChangeVector ?? GetDatabaseChangeVector(context), result.ChangeVector);
-                    var updateResult = ChangeVectorUtils.TryUpdateChangeVector(_documentDatabase.ServerStore.NodeTag, _documentDatabase.DbBase64Id, newEtag, changeVector);
-                    Debug.Assert(updateResult.IsValid, $"Failed to update {changeVector} with node tag {_documentDatabase.ServerStore.NodeTag} and new etag {newEtag}");
-                    if (updateResult.IsValid)
-                        changeVector = updateResult.ChangeVector;
-
+                    var result = _documentsStorage.ConflictsStorage.MergeConflictChangeVectorIfNeededAndDeleteConflicts(changeVector, context, id, newEtag, document);
                     nonPersistentFlags = result.NonPersistentFlags;
+
+                    if (string.IsNullOrEmpty(result.ChangeVector) == false)
+                        return (result.ChangeVector, nonPersistentFlags);
                 }
             }
 
