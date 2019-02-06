@@ -1,5 +1,6 @@
 ﻿import backupSettings = require("models/database/tasks/periodicBackup/backupSettings");
 import jsonUtil = require("common/jsonUtil");
+import fileImporter = require("common/fileImporter");
 
 class ftpSettings extends backupSettings {
     url = ko.observable<string>();
@@ -111,31 +112,21 @@ class ftpSettings extends backupSettings {
         });
     }
 
-    fileSelected() {
+    fileSelected(fileInput: HTMLInputElement) {
         this.isLoadingFile(true);
-        const fileInput = document.querySelector("#filePicker") as HTMLInputElement;
-        const fileList = fileInput.files;
-        const fileReader = new FileReader();
-        if (!(fileReader && fileList && fileList.length)) {
-            this.isLoadingFile(false);
-            return;
-        }
+        
+        fileImporter.readAsArrayBuffer(fileInput, (data, filename) => {
+            this.certificateFileName(filename);
 
-        const file = fileList[0];
-        this.certificateFileName(file.name);
-
-        fileReader.readAsArrayBuffer(file);
-        fileReader.onload = () => {
             let binary = "";
-            const bytes = new Uint8Array(fileReader.result);
+            const bytes = new Uint8Array(data);
             for (let i = 0; i < bytes.byteLength; i++) {
                 binary += String.fromCharCode(bytes[i]);
             }
             const result = window.btoa(binary);
             this.certificateAsBase64(result);
-            this.isLoadingFile(false);
-        };
-        fileReader.onerror = () => this.isLoadingFile(false);
+        })
+            .always(() => this.isLoadingFile(false));
     }
 
     toDto(): Raven.Client.Documents.Operations.Backups.FtpSettings {

@@ -48,7 +48,7 @@
                     <i class="icon-import"></i><span>Import</span>
                 </label>
                 <div class="input-group file-input" title="Import performance graph file">
-                    <input type="file" id="importFilePicker" data-bind="event: { change: fileSelected }" tabindex="-1" accept=".json">
+                    <input type="file" id="importFilePicker" data-bind="event: { change: _.partial(fileSelected, $element) }" tabindex="-1" accept=".json">
                 </div>
             </div>
         </div>

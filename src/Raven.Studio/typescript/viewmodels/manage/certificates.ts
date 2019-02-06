@@ -20,6 +20,7 @@ import eventsCollector = require("common/eventsCollector");
 import changesContext = require("common/changesContext");
 import accessManager = require("common/shell/accessManager");
 import getServerCertificateRenewalDateCommand = require("commands/auth/getServerCertificateRenewalDateCommand");
+import fileImporter = require("common/fileImporter");
 
 interface unifiedCertificateDefinitionWithCache extends unifiedCertificateDefinition {
     expirationClass: string;
@@ -254,25 +255,13 @@ class certificates extends viewModelBase {
     }
 
     fileSelected(fileInput: HTMLInputElement) {
-        if (fileInput.files.length === 0) {
-            return;
-        }
-        
-        const fileName = fileInput.value;
-        const isFileSelected = fileName ? !!fileName.trim() : false;
-        this.importedFileName(isFileSelected ? fileName.split(/(\\|\/)/g).pop() : null);
-        
-        const file = fileInput.files[0];
-        const reader = new FileReader();
-        reader.onload = () => {
-            const dataUrl = reader.result;
+        fileImporter.readAsDataURL(fileInput, (dataUrl, fileName) => {
+            const isFileSelected = fileName ? !!fileName.trim() : false;
+            this.importedFileName(isFileSelected ? fileName.split(/(\\|\/)/g).pop() : null);
+
             // dataUrl has following format: data:;base64,PD94bW... trim on first comma
             this.model().certificateAsBase64(dataUrl.substr(dataUrl.indexOf(",") + 1));
-        };
-        reader.onerror = function(error: any) {
-            alert(error);
-        };
-        reader.readAsDataURL(file);
+        });
     }
 
     save() {

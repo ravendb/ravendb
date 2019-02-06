@@ -29,6 +29,7 @@ import mapIndexSyntax = require("viewmodels/database/indexes/mapIndexSyntax");
 import fileDownloader = require("common/fileDownloader");
 import mapReduceIndexSyntax = require("viewmodels/database/indexes/mapReduceIndexSyntax");
 import additionalSourceSyntax = require("viewmodels/database/indexes/additionalSourceSyntax");
+import fileImporter = require("common/fileImporter");
 
 class editIndex extends viewModelBase {
 
@@ -581,28 +582,9 @@ class editIndex extends viewModelBase {
             });
     }
 
-    fileSelected() {
+    fileSelected(fileInput: HTMLInputElement) {
         eventsCollector.default.reportEvent("index", "additional-source");
-        const fileInput = <HTMLInputElement>document.querySelector("#additionalSourceFilePicker");
-        const self = this;
-        if (fileInput.files.length === 0) {
-            return;
-        }
-
-        const file = fileInput.files[0];
-        const fileName = file.name;
-        
-        const reader = new FileReader();
-        reader.onload = function() {
-// ReSharper disable once SuspiciousThisUsage
-            self.onFileAdded(fileName, this.result);
-        };
-        reader.onerror = function(error: any) {
-            alert(error);
-        };
-        reader.readAsText(file);
-
-        $("#additionalSourceFilePicker").val(null);
+        fileImporter.readAsText(fileInput, (data, fileName) => this.onFileAdded(fileName, data));
     }
     
     private onFileAdded(fileName: string, contents: string) {        

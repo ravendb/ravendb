@@ -48,7 +48,7 @@
                 </label>
 
                 <span class="input-group file-input" title="Import IO stats graph file">
-                    <input type="file" id="importFilePicker" data-bind="event: { change: fileSelected }" tabindex="-1" accept=".json" style="width: 10px">
+                    <input type="file" id="importFilePicker" data-bind="event: { change: _.partial(fileSelected, $element) }" tabindex="-1" accept=".json" style="width: 10px">
                 </span>
             </div>
             <div class="flex-separator"></div>

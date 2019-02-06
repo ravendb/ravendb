@@ -13,6 +13,7 @@ import inProgressAnimator = require("common/helpers/graph/inProgressAnimator");
 
 import colorsManager = require("common/colorsManager");
 import etlScriptDefinitionCache = require("models/database/stats/etlScriptDefinitionCache");
+import fileImporter = require("common/fileImporter");
 
 type rTreeLeaf = {
     minX: number;
@@ -1518,28 +1519,11 @@ class ongoingTasksStats extends viewModelBase {
         this.tooltip.datum(null);
     }
 
-    fileSelected() {
-        const fileInput = <HTMLInputElement>document.querySelector("#importFilePicker");
-        const self = this;
-        if (fileInput.files.length === 0) {
-            return;
-        }
-
-        const file = fileInput.files[0];
-        const reader = new FileReader();
-        reader.onload = function () {
-            self.dataImported(this.result as string);
-        };
-        reader.onerror = (error: any) => {
-            alert(error);
-        };
-        reader.readAsText(file);
-
-        this.importFileName(fileInput.files[0].name);
-
-        // Must clear the filePicker element value so that user will be able to import the -same- file after closing the imported view...
-        const $input = $("#importFilePicker");
-        $input.val(null);
+    fileSelected(fileInput: HTMLInputElement) {
+        fileImporter.readAsText(fileInput, (data, fileName) => {
+            this.dataImported(data);
+            this.importFileName(fileName);
+        });
     }
 
     private dataImported(result: string) {

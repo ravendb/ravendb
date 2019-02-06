@@ -128,7 +128,7 @@
                                     </div>
 
                                     <div class="input-group file-input" title="Import certificate from file">
-                                        <input type="file" id="certificateFilePicker" data-bind="event: { change: $root.certificateSelected }" tabindex="-1">
+                                        <input type="file" id="certificateFilePicker" data-bind="event: { change: _.partial($root.certificateSelected, $element) }" tabindex="-1">
                                     </div>
                                     
                                     <div class="flex-horizontal certificates-actions">

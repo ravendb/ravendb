@@ -14,6 +14,7 @@ import messagePublisher = require("common/messagePublisher");
 import discoveryUrl = require("models/database/settings/discoveryUrl");
 import pullReplicationCertificate = require("models/database/tasks/pullReplicationCertificate");
 import forge = require("forge/forge");
+import fileImporter = require("common/fileImporter");
 
 class editPullReplicationSinkTask extends viewModelBase {
 
@@ -249,26 +250,8 @@ class editPullReplicationSinkTask extends viewModelBase {
             });
     }
 
-    onConfigurationFileSelected() {
-        const fileInput = <HTMLInputElement>document.querySelector("#configurationFilePicker");
-        const self = this;
-        if (fileInput.files.length === 0) {
-            return;
-        }
-
-        const file = fileInput.files[0];
-        const reader = new FileReader();
-        reader.onload = function() {
-// ReSharper disable once SuspiciousThisUsage
-            self.importUsingFile(this.result as string);
-        };
-        reader.onerror = function(error: any) {
-            alert(error);
-        };
-        reader.readAsText(file);
-
-        const $input = $("#configurationFilePicker");
-        $input.val(null);
+    onConfigurationFileSelected(fileInput: HTMLInputElement) {
+        fileImporter.readAsText(fileInput, data => this.importUsingFile(data));
     }
     
     private importUsingFile(contents: string) {
@@ -304,27 +287,13 @@ class editPullReplicationSinkTask extends viewModelBase {
     }
 
     certFileSelected(fileInput: HTMLInputElement) {
-        const self = this;
-        if (fileInput.files.length === 0) {
-            return;
-        }
+        fileImporter.readAsBinaryString(fileInput, (data, fileName) => {
+            const isFileSelected = fileName ? !!fileName.trim() : false;
+            this.importedFileName(isFileSelected ? fileName.split(/(\\|\/)/g).pop() : null);
 
-        const file = fileInput.files[0];
-
-        const fileName = fileInput.value;
-        const isFileSelected = fileName ? !!fileName.trim() : false;
-        this.importedFileName(isFileSelected ? fileName.split(/(\\|\/)/g).pop() : null);
-        
-        const reader = new FileReader();
-        reader.onload = function() {
-// ReSharper disable once SuspiciousThisUsage
-            const asBase64 = forge.util.encode64(this.result);
-            self.onCertificateLoaded(asBase64);
-        };
-        reader.onerror = function(error: any) {
-            alert(error);
-        };
-        reader.readAsBinaryString(file);
+            const asBase64 = forge.util.encode64(data);
+            this.onCertificateLoaded(asBase64);
+        });
     }
     
     onCertificateLoaded(certAsBase64: string) {

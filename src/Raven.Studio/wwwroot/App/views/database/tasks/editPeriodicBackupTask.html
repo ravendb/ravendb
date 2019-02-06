@@ -494,7 +494,7 @@
                         <label class="control-label col-xs-12 col-sm-6 col-lg-4">Certificate</label>
                         <div class="col-xs-12 col-sm-6 col-lg-8" >
                             <div class="input-group file-input">
-                                <input type="file" id="filePicker" data-bind="event: { change: fileSelected }, disable: isLoadingFile" tabindex="-1", disabled>
+                                <input type="file" id="filePicker" data-bind="event: { change: _.partial(fileSelected, $element) }, disable: isLoadingFile" tabindex="-1", disabled>
                                 <span class="static-name form-control" data-bind="text: certificateFileName() || 'Select file...'"></span>
                                 <span class="input-group-btn">
                                     <label for="filePicker" class="btn btn-default">

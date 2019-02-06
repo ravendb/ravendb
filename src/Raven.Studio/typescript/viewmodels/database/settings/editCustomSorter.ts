@@ -6,6 +6,7 @@ import customSorter = require("models/database/settings/customSorter");
 import saveCustomSorterCommand = require("commands/database/settings/saveCustomSorterCommand");
 import getCustomSortersCommand = require("commands/database/settings/getCustomSortersCommand");
 import messagePublisher = require("common/messagePublisher");
+import fileImporter = require("common/fileImporter");
 
 class editCustomSorter extends viewModelBase {
 
@@ -61,34 +62,16 @@ class editCustomSorter extends viewModelBase {
         router.navigate(appUrl.forCustomSorters(this.activeDatabase()));
     }
 
-    fileSelected() {
-        const fileInput = <HTMLInputElement>document.querySelector("#importFilePicker");
-        const self = this;
-        if (fileInput.files.length === 0) {
-            return;
-        }
+    fileSelected(fileInput: HTMLInputElement) {
+        fileImporter.readAsText(fileInput, (data, fileName) => {
+            this.editedSorter().code(data);
 
-        const file = fileInput.files[0];
-        let fileName = file.name;
-        
-        if (fileName.endsWith(".cs")) {
-            fileName = fileName.substr(0, fileName.length - 3);
-        }
-        
-        self.editedSorter().name(fileName);
-        
-        const reader = new FileReader();
-        reader.onload = function() {
-// ReSharper disable once SuspiciousThisUsage
-            self.editedSorter().code(this.result as string);
-        };
-        reader.onerror = function(error: any) {
-            alert(error);
-        };
-        reader.readAsText(file);
+            if (fileName.endsWith(".cs")) {
+                fileName = fileName.substr(0, fileName.length - 3);
+            }
 
-        const $input = $("#importFilePicker");
-        $input.val(null);
+            this.editedSorter().name(fileName);
+        });
     }
     
     save() {

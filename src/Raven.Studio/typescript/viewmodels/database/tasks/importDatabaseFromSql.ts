@@ -19,6 +19,7 @@ import referenceUsageDialog = require("viewmodels/database/tasks/referenceUsageD
 import showDataDialog = require("viewmodels/common/showDataDialog");
 import documentMetadata = require("models/database/documents/documentMetadata");
 import generalUtils = require("common/generalUtils");
+import fileImporter = require("common/fileImporter");
 
 interface exportDataDto {
     Schema: Raven.Server.SqlMigration.Schema.DatabaseSchema,
@@ -169,21 +170,8 @@ class importDatabaseFromSql extends viewModelBase {
 
         eventsCollector.default.reportEvent("import-sql", "continue-with-file");
         
-        const fileInput = <HTMLInputElement>document.querySelector("#jsImportSqlFilePicker");
-        const self = this;
-        if (fileInput.files.length === 0) {
-            return;
-        }
-
-        const file = fileInput.files[0];
-        const reader = new FileReader();
-        reader.onload = function () {
-            self.onConfigurationFileRead(this.result);
-        };
-        reader.onerror = (error: any) => {
-            alert(error);
-        };
-        reader.readAsText(file);
+        const fileInput = document.querySelector("#jsImportSqlFilePicker") as HTMLInputElement;
+        fileImporter.readAsText(fileInput, data => this.onConfigurationFileRead(data));
     }
     
     private onConfigurationFileRead(content: string) {
