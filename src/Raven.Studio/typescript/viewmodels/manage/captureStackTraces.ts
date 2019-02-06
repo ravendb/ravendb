@@ -5,6 +5,7 @@ import captureClusterStackTracesCommand = require("commands/maintenance/captureC
 import clusterTopologyManager = require("common/shell/clusterTopologyManager");
 import copyToClipboard = require("common/copyToClipboard");
 import fileDownloader = require("common/fileDownloader");
+import fileImporter = require("common/fileImporter");
 
 type stackFrame = {
     short: string;
@@ -467,27 +468,8 @@ class captureStackTraces extends viewModelBase {
         fileDownloader.downloadAsJson(this.data, "stacks.json");
     }
 
-    fileSelected() {
-        const fileInput = <HTMLInputElement>document.querySelector("#importStacksFilePicker");
-        const self = this;
-        if (fileInput.files.length === 0) {
-            return;
-        }
-
-        const file = fileInput.files[0];
-        const reader = new FileReader();
-        reader.onload = function() {
-// ReSharper disable once SuspiciousThisUsage
-            self.dataImported(this.result as string);
-        };
-        reader.onerror = function(error: any) {
-            alert(error);
-        };
-        reader.readAsText(file);
-
-        // Must clear the filePicker element value so that user will be able to import the -same- file after closing the imported view...
-        const $input = $("#importStacksFilePicker");
-        $input.val(null);
+    fileSelected(fileInput: HTMLInputElement) {
+        fileImporter.readAsText(fileInput, data => this.dataImported(data));
     }
 
     private dataImported(result: string) {

@@ -15,6 +15,7 @@ import fileDownloader = require("common/fileDownloader");
 import forge = require("forge/forge");
 import clusterTopologyManager = require("common/shell/clusterTopologyManager");
 import generatePullReplicationCertificateConfirm = require("viewmodels/database/tasks/generatePullReplicationCertificateConfirm");
+import fileImporter = require("common/fileImporter");
 
 class editPullReplicationHubTask extends viewModelBase {
 
@@ -170,26 +171,8 @@ class editPullReplicationHubTask extends viewModelBase {
         fileDownloader.downloadAsJson(configurationToExport, fileName);
     }
 
-    certificateSelected() {
-        const fileInput = <HTMLInputElement>document.querySelector("#certificateFilePicker");
-        const self = this;
-        if (fileInput.files.length === 0) {
-            return;
-        }
-
-        const file = fileInput.files[0];
-        const reader = new FileReader();
-        reader.onload = function() {
-// ReSharper disable once SuspiciousThisUsage
-            self.certificateImported(this.result as string);
-        };
-        reader.onerror = function(error: any) {
-            alert(error);
-        };
-        reader.readAsText(file);
-
-        const $input = $("#certificateFilePicker");
-        $input.val(null);
+    certificateSelected(fileInput: HTMLInputElement) {
+        fileImporter.readAsText(fileInput,data => this.certificateImported(data));
     }
 
     certificateImported(cert: string) {

@@ -11,6 +11,7 @@ import inProgressAnimator = require("common/helpers/graph/inProgressAnimator");
 import messagePublisher = require("common/messagePublisher");
 import getIndexesStatsCommand = require("commands/database/index/getIndexesStatsCommand");
 import colorsManager = require("common/colorsManager");
+import fileImporter = require("common/fileImporter");
 
 type rTreeLeaf = {
     minX: number;
@@ -1289,29 +1290,11 @@ class indexPerformance extends viewModelBase {
         this.tooltip.datum(null);      
     }
 
-    fileSelected() { 
-        const fileInput = <HTMLInputElement>document.querySelector("#importFilePicker");
-        const self = this;
-        if (fileInput.files.length === 0) {
-            return;
-        }
-
-        const file = fileInput.files[0];
-        const reader = new FileReader();
-        reader.onload = function() {
-// ReSharper disable once SuspiciousThisUsage
-            self.dataImported(this.result as string);
-        };
-        reader.onerror = function(error: any) {
-            alert(error);
-        };
-        reader.readAsText(file);
-
-        this.importFileName(fileInput.files[0].name);
-
-        // Must clear the filePicker element value so that user will be able to import the -same- file after closing the imported view...
-        const $input = $("#importFilePicker");
-        $input.val(null);
+    fileSelected(fileInput: HTMLInputElement) {
+        fileImporter.readAsText(fileInput, (data, fileName) => {
+            this.dataImported(data);
+            this.importFileName(fileName);
+        });
     }
 
     private dataImported(result: string) {
@@ -1391,9 +1374,12 @@ class indexPerformance extends viewModelBase {
         this.zoom.x(this.xNumericScale);
 
         brushAction(this.brush);
-        this.brushContainer.call(this.brush);
+        
+        if (this.brushContainer) {
+            this.brushContainer.call(this.brush);    
+        }
+        
         this.clearSelectionVisible(!this.brush.empty());
-
         this.brushAndZoomCallbacksDisabled = false;
     }
 

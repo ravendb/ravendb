@@ -14,7 +14,7 @@
                     <div class="flex-separator"></div>
                     <div>
                         <div class="input-group file-input" title="Import configuration from file">
-                            <input type="file" id="configurationFilePicker" data-bind="event: { change: $root.onConfigurationFileSelected }" tabindex="-1" accept=".json">
+                            <input type="file" id="configurationFilePicker" data-bind="event: { change: _.partial($root.onConfigurationFileSelected, $element) }" tabindex="-1" accept=".json">
                         </div>
                     </div>
                     <label for="configurationFilePicker" class="btn btn-default">

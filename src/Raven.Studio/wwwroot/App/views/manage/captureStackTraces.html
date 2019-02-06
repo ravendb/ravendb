@@ -28,7 +28,7 @@
             </label>
 
             <div class="input-group file-input" title="Import stack traces from file">
-                <input type="file" id="importStacksFilePicker" data-bind="event: { change: fileSelected }" tabindex="-1" accept=".json">
+                <input type="file" id="importStacksFilePicker" data-bind="event: { change: _.partial(fileSelected, $element) }" tabindex="-1" accept=".json">
             </div>
         </div>
          
