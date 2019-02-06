@@ -669,13 +669,6 @@ namespace Raven.Server.Documents
 
                         var etag = _documentsStorage.GenerateNextEtag();
 
-                    if (changeVector == null)
-                    {
-                        changeVector = ChangeVectorUtils.NewChangeVector(_documentDatabase.ServerStore.NodeTag, etag, _documentsStorage.Environment.Base64Id);
-                        context.LastDatabaseChangeVector =
-                            ChangeVectorUtils.MergeVectors(context.LastDatabaseChangeVector ?? GetDatabaseChangeVector(context), changeVector);
-                    }
-
                         using (Slice.From(context.Allocator, changeVector, out var cv))
                         using (DocumentIdWorker.GetStringPreserveCase(context, collectionName.Name, out Slice collectionSlice))
                         {
