@@ -36,7 +36,8 @@ namespace Voron.Impl.Paging
             if (initialFileSize.HasValue == false || initialFileSize.Value == 0) 
                 initialFileSize = Math.Max(SysInfo.PageSize * 16, 64 * 1024);
 
-            initialFileSize += SysInfo.PageSize - initialFileSize % SysInfo.PageSize;
+            if (initialFileSize % SysInfo.PageSize != 0)
+                initialFileSize += SysInfo.PageSize - initialFileSize % SysInfo.PageSize;
 
             Debug.Assert(file != null);
 
