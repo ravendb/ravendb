@@ -238,7 +238,7 @@ namespace Raven.Server.Documents.ETL.Providers.Raven
             {
                 Debug.Assert(item.Type == EtlItemType.Document);
 
-                if (ShouldFilterOutDeletion() == false)
+                if (ShouldFilterOutDeletion(item) == false)
                 {
                     if (_script.HasTransformation)
                     {
@@ -262,54 +262,55 @@ namespace Raven.Server.Documents.ETL.Providers.Raven
 
                 }
 
-                bool ShouldFilterOutDeletion()
-                {
-                    if (_script.HasDeleteDocumentsBehaviors)
-                    {
-                        var collection = item.Collection ?? item.CollectionFromMetadata;
-                        var documentId = item.DocumentId;
-
-                        if (item.IsAttachmentTombstone)
-                        {
-                            documentId = AttachmentsStorage.ExtractDocIdAndAttachmentNameFromTombstone(Context, item.AttachmentTombstoneId).DocId;
-
-                            Debug.Assert(collection == null);
-
-                            var document = Database.DocumentsStorage.Get(Context, documentId);
-
-                            if (document == null)
-                                return true; // document was deleted, no need to send DELETE of attachment tombstone
-
-                            collection = Database.DocumentsStorage.ExtractCollectionName(Context, document.Data).Name;
-                        }
-
-                        Debug.Assert(collection != null);
-
-                        if (_script.TryGetDeleteDocumentBehaviorFunctionFor(collection, out var function) ||
-                            _script.TryGetDeleteDocumentBehaviorFunctionFor(Transformation.GenericDeleteDocumentsBehaviorFunctionKey, out function))
-                        {
-                            object[] parameters;
-
-                            if (Transformation.GenericDeleteDocumentsBehaviorFunctionName.Equals(function, StringComparison.OrdinalIgnoreCase))
-                                parameters = new object[] { documentId, collection };
-                            else
-                                parameters = new object[] { documentId };
-
-                            using (var result = BehaviorsScript.Run(Context, Context, function, parameters))
-                            {
-                                if (result.BooleanValue == null || result.BooleanValue == false)
-                                    return true;
-                            }
-                        }
-                    }
-
-                    return false;
-                }
             }
 
             _commands.AddRange(_currentRun.GetCommands());
         }
 
+
+        private bool ShouldFilterOutDeletion(RavenEtlItem item)
+        {
+            if (_script.HasDeleteDocumentsBehaviors)
+            {
+                var collection = item.Collection ?? item.CollectionFromMetadata;
+                var documentId = item.DocumentId;
+
+                if (item.IsAttachmentTombstone)
+                {
+                    documentId = AttachmentsStorage.ExtractDocIdAndAttachmentNameFromTombstone(Context, item.AttachmentTombstoneId).DocId;
+
+                    Debug.Assert(collection == null);
+
+                    var document = Database.DocumentsStorage.Get(Context, documentId);
+
+                    if (document == null)
+                        return true; // document was deleted, no need to send DELETE of attachment tombstone
+
+                    collection = Database.DocumentsStorage.ExtractCollectionName(Context, document.Data).Name;
+                }
+
+                Debug.Assert(collection != null);
+
+                if (_script.TryGetDeleteDocumentBehaviorFunctionFor(collection, out var function) ||
+                    _script.TryGetDeleteDocumentBehaviorFunctionFor(Transformation.GenericDeleteDocumentsBehaviorFunctionKey, out function))
+                {
+                    object[] parameters;
+
+                    if (Transformation.GenericDeleteDocumentsBehaviorFunctionName.Equals(function, StringComparison.OrdinalIgnoreCase))
+                        parameters = new object[] { documentId, collection };
+                    else
+                        parameters = new object[] { documentId };
+
+                    using (var result = BehaviorsScript.Run(Context, Context, function, parameters))
+                    {
+                        if (result.BooleanValue == null || result.BooleanValue == false)
+                            return true;
+                    }
+                }
+            }
+
+            return false;
+        }
 
 
         private void AddCounters(LazyStringValue docId, BlittableJsonReaderObject counterGroupDocument, string function = null)
@@ -348,21 +349,24 @@ namespace Raven.Server.Documents.ETL.Providers.Raven
                 if (GetCounterValueAndCheckIfShouldSkip(item.DocumentId, null, prop, out long value, out bool delete))
                     continue;
 
-                if (delete)
-                {
-                    counterOperations.Add(new CounterOperation
-                    {
-                        Type = CounterOperationType.Delete,
-                        CounterName = prop.Name,
-                    });
-                }
-                else
+                if (delete == false)
                 {
                     counterOperations.Add(new CounterOperation
                     {
                         Type = CounterOperationType.Put,
                         CounterName = prop.Name,
                         Delta = value
+                    });
+                }
+                else
+                {
+                    if (ShouldFilterOutDeletion(item))
+                        continue;
+
+                    counterOperations.Add(new CounterOperation
+                    {
+                        Type = CounterOperationType.Delete,
+                        CounterName = prop.Name,
                     });
                 }
             }
