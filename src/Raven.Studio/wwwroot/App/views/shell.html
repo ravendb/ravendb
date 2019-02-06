@@ -95,7 +95,7 @@
                             <h4>Matched documents</h4>
                             <ul data-bind="foreach: matchedDocumentIds">
                                 <li>
-                                    <a href="#" data-bind="click: _.partial($parent.goToDocument, $data)">
+                                    <a href="#" data-bind="click: _.partial($parent.goToDocument, $data), css: { 'active': $parent.matchesDocumentIdx($index) }">
                                         <span class="icon-document"></span> 
                                         <span data-bind="text: $data"></span>
                                     </a>
@@ -109,7 +109,7 @@
                             <h4>Recent documents</h4>
                             <ul data-bind="foreach: recentDocumentsList">
                                 <li>
-                                    <a href="#" data-bind="click: _.partial($parent.goToDocument, $data)">
+                                    <a href="#" data-bind="click: _.partial($parent.goToDocument, $data), css: { 'active': $parent.matchesRecentDocumentIdx($index)}">
                                         <span class="icon-document"></span> 
                                         <span data-bind="text: $data"></span>
                                     </a>
