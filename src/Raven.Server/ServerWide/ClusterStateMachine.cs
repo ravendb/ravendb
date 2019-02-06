@@ -739,7 +739,8 @@ namespace Raven.Server.ServerWide
 
             DeleteTreeByPrefix(context, UpdateValueForDatabaseCommand.GetStorageKey(databaseName, null), Identities);
 
-            using (Slice.From(context.Allocator, databaseName + "/", out var databaseSlice))
+            var databaseLowered = databaseName.ToLowerInvariant();
+            using (Slice.From(context.Allocator, databaseLowered + "/", out var databaseSlice))
             {
                 context.Transaction.InnerTransaction.OpenTable(CompareExchangeSchema, CompareExchange).DeleteByPrimaryKeyPrefix(databaseSlice);
             }
