@@ -297,7 +297,8 @@ namespace Voron.Data.BTrees
             }
             finally
             {
-                decompressed.CopyToOriginal(_llt, defragRequired: true, wasModified: true);
+                if (decompressed.NumberOfEntries > 0) // no need to copy empty page because it was deleted
+                    decompressed.CopyToOriginal(_llt, defragRequired: true, wasModified: true, this);
             }
         }
 
