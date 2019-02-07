@@ -45,8 +45,8 @@ namespace Raven.Server.Documents
         public bool ReadLegacyEtag;
         public DatabaseItemType OperateOnTypes;
         public string LegacyEtag { get; private set; }
-        private string _firstEtagOfLegacyRevision;
-        private long _legacyRevisionsCount;
+        public string FirstEtagOfLegacyRevision;
+        public long LegacyRevisionsCount;
 
         private JsonOperationContext _ctx;
         private LazyStringValue _metadataCollections;
@@ -315,7 +315,7 @@ namespace Raven.Server.Documents
                     if (ReadFirstEtagOfLegacyRevision &&
                         (NonPersistentFlags & NonPersistentDocumentFlags.LegacyRevision) == NonPersistentDocumentFlags.LegacyRevision)
                     {
-                        if (_firstEtagOfLegacyRevision == null)
+                        if (FirstEtagOfLegacyRevision == null)
                         {
                             if (reader.Read() == false)
                             {
@@ -325,12 +325,12 @@ namespace Raven.Server.Documents
                             }
                             if (state.CurrentTokenType != JsonParserToken.String)
                                 ThrowExpectedFieldTypeOfString("@etag", state, reader);
-                            _firstEtagOfLegacyRevision = LegacyEtag = CreateLazyStringValueFromParserState(state);
-                            ChangeVector = ChangeVectorUtils.NewChangeVector("RV", ++_legacyRevisionsCount, new Guid(_firstEtagOfLegacyRevision).ToBase64Unpadded());
+                            FirstEtagOfLegacyRevision = LegacyEtag = CreateLazyStringValueFromParserState(state);
+                            ChangeVector = ChangeVectorUtils.NewChangeVector("RV", ++LegacyRevisionsCount, new Guid(FirstEtagOfLegacyRevision).ToBase64Unpadded());
                             break;
                         }
 
-                        ChangeVector = ChangeVectorUtils.NewChangeVector("RV", ++_legacyRevisionsCount, new Guid(_firstEtagOfLegacyRevision).ToBase64Unpadded());
+                        ChangeVector = ChangeVectorUtils.NewChangeVector("RV", ++LegacyRevisionsCount, new Guid(FirstEtagOfLegacyRevision).ToBase64Unpadded());
                     }
 
                     if (ReadLegacyEtag)
@@ -750,8 +750,8 @@ namespace Raven.Server.Documents
 
                     if (state.CurrentTokenType != JsonParserToken.String)
                         ThrowExpectedFieldTypeOfString("@etag", state, reader);
-                    _firstEtagOfLegacyRevision = LegacyEtag = CreateLazyStringValueFromParserState(state);
-                    ChangeVector = ChangeVectorUtils.NewChangeVector("RV", ++_legacyRevisionsCount, new Guid(_firstEtagOfLegacyRevision).ToBase64Unpadded());
+                    FirstEtagOfLegacyRevision = LegacyEtag = CreateLazyStringValueFromParserState(state);
+                    ChangeVector = ChangeVectorUtils.NewChangeVector("RV", ++LegacyRevisionsCount, new Guid(FirstEtagOfLegacyRevision).ToBase64Unpadded());
                     break;
                 case State.ReadingEtag:
                     if (reader.Read() == false)
