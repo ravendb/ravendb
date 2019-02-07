@@ -433,7 +433,7 @@ namespace Tests.Infrastructure
             return leader;
         }
 
-        protected async Task<(List<RavenServer> Nodes, RavenServer Leader)> CreateRaftCluster(int numberOfNodes, bool shouldRunInMemory = true, int? leaderIndex = null, bool useSsl = false,
+        protected async Task<(List<RavenServer> Nodes, RavenServer Leader)> CreateRaftCluster(int numberOfNodes, bool shouldRunInMemory = true, int? leaderIndex = null, bool useSsl = false, bool createNewCert = false,
             IDictionary<string, string> customSettings = null)
         {
             leaderIndex = leaderIndex ?? _random.Next(0, numberOfNodes);
@@ -454,7 +454,8 @@ namespace Tests.Infrastructure
                 if (useSsl)
                 {
                     serverUrl = UseFiddlerUrl("https://127.0.0.1:0");
-                    SetupServerAuthentication(customSettings, serverUrl);
+                    var shouldCreateNewCert = createNewCert && i == 0;
+                    SetupServerAuthentication(customSettings, serverUrl, createNew: shouldCreateNewCert);
                 }
                 else
                 {
