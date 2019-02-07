@@ -27,7 +27,7 @@ namespace Raven.Server.Documents
 {
     internal static class ReplayTxCommandHelper
     {
-        internal static IEnumerable<ReplayProgress> Replay(DocumentDatabase database, Stream replayStream)
+        internal static IEnumerable<ReplayProgress> Replay(DocumentDatabase database, Stream replayStream, CancellationToken token)
         {
             DocumentsOperationContext txCtx = null;
             IDisposable txDisposable = null;
@@ -45,8 +45,6 @@ namespace Raven.Server.Documents
                 var readers = UnmanagedJsonParserHelper.ReadArrayToMemory(context, peepingTomStream, parser, state, buffer);
                 using (var readersItr = readers.GetEnumerator())
                 {
-                    database.DatabaseShutdown.ThrowIfCancellationRequested();
-
                     ReadStartRecordingDetails(readersItr, context, peepingTomStream);
                     while (readersItr.MoveNext())
                     {
@@ -63,7 +61,7 @@ namespace Raven.Server.Documents
                                 {
                                     case TxInstruction.BeginTx:
                                         txDisposable = database.DocumentsStorage.ContextPool.AllocateOperationContext(out txCtx);
-                                        OpenWriteTransaction(txCtx, database.DatabaseShutdown);
+                                        OpenWriteTransaction(txCtx, token);
                                         break;
                                     case TxInstruction.Commit:
                                         txCtx.Transaction.Commit();
