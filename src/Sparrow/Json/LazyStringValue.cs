@@ -4,6 +4,7 @@ using System.Diagnostics;
 using System.Globalization;
 using System.Linq;
 using System.Runtime.CompilerServices;
+using System.Text;
 using Sparrow.Binary;
 using Sparrow.Utils;
 
@@ -735,6 +736,26 @@ namespace Sparrow.Json
         public string Substring(int startIndex, int length)
         {
             return ToString().Substring(startIndex, length);
+        }
+
+        public string Normalize()
+        {
+            return ToString().Normalize();
+        }
+
+        public string Normalize(NormalizationForm normalizationForm)
+        {
+            return ToString().Normalize(normalizationForm);
+        }
+
+        public bool IsNormalized()
+        {
+            return ToString().IsNormalized();
+        }
+
+        public bool IsNormalized(NormalizationForm normalizationForm)
+        {
+            return ToString().IsNormalized(normalizationForm);
         }
 
         public string[] Split(char separator, StringSplitOptions options = StringSplitOptions.None)
