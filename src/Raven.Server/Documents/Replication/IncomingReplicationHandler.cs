@@ -1209,11 +1209,11 @@ namespace Raven.Server.Documents.Replication
                                     switch (conflictStatus)
                                     {
                                         case ConflictStatus.Update:
+
                                             if (resolvedDocument != null)
                                             {
-#if DEBUG
                                                 AttachmentsStorage.AssertAttachments(document, item.Flags);
-#endif
+
                                                 database.DocumentsStorage.Put(context, item.Id, null, resolvedDocument, item.LastModifiedTicks,
                                                     rcvdChangeVector, flags, NonPersistentDocumentFlags.FromReplication);
                                             }
