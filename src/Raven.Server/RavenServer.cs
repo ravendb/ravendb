@@ -10,6 +10,7 @@ using System.Net.Security;
 using System.Net.Sockets;
 using System.Security.Authentication;
 using System.Security.Claims;
+using System.Security.Cryptography;
 using System.Security.Cryptography.X509Certificates;
 using System.Text;
 using System.Threading;
@@ -649,6 +650,7 @@ namespace Raven.Server
                 {
                     Certificate = Convert.ToBase64String(Certificate.Certificate.Export(X509ContentType.Cert)),
                     Thumbprint = Certificate.Certificate.Thumbprint,
+                    PublicKeyPinningHash = CertificateUtils.GetPublicKeyPinningHash(Certificate.Certificate),
                     NotAfter = Certificate.Certificate.NotAfter,
                     Name = "Old Server Certificate - can delete",
                     SecurityClearance = SecurityClearance.ClusterNode
@@ -658,6 +660,7 @@ namespace Raven.Server
                 {
                     Certificate = Convert.ToBase64String(newCertificate.Export(X509ContentType.Cert)),
                     Thumbprint = newCertificate.Thumbprint,
+                    PublicKeyPinningHash = CertificateUtils.GetPublicKeyPinningHash(newCertificate),
                     NotAfter = newCertificate.NotAfter,
                     Name = "Server Certificate",
                     SecurityClearance = SecurityClearance.ClusterNode
@@ -935,9 +938,33 @@ namespace Raven.Server
 
                     if (cert == null)
                     {
+                        var allCertKeys = ServerStore.Cluster.ItemKeysStartingWith(ctx, Constants.Certificates.Prefix, 0, int.MaxValue).ToList();
+                        allCertKeys.AddRange(ServerStore.Cluster.GetCertificateKeysFromLocalState(ctx));
+
+                        // POC - need to change this to be efficient, probably the key to be the hash instead of the thumbprint.
+                        // Then we will store in each hash, a list (BlittableArray) of certs of the same hash.
+                        foreach (var key in allCertKeys)
+                        {
+                            var currentCert = ServerStore.Cluster.Read(ctx, key) ??
+                                       ServerStore.Cluster.GetLocalState(ctx, key);
+
+                            if (currentCert == null)
+                                continue;
+
+                            if (currentCert.TryGet(nameof(CertificateDefinition.PublicKeyPinningHash), out string hash) == false)
+                                continue;
+
+                            if (CertificateUtils.GetPublicKeyPinningHash(certificate).Equals(hash) == false)
+                                continue;
+
+                            cert = currentCert;
+                            break;
+
+                        }
                         authenticationStatus.Status = AuthenticationStatus.UnfamiliarCertificate;
                     }
-                    else
+
+                    if (cert != null)
                     {
                         var definition = JsonDeserializationServer.CertificateDefinition(cert);
                         authenticationStatus.Definition = definition;

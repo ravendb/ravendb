@@ -20,6 +20,7 @@ using Raven.Server.ServerWide;
 using Raven.Server.ServerWide.Commands;
 using Raven.Server.ServerWide.Context;
 using Raven.Server.ServerWide.Maintenance;
+using Raven.Server.Utils;
 using Raven.Server.Web;
 using Raven.Server.Web.System;
 using Sparrow;
@@ -472,6 +473,7 @@ namespace Raven.Server.Documents.Handlers.Admin
                             {
                                 Certificate = nodeInfo.Certificate,
                                 Thumbprint = certificate.Thumbprint,
+                                PublicKeyPinningHash = CertificateUtils.GetPublicKeyPinningHash(certificate),
                                 NotAfter = certificate.NotAfter,
                                 Name = "Server Certificate for " + nodeUrl,
                                 SecurityClearance = SecurityClearance.ClusterNode
