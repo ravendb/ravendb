@@ -1039,6 +1039,11 @@ namespace Raven.Server.Documents.Indexes
                                     if (_logger.IsInfoEnabled)
                                         _logger.Info($"Finished indexing for '{Name}'.'");
                                 }
+                                catch (TimeoutException te)
+                                {
+                                    if (_logger.IsOperationsEnabled)
+                                        _logger.Operations($"Failed to open write transaction, indexing will be retried", te);
+                                }
                                 catch (OutOfMemoryException oome)
                                 {
                                     HandleOutOfMemoryException(oome, scope);
