@@ -2,10 +2,10 @@
 using System.Collections.Generic;
 using System.IO;
 using System.IO.Compression;
+using System.Threading;
 using Newtonsoft.Json;
 using Raven.Client.Documents.Conventions;
 using Raven.Client.Json;
-using Raven.Client.Json.Converters;
 using Raven.Client.Properties;
 using Raven.Server.Documents.Expiration;
 using Raven.Server.Documents.Handlers;
@@ -45,6 +45,8 @@ namespace Raven.Server.Documents
                 var readers = UnmanagedJsonParserHelper.ReadArrayToMemory(context, peepingTomStream, parser, state, buffer);
                 using (var readersItr = readers.GetEnumerator())
                 {
+                    database.DatabaseShutdown.ThrowIfCancellationRequested();
+
                     ReadStartRecordingDetails(readersItr, context, peepingTomStream);
                     while (readersItr.MoveNext())
                     {
@@ -61,7 +63,7 @@ namespace Raven.Server.Documents
                                 {
                                     case TxInstruction.BeginTx:
                                         txDisposable = database.DocumentsStorage.ContextPool.AllocateOperationContext(out txCtx);
-                                        txCtx.OpenWriteTransaction();
+                                        OpenWriteTransaction(txCtx, database.DatabaseShutdown);
                                         break;
                                     case TxInstruction.Commit:
                                         txCtx.Transaction.Commit();
@@ -105,6 +107,29 @@ namespace Raven.Server.Documents
                     }
                 }
             }
+        }
+
+        private static void OpenWriteTransaction(DocumentsOperationContext txCtx, CancellationToken ct)
+        {
+            var retries = 10;
+
+            while (true)
+            {
+                try
+                {
+                    ct.ThrowIfCancellationRequested();
+
+                    txCtx.OpenWriteTransaction();
+                }
+                catch (TimeoutException)
+                {
+                    if (retries-- > 0)
+                        continue;
+
+                    throw;
+                }
+            }
+            
         }
 
         private static void ReadStartRecordingDetails(IEnumerator<BlittableJsonReaderObject> iterator, DocumentsOperationContext context, PeepingTomStream peepingTomStream)
