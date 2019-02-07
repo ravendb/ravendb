@@ -6,6 +6,7 @@ using System.IO;
 using System.IO.Compression;
 using System.Linq;
 using System.Runtime.CompilerServices;
+using System.Runtime.InteropServices;
 using System.Security.Cryptography;
 using System.Security.Cryptography.X509Certificates;
 using System.Threading;
@@ -482,8 +483,17 @@ namespace FastTests
             } while (debug == false || Debugger.IsAttached);
         }
 
-        public static void WaitForUserToContinueTheTest(IDocumentStore documentStore, bool debug = true, string database = null)
+        public static void WaitForUserToContinueTheTest(IDocumentStore documentStore, bool debug = true, string database = null, X509Certificate2 clientCert = null)
         {
+            if (clientCert != null && RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
+            {
+                using (var userPersonalStore = new X509Store(StoreName.My, StoreLocation.CurrentUser))
+                {
+                    userPersonalStore.Open(OpenFlags.ReadWrite);
+                    userPersonalStore.Add(clientCert);
+                }
+            }
+
             if (debug && Debugger.IsAttached == false)
                 return;
 
@@ -492,7 +502,10 @@ namespace FastTests
             var databaseNameEncoded = Uri.EscapeDataString(database ?? documentStore.Database);
             var documentsPage = urls.First() + "/studio/index.html#databases/documents?&database=" + databaseNameEncoded + "&withStop=true";
 
-            OpenBrowser(documentsPage);// start the server
+            if (clientCert != null && RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
+                Process.Start("chrome.exe", documentsPage);
+            else
+                OpenBrowser(documentsPage);// start the server
 
             do
             {
@@ -620,6 +633,27 @@ namespace FastTests
                 }
             }
             return clientCertificate;
+        }
+
+        protected void AskCluster2ToTrustCluster1(X509Certificate2 cluster1Cert, X509Certificate2 cluster2Cert, Dictionary<string, DatabaseAccess> permissions, SecurityClearance clearance, RavenServer cluster2Leader)
+        {
+            using (var store = GetDocumentStore(new Options
+            {
+                Server = cluster2Leader,
+                ClientCertificate = cluster2Cert,
+                AdminCertificate = cluster2Cert,
+                CreateDatabase = false
+            }))
+            {
+                var requestExecutor = store.GetRequestExecutor();
+                using (requestExecutor.ContextPool.AllocateOperationContext(out JsonOperationContext context))
+                {
+                    var command = new PutClientCertificateOperation("cluster1 certificate", cluster1Cert, permissions, clearance)
+                        .GetCommand(store.Conventions, context);
+
+                    requestExecutor.Execute(command, context);
+                }
+            }
         }
 
         protected IDisposable RestoreDatabase(IDocumentStore store, RestoreBackupConfiguration config, TimeSpan? timeout = null)
