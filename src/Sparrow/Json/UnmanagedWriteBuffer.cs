@@ -332,6 +332,9 @@ namespace Sparrow.Json
             // mutate it to ensure all copies have the same allocations.
             var allocation = _context.GetMemory(segmentSize);
 
+            if (allocation.SizeInBytes < required)
+                ThrowOnAllocationSizeMismatch(allocation.SizeInBytes, required);
+
             // Copy the head
             Segment previousHead = _head.ShallowCopy();
 
@@ -343,6 +346,12 @@ namespace Sparrow.Json
             _head.Address = allocation.Address;
             _head.Used = 0;
             _head.AccumulatedSizeInBytes = previousHead.AccumulatedSizeInBytes;
+        }
+
+        private static void ThrowOnAllocationSizeMismatch(int allocationSizeInBytes, int required)
+        {
+            throw new InvalidOperationException($"Allocated {new Size(allocationSizeInBytes, SizeUnit.Bytes)}" +
+                                                $"but we requested at least {new Size(required, SizeUnit.Bytes)}");
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
@@ -385,8 +394,20 @@ Grow:
                 copiedBytes += head.Used;
                 Memory.Copy(whereToWrite, head.Address, head.Used);
             }
-            Debug.Assert(copiedBytes == _head.AccumulatedSizeInBytes);
+
+            ThrowOnCopiedBytesMismatch(copiedBytes, _head.AccumulatedSizeInBytes);
+
             return copiedBytes;
+        }
+
+        [Conditional("DEBUG")]
+        private static void ThrowOnCopiedBytesMismatch(int copiedBytes, int accumulatedSizeInBytes)
+        {
+            if (copiedBytes != accumulatedSizeInBytes)
+            {
+                throw new InvalidOperationException($"Copied size is: {new Size(copiedBytes, SizeUnit.Bytes)} " +
+                                                    $"while the accumulated size (in the segment) is: {new Size(accumulatedSizeInBytes, SizeUnit.Bytes)}");
+            }
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
