@@ -3,9 +3,11 @@ using System.Collections.Generic;
 using System.Security.Cryptography.X509Certificates;
 using System.Threading.Tasks;
 using FastTests;
+using Org.BouncyCastle.Crypto.Tls;
 using Raven.Client.ServerWide.Operations.Certificates;
 using Raven.Server.ServerWide.Commands;
 using Raven.Server.ServerWide.Context;
+using Raven.Server.Utils;
 using Sparrow.Json.Parsing;
 using Xunit;
 
@@ -29,6 +31,7 @@ namespace SlowTests.Server
                         Permissions = new Dictionary<string, DatabaseAccess>(),
                         SecurityClearance = SecurityClearance.ClusterAdmin,
                         Thumbprint = certificate.Thumbprint,
+                        PublicKeyPinningHash = CertificateUtils.GetPublicKeyPinningHash(certificate),
                         NotAfter = certificate.NotAfter
                     }));
                 }
@@ -64,6 +67,7 @@ namespace SlowTests.Server
                             Permissions = null,
                             SecurityClearance = SecurityClearance.ClusterAdmin,
                             Thumbprint = certificate.Thumbprint,
+                            PublicKeyPinningHash = CertificateUtils.GetPublicKeyPinningHash(certificate),
                             NotAfter = certificate.NotAfter
                         }));
                     }
@@ -79,6 +83,7 @@ namespace SlowTests.Server
                             Permissions = null,
                             SecurityClearance = SecurityClearance.ClusterAdmin,
                             Thumbprint = certificate.Thumbprint,
+                            PublicKeyPinningHash = CertificateUtils.GetPublicKeyPinningHash(certificate),
                             NotAfter = certificate.NotAfter
                         }));
                     }
