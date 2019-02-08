@@ -54,7 +54,25 @@ namespace FastTests
             foreach (var pathToDelete in localPathsToDelete)
             {
                 pathsToDelete.TryRemove(pathToDelete);
-                exceptionAggregator.Execute(() => ClearDatabaseDirectory(pathToDelete));
+
+                FileAttributes pathAttributes;
+                try
+                {
+                    pathAttributes = File.GetAttributes(pathToDelete);
+                }
+                catch (FileNotFoundException)
+                {
+                    continue;
+                }
+                catch (DirectoryNotFoundException)
+                {
+                    continue;
+                }
+
+                if (pathAttributes.HasFlag(FileAttributes.Directory))
+                    exceptionAggregator.Execute(() => ClearDatabaseDirectory(pathToDelete));
+                else
+                    exceptionAggregator.Execute(() => IOExtensions.DeleteFile(pathToDelete));
             }
         }
 
