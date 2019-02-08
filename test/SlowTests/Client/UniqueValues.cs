@@ -59,7 +59,7 @@ namespace SlowTests.Client
         [Fact]
         public async Task CanExportAndImportCmpXchg()
         {
-            var file = Path.GetTempFileName();
+            var file = GetTempFileName();
             DoNotReuseServer();
             var store = GetDocumentStore();
             var store2 = GetDocumentStore();
