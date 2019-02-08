@@ -249,7 +249,7 @@ namespace SlowTests.Server.Replication
         [Fact]
         public async Task ResolvedDocumentShouldNotGenerateRevision()
         {
-            var file = Path.GetTempFileName();
+            var file = GetTempFileName();
             try
             {
                 using (var storeA = GetDocumentStore())

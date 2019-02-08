@@ -12,6 +12,7 @@ namespace Voron.Data.BTrees
     public unsafe class TreePageSplitter
     {
         private readonly TreeCursor _cursor;
+        private readonly bool _splittingOnDecompressed;
         private readonly int _len;
         private readonly Slice _newKey;
         private readonly TreeNodeFlags _nodeType;
@@ -28,7 +29,8 @@ namespace Voron.Data.BTrees
             int len,
             long pageNumber,
             TreeNodeFlags nodeType,
-            TreeCursor cursor)
+            TreeCursor cursor,
+            bool splittingOnDecompressed = false)
         {
             _tx = tx;
             _tree = tree;
@@ -37,8 +39,17 @@ namespace Voron.Data.BTrees
             _pageNumber = pageNumber;
             _nodeType = nodeType;
             _cursor = cursor;
+            _splittingOnDecompressed = splittingOnDecompressed;
             TreePage page = _cursor.Pages.Peek();
-            _page = _tree.ModifyPage(page);
+
+            if (_splittingOnDecompressed == false)
+                _page = _tree.ModifyPage(page);
+            else
+            {
+                Debug.Assert(page is DecompressedLeafPage);
+                _page = page;
+            }
+
             _cursor.Pop();
         }
 
@@ -116,7 +127,7 @@ namespace Voron.Data.BTrees
         {
             if (_pageDecompressed == null)
                 return;
-            _pageDecompressed.CopyToOriginal(_tx, defragRequired: false, wasModified: wasModified);
+            _pageDecompressed.CopyToOriginal(_tx, defragRequired: false, wasModified: wasModified, _tree);
             _tree.DecompressionsCache.Invalidate(_pageDecompressed.PageNumber, DecompressionUsage.Read);
             _page = _pageDecompressed.Original;
         }
@@ -182,7 +193,7 @@ namespace Voron.Data.BTrees
                 case TreeNodeFlags.MultiValuePageRef:
                     return page.AddMultiValueNode(index, newKeyToInsert, _len);
                 default:
-                    throw new NotSupportedException("Unknown node type");
+                    throw new NotSupportedException($"Unknown node type: {_nodeType}");
             }
         }
 
@@ -212,9 +223,24 @@ namespace Voron.Data.BTrees
                 }
             }
 
+            DecompressedLeafPage rightDecompressed = null;
+            int? decompressedPageSize = null;
+
+            if (_pageDecompressed != null)
+                decompressedPageSize = _pageDecompressed.PageSize;
+            else if (_splittingOnDecompressed)
+                decompressedPageSize = _page.PageSize;
+
+            if (decompressedPageSize != null)
+            {
+                // splitting the decompressed page, let's allocate the page of the same size to ensure enough space
+                rightDecompressed = _tx.Environment.DecompressionBuffers.GetPage(_tx, decompressedPageSize.Value, DecompressionUsage.Write, rightPage);
+                rightPage = rightDecompressed;
+            }
+
             if (_page.IsLeaf)
             {
-                splitIndex = AdjustSplitPosition(currentIndex, splitIndex, ref toRight);
+                splitIndex = AdjustSplitPosition(currentIndex, splitIndex, rightPage, ref toRight);
             }
 
             Slice currentKey;
@@ -233,16 +259,7 @@ namespace Voron.Data.BTrees
                 var addedAsImplicitRef = false;
                 var parentOfPage = _cursor.CurrentPage;
                 TreePage parentOfRight;
-
-                DecompressedLeafPage rightDecompressed = null;
-
-                if (_pageDecompressed != null)
-                {
-                    // splitting the decompressed page, let's allocate the page of the same size to ensure enough space
-                    rightDecompressed = _tx.Environment.DecompressionBuffers.GetPage(_tx, _pageDecompressed.PageSize, DecompressionUsage.Write, rightPage);
-                    rightPage = rightDecompressed;
-                }
-
+                
                 using (rightDecompressed)
                 {
                     AddSeparatorToParentPage(rightPage.PageNumber, seperatorKey, out parentOfRight);
@@ -275,7 +292,7 @@ namespace Voron.Data.BTrees
 
                     if (rightDecompressed != null)
                     {
-                        rightDecompressed.CopyToOriginal(_tx, defragRequired: false, wasModified: true);
+                        rightDecompressed.CopyToOriginal(_tx, defragRequired: false, wasModified: true, _tree);
                         rightPage = rightDecompressed.Original;
                     }
                 }
@@ -395,7 +412,7 @@ namespace Voron.Data.BTrees
             return pos;
         }
 
-        private int AdjustSplitPosition(int currentIndex, int splitIndex, ref bool toRight)
+        private int AdjustSplitPosition(int currentIndex, int splitIndex, TreePage rightPage, ref bool toRight)
         {
             Slice keyToInsert = _newKey;
 
@@ -427,7 +444,7 @@ namespace Voron.Data.BTrees
                     TreeNodeHeader* node = _page.GetNode(i);
                     pageSize += node->GetNodeSize();
                     pageSize += pageSize & 1;
-                    if (pageSize > _page.PageMaxSpace)
+                    if (pageSize > rightPage.PageMaxSpace)
                     {
                         if (i >= currentIndex)
                         {

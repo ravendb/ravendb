@@ -126,18 +126,27 @@ namespace FastTests
 
         protected static volatile string _selfSignedCertFileName;
 
-        protected static string GenerateAndSaveSelfSignedCertificate(bool createNew = false)
+        protected string GenerateAndSaveSelfSignedCertificate(bool createNew = false)
         {
            if (_selfSignedCertFileName == null || createNew)
                 GenerateSelfSignedCertFileName(createNew);
 
-            var tmp = Path.GetTempFileName();
+            var tmp = GetTempFileName();
             File.Copy(_selfSignedCertFileName, tmp, true);
+
             return tmp;
         }
 
-        private static void GenerateSelfSignedCertFileName(bool createNew = false)
+        protected string GetTempFileName()
         {
+            var tmp = Path.GetTempFileName();
+
+            _localPathsToDelete.Add(tmp);
+
+            return tmp;
+        }
+
+        private static void GenerateSelfSignedCertFileName(bool createNew = false)        {
             lock (typeof(TestBase))
             {
                 if (_selfSignedCertFileName != null && createNew == false)
@@ -182,6 +191,8 @@ namespace FastTests
                 }
 
                 _selfSignedCertFileName = tempFileName;
+
+                GlobalPathsToDelete.Add(_selfSignedCertFileName);
             }
         }
 
