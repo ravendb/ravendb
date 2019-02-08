@@ -127,7 +127,7 @@ namespace SlowTests.Smuggler
         [Fact]
         public async Task CanExportAndImportEncrypted()
         {
-            var file = Path.GetTempFileName();
+            var file = GetTempFileName();
             try
             {
                 using (var store1 = GetDocumentStore(new Options
