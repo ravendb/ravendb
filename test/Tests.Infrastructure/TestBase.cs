@@ -126,13 +126,23 @@ namespace FastTests
 
         protected static volatile string _selfSignedCertFileName;
 
-        protected static string GenerateAndSaveSelfSignedCertificate()
+        protected string GenerateAndSaveSelfSignedCertificate()
         {
             if (_selfSignedCertFileName == null)
                 GenerateSelfSignedCertFileName();
 
-            var tmp = Path.GetTempFileName();
+            var tmp = GetTempFileName();
             File.Copy(_selfSignedCertFileName, tmp, true);
+
+            return tmp;
+        }
+
+        protected string GetTempFileName()
+        {
+            var tmp = Path.GetTempFileName();
+
+            _localPathsToDelete.Add(tmp);
+
             return tmp;
         }
 
@@ -182,6 +192,8 @@ namespace FastTests
                 }
 
                 _selfSignedCertFileName = tempFileName;
+
+                GlobalPathsToDelete.Add(_selfSignedCertFileName);
             }
         }
 

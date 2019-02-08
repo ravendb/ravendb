@@ -40,7 +40,7 @@ namespace SlowTests.Authentication
             catch (PlatformNotSupportedException)
             {
                 // so we fall back to a file
-                Server.ServerStore.Configuration.Security.MasterKeyPath = Path.GetTempFileName();
+                Server.ServerStore.Configuration.Security.MasterKeyPath = GetTempFileName();
             }
 
             Server.ServerStore.PutSecretKey(base64Key, dbName, true);
@@ -58,7 +58,7 @@ namespace SlowTests.Authentication
 
                 WaitForIndexing(store);
 
-                var file = Path.GetTempFileName();
+                var file = GetTempFileName();
                 var operation = await store.Smuggler.ExportAsync(new DatabaseSmugglerExportOptions(), file);
                 await operation.WaitForCompletionAsync(TimeSpan.FromMinutes(1));
 
@@ -116,7 +116,7 @@ namespace SlowTests.Authentication
             catch (PlatformNotSupportedException)
             {
                 // so we fall back to a file
-                Server.ServerStore.Configuration.Security.MasterKeyPath = Path.GetTempFileName();
+                Server.ServerStore.Configuration.Security.MasterKeyPath = GetTempFileName();
             }
 
             Server.ServerStore.PutSecretKey(base64Key, dbName, true);
