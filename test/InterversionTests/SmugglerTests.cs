@@ -14,7 +14,7 @@ namespace InterversionTests
         [Fact]
         public async Task CanExportFrom40AndImportTo41()
         {
-            var file = Path.GetTempFileName();
+            var file = GetTempFileName();
             long countOfDocuments;
             long countOfAttachments;
             long countOfIndexes;
@@ -69,7 +69,7 @@ namespace InterversionTests
         [Fact]
         public async Task CanExportFrom41AndImportTo40()
         {
-            var file = Path.GetTempFileName();
+            var file = GetTempFileName();
             long countOfDocuments;
             long countOfAttachments;
             long countOfIndexes;

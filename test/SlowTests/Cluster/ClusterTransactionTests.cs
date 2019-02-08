@@ -188,7 +188,7 @@ namespace SlowTests.Cluster
         [Fact]
         public async Task CanImportExportAndBackupWithClusterTransactions()
         {
-            var file = Path.GetTempFileName();
+            var file = GetTempFileName();
 
             var leader = await CreateRaftClusterAndGetLeader(3);
             var user1 = new User()

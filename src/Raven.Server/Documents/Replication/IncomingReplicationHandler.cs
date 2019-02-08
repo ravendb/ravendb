@@ -556,7 +556,11 @@ namespace Raven.Server.Documents.Replication
 
                 if (_log.IsInfoEnabled)
                     _log.Info(
-                        $"Replication connection {FromToString}: received {replicatedItemsCount:#,#;;0} documents with size {totalSize / 1024:#,#;;0} kb to database in {sw.ElapsedMilliseconds:#,#;;0} ms.");
+                        $"Replication connection {FromToString}: " +
+                        $"received {replicatedItemsCount:#,#;;0} items, " +
+                        $"{attachmentStreamCount:#,#;;0} attachment streams, " +
+                        $"total size: {new Sparrow.Size(totalSize, SizeUnit.Bytes)}, " +
+                        $"took: {sw.ElapsedMilliseconds:#,#;;0}ms");
 
                 using (stats.For(ReplicationOperation.Incoming.Storage))
                 {
@@ -585,7 +589,7 @@ namespace Raven.Server.Documents.Replication
 
                 if (_log.IsInfoEnabled)
                     _log.Info($"Replication connection {FromToString}: " +
-                              $"received and written {replicatedItemsCount:#,#;;0} documents to database in {sw.ElapsedMilliseconds:#,#;;0} ms, " +
+                              $"received and written {replicatedItemsCount:#,#;;0} items to database in {sw.ElapsedMilliseconds:#,#;;0}ms, " +
                               $"with last etag = {lastEtag}.");
             }
             catch (Exception e)
@@ -1225,11 +1229,11 @@ namespace Raven.Server.Documents.Replication
                                     switch (conflictStatus)
                                     {
                                         case ConflictStatus.Update:
+
                                             if (resolvedDocument != null)
                                             {
-#if DEBUG
                                                 AttachmentsStorage.AssertAttachments(document, item.Flags);
-#endif
+
                                                 database.DocumentsStorage.Put(context, item.Id, null, resolvedDocument, item.LastModifiedTicks,
                                                     rcvdChangeVector, flags, NonPersistentDocumentFlags.FromReplication);
                                             }

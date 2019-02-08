@@ -727,7 +727,11 @@ namespace Raven.Server.Smuggler.Documents
                         if (oldContext != context)
                         {
                             builder.Dispose();
-                            modifier = new BlittableMetadataModifier(context, legacyImport, _readLegacyEtag, _operateOnTypes);
+                            modifier = new BlittableMetadataModifier(context, legacyImport, _readLegacyEtag, _operateOnTypes)
+                            {
+                                FirstEtagOfLegacyRevision = modifier.FirstEtagOfLegacyRevision,
+                                LegacyRevisionsCount = modifier.LegacyRevisionsCount
+                            };
                             builder = CreateBuilder(context, modifier);
                         }
                     }
