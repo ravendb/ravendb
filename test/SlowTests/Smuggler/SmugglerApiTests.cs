@@ -72,7 +72,7 @@ namespace SlowTests.Smuggler
         [Fact]
         public async Task CanExportAndImport()
         {
-            var file = Path.GetTempFileName();
+            var file = GetTempFileName();
             try
             {
                 using (var store1 = GetDocumentStore(new Options
@@ -126,7 +126,7 @@ namespace SlowTests.Smuggler
         [Fact]
         public async Task ShouldReturnCorrectSmugglerResult()
         {
-            var file = Path.GetTempFileName();
+            var file = GetTempFileName();
             try
             {
                 using (var store1 = GetDocumentStore(new Options
@@ -188,7 +188,7 @@ namespace SlowTests.Smuggler
         [Fact]
         public async Task SkipExpiredDocumentWhenExport()
         {
-            var file = Path.GetTempFileName();
+            var file = GetTempFileName();
             try
             {
                 using (var exportStore = GetDocumentStore(new Options
@@ -238,7 +238,7 @@ namespace SlowTests.Smuggler
         [Fact]
         public async Task CanExportAndImportWithRevisionDocuments()
         {
-            var file = Path.GetTempFileName();
+            var file = GetTempFileName();
             try
             {
                 using (var store1 = GetDocumentStore(new Options
@@ -439,7 +439,7 @@ namespace SlowTests.Smuggler
         [Fact]
         public async Task WillNotCreateMoreRevisionsAfterImport()
         {
-            var file = Path.GetTempFileName();
+            var file = GetTempFileName();
             try
             {
                 using (var store1 = GetDocumentStore(new Options
@@ -503,7 +503,7 @@ namespace SlowTests.Smuggler
         [Fact]
         public async Task CanExportAndImportCounters()
         {
-            var file = Path.GetTempFileName();
+            var file = GetTempFileName();
             try
             {
                 using (var store1 = GetDocumentStore())
@@ -563,7 +563,7 @@ namespace SlowTests.Smuggler
         [Fact]
         public async Task CanExportAndImportCounterTombstones()
         {
-            var file = Path.GetTempFileName();
+            var file = GetTempFileName();
             try
             {
                 using (var store1 = GetDocumentStore())
@@ -643,7 +643,7 @@ namespace SlowTests.Smuggler
         [Fact]
         public async Task ShouldAvoidCreatingNewRevisionsDuringImport()
         {
-            var file = Path.GetTempFileName();
+            var file = GetTempFileName();
             try
             {
                 using (var store1 = GetDocumentStore(new Options

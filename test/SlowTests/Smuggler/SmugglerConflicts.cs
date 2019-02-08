@@ -21,7 +21,7 @@ namespace SlowTests.Smuggler
 
         public SmugglerConflicts()
         {
-            _file = Path.GetTempFileName();
+            _file = GetTempFileName();
 
             _store1 = GetDocumentStore(new Options
             {

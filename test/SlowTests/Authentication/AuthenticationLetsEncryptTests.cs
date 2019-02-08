@@ -135,7 +135,7 @@ namespace SlowTests.Authentication
                 settingsJsonObject.TryGet(RavenConfiguration.GetKey(x => x.Core.SetupMode), out SetupMode setupMode);
                 settingsJsonObject.TryGet(RavenConfiguration.GetKey(x => x.Core.ExternalIp), out string externalIp);
 
-                var tempFileName = Path.GetTempFileName();
+                var tempFileName = GetTempFileName();
                 File.WriteAllBytes(tempFileName, serverCertBytes);
 
                 IDictionary<string, string> customSettings = new ConcurrentDictionary<string, string>

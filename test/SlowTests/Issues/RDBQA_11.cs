@@ -30,7 +30,7 @@ namespace SlowTests.Issues
         [Fact, Trait("Category", "Smuggler")]
         public async Task SmugglerWithoutExcludeExpiredDocumentsShouldWork()
         {
-            var path = Path.GetTempFileName();
+            var path = GetTempFileName();
 
             try
             {
@@ -68,7 +68,7 @@ namespace SlowTests.Issues
         [Fact, Trait("Category", "Smuggler")]
         public async Task SmugglerWithExcludeExpiredDocumentsShouldWork1()
         {
-            var path = Path.GetTempFileName();
+            var path = GetTempFileName();
 
             try
             {
@@ -106,7 +106,7 @@ namespace SlowTests.Issues
         [Fact, Trait("Category", "Smuggler")]
         public async Task SmugglerWithExcludeExpiredDocumentsShouldWork2()
         {
-            var path = Path.GetTempFileName();
+            var path = GetTempFileName();
 
             try
             {

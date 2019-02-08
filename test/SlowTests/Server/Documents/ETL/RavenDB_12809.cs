@@ -33,7 +33,7 @@ namespace SlowTests.Server.Documents.ETL
             catch (PlatformNotSupportedException)
             {
                 // so we fall back to a file
-                Server.ServerStore.Configuration.Security.MasterKeyPath = Path.GetTempFileName();
+                Server.ServerStore.Configuration.Security.MasterKeyPath = GetTempFileName();
             }
 
             Server.ServerStore.PutSecretKey(base64Key, dbName, true);
