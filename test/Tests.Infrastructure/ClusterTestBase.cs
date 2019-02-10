@@ -434,7 +434,7 @@ namespace Tests.Infrastructure
         }
 
         protected async Task<(List<RavenServer> Nodes, RavenServer Leader)> CreateRaftCluster(int numberOfNodes, bool shouldRunInMemory = true, int? leaderIndex = null, bool useSsl = false, bool createNewCert = false,
-            IDictionary<string, string> customSettings = null)
+            string serverCertPath = null, IDictionary<string, string> customSettings = null)
         {
             leaderIndex = leaderIndex ?? _random.Next(0, numberOfNodes);
             RavenServer leader = null;

@@ -513,6 +513,15 @@ namespace FastTests
             } while (documentStore.Commands(database).Head("Debug/Done") == null && (debug == false || Debugger.IsAttached));
 
             documentStore.Commands(database).Delete("Debug/Done", null);
+
+            if (clientCert != null && RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
+            {
+                using (var userPersonalStore = new X509Store(StoreName.My, StoreLocation.CurrentUser))
+                {
+                    userPersonalStore.Open(OpenFlags.ReadWrite);
+                    userPersonalStore.Remove(clientCert);
+                }
+            }
         }
 
         protected ManualResetEventSlim WaitForIndexBatchCompleted(IDocumentStore store, Func<(string IndexName, bool DidWork), bool> predicate)
@@ -685,9 +694,10 @@ namespace FastTests
 
         protected string SetupServerAuthentication(
             IDictionary<string, string> customSettings = null,
-            string serverUrl = null, bool createNew = false)
+            string serverUrl = null, bool createNew = false, string serverCertPath = null)
         {
-            var serverCertPath = GenerateAndSaveSelfSignedCertificate(createNew);
+            if (serverCertPath == null)
+                serverCertPath = GenerateAndSaveSelfSignedCertificate(createNew);
 
             if (customSettings == null)
                 customSettings = new ConcurrentDictionary<string, string>();
