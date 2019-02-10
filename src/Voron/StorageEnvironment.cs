@@ -27,6 +27,7 @@ using Voron.Impl.FreeSpace;
 using Voron.Impl.Journal;
 using Voron.Impl.Paging;
 using Voron.Impl.Scratch;
+using Voron.Platform;
 using Voron.Platform.Posix;
 using Voron.Platform.Win32;
 using Voron.Util;
@@ -144,7 +145,7 @@ namespace Voron
 
                 _scratchBufferPool = new ScratchBufferPool(this);
 
-                options.SetPosixOptions();
+                options.SetDurability();
 
                 _journal = new WriteAheadJournal(this);
 
@@ -164,71 +165,6 @@ namespace Voron
                 Dispose();
                 throw;
             }
-        }
-
-        internal static bool IsStorageSupportingO_Direct(Logger log, string path)
-        {
-            var filename = Path.Combine(path, "test-" + Guid.NewGuid() + ".tmp");
-            var fd = Syscall.open(filename,
-                OpenFlags.O_WRONLY | PerPlatformValues.OpenFlags.O_DSYNC | PerPlatformValues.OpenFlags.O_DIRECT |
-                PerPlatformValues.OpenFlags.O_CREAT, FilePermissions.S_IWUSR | FilePermissions.S_IRUSR);
-
-            int result;
-
-            try
-            {
-                if (fd == -1)
-                {
-                    if (log.IsInfoEnabled)
-                        log.Info(
-                            $"Failed to create test file at \'{filename}\'. Cannot determine if O_DIRECT supported by the file system. Assuming it is");
-                    return true;
-                }
-
-                bool usingWrite;
-                result = Syscall.AllocateFileSpace(fd, 64L * 1024, filename, out usingWrite);
-                if (usingWrite)
-                {
-                    if (log.IsInfoEnabled)
-                        log.Info(
-                            $"Failed to allocate test file at \'{filename}\'. (rc = {result}) but had success with pwrite. New file allocations will take longer time with pwrite");
-                }
-
-                if (result == (int)Errno.EINVAL)
-                {
-                    if (log.IsInfoEnabled)
-                        log.Info(
-                            $"Cannot allocate (rc = EINVAL) to a file \'{filename}\' opened using O_DIRECT. Assuming O_DIRECT is not supported by this file system");
-
-                    return false;
-                }
-
-                if (result != 0)
-                {
-                    if (log.IsInfoEnabled)
-                        log.Info(
-                            $"Failed to allocate test file at \'{filename}\'. (rc = {result}). Cannot determine if O_DIRECT supported by the file system. Assuming it is");
-                }
-
-            }
-            finally
-            {
-                result = Syscall.close(fd);
-                if (result != 0)
-                {
-                    if (log.IsInfoEnabled)
-                        log.Info($"Failed to close test file at \'{filename}\'. (rc = {result}).");
-                }
-
-                result = Syscall.unlink(filename);
-                if (result != 0)
-                {
-                    if (log.IsInfoEnabled)
-                        log.Info($"Failed to delete test file at \'{filename}\'. (rc = {result}).");
-                }
-            }
-
-            return true;
         }
 
         private async Task IdleFlushTimer()
@@ -1234,28 +1170,16 @@ namespace Voron
                     _dataPager.Sync(Journal.Applicator.TotalWrittenButUnsyncedBytes);
                 }
 
-                switch (mode)
-                {
-                    case TransactionsMode.Safe:
-                    case TransactionsMode.Lazy:
-                        {
-                            Options.PosixOpenFlags = Options.SafePosixOpenFlags;
-                            Options.WinOpenFlags = StorageEnvironmentOptions.SafeWin32OpenFlags;
-                        }
-                        break;
+                if (mode == TransactionsMode.Danger)
+                    Journal.TruncateJournal();
 
-                    case TransactionsMode.Danger:
-                        {
-                            Options.PosixOpenFlags = Options.DefaultPosixFlags;
-                            Options.WinOpenFlags = Win32NativeFileAttributes.None;
-                            Journal.TruncateJournal();
-                        }
-                        break;
-                    default:
-                        {
-                            throw new InvalidOperationException("Query string value 'mode' is not a valid mode: " + mode);
-                        }
+                if (mode != TransactionsMode.Lazy &&
+                    mode != TransactionsMode.Safe &&
+                    mode != TransactionsMode.Danger)
+                {
+                    throw new InvalidOperationException("Query string value 'mode' is not a valid mode: " + mode);
                 }
+
 
                 return TransactionsModeResult.SetModeSuccessfully;
             }

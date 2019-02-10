@@ -34,6 +34,7 @@
 #define FAIL_EOF                        25
 #define FAIL_PREFETCH                   26
 #define FAIL_CALLOC                     27
+#define FAIL_TEST_DURABILITY            28
 
 #define ERRNO_SPECIAL_CODES_NONE        0
 #define ERRNO_SPECIAL_CODES_ENOMEM      (1 << 0)
@@ -58,5 +59,9 @@
 #define JOURNAL_MODE_SAFE               0
 #define JOURNAL_MODE_DANGER             1
 #define JOURNAL_MODE_PURE_MEMORY        2
+
+#define DURABILITY_NONE                 0
+#define DURABILITY_SUPPORTED            1
+#define DURABILITY_NOT_SUPPORTED        2
 
 #endif

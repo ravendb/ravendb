@@ -36,15 +36,18 @@ _free_journal_handle(struct journal_handle* handle)
 }
 
 EXPORT int32_t
-rvn_open_journal_for_writes(const char *file_name, int32_t transaction_mode, int64_t initial_file_size, void **handle, int64_t *actual_size, int32_t *detailed_error_code)
+rvn_open_journal_for_writes(const char *file_name, int32_t transaction_mode, int64_t initial_file_size, int32_t durability_support, void **handle, int64_t *actual_size, int32_t *detailed_error_code)
 {
     assert(initial_file_size > 0);
 
     int32_t rc;
     
     int32_t flags = O_DSYNC | O_DIRECT;
-    if (transaction_mode == JOURNAL_MODE_DANGER)
-        flags = 0;    
+    if (durability_support == DURABILITY_NOT_SUPPORTED)
+        flags = O_DSYNC;
+
+    if (transaction_mode == JOURNAL_MODE_DANGER || transaction_mode == JOURNAL_MODE_PURE_MEMORY)
+        flags = 0;
     if (sizeof(int) == 4) /* 32 bits */
         flags |= O_LARGEFILE;
 
@@ -68,6 +71,7 @@ rvn_open_journal_for_writes(const char *file_name, int32_t transaction_mode, int
     }
 
     jfh->fd = open(file_name, flags | O_WRONLY | O_CREAT, S_IWUSR | S_IRUSR);
+
     if (jfh->fd == -1)
     {
         rc = FAIL_OPEN_FILE;

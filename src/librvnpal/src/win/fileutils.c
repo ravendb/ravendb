@@ -160,3 +160,13 @@ error_cleanup:
     *detailed_error_code = GetLastError();
     return rc;
 }
+
+EXPORT int32_t
+rvn_test_storage_durability(
+    const char *temp_file_name,
+    int32_t *detailed_error_code)
+{
+   *detailed_error_code = 0;
+    return SUCCESS; /* windows and mac are always true */
+}
+

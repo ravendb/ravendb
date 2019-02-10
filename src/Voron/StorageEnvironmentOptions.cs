@@ -190,8 +190,6 @@ namespace Voron
 
         protected StorageEnvironmentOptions(VoronPathSetting tempPath, IoChangesNotifications ioChangesNotifications, CatastrophicFailureNotification catastrophicFailureNotification)
         {
-            SafePosixOpenFlags = SafePosixOpenFlags | DefaultPosixFlags;
-
             DisposeWaitTime = TimeSpan.FromSeconds(15);
 
             TempPath = tempPath;
@@ -805,11 +803,6 @@ namespace Voron
                 new Dictionary<string, IntPtr>(StringComparer.OrdinalIgnoreCase);
             private readonly int _instanceId;
 
-            public override void SetPosixOptions()
-            {
-                PosixOpenFlags = DefaultPosixFlags;
-            }
-
             public PureMemoryStorageEnvironmentOptions(string name, VoronPathSetting tempPath,
                 IoChangesNotifications ioChangesNotifications, CatastrophicFailureNotification catastrophicFailureNotification)
                 : base(tempPath, ioChangesNotifications, catastrophicFailureNotification)
@@ -820,8 +813,6 @@ namespace Voron
                 using (var currentProcess = Process.GetCurrentProcess())
                 {
                     var filename = $"ravendb-{currentProcess.Id}-{_instanceId}-data.pager-{guid}";
-
-                    WinOpenFlags = Win32NativeFileAttributes.Temporary | Win32NativeFileAttributes.DeleteOnClose;
 
                     if (Directory.Exists(tempPath.FullPath) == false)
                         Directory.CreateDirectory(tempPath.FullPath);
@@ -1081,8 +1072,8 @@ namespace Voron
 
 
         public TransactionsMode TransactionsMode { get; set; }
-        public OpenFlags PosixOpenFlags;
-        public Win32NativeFileAttributes WinOpenFlags = SafeWin32OpenFlags;
+        public PalFlags.DurabilityMode SupportDurabilityFlags { get; set; } = PalFlags.DurabilityMode.DurabililtySupported;
+
         public DateTime? NonSafeTransactionExpiration { get; set; }
         public TimeSpan DisposeWaitTime { get; set; }
 
@@ -1117,9 +1108,6 @@ namespace Voron
         internal bool ManualSyncing { get; set; } = false;
         public bool? IgnoreInvalidJournalErrors { get; set; }
 
-        public const Win32NativeFileAttributes SafeWin32OpenFlags = Win32NativeFileAttributes.Write_Through | Win32NativeFileAttributes.NoBuffering;
-        public OpenFlags DefaultPosixFlags = PlatformDetails.Is32Bits ? PerPlatformValues.OpenFlags.O_LARGEFILE : 0;
-        public OpenFlags SafePosixOpenFlags = PerPlatformValues.OpenFlags.O_DSYNC | PerPlatformValues.OpenFlags.O_DIRECT;
         private readonly Logger _log;
 
         private readonly SortedList<long, string> _journalsForReuse = new SortedList<long, string>();
@@ -1129,26 +1117,6 @@ namespace Voron
         public long CompressTxAboveSizeInBytes;
         private Guid _environmentId;
         private long _maxScratchBufferSize;
-
-        public virtual void SetPosixOptions()
-        {
-            if (PlatformDetails.RunningOnPosix == false)
-                return;
-
-            if (PlatformDetails.RunningOnMacOsx)
-                return; // osx supports F_NOCACHE
-
-            if (BasePath != null && StorageEnvironment.IsStorageSupportingO_Direct(_log, BasePath.FullPath) == false)
-            {
-                SafePosixOpenFlags &= ~PerPlatformValues.OpenFlags.O_DIRECT;
-                var message = "Path " + BasePath +
-                              " not supporting O_DIRECT writes. As a result - data durability is not guaranteed";
-                var details = $"Storage type '{PosixHelper.GetFileSystemOfPath(BasePath.FullPath)}' doesn't support direct write to disk (non durable file system)";
-                InvokeNonDurableFileSystemError(this, message, new NonDurableFileSystemException(message), details);
-            }
-
-            PosixOpenFlags = SafePosixOpenFlags;
-        }
 
         public void TryStoreJournalForReuse(VoronPathSetting filename)
         {
@@ -1248,7 +1216,51 @@ namespace Voron
         {
             OnDirectoryInitialize?.Invoke(this);
         }
-    }
 
-    
+        public void SetDurability()
+        {
+            if (BasePath != null)
+            {
+                string testFile = Path.Combine(BasePath.FullPath, "test-" + Guid.NewGuid() + ".tmp");
+                var rc = Pal.rvn_test_storage_durability(testFile, out var errorCode);
+                switch (rc)
+                {
+                    case PalFlags.FailCodes.FailOpenFile:
+                    {
+                        if (_log.IsInfoEnabled)
+                            _log.Info(
+                                $"Failed to create test file at '{testFile}'. Error:'{PalHelper.GetNativeErrorString(errorCode, "Failed to open test file", out _)}'. Cannot determine if O_DIRECT supported by the file system. Assuming it is");
+                    }
+                        break;
+
+                    case PalFlags.FailCodes.FailAllocFile:
+                    {
+                        if (_log.IsInfoEnabled)
+                            _log.Info(
+                                $"Failed to allocate test file at '{testFile}'. Error:'{PalHelper.GetNativeErrorString(errorCode, "Failed to allocate space for test file", out _)}'. Cannot determine if O_DIRECT supported by the file system. Assuming it is");
+                    }
+                        break;
+
+                    case PalFlags.FailCodes.FailTestDurability:
+                    {
+                        SupportDurabilityFlags = PalFlags.DurabilityMode.DurabilityNotSupported;
+
+                        var message = "Path " + BasePath +
+                                      " not supporting O_DIRECT writes. As a result - data durability is not guaranteed";
+                        var details =
+                            $"Storage type '{PosixHelper.GetFileSystemOfPath(BasePath.FullPath)}' doesn't support direct write to disk (non durable file system)";
+                        InvokeNonDurableFileSystemError(this, message, new NonDurableFileSystemException(message), details);
+                    }
+                        break;
+                    case PalFlags.FailCodes.Success:
+                        break;
+                    default:
+                        if (_log.IsInfoEnabled)
+                            _log.Info(
+                                $"Unknown failure on test file at '{testFile}'. Error:'{PalHelper.GetNativeErrorString(errorCode, "Unknown error while testing O_DIRECT", out _)}'. Cannot determine if O_DIRECT supported by the file system. Assuming it is");
+                        break;
+                }
+            }
+        }
+    }
 }

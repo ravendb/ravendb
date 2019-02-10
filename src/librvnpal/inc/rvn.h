@@ -74,7 +74,7 @@ EXPORT int32_t
 rvn_allocate_more_space(int64_t new_length_after_adjustment, void *handle, void **new_address, int32_t *detailed_error_code);
 
 EXPORT int32_t
-rvn_open_journal_for_writes(const char *file_name, int32_t transaction_mode, int64_t initial_file_size, void **handle, int64_t *actual_size, int32_t *detailed_error_code);
+rvn_open_journal_for_writes(const char *file_name, int32_t transaction_mode, int64_t initial_file_size, int32_t durability_support, void **handle, int64_t *actual_size, int32_t *detailed_error_code);
 
 EXPORT int32_t
 rvn_close_journal(void* handle, int32_t* detailed_error_code);
@@ -93,6 +93,9 @@ rvn_truncate_journal(void* handle, int64_t size, int32_t* detailed_error_code);
 
 EXPORT int32_t
 rvn_discard_virtual_memory(void* address, int64_t size, int32_t* detailed_error_code);
+
+EXPORT int32_t
+rvn_test_storage_durability(const char *temp_file_name, int32_t *detailed_error_code);
 
 /* For internal use: */
 PRIVATE int64_t
