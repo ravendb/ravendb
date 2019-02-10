@@ -7,6 +7,7 @@
 using System;
 using System.Collections.Generic;
 using System.Diagnostics;
+using System.IO;
 using System.Linq;
 using System.Security.Cryptography.X509Certificates;
 using System.Threading;
@@ -99,6 +100,7 @@ namespace SlowTests.Authentication
                     requestExecutor.Execute(command, context);
                 }
                 Assert.True(mre.Wait(Debugger.IsAttached ? TimeSpan.FromMinutes(10) : TimeSpan.FromMinutes(2)), "Waited too long");
+                Assert.NotNull(leader.Certificate.Certificate.Thumbprint);
                 Assert.True(leader.Certificate.Certificate.Thumbprint.Equals(newServerCert.Thumbprint), "New cert is identical");
 
                 using (var session = store.OpenSession())
@@ -117,21 +119,32 @@ namespace SlowTests.Authentication
             var clusterSize = 3;
             var databaseName = GetDatabaseName();
 
-            var leader1 = await CreateRaftClusterAndGetLeader(clusterSize, false, useSsl: true);
-            var adminCertificate1 = AskServerForClientCertificate(_selfSignedCertFileName, new Dictionary<string, DatabaseAccess>(), SecurityClearance.ClusterAdmin, server: leader1);
-            var topology1 = await CreateDatabaseInCluster(databaseName, clusterSize, leader1.WebUrl, adminCertificate1);
+            // We generate two certificates for cluster 1, an original and a renewed certificate with same private key.
+            var (cluster1CertBytes, cluster1ReplacementCertBytes) = CertificateUtils.CreateTwoTestCertificateWithSameKey(Environment.MachineName, "RavenTestsTwoCerts");
+            var cluster1CertFileName = GetTempFileName();
+            var cluster1ReplacementCertFileName = GetTempFileName();
+            File.WriteAllBytes(cluster1CertFileName, cluster1CertBytes);
+            File.WriteAllBytes(cluster1ReplacementCertFileName, cluster1ReplacementCertBytes);
 
-            var leader2 = await CreateRaftClusterAndGetLeader(clusterSize, false, useSsl: true, createNewCert: true);
+            // Create cluster 1 with the original certificate. Later we will replace that with the renewed certificate.
+            var leader1 = await CreateRaftClusterAndGetLeader(clusterSize, false, useSsl: true, serverCertPath: cluster1CertFileName);
+            var cluster1Cert = new X509Certificate2(cluster1CertFileName);
+            var adminCertificate1 = AskServerForClientCertificate(cluster1CertFileName, new Dictionary<string, DatabaseAccess>(), SecurityClearance.ClusterAdmin, server: leader1);
+            await CreateDatabaseInCluster(databaseName, clusterSize, leader1.WebUrl, adminCertificate1);
+
+            // Cluster 2 gets a normal test certificate
+            var leader2 = await CreateRaftClusterAndGetLeader(clusterSize, false, useSsl: true);
+            var cluster2Cert = new X509Certificate2(_selfSignedCertFileName);
             var adminCertificate2 = AskServerForClientCertificate(_selfSignedCertFileName, new Dictionary<string, DatabaseAccess>(), SecurityClearance.ClusterAdmin, server: leader2);
-            var topology2 = await CreateDatabaseInCluster(databaseName, clusterSize, leader2.WebUrl, adminCertificate2);
+            await CreateDatabaseInCluster(databaseName, clusterSize, leader2.WebUrl, adminCertificate2);
 
             // This will register cluster 1's cert as a user cert in cluster 2
-            AskCluster2ToTrustCluster1(adminCertificate1, adminCertificate2, new Dictionary<string, DatabaseAccess>
+            AskCluster2ToTrustCluster1(cluster1Cert, cluster2Cert, new Dictionary<string, DatabaseAccess>
             {
                 [databaseName] = DatabaseAccess.ReadWrite
             }, SecurityClearance.ValidUser, leader2);
-
-
+            
+            // First we'll make sure external replication works between the two clusters
             using (var store1 = new DocumentStore
             {
                 Urls = new[] { leader1.WebUrl },
@@ -150,7 +163,7 @@ namespace SlowTests.Authentication
                 {
                     Name = watcher.ConnectionStringName,
                     Database = watcher.Database,
-                    TopologyDiscoveryUrls = store1.Urls
+                    TopologyDiscoveryUrls = store2.Urls
                 }));
 
                 IMaintenanceOperation<ModifyOngoingTaskResult> op = new UpdateExternalReplicationOperation(watcher);
@@ -162,67 +175,34 @@ namespace SlowTests.Authentication
                     await session.StoreAsync(new User { Name = "Karmelush" }, "users/1");
                     await session.SaveChangesAsync();
                 }
-                WaitForUserToContinueTheTest(store1, debug: true, clientCert: adminCertificate1);
-                WaitForUserToContinueTheTest(store2, debug: true, clientCert: adminCertificate2);
-
                 Assert.True(WaitForDocument(store2, "users/1"));
-            }
 
-            
-            /*foreach (var server in Servers)
-            {
-                await server.ServerStore.Cluster.WaitForIndexNotification(databaseResult.RaftCommandIndex);
-            }
-            foreach (var server in Servers.Where(s => databaseResult.NodesAddedTo.Any(n => n == s.WebUrl)))
-            {
-                await server.ServerStore.DatabasesLandlord.TryGetOrCreateResourceStore(databaseName);
-            }
-*/
-
-            /*using (var store = new DocumentStore()
-            {
-                Urls = new[] { databaseResult.NodesAddedTo[0] },
-                Database = databaseName,
-                Certificate = adminCertificate1,
-                Conventions =
-                {
-                    DisableTopologyUpdates = true
-                }
-            }.Initialize())
-            {
-                using (var session = store.OpenAsyncSession())
-                {
-                    await session.StoreAsync(new User { Name = "Karmelush" }, "users/1");
-                    await session.SaveChangesAsync();
-                }
-
-                var certBytes = CertificateUtils.CreateSelfSignedTestCertificate(Environment.MachineName, "RavenTestsServerReplacementCert");
-                var newServerCert = new X509Certificate2(certBytes, (string)null, X509KeyStorageFlags.Exportable | X509KeyStorageFlags.PersistKeySet | X509KeyStorageFlags.MachineKeySet);
+                // Let's replace the certificate in cluster 1 (new cert has same private key) and make sure cluster 2 still trusts cluster 1.
+                var cluster1ReplacementCert = new X509Certificate2(cluster1ReplacementCertBytes);
 
                 var mre = new ManualResetEventSlim();
 
                 leader1.ServerCertificateChanged += (sender, args) => mre.Set();
 
-                var requestExecutor = store.GetRequestExecutor();
+                var requestExecutor = store1.GetRequestExecutor();
                 using (requestExecutor.ContextPool.AllocateOperationContext(out JsonOperationContext context))
                 {
-                    var command = new ReplaceClusterCertificateOperation(certBytes, false)
-                        .GetCommand(store.Conventions, context);
+                    var command = new ReplaceClusterCertificateOperation(cluster1ReplacementCertBytes, false)
+                        .GetCommand(store1.Conventions, context);
 
                     requestExecutor.Execute(command, context);
                 }
+                Assert.True(mre.Wait(Debugger.IsAttached ? TimeSpan.FromMinutes(10) : TimeSpan.FromMinutes(2)), "Waited too long");
+                Assert.NotNull(leader1.Certificate.Certificate.Thumbprint);
+                Assert.True(leader1.Certificate.Certificate.Thumbprint.Equals(cluster1ReplacementCert.Thumbprint), "New cert is identical");
 
-                Assert.True(mre.Wait(5000));
-
-                Assert.True(leader1.Certificate.Certificate.Thumbprint.Equals(newServerCert.Thumbprint));
-
-                using (var session = store.OpenSession())
+                using (var session = store1.OpenAsyncSession())
                 {
-                    var user1 = session.Load<User>("users/1");
-                    Assert.NotNull(user1);
-                    Assert.Equal("Karmelush", user1.Name);
+                    await session.StoreAsync(new User { Name = "Avivush" }, "users/2");
+                    await session.SaveChangesAsync();
                 }
-            }*/
+                Assert.True(WaitForDocument(store2, "users/2"));
+            }
         }
     }
 }
