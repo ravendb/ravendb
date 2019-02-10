@@ -6,7 +6,7 @@
 #include "internal_win.h"
 
 EXPORT int32_t
-rvn_open_journal_for_writes(const char* file_name, int32_t transaction_mode, int64_t initial_file_size, void** handle, int64_t* actual_size, int32_t* detailed_error_code)
+rvn_open_journal_for_writes(const char* file_name, int32_t transaction_mode, int64_t initial_file_size, int32_t durability_support, void** handle, int64_t* actual_size, int32_t* detailed_error_code)
 {
     assert(initial_file_size > 0);
 
@@ -23,6 +23,8 @@ rvn_open_journal_for_writes(const char* file_name, int32_t transaction_mode, int
             break;
         default:
             access_flags = FILE_FLAG_NO_BUFFERING | FILE_FLAG_WRITE_THROUGH;
+            if (durability_support == DURABILITY_NOT_SUPPORTED)
+                access_flags = FILE_FLAG_NO_BUFFERING;
             break;
     }
 

@@ -161,6 +161,7 @@ namespace Voron.Platform
             string fileName,
             PalFlags.JournalMode mode,
             Int64 requiredSize,
+            PalFlags.DurabilityMode supportDurability,
             out SafeJournalHandle handle,
             out Int64 actualSize,
             out Int32 errorCode);
@@ -210,5 +211,11 @@ namespace Voron.Platform
             void* address,
             Int64 size,
             out Int32 errorCode);
+
+        [DllImport(LIBRVNPAL, SetLastError = true)]
+        public static extern PalFlags.FailCodes rvn_test_storage_durability(
+            string tempFilename,
+            out Int32 errorCode);
+
     }
 }

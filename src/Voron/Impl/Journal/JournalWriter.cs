@@ -33,7 +33,7 @@ namespace Voron.Impl.Journal
             _options = options;
             FileName = filename;
 
-            var result = Pal.rvn_open_journal_for_writes(filename.FullPath, mode, size, out _writeHandle, out var actualSize, out var error);
+            var result = Pal.rvn_open_journal_for_writes(filename.FullPath, mode, size, options.SupportDurabilityFlags, out _writeHandle, out var actualSize, out var error);
             if (result != PalFlags.FailCodes.Success)
                 PalHelper.ThrowLastError(result, error, $"Attempted to open journal file - Path: {filename.FullPath} Size :{size}");
 

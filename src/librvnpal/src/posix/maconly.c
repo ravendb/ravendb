@@ -59,4 +59,13 @@ _get_strerror_r(int32_t error, char* tmp_buff, int32_t buf_size)
   return NULL;
 }
 
+EXPORT int32_t
+rvn_test_storage_durability(
+    const char *temp_file_name,
+    int32_t *detailed_error_code)
+{
+    *detailed_error_code = 0;
+    return SUCCESS; /* windows and mac are always true */
+}
+
 #endif

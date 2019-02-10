@@ -71,4 +71,39 @@ _get_strerror_r(int32_t error, char* tmp_buff, int32_t buf_size)
   return strerror_r(error, tmp_buff, buf_size);
 }
 
+EXPORT int32_t
+rvn_test_storage_durability(
+    const char *temp_file_name,
+    int32_t *detailed_error_code)
+{
+    int fd = open(temp_file_name, O_WRONLY | O_DSYNC | O_DIRECT | O_CREAT, S_IWUSR | S_IRUSR);
+    int rc = SUCCESS;
+    if (fd == -1)
+    {
+        rc = FAIL_OPEN_FILE;
+        goto error_cleanup;
+    }
+
+    rc = _allocate_file_space(fd, 64 * 1024, detailed_error_code);
+    if ( rc != SUCCESS )
+    {
+        rc = FAIL_ALLOC_FILE;
+        if ( errno == EINVAL)
+            rc = FAIL_TEST_DURABILITY;
+        goto error_cleanup;        
+    }
+
+error_cleanup:
+    if (rc != SUCCESS)
+        *detailed_error_code = errno;
+    if (fd != -1)
+    {
+        close(fd);
+        unlink(temp_file_name);
+    }
+
+    return rc;
+}
+
+
 #endif

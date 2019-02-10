@@ -35,6 +35,7 @@ namespace Voron.Platform
             FailEndOfFile = 25,
             FailPrefetch = 26,
             FailGetFilePath = 27,
+            FailTestDurability = 28
         };
 
         [Flags]
@@ -67,6 +68,13 @@ namespace Voron.Platform
             Safe = 0,
             Danger = 1,
             PureMemory = 2
+        }
+
+        public enum DurabilityMode
+        {
+            None = 0,
+            DurabililtySupported = 1,
+            DurabilityNotSupported = 2
         }
     }
 }
