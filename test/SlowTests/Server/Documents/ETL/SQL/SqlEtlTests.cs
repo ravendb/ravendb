@@ -96,7 +96,7 @@ for (var i = 0; i < this.OrderLines.length; i++) {
 loadToOrders(orderData);
 ";
 
-        [Fact]
+        [Fact(Skip = "SQL")]
         public async Task ReplicateMultipleBatches()
         {
             using (var store = GetDocumentStore())
@@ -208,7 +208,7 @@ CREATE DATABASE [SqlReplication-{store.Database}]
             }
         }
 
-        [Fact]
+        [Fact(Skip = "SQL")]
         public async Task SimpleTransformation()
         {
             using (var store = GetDocumentStore())
@@ -250,7 +250,7 @@ CREATE DATABASE [SqlReplication-{store.Database}]
             }
         }
 
-        [Fact]
+        [Fact(Skip = "SQL")]
         public async Task NullPropagation()
         {
             using (var store = GetDocumentStore())
@@ -296,7 +296,7 @@ loadToOrders(orderData);");
             }
         }
 
-        [Fact]
+        [Fact(Skip = "SQL")]
         public async Task NullPropagation_WithExplicitNull()
         {
             using (var store = GetDocumentStore())
@@ -345,7 +345,7 @@ loadToOrders(orderData);");
             }
         }
 
-        [Fact]
+        [Fact(Skip = "SQL")]
         public async Task RavenDB_3341()
         {
             using (var store = GetDocumentStore())
@@ -399,7 +399,7 @@ loadToOrders(orderData);");
             }
         }
 
-        [Fact]
+        [Fact(Skip = "SQL")]
         public async Task CanUpdateToBeNoItemsInChildTable()
         {
             using (var store = GetDocumentStore())
@@ -441,7 +441,7 @@ loadToOrders(orderData);");
             }
         }
 
-        [Fact]
+        [Fact(Skip = "SQL")]
         public async Task CanDelete()
         {
             using (var store = GetDocumentStore())
@@ -480,7 +480,7 @@ loadToOrders(orderData);");
             }
         }
 
-        [Fact]
+        [Fact(Skip = "SQL")]
         public async Task RavenDB_3172()
         {
             using (var store = GetDocumentStore())
@@ -529,7 +529,7 @@ loadToOrders(orderData);");
             }
         }
 
-        [Fact]
+        [Fact(Skip = "SQL")]
         public async Task WillLog()
         {
             using (var client = new ClientWebSocket())
@@ -755,7 +755,7 @@ var nameArr = this.StepName.split('.'); loadToOrders({});");
             }
         }
 
-        [Fact]
+        [Fact(Skip = "SQL")]
         public async Task LoadingSingleAttachment()
         {
             using (var store = GetDocumentStore())
@@ -821,7 +821,7 @@ loadToOrders(orderData);
             }
         }
 
-        [Fact]
+        [Fact(Skip = "SQL")]
         public async Task Should_error_if_attachment_doesnt_exist()
         {
             using (var store = GetDocumentStore())
@@ -891,7 +891,7 @@ loadToOrders(orderData);
             }
         }
 
-        [Fact]
+        [Fact(Skip = "SQL")]
         public async Task LoadingMultipleAttachments()
         {
             using (var store = GetDocumentStore())
@@ -971,7 +971,7 @@ for (var i = 0; i < attachments.length; i++)
             }
         }
 
-        [Fact]
+        [Fact(Skip = "SQL")]
         public async Task CanSkipSettingFieldIfAttachmentDoesntExist()
         {
             using (var store = GetDocumentStore())
@@ -1025,7 +1025,7 @@ loadToOrders(orderData);
             }
         }
 
-        [Fact]
+        [Fact(Skip = "SQL")]
         public async Task LoadingFromMultipleCollections()
         {
             using (var store = GetDocumentStore())
@@ -1076,7 +1076,7 @@ loadToOrders(orderData);
             }
         }
 
-        [Fact]
+        [Fact(Skip = "SQL")]
         public async Task CanUseVarcharAndNVarcharFunctions()
         {
             using (var store = GetDocumentStore())

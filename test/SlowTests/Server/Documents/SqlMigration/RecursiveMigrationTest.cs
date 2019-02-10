@@ -13,7 +13,7 @@ namespace SlowTests.Server.Documents.SqlMigration
 {
     public class RecursiveMigrationTest : SqlAwareTestBase
     {
-        [Theory]
+        [Theory(Skip = "SQL")]
         [InlineData(MigrationProvider.MsSQL)]
         [RequiresMySqlInlineData]
         [RequiresNpgSqlInlineData]
@@ -64,7 +64,7 @@ namespace SlowTests.Server.Documents.SqlMigration
             }
         }
         
-        [Theory]
+        [Theory(Skip = "SQL")]
         [InlineData(MigrationProvider.MsSQL)]
         [RequiresMySqlInlineData]
         [RequiresNpgSqlInlineData]
@@ -113,7 +113,7 @@ namespace SlowTests.Server.Documents.SqlMigration
             }
         }
         
-        [Theory]
+        [Theory(Skip = "SQL")]
         [InlineData(MigrationProvider.MsSQL)]
         [RequiresMySqlInlineData]
         [RequiresNpgSqlInlineData]
