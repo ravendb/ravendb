@@ -1,6 +1,7 @@
 using System.Collections.Generic;
 using System.Globalization;
 using System.Linq;
+using System.Runtime.CompilerServices;
 using FastTests;
 using Raven.Client.Documents;
 using Raven.Client.Documents.Indexes;
@@ -69,11 +70,11 @@ namespace SlowTests.Tests.Spatial
         {
             private List<Vehicle> Vehicles { get; set; }
 
-            private readonly IDocumentStore _store;
+            private IDocumentStore _store;
 
-            public CanGetFacetsOnVehicleSpatialSearch()
+            public void Initialize([CallerMemberName] string caller = null)
             {
-                _store = GetDocumentStore();
+                _store = GetDocumentStore(caller: $"{GetType().Name}.{caller}");
 
                 Vehicles = new List<Vehicle>();
                 for (int i = 0; i < 3; i++)
@@ -137,6 +138,7 @@ namespace SlowTests.Tests.Spatial
             [CriticalCultures]
             public void ShouldMatchMakeFacetsOnLocation(CultureInfo criticalCulture)
             {
+                Initialize();
                 using (CultureHelper.EnsureCulture(criticalCulture))
                 using (var session = _store.OpenSession())
                 {

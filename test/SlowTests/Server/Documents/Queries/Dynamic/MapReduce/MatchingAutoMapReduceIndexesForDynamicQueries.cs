@@ -1,4 +1,5 @@
-﻿using FastTests;
+﻿using System.Runtime.CompilerServices;
+using FastTests;
 using Raven.Client.Documents.Indexes;
 using Raven.Client.Util;
 using Raven.Server.Documents;
@@ -13,12 +14,12 @@ namespace SlowTests.Server.Documents.Queries.Dynamic.MapReduce
 {
     public class MatchingAutoMapReduceIndexesForDynamicQueries : RavenLowLevelTestBase
     {
-        private readonly DocumentDatabase _documentDatabase;
-        protected readonly DynamicQueryToIndexMatcher _sut;
+        private DocumentDatabase _documentDatabase;
+        protected DynamicQueryToIndexMatcher _sut;
 
-        public MatchingAutoMapReduceIndexesForDynamicQueries()
+        public void Initialize([CallerMemberName] string caller = null)
         {
-            _documentDatabase = CreateDocumentDatabase();
+            _documentDatabase = CreateDocumentDatabase(caller: $"{GetType().Name}.{caller}");
 
             _sut = new DynamicQueryToIndexMatcher(_documentDatabase.IndexStore);
         }

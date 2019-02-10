@@ -111,14 +111,12 @@ namespace FastTests
 
         protected string GetDatabaseName([CallerMemberName] string caller = null)
         {
-            //if (caller != null && caller.Contains(".ctor"))
-            //    throw new InvalidOperationException($"Usage of '{nameof(GetDocumentStore)}' without explicit '{nameof(caller)}' parameter is forbidden from inside constructor.");
-
-            //We shouldn't have databases named .ctor since its hard to track where they were created.
             if (caller != null && caller.Contains(".ctor"))
-            {
-                return $"{GetType().Name}_{Guid.NewGuid():N}";
-            }
+                throw new InvalidOperationException(
+                    $"{nameof(GetDatabaseName)} was invoked from within {GetType().Name} constructor. This is an indication that you're trying to generate" +
+                    " a database within a test class constructor. This is forbidden because this database will be generated but the test won't run until" +
+                    $" it gets the semaphore at {nameof(InitializeAsync)} also the constructor is invoked per test method and it is not shared between tests" +
+                    " so there is no value in generating the database from the constructor.");
 
             var name = caller != null ? $"{caller}_{Interlocked.Increment(ref _counter)}" : Guid.NewGuid().ToString("N");
             return name;
