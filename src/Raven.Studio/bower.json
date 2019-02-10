@@ -38,7 +38,8 @@
     "css-escape": "^1.5.1",
     "forge": "^0.6.49",
     "jszip": "^3.1.5",
-    "jszip-utils": "^0.0.2"
+    "jszip-utils": "^0.0.2",
+    "diff": "https://cdnjs.cloudflare.com/ajax/libs/jsdiff/4.0.1/diff.min.js"
   },
   "resolutions": {
     "jquery": "^2.2.0",

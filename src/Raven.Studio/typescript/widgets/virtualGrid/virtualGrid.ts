@@ -633,7 +633,7 @@ class virtualGrid<T> {
             const linkActionValue = $target.attr("data-link-action");
 
             if (actionValue) {
-                this.handleAction(actionValue, this.findRowForCell($target));
+                this.handleAction(actionValue, this.findRowForCell($target), e);
             } else if (linkActionValue) {
                 this.handleLinkAction(linkActionValue, e, this.findRowForCell($target));
             } else if ($target.hasClass("checked-column-header")) {
@@ -852,13 +852,13 @@ class virtualGrid<T> {
         this.shiftSelection.lastShiftIndex(newShiftStartIndex);
     }
 
-    private handleAction(actionId: string, row: virtualRow) {
+    private handleAction(actionId: string, row: virtualRow, event: JQueryEventObject) {
         const handler = this.columns().find(x => x instanceof actionColumn && x.canHandle(actionId)) as actionColumn<T>;
         if (!handler) {
             throw new Error("Unable to find handler for: " + actionId + " at index: " + row.index);
         }
 
-        handler.handle(row);
+        handler.handle(row, event);
     }
 
     private handleLinkAction(actionId: string, event: JQueryEventObject, row: virtualRow) {
