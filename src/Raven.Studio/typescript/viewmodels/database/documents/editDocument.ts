@@ -37,17 +37,22 @@ import changeVectorUtils = require("common/changeVectorUtils");
 import eventsCollector = require("common/eventsCollector");
 import collectionsTracker = require("common/helpers/database/collectionsTracker");
 import database = require("models/resources/database");
+import aceDiff = require("common/helpers/text/aceDiff");
 
 class editDocument extends viewModelBase {
 
     static editDocSelector = "#editDocumentContainer";
     static documentNameSelector = "#documentName";
     static docEditorSelector = "#docEditor";
+    static docEditorSelectorRight = "#docEditorRight";
 
     inReadOnlyMode = ko.observable<boolean>(false);
+    inDiffMode = ko.observable<boolean>(false);
+    currentDiff = ko.observable<aceDiff>();
     revisionChangeVector = ko.observable<string>();
     document = ko.observable<document>();
     documentText = ko.observable("");
+    documentTextRight = ko.observable("");
     metadata: KnockoutComputed<documentMetadata>;
     
     changeVector: KnockoutComputed<changeVectorItem[]>;
@@ -73,10 +78,12 @@ class editDocument extends viewModelBase {
     documentExpirationEnabled: KnockoutComputed<boolean>;
 
     private docEditor: AceAjax.Editor;
+    private docEditorRight: AceAjax.Editor;
     entityName = ko.observable<string>("");
 
     $documentName: JQuery;
     $docEditor: JQuery;
+    $docEditorRight: JQuery;
 
     isConflictDocument = ko.observable<boolean>(false);
     isNewLineFriendlyMode = ko.observable<boolean>(false);
@@ -94,7 +101,13 @@ class editDocument extends viewModelBase {
     // it represents effective actions provider - normally it uses normalActionProvider, in clone document node it overrides actions on attachments/counter to 'in-memory' implementation 
     private crudActionsProvider = ko.observable<editDocumentCrudActions>(this.normalActionProvider); 
 
-    connectedDocuments = new connectedDocuments(this.document, this.activeDatabase, (docId) => this.loadDocument(docId), this.isCreatingNewDocument, this.crudActionsProvider, this.inReadOnlyMode);
+    connectedDocuments = new connectedDocuments(this.document, 
+        this.activeDatabase, 
+        (docId) => this.loadDocument(docId), 
+            changeVector => this.compareWithRevision(changeVector), 
+        this.isCreatingNewDocument, 
+        this.crudActionsProvider, 
+        this.inReadOnlyMode);
 
     isSaveEnabled: KnockoutComputed<boolean>;
     
@@ -153,6 +166,7 @@ class editDocument extends viewModelBase {
 
         this.$documentName = $(editDocument.documentNameSelector);
         this.$docEditor = $(editDocument.docEditorSelector);
+        this.$docEditorRight = $(editDocument.docEditorSelectorRight);
 
         this.isNewLineFriendlyMode.subscribe(val => {
             this.updateNewlineLayoutInDocument(val);
@@ -162,6 +176,7 @@ class editDocument extends viewModelBase {
     compositionComplete() {
         super.compositionComplete();
         this.docEditor = aceEditorBindingHandler.getEditorBySelection(this.$docEditor);
+        this.docEditorRight = aceEditorBindingHandler.getEditorBySelection(this.$docEditorRight);
 
         // preload json newline friendly mode to avoid issues with document save
         (ace as any).config.loadModule("ace/mode/raven_document_newline_friendly");
@@ -770,6 +785,26 @@ class editDocument extends viewModelBase {
         return loadTask;
     }
 
+    private compareWithRevision(revisionChangeVector: string): JQueryPromise<document> {
+        return new getDocumentAtRevisionCommand(revisionChangeVector, this.activeDatabase())
+            .execute()
+            .done((doc: document) => {
+
+                if (doc) {
+                    const docDto = doc.toDto(true);
+                    const metaDto = docDto["@metadata"];
+                    if (metaDto) {
+                        documentMetadata.filterMetadata(metaDto, []);
+                    }
+
+                    const docText = this.stringify(docDto);
+                    this.documentTextRight(docText);
+                }
+                
+                this.enterCompareMode();
+            });
+    }
+        
     private getDocumentPhysicalSize(id: string): JQueryPromise<Raven.Server.Documents.Handlers.DocumentSizeDetails> {
         return new getDocumentPhysicalSizeCommand(id, this.activeDatabase())
             .execute()
@@ -906,6 +941,22 @@ class editDocument extends viewModelBase {
             contentType: file.ContentType,
             size: file.Size
         } as attachmentItem;
+    }
+
+    private enterCompareMode() {
+        this.inDiffMode(true);
+        this.currentDiff(new aceDiff(this.docEditor, this.docEditorRight));
+    }
+
+    exitCompareMode() {
+        this.documentTextRight("");
+        
+        if (this.currentDiff()) {
+            this.currentDiff().destroy();
+            this.currentDiff(undefined);
+        }
+        
+        this.inDiffMode(false);
     }
 
 }

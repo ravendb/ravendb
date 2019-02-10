@@ -24,10 +24,15 @@ import editDocumentUploader = require("viewmodels/database/documents/editDocumen
 type connectedDocsTabs = "attachments" | "counters" | "revisions" | "related" | "recent";
 
 
+
 interface connectedDocumentItem { 
     id: string;
     href: string;
     deletedRevision: boolean;
+}
+
+interface connectedRevisionDocumentItem extends connectedDocumentItem {
+    revisionChangeVector: string;
 }
 
 class connectedDocuments {
@@ -36,6 +41,7 @@ class connectedDocuments {
     static currentTab = ko.observable<connectedDocsTabs>("attachments"); 
 
     loadDocumentAction: (docId: string) => void;
+    compareWithRevisionAction: (revisionChangeVector: string) => JQueryPromise<document>;
     document: KnockoutObservable<document>;
     db: KnockoutObservable<database>;
     inReadOnlyMode: KnockoutObservable<boolean>;
@@ -48,6 +54,7 @@ class connectedDocuments {
     crudActionsProvider: () => editDocumentCrudActions;
     
     docsColumns: virtualColumn[];
+    revisionsColumns: virtualColumn[];
     attachmentsColumns: virtualColumn[];
     attachmentsInReadOnlyModeColumns: virtualColumn[];
     countersColumns: virtualColumn[];
@@ -84,6 +91,7 @@ class connectedDocuments {
     constructor(document: KnockoutObservable<document>,
         db: KnockoutObservable<database>,
         loadDocument: (docId: string) => void,
+        compareWithRevision: (revisionChangeVector: string) => JQueryPromise<document>,
         isCreatingNewDocument: KnockoutObservable<boolean>,
         crudActionsProvider: () => editDocumentCrudActions,
         inReadOnlyMode: KnockoutObservable<boolean>) {
@@ -95,6 +103,7 @@ class connectedDocuments {
         this.inReadOnlyMode = inReadOnlyMode;
         this.document.subscribe((doc) => this.onDocumentLoaded(doc));
         this.loadDocumentAction = loadDocument;
+        this.compareWithRevisionAction = compareWithRevision;
         this.uploader = new editDocumentUploader(document, db, () => this.afterUpload());
         this.crudActionsProvider = crudActionsProvider;
 
@@ -123,13 +132,21 @@ class connectedDocuments {
 
     private initColumns() {
         this.docsColumns = [
-            new hyperlinkColumn<connectedDocumentItem>(this.gridController() as virtualGridController<any>, x => x.id, x => x.href, "", "100%",
+            new hyperlinkColumn<connectedDocumentItem>(this.gridController() as virtualGridController<any>, x => x.id, x => x.href, "", "100%")
+        ];
+
+        this.revisionsColumns = [
+            new hyperlinkColumn<connectedRevisionDocumentItem>(this.gridController() as virtualGridController<any>, x => x.id, x => x.href, "", "75%",
                 {
                     extraClass: item => item.deletedRevision ? "deleted-revision" : ""
+                }),
+            new actionColumn<connectedRevisionDocumentItem>(this.gridController() as virtualGridController<any>, (x, idx, e) => this.compareRevision(x, idx, e), "Diff", x => `Compare`, "25%", /* TODO make icon! */ 
+                {
+                    extraClass: () => 'btn-link',
+                    title: (item: connectedRevisionDocumentItem) => "Compare current document with this revision"
                 })
         ];
         
-
         this.attachmentsColumns = [
             new actionColumn<attachmentItem>(this.gridController() as virtualGridController<any>, x => this.downloadAttachment(x), "Name", x => x.name, "160px",
                 {
@@ -194,6 +211,10 @@ class connectedDocuments {
                     return this.revisionCountersColumns;
                 }
                 return this.countersColumns;
+            }
+            
+            if (connectedDocuments.currentTab() === "revisions") {
+                return this.revisionsColumns;
             }
             return this.docsColumns;
         });
@@ -291,11 +312,13 @@ class connectedDocuments {
         return fetchTask.promise();
     }
 
-    private revisionToConnectedDocument(doc: document): connectedDocumentItem {
+    private revisionToConnectedDocument(doc: document): connectedRevisionDocumentItem {
+        const changeVector = doc.__metadata.changeVector();
         return {
-            href: appUrl.forViewDocumentAtRevision(doc.getId(), doc.__metadata.changeVector(), this.db()),
+            href: appUrl.forViewDocumentAtRevision(doc.getId(), changeVector, this.db()),
             id: doc.__metadata.lastModified(),
-            deletedRevision: doc.__metadata.hasFlag("DeleteRevision")
+            deletedRevision: doc.__metadata.hasFlag("DeleteRevision"),
+            revisionChangeVector: changeVector
         };
     }
 
@@ -306,6 +329,14 @@ class connectedDocuments {
         }).promise();
     }
 
+    private compareRevision(revision: connectedRevisionDocumentItem, idx: number, event: JQueryEventObject) {
+        const $target = $(event.target);
+        $target.addClass("btn-spinner");
+        
+        this.compareWithRevisionAction(revision.revisionChangeVector)
+            .always(() => $target.removeClass("btn-spinner"));
+    }
+    
     private downloadAttachment(file: attachmentItem) {
         const args = {
             id: file.documentId,

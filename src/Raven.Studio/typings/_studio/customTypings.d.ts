@@ -186,6 +186,27 @@ declare module "ace/ace" {
     export = ace;
 }
 
+declare namespace AceAjax {
+    export interface IEditSession {
+        widgetManager: WidgetManager;
+        off(event: string, fn: (e: any) => any): void;
+        setFoldStyle(style: "manual" | "markbegin" | "markbeginend"): void;
+    }
+    
+    export interface WidgetManager {
+        addLineWidget: (widget: any) => void;
+        removeLineWidget: (wigdet: any) => void;
+    }
+    
+    export interface VirtualRenderer {
+        layerConfig: VirtualRendererConfig;
+    }
+    
+    export interface VirtualRendererConfig {
+        lineHeight: number;
+    }
+}
+
 interface CSS {
     escape(input: string): string;
 }

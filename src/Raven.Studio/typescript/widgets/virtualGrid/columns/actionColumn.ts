@@ -12,7 +12,7 @@ type actionColumnOpts<T> = {
 type provider<T> = (item: T) => string;
 
 class actionColumn<T> implements virtualColumn {
-    private readonly action: (obj: T, idx: number) => void;
+    private readonly action: (obj: T, idx: number, event: JQueryEventObject) => void;
 
     protected gridController: virtualGridController<T>;
 
@@ -25,7 +25,7 @@ class actionColumn<T> implements virtualColumn {
     
     actionUniqueId = _.uniqueId("action-");
 
-    constructor(gridController: virtualGridController<T>, action: (obj: T, idx: number) => void, header: string, buttonText: provider<T> | string, width: string, opts: actionColumnOpts<T> = {}) {
+    constructor(gridController: virtualGridController<T>, action: (obj: T, idx: number, event: JQueryEventObject) => void, header: string, buttonText: provider<T> | string, width: string, opts: actionColumnOpts<T> = {}) {
         this.gridController = gridController;
         this.action = action;
         this.header = header;
@@ -50,8 +50,8 @@ class actionColumn<T> implements virtualColumn {
         return this.actionUniqueId === actionId;
     }
 
-    handle(row: virtualRow) {
-        this.action(row.data as T, row.index);
+    handle(row: virtualRow, event: JQueryEventObject) {
+        this.action(row.data as T, row.index, event);
     }
 
     renderCell(item: T, isSelected: boolean, isSorted: boolean): string {

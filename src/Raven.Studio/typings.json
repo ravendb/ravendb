@@ -27,5 +27,8 @@
     "toastr": "registry:dt/toastr#2.1.3+20161123234806",
     "typeahead": "registry:dt/typeahead#0.11.1+20160317120654",
     "webcola": "registry:dt/webcola#3.1.1+20160510192225"
+  },
+  "dependencies": {
+    "diff": "registry:dt/diff#0.0.0+20160810231743"
   }
 }

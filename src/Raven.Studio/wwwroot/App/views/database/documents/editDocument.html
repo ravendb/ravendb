@@ -1,4 +1,4 @@
-<form data-bind="submit: saveDocument" class="editDocument" autocomplete="off">
+<form data-bind="submit: saveDocument, css: { 'diff': inDiffMode }" class="editDocument" autocomplete="off">
     <div class="docEditor flex-window flex-grow content-margin">
         <div class="flex-window-head">
             <div class="row">
@@ -28,7 +28,7 @@
                         </div>
                     </div>
                 </div>
-                <div class="col-md-6">
+                <div class="col-md-6" data-bind="visible: !inDiffMode()">
                     <p class="pull-right-md text-right-md padding padding-xs on-base-background" data-bind="if: displayLastModifiedDate()">
                         <i class="icon-recent"></i>
                         <small>Last modified <span data-bind="text: $root.lastModifiedAsAgo"></span></small>
@@ -46,7 +46,7 @@
                         <i class="icon-save"></i>
                         <span>Save</span>
                     </button>
-                    <button type="button" class="clone-btn btn btn-default" data-bind="click: createClone, enable: !isCreatingNewDocument(), visible: !isDeleteRevision()">
+                    <button type="button" class="clone-btn btn btn-default" data-bind="click: createClone, enable: !isCreatingNewDocument(), visible: !isDeleteRevision() && !inDiffMode()">
                         <i class="icon-clone"></i>
                         <span>Clone</span>
                     </button>
@@ -60,7 +60,7 @@
                     </a>
                 </div>
                 <div class="pull-right-sm" data-bind="visible: !isDeleteRevision()">
-                    <div class="btn-group">
+                    <div class="btn-group" data-bind="visible: !inDiffMode()">
                         <button type="button" class="btn btn-default" data-bind="click: toClipboard" title="Copy document content to clipboard">
                             <i class="icon-copy-to-clipboard"></i>
                             <span>Copy to Clipboard</span>
@@ -78,32 +78,58 @@
                 </div>
             </div>
             <div class="clearfix" data-bind="visible: !isDeleteRevision()">
-                <div class="btn-group btn-group-sm pull-right" role="group">
+                <div class="pull-right">
+                    <button class="btn btn-sm btn-default" data-bind="visible: inDiffMode(), click: exitCompareMode">
+                        <i class="icon-cancel"></i>
+                        <span>Exit revisions compare mode</span>
+                    </button>
+                </div>
+                <div class="btn-group btn-group-sm pull-right" role="group" data-bind="visible: !inDiffMode()">
                     <button type="button" class="btn btn-default" data-bind="enable: !isNewLineFriendlyMode(), click: formatDocument"><span class="icon-indent"></span> <span>Format</span></button>
                     <button type="button" class="btn btn-default" data-toggle="button" data-bind="click: toggleAutoCollapse"><span class="icon-collapse"></span> <span>Toggle collapse</span></button>
                     <button type="button" class="btn btn-default" data-toggle="button" data-bind="click: toggleNewlineMode"><span class="icon-newline"></span> <span>Toggle new lines</span></button>
                 </div>
             </div>
         </div>
-        <div class="flex-window-scroll">
-            <pre id="docEditor" class="form-control absolute-fill" 
-                 data-bind="aceEditor: { code: documentText, fontSize:'16px', lang: 'ace/mode/raven_document', readOnly: inReadOnlyMode() }, disable: isBusy, validationOptions: { errorsAsTitle: false }, validationElement: documentText, visible: !isDeleteRevision()"></pre>
-            <div class="absolute-fill" data-bind="visible: isDeleteRevision()">
-                <div class="absolute-center padding bg-info text-center">
-                    <i class="icon-trash icon-xl"></i>
-                    This document was removed on <span data-bind="text: metadata().lastModifiedFullDate"></span>.
-                    <br />
-                    Go to <a href="#" class="text-revisions" data-bind="click: _.partial(connectedDocuments.activateRevisions, true)">REVISIONS</a> to see entire document history.
+        <div class="flex-window-scroll editors-container">
+            <div class="left-editor">
+                <pre id="docEditor" class="form-control absolute-fill"
+                     data-bind="aceEditor: { code: documentText, fontSize:'16px', lang: 'ace/mode/raven_document', readOnly: inReadOnlyMode() || inDiffMode() }, disable: isBusy, validationOptions: { errorsAsTitle: false }, validationElement: documentText, visible: !isDeleteRevision()"></pre>
+                <div class="absolute-fill" data-bind="visible: isDeleteRevision()">
+                    <div class="absolute-center padding bg-info text-center">
+                        <i class="icon-trash icon-xl"></i>
+                        This document was removed on <span data-bind="text: metadata().lastModifiedFullDate"></span>.
+                        <br />
+                        Go to <a href="#" class="text-revisions" data-bind="click: _.partial(connectedDocuments.activateRevisions, true)">REVISIONS</a> to see entire document history.
+                    </div>
                 </div>
+            </div>
+            <div class="right-editor">
+                <pre id="docEditorRight" class="form-control absolute-fill"
+                     data-bind="aceEditor: { code: documentTextRight, fontSize:'16px', lang: 'ace/mode/raven_document', readOnly: inReadOnlyMode() || inDiffMode() }, disable: isBusy, validationOptions: { errorsAsTitle: false }, validationElement: documentText, visible: !isDeleteRevision()"></pre>
             </div>
         </div>
         <div data-bind="validationOptions: { errorsAsTitle: false }, validationElement: documentText">
             <div class="help-block" data-bind="validationMessage: documentText"></div>
         </div>
-        <small data-bind="visible: inReadOnlyMode() && !isDeleteRevision()" class="text-warning bg-warning padding padding-sm">
+        <small data-bind="visible: inReadOnlyMode() && !isDeleteRevision() && !inDiffMode()" class="text-warning bg-warning padding padding-sm">
             <i class="icon-warning"></i>
             <span data-bind="text: 'Note: File editing is not available in revisions'"></span>
         </small>
+        <div class="differences_summary" data-bind="visible: currentDiff, with: currentDiff">
+            <div class="padding padding-sm" data-bind="visible: identicalContent">
+                <small class="text-success">Contents are identical</small>    
+            </div>
+            <div class="padding padding-sm" data-bind="visible: !identicalContent()">
+                <small class="text-warning">
+                    Revisions are different:  
+                    <strong class="text-success" data-bind="text: additions"></strong>
+                    <span data-bind="text: $root.pluralize(additions(), 'addition', 'additions', true)"></span>, 
+                    <strong class="text-danger" data-bind="text: deletions"></strong>
+                    <span data-bind="text: $root.pluralize(deletions(), 'deletion', 'deletions', true)"></span>
+                </small>
+            </div>
+        </div>
     </div>
     <div id="right-options-panel" class="flex-window">
         <div class="panel flex-window-head">
