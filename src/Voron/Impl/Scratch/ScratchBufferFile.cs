@@ -48,16 +48,23 @@ namespace Voron.Impl.Scratch
             scratchPager.AllocatedInBytesFunc = () => AllocatedPagesCount * Constants.Storage.PageSize;
 
             _disposeOnceRunner = new DisposeOnce<SingleAttempt>(() =>
-            {
+            {                
                 _scratchPager.PagerState.DiscardOnTxCopy = true;
                 _scratchPager.Dispose();
+                ClearDictionaries();
             });
+        }
+
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        private void ClearDictionaries()
+        {
+            _allocatedPages.Clear();
+            _freePagesBySizeAvailableImmediately.Clear();
+            _freePagesBySize.Clear();
         }
 
         public void Reset()
         {
-            _allocatedPages.Clear();
-
 #if VALIDATE
             foreach (var free in _freePagesBySizeAvailableImmediately)
             {
@@ -70,10 +77,6 @@ namespace Voron.Impl.Scratch
                     _scratchPager.UnprotectPageRange(freeAndAvailablePagePointer, freeAndAvailablePageSize, true);
                 }
             }            
-#endif
-            _freePagesBySizeAvailableImmediately.Clear();
-
-#if VALIDATE
             foreach (var free in _freePagesBySize)
             {
                 foreach (var val in free.Value)
@@ -86,7 +89,7 @@ namespace Voron.Impl.Scratch
                 }
             }
 #endif
-            _freePagesBySize.Clear();
+            ClearDictionaries();
             _txIdAfterWhichLatestFreePagesBecomeAvailable = -1;
             _lastUsedPage = 0;
             _allocatedPagesCount = 0;
