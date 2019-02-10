@@ -289,36 +289,18 @@ namespace Raven.Server.Documents
                 SubscriptionStorage.Initialize();
                 _addToInitLog("Initializing SubscriptionStorage completed");
 
-                TaskExecutor.Execute((state) =>
+                var databaseTaskRunner = new DatabaseTaskRunner
                 {
-                    try
-                    {
-                        NotifyFeaturesAboutStateChange(record, index);
-                    }
-                    catch
-                    {
-                        // We ignore the exception since it was caught in the function itself
-                    }
-                }, null);
+                    Landlord = ServerStore.DatabasesLandlord,
+                    DatabaseName = Name,
+                    Logger = _logger,
+                    Cts = _databaseShutdown.Token,
+                    Index = index,
+                    Record = record
+                };
 
-                Task.Factory.StartNew(async _ =>
-                {
-                    try
-                    {
-                        await ExecuteClusterTransactionTask();
-                    }
-                    catch (OperationCanceledException)
-                    {
-                        // database shutdown
-                    }
-                    catch (Exception e)
-                    {
-                        if (_logger.IsInfoEnabled)
-                        {
-                            _logger.Info("An unhandled exception closed the cluster transaction task", e);
-                        }
-                    }
-                }, DatabaseShutdown, TaskCreationOptions.LongRunning);
+                databaseTaskRunner.NotifyFeaturesAboutStateChange();
+                databaseTaskRunner.ClusterTransaction();
             }
             catch (Exception)
             {
@@ -327,6 +309,71 @@ namespace Raven.Server.Documents
             }
         }
 
+        /// <summary>
+        /// The purpse of this class is to run the DocumentDatabase async task in a way that won't capture the database instance
+        /// </summary>
+        internal class DatabaseTaskRunner
+        {
+            public DatabasesLandlord Landlord;
+            public CancellationToken Cts;
+            public string DatabaseName;
+            public Logger Logger;
+            public DatabaseRecord Record;
+            public long Index;
+
+            public void NotifyFeaturesAboutStateChange()
+            {
+                TaskExecutor.Execute(TryNotifyDatabase, null);
+            }
+
+            private void TryNotifyDatabase(object state)
+            {
+                try
+                {
+                    //we want to avoid capturing the DocumentDatabase here
+                    if (Landlord.DatabasesCache.TryGetValue(DatabaseName, out var dbTask) && 
+                            dbTask.IsCompletedSuccessfully)
+                    {
+                        dbTask.Result.NotifyFeaturesAboutStateChange(Record, Index);
+                    }
+
+                }
+                catch
+                {
+                    // We ignore the exception since it was caught in the function itself
+                }
+            }
+
+            public void ClusterTransaction()
+            {
+                Task.Factory.StartNew(ExecuteClusterTransaction, Cts);
+            }
+
+            private async Task ExecuteClusterTransaction(object o)
+            {
+                try
+                {
+                    Landlord.DatabasesCache.TryGetValue(DatabaseName, out var dbTask);
+                    await dbTask; //the task might not be completed yet even if it is in the cache
+                    if (dbTask.IsCompletedSuccessfully)
+                    {
+                        await dbTask.Result.ExecuteClusterTransactionTask();
+                    }
+                }
+                catch (OperationCanceledException)
+                {
+                    // database shutdown
+                }
+                catch (Exception e)
+                {
+                    if (Logger.IsInfoEnabled)
+                    {
+                        Logger.Info("An unhandled exception closed the cluster transaction task", e);
+                    }
+                }
+            }
+        }
+        
         private void TryAcquireWriteLock()
         {
             if (Configuration.Core.RunInMemory)

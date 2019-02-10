@@ -81,6 +81,8 @@ namespace Voron.Impl.Scratch
 
                     _recycleArea.RemoveFirst();
                 }
+
+                _current = null;
             });
 
             _env = env;
