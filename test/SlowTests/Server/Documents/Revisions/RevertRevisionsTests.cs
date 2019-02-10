@@ -456,8 +456,8 @@ namespace SlowTests.Server.Documents.Revisions
                         onProgress: null, token: token);
                 }
 
-                Assert.Equal(3, result.ScannedRevisions);
-                Assert.Equal(1, result.ScannedDocuments);
+                Assert.Equal(4, result.ScannedRevisions);
+                Assert.Equal(2, result.ScannedDocuments);
                 Assert.Equal(0, result.RevertedDocuments);
 
                 using (var session = store1.OpenAsyncSession())
@@ -522,13 +522,13 @@ namespace SlowTests.Server.Documents.Revisions
                 }
 
                 Assert.Equal(4, result.ScannedRevisions);
-                Assert.Equal(1, result.ScannedDocuments);
-                Assert.Equal(1, result.RevertedDocuments);
+                Assert.Equal(2, result.ScannedDocuments);
+                Assert.Equal(2, result.RevertedDocuments);
 
                 using (var session = store1.OpenAsyncSession())
                 {
                     var persons = await session.Advanced.Revisions.GetForAsync<Person>("foo/bar");
-                    Assert.Equal(5, persons.Count);
+                    Assert.Equal(4, persons.Count);
 
                     Assert.Equal("Name1", persons[0].Name);
                     var metadata = session.Advanced.GetMetadataFor(persons[0]);
@@ -545,10 +545,6 @@ namespace SlowTests.Server.Documents.Revisions
                     Assert.Equal("Name2", persons[3].Name);
                     metadata = session.Advanced.GetMetadataFor(persons[3]);
                     Assert.Equal((DocumentFlags.HasRevisions | DocumentFlags.Revision | DocumentFlags.FromReplication | DocumentFlags.Conflicted).ToString(), metadata.GetString(Constants.Documents.Metadata.Flags));
-
-                    Assert.Equal("Name1", persons[4].Name);
-                    metadata = session.Advanced.GetMetadataFor(persons[4]);
-                    Assert.Equal((DocumentFlags.HasRevisions | DocumentFlags.Revision).ToString(), metadata.GetString(Constants.Documents.Metadata.Flags));
                 }
             }
         }
@@ -611,14 +607,14 @@ namespace SlowTests.Server.Documents.Revisions
                         token: token);
                 }
 
-                Assert.Equal(4, result.ScannedRevisions);
-                Assert.Equal(1, result.ScannedDocuments);
-                Assert.Equal(1, result.RevertedDocuments);
+                Assert.Equal(5, result.ScannedRevisions);
+                Assert.Equal(3, result.ScannedDocuments);
+                Assert.Equal(2, result.RevertedDocuments);
 
                 using (var session = store1.OpenAsyncSession())
                 {
                     var persons = await session.Advanced.Revisions.GetForAsync<Person>("foo/bar");
-                    Assert.Equal(5, persons.Count);
+                    Assert.Equal(4, persons.Count);
 
                     Assert.Equal("Name1", persons[0].Name);
                     var metadata = session.Advanced.GetMetadataFor(persons[0]);
@@ -635,11 +631,6 @@ namespace SlowTests.Server.Documents.Revisions
                     Assert.Equal("Name2", persons[3].Name);
                     metadata = session.Advanced.GetMetadataFor(persons[3]);
                     Assert.Equal((DocumentFlags.HasRevisions | DocumentFlags.Revision | DocumentFlags.FromReplication | DocumentFlags.Conflicted).ToString(), metadata.GetString(Constants.Documents.Metadata.Flags));
-
-                    Assert.Equal("Name1", persons[4].Name);
-                    metadata = session.Advanced.GetMetadataFor(persons[4]);
-                    Assert.Equal((DocumentFlags.HasRevisions | DocumentFlags.Revision).ToString(), metadata.GetString(Constants.Documents.Metadata.Flags));
-
                 }
             }
         }
@@ -699,13 +690,13 @@ namespace SlowTests.Server.Documents.Revisions
                 }
 
                 Assert.Equal(5, result.ScannedRevisions);
-                Assert.Equal(1, result.ScannedDocuments);
-                Assert.Equal(1, result.RevertedDocuments);
+                Assert.Equal(2, result.ScannedDocuments);
+                Assert.Equal(2, result.RevertedDocuments);
 
                 using (var session = store1.OpenAsyncSession())
                 {
                     var persons = await session.Advanced.Revisions.GetForAsync<Person>("foo/bar");
-                    Assert.Equal(6, persons.Count);
+                    Assert.Equal(5, persons.Count);
 
                     Assert.Equal(null, persons[0].Name);
                     var metadata = session.Advanced.GetMetadataFor(persons[0]);
@@ -723,12 +714,8 @@ namespace SlowTests.Server.Documents.Revisions
                     metadata = session.Advanced.GetMetadataFor(persons[3]);
                     Assert.Equal((DocumentFlags.HasRevisions | DocumentFlags.Revision | DocumentFlags.FromReplication | DocumentFlags.Conflicted).ToString(), metadata.GetString(Constants.Documents.Metadata.Flags));
 
-                    Assert.Equal(null, persons[4].Name);
+                    Assert.Equal("Name1", persons[4].Name);
                     metadata = session.Advanced.GetMetadataFor(persons[4]);
-                    Assert.Equal((DocumentFlags.HasRevisions | DocumentFlags.DeleteRevision).ToString(), metadata.GetString(Constants.Documents.Metadata.Flags));
-
-                    Assert.Equal("Name1", persons[5].Name);
-                    metadata = session.Advanced.GetMetadataFor(persons[5]);
                     Assert.Equal((DocumentFlags.HasRevisions | DocumentFlags.Revision).ToString(), metadata.GetString(Constants.Documents.Metadata.Flags));
                 }
             }
@@ -780,14 +767,13 @@ namespace SlowTests.Server.Documents.Revisions
                     last = DateTime.UtcNow;
                 }
 
-
                 await SetupReplicationAsync(store2, store1);
                 WaitForDocument(store1, "marker");
 
                 using (var session = store1.OpenAsyncSession())
                 {
                     var companiesRevisions = await session.Advanced.Revisions.GetForAsync<Person>("foo/bar");
-                    Assert.Equal(5, companiesRevisions.Count);
+                    Assert.Equal(4, companiesRevisions.Count);
                 }
 
                 var db = await GetDocumentDatabaseInstanceFor(store1);
@@ -800,13 +786,13 @@ namespace SlowTests.Server.Documents.Revisions
                 }
 
                 Assert.Equal(5, result.ScannedRevisions);
-                Assert.Equal(1, result.ScannedDocuments);
+                Assert.Equal(2, result.ScannedDocuments);
                 Assert.Equal(1, result.RevertedDocuments);
 
                 using (var session = store1.OpenAsyncSession())
                 {
                     var persons = await session.Advanced.Revisions.GetForAsync<Person>("foo/bar");
-                    Assert.Equal(6, persons.Count);
+                    Assert.Equal(5, persons.Count);
 
                     Assert.Equal(null, persons[0].Name);
                     var metadata = session.Advanced.GetMetadataFor(persons[0]);
@@ -824,12 +810,8 @@ namespace SlowTests.Server.Documents.Revisions
                     metadata = session.Advanced.GetMetadataFor(persons[3]);
                     Assert.Equal((DocumentFlags.HasRevisions | DocumentFlags.Revision | DocumentFlags.FromReplication | DocumentFlags.Conflicted).ToString(), metadata.GetString(Constants.Documents.Metadata.Flags));
 
-                    Assert.Equal(null, persons[4].Name);
+                    Assert.Equal("Name1", persons[4].Name);
                     metadata = session.Advanced.GetMetadataFor(persons[4]);
-                    Assert.Equal((DocumentFlags.HasRevisions | DocumentFlags.DeleteRevision).ToString(), metadata.GetString(Constants.Documents.Metadata.Flags));
-
-                    Assert.Equal("Name1", persons[5].Name);
-                    metadata = session.Advanced.GetMetadataFor(persons[5]);
                     Assert.Equal((DocumentFlags.HasRevisions | DocumentFlags.Revision).ToString(), metadata.GetString(Constants.Documents.Metadata.Flags));
                 }
             }
