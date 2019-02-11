@@ -7,16 +7,29 @@ type gapItem = {
     emptyLinesCount: number;
 }
 
+type foldItem = {
+    firstLine: number;
+    lines: number;
+}
+
 class aceDiffEditor {
-    highlights: number[];
-    editor: AceAjax.Editor;
-    mode: "left" | "right";
-    gutterClass: string;
-    markerClass: string;
+    static foldClassName = "diff_fold";
     
-    onScroll: (scroll: any) => void;
-    markers = [] as number[];
-    widgets = [] as any[];
+    private highlights: number[];
+    private folds = [] as foldItem[];
+    private readonly editor: AceAjax.Editor;
+    private readonly mode: "left" | "right";
+    private readonly gutterClass: string;
+    private readonly markerClass: string;
+    private previousAceMode: string;
+    private onModeChange: () => void;
+    
+    private onScroll: (scroll: any) => void;
+    private onFold: (foldEvent: any) => void;
+    private markers = [] as number[];
+    private widgets = [] as any[];
+    
+    private gutters = [] as Array<{ row: number, className: string, idx?: number }>;
     
     constructor(editor: AceAjax.Editor, mode: "left" | "right", gutterClass: string, markerClass: string) {
         this.editor = editor;
@@ -28,21 +41,31 @@ class aceDiffEditor {
     }
 
     getAllLines() {
-        return this.editor.getSession().getDocument().getAllLines();
+        return this.getSession().getDocument().getAllLines();
     }
 
     private initEditor() {
-        const session = this.editor.getSession() as any;
+        const session = this.getSession() as any;
         if (!session.widgetManager) {
             const LineWidgets = ace.require("ace/line_widgets").LineWidgets;
             session.widgetManager = new LineWidgets(session);
             session.widgetManager.attach(this.editor);
         }
+        
+        this.previousAceMode = this.getSession().getMode().$id;
 
-        // we want to manage folds manually 
-        this.editor.getSession().setFoldStyle("manual");
+        this.onModeChange = () => this.modeChanged();
+        this.getSession().on("changeMode", this.onModeChange);
     }
 
+    private modeChanged() {
+        const mode = this.getSession().getMode();
+        
+        if (mode.$id === "ace/mode/raven_document_diff") {
+            this.getSession().foldAll();
+        }
+    }
+    
     getSession() {
         return this.editor.getSession();
     }
@@ -54,8 +77,71 @@ class aceDiffEditor {
     update(patch: diff.IUniDiff, gaps: gapItem[]) {
         this.widgets = this.applyLineGaps(this.editor, gaps);
         this.highlights = this.findLinesToHighlight(patch.hunks, this.mode);
+        this.folds = this.findFolds(this.highlights, gaps);
         this.decorateGutter(this.editor, this.gutterClass, this.highlights);
         this.createLineMarkers();
+        this.addFolds();
+
+        this.getSession().setMode("ace/mode/raven_document_diff");
+    }
+    
+    private addFolds() {
+        const session = this.getSession();
+        this.folds.forEach((fold, idx) => {
+            const linesClass = "diff_l_" + fold.lines;
+            
+            this.addDisposableGutterDecoration(session, fold.firstLine, aceDiffEditor.foldClassName, idx);
+            this.addDisposableGutterDecoration(session, fold.firstLine, linesClass);
+        })
+    }
+    
+    private findFolds(highlightedLines: Array<number>, gaps: gapItem[]): Array<foldItem> {
+        const totalLines = this.editor.getSession().getDocument().getLength();
+        const bits = new Array(totalLines).fill(0);
+        
+        const context = 3;
+        
+        gaps.forEach(gap => {
+            const l = gap.firstLine - 1;
+            for (let i = Math.max(l - context, 0); i < Math.min(l + context, totalLines); i++) {
+                bits[i] = 1;
+            }
+        });
+        
+        highlightedLines.forEach(l => {
+            l = l - 1;
+            for (let i = Math.max(l - context, 0); i < Math.min(l + context + 1, totalLines); i++) {
+                bits[i] = 1;
+            }
+        });
+        
+        let inFold = false;
+        let foldStart = -1;
+        
+        const result = [] as Array<foldItem>;
+        for (let i = 0; i < totalLines; i++) {
+            if (bits[i] === 0 && !inFold) {
+                foldStart = i;
+                inFold = true;
+            }
+            
+            if (bits[i] === 1 && inFold) {
+                result.push({
+                    firstLine: foldStart,
+                    lines: i - foldStart
+                });
+                inFold = false;
+            }
+        }
+        
+        if (inFold) {
+            result.push({
+                firstLine: foldStart,
+                lines: totalLines - foldStart
+            })
+        }
+        
+        return result;
     }
 
     private createLineMarkers() {
@@ -87,8 +173,18 @@ class aceDiffEditor {
 
     private decorateGutter(editor: AceAjax.Editor, className: string, rows: Array<number>) {
         for (let i = 0; i < rows.length; i++) {
-            editor.getSession().addGutterDecoration(rows[i] - 1, className);
+            this.addDisposableGutterDecoration(editor.getSession(), rows[i] - 1, className);
         }
+    }
+    
+    private addDisposableGutterDecoration(session: AceAjax.IEditSession, row: number, className: string, idx?: number) {
+        session.addGutterDecoration(row, className);
+        
+        this.gutters.push({
+            className: className,
+            row: row,
+            idx: idx
+        });
     }
 
     private findLinesToHighlight(hunks: diff.IHunk[], mode: "left" | "right") {
@@ -134,9 +230,14 @@ class aceDiffEditor {
         });
     }
 
-    private cleanupGutter(editor: AceAjax.Editor, className: string, lineNumbers: number[]) {
+    private cleanupGutter(editor: AceAjax.Editor) {
         const session = editor.getSession();
-        lineNumbers.forEach(line => session.removeGutterDecoration(line - 1, className));
+        for (let i = 0; i < this.gutters.length; i++) {
+            const toClean = this.gutters[i];
+            session.removeGutterDecoration(toClean.row, toClean.className);
+        }
+        
+        this.gutters = [];
     }
     
     synchronizeScroll(secondEditor: aceDiffEditor) {
@@ -150,23 +251,74 @@ class aceDiffEditor {
         this.getSession().on("changeScrollTop", this.onScroll);
     }
     
+    synchronizeFolds(secondEditor: aceDiffEditor) {
+        this.onFold = e => {
+            const action = e.action;
+            const startLine = e.data.start.row;
+            
+            const fold = this.gutters.find(x => x.row === startLine && x.className === aceDiffEditor.foldClassName);
+            
+            if (fold) {
+                switch (action) {
+                    case "add":
+                        secondEditor.addFold(fold.idx);
+                        break;
+                    case "remove":
+                        secondEditor.removeFold(fold.idx);
+                        break;
+                }
+            }
+        };
+        
+        this.getSession().on("changeFold", this.onFold);
+    }
+    
+    addFold(idx: number) {
+        const gutter = this.gutters.find(x => x.idx === idx && x.className === aceDiffEditor.foldClassName);
+        
+        const existingFold = this.getSession().getFoldAt(gutter.row, 0);
+        if (existingFold) {
+            return;
+        }
+        
+        const range = this.getSession().getFoldWidgetRange(gutter.row);
+        
+        this.getSession().addFold("...", range);
+    }
+    
+    removeFold(idx: number) {
+        const gutter = this.gutters.find(x => x.idx === idx && x.className === aceDiffEditor.foldClassName);
+        if (gutter) {
+            const fold = this.getSession().getFoldAt(gutter.row, 0);
+            if (fold) {
+                this.getSession().removeFold(fold);
+            }
+        }
+    }
+    
     destroy() {
         if (this.onScroll) {
             this.getSession().off("changeScrollTop", this.onScroll);
             this.onScroll = null;
         }
         
-        this.cleanupGutter(this.editor, this.gutterClass, this.highlights);
+        if (this.onFold) {
+            this.getSession().off("changeFold", this.onFold);
+            this.onFold = null;
+        }
+        
+        this.cleanupGutter(this.editor);
         
         this.highlights = [];
         
         this.markers.forEach(marker => this.getSession().removeMarker(marker));
-        
         this.markers = [];
         
         this.widgets.forEach(widget => this.getSession().widgetManager.removeLineWidget(widget));
+
+        this.getSession().off("changeMode", this.onModeChange);
         
-        this.getSession().setFoldStyle("markbegin");
+        this.getSession().setMode(this.previousAceMode);
     }
 }
 
@@ -192,6 +344,10 @@ class aceDiff {
         this.computeDifference();
         this.leftEditor.synchronizeScroll(this.rightEditor);
         this.rightEditor.synchronizeScroll(this.leftEditor);
+        
+        this.leftEditor.synchronizeFolds(this.rightEditor);
+        this.rightEditor.synchronizeFolds(this.leftEditor);
+        
         //initial sync:
         this.rightEditor.getSession().setScrollTop(this.leftEditor.getSession().getScrollTop());
     }
