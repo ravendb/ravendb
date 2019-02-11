@@ -27,6 +27,7 @@ using Sparrow.Logging;
 using Sparrow.LowMemory;
 using Sparrow.Platform;
 using Sparrow.Utils;
+using Voron.Platform;
 using Size = Sparrow.Size;
 using SizeClient = Raven.Client.Util.Size;
 
@@ -548,7 +549,9 @@ namespace Raven.Server.Utils.Cli
                        Environment.NewLine +
                        $" {memoryInfo.TotalPhysicalMemory} Physical Memory, {memoryInfo.AvailableMemory} Available Memory, {memoryInfo.AvailableWithoutTotalCleanMemory} Calculated Available Memory" +
                        Environment.NewLine +
-                       $" {RuntimeSettings.Describe()}";
+                       $" {RuntimeSettings.Describe()}" +
+                       Environment.NewLine +
+                       $"librvnpal Expected Version: {Pal.PAL_VER}, librvnpal Current Version: {Pal.rvn_get_pal_ver()}";
             }
         }
 
