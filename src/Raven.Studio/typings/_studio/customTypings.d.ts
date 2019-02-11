@@ -191,6 +191,7 @@ declare namespace AceAjax {
         widgetManager: WidgetManager;
         off(event: string, fn: (e: any) => any): void;
         setFoldStyle(style: "manual" | "markbegin" | "markbeginend"): void;
+        getFoldWidgetRange: (row: number) => Range;
     }
     
     export interface WidgetManager {
@@ -204,6 +205,10 @@ declare namespace AceAjax {
     
     export interface VirtualRendererConfig {
         lineHeight: number;
+    }
+    
+    export interface TextMode {
+        $id: string;
     }
 }
 
