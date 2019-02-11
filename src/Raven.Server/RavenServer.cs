@@ -52,6 +52,7 @@ using Raven.Server.ServerWide.Context;
 using Raven.Server.ServerWide.Maintenance;
 using Raven.Server.Utils;
 using Raven.Server.Utils.Cpu;
+using Raven.Server.Web.Authentication;
 using Raven.Server.Web.ResponseCompression;
 using Sparrow;
 using Sparrow.Json;
@@ -900,6 +901,8 @@ namespace Raven.Server
             }
         }
 
+        private readonly ReaderWriterLockSlim _certificatesLock = new ReaderWriterLockSlim(LockRecursionPolicy.SupportsRecursion);
+
         internal AuthenticateConnection AuthenticateConnectionCertificate(X509Certificate2 certificate)
         {
             var authenticationStatus = new AuthenticateConnection
@@ -932,19 +935,27 @@ namespace Raven.Server
                 using (ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext ctx))
                 using (ctx.OpenReadTransaction())
                 {
+                    _certificatesLock.EnterReadLock();
                     var certKey = Constants.Certificates.Prefix + certificate.Thumbprint;
                     var cert = ServerStore.Cluster.Read(ctx, certKey) ??
                                ServerStore.Cluster.GetLocalState(ctx, certKey);
+                    _certificatesLock.ExitReadLock();
 
                     if (cert == null)
                     {
+                        // The certificate is not explicitly registered in our server, let's see if we have a certificate
+                        // with the same public key pinning hash.
+                        _certificatesLock.EnterReadLock();
                         var allCertKeys = ServerStore.Cluster.ItemKeysStartingWith(ctx, Constants.Certificates.Prefix, 0, int.MaxValue).ToList();
                         allCertKeys.AddRange(ServerStore.Cluster.GetCertificateKeysFromLocalState(ctx));
-                        
+                        _certificatesLock.ExitReadLock();
+
                         foreach (var key in allCertKeys)
                         {
+                            _certificatesLock.EnterReadLock();
                             var currentCert = ServerStore.Cluster.Read(ctx, key) ??
                                        ServerStore.Cluster.GetLocalState(ctx, key);
+                            _certificatesLock.ExitReadLock();
 
                             if (currentCert == null)
                                 continue;
@@ -955,7 +966,33 @@ namespace Raven.Server
                             if (CertificateUtils.GetPublicKeyPinningHash(certificate).Equals(hash) == false)
                                 continue;
 
-                            cert = currentCert;
+                            // Same cert (race?) so no need to store it again.
+                            if (currentCert.TryGet(nameof(CertificateDefinition.Thumbprint), out string thumbprint) && certificate.Thumbprint.Equals(thumbprint))
+                                continue;
+
+                            // Different certificate but same public key pinning hash. We'll allow the connection and register the used certificate
+                            // in the server with the same permissions as the original.
+                            var currentCertDef = JsonDeserializationServer.CertificateDefinition(currentCert);
+                            var certBytes = certificate.Export(X509ContentType.Cert);
+
+                            var newCopy = new CertificateDefinition
+                            {
+                                Name = currentCertDef.Name,
+                                Certificate = Convert.ToBase64String(certBytes),
+                                Permissions = currentCertDef.Permissions,
+                                SecurityClearance = currentCertDef.SecurityClearance,
+                                Thumbprint = certificate.Thumbprint,
+                                PublicKeyPinningHash = CertificateUtils.GetPublicKeyPinningHash(certificate),
+                                NotAfter = certificate.NotAfter,
+                            };
+
+                            cert = ctx.ReadObject(currentCertDef.ToJson(), "Client/Certificate/Definition");
+
+                            _certificatesLock.EnterWriteLock();
+
+                            AdminCertificatesHandler.PutCertificateCollectionInCluster(newCopy, certBytes, (string)null, ServerStore, ctx).Wait();
+
+                            _certificatesLock.ExitWriteLock();
                             break;
 
                         }
