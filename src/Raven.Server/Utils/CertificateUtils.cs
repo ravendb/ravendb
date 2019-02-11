@@ -374,7 +374,7 @@ namespace Raven.Server.Utils
                 var subjectPublicKeyInfo = new byte[bufferLength];
                 fixed (byte* newPtr = subjectPublicKeyInfo)
                 {
-                    Memory.Copy(ptr, newPtr, bufferLength);
+                    Memory.Copy(newPtr, ptr, bufferLength);
                 }
                 return subjectPublicKeyInfo;
             }    

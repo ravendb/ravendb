@@ -46,7 +46,7 @@ namespace SlowTests.Authentication
             DatabasePutResult databaseResult;
             using (var store = new DocumentStore
             {
-                Urls = new[] { leader.WebUrl },
+                Urls = new[] {leader.WebUrl},
                 Database = databaseName,
                 Certificate = adminCertificate,
                 Conventions =
@@ -58,11 +58,13 @@ namespace SlowTests.Authentication
                 var doc = new DatabaseRecord(databaseName);
                 databaseResult = await store.Maintenance.Server.SendAsync(new CreateDatabaseOperation(doc, clusterSize));
             }
+
             Assert.Equal(clusterSize, databaseResult.Topology.AllNodes.Count());
             foreach (var server in Servers)
             {
                 await server.ServerStore.Cluster.WaitForIndexNotification(databaseResult.RaftCommandIndex);
             }
+
             foreach (var server in Servers.Where(s => databaseResult.NodesAddedTo.Any(n => n == s.WebUrl)))
             {
                 await server.ServerStore.DatabasesLandlord.TryGetOrCreateResourceStore(databaseName);
@@ -70,7 +72,7 @@ namespace SlowTests.Authentication
 
             using (var store = new DocumentStore()
             {
-                Urls = new[] { databaseResult.NodesAddedTo[0] },
+                Urls = new[] {databaseResult.NodesAddedTo[0]},
                 Database = databaseName,
                 Certificate = adminCertificate,
                 Conventions =
@@ -100,6 +102,7 @@ namespace SlowTests.Authentication
 
                     requestExecutor.Execute(command, context);
                 }
+
                 Assert.True(mre.Wait(Debugger.IsAttached ? TimeSpan.FromMinutes(10) : TimeSpan.FromMinutes(2)), "Waited too long");
                 Assert.NotNull(leader.Certificate.Certificate.Thumbprint);
                 Assert.True(leader.Certificate.Certificate.Thumbprint.Equals(newServerCert.Thumbprint), "New cert is identical");
@@ -112,7 +115,7 @@ namespace SlowTests.Authentication
                 }
             }
         }
-        
+
         [Fact]
         public async Task CanTrustNewClientCertBasedOnPublicKeyPinningHash()
         {
@@ -148,23 +151,23 @@ namespace SlowTests.Authentication
             {
                 [databaseName] = DatabaseAccess.ReadWrite
             }, SecurityClearance.ValidUser, leader2);
-            
+
             // First we'll make sure external replication works between the two clusters
             using (var store1 = new DocumentStore
             {
-                Urls = new[] { leader1.WebUrl },
+                Urls = new[] {leader1.WebUrl},
                 Database = databaseName,
                 Certificate = adminCertificate1
             }.Initialize())
             using (var store2 = new DocumentStore
             {
-                Urls = new[] { leader2.WebUrl },
+                Urls = new[] {leader2.WebUrl},
                 Database = databaseName,
                 Certificate = adminCertificate2
             }.Initialize())
             {
                 var externalList = await SetupReplicationAsync((DocumentStore)store1, (DocumentStore)store2);
-                
+
                 using (var session = store1.OpenAsyncSession())
                 {
                     await session.StoreAsync(new User { Name = "Karmelush" }, "users/1");
@@ -190,6 +193,7 @@ namespace SlowTests.Authentication
 
                     requestExecutor.Execute(command, context);
                 }
+
                 Assert.True(mre.Wait(Debugger.IsAttached ? TimeSpan.FromMinutes(10) : TimeSpan.FromMinutes(2)), "Waited too long");
                 Assert.NotNull(leader1.Certificate.Certificate.Thumbprint);
                 Assert.True(leader1.Certificate.Certificate.Thumbprint.Equals(cluster1ReplacementCert.Thumbprint), "New cert is identical");
@@ -228,7 +232,7 @@ namespace SlowTests.Authentication
                     await session.StoreAsync(new User { Name = "Avivush" }, "users/2");
                     await session.SaveChangesAsync();
                 }
-                
+
                 var replicated2 = WaitForDocumentToReplicate<User>(store2, "users/2", 10000);
                 Assert.NotNull(replicated2);
                 Assert.Equal("Avivush", replicated2.Name);
@@ -267,13 +271,13 @@ namespace SlowTests.Authentication
             // First we'll make sure external replication works between the two clusters
             using (var store1 = new DocumentStore
             {
-                Urls = new[] { leader1.WebUrl },
+                Urls = new[] {leader1.WebUrl},
                 Database = databaseName,
                 Certificate = adminCertificate1
             }.Initialize())
             using (var store2 = new DocumentStore
             {
-                Urls = new[] { leader2.WebUrl },
+                Urls = new[] {leader2.WebUrl},
                 Database = databaseName,
                 Certificate = adminCertificate2
             }.Initialize())
@@ -290,7 +294,7 @@ namespace SlowTests.Authentication
                 Assert.NotNull(replicated1);
                 Assert.Equal("Karmelush", replicated1.Name);
 
-                // Let's replace the certificate in cluster 1 (new cert has diffetent private key) and make sure cluster 2 WILL NOT trusts cluster 1.
+                // Let's replace the certificate in cluster 1 (new cert has different private key) and make sure cluster 2 WILL NOT trusts cluster 1.
                 var certBytes = CertificateUtils.CreateSelfSignedTestCertificate(Environment.MachineName, "ReplacementCertDifferentKey");
                 var cluster1ReplacementCert = new X509Certificate2(certBytes);
 
@@ -306,6 +310,7 @@ namespace SlowTests.Authentication
 
                     requestExecutor.Execute(command, context);
                 }
+
                 Assert.True(mre.Wait(Debugger.IsAttached ? TimeSpan.FromMinutes(10) : TimeSpan.FromMinutes(2)), "Waited too long");
                 Assert.NotNull(leader1.Certificate.Certificate.Thumbprint);
                 Assert.True(leader1.Certificate.Certificate.Thumbprint.Equals(cluster1ReplacementCert.Thumbprint), "New cert is identical");
@@ -344,9 +349,37 @@ namespace SlowTests.Authentication
                     await session.StoreAsync(new User { Name = "Avivush" }, "users/2");
                     await session.SaveChangesAsync();
                 }
+
                 var replicated = WaitForDocumentToReplicate<User>(store2, "users/2", 10000);
                 Assert.Null(replicated);
             }
+        }
+
+        [Fact]
+        public async Task PublicKeyPinningHashShouldBeEqual()
+        {
+            var (c1, c2) = CertificateUtils.CreateTwoTestCertificatesWithSameKey(Environment.MachineName, "sameKey");
+            var c1Cert = new X509Certificate2(c1);
+            var c2Cert = new X509Certificate2(c2);
+
+            var h1 = CertificateUtils.GetPublicKeyPinningHash(c1Cert);
+            var h2 = CertificateUtils.GetPublicKeyPinningHash(c2Cert);
+            Assert.Equal(h1, h2);
+        }
+
+        [Fact]
+        public async Task PublicKeyPinningHashShouldNotBeEqual()
+        {
+            // Different private key
+            var c1 = CertificateUtils.CreateSelfSignedTestCertificate(Environment.MachineName, "first");
+            var c2 = CertificateUtils.CreateSelfSignedTestCertificate(Environment.MachineName, "second");
+
+            var c1Cert = new X509Certificate2(c1);
+            var c2Cert = new X509Certificate2(c2);
+
+            var h1 = CertificateUtils.GetPublicKeyPinningHash(c1Cert);
+            var h2 = CertificateUtils.GetPublicKeyPinningHash(c2Cert);
+            Assert.NotEqual(h1, h2);
         }
     }
 }
