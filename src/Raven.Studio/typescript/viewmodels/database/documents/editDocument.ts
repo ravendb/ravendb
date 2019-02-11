@@ -38,6 +38,12 @@ import eventsCollector = require("common/eventsCollector");
 import collectionsTracker = require("common/helpers/database/collectionsTracker");
 import database = require("models/resources/database");
 import aceDiff = require("common/helpers/text/aceDiff");
+import getDocumentRevisionsCommand = require("commands/database/documents/getDocumentRevisionsCommand");
+
+interface revisionToCompare {
+    date: string;
+    changeVector: string;
+}
 
 class editDocument extends viewModelBase {
 
@@ -49,6 +55,10 @@ class editDocument extends viewModelBase {
     inReadOnlyMode = ko.observable<boolean>(false);
     inDiffMode = ko.observable<boolean>(false);
     currentDiff = ko.observable<aceDiff>();
+    revisionsToCompare = ko.observableArray<document>([]);
+    comparingWith = ko.observable<document>();
+    leftRevisionIsNewer: KnockoutComputed<boolean>;
+    
     revisionChangeVector = ko.observable<string>();
     document = ko.observable<document>();
     documentText = ko.observable("");
@@ -104,7 +114,7 @@ class editDocument extends viewModelBase {
     connectedDocuments = new connectedDocuments(this.document, 
         this.activeDatabase, 
         (docId) => this.loadDocument(docId), 
-            changeVector => this.compareWithRevision(changeVector), 
+            changeVector => this.enterCompareModeAndCompareByChangeVector(changeVector), 
         this.isCreatingNewDocument, 
         this.crudActionsProvider, 
         this.inReadOnlyMode);
@@ -130,6 +140,8 @@ class editDocument extends viewModelBase {
         aceEditorBindingHandler.install();
         this.initializeObservables();
         this.initValidation();
+        
+        this.bindToCurrentInstance("compareRevisions");
     }
 
     canActivate(args: any) {
@@ -321,7 +333,21 @@ class editDocument extends viewModelBase {
             } else {
                 return false;
             }
-        })
+        });
+        
+        this.leftRevisionIsNewer = ko.pureComputed(() => {
+           const leftDoc = this.document();
+           const rightDoc = this.comparingWith();
+           
+           if (leftDoc && rightDoc) {
+               const leftMoment = moment(leftDoc.__metadata.lastModified());
+               const rightMoment = moment(rightDoc.__metadata.lastModified());
+               
+               return leftMoment.isAfter(rightMoment);
+           }
+           
+           return false;
+        });
 
         this.isDeleteRevision = ko.pureComputed(() => {
             const doc = this.document();
@@ -785,7 +811,24 @@ class editDocument extends viewModelBase {
         return loadTask;
     }
 
-    private compareWithRevision(revisionChangeVector: string): JQueryPromise<document> {
+    private enterCompareModeAndCompareByChangeVector(revisionChangeVector: string): JQueryPromise<document> {
+        return new getDocumentRevisionsCommand(this.document().getId(), this.activeDatabase(), 0, 1024, true)
+            .execute()
+            .then(revisions => {
+                const itemToCompare = revisions.items.find(x => x.__metadata.changeVector() === revisionChangeVector);
+                
+                this.revisionsToCompare(revisions.items);
+                
+                if (itemToCompare) {
+                    return this.compareRevisions(itemToCompare);    
+                }
+            });
+    }
+    
+    compareRevisions(item: document) {
+        this.comparingWith(item);
+        
+        const revisionChangeVector = item.__metadata.changeVector();
         return new getDocumentAtRevisionCommand(revisionChangeVector, this.activeDatabase())
             .execute()
             .done((doc: document) => {
@@ -800,11 +843,11 @@ class editDocument extends viewModelBase {
                     const docText = this.stringify(docDto);
                     this.documentTextRight(docText);
                 }
-                
-                this.enterCompareMode();
+
+                this.renderDifferences();
             });
     }
-        
+    
     private getDocumentPhysicalSize(id: string): JQueryPromise<Raven.Server.Documents.Handlers.DocumentSizeDetails> {
         return new getDocumentPhysicalSizeCommand(id, this.activeDatabase())
             .execute()
@@ -943,13 +986,19 @@ class editDocument extends viewModelBase {
         } as attachmentItem;
     }
 
-    private enterCompareMode() {
-        this.inDiffMode(true);
-        this.currentDiff(new aceDiff(this.docEditor, this.docEditorRight));
+    private renderDifferences() {
+        if (!this.inDiffMode()) {
+            this.inDiffMode(true);
+            this.currentDiff(new aceDiff(this.docEditor, this.docEditorRight));    
+        } else {
+            this.currentDiff().refresh();
+        }
     }
 
     exitCompareMode() {
         this.documentTextRight("");
+        this.revisionsToCompare([]);
+        this.comparingWith(null);
         
         if (this.currentDiff()) {
             this.currentDiff().destroy();

@@ -16,6 +16,7 @@ class aceDiffEditor {
     static foldClassName = "diff_fold";
     
     private highlights: number[];
+    private hasAnyChange: boolean;
     private folds = [] as foldItem[];
     private readonly editor: AceAjax.Editor;
     private readonly mode: "left" | "right";
@@ -61,9 +62,14 @@ class aceDiffEditor {
     private modeChanged() {
         const mode = this.getSession().getMode();
         
-        if (mode.$id === "ace/mode/raven_document_diff") {
+        if (mode.$id === "ace/mode/raven_document_diff" && this.hasAnyChange) {
             this.getSession().foldAll();
         }
+    }
+    
+    refresh() {
+        this.destroy();
+        this.initEditor();
     }
     
     getSession() {
@@ -77,6 +83,7 @@ class aceDiffEditor {
     update(patch: diff.IUniDiff, gaps: gapItem[]) {
         this.widgets = this.applyLineGaps(this.editor, gaps);
         this.highlights = this.findLinesToHighlight(patch.hunks, this.mode);
+        this.hasAnyChange = patch.hunks.length > 0;
         this.folds = this.findFolds(this.highlights, gaps);
         this.decorateGutter(this.editor, this.gutterClass, this.highlights);
         this.createLineMarkers();
@@ -341,13 +348,17 @@ class aceDiff {
             return a === 0 && d === 0;
         });
         
+        this.init();
+    }
+    
+    private init() {
         this.computeDifference();
         this.leftEditor.synchronizeScroll(this.rightEditor);
         this.rightEditor.synchronizeScroll(this.leftEditor);
-        
+
         this.leftEditor.synchronizeFolds(this.rightEditor);
         this.rightEditor.synchronizeFolds(this.leftEditor);
-        
+
         //initial sync:
         this.rightEditor.getSession().setScrollTop(this.leftEditor.getSession().getScrollTop());
     }
@@ -381,6 +392,13 @@ class aceDiff {
 
         this.additions(this.rightEditor.getHighlightsCount());
         this.deletions(this.leftEditor.getHighlightsCount());
+    }
+
+    refresh() {
+        this.leftEditor.refresh();
+        this.rightEditor.refresh();
+        
+        this.init();
     }
     
     destroy() {

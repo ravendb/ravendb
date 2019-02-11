@@ -77,13 +77,34 @@
                     </div>
                 </div>
             </div>
-            <div class="clearfix" data-bind="visible: !isDeleteRevision()">
-                <div class="pull-right">
-                    <button class="btn btn-sm btn-default" data-bind="visible: inDiffMode(), click: exitCompareMode">
-                        <i class="icon-cancel"></i>
-                        <span>Exit revisions compare mode</span>
-                    </button>
+            <div class="row" data-bind="visible: inDiffMode()">
+                <div class="col-md-6 flex-horizontal">
+                    <div>Version:</div>
+                    <div data-bind="text: document().__metadata.lastModified()"></div>
+                    <div data-bind="visible: currentDiff() && !currentDiff().identicalContent()"><small data-bind="text: $root.leftRevisionIsNewer() ? '(Newer version)' : '(Older version)'"></small></div>
                 </div>
+                <div class="col-md-6 flex-horizontal">
+                    <div class="dropdown" data-bind="if: comparingWith">
+                        <button type="button" class="btn btn-sm dropdown-toggle" data-toggle="dropdown">
+                            Compare with: <span data-bind="text: comparingWith().__metadata.lastModified()"></span> <span class="caret"></span>
+                        </button>
+                        <ul class="dropdown-menu max-height" data-bind="foreach: revisionsToCompare">
+                            <li data-bind="css: { active:  $data === $root.comparingWith() }">
+                                <a href="#" data-bind="text: $data.__metadata.lastModified(), click: _.partial($root.compareRevisions, $data)"></a>
+                            </li>
+                        </ul>
+                    </div>
+                    <div data-bind="visible: currentDiff() && !currentDiff().identicalContent()"><small data-bind="text: $root.leftRevisionIsNewer() ? '(Older version)' : '(Newer version)'"></small></div>
+                    <div class="flex-separator"></div>
+                    <div>
+                        <button class="btn btn-sm btn-default" data-bind="visible: inDiffMode(), click: exitCompareMode">
+                            <i class="icon-cancel"></i>
+                            <span>Exit revisions compare mode</span>
+                        </button>
+                    </div>
+                </div>
+            </div>
+            <div class="clearfix" data-bind="visible: !isDeleteRevision() && !inDiffMode()">
                 <div class="btn-group btn-group-sm pull-right" role="group" data-bind="visible: !inDiffMode()">
                     <button type="button" class="btn btn-default" data-bind="enable: !isNewLineFriendlyMode(), click: formatDocument"><span class="icon-indent"></span> <span>Format</span></button>
                     <button type="button" class="btn btn-default" data-toggle="button" data-bind="click: toggleAutoCollapse"><span class="icon-collapse"></span> <span>Toggle collapse</span></button>
