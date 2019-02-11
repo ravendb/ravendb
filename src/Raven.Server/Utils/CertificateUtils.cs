@@ -356,25 +356,25 @@ namespace Raven.Server.Utils
             */
 
             var rawCert = cert.GetRawCertData();
-            var currentLength = rawCert.Length;
+            var bufferLength = rawCert.Length;
 
             fixed (byte* certPtr = rawCert)
             {
-                var ptr = AsnNext(certPtr, ref currentLength, true, false);  // unwrap certificate sequence
-                ptr = AsnNext(ptr, ref currentLength, false, false); // get tbsCertificate
-                ptr = AsnNext(ptr, ref currentLength, true, false);  // unwrap tbsCertificate sequence
-                ptr = AsnNext(ptr, ref currentLength, false, true);  // skip tbsCertificate.Version
-                ptr = AsnNext(ptr, ref currentLength, false, true);  // skip tbsCertificate.SerialNumber
-                ptr = AsnNext(ptr, ref currentLength, false, true);  // skip tbsCertificate.Signature
-                ptr = AsnNext(ptr, ref currentLength, false, true);  // skip tbsCertificate.Issuer
-                ptr = AsnNext(ptr, ref currentLength, false, true);  // skip tbsCertificate.Validity
-                ptr = AsnNext(ptr, ref currentLength, false, true);  // skip tbsCertificate.Subject  
-                ptr = AsnNext(ptr, ref currentLength, false, false); // get tbsCertificate.SubjectPublicKeyInfo 
+                var ptr = AsnNext(certPtr, ref bufferLength, true, false);  // unwrap certificate sequence
+                ptr = AsnNext(ptr, ref bufferLength, false, false); // get tbsCertificate
+                ptr = AsnNext(ptr, ref bufferLength, true, false);  // unwrap tbsCertificate sequence
+                ptr = AsnNext(ptr, ref bufferLength, false, true);  // skip tbsCertificate.Version
+                ptr = AsnNext(ptr, ref bufferLength, false, true);  // skip tbsCertificate.SerialNumber
+                ptr = AsnNext(ptr, ref bufferLength, false, true);  // skip tbsCertificate.Signature
+                ptr = AsnNext(ptr, ref bufferLength, false, true);  // skip tbsCertificate.Issuer
+                ptr = AsnNext(ptr, ref bufferLength, false, true);  // skip tbsCertificate.Validity
+                ptr = AsnNext(ptr, ref bufferLength, false, true);  // skip tbsCertificate.Subject  
+                ptr = AsnNext(ptr, ref bufferLength, false, false); // get tbsCertificate.SubjectPublicKeyInfo 
 
-                var subjectPublicKeyInfo = new byte[currentLength];
+                var subjectPublicKeyInfo = new byte[bufferLength];
                 fixed (byte* newPtr = subjectPublicKeyInfo)
                 {
-                    Memory.Copy(ptr, newPtr, currentLength);
+                    Memory.Copy(ptr, newPtr, bufferLength);
                 }
                 return subjectPublicKeyInfo;
             }    
@@ -390,6 +390,7 @@ namespace Raven.Server.Utils
             var index = 0;
             //var entityType = buffer[index];
             index ++;
+
             int length = buffer[index];
             index ++;
 
