@@ -197,7 +197,7 @@ namespace FastTests.Server.Replication
         }
 
         protected static async Task<ModifyOngoingTaskResult> AddWatcherToReplicationTopology<T>(
-            DocumentStore store,
+            IDocumentStore store,
             T watcher,
             string[] urls = null) where T : ExternalReplicationBase
         {
@@ -248,7 +248,7 @@ namespace FastTests.Server.Replication
             return await store.Maintenance.Server.SendAsync(op);
         }
 
-        public async Task<List<ModifyOngoingTaskResult>> SetupReplicationAsync(DocumentStore fromStore, params DocumentStore[] toStores)
+        public async Task<List<ModifyOngoingTaskResult>> SetupReplicationAsync(IDocumentStore fromStore, params IDocumentStore[] toStores)
         {
             var tasks = new List<Task<ModifyOngoingTaskResult>>();
             var resList = new List<ModifyOngoingTaskResult>();

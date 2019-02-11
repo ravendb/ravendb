@@ -503,7 +503,7 @@ namespace FastTests
             var documentsPage = urls.First() + "/studio/index.html#databases/documents?&database=" + databaseNameEncoded + "&withStop=true";
 
             if (clientCert != null && RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
-                Process.Start("chrome.exe", documentsPage);
+                Process.Start(@"C:\Program Files (x86)\Google\Chrome\Application\chrome.exe", documentsPage);
             else
                 OpenBrowser(documentsPage);// start the server
 

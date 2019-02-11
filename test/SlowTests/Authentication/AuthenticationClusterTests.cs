@@ -12,6 +12,7 @@ using System.Linq;
 using System.Security.Cryptography.X509Certificates;
 using System.Threading;
 using System.Threading.Tasks;
+using FastTests.Server.Replication;
 using Raven.Client.Documents;
 using Raven.Client.Documents.Operations;
 using Raven.Client.Documents.Operations.ConnectionStrings;
@@ -29,7 +30,7 @@ using Xunit;
 
 namespace SlowTests.Authentication
 {
-    public class AuthenticationClusterTests : ClusterTestBase
+    public class AuthenticationClusterTests : ReplicationTestBase
     {
         [Fact]
         public async Task CanReplaceClusterCert()
@@ -116,15 +117,19 @@ namespace SlowTests.Authentication
         public async Task CanTrustNewClientCertBasedOnPublicKeyPinningHash()
         {
             // Setting up two clusters with external replication cluster1 --> cluster2
-            var clusterSize = 3;
+            var clusterSize = 1;
             var databaseName = GetDatabaseName();
 
             // We generate two certificates for cluster 1, an original and a renewed certificate with same private key.
-            var (cluster1CertBytes, cluster1ReplacementCertBytes) = CertificateUtils.CreateTwoTestCertificateWithSameKey(Environment.MachineName, "RavenTestsTwoCerts");
+            var (cluster1CertBytes, cluster1ReplacementCertBytes) = CertificateUtils.CreateTwoTestCertificatesWithSameKey(Environment.MachineName, "RavenTestsTwoCerts");
             var cluster1CertFileName = GetTempFileName();
             var cluster1ReplacementCertFileName = GetTempFileName();
             File.WriteAllBytes(cluster1CertFileName, cluster1CertBytes);
             File.WriteAllBytes(cluster1ReplacementCertFileName, cluster1ReplacementCertBytes);
+
+            var cert = new X509Certificate2(cluster1CertBytes);
+            var replacementCert = new X509Certificate2(cluster1ReplacementCertBytes);
+            Assert.Equal(CertificateUtils.GetPublicKeyPinningHash(cert), CertificateUtils.GetPublicKeyPinningHash(replacementCert));
 
             // Create cluster 1 with the original certificate. Later we will replace that with the renewed certificate.
             var leader1 = await CreateRaftClusterAndGetLeader(clusterSize, false, useSsl: true, serverCertPath: cluster1CertFileName);
@@ -158,24 +163,17 @@ namespace SlowTests.Authentication
                 Certificate = adminCertificate2
             }.Initialize())
             {
-                var watcher = new ExternalReplication(store1.Database, "ExternalReplication");
-                await store1.Maintenance.SendAsync(new PutConnectionStringOperation<RavenConnectionString>(new RavenConnectionString
-                {
-                    Name = watcher.ConnectionStringName,
-                    Database = watcher.Database,
-                    TopologyDiscoveryUrls = store2.Urls
-                }));
-
-                IMaintenanceOperation<ModifyOngoingTaskResult> op = new UpdateExternalReplicationOperation(watcher);
+                var externalList = await SetupReplicationAsync((DocumentStore)store1, (DocumentStore)store2);
                 
-                await store1.Maintenance.SendAsync(op);
-
                 using (var session = store1.OpenAsyncSession())
                 {
                     await session.StoreAsync(new User { Name = "Karmelush" }, "users/1");
                     await session.SaveChangesAsync();
                 }
-                Assert.True(WaitForDocument(store2, "users/1"));
+
+                var replicated1 = WaitForDocumentToReplicate<User>(store2, "users/1", 10000);
+                Assert.NotNull(replicated1);
+                Assert.Equal("Karmelush", replicated1.Name);
 
                 // Let's replace the certificate in cluster 1 (new cert has same private key) and make sure cluster 2 still trusts cluster 1.
                 var cluster1ReplacementCert = new X509Certificate2(cluster1ReplacementCertBytes);
@@ -196,12 +194,158 @@ namespace SlowTests.Authentication
                 Assert.NotNull(leader1.Certificate.Certificate.Thumbprint);
                 Assert.True(leader1.Certificate.Certificate.Thumbprint.Equals(cluster1ReplacementCert.Thumbprint), "New cert is identical");
 
+                // Disable external replication
+                var external = new ExternalReplication(store1.Database, $"ConnectionString-{store2.Identifier}")
+                {
+                    TaskId = externalList.First().TaskId,
+                    Disabled = true
+                };
+
+                var responsibleNode = externalList[0].ResponsibleNode;
+
+                var clusterNodes1 = Servers.Where(s => s.ServerStore.GetClusterTopology().TryGetNodeTagByUrl(leader1.WebUrl).HasUrl);
+                var node = clusterNodes1.Single(n => n.ServerStore.NodeTag == responsibleNode);
+
+                var db1 = await node.ServerStore.DatabasesLandlord.TryGetOrCreateResourceStore(store1.Database);
+                Assert.NotNull(db1);
+                var replicationConnection = db1.ReplicationLoader.OutgoingHandlers.Single(x => x.Destination is ExternalReplication);
+                var res = await store1.Maintenance.SendAsync(new UpdateExternalReplicationOperation(external));
+
+                Assert.Equal(externalList.First().TaskId, res.TaskId);
+
+                // Make sure the command is processed
+                await db1.ServerStore.Cluster.WaitForIndexNotification(res.RaftCommandIndex);
+                var connectionDropped = await WaitForValueAsync(() => replicationConnection.IsConnectionDisposed, true);
+                Assert.True(connectionDropped);
+
+                // Enable external replication
+                external.Disabled = false;
+                res = await store1.Maintenance.SendAsync(new UpdateExternalReplicationOperation(external));
+                Assert.Equal(externalList.First().TaskId, res.TaskId);
+
                 using (var session = store1.OpenAsyncSession())
                 {
                     await session.StoreAsync(new User { Name = "Avivush" }, "users/2");
                     await session.SaveChangesAsync();
                 }
-                Assert.True(WaitForDocument(store2, "users/2"));
+                
+                var replicated2 = WaitForDocumentToReplicate<User>(store2, "users/2", 10000);
+                Assert.NotNull(replicated2);
+                Assert.Equal("Avivush", replicated2.Name);
+            }
+        }
+
+        [Fact]
+        public async Task WillNotTrustNewClientCertIfPublicKeyPinningHashIsDifferent()
+        {
+            // Setting up two clusters with external replication cluster1 --> cluster2
+            var clusterSize = 1;
+            var databaseName = GetDatabaseName();
+
+            // We generate the first certificate before calling CreateRaftClusterAndGetLeader so that the two clusters will have separate certificates
+            var cluster1CertBytes = CertificateUtils.CreateSelfSignedTestCertificate(Environment.MachineName, "RavenTests");
+            var cluster1CertFileName = GetTempFileName();
+            File.WriteAllBytes(cluster1CertFileName, cluster1CertBytes);
+
+            var leader1 = await CreateRaftClusterAndGetLeader(clusterSize, false, useSsl: true, serverCertPath: cluster1CertFileName);
+            var cluster1Cert = new X509Certificate2(cluster1CertFileName);
+            var adminCertificate1 = AskServerForClientCertificate(cluster1CertFileName, new Dictionary<string, DatabaseAccess>(), SecurityClearance.ClusterAdmin, server: leader1);
+            await CreateDatabaseInCluster(databaseName, clusterSize, leader1.WebUrl, adminCertificate1);
+
+            // Cluster 2 gets a normal test certificate
+            var leader2 = await CreateRaftClusterAndGetLeader(clusterSize, false, useSsl: true);
+            var cluster2Cert = new X509Certificate2(_selfSignedCertFileName);
+            var adminCertificate2 = AskServerForClientCertificate(_selfSignedCertFileName, new Dictionary<string, DatabaseAccess>(), SecurityClearance.ClusterAdmin, server: leader2);
+            await CreateDatabaseInCluster(databaseName, clusterSize, leader2.WebUrl, adminCertificate2);
+
+            // This will register cluster 1's cert as a user cert in cluster 2
+            AskCluster2ToTrustCluster1(cluster1Cert, cluster2Cert, new Dictionary<string, DatabaseAccess>
+            {
+                [databaseName] = DatabaseAccess.ReadWrite
+            }, SecurityClearance.ValidUser, leader2);
+
+            // First we'll make sure external replication works between the two clusters
+            using (var store1 = new DocumentStore
+            {
+                Urls = new[] { leader1.WebUrl },
+                Database = databaseName,
+                Certificate = adminCertificate1
+            }.Initialize())
+            using (var store2 = new DocumentStore
+            {
+                Urls = new[] { leader2.WebUrl },
+                Database = databaseName,
+                Certificate = adminCertificate2
+            }.Initialize())
+            {
+                var externalList = await SetupReplicationAsync((DocumentStore)store1, (DocumentStore)store2);
+
+                using (var session = store1.OpenAsyncSession())
+                {
+                    await session.StoreAsync(new User { Name = "Karmelush" }, "users/1");
+                    await session.SaveChangesAsync();
+                }
+
+                var replicated1 = WaitForDocumentToReplicate<User>(store2, "users/1", 10000);
+                Assert.NotNull(replicated1);
+                Assert.Equal("Karmelush", replicated1.Name);
+
+                // Let's replace the certificate in cluster 1 (new cert has diffetent private key) and make sure cluster 2 WILL NOT trusts cluster 1.
+                var certBytes = CertificateUtils.CreateSelfSignedTestCertificate(Environment.MachineName, "ReplacementCertDifferentKey");
+                var cluster1ReplacementCert = new X509Certificate2(certBytes);
+
+                var mre = new ManualResetEventSlim();
+
+                leader1.ServerCertificateChanged += (sender, args) => mre.Set();
+
+                var requestExecutor = store1.GetRequestExecutor();
+                using (requestExecutor.ContextPool.AllocateOperationContext(out JsonOperationContext context))
+                {
+                    var command = new ReplaceClusterCertificateOperation(certBytes, false)
+                        .GetCommand(store1.Conventions, context);
+
+                    requestExecutor.Execute(command, context);
+                }
+                Assert.True(mre.Wait(Debugger.IsAttached ? TimeSpan.FromMinutes(10) : TimeSpan.FromMinutes(2)), "Waited too long");
+                Assert.NotNull(leader1.Certificate.Certificate.Thumbprint);
+                Assert.True(leader1.Certificate.Certificate.Thumbprint.Equals(cluster1ReplacementCert.Thumbprint), "New cert is identical");
+
+                // Disable external replication
+                var external = new ExternalReplication(store1.Database, $"ConnectionString-{store2.Identifier}")
+                {
+                    TaskId = externalList.First().TaskId,
+                    Disabled = true
+                };
+
+                var responsibleNode = externalList[0].ResponsibleNode;
+
+                var clusterNodes1 = Servers.Where(s => s.ServerStore.GetClusterTopology().TryGetNodeTagByUrl(leader1.WebUrl).HasUrl);
+                var node = clusterNodes1.Single(n => n.ServerStore.NodeTag == responsibleNode);
+
+                var db1 = await node.ServerStore.DatabasesLandlord.TryGetOrCreateResourceStore(store1.Database);
+                Assert.NotNull(db1);
+                var replicationConnection = db1.ReplicationLoader.OutgoingHandlers.Single(x => x.Destination is ExternalReplication);
+                var res = await store1.Maintenance.SendAsync(new UpdateExternalReplicationOperation(external));
+
+                Assert.Equal(externalList.First().TaskId, res.TaskId);
+
+                // Make sure the command is processed
+                await db1.ServerStore.Cluster.WaitForIndexNotification(res.RaftCommandIndex);
+                var connectionDropped = await WaitForValueAsync(() => replicationConnection.IsConnectionDisposed, true);
+                Assert.True(connectionDropped);
+
+                // Enable external replication
+                external.Disabled = false;
+                res = await store1.Maintenance.SendAsync(new UpdateExternalReplicationOperation(external));
+                Assert.Equal(externalList.First().TaskId, res.TaskId);
+
+                using (var session = store1.OpenAsyncSession())
+                {
+                    await session.StoreAsync(new User { Name = "Avivush" }, "users/2");
+                    await session.SaveChangesAsync();
+                }
+                var replicated = WaitForDocumentToReplicate<User>(store2, "users/2", 10000);
+                Assert.Null(replicated);
             }
         }
     }
