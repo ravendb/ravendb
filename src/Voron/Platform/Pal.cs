@@ -11,6 +11,7 @@ namespace Voron.Platform
     public static unsafe class Pal
     {
         public static SystemInformation SysInfo;
+        public const int PAL_VER = 42001; // Should match auto generated rc from rvn_get_pal_ver() @ src/rvngetpalver.c
 
         static Pal()
         {
@@ -63,10 +64,21 @@ namespace Voron.Platform
             }
 
             PalFlags.FailCodes rc = PalFlags.FailCodes.None;
-            int errorCode = 0;
+            int errorCode;
             try
             {
+                var palver = rvn_get_pal_ver();
+                if (palver != 0 && palver != PAL_VER)
+                {
+                    throw new IncorrectDllException(
+                        $"{LIBRVNPAL} version '{palver}' mismatches this RavenDB instance version (set to '{PAL_VER}'). Either use correct {fromFilename}, or a new one returning zero in 'rvn_get_pal_ver()'");
+                }
+
                 rc = rvn_get_system_information(out SysInfo, out errorCode);
+            }
+            catch (IncorrectDllException)
+            {
+                throw;
             }
             catch (Exception ex)
             {
@@ -216,6 +228,9 @@ namespace Voron.Platform
         public static extern PalFlags.FailCodes rvn_test_storage_durability(
             string tempFilename,
             out Int32 errorCode);
+
+        [DllImport(LIBRVNPAL, SetLastError = true)]
+        public static extern Int32 rvn_get_pal_ver();
 
     }
 }
