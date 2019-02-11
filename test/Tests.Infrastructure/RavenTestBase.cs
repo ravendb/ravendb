@@ -494,32 +494,34 @@ namespace FastTests
                 }
             }
 
-            if (debug && Debugger.IsAttached == false)
-                return;
+            try
+            {
+                if (debug && Debugger.IsAttached == false)
+                    return;
 
-            var urls = documentStore.Urls;
+                var urls = documentStore.Urls;
 
-            var databaseNameEncoded = Uri.EscapeDataString(database ?? documentStore.Database);
-            var documentsPage = urls.First() + "/studio/index.html#databases/documents?&database=" + databaseNameEncoded + "&withStop=true";
+                var databaseNameEncoded = Uri.EscapeDataString(database ?? documentStore.Database);
+                var documentsPage = urls.First() + "/studio/index.html#databases/documents?&database=" + databaseNameEncoded + "&withStop=true";
 
-            if (clientCert != null && RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
-                Process.Start(@"C:\Program Files (x86)\Google\Chrome\Application\chrome.exe", documentsPage);
-            else
                 OpenBrowser(documentsPage);// start the server
 
-            do
-            {
-                Thread.Sleep(500);
-            } while (documentStore.Commands(database).Head("Debug/Done") == null && (debug == false || Debugger.IsAttached));
-
-            documentStore.Commands(database).Delete("Debug/Done", null);
-
-            if (clientCert != null && RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
-            {
-                using (var userPersonalStore = new X509Store(StoreName.My, StoreLocation.CurrentUser))
+                do
                 {
-                    userPersonalStore.Open(OpenFlags.ReadWrite);
-                    userPersonalStore.Remove(clientCert);
+                    Thread.Sleep(500);
+                } while (documentStore.Commands(database).Head("Debug/Done") == null && (debug == false || Debugger.IsAttached));
+
+                documentStore.Commands(database).Delete("Debug/Done", null);
+            }
+            finally
+            {
+                if (clientCert != null && RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
+                {
+                    using (var userPersonalStore = new X509Store(StoreName.My, StoreLocation.CurrentUser))
+                    {
+                        userPersonalStore.Open(OpenFlags.ReadWrite);
+                        userPersonalStore.Remove(clientCert);
+                    }
                 }
             }
         }
