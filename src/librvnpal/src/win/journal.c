@@ -24,7 +24,7 @@ rvn_open_journal_for_writes(const char* file_name, int32_t transaction_mode, int
         default:
             access_flags = FILE_FLAG_NO_BUFFERING | FILE_FLAG_WRITE_THROUGH;
             if (durability_support == DURABILITY_NOT_SUPPORTED)
-                access_flags = FILE_FLAG_NO_BUFFERING;
+                access_flags = 0;
             break;
     }
 
