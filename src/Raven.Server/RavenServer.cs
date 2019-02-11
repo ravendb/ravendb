@@ -940,9 +940,7 @@ namespace Raven.Server
                     {
                         var allCertKeys = ServerStore.Cluster.ItemKeysStartingWith(ctx, Constants.Certificates.Prefix, 0, int.MaxValue).ToList();
                         allCertKeys.AddRange(ServerStore.Cluster.GetCertificateKeysFromLocalState(ctx));
-
-                        // POC - need to change this to be efficient, probably the key to be the hash instead of the thumbprint.
-                        // Then we will store in each hash, a list (BlittableArray) of certs of the same hash.
+                        
                         foreach (var key in allCertKeys)
                         {
                             var currentCert = ServerStore.Cluster.Read(ctx, key) ??

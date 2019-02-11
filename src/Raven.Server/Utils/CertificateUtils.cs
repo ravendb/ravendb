@@ -13,6 +13,8 @@ using Org.BouncyCastle.Pkcs;
 using Org.BouncyCastle.Security;
 using Org.BouncyCastle.X509;
 using Org.BouncyCastle.X509.Extension;
+using Raven.Server.ServerWide;
+using Sparrow;
 using Sparrow.Platform;
 using BigInteger = Org.BouncyCastle.Math.BigInteger;
 using X509Certificate = Org.BouncyCastle.X509.X509Certificate;
@@ -27,7 +29,7 @@ namespace Raven.Server.Utils
         {
             // Note this is for tests only!
             CreateCertificateAuthorityCertificate(commonNameValue + " CA", out var ca, out var caSubjectName, log);
-            CreateSelfSignedCertificateBasedOnPrivateKey(commonNameValue, caSubjectName, ca, false, false, 0, out var certBytes, log);
+            CreateSelfSignedCertificateBasedOnPrivateKey(commonNameValue, caSubjectName, ca, false, false, 0, out var certBytes, log: log);
             var selfSignedCertificateBasedOnPrivateKey = new X509Certificate2(certBytes, (string)null, X509KeyStorageFlags.MachineKeySet);
             selfSignedCertificateBasedOnPrivateKey.Verify();
 
@@ -38,15 +40,17 @@ namespace Raven.Server.Utils
             return certBytes;
         }
 
-        public static (byte[], byte[]) CreateTwoTestCertificateWithSameKey(string commonNameValue, string issuerName, StringBuilder log = null)
+        public static (byte[], byte[]) CreateTwoTestCertificatesWithSameKey(string commonNameValue, string issuerName, StringBuilder log = null)
         {
             CreateCertificateAuthorityCertificate(commonNameValue + " CA", out var ca, out var caSubjectName, log);
 
-            CreateSelfSignedCertificateBasedOnPrivateKey(commonNameValue, caSubjectName, ca, false, false, 0, out var certBytes1, log);
+            var existingKeyPair = GetRsaKey();
+
+            CreateSelfSignedCertificateBasedOnPrivateKey(commonNameValue, caSubjectName, ca, false, false, 0, out var certBytes1, existingKeyPair, log);
             var selfSignedCertificateBasedOnPrivateKey1 = new X509Certificate2(certBytes1, (string)null, X509KeyStorageFlags.MachineKeySet);
             selfSignedCertificateBasedOnPrivateKey1.Verify();
 
-            CreateSelfSignedCertificateBasedOnPrivateKey(commonNameValue, caSubjectName, ca, false, false, 0, out var certBytes2, log);
+            CreateSelfSignedCertificateBasedOnPrivateKey(commonNameValue, caSubjectName, ca, false, false, 0, out var certBytes2, existingKeyPair, log);
             var selfSignedCertificateBasedOnPrivateKey2 = new X509Certificate2(certBytes2, (string)null, X509KeyStorageFlags.MachineKeySet);
             selfSignedCertificateBasedOnPrivateKey2.Verify();
 
@@ -146,22 +150,23 @@ namespace Raven.Server.Utils
 
         public static void CreateSelfSignedCertificateBasedOnPrivateKey(string commonNameValue, 
             X509Name issuer, 
-            (AsymmetricKeyParameter PrivateKey, AsymmetricKeyParameter PublicKey) key,
+            (AsymmetricKeyParameter PrivateKey, AsymmetricKeyParameter PublicKey) issuerKeyPair,
             bool isClientCertificate,
             bool isCaCertificate,
             int yearsUntilExpiration,
-            out byte[] certBytes, 
+            out byte[] certBytes,
+            AsymmetricCipherKeyPair subjectKeyPair = null,
             StringBuilder log = null)
         {
             log?.AppendLine("CreateSelfSignedCertificateBasedOnPrivateKey:");
 
             // Generating Random Numbers
             var random = GetSeededSecureRandom();
-            ISignatureFactory signatureFactory = new Asn1SignatureFactory("SHA512WITHRSA", key.PrivateKey, random);
+            ISignatureFactory signatureFactory = new Asn1SignatureFactory("SHA512WITHRSA", issuerKeyPair.PrivateKey, random);
 
             // The Certificate Generator
             X509V3CertificateGenerator certificateGenerator = new X509V3CertificateGenerator();
-            var authorityKeyIdentifier = new AuthorityKeyIdentifierStructure(key.PublicKey);
+            var authorityKeyIdentifier = new AuthorityKeyIdentifierStructure(issuerKeyPair.PublicKey);
             certificateGenerator.AddExtension(X509Extensions.AuthorityKeyIdentifier.Id, false, authorityKeyIdentifier);
 
             if (isClientCertificate)
@@ -204,7 +209,8 @@ namespace Raven.Server.Utils
             log?.AppendLine($"notBefore = {notBefore}");
             log?.AppendLine($"notAfter = {notAfter}");
             
-            var subjectKeyPair = GetRsaKey();
+            if (subjectKeyPair == null)
+                subjectKeyPair = GetRsaKey();
 
             certificateGenerator.SetPublicKey(subjectKeyPair.Public);
 
@@ -322,11 +328,8 @@ namespace Raven.Server.Utils
             return hash;
         }
 
-        public static byte[] GetSubjectPublicKeyInfoRaw(X509Certificate2 cert)
+        public static unsafe byte[] GetSubjectPublicKeyInfoRaw(X509Certificate2 cert)
         {
-            //Public domain: No attribution required.
-            var rawCert = cert.GetRawCertData();
-
             /*
              Certificate is, by definition:
 
@@ -349,41 +352,46 @@ namespace Raven.Server.Utils
                     extensions      [3]  EXPLICIT Extensions       OPTIONAL  -- If present, version MUST be v3
                 }
 
-            So we walk to ASN.1 DER tree in order to drill down to the SubjectPublicKeyInfo item
+            So we walk the ASN.1 DER tree in order to drill down to the SubjectPublicKeyInfo item
             */
-            var list = AsnNext(ref rawCert, true); //unwrap certificate sequence
-            var tbsCertificate = AsnNext(ref list, false); //get next item; which is tbsCertificate
-            list = AsnNext(ref tbsCertificate, true); //unwap tbsCertificate sequence
 
-            var version = AsnNext(ref list, false); //tbsCertificate.Version
-            var serialNumber = AsnNext(ref list, false); //tbsCertificate.SerialNumber
-            var signature = AsnNext(ref list, false); //tbsCertificate.Signature
-            var issuer = AsnNext(ref list, false); //tbsCertificate.Issuer
-            var validity = AsnNext(ref list, false); //tbsCertificate.Validity
-            var subject = AsnNext(ref list, false); //tbsCertificate.Subject        
-            var subjectPublicKeyInfo = AsnNext(ref list, false); //tbsCertificate.SubjectPublicKeyInfo        
+            var rawCert = cert.GetRawCertData();
+            var currentLength = rawCert.Length;
 
-            return subjectPublicKeyInfo;
+            fixed (byte* certPtr = rawCert)
+            {
+                var ptr = AsnNext(certPtr, ref currentLength, true, false);  // unwrap certificate sequence
+                ptr = AsnNext(ptr, ref currentLength, false, false); // get tbsCertificate
+                ptr = AsnNext(ptr, ref currentLength, true, false);  // unwrap tbsCertificate sequence
+                ptr = AsnNext(ptr, ref currentLength, false, true);  // skip tbsCertificate.Version
+                ptr = AsnNext(ptr, ref currentLength, false, true);  // skip tbsCertificate.SerialNumber
+                ptr = AsnNext(ptr, ref currentLength, false, true);  // skip tbsCertificate.Signature
+                ptr = AsnNext(ptr, ref currentLength, false, true);  // skip tbsCertificate.Issuer
+                ptr = AsnNext(ptr, ref currentLength, false, true);  // skip tbsCertificate.Validity
+                ptr = AsnNext(ptr, ref currentLength, false, true);  // skip tbsCertificate.Subject  
+                ptr = AsnNext(ptr, ref currentLength, false, false); // get tbsCertificate.SubjectPublicKeyInfo 
+
+                var subjectPublicKeyInfo = new byte[currentLength];
+                fixed (byte* newPtr = subjectPublicKeyInfo)
+                {
+                    Memory.Copy(ptr, newPtr, currentLength);
+                }
+                return subjectPublicKeyInfo;
+            }    
         }
 
-        private static byte[] AsnNext(ref byte[] buffer, bool unwrap)
+        private static unsafe byte* AsnNext(byte* buffer, ref int bufferLength, bool unwrap, bool getRemaining)
         {
-            //Public domain: No attribution required.
-            byte[] result;
-
-            if (buffer.Length < 2)
+            if (bufferLength < 2)
             {
-                result = buffer;
-                buffer = new byte[0];
-                return result;
+                return buffer;
             }
 
             var index = 0;
-            var entityType = buffer[index];
-            index += 1;
-
+            //var entityType = buffer[index];
+            index ++;
             int length = buffer[index];
-            index += 1;
+            index ++;
 
             var lengthBytes = 1;
             if (length >= 0x80)
@@ -393,34 +401,36 @@ namespace Raven.Server.Utils
 
                 for (var i = 0; i < lengthBytes; i++)
                 {
-                    length = (length << 8) + (int)buffer[2 + i];
-                    index += 1;
+                    length = (length << 8) + (int)buffer[index + i];
                 }
                 lengthBytes++;
             }
 
-            int copyStart;
-            int copyLength;
+            int skip;
+            int take;
             if (unwrap)
             {
-                copyStart = 1 + lengthBytes;
-                copyLength = length;
+                skip = 1 + lengthBytes;
+                take = length;
             }
             else
             {
-                copyStart = 0;
-                copyLength = 1 + lengthBytes + length;
+                skip = 0;
+                take = 1 + lengthBytes + length;
             }
-            result = new byte[copyLength];
-            Array.Copy(buffer, copyStart, result, 0, copyLength);
 
-            var remaining = new byte[buffer.Length - (copyStart + copyLength)];
-            if (remaining.Length > 0)
-                Array.Copy(buffer, copyStart + copyLength, remaining, 0, remaining.Length);
-            buffer = remaining;
+            if (getRemaining == false)
+            {
+                buffer += skip;
+                bufferLength = take;
+            }
+            else
+            {
+                buffer += skip + take;
+                bufferLength -= (skip + take);
+            }
 
-            return result;
+            return buffer;
         }
-
     }
 }
