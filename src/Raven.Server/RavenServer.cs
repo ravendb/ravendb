@@ -901,7 +901,7 @@ namespace Raven.Server
             }
         }
 
-        private readonly ReaderWriterLockSlim _certificatesLock = new ReaderWriterLockSlim(LockRecursionPolicy.SupportsRecursion);
+        private readonly object _certificatesLock = new object();
 
         internal AuthenticateConnection AuthenticateConnectionCertificate(X509Certificate2 certificate)
         {
@@ -935,94 +935,104 @@ namespace Raven.Server
                 using (ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext ctx))
                 using (ctx.OpenReadTransaction())
                 {
-                    _certificatesLock.EnterReadLock();
-                    var certKey = Constants.Certificates.Prefix + certificate.Thumbprint;
-                    var cert = ServerStore.Cluster.Read(ctx, certKey) ??
-                               ServerStore.Cluster.GetLocalState(ctx, certKey);
-                    _certificatesLock.ExitReadLock();
-
-                    if (cert == null)
+                    try
                     {
-                        // The certificate is not explicitly registered in our server, let's see if we have a certificate
-                        // with the same public key pinning hash.
-                        _certificatesLock.EnterReadLock();
-                        var allCertKeys = ServerStore.Cluster.ItemKeysStartingWith(ctx, Constants.Certificates.Prefix, 0, int.MaxValue).ToList();
-                        allCertKeys.AddRange(ServerStore.Cluster.GetCertificateKeysFromLocalState(ctx));
-                        _certificatesLock.ExitReadLock();
+                        var certKey = Constants.Certificates.Prefix + certificate.Thumbprint;
+                        var cert = ServerStore.Cluster.Read(ctx, certKey) ??
+                                   ServerStore.Cluster.GetLocalState(ctx, certKey);
 
-                        foreach (var key in allCertKeys)
+                        if (cert == null)
                         {
-                            _certificatesLock.EnterReadLock();
-                            var currentCert = ServerStore.Cluster.Read(ctx, key) ??
-                                       ServerStore.Cluster.GetLocalState(ctx, key);
-                            _certificatesLock.ExitReadLock();
+                            // The certificate is not explicitly registered in our server, let's see if we have a certificate
+                            // with the same public key pinning hash.
+                            var allCertKeys = ServerStore.Cluster.ItemKeysStartingWith(ctx, Constants.Certificates.Prefix, 0, int.MaxValue).ToList();
+                            allCertKeys.AddRange(ServerStore.Cluster.GetCertificateKeysFromLocalState(ctx));
 
-                            if (currentCert == null)
-                                continue;
-
-                            if (currentCert.TryGet(nameof(CertificateDefinition.PublicKeyPinningHash), out string hash) == false)
-                                continue;
-
-                            if (CertificateUtils.GetPublicKeyPinningHash(certificate).Equals(hash) == false)
-                                continue;
-
-                            // Same cert (race?) so no need to store it again.
-                            if (currentCert.TryGet(nameof(CertificateDefinition.Thumbprint), out string thumbprint) && certificate.Thumbprint.Equals(thumbprint))
-                                continue;
-
-                            // Different certificate but same public key pinning hash. We'll allow the connection and register the used certificate
-                            // in the server with the same permissions as the original.
-                            var currentCertDef = JsonDeserializationServer.CertificateDefinition(currentCert);
-                            var certBytes = certificate.Export(X509ContentType.Cert);
-
-                            var newCopy = new CertificateDefinition
+                            foreach (var key in allCertKeys)
                             {
-                                Name = currentCertDef.Name,
-                                Certificate = Convert.ToBase64String(certBytes),
-                                Permissions = currentCertDef.Permissions,
-                                SecurityClearance = currentCertDef.SecurityClearance,
-                                Thumbprint = certificate.Thumbprint,
-                                PublicKeyPinningHash = CertificateUtils.GetPublicKeyPinningHash(certificate),
-                                NotAfter = certificate.NotAfter,
-                            };
+                                var currentCert = ServerStore.Cluster.Read(ctx, key) ??
+                                                  ServerStore.Cluster.GetLocalState(ctx, key);
 
-                            cert = ctx.ReadObject(currentCertDef.ToJson(), "Client/Certificate/Definition");
+                                if (currentCert == null)
+                                    continue;
 
-                            _certificatesLock.EnterWriteLock();
+                                if (currentCert.TryGet(nameof(CertificateDefinition.PublicKeyPinningHash), out string hash) == false)
+                                    continue;
 
-                            AdminCertificatesHandler.PutCertificateCollectionInCluster(newCopy, certBytes, (string)null, ServerStore, ctx).Wait();
+                                if (CertificateUtils.GetPublicKeyPinningHash(certificate).Equals(hash) == false)
+                                    continue;
 
-                            _certificatesLock.ExitWriteLock();
-                            break;
+                                if (currentCert.TryGet(nameof(CertificateDefinition.Thumbprint), out string thumbprint) && certificate.Thumbprint.Equals(thumbprint))
+                                    continue;
+                                // Different certificate but same public key pinning hash. We'll allow the connection and register the used certificate
+                                // in the server with the same permissions as the original.
+                                var currentCertDef = JsonDeserializationServer.CertificateDefinition(currentCert);
+                                var certBytes = certificate.Export(X509ContentType.Cert);
 
+                                var newCopy = new CertificateDefinition
+                                {
+                                    Name = currentCertDef.Name,
+                                    Certificate = Convert.ToBase64String(certBytes),
+                                    Permissions = currentCertDef.Permissions,
+                                    SecurityClearance = currentCertDef.SecurityClearance,
+                                    Thumbprint = certificate.Thumbprint,
+                                    PublicKeyPinningHash = CertificateUtils.GetPublicKeyPinningHash(certificate),
+                                    NotAfter = certificate.NotAfter,
+                                };
+
+                                lock (_certificatesLock)
+                                {
+                                    ctx.CloseTransaction(); // Exiting the loop, closing the read tx
+
+                                    // Opening a new tx to get the current snapshot,
+                                    // making sure we won't try to store many identical certs
+                                    using (ctx.OpenReadTransaction())
+                                    {
+                                        cert = ServerStore.Cluster.Read(ctx, certKey) ??
+                                               ServerStore.Cluster.GetLocalState(ctx, certKey);
+                                    }
+
+                                    if (cert == null)
+                                    {
+                                        AdminCertificatesHandler.PutCertificateCollectionInCluster(newCopy, certBytes, (string)null, ServerStore, ctx)
+                                            .Wait(ServerStore.ServerShutdown);
+                                        cert = ctx.ReadObject(newCopy.ToJson(), "Client/Certificate/Definition");
+                                    }
+                                }
+                                break;
+                            }
+                            authenticationStatus.Status = AuthenticationStatus.UnfamiliarCertificate;
                         }
-                        authenticationStatus.Status = AuthenticationStatus.UnfamiliarCertificate;
-                    }
 
-                    if (cert != null)
-                    {
-                        var definition = JsonDeserializationServer.CertificateDefinition(cert);
-                        authenticationStatus.Definition = definition;
-                        if (definition.SecurityClearance == SecurityClearance.ClusterAdmin)
+                        if (cert != null)
                         {
-                            authenticationStatus.Status = AuthenticationStatus.ClusterAdmin;
-                        }
-                        else if (definition.SecurityClearance == SecurityClearance.ClusterNode)
-                        {
-                            authenticationStatus.Status = AuthenticationStatus.ClusterAdmin;
-                        }
-                        else if (definition.SecurityClearance == SecurityClearance.Operator)
-                        {
-                            authenticationStatus.Status = AuthenticationStatus.Operator;
-                        }
-                        else
-                        {
-                            authenticationStatus.Status = AuthenticationStatus.Allowed;
-                            foreach (var kvp in definition.Permissions)
+                            var definition = JsonDeserializationServer.CertificateDefinition(cert);
+                            authenticationStatus.Definition = definition;
+                            if (definition.SecurityClearance == SecurityClearance.ClusterAdmin)
                             {
-                                authenticationStatus.AuthorizedDatabases.Add(kvp.Key, kvp.Value);
+                                authenticationStatus.Status = AuthenticationStatus.ClusterAdmin;
+                            }
+                            else if (definition.SecurityClearance == SecurityClearance.ClusterNode)
+                            {
+                                authenticationStatus.Status = AuthenticationStatus.ClusterAdmin;
+                            }
+                            else if (definition.SecurityClearance == SecurityClearance.Operator)
+                            {
+                                authenticationStatus.Status = AuthenticationStatus.Operator;
+                            }
+                            else
+                            {
+                                authenticationStatus.Status = AuthenticationStatus.Allowed;
+                                foreach (var kvp in definition.Permissions)
+                                {
+                                    authenticationStatus.AuthorizedDatabases.Add(kvp.Key, kvp.Value);
+                                }
                             }
                         }
+                    }
+                    finally
+                    {
+                        ctx.CloseTransaction();
                     }
                 }
             }
