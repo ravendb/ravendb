@@ -278,5 +278,5 @@ namespace Sparrow
 
         [DllImport(LIBSODIUM)]
         public static extern int sodium_mlock(byte* addr, UIntPtr len);
-	}
+    }
 }
