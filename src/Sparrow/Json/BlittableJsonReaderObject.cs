@@ -735,16 +735,16 @@ namespace Sparrow.Json
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public int GetPropertyIndex(StringSegment name)
+        public int GetPropertyIndex(StringSegment name, bool ignoreCase = false)
         {
             AssertContextNotDisposed();
 
             var comparer = _context.GetLazyStringForFieldWithCaching(name);
-            return GetPropertyIndex(comparer);
+            return GetPropertyIndex(comparer, ignoreCase);
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        private int GetPropertyIndex(LazyStringValue comparer)
+        public int GetPropertyIndex(LazyStringValue comparer, bool ignoreCase = false)
         {
             AssertContextNotDisposed();
 
@@ -768,7 +768,7 @@ namespace Sparrow.Json
 
                 var propertyId = ReadNumber(propertyIntPtr + currentOffsetSize, currentPropertyIdSize);
 
-                var cmpResult = ComparePropertyName(propertyId, comparer);
+                var cmpResult = ComparePropertyName(propertyId, comparer, ignoreCase);
                 if (cmpResult == 0)
                 {
                     return mid;
@@ -795,9 +795,10 @@ namespace Sparrow.Json
         /// </summary>
         /// <param name="propertyId">Position of the string in the property ids storage</param>
         /// <param name="comparer">Comparer of a specific string value</param>
+        /// <param name="ignoreCase">Indicates if the comparassion should be case insensitive</param>
         /// <returns></returns>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        private int ComparePropertyName(int propertyId, LazyStringValue comparer)
+        private int ComparePropertyName(int propertyId, LazyStringValue comparer, bool ignoreCase = false)
         {
             AssertContextNotDisposed();
 
@@ -812,8 +813,66 @@ namespace Sparrow.Json
             // Get the property name size
             var size = ReadVariableSizeInt((int)position, out byte propertyNameLengthDataLength);
 
+            if (ignoreCase)
+            {
+                return CompareCaseInsensitive(comparer, propertyNameRelativePosition + propertyNameLengthDataLength, size);
+            }
+
             // Return result of comparison between property name and received comparer
             return comparer.Compare(propertyNameRelativePosition + propertyNameLengthDataLength, size);
+
+        }
+
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        private static int CompareCaseInsensitive(LazyStringValue lsv, byte* p, int pSize)
+        {
+            char[] pCharArray = null;
+            char[] lsvCharArray = null;
+
+            try
+            {
+                pCharArray = ArrayPool<char>.Shared.Rent(pSize);
+
+                fixed (char* pChars = pCharArray)
+                {
+                    var pCount = System.Text.Encoding.UTF8.GetChars(p, pSize, pChars, pSize);
+                    var pSpan = new ReadOnlySpan<char>(pChars, pCount);
+
+                    ReadOnlySpan<char> lsvSpan;
+                    if (lsv.HasStringValue == false)
+                    {
+                        lsvCharArray = ArrayPool<char>.Shared.Rent(lsv.Size);
+
+                        fixed (char* lsvChars = lsvCharArray)
+                        {
+                            System.Text.Encoding.UTF8.GetChars(lsv.Buffer, lsv.Size, lsvChars, lsv.Size);
+                            lsvSpan = new ReadOnlySpan<char>(lsvChars, lsv.Length);
+
+                            return lsvSpan.CompareTo(pSpan, StringComparison.OrdinalIgnoreCase);
+                        }
+                    }
+
+                    fixed (char* lsvChars = (string)lsv)
+                    {
+                        lsvSpan = new ReadOnlySpan<char>(lsvChars, lsv.Length);
+
+                        return lsvSpan.CompareTo(pSpan, StringComparison.OrdinalIgnoreCase);
+                    }
+
+                }
+            }
+            finally
+            {
+                if (pCharArray != null)
+                {
+                    ArrayPool<char>.Shared.Return(pCharArray);
+                }
+
+                if (lsvCharArray != null)
+                {
+                    ArrayPool<char>.Shared.Return(lsvCharArray);
+                }
+            }
         }
 
         public struct InsertionOrderProperties : IDisposable

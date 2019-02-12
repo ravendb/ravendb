@@ -83,6 +83,8 @@ namespace Sparrow.Json
             }
         }
 
+        public bool HasStringValue => _string != null;
+
         [ThreadStatic]
         private static char[] _lazyStringTempBuffer;
 

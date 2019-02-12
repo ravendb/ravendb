@@ -282,14 +282,26 @@ namespace Raven.Server.Documents
 
                         var counterEtag = _documentsStorage.GenerateNextEtag();
 
-                        if (counters.TryGetMember(name, out var existingCounter) == false ||
-                            existingCounter is LazyStringValue || overrideExisting)
+                        object existingCounter = null;
+                        var propIndex = counters.GetPropertyIndex(name, ignoreCase: true);
+
+                        if (propIndex != -1)
+                        {
+                            var prop = new BlittableJsonReaderObject.PropertyDetails();
+                            counters.GetPropertyByIndex(propIndex, ref prop);
+                            existingCounter = prop.Value;
+                            name = prop.Name; // use original casing
+                        }
+
+                        if (existingCounter == null ||
+                            existingCounter is LazyStringValue ||
+                            overrideExisting)
                         {
                             CreateNewCounterOrOverrideExisting(context, name, dbIdIndex, value, counterEtag, counters);
                         }
                         else
                         {
-                            exists = IncrementExistingCounter(context, documentId, name, delta, 
+                            exists = IncrementExistingCounter(context, documentId, name, delta,
                                 existingCounter as BlittableJsonReaderObject.RawBlob, dbIdIndex, counterEtag, counters, ref value);
                         }
 
@@ -358,7 +370,7 @@ namespace Raven.Server.Documents
 
         private int GetOrAddLocalDbIdIndex(BlittableJsonReaderObject data)
         {
-            if (data.TryGet(DbIds, out BlittableJsonReaderArray dbIds)== false)
+            if (data.TryGet(DbIds, out BlittableJsonReaderArray dbIds) == false)
                 throw new InvalidDataException($"Counter-Group document is missing '{DbIds}' property. Shouldn't happen");
 
             int dbIdIndex;
@@ -401,7 +413,7 @@ namespace Raven.Server.Documents
             };
         }
 
-        private bool IncrementExistingCounter(DocumentsOperationContext context, string documentId, string name, long delta, 
+        private bool IncrementExistingCounter(DocumentsOperationContext context, string documentId, string name, long delta,
             BlittableJsonReaderObject.RawBlob existingCounter,
             int dbIdIndex, long newETag, BlittableJsonReaderObject counters, ref long value)
         {
@@ -413,7 +425,7 @@ namespace Raven.Server.Documents
                 try
                 {
                     value = checked(counter->Value + delta); //inc
-                    counter->Value = value; 
+                    counter->Value = value;
                     counter->Etag = newETag;
                 }
                 catch (OverflowException e)
@@ -542,15 +554,21 @@ namespace Raven.Server.Documents
                                 LazyStringValue deletedLocalCounter = null;
                                 BlittableJsonReaderObject.RawBlob localCounterValues = null;
 
-                                if (localCounters.TryGet(counterName, out object existingCounter))
+                                var propIndex = localCounters.GetPropertyIndex(counterName, ignoreCase: true);
+                                if (propIndex != -1)
                                 {
-                                    if (existingCounter is LazyStringValue lsv)
+                                    var localProp = new BlittableJsonReaderObject.PropertyDetails();
+                                    localCounters.GetPropertyByIndex(propIndex, ref localProp);
+
+                                    counterName = prop.Name; // use original casing
+
+                                    if (localProp.Value is LazyStringValue lsv)
                                     {
                                         deletedLocalCounter = lsv;
                                     }
                                     else
                                     {
-                                        localCounterValues = existingCounter as BlittableJsonReaderObject.RawBlob;
+                                        localCounterValues = localProp.Value as BlittableJsonReaderObject.RawBlob;
                                     }
                                 }
 
@@ -576,7 +594,7 @@ namespace Raven.Server.Documents
                                         // delete + blob => resolve conflict
 
                                         var conflictStatus = CompareCounterValuesAndDeletedCounter(localCounterValues, deletedSourceCounter, dbIdsHolder.dbIdsList, true);
-                                        
+
                                         switch (conflictStatus)
                                         {
                                             case ConflictStatus.Update:
@@ -589,10 +607,10 @@ namespace Raven.Server.Documents
                                             case ConflictStatus.Conflict:
                                             // conflict => resolve to raw blob (no change)
                                             case ConflictStatus.AlreadyMerged:
-                                            // raw blob is more up to date (no change)
+                                                // raw blob is more up to date (no change)
                                                 continue;
                                         }
-                                        
+
                                     }
                                     else
                                     {
@@ -622,7 +640,7 @@ namespace Raven.Server.Documents
                                                 localCounterValues = new BlittableJsonReaderObject.RawBlob();
                                                 break;
                                             case ConflictStatus.AlreadyMerged:
-                                            //delete is more up do date (no change)
+                                                //delete is more up do date (no change)
                                                 continue;
                                         }
 
@@ -739,9 +757,9 @@ namespace Raven.Server.Documents
                 if (localDbIdIndex < existingCount)
                 {
                     var localValuePtr = (CounterValues*)existingCounter.Ptr + localDbIdIndex;
-                    if (localValuePtr->Etag >= sourceValue->Etag)                    
+                    if (localValuePtr->Etag >= sourceValue->Etag)
                         continue;
-                    
+
                     localValuePtr->Value = sourceValue->Value;
                     localValuePtr->Etag = sourceValue->Etag;
 
@@ -905,8 +923,8 @@ namespace Raven.Server.Documents
 
                 var blob = counterValues as BlittableJsonReaderObject.RawBlob;
                 var existingCount = blob?.Length / SizeOfCounterValues ?? 0;
-                
-                for (var dbIdIndex = 0; dbIdIndex < existingCount; dbIdIndex ++)
+
+                for (var dbIdIndex = 0; dbIdIndex < existingCount; dbIdIndex++)
                 {
                     var val = GetPartialValue(dbIdIndex, blob);
                     yield return (dbIds[dbIdIndex].ToString(), val);
@@ -974,14 +992,21 @@ namespace Raven.Server.Documents
 
                 var data = GetCounterValuesData(context, ref existing);
 
-                if (data.TryGet(Values, out BlittableJsonReaderObject counters) == false ||
-                    counters.TryGetMember(counterName, out object counterToDelete) == false)
+                if (data.TryGet(Values, out BlittableJsonReaderObject counters) == false)
                     return null;
 
-                if (counterToDelete is LazyStringValue) // already deleted
+                var propIndex = counters.GetPropertyIndex(counterName, ignoreCase: true);
+                if (propIndex == -1)
                     return null;
 
-                var deleteCv = GenerateDeleteChangeVectorFromRawBlob(data, counterToDelete as BlittableJsonReaderObject.RawBlob);
+                var prop = new BlittableJsonReaderObject.PropertyDetails();
+                counters.GetPropertyByIndex(propIndex, ref prop);
+
+                if (prop.Value is LazyStringValue) // already deleted
+                    return null;
+
+                counterName = prop.Name; // use original casing
+                var deleteCv = GenerateDeleteChangeVectorFromRawBlob(data, prop.Value as BlittableJsonReaderObject.RawBlob);
                 counters.Modifications = new DynamicJsonValue(counters)
                 {
                     [counterName] = deleteCv
@@ -1161,11 +1186,11 @@ namespace Raven.Server.Documents
             }
 
             using (data)
-			{
-            	var newDocumentData = context.ReadObject(doc.Data, docId, BlittableJsonDocumentBuilder.UsageMode.ToDisk);
-            	var putResult = _documentDatabase.DocumentsStorage.Put(context, docId, null, newDocumentData, flags: flags, nonPersistentFlags: nonPersistentDocumentFlags);
-            	return putResult.ChangeVector;
-			}
+            {
+                var newDocumentData = context.ReadObject(doc.Data, docId, BlittableJsonDocumentBuilder.UsageMode.ToDisk);
+                var putResult = _documentDatabase.DocumentsStorage.Put(context, docId, null, newDocumentData, flags: flags, nonPersistentFlags: nonPersistentDocumentFlags);
+                return putResult.ChangeVector;
+            }
         }
 
         private static SortedSet<string> GetCountersForDocument(BlittableJsonReaderArray metadataCounters, SortedSet<string> countersToAdd,
@@ -1239,7 +1264,7 @@ namespace Raven.Server.Documents
             //any missing entries from a change vector are assumed to have zero value
             var blobHasLargerEntries = false;
             var deleteHasLargerEntries = false;
-             
+
             var deletedCv = DeletedCounterToChangeVectorEntries(deletedCounter);
 
             var sizeOfValues = counterValues.Length / SizeOfCounterValues;
@@ -1316,8 +1341,8 @@ namespace Raven.Server.Documents
                 currentPos += DbIdAsBase64Size + 1;
 
                 var next = changeVector.IndexOf(',', currentPos);
-                var etagStr = next > 0 
-                    ? changeVector.Substring(currentPos, next - currentPos) 
+                var etagStr = next > 0
+                    ? changeVector.Substring(currentPos, next - currentPos)
                     : changeVector.Substring(currentPos);
 
                 if (long.TryParse(etagStr, out var etag) == false)
@@ -1335,7 +1360,7 @@ namespace Raven.Server.Documents
                 currentPos = next + 2;
             }
 
-            return list.ToArray();            
+            return list.ToArray();
         }
 
         private static string MergeDeletedCounterVectors(string deletedA, string deletedB)
