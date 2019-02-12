@@ -1,6 +1,6 @@
-﻿using System.Collections.Generic;
+﻿using System;
+using System.Collections.Generic;
 using System.Linq;
-using System.Threading;
 using System.Threading.Tasks;
 using Raven.Client.Documents;
 using Raven.Client.Documents.Conventions;
@@ -127,19 +127,25 @@ namespace SlowTests.Client.Counters
 
                 Task.WaitAll(tasks.ToArray());
 
+                //wait for replication 
+
+                using (var session = stores[0].OpenSession())
+                {
+                    session.Advanced.WaitForReplicationAfterSaveChanges(timeout: TimeSpan.FromSeconds(10), replicas: 2);
+                    session.Store(new User
+                    {
+                        Name = "Karmel"
+                    }, "users/2");
+                    session.SaveChanges();
+                }
+
+                // verify that all stores have the correct accumulated counter-value
+
                 foreach (var store in stores)
                 {
-                    long? val = null;
-                    for (int i = 0; i < 100; i++)
-                    {
-                        val = store.Operations
-                            .Send(new GetCountersOperation("users/1", new[] {"likes"}))
-                            .Counters[0]?.TotalValue;
-
-                        if (val == 30)
-                            break;
-                        Thread.Sleep(250);
-                    }
+                    var val = store.Operations
+                        .Send(new GetCountersOperation("users/1", new[] { "likes" }))
+                        .Counters[0]?.TotalValue;
 
                     Assert.Equal(30, val);
                 }
