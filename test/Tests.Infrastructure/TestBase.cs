@@ -114,6 +114,12 @@ namespace FastTests
             //if (caller != null && caller.Contains(".ctor"))
             //    throw new InvalidOperationException($"Usage of '{nameof(GetDocumentStore)}' without explicit '{nameof(caller)}' parameter is forbidden from inside constructor.");
 
+            //We shouldn't have databases named .ctor since its hard to track where they were created.
+            if (caller != null && caller.Contains(".ctor"))
+            {
+                return $"{GetType().Name}_{Guid.NewGuid():N}";
+            }
+
             var name = caller != null ? $"{caller}_{Interlocked.Increment(ref _counter)}" : Guid.NewGuid().ToString("N");
             return name;
         }
