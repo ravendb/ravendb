@@ -6,7 +6,6 @@ using System.IO;
 using System.Linq;
 using System.Net;
 using System.Net.Sockets;
-using System.Runtime.InteropServices;
 using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
@@ -25,8 +24,10 @@ using Sparrow;
 using Sparrow.Json;
 using Sparrow.Json.Parsing;
 using Sparrow.Logging;
+using Sparrow.Platform;
 using Sparrow.Utils;
 using Voron;
+using Size = Sparrow.Size;
 
 namespace Raven.Server.Documents.Replication
 {
@@ -451,8 +452,10 @@ namespace Raven.Server.Documents.Replication
             }
         }
 
-        private unsafe void ReadExactly(int size, ref UnmanagedWriteBuffer into)
+        private unsafe void ReadExactly(byte* ptr, int size)
         {
+            var written = 0;
+
             while (size > 0)
             {
                 var available = _copiedBuffer.Buffer.Valid - _copiedBuffer.Buffer.Used;
@@ -468,9 +471,11 @@ namespace Raven.Server.Documents.Replication
                     _copiedBuffer.Buffer.Used = 0;
                     continue;
                 }
+
                 var min = Math.Min(size, available);
                 var result = _copiedBuffer.Buffer.Pointer + _copiedBuffer.Buffer.Used;
-                into.Write(result, min);
+                Memory.Copy(ptr + written, result, (uint)min);
+                written += min;
                 _copiedBuffer.Buffer.Used += min;
                 size -= min;
             }
@@ -512,24 +517,24 @@ namespace Raven.Server.Documents.Replication
             return result;
         }
 
-        private int _initialReplicationBuffer = JsonOperationContext.InitialStreamSize;
-        private unsafe void ReceiveSingleDocumentsBatch(DocumentsOperationContext documentsContext, int replicatedItemsCount, int attachmentStreamCount, long lastEtag, IncomingReplicationStatsScope stats)
+        private void ReceiveSingleDocumentsBatch(DocumentsOperationContext documentsContext, int replicatedItemsCount, int attachmentStreamCount, long lastEtag, IncomingReplicationStatsScope stats)
         {
             if (_log.IsInfoEnabled)
             {
                 _log.Info($"Receiving replication batch with {replicatedItemsCount} documents starting with {lastEtag} from {ConnectionInfo}");
             }
 
+            var incomingReplicationAllocator = new IncomingReplicationAllocator(documentsContext, _database);
             var sw = Stopwatch.StartNew();
-            var writeBuffer = documentsContext.GetStream(_initialReplicationBuffer);
             Task task = null;
+
             try
             {
                 using (var networkStats = stats.For(ReplicationOperation.Incoming.Network))
                 {
                     // this will read the documents to memory from the network
                     // without holding the write tx open
-                    ReadItemsFromSource(ref writeBuffer, replicatedItemsCount, documentsContext, networkStats);
+                    ReadItemsFromSource(replicatedItemsCount, documentsContext, incomingReplicationAllocator, networkStats);
 
                     using (networkStats.For(ReplicationOperation.Incoming.AttachmentRead))
                     {
@@ -537,19 +542,19 @@ namespace Raven.Server.Documents.Replication
                     }
                 }
 
-                writeBuffer.EnsureSingleChunk(out byte* buffer, out int totalSize);
-
                 if (_log.IsInfoEnabled)
+                {
                     _log.Info(
                         $"Replication connection {FromToString}: " +
                         $"received {replicatedItemsCount:#,#;;0} items, " +
                         $"{attachmentStreamCount:#,#;;0} attachment streams, " +
-                        $"total size: {new Sparrow.Size(totalSize, SizeUnit.Bytes)}, " +
+                        $"total size: {new Size(incomingReplicationAllocator.TotalDocumentsSizeInBytes, SizeUnit.Bytes)}, " +
                         $"took: {sw.ElapsedMilliseconds:#,#;;0}ms");
+                }
 
                 using (stats.For(ReplicationOperation.Incoming.Storage))
                 {
-                    var replicationCommand = new MergedDocumentReplicationCommand(this, buffer, totalSize, lastEtag);
+                    var replicationCommand = new MergedDocumentReplicationCommand(this, lastEtag);
                     task = _database.TxMerger.Enqueue(replicationCommand);
 
                     using (var writer = new BlittableJsonTextWriter(documentsContext, _connectionOptions.Stream))
@@ -606,15 +611,8 @@ namespace Raven.Server.Documents.Replication
                     // in a bad state and likely in the process of shutting 
                     // down
                 }
-                if (writeBuffer.SizeInBytes > _initialReplicationBuffer)
-                {
-                    if (_log.IsInfoEnabled)
-                    {
-                        _log.Info($"Increasing incoming replication buffer for {_incomingWork.Name} from {new Sparrow.Size(_initialReplicationBuffer, SizeUnit.Bytes)} to {new Sparrow.Size(writeBuffer.SizeInBytes, SizeUnit.Bytes)}.");
-                    }
-                    _initialReplicationBuffer = writeBuffer.SizeInBytes;
-                }
-                writeBuffer.Dispose();
+
+                incomingReplicationAllocator.Dispose();
             }
         }
 
@@ -683,12 +681,12 @@ namespace Raven.Server.Documents.Replication
             #region Document
 
             public string Id;
-            public int Position;
             public string ChangeVector;
             public int DocumentSize;
             public string Collection;
             public long LastModifiedTicks;
             public DocumentFlags Flags;
+            public BlittableJsonReaderObject Document;
 
             #endregion
 
@@ -748,21 +746,22 @@ namespace Raven.Server.Documents.Replication
             }
         }
 
-        private unsafe void ReadItemsFromSource(ref UnmanagedWriteBuffer writeBuffer, int replicatedDocs, DocumentsOperationContext context, IncomingReplicationStatsScope stats)
+        private unsafe void ReadItemsFromSource(int replicatedDocs, DocumentsOperationContext context,
+            IncomingReplicationAllocator incomingReplicationAllocator, IncomingReplicationStatsScope stats)
         {
             var documentRead = stats.For(ReplicationOperation.Incoming.DocumentRead, start: false);
             var attachmentRead = stats.For(ReplicationOperation.Incoming.AttachmentRead, start: false);
             var tombstoneRead = stats.For(ReplicationOperation.Incoming.TombstoneRead, start: false);
 
             _replicatedItems.Clear();
+
             for (int x = 0; x < replicatedDocs; x++)
             {
                 stats.RecordInputAttempt();
 
                 var item = new ReplicationItem
                 {
-                    Type = *(ReplicationBatchItem.ReplicationItemType*)ReadExactly(sizeof(byte)),
-                    Position = writeBuffer.SizeInBytes
+                    Type = *(ReplicationBatchItem.ReplicationItemType*)ReadExactly(sizeof(byte))
                 };
 
                 var changeVectorSize = *(int*)ReadExactly(sizeof(int));
@@ -873,7 +872,10 @@ namespace Raven.Server.Documents.Replication
                         var documentSize = item.DocumentSize = *(int*)ReadExactly(sizeof(int));
                         if (documentSize != -1) //if -1, then this is a tombstone
                         {
-                            ReadExactly(documentSize, ref writeBuffer);
+                            var mem = incomingReplicationAllocator.AllocateMemoryForDocument(documentSize);
+                            ReadExactly(mem, documentSize);
+
+                            item.Document = new BlittableJsonReaderObject(mem, documentSize, context);
                         }
                         else
                         {
@@ -888,6 +890,102 @@ namespace Raven.Server.Documents.Replication
                 }
 
                 _replicatedItems.Add(item);
+            }
+        }
+
+        private unsafe class IncomingReplicationAllocator : IDisposable
+        {
+            private readonly DocumentsOperationContext _context;
+            private readonly long _maxSizeForContextUseInBytes;
+            private readonly long _minSizeToAllocateNonContextUseInBytes;
+            public long TotalDocumentsSizeInBytes { get; private set; }
+
+            private List<Allocation> _nativeAllocationList;
+            private Allocation _currentAllocation;
+
+            public IncomingReplicationAllocator(DocumentsOperationContext context, DocumentDatabase database)
+            {
+                _context = context;
+
+                var maxSizeForContextUse = database.Configuration.Replication.MaxSizeToSend * 2 ??
+                              new Size(128, SizeUnit.Megabytes);
+
+                _maxSizeForContextUseInBytes = maxSizeForContextUse.GetValue(SizeUnit.Bytes);
+                var minSizeToNonContextAllocationInMb = PlatformDetails.Is32Bits ? 4 : 16;
+                _minSizeToAllocateNonContextUseInBytes = new Size(minSizeToNonContextAllocationInMb, SizeUnit.Megabytes).GetValue(SizeUnit.Bytes);
+            }
+
+            public byte* AllocateMemoryForDocument(int size)
+            {
+                TotalDocumentsSizeInBytes += size;
+                if (TotalDocumentsSizeInBytes < _maxSizeForContextUseInBytes)
+                {
+                    _context.Allocator.Allocate(size, out var output);
+                    return output.Ptr;
+                }
+
+                if (_currentAllocation == null || _currentAllocation.Free < size)
+                {
+                    // there can be a document that is larger than the minimum
+                    var sizeToAllocate = Math.Max(size, _minSizeToAllocateNonContextUseInBytes);
+
+                    var allocation = new Allocation(sizeToAllocate);
+                    if (_nativeAllocationList == null)
+                        _nativeAllocationList = new List<Allocation>();
+
+                    _nativeAllocationList.Add(allocation);
+                    _currentAllocation = allocation;
+                }
+
+                return _currentAllocation.GetMemory(size);
+            }
+
+            public void Dispose()
+            {
+                foreach (var allocation in _nativeAllocationList)
+                {
+                    allocation.Dispose();
+                }
+            }
+
+            private class Allocation : IDisposable
+            {
+                private readonly byte* _ptr;
+                private readonly long _allocationSize;
+                private readonly NativeMemory.ThreadStats _threadStats;
+                private long _used;
+                public long Free => _allocationSize - _used;
+
+                public Allocation(long allocationSize)
+                {
+                    _ptr = NativeMemory.AllocateMemory(allocationSize, out var threadStats);
+                    _allocationSize = allocationSize;
+                    _threadStats = threadStats;
+                }
+
+                public byte* GetMemory(long size)
+                {
+                    ThrowOnPointerOutOfRange(size);
+
+                    var mem = _ptr + _used;
+                    _used += size;
+                    return mem;
+                }
+
+                [Conditional("DEBUG")]
+                private void ThrowOnPointerOutOfRange(long size)
+                {
+                    if (_used + size > _allocationSize)
+                        throw new InvalidOperationException(
+                            $"Not enough space to allocate the requested size: {new Size(size, SizeUnit.Bytes)}, " +
+                            $"used: {new Size(_used, SizeUnit.Bytes)}, " +
+                            $"total allocation size: {new Size(_allocationSize, SizeUnit.Bytes)}");
+                }
+
+                public void Dispose()
+                {
+                    NativeMemory.Free(_ptr, _allocationSize, _threadStats);
+                }
             }
         }
 
@@ -1071,15 +1169,11 @@ namespace Raven.Server.Documents.Replication
             private readonly IncomingReplicationHandler _incoming;
 
             private readonly long _lastEtag;
-            private readonly byte* _buffer;
-            private readonly int _totalSize;
             private readonly List<IDisposable> _disposables = new List<IDisposable>();
 
-            public MergedDocumentReplicationCommand(IncomingReplicationHandler incoming, byte* buffer, int totalSize, long lastEtag)
+            public MergedDocumentReplicationCommand(IncomingReplicationHandler incoming, long lastEtag)
             {
                 _incoming = incoming;
-                _buffer = buffer;
-                _totalSize = totalSize;
                 _lastEtag = lastEtag;
             }
 
@@ -1149,14 +1243,11 @@ namespace Raven.Server.Documents.Replication
                                     // document size == -1 --> doc is a tombstone
                                     if (item.DocumentSize >= 0)
                                     {
-                                        if (item.Position + item.DocumentSize > _totalSize)
-                                            throw new ArgumentOutOfRangeException($"Reading past the size of buffer! TotalSize {_totalSize} " +
-                                                                                  $"but position is {item.Position} & size is {item.DocumentSize}!");
-
-                                        //if something throws at this point, this means something is really wrong and we should stop receiving documents.
-                                        //the other side will receive negative ack and will retry sending again.
-                                        document = new BlittableJsonReaderObject(_buffer + item.Position, item.DocumentSize, context);
+                                        // if something throws at this point, this means something is really wrong and we should stop receiving documents.
+                                        // the other side will receive negative ack and will retry sending again.
+                                        document = item.Document;
                                         document.BlittableValidation();
+
                                         try
                                         {
                                             AssertAttachmentsFromReplication(context, item.Id, document);
@@ -1348,10 +1439,6 @@ namespace Raven.Server.Documents.Replication
 
             public override TransactionOperationsMerger.IReplayableCommandDto<TransactionOperationsMerger.MergedTransactionCommand> ToDto(JsonOperationContext context)
             {
-                var buffer = new byte[_totalSize];
-                Marshal.Copy((IntPtr)_buffer, buffer, 0, _totalSize);
-                var strBuffer = Convert.ToBase64String(buffer);
-
                 var replicatedAttachmentStreams = _incoming._replicatedAttachmentStreams
                     .Select(kv => KeyValuePair.Create(kv.Key.ToString(), kv.Value.Stream))
                     .ToArray();
@@ -1359,7 +1446,6 @@ namespace Raven.Server.Documents.Replication
                 return new MergedDocumentReplicationCommandDto
                 {
                     LastEtag = _lastEtag,
-                    Buffer = strBuffer,
                     ReplicatedItemDtos = _incoming._replicatedItems.Select(i => ReplicationItemToDto(context, i)).ToArray(),
                     SourceDatabaseId = _incoming.ConnectionInfo.SourceDatabaseId,
                     ReplicatedAttachmentStreams = replicatedAttachmentStreams
@@ -1373,8 +1459,8 @@ namespace Raven.Server.Documents.Replication
                     TransactionMarker = item.TransactionMarker,
                     Type = item.Type,
                     Id = item.Id,
-                    Position = item.Position,
                     ChangeVector = item.ChangeVector,
+                    Document = item.Document,
                     DocumentSize = item.DocumentSize,
                     Collection = item.Collection,
                     LastModifiedTicks = item.LastModifiedTicks,
@@ -1414,7 +1500,6 @@ namespace Raven.Server.Documents.Replication
     {
         public ReplicationItemDto[] ReplicatedItemDtos;
         public long LastEtag;
-        public string Buffer;
         public string SourceDatabaseId;
         public KeyValuePair<string, Stream>[] ReplicatedAttachmentStreams;
 
@@ -1428,17 +1513,7 @@ namespace Raven.Server.Documents.Replication
 
             var replicatedAttachmentStreams = ReplicatedAttachmentStreams.Select(i => CreateReplicationAttachmentStream(context, i)).ToArray();
             var replicationHandler = new IncomingReplicationHandler(database, replicationItems, connectionInfo, database.ReplicationLoader, replicatedAttachmentStreams);
-
-            unsafe
-            {
-                var buffer = Convert.FromBase64String(Buffer);
-                fixed (byte* pBuffer = buffer)
-                {
-                    var memory = context.GetMemory(buffer.Length);
-                    Memory.Copy(memory.Address, pBuffer, buffer.Length);
-                    return new IncomingReplicationHandler.MergedDocumentReplicationCommand(replicationHandler, memory.Address, Buffer.Length, LastEtag);
-                }
-            }
+            return new IncomingReplicationHandler.MergedDocumentReplicationCommand(replicationHandler, LastEtag);
         }
 
         private IncomingReplicationHandler.ReplicationAttachmentStream CreateReplicationAttachmentStream(DocumentsOperationContext context, KeyValuePair<string, Stream> arg)
@@ -1461,6 +1536,7 @@ namespace Raven.Server.Documents.Replication
         public string Id;
         public int Position;
         public string ChangeVector;
+        public BlittableJsonReaderObject Document;
         public int DocumentSize;
         public string Collection;
         public long LastModifiedTicks;
@@ -1484,7 +1560,6 @@ namespace Raven.Server.Documents.Replication
                 TransactionMarker = TransactionMarker,
                 Type = Type,
                 Id = Id,
-                Position = Position,
                 ChangeVector = ChangeVector,
                 DocumentSize = DocumentSize,
                 Collection = Collection,
