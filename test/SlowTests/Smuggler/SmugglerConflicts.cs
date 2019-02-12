@@ -35,7 +35,7 @@ namespace SlowTests.Smuggler
                         ResolveByCollection = new Dictionary<string, ScriptResolver>()
                     };
                 }
-            },caller: $"{GetType().Name}.{caller}");
+            },caller: caller);
             _store2 = GetDocumentStore(new Options
             {
                 ModifyDatabaseName = s => $"{s}_store2",
@@ -47,7 +47,7 @@ namespace SlowTests.Smuggler
                         ResolveByCollection = new Dictionary<string, ScriptResolver>()
                     };
                 }
-            }, caller: $"{GetType().Name}.{caller}");
+            }, caller: caller);
         }
         public override void Dispose()
         {

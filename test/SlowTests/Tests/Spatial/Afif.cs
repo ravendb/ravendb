@@ -74,7 +74,7 @@ namespace SlowTests.Tests.Spatial
 
             public void Initialize([CallerMemberName] string caller = null)
             {
-                _store = GetDocumentStore(caller: $"{GetType().Name}.{caller}");
+                _store = GetDocumentStore(caller: caller);
 
                 Vehicles = new List<Vehicle>();
                 for (int i = 0; i < 3; i++)
