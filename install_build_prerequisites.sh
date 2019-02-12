@@ -82,11 +82,11 @@ if [ -z "$NODE_CMD" ] ; then
 else
     NODE_VERSION="$($NODE_CMD --version)"
 
-    if [[ ! "$NODE_VERSION" =~ ^v?[89] ]] ; then
+    if [[ ! "$NODE_VERSION" =~ ^v?(8|9|10|11) ]] ; then
         echo "Incompatible version of NodeJS found: $NODE_VERSION. NodeJS 8.x or later is required."
         exit 1
     else
-    echo "Node $NODE_VERSION is installed."
+        echo "Node $NODE_VERSION is installed."
     fi
 fi
 
