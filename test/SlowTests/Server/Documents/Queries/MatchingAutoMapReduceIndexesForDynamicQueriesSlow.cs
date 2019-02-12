@@ -18,7 +18,7 @@ namespace SlowTests.Server.Documents.Queries
 
         public void Initialize([CallerMemberName] string caller = null)
         {
-            _documentDatabase = CreateDocumentDatabase(caller: $"{GetType().Name}.{caller}");
+            _documentDatabase = CreateDocumentDatabase(caller: caller);
 
             _sut = new DynamicQueryToIndexMatcher(_documentDatabase.IndexStore);
         }
