@@ -96,9 +96,6 @@ namespace Raven.Server.Documents.Indexes.Workers
                                 if (tombstone.Type != Tombstone.TombstoneType.Document)
                                     continue; // this can happen when we have '@all_docs'
 
-                                if (tombstone.DeletedEtag > lastMappedEtag)
-                                    continue; // no-op, we have not yet indexed this document
-
                                 _index.HandleDelete(tombstone, collection, indexWriter, indexContext, collectionStats);
 
                                 if (CanContinueBatch(databaseContext, indexContext, collectionStats, indexWriter, lastEtag, lastCollectionEtag, batchCount) == false)
