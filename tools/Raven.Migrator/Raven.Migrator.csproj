@@ -2,9 +2,7 @@
   <PropertyGroup>
     <OutputType>Exe</OutputType>
     <TargetFramework>netcoreapp2.2</TargetFramework>
-    <RuntimeFrameworkVersion>2.2.1</RuntimeFrameworkVersion>
-    <TargetFramework>netcoreapp2.1</TargetFramework>
-    <RuntimeFrameworkVersion>2.1.8</RuntimeFrameworkVersion>
+    <RuntimeFrameworkVersion>2.2.2</RuntimeFrameworkVersion>
     <RuntimeIdentifiers>win7-x64;win8-x64;win81-x64;win10-x64;win7-x86;win8-x86;win81-x86;win10-x86;ubuntu.14.04-x64;ubuntu.16.04-x64;ubuntu.18.04-x64</RuntimeIdentifiers>
     <CodeAnalysisRuleSet>..\..\RavenDB.ruleset</CodeAnalysisRuleSet>
   </PropertyGroup>
@@ -19,9 +17,6 @@
     <PackageReference Include="MongoDB.Driver" Version="2.7.2" />
     <PackageReference Include="MongoDB.Driver.GridFS" Version="2.7.2" />
     <PackageReference Include="Newtonsoft.Json" Version="12.0.1" />
-    <PackageReference Include="MongoDB.Driver" Version="2.7.3" />
-    <PackageReference Include="MongoDB.Driver.GridFS" Version="2.7.3" />
-    <PackageReference Include="Newtonsoft.Json" Version="11.0.2" />
     <PackageReference Include="System.Data.HashFunction.Blake2" Version="2.0.0" />
   </ItemGroup>
 </Project>
