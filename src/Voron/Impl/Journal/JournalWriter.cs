@@ -44,11 +44,11 @@ namespace Voron.Impl.Journal
         {
             Debug.Assert(_options.IoMetrics != null);
 
-            using (var metrics = _options.IoMetrics.MeterIoRate(FileName.FullPath, IoMetrics.MeterType.JournalWrite, (long)numberOf4Kb * 4 * Constants.Size.Kilobyte))
+            using (var metrics = _options.IoMetrics.MeterIoRate(FileName.FullPath, IoMetrics.MeterType.JournalWrite, numberOf4Kb * 4L * Constants.Size.Kilobyte))
             {
-                var result = Pal.rvn_write_journal(_writeHandle, p, numberOf4Kb * 4 * Constants.Size.Kilobyte, posBy4Kb * 4 * Constants.Size.Kilobyte, out var error);
+                var result = Pal.rvn_write_journal(_writeHandle, p, numberOf4Kb * 4L * Constants.Size.Kilobyte, posBy4Kb * 4L * Constants.Size.Kilobyte, out var error);
                 if (result != PalFlags.FailCodes.Success)
-                    PalHelper.ThrowLastError(result, error, $"Attempted to write to journal file - Path: {FileName.FullPath} Size: {numberOf4Kb * 4 * Constants.Size.Kilobyte}");
+                    PalHelper.ThrowLastError(result, error, $"Attempted to write to journal file - Path: {FileName.FullPath} Size: {numberOf4Kb * 4L * Constants.Size.Kilobyte}, numberOf4Kb={numberOf4Kb}");
 
                 metrics.SetFileSize(NumberOfAllocated4Kb * (4L * Constants.Size.Kilobyte));
             }
