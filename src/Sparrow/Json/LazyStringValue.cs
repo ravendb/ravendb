@@ -1000,7 +1000,7 @@ namespace Sparrow.Json
             EscapePositions = null;
             IsDisposed = false;
             AllocatedMemoryData = null;
-            _hashCode = new int?();
+            _hashCode = default;
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]

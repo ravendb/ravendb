@@ -259,7 +259,7 @@ namespace Raven.Server.Documents
                 var collectionName = _documentsStorage.ExtractCollectionName(context, collection);
                 var table = GetCountersTable(context.Transaction.InnerTransaction, collectionName);
 
-                using (DocumentIdWorker.GetLowerIdSliceAndStorageKey(context, documentId, out Slice counterKey, out _))
+                using (DocumentIdWorker.GetSliceFromId(context, documentId, out Slice counterKey))
                 {
                     BlittableJsonReaderObject data;
                     exists = false;
@@ -274,7 +274,11 @@ namespace Raven.Server.Documents
                             data = data.Clone(context);
                         }
 
-                        var dbIdIndex = GetOrAddLocalDbIdIndex(data);
+                        if (data.TryGet(DbIds, out BlittableJsonReaderArray dbIds) == false)
+                            throw new InvalidDataException($"Counter-Group document '{counterKey}' is missing '{DbIds}' property. Shouldn't happen");
+
+                        var dbIdIndex = GetOrAddLocalDbIdIndex(dbIds);
+
                         if (data.TryGet(Values, out BlittableJsonReaderObject counters) == false)
                         {
                             throw new InvalidDataException($"Counter-Group document '{counterKey}' is missing '{Values}' property. Shouldn't happen");
@@ -309,7 +313,7 @@ namespace Raven.Server.Documents
                         {
                             using (data)
                             {
-                                data = context.ReadObject(data, null, BlittableJsonDocumentBuilder.UsageMode.ToDisk);
+                                data = context.ReadObject(data, documentId, BlittableJsonDocumentBuilder.UsageMode.ToDisk);
                             }
                         }
                     }
@@ -368,11 +372,8 @@ namespace Raven.Server.Documents
             }
         }
 
-        private int GetOrAddLocalDbIdIndex(BlittableJsonReaderObject data)
+        private int GetOrAddLocalDbIdIndex(BlittableJsonReaderArray dbIds)
         {
-            if (data.TryGet(DbIds, out BlittableJsonReaderArray dbIds) == false)
-                throw new InvalidDataException($"Counter-Group document is missing '{DbIds}' property. Shouldn't happen");
-
             int dbIdIndex;
             for (dbIdIndex = 0; dbIdIndex < dbIds.Length; dbIdIndex++)
             {
@@ -504,7 +505,7 @@ namespace Raven.Server.Documents
                 var collectionName = _documentsStorage.ExtractCollectionName(context, collection);
                 var table = GetCountersTable(context.Transaction.InnerTransaction, collectionName);
 
-                using (DocumentIdWorker.GetLowerIdSliceAndStorageKey(context, documentId, out Slice counterKey, out _))
+                using (DocumentIdWorker.GetSliceFromId(context, documentId, out Slice counterKey))
                 {
                     if (sourceData.TryGet(Values, out BlittableJsonReaderObject sourceCounters) == false)
                     {
@@ -676,13 +677,13 @@ namespace Raven.Server.Documents
                             {
                                 using (data)
                                 {
-                                    data = context.ReadObject(data, null, BlittableJsonDocumentBuilder.UsageMode.ToDisk);
+                                    data = context.ReadObject(data, documentId, BlittableJsonDocumentBuilder.UsageMode.ToDisk);
                                 }
                             }
                         }
                         else
                         {
-                            data = context.ReadObject(sourceData, null, BlittableJsonDocumentBuilder.UsageMode.ToDisk);
+                            data = context.ReadObject(sourceData, documentId, BlittableJsonDocumentBuilder.UsageMode.ToDisk);
                         }
 
                         var etag = _documentsStorage.GenerateNextEtag();
@@ -848,7 +849,7 @@ namespace Raven.Server.Documents
         {
             var table = new Table(CountersSchema, context.Transaction.InnerTransaction);
 
-            using (DocumentIdWorker.GetLowerIdSliceAndStorageKey(context, docId, out Slice key, out _))
+            using (DocumentIdWorker.GetSliceFromId(context, docId, out Slice key))
             {
                 if (table.ReadByKey(key, out var existing) == false)
                     yield break;
@@ -889,7 +890,7 @@ namespace Raven.Server.Documents
             blob = null;
             var table = new Table(CountersSchema, context.Transaction.InnerTransaction);
 
-            using (DocumentIdWorker.GetLowerIdSliceAndStorageKey(context, docId, out Slice key, out _))
+            using (DocumentIdWorker.GetSliceFromId(context, docId, out Slice key))
             {
                 if (table.ReadByKey(key, out var tvr) == false)
                     return false;
@@ -909,7 +910,7 @@ namespace Raven.Server.Documents
         {
             var table = new Table(CountersSchema, context.Transaction.InnerTransaction);
 
-            using (DocumentIdWorker.GetLowerIdSliceAndStorageKey(context, docId, out Slice key, out _))
+            using (DocumentIdWorker.GetSliceFromId(context, docId, out Slice key))
             {
                 if (table.ReadByKey(key, out var tvr) == false)
                     yield break;
@@ -941,7 +942,7 @@ namespace Raven.Server.Documents
         {
             var table = new Table(CountersSchema, context.Transaction.InnerTransaction);
 
-            using (DocumentIdWorker.GetLowerIdSliceAndStorageKey(context, docId, out Slice key, out _))
+            using (DocumentIdWorker.GetSliceFromId(context, docId, out Slice key))
             {
                 if (table.ReadByKey(key, out var existing) == false)
                     return null;
@@ -961,7 +962,7 @@ namespace Raven.Server.Documents
             if (table.NumberOfEntries == 0)
                 return;
 
-            using (DocumentIdWorker.GetLowerIdSliceAndStorageKey(context, documentId, out Slice lowerId, out _))
+            using (DocumentIdWorker.GetSliceFromId(context, documentId, out Slice lowerId))
             {
                 table.DeleteByKey(lowerId);
             }
@@ -982,7 +983,7 @@ namespace Raven.Server.Documents
                 Debug.Assert(false); // never hit
             }
 
-            using (DocumentIdWorker.GetLowerIdSliceAndStorageKey(context, documentId, out Slice lowerId, out _))
+            using (DocumentIdWorker.GetSliceFromId(context, documentId, out Slice lowerId))
             {
                 var collectionName = _documentsStorage.ExtractCollectionName(context, collection);
                 var table = GetCountersTable(context.Transaction.InnerTransaction, collectionName);
@@ -1014,7 +1015,7 @@ namespace Raven.Server.Documents
 
                 using (data)
                 {
-                    data = context.ReadObject(data, null, BlittableJsonDocumentBuilder.UsageMode.ToDisk);
+                    data = context.ReadObject(data, documentId, BlittableJsonDocumentBuilder.UsageMode.ToDisk);
                 }
 
                 var newEtag = _documentsStorage.GenerateNextEtag();
@@ -1051,8 +1052,10 @@ namespace Raven.Server.Documents
         internal string GenerateDeleteChangeVectorFromRawBlob(BlittableJsonReaderObject data,
             BlittableJsonReaderObject.RawBlob counterToDelete)
         {
-            data.TryGet(DbIds, out BlittableJsonReaderArray dbIds);
-            var dbIdIndex = GetOrAddLocalDbIdIndex(data);
+            if (data.TryGet(DbIds, out BlittableJsonReaderArray dbIds) == false)
+                throw new InvalidDataException($"Counter-Group document is missing '{DbIds}' property. Shouldn't happen");
+
+            var dbIdIndex = GetOrAddLocalDbIdIndex(dbIds);
             var count = counterToDelete.Length / SizeOfCounterValues;
             var sb = new StringBuilder();
 
@@ -1254,7 +1257,7 @@ namespace Raven.Server.Documents
 
             using (counterGroupDetail.Values)
             {
-                counterGroupDetail.Values = context.ReadObject(counterGroupDetail.Values, null);
+                counterGroupDetail.Values = context.ReadObject(counterGroupDetail.Values, counterGroupDetail.CounterKey);
             }
         }
 
@@ -1333,17 +1336,19 @@ namespace Raven.Server.Documents
             if (string.IsNullOrEmpty(changeVector))
                 return Array.Empty<ChangeVectorEntry>();
 
+            var span = changeVector.AsSpan();
+
             var list = new List<ChangeVectorEntry>();
             var currentPos = 0;
             while (currentPos < changeVector.Length)
             {
-                var dbId = changeVector.Substring(currentPos, DbIdAsBase64Size);
+                var dbId = span.Slice(currentPos, DbIdAsBase64Size);
                 currentPos += DbIdAsBase64Size + 1;
 
                 var next = changeVector.IndexOf(',', currentPos);
                 var etagStr = next > 0
-                    ? changeVector.Substring(currentPos, next - currentPos)
-                    : changeVector.Substring(currentPos);
+                    ? span.Slice(currentPos, next - currentPos)
+                    : span.Slice(currentPos);
 
                 if (long.TryParse(etagStr, out var etag) == false)
                     throw new InvalidDataException("Invalid deleted counter string: " + changeVector);
@@ -1351,7 +1356,7 @@ namespace Raven.Server.Documents
                 list.Add(new ChangeVectorEntry
                 {
                     Etag = etag,
-                    DbId = dbId
+                    DbId = dbId.ToString()
                 });
 
                 if (next == -1)
@@ -1389,16 +1394,17 @@ namespace Raven.Server.Documents
             if (string.IsNullOrEmpty(deletedCounterVector))
                 return;
 
+            var span = deletedCounterVector.AsSpan();
             var currentPos = 0;
             while (currentPos < deletedCounterVector.Length)
             {
-                var dbId = deletedCounterVector.Substring(currentPos, DbIdAsBase64Size);
+                var dbId = span.Slice(currentPos, DbIdAsBase64Size).ToString();
                 currentPos += DbIdAsBase64Size + 1;
 
                 var next = deletedCounterVector.IndexOf(',', currentPos);
                 var etagStr = next > 0
-                    ? deletedCounterVector.Substring(currentPos, next - currentPos)
-                    : deletedCounterVector.Substring(currentPos);
+                    ? span.Slice(currentPos, next - currentPos)
+                    : span.Slice(currentPos);
 
                 if (long.TryParse(etagStr, out var etag) == false)
                     throw new InvalidDataException("Invalid deleted counter string: " + deletedCounterVector);

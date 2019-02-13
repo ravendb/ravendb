@@ -259,6 +259,22 @@ namespace Raven.Server.Documents.Handlers
                 _resetContext = _database.DocumentsStorage.ContextPool.AllocateOperationContext(out _context);
             }
 
+            /// <summary>
+            /// Used only from replay Tx commands
+            /// </summary>
+            public SmugglerCounterBatchCommand(
+                DocumentDatabase database,
+                List<CounterGroupDetail> counterGroups,
+                Dictionary<string, Dictionary<string, List<(string ChangeVector, long Value)>>> legacyDictionary)
+            {
+                _database = database;
+                _counterGroups = counterGroups;
+                _legacyDictionary = legacyDictionary;
+
+                _toDispose = new List<IDisposable>();
+                _resetContext = _database.DocumentsStorage.ContextPool.AllocateOperationContext(out _context);
+            }
+
             public void Add(CounterGroupDetail cgd)
             {
                 _counterGroups.Add(cgd);
@@ -313,7 +329,7 @@ namespace Raven.Server.Documents.Handlers
                 {
                     foreach (var kvp in _legacyDictionary)
                     {
-                        var values = ToCounterGroup(context, kvp.Value, out var cv);
+                        var values = ToCounterGroup(context, kvp.Key, kvp.Value, out var cv);
                         using (var cvLsv = context.GetLazyString(cv))
                         using (var keyLsv = context.GetLazyString(kvp.Key))
                         {
@@ -409,7 +425,7 @@ namespace Raven.Server.Documents.Handlers
 
             }
 
-            private static unsafe BlittableJsonReaderObject ToCounterGroup(DocumentsOperationContext context, Dictionary<string, List<(string ChangeVector, long Value)>> dict, out string lastCv)
+            private static unsafe BlittableJsonReaderObject ToCounterGroup(DocumentsOperationContext context, string docId, Dictionary<string, List<(string ChangeVector, long Value)>> dict, out string lastCv)
             {
                 lastCv = null;
                 var dbIds = new Dictionary<string, int>();
@@ -450,7 +466,7 @@ namespace Raven.Server.Documents.Handlers
                     {
                         [CountersStorage.DbIds] = dbIds.Keys,
                         [CountersStorage.Values] = counters
-                    }, null);
+                    }, docId);
 
                     return values;
 
@@ -492,7 +508,11 @@ namespace Raven.Server.Documents.Handlers
 
             public override TransactionOperationsMerger.IReplayableCommandDto<TransactionOperationsMerger.MergedTransactionCommand> ToDto(JsonOperationContext context)
             {
-                return new SmugglerCounterBatchCommandDto();
+                return new SmugglerCounterBatchCommandDto
+                {
+                    CounterGroups = _counterGroups,
+                    LegacyDictionary = _legacyDictionary
+                };
             }
         }
 
@@ -638,10 +658,13 @@ namespace Raven.Server.Documents.Handlers
 
     public class SmugglerCounterBatchCommandDto : TransactionOperationsMerger.IReplayableCommandDto<CountersHandler.SmugglerCounterBatchCommand>
     {
+        public List<CounterGroupDetail> CounterGroups;
+        public Dictionary<string, Dictionary<string, List<(string ChangeVector, long Value)>>> LegacyDictionary;
+
         public CountersHandler.SmugglerCounterBatchCommand ToCommand(DocumentsOperationContext context, DocumentDatabase database)
         {
             var command = new CountersHandler.
-                SmugglerCounterBatchCommand(database);
+                SmugglerCounterBatchCommand(database, CounterGroups, LegacyDictionary);
             return command;
         }
     }

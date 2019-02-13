@@ -826,51 +826,39 @@ namespace Sparrow.Json
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         private static int CompareCaseInsensitive(LazyStringValue lsv, byte* p, int pSize)
         {
-            char[] pCharArray = null;
-            char[] lsvCharArray = null;
+            char[] buffer = null;
 
             try
             {
-                pCharArray = ArrayPool<char>.Shared.Rent(pSize);
+                if (lsv.HasStringValue == false)
+                {
+                    buffer = ArrayPool<char>.Shared.Rent(lsv.Size + pSize);
+                    fixed (char* chars = buffer)
+                    {
+                        System.Text.Encoding.UTF8.GetChars(lsv.Buffer, lsv.Size, chars, lsv.Size);
+                        var pCount = System.Text.Encoding.UTF8.GetChars(p, pSize, chars + lsv.Length, pSize);
+                        var span = new ReadOnlySpan<char>(chars, pCount + lsv.Length);
 
-                fixed (char* pChars = pCharArray)
+                        return span.Slice(0, lsv.Length).CompareTo(span.Slice(lsv.Length), StringComparison.OrdinalIgnoreCase);
+                    }
+                }
+
+                buffer = ArrayPool<char>.Shared.Rent(pSize);
+                fixed (char* pChars = buffer)
                 {
                     var pCount = System.Text.Encoding.UTF8.GetChars(p, pSize, pChars, pSize);
                     var pSpan = new ReadOnlySpan<char>(pChars, pCount);
 
-                    ReadOnlySpan<char> lsvSpan;
-                    if (lsv.HasStringValue == false)
-                    {
-                        lsvCharArray = ArrayPool<char>.Shared.Rent(lsv.Size);
+                    var lsvSpan = lsv.ToString().AsSpan();
 
-                        fixed (char* lsvChars = lsvCharArray)
-                        {
-                            System.Text.Encoding.UTF8.GetChars(lsv.Buffer, lsv.Size, lsvChars, lsv.Size);
-                            lsvSpan = new ReadOnlySpan<char>(lsvChars, lsv.Length);
-
-                            return lsvSpan.CompareTo(pSpan, StringComparison.OrdinalIgnoreCase);
-                        }
-                    }
-
-                    fixed (char* lsvChars = (string)lsv)
-                    {
-                        lsvSpan = new ReadOnlySpan<char>(lsvChars, lsv.Length);
-
-                        return lsvSpan.CompareTo(pSpan, StringComparison.OrdinalIgnoreCase);
-                    }
-
+                    return lsvSpan.CompareTo(pSpan, StringComparison.OrdinalIgnoreCase);
                 }
             }
             finally
             {
-                if (pCharArray != null)
+                if (buffer != null)
                 {
-                    ArrayPool<char>.Shared.Return(pCharArray);
-                }
-
-                if (lsvCharArray != null)
-                {
-                    ArrayPool<char>.Shared.Return(lsvCharArray);
+                    ArrayPool<char>.Shared.Return(buffer);
                 }
             }
         }
