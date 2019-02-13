@@ -322,6 +322,8 @@
                                             <li><span>Client IP:</span><span class="text-details" data-bind="text: clientIP"></span></li>
                                             <li><span>Connection Strategy:</span><span class="text-details" data-bind="text: connectionStrategy"></span></li>
                                             <!-- /ko -->
+                                            <li><span>Change vector for next batch: </span><span class="text-details" data-bind="text: changeVectorForNextBatchStartingPoint() || 'N/A'"></span></li>
+                                            
                                             <li><span>Last Batch Acknowledgement Time:</span><span class="text-details" data-bind="text: lastTimeServerMadeProgressWithDocuments"></span></li>
                                             <li>
                                                 <span>Last Client Connection Time:</span><span class="text-details" data-bind="text: lastClientConnectionTime"></span>
