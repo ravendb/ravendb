@@ -26,6 +26,10 @@ namespace Sparrow.Json
         private readonly bool _isRoot;
         private byte* _objStart;
 
+        #if DEBUG || VALIDATE
+        private string _whereDisposed;
+        #endif
+
         public DynamicJsonValue Modifications;
 
         private Dictionary<StringSegment, object> _objectsPathCache;
@@ -1029,6 +1033,10 @@ namespace Sparrow.Json
             }
 
             _buffer.Dispose();
+
+            #if DEBUG || VALIDATE
+            _whereDisposed = Environment.StackTrace;
+            #endif
         }
 
         public void CopyTo(byte* ptr)

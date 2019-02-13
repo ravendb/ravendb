@@ -2265,6 +2265,8 @@ namespace Raven.Server.Documents.Indexes
                             isStale = IsStale(documentsContext, indexContext, cutoffEtag?.DocEtag, cutoffEtag?.ReferenceEtag);
                             if (WillResultBeAcceptable(isStale, query, wait) == false)
                             {
+                                ThrowIfPartOfGraphQuery(query); //precaution
+
                                 documentsContext.CloseTransaction();
 
                                 Debug.Assert(query.WaitForNonStaleResultsTimeout != null);
@@ -2402,6 +2404,13 @@ namespace Raven.Server.Documents.Indexes
                     }
                 }
             }
+        }
+
+        private static void ThrowIfPartOfGraphQuery(IndexQueryServerSide query)
+        {
+            if (query.IsPartOfGraphQuery)
+                throw new InvalidOperationException(
+                    "Tried to close transaction in the middle of a graph query. This is not supposed to happen and it is likely a bug and should be reported.");
         }
 
         private async Task IndexEntriesQueryInternal<TQueryResult>(

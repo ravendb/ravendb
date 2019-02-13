@@ -8,6 +8,7 @@ using Raven.Client.Exceptions;
 using Raven.Server.Documents.Queries.AST;
 using Raven.Server.ServerWide;
 using Raven.Server.ServerWide.Context;
+using Sparrow.Json;
 using static Raven.Server.Documents.Queries.GraphQueryRunner;
 
 namespace Raven.Server.Documents.Queries.Graph
@@ -159,6 +160,7 @@ namespace Raven.Server.Documents.Queries.Graph
             var results = _queryRunner.ExecuteQuery(new IndexQueryServerSide(_queryMetadata)
             {
                 QueryParameters = _queryParameters,
+                IsPartOfGraphQuery = true
             },
                 _context, _resultEtag, _token);
 
@@ -220,6 +222,8 @@ namespace Raven.Server.Documents.Queries.Graph
         }
 
         public string GetIndexName => _queryMetadata.IndexName;
+
+        public BlittableJsonReaderObject QueryParameters => _queryParameters;
 
         public HashSet<string> GetAllAliases()
         {

@@ -1,10 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
-using System.Reflection;
-using System.Threading.Tasks;
 using Raven.Client.Documents.Linq;
-using Raven.Client.Documents.Session;
 using Xunit;
 
 namespace FastTests.Graph
