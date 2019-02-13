@@ -1,7 +1,7 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
   <PropertyGroup>
     <TargetFramework>netcoreapp2.2</TargetFramework>
-    <RuntimeFrameworkVersion>2.2.1</RuntimeFrameworkVersion>
+    <RuntimeFrameworkVersion>2.2.2</RuntimeFrameworkVersion>
     <AssemblyName>Subscriptions.Benchmark</AssemblyName>
     <OutputType>Exe</OutputType>
     <PackageId>Subscriptions.Benchmark</PackageId>
