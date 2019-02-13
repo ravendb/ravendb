@@ -7,6 +7,7 @@ using Microsoft.Extensions.Primitives;
 using Raven.Client.Exceptions;
 using Raven.Server.Documents.Indexes;
 using Raven.Server.Documents.Queries.AST;
+using Raven.Server.Documents.Queries.Dynamic;
 using Raven.Server.ServerWide;
 using Raven.Server.ServerWide.Context;
 using Raven.Server.Utils;
@@ -30,6 +31,8 @@ namespace Raven.Server.Documents.Queries.Graph
         public Dictionary<string, DocumentQueryResult> QueryCache = new Dictionary<string, DocumentQueryResult>();
         public Dictionary<string, Reference<int>> IdenticalQueriesCount = new Dictionary<string, Reference<int>>();
 
+        private readonly DynamicQueryRunner _dynamicQueryRunner;
+
         public GraphQueryPlan(IndexQueryServerSide query, DocumentsOperationContext context, long? resultEtag,
             OperationCancelToken token, DocumentDatabase database)
         {
@@ -38,6 +41,7 @@ namespace Raven.Server.Documents.Queries.Graph
             _context = context;
             _resultEtag = resultEtag;
             _token = token;
+            _dynamicQueryRunner = new DynamicQueryRunner(database);
         }
 
         public void BuildQueryPlan()
@@ -270,6 +274,16 @@ namespace Raven.Server.Documents.Queries.Graph
             foreach (var indexName in indexNamesGatherer.Indexes)
             {
                 var index = _database.IndexStore.GetIndex(indexName);
+                indexes.Add(index);
+                indexWaiters.Add(index, new AsyncWaitForIndexing(queryDuration, queryTimeout, index));
+            }
+
+            foreach (var qqs in indexNamesGatherer.QueryStepsWithoutExplicitIndex)
+            {
+                //this will ensure that query step has relevant index
+                //if needed, this will create auto-index                
+                var query = new IndexQueryServerSide(qqs.Query.ToString(), qqs.QueryParameters);
+                var index = await _dynamicQueryRunner.MatchIndex(query, true, null, _context, _database.DatabaseShutdown);
                 indexes.Add(index);
                 indexWaiters.Add(index, new AsyncWaitForIndexing(queryDuration, queryTimeout, index));
             }

@@ -114,7 +114,7 @@ namespace Raven.Server.Documents.Queries.Dynamic
             }
         }
 
-        private async Task<Index> MatchIndex(IndexQueryServerSide query, bool createAutoIndexIfNoMatchIsFound, TimeSpan? customStalenessWaitTimeout, DocumentsOperationContext docsContext,
+        public async Task<Index> MatchIndex(IndexQueryServerSide query, bool createAutoIndexIfNoMatchIsFound, TimeSpan? customStalenessWaitTimeout, DocumentsOperationContext docsContext,
             CancellationToken token)
         {
             Index index;

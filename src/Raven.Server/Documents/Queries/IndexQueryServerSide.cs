@@ -63,6 +63,8 @@ namespace Raven.Server.Documents.Queries
             Metadata = metadata;
         }
 
+        public bool IsPartOfGraphQuery;
+
         public string ServerSideQuery => Metadata.Query.ToString();
 
         public List<string> Diagnostics;

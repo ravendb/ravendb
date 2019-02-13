@@ -1,41 +1,53 @@
 using System;
-using System.Collections.Generic;
 using System.Linq;
+using System.Collections.Generic;
+using System.Diagnostics;
 using System.Runtime.InteropServices;
-using System.Threading.Tasks;
-using BenchmarkDotNet.Attributes;
-using BenchmarkDotNet.Running;
 using FastTests.Graph;
 using Raven.Client.Documents;
-using Raven.Client.Documents.Linq;
 using Raven.Client.ServerWide;
 using Raven.Client.ServerWide.Operations;
-using Raven.Server.Documents;
-using Raven.Server.Documents.Queries.AST;
-using Raven.Server.Documents.Queries.Parser;
-using Sparrow;
+using Sparrow.Platform;
 using Xunit;
-using Xunit.Sdk;
 
 namespace Tryouts
 {
    
     public static class Program
     {
-     
-        public static void Main(string[] args)
+        private static void FragmentMemory()
+        {
+            var rand = new Random();
+            var freeMeLater = Marshal.AllocHGlobal(500 * 1024 * 1024);
+            while (true)
+            {
+                try
+                {
+                    Marshal.AllocHGlobal(rand.Next(1, 256) * 4096);
+                }
+                catch (OutOfMemoryException oom)
+                {
+                    Marshal.FreeHGlobal(freeMeLater);
+                    return;
+                }
+            }
+        }
+
+        public static unsafe void Main(string[] args)
         {
             Console.WriteLine("Paused to allow attachment of WinDBG. Press any key to continue.");
             Console.ReadKey();
 
+            FragmentMemory();
+
             for (int i = 0; i < 1000; i++)
             {
                 Console.WriteLine(i);
-                DoCoolStuff();
+                DoCoolStuffWithGraphs();
             }
         }
 
-        private static void DoCoolStuff()
+        private static void DoCoolStuffWithGraphs()
         {
             using (var store = new DocumentStore
             {
@@ -77,11 +89,21 @@ namespace Tryouts
                     //Console.WriteLine($"Q1:{q1.Count}");
                     //Console.WriteLine($"Q2:{q2.Count}");
 
-                    var graphQuery = session.Advanced.GraphQuery<ClientGraphQueries.FooBar>("match (Foo)-[Bars as _]->(Bars as Bar)")
-                        .With("Foo", builder => builder.DocumentQuery<ClientGraphQueries.Foo>().WhereIn(x => x.Name, names).WaitForNonStaleResults())
-                        .With("Bar", session.Query<ClientGraphQueries.Bar>().Customize(x => x.WaitForNonStaleResults()).Where(x => x.Age >= 18));
+                    //var graphQuery = session.Advanced.GraphQuery<ClientGraphQueries.FooBar>("match (Foo)-[Bars as _]->(Bars as Bar)")
+                    //    .With("Foo", builder => builder.DocumentQuery<ClientGraphQueries.Foo>().WhereIn(x => x.Name, names))
+                    //    .With("Bar", session.Query<ClientGraphQueries.Bar>().Where(x => x.Age >= 18)).WaitForNonStaleResults();
 
-//                    Console.WriteLine(graphQuery);
+                    //Console.WriteLine(graphQuery);
+
+                    var graphQuery = session.Advanced.RawQuery<ClientGraphQueries.FooBar>(@"
+                        with {from Foos where Name in ('Fi','Fah','Foozy')} as Foo
+                        with {from Bars where Age >= 18} as Bar
+                        match (Foo)-[Bars as _]->(Bar)
+                    ").WaitForNonStaleResults();
+
+                    //var graphQuery = session.Advanced.RawQuery<ClientGraphQueries.FooBar>(@"
+                    //    match (Foos as Foo)-[Bars as _]->(Bars as Bar)
+                    //").WaitForNonStaleResults();
 
                     var res = graphQuery
                         .ToList();
@@ -92,6 +114,24 @@ namespace Tryouts
                     Assert.Equal(res[0].Foo.Name, "Foozy");
                     Assert.Equal(res[0].Bar.Name, "Barvazon");
                 }
+            }
+        }
+
+        private static void DeleteAndCreateDatabase()
+        {
+            using (var store = new DocumentStore
+            {
+                Urls = new[] {"http://localhost:8080 "},
+                Database = "FooBar"
+            })
+            {
+                store.Initialize();
+                store.Maintenance.Server.Send(new DeleteDatabasesOperation(new DeleteDatabasesOperation.Parameters
+                {
+                    DatabaseNames = new[] {"FooBar"},
+                    HardDelete = true
+                }));
+                store.Maintenance.Server.Send(new CreateDatabaseOperation(new DatabaseRecord("FooBar")));
             }
         }
     }
