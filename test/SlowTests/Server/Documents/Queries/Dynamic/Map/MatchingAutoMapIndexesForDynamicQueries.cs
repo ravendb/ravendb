@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Runtime.CompilerServices;
 using FastTests;
 using Raven.Client.Documents.Indexes;
 using Raven.Client.Util;
@@ -13,12 +14,12 @@ namespace SlowTests.Server.Documents.Queries.Dynamic.Map
 {
     public class MatchingAutoMapIndexesForDynamicQueries : RavenLowLevelTestBase
     {
-        private readonly DocumentDatabase _documentDatabase;
-        private readonly DynamicQueryToIndexMatcher _sut;
+        private DocumentDatabase _documentDatabase;
+        private DynamicQueryToIndexMatcher _sut;
 
-        public MatchingAutoMapIndexesForDynamicQueries()
+        public void Initialize([CallerMemberName] string caller = null)
         {
-            _documentDatabase = CreateDocumentDatabase();
+            _documentDatabase = CreateDocumentDatabase(caller: caller);
 
             _sut = new DynamicQueryToIndexMatcher(_documentDatabase.IndexStore);
         }
@@ -26,6 +27,7 @@ namespace SlowTests.Server.Documents.Queries.Dynamic.Map
         [Fact]
         public void Failure_if_there_is_no_index()
         {
+            Initialize();
             var dynamicQuery = DynamicQueryMapping.Create(new IndexQueryServerSide("FROM Users WHERE Name = 'Arek'"));
 
             var result = _sut.Match(dynamicQuery, null);
@@ -36,6 +38,7 @@ namespace SlowTests.Server.Documents.Queries.Dynamic.Map
         [Fact]
         public void Failure_if_there_is_no_index_for_given_collection()
         {
+            Initialize();
             var definition = new AutoMapIndexDefinition("Users", new[]
             {
                 new AutoIndexField
@@ -57,6 +60,7 @@ namespace SlowTests.Server.Documents.Queries.Dynamic.Map
         [Fact]
         public void Complete_match_for_single_matching_index()
         {
+            Initialize();
             var definition = new AutoMapIndexDefinition("Users", new[]
             {
                 new AutoIndexField
@@ -79,6 +83,7 @@ namespace SlowTests.Server.Documents.Queries.Dynamic.Map
         [Fact]
         public void Complete_match_for_index_containing_all_fields()
         {
+            Initialize();
             var usersByName = new AutoMapIndexDefinition("Users", new[]
             {
                 new AutoIndexField
@@ -116,6 +121,7 @@ namespace SlowTests.Server.Documents.Queries.Dynamic.Map
         [Fact]
         public void PartialMatch_for_index_containing_only_part_of_indexes_fields()
         {
+            Initialize();
             var usersByName = new AutoMapIndexDefinition("Users", new[]
             {
                 new AutoIndexField
@@ -138,6 +144,7 @@ namespace SlowTests.Server.Documents.Queries.Dynamic.Map
         [Fact]
         public void Complete_match_for_single_matching_index_with_mapping_nested_fields()
         {
+            Initialize();
             var definition = new AutoMapIndexDefinition("Users", new[]
             {
                 new AutoIndexField
@@ -170,6 +177,7 @@ namespace SlowTests.Server.Documents.Queries.Dynamic.Map
         [Fact]
         public void Complete_match_for_single_matching_index_with_default_string_sort_option()
         {
+            Initialize();
             var definition = new AutoMapIndexDefinition("Users", new[]
             {
                 new AutoIndexField
@@ -192,6 +200,7 @@ namespace SlowTests.Server.Documents.Queries.Dynamic.Map
         [Fact]
         public void Complete_match_for_single_matching_index_with_numeric_sort_option_for_nested_field()
         {
+            Initialize();
             var definition = new AutoMapIndexDefinition("Users", new[]
             {
                 new AutoIndexField
@@ -214,6 +223,7 @@ namespace SlowTests.Server.Documents.Queries.Dynamic.Map
         [Fact]
         public void Partial_match_when_sort_field_is_not_mapped()
         {
+            Initialize();
             var definition = new AutoMapIndexDefinition("Users", new[]
             {
                 new AutoIndexField
@@ -236,6 +246,7 @@ namespace SlowTests.Server.Documents.Queries.Dynamic.Map
         [Fact]
         public void Complete_match_query_sort_is_default_and_definition_doesn_not_specify_sorting_at_all()
         {
+            Initialize();
             var definition = new AutoMapIndexDefinition("Users", new[]
             {
                 new AutoIndexField
@@ -265,6 +276,7 @@ namespace SlowTests.Server.Documents.Queries.Dynamic.Map
         [Fact]
         public void Failure_if_matching_index_is_disabled_errored_or_has_lot_of_errors()
         {
+            Initialize();
             var definition = new AutoMapIndexDefinition("Users", new[]
             {
                 new AutoIndexField
@@ -307,6 +319,7 @@ namespace SlowTests.Server.Documents.Queries.Dynamic.Map
         [Fact]
         public void Partial_match_if_analyzer_is_required()
         {
+            Initialize();
             using (var db = CreateDocumentDatabase())
             {
                 var mapping = DynamicQueryMapping.Create(new IndexQueryServerSide(@"from Users
@@ -328,6 +341,7 @@ where search(Name, 'arek')"));
         [Fact]
         public void Partial_match_if_exact_is_required()
         {
+            Initialize();
             using (var db = CreateDocumentDatabase())
             {
                 var mapping = DynamicQueryMapping.Create(new IndexQueryServerSide(@"from Users
@@ -349,6 +363,7 @@ where exact(Name = 'arek')"));
         [Fact]
         public void Partial_match_when_highlighting_is_required()
         {
+            Initialize();
             using (var db = CreateDocumentDatabase())
             {
                 var mapping = DynamicQueryMapping.Create(new IndexQueryServerSide(@"from Users
