@@ -3,8 +3,6 @@ using System.Linq;
 using FastTests;
 using Raven.Client.Documents.Indexes;
 using Raven.Client.Documents.Operations.Indexes;
-using Raven.Client.Exceptions;
-using Raven.Server.Exceptions;
 using Tests.Infrastructure;
 using Xunit;
 
@@ -12,41 +10,11 @@ namespace SlowTests.Issues
 {
     public class RavenDB_10621 : RavenTestBase
     {
-        [Fact64Bit]
-        public void ShouldErrorIndexOnInvalidProgramException()
+        [Fact]
+        public void ShouldNotErrorIndexOnInvalidProgramException()
         {
             // if this test fails it's very likely the following issue got fixed: https://github.com/dotnet/coreclr/issues/14672
 
-            using (var store = GetDocumentStore())
-            {
-                new BigIndexOutput().Execute(store);
-
-                using (var session = store.OpenSession())
-                {
-                    session.Store(new ErroringDocument
-                    {
-                        NumVals = { { "Value001", 2.0 } }
-                    });
-
-                    session.SaveChanges();
-                }
-
-                using (var session = store.OpenSession())
-                {
-                    var exception = Assert.Throws<RavenException>(() =>
-                        session.Query<ErroringDocument, BigIndexOutput>().Customize(x => x.WaitForNonStaleResults()).ToList());
-
-                    Assert.Contains(JitHitInternalLimitsOnIndexingFunction.ErrorMessage, exception.Message);
-                }
-
-                var indexStats = store.Maintenance.Send(new GetIndexStatisticsOperation(new BigIndexOutput().IndexName));
-
-                Assert.Equal(IndexState.Error, indexStats.State);
-            }
-        }
-        [Fact32Bit]
-        public void ShouldNotErrorIndexOnInvalidProgramException()
-        {
             using (var store = GetDocumentStore())
             {
                 new BigIndexOutput().Execute(store);
@@ -73,6 +41,7 @@ namespace SlowTests.Issues
                 Assert.Equal(IndexState.Normal, indexStats.State);
             }
         }
+
         [Fact]
         public void ShouldNotErrorIndexByInvalidProgramExceptionWhenUsingDictionary()
         {
