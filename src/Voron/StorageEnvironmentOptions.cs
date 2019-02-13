@@ -440,7 +440,7 @@ namespace Voron
             {
                 return GetMemoryMapPagerInternal(this, null, filename);
             }
-
+            
             public override IJournalWriter CreateJournalWriter(long journalNumber, long journalSize)
             {
                 var name = JournalName(journalNumber);
@@ -492,6 +492,51 @@ namespace Voron
             }
 
             private static readonly long TickInHour = TimeSpan.FromHours(1).Ticks;
+
+            public override void TryStoreJournalForReuse(VoronPathSetting filename)
+            {
+                var reusedCount = 0;
+                try
+                {
+                    var fileModifiedDate = new FileInfo(filename.FullPath).LastWriteTimeUtc;
+                    var counter = Interlocked.Increment(ref _reuseCounter);
+                    var newName = Path.Combine(Path.GetDirectoryName(filename.FullPath), RecyclableJournalName(counter));
+
+                    File.Move(filename.FullPath, newName);
+                    lock (_journalsForReuse)
+                    {
+                        reusedCount = _journalsForReuse.Count;
+
+                        if (reusedCount > _lastReusedJournalCountOnSync)
+                        {
+                            if (File.Exists(newName))
+                                File.Delete(newName);
+                            return;
+                        }
+
+                        var ticks = fileModifiedDate.Ticks;
+
+                        while (_journalsForReuse.ContainsKey(ticks))
+                            ticks++;
+
+                        _journalsForReuse[ticks] = newName;
+                    }
+                }
+                catch (Exception ex)
+                {
+                    if (_log.IsInfoEnabled)
+                        _log.Info(reusedCount > _lastReusedJournalCountOnSync ? "Can't remove" : "Can't store" + " journal for reuse : " + filename, ex);
+                    try
+                    {
+                        if (File.Exists(filename.FullPath))
+                            File.Delete(filename.FullPath);
+                    }
+                    catch
+                    {
+                        // nothing we can do about it
+                    }
+                }
+            }
 
             private void AttemptToReuseJournal(VoronPathSetting desiredPath, long desiredSize)
             {
@@ -823,6 +868,8 @@ namespace Voron
                 PosixOpenFlags = DefaultPosixFlags;
             }
 
+            
+
             public PureMemoryStorageEnvironmentOptions(string name, VoronPathSetting tempPath,
                 IoChangesNotifications ioChangesNotifications, CatastrophicFailureNotification catastrophicFailureNotification)
                 : base(tempPath, ioChangesNotifications, catastrophicFailureNotification)
@@ -887,6 +934,10 @@ namespace Voron
 
                     return TempPath.Combine(filename);
                 }
+            }
+
+            public override void TryStoreJournalForReuse(VoronPathSetting filename)
+            {
             }
 
             protected override void Disposing()
@@ -1173,50 +1224,7 @@ namespace Voron
             PosixOpenFlags = SafePosixOpenFlags;
         }
 
-        public void TryStoreJournalForReuse(VoronPathSetting filename)
-        {
-            var reusedCount = 0;
-            try
-            {
-                var fileModifiedDate = new FileInfo(filename.FullPath).LastWriteTimeUtc;
-                var counter = Interlocked.Increment(ref _reuseCounter);
-                var newName = Path.Combine(Path.GetDirectoryName(filename.FullPath), RecyclableJournalName(counter));
-
-                File.Move(filename.FullPath, newName);
-                lock (_journalsForReuse)
-                {
-                    reusedCount = _journalsForReuse.Count;
-
-                    if (reusedCount > _lastReusedJournalCountOnSync)
-                    {
-                        if (File.Exists(newName))
-                            File.Delete(newName);
-                        return;
-                    }
-
-                    var ticks = fileModifiedDate.Ticks;
-
-                    while (_journalsForReuse.ContainsKey(ticks))
-                        ticks++;
-
-                    _journalsForReuse[ticks] = newName;
-                }
-            }
-            catch (Exception ex)
-            {
-                if (_log.IsInfoEnabled)
-                    _log.Info(reusedCount > _lastReusedJournalCountOnSync ? "Can't remove" : "Can't store" + " journal for reuse : " + filename, ex);
-                try
-                {
-                    if (File.Exists(filename.FullPath))
-                        File.Delete(filename.FullPath);
-                }
-                catch
-                {
-                    // nothing we can do about it
-                }
-            }
-        }
+        public abstract void TryStoreJournalForReuse(VoronPathSetting filename);
 
         private void TryDelete(string file)
         {
