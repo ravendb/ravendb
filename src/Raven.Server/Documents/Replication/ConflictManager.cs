@@ -85,11 +85,9 @@ namespace Raven.Server.Documents.Replication
                     {
                         conflictedDoc.Clone()
                     };
-                    conflicts.AddRange(documentsContext.DocumentDatabase.DocumentsStorage.ConflictsStorage.GetConflictsFor(
-                        documentsContext, id));
-                    var localDocumentTuple =
-                        documentsContext.DocumentDatabase.DocumentsStorage.GetDocumentOrTombstone(documentsContext,
-                            id, false);
+                    conflicts.AddRange(_database.DocumentsStorage.ConflictsStorage.GetConflictsFor(documentsContext, id));
+
+                    var localDocumentTuple = _database.DocumentsStorage.GetDocumentOrTombstone(documentsContext, id, false);
                     var local = DocumentConflict.From(documentsContext, localDocumentTuple.Document) ?? DocumentConflict.From(localDocumentTuple.Tombstone);
                     if (local != null)
                         conflicts.Add(local);
@@ -218,7 +216,7 @@ namespace Raven.Server.Documents.Replication
                 
                 if (compareResult.HasFlag(DocumentCompareResult.CountersNotEqual))                
                     nonPersistentFlags |= NonPersistentDocumentFlags.ResolveCountersConflict;
-                
+
                 _database.DocumentsStorage.Put(context, id, null, incomingDoc, lastModifiedTicks, mergedChangeVector, nonPersistentFlags: nonPersistentFlags);
                 return true;
             }

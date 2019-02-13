@@ -425,7 +425,8 @@ namespace Tests.Infrastructure
             return leader;
         }
 
-        protected async Task<RavenServer> CreateRaftClusterAndGetLeader(int numberOfNodes, bool shouldRunInMemory = true, int? leaderIndex = null, bool useSsl = false, IDictionary<string, string> customSettings = null)
+        protected async Task<(List<RavenServer> Nodes, RavenServer Leader)> CreateRaftCluster(int numberOfNodes, bool shouldRunInMemory = true, int? leaderIndex = null, bool useSsl = false,
+            IDictionary<string, string> customSettings = null)
         {
             leaderIndex = leaderIndex ?? _random.Next(0, numberOfNodes);
             RavenServer leader = null;
@@ -436,9 +437,9 @@ namespace Tests.Infrastructure
             {
                 customSettings = customSettings ?? new Dictionary<string, string>()
                 {
-                    [RavenConfiguration.GetKey(x=>x.Cluster.MoveToRehabGraceTime)] = "1",
-                    [RavenConfiguration.GetKey(x=>x.Cluster.ElectionTimeout)] = _electionTimeoutInMs.ToString(),
-                    [RavenConfiguration.GetKey(x=>x.Cluster.StabilizationTime)] = "1",
+                    [RavenConfiguration.GetKey(x => x.Cluster.MoveToRehabGraceTime)] = "1",
+                    [RavenConfiguration.GetKey(x => x.Cluster.ElectionTimeout)] = _electionTimeoutInMs.ToString(),
+                    [RavenConfiguration.GetKey(x => x.Cluster.StabilizationTime)] = "1",
                 };
                 string serverUrl;
 
@@ -486,7 +487,12 @@ namespace Tests.Infrastructure
                 states = GetLastStatesFromAllServersOrderedByTime();
             }
             Assert.True(condition, "The leader has changed while waiting for cluster to become stable. All nodes status: " + states);
-            return leader;
+            return (clustersServers, leader);
+        }
+
+        protected async Task<RavenServer> CreateRaftClusterAndGetLeader(int numberOfNodes, bool shouldRunInMemory = true, int? leaderIndex = null, bool useSsl = false, IDictionary<string, string> customSettings = null)
+        {
+            return (await CreateRaftCluster(numberOfNodes, shouldRunInMemory, leaderIndex, useSsl, customSettings)).Leader;
         }
 
         protected async Task<(RavenServer, Dictionary<RavenServer, ProxyServer>)> CreateRaftClusterWithProxiesAndGetLeader(int numberOfNodes, bool shouldRunInMemory = true, int? leaderIndex = null, bool useSsl = false, int delay = 0)

@@ -817,19 +817,19 @@ namespace Raven.Server.Documents
             return indexOfLargestEtag;
         }
 
-        public static ConflictStatus GetConflictStatusForDocument(DocumentsOperationContext context, IncomingReplicationHandler.ReplicationItem remote, out string conflictingVector, out bool hasLocalClusterTx)
+        public static ConflictStatus GetConflictStatusForDocument(DocumentsOperationContext context, string id, string changeVector, out string conflictingVector, out bool hasLocalClusterTx)
         {
             hasLocalClusterTx = false;
             conflictingVector = null;
 
             //tombstones also can be a conflict entry
-            var conflicts = context.DocumentDatabase.DocumentsStorage.ConflictsStorage.GetConflictsFor(context, remote.Id);
+            var conflicts = context.DocumentDatabase.DocumentsStorage.ConflictsStorage.GetConflictsFor(context, id);
             ConflictStatus status;
             if (conflicts.Count > 0)
             {
                 foreach (var existingConflict in conflicts)
                 {
-                    status = ChangeVectorUtils.GetConflictStatus(remote.ChangeVector, existingConflict.ChangeVector);
+                    status = ChangeVectorUtils.GetConflictStatus(changeVector, existingConflict.ChangeVector);
                     if (status == ConflictStatus.Conflict)
                     {
                         conflictingVector = existingConflict.ChangeVector;
@@ -840,7 +840,7 @@ namespace Raven.Server.Documents
                 return ConflictStatus.Update;
             }
 
-            var result = context.DocumentDatabase.DocumentsStorage.GetDocumentOrTombstone(context, remote.Id);
+            var result = context.DocumentDatabase.DocumentsStorage.GetDocumentOrTombstone(context, id);
             string local;
 
             if (result.Document != null)
@@ -856,7 +856,7 @@ namespace Raven.Server.Documents
             else
                 return ConflictStatus.Update; //document with 'id' doesn't exist locally, so just do PUT
            
-            status = ChangeVectorUtils.GetConflictStatus(remote.ChangeVector, local);
+            status = ChangeVectorUtils.GetConflictStatus(changeVector, local);
             if (status == ConflictStatus.Conflict)
             {
                 conflictingVector = local;
