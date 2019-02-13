@@ -93,7 +93,7 @@ namespace SlowTests.Issues
                 WaitForDocumentToReplicate<User>(destination, userId, 15_000);
 
                 // we want that the change vector of the document will contain both nodes, A & B
-                while (true)
+                var result = await WaitForValueAsync(() =>
                 {
                     using (var session = source.OpenSession())
                     {
@@ -102,12 +102,11 @@ namespace SlowTests.Issues
                         session.SaveChanges();
 
                         var changeVector = session.Advanced.GetChangeVectorFor(user);
-                        if (changeVector.Contains("A:") && changeVector.Contains("B:"))
-                            break;
-
-                        await Task.Delay(10);
+                        return changeVector.Contains("A:") && changeVector.Contains("B:");
                     }
-                }
+                }, true, 15_000);
+
+                Assert.True(result);
 
                 WaitForDocumentToReplicate<User>(source, userId, 15_000);
                 WaitForDocumentToReplicate<User>(destination, userId, 15_000);
