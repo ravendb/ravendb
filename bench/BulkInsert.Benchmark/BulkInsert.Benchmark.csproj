@@ -2,6 +2,8 @@
   <PropertyGroup>
     <TargetFramework>netcoreapp2.2</TargetFramework>
     <RuntimeFrameworkVersion>2.2.1</RuntimeFrameworkVersion>
+    <TargetFramework>netcoreapp2.1</TargetFramework>
+    <RuntimeFrameworkVersion>2.1.8</RuntimeFrameworkVersion>
     <AssemblyName>BulkInsert.Benchmark</AssemblyName>
     <OutputType>Exe</OutputType>
     <PackageId>BulkInsert.Benchmark</PackageId>
