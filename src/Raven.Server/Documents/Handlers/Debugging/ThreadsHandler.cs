@@ -24,11 +24,19 @@ namespace Raven.Server.Documents.Handlers.Debugging
             var threadIds = GetStringValuesQueryString("threadId", required: false);
             var includeStackObjects = GetBoolValueQueryString("includeStackObjects", required: false) ?? false;
 
-            using (var sw = new StreamWriter(ResponseBodyStream(), Encoding.UTF8,1024, true))
+            using (var stream = new MemoryStream())
             {
-                OutputResultToStream(sw, threadIds.ToHashSet(), includeStackObjects);
+                using (var sw = new StreamWriter(stream))
+                {
+                    OutputResultToStream(sw, threadIds.ToHashSet(), includeStackObjects);
+                 
+                    sw.Flush();
+                    
+                    stream.Position = 0;
+                    stream.WriteTo(ResponseBodyStream());    
+                }
             }
-
+            
             return Task.CompletedTask;
         }
 
@@ -39,8 +47,8 @@ namespace Raven.Server.Documents.Handlers.Debugging
             {
                 using (var writer = new BlittableJsonTextWriter(context, ResponseBodyStream()))
                 {
-                                    try
-                                    {
+                    try
+                    {
                         var threadsUsage = new ThreadsUsage();
 
                         // need to wait to get a correct measure of the cpu
@@ -48,24 +56,23 @@ namespace Raven.Server.Documents.Handlers.Debugging
 
                         var result = threadsUsage.Calculate();
                         context.Write(writer,
-                                            new DynamicJsonValue
-                                            {
+                            new DynamicJsonValue
+                            {
                                 ["Runaway Threads"] = result.ToJson()
-                                            });
-                        
-                                    }
-                                    catch (Exception e)
-                                    {
+                            });
+                    }
+                    catch (Exception e)
+                    {
                         context.Write(writer,
-                                            new DynamicJsonValue
-                                            {
-                                                ["Error"] = e.ToString()
-                                            });
-                                    }
+                            new DynamicJsonValue
+                            {
+                                ["Error"] = e.ToString()
+                            });
+                    }
 
                     writer.Flush();
-        }
-        }
+                }
+            }
         }
 
         public static void OutputResultToStream(StreamWriter sw, HashSet<string> threadIds = null, bool includeStackObjects = false)

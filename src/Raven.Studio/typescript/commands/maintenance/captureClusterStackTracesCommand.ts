@@ -40,7 +40,7 @@ class captureClusterStackTracesCommand extends commandBase {
     
     private extractStackTrace(fileName: string, zipFile: JSZipObject): Promise<clusterWideStackTraceResponseItem> {
         return new Promise((resolve, reject) => {
-            const nodeTagRegexp = /\[([A-Z]{1,4})\]/;
+            const nodeTagRegexp = /\[([A-Z?]{1,4})\]/;
             const nodeTag = fileName.match(nodeTagRegexp)[1];
             zipFile.async("arraybuffer")
                 .then(buffer => {
@@ -56,8 +56,8 @@ class captureClusterStackTracesCommand extends commandBase {
                                     .then(stacks => {
                                         const stacksAsJson = JSON.parse(stacks);
                                         
-                                        if (stacks.Error) {
-                                            reject(stacks.Error);
+                                        if (stacksAsJson.Error) {
+                                            reject(stacksAsJson.Error);
                                         } else {
                                             resolve({
                                                 NodeTag: nodeTag,
