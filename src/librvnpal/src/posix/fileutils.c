@@ -24,7 +24,7 @@ _pwrite(int32_t fd, void *buffer, uint64_t count, uint64_t offset, int32_t *deta
     int64_t cifs_retries = 3;
     do
     {
-        int64_t result = pwrite(fd, buffer, count - actually_written, offset + actually_written);
+        int64_t result = rvn_pwrite(fd, buffer, count - actually_written, offset + actually_written);
         if (result < 0) /* we assume zero cannot be returned at any case as defined in POSIX */
         {
             if (errno == EINVAL && _sync_directory_allowed(fd) == SYNC_DIR_NOT_ALLOWED && --cifs_retries > 0)
