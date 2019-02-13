@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Linq;
+using System.Runtime.CompilerServices;
 using System.Threading.Tasks;
 using Raven.Client.Exceptions;
 using Raven.Server.Documents;
@@ -15,9 +16,9 @@ namespace FastTests.Server.Documents
         private DocumentDatabase _documentDatabase;
         private IDisposable _disposeDatabase;
 
-        public DocumentsCrud()
+        public void Initialize([CallerMemberName]string caller = null)
         {
-            _disposeDatabase = CreatePersistentDocumentDatabase(NewDataPath(prefix: "DocumentsCrud"), out _documentDatabase);
+            _disposeDatabase = CreatePersistentDocumentDatabase(NewDataPath(prefix: "DocumentsCrud"), out _documentDatabase, caller);
         }
 
         [Theory]
@@ -27,6 +28,7 @@ namespace FastTests.Server.Documents
         [InlineData("users/111112222233333333333444444445555556")]
         public void PutAndGetDocumentById(string id)
         {
+            Initialize();
             using (var ctx = DocumentsOperationContext.ShortTermSingleUse(_documentDatabase))
             {
                 ctx.OpenWriteTransaction();
@@ -63,6 +65,7 @@ namespace FastTests.Server.Documents
         [InlineData("לכובע שלי שלוש פינות")]
         public void CanDelete(string id)
         {
+            Initialize();
             using (var ctx = DocumentsOperationContext.ShortTermSingleUse(_documentDatabase))
             {
                 ctx.OpenWriteTransaction();
@@ -100,6 +103,7 @@ namespace FastTests.Server.Documents
         [Fact]
         public void CanQueryByGlobalEtag()
         {
+            Initialize();
             using (var ctx = DocumentsOperationContext.ShortTermSingleUse(_documentDatabase))
             {
                 ctx.OpenWriteTransaction();
@@ -161,6 +165,7 @@ namespace FastTests.Server.Documents
         [Fact]
         public async Task EtagsArePersisted()
         {
+            Initialize();
             using (var ctx = DocumentsOperationContext.ShortTermSingleUse(_documentDatabase))
             {
                 ctx.OpenWriteTransaction();
@@ -207,6 +212,7 @@ namespace FastTests.Server.Documents
         [Fact]
         public async Task EtagsArePersistedWithDeletes()
         {
+            Initialize();
             using (var ctx = DocumentsOperationContext.ShortTermSingleUse(_documentDatabase))
             {
                 ctx.OpenWriteTransaction();
@@ -266,6 +272,7 @@ namespace FastTests.Server.Documents
         [Fact]
         public void CanQueryByPrefix()
         {
+            Initialize();
             using (var ctx = DocumentsOperationContext.ShortTermSingleUse(_documentDatabase))
             {
                 ctx.OpenWriteTransaction();
@@ -325,6 +332,7 @@ namespace FastTests.Server.Documents
         [Fact]
         public void CanQueryByCollectionEtag()
         {
+            Initialize();
             using (var ctx = DocumentsOperationContext.ShortTermSingleUse(_documentDatabase))
             {
                 ctx.OpenWriteTransaction();
@@ -385,6 +393,7 @@ namespace FastTests.Server.Documents
         [Fact]
         public void WillVerifyEtags_New()
         {
+            Initialize();
             using (var ctx = DocumentsOperationContext.ShortTermSingleUse(_documentDatabase))
             {
                 ctx.OpenWriteTransaction();
@@ -409,6 +418,7 @@ namespace FastTests.Server.Documents
         [Fact]
         public void WillVerifyEtags_Existing()
         {
+            Initialize();
             using (var ctx = DocumentsOperationContext.ShortTermSingleUse(_documentDatabase))
             {
                 ctx.OpenWriteTransaction();
@@ -424,7 +434,7 @@ namespace FastTests.Server.Documents
                 {
                     _documentDatabase.DocumentsStorage.Put(ctx, "users/1", null, doc);
                     var changeVector = ctx.GetLazyString($"A:3-{_documentDatabase.DocumentsStorage.Environment.Base64Id}");
-                     Assert.Throws<ConcurrencyException>(() => _documentDatabase.DocumentsStorage.Put(ctx, "users/1", changeVector, doc));
+                    Assert.Throws<ConcurrencyException>(() => _documentDatabase.DocumentsStorage.Put(ctx, "users/1", changeVector, doc));
                 }
 
                 ctx.Transaction.Commit();
@@ -434,6 +444,7 @@ namespace FastTests.Server.Documents
         [Fact]
         public void WillVerifyEtags_OnDeleteExisting()
         {
+            Initialize();
             using (var ctx = DocumentsOperationContext.ShortTermSingleUse(_documentDatabase))
             {
                 ctx.OpenWriteTransaction();
@@ -459,6 +470,7 @@ namespace FastTests.Server.Documents
         [Fact]
         public void WillVerifyEtags_OnDeleteNotThere()
         {
+            Initialize();
             using (var ctx = DocumentsOperationContext.ShortTermSingleUse(_documentDatabase))
             {
                 ctx.OpenWriteTransaction();
@@ -472,6 +484,7 @@ namespace FastTests.Server.Documents
         [Fact]
         public void WillVerifyEtags_ShouldBeNew()
         {
+            Initialize();
             using (var ctx = DocumentsOperationContext.ShortTermSingleUse(_documentDatabase))
             {
                 ctx.OpenWriteTransaction();
@@ -496,6 +509,7 @@ namespace FastTests.Server.Documents
         [Fact]
         public void WillVerifyEtags_VerifyNew()
         {
+            Initialize();
             using (var ctx = DocumentsOperationContext.ShortTermSingleUse(_documentDatabase))
             {
                 ctx.OpenWriteTransaction();
@@ -521,6 +535,7 @@ namespace FastTests.Server.Documents
         [Fact]
         public void PutDocumentWithoutId()
         {
+            Initialize();
             var id = "users/";
             using (var ctx = DocumentsOperationContext.ShortTermSingleUse(_documentDatabase))
             {

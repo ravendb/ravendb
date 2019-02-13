@@ -1,4 +1,5 @@
-﻿using FastTests;
+﻿using System.Runtime.CompilerServices;
+using FastTests;
 using Raven.Client.Documents.Indexes;
 using Raven.Client.Util;
 using Raven.Server.Documents;
@@ -13,12 +14,12 @@ namespace SlowTests.Server.Documents.Queries.Dynamic.MapReduce
 {
     public class MatchingAutoMapReduceIndexesForDynamicQueries : RavenLowLevelTestBase
     {
-        private readonly DocumentDatabase _documentDatabase;
-        protected readonly DynamicQueryToIndexMatcher _sut;
+        private DocumentDatabase _documentDatabase;
+        protected DynamicQueryToIndexMatcher _sut;
 
-        public MatchingAutoMapReduceIndexesForDynamicQueries()
+        public void Initialize([CallerMemberName] string caller = null)
         {
-            _documentDatabase = CreateDocumentDatabase();
+            _documentDatabase = CreateDocumentDatabase(caller: caller);
 
             _sut = new DynamicQueryToIndexMatcher(_documentDatabase.IndexStore);
         }
@@ -26,6 +27,8 @@ namespace SlowTests.Server.Documents.Queries.Dynamic.MapReduce
         [Fact]
         public void Failure_match_if_there_is_no_index()
         {
+            Initialize();
+
             var dynamicQuery = DynamicQueryMapping.Create(new IndexQueryServerSide("FROM Users GROUP BY Location SELECT Location, count() "));
 
             var result = _sut.Match(dynamicQuery, null);
@@ -36,6 +39,8 @@ namespace SlowTests.Server.Documents.Queries.Dynamic.MapReduce
         [Fact]
         public void Complete_match_for_single_matching_index_with_sort_options()
         {
+            Initialize();
+
             var definition = new AutoMapReduceIndexDefinition("Users", new[]
             {
                 new AutoIndexField
@@ -68,6 +73,8 @@ namespace SlowTests.Server.Documents.Queries.Dynamic.MapReduce
         [Fact]
         public void Failure_match_for_map_index_containing_the_same_field_names()
         {
+            Initialize();
+
             var definition = new AutoMapIndexDefinition("Users", new[]
             {
                 new AutoIndexField
@@ -94,6 +101,8 @@ namespace SlowTests.Server.Documents.Queries.Dynamic.MapReduce
         [Fact]
         public void Failure_match_for_map_reduce_index_having_different_aggregation_function()
         {
+            Initialize();
+
             var definition = new AutoMapReduceIndexDefinition("Users", new[]
             {
                 new AutoIndexField
@@ -124,6 +133,8 @@ namespace SlowTests.Server.Documents.Queries.Dynamic.MapReduce
         [Fact]
         public void Partial_match_for_map_reduce_index_not_having_all_map_fields_defined_in_query()
         {
+            Initialize();
+
             var definition = new AutoMapReduceIndexDefinition("Users", new[]
             {
                 new AutoIndexField
@@ -155,6 +166,8 @@ namespace SlowTests.Server.Documents.Queries.Dynamic.MapReduce
         [Fact]
         public void Failure_match_for_map_reduce_index_not_matching_exactly_group_by_fields()
         {
+            Initialize();
+
             // missing nick name field to match
             var usersByCountReducedByAgeAndLocation = new AutoMapReduceIndexDefinition("Users", new[]
             {
@@ -222,6 +235,8 @@ namespace SlowTests.Server.Documents.Queries.Dynamic.MapReduce
         [Fact]
         public void Complete_match_and_surpassed_map_reduce_index_is_choosen()
         {
+            Initialize();
+
             var usersByCountGroupedByLocation = new AutoMapReduceIndexDefinition("Users", new[]
             {
                 new AutoIndexField
@@ -278,6 +293,8 @@ namespace SlowTests.Server.Documents.Queries.Dynamic.MapReduce
         [Fact]
         public void Partial_match_when_sort_field_is_not_mapped()
         {
+            Initialize();
+
             var definition = new AutoMapIndexDefinition("Users", new[]
             {
                 new AutoIndexField
@@ -300,6 +317,8 @@ namespace SlowTests.Server.Documents.Queries.Dynamic.MapReduce
         [Fact]
         public void Partial_match_if_analyzer_is_required_on_group_by_field()
         {
+            Initialize();
+
             using (var db = CreateDocumentDatabase())
             {
                 var mapping = DynamicQueryMapping.Create(new IndexQueryServerSide(@"
@@ -327,6 +346,8 @@ select Name, count()"));
         [Fact]
         public void Partial_match_if_exact_is_required_on_group_by_field()
         {
+            Initialize();
+
             using (var db = CreateDocumentDatabase())
             {
                 var mapping = DynamicQueryMapping.Create(new IndexQueryServerSide(@"
@@ -365,7 +386,7 @@ select Name, count()"));
         {
             try
             {
-                _documentDatabase.Dispose();
+                _documentDatabase?.Dispose();
             }
             finally
             {

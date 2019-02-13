@@ -185,6 +185,32 @@ namespace SlowTests.Server.Documents.Revisions
             }
         }
 
+        [Fact]
+        public async Task ShouldRevisionOnReplication()
+        {
+            using (var store1 = GetDocumentStore())
+            using (var store2 = GetDocumentStore())
+            {
+                await RevisionsHelper.SetupRevisions(Server.ServerStore, store2.Database);
+                await SetupReplicationAsync(store1, store2);
+
+                using (var session = store1.OpenAsyncSession())
+                {
+                    await session.StoreAsync(new User { Name = "Hibernating" }, "users/1");
+                    await session.SaveChangesAsync();
+                }
+
+                Assert.True(WaitForDocument(store2, "users/1"));
+
+                using (var session = store2.OpenAsyncSession())
+                {
+                    var user = await session.Advanced.Revisions.GetMetadataForAsync("users/1");
+                    Assert.NotNull(user);
+                    Assert.Equal(1, user.Count);
+                }
+            }
+        }
+
         [Theory]
         [InlineData(false)]
         [InlineData(true)]

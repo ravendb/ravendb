@@ -68,10 +68,17 @@ namespace Voron.Data.Compression
                         if (wasModified == false)
                             return;
 
-                        // we aren't able to compress the page back to 8KB page
-                        // let's split it and try to copy it then
+                        if (NumberOfEntries > 0)
+                        {
+                            // we aren't able to compress the page back to 8KB page
+                            // let's split it and try to copy it then
 
-                        SplitPage(tx, tree);
+                            SplitPage(tx, tree);
+                        }
+                        else
+                        {
+                            ThrowCouldNotCompressEmptyDecompressedPage(PageNumber);
+                        }
 
                         CopyToOriginal(tx, defragRequired: true, wasModified: true, tree);
 
@@ -124,6 +131,11 @@ namespace Voron.Data.Compression
                     }
                 }
             }
+        }
+
+        private static void ThrowCouldNotCompressEmptyDecompressedPage(long pageNumber)
+        {
+            throw new InvalidOperationException($"Empty decompressed page #{pageNumber} could not be compressed back. Should never happen");
         }
     }
 }
