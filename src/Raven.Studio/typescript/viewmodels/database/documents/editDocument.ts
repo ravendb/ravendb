@@ -170,7 +170,11 @@ class editDocument extends viewModelBase {
 
         this.focusOnEditor();
        
-        $('#right-options-panel [data-toggle="tooltip"]').tooltip(); 
+        this.initTooltips();
+    }
+    
+    private initTooltips() {
+        $('#right-options-panel [data-toggle="tooltip"]').tooltip();
     }
 
     detached() {
@@ -712,7 +716,7 @@ class editDocument extends viewModelBase {
         this.isCreatingNewDocument(false);
         this.collectionForNewDocument(null);
 
-        $('#right-options-panel [data-toggle="tooltip"]').tooltip();
+        this.initTooltips();
         this.getDocumentPhysicalSize(metadata['@id']);
     }
 
@@ -832,6 +836,7 @@ class editDocument extends viewModelBase {
                     this.loadDocument(docId)
                         .done(() => {
                             this.connectedDocuments.gridController().reset(true);
+                            this.initTooltips();
                         });
 
                 this.displayDocumentChange(false);
