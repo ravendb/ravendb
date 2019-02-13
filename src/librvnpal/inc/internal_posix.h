@@ -5,12 +5,14 @@
 #define rvn_mmap mmap
 #define rvn_ftruncate ftruncate
 #define rvn_pread pread
+#define rvn_pwrite pwrite
 #define O_DIRECT 0
 #define O_LARGEFILE 0
 #else
 #define rvn_mmap mmap64
 #define rvn_ftruncate ftruncate64
 #define rvn_pread pread64
+#define rvn_pwrite pwrite64
 #endif
 
 
