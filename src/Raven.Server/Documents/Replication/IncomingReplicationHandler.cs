@@ -942,6 +942,9 @@ namespace Raven.Server.Documents.Replication
 
             public void Dispose()
             {
+                if (_nativeAllocationList == null)
+                    return;
+
                 foreach (var allocation in _nativeAllocationList)
                 {
                     allocation.Dispose();
