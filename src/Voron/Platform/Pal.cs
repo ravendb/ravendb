@@ -11,7 +11,7 @@ namespace Voron.Platform
     public static unsafe class Pal
     {
         public static SystemInformation SysInfo;
-        public const int PAL_VER = 42001; // Should match auto generated rc from rvn_get_pal_ver() @ src/rvngetpalver.c
+        public const int PAL_VER = 42002; // Should match auto generated rc from rvn_get_pal_ver() @ src/rvngetpalver.c
 
         static Pal()
         {
