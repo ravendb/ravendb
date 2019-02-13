@@ -50,6 +50,19 @@ class document implements documentBase {
         return dto;
     }
 
+    /**
+     * serialize document to dto but unify metadata: put counters under common key regardless if document is revision or no
+     */
+    toDiffDto() {
+        const dto = this.toDto(true);
+        
+        if (this.__metadata && this.__metadata.revisionCounters) {
+            dto["@metadata"]["@counters"] = this.__metadata.revisionCounters().map(x => x.name);
+        }
+        
+        return dto;
+    }
+
     toBulkDoc(method: Raven.Client.Documents.Commands.Batches.CommandType): Raven.Server.Documents.Handlers.BatchRequestParser.CommandData {
         const dto = this.toDto(true);
         const bulkDoc = {

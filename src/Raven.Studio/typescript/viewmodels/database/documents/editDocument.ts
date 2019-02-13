@@ -63,6 +63,7 @@ class editDocument extends viewModelBase {
     document = ko.observable<document>();
     documentText = ko.observable("");
     documentTextRight = ko.observable("");
+    documentTextStash = ko.observable<string>("");
     metadata: KnockoutComputed<documentMetadata>;
     
     changeVector: KnockoutComputed<changeVectorItem[]>;
@@ -832,16 +833,22 @@ class editDocument extends viewModelBase {
         return new getDocumentAtRevisionCommand(revisionChangeVector, this.activeDatabase())
             .execute()
             .done((doc: document) => {
-
+                const wasDirty = this.dirtyFlag().isDirty();
+                
+                this.documentTextStash(this.documentText());
+                
+                const leftDoc = this.document();
+                const leftDocDto = leftDoc.toDiffDto();
+                this.documentText(this.stringify(leftDocDto));
+                
                 if (doc) {
-                    const docDto = doc.toDto(true);
-                    const metaDto = docDto["@metadata"];
-                    if (metaDto) {
-                        documentMetadata.filterMetadata(metaDto, []);
-                    }
-
+                    const docDto = doc.toDiffDto();
                     const docText = this.stringify(docDto);
                     this.documentTextRight(docText);
+                }
+                
+                if (!wasDirty) {
+                    this.dirtyFlag().reset();
                 }
 
                 this.renderDifferences();
@@ -996,6 +1003,9 @@ class editDocument extends viewModelBase {
     }
 
     exitCompareMode() {
+        this.documentText(this.documentTextStash());
+        this.documentTextStash("");
+        
         this.documentTextRight("");
         this.revisionsToCompare([]);
         this.comparingWith(null);
