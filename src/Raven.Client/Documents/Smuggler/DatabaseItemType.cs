@@ -20,7 +20,7 @@ namespace Raven.Client.Documents.Smuggler
         DatabaseRecord = 1 << 11,
         Unknown = 1 << 12,
 
-        [Obsolete]
+        [Obsolete("DatabaseItemType.Counters is not supported anymore. Will be removed in next major version of the product.")]
         Counters = 1 << 13,
 
         Attachments = 1 << 14,

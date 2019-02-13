@@ -852,10 +852,13 @@ namespace Raven.Server.Documents.Replication
 
                     ReadExactly(sizeOfData, ref writeBuffer);
                 }
-                else if (item.Type == ReplicationBatchItem.ReplicationItemType.LegacyCounter)
+                else if (item.Type == ReplicationBatchItem.ReplicationItemType.LegacyCounter ||
+#pragma warning disable 618
+                         item.Type == ReplicationBatchItem.ReplicationItemType.CounterTombstone)
+#pragma warning restore 618
                 {
-                    throw new InvalidOperationException($"Received an item of type {nameof(ReplicationBatchItem.ReplicationItemType.LegacyCounter)}. " +
-                                                        $"Replication of counters between 4.1.x and {ServerVersion.Version} is not supported.");
+                    throw new InvalidOperationException($"Received an item of type '{item.Type}'. Replication of counters and counter tombstones " +
+                                                        $"between 4.1.x and {ServerVersion.Version} is not supported.");
                 }
                 else
                 {

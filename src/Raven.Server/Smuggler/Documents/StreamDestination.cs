@@ -420,11 +420,11 @@ namespace Raven.Server.Smuggler.Documents
                 Writer.WriteStartObject();
 
                 Writer.WritePropertyName(nameof(CounterItem.Batch.CounterKey));
-                Writer.WriteString(counterDetail.CounterKey, true);
+                Writer.WriteString(counterDetail.CounterKey, skipEscaping: true);
                 Writer.WriteComma();
 
                 Writer.WritePropertyName(nameof(CounterItem.ChangeVector));
-                Writer.WriteString(counterDetail.ChangeVector, true);
+                Writer.WriteString(counterDetail.ChangeVector, skipEscaping: true);
                 Writer.WriteComma();
 
                 Writer.WritePropertyName(nameof(CounterItem.Batch.Values));

@@ -230,7 +230,7 @@ namespace Raven.Server.Storage.Schema.Updates.Documents
 
         private static IEnumerable<CounterDetail> GetAllCounters(Table table, DocumentsOperationContext ctx)
         {
-            foreach (var result in table.SeekByPrimaryKeyPrefix(Slices.Empty, Slices.Empty, 0))
+            foreach (var result in table.SeekByPrimaryKeyPrefix(Slices.BeforeAllKeys, Slices.Empty, 0))
             {
                 yield return TableValueToCounterDetail(ctx, result.Value.Reader);
             }

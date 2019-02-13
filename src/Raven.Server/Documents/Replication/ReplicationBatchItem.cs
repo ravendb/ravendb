@@ -128,7 +128,11 @@ namespace Raven.Server.Documents.Replication
             AttachmentTombstone = 5,
             RevisionTombstone = 6,
             LegacyCounter = 7,
-            CounterBatch = 8
+
+            [Obsolete("ReplicationItemType.CounterTombstone is not supported anymore. Will be removed in next major version of the product.")]
+            CounterTombstone = 8,
+
+            CounterBatch = 9
         }
     }
 }

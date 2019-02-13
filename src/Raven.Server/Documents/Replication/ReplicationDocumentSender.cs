@@ -15,6 +15,7 @@ using Sparrow.Json.Parsing;
 using Sparrow.Logging;
 using Raven.Server.ServerWide.Context;
 using Raven.Server.Utils;
+using Sparrow.Json;
 using Voron;
 
 namespace Raven.Server.Documents.Replication
@@ -531,7 +532,8 @@ namespace Raven.Server.Documents.Replication
             {
                 WriteCountersToServer(documentsContext, item);
 
-                stats.RecordCountersOutput(item.Values.Count -1); //?
+                item.Values.TryGet(CountersStorage.Values, out BlittableJsonReaderObject counters);
+                stats.RecordCountersOutput(counters?.Count ?? 0); 
             }
 
             foreach (var item in _orderedReplicaItems)
@@ -595,13 +597,6 @@ namespace Raven.Server.Documents.Replication
             {
                 WriteDocumentToServer(context, item);
                 stats.RecordDocumentTombstoneOutput();
-                return;
-            }
-
-            if (item.Type == ReplicationBatchItem.ReplicationItemType.CounterBatch)
-            {
-                WriteCounterToServer(context, item);
-                stats.RecordCounterOutput();
                 return;
             }
 

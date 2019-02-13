@@ -1,26 +1,27 @@
 using System;
 using System.IO;
 using System.Linq;
+using System.Reflection;
 using System.Threading.Tasks;
 using FastTests;
 using FastTests.Utils;
+using Orders;
 using Raven.Client;
 using Raven.Client.Documents;
 using Raven.Client.Documents.Commands;
 using Raven.Client.Documents.Indexes;
 using Raven.Client.Documents.Operations;
-using Raven.Client.Documents.Operations.Backups;
 using Raven.Client.Documents.Operations.Expiration;
 using Raven.Client.Documents.Smuggler;
 using Raven.Client.ServerWide;
 using Raven.Client.ServerWide.Operations;
-using Raven.Server.Documents;
-using Raven.Server.ServerWide.Context;
 using Raven.Tests.Core.Utils.Entities;
 using SlowTests.Issues;
 using Sparrow;
 using Sparrow.Json;
 using Xunit;
+using Company = Raven.Tests.Core.Utils.Entities.Company;
+using Employee = Raven.Tests.Core.Utils.Entities.Employee;
 
 namespace SlowTests.Smuggler
 {
@@ -618,6 +619,48 @@ namespace SlowTests.Smuggler
             finally
             {
                 File.Delete(file);
+            }
+        }
+
+        [Fact]
+        public async Task CanImportLegacyCounters()
+        {
+            var assembly = typeof(SmugglerApiTests).GetTypeInfo().Assembly;
+
+            using (var fs = assembly.GetManifestResourceStream("SlowTests.Data.legacy-counters.4.1.5.ravendbdump"))
+            using (var store = GetDocumentStore())
+            {
+                var options = new DatabaseSmugglerImportOptions();
+                options.OperateOnTypes &= ~DatabaseItemType.CountersBatch;
+
+#pragma warning disable 618
+                options.OperateOnTypes |= DatabaseItemType.Counters;
+#pragma warning restore 618
+
+                var operation = await store.Smuggler.ImportAsync(options, fs);
+                await operation.WaitForCompletionAsync(TimeSpan.FromMinutes(1));
+
+                var stats = await store.Maintenance.SendAsync(new GetStatisticsOperation());
+
+                Assert.Equal(1059, stats.CountOfDocuments);
+                Assert.Equal(3, stats.CountOfIndexes);
+                Assert.Equal(4645, stats.CountOfRevisionDocuments);
+                Assert.Equal(17, stats.CountOfAttachments);
+
+                Assert.Equal(29, stats.CountOfCounterEntries);
+
+                using (var session = store.OpenSession())
+                {
+                    var q = session.Query<Supplier>().ToList();
+                    Assert.Equal(29, q.Count);
+
+                    foreach (var supplier in q)
+                    {
+                        var counters = session.CountersFor(supplier).GetAll();
+                        Assert.Equal(1, counters.Count);
+                        Assert.Equal(10, counters["likes"]);
+                    }
+                }
             }
         }
 

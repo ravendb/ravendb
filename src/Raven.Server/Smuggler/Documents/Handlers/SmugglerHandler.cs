@@ -150,6 +150,13 @@ namespace Raven.Server.Smuggler.Documents.Handlers
             if (version.Major != RavenVersionAttribute.Instance.MajorVersion)
                 return;
 
+#pragma warning disable 618
+            if (version.Minor < 2 && options.OperateOnTypes.HasFlag(DatabaseItemType.Counters))
+#pragma warning restore 618
+            {
+                options.OperateOnTypes |= DatabaseItemType.CountersBatch;
+            }
+
             // only all 4.0 and 4.1 less or equal to 41006
             if (version.Revision < 50 || version.Revision > 41006) 
                 return;
