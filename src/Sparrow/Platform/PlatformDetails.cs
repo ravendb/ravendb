@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Globalization;
 using System.Runtime.InteropServices;
 using Sparrow.Platform.Posix;
 using Sparrow.Platform.Posix.macOS;
@@ -8,6 +9,8 @@ namespace Sparrow.Platform
 {
     public static class PlatformDetails
     {
+        private static readonly bool IsWindows8OrNewer;
+
         public static readonly bool Is32Bits = IntPtr.Size == sizeof(int);
 
 
@@ -18,9 +21,17 @@ namespace Sparrow.Platform
 
         public static readonly bool RunningOnLinux = RuntimeInformation.IsOSPlatform(OSPlatform.Linux);
 
-        public static readonly bool CanPrefetch = IsWindows8OrNewer() || RunningOnPosix;
+        public static readonly bool CanPrefetch;
 
         public static bool RunningOnDocker => string.Equals(Environment.GetEnvironmentVariable("RAVEN_IN_DOCKER"), "true", StringComparison.OrdinalIgnoreCase);
+
+        static PlatformDetails()
+        {
+            if (TryGetWindowsVersion(out var version))
+                IsWindows8OrNewer = version >= 6.19M;
+
+            CanPrefetch = IsWindows8OrNewer || RunningOnPosix;
+        }
 
         public static ulong GetCurrentThreadId()
         {
@@ -34,8 +45,10 @@ namespace Sparrow.Platform
             return macSyscall.pthread_self();
         }
 
-        private static bool IsWindows8OrNewer()
+        private static bool TryGetWindowsVersion(out decimal version)
         {
+            version = -1M;
+
             if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows) == false)
                 return false;
 
@@ -52,15 +65,11 @@ namespace Sparrow.Platform
 
                 if (ver != null)
                 {
-                    // remove second occurance of '.' (win 10 might be 10.123.456)
+                    // remove second occurence of '.' (win 10 might be 10.123.456)
                     var index = ver.IndexOf('.', ver.IndexOf('.') + 1);
                     ver = string.Concat(ver.Substring(0, index), ver.Substring(index + 1));
 
-                    decimal output;
-                    if (decimal.TryParse(ver, out output))
-                    {
-                        return output >= 6.19M; // 6.2 is win8, 6.1 win7..
-                    }
+                    return decimal.TryParse(ver, NumberStyles.Any, CultureInfo.InvariantCulture, out version);
                 }
 
                 return false;
