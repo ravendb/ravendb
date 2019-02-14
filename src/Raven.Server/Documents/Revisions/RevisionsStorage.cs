@@ -273,9 +273,6 @@ namespace Raven.Server.Documents.Revisions
             if (nonPersistentFlags.Contain(NonPersistentDocumentFlags.Resolved))
                 return true;
 
-            if (nonPersistentFlags.Contain(NonPersistentDocumentFlags.FromReplication))
-                return false; // no need, since we put the revision directly from replication
-
             if (Configuration == null)
                 return false;
 

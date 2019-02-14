@@ -31,12 +31,7 @@ namespace Raven.Server.ServerWide
         public OperationCancelToken(CancellationToken shutdown)
             : this(Timeout.InfiniteTimeSpan, shutdown)
         {
-        }
-
-        ~OperationCancelToken()
-        {
-            DisposeInternal();
-        }
+        }       
 
         public void Delay()
         {
@@ -51,7 +46,7 @@ namespace Raven.Server.ServerWide
             if (_sw?.ElapsedMilliseconds < minimumDelayTime)
                 return;
 
-            lock (_locker)
+            lock (this)
             {
                 if (_disposed)
                     return;
@@ -83,7 +78,7 @@ namespace Raven.Server.ServerWide
             if (_disposed)
                 return;
 
-            lock (_locker)
+            lock (this)
             {
                 if (_disposed)
                     return;
