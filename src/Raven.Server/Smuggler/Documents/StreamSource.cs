@@ -5,7 +5,12 @@ using System.Threading;
 using Raven.Client;
 using Raven.Client.Documents.Indexes;
 using Raven.Client.Documents.Operations.Attachments;
+using Raven.Client.Documents.Operations.Backups;
 using Raven.Client.Documents.Operations.Counters;
+using Raven.Client.Documents.Operations.ETL;
+using Raven.Client.Documents.Operations.ETL.SQL;
+using Raven.Client.Documents.Operations.Replication;
+using Raven.Client.Documents.Queries.Sorting;
 using Raven.Client.Documents.Smuggler;
 using Raven.Client.Properties;
 using Raven.Client.ServerWide;
@@ -145,6 +150,189 @@ namespace Raven.Server.Smuggler.Documents
                     }
                 }
 
+                if (reader.TryGet(nameof(databaseRecord.ConflictSolverConfig), out BlittableJsonReaderObject conflictSolverConfig) &&
+                    conflictSolverConfig != null)
+                {
+                    try
+                    {
+                        databaseRecord.ConflictSolverConfig = JsonDeserializationCluster.ConflictSolverConfig(conflictSolverConfig);
+                    }
+                    catch (Exception e)
+                    {
+                        if (_log.IsInfoEnabled)
+                            _log.Info("Wasn't able to import the Conflict Solver Config configuration from smuggler file. Skipping.", e);
+                    }
+                }
+
+                if (reader.TryGet(nameof(databaseRecord.PeriodicBackups), out BlittableJsonReaderArray periodicBackups) &&
+                    periodicBackups != null)
+                {
+                    databaseRecord.PeriodicBackups = new List<PeriodicBackupConfiguration>();
+                    foreach (BlittableJsonReaderObject backup in periodicBackups)
+                    {
+                        try
+                        {
+                            var periodicBackup = JsonDeserializationCluster.PeriodicBackupConfiguration(backup);
+                            databaseRecord.PeriodicBackups.Add(periodicBackup);
+                        }
+                        catch (Exception e)
+                        {
+                            if (_log.IsInfoEnabled)
+                                _log.Info("Wasn't able to import the periodic Backup configuration from smuggler file. Skipping.", e);
+                        }
+                    }
+                }
+
+                if (reader.TryGet(nameof(databaseRecord.Settings), out BlittableJsonReaderArray settings) &&
+                    settings != null)
+                {
+                    databaseRecord.Settings = new Dictionary<string, string>();
+                    foreach (BlittableJsonReaderObject config in settings)
+                    {
+                        try
+                        {
+                            var key = config.GetPropertyNames()[0];
+                            config.TryGet(key, out string val);
+                            databaseRecord.Settings[key] = val;
+                        }
+                        catch (Exception e)
+                        {
+                            if (_log.IsInfoEnabled)
+                                _log.Info("Wasn't able to import the settings configuration from smuggler file. Skipping.", e);
+                        }
+                    }
+                }
+
+                if (reader.TryGet(nameof(databaseRecord.ExternalReplications), out BlittableJsonReaderArray externalReplications) &&
+                    externalReplications != null)
+                {
+                    databaseRecord.ExternalReplications = new List<ExternalReplication>();
+                    foreach (BlittableJsonReaderObject replication in externalReplications)
+                    {
+                        try
+                        {
+                            databaseRecord.ExternalReplications.Add(JsonDeserializationCluster.ExternalReplication(replication));
+                        }
+                        catch (Exception e)
+                        {
+                            if (_log.IsInfoEnabled)
+                                _log.Info("Wasn't able to import the External Replication configuration from smuggler file. Skipping.", e);
+                        }
+
+                    }
+                }
+
+                if (reader.TryGet(nameof(databaseRecord.Sorters), out BlittableJsonReaderObject sorters) &&
+                    sorters != null)
+                {
+                    databaseRecord.Sorters = new Dictionary<string, SorterDefinition>();
+
+                    try
+                    {
+                        foreach (var sorterName in sorters.GetPropertyNames())
+                        {
+                            if (sorters.TryGet(sorterName, out BlittableJsonReaderObject sorter) == false)
+                            {
+                                if (_log.IsInfoEnabled)
+                                    _log.Info($"Wasn't able to import the sorters {sorterName} from smuggler file. Skipping.");
+
+                                continue;
+                            }
+
+                            databaseRecord.Sorters[sorterName] = JsonDeserializationCluster.Sorters(sorter);
+                        }
+                    }
+                    catch (Exception e)
+                    {
+                        if (_log.IsInfoEnabled)
+                            _log.Info("Wasn't able to import the sorters configuration from smuggler file. Skipping.", e);
+                    }
+                }
+
+                if (reader.TryGet(nameof(databaseRecord.SinkPullReplications), out BlittableJsonReaderArray sinkPullReplications) &&
+                    sinkPullReplications != null)
+                {
+                    databaseRecord.SinkPullReplications = new List<PullReplicationAsSink>();
+                    foreach (BlittableJsonReaderObject pullReplication in sinkPullReplications)
+                    {
+                        try
+                        {
+                            var sink = JsonDeserializationCluster.PullReplicationAsSink(pullReplication);
+                            databaseRecord.SinkPullReplications.Add(sink);
+                        }
+                        catch (Exception e)
+                        {
+                            if (_log.IsInfoEnabled)
+                                _log.Info("Wasn't able to import sink pull replication configuration from smuggler file. Skipping.", e);
+                        }
+
+                    }
+                }
+
+                if (reader.TryGet(nameof(databaseRecord.HubPullReplications), out BlittableJsonReaderObject hubPullReplications) &&
+                    hubPullReplications != null)
+                {
+                    databaseRecord.HubPullReplications = new List<PullReplicationDefinition>();
+                    foreach (var pullReplication in hubPullReplications.GetPropertyNames())
+                    {
+                        if (hubPullReplications.TryGet(pullReplication, out BlittableJsonReaderObject pullReplicationDefinition) == false)
+                        {
+                            if (_log.IsInfoEnabled)
+                                _log.Info($"Wasn't able to import the pull Replication {pullReplication} from smuggler file. Skipping.");
+
+                            continue;
+                        }
+
+                        try
+                        {
+                            var hub = JsonDeserializationCluster.PullReplicationDefinition(pullReplicationDefinition);
+                            databaseRecord.HubPullReplications.Add(hub);
+                        }
+                        catch (Exception e)
+                        {
+                            if (_log.IsInfoEnabled)
+                                _log.Info("Wasn't able to import hub pull replication configuration from smuggler file. Skipping.", e);
+                        }
+                    }
+                }
+
+                if (reader.TryGet(nameof(databaseRecord.RavenEtls), out BlittableJsonReaderArray ravenEtls) &&
+                    ravenEtls != null)
+                {
+                    databaseRecord.RavenEtls = new List<RavenEtlConfiguration>();
+                    foreach (BlittableJsonReaderObject etl in ravenEtls)
+                    {
+                        try
+                        {
+                            databaseRecord.RavenEtls.Add(JsonDeserializationCluster.RavenEtlConfiguration(etl));
+                        }
+                        catch (Exception e)
+                        {
+                            if (_log.IsInfoEnabled)
+                                _log.Info("Wasn't able to import the Raven Etls configuration from smuggler file. Skipping.", e);
+                        }
+                    }
+                }
+
+                if (reader.TryGet(nameof(databaseRecord.SqlEtls), out BlittableJsonReaderArray sqlEtls) &&
+                    sqlEtls != null)
+                {
+                    databaseRecord.SqlEtls = new List<SqlEtlConfiguration>();
+                    foreach (BlittableJsonReaderObject etl in sqlEtls)
+                    {
+                        try
+                        {
+                            databaseRecord.SqlEtls.Add(JsonDeserializationCluster.SqlEtlConfiguration(etl));
+                        }
+                        catch (Exception e)
+                        {
+                            if (_log.IsInfoEnabled)
+                                _log.Info("Wasn't able to import the Raven SQL Etls configuration from smuggler file. Skipping.", e);
+                        }
+
+                    }
+                }
+
                 if (reader.TryGet(nameof(databaseRecord.RavenConnectionStrings), out BlittableJsonReaderObject ravenConnectionStrings) &&
                     ravenConnectionStrings != null)
                 {
@@ -213,7 +401,6 @@ namespace Raven.Server.Smuggler.Documents
                     }
                 }
             });
-
 
             return databaseRecord;
         }

@@ -15,7 +15,7 @@ namespace Raven.Server.Web.System
     {
         private static readonly Lazy<string[]> ServerWideOnlyConfigurationKeys = new Lazy<string[]>(GetServerWideOnlyConfigurationKeys);
 
-        private static string[] GetServerWideOnlyConfigurationKeys()
+        public static string[] GetServerWideOnlyConfigurationKeys()
         {
             var keys = new string[0];
             foreach (var configurationProperty in typeof(RavenConfiguration).GetProperties(BindingFlags.Instance | BindingFlags.Public))

@@ -12,16 +12,34 @@ namespace Raven.Client.Documents.Smuggler
                                                               DatabaseItemType.Identities | DatabaseItemType.CompareExchange |
                                                               DatabaseItemType.Attachments | DatabaseItemType.Counters;
 
+        public const DatabaseRecordItemType DefaultOperateOnDatabaseRecordTypes = DatabaseRecordItemType.Client |
+                                                                                  DatabaseRecordItemType.ConflictSolverConfig |
+                                                                                  DatabaseRecordItemType.Expiration |
+                                                                                  DatabaseRecordItemType.ExternalReplications |
+                                                                                  DatabaseRecordItemType.PeriodicBackups |
+                                                                                  DatabaseRecordItemType.RavenConnectionStrings |
+                                                                                  DatabaseRecordItemType.RavenEtls |
+                                                                                  DatabaseRecordItemType.Revisions |
+                                                                                  DatabaseRecordItemType.Settings |
+                                                                                  DatabaseRecordItemType.SqlConnectionStrings |
+                                                                                  DatabaseRecordItemType.Sorters |
+                                                                                  DatabaseRecordItemType.SqlEtls |
+                                                                                  DatabaseRecordItemType.HubPullReplications |
+                                                                                  DatabaseRecordItemType.SinkPullReplications;
+
         private const int DefaultMaxStepsForTransformScript = 10 * 1000;
 
         public DatabaseSmugglerOptions()
         {
             OperateOnTypes = DefaultOperateOnTypes;
+            OperateOnDatabaseRecordTypes = DefaultOperateOnDatabaseRecordTypes;
             MaxStepsForTransformScript = DefaultMaxStepsForTransformScript;
             IncludeExpired = true;
         }
 
         public DatabaseItemType OperateOnTypes { get; set; }
+
+        public DatabaseRecordItemType OperateOnDatabaseRecordTypes { get; set; }
 
         public bool IncludeExpired { get; set; }
 
@@ -42,6 +60,7 @@ namespace Raven.Client.Documents.Smuggler
     internal interface IDatabaseSmugglerOptions
     {
         DatabaseItemType OperateOnTypes { get; set; }
+        DatabaseRecordItemType OperateOnDatabaseRecordTypes { get; set; }
         bool IncludeExpired { get; set; }
         bool RemoveAnalyzers { get; set; }
         string TransformScript { get; set; }

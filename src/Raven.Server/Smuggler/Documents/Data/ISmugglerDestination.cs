@@ -58,6 +58,6 @@ namespace Raven.Server.Smuggler.Documents.Data
 
     public interface IDatabaseRecordActions : IDisposable
     {
-        void WriteDatabaseRecord(DatabaseRecord databaseRecord, SmugglerProgressBase.DatabaseRecordProgress progress, AuthorizationStatus authorizationStatus);
+        void WriteDatabaseRecord(DatabaseRecord databaseRecord, SmugglerProgressBase.DatabaseRecordProgress progress, AuthorizationStatus authorizationStatus, DatabaseRecordItemType databaseRecordItemType);
     }
 }

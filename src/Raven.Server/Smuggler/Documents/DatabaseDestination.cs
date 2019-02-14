@@ -20,6 +20,9 @@ using Raven.Server.Documents.TransactionCommands;
 using Raven.Server.Routing;
 using Raven.Server.ServerWide.Commands;
 using Raven.Server.ServerWide.Commands.ConnectionStrings;
+using Raven.Server.ServerWide.Commands.ETL;
+using Raven.Server.ServerWide.Commands.PeriodicBackup;
+using Raven.Server.ServerWide.Commands.Sorters;
 using Raven.Server.ServerWide.Context;
 using Raven.Server.Smuggler.Documents.Data;
 using Raven.Server.Smuggler.Documents.Processors;
@@ -445,10 +448,123 @@ namespace Raven.Server.Smuggler.Documents
                 _log = log;
             }
 
-            public void WriteDatabaseRecord(DatabaseRecord databaseRecord, SmugglerProgressBase.DatabaseRecordProgress progress, AuthorizationStatus authorizationStatus)
+            public void WriteDatabaseRecord(DatabaseRecord databaseRecord, SmugglerProgressBase.DatabaseRecordProgress progress, AuthorizationStatus authorizationStatus, DatabaseRecordItemType databaseRecordItemType)
             {
                 var currentDatabaseRecord = _database.ReadDatabaseRecord();
                 var tasks = new List<Task<(long Index, object Result)>>();
+
+                if (currentDatabaseRecord?.ConflictSolverConfig == null &&
+                    databaseRecord?.ConflictSolverConfig != null)
+                {
+                    if (_log.IsInfoEnabled)
+                        _log.Info("Configuring conflict solver config from smuggler");
+                    tasks.Add(_database.ServerStore.SendToLeaderAsync(new ModifyConflictSolverCommand(_database.Name)
+                    {
+                        Solver = databaseRecord.ConflictSolverConfig
+                    }));
+                    progress.ConflictSolverConfigUpdated = true;
+                }
+
+                if (currentDatabaseRecord?.PeriodicBackups.Count == 0 &&
+                    databaseRecord?.PeriodicBackups.Count > 0)
+                {
+                    if (_log.IsInfoEnabled)
+                        _log.Info("Configuring periodic backups configuration from smuggler");
+                    foreach (var backupConfig in databaseRecord.PeriodicBackups)
+                    {
+                        backupConfig.Disabled = true;
+                        tasks.Add(_database.ServerStore.SendToLeaderAsync(new UpdatePeriodicBackupCommand(backupConfig, _database.Name)));
+                    }
+                    progress.PeriodicBackupsUpdated = true;
+                }
+
+                if (currentDatabaseRecord?.SinkPullReplications.Count == 0 &&
+                    databaseRecord?.SinkPullReplications.Count > 0)
+                {
+                    if (_log.IsInfoEnabled)
+                        _log.Info("Configuring sink pull replication configuration from smuggler");
+                    foreach (var pullReplication in databaseRecord.SinkPullReplications)
+                    {
+                        pullReplication.Disabled = true;
+                        tasks.Add(_database.ServerStore.SendToLeaderAsync(new UpdatePullReplicationAsSinkCommand(_database.Name)
+                        {
+                            PullReplicationAsSink = pullReplication
+                        }));
+                    }
+                    progress.SinkPullReplicationsUpdated = true;
+                }
+
+                if (currentDatabaseRecord?.HubPullReplications.Count == 0 &&
+                    databaseRecord?.HubPullReplications.Count > 0)
+                {
+                    if (_log.IsInfoEnabled)
+                        _log.Info("Configuring hub pull replication configuration from smuggler");
+                    foreach (var pullReplication in databaseRecord.HubPullReplications)
+                    {
+                        pullReplication.Disabled = true;
+                        tasks.Add(_database.ServerStore.SendToLeaderAsync(new UpdatePullReplicationAsHubCommand(_database.Name)
+                            {
+                                Definition = pullReplication
+                            }
+                        ));
+                    }
+                    progress.HubPullReplicationsUpdated = true;
+                }
+
+                if (currentDatabaseRecord?.Sorters.Count == 0 &&
+                    databaseRecord?.Sorters.Count > 0)
+                {
+                    if (_log.IsInfoEnabled)
+                        _log.Info("Configuring sorters configuration from smuggler");
+
+                    tasks.Add(_database.ServerStore.SendToLeaderAsync(new PutSortersCommand(_database.Name)
+                    {
+                        Sorters = databaseRecord.Sorters.Values.ToList()
+                    }));
+
+                    progress.SortersUpdated = true;
+                }
+
+                if (currentDatabaseRecord?.ExternalReplications.Count == 0 &&
+                    databaseRecord?.ExternalReplications.Count > 0)
+                {
+                    if (_log.IsInfoEnabled)
+                        _log.Info("Configuring external replications configuration from smuggler");
+                    foreach (var replication in databaseRecord.ExternalReplications)
+                    {
+                        replication.Disabled = true;
+                        tasks.Add(_database.ServerStore.SendToLeaderAsync(new UpdateExternalReplicationCommand(_database.Name)
+                        {
+                            Watcher = replication
+                        }));
+                    }
+                    progress.ExternalReplicationsUpdated = true;
+                }
+
+                if (currentDatabaseRecord?.RavenEtls.Count == 0 &&
+                    databaseRecord?.RavenEtls.Count > 0)
+                {
+                    if (_log.IsInfoEnabled)
+                        _log.Info("Configuring raven etls configuration from smuggler");
+                    foreach (var etl in databaseRecord.RavenEtls)
+                    {
+                        etl.Disabled = true;
+                        tasks.Add(_database.ServerStore.SendToLeaderAsync(new AddRavenEtlCommand(etl, _database.Name)));
+                    }
+                    progress.RavenEtlsUpdated = true;
+                }
+
+                if (currentDatabaseRecord?.SqlEtls.Count == 0 &&
+                    databaseRecord?.SqlEtls.Count > 0)
+                {
+                    if (_log.IsInfoEnabled)
+                        _log.Info("Configuring sql etls configuration from smuggler");
+                    foreach (var etl in databaseRecord.SqlEtls)
+                    {
+                        tasks.Add(_database.ServerStore.SendToLeaderAsync(new AddSqlEtlCommand(etl, _database.Name)));
+                    }
+                    progress.SqlEtlsUpdated = true;
+                }
 
                 if (currentDatabaseRecord?.Revisions == null &&
                     databaseRecord?.Revisions != null)

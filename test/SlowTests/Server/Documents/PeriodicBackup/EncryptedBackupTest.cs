@@ -85,7 +85,7 @@ namespace SlowTests.Server.Documents.PeriodicBackup
                     }
                 }))
                 {
-                    using (var session = store.OpenSession(dbName))
+                    using (var session = store.OpenSession(databaseName))
                     {
                         var users = session.Load<User>("users/1");
                         Assert.NotNull(users);
@@ -156,7 +156,7 @@ namespace SlowTests.Server.Documents.PeriodicBackup
                     }
                 }))
                 {
-                    using (var session = store.OpenSession(dbName))
+                    using (var session = store.OpenSession(databaseName))
                     {
                         var users = session.Load<User>("users/1");
                         Assert.NotNull(users);
@@ -228,7 +228,7 @@ namespace SlowTests.Server.Documents.PeriodicBackup
                     }
                 }))
                 {
-                    using (var session = store.OpenSession(dbName))
+                    using (var session = store.OpenSession(databaseName))
                     {
                         var users = session.Load<User>("users/1");
                         Assert.NotNull(users);
@@ -295,7 +295,7 @@ namespace SlowTests.Server.Documents.PeriodicBackup
                     }
                 }))
                 {
-                    using (var session = store.OpenSession(dbName))
+                    using (var session = store.OpenSession(databaseName))
                     {
                         var users = session.Load<User>("users/1");
                         Assert.NotNull(users);
@@ -367,7 +367,7 @@ namespace SlowTests.Server.Documents.PeriodicBackup
                     }
                 }))
                 {
-                    using (var session = store.OpenSession(dbName))
+                    using (var session = store.OpenSession(databaseName))
                     {
                         var users = session.Load<User>("users/1");
                         Assert.NotNull(users);
@@ -440,7 +440,7 @@ namespace SlowTests.Server.Documents.PeriodicBackup
                     }
                 }))
                 {
-                    using (var session = store.OpenSession(dbName))
+                    using (var session = store.OpenSession(databaseName))
                     {
                         var users = session.Load<User>("users/1");
                         Assert.NotNull(users);
@@ -643,7 +643,7 @@ namespace SlowTests.Server.Documents.PeriodicBackup
                     }
                 }))
                 {
-                    using (var session = store.OpenSession(dbName))
+                    using (var session = store.OpenSession(databaseName))
                     {
                         var users = session.Load<User>("users/1");
                         Assert.NotNull(users);
@@ -714,7 +714,7 @@ namespace SlowTests.Server.Documents.PeriodicBackup
                     }
                 }))
                 {
-                    using (var session = store.OpenSession(dbName))
+                    using (var session = store.OpenSession(databaseName))
                     {
                         var users = session.Load<User>("users/1");
                         Assert.NotNull(users);
@@ -1401,7 +1401,7 @@ namespace SlowTests.Server.Documents.PeriodicBackup
         }
 
         [Fact]
-        public async Task snapshot_and_restore_unencrypted_db_and_unencrypted_backup_1()
+        public async Task  snapshot_and_restore_unencrypted_db_and_unencrypted_backup_1()
         {
             var backupPath = NewDataPath(suffix: "BackupFolder");
 
