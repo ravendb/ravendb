@@ -215,7 +215,6 @@ namespace Raven.Client.Documents.Subscriptions
             {
                 var command = new CreateSubscriptionCommand(_store.Conventions, options);
                 await requestExecutor.ExecuteAsync(command, context, sessionInfo: null, token: token).ConfigureAwait(false);
-
                 return command.Result.Name;
             }
         }
@@ -301,6 +300,7 @@ namespace Raven.Client.Documents.Subscriptions
         {
             (_store as DocumentStoreBase).AssertInitialized();
             var requestExecutor = _store.GetRequestExecutor(database ?? _store.Database);
+
             using (requestExecutor.ContextPool.AllocateOperationContext(out JsonOperationContext jsonOperationContext))
             {
                 var command = new DeleteSubscriptionCommand(name);

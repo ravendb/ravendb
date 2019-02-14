@@ -6,11 +6,15 @@ using System.Text;
 using System.Threading.Tasks;
 using FastTests;
 using Raven.Client.Documents.Commands;
+using Raven.Client.Documents.Operations;
 using Raven.Client.Documents.Operations.Indexes;
 using Raven.Client.Documents.Queries;
 using Raven.Client.Documents.Smuggler;
+using Raven.Client.ServerWide;
+using Raven.Client.ServerWide.Operations;
 using Raven.Client.ServerWide.Operations.Certificates;
 using Raven.Server.Documents.Indexes.Static;
+using SlowTests.Voron.Compaction;
 using Tests.Infrastructure;
 using Xunit;
 
@@ -185,6 +189,74 @@ namespace SlowTests.Authentication
                         Assert.True(queryResult.Results.Length > 0);
                     }
                 }
+            }
+        }
+
+        [Fact]
+        public async Task CanCompactEncryptedDb()
+        {
+            var serverCertPath = SetupServerAuthentication();
+            var dbName = GetDatabaseName();
+            var adminCert = AskServerForClientCertificate(serverCertPath, new Dictionary<string, DatabaseAccess>(), SecurityClearance.ClusterAdmin);
+
+            var buffer = new byte[32];
+            using (var rand = RandomNumberGenerator.Create())
+            {
+                rand.GetBytes(buffer);
+            }
+            var base64Key = Convert.ToBase64String(buffer);
+
+            // sometimes when using `dotnet xunit` we get platform not supported from ProtectedData
+            try
+            {
+                ProtectedData.Protect(Encoding.UTF8.GetBytes("Is supported?"), null, DataProtectionScope.CurrentUser);
+            }
+            catch (PlatformNotSupportedException)
+            {
+                // so we fall back to a file
+                Server.ServerStore.Configuration.Security.MasterKeyPath = GetTempFileName();
+            }
+
+            Server.ServerStore.PutSecretKey(base64Key, dbName, true);
+
+            var path = NewDataPath();
+            using (var store = GetDocumentStore(new Options
+            {
+                AdminCertificate = adminCert,
+                ClientCertificate = adminCert,
+                ModifyDatabaseName = s => dbName,
+                ModifyDatabaseRecord = record => record.Encrypted = true,
+                Path = path
+            }))
+            {
+                store.Maintenance.Send(new CreateSampleDataOperation());
+
+                for (int i = 0; i < 3; i++)
+                {
+                    await store.Operations.Send(new PatchByQueryOperation(new IndexQuery
+                    {
+                        Query = @"FROM Orders UPDATE { put(""orders/"", this); } "
+                    })).WaitForCompletionAsync(TimeSpan.FromSeconds(300));
+                }
+
+                WaitForIndexing(store);
+
+                var deleteOperation = store.Operations.Send(new DeleteByQueryOperation(new IndexQuery() { Query = "FROM orders" }));
+                await deleteOperation.WaitForCompletionAsync(TimeSpan.FromSeconds(60));
+                
+                var oldSize = StorageCompactionTestsSlow.GetDirSize(new DirectoryInfo(path));
+
+                var compactOperation = store.Maintenance.Server.Send(new CompactDatabaseOperation(new CompactSettings
+                {
+                    DatabaseName = store.Database,
+                    Documents = true,
+                    Indexes = new[] { "Orders/ByCompany", "Orders/Totals" }
+                }));
+                await compactOperation.WaitForCompletionAsync(TimeSpan.FromSeconds(60));
+
+                var newSize = StorageCompactionTestsSlow.GetDirSize(new DirectoryInfo(path));
+
+                Assert.True(oldSize > newSize);
             }
         }
     }
