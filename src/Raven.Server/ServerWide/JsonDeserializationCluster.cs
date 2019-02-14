@@ -7,6 +7,7 @@ using Raven.Client.Documents.Operations.ETL.SQL;
 using Raven.Client.Documents.Operations.Expiration;
 using Raven.Client.Documents.Operations.Replication;
 using Raven.Client.Documents.Operations.Revisions;
+using Raven.Client.Documents.Queries.Sorting;
 using Raven.Client.Documents.Subscriptions;
 using Raven.Client.ServerWide;
 using Raven.Server.Documents.Patch;
@@ -58,6 +59,14 @@ namespace Raven.Server.ServerWide
         public static readonly Func<BlittableJsonReaderObject, RestoreBackupConfiguration> RestoreBackupConfiguration = GenerateJsonDeserializationRoutine<RestoreBackupConfiguration>();
 
         public static readonly Func<BlittableJsonReaderObject, RevisionsConfiguration> RevisionsConfiguration = GenerateJsonDeserializationRoutine<RevisionsConfiguration>();
+
+        public static readonly Func<BlittableJsonReaderObject, PullReplicationAsSink> PullReplicationAsSink = GenerateJsonDeserializationRoutine<PullReplicationAsSink>();
+
+        public static readonly Func<BlittableJsonReaderObject, ExternalReplication> ExternalReplication = GenerateJsonDeserializationRoutine<ExternalReplication>();
+
+        public static readonly Func<BlittableJsonReaderObject, SorterDefinition> Sorters = GenerateJsonDeserializationRoutine<SorterDefinition>();
+
+        public static readonly Func<BlittableJsonReaderObject, ConflictSolver> ConflictSolverConfig = GenerateJsonDeserializationRoutine<ConflictSolver>();
 
         public static Func<BlittableJsonReaderObject, RavenEtlConfiguration> RavenEtlConfiguration = GenerateJsonDeserializationRoutine<RavenEtlConfiguration>();
 

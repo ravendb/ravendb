@@ -473,7 +473,7 @@ namespace Raven.Server.Smuggler.Documents
 
                 try
                 {
-                    actions.WriteDatabaseRecord(databaseRecord, result.DatabaseRecord, _options.AuthorizationStatus);
+                    actions.WriteDatabaseRecord(databaseRecord, result.DatabaseRecord, _options.AuthorizationStatus, _options.OperateOnDatabaseRecordTypes);
                 }
                 catch (Exception e)
                 {

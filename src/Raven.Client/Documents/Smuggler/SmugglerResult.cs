@@ -183,6 +183,22 @@ namespace Raven.Client.Documents.Smuggler
 
         public class DatabaseRecordProgress : Counts
         {
+            public bool SortersUpdated { get; set; }
+
+            public bool SinkPullReplicationsUpdated { get; set; }
+
+            public bool HubPullReplicationsUpdated { get; set; }
+
+            public bool RavenEtlsUpdated { get; set; }
+
+            public bool SqlEtlsUpdated { get; set; }
+
+            public bool ExternalReplicationsUpdated { get; set; }
+
+            public bool PeriodicBackupsUpdated { get; set; }
+
+            public bool ConflictSolverConfigUpdated { get; set; }
+
             public bool RevisionsConfigurationUpdated { get; set; }
 
             public bool ExpirationConfigurationUpdated { get; set; }
@@ -201,6 +217,14 @@ namespace Raven.Client.Documents.Smuggler
                 json[nameof(RavenConnectionStringsUpdated)] = RavenConnectionStringsUpdated;
                 json[nameof(SqlConnectionStringsUpdated)] = SqlConnectionStringsUpdated;
                 json[nameof(ClientConfigurationUpdated)] = ClientConfigurationUpdated;
+                json[nameof(ConflictSolverConfigUpdated)] = ClientConfigurationUpdated;
+                json[nameof(PeriodicBackupsUpdated)] = PeriodicBackupsUpdated;
+                json[nameof(ExternalReplicationsUpdated)] = ExternalReplicationsUpdated;
+                json[nameof(SqlEtlsUpdated)] = SqlEtlsUpdated;
+                json[nameof(RavenEtlsUpdated)] = RavenEtlsUpdated;
+                json[nameof(SortersUpdated)] = SortersUpdated;
+                json[nameof(SinkPullReplicationsUpdated)] = SinkPullReplicationsUpdated;
+                json[nameof(HubPullReplicationsUpdated)] = HubPullReplicationsUpdated;
                 return json;
             }
 
@@ -210,6 +234,14 @@ namespace Raven.Client.Documents.Smuggler
                        $"ExpirationConfigurationUpdated: {ExpirationConfigurationUpdated}. " +
                        $"RavenConnectionStringsUpdated: {RavenConnectionStringsUpdated}. " +
                        $"SqlConnectionStringsUpdated: {SqlConnectionStringsUpdated}. " +
+                       $"ConflictSolverConfigUpdated: {ConflictSolverConfigUpdated}. " +
+                       $"PeriodicBackupsUpdated: {PeriodicBackupsUpdated}. " +
+                       $"ExternalReplicationsUpdated: {ExternalReplicationsUpdated}. " +
+                       $"RavenEtlsUpdated: {RavenEtlsUpdated}. " +
+                       $"SqlEtlsUpdated: {SqlEtlsUpdated}. " +
+                       $"SortersUpdated: {SortersUpdated}. " +
+                       $"SinkPullReplicationsUpdated: {SinkPullReplicationsUpdated}. " +
+                       $"HubPullReplicationsUpdated: {HubPullReplicationsUpdated}. " +
                        $"ClientConfigurationUpdated: {ClientConfigurationUpdated}.";
             }
         }

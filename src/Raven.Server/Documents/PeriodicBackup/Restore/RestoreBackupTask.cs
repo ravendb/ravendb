@@ -519,14 +519,26 @@ namespace Raven.Server.Documents.PeriodicBackup.Restore
                 },
                 onDatabaseRecordAction: smugglerDatabaseRecord =>
                 {
-                    // need to enable revisions before import
-                    database.DocumentsStorage.RevisionsStorage.InitializeFromDatabaseRecord(smugglerDatabaseRecord);
-
+                    databaseRecord.ConflictSolverConfig = smugglerDatabaseRecord.ConflictSolverConfig;
+                    foreach (var setting in smugglerDatabaseRecord.Settings)
+                    {
+                        databaseRecord.Settings[setting.Key] = setting.Value;
+                    }
+                    databaseRecord.SqlEtls = smugglerDatabaseRecord.SqlEtls;
+                    databaseRecord.RavenEtls = smugglerDatabaseRecord.RavenEtls;
+                    databaseRecord.PeriodicBackups = smugglerDatabaseRecord.PeriodicBackups;
+                    databaseRecord.ExternalReplications = smugglerDatabaseRecord.ExternalReplications;
+                    databaseRecord.Sorters = smugglerDatabaseRecord.Sorters;
+                    databaseRecord.SinkPullReplications = smugglerDatabaseRecord.SinkPullReplications;
+                    databaseRecord.HubPullReplications = smugglerDatabaseRecord.HubPullReplications;
                     databaseRecord.Revisions = smugglerDatabaseRecord.Revisions;
                     databaseRecord.Expiration = smugglerDatabaseRecord.Expiration;
                     databaseRecord.RavenConnectionStrings = smugglerDatabaseRecord.RavenConnectionStrings;
                     databaseRecord.SqlConnectionStrings = smugglerDatabaseRecord.SqlConnectionStrings;
                     databaseRecord.Client = smugglerDatabaseRecord.Client;
+
+                    // need to enable revisions before import
+                    database.DocumentsStorage.RevisionsStorage.InitializeFromDatabaseRecord(smugglerDatabaseRecord);
                 });
         }
 

@@ -102,6 +102,11 @@ namespace Raven.Server.Smuggler.Documents.Handlers
                     {
                         var blittableJson = await context.ParseToMemoryAsync(stream, "DownloadOptions", BlittableJsonDocumentBuilder.UsageMode.None, buffer);
                         options = JsonDeserializationServer.DatabaseSmugglerOptions(blittableJson);
+                        if (((options.OperateOnTypes & DatabaseItemType.DatabaseRecord) != 0)
+                            && (options.OperateOnDatabaseRecordTypes == DatabaseRecordItemType.NotSet))
+                        {
+                            options.OperateOnDatabaseRecordTypes = DatabaseSmugglerOptions.DefaultOperateOnDatabaseRecordTypes;
+                        }
                     }
                     else
                     {
@@ -675,6 +680,11 @@ namespace Raven.Server.Smuggler.Documents.Handlers
                                         }
 
                                         options = JsonDeserializationServer.DatabaseSmugglerOptions(blittableJson);
+                                        if (((options.OperateOnTypes & DatabaseItemType.DatabaseRecord) != 0)
+                                            && (options.OperateOnDatabaseRecordTypes == DatabaseRecordItemType.NotSet))
+                                        {
+                                            options.OperateOnDatabaseRecordTypes = DatabaseSmugglerOptions.DefaultOperateOnDatabaseRecordTypes;
+                                        }
                                         continue;
                                     }
 
