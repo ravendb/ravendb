@@ -57,11 +57,10 @@ namespace FastTests.Graph
                     };
 
                     var res = session.Advanced.GraphQuery<FooBar>("match (Foo)-[Bars as _]->(Bars as Bar)")
-                        .With("Foo", builder => builder.DocumentQuery<Foo>().WhereIn(x=>x.Name, names))
-                        .With("Bar", session.Query<Bar>().Where(x=>x.Age >= 18))
-						.WaitForNonStaleResults()
+                        .With("Foo", builder => builder.DocumentQuery<Foo>().WhereIn(x => x.Name, names))
+                        .With("Bar", session.Query<Bar>().Where(x => x.Age >= 18))
+                        .WaitForNonStaleResults()
                         .ToList();
-                        
 
                     Assert.Single(res);
                     Assert.Equal(res[0].Foo.Name, "Foozy");
@@ -207,42 +206,42 @@ namespace FastTests.Graph
             }
         }
 
-        public class FriendsTuple
+        private class FriendsTuple
         {
             public Friend F1 { get; set; }
             public FriendDescriptor L1 { get; set; }
             public Friend F2 { get; set; }
         }
 
-        public class Friend
+        private class Friend
         {
             public string Name { get; set; }
             public int Age { get; set; }
             public FriendDescriptor[] Friends { get; set; }
         }
 
-        public class FooBar
+        private class FooBar
         {
             public Foo Foo { get; set; }
             public Bar Bar { get; set; }
         }
 
-        public class Foo
+        private class Foo
         {
             public string Name { get; set; }
             public List<string> Bars { get; set; }
         }
 
-        public class Bar
+        private class Bar
         {
             public string Name { get; set; }
             public int Age { get; set; }
         }
-    }
 
-    public class FriendDescriptor
-    {
-        public DateTime FriendsSince { get; set; }
-        public string FriendId { get; set; }
+        private class FriendDescriptor
+        {
+            public DateTime FriendsSince { get; set; }
+            public string FriendId { get; set; }
+        }
     }
 }
