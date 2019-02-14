@@ -18,9 +18,9 @@ namespace Raven.Server.Documents
     [SuppressMessage("ReSharper", "InconsistentlySynchronizedField")]
     public class ResourceCache<TResource> : IEnumerable<KeyValuePair<StringSegment, Task<TResource>>>
     {
-        readonly ConcurrentDictionary<StringSegment, Task<TResource>> _caseInsensitive = 
+        private readonly ConcurrentDictionary<StringSegment, Task<TResource>> _caseInsensitive =
                     new ConcurrentDictionary<StringSegment, Task<TResource>>(StringSegmentComparer.OrdinalIgnoreCase);
-        readonly ConcurrentDictionary<StringSegment, Task<TResource>> _caseSensitive 
+        private readonly ConcurrentDictionary<StringSegment, Task<TResource>> _caseSensitive
             = new ConcurrentDictionary<StringSegment, Task<TResource>>(StringSegmentComparer.Ordinal);
 
         private readonly ConcurrentDictionary<StringSegment, ConcurrentSet<StringSegment>> _mappings =
@@ -29,9 +29,9 @@ namespace Raven.Server.Documents
         /// <summary>
         /// This locks the entire cache. Use carefully.
         /// </summary>
-        public IEnumerable<Task<TResource>> Values => _caseSensitive.Values;
+        public IEnumerable<Task<TResource>> Values => _caseInsensitive.Values;
 
-        public int Count => _caseSensitive.Count;
+        public int Count => _caseInsensitive.Count;
 
         public void Clear()
         {

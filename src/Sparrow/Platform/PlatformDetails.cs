@@ -9,6 +9,8 @@ namespace Sparrow.Platform
 {
     public static class PlatformDetails
     {
+        private static readonly bool IsWindows8OrNewer;
+
         public static readonly bool Is32Bits = IntPtr.Size == sizeof(int);
 
 
@@ -19,10 +21,18 @@ namespace Sparrow.Platform
 
         public static readonly bool RunningOnLinux = RuntimeInformation.IsOSPlatform(OSPlatform.Linux);
 
-        public static readonly bool CanPrefetch = IsWindows8OrNewer() || RunningOnPosix;
+        public static readonly bool CanPrefetch;
         public static readonly bool CanDiscardMemory = IsWindows10OrNewer() || RunningOnPosix;
 
         public static bool RunningOnDocker => string.Equals(Environment.GetEnvironmentVariable("RAVEN_IN_DOCKER"), "true", StringComparison.OrdinalIgnoreCase);
+
+        static PlatformDetails()
+        {
+            if (TryGetWindowsVersion(out var version))
+                IsWindows8OrNewer = version >= 6.19M;
+
+            CanPrefetch = IsWindows8OrNewer || RunningOnPosix;
+        }
 
         public static ulong GetCurrentThreadId()
         {
@@ -36,8 +46,10 @@ namespace Sparrow.Platform
             return macSyscall.pthread_self();
         }
 
-        private static bool IsWindows8OrNewer()
+        private static bool TryGetWindowsVersion(out decimal version)
         {
+            version = -1M;
+
             if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows) == false)
                 return false;
 
@@ -56,13 +68,8 @@ namespace Sparrow.Platform
                 var index = ver.IndexOf('.', ver.IndexOf('.') + 1);
                 ver = string.Concat(ver.Substring(0, index), ver.Substring(index + 1));
 
-                if (decimal.TryParse(ver, System.Globalization.NumberStyles.AllowDecimalPoint, CultureInfo.InvariantCulture, out decimal output))
-                {
-                    return output >= 6.19m; // 6.2 is win8, 6.1 win7..
+                    return decimal.TryParse(ver, NumberStyles.Any, CultureInfo.InvariantCulture, out version);
                 }
-
-                return false;
-            }
             catch (DllNotFoundException)
             {
                 return false;
