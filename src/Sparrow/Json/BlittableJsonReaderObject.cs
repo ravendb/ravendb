@@ -26,10 +26,6 @@ namespace Sparrow.Json
         private readonly bool _isRoot;
         private byte* _objStart;
 
-        #if DEBUG || VALIDATE
-        private string _whereDisposed;
-        #endif
-
         public DynamicJsonValue Modifications;
 
         private Dictionary<StringSegment, object> _objectsPathCache;
@@ -49,7 +45,7 @@ namespace Sparrow.Json
         }
 
         public void WriteJsonTo(Stream stream)
-        {         
+        {
             AssertContextNotDisposed();
 
             _context.Write(stream, this);
@@ -384,14 +380,14 @@ namespace Sparrow.Json
                             obj = (T)Convert.ChangeType(lazyCompressStringValue.ToString(), type);
                     }
                     else
-                    { 
+                    {
                         obj = (T)Convert.ChangeType(result, type);
                     }
                 }
                 catch
                 {
                     return false;
-                }                
+                }
             }
 
             return true;
@@ -607,8 +603,8 @@ namespace Sparrow.Json
             var secondClearedToken = (secondToken & TypesMask);
             if (firstClearedToken == secondClearedToken)
                 return true;
-            
-            return (firstClearedToken == BlittableJsonToken.EmbeddedBlittable && secondClearedToken == BlittableJsonToken.StartObject 
+
+            return (firstClearedToken == BlittableJsonToken.EmbeddedBlittable && secondClearedToken == BlittableJsonToken.StartObject
                     || firstClearedToken == BlittableJsonToken.StartObject && secondClearedToken == BlittableJsonToken.EmbeddedBlittable);
         }
 
@@ -840,7 +836,7 @@ namespace Sparrow.Json
 
             public void Dispose()
             {
-                if(PropertiesBuffer != null)
+                if (PropertiesBuffer != null)
                 {
                     ArrayPool<int>.Shared.Return(PropertiesBuffer);
                     PropertiesBuffer = null;
@@ -968,10 +964,6 @@ namespace Sparrow.Json
             }
 
             _buffer.Dispose();
-
-            #if DEBUG || VALIDATE
-            _whereDisposed = Environment.StackTrace;
-            #endif
         }
 
         public void CopyTo(byte* ptr)
@@ -1334,7 +1326,7 @@ namespace Sparrow.Json
                 GetPropertyTypeAndPosition(i, metadataSize, out var token, out var position, out var id);
 
                 var propertyName = GetPropertyName(id);
-                if(ignoreRavenProperties && propertyName.StartsWith('@'))
+                if (ignoreRavenProperties && propertyName.StartsWith('@'))
                     continue;
 
                 var otherId = other.GetPropertyIndex(propertyName);
@@ -1342,7 +1334,7 @@ namespace Sparrow.Json
                 if (otherId == -1)
                     return false;
 
-                if (other.TryGetObjectByIndex(otherId, token, out var result) == false) 
+                if (other.TryGetObjectByIndex(otherId, token, out var result) == false)
                     return false;
 
                 var thisId = GetPropertyIndex(propertyName);
@@ -1368,7 +1360,7 @@ namespace Sparrow.Json
         [Conditional("DEBUG")]
         public static void AssertNoModifications(BlittableJsonReaderObject data, string id, bool assertChildren, bool assertRemovals = true, bool assertProperties = true)
         {
-            data.AssertContextNotDisposed();            
+            data.AssertContextNotDisposed();
 
             if (assertRemovals == false && assertProperties == false)
                 throw new InvalidOperationException($"Both {nameof(assertRemovals)} and {nameof(assertProperties)} cannot be set to false.");
