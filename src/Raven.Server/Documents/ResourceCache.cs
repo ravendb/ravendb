@@ -17,9 +17,9 @@ namespace Raven.Server.Documents
     [SuppressMessage("ReSharper", "InconsistentlySynchronizedField")]
     public class ResourceCache<TResource> : IEnumerable<KeyValuePair<StringSegment, Task<TResource>>>
     {
-        readonly ConcurrentDictionary<StringSegment, Task<TResource>> _caseInsensitive = 
+        private readonly ConcurrentDictionary<StringSegment, Task<TResource>> _caseInsensitive =
                     new ConcurrentDictionary<StringSegment, Task<TResource>>(CaseInsensitiveStringSegmentEqualityComparer.Instance);
-        readonly ConcurrentDictionary<StringSegment, Task<TResource>> _caseSensitive 
+        private readonly ConcurrentDictionary<StringSegment, Task<TResource>> _caseSensitive
             = new ConcurrentDictionary<StringSegment, Task<TResource>>(StringSegmentEqualityComparer.Instance);
 
         private readonly ConcurrentDictionary<StringSegment, ConcurrentSet<StringSegment>> _mappings =
@@ -28,9 +28,9 @@ namespace Raven.Server.Documents
         /// <summary>
         /// This locks the entire cache. Use carefully.
         /// </summary>
-        public IEnumerable<Task<TResource>> Values => _caseSensitive.Values;
+        public IEnumerable<Task<TResource>> Values => _caseInsensitive.Values;
 
-        public int Count => _caseSensitive.Count;
+        public int Count => _caseInsensitive.Count;
 
         public void Clear()
         {
@@ -42,9 +42,9 @@ namespace Raven.Server.Documents
         {
             if (_caseSensitive.TryGetValue(resourceName, out resourceTask))
                 return true;
-            
+
             return UnlikelyTryGet(resourceName, out resourceTask);
-                
+
         }
 
         private bool UnlikelyTryGet(StringSegment resourceName, out Task<TResource> resourceTask)
@@ -62,7 +62,7 @@ namespace Raven.Server.Documents
                 }
             }
             return true;
-                
+
         }
 
         public bool TryRemove(StringSegment resourceName, out Task<TResource> resourceTask)
@@ -152,8 +152,8 @@ namespace Raven.Server.Documents
                         });
                     }
                 }
-                
-                if(current.IsCompleted == false)
+
+                if (current.IsCompleted == false)
                     throw new DatabaseConcurrentLoadTimeoutException($"Attempting to unload database {databaseName} that is loading is not allowed (by {caller})");
                 if (current.IsCompletedSuccessfully)
                 {
