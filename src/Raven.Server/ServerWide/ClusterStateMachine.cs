@@ -797,7 +797,7 @@ namespace Raven.Server.ServerWide
         }
 
         private static void SetDatabaseValues(
-            Dictionary<string, ExpandoObject> databaseValues,
+            Dictionary<string, BlittableJsonReaderObject> databaseValues,
             string databaseName,
             TransactionOperationContext context,
             long index,
@@ -817,7 +817,7 @@ namespace Raven.Server.ServerWide
                 var key = $"{Helpers.ClusterStateMachineValuesPrefix(databaseName)}{keyValue.Key}";
                 using (Slice.From(context.Allocator, key, out Slice databaseValueName))
                 using (Slice.From(context.Allocator, key.ToLowerInvariant(), out Slice databaseValueNameLowered))
-                using (var value = EntityToBlittable.ConvertCommandToBlittable(keyValue.Value, context))
+                using (var value = keyValue.Value.Clone(context))
                 {
                     UpdateValue(index, items, databaseValueNameLowered, databaseValueName, value);
                 }
