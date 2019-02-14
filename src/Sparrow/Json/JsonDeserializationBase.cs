@@ -189,7 +189,12 @@ namespace Sparrow.Json
                     }
                     else
                     {
-                        var converterExpression = Expression.Constant(GetConverterFromCache(valueType));
+                        ConstantExpression converterExpression;
+                        if (valueType == typeof(BlittableJsonReaderObject))
+                            converterExpression = Expression.Constant(null, typeof(Func<BlittableJsonReaderObject, BlittableJsonReaderObject>));
+                        else
+                            converterExpression = Expression.Constant(GetConverterFromCache(valueType));
+                        
                         var methodToCall = typeof(JsonDeserializationBase).GetMethod(nameof(ToDictionary), BindingFlags.NonPublic | BindingFlags.Static).MakeGenericMethod(propertyType.GenericTypeArguments[0], valueType);
                         return Expression.Call(methodToCall, json, Expression.Constant(propertyName), converterExpression);
                     }
@@ -328,7 +333,7 @@ namespace Sparrow.Json
                 }
                 else
                 {
-                    if (typeOfValue != typeof(object) &&
+                    if (typeOfValue != typeof(object) && typeOfValue != typeof(BlittableJsonReaderObject) &&
                         val is BlittableJsonReaderObject blittableJsonReaderObject)
                     {
                         dictionary[key] = converter(blittableJsonReaderObject);
