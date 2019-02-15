@@ -17,7 +17,18 @@
                             <input type="checkbox" class="styled" data-bind="checkboxTriple: indexesSelectionState, event: { change: toggleSelectAll }" />
                             <label></label>
                         </div>
-                        <input type="text" accesskey="/" class="form-control" placeholder="Filter" title="Filter indexes (Alt+/)" data-bind="textInput: searchText" />
+                        <div class="btn-group-label" data-label="Filter">
+                            <input type="text" accesskey="/" class="form-control" placeholder="Index Name" title="Filter indexes (Alt+/)" data-bind="textInput: searchText" />
+                            <div class="dropdown dropdown-right">
+                                <button class="btn btn-default dropdown-toggle" type="button" data-toggle="dropdown" data-bind="css: { active: hasAnyStateFilter }">
+                                    <span>Index Status</span>
+                                    <span class="caret"></span>
+                                </button>
+                                <div class="dropdown-menu settings-menu" data-bind="dropdownPanel: true, template: { name: 'indexes-filter-status-template' }">
+                                </div>
+                            </div>
+                        </div>
+                        
 
                         <div class="indexesToolbar-actions">
                             
@@ -403,4 +414,84 @@
             </div>
         </div>
     </div>
+</script>
+
+
+<script type="text/html" id="indexes-filter-status-template">
+    <div class="settings-item">
+        <div class="margin-left margin-right margin-right-sm">
+            <div class="flex-horizontal">
+                <div class="control-label flex-grow">Normal</div>
+                <div class="flex-noshrink">
+                    <div class="toggle toggle-success">
+                        <input type="checkbox" class="styled" data-bind="checkedValue: 'Normal', checked: indexStatusFilter">
+                        <label></label>
+                    </div>
+                </div>
+            </div>
+            <div class="flex-horizontal">
+                <div class="control-label flex-grow">Error / Faulty</div>
+                <div class="flex-noshrink">
+                    <div class="toggle toggle-danger">
+                        <input type="checkbox" class="styled" data-bind="checkedValue: 'ErrorOrFaulty', checked: indexStatusFilter">
+                        <label></label>
+                    </div>
+                </div>
+            </div>
+            <div class="flex-horizontal">
+                <div class="control-label flex-grow">Stale</div>
+                <div class="flex-noshrink">
+                    <div class="toggle toggle-warning">
+                        <input type="checkbox" class="styled" data-bind="checkedValue: 'Stale', checked: indexStatusFilter">
+                        <label></label>
+                    </div>
+                </div>
+            </div>
+            <div class="flex-horizontal">
+                <div class="control-label flex-grow">Paused</div>
+                <div class="flex-noshrink">
+                    <div class="toggle toggle-warning">
+                        <input type="checkbox" class="styled" data-bind="checkedValue: 'Paused', checked: indexStatusFilter">
+                        <label></label>
+                    </div>
+                </div>
+            </div>
+            <div class="flex-horizontal">
+                <div class="control-label flex-grow">Disabled</div>
+                <div class="flex-noshrink">
+                    <div class="toggle toggle-warning">
+                        <input type="checkbox" class="styled" data-bind="checkedValue: 'Disabled', checked: indexStatusFilter">
+                        <label></label>
+                    </div>
+                </div>
+            </div>
+            <div class="flex-horizontal">
+                <div class="control-label flex-grow">Idle</div>
+                <div class="flex-noshrink">
+                    <div class="toggle toggle-warning">
+                        <input type="checkbox" class="styled" data-bind="checkedValue: 'Idle', checked: indexStatusFilter">
+                        <label></label>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <div class="bg-info auto-update-container">
+            <div class="flex-horizontal">
+                <div class="control-label flex-grow">Auto refresh</div>
+                <div class="flex-noshrink">
+                    <div class="toggle toggle-info">
+                        <input type="checkbox" class="styled" data-bind="checked: autoRefresh">
+                        <label></label>
+                    </div>
+                </div>
+            </div>
+
+            <div class="margin-right margin-right-sm">
+                <small>Automatically refreshes the list of indexes. Might result in list flickering.</small>
+            </div>
+        </div>
+       
+    </div>
+
 </script>

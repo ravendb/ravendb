@@ -31,7 +31,10 @@ class indexes extends viewModelBase {
     indexGroups = ko.observableArray<indexGroup>();
     sortedGroups: KnockoutComputed<indexGroup[]>;
     newIndexUrl = appUrl.forCurrentDatabase().newIndex;
-    searchText = ko.observable<string>();
+    searchText = ko.observable<string>("");
+    hasAnyStateFilter: KnockoutComputed<boolean>;
+    autoRefresh = ko.observable<boolean>(true);
+    indexStatusFilter = ko.observableArray<indexStatusFilter>(["Normal", "ErrorOrFaulty", "Stale", "Paused", "Disabled", "Idle"]);
     lockModeCommon: KnockoutComputed<string>;
     selectedIndexesName = ko.observableArray<string>();
     indexesSelectionState: KnockoutComputed<checkbox>;
@@ -116,7 +119,19 @@ class indexes extends viewModelBase {
     }
 
     private initObservables() {
-        this.searchText.throttle(200).subscribe(() => this.filterIndexes());
+        this.searchText.throttle(200).subscribe(() => this.filterIndexes(false));
+        this.indexStatusFilter.subscribe(() => this.filterIndexes(false));
+        this.autoRefresh.subscribe(refresh => {
+            if (refresh) {
+                this.filterIndexes(false);
+            }
+        });
+        
+        this.hasAnyStateFilter = ko.pureComputed(() => {
+            const autoRefresh = this.autoRefresh();
+            const filterCount = this.indexStatusFilter();
+            return !autoRefresh || filterCount.length !== 6;
+        });
 
         this.sortedGroups = ko.pureComputed<indexGroup[]>(() => {
             const groups = this.indexGroups().slice(0).sort((l, r) => generalUtils.sortAlphaNumeric(l.entityName, r.entityName));
@@ -155,6 +170,10 @@ class indexes extends viewModelBase {
     activate(args: any) {
         super.activate(args);
         this.updateHelpLink('AIHAR1');
+        
+        if (args && args.stale) {
+            this.indexStatusFilter(["Stale"]);
+        }
 
         return this.fetchIndexes();
     }
@@ -195,10 +214,8 @@ class indexes extends viewModelBase {
                 this.indexesProgressRefreshThrottle();
             });
 
-        if (this.searchText()) {
-            this.filterIndexes();
-        }
-
+        this.filterIndexes(true);
+        
         this.processReplacements(replacements);
         this.syncIndexingProgress();
     }
@@ -258,14 +275,20 @@ class indexes extends viewModelBase {
         }
     }
 
-    private filterIndexes() {
+    private filterIndexes(passive: boolean) {
+        if (passive && !this.autoRefresh()) {
+            // do NOT touch visibility of indexes!
+            return;
+        }
+
         const filterLower = this.searchText().toLowerCase();
+        const typeFilter = this.indexStatusFilter();
+        
         this.selectedIndexesName([]);
         this.indexGroups().forEach(indexGroup => {
             let hasAnyInGroup = false;
             indexGroup.indexes().forEach(index => {
-                const match = index.name.toLowerCase().indexOf(filterLower) >= 0;
-                index.filteredOut(!match);
+                const match = index.filter(filterLower, typeFilter);
                 if (match) {
                     hasAnyInGroup = true;
                 }
