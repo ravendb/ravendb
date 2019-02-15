@@ -11,10 +11,15 @@ import eventsCollector = require("common/eventsCollector");
 import backupSettings = require("models/database/tasks/periodicBackup/backupSettings");
 import getPossibleMentorsCommand = require("commands/database/tasks/getPossibleMentorsCommand");
 import setupEncryptionKey = require("viewmodels/resources/setupEncryptionKey");
+import cronEditor = require("viewmodels/common/cronEditor");
 
 class editPeriodicBackupTask extends viewModelBase {
 
     configuration = ko.observable<periodicBackupConfiguration>();
+    
+    fullBackupCronEditor = ko.observable<cronEditor>();
+    incrementalBackupCronEditor = ko.observable<cronEditor>();
+    
     isAddingNewBackupTask = ko.observable<boolean>(true);
     possibleMentors = ko.observableArray<string>([]);
     serverConfiguration = ko.observable<periodicBackupServerLimitsResponse>();
@@ -69,6 +74,9 @@ class editPeriodicBackupTask extends viewModelBase {
                     const encryptionSettings = this.configuration().encryptionSettings();
                     this.encryptionSection = setupEncryptionKey.forBackup(encryptionSettings.key, encryptionSettings.keyConfirmation, dbName);
                     this.dirtyFlag = this.configuration().dirtyFlag;
+
+                    this.fullBackupCronEditor(new cronEditor(this.configuration().fullBackupFrequency));
+                    this.incrementalBackupCronEditor(new cronEditor(this.configuration().incrementalBackupFrequency));
                     
                     if (!encryptionSettings.key()) {
                         return this.encryptionSection.generateEncryptionKey()
@@ -154,31 +162,6 @@ class editPeriodicBackupTask extends viewModelBase {
                         "</li>" +
                     "</ul>" +
                     "* An incremental Snapshot is the same as an incremental Backup"
-            });
-
-        popoverUtils.longWithHover($("#schedule-info"),
-            {
-                content: 
-                    "<div class='schedule-info-text'>" +  
-                    "Backup schedule is defined by a cron expression that can represent fixed times, dates, or intervals.<br/>" +
-                    "We support cron expressions which consist of 5 <span style='color: #B9F4B7'>Fields</span>.<br/>" +
-                    "Each field can contain any of the following <span style='color: #f9d291'>Values</span> along with " +
-                    "various combinations of <span style='color: white'>Special Characters</span> for that field.<br/>" + 
-                    "<pre>" +
-                    "+----------------> minute (<span class='values'>0 - 59</span>) (<span class='special-characters'>, - * /</span>)<br/>" +
-                    "|  +-------------> hour (<span class='values'>0 - 23</span>) (<span class='special-characters'>, - * /</span>)<br/>" +
-                    "|  |  +----------> day of month (<span class='values'>1 - 31</span>) (<span class='special-characters'>, - * ? / L W</span>)<br/>" +
-                    "|  |  |  +-------> month (<span class='values'>1-12 or JAN-DEC</span>) (<span class='special-characters'>, - * /</span>)<br/>" +
-                    "|  |  |  |  +----> day of week (<span class='values'>0-6 or SUN-SAT</span>) (<span class='special-characters'>, - * ? / L #</span>)<br/>" +
-                    "|  |  |  |  |<br/>" +
-                    "<span style='color: #B9F4B7'>" +
-                    "<small><i class='icon-star-filled'></i></small>&nbsp;" +
-                    "<small><i class='icon-star-filled'></i></small>&nbsp;" +
-                    "<small><i class='icon-star-filled'></i></small>&nbsp;" +
-                    "<small><i class='icon-star-filled'></i></small>&nbsp;" +
-                    "<small><i class='icon-star-filled'></i></small>" +
-                    "</span></pre><br/>" +
-                    "For more information see: <a href='http://www.quartz-scheduler.org/documentation/quartz-2.x/tutorials/crontrigger.html' target='_blank'>CronTrigger Tutorial</a></div>"
             });
 
         popoverUtils.longWithHover($("#bucket-info"),

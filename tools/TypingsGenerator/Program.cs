@@ -327,7 +327,7 @@ namespace TypingsGenerator
             scripter.AddType(typeof(RestoreBackupConfiguration));
             scripter.AddType(typeof(RestorePoints));
             scripter.AddType(typeof(RestoreProgress));
-            scripter.AddType(typeof(NextBackupOccurrence));
+            scripter.AddType(typeof(StudioTasksHandler.NextCronExpressionOccurrence));
             scripter.AddType(typeof(OfflineMigrationConfiguration));
             scripter.AddType(typeof(BackupProgress));
             scripter.AddType(typeof(StartBackupOperationResult));
