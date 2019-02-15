@@ -27,6 +27,7 @@ class footer {
 
     urlForDocuments = ko.pureComputed(() => appUrl.forDocuments(null, this.db()));
     urlForIndexes = ko.pureComputed(() => appUrl.forIndexes(this.db()));
+    urlForStaleIndexes = ko.pureComputed(() => appUrl.forIndexes(this.db(), true));
     urlForIndexingErrors = ko.pureComputed(() => appUrl.forIndexErrors(this.db()));
     urlForAbout = appUrl.forAbout();
 

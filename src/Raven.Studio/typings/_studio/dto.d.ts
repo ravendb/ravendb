@@ -609,3 +609,5 @@ interface rawStackTraceResponseItem {
     NativeThreads: boolean,
     StackTrace: string[];
 }
+
+type indexStatusFilter = "Normal" | "ErrorOrFaulty" | "Stale" | "Paused" | "Disabled" | "Idle";

@@ -302,10 +302,12 @@
             <a data-bind="attr: { href: $parent.urlForDocuments() }" title="Documents"><i class="icon-documents"></i> <span data-bind="text: countOfDocuments().toLocaleString()"></span></a>
         </div>
         <div class="footer-item">
-            <a title="Indexes" data-bind="attr: { href: $parent.urlForIndexes() }">
+            <a title="Indexes" class="indexes-link" data-bind="attr: { href: $parent.urlForIndexes() }">
                 <i class="icon-index"></i>
                 <span data-bind="text: countOfIndexes().toLocaleString()"></span>
-                <span class="separator">|</span><span title="Stale indexes" data-bind="text: countOfStaleIndexes().toLocaleString(), css: {'text-warning': countOfStaleIndexes}"></span>
+            </a>
+            <a title="Stale Indexes" class="stale-indexes-link" data-bind="attr: { href: $parent.urlForStaleIndexes() }">
+                <span class="separator">|</span><span data-bind="text: countOfStaleIndexes().toLocaleString(), css: {'text-warning': countOfStaleIndexes}"></span>
             </a>
         </div>
         <div class="footer-item" data-bind="visible: countOfIndexingErrors">

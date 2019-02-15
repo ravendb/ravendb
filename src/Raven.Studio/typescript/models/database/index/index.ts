@@ -190,7 +190,7 @@ class index {
             }
 
             if (this.isPausedState()) {
-                return "state-warning";
+                return "state-warnwing";
             }
 
             if (this.isDisabledState()) {
@@ -292,6 +292,50 @@ class index {
         
         this.memory(incomingData.memory());
         this.isStale(incomingData.isStale());
+    }
+
+    filter(indexName: string, allowedStatuses: indexStatusFilter[]): boolean {
+        const nameMatch = !indexName || this.name.toLowerCase().indexOf(indexName) >= 0;
+        
+        const statusMatch = this.matchesAnyStatus(allowedStatuses);
+        
+        const matches = nameMatch && statusMatch;
+
+        this.filteredOut(!matches);
+
+        return matches;
+    }
+    
+    private matchesAnyStatus(status: indexStatusFilter[]) {
+        if (status.length === 0) {
+            return false;
+        }
+        
+        if (_.includes(status, "Stale") && this.isStale()) {
+            return true;
+        }
+        
+        if (_.includes(status, "Normal") && this.isNormalState()) {
+            return true;
+        }
+        
+        if (_.includes(status, "ErrorOrFaulty") && (this.isErrorState() || this.isFaulty())) {
+            return true;
+        }
+        
+        if (_.includes(status, "Paused") && this.isPausedState()) {
+            return true;
+        }
+        
+        if (_.includes(status, "Disabled") && this.isDisabledState()) {
+            return true;
+        }
+        
+        if (_.includes(status, "Idle") && this.isIdleState()) {
+            return true;
+        }
+        
+        return false;
     }
     
 }
