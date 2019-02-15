@@ -69,51 +69,5 @@ namespace Raven.Server.Web.System
 
             return Task.CompletedTask;
         }
-
-        [RavenAction("/periodic-backup/next-backup-occurrence", "GET", AuthorizationStatus.ValidUser)]
-        public Task GetNextBackupOccurrence()
-        {
-            var backupFrequency = GetQueryStringValueAndAssertIfSingleAndNotEmpty("backupFrequency");
-            CrontabSchedule crontabSchedule;
-            try
-            {
-                // will throw if the backup frequency is invalid
-                crontabSchedule = CrontabSchedule.Parse(backupFrequency);
-            }
-            catch (Exception e)
-            {
-                HttpContext.Response.StatusCode = (int)HttpStatusCode.BadRequest;
-                using (var streamWriter = new StreamWriter(ResponseBodyStream()))
-                {
-                    streamWriter.Write(e.Message);
-                    streamWriter.Flush();
-                }
-                return Task.CompletedTask;
-            }
-
-            var nextOccurrence = crontabSchedule.GetNextOccurrence(SystemTime.UtcNow.ToLocalTime());
-
-            using (ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
-            using (var writer = new BlittableJsonTextWriter(context, ResponseBodyStream()))
-            {
-                writer.WriteStartObject();
-                writer.WritePropertyName(nameof(NextBackupOccurrence.Utc));
-                writer.WriteDateTime(nextOccurrence.ToUniversalTime(), true);
-                writer.WriteComma();
-                writer.WritePropertyName(nameof(NextBackupOccurrence.ServerTime));
-                writer.WriteDateTime(nextOccurrence, false);
-                writer.WriteEndObject();
-                writer.Flush();
-            }
-
-            return Task.CompletedTask;
-        }
-    }
-
-    public class NextBackupOccurrence
-    {
-        public DateTime Utc { get; set; }
-
-        public DateTime ServerTime { get; set; }
     }
 }

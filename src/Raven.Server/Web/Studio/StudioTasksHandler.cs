@@ -1,10 +1,14 @@
 ﻿using System;
+using System.IO;
+using System.Net;
 using System.Threading.Tasks;
 using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.CSharp;
 using Microsoft.CodeAnalysis.Formatting;
+using NCrontab.Advanced;
 using Raven.Client.Exceptions;
 using Raven.Client.ServerWide.Operations.Migration;
+using Raven.Client.Util;
 using Raven.Server.Routing;
 using Raven.Server.ServerWide;
 using Raven.Server.Utils;
@@ -14,6 +18,7 @@ using Sparrow.Json.Parsing;
 using Raven.Server.Config;
 using Voron.Util.Settings;
 using Raven.Server.Documents.Indexes;
+using Raven.Server.ServerWide.Context;
 
 namespace Raven.Server.Web.Studio
 {
@@ -217,6 +222,53 @@ namespace Raven.Server.Web.Studio
 
             return Task.CompletedTask;
         }
+        
+        [RavenAction("/studio-tasks/next-cron-expression-occurrence", "GET", AuthorizationStatus.ValidUser)]
+        public Task GetNextCronExpressionOccurrence()
+        {
+            var expression = GetQueryStringValueAndAssertIfSingleAndNotEmpty("expression");
+            CrontabSchedule crontabSchedule;
+            try
+            {
+                // will throw if the cron expression is invalid
+                crontabSchedule = CrontabSchedule.Parse(expression);
+            }
+            catch (Exception e)
+            {
+                HttpContext.Response.StatusCode = (int)HttpStatusCode.BadRequest;
+                using (var streamWriter = new StreamWriter(ResponseBodyStream()))
+                {
+                    streamWriter.Write(e.Message);
+                    streamWriter.Flush();
+                }
+                return Task.CompletedTask;
+            }
+
+            var nextOccurrence = crontabSchedule.GetNextOccurrence(SystemTime.UtcNow.ToLocalTime());
+
+            using (ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
+            using (var writer = new BlittableJsonTextWriter(context, ResponseBodyStream()))
+            {
+                writer.WriteStartObject();
+                writer.WritePropertyName(nameof(NextCronExpressionOccurrence.Utc));
+                writer.WriteDateTime(nextOccurrence.ToUniversalTime(), true);
+                writer.WriteComma();
+                writer.WritePropertyName(nameof(NextCronExpressionOccurrence.ServerTime));
+                writer.WriteDateTime(nextOccurrence, false);
+                writer.WriteEndObject();
+                writer.Flush();
+            }
+
+            return Task.CompletedTask;
+        }
+
+        public class NextCronExpressionOccurrence
+        {
+            public DateTime Utc { get; set; }
+
+            public DateTime ServerTime { get; set; }
+        }
+        
 
         public class FormattedExpression : IDynamicJson
         {

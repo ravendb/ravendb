@@ -58,72 +58,33 @@
             </div>
         </div>
     </div>
-    <h3>Schedule <i id="schedule-info" class="icon-info text-info"></i></h3>
+    <h3>Schedule</h3>
     <div class="panel">
         <div class="padding">
             <div class="row flex-row margin-bottom" data-bind="validationElement: fullBackupFrequency">
                 <label class="control-label col-xs-12 col-sm-4 col-lg-2">Full</label>
                 <div class="col-xs-6 col-sm-4 col-lg-4">
-                    <div class="dropdown btn-block">
-                        <input type="text" class="form-control dropdown-toggle" data-toggle="dropdown"
-                               id="fullBackupFrequencyInput"
-                               data-bind="textInput: fullBackupFrequency"
-                               placeholder="Cron expression, e.g. 0 1 * * * - every day at 01:00 AM">
-                        <ul class="dropdown-menu max-height" data-bind="foreach: createBackupFrequencyAutoCompleter(true), autoComplete: '#' + 'fullBackupFrequencyInput'">
-                            <li data-bind="click: $parent.useCronExprssion.bind($parent, true, $data)">
-                                <a href="#" data-bind="text: $data.label"></a>
-                            </li>
-                        </ul>
+                    <div class="toggle" data-bind="validationOptions: { insertMessages: false }">
+                        <input id="fullBackupToggle" type="checkbox" data-bind="checked: fullBackupEnabled">
+                        <label for="fullBackupToggle">Enable full backup</label>
                     </div>
-                    <div>
-                        <span>Description:</span>
-                        <strong data-bind="text: fullBackupHumanReadable"></strong>
-                        <br/>
-                        <span>Next estimated backup: </span> 
-                        <strong data-bind="text: nextFullBackupOccurrenceServerTime"></strong> <span data-bind="if: nextFullBackupOccurrenceServerTime() !== 'N/A'">
-                            <span data-bind="if: canDisplayNextFullBackupOccurrenceLocalTime">(Server time)</span>
-                        </span>
-                        
-                        <div class="next-backup-occurrence-local" data-bind="if: canDisplayNextFullBackupOccurrenceLocalTime">
-                            <strong data-bind="text: nextFullBackupOccurrenceLocalTime"></strong> <span data-bind="if: nextFullBackupOccurrenceLocalTime">(Local time)</span>
-                        </div>
 
-                        <div class="next-backup-occurrence-local">
-                            <strong data-bind="text: nextFullBackupInterval"></strong>
-                        </div>
-                    </div>
+                    <div data-bind="compose: $root.fullBackupCronEditor, visible: fullBackupEnabled"></div>
                 </div>
             </div>
             <div class="row flex-row margin-bottom" data-bind="validationElement: incrementalBackupFrequency">
                 <label class="control-label col-xs-12 col-sm-4 col-lg-2">Incremental</label>
                 <div class="col-xs-6 col-sm-4 col-lg-4">
-                    <div class="dropdown btn-block">
-                        <input type="text" class="form-control dropdown-toggle" data-toggle="dropdown"
-                               id="incrementalBackupFrequencyInput"
-                               data-bind="textInput: incrementalBackupFrequency"
-                               placeholder="Cron expression, e.g. */30 * * * * - every 30 minutes">
-                        <ul class="dropdown-menu max-height" data-bind="foreach: createBackupFrequencyAutoCompleter(false), autoComplete: '#' + 'incrementalBackupFrequencyInput'">
-                            <li data-bind="click: $parent.useCronExprssion.bind($parent, false, $data)">
-                                <a href="#" data-bind="text: $data.label"></a>
-                            </li>
-                        </ul>
+                    <div class="toggle" data-bind="validationOptions: { insertMessages: false }">
+                        <input id="incrementalBackupToggle" type="checkbox" data-bind="checked: incrementalBackupEnabled">
+                        <label for="incrementalBackupToggle">Enable incremental backup</label>
                     </div>
-                    <div>
-                        <span>Description:</span>
-                        <strong data-bind="text: incrementalBackupHumanReadable"></strong><br/>
-                        <span>Next estimated backup: </span> 
-                        <strong data-bind="text: nextIncrementalBackupOccurrenceServerTime"></strong> <span data-bind="if: nextIncrementalBackupOccurrenceServerTime() !== 'N/A'">
-                            <span data-bind="if: canDisplayNextIncrementalBackupOccurrenceLocalTime">(Server time)</span>
-                        </span>
-                        
-                        <div class="next-backup-occurrence-local" data-bind="if: canDisplayNextIncrementalBackupOccurrenceLocalTime">
-                            <strong data-bind="text: nextIncrementalBackupOccurrenceLocalTime"></strong> <span data-bind="if: nextIncrementalBackupOccurrenceLocalTime">(Local time)</span>
-                        </div>
-                        
-                        <div class="next-backup-occurrence-local">
-                            <strong data-bind="text: nextIncrementalBackupInterval"></strong>
-                        </div>
+
+                    <div data-bind="validationElement: incrementalBackupEnabled">
+                        <div class="help-block" data-bind="validationMessage: incrementalBackupEnabled"></div>
                     </div>
+                    
+                    <div data-bind="compose: $root.incrementalBackupCronEditor, visible: incrementalBackupEnabled"></div>
                 </div>
             </div>
         </div>
