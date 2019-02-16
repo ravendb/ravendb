@@ -246,7 +246,7 @@ namespace Raven.Server.Documents.Replication
            DocumentConflict resolved,
            DocumentConflict incoming = null)
         {
-            SaveConflictedDocumentsAsRevisions(context, resolved, incoming);
+            SaveConflictedDocumentsAsRevisions(context, resolved.Id, incoming);
 
             if (resolved.Doc == null)
             {
@@ -278,7 +278,7 @@ namespace Raven.Server.Documents.Replication
             }
         }
 
-        private void SaveConflictedDocumentsAsRevisions(DocumentsOperationContext context, DocumentConflict resolved, DocumentConflict incoming)
+        private void SaveConflictedDocumentsAsRevisions(DocumentsOperationContext context, string id, DocumentConflict incoming)
         {
             if (incoming == null)
                 return;
@@ -302,7 +302,7 @@ namespace Raven.Server.Documents.Replication
             if (_database.DocumentsStorage.ConflictsStorage.ConflictsCount != 0) // we have conflicts and we will resolve them in the put method, rest of the function is when we resolve on the fly
                 return;
 
-            SaveLocalAsRevision(context, resolved.Id);
+            SaveLocalAsRevision(context, id);
         }
 
         public void SaveLocalAsRevision(DocumentsOperationContext context, string id)

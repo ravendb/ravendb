@@ -411,7 +411,7 @@ namespace Raven.Server.Documents.Replication
                 if (isArtificial)
                     _skippedArtificialDocuments++;
 
-                if (_startChangeVector != null)
+                if (_startChangeVector == null)
                 {
                     _startChangeVector = item.ChangeVector;
                     _startEtag = item.Etag;
@@ -444,7 +444,6 @@ namespace Raven.Server.Documents.Replication
                 _endChangeVector = null;
             }
         }
-
         private bool AddReplicationItemToBatch(ReplicationBatchItem item, OutgoingReplicationStatsScope stats, SkippedReplicationItemsInfo skippedReplicationItemsInfo)
         {
             if (item.Type == ReplicationBatchItem.ReplicationItemType.Document ||
@@ -458,13 +457,23 @@ namespace Raven.Server.Documents.Replication
                 }
             }
 
-
             if (item.Type == ReplicationBatchItem.ReplicationItemType.CounterTombstone && 
                 _parent.SupportedFeatures.Replication.Counters == false)
             {
                 // skip counter tombstones in legacy mode
                 skippedReplicationItemsInfo.Update(item);
                 return false;
+            }
+
+            if (item.Flags.Contain(DocumentFlags.Revision) || item.Flags.Contain(DocumentFlags.DeleteRevision))
+            {
+                // we let pass all the conflicted/resolved revisions, since we keep them with their original change vector which might be `AlreadyMerged` at the destination.
+                if (item.Flags.Contain(DocumentFlags.Conflicted) || 
+                    item.Flags.Contain(DocumentFlags.Resolved))
+                {
+                    _orderedReplicaItems.Add(item.Etag, item);
+                    return true;
+                }
             }
 
             // destination already has it
@@ -483,6 +492,7 @@ namespace Raven.Server.Documents.Replication
                     var message = skippedReplicationItemsInfo.GetInfoForDebug(_parent.LastAcceptedChangeVector);
                     _log.Info(message);
                 }
+
                 skippedReplicationItemsInfo.Reset();
             }
 

@@ -1824,10 +1824,10 @@ namespace Raven.Server.ServerWide
 
         public Task<(long Index, object Result)> WriteDatabaseRecordAsync(
             string databaseName, DatabaseRecord record, long? index,
-            Dictionary<string, ExpandoObject> databaseValues = null, bool isRestore = false)
+            Dictionary<string, BlittableJsonReaderObject> databaseValues = null, bool isRestore = false)
         {
             if (databaseValues == null)
-                databaseValues = new Dictionary<string, ExpandoObject>();
+                databaseValues = new Dictionary<string, BlittableJsonReaderObject>();
 
             Debug.Assert(record.Topology != null);
 

@@ -1121,7 +1121,7 @@ namespace SlowTests.Server.Replication
         [Fact]
         public async Task BackgroundResolveToLatestInCluster()
         {
-            var leader1 = await CreateRaftClusterAndGetLeader(2);
+            var leader1 = await CreateRaftClusterAndGetLeader(3);
 
             using (var store1 = GetDocumentStore(new Options
             {
@@ -1162,7 +1162,7 @@ namespace SlowTests.Server.Replication
                     await session.SaveChangesAsync();
                 }
 
-                //Assert.Equal(2, WaitUntilHasConflict(store1, "foo/bar").Length);
+                Assert.Equal(2, WaitUntilHasConflict(store1, "foo/bar").Length);
 
                 await SetReplicationConflictResolutionAsync(store1, StraightforwardConflictResolution.ResolveToLatest);
                 Assert.True(WaitForDocument<User>(store1, "foo/bar", u => u.Name == "Grisha"));
@@ -1236,13 +1236,14 @@ namespace SlowTests.Server.Replication
                 await SetReplicationConflictResolutionAsync(store2, StraightforwardConflictResolution.ResolveToLatest);
                 await SetupReplicationAsync(store3, store2);
                 Assert.True(WaitForDocument<User>(store2, "foo/bar", u => u.Name == "Grisha"));
-
+                WaitForUserToContinueTheTest(store2);
                 using (var session2 = store2.OpenAsyncSession())
                 using (var session3 = store3.OpenAsyncSession())
                 {
                     var rev2 = await session2.Advanced.Revisions.GetMetadataForAsync("foo/bar");
                     var rev3 = await session3.Advanced.Revisions.GetMetadataForAsync("foo/bar");
 
+                    Assert.True(rev3.Count == rev2.Count, $"On the fly has {rev3.Count}, while from background has {rev2.Count}");
                     Assert.Equal(3, rev3.Count);
                     Assert.Equal(3, rev2.Count);
                 }

@@ -166,8 +166,6 @@ namespace Raven.Server.Documents
                     }
                 }
 
-                UpdateChangeVectorIfNeeded(context, nonPersistentFlags, ref changeVector, ref newEtag);
-
                 using (Slice.From(context.Allocator, changeVector, out var cv))
                 using (table.Allocate(out TableValueBuilder tvb))
                 {
