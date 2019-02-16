@@ -42,7 +42,7 @@ namespace Raven.Server.Smuggler.Documents
         private bool _headersProcessed;
         private string[] _csvReaderFieldHeaders;
 
-        private readonly List<IDisposable> _disposibales = new List<IDisposable>();
+        private readonly List<IDisposable> _disposables = new List<IDisposable>();
 
         public CsvStreamSource(DocumentDatabase database, Stream stream, DocumentsOperationContext context, string collection)
         {
@@ -58,8 +58,8 @@ namespace Raven.Server.Smuggler.Documents
             buildVersion = 40;
             _reader = new StreamReader(_stream);
             _csvReader = new CsvReader(_reader);
-            _result = result;
             _csvReader.Configuration.Delimiter = ",";
+            _result = result;
             return new DisposableAction(() =>
             {
                 _reader.Dispose();
@@ -250,11 +250,11 @@ namespace Raven.Server.Smuggler.Documents
             }
             finally
             {
-                foreach (var disposeMe in _disposibales)
+                foreach (var disposeMe in _disposables)
                 {
                     disposeMe.Dispose();
                 }
-                _disposibales.Clear();
+                _disposables.Clear();
             }
         }
 
@@ -277,7 +277,7 @@ namespace Raven.Server.Smuggler.Documents
             {
                 var array = _context.ParseBufferToArray(s, "CsvImport/ArrayValue",
                     BlittableJsonDocumentBuilder.UsageMode.None);
-                _disposibales.Add(array);
+                _disposables.Add(array);
                 return array;
             }
             if (char.IsDigit(s[0]) || s[0] == '-')
