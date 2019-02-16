@@ -43,6 +43,8 @@ class indexes extends viewModelBase {
     indexingProgresses = new Map<string, indexProgress>();  
     requestedIndexingInProgress = false;
     indexesCount: KnockoutComputed<number>;
+    visibleIndexesCount: KnockoutComputed<number>;
+    searchCriteriaDescription: KnockoutComputed<string>;
 
     spinners = {
         globalStartStop: ko.observable<boolean>(false),
@@ -98,6 +100,35 @@ class indexes extends viewModelBase {
         this.indexesCount = ko.pureComputed(() => {
             return _.sum(this.indexGroups().map(x => x.indexes().length));
         });
+        
+        this.visibleIndexesCount = ko.pureComputed(() => {
+            return _.sum(this.indexGroups().map(x => x.indexes().filter(i => !i.filteredOut()).length));
+        });
+        
+        this.searchCriteriaDescription = ko.pureComputed(() => {
+            const indexesCount = this.visibleIndexesCount();
+            const statusPart = this.indexStatusFilter().length === 6 
+                ? "" 
+                : ` with status <strong>${this.indexStatusFilter().map(x => this.mapIndexStatus(x)).join(", ")}</strong> `;
+            const refreshPart = `Auto refresh is <strong>${this.autoRefresh() ? "on" : "off"}</strong>`;
+            const namePart = this.searchText() ? `, where name contains <strong>${generalUtils.escapeHtml(this.searchText())}</strong>` : "";
+            
+            return `Displaying <strong>${indexesCount}</strong> ${this.pluralize(indexesCount, "index", "indexes", true)} ${statusPart} ${namePart}. ${refreshPart}.`;
+        });
+    }
+    
+    private mapIndexStatus(status: indexStatusFilter) {
+        switch (status) {
+            case "Normal":
+            case "Disabled":
+            case "Idle":
+            case "Paused":
+            case "Stale":
+                return status;
+            case "ErrorOrFaulty":
+                return "Error, Faulty";
+                
+        }
     }
 
     private getAllIndexes(): index[] {

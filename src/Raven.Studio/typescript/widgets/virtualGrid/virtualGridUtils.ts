@@ -1,17 +1,7 @@
 ﻿/// <reference path="../../../typings/tsd.d.ts"/>
 
 import virtualColumn = require("widgets/virtualGrid/columns/virtualColumn");
-
-const entityMap: any = {
-    '&': '&amp;',
-    '<': '&lt;',
-    '>': '&gt;',
-    '"': '&quot;',
-    "'": '&#39;',
-    '/': '&#x2F;',
-    '`': '&#x60;',
-    '=': '&#x3D;'
-};
+import generalUtils = require("common/generalUtils");
 
 function deselect() {
     try {
@@ -27,10 +17,6 @@ function deselect() {
     }
 }
 
-function escapeHtml(string: string) {
-    return String(string).replace(/[&<>"'`=\/]/g, s => entityMap[s]);
-}
-
 
 function nl2br(str: string) {
     return str = str.replace(/(?:\r\n|\r|\n)/g, '<br>');
@@ -44,7 +30,7 @@ function widthToPixels(column: virtualColumn) {
 }
 
 export = {
-    escape: escapeHtml,
+    escape: generalUtils.escapeHtml,
     widthToPixels,
     deselect,
     nl2br
