@@ -216,7 +216,7 @@ namespace Raven.Server.Documents.Handlers
             if (string.IsNullOrEmpty(format) || string.Equals(format, "csv", StringComparison.OrdinalIgnoreCase) == false)
                 ThrowUnsupportedException($"You have selected \"{format}\" file format, which is not supported.");
 
-            return new StreamCsvBlittableQueryResultWriter(response, responseBodyStream, context, propertiesArray, fileNamePrefix);
+            return new StreamCsvBlittableQueryResultWriter(response, responseBodyStream, propertiesArray, fileNamePrefix);
         }
 
         private IStreamQueryResultWriter<Document> GetQueryResultWriter(string format, HttpResponse response, DocumentsOperationContext context, Stream responseBodyStream,
