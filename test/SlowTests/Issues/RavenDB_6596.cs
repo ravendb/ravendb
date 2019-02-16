@@ -9,11 +9,14 @@ using FastTests.Client;
 using Sparrow.Platform;
 using Tests.Infrastructure;
 using Xunit;
+using Xunit.Abstractions;
 
 namespace SlowTests.Issues
 {
     public class RavenDB_6596 : NoDisposalNeeded
     {
+        private readonly ITestOutputHelper _output;
+
         private static readonly List<MethodInfo> _syncTests = new List<MethodInfo>();
 
         private static readonly List<MethodInfo> _asyncTests = new List<MethodInfo>();
@@ -33,6 +36,11 @@ namespace SlowTests.Issues
         static RavenDB_6596()
         {
             FindTests(typeof(CRUD).GetTypeInfo().Assembly, typeof(RavenDB_6596).GetTypeInfo().Assembly);
+        }
+
+        public RavenDB_6596(ITestOutputHelper output)
+        {
+            _output = output;
         }
 
         private static void FindTests(params Assembly[] assemblies)
@@ -95,6 +103,8 @@ namespace SlowTests.Issues
                     CultureInfo.DefaultThreadCurrentCulture = culture;
                     CultureInfo.DefaultThreadCurrentUICulture = culture;
 
+                    _output?.WriteLine($"\t\t{test.Name}");
+
                     try
                     {
                         var @class = Activator.CreateInstance(test.DeclaringType);
@@ -129,6 +139,8 @@ namespace SlowTests.Issues
                     CultureInfo.CurrentUICulture = culture;
                     CultureInfo.DefaultThreadCurrentCulture = culture;
                     CultureInfo.DefaultThreadCurrentUICulture = culture;
+
+                    _output?.WriteLine($"\t\t{test.Name}");
 
                     try
                     {

@@ -148,7 +148,7 @@ namespace Raven.Server.Documents.Handlers
         {
             if (string.IsNullOrEmpty(format) == false && format.StartsWith("csv"))
             {
-                return new StreamCsvDocumentQueryResultWriter(response, responseBodyStream, context, propertiesArray, fileName);
+                return new StreamCsvDocumentQueryResultWriter(response, responseBodyStream, propertiesArray, fileName);
             }
 
             if (propertiesArray != null)
