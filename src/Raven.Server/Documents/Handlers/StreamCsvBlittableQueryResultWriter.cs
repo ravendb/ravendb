@@ -1,7 +1,6 @@
 ﻿using System.IO;
 using Microsoft.AspNetCore.Http;
 using Raven.Client.Json;
-using Raven.Server.ServerWide.Context;
 using Sparrow.Json;
 
 namespace Raven.Server.Documents.Handlers
@@ -12,7 +11,7 @@ namespace Raven.Server.Documents.Handlers
         {
             WriteCsvHeaderIfNeeded(res, false);
 
-            foreach ((var property, var path) in GetProperties())
+            foreach (var (_, path) in GetProperties())
             {
                 var o = new BlittablePath(path).Evaluate(res, false);
                 GetCsvWriter().WriteField(o?.ToString());
@@ -21,8 +20,8 @@ namespace Raven.Server.Documents.Handlers
             GetCsvWriter().NextRecord();
         }
 
-        public StreamCsvBlittableQueryResultWriter(HttpResponse response, Stream stream, DocumentsOperationContext context, string[] properties = null,
-            string csvFileName = "export") : base(response, stream, context, properties, csvFileName)
+        public StreamCsvBlittableQueryResultWriter(HttpResponse response, Stream stream, string[] properties = null,
+            string csvFileName = "export") : base(response, stream, properties, csvFileName)
         {
         }
     }

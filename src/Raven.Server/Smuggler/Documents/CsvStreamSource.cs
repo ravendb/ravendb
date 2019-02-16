@@ -60,8 +60,8 @@ namespace Raven.Server.Smuggler.Documents
             buildVersion = ServerVersion.DevBuildNumber;
             _reader = new StreamReader(_stream);
             _csvReader = new CsvReader(_reader);
-            _result = result;
             _csvReader.Configuration.Delimiter = ",";
+            _result = result;
             return new DisposableAction(() =>
             {
                 _reader.Dispose();

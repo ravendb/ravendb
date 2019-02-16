@@ -12,7 +12,7 @@ namespace Raven.Server.Documents.Handlers
         {
             WriteCsvHeaderIfNeeded(res.Data);
 
-            foreach ((var property, var path) in GetProperties())
+            foreach (var (property, path) in GetProperties())
             {
                 if (Constants.Documents.Metadata.Id == property)
                 {
@@ -28,7 +28,7 @@ namespace Raven.Server.Documents.Handlers
         }
 
         public StreamCsvDocumentQueryResultWriter(HttpResponse response, Stream stream, DocumentsOperationContext context, string[] properties = null,
-            string csvFileName = "export") : base(response, stream, context, properties, csvFileName)
+            string csvFileName = "export") : base(response, stream, properties, csvFileName)
         {
 
         }
