@@ -263,7 +263,10 @@ namespace Raven.Server.Documents.Revisions
             ref DocumentFlags documentFlags, out RevisionsCollectionConfiguration configuration)
         {
             configuration = GetRevisionsConfiguration(collectionName.Name);
-            
+
+            if (nonPersistentFlags.Contain(NonPersistentDocumentFlags.FromRevision))
+                return false;
+
             if (nonPersistentFlags.Contain(NonPersistentDocumentFlags.FromSmuggler))
             {
                 if (nonPersistentFlags.Contain(NonPersistentDocumentFlags.ByCountersUpdate))
@@ -339,60 +342,33 @@ namespace Raven.Server.Documents.Revisions
                 configuration = GetRevisionsConfiguration(collectionName.Name);
 
             using (DocumentIdWorker.GetLowerIdSliceAndStorageKey(context, id, out Slice lowerId, out Slice idPtr))
+            using (Slice.From(context.Allocator, changeVector, out Slice changeVectorSlice))
             {
                 var table = EnsureRevisionTableCreated(context.Transaction.InnerTransaction, collectionName);
+                var revisionExists = table.VerifyKeyExists(changeVectorSlice);
+                
+                // Revisions are immutable.
+                if (revisionExists)
+                    return;
 
                 // We want the revision's attachments to have a lower etag than the revision itself
-                if ((flags & DocumentFlags.HasAttachments) == DocumentFlags.HasAttachments)
+                if (flags.Contain(DocumentFlags.HasAttachments) &&
+                    flags.Contain(DocumentFlags.Revision) == false)
                 {
-                    if (flags.Contain(DocumentFlags.Revision) == false)
-                    {
-                        using (Slice.From(context.Allocator, changeVector, out Slice changeVectorSlice))
-                        {
-                            if (table.VerifyKeyExists(changeVectorSlice) == false)
-                            {
-                                _documentsStorage.AttachmentsStorage.RevisionAttachments(context, lowerId, changeVectorSlice);
-                            }
-                        }
-                    }
+                    _documentsStorage.AttachmentsStorage.RevisionAttachments(context, lowerId, changeVectorSlice);
                 }
 
-                if (document.TryGet(Constants.Documents.Metadata.Key, out BlittableJsonReaderObject metadata) &&
-                    metadata.TryGet(Constants.Documents.Metadata.Counters, out BlittableJsonReaderArray counterNames))
-                {
-                    var dvj = new DynamicJsonValue();
-                    for (var i = 0; i < counterNames.Length; i++)
-                    {
-                        var counter = counterNames[i].ToString();
-                        var val = _documentsStorage.CountersStorage.GetCounterValue(context, id, counter);
-                        if (val == null)
-                            continue;
-                        dvj[counter] = val.Value;
-                    }
-
-                    metadata.Modifications = new DynamicJsonValue(metadata)
-                    {
-                        [Constants.Documents.Metadata.RevisionCounters] = dvj
-                    };
-                    metadata.Modifications.Remove(Constants.Documents.Metadata.Counters);
-                    document.Modifications = new DynamicJsonValue(document)
-                    {
-                        [Constants.Documents.Metadata.Key] = metadata
-                    };
-
-                    document = context.ReadObject(document, id, BlittableJsonDocumentBuilder.UsageMode.ToDisk);
-                }
+                document = RecreateCountersIfNeeded(context, id, document);
 
                 PutFromRevisionIfChangeVectorIsGreater(context, document, id, changeVector, lastModifiedTicks, flags, nonPersistentFlags);
 
                 flags |= DocumentFlags.Revision;
-                var newEtag = _database.DocumentsStorage.GenerateNextEtag();
-                var newEtagSwapBytes = Bits.SwapBytes(newEtag);
+                var etag = _database.DocumentsStorage.GenerateNextEtag();
+                var newEtagSwapBytes = Bits.SwapBytes(etag);
 
                 using (table.Allocate(out TableValueBuilder tvb))
-                using (Slice.From(context.Allocator, changeVector, out var cv))
                 {
-                    tvb.Add(cv.Content.Ptr, cv.Size);
+                    tvb.Add(changeVectorSlice.Content.Ptr, changeVectorSlice.Size);
                     tvb.Add(lowerId);
                     tvb.Add(SpecialChars.RecordSeparator);
                     tvb.Add(newEtagSwapBytes);
@@ -411,14 +387,42 @@ namespace Raven.Server.Documents.Revisions
                         tvb.Add(0);
                     }
                     tvb.Add(Bits.SwapBytes(lastModifiedTicks));
-                    var isNew = table.Set(tvb);
-                    if (isNew == false)
-                        // It might be just an update from replication as we call this twice, both for the doc delete and for deleteRevision.
-                        return;
+                    table.Insert(tvb);
                 }
 
                 DeleteOldRevisions(context, table, lowerId, collectionName, configuration, nonPersistentFlags, changeVector, lastModifiedTicks);
             }
+        }
+
+        private BlittableJsonReaderObject RecreateCountersIfNeeded(DocumentsOperationContext context, string id, BlittableJsonReaderObject document)
+        {
+            if (document.TryGet(Constants.Documents.Metadata.Key, out BlittableJsonReaderObject metadata) &&
+                metadata.TryGet(Constants.Documents.Metadata.Counters, out BlittableJsonReaderArray counterNames))
+            {
+                var dvj = new DynamicJsonValue();
+                for (var i = 0; i < counterNames.Length; i++)
+                {
+                    var counter = counterNames[i].ToString();
+                    var val = _documentsStorage.CountersStorage.GetCounterValue(context, id, counter);
+                    if (val == null)
+                        continue;
+                    dvj[counter] = val.Value;
+                }
+
+                metadata.Modifications = new DynamicJsonValue(metadata)
+                {
+                    [Constants.Documents.Metadata.RevisionCounters] = dvj
+                };
+                metadata.Modifications.Remove(Constants.Documents.Metadata.Counters);
+                document.Modifications = new DynamicJsonValue(document)
+                {
+                    [Constants.Documents.Metadata.Key] = metadata
+                };
+
+                document = context.ReadObject(document, id, BlittableJsonDocumentBuilder.UsageMode.ToDisk);
+            }
+
+            return document;
         }
 
         private void PutFromRevisionIfChangeVectorIsGreater(
@@ -442,45 +446,23 @@ namespace Raven.Server.Documents.Revisions
 
             using (DocumentIdWorker.GetLowerIdSliceAndStorageKey(context, id, out var lowerId, out _))
             {
-                DocumentOrTombstone result;
-                try
+                var conflictStatus = ConflictsStorage.GetConflictStatusForDocument(context, id, changeVector, out _, out _);
+                if (conflictStatus != ConflictStatus.Update)
+                    return; // Do not modify the document.
+
+                if (flags.Contain(DocumentFlags.Resolved))
                 {
-                    result = _documentsStorage.GetDocumentOrTombstone(context, lowerId, throwOnConflict: true);
+                    _database.ReplicationLoader.ConflictResolver.SaveLocalAsRevision(context, id);
                 }
-                catch (DocumentConflictException)
+
+                if (document == null)
                 {
-                    // Do not modify the document.
+                    _documentsStorage.Delete(context, lowerId, id, null, lastModifiedTicks, changeVector, collectionName,
+                        nonPersistentFlags | NonPersistentDocumentFlags.FromRevision);
                     return;
                 }
-
-                if (result.Missing)
-                {
-                    PutFromRevision();
-                    return;
-                }
-
-                var docChangeVector = result.Document?.ChangeVector ?? result.Tombstone?.ChangeVector;
-                if (ChangeVectorUtils.GetConflictStatus(changeVector, docChangeVector) == ConflictStatus.Update)
-                {
-                    if (flags.Contain(DocumentFlags.Resolved))
-                    {
-                        _database.ReplicationLoader.ConflictResolver.SaveLocalAsRevision(context, id);
-                    }
-
-                    PutFromRevision();
-                }
-
-                void PutFromRevision()
-                {
-                    if (document == null)
-                    {
-                        _documentsStorage.Delete(context, lowerId, id, null, lastModifiedTicks, changeVector, collectionName,
-                            nonPersistentFlags | NonPersistentDocumentFlags.FromRevision);
-                        return;
-                    }
-                    _documentsStorage.Put(context, id, null, document, lastModifiedTicks, changeVector,
-                        flags.Strip(DocumentFlags.Revision), nonPersistentFlags | NonPersistentDocumentFlags.FromRevision);
-                }
+                _documentsStorage.Put(context, id, null, document, lastModifiedTicks, changeVector,
+                    flags.Strip(DocumentFlags.Revision), nonPersistentFlags | NonPersistentDocumentFlags.FromRevision);
             }
         }
 
@@ -744,51 +726,54 @@ namespace Raven.Server.Documents.Revisions
 
             var table = EnsureRevisionTableCreated(context.Transaction.InnerTransaction, collectionName);
 
-            if (configuration.Disabled == false && configuration.PurgeOnDelete)
+            using (Slice.From(context.Allocator, changeVector, out var changeVectorSlice))
             {
-                using (GetKeyPrefix(context, lowerId, out var prefixSlice))
-                {
-                    DeleteRevisions(context, table, prefixSlice, collectionName, long.MaxValue, null, changeVector, lastModifiedTicks);
-                    DeleteCountOfRevisions(context, prefixSlice);
-                }
-
-                return;
-            }
-
-            PutFromRevisionIfChangeVectorIsGreater(context, null, id, changeVector, lastModifiedTicks, flags, nonPersistentFlags, collectionName);
-
-            var newEtag = _database.DocumentsStorage.GenerateNextEtag();
-            var newEtagSwapBytes = Bits.SwapBytes(newEtag);
-
-            using (table.Allocate(out TableValueBuilder tvb))
-            using (Slice.From(context.Allocator, changeVector, out var cv))
-            {
-                tvb.Add(cv.Content.Ptr, cv.Size);
-                tvb.Add(lowerId);
-                tvb.Add(SpecialChars.RecordSeparator);
-                tvb.Add(newEtagSwapBytes);
-                tvb.Add(idSlice);
-                tvb.Add(deleteRevisionDocument.BasePointer, deleteRevisionDocument.Size);
-                tvb.Add((int)(DocumentFlags.DeleteRevision | flags));
-                tvb.Add(newEtagSwapBytes);
-                tvb.Add(lastModifiedTicks);
-                tvb.Add(context.GetTransactionMarker());
-                if (flags.Contain(DocumentFlags.Resolved))
-                {
-                    tvb.Add((int)DocumentFlags.Resolved);
-                }
-                else
-                {
-                    tvb.Add(0);
-                }
-                tvb.Add(Bits.SwapBytes(lastModifiedTicks));
-                var isNew = table.Set(tvb);
-                if (isNew == false)
-                    // It might be just an update from replication as we call this twice, both for the doc delete and for deleteRevision.
+                var revisionExists = table.VerifyKeyExists(changeVectorSlice);
+                // Revisions are immutable.
+                if (revisionExists)
                     return;
-            }
 
-            DeleteOldRevisions(context, table, lowerId, collectionName, configuration, nonPersistentFlags, changeVector, lastModifiedTicks);
+                if (configuration.Disabled == false && configuration.PurgeOnDelete)
+                {
+                    using (GetKeyPrefix(context, lowerId, out var prefixSlice))
+                    {
+                        DeleteRevisions(context, table, prefixSlice, collectionName, long.MaxValue, null, changeVector, lastModifiedTicks);
+                        DeleteCountOfRevisions(context, prefixSlice);
+                    }
+                    return;
+                }
+
+                PutFromRevisionIfChangeVectorIsGreater(context, null, id, changeVector, lastModifiedTicks, flags, nonPersistentFlags, collectionName);
+
+                var newEtag = _database.DocumentsStorage.GenerateNextEtag();
+                var newEtagSwapBytes = Bits.SwapBytes(newEtag);
+
+                using (table.Allocate(out TableValueBuilder tvb))
+                {
+                    tvb.Add(changeVectorSlice.Content.Ptr, changeVectorSlice.Size);
+                    tvb.Add(lowerId);
+                    tvb.Add(SpecialChars.RecordSeparator);
+                    tvb.Add(newEtagSwapBytes);
+                    tvb.Add(idSlice);
+                    tvb.Add(deleteRevisionDocument.BasePointer, deleteRevisionDocument.Size);
+                    tvb.Add((int)(DocumentFlags.DeleteRevision | flags));
+                    tvb.Add(newEtagSwapBytes);
+                    tvb.Add(lastModifiedTicks);
+                    tvb.Add(context.GetTransactionMarker());
+                    if (flags.Contain(DocumentFlags.Resolved))
+                    {
+                        tvb.Add((int)DocumentFlags.Resolved);
+                    }
+                    else
+                    {
+                        tvb.Add(0);
+                    }
+                    tvb.Add(Bits.SwapBytes(lastModifiedTicks));
+                    table.Insert(tvb);
+                }
+
+                DeleteOldRevisions(context, table, lowerId, collectionName, configuration, nonPersistentFlags, changeVector, lastModifiedTicks);
+            }
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]

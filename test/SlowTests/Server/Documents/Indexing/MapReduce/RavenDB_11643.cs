@@ -86,24 +86,32 @@ namespace SlowTests.Server.Documents.Indexing.MapReduce
                             
                             var writeOperation = new Lazy<IndexWriteOperation>(() => index.IndexPersistence.OpenIndexWriter(tx.InnerTransaction, null));
 
-                            var stats = new IndexingStatsScope(new IndexingRunStats());
-                            reducer.Execute(null, indexContext,
-                                writeOperation,
-                                stats, CancellationToken.None);
-
-                            Assert.DoesNotContain(pageNumber, mapReduceContext.FreedPages);
-
-                            var table = indexContext.Transaction.InnerTransaction.OpenTable(ReduceMapResultsBase<MapReduceIndexDefinition>.ReduceResultsSchema,
-                                ReduceMapResultsBase<MapReduceIndexDefinition>.PageNumberToReduceResultTableName);
-
-                            var page = Bits.SwapBytes(pageNumber);
-
-                            unsafe
+                            try
                             {
-                                using (Slice.External(indexContext.Allocator, (byte*)&page, sizeof(long), out Slice pageSlice))
+                                var stats = new IndexingStatsScope(new IndexingRunStats());
+                                reducer.Execute(null, indexContext,
+                                    writeOperation,
+                                    stats, CancellationToken.None);
+
+                                Assert.DoesNotContain(pageNumber, mapReduceContext.FreedPages);
+
+                                var table = indexContext.Transaction.InnerTransaction.OpenTable(ReduceMapResultsBase<MapReduceIndexDefinition>.ReduceResultsSchema,
+                                    ReduceMapResultsBase<MapReduceIndexDefinition>.PageNumberToReduceResultTableName);
+
+                                var page = Bits.SwapBytes(pageNumber);
+
+                                unsafe
                                 {
-                                    Assert.True(table.ReadByKey(pageSlice, out TableValueReader tvr));
+                                    using (Slice.External(indexContext.Allocator, (byte*)&page, sizeof(long), out Slice pageSlice))
+                                    {
+                                        Assert.True(table.ReadByKey(pageSlice, out TableValueReader tvr));
+                                    }
                                 }
+                            }
+                            finally
+                            {
+                                if (writeOperation.IsValueCreated)
+                                    writeOperation.Value.Dispose();
                             }
                         }
                     }

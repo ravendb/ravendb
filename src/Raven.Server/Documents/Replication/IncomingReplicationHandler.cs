@@ -1221,8 +1221,8 @@ namespace Raven.Server.Documents.Replication
                                     }
 
                                     var hasRemoteClusterTx = item.Flags.Contain(DocumentFlags.FromClusterTransaction);
-                                    var conflictStatus =
-                                        ConflictsStorage.GetConflictStatusForDocument(context, item, out var conflictingVector, out var hasLocalClusterTx);
+                                    var conflictStatus = ConflictsStorage.GetConflictStatusForDocument(context, item.Id, item.ChangeVector, out var conflictingVector,
+                                        out var hasLocalClusterTx);
 
                                     var flags = item.Flags;
                                     var resolvedDocument = document;

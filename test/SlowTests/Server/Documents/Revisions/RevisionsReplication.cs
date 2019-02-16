@@ -14,7 +14,10 @@ using FastTests.Server.Replication;
 using FastTests.Utils;
 using Raven.Client;
 using Raven.Client.Documents;
+using Raven.Client.Documents.Conventions;
 using Raven.Client.Documents.Operations;
+using Raven.Client.ServerWide;
+using Raven.Client.ServerWide.Operations;
 using Raven.Server.Documents;
 using Raven.Server.Documents.Handlers.Admin;
 using Raven.Tests.Core.Utils.Entities;
@@ -211,6 +214,199 @@ namespace SlowTests.Server.Documents.Revisions
             }
         }
 
+        [Fact]
+        public async Task ConflictedRevisionShouldReplicateBack()
+        {
+            using (var store1 = GetDocumentStore())
+            using (var store2 = GetDocumentStore())
+            {
+                await PutDocument(store1);
+                await PutDocument(store2);
+
+                await SetupReplicationAsync(store1, store2);
+                WaitForMarker(store1, store2);
+
+                await PutDocument(store1);
+                WaitForMarker(store1, store2);
+
+                await SetupReplicationAsync(store2, store1);
+                WaitForMarker(store2, store1);
+
+                using (var session1 = store1.OpenAsyncSession())
+                using (var session2 = store2.OpenAsyncSession())
+                {
+                    var doc1 = await session1.LoadAsync<User>("foo/bar");
+                    var doc2 = await session2.LoadAsync<User>("foo/bar");
+
+                    Assert.Equal(doc1.Name, doc2.Name);
+
+                    var rev1 = await session1.Advanced.Revisions.GetMetadataForAsync("foo/bar", pageSize: int.MaxValue);
+                    var rev2 = await session2.Advanced.Revisions.GetMetadataForAsync("foo/bar", pageSize: int.MaxValue);
+
+                    Assert.Equal(rev1.Count, rev2.Count);
+                }
+            }
+        }
+
+        [Fact]
+        public async Task ResolvedRevisionShouldReplicateBack()
+        {
+            using (var store1 = GetDocumentStore())
+            using (var store2 = GetDocumentStore())
+            {
+                await PutDocument(store1);
+                await PutDocument(store2);
+
+                await SetupReplicationAsync(store1, store2);
+                WaitForMarker(store1, store2);
+
+                await SetupReplicationAsync(store2, store1);
+                WaitForMarker(store2, store1);
+
+                using (var session1 = store1.OpenAsyncSession())
+                using (var session2 = store2.OpenAsyncSession())
+                {
+                    var doc1 = await session1.LoadAsync<User>("foo/bar");
+                    var doc2 = await session2.LoadAsync<User>("foo/bar");
+
+                    Assert.Equal(doc1.Name, doc2.Name);
+
+                    var rev1 = await session1.Advanced.Revisions.GetMetadataForAsync("foo/bar", pageSize: int.MaxValue);
+                    var rev2 = await session2.Advanced.Revisions.GetMetadataForAsync("foo/bar", pageSize: int.MaxValue);
+
+                    Assert.Equal(rev1.Count, rev2.Count);
+                }
+            }
+        }
+
+        [Fact]
+        public async Task IdenticalRevisionCountCluster()
+        {
+            var cluster = await CreateRaftCluster(3);
+            var database = GetDatabaseName();
+
+            using (var store1 = GetDocumentStore(new Options
+            {
+                Server = cluster.Nodes[0],
+                CreateDatabase = false,
+                ModifyDocumentStore = s => s.Conventions = new DocumentConventions
+                {
+                    DisableTopologyUpdates = true
+                },
+                ModifyDatabaseName = _ => database
+            }))
+            using (var store2 = GetDocumentStore(new Options
+            {
+                Server = cluster.Nodes[1],
+                CreateDatabase = false,
+                ModifyDocumentStore = s => s.Conventions = new DocumentConventions
+                {
+                    DisableTopologyUpdates = true
+                },
+                ModifyDatabaseName = _ => database
+            }))
+            {
+                store1.Maintenance.Server.Send(new CreateDatabaseOperation(new DatabaseRecord(database)
+                {
+                    Topology = new DatabaseTopology
+                    {
+                        Members = new List<string>
+                        {
+                            cluster.Nodes[0].ServerStore.NodeTag,
+                            cluster.Nodes[1].ServerStore.NodeTag
+                        }
+                    }
+                }, 2));
+
+                await Task.WhenAll(PutMultiDocuments(store1), PutMultiDocuments(store2));
+
+                WaitForMarker(store1, store2);
+                WaitForMarker(store2, store1);
+
+                using (var session1 = store1.OpenAsyncSession())
+                using (var session2 = store2.OpenAsyncSession())
+                {
+                    var doc1 = await session1.LoadAsync<User>("foo/bar");
+                    var doc2 = await session2.LoadAsync<User>("foo/bar");
+
+                    Assert.Equal(doc1.Name, doc2.Name);
+
+                    var rev1 = await session1.Advanced.Revisions.GetMetadataForAsync("foo/bar", pageSize: int.MaxValue);
+                    var rev2 = await session2.Advanced.Revisions.GetMetadataForAsync("foo/bar", pageSize: int.MaxValue);
+
+                    Assert.Equal(rev1.Count, rev2.Count);
+                }
+            }
+        }
+
+        [Fact]
+        public async Task IdenticalRevisionCountExternal()
+        {
+            using (var store1 = GetDocumentStore())
+            using (var store2 = GetDocumentStore())
+            {
+                await SetupReplicationAsync(store1, store2);
+                await SetupReplicationAsync(store2, store1);
+
+                await Task.WhenAll(PutMultiDocuments(store1), PutMultiDocuments(store2));
+
+                WaitForMarker(store1, store2);
+                WaitForMarker(store2, store1);
+
+                using (var session1 = store1.OpenAsyncSession())
+                using (var session2 = store2.OpenAsyncSession())
+                {
+                    var doc1 = await session1.LoadAsync<User>("foo/bar");
+                    var doc2 = await session2.LoadAsync<User>("foo/bar");
+
+                    Assert.Equal(doc1.Name, doc2.Name);
+
+                    var rev1 = await session1.Advanced.Revisions.GetMetadataForAsync("foo/bar", pageSize: int.MaxValue);
+                    var rev2 = await session2.Advanced.Revisions.GetMetadataForAsync("foo/bar", pageSize: int.MaxValue);
+
+                    Assert.Equal(rev1.Count, rev2.Count);
+                }
+            }
+        }
+
+        private static async Task PutDocument(DocumentStore store)
+        {
+            using (var session = store.OpenAsyncSession())
+            {
+                var user = new User { Name = RandomString(5) };
+                await session.StoreAsync(user, "foo/bar");
+                await session.SaveChangesAsync();
+            }
+        }
+
+        private async Task PutMultiDocuments(IDocumentStore store)
+        {
+            for (var i = 0; i < 10; i++)
+            {
+                try
+                {
+                    using (var session = store.OpenAsyncSession())
+                    {
+                        var loaded = await session.LoadAsync<User>("foo/bar");
+                        if (loaded == null)
+                        {
+                            loaded = new User();
+                            await session.StoreAsync(loaded, "foo/bar");
+                        }
+
+                        loaded.Name = RandomString(5);
+                        
+                        await session.StoreAsync(loaded, "foo/bar");
+                        await session.SaveChangesAsync();
+                    }
+                }
+                catch
+                {
+                    //
+                }
+            }
+        }
+
         [Theory]
         [InlineData(false)]
         [InlineData(true)]
@@ -305,6 +501,18 @@ namespace SlowTests.Server.Documents.Revisions
 
                 Assert.Equal(0, statistics.CountOfRevisionDocuments);
             }
+        }
+
+        private static readonly Random Random = new Random(357);
+        public static string RandomString(int length)
+        {
+            const string chars = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ1234567890 ";
+            var str = new char[length];
+            for (int i = 0; i < length; i++)
+            {
+                str[i] = chars[Random.Next(chars.Length)];
+            }
+            return new string(str);
         }
 
         public Task ReplicateExpiredAndDeletedRevisions(/*bool useSession*/)
