@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.IO;
+using System.Linq;
 using System.Threading.Tasks;
 using FastTests.Server.Documents.Revisions;
 using FastTests.Server.Replication;
@@ -166,8 +167,7 @@ namespace SlowTests.Server.Replication
             {
                 await GenerateConflictAndSetupMasterMasterReplication(storeA, storeB);
 
-                Assert.Equal(2, WaitUntilHasConflict(storeA, "foo/bar").Length);
-                Assert.Equal(2, WaitUntilHasConflict(storeB, "foo/bar").Length);
+               
 
                 using (var session = storeA.OpenSession())
                 {
@@ -238,10 +238,33 @@ namespace SlowTests.Server.Replication
                 using (var session = storeA.OpenSession())
                 {
                     Assert.Equal(3, WaitForValue(() => session.Advanced.Revisions.GetMetadataFor("foo/bar").Count, 3));
+
+                    var metadata = session.Advanced.Revisions.GetMetadataFor("foo/bar");
+                    var flags = metadata[0]["@flags"];
+                    Assert.Equal((DocumentFlags.Revision| DocumentFlags.HasRevisions | DocumentFlags.Resolved).ToString(), flags);
+                    flags = metadata[1]["@flags"];
+                    Assert.Equal((DocumentFlags.Revision | DocumentFlags.HasRevisions | DocumentFlags.FromReplication | DocumentFlags.Conflicted).ToString(), flags);
+                    flags = metadata[2]["@flags"];
+                    Assert.Equal((DocumentFlags.Revision | DocumentFlags.HasRevisions | DocumentFlags.Conflicted).ToString(), flags);
                 }
                 using (var session = storeB.OpenSession())
                 {
                     Assert.Equal(3, WaitForValue(() => session.Advanced.Revisions.GetMetadataFor("foo/bar").Count, 3));
+
+                    var metadata = session.Advanced.Revisions.GetMetadataFor("foo/bar");
+                    var flags = metadata[0]["@flags"];
+                    Assert.Equal((DocumentFlags.Revision | DocumentFlags.HasRevisions | DocumentFlags.FromReplication | DocumentFlags.Resolved).ToString(), flags);
+                    flags = metadata[1]["@flags"];
+                    if (configureVersioning)
+                    {
+                        Assert.Equal((DocumentFlags.Revision | DocumentFlags.HasRevisions | DocumentFlags.Conflicted).ToString(), flags);
+                    }
+                    else
+                    {
+                        Assert.Equal((DocumentFlags.Revision | DocumentFlags.HasRevisions | DocumentFlags.FromReplication | DocumentFlags.Conflicted).ToString(), flags);
+                    }
+                    flags = metadata[2]["@flags"];
+                    Assert.Equal((DocumentFlags.Revision | DocumentFlags.HasRevisions | DocumentFlags.FromReplication | DocumentFlags.Conflicted).ToString(), flags);
                 }
             }
         }
@@ -444,20 +467,25 @@ namespace SlowTests.Server.Replication
                 await RevisionsHelper.SetupRevisions(Server.ServerStore, storeB.Database);
             }
 
+            using (var session = storeB.OpenAsyncSession())
+            {
+                await session.StoreAsync(new Company(), "keep-conflicted-revision-insert-order");
+                await session.SaveChangesAsync();
+
+                await session.StoreAsync(user2, "foo/bar");
+                await session.SaveChangesAsync();
+            }
+
             using (var session = storeA.OpenAsyncSession())
             {
                 await session.StoreAsync(user, "foo/bar");
                 await session.SaveChangesAsync();
             }
 
-            using (var session = storeB.OpenAsyncSession())
-            {
-                await session.StoreAsync(user2, "foo/bar");
-                await session.SaveChangesAsync();
-            }
-
             await SetupReplicationAsync(storeA, storeB);
+            Assert.Equal(2, WaitUntilHasConflict(storeB, "foo/bar").Length);
             await SetupReplicationAsync(storeB, storeA);
+            Assert.Equal(2, WaitUntilHasConflict(storeA, "foo/bar").Length);
         }
 
         [Fact]
