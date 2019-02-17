@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Runtime.CompilerServices;
+using Raven.Client.Documents.Smuggler;
 
 namespace Raven.Server.Documents
 {
@@ -62,6 +63,12 @@ namespace Raven.Server.Documents
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public static bool Contain(this NonPersistentDocumentFlags current, NonPersistentDocumentFlags flag)
+        {
+            return (current & flag) == flag;
+        }
+
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public static bool Contain(this DatabaseRecordItemType current, DatabaseRecordItemType flag)
         {
             return (current & flag) == flag;
         }

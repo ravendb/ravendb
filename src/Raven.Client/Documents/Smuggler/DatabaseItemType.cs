@@ -27,7 +27,7 @@ namespace Raven.Client.Documents.Smuggler
     [Flags]
     public enum DatabaseRecordItemType
     {
-        NotSet = 0,
+        None = 0,
 
         ConflictSolverConfig = 1 << 0,
         Settings = 1 << 1,
