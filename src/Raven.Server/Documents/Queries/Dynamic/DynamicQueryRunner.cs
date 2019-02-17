@@ -126,23 +126,28 @@ namespace Raven.Server.Documents.Queries.Dynamic
                     return index;
             }
 
-            var map = DynamicQueryMapping.Create(query);
+            (index, _) = await CreateAutoIndexIfNeeded(query, createAutoIndexIfNoMatchIsFound, customStalenessWaitTimeout, docsContext, token);
 
-            if (TryMatchExistingIndexToQuery(map, docsContext, out index) == false)
+            return index;
+        }
+
+        public async Task<(Index Index, bool HasCreatedAutoIndex)> CreateAutoIndexIfNeeded(IndexQueryServerSide query, bool createAutoIndexIfNoMatchIsFound, TimeSpan? customStalenessWaitTimeout,
+            DocumentsOperationContext docsContext, CancellationToken token)
+        {
+            var map = DynamicQueryMapping.Create(query);
+            bool hasCreatedAutoIndex = false;
+            if (TryMatchExistingIndexToQuery(map, docsContext, out var index) == false)
             {
                 if (createAutoIndexIfNoMatchIsFound == false)
                     throw new IndexDoesNotExistException("Could not find index for a given query.");
 
                 var definition = map.CreateAutoIndexDefinition();
-
                 index = await _indexStore.CreateIndex(definition);
+                hasCreatedAutoIndex = true;
 
                 if (query.WaitForNonStaleResultsTimeout.HasValue == false)
                 {
-                    if (customStalenessWaitTimeout.HasValue)
-                        query.WaitForNonStaleResultsTimeout = customStalenessWaitTimeout.Value;
-                    else
-                        query.WaitForNonStaleResultsTimeout = TimeSpan.FromSeconds(15); // allow new auto indexes to have some results
+                    query.WaitForNonStaleResultsTimeout = customStalenessWaitTimeout ?? TimeSpan.FromSeconds(15);
                 }
 
                 var t = CleanupSupersededAutoIndexes(index, map, token)
@@ -158,7 +163,7 @@ namespace Raven.Server.Documents.Queries.Dynamic
                                 _indexStore.Logger.Info("Failed to delete superseded indexes for index " + index.Name);
                             }
                         }
-                    });
+                    }, token);
 
                 if (query.WaitForNonStaleResults &&
                     Database.Configuration.Indexing.TimeToWaitBeforeDeletingAutoIndexMarkedAsIdle.AsTimeSpan ==
@@ -166,7 +171,7 @@ namespace Raven.Server.Documents.Queries.Dynamic
                     await t; // this is used in testing, mainly
             }
 
-            return index;
+            return (index, hasCreatedAutoIndex);
         }
 
         private async Task CleanupSupersededAutoIndexes(Index index, DynamicQueryMapping map, CancellationToken token)

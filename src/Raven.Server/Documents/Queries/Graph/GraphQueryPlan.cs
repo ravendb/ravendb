@@ -259,6 +259,33 @@ namespace Raven.Server.Documents.Queries.Graph
             return list;
         }
 
+        public async Task CreateAutoIndexesAndWaitIfNecessary()
+        {
+            var queryStepsGatherer = new QueryQueryStepGatherer();
+            queryStepsGatherer.Visit(RootQueryStep);
+            
+            if (_context.Transaction == null || _context.Transaction.Disposed)
+                _context.OpenReadTransaction();
+
+            var etag = DocumentsStorage.ReadLastEtag(_context.Transaction.InnerTransaction);
+            var queryDuration = Stopwatch.StartNew();
+            var indexes = new List<Index>();
+            var indexWaiters = new Dictionary<Index, (IndexQueryServerSide, AsyncWaitForIndexing)>();
+            foreach (var qqs in queryStepsGatherer.QuerySteps)
+            {
+                var indexQuery = new IndexQueryServerSide(qqs.Query.ToString(), qqs.QueryParameters);
+                var indexCreationInfo = await _dynamicQueryRunner.CreateAutoIndexIfNeeded(indexQuery, true, null, _context, _database.DatabaseShutdown);
+                if (indexCreationInfo.HasCreatedAutoIndex) //wait for non-stale only IF we just created an auto-index
+                {
+                    indexes.Add(indexCreationInfo.Index);
+                    var queryTimeout = indexQuery.WaitForNonStaleResultsTimeout ?? Index.DefaultWaitForNonStaleResultsTimeout;
+                    indexWaiters.Add(indexCreationInfo.Index, (indexQuery, new AsyncWaitForIndexing(queryDuration, queryTimeout, indexCreationInfo.Index)));
+                }
+            }
+
+            await WaitForNonStaleResultsInternal(etag, indexes, indexWaiters);
+        }
+
         public async Task<bool> WaitForNonStaleResults()
         {
             if (_context.Transaction == null || _context.Transaction.Disposed)
@@ -269,13 +296,13 @@ namespace Raven.Server.Documents.Queries.Graph
             var indexNamesGatherer = new GraphQueryIndexNamesGatherer();
             indexNamesGatherer.Visit(RootQueryStep);
             var indexes = new List<Index>();
-            Dictionary<Index, AsyncWaitForIndexing> indexWaiters = new Dictionary<Index, AsyncWaitForIndexing>();
+            var indexWaiters = new Dictionary<Index, (IndexQueryServerSide, AsyncWaitForIndexing)>();
             var queryTimeout = _query.WaitForNonStaleResultsTimeout ?? Index.DefaultWaitForNonStaleResultsTimeout;
             foreach (var indexName in indexNamesGatherer.Indexes)
             {
                 var index = _database.IndexStore.GetIndex(indexName);
                 indexes.Add(index);
-                indexWaiters.Add(index, new AsyncWaitForIndexing(queryDuration, queryTimeout, index));
+                indexWaiters.Add(index, (_query, new AsyncWaitForIndexing(queryDuration, queryTimeout, index)));
             }
 
             foreach (var qqs in indexNamesGatherer.QueryStepsWithoutExplicitIndex)
@@ -285,10 +312,17 @@ namespace Raven.Server.Documents.Queries.Graph
                 var query = new IndexQueryServerSide(qqs.Query.ToString(), qqs.QueryParameters);
                 var index = await _dynamicQueryRunner.MatchIndex(query, true, null, _context, _database.DatabaseShutdown);
                 indexes.Add(index);
-                indexWaiters.Add(index, new AsyncWaitForIndexing(queryDuration, queryTimeout, index));
+                indexWaiters.Add(index, (_query, new AsyncWaitForIndexing(queryDuration, queryTimeout, index)));
             }
 
+            return await WaitForNonStaleResultsInternal(etag, indexes, indexWaiters);
+        }
+
+        private async Task<bool> WaitForNonStaleResultsInternal(long etag, List<Index> indexes, Dictionary<Index, (IndexQueryServerSide Query, AsyncWaitForIndexing Waiter)> indexWaiters)
+        {
             var staleIndexes = indexes;
+            var frozenAwaiters = new Dictionary<Index, AsyncManualResetEvent.FrozenAwaiter>();
+
             while (true)
             {
                 //If we found a stale index we already disposed of the old transaction
@@ -296,11 +330,12 @@ namespace Raven.Server.Documents.Queries.Graph
                     _context.OpenReadTransaction();
 
                 //see http://issues.hibernatingrhinos.com/issue/RavenDB-5576
-                var frozenAwaiters = new Dictionary<Index, AsyncManualResetEvent.FrozenAwaiter>();
+                frozenAwaiters.Clear();
                 foreach (var index in staleIndexes)
                 {
                     frozenAwaiters.Add(index, index.GetIndexingBatchAwaiter());
                 }
+
                 staleIndexes = GetStaleIndexes(staleIndexes, etag);
                 //All indexes are not stale we can continue without waiting
                 if (staleIndexes.Count == 0)
@@ -314,15 +349,17 @@ namespace Raven.Server.Documents.Queries.Graph
                 //here we will just wait for the first stale index we find
                 foreach (var index in staleIndexes)
                 {
-                    var indexAwaiter = indexWaiters[index];
+                    var indexAwaiter = indexWaiters[index].Waiter;
+                    var query = indexWaiters[index].Query;
+
                     //if any index timedout we are stale
                     indexTimedout |= indexAwaiter.TimeoutExceeded;
 
-                    if (Index.WillResultBeAcceptable(true, _query, indexWaiters[index]) == false)
+                    if (Index.WillResultBeAcceptable(true, query, indexWaiters[index].Waiter) == false)                        
                     {
-                        _context.CloseTransaction();                        
+                        _context.CloseTransaction();
                         await indexAwaiter.WaitForIndexingAsync(frozenAwaiters[index]).ConfigureAwait(false);
-                        foundStaleIndex = true;                        
+                        foundStaleIndex = true;
                         break;
                     }
                 }

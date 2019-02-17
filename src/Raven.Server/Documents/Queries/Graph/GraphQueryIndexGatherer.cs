@@ -1,10 +1,5 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Text;
-using JetBrains.Annotations;
+﻿using System.Collections.Generic;
 using NCrontab.Advanced.Extensions;
-using Raven.Server.Documents.Indexes;
-using Raven.Server.Documents.Queries.Dynamic;
 
 namespace Raven.Server.Documents.Queries.Graph
 {
