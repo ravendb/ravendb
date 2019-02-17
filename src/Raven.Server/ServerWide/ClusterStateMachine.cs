@@ -63,6 +63,7 @@ namespace Raven.Server.ServerWide
         private static readonly TableSchema ItemsSchema;
         private static readonly TableSchema CompareExchangeSchema;
         public static readonly TableSchema TransactionCommandsSchema;
+        public static readonly TableSchema CertificatesSchema;
 
         public enum UniqueItems
         {
@@ -76,6 +77,7 @@ namespace Raven.Server.ServerWide
         public static readonly Slice Identities;
         public static readonly Slice TransactionCommands;
         public static readonly Slice TransactionCommandsCountPerDatabase;
+        public static readonly Slice Certificates;
 
         static ClusterStateMachine()
         {
@@ -86,6 +88,7 @@ namespace Raven.Server.ServerWide
                 Slice.From(ctx, "Identities", out Identities);
                 Slice.From(ctx, "TransactionCommands", out TransactionCommands);
                 Slice.From(ctx, "TransactionCommandsIndex", out TransactionCommandsCountPerDatabase);
+                Slice.From(ctx, "Certificates", out Certificates);
             }
             ItemsSchema = new TableSchema();
 
@@ -109,6 +112,18 @@ namespace Raven.Server.ServerWide
             {
                 StartIndex = 0,
                 Count = 1, // Database, Separator, Commands count
+            });
+
+            CertificatesSchema = new TableSchema();
+            CertificatesSchema.DefineKey(new TableSchema.SchemaIndexDef()
+            {
+                StartIndex = 0,
+                Count = 1,
+            });
+            CertificatesSchema.DefineKey(new TableSchema.SchemaIndexDef()
+            {
+                StartIndex = 1,
+                Count = 1,
             });
         }
 
@@ -1110,6 +1125,10 @@ namespace Raven.Server.ServerWide
                        || slice.Content.Match(TransactionCommands.Content)
                        || slice.Content.Match(TransactionCommandsCountPerDatabase.Content);
 
+            if (ClusterCommandsVersionManager.CurrentClusterMinimalVersion >= ClusterCommandsVersionManager.Base42CommandsVersion)
+                return baseVersion
+                       || slice.Content.Match(Certificates.Content);
+
             return baseVersion;
         }
 
@@ -1119,9 +1138,11 @@ namespace Raven.Server.ServerWide
             ItemsSchema.Create(context.Transaction.InnerTransaction, Items, 32);
             CompareExchangeSchema.Create(context.Transaction.InnerTransaction, CompareExchange, 32);
             TransactionCommandsSchema.Create(context.Transaction.InnerTransaction, TransactionCommands, 32);
+            CertificatesSchema.Create(context.Transaction.InnerTransaction, TransactionCommands, 32);
             context.Transaction.InnerTransaction.CreateTree(TransactionCommandsCountPerDatabase);
             context.Transaction.InnerTransaction.CreateTree(LocalNodeStateTreeName);
             context.Transaction.InnerTransaction.CreateTree(Identities);
+            context.Transaction.InnerTransaction.CreateTree(Certificates);
             parent.StateChanged += OnStateChange;
         }
 
