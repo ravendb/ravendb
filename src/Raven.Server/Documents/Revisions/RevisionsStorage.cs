@@ -332,15 +332,17 @@ namespace Raven.Server.Documents.Revisions
             if (configuration == null)
                 configuration = GetRevisionsConfiguration(collectionName.Name);
 
-            using (DocumentIdWorker.GetLowerIdSliceAndStorageKey(context, id, out Slice lowerId, out Slice idPtr))
+            using (DocumentIdWorker.GetLowerIdSliceAndStorageKey(context, id, out Slice lowerId, out Slice idSlice))
             using (Slice.From(context.Allocator, changeVector, out Slice changeVectorSlice))
             {
                 var table = EnsureRevisionTableCreated(context.Transaction.InnerTransaction, collectionName);
-                var revisionExists = table.VerifyKeyExists(changeVectorSlice);
+                var revisionExists = table.ReadByKey(changeVectorSlice, out var tvr);
                 
-                // Revisions are immutable.
                 if (revisionExists)
+                {
+                    MarkRevisionsAsConflictedIfNeeded(context, lowerId, idSlice, flags, tvr, table, changeVectorSlice);
                     return;
+                }
 
                 // We want the revision's attachments to have a lower etag than the revision itself
                 if (flags.Contain(DocumentFlags.HasAttachments) &&
@@ -363,7 +365,7 @@ namespace Raven.Server.Documents.Revisions
                     tvb.Add(lowerId);
                     tvb.Add(SpecialChars.RecordSeparator);
                     tvb.Add(newEtagSwapBytes);
-                    tvb.Add(idPtr);
+                    tvb.Add(idSlice);
                     tvb.Add(document.BasePointer, document.Size);
                     tvb.Add((int)flags);
                     tvb.Add(NotDeletedRevisionMarker);
@@ -721,10 +723,13 @@ namespace Raven.Server.Documents.Revisions
 
             using (Slice.From(context.Allocator, changeVector, out var changeVectorSlice))
             {
-                var revisionExists = table.VerifyKeyExists(changeVectorSlice);
+                var revisionExists = table.ReadByKey(changeVectorSlice,out var tvr);
                 // Revisions are immutable.
                 if (revisionExists)
+                {
+                    MarkRevisionsAsConflictedIfNeeded(context, lowerId, idSlice, flags, tvr, table, changeVectorSlice);
                     return;
+                }
 
                 if (configuration.Disabled == false && configuration.PurgeOnDelete)
                 {
@@ -766,6 +771,52 @@ namespace Raven.Server.Documents.Revisions
                 }
 
                 DeleteOldRevisions(context, table, lowerId, collectionName, configuration, nonPersistentFlags, changeVector, lastModifiedTicks);
+            }
+        }
+
+        private void MarkRevisionsAsConflictedIfNeeded(DocumentsOperationContext context, Slice lowerId, Slice idSlice, DocumentFlags flags, TableValueReader tvr, Table table,
+            Slice changeVectorSlice)
+        {
+            // Revisions are immutable, but if there was a conflict we need to update the flags accordingly with the `Conflicted` flag.
+            if (flags.Contain(DocumentFlags.Conflicted))
+            {
+                var currentFlags = TableValueToFlags((int)RevisionsTable.Flags, ref tvr);
+                if (currentFlags.Contain(DocumentFlags.Conflicted) == false)
+                {
+                    MarkRevisionAsConflicted(context, tvr, table, changeVectorSlice, lowerId, idSlice);
+                }
+            }
+        }
+
+        private void MarkRevisionAsConflicted(DocumentsOperationContext context, TableValueReader tvr, Table table, Slice changeVectorSlice, Slice lowerId, Slice idSlice)
+        {
+            var revisionCopy = context.GetMemory(tvr.Size);
+            // we have to copy it to the side because we might do a defrag during update, and that
+            // can cause corruption if we read from the old value (which we just deleted)
+            Memory.Copy(revisionCopy.Address, tvr.Pointer, tvr.Size);
+            var copyTvr = new TableValueReader(revisionCopy.Address, tvr.Size);
+
+            var revision = TableValueToRevision(context, ref copyTvr);
+            var flags = revision.Flags | DocumentFlags.Conflicted;
+            var newEtag = _database.DocumentsStorage.GenerateNextEtag();
+            var deletedEtag = TableValueToEtag((int)RevisionsTable.DeletedEtag, ref tvr);
+            var resolvedFlag = TableValueToFlags((int)RevisionsTable.Resolved, ref tvr);
+
+            using (table.Allocate(out TableValueBuilder tvb))
+            {
+                tvb.Add(changeVectorSlice.Content.Ptr, changeVectorSlice.Size);
+                tvb.Add(lowerId);
+                tvb.Add(SpecialChars.RecordSeparator);
+                tvb.Add(Bits.SwapBytes(newEtag));
+                tvb.Add(idSlice);
+                tvb.Add(revision.Data.BasePointer, revision.Data.Size);
+                tvb.Add((int)flags);
+                tvb.Add(deletedEtag);
+                tvb.Add(revision.LastModified.Ticks);
+                tvb.Add(context.GetTransactionMarker());
+                tvb.Add((int)resolvedFlag);
+                tvb.Add(Bits.SwapBytes(revision.LastModified.Ticks));
+                table.Set(tvb);
             }
         }
 
