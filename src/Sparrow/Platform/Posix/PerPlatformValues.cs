@@ -8,10 +8,11 @@ namespace Voron.Platform.Posix
         public class SyscallNumbers
         {
             public static long SYS_gettid =
-            (RuntimeInformation.OSArchitecture == Architecture.Arm ||
-             RuntimeInformation.OSArchitecture == Architecture.Arm64)
+            (RuntimeInformation.OSArchitecture == Architecture.Arm)
                 ? 224
-                : 186;
+                : (RuntimeInformation.OSArchitecture == Architecture.Arm64)
+                    ? 178
+                    : 186;
         }
 
         public class OpenFlags

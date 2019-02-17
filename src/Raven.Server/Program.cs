@@ -17,6 +17,8 @@ using Raven.Server.Utils.Cli;
 using Sparrow;
 using Sparrow.Logging;
 using Sparrow.Platform;
+using Sparrow.Utils;
+using Voron.Platform;
 
 namespace Raven.Server
 {
@@ -26,6 +28,8 @@ namespace Raven.Server
 
         public static int Main(string[] args)
         {
+            NativeMemory.GetCurrentUnmanagedThreadId = () => (ulong)Pal.rvn_get_current_thread_id();
+
             UseOnlyInvariantCultureInRavenDB();
 
             SetCurrentDirectoryToServerPath();

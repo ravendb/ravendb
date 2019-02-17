@@ -29,6 +29,7 @@ using Sparrow.Logging;
 using Sparrow.Platform;
 using Sparrow.Threading;
 using Sparrow.Utils;
+using Voron.Platform;
 using Xunit;
 
 namespace FastTests
@@ -67,6 +68,7 @@ namespace FastTests
 
         static TestBase()
         {
+            NativeMemory.GetCurrentUnmanagedThreadId = () => (ulong)Pal.rvn_get_current_thread_id();
 #if DEBUG2
             TaskScheduler.UnobservedTaskException += (sender, args) =>
             {

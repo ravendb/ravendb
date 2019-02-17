@@ -232,5 +232,7 @@ namespace Voron.Platform
         [DllImport(LIBRVNPAL, SetLastError = true)]
         public static extern Int32 rvn_get_pal_ver();
 
+        [DllImport(LIBRVNPAL, SetLastError = true)]
+        public static extern Int64 rvn_get_current_thread_id();
     }
 }
