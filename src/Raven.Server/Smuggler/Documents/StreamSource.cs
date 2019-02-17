@@ -270,30 +270,23 @@ namespace Raven.Server.Smuggler.Documents
                     }
                 }
 
-                if (reader.TryGet(nameof(databaseRecord.HubPullReplications), out BlittableJsonReaderObject hubPullReplications) &&
+                if (reader.TryGet(nameof(databaseRecord.HubPullReplications), out BlittableJsonReaderArray hubPullReplications) &&
                     hubPullReplications != null)
                 {
                     databaseRecord.HubPullReplications = new List<PullReplicationDefinition>();
-                    foreach (var pullReplication in hubPullReplications.GetPropertyNames())
+                    foreach (BlittableJsonReaderObject pullReplication in hubPullReplications)
                     {
-                        if (hubPullReplications.TryGet(pullReplication, out BlittableJsonReaderObject pullReplicationDefinition) == false)
-                        {
-                            if (_log.IsInfoEnabled)
-                                _log.Info($"Wasn't able to import the pull Replication {pullReplication} from smuggler file. Skipping.");
-
-                            continue;
-                        }
-
                         try
                         {
-                            var hub = JsonDeserializationCluster.PullReplicationDefinition(pullReplicationDefinition);
+                            var hub = JsonDeserializationCluster.PullReplicationDefinition(pullReplication);
                             databaseRecord.HubPullReplications.Add(hub);
                         }
                         catch (Exception e)
                         {
                             if (_log.IsInfoEnabled)
-                                _log.Info("Wasn't able to import hub pull replication configuration from smuggler file. Skipping.", e);
+                                _log.Info($"Wasn't able to import the pull Replication {pullReplication} configuration from smuggler file. Skipping.", e);
                         }
+
                     }
                 }
 

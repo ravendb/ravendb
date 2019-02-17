@@ -18,6 +18,7 @@ using Raven.Client.Documents.Queries.Sorting;
 using Raven.Client.Documents.Smuggler;
 using Raven.Client.ServerWide;
 using Raven.Client.Util;
+using Raven.Server.Config;
 using Raven.Server.Documents;
 using Raven.Server.Documents.Indexes;
 using Raven.Server.Json;
@@ -67,7 +68,7 @@ namespace Raven.Server.Smuggler.Documents
 
         public IDatabaseRecordActions DatabaseRecord()
         {
-            return new DatabaseRecordActions(_writer);
+            return new DatabaseRecordActions(_writer, _context);
         }
 
         public IDocumentActions Documents()
@@ -113,10 +114,12 @@ namespace Raven.Server.Smuggler.Documents
         private class DatabaseRecordActions : IDatabaseRecordActions
         {
             private readonly BlittableJsonTextWriter _writer;
+            private readonly JsonOperationContext _context;
 
-            public DatabaseRecordActions(BlittableJsonTextWriter writer)
+            public DatabaseRecordActions(BlittableJsonTextWriter writer, JsonOperationContext context)
             {
                 _writer = writer;
+                _context = context;
 
                 _writer.WriteComma();
                 _writer.WritePropertyName(nameof(DatabaseItemType.DatabaseRecord));
@@ -132,42 +135,42 @@ namespace Raven.Server.Smuggler.Documents
                 _writer.WritePropertyName(nameof(databaseRecord.Encrypted));
                 _writer.WriteBool(databaseRecord.Encrypted);
 
-                if ((databaseRecordItemType & DatabaseRecordItemType.ConflictSolverConfig) != 0)
+                if (databaseRecordItemType.Contain(DatabaseRecordItemType.ConflictSolverConfig))
                 {
                     _writer.WriteComma();
                     _writer.WritePropertyName(nameof(databaseRecord.ConflictSolverConfig));
                     WriteConflictSolver(databaseRecord.ConflictSolverConfig);
                 }
 
-                if ((databaseRecordItemType & DatabaseRecordItemType.Settings) != 0)
+                if (databaseRecordItemType.Contain(DatabaseRecordItemType.Settings))
                 {
                     _writer.WriteComma();
                     _writer.WritePropertyName(nameof(databaseRecord.Settings));
                     WriteSettings(databaseRecord.Settings);
                 }
 
-                if ((databaseRecordItemType & DatabaseRecordItemType.Revisions) != 0)
+                if (databaseRecordItemType.Contain(DatabaseRecordItemType.Revisions))
                 {
                     _writer.WriteComma();
                     _writer.WritePropertyName(nameof(databaseRecord.Revisions));
                     WriteRevisions(databaseRecord.Revisions);
                 }
 
-                if ((databaseRecordItemType & DatabaseRecordItemType.Expiration) != 0)
+                if (databaseRecordItemType.Contain(DatabaseRecordItemType.Expiration))
                 {
                     _writer.WriteComma();
                     _writer.WritePropertyName(nameof(databaseRecord.Expiration));
                     WriteExpiration(databaseRecord.Expiration);
                 }
 
-                if ((databaseRecordItemType & DatabaseRecordItemType.Client) != 0)
+                if (databaseRecordItemType.Contain(DatabaseRecordItemType.Client))
                 {
                     _writer.WriteComma();
                     _writer.WritePropertyName(nameof(databaseRecord.Client));
                     WriteClientConfiguration(databaseRecord.Client);
                 }
 
-                if ((databaseRecordItemType & DatabaseRecordItemType.Sorters) != 0)
+                if (databaseRecordItemType.Contain(DatabaseRecordItemType.Sorters))
                 {
                     _writer.WriteComma();
                     _writer.WritePropertyName(nameof(databaseRecord.Sorters));
@@ -179,56 +182,56 @@ namespace Raven.Server.Smuggler.Documents
                     case AuthorizationStatus.DatabaseAdmin:
                     case AuthorizationStatus.Operator:
                     case AuthorizationStatus.ClusterAdmin:
-                        if ((databaseRecordItemType & DatabaseRecordItemType.RavenConnectionStrings) != 0)
+                        if (databaseRecordItemType.Contain(DatabaseRecordItemType.RavenConnectionStrings))
                         {
                             _writer.WriteComma();
                             _writer.WritePropertyName(nameof(databaseRecord.RavenConnectionStrings));
                             WriteRavenConnectionStrings(databaseRecord.RavenConnectionStrings);
                         }
 
-                        if ((databaseRecordItemType & DatabaseRecordItemType.SqlConnectionStrings) != 0)
+                        if (databaseRecordItemType.Contain(DatabaseRecordItemType.SqlConnectionStrings))
                         {
                             _writer.WriteComma();
                             _writer.WritePropertyName(nameof(databaseRecord.SqlConnectionStrings));
                             WriteSqlConnectionStrings(databaseRecord.SqlConnectionStrings);
                         }
 
-                        if ((databaseRecordItemType & DatabaseRecordItemType.PeriodicBackups) != 0)
+                        if (databaseRecordItemType.Contain(DatabaseRecordItemType.PeriodicBackups))
                         {
                             _writer.WriteComma();
                             _writer.WritePropertyName(nameof(databaseRecord.PeriodicBackups));
                             WritePeriodicBackups(databaseRecord.PeriodicBackups);
                         }
 
-                        if ((databaseRecordItemType & DatabaseRecordItemType.ExternalReplications) != 0)
+                        if (databaseRecordItemType.Contain(DatabaseRecordItemType.ExternalReplications))
                         {
                             _writer.WriteComma();
                             _writer.WritePropertyName(nameof(databaseRecord.ExternalReplications));
                             WriteExternalReplications(databaseRecord.ExternalReplications);
                         }
 
-                        if ((databaseRecordItemType & DatabaseRecordItemType.RavenEtls) != 0)
+                        if (databaseRecordItemType.Contain(DatabaseRecordItemType.RavenEtls))
                         {
                             _writer.WriteComma();
                             _writer.WritePropertyName(nameof(databaseRecord.RavenEtls));
                             WriteRavenEtls(databaseRecord.RavenEtls);
                         }
 
-                        if ((databaseRecordItemType & DatabaseRecordItemType.SqlEtls) != 0)
+                        if (databaseRecordItemType.Contain(DatabaseRecordItemType.SqlEtls))
                         {
                             _writer.WriteComma();
                             _writer.WritePropertyName(nameof(databaseRecord.SqlEtls));
                             WriteSqlEtls(databaseRecord.SqlEtls);
                         }
 
-                        if ((databaseRecordItemType & DatabaseRecordItemType.HubPullReplications) != 0)
+                        if (databaseRecordItemType.Contain(DatabaseRecordItemType.HubPullReplications))
                         {
                             _writer.WriteComma();
                             _writer.WritePropertyName(nameof(databaseRecord.HubPullReplications));
                             WriteHubPullReplications(databaseRecord.HubPullReplications);
                         }
 
-                        if ((databaseRecordItemType & DatabaseRecordItemType.SinkPullReplications) != 0)
+                        if (databaseRecordItemType.Contain(DatabaseRecordItemType.SinkPullReplications))
                         {
                             _writer.WriteComma();
                             _writer.WritePropertyName(nameof(databaseRecord.SinkPullReplications));
@@ -246,55 +249,17 @@ namespace Raven.Server.Smuggler.Documents
                     _writer.WriteNull();
                     return;
                 }
-                _writer.WriteStartObject();
+                _writer.WriteStartArray();
                 var first = true;
                 foreach (var pullReplication in hubPullReplications)
                 {
                     if (first == false)
                         _writer.WriteComma();
                     first = false;
-                    _writer.WritePropertyName(pullReplication.Name);
-                    _writer.WriteStartObject();
 
-                    _writer.WritePropertyName(nameof(pullReplication.Certificates));
-
-                    var first2 = true;
-                    _writer.WriteStartObject();
-                    foreach (var pullReplicationCertificate in pullReplication.Certificates)
-                    {
-                        if (first2 == false)
-                            _writer.WriteComma();
-                        first2 = false;
-
-                        _writer.WritePropertyName(pullReplicationCertificate.Key);
-                        _writer.WriteString(pullReplicationCertificate.Value);
-                    }
-                    _writer.WriteEndObject();
-
-                    _writer.WriteComma();
-
-                    _writer.WritePropertyName(nameof(pullReplication.Disabled));
-                    _writer.WriteBool(pullReplication.Disabled);
-                    _writer.WriteComma();
-
-                    _writer.WritePropertyName(nameof(pullReplication.Name));
-                    _writer.WriteString(pullReplication.Name);
-                    _writer.WriteComma();
-
-                    _writer.WritePropertyName(nameof(pullReplication.MentorNode));
-                    _writer.WriteString(pullReplication.MentorNode);
-                    _writer.WriteComma();
-
-                    _writer.WritePropertyName(nameof(pullReplication.TaskId));
-                    _writer.WriteDouble(pullReplication.TaskId);
-                    _writer.WriteComma();
-
-                    _writer.WritePropertyName(nameof(pullReplication.DelayReplicationFor));
-                    _writer.WriteString(pullReplication.DelayReplicationFor.ToString());
-
-                    _writer.WriteEndObject();
+                    _context.Write(_writer, pullReplication.ToJson());
                 }
-                _writer.WriteEndObject();
+                _writer.WriteEndArray();
             }
 
             private void WriteSinkPullReplications(List<PullReplicationAsSink> sinkPullReplications)
@@ -312,44 +277,8 @@ namespace Raven.Server.Smuggler.Documents
                         _writer.WriteComma();
                     first = false;
 
-                    _writer.WriteStartObject();
+                    _context.Write(_writer, pullReplication.ToJson());
 
-                    _writer.WritePropertyName(nameof(pullReplication.CertificateWithPrivateKey));
-                    _writer.WriteString(pullReplication.CertificateWithPrivateKey);
-                    _writer.WriteComma();
-
-                    _writer.WritePropertyName(nameof(pullReplication.CertificatePassword));
-                    _writer.WriteString(pullReplication.CertificatePassword);
-                    _writer.WriteComma();
-
-                    _writer.WritePropertyName(nameof(pullReplication.HubDefinitionName));
-                    _writer.WriteString(pullReplication.HubDefinitionName);
-                    _writer.WriteComma();
-
-                    _writer.WritePropertyName(nameof(pullReplication.Name));
-                    _writer.WriteString(pullReplication.Name);
-                    _writer.WriteComma();
-
-                    _writer.WritePropertyName(nameof(pullReplication.ConnectionStringName));
-                    _writer.WriteString(pullReplication.ConnectionStringName);
-                    _writer.WriteComma();
-
-                    _writer.WritePropertyName(nameof(pullReplication.MentorNode));
-                    _writer.WriteString(pullReplication.MentorNode);
-                    _writer.WriteComma();
-
-                    _writer.WritePropertyName(nameof(pullReplication.TaskId));
-                    _writer.WriteDouble(pullReplication.TaskId);
-                    _writer.WriteComma();
-
-                    _writer.WritePropertyName(nameof(pullReplication.DelayReplicationFor));
-                    _writer.WriteString(pullReplication.DelayReplicationFor.ToString());
-                    _writer.WriteComma();
-
-                    _writer.WritePropertyName(nameof(pullReplication.Database));
-                    _writer.WriteString(pullReplication.Database);
-
-                    _writer.WriteEndObject();
                 }
                 _writer.WriteEndArray();
             }
@@ -385,6 +314,17 @@ namespace Raven.Server.Smuggler.Documents
                 _writer.WriteEndObject();
             }
 
+            private static readonly HashSet<string> DoNotBackUp = new HashSet<string>
+            {
+                RavenConfiguration.GetKey(x => x.Core.DataDirectory),
+                RavenConfiguration.GetKey(x => x.Storage.TempPath),
+                RavenConfiguration.GetKey(x => x.Indexing.TempPath),
+                RavenConfiguration.GetKey(x => x.Licensing.License),
+                RavenConfiguration.GetKey(x => x.Core.RunInMemory)
+            };
+
+            private static readonly HashSet<string> ServerWideKeys = DatabaseHelper.GetServerWideOnlyConfigurationKeys().ToHashSet();
+
             private void WriteSettings(Dictionary<string, string> settings)
             {
                 if (settings == null)
@@ -393,19 +333,12 @@ namespace Raven.Server.Smuggler.Documents
                     return;
                 }
 
-                var serverWideKeys = DatabaseHelper.GetServerWideOnlyConfigurationKeys();
-
-                string[] doNotBackUp = new string[]
-                {
-                    "DataDir", "Storage.TempPath", "Indexing.TempPath", "License", "RunInMemory"
-                };
-
                 _writer.WriteStartArray();
                 var first = true;
                 foreach (var config in settings)
                 {
-
-                    if (!(doNotBackUp.Contains(config.Key) || serverWideKeys.Contains(config.Key)))
+                    if (!(DoNotBackUp.Contains(config.Key, StringComparer.OrdinalIgnoreCase) || 
+                          ServerWideKeys.Contains(config.Key, StringComparer.OrdinalIgnoreCase)))
                     {
                         if (first == false)
                             _writer.WriteComma();
@@ -506,21 +439,7 @@ namespace Raven.Server.Smuggler.Documents
                     if (first == false)
                         _writer.WriteComma();
                     first = false;
-
-                    _writer.WriteStartObject();
-
-                    _writer.WritePropertyName(nameof(sqlTable.TableName));
-                    _writer.WriteString(sqlTable.TableName);
-                    _writer.WriteComma();
-
-                    _writer.WritePropertyName(nameof(sqlTable.DocumentIdColumn));
-                    _writer.WriteString(sqlTable.DocumentIdColumn);
-                    _writer.WriteComma();
-
-                    _writer.WritePropertyName(nameof(sqlTable.InsertOnlyMode));
-                    _writer.WriteBool(sqlTable.InsertOnlyMode);
-
-                    _writer.WriteEndObject();
+                    _context.Write(_writer, sqlTable.ToJson());
                 }
 
                 _writer.WriteEndArray();
@@ -599,30 +518,7 @@ namespace Raven.Server.Smuggler.Documents
                     if (first == false)
                         _writer.WriteComma();
                     first = false;
-
-                    _writer.WriteStartObject();
-
-                    _writer.WritePropertyName(nameof(transform.Name));
-                    _writer.WriteString(transform.Name);
-                    _writer.WriteComma();
-
-                    _writer.WritePropertyName(nameof(transform.Disabled));
-                    _writer.WriteBool(transform.Disabled);
-                    _writer.WriteComma();
-
-                    _writer.WritePropertyName(nameof(transform.Collections));
-                    WriteListOfString(transform.Collections);
-                    _writer.WriteComma();
-
-                    _writer.WritePropertyName(nameof(transform.ApplyToAllDocuments));
-                    _writer.WriteBool(transform.ApplyToAllDocuments);
-                    _writer.WriteComma();
-
-                    _writer.WritePropertyName(nameof(transform.Script));
-                    _writer.WriteString(transform.Script);
-
-                    _writer.WriteEndObject();
-
+                    _context.Write(_writer, transform.ToJson());
                 }
 
                 _writer.WriteEndArray();
@@ -644,40 +540,7 @@ namespace Raven.Server.Smuggler.Documents
                         _writer.WriteComma();
                     first = false;
 
-                    _writer.WriteStartObject();
-
-                    _writer.WritePropertyName(nameof(replication.Url));
-                    _writer.WriteString(replication.Url);
-                    _writer.WriteComma();
-
-                    _writer.WritePropertyName(nameof(replication.Database));
-                    _writer.WriteString(replication.Database);
-                    _writer.WriteComma();
-
-                    _writer.WritePropertyName(nameof(replication.Disabled));
-                    _writer.WriteBool(replication.Disabled);
-                    _writer.WriteComma();
-
-                    _writer.WritePropertyName(nameof(replication.TaskId));
-                    _writer.WriteDouble(replication.TaskId);
-                    _writer.WriteComma();
-
-                    _writer.WritePropertyName(nameof(replication.Name));
-                    _writer.WriteString(replication.Name);
-                    _writer.WriteComma();
-
-                    _writer.WritePropertyName(nameof(replication.ConnectionStringName));
-                    _writer.WriteString(replication.ConnectionStringName);
-                    _writer.WriteComma();
-
-                    _writer.WritePropertyName(nameof(replication.MentorNode));
-                    _writer.WriteString(replication.MentorNode);
-                    _writer.WriteComma();
-
-                    _writer.WritePropertyName(nameof(replication.DelayReplicationFor));
-                    _writer.WriteDouble(replication.DelayReplicationFor.TotalSeconds);
-
-                    _writer.WriteEndObject();
+                    _context.Write(_writer, replication.ToJson());
                 }
 
                 _writer.WriteEndArray();
@@ -904,63 +767,7 @@ namespace Raven.Server.Smuggler.Documents
                     _writer.WriteNull();
                     return;
                 }
-
-                _writer.WriteStartObject();
-
-                _writer.WritePropertyName(nameof(conflictSolver.ResolveByCollection));
-                WriteResolveByCollection(conflictSolver.ResolveByCollection);
-                _writer.WriteComma();
-
-                _writer.WritePropertyName(nameof(conflictSolver.ResolveToLatest));
-                _writer.WriteBool(conflictSolver.ResolveToLatest);
-
-                _writer.WriteEndObject();
-            }
-
-            private void WriteResolveByCollection(Dictionary<string, ScriptResolver> resolveByCollection)
-            {
-                if (resolveByCollection == null)
-                {
-                    _writer.WriteNull();
-                    return;
-                }
-                _writer.WriteStartObject();
-                var first = true;
-                foreach (var resolve in resolveByCollection)
-                {
-                    if (first == false)
-                        _writer.WriteComma();
-                    first = false;
-
-                    _writer.WritePropertyName(resolve.Key);
-
-                    _writer.WriteStartObject();
-
-                    _writer.WritePropertyName(nameof(resolve.Value.Script));
-                    _writer.WriteString(resolve.Value.Script);
-                    _writer.WriteComma();
-
-                    _writer.WritePropertyName(nameof(resolve.Value.LastModifiedTime));
-                    _writer.WriteDateTime(resolve.Value.LastModifiedTime, true);
-
-                    _writer.WriteEndObject();
-                }
-                _writer.WriteEndObject();
-            }
-
-            private void WriteListOfString(List<string> list)
-            {
-                _writer.WriteStartArray();
-                var first = true;
-                foreach (var l in list)
-                {
-                    if (first == false)
-                        _writer.WriteComma();
-                    first = false;
-                    _writer.WriteString(l);
-                }
-
-                _writer.WriteEndArray();
+                _context.Write(_writer, conflictSolver.ToJson());
             }
 
             private void WriteClientConfiguration(ClientConfiguration clientConfiguration)
@@ -970,38 +777,7 @@ namespace Raven.Server.Smuggler.Documents
                     _writer.WriteNull();
                     return;
                 }
-
-                _writer.WriteStartObject();
-
-                _writer.WritePropertyName(nameof(clientConfiguration.Etag));
-                _writer.WriteInteger(clientConfiguration.Etag);
-                _writer.WriteComma();
-
-                _writer.WritePropertyName(nameof(clientConfiguration.Disabled));
-                _writer.WriteBool(clientConfiguration.Disabled);
-
-                if (clientConfiguration.MaxNumberOfRequestsPerSession.HasValue)
-                {
-                    _writer.WriteComma();
-                    _writer.WritePropertyName(nameof(clientConfiguration.MaxNumberOfRequestsPerSession));
-                    _writer.WriteInteger(clientConfiguration.MaxNumberOfRequestsPerSession.Value);
-                }
-
-                if (clientConfiguration.PrettifyGeneratedLinqExpressions.HasValue)
-                {
-                    _writer.WriteComma();
-                    _writer.WritePropertyName(nameof(clientConfiguration.PrettifyGeneratedLinqExpressions));
-                    _writer.WriteBool(clientConfiguration.PrettifyGeneratedLinqExpressions.Value);
-                }
-
-                if (clientConfiguration.ReadBalanceBehavior.HasValue)
-                {
-                    _writer.WriteComma();
-                    _writer.WritePropertyName(nameof(clientConfiguration.ReadBalanceBehavior));
-                    _writer.WriteString(clientConfiguration.ReadBalanceBehavior.Value.ToString());
-                }
-
-                _writer.WriteEndObject();
+                _context.Write(_writer, clientConfiguration.ToJson());
             }
 
             private void WriteExpiration(ExpirationConfiguration expiration)
