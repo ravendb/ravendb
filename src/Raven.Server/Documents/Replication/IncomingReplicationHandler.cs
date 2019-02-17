@@ -612,7 +612,10 @@ namespace Raven.Server.Documents.Replication
                     // down
                 }
 
-                incomingReplicationAllocator.Dispose();
+                using (incomingReplicationAllocator)
+                {
+                    _replicatedItems.ForEach(x => x.Dispose());
+                }
             }
         }
 
