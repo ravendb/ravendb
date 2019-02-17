@@ -542,13 +542,13 @@ select ancestry.paternal.Name as Parentage, son.Name, paternal0.Name as Eldest")
             using (var store = GetDocumentStore())
             {
                 SetupHobbitAncestry(store);
-
                 using (var session = store.OpenSession())
                 {
                     var results = session.Advanced.RawQuery<HobbitAncestry>(@"
-match (People as son)-recursive as ancestry (2) { [Parents where Gender = 'Male' select Id]->(People as paternal where BornAt='Shire') } 
-select ancestry.paternal.Name as PaternalAncestors, son.Name")
-.ToList();
+                        match (People as son)-recursive as ancestry (2) { [Parents where Gender = 'Male' select Id]->(People as paternal where BornAt='Shire') } 
+                        select ancestry.paternal.Name as PaternalAncestors, son.Name")
+                    .ToList();
+
                     results.Sort((x, y) => x.Name.CompareTo(y.Name)); // we didn't implement order by yet
                     Assert.Equal(2, results.Count);
                     Assert.Equal("Bilbo Baggins", results[0].Name);

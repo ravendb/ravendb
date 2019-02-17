@@ -235,11 +235,15 @@ namespace Raven.Server.Documents.Queries
             qp.BuildQueryPlan();
             qp.OptimizeQueryPlan(); //TODO: audit optimization
 
-
             if (query.WaitForNonStaleResults)
             {
                 qp.IsStale = await qp.WaitForNonStaleResults();
             }
+            else
+            {            
+                await qp.CreateAutoIndexesAndWaitIfNecessary();
+            }
+
             //for the case where we don't wait for non stale results we will override IsStale in the QueryQueryStep steps
 
             if (documentsContext.Transaction == null || documentsContext.Transaction.Disposed)
