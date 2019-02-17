@@ -455,7 +455,7 @@ namespace Tests.Infrastructure
                 {
                     serverUrl = UseFiddlerUrl("https://127.0.0.1:0");
                     var shouldCreateNewCert = createNewCert && i == 0;
-                    SetupServerAuthentication(customSettings, serverUrl, createNew: shouldCreateNewCert);
+                    SetupServerAuthentication(customSettings, serverUrl, createNew: shouldCreateNewCert, serverCertPath: serverCertPath);
                 }
                 else
                 {
@@ -499,9 +499,9 @@ namespace Tests.Infrastructure
             return (clustersServers, leader);
         }
 
-        protected async Task<RavenServer> CreateRaftClusterAndGetLeader(int numberOfNodes, bool shouldRunInMemory = true, int? leaderIndex = null, bool useSsl = false, IDictionary<string, string> customSettings = null)
+        protected async Task<RavenServer> CreateRaftClusterAndGetLeader(int numberOfNodes, bool shouldRunInMemory = true, int? leaderIndex = null, bool useSsl = false, string serverCertPath = null, IDictionary<string, string> customSettings = null)
         {
-            return (await CreateRaftCluster(numberOfNodes, shouldRunInMemory, leaderIndex, useSsl, customSettings)).Leader;
+            return (await CreateRaftCluster(numberOfNodes, shouldRunInMemory, leaderIndex, useSsl, serverCertPath: serverCertPath, customSettings: customSettings)).Leader;
         }
 
         protected async Task<(RavenServer, Dictionary<RavenServer, ProxyServer>)> CreateRaftClusterWithProxiesAndGetLeader(int numberOfNodes, bool shouldRunInMemory = true, int? leaderIndex = null, bool useSsl = false, int delay = 0)
