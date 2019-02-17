@@ -325,7 +325,7 @@ namespace Raven.Server.Utils
                     return;
                 }
 
-                _currentUnmanagedThreadId = PlatformDetails.GetCurrentThreadId();
+                _currentUnmanagedThreadId = NativeMemory.GetCurrentUnmanagedThreadId.Invoke();
                 _currentProcess = Process.GetCurrentProcess();
 
                 if (PlatformDetails.RunningOnLinux)

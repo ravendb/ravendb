@@ -16,6 +16,14 @@ namespace Sparrow.Utils
 {
     public static unsafe class NativeMemory
     {
+        static NativeMemory()
+        {
+            // GetCurrentUnmanagedThreadId default to PlatformDetails.GetCurrentThreadId for client purpose
+            // Raven.Server set it to Pal's p/Invoke
+            GetCurrentUnmanagedThreadId = PlatformDetails.GetCurrentThreadId;
+        }
+
+        public static Func<ulong> GetCurrentUnmanagedThreadId;
         private static readonly ThreadLocal<ThreadStats> ThreadAllocations = new ThreadLocal<ThreadStats>(
             () => new ThreadStats(), trackAllValues: true);
 
@@ -75,8 +83,8 @@ namespace Sparrow.Utils
             {
                 _threadInstance = Thread.CurrentThread;
                 ManagedThreadId = _threadInstance.ManagedThreadId;
-                InternalId = Interlocked.Increment(ref _uniqueThreadId);                    
-                UnmanagedThreadId = PlatformDetails.GetCurrentThreadId();
+                InternalId = Interlocked.Increment(ref _uniqueThreadId);
+                UnmanagedThreadId = GetCurrentUnmanagedThreadId.Invoke();
             }
         }
 
