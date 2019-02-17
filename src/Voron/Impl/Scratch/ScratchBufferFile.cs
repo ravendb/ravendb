@@ -48,9 +48,10 @@ namespace Voron.Impl.Scratch
             scratchPager.AllocatedInBytesFunc = () => AllocatedPagesCount * Constants.Storage.PageSize;
 
             _disposeOnceRunner = new DisposeOnce<SingleAttempt>(() =>
-            {
+            {                
                 _scratchPager.PagerState.DiscardOnTxCopy = true;
                 _scratchPager.Dispose();
+                Reset();
             });
         }
 
