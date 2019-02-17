@@ -918,7 +918,7 @@ namespace Raven.Server.Documents.Replication
             public byte* AllocateMemoryForDocument(int size)
             {
                 TotalDocumentsSizeInBytes += size;
-                if (TotalDocumentsSizeInBytes < _maxSizeForContextUseInBytes)
+                if (TotalDocumentsSizeInBytes <= _maxSizeForContextUseInBytes)
                 {
                     _context.Allocator.Allocate(size, out var output);
                     return output.Ptr;
@@ -926,6 +926,8 @@ namespace Raven.Server.Documents.Replication
 
                 if (_currentAllocation == null || _currentAllocation.Free < size)
                 {
+                    // first allocation or we don't have enough space on the currently allocated chunk
+
                     // there can be a document that is larger than the minimum
                     var sizeToAllocate = Math.Max(size, _minSizeToAllocateNonContextUseInBytes);
 
