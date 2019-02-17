@@ -49,8 +49,14 @@ namespace Raven.Server.Documents
 
         public void Dispose()
         {
-            _file.Dispose();
-            PosixFile.DeleteOnClose(_tempFile);
+            try
+            {
+                _file.Dispose();
+            }
+            finally
+            {
+                PosixFile.DeleteOnClose(_tempFile);
+            }
         }
 
         private class InnerPartStream : Stream
@@ -60,6 +66,7 @@ namespace Raven.Server.Documents
             private readonly long _startPosition;
             private long _length;
             private bool _reading;
+
             public InnerPartStream(Stream file, StreamsTempFile parent)
             {
                 _file = file;
