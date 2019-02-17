@@ -60,8 +60,8 @@ namespace FastTests.Graph
                     };
 
                     var res = session.Advanced.GraphQuery<FooBar>("match (Foo)-[Bars as _]->(Bars as Bar)")
-                        .With("Foo", builder => builder.DocumentQuery<Foo>().WhereIn(x=>x.Name, names))
-                        .With("Bar", session.Query<Bar>().Where(x=>x.Age >= 18))
+                        .With("Foo", builder => builder.DocumentQuery<Foo>().WhereIn(x=>x.Name, names).WaitForNonStaleResults())
+                        .With("Bar", session.Query<Bar>().Where(x=>x.Age >= 18).Customize(x => x.WaitForNonStaleResults()))
 						.WaitForNonStaleResults()
                         .ToList();
                         
