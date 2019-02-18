@@ -724,7 +724,6 @@ namespace Raven.Server.Documents.Revisions
             using (Slice.From(context.Allocator, changeVector, out var changeVectorSlice))
             {
                 var revisionExists = table.ReadByKey(changeVectorSlice,out var tvr);
-                // Revisions are immutable.
                 if (revisionExists)
                 {
                     MarkRevisionsAsConflictedIfNeeded(context, lowerId, idSlice, flags, tvr, table, changeVectorSlice);
