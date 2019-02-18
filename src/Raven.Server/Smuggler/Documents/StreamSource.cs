@@ -819,7 +819,7 @@ namespace Raven.Server.Smuggler.Documents
                     }
                     builder.Renew("import/object", BlittableJsonDocumentBuilder.UsageMode.ToDisk);
 
-                    _context.CachedProperties.NewDocument();
+                    context.CachedProperties.NewDocument();
 
                     ReadObject(builder);
 
