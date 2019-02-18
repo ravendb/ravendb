@@ -921,38 +921,31 @@ namespace Raven.Server.Smuggler.Documents
             private CountersHandler.SmugglerCounterBatchCommand _cmd;
             private CountersHandler.SmugglerCounterBatchCommand _prevCommand;
             private Task _prevCommandTask = Task.CompletedTask;
-            private int _docCount;
-            private int _countersPerDoc;
-            private const int MaxDocumentCount = 1_024;
-            private const int MaxCountersPerDocument = 32 * 1_024;
+            private int _countersCount;
+            private readonly int _maxBatchSize;
 
             public CounterActions(DocumentDatabase database)
             {
                 _database = database;
-                _docCount = 0;
                 _cmd = new CountersHandler.SmugglerCounterBatchCommand(_database);
+
+                _maxBatchSize = PlatformDetails.Is32Bits || database.Configuration.Storage.ForceUsing32BitsPager
+                    ? 2 * 1024
+                    : 10 * 1024;
             }
 
             private void AddToBatch(CounterGroupDetail counterGroupDetail)
             {
                 _cmd.Add(counterGroupDetail);
 
-                _docCount++;
-
                 counterGroupDetail.Values.TryGet(CountersStorage.Values, out BlittableJsonReaderObject counters);
-                _countersPerDoc += counters?.Count ?? 0;
+                _countersCount += counters?.Count ?? 0;
             }
 
             private void AddToBatch(CounterDetail counter)
             {
-                _cmd.AddLegacy(counter.DocumentId, counter, out var isNew);
-
-                if (isNew)
-                {
-                    _docCount++;
-                }
-
-                _countersPerDoc++;
+                _cmd.AddLegacy(counter.DocumentId, counter);
+                _countersCount++;
             }
 
             public void WriteCounter(CounterGroupDetail counterDetail)
@@ -979,7 +972,7 @@ namespace Raven.Server.Smuggler.Documents
 
             private void HandleBatchOfCountersIfNecessary()
             {
-                if (_docCount < MaxDocumentCount && _countersPerDoc < MaxCountersPerDocument)
+                if (_countersCount < _maxBatchSize)
                     return;
 
                 var prevCommand = _prevCommand;
@@ -997,8 +990,7 @@ namespace Raven.Server.Smuggler.Documents
                 }
                 _cmd = new CountersHandler.SmugglerCounterBatchCommand(_database);
 
-                _docCount = 0;
-                _countersPerDoc = 0;
+                _countersCount = 0;
             }
 
             private void FinishBatchOfCounters()
@@ -1011,7 +1003,7 @@ namespace Raven.Server.Smuggler.Documents
                     _prevCommand = null;
                 }
 
-                if (_docCount > 0)
+                if (_countersCount > 0)
                 {
                     using (_cmd)
                         AsyncHelpers.RunSync(() => _database.TxMerger.Enqueue(_cmd));

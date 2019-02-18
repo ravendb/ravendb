@@ -280,9 +280,8 @@ namespace Raven.Server.Documents.Handlers
                 _counterGroups.Add(cgd);
             }
 
-            public void AddLegacy(string id, CounterDetail counterDetail, out bool isNew)
+            public void AddLegacy(string id, CounterDetail counterDetail)
             {
-                isNew = false;
                 _legacyDictionary = _legacyDictionary ?? new Dictionary<string, Dictionary<string, List<(string ChangeVector, long Value)>>>(StringComparer.OrdinalIgnoreCase);
                 var valueToAdd = (counterDetail.ChangeVector, counterDetail.TotalValue);
 
@@ -302,7 +301,6 @@ namespace Raven.Server.Documents.Handlers
                 }
                 else
                 {
-                    isNew = true;
                     _legacyDictionary[counterDetail.DocumentId] = new Dictionary<string, List<(string ChangeVector, long Value)>>
                     {
                         {
