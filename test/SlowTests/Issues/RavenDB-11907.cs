@@ -53,7 +53,7 @@ namespace SlowTests.Issues
 
                     Assert.NotNull(doc);
                     Assert.False(doc.HasTags);
-                    Assert.Null(doc.OriginalData);
+                    Assert.Empty(doc.OriginalData);
                     Assert.Empty(doc.FilteredData);
 
                     Assert.True(doc.All);
