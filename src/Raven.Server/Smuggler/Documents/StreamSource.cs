@@ -608,8 +608,7 @@ namespace Raven.Server.Smuggler.Documents
             if (_state.CurrentTokenType != JsonParserToken.StartArray)
                 UnmanagedJsonParserHelper.ThrowInvalidJson("Expected start array, got " + _state.CurrentTokenType, _peepingTomStream, _parser);
 
-
-            var context = actions != null ? actions.GetContextForNewDocument() : _context;
+            var context = _context;
             var builder = CreateBuilder(context);
 
             try
@@ -621,6 +620,17 @@ namespace Raven.Server.Smuggler.Documents
 
                     if (_state.CurrentTokenType == JsonParserToken.EndArray)
                         break;
+
+                    if (actions != null)
+                    {
+                        var oldContext = context;
+                        context = actions.GetContextForNewDocument();
+                        if (context != oldContext)
+                        {
+                            builder.Dispose();
+                            builder = CreateBuilder(context);
+                        }
+                    }
 
                     builder.Renew("import/object", BlittableJsonDocumentBuilder.UsageMode.ToDisk);
 
