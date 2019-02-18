@@ -1,3 +1,4 @@
+using System;
 using Sparrow.Json;
 
 namespace Raven.Client.Documents.Session
@@ -17,11 +18,13 @@ namespace Raven.Client.Documents.Session
         /// <summary>
         /// Previous field type.
         /// </summary>
+        [Obsolete("DocumentsChanges.FieldOldType is not supported anymore. Will be removed in next major version of the product.")]
         public BlittableJsonToken FieldOldType { get; set; }
 
         /// <summary>
         /// Current field type.
         /// </summary>
+        [Obsolete("DocumentsChanges.FieldNewType is not supported anymore. Will be removed in next major version of the product.")]
         public BlittableJsonToken FieldNewType { get; set; }
 
         /// <summary>
