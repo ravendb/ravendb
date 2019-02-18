@@ -271,9 +271,11 @@ namespace Raven.Server.Documents.Queries.Graph
             var queryDuration = Stopwatch.StartNew();
             var indexes = new List<Index>();
             var indexWaiters = new Dictionary<Index, (IndexQueryServerSide, AsyncWaitForIndexing)>();
-            foreach (var qqs in queryStepsGatherer.QuerySteps)
+            foreach (var queryStepInfo in queryStepsGatherer.QuerySteps)
             {
-                var indexQuery = new IndexQueryServerSide(qqs.Query.ToString(), qqs.QueryParameters);
+                if(string.IsNullOrWhiteSpace(queryStepInfo.QueryStep.Query.From.From.FieldValue) || queryStepInfo.IsIndexQuery)
+                    continue;
+                var indexQuery = new IndexQueryServerSide(queryStepInfo.QueryStep.GetQueryString, queryStepInfo.QueryStep.QueryParameters);
                 var indexCreationInfo = await _dynamicQueryRunner.CreateAutoIndexIfNeeded(indexQuery, true, null, _context, _database.DatabaseShutdown);
                 if (indexCreationInfo.HasCreatedAutoIndex) //wait for non-stale only IF we just created an auto-index
                 {

@@ -97,9 +97,7 @@ namespace FastTests.Graph
                 CreateMoviesData(store);
                 using (var session = store.OpenSession())
                 {
-                    var results = session.Advanced.RawQuery<Movie>(@"
-                        match ()-[HasRated select Movie]->(Movies as m) select m
-                    ").ToList();
+                    var results = session.Advanced.RawQuery<Movie>("match ()-[HasRated select Movie]->(Movies as m) select m").ToList();
                     Assert.Equal(5, results.Count);
                 }
             }
