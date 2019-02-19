@@ -794,7 +794,7 @@ namespace Raven.Server.Documents.Revisions
             }
         }
 
-        private void MarkRevisionAsConflicted(DocumentsOperationContext context, TableValueReader tvr, Table table, Slice changeVectorSlice, Slice lowerId, Slice idSlice)
+        private unsafe void MarkRevisionAsConflicted(DocumentsOperationContext context, TableValueReader tvr, Table table, Slice changeVectorSlice, Slice lowerId, Slice idSlice)
         {
             var revisionCopy = context.GetMemory(tvr.Size);
             // we have to copy it to the side because we might do a defrag during update, and that

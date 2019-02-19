@@ -94,8 +94,8 @@ namespace Raven.Server.Documents.Replication
         ///This constructor should be used for replay transaction commands only!!!
         ///</summary>
         internal IncomingReplicationHandler(
-            DocumentDatabase database, 
-            List<ReplicationItem> replicatedItems, 
+            DocumentDatabase database,
+            List<ReplicationItem> replicatedItems,
             IncomingConnectionInfo connectionInfo,
             ReplicationLoader parent,
             ReplicationAttachmentStream[] replicatedAttachmentStreams)
@@ -629,8 +629,8 @@ namespace Raven.Server.Documents.Replication
                 }
 
                 incomingReplicationAllocator.Dispose();
-                    }
-                }
+            }
+        }
 
         private void SendHeartbeatStatusToSource(DocumentsOperationContext documentsContext, BlittableJsonTextWriter writer, long lastDocumentEtag, string handledMessageType)
         {
@@ -849,7 +849,11 @@ namespace Raven.Server.Documents.Replication
                     var sizeOfData = *(int*)ReadExactly(sizeof(int));
                     item.DocumentSize = sizeOfData;
 
-                    ReadExactly(sizeOfData, ref writeBuffer);
+                    var mem = incomingReplicationAllocator.AllocateMemoryForDocument(sizeOfData);
+                    ReadExactly(mem, sizeOfData);
+
+                    item.CounterValues = new BlittableJsonReaderObject(mem, sizeOfData, context);
+                    item.CounterValues.BlittableValidation();
                 }
                 else if (item.Type == ReplicationBatchItem.ReplicationItemType.LegacyCounter ||
 #pragma warning disable 618
@@ -1241,12 +1245,7 @@ namespace Raven.Server.Documents.Replication
                             }
                             else if (item.Type == ReplicationBatchItem.ReplicationItemType.CounterBatch)
                             {
-                                var counterValues = new BlittableJsonReaderObject(_buffer + item.Position, item.DocumentSize, context);
-                                counterValues.BlittableValidation();
-
-                                database.DocumentsStorage.CountersStorage.PutCounters(context,
-                                    item.Id, item.Collection, item.ChangeVector,
-                                    counterValues);
+                                database.DocumentsStorage.CountersStorage.PutCounters(context, item.Id, item.Collection, item.ChangeVector, item.CounterValues);
                             }
                             else
                             {
@@ -1528,7 +1527,7 @@ namespace Raven.Server.Documents.Replication
             var replicatedAttachmentStreams = ReplicatedAttachmentStreams.Select(i => CreateReplicationAttachmentStream(context, i)).ToArray();
             var replicationHandler = new IncomingReplicationHandler(database, replicationItems, connectionInfo, database.ReplicationLoader, replicatedAttachmentStreams);
             return new IncomingReplicationHandler.MergedDocumentReplicationCommand(replicationHandler, LastEtag);
-                }
+        }
 
         private IncomingReplicationHandler.ReplicationAttachmentStream CreateReplicationAttachmentStream(DocumentsOperationContext context, KeyValuePair<string, Stream> arg)
         {
