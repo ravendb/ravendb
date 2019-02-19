@@ -1,10 +1,8 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
-using System.Threading;
 using System.Threading.Tasks;
-using Raven.Server.Documents.Indexes.Static.Extensions;
-using Sparrow;
+using Sparrow.Server.Meters;
 using Xunit;
 
 namespace FastTests.Sparrow

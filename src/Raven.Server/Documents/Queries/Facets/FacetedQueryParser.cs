@@ -8,7 +8,6 @@ using Raven.Client.Documents.Queries.Facets;
 using Raven.Client.Exceptions;
 using Raven.Server.Documents.Queries.AST;
 using Raven.Server.Documents.Queries.Parser;
-using Sparrow;
 using Sparrow.Json;
 using Constants = Raven.Client.Constants;
 

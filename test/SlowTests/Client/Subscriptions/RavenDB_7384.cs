@@ -9,7 +9,7 @@ using Raven.Client.Exceptions.Documents.Subscriptions;
 using Raven.Server.Documents;
 using Raven.Server.ServerWide.Context;
 using Raven.Tests.Core.Utils.Entities;
-using Sparrow;
+using Sparrow.Server;
 using Xunit;
 
 namespace SlowTests.Client.Subscriptions

@@ -2,13 +2,14 @@
 using System.Diagnostics;
 using System.IO;
 using System.Runtime.CompilerServices;
-using Raven.Client;
 using Raven.Client.Documents.Smuggler;
 using Raven.Server.Utils;
 using Sparrow;
 using Sparrow.Collections;
 using Sparrow.Json;
 using Sparrow.Json.Parsing;
+using Sparrow.Server;
+using Constants = Raven.Client.Constants;
 
 namespace Raven.Server.Documents
 {

@@ -2,7 +2,6 @@ using System;
 using System.Collections.Generic;
 using System.IO;
 using Microsoft.Extensions.Primitives;
-using Sparrow;
 using Sparrow.Json;
 
 namespace Raven.Server.Documents.Patch

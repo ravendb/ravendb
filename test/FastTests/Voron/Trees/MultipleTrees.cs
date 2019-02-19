@@ -1,6 +1,5 @@
 ﻿using System;
 using Xunit;
-using Voron;
 
 namespace FastTests.Voron.Trees
 {

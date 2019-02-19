@@ -1,7 +1,6 @@
 ﻿using System.Collections.Generic;
 using Microsoft.Extensions.Primitives;
 using Raven.Server.ServerWide;
-using Sparrow;
 using static Raven.Server.Documents.Queries.GraphQueryRunner;
 
 namespace Raven.Server.Documents.Queries.Graph

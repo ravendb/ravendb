@@ -1,7 +1,6 @@
 using System.Collections.Generic;
 using System.Linq;
 using FastTests;
-using Microsoft.Extensions.Primitives;
 using Raven.Client;
 using Xunit;
 

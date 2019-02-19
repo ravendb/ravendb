@@ -1,6 +1,5 @@
 ﻿using System;
 using System.Collections.Generic;
-using Jint.Native;
 using Raven.Client;
 using Raven.Server.ServerWide.Context;
 using Sparrow.Json;

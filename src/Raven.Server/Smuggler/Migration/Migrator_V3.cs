@@ -10,7 +10,6 @@ using System.Threading.Tasks;
 using Newtonsoft.Json;
 using Raven.Client.Documents.Smuggler;
 using Raven.Client.Exceptions;
-using Raven.Server.Documents;
 using Raven.Server.ServerWide.Context;
 using Raven.Server.Smuggler.Documents;
 using Raven.Server.Smuggler.Documents.Data;

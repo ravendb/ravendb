@@ -1,6 +1,5 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.Configuration;
 using System.IO;
 using System.Linq;
 using System.Threading;
@@ -13,6 +12,7 @@ using Raven.Server.ServerWide;
 using Raven.Server.Utils;
 using Sparrow;
 using Sparrow.Logging;
+using Sparrow.Server;
 using Voron;
 using Voron.Exceptions;
 using Voron.Impl.Compaction;

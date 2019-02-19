@@ -1,5 +1,4 @@
 ﻿using Raven.Server.Config;
-using Raven.Server.ServerWide;
 using Xunit;
 
 namespace FastTests.Issues

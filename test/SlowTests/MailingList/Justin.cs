@@ -4,9 +4,7 @@ using FastTests;
 using Raven.Client.Documents;
 using Raven.Client.Documents.Indexes;
 using Raven.Client.Documents.Linq;
-using Raven.Client.Exceptions.Compilation;
 using Raven.Client.Exceptions.Documents.Compilation;
-using SlowTests.Utils;
 using Xunit;
 
 namespace SlowTests.MailingList

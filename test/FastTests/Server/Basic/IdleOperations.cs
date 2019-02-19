@@ -1,6 +1,5 @@
 ﻿using System;
 using System.Linq;
-using Raven.Client.Extensions;
 using Raven.Client.ServerWide;
 using Raven.Client.ServerWide.Operations;
 using Xunit;

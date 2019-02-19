@@ -1,4 +1,4 @@
-﻿namespace Sparrow
+﻿namespace Sparrow.Server.Platform.Posix
 {
     public enum Errno
     {

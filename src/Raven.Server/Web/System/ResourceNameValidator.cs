@@ -4,7 +4,7 @@ using System.Linq;
 using System.Runtime.InteropServices;
 using Raven.Client;
 using Raven.Server.Utils;
-using Sparrow.Utils;
+using Sparrow.Server.Utils;
 
 namespace Raven.Server.Web.System
 {

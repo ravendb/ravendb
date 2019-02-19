@@ -5,7 +5,6 @@ using Microsoft.Extensions.Primitives;
 using Raven.Client.Documents.Conventions;
 using Raven.Client.Documents.Linq;
 using Raven.Client.Documents.Queries;
-using Raven.Client.Util;
 using Raven.Server.Documents.Queries;
 using Raven.Server.ServerWide;
 using Sparrow.Json;

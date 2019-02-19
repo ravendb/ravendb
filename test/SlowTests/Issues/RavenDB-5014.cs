@@ -1,7 +1,6 @@
 ﻿using System;
 using FastTests;
 using Raven.Client.Documents.Operations;
-using Raven.Client.Documents.Queries;
 using Raven.Client.Json.Converters;
 using SlowTests.Core.Utils.Entities;
 using Sparrow.Json;

@@ -6,6 +6,7 @@ using System.Runtime.CompilerServices;
 using System.Runtime.ExceptionServices;
 using System.Threading.Tasks;
 using Sparrow;
+using Sparrow.Server;
 using Sparrow.Threading;
 using Sparrow.Utils;
 using Voron.Data;
@@ -17,9 +18,9 @@ using Voron.Impl.FreeSpace;
 using Voron.Impl.Journal;
 using Voron.Impl.Paging;
 using Voron.Impl.Scratch;
-using Voron.Global;
 using Voron.Debugging;
 using Voron.Util;
+using Constants = Voron.Global.Constants;
 
 namespace Voron.Impl
 {

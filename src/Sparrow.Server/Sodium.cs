@@ -1,9 +1,9 @@
 ﻿using System;
 using System.IO;
-using Sparrow.Platform;
 using System.Runtime.InteropServices;
+using Sparrow.Server.Platform;
 
-namespace Sparrow
+namespace Sparrow.Server
 {
     public static unsafe partial class Sodium
     {

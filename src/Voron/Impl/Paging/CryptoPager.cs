@@ -3,10 +3,11 @@ using System.Collections.Generic;
 using System.Diagnostics;
 using System.Runtime.CompilerServices;
 using Sparrow;
+using Sparrow.Server;
 using Sparrow.Utils;
 using Voron.Data;
-using Voron.Global;
 using Voron.Platform;
+using Constants = Voron.Global.Constants;
 
 namespace Voron.Impl.Paging
 {

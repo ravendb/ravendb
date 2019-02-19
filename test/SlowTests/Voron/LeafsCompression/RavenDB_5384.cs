@@ -4,7 +4,7 @@ using System.IO;
 using System.Linq;
 using FastTests.Voron;
 using FastTests.Voron.FixedSize;
-using Sparrow;
+using Sparrow.Server;
 using Voron;
 using Voron.Data.BTrees;
 using Voron.Impl;

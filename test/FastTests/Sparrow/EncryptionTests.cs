@@ -1,20 +1,17 @@
 ﻿using System;
 using System.IO;
-using System.Runtime.InteropServices;
 using System.Text;
 using FastTests.Utils;
 using FastTests.Voron;
 using FastTests.Voron.FixedSize;
 using Raven.Server.ServerWide;
 using Sparrow;
+using Sparrow.Server;
 using Voron;
 using Voron.Data;
 using Voron.Impl.Paging;
-using Voron.Platform.Win32;
 using Xunit;
 using Voron.Global;
-using Voron.Platform.Posix;
-using Voron.Util.Settings;
 
 namespace FastTests.Sparrow
 {

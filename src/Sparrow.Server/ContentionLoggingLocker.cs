@@ -4,7 +4,7 @@ using System.Runtime.CompilerServices;
 using System.Threading;
 using Sparrow.Logging;
 
-namespace Sparrow
+namespace Sparrow.Server
 {
     public class ContentionLoggingLocker
     {

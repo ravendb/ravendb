@@ -1,9 +1,8 @@
 ﻿using System.Linq;
-using Sparrow;
+using Sparrow.Server;
 using Voron;
 using Voron.Data.Tables;
 using Xunit;
-using Xunit.Sdk;
 
 namespace FastTests.Voron.Tables
 {

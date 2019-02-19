@@ -4,7 +4,7 @@ using System.Threading.Tasks;
 using FastTests;
 using Raven.Client.Documents.Subscriptions;
 using Raven.Tests.Core.Utils.Entities;
-using Sparrow;
+using Sparrow.Server;
 using Xunit;
 
 namespace SlowTests.Client.Subscriptions

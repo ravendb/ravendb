@@ -3,7 +3,6 @@ using FastTests;
 using FastTests.Server.Replication;
 using SlowTests.Server.Replication;
 using Tests.Infrastructure;
-using Xunit;
 
 namespace StressTests.Server.Replication
 {

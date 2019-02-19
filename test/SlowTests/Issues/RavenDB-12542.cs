@@ -4,7 +4,6 @@ using FastTests.Server.Basic.Entities;
 using Newtonsoft.Json.Linq;
 using Raven.Client.Documents.Indexes;
 using Raven.Client.Exceptions;
-using Raven.Server.Documents.Queries.Parser;
 using Xunit;
 
 namespace SlowTests.Issues

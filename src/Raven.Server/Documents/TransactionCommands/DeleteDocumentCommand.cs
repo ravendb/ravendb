@@ -1,12 +1,7 @@
 ﻿using System.Runtime.ExceptionServices;
-using System.Runtime.Serialization;
-using Newtonsoft.Json;
-using Raven.Client.Documents.Conventions;
 using Raven.Client.Exceptions;
-using Raven.Client.Json;
 using Raven.Server.ServerWide.Context;
 using Sparrow.Json;
-using Sparrow.Json.Parsing;
 
 namespace Raven.Server.Documents.TransactionCommands
 {

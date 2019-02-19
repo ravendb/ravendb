@@ -1,8 +1,8 @@
 ﻿using System;
 using System.Collections.Generic;
 using BenchmarkDotNet.Attributes;
-using Sparrow;
 using System.Linq;
+using Sparrow.Server;
 
 namespace Voron.Benchmark.BTree
 {

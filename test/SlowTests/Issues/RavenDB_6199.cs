@@ -6,8 +6,8 @@ using Raven.Client.Documents.Indexes;
 using Raven.Client.Documents.Operations.Indexes;
 using Raven.Server.NotificationCenter.Notifications;
 using Raven.Server.NotificationCenter.Notifications.Details;
-using Sparrow.Collections;
 using Sparrow.Json.Parsing;
+using Sparrow.Server.Collections;
 using Xunit;
 
 namespace SlowTests.Issues

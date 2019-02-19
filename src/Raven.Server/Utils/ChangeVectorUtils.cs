@@ -1,12 +1,11 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Diagnostics;
-using System.Linq;
 using System.Runtime.CompilerServices;
 using System.Text;
 using Lucene.Net.Support;
 using Raven.Server.Documents.Replication;
-using Sparrow;
+using Sparrow.Server;
 using Sparrow.Utils;
 
 namespace Raven.Server.Utils

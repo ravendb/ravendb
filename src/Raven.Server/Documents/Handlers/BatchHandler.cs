@@ -8,14 +8,12 @@ using System.Text;
 using System.Threading.Tasks;
 using Microsoft.AspNetCore.WebUtilities;
 using Microsoft.Net.Http.Headers;
-using Raven.Client;
 using Raven.Client.Documents.Commands.Batches;
 using Raven.Client.Documents.Operations.Attachments;
 using Raven.Server.Documents.Indexes;
 using Raven.Server.Routing;
 using Raven.Server.ServerWide.Context;
 using Raven.Server.Smuggler;
-using Sparrow;
 using Sparrow.Json;
 using Sparrow.Json.Parsing;
 using System.Runtime.ExceptionServices;
@@ -26,14 +24,14 @@ using Raven.Server.Json;
 using Raven.Client.Documents.Operations.Counters;
 using Raven.Client.Exceptions;
 using Raven.Client.Exceptions.Documents;
-using Raven.Server.Config.Categories;
-using Raven.Server.Exceptions;
 using Raven.Server.Rachis;
 using Raven.Server.ServerWide.Commands;
 using Raven.Server.TrafficWatch;
 using Raven.Server.Utils;
 using Voron;
 using Raven.Server.Documents.Patch;
+using Sparrow.Server;
+using Constants = Raven.Client.Constants;
 
 namespace Raven.Server.Documents.Handlers
 {

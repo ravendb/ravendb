@@ -6,7 +6,7 @@ using FastTests.Voron;
 using FastTests.Voron.FixedSize;
 using FastTests.Voron.Util;
 using Raven.Server.Utils;
-using Sparrow;
+using Sparrow.Server;
 using Voron;
 using Voron.Data.BTrees;
 using Voron.Impl.Compaction;

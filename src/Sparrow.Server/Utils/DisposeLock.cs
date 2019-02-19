@@ -1,7 +1,7 @@
 ﻿using System;
 using System.Threading;
 
-namespace Sparrow.Utils
+namespace Sparrow.Server.Utils
 {
     /// <summary>
     /// This class allow us to perform disposal operations without running

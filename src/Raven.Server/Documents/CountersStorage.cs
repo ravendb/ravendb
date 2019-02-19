@@ -4,7 +4,6 @@ using System.Diagnostics;
 using System.IO;
 using System.Runtime.InteropServices;
 using System.Text;
-using Raven.Client;
 using Raven.Server.Documents.Replication;
 using Raven.Server.ServerWide.Context;
 using Voron;
@@ -12,7 +11,6 @@ using Voron.Data.Tables;
 using Voron.Impl;
 using Sparrow;
 using Sparrow.Binary;
-using Sparrow.Utils;
 using static Raven.Server.Documents.DocumentsStorage;
 using static Raven.Server.Documents.Replication.ReplicationBatchItem;
 using Raven.Server.Utils;
@@ -21,6 +19,9 @@ using Raven.Client.Documents.Operations.Counters;
 using Raven.Client.Exceptions.Documents.Counters;
 using Sparrow.Json;
 using Sparrow.Json.Parsing;
+using Sparrow.Server;
+using Sparrow.Server.Utils;
+using Constants = Raven.Client.Constants;
 
 namespace Raven.Server.Documents
 {

@@ -1,7 +1,7 @@
 ﻿using System;
 using Raven.Client.Documents.Replication;
-using Sparrow.Collections;
 using Sparrow.Json.Parsing;
+using Sparrow.Server.Collections;
 
 namespace Raven.Server.Documents.Replication
 {

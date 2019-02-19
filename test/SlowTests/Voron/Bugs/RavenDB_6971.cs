@@ -4,7 +4,6 @@ using FastTests;
 using Raven.Client.Documents.Operations;
 using Raven.Client.Documents.Operations.Indexes;
 using Raven.Client.Documents.Queries;
-using Sparrow.Platform;
 using Tests.Infrastructure;
 using Xunit;
 

@@ -26,7 +26,6 @@ using Raven.Server.ServerWide;
 using Raven.Server.ServerWide.Context;
 using Sparrow;
 using Sparrow.Json;
-using Sparrow.Utils;
 
 namespace Raven.Server.Web
 {

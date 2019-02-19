@@ -19,7 +19,6 @@ using Raven.Server.ServerWide.Commands;
 using Raven.Server.ServerWide.Context;
 using Raven.Server.Utils;
 using Raven.Server.Web.System;
-using Sparrow;
 using Sparrow.Logging;
 using Sparrow.Utils;
 using Voron.Exceptions;

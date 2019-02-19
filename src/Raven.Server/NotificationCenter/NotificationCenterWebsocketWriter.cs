@@ -6,9 +6,9 @@ using System.Threading;
 using System.Threading.Tasks;
 using Raven.Server.ServerWide.Context;
 using Raven.Server.Utils;
-using Sparrow.Collections;
 using Sparrow.Json;
 using Sparrow.Json.Parsing;
+using Sparrow.Server.Collections;
 
 namespace Raven.Server.NotificationCenter
 {

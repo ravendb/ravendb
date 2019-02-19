@@ -13,7 +13,6 @@ using Raven.Client.Documents.Linq.Indexing;
 using Raven.Client.Documents.Operations.Indexes;
 using Raven.Client.Documents.Session;
 using SlowTests.Core.Utils.Entities;
-using Sparrow.Json;
 using Xunit;
 
 namespace SlowTests.Core.Streaming

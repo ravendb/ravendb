@@ -2,7 +2,7 @@
 using System.Text;
 using System.Collections.Generic;
 using System.Diagnostics;
-using Sparrow.Utils;
+using Sparrow.Server.Utils;
 
 namespace Raven.Server.Documents.Replication
 {

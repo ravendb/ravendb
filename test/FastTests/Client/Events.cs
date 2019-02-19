@@ -1,5 +1,4 @@
-﻿using Raven.Client;
-using Raven.Client.Documents.Session;
+﻿using Raven.Client.Documents.Session;
 using Raven.Tests.Core.Utils.Entities;
 using Xunit;
 

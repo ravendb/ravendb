@@ -1,11 +1,11 @@
-﻿using Voron.Data.Tables;
+﻿using Sparrow.Server;
+using Voron.Data.Tables;
 
 namespace Voron.Benchmark.Table
 {
     using System.Collections.Generic;
     using System.Threading;
     using BenchmarkDotNet.Attributes;
-    using Sparrow;
 
     public class TableReadAndIterate : StorageBenchmark
     {

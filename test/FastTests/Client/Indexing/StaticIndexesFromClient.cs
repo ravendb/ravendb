@@ -2,7 +2,6 @@
 using System.Threading;
 using System.Threading.Tasks;
 using Raven.Client.Documents.Indexes;
-using Raven.Client.Documents.Operations;
 using Raven.Client.Documents.Operations.Indexes;
 using Raven.Tests.Core.Utils.Entities;
 using Xunit;

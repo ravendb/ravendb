@@ -1,17 +1,10 @@
 ﻿using System;
-using System.Collections.Generic;
 using System.IO;
 using System.IO.Pipes;
-using System.Net.WebSockets;
-using System.Reflection;
-using System.Security.Cryptography.X509Certificates;
-using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
 using rvn.Utils;
 using Raven.Server.Utils;
-using Raven.Server.Utils.Cli;
-using Sparrow.Platform;
 
 namespace rvn
 {

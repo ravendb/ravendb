@@ -19,6 +19,9 @@ using System.Threading.Tasks;
 using Sparrow.Compression;
 using Sparrow.Logging;
 using Sparrow.LowMemory;
+using Sparrow.Server;
+using Sparrow.Server.Meters;
+using Sparrow.Server.Utils;
 using Sparrow.Threading;
 using Sparrow.Utils;
 using Voron.Data;
@@ -26,7 +29,7 @@ using Voron.Exceptions;
 using Voron.Impl.FileHeaders;
 using Voron.Impl.Paging;
 using Voron.Util;
-using Voron.Global;
+using Constants = Voron.Global.Constants;
 
 namespace Voron.Impl.Journal
 {

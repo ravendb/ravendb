@@ -1,4 +1,3 @@
-using System.Threading.Tasks;
 using FastTests;
 using Xunit;
 using System.Linq;

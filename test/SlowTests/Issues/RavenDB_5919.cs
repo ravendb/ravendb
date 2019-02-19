@@ -5,7 +5,6 @@ using Raven.Client;
 using Raven.Client.Documents.Indexes;
 using Raven.Client.Documents.Operations;
 using Raven.Client.Documents.Operations.Indexes;
-using Raven.Client.ServerWide.Operations;
 using Xunit;
 
 namespace SlowTests.Issues

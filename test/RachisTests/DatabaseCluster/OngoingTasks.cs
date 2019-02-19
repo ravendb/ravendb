@@ -11,7 +11,6 @@ using Raven.Client.Documents.Operations.OngoingTasks;
 using Raven.Client.Documents.Operations.Replication;
 using Raven.Client.ServerWide;
 using Raven.Client.ServerWide.Operations;
-using Tests.Infrastructure;
 using Xunit;
 
 namespace RachisTests.DatabaseCluster

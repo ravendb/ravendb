@@ -1,5 +1,4 @@
-﻿using System.Collections.Generic;
-using FastTests;
+﻿using FastTests;
 using Orders;
 using Raven.Client.Documents.Queries.Facets;
 using Xunit;

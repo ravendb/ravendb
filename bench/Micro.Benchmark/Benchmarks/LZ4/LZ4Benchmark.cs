@@ -10,7 +10,7 @@ using BenchmarkDotNet.Exporters;
 using BenchmarkDotNet.Jobs;
 using BenchmarkDotNet.Validators;
 using Sparrow;
-using Sparrow.LowMemory;
+using Sparrow.Server;
 using Sparrow.Threading;
 using Platform = BenchmarkDotNet.Environments.Platform;
 

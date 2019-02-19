@@ -1,10 +1,7 @@
 ﻿using System;
-using System.Linq;
 using FastTests;
-using Orders;
 using Raven.Client.Documents.Operations;
 using Raven.Client.Documents.Queries;
-using Raven.Client.Exceptions;
 using Raven.Tests.Core.Utils.Entities;
 using Xunit;
 

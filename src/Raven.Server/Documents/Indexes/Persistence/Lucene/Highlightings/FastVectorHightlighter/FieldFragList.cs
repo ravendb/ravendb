@@ -18,11 +18,6 @@
 using System;
 using System.Collections.Generic;
 using System.Text;
-
-using Lucene.Net.Documents;
-using Lucene.Net.Search;
-using Lucene.Net.Index;
-
 using Toffs = Lucene.Net.Search.Vectorhighlight.FieldPhraseList.WeightedPhraseInfo.Toffs;
 using WeightedPhraseInfo = Lucene.Net.Search.Vectorhighlight.FieldPhraseList.WeightedPhraseInfo;
 

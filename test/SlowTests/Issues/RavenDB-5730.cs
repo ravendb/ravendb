@@ -3,7 +3,6 @@ using System.Threading.Tasks;
 using FastTests.Server.Replication;
 using Raven.Client.Documents;
 using Raven.Client.Documents.Operations.Replication;
-using Raven.Client.ServerWide;
 using Xunit;
 
 namespace SlowTests.Issues

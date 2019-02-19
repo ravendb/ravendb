@@ -6,7 +6,7 @@ using Raven.Client.Documents.Subscriptions;
 using Raven.Client.Exceptions.Documents.Subscriptions;
 using Raven.Client.Util;
 using Raven.Server.Documents.TcpHandlers;
-using Sparrow;
+using Sparrow.Server;
 
 namespace Raven.Server.Documents.Subscriptions
 {

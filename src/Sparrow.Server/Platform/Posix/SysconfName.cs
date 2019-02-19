@@ -1,4 +1,4 @@
-﻿namespace Voron.Platform.Posix
+﻿namespace Sparrow.Server.Platform.Posix
 {
     public enum SysconfName : int
     {

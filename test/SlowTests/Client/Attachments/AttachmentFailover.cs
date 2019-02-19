@@ -2,16 +2,13 @@
 using System.Linq;
 using System.Threading.Tasks;
 using Raven.Client;
-using Raven.Client.Documents.Operations;
 using Raven.Client.Documents.Operations.Attachments;
 using Raven.Client.Documents.Session;
 using Raven.Client.Documents.Session.Operations;
-using Raven.Client.Http;
 using Raven.Client.ServerWide;
 using Raven.Server.Documents;
 using Raven.Tests.Core.Utils.Entities;
 using Sparrow.Json;
-using Sparrow.Platform;
 using Tests.Infrastructure;
 using Xunit;
 

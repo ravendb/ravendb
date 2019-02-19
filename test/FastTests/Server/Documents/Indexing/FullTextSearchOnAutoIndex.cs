@@ -1,9 +1,7 @@
 ﻿using System.Linq;
 using System.Threading.Tasks;
 using Raven.Client.Documents;
-using Raven.Client.Documents.Operations;
 using Raven.Client.Documents.Session;
-using Raven.Server.Config;
 using Raven.Tests.Core.Utils.Entities;
 using Xunit;
 

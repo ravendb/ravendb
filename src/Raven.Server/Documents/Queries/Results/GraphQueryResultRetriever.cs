@@ -1,11 +1,8 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.Diagnostics;
 using System.Linq;
 using Lucene.Net.Store;
-using Microsoft.Extensions.Primitives;
 using Raven.Client;
-using Raven.Client.Extensions;
 using Raven.Server.Documents.Includes;
 using Raven.Server.Documents.Queries.AST;
 using Raven.Server.Documents.Queries.Timings;

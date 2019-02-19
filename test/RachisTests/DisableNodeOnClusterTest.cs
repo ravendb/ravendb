@@ -6,7 +6,6 @@ using FastTests.Server.Replication;
 using Raven.Client.Documents;
 using Raven.Server.Config;
 using Raven.Tests.Core.Utils.Entities;
-using Tests.Infrastructure;
 using Xunit;
 
 namespace RachisTests

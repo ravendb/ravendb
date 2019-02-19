@@ -1,5 +1,4 @@
 ﻿using System.Threading.Tasks;
-using FastTests.Server.Documents.Revisions;
 using FastTests.Utils;
 using Raven.Tests.Core.Utils.Entities;
 using Xunit;

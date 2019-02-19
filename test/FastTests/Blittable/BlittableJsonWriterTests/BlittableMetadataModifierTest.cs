@@ -1,10 +1,7 @@
 ﻿using System.Text;
-using Raven.Client.Documents.Conventions;
-using Raven.Client.Json;
 using Raven.Server.Documents;
 using Sparrow.Json;
 using Sparrow.Json.Parsing;
-using Sparrow.Threading;
 using Xunit;
 
 namespace FastTests.Blittable.BlittableJsonWriterTests

@@ -3,7 +3,6 @@ using FastTests;
 using Raven.Server.Utils;
 using Sparrow.Json;
 using Sparrow.Json.Parsing;
-using Sparrow.LowMemory;
 using Sparrow.Threading;
 using Xunit;
 

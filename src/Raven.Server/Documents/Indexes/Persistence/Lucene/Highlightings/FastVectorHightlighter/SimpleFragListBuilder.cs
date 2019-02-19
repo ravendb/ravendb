@@ -17,8 +17,6 @@
 
 using System;
 using System.Collections.Generic;
-using System.Text;
-
 using WeightedPhraseInfo = Lucene.Net.Search.Vectorhighlight.FieldPhraseList.WeightedPhraseInfo;
 
 namespace Lucene.Net.Search.Vectorhighlight

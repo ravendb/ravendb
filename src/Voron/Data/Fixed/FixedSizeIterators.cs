@@ -4,10 +4,8 @@
 //  </copyright>
 // -----------------------------------------------------------------------
 
-using Sparrow;
 using System;
-using Voron.Impl;
-using Voron.Impl.FileHeaders;
+using Sparrow.Server;
 
 namespace Voron.Data.Fixed
 {

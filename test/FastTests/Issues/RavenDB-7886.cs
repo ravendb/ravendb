@@ -1,9 +1,6 @@
 ﻿using System;
-using System.Collections.Generic;
 using System.IO;
-using System.Text;
 using Raven.Server.Config;
-using Raven.Server.ServerWide;
 using Xunit;
 
 namespace FastTests.Issues

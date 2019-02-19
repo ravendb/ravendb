@@ -3,11 +3,10 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using FastTests.Voron.Util;
-using Sparrow.Platform.Posix;
-using Sparrow.Platform.Win32;
+using Sparrow.Server.Platform.Posix;
+using Sparrow.Server.Platform.Win32;
 using Voron;
 using Voron.Global;
-using Voron.Platform.Posix;
 using Xunit;
 
 namespace SlowTests.Voron.Storage

@@ -17,9 +17,6 @@
 
 using System;
 using System.Collections.Generic;
-using System.Text;
-
-using Lucene.Net.Search;
 using Lucene.Net.Index;
 using Lucene.Net.Support.Compatibility;
 using TermInfo = Lucene.Net.Search.Vectorhighlight.FieldTermStack.TermInfo;

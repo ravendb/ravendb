@@ -1,7 +1,7 @@
 ﻿using FastTests;
 using Raven.Server.Documents.Indexes.MapReduce;
 using Raven.Server.ServerWide;
-using Sparrow;
+using Sparrow.Server;
 using Sparrow.Threading;
 using Xunit;
 

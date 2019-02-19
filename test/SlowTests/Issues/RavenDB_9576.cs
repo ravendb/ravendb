@@ -1,9 +1,6 @@
-using System.IO;
 using System.Threading.Tasks;
 using FastTests;
 using Raven.Client.Exceptions;
-using Raven.Server.Documents;
-using Raven.Server.ServerWide.Context;
 using Xunit;
 
 namespace SlowTests.Issues

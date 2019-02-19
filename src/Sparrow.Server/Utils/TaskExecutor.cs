@@ -2,8 +2,9 @@
 using System.Collections.Concurrent;
 using System.Threading;
 using System.Threading.Tasks;
+using Sparrow.Utils;
 
-namespace Sparrow.Utils
+namespace Sparrow.Server.Utils
 {
     /// <summary>
     /// Allow to raise a task completion source with minimal costs

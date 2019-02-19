@@ -4,8 +4,6 @@ using Orders;
 using Raven.Client;
 using Raven.Client.Documents.Operations;
 using Raven.Client.Documents.Queries;
-using Raven.Client.Exceptions.Documents.Patching;
-using Raven.Server.Config;
 using Xunit;
 
 namespace SlowTests.Core.ScriptedPatching

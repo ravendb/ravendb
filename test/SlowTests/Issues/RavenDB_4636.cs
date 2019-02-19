@@ -1,7 +1,6 @@
 ﻿using FastTests;
 using Raven.Client.Documents.Operations.Configuration;
 using Raven.Client.Http;
-using Raven.Client.ServerWide;
 using Raven.Client.ServerWide.Operations.Configuration;
 using Xunit;
 

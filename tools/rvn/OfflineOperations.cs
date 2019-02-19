@@ -3,7 +3,7 @@ using System.IO;
 using Raven.Server.Config.Categories;
 using Raven.Server.ServerWide;
 using Raven.Server.Utils;
-using Sparrow;
+using Sparrow.Server;
 using Voron;
 using Voron.Impl.Compaction;
 

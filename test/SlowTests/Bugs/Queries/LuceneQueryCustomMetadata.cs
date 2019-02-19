@@ -1,6 +1,5 @@
 using System.Dynamic;
 using FastTests;
-using Newtonsoft.Json.Linq;
 using Xunit;
 
 namespace SlowTests.Bugs.Queries

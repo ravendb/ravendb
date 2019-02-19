@@ -2,13 +2,9 @@
 //
 // This file is distributed under the MIT License. See LICENSE.md for details.
 
-using System;
-using System.Collections.Generic;
-using System.Diagnostics;
-using System.Runtime.InteropServices;
 using System.Threading;
 
-namespace Sparrow.Collections.LockFree
+namespace Sparrow.Server.Collections.LockFree
 {
     internal sealed class DictionaryImplInt<TValue>
                 : DictionaryImpl<int, int, TValue>

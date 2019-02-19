@@ -1,12 +1,4 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Data;
-using System.Data.Common;
-using System.Data.SqlClient;
-using System.Linq;
-using Raven.Server.SqlMigration.Model;
-using Raven.Server.SqlMigration.Schema;
-using Sparrow.Json.Parsing;
+﻿using Raven.Server.SqlMigration.Schema;
 
 namespace Raven.Server.SqlMigration.MsSQL
 {

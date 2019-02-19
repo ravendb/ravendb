@@ -1,11 +1,7 @@
-using System;
 using System.Collections.Generic;
 using System.ComponentModel;
-using System.Linq;
-using Microsoft.Extensions.Configuration;
 using Raven.Server.Config.Attributes;
 using Raven.Server.NotificationCenter.Notifications;
-using Raven.Server.ServerWide;
 
 namespace Raven.Server.Config.Categories
 {

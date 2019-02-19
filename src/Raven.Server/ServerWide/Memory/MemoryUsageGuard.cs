@@ -1,5 +1,4 @@
-﻿using System;
-using Sparrow;
+﻿using Sparrow;
 using Sparrow.Logging;
 using Sparrow.LowMemory;
 using Sparrow.Utils;

@@ -4,12 +4,10 @@
 //  </copyright>
 // -----------------------------------------------------------------------
 
-using System;
 using System.Linq;
 using System.Threading.Tasks;
 using FastTests;
 using Raven.Client.Documents;
-using Raven.Client.Util;
 using Xunit;
 
 namespace SlowTests.Issues

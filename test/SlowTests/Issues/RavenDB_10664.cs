@@ -5,7 +5,6 @@ using Raven.Client.Documents.Operations.Backups;
 using Raven.Client.Documents.Operations.ConnectionStrings;
 using Raven.Client.Documents.Operations.ETL;
 using Raven.Client.Documents.Operations.Replication;
-using Raven.Server.ServerWide.Commands;
 using Xunit;
 
 namespace SlowTests.Issues

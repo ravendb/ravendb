@@ -12,7 +12,6 @@ using System.Threading.Tasks;
 using Raven.Client.Documents.Operations.Attachments;
 using Raven.Client.Documents.Replication;
 using Raven.Client.Documents.Replication.Messages;
-using Raven.Client.Extensions;
 using Raven.Client.ServerWide.Tcp;
 using Raven.Client.Util;
 using Raven.Server.Documents.TcpHandlers;
@@ -28,7 +27,9 @@ using Sparrow.Platform;
 using Sparrow.Utils;
 using Voron;
 using Raven.Server.ServerWide;
+using Sparrow.Server;
 using Size = Sparrow.Size;
+using Raven.Client.Extensions;
 
 namespace Raven.Server.Documents.Replication
 {

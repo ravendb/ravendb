@@ -1,13 +1,10 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.Diagnostics;
-using System.Threading;
 using System.Threading.Tasks;
 using Microsoft.Extensions.Primitives;
 using Raven.Client;
 using Raven.Server.ServerWide;
 using Raven.Server.ServerWide.Context;
-using Sparrow;
 
 namespace Raven.Server.Documents.Queries.Graph
 {

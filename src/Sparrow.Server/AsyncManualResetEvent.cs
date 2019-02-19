@@ -4,7 +4,7 @@ using System.Threading;
 using System.Threading.Tasks;
 using Sparrow.Utils;
 
-namespace Sparrow
+namespace Sparrow.Server
 {
     public class AsyncManualResetEvent
     {

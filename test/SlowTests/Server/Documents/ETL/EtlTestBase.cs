@@ -6,7 +6,6 @@ using FastTests;
 using Raven.Client.Documents;
 using Raven.Client.Documents.Operations.ConnectionStrings;
 using Raven.Client.Documents.Operations.ETL;
-using Raven.Client.ServerWide;
 using Raven.Server.Documents.ETL;
 using Xunit;
 

@@ -1,7 +1,6 @@
 using System.Collections.Generic;
 using System.Linq;
 using FastTests;
-using SlowTests.Core.Utils.Entities;
 using SlowTests.Core.Utils.Indexes;
 using Xunit;
 

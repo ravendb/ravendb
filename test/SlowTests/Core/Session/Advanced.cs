@@ -3,7 +3,6 @@ using System.Collections.Generic;
 using FastTests;
 using Raven.Client.Documents.Commands.Batches;
 using Raven.Client.Exceptions;
-using Raven.Client.Util;
 using Sparrow.Json.Parsing;
 using Xunit;
 

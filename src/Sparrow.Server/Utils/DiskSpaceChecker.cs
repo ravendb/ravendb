@@ -5,9 +5,9 @@ using System.Runtime.InteropServices;
 using System.Text;
 using Sparrow.Logging;
 using Sparrow.Platform;
-using Sparrow.Platform.Posix;
+using Sparrow.Server.Platform.Posix;
 
-namespace Sparrow.Utils
+namespace Sparrow.Server.Utils
 {
     public static class DiskSpaceChecker
     {

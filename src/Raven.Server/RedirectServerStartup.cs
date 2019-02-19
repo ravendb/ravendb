@@ -1,11 +1,8 @@
 using System;
-using System.Text;
 using System.Threading.Tasks;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.Logging;
-using Raven.Server.Extensions;
-using Sparrow.Logging;
 
 namespace Raven.Server
 {

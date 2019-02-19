@@ -1,7 +1,6 @@
 using FastTests;
 using Raven.Client.Documents.Indexes;
 using Raven.Client.Documents.Operations.Indexes;
-using Raven.Client.Exceptions.Compilation;
 using Raven.Client.Exceptions.Documents.Compilation;
 using Xunit;
 

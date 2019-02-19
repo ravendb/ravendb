@@ -4,7 +4,7 @@ using System.Diagnostics;
 using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
 using Sparrow.Json;
-using Sparrow.LowMemory;
+using Sparrow.Server;
 using Sparrow.Threading;
 
 namespace Voron

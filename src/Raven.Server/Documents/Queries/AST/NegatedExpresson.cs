@@ -1,6 +1,3 @@
-using System.Collections.Generic;
-using System.Linq;
-
 namespace Raven.Server.Documents.Queries.AST
 {
     public class NegatedExpression : QueryExpression

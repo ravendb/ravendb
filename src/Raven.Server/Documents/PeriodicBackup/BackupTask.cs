@@ -13,7 +13,6 @@ using Raven.Client.Documents.Smuggler;
 using Raven.Client.ServerWide;
 using Raven.Client.Util;
 using Raven.Server.Config.Settings;
-using Raven.Server.Documents.Indexes.Static.Extensions;
 using Raven.Server.Documents.PeriodicBackup.Aws;
 using Raven.Server.Documents.PeriodicBackup.Azure;
 using Raven.Server.Documents.PeriodicBackup.Restore;

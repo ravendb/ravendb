@@ -1,9 +1,6 @@
-﻿using System;
-using System.Threading.Tasks;
-using Raven.Client.Documents.Conventions;
+﻿using Raven.Client.Documents.Conventions;
 using Raven.Client.Documents.Operations;
 using Raven.Client.Http;
-using Sparrow.Utils;
 
 namespace Raven.Client.ServerWide.Operations
 {

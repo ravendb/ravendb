@@ -6,7 +6,6 @@
 
 using FastTests;
 using Raven.Server.Documents;
-using Raven.Server.Documents.Indexes.Static;
 using Raven.Server.Documents.Patch;
 using Raven.Server.ServerWide.Context;
 using Sparrow.Json.Parsing;

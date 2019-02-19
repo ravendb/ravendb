@@ -5,7 +5,6 @@ using System.Linq;
 using System.Net.Http;
 using System.Threading;
 using System.Threading.Tasks;
-using FastTests.Server.Documents.Revisions;
 using FastTests.Utils;
 using Raven.Client.Documents;
 using Raven.Client.Documents.Commands;
@@ -20,10 +19,9 @@ using Raven.Client.ServerWide.Operations;
 using Raven.Client.Util;
 using Raven.Server;
 using Raven.Server.Config;
-using Raven.Server.Utils;
 using Raven.Tests.Core.Utils.Entities;
 using SlowTests.Cluster;
-using Sparrow;
+using Sparrow.Server;
 using Xunit;
 
 namespace InterversionTests

@@ -1,4 +1,4 @@
-﻿using Sparrow;
+﻿using Sparrow.Server;
 using Sparrow.Threading;
 
 namespace Voron.Benchmark

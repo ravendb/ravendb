@@ -5,7 +5,6 @@
 // -----------------------------------------------------------------------
 
 using FastTests;
-using Raven.Client.Documents.Replication.Messages;
 using SlowTests.Core.Utils.Entities;
 using Xunit;
 

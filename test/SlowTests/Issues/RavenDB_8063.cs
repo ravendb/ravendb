@@ -1,5 +1,4 @@
-﻿using System.Threading;
-using FastTests;
+﻿using FastTests;
 using Orders;
 using Raven.Client.Documents.Commands;
 using Xunit;

@@ -1,11 +1,9 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.Data;
 using System.Threading.Tasks;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Http.Features.Authentication;
 using Raven.Client.Documents.Operations.Replication;
-using Raven.Client.Exceptions.Security;
 using Raven.Client.ServerWide;
 using Raven.Server.Extensions;
 using Raven.Server.Routing;

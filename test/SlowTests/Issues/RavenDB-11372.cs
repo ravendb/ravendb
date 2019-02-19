@@ -1,6 +1,4 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Text;
+﻿using System.Collections.Generic;
 using FastTests;
 using Raven.Client.Documents;
 using Raven.Client.Documents.Conventions;

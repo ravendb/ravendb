@@ -1,7 +1,6 @@
 using System;
 using DasMulli.Win32.ServiceUtils;
 using Raven.Server.Config;
-using Raven.Server.ServerWide;
 using Raven.Server.Utils.Cli;
 using Sparrow.Logging;
 using Sparrow.Platform;

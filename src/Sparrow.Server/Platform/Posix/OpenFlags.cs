@@ -1,6 +1,6 @@
 ﻿using System;
 
-namespace Sparrow.Platform.Posix
+namespace Sparrow.Server.Platform.Posix
 {
     [Flags]
     

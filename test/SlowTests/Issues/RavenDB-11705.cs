@@ -1,12 +1,7 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Text;
-using System.Threading.Tasks;
+﻿using System.Threading.Tasks;
 using FastTests;
-using FastTests.Server.Documents.Revisions;
 using FastTests.Utils;
 using Raven.Client.Documents.Commands.Batches;
-using Raven.Client.Exceptions;
 using Raven.Client.Exceptions.Documents.Patching;
 using Raven.Tests.Core.Utils.Entities;
 using Xunit;

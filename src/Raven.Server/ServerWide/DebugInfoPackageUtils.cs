@@ -3,7 +3,7 @@ using System.Collections.Generic;
 using System.IO;
 using System.IO.Compression;
 using Raven.Server.Routing;
-using Sparrow.Platform.Posix;
+using Sparrow.Server.Platform.Posix;
 
 namespace Raven.Server.ServerWide
 {

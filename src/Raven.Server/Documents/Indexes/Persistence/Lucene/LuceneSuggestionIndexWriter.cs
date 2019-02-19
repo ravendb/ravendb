@@ -12,6 +12,7 @@ using Raven.Server.Documents.Indexes.Persistence.Lucene.Analyzers;
 using Raven.Server.Exceptions;
 using Raven.Server.Indexing;
 using Sparrow.Logging;
+using Sparrow.Server.Utils;
 
 namespace Raven.Server.Documents.Indexes.Persistence.Lucene
 {

@@ -16,9 +16,6 @@
  */
 
 using System;
-using System.Collections.Generic;
-using System.Text;
-
 using Lucene.Net.Index;
 using Lucene.Net.Store;
 

@@ -1,7 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Diagnostics;
-using Sparrow;
+using Sparrow.Server;
 using Voron.Data.Tables;
 
 namespace Voron.Benchmark

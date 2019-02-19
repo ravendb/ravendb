@@ -3,9 +3,6 @@ using Xunit;
 using System.Threading;
 using System.Threading.Tasks;
 using FastTests;
-using Raven.Client.Documents.Changes;
-using Raven.Client.Extensions;
-using Raven.Tests.Core.Utils.Entities;
 
 namespace SlowTests.Issues
 {

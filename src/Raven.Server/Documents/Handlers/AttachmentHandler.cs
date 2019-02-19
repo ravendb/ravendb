@@ -6,21 +6,16 @@
 
 using System;
 using System.IO;
-using System.Linq;
 using System.Net;
 using System.Runtime.ExceptionServices;
 using System.Threading.Tasks;
-using Microsoft.AspNetCore.Http;
 using Raven.Client;
 using Raven.Client.Documents.Attachments;
 using Raven.Client.Documents.Operations.Attachments;
 using Raven.Client.Exceptions;
-using Raven.Client.ServerWide.Tcp;
-using Raven.Server.Json;
 using Raven.Server.Routing;
 using Raven.Server.ServerWide.Context;
 using Sparrow.Json;
-using Sparrow.Json.Parsing;
 using Voron;
 
 namespace Raven.Server.Documents.Handlers

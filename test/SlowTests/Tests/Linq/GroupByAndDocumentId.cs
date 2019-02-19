@@ -10,7 +10,6 @@ using System.Linq;
 using FastTests;
 using Raven.Client.Documents.Indexes;
 using Xunit;
-using SlowTests.Utils;
 
 namespace SlowTests.Tests.Linq
 {

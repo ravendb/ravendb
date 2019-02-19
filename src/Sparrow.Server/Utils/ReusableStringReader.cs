@@ -2,11 +2,13 @@
 // The .NET Foundation licenses this file to you under the MIT license.
 // See the LICENSE file in the project root for more information.
 
-using System.Runtime.InteropServices;
+using System;
 using System.Diagnostics.Contracts;
+using System.IO;
+using System.Runtime.InteropServices;
 using System.Threading.Tasks;
 
-namespace System.IO
+namespace Sparrow.Server.Utils
 {
     // This class implements a text reader that reads from a string based on the CoreCLR version but allows to reset the position.
     [ComVisible(true)]

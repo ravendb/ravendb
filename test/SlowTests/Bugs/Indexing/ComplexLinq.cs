@@ -2,8 +2,6 @@ using System;
 using FastTests;
 using Xunit;
 using System.Linq;
-using Raven.Client.Documents.Queries;
-using Raven.Client.Documents.Session;
 
 namespace SlowTests.Bugs.Indexing
 {

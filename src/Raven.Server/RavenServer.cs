@@ -25,7 +25,6 @@ using Microsoft.Extensions.DependencyInjection;
 using Newtonsoft.Json;
 using Org.BouncyCastle.Pkcs;
 using Raven.Client;
-using Raven.Client.Documents.Operations.Replication;
 using Raven.Client.Exceptions.Database;
 using Raven.Client.Exceptions.Security;
 using Raven.Client.Extensions;
@@ -57,7 +56,6 @@ using Sparrow;
 using Sparrow.Json;
 using Sparrow.Json.Parsing;
 using Sparrow.Logging;
-using Sparrow.Platform;
 
 namespace Raven.Server
 {

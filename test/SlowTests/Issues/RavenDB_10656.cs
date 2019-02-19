@@ -1,7 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Threading.Tasks;
-using FastTests.Server.Documents.Revisions;
 using FastTests.Server.Replication;
 using FastTests.Utils;
 using Orders;

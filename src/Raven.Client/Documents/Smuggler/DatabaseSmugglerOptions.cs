@@ -1,5 +1,4 @@
 ﻿using System;
-using Raven.Client.Documents.Operations.Backups;
 
 namespace Raven.Client.Documents.Smuggler
 {

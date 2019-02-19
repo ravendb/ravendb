@@ -1,8 +1,6 @@
 ﻿using System;
 using System.Text;
-using Esprima;
 using Raven.Server.Documents.Queries.AST;
-using Sparrow;
 using Microsoft.Extensions.Primitives;
 
 namespace Raven.Server.Documents.Queries.Parser

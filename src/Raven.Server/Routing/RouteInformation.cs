@@ -8,7 +8,6 @@ using Raven.Client.Exceptions.Cluster;
 using Raven.Client.Exceptions.Database;
 using Raven.Server.Documents;
 using Raven.Server.Web;
-using Sparrow;
 
 namespace Raven.Server.Routing
 {

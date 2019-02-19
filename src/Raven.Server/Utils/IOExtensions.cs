@@ -3,9 +3,8 @@ using System.IO;
 using System.Text;
 using System.Threading;
 using Raven.Client.Extensions;
-using Raven.Server.Extensions;
 using Sparrow.Platform;
-using Sparrow.Platform.Posix;
+using Sparrow.Server.Platform.Posix;
 
 namespace Raven.Server.Utils
 {

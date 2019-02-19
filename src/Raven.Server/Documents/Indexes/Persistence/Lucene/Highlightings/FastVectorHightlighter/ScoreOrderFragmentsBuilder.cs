@@ -17,8 +17,6 @@
 
 using System;
 using System.Collections.Generic;
-using System.Text;
-
 using WeightedFragInfo = Lucene.Net.Search.Vectorhighlight.FieldFragList.WeightedFragInfo;
 
 namespace Lucene.Net.Search.Vectorhighlight

@@ -6,7 +6,6 @@ using Newtonsoft.Json.Serialization;
 using Raven.Client.Documents.Operations.CompareExchange;
 using Raven.Client.Documents.Session;
 using SlowTests.Core.Utils.Entities;
-using Sparrow.Json;
 using Xunit;
 
 namespace SlowTests.Issues

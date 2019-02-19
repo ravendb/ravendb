@@ -1,12 +1,9 @@
-﻿using System;
-using System.Collections.Generic;
+﻿using System.Collections.Generic;
 using System.Linq;
-using System.Text;
 using FastTests;
 using Raven.Client.Documents.Indexes;
 using Raven.Client.Documents.Operations;
 using Raven.Client.Documents.Queries;
-using Raven.Tests.Core.Utils.Entities;
 using Sparrow.Json;
 using Xunit;
 using static SlowTests.Issues.RavenDB_11985.Building;

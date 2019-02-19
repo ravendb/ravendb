@@ -1,7 +1,4 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Text;
-using FastTests;
+﻿using FastTests;
 using Raven.Client.Documents;
 using Raven.Client.Documents.Operations.Attachments;
 using Xunit;

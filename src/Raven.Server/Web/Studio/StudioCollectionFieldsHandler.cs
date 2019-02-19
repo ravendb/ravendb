@@ -8,7 +8,6 @@ using Raven.Server.Documents;
 using Raven.Server.Routing;
 using Raven.Server.ServerWide.Context;
 using Sparrow.Json;
-using Sparrow.Utils;
 
 namespace Raven.Server.Web.Studio
 {

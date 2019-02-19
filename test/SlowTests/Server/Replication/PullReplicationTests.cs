@@ -7,7 +7,6 @@ using System.Threading.Tasks;
 using Esprima.Ast;
 using FastTests.Server.Replication;
 using Raven.Client.Documents;
-using Raven.Client.Documents.Operations.ETL;
 using Raven.Client.Documents.Operations.OngoingTasks;
 using Raven.Client.Documents.Operations.Replication;
 using Raven.Client.Documents.Session;

@@ -5,12 +5,12 @@ using Raven.Server.Documents.Replication;
 using Raven.Server.Documents.Subscriptions;
 using Raven.Server.ServerWide.Context;
 using Raven.Tests.Core.Utils.Entities;
-using Sparrow;
 using Xunit;
 using Raven.Client.Extensions;
 using System;
 using System.Diagnostics;
 using Raven.Client.Exceptions.Documents.Subscriptions;
+using Sparrow.Server;
 
 namespace SlowTests.Client.Subscriptions
 {

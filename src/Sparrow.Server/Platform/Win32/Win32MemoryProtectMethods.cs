@@ -1,7 +1,7 @@
 ﻿using System;
 using System.Runtime.InteropServices;
 
-namespace Sparrow.Platform.Win32
+namespace Sparrow.Server.Platform.Win32
 {
     public static unsafe class Win32MemoryProtectMethods
     {

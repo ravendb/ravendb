@@ -1,20 +1,19 @@
-﻿using Sparrow.Binary;
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
 using System.Text;
 using System.Threading;
+using Sparrow.Binary;
 using Sparrow.Collections;
 using Sparrow.Extensions;
-using Sparrow.Global;
 using Sparrow.Json;
 using Sparrow.LowMemory;
 using Sparrow.Threading;
 using Sparrow.Utils;
 
-namespace Sparrow
+namespace Sparrow.Server
 {
     [Flags]
     public enum ByteStringType : byte
@@ -819,7 +818,7 @@ namespace Sparrow
             {
                 if (_externalCurrentLeft == 0)
                 {
-                    var tmp = Math.Min(2 * Constants.Size.Megabyte, _allocationBlockSize * 2);
+                    var tmp = Math.Min(2 * Sparrow.Global.Constants.Size.Megabyte, _allocationBlockSize * 2);
                     AllocateExternalSegment(tmp);
                     _allocationBlockSize = tmp;
                 }
@@ -949,7 +948,7 @@ namespace Sparrow
             }
             else
             {
-                _allocationBlockSize = Math.Min(2 * Constants.Size.Megabyte, _allocationBlockSize * 2);
+                _allocationBlockSize = Math.Min(2 * Sparrow.Global.Constants.Size.Megabyte, _allocationBlockSize * 2);
                 _internalCurrent = AllocateSegment(_allocationBlockSize);
             }
 

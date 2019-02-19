@@ -1,6 +1,5 @@
 ﻿using System;
 using System.Threading.Tasks;
-using Raven.Client.Extensions;
 using Sparrow.Logging;
 
 namespace Raven.Server.Utils

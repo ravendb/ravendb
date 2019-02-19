@@ -1,6 +1,5 @@
 ﻿using System;
 using System.Threading.Tasks;
-using FastTests.Server.Replication;
 using Raven.Server.ServerWide.Context;
 using Tests.Infrastructure;
 using Xunit;

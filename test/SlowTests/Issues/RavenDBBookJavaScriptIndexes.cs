@@ -1,13 +1,6 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
+﻿using System.Collections.Generic;
 using FastTests;
-using Orders;
-using Raven.Client.Documents;
 using Raven.Client.Documents.Indexes;
-using SlowTests.Tests.Linq;
-using Tests.Infrastructure;
 using Xunit;
 
 namespace SlowTests.Issues

@@ -10,7 +10,6 @@ using FastTests;
 using Newtonsoft.Json;
 using Xunit;
 using System.Linq;
-using Raven.Client;
 using Raven.Client.Documents.Linq;
 using Raven.Client.Documents.Session;
 

@@ -5,14 +5,7 @@
 // -----------------------------------------------------------------------
 
 using System.IO;
-using System.Text;
-using Raven.Server.Config;
-using Raven.Server.Config.Settings;
-using Raven.Server.Documents;
-using Raven.Server.ServerWide;
-using Raven.Server.ServerWide.Context;
 using Xunit;
-using Voron.Data.Tables;
 using Voron.Debugging;
 
 namespace FastTests.Voron.Optimizations

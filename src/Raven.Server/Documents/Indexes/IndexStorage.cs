@@ -10,9 +10,9 @@ using Raven.Server.ServerWide.Context;
 using Sparrow.Json;
 using Voron;
 using Voron.Data.Tables;
-using Sparrow;
 using Sparrow.Binary;
 using Sparrow.Logging;
+using Sparrow.Server;
 using Voron.Exceptions;
 
 namespace Raven.Server.Documents.Indexes

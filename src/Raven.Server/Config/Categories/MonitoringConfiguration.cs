@@ -1,7 +1,6 @@
 using System.ComponentModel;
 using Microsoft.Extensions.Configuration;
 using Raven.Server.Config.Attributes;
-using Raven.Server.Config.Settings;
 using Raven.Server.ServerWide;
 
 namespace Raven.Server.Config.Categories

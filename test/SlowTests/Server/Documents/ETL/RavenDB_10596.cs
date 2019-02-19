@@ -5,8 +5,8 @@ using System.Threading.Tasks;
 using Raven.Server.NotificationCenter.Notifications;
 using Raven.Server.NotificationCenter.Notifications.Details;
 using Raven.Tests.Core.Utils.Entities;
-using Sparrow.Collections;
 using Sparrow.Json.Parsing;
+using Sparrow.Server.Collections;
 using Xunit;
 
 namespace SlowTests.Server.Documents.ETL

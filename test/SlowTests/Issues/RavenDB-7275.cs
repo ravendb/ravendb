@@ -1,14 +1,4 @@
-﻿using System;
-using System.Threading.Tasks;
-using FastTests;
-using Raven.Client.Documents.Subscriptions;
-using Raven.Client.Exceptions.Security;
-using Raven.Client.Util;
-using Raven.Tests.Core.Utils.Entities;
-using Sparrow;
-using Xunit;
-
-namespace SlowTests.Issues
+﻿namespace SlowTests.Issues
 {
     /*public class RavenDB_7275 : RavenTestBase
     {

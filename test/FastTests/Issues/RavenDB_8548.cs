@@ -1,8 +1,5 @@
 ﻿using System;
-using System.IO;
 using Raven.Server.Config;
-using Raven.Server.Config.Settings;
-using Raven.Server.ServerWide;
 using Sparrow.Logging;
 using Xunit;
 

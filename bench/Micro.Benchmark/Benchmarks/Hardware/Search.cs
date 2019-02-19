@@ -11,7 +11,7 @@ using BenchmarkDotNet.Environments;
 using BenchmarkDotNet.Exporters;
 using BenchmarkDotNet.Jobs;
 using BenchmarkDotNet.Validators;
-using Sparrow;
+using Sparrow.Server;
 using Sparrow.Threading;
 using Voron;
 using Voron.Data.BTrees;

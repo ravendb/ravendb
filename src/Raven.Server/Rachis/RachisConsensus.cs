@@ -3,7 +3,6 @@ using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
-using System.Linq;
 using System.Net;
 using System.Security.Cryptography.X509Certificates;
 using System.Text;
@@ -13,7 +12,6 @@ using Raven.Client.Exceptions;
 using Raven.Client.Extensions;
 using Raven.Server.ServerWide.Context;
 using Raven.Server.Utils;
-using Sparrow;
 using Sparrow.Binary;
 using Sparrow.Json;
 using Sparrow.Json.Parsing;
@@ -29,6 +27,9 @@ using Raven.Server.Config;
 using Raven.Server.NotificationCenter.Notifications;
 using Raven.Server.ServerWide;
 using Raven.Server.ServerWide.Commands;
+using Sparrow.Server;
+using Sparrow.Server.Utils;
+using System.Linq;
 
 namespace Raven.Server.Rachis
 {

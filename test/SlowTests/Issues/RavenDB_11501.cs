@@ -3,7 +3,6 @@ using System.Collections.Generic;
 using System.Linq;
 using FastTests;
 using Raven.Client.Documents.Indexes;
-using Raven.Server.Documents.Indexes.Static.Linq;
 using Xunit;
 
 namespace SlowTests.Issues

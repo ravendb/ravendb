@@ -1,8 +1,6 @@
 ﻿using System;
 using System.Linq;
 using Raven.Client.Documents.Indexes;
-using Raven.Client.Documents.Queries;
-using Raven.Client.Exceptions;
 using Raven.Server.Documents.Indexes;
 using Raven.Server.Documents.Indexes.MapReduce.Auto;
 using Raven.Server.Documents.Queries;

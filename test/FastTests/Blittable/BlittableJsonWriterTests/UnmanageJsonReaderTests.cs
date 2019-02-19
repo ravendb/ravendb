@@ -2,9 +2,6 @@
 using System.IO;
 using System.Reflection;
 using System.Text;
-using Raven.Server.Json;
-using Raven.Server.ServerWide;
-using Raven.Server.ServerWide.Context;
 using Sparrow.Json;
 using Sparrow.Json.Parsing;
 using Xunit;

@@ -15,12 +15,6 @@
  * limitations under the License.
  */
 
-using System;
-using System.Collections.Generic;
-using System.Text;
-
-using Lucene.Net.Documents;
-using Lucene.Net.Search;
 using Lucene.Net.Index;
 using Lucene.Net.Store;
 

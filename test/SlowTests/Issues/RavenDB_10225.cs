@@ -2,8 +2,8 @@
 using System.Threading.Tasks;
 using FastTests;
 using Raven.Server.NotificationCenter.Notifications;
-using Sparrow.Collections;
 using Sparrow.Json.Parsing;
+using Sparrow.Server.Collections;
 using Xunit;
 
 namespace SlowTests.Issues

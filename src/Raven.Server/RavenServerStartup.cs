@@ -25,7 +25,6 @@ using Raven.Server.Config;
 using Raven.Server.Rachis;
 using Raven.Server.Routing;
 using Raven.Server.TrafficWatch;
-using Raven.Server.Utils;
 using Raven.Server.Web;
 using Sparrow.Json;
 using Sparrow.Json.Parsing;

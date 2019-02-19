@@ -5,11 +5,8 @@
 using System;
 using System.Collections;
 using System.Collections.Generic;
-using System.Collections.ObjectModel;
-using System.Diagnostics;
-using System.Threading;
 
-namespace Sparrow.Collections.LockFree
+namespace Sparrow.Server.Collections.LockFree
 {
     internal abstract partial class DictionaryImpl<TKey, TKeyStore, TValue>
         : DictionaryImpl<TKey, TValue>

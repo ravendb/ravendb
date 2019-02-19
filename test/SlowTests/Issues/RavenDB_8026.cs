@@ -1,8 +1,6 @@
 ﻿using System.Linq;
-using FastTests;
 using Raven.Client.Documents;
 using Raven.Client.Documents.Queries.Facets;
-using SlowTests.Core.Utils.Indexes;
 using Xunit;
 
 namespace SlowTests.Issues

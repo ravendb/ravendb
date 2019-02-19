@@ -20,7 +20,7 @@ using Raven.Server.Web;
 using Sparrow.Json;
 using Sparrow.Json.Parsing;
 using Sparrow.Platform;
-using Sparrow.Platform.Posix;
+using Sparrow.Server.Platform.Posix;
 
 namespace Raven.Server.Documents.Handlers.Debugging
 {

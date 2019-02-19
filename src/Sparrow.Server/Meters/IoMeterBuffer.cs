@@ -2,7 +2,7 @@
 using System.Collections.Generic;
 using System.Threading;
 
-namespace Sparrow
+namespace Sparrow.Server.Meters
 {
     public class IoMeterBuffer
     {

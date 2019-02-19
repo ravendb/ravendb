@@ -2,7 +2,6 @@
 using System.Linq;
 using System.Reflection;
 using FastTests;
-using Raven.Client.Documents.Smuggler;
 using Raven.Server.Documents;
 using Raven.Server.ServerWide.Context;
 using Raven.Server.Smuggler.Documents;

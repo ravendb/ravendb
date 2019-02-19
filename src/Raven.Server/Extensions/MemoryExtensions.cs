@@ -3,8 +3,7 @@ using System.Diagnostics;
 using System.Runtime.InteropServices;
 using Sparrow.Logging;
 using Sparrow.Platform;
-using Sparrow.Platform.Posix;
-using Voron.Platform.Posix;
+using Sparrow.Server.Platform.Posix;
 
 namespace Raven.Server.Extensions
 {

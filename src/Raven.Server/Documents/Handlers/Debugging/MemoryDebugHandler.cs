@@ -14,7 +14,7 @@ using Sparrow.Json.Parsing;
 using Sparrow.LowMemory;
 using Sparrow.Platform;
 using Sparrow.Platform.Posix;
-using Sparrow.Platform.Win32;
+using Sparrow.Server.Platform.Win32;
 using Sparrow.Utils;
 using Size = Raven.Client.Util.Size;
 

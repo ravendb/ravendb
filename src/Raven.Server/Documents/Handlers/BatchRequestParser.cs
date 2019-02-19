@@ -17,7 +17,6 @@ using Raven.Server.ServerWide;
 using Sparrow;
 using Sparrow.Json;
 using Sparrow.Json.Parsing;
-using Sparrow.Threading;
 using Sparrow.Utils;
 
 namespace Raven.Server.Documents.Handlers

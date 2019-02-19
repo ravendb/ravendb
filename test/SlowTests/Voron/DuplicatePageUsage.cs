@@ -1,7 +1,6 @@
 ﻿using System.IO;
 using System.Reflection;
 using FastTests;
-using Sparrow.Logging;
 using Voron;
 using Voron.Data.Tables;
 using Xunit;

@@ -3,7 +3,6 @@ using System.Collections.Generic;
 using Microsoft.Extensions.Primitives;
 using Raven.Client.Exceptions;
 using Raven.Server.Documents.Queries.AST;
-using Sparrow;
 using Sparrow.Json;
 
 namespace Raven.Server.Documents.Queries

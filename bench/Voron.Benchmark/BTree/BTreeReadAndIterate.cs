@@ -1,7 +1,7 @@
 ﻿using System.Collections.Generic;
 using System.Threading;
 using BenchmarkDotNet.Attributes;
-using Sparrow;
+using Sparrow.Server;
 
 namespace Voron.Benchmark.BTree
 {

@@ -1,8 +1,5 @@
 using System;
-using System.Threading.Tasks;
-
 using FastTests;
-using Raven.Client;
 using Raven.Client.Documents;
 using Raven.Client.Documents.Session;
 using Xunit;

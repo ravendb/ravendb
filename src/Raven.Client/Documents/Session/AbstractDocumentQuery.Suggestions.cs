@@ -1,5 +1,4 @@
 using System;
-using System.Linq;
 using Raven.Client.Documents.Queries.Suggestions;
 using Raven.Client.Documents.Session.Tokens;
 

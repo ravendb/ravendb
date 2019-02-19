@@ -3,7 +3,6 @@ using System.Collections.Generic;
 using System.Linq;
 using BenchmarkDotNet.Analysers;
 using BenchmarkDotNet.Attributes;
-using BenchmarkDotNet.Columns;
 using BenchmarkDotNet.Configs;
 using BenchmarkDotNet.Environments;
 using BenchmarkDotNet.Exporters;

@@ -10,7 +10,6 @@ using Raven.Client.Documents;
 using Raven.Client.Documents.Operations.Attachments;
 using Raven.Server.Documents;
 using Raven.Tests.Core.Utils.Entities;
-using Sparrow.Platform;
 
 namespace SlowTests.Client.Attachments
 {

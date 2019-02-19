@@ -1,7 +1,6 @@
 ﻿using System;
-using Sparrow.Meters;
 
-namespace Sparrow
+namespace Sparrow.Server.Meters
 {
     public class DatabasePerformanceMetrics
     {

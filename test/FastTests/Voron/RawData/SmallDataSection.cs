@@ -6,7 +6,6 @@ using Raven.Server.Documents;
 using Sparrow;
 using Xunit;
 using Voron.Data.RawData;
-using Voron.Impl;
 
 namespace FastTests.Voron.RawData
 {

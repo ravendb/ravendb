@@ -1,7 +1,7 @@
 ﻿using System;
 using System.Diagnostics;
 
-namespace Sparrow.Utils
+namespace Sparrow.Server.Utils
 {
     public class Base64
     {

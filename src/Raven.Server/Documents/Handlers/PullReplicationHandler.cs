@@ -1,24 +1,18 @@
-﻿﻿using System.Linq;
-using System.Net;
+﻿using System.Net;
 ﻿using System;
-using System.IO.Compression;
 using System.Security.Cryptography.X509Certificates;
 using System.Text;
 using System.Threading.Tasks;
-using Raven.Client.Documents.Operations.ETL;
 using Raven.Client.Documents.Operations.OngoingTasks;
 using Raven.Client.Documents.Operations.Replication;
 using Raven.Client.Exceptions;
 using Raven.Client.Json.Converters;
-using Raven.Server.Json;
 using Raven.Server.Routing;
 using Raven.Server.ServerWide.Commands;
-using Raven.Server.ServerWide.Commands.ConnectionStrings;
 using Raven.Server.ServerWide.Context;
 using Raven.Server.Utils;
 using Raven.Server.Web.System;
 using Sparrow.Json;
-using Sparrow.Json.Parsing;
 
 namespace Raven.Server.Documents.Handlers
 {

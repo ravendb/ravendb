@@ -1,7 +1,4 @@
-﻿using System;
-using System.Collections.Generic;
-using System.IO;
-using System.Text;
+﻿using System.IO;
 using FastTests;
 using Newtonsoft.Json;
 using Raven.Client.Documents.Conventions;

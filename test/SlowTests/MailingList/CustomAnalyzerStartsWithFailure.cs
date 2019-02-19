@@ -1,9 +1,7 @@
 using System.Linq;
-using System.Threading.Tasks;
 using FastTests;
 using Lucene.Net.Analysis;
 using Lucene.Net.Analysis.Standard;
-using Raven.Client;
 using Raven.Client.Documents;
 using Raven.Client.Documents.Indexes;
 using Raven.Client.Documents.Session;

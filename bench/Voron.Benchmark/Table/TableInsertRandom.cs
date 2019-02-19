@@ -1,7 +1,7 @@
 ﻿using System.Collections.Generic;
 using System.Linq;
 using BenchmarkDotNet.Attributes;
-using Sparrow;
+using Sparrow.Server;
 using Voron.Data.Tables;
 
 namespace Voron.Benchmark.Table

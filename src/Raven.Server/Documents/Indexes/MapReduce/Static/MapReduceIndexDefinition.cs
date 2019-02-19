@@ -1,7 +1,6 @@
 ﻿using System.Collections.Generic;
 using Raven.Client.Documents.Indexes;
 using Raven.Server.Documents.Indexes.Static;
-using Raven.Server.Documents.Indexes.Static.Roslyn.Rewriters;
 
 namespace Raven.Server.Documents.Indexes.MapReduce.Static
 {

@@ -2,7 +2,7 @@
 using System.Collections.Concurrent;
 using System.Collections.Generic;
 
-namespace Sparrow
+namespace Sparrow.Server.Meters
 {
     public class IoMetrics
     {

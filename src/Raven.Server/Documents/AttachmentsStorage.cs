@@ -3,7 +3,6 @@ using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
 using System.Runtime.CompilerServices;
-using Raven.Client;
 using Raven.Client.Documents.Attachments;
 using Raven.Client.Documents.Operations.Attachments;
 using Raven.Client.Exceptions;
@@ -20,8 +19,10 @@ using Sparrow.Binary;
 using Sparrow.Json;
 using Sparrow.Json.Parsing;
 using Sparrow.Logging;
-using Sparrow.Utils;
+using Sparrow.Server;
+using Sparrow.Server.Utils;
 using static Raven.Server.Documents.DocumentsStorage;
+using Constants = Raven.Client.Constants;
 
 namespace Raven.Server.Documents
 {

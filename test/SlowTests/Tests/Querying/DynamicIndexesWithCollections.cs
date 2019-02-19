@@ -9,7 +9,6 @@ using System.Collections.Generic;
 using FastTests;
 using Xunit;
 using System.Linq;
-using Raven.Client;
 using Raven.Client.Documents;
 using Raven.Client.Documents.Indexes;
 using Raven.Client.Documents.Operations.Indexes;

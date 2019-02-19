@@ -1,5 +1,4 @@
 ﻿using System;
-using Sparrow.Json;
 
 namespace Raven.Server.Documents.Queries
 {

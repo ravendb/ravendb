@@ -1,7 +1,4 @@
-﻿using System.Collections.Generic;
-using Raven.Server.Documents.Queries.AST;
-
-namespace Raven.Server.Documents.Queries.Counters
+﻿namespace Raven.Server.Documents.Queries.Counters
 {
     public class CountersField
     {

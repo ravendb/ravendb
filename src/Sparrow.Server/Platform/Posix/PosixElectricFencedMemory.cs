@@ -1,10 +1,8 @@
 ﻿using System;
 using System.Runtime.InteropServices;
-using Sparrow.Platform.Posix;
-using Voron.Platform.Posix;
 using System.Threading;
 
-namespace Sparrow.Platform
+namespace Sparrow.Server.Platform.Posix
 {
     public unsafe class PosixElectricFencedMemory
     {

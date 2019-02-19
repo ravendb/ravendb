@@ -3,7 +3,6 @@ using System.Collections.Generic;
 using System.IO;
 using System.Reflection;
 using FastTests.Voron;
-using SlowTests.Voron;
 using Voron;
 using Xunit;
 
