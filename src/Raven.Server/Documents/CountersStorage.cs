@@ -311,7 +311,7 @@ namespace Raven.Server.Documents
 
                         if (counters.Modifications != null)
                         {
-                            using (data)
+                            using (var old = data)
                             {
                                 data = context.ReadObject(data, documentId, BlittableJsonDocumentBuilder.UsageMode.ToDisk);
                             }
@@ -675,7 +675,7 @@ namespace Raven.Server.Documents
 
                             if (localCounters.Modifications != null)
                             {
-                                using (data)
+                                using (var old = data)
                                 {
                                     data = context.ReadObject(data, documentId, BlittableJsonDocumentBuilder.UsageMode.ToDisk);
                                 }
@@ -1013,7 +1013,7 @@ namespace Raven.Server.Documents
                     [counterName] = deleteCv
                 };
 
-                using (data)
+                using (var old = data)
                 {
                     data = context.ReadObject(data, documentId, BlittableJsonDocumentBuilder.UsageMode.ToDisk);
                 }

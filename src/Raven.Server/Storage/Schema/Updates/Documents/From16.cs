@@ -205,7 +205,7 @@ namespace Raven.Server.Storage.Schema.Updates.Documents
                 var deleteCv = step.DocumentsStorage.CountersStorage.GenerateDeleteChangeVectorFromRawBlob(data, counterToDelete as BlittableJsonReaderObject.RawBlob);
                 counters.Modifications = new DynamicJsonValue(counters) {[counterName] = deleteCv};
 
-                using (data)
+                using (var old = data)
                 {
                     data = context.ReadObject(data, null, BlittableJsonDocumentBuilder.UsageMode.ToDisk);
                 }

@@ -181,7 +181,9 @@ namespace Raven.Server.Smuggler.Documents
                 case DatabaseItemType.CompareExchange:
                     counts = ProcessCompareExchange(result);
                     break;
+#pragma warning disable 618
                 case DatabaseItemType.Counters:
+#pragma warning restore 618
                     counts = ProcessLegacyCounters(result);
                     break;
                 case DatabaseItemType.CountersBatch:
@@ -237,7 +239,9 @@ namespace Raven.Server.Smuggler.Documents
                 case DatabaseItemType.CompareExchange:
                     counts = result.CompareExchange;
                     break;
+#pragma warning disable 618
                 case DatabaseItemType.Counters:
+#pragma warning restore 618
                 case DatabaseItemType.CountersBatch:
                     counts = result.Counters;
                     break;
