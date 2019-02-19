@@ -75,7 +75,7 @@ namespace SlowTests.Issues
                 var importOptions = new DatabaseSmugglerImportOptions();
                 importOptions.OperateOnTypes -= DatabaseItemType.DatabaseRecord;
                 importOptions.OperateOnTypes -= DatabaseItemType.RevisionDocuments;
-                importOptions.OperateOnTypes -= DatabaseItemType.CountersBatch;
+                importOptions.OperateOnTypes -= DatabaseItemType.CounterGroups;
 
                 var operation = await store3.Smuggler.ImportAsync(importOptions, file);
                 await operation.WaitForCompletionAsync(TimeSpan.FromMinutes(1));
@@ -109,7 +109,7 @@ namespace SlowTests.Issues
                 var importOptions = new DatabaseSmugglerImportOptions();
                 importOptions.OperateOnTypes -= DatabaseItemType.DatabaseRecord;
                 importOptions.OperateOnTypes -= DatabaseItemType.RevisionDocuments;
-                importOptions.OperateOnTypes -= DatabaseItemType.CountersBatch;
+                importOptions.OperateOnTypes -= DatabaseItemType.CounterGroups;
 
                 var operation = await store4.Smuggler.ImportAsync(importOptions, file);
                 await operation.WaitForCompletionAsync(TimeSpan.FromMinutes(1));

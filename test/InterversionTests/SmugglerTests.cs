@@ -27,7 +27,7 @@ namespace InterversionTests
                     store40.Maintenance.Send(new CreateSampleDataOperation());
 
                     var options = new DatabaseSmugglerExportOptions();
-                    options.OperateOnTypes &= ~DatabaseItemType.CountersBatch;
+                    options.OperateOnTypes &= ~DatabaseItemType.CounterGroups;
 
                     var operation = await store40.Smuggler.ExportAsync(options, file);
                     await operation.WaitForCompletionAsync(TimeSpan.FromMinutes(1));
@@ -106,7 +106,7 @@ namespace InterversionTests
                 {
 
                     var options = new DatabaseSmugglerImportOptions();
-                    options.OperateOnTypes &= ~DatabaseItemType.CountersBatch;
+                    options.OperateOnTypes &= ~DatabaseItemType.CounterGroups;
                     options.SkipRevisionCreation = true;
 
                     var operation = await store40.Smuggler.ImportAsync(options, file);

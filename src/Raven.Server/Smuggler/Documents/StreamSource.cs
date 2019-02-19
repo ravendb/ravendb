@@ -391,7 +391,7 @@ namespace Raven.Server.Smuggler.Documents
 #pragma warning disable 618
                 case DatabaseItemType.Counters:
 #pragma warning restore 618
-                case DatabaseItemType.CountersBatch:
+                case DatabaseItemType.CounterGroups:
                     return SkipArray(onSkipped, token);
                 case DatabaseItemType.DatabaseRecord:
                     return SkipObject(onSkipped);
@@ -1204,8 +1204,8 @@ namespace Raven.Server.Smuggler.Documents
                 type.Equals("CmpXchg", StringComparison.OrdinalIgnoreCase)) //support the old name
                 return DatabaseItemType.CompareExchange;
 
-            if (type.Equals(nameof(DatabaseItemType.CountersBatch), StringComparison.OrdinalIgnoreCase))
-                return DatabaseItemType.CountersBatch;
+            if (type.Equals(nameof(DatabaseItemType.CounterGroups), StringComparison.OrdinalIgnoreCase))
+                return DatabaseItemType.CounterGroups;
 
 #pragma warning disable 618
             if (type.Equals(nameof(DatabaseItemType.Counters), StringComparison.OrdinalIgnoreCase))

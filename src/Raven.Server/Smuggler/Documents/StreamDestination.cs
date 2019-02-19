@@ -97,7 +97,7 @@ namespace Raven.Server.Smuggler.Documents
 
         public ICounterActions Counters()
         {
-            return new StreamCounterActions(_writer, _context, nameof(DatabaseItemType.CountersBatch));
+            return new StreamCounterActions(_writer, _context, nameof(DatabaseItemType.CounterGroups));
         }
 
         public IIndexActions Indexes()

@@ -398,7 +398,7 @@ namespace SlowTests.Smuggler
 
                     var operation = await store1.Smuggler.ExportAsync(new DatabaseSmugglerExportOptions
                     {
-                        OperateOnTypes = DatabaseItemType.CountersBatch | DatabaseItemType.DatabaseRecord
+                        OperateOnTypes = DatabaseItemType.CounterGroups | DatabaseItemType.DatabaseRecord
 
                     }, file);
                     await operation.WaitForCompletionAsync(TimeSpan.FromMinutes(1));
@@ -631,7 +631,7 @@ namespace SlowTests.Smuggler
             using (var store = GetDocumentStore())
             {
                 var options = new DatabaseSmugglerImportOptions();
-                options.OperateOnTypes &= ~DatabaseItemType.CountersBatch;
+                options.OperateOnTypes &= ~DatabaseItemType.CounterGroups;
 
 #pragma warning disable 618
                 options.OperateOnTypes |= DatabaseItemType.Counters;
