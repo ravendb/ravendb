@@ -75,18 +75,7 @@ namespace Raven.Server.Rachis
                             continue; // we already voted for ourselves
                         var candidateAmbassador = new CandidateAmbassador(_engine, this, voter.Key, voter.Value);
                         _voters.Add(candidateAmbassador);
-                        try
-                        {
-                            _engine.AppendStateDisposable(this, candidateAmbassador);
-                        }
-                        catch (ConcurrencyException)
-                        {
-                            foreach (var ambassador in _voters)
-                            {
-                                ambassador.Dispose();
-                            }
-                            return; // we lost the election, because someone else changed our state to follower
-                        }
+                        _engine.AppendStateDisposable(this, candidateAmbassador); // concurrency exception here will dispose the current candidate and it ambassadors
                         candidateAmbassador.Start();
                     }
                     while (_running && _engine.CurrentState == RachisState.Candidate)
