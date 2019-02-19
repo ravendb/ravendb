@@ -16,7 +16,6 @@ using Raven.Client.ServerWide;
 using Raven.Client.ServerWide.Operations.Certificates;
 using Raven.Server.Commercial;
 using Raven.Server.Config;
-using Raven.Server.Documents;
 using Raven.Server.Json;
 using Raven.Server.Routing;
 using Raven.Server.ServerWide;
@@ -25,9 +24,8 @@ using Raven.Server.ServerWide.Context;
 using Raven.Server.Utils;
 using Raven.Server.Web.System;
 using Sparrow.Json;
-using Sparrow.Platform;
+using Sparrow.Platform.Posix;
 using Sparrow.Utils;
-using Voron.Platform.Posix;
 
 namespace Raven.Server.Web.Authentication
 {
