@@ -45,7 +45,7 @@ namespace Raven.Server.Smuggler.Documents
             DatabaseItemType.Indexes,
             DatabaseItemType.Identities,
             DatabaseItemType.CompareExchange,
-            DatabaseItemType.CountersBatch,
+            DatabaseItemType.CounterGroups,
             DatabaseItemType.None
         };
 
@@ -65,7 +65,7 @@ namespace Raven.Server.Smuggler.Documents
                 options.OperateOnTypes.HasFlag(DatabaseItemType.RevisionDocuments) ||
                 options.OperateOnTypes.HasFlag(DatabaseItemType.Tombstones) ||
                 options.OperateOnTypes.HasFlag(DatabaseItemType.Conflicts) ||
-                options.OperateOnTypes.HasFlag(DatabaseItemType.CountersBatch))
+                options.OperateOnTypes.HasFlag(DatabaseItemType.CounterGroups))
             {
                 _returnContext = _database.DocumentsStorage.ContextPool.AllocateOperationContext(out _context);
                 _disposeTransaction = _context.OpenReadTransaction();
