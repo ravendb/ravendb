@@ -11,20 +11,17 @@ class progressItem {
 
     documents = new genericProgress(0, 0, x => x.toLocaleString());
     documentTombstones = new genericProgress(0, 0, x => x.toLocaleString());
-    counters = new genericProgress(0, 0, x => x.toLocaleString());
-    countersTombstones = new genericProgress(0, 0, x => x.toLocaleString());
+    counterGroups = new genericProgress(0, 0, x => x.toLocaleString());
     
     countersVisible = ko.pureComputed(() => {
-        const countersCount = this.counters.total();
-        const tombstonesCount = this.countersTombstones.total();
-        return countersCount > 0 || tombstonesCount > 0;
+        const countersCount = this.counterGroups.total();
+        return countersCount > 0;
     });
 
     innerProgresses = [
         { name: "Documents", progress: this.documents, visible: true },
         { name: "Document Tombstones", progress: this.documentTombstones, visible: true },
-        { name: "Counters", progress: this.counters, visible: this.countersVisible },
-        { name: "Counter Tombstones", progress: this.countersTombstones, visible: this.countersVisible }
+        { name: "Counter Groups", progress: this.counterGroups, visible: this.countersVisible }
     ]; 
     
     constructor(dto: Raven.Server.Documents.ETL.Stats.EtlProcessProgress) {
@@ -40,18 +37,14 @@ class progressItem {
         this.documentTombstones.total(dto.TotalNumberOfDocumentTombstones);
         this.documentTombstones.processed(dto.TotalNumberOfDocumentTombstones - dto.NumberOfDocumentTombstonesToProcess);
         
-        this.counters.total(dto.TotalNumberOfCounters);
-        this.counters.processed(dto.TotalNumberOfCounters - dto.NumberOfCountersToProcess);
-        
-        this.countersTombstones.total(dto.TotalNumberOfCounterTombstones);
-        this.countersTombstones.processed(dto.TotalNumberOfCounterTombstones - dto.NumberOfCounterTombstonesToProcess);
+        this.counterGroups.total(dto.TotalNumberOfCounterGroups);
+        this.counterGroups.processed(dto.TotalNumberOfCounterGroups - dto.NumberOfCounterGroupsToProcess);
         
         this.globalProgress.processedPerSecond(dto.AverageProcessedPerSecond);
         this.globalProgress.total(
             this.documents.total() +
             this.documentTombstones.total() +
-            this.counters.total() + 
-            this.countersTombstones.total()
+            this.counterGroups.total()
         );
         
         this.globalProgress.completed(dto.Completed);
@@ -60,8 +53,7 @@ class progressItem {
         this.globalProgress.processed(
             this.documents.processed() +
             this.documentTombstones.processed() +
-            this.counters.processed() +
-            this.countersTombstones.processed()
+            this.counterGroups.processed()
         );
     }
 }

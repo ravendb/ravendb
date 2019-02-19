@@ -206,7 +206,10 @@ namespace Raven.Server.Documents.ETL.Providers.Raven
                             if (_script.HasLoadCounterBehaviors && _script.TryGetLoadCounterBehaviorFunctionFor(item.Collection, out var function))
                             {
                                 var counterGroupDetail = GetCounterGroupFor(item);
-                                AddCounters(item.DocumentId, counterGroupDetail.Values, function);
+                                if (counterGroupDetail != null)
+                                {
+                                    AddCounters(item.DocumentId, counterGroupDetail.Values, function);    
+                                }
                             }
                         }
                         else
