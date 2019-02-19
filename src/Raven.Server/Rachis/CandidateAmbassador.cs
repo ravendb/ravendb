@@ -72,7 +72,7 @@ namespace Raven.Server.Rachis
                     {
                         _engine.Log.Info(
                             $"CandidateAmbassador for {_tag}: Waited for a full second for thread {_candidateAmbassadorLongRunningWork.ManagedThreadId} " +
-                            $"({(_candidateAmbassadorLongRunningWork.Join(0) ? "running" : "finished")}) to finish, after the elections were {_candidate.ElectionResult}");
+                            $"({(_candidateAmbassadorLongRunningWork.Join(0) ? "finished" : "running")}) to finish, after the elections were {_candidate.ElectionResult}");
                     }
                     DisposeConnectionIfNeeded();
                 }
