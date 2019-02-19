@@ -300,15 +300,7 @@ namespace Raven.Server.Smuggler.Documents
                     first = false;
 
                     _writer.WritePropertyName(sorter.Key);
-                    _writer.WriteStartObject();
-
-                    _writer.WritePropertyName(nameof(sorter.Value.Name));
-                    _writer.WriteString(sorter.Value.Name);
-                    _writer.WriteComma();
-                    _writer.WritePropertyName(nameof(sorter.Value.Code));
-                    _writer.WriteString(sorter.Value.Code);
-
-                    _writer.WriteEndObject();
+                    _context.Write(_writer, sorter.Value.ToJson());
                 }
 
                 _writer.WriteEndObject();
@@ -367,79 +359,7 @@ namespace Raven.Server.Smuggler.Documents
                     if (first == false)
                         _writer.WriteComma();
                     first = false;
-
-                    _writer.WriteStartObject();
-
-                    _writer.WritePropertyName(nameof(etl.TaskId));
-                    _writer.WriteDouble(etl.TaskId);
-                    _writer.WriteComma();
-
-                    _writer.WritePropertyName(nameof(etl.Name));
-                    _writer.WriteString(etl.Name);
-                    _writer.WriteComma();
-
-                    _writer.WritePropertyName(nameof(etl.ConnectionStringName));
-                    _writer.WriteString(etl.ConnectionStringName);
-                    _writer.WriteComma();
-
-                    _writer.WritePropertyName(nameof(etl.Transforms));
-                    WriteTransforms(etl.Transforms);
-                    _writer.WriteComma();
-
-                    _writer.WritePropertyName(nameof(etl.Disabled));
-                    _writer.WriteBool(etl.Disabled);
-                    _writer.WriteComma();
-
-                    _writer.WritePropertyName(nameof(etl.FactoryName));
-                    _writer.WriteString(etl.FactoryName);
-                    _writer.WriteComma();
-
-                    _writer.WritePropertyName(nameof(etl.ParameterizeDeletes));
-                    _writer.WriteBool(etl.ParameterizeDeletes);
-                    _writer.WriteComma();
-
-                    _writer.WritePropertyName(nameof(etl.ForceQueryRecompile));
-                    _writer.WriteBool(etl.ForceQueryRecompile);
-                    _writer.WriteComma();
-
-                    _writer.WritePropertyName(nameof(etl.QuoteTables));
-                    _writer.WriteBool(etl.QuoteTables);
-                    _writer.WriteComma();
-
-                    _writer.WritePropertyName(nameof(etl.AllowEtlOnNonEncryptedChannel));
-                    _writer.WriteBool(etl.AllowEtlOnNonEncryptedChannel);
-                    _writer.WriteComma();
-
-                    _writer.WritePropertyName(nameof(etl.CommandTimeout));
-                    if (etl.CommandTimeout != null)
-                        _writer.WriteInteger(etl.CommandTimeout.Value);
-                    else
-                        _writer.WriteNull();
-                    _writer.WriteComma();
-
-                    _writer.WritePropertyName(nameof(etl.SqlTables));
-                    WriteSqlTables(etl.SqlTables);
-                    _writer.WriteEndObject();
-                }
-
-                _writer.WriteEndArray();
-            }
-
-            private void WriteSqlTables(List<SqlEtlTable> SqlTables)
-            {
-                if (SqlTables == null)
-                {
-                    _writer.WriteNull();
-                    return;
-                }
-                _writer.WriteStartArray();
-                var first = true;
-                foreach (var sqlTable in SqlTables)
-                {
-                    if (first == false)
-                        _writer.WriteComma();
-                    first = false;
-                    _context.Write(_writer, sqlTable.ToJson());
+                    _context.Write(_writer, etl.ToJson());
                 }
 
                 _writer.WriteEndArray();
@@ -460,65 +380,7 @@ namespace Raven.Server.Smuggler.Documents
                     if (first == false)
                         _writer.WriteComma();
                     first = false;
-
-                    _writer.WriteStartObject();
-
-                    _writer.WritePropertyName(nameof(etl.TaskId));
-                    _writer.WriteDouble(etl.TaskId);
-                    _writer.WriteComma();
-
-                    _writer.WritePropertyName(nameof(etl.Name));
-                    _writer.WriteString(etl.Name);
-                    _writer.WriteComma();
-
-                    _writer.WritePropertyName(nameof(etl.ConnectionStringName));
-                    _writer.WriteString(etl.ConnectionStringName);
-                    _writer.WriteComma();
-
-                    _writer.WritePropertyName(nameof(etl.Transforms));
-                    WriteTransforms(etl.Transforms);
-                    _writer.WriteComma();
-
-                    _writer.WritePropertyName(nameof(etl.Disabled));
-                    _writer.WriteBool(etl.Disabled);
-                    _writer.WriteComma();
-
-                    _writer.WritePropertyName(nameof(etl.AllowEtlOnNonEncryptedChannel));
-                    _writer.WriteBool(etl.AllowEtlOnNonEncryptedChannel);
-                    _writer.WriteComma();
-
-                    _writer.WritePropertyName(nameof(etl.TestMode));
-                    _writer.WriteBool(etl.TestMode);
-                    _writer.WriteComma();
-
-                    _writer.WritePropertyName(nameof(etl.LoadRequestTimeoutInSec));
-                    if (etl.LoadRequestTimeoutInSec != null)
-                        _writer.WriteInteger(etl.LoadRequestTimeoutInSec.Value);
-                    else
-                        _writer.WriteNull();
-                    _writer.WriteComma();
-
-                    _writer.WritePropertyName(nameof(etl.EtlType));
-                    _writer.WriteString(etl.EtlType.ToString());
-
-                    _writer.WriteEndObject();
-                }
-
-                _writer.WriteEndArray();
-            }
-
-            private void WriteTransforms(List<Transformation> transformation)
-            {
-                _writer.WriteStartArray();
-
-                var first = true;
-
-                foreach (var transform in transformation)
-                {
-                    if (first == false)
-                        _writer.WriteComma();
-                    first = false;
-                    _context.Write(_writer, transform.ToJson());
+                    _context.Write(_writer, etl.ToJson());
                 }
 
                 _writer.WriteEndArray();
@@ -562,202 +424,9 @@ namespace Raven.Server.Smuggler.Documents
                     if (first == false)
                         _writer.WriteComma();
                     first = false;
-                    WriteBackupConfiguration(backup);
+                    _context.Write(_writer, backup.ToJson());
                 }
                 _writer.WriteEndArray();
-            }
-
-            private void WriteBackupConfiguration(PeriodicBackupConfiguration backup)
-            {
-                _writer.WriteStartObject();
-
-                _writer.WritePropertyName(nameof(backup.TaskId));
-                _writer.WriteDouble(backup.TaskId);
-                _writer.WriteComma();
-
-                _writer.WritePropertyName(nameof(backup.Disabled));
-                _writer.WriteBool(backup.Disabled);
-                _writer.WriteComma();
-
-                _writer.WritePropertyName(nameof(backup.Name));
-                _writer.WriteString(backup.Name);
-                _writer.WriteComma();
-
-                _writer.WritePropertyName(nameof(backup.MentorNode));
-                _writer.WriteString(backup.MentorNode);
-                _writer.WriteComma();
-
-                _writer.WritePropertyName(nameof(backup.BackupType));
-                _writer.WriteString(backup.BackupType.ToString());
-                _writer.WriteComma();
-
-                _writer.WritePropertyName(nameof(backup.FullBackupFrequency));
-                _writer.WriteString(backup.FullBackupFrequency);
-                _writer.WriteComma();
-
-                _writer.WritePropertyName(nameof(backup.IncrementalBackupFrequency));
-                _writer.WriteString(backup.IncrementalBackupFrequency);
-                _writer.WriteComma();
-
-                _writer.WritePropertyName(nameof(backup.LocalSettings));
-                WriteLocalSettings(backup.LocalSettings);
-                _writer.WriteComma();
-
-                _writer.WritePropertyName(nameof(backup.S3Settings));
-                WriteS3Settings(backup.S3Settings);
-                _writer.WriteComma();
-
-                _writer.WritePropertyName(nameof(backup.GlacierSettings));
-                WriteGlacierSettings(backup.GlacierSettings);
-                _writer.WriteComma();
-
-                _writer.WritePropertyName(nameof(backup.AzureSettings));
-                WriteAzureSettings(backup.AzureSettings);
-                _writer.WriteComma();
-
-                _writer.WritePropertyName(nameof(backup.FtpSettings));
-                WriteFtpSettings(backup.FtpSettings);
-
-                _writer.WriteEndObject();
-            }
-
-            private void WriteLocalSettings(LocalSettings localSettings)
-            {
-                if (localSettings == null)
-                {
-                    _writer.WriteNull();
-                    return;
-                }
-
-                _writer.WriteStartObject();
-
-                _writer.WritePropertyName(nameof(localSettings.Disabled));
-                _writer.WriteBool(localSettings.Disabled);
-                _writer.WriteComma();
-
-                _writer.WritePropertyName(nameof(localSettings.FolderPath));
-                _writer.WriteString(localSettings.FolderPath);
-
-                _writer.WriteEndObject();
-            }
-
-            private void WriteS3Settings(S3Settings s3Settings)
-            {
-                if (s3Settings == null)
-                {
-                    _writer.WriteNull();
-                    return;
-                }
-
-                _writer.WriteStartObject();
-
-                _writer.WritePropertyName(nameof(s3Settings.Disabled));
-                _writer.WriteBool(s3Settings.Disabled);
-                _writer.WriteComma();
-
-                _writer.WritePropertyName(nameof(s3Settings.BucketName));
-                _writer.WriteString(s3Settings.BucketName);
-                _writer.WriteComma();
-
-                _writer.WritePropertyName(nameof(s3Settings.RemoteFolderName));
-                _writer.WriteString(s3Settings.RemoteFolderName);
-
-                _writer.WriteEndObject();
-            }
-
-            private void WriteGlacierSettings(GlacierSettings glacierSettings)
-            {
-                if (glacierSettings == null)
-                {
-                    _writer.WriteNull();
-                    return;
-                }
-
-                _writer.WriteStartObject();
-
-                _writer.WritePropertyName(nameof(glacierSettings.Disabled));
-                _writer.WriteBool(glacierSettings.Disabled);
-                _writer.WriteComma();
-
-                _writer.WritePropertyName(nameof(glacierSettings.VaultName));
-                _writer.WriteString(glacierSettings.VaultName);
-
-                _writer.WriteEndObject();
-            }
-
-            private void WriteAzureSettings(AzureSettings azureSettings)
-            {
-                if (azureSettings == null)
-                {
-                    _writer.WriteNull();
-                    return;
-                }
-
-                _writer.WriteStartObject();
-
-                _writer.WritePropertyName(nameof(azureSettings.Disabled));
-                _writer.WriteBool(azureSettings.Disabled);
-                _writer.WriteComma();
-
-                _writer.WritePropertyName(nameof(azureSettings.StorageContainer));
-                _writer.WriteString(azureSettings.StorageContainer);
-                _writer.WriteComma();
-
-                _writer.WritePropertyName(nameof(azureSettings.RemoteFolderName));
-                _writer.WriteString(azureSettings.RemoteFolderName);
-                _writer.WriteComma();
-
-                _writer.WritePropertyName(nameof(azureSettings.AccountName));
-                _writer.WriteString(azureSettings.AccountName);
-                _writer.WriteComma();
-
-                _writer.WritePropertyName(nameof(azureSettings.AccountKey));
-                _writer.WriteString(azureSettings.AccountKey);
-
-                _writer.WriteEndObject();
-            }
-
-            private void WriteFtpSettings(FtpSettings ftpSettings)
-            {
-                if (ftpSettings == null)
-                {
-                    _writer.WriteNull();
-                    return;
-                }
-
-                _writer.WriteStartObject();
-
-                _writer.WritePropertyName(nameof(ftpSettings.Url));
-                _writer.WriteString(ftpSettings.Url);
-                _writer.WriteComma();
-
-                _writer.WritePropertyName(nameof(ftpSettings.Disabled));
-                _writer.WriteBool(ftpSettings.Disabled);
-                _writer.WriteComma();
-
-                _writer.WritePropertyName(nameof(ftpSettings.Port));
-                if (ftpSettings.Port != null)
-                    _writer.WriteInteger(ftpSettings.Port.Value);
-                else
-                    _writer.WriteNull();
-                _writer.WriteComma();
-
-                _writer.WritePropertyName(nameof(ftpSettings.UserName));
-                _writer.WriteString(ftpSettings.UserName);
-                _writer.WriteComma();
-
-                _writer.WritePropertyName(nameof(ftpSettings.Password));
-                _writer.WriteString(ftpSettings.Password);
-                _writer.WriteComma();
-
-                _writer.WritePropertyName(nameof(ftpSettings.CertificateAsBase64));
-                _writer.WriteString(ftpSettings.CertificateAsBase64);
-                _writer.WriteComma();
-
-                _writer.WritePropertyName(nameof(ftpSettings.CertificateFileName));
-                _writer.WriteString(ftpSettings.CertificateFileName);
-
-                _writer.WriteEndObject();
             }
 
             private void WriteConflictSolver(ConflictSolver conflictSolver)
@@ -788,19 +457,7 @@ namespace Raven.Server.Smuggler.Documents
                     return;
                 }
 
-                _writer.WriteStartObject();
-
-                _writer.WritePropertyName(nameof(expiration.Disabled));
-                _writer.WriteBool(expiration.Disabled);
-
-                if (expiration.DeleteFrequencyInSec.HasValue)
-                {
-                    _writer.WriteComma();
-                    _writer.WritePropertyName(nameof(expiration.DeleteFrequencyInSec));
-                    _writer.WriteString(expiration.DeleteFrequencyInSec.Value.ToString());
-                }
-
-                _writer.WriteEndObject();
+                _context.Write(_writer, expiration.ToJson());
             }
 
             private void WriteRevisions(RevisionsConfiguration revisions)
@@ -810,39 +467,7 @@ namespace Raven.Server.Smuggler.Documents
                     _writer.WriteNull();
                     return;
                 }
-
-                _writer.WriteStartObject();
-
-                _writer.WritePropertyName(nameof(revisions.Default));
-                WriteRevisionsCollectionConfiguration(revisions.Default);
-                _writer.WriteComma();
-
-                _writer.WritePropertyName(nameof(revisions.Collections));
-
-                if (revisions.Collections == null)
-                {
-                    _writer.WriteNull();
-                }
-                else
-                {
-                    _writer.WriteStartObject();
-
-                    var first = true;
-                    foreach (var collection in revisions.Collections)
-                    {
-                        if (first == false)
-                            _writer.WriteComma();
-                        first = false;
-
-                        _writer.WritePropertyName(collection.Key);
-                        WriteRevisionsCollectionConfiguration(collection.Value);
-                    }
-
-                    _writer.WriteEndObject();
-                }
-
-
-                _writer.WriteEndObject();
+                _context.Write(_writer, revisions.ToJson());
             }
 
             private void WriteRavenConnectionStrings(Dictionary<string, RavenConnectionString> connections)
@@ -856,22 +481,9 @@ namespace Raven.Server.Smuggler.Documents
                         _writer.WriteComma();
                     first = false;
 
-                    _writer.WritePropertyName(nameof(ravenConnectionString.Key));
+                    _writer.WritePropertyName(ravenConnectionString.Key);
 
-                    _writer.WriteStartObject();
-
-                    var value = ravenConnectionString.Value;
-                    _writer.WritePropertyName(nameof(value.Name));
-                    _writer.WriteString(value.Name);
-                    _writer.WriteComma();
-
-                    _writer.WritePropertyName(nameof(value.Database));
-                    _writer.WriteString(value.Database);
-                    _writer.WriteComma();
-
-                    _writer.WriteArray(nameof(value.TopologyDiscoveryUrls), value.TopologyDiscoveryUrls);
-
-                    _writer.WriteEndObject();
+                    _context.Write(_writer, ravenConnectionString.Value.ToJson());
                 }
 
                 _writer.WriteEndObject();
@@ -888,54 +500,10 @@ namespace Raven.Server.Smuggler.Documents
                         _writer.WriteComma();
                     first = false;
 
-                    _writer.WritePropertyName(nameof(sqlConnectionString.Key));
+                    _writer.WritePropertyName(sqlConnectionString.Key);
 
-                    _writer.WriteStartObject();
-
-                    var value = sqlConnectionString.Value;
-                    _writer.WritePropertyName(nameof(value.Name));
-                    _writer.WriteString(value.Name);
-                    _writer.WriteComma();
-
-                    _writer.WritePropertyName(nameof(value.ConnectionString));
-                    _writer.WriteString(value.ConnectionString);
-
-                    _writer.WriteEndObject();
+                    _context.Write(_writer, sqlConnectionString.Value.ToJson());
                 }
-
-                _writer.WriteEndObject();
-            }
-
-            private void WriteRevisionsCollectionConfiguration(RevisionsCollectionConfiguration collectionConfiguration)
-            {
-                if (collectionConfiguration == null)
-                {
-                    _writer.WriteNull();
-                    return;
-                }
-
-                _writer.WriteStartObject();
-
-                if (collectionConfiguration.MinimumRevisionsToKeep.HasValue)
-                {
-                    _writer.WritePropertyName(nameof(collectionConfiguration.MinimumRevisionsToKeep));
-                    _writer.WriteInteger(collectionConfiguration.MinimumRevisionsToKeep.Value);
-                    _writer.WriteComma();
-                }
-
-                if (collectionConfiguration.MinimumRevisionAgeToKeep.HasValue)
-                {
-                    _writer.WritePropertyName(nameof(collectionConfiguration.MinimumRevisionAgeToKeep));
-                    _writer.WriteString(collectionConfiguration.MinimumRevisionAgeToKeep.Value.ToString());
-                    _writer.WriteComma();
-                }
-
-                _writer.WritePropertyName(nameof(collectionConfiguration.Disabled));
-                _writer.WriteBool(collectionConfiguration.Disabled);
-                _writer.WriteComma();
-
-                _writer.WritePropertyName(nameof(collectionConfiguration.PurgeOnDelete));
-                _writer.WriteBool(collectionConfiguration.PurgeOnDelete);
 
                 _writer.WriteEndObject();
             }

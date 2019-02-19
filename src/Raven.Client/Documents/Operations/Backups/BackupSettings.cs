@@ -1,3 +1,5 @@
+using Sparrow.Json.Parsing;
+
 namespace Raven.Client.Documents.Operations.Backups
 {
     public abstract class BackupSettings
@@ -9,6 +11,14 @@ namespace Raven.Client.Documents.Operations.Backups
         public virtual bool WasEnabled(BackupSettings other)
         {
             return Disabled && other.Disabled == false;
+        }
+
+        public virtual DynamicJsonValue ToJson()
+        {
+            return new DynamicJsonValue
+            {
+                [nameof(Disabled)] = Disabled
+            };
         }
     }
 
@@ -35,6 +45,15 @@ namespace Raven.Client.Documents.Operations.Backups
 
             return other.FolderPath.Equals(FolderPath);
         }
+
+        public override DynamicJsonValue ToJson()
+        {
+            var djv = base.ToJson();
+
+            djv[nameof(FolderPath)] = FolderPath;
+
+            return djv;
+        }
     }
 
     public abstract class AmazonSettings : BackupSettings
@@ -47,6 +66,17 @@ namespace Raven.Client.Documents.Operations.Backups
         /// Amazon Web Services (AWS) region.
         /// </summary>
         public string AwsRegionName { get; set; }
+
+        public override DynamicJsonValue ToJson()
+        {
+            var djv = base.ToJson();
+
+            djv[nameof(AwsAccessKey)] = AwsAccessKey;
+            djv[nameof(AwsSecretKey)] = AwsSecretKey;
+            djv[nameof(AwsRegionName)] = AwsRegionName;
+
+            return djv;
+        }
     }
 
     public class S3Settings : AmazonSettings
@@ -85,6 +115,16 @@ namespace Raven.Client.Documents.Operations.Backups
 
             return true;
         }
+
+        public override DynamicJsonValue ToJson()
+        {
+            var djv = base.ToJson();
+
+            djv[nameof(RemoteFolderName)] = RemoteFolderName;
+            djv[nameof(BucketName)] = BucketName;
+
+            return djv;
+        }
     }
 
     public class GlacierSettings : AmazonSettings
@@ -114,6 +154,15 @@ namespace Raven.Client.Documents.Operations.Backups
                 return false;
 
             return true;
+        }
+
+        public override DynamicJsonValue ToJson()
+        {
+            var djv = base.ToJson();
+
+            djv[nameof(VaultName)] = VaultName;
+
+            return djv;
         }
     }
 
@@ -148,6 +197,18 @@ namespace Raven.Client.Documents.Operations.Backups
 
             return other.RemoteFolderName == RemoteFolderName;
         }
+
+        public override DynamicJsonValue ToJson()
+        {
+            var djv = base.ToJson();
+
+            djv[nameof(StorageContainer)] = StorageContainer;
+            djv[nameof(RemoteFolderName)] = RemoteFolderName;
+            djv[nameof(AccountName)] = AccountName;
+            djv[nameof(AccountKey)] = AccountKey;
+
+            return djv;
+        }
     }
 
     public class FtpSettings : BackupSettings
@@ -167,6 +228,20 @@ namespace Raven.Client.Documents.Operations.Backups
         public override bool HasSettings()
         {
             return Port != 0 && string.IsNullOrWhiteSpace(Url) == false;
+        }
+
+        public override DynamicJsonValue ToJson()
+        {
+            var djv = base.ToJson();
+
+            djv[nameof(Url)] = Url;
+            djv[nameof(Port)] = Port;
+            djv[nameof(UserName)] = UserName;
+            djv[nameof(Password)] = Password;
+            djv[nameof(CertificateAsBase64)] = CertificateAsBase64;
+            djv[nameof(CertificateFileName)] = CertificateFileName;
+
+            return djv;
         }
     }
 }

@@ -5,6 +5,8 @@
 //-----------------------------------------------------------------------
 
 using System.Collections.Generic;
+using System.Linq;
+using Sparrow.Json.Parsing;
 
 namespace Raven.Client.Documents.Operations.Revisions
 {
@@ -58,6 +60,22 @@ namespace Raven.Client.Documents.Operations.Revisions
                 }
                 return hash ;
             }
+        }
+
+        public DynamicJsonValue ToJson()
+        {
+            var collections = new DynamicJsonValue();
+            
+            foreach (var c in Collections)
+            {
+                collections[c.Key] = c.Value.ToJson();
+            }
+            
+            return new DynamicJsonValue
+            {
+                [nameof(Default)] = Default?.ToJson(),
+                [nameof(Collections)] = collections
+            };
         }
     }
 }
