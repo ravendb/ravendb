@@ -51,7 +51,7 @@
     }
 
     .difference_gap {
-        background: darken(@pre-bg,5%);
+        background: fade(@pre-bg, 50%);
     }
 
     .ace_marker-layer .ace_active-line {
@@ -126,8 +126,22 @@
     }
 
     .ace_fold {
-        background-color: #757aD8;
-        border-color: #8F938F
+        height: auto !important;
+        margin-top: 0 !important;
+        background: @color-5 !important;
+        border: none !important;
+        border-radius: 20px !important;
+        cursor: pointer !important;
+        pointer-events: auto !important;
+
+        &:before {
+            content: "\ea24";
+            color: @gray-lighter !important;
+            font-family: 'icomoon' !important;
+            margin: 0 6px;
+            display: inline-block;
+            font-size: 13px;
+        }
     }
 
     .ace_function {
