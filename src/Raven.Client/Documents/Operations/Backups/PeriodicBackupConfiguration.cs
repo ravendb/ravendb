@@ -7,6 +7,8 @@
 using System.Collections.Generic;
 using System.Diagnostics;
 using Raven.Client.ServerWide;
+using Sparrow.Json.Parsing;
+
 namespace Raven.Client.Documents.Operations.Backups
 {
     public class PeriodicBackupConfiguration : IDatabaseTask
@@ -123,6 +125,26 @@ namespace Raven.Client.Documents.Operations.Backups
                 backupDestinations.Add("FTP");
 
             return backupDestinations;
+        }
+
+        public DynamicJsonValue ToJson()
+        {
+            return new DynamicJsonValue
+            {
+                [nameof(TaskId)] = TaskId,
+                [nameof(Disabled)] = Disabled,
+                [nameof(Name)] = Name,
+                [nameof(MentorNode)] = MentorNode,
+                [nameof(BackupType)] = BackupType,
+                [nameof(BackupEncryptionSettings)] = BackupEncryptionSettings?.ToJson(),
+                [nameof(FullBackupFrequency)] = FullBackupFrequency,
+                [nameof(IncrementalBackupFrequency)] = IncrementalBackupFrequency,
+                [nameof(LocalSettings)] = LocalSettings?.ToJson(),
+                [nameof(S3Settings)] = S3Settings?.ToJson(),
+                [nameof(GlacierSettings)] = GlacierSettings?.ToJson(),
+                [nameof(AzureSettings)] = AzureSettings?.ToJson(),
+                [nameof(FtpSettings)] = FtpSettings?.ToJson()
+            };
         }
     }
 }

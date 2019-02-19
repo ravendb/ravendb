@@ -283,7 +283,7 @@ namespace Raven.Server.Smuggler.Documents
                         catch (Exception e)
                         {
                             if (_log.IsInfoEnabled)
-                                _log.Info($"Wasn't able to import the pull Replication {pullReplication} configuration from smuggler file. Skipping.", e);
+                                _log.Info($"Wasn't able to import the pull replication configuration from smuggler file. Skipping.", e);
                         }
 
                     }
@@ -360,7 +360,7 @@ namespace Raven.Server.Smuggler.Documents
                     {
                         foreach (var connectionName in sqlConnectionStrings.GetPropertyNames())
                         {
-                            if (ravenConnectionStrings.TryGet(connectionName, out BlittableJsonReaderObject connection) == false)
+                            if (sqlConnectionStrings.TryGet(connectionName, out BlittableJsonReaderObject connection) == false)
                             {
                                 if (_log.IsInfoEnabled)
                                     _log.Info($"Wasn't able to import the SQL connection string {connectionName} from smuggler file. Skipping.");

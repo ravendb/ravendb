@@ -49,7 +49,7 @@ namespace Raven.Client.ServerWide
 
         public ConflictSolver ConflictSolverConfig;
 
-        public Dictionary<string, SorterDefinition> Sorters;
+        public Dictionary<string, SorterDefinition> Sorters = new Dictionary<string, SorterDefinition>();
 
         public Dictionary<string, IndexDefinition> Indexes;
 
@@ -61,7 +61,7 @@ namespace Raven.Client.ServerWide
 
         public ExpirationConfiguration Expiration;
 
-        public List<PeriodicBackupConfiguration> PeriodicBackups;
+        public List<PeriodicBackupConfiguration> PeriodicBackups = new List<PeriodicBackupConfiguration>();
 
         public List<ExternalReplication> ExternalReplications = new List<ExternalReplication>();
 
@@ -73,9 +73,9 @@ namespace Raven.Client.ServerWide
 
         public Dictionary<string, SqlConnectionString> SqlConnectionStrings = new Dictionary<string, SqlConnectionString>();
 
-        public List<RavenEtlConfiguration> RavenEtls;
+        public List<RavenEtlConfiguration> RavenEtls = new List<RavenEtlConfiguration>();
 
-        public List<SqlEtlConfiguration> SqlEtls;
+        public List<SqlEtlConfiguration> SqlEtls = new List<SqlEtlConfiguration>();
 
         public ClientConfiguration Client;
 

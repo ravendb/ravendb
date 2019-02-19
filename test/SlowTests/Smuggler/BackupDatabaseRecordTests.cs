@@ -5,6 +5,7 @@ using System.Linq;
 using System.Threading.Tasks;
 using FastTests;
 using Raven.Client.Documents.Operations.Backups;
+using Raven.Client.Documents.Operations.ConnectionStrings;
 using Raven.Client.Documents.Operations.ETL;
 using Raven.Client.Documents.Operations.ETL.SQL;
 using Raven.Client.Documents.Operations.Replication;
@@ -302,11 +303,11 @@ namespace SlowTests.Smuggler
                             new SqlEtlConfiguration()
                             {
                                 AllowEtlOnNonEncryptedChannel = true,
-                                ConnectionStringName = "connection",
                                 ForceQueryRecompile = false,
+                                ConnectionStringName = "connection",
                                 Name = "sql",
                                 ParameterizeDeletes = false,
-                                TaskId = 5
+                                MentorNode = "A"
                             }
                         };
                     }
