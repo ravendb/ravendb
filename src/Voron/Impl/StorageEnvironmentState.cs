@@ -1,5 +1,4 @@
-﻿using System;
-using Voron.Data.BTrees;
+﻿using Voron.Data.BTrees;
 
 namespace Voron.Impl
 {

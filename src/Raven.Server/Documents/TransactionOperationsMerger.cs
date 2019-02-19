@@ -17,11 +17,12 @@ using Sparrow.Json;
 using Sparrow.Logging;
 using Sparrow.LowMemory;
 using Sparrow.Platform;
+using Sparrow.Server.Meters;
+using Sparrow.Server.Utils;
 using Sparrow.Utils;
 using Voron.Debugging;
 using Voron.Global;
 using Voron.Impl;
-using static Sparrow.DatabasePerformanceMetrics;
 
 namespace Raven.Server.Documents
 {
@@ -62,8 +63,8 @@ namespace Raven.Server.Documents
             _is32Bits = _parent.Configuration.Storage.ForceUsing32BitsPager || PlatformDetails.Is32Bits;
         }
 
-        public DatabasePerformanceMetrics GeneralWaitPerformanceMetrics = new DatabasePerformanceMetrics(MetricType.GeneralWait, 256, 1);
-        public DatabasePerformanceMetrics TransactionPerformanceMetrics = new DatabasePerformanceMetrics(MetricType.Transaction, 256, 8);
+        public DatabasePerformanceMetrics GeneralWaitPerformanceMetrics = new DatabasePerformanceMetrics(DatabasePerformanceMetrics.MetricType.GeneralWait, 256, 1);
+        public DatabasePerformanceMetrics TransactionPerformanceMetrics = new DatabasePerformanceMetrics(DatabasePerformanceMetrics.MetricType.Transaction, 256, 8);
 
         public int NumberOfQueuedOperations => _operations.Count;
 

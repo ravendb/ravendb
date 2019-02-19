@@ -7,10 +7,6 @@
 using System;
 using System.IO;
 using System.Text;
-using System.Threading.Tasks;
-using Raven.Server.Json;
-using Raven.Server.ServerWide;
-using Raven.Server.ServerWide.Context;
 using Sparrow.Json;
 using Sparrow.Json.Parsing;
 using Xunit;

@@ -1,10 +1,7 @@
 ﻿using Sparrow.Utils;
 using Voron;
 using Voron.Global;
-using Voron.Impl.Journal;
-using Voron.Impl.Paging;
 using Voron.Impl.Scratch;
-using Voron.Util;
 using Xunit;
 
 namespace FastTests.Voron.ScratchBuffer

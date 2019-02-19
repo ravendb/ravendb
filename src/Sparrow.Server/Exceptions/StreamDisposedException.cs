@@ -1,6 +1,6 @@
 ﻿using System;
 
-namespace Sparrow.Exceptions
+namespace Sparrow.Server.Exceptions
 {
     public class StreamDisposedException : Exception
     {

@@ -1,6 +1,4 @@
-using System;
 using System.Linq;
-using System.Reflection.Metadata;
 using FastTests;
 using Raven.Client;
 using Raven.Client.Documents;

@@ -10,7 +10,6 @@ using System.IO;
 using System.Threading;
 using Sparrow;
 using Voron.Global;
-using Voron.Impl;
 using Voron.Impl.Journal;
 using Voron.Impl.Paging;
 

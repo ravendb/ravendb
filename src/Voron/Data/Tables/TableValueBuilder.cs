@@ -4,6 +4,7 @@ using System.Runtime.CompilerServices;
 using Sparrow;
 using Sparrow.Collections;
 using Sparrow.Json.Parsing;
+using Sparrow.Server;
 using Voron.Util;
 
 namespace Voron.Data.Tables

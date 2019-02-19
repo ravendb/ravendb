@@ -10,7 +10,6 @@ using Raven.Server.Documents.Queries.Timings;
 using Raven.Server.Json;
 using Raven.Server.NotificationCenter;
 using Raven.Server.TrafficWatch;
-using Raven.Server.Web;
 using Sparrow.Json;
 
 namespace Raven.Server.Documents.Queries

@@ -3,10 +3,8 @@ using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Runtime.ExceptionServices;
 using System.Threading;
-using Sparrow;
 using Sparrow.Logging;
 using Sparrow.Utils;
-using Voron.Global;
 using Voron.Impl.Journal;
 
 namespace Voron

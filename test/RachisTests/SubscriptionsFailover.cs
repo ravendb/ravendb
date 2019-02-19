@@ -4,7 +4,6 @@ using System.Diagnostics;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
-using FastTests;
 using Raven.Client.Documents;
 using Raven.Client.Documents.Subscriptions;
 using Raven.Server.ServerWide.Context;
@@ -23,8 +22,8 @@ using Raven.Client.Util;
 using Raven.Server;
 using Raven.Server.Config;
 using Raven.Server.Rachis;
-using Sparrow;
 using Sparrow.Json;
+using Sparrow.Server;
 using Xunit.Sdk;
 
 

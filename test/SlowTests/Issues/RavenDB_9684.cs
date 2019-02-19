@@ -1,5 +1,4 @@
-﻿using System;
-using System.Linq;
+﻿using System.Linq;
 using FastTests;
 using Raven.Client.ServerWide;
 using Raven.Client.ServerWide.Operations;

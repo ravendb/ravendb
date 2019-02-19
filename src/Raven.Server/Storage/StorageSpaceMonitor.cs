@@ -8,7 +8,7 @@ using Raven.Server.NotificationCenter.Notifications;
 using Sparrow;
 using Sparrow.Logging;
 using Sparrow.Platform;
-using Sparrow.Utils;
+using Sparrow.Server.Utils;
 using Voron;
 
 namespace Raven.Server.Storage

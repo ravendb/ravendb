@@ -4,7 +4,6 @@ using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq;
 using Microsoft.Extensions.Primitives;
-using Raven.Client;
 using Raven.Client.Exceptions;
 using Raven.Server.Documents.Includes;
 using Raven.Server.Documents.Queries.AST;
@@ -12,9 +11,10 @@ using Raven.Server.Documents.Queries.Results;
 using Raven.Server.Documents.Queries.Timings;
 using Raven.Server.ServerWide.Context;
 using Raven.Server.Utils;
-using Sparrow;
 using Sparrow.Json;
+using Sparrow.Server;
 using Voron;
+using Constants = Raven.Client.Constants;
 using Query = Raven.Server.Documents.Queries.AST.Query;
 
 namespace Raven.Server.Documents.Queries

@@ -1,6 +1,5 @@
 ﻿using System;
 using System.Data.Common;
-using System.Data.SqlClient;
 using Sparrow.Json.Parsing;
 
 namespace Raven.Server.SqlMigration.MsSQL

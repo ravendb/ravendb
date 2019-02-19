@@ -15,7 +15,7 @@ using Sparrow.Json;
 using Sparrow.Json.Parsing;
 using Sparrow.Logging;
 using Sparrow.Platform;
-using Sparrow.Utils;
+using Sparrow.Server.Utils;
 
 namespace Raven.Server.Web.Studio
 {

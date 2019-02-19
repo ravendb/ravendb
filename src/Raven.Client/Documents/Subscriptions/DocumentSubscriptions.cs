@@ -12,7 +12,6 @@ using System.Threading;
 using System.Threading.Tasks;
 using Lambda2Js;
 using Raven.Client.Documents.Commands;
-using Raven.Client.Documents.Operations;
 using Raven.Client.Documents.Operations.OngoingTasks;
 using Raven.Client.Documents.Session;
 using Raven.Client.Documents.Session.Loaders;

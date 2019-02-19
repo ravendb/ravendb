@@ -2,7 +2,6 @@
 using System.Collections.Generic;
 using System.Text;
 using FastTests;
-using Sparrow.Logging;
 using Voron;
 using Xunit;
 

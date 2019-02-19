@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using Sparrow.Server;
 using Voron.Data.Fixed;
 
 namespace Voron.Impl.FreeSpace
@@ -16,7 +17,7 @@ namespace Voron.Impl.FreeSpace
         {
             using (StorageEnvironment.GetStaticContext(out var ctx))
             {
-                Slice.From(ctx, "$free-space", Sparrow.ByteStringType.Immutable, out FreeSpaceKey);
+                Slice.From(ctx, "$free-space", ByteStringType.Immutable, out FreeSpaceKey);
             }
         }
 

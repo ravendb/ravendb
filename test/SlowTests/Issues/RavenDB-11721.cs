@@ -1,5 +1,4 @@
-﻿using System;
-using FastTests;
+﻿using FastTests;
 using System.Linq;
 using Raven.Tests.Core.Utils.Entities;
 using Xunit;

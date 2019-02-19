@@ -1,7 +1,6 @@
 ﻿using System;
 using System.Diagnostics.CodeAnalysis;
 using System.Threading.Tasks;
-using FastTests.Server.Basic.Entities;
 using Raven.Client.Documents.Queries;
 using Raven.Tests.Core.Utils.Entities;
 using Xunit;

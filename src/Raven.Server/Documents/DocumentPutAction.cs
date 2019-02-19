@@ -2,7 +2,6 @@ using System;
 using System.Diagnostics;
 using System.IO;
 using System.Runtime.CompilerServices;
-using Raven.Client;
 using Raven.Client.Documents.Changes;
 using Raven.Server.ServerWide.Context;
 using Raven.Server.Utils;
@@ -13,8 +12,9 @@ using Voron;
 using Voron.Data.Tables;
 using System.Linq;
 using Raven.Client.Exceptions;
-using Sparrow;
+using Sparrow.Server;
 using static Raven.Server.Documents.DocumentsStorage;
+using Constants = Raven.Client.Constants;
 
 namespace Raven.Server.Documents
 {

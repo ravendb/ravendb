@@ -5,7 +5,7 @@
 // -----------------------------------------------------------------------
 
 using System;
-using Sparrow;
+using Sparrow.Server;
 
 namespace Voron.Data.BTrees
 {

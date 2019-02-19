@@ -7,13 +7,13 @@ using BenchmarkDotNet.Analysers;
 using BenchmarkDotNet.Attributes;
 using BenchmarkDotNet.Columns;
 using BenchmarkDotNet.Configs;
-using BenchmarkDotNet.Diagnosers;
 using BenchmarkDotNet.Environments;
 using BenchmarkDotNet.Exporters;
 using BenchmarkDotNet.Jobs;
 using BenchmarkDotNet.Validators;
 using Sparrow;
 using Sparrow.Binary;
+using Sparrow.Server;
 using Sparrow.Threading;
 using RunMode = BenchmarkDotNet.Jobs.RunMode;
 

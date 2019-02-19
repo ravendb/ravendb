@@ -6,7 +6,7 @@ using FastTests;
 using Raven.Client.Documents.Subscriptions;
 using Raven.Client.Exceptions.Documents.Subscriptions;
 using Raven.Tests.Core.Utils.Entities;
-using Sparrow;
+using Sparrow.Server;
 using Tests.Infrastructure;
 using Xunit;
 

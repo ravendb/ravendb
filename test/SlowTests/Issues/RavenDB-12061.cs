@@ -3,7 +3,6 @@ using System.Linq;
 using FastTests;
 using Newtonsoft.Json.Linq;
 using Raven.Client.Exceptions;
-using Raven.Server.Documents.Queries.Parser;
 using Xunit;
 
 namespace SlowTests.Issues

@@ -5,11 +5,8 @@
 // -----------------------------------------------------------------------
 
 using System.Linq;
-using System.Threading;
 using FastTests;
-using Raven.Client.Documents.Commands;
 using Raven.Client.Documents.Indexes;
-using Sparrow.Json;
 using Xunit;
 
 namespace SlowTests.Issues

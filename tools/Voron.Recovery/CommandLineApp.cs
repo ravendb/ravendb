@@ -2,10 +2,7 @@
 using System.IO;
 using System.Threading;
 using System.Threading.Tasks;
-using Microsoft.CodeAnalysis.Operations;
 using Microsoft.Extensions.CommandLineUtils;
-using Raven.Client.Documents;
-using Raven.Client.Documents.Operations;
 using Sparrow.Logging;
 
 namespace Voron.Recovery

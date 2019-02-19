@@ -6,8 +6,6 @@ using FastTests.Server.Replication;
 using Raven.Client.Documents.Indexes;
 using Raven.Client.Documents.Operations.OngoingTasks;
 using Raven.Client.Documents.Replication;
-using Raven.Client.Documents.Replication.Messages;
-using Raven.Client.ServerWide.Operations;
 using Raven.Server.ServerWide.Context;
 using Raven.Tests.Core.Utils.Entities;
 using Xunit;

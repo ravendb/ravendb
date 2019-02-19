@@ -1,5 +1,4 @@
 using System.Runtime.InteropServices;
-using Voron.Impl.FileHeaders;
 
 namespace Voron.Data.BTrees
 {

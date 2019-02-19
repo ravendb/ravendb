@@ -5,7 +5,6 @@ using Raven.Client.Documents;
 using Raven.Client.Documents.Conventions;
 using Raven.Client.Documents.Indexes;
 using Raven.Client.Documents.Operations.Indexes;
-using SlowTests.Utils;
 using Xunit;
 
 namespace SlowTests.Tests.Indexes

@@ -4,7 +4,6 @@ using System.Diagnostics;
 using System.Linq;
 using System.Runtime.Serialization;
 using FastTests;
-using Raven.Client;
 using Raven.Client.Documents.Indexes;
 using Raven.Client.Documents.Session;
 using Xunit;

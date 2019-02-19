@@ -12,17 +12,17 @@ using Raven.Server.Documents.Indexes.Persistence.Lucene;
 using Raven.Server.Documents.Indexes.Workers;
 using Raven.Server.ServerWide.Context;
 using Raven.Server.Utils;
-using Sparrow;
 using Sparrow.Binary;
 using Sparrow.Json;
 using Sparrow.Logging;
 using Sparrow.LowMemory;
+using Sparrow.Server;
 using Voron;
 using Voron.Data.BTrees;
 using Voron.Data.Tables;
 using Voron.Impl;
 using Voron.Data.Compression;
-using Voron.Global;
+using Constants = Voron.Global.Constants;
 
 namespace Raven.Server.Documents.Indexes.MapReduce
 {

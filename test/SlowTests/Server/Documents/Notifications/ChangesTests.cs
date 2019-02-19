@@ -1,7 +1,6 @@
 using System;
 using System.Collections.Concurrent;
 using System.Linq;
-using System.Threading;
 using System.Threading.Tasks;
 using FastTests;
 using Raven.Client.Documents.Changes;
@@ -9,7 +8,6 @@ using Raven.Client.Documents.Indexes;
 using Raven.Client.Documents.Operations;
 using Raven.Client.Exceptions.Database;
 using Raven.Tests.Core.Utils.Entities;
-using Sparrow;
 using Tests.Infrastructure;
 using Xunit;
 

@@ -6,6 +6,7 @@ using Raven.Server.Dashboard;
 using Sparrow.Json;
 using Sparrow.Logging;
 using Sparrow.Platform.Posix.macOS;
+using Sparrow.Server.Platform.Posix.macOS;
 using Sparrow.Utils;
 
 namespace Raven.Server.Utils.Cpu

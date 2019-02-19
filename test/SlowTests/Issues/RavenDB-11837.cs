@@ -1,4 +1,3 @@
-using System;
 using System.Collections.Generic;
 using FastTests;
 using Raven.Client.Documents.Operations;

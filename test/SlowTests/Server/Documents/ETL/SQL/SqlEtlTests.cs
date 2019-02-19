@@ -26,7 +26,7 @@ using Raven.Server.Documents.ETL.Providers.SQL.RelationalWriters;
 using Raven.Server.Documents.ETL.Providers.SQL.Test;
 using Raven.Server.ServerWide.Context;
 using Raven.Tests.Core.Utils.Entities;
-using Sparrow;
+using Sparrow.Server;
 using Xunit;
 
 namespace SlowTests.Server.Documents.ETL.SQL

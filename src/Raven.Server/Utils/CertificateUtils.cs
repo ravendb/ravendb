@@ -13,7 +13,6 @@ using Org.BouncyCastle.Pkcs;
 using Org.BouncyCastle.Security;
 using Org.BouncyCastle.X509;
 using Org.BouncyCastle.X509.Extension;
-using Raven.Server.ServerWide;
 using Sparrow.Platform;
 using BigInteger = Org.BouncyCastle.Math.BigInteger;
 using X509Certificate = Org.BouncyCastle.X509.X509Certificate;

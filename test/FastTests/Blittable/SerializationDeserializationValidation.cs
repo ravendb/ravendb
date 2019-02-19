@@ -1,11 +1,7 @@
-﻿using Raven.Client;
-using Raven.Client.Documents;
-using Raven.Client.Documents.Session;
+﻿using Raven.Client.Documents.Session;
 using Sparrow.Json;
 using System;
-using System.Collections.Generic;
 using System.Linq;
-using System.Text;
 using Xunit;
 
 namespace FastTests.Blittable

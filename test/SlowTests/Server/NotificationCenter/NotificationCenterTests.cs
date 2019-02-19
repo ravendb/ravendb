@@ -18,10 +18,10 @@ using Raven.Server.NotificationCenter.Notifications;
 using Raven.Server.NotificationCenter.Notifications.Details;
 using Raven.Server.NotificationCenter.Notifications.Server;
 using Raven.Server.ServerWide.Context;
-using Sparrow.Collections;
 using Sparrow.Extensions;
 using Sparrow.Json;
 using Sparrow.Json.Parsing;
+using Sparrow.Server.Collections;
 using Xunit;
 
 namespace SlowTests.Server.NotificationCenter

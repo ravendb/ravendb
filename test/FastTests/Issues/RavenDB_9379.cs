@@ -1,6 +1,5 @@
 ﻿using System;
 using Raven.Server.Config;
-using Raven.Server.ServerWide;
 using Raven.Server.Utils.Cli;
 using Xunit;
 

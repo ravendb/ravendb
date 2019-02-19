@@ -4,7 +4,6 @@
 // </copyright>
 //-----------------------------------------------------------------------
 
-using System.IO;
 using Raven.Client.Documents.Operations.Attachments;
 
 namespace Raven.Client.Documents.Session

@@ -10,7 +10,7 @@ using System.IO;
 using System.Linq;
 using FastTests.Voron.FixedSize;
 using Raven.Server.Utils;
-using Sparrow;
+using Sparrow.Server;
 using Sparrow.Threading;
 using Xunit;
 using Voron;

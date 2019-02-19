@@ -4,8 +4,8 @@ using System.IO;
 using System.Threading;
 using System.Threading.Tasks;
 using Raven.Server.ServerWide.Context;
-using Sparrow;
 using Sparrow.Json;
+using Sparrow.Server;
 
 namespace Raven.Server.Documents.Replication
 {

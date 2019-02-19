@@ -5,9 +5,7 @@
 // -----------------------------------------------------------------------
 
 using System.Linq;
-using System.Threading.Tasks;
 using FastTests;
-using Raven.Client;
 using Raven.Client.Documents.Session;
 using Xunit;
 

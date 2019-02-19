@@ -12,7 +12,7 @@ using Raven.Client.Exceptions.Documents.Indexes;
 using Raven.Server.Config;
 using Raven.Server.Documents.Patch;
 using Raven.Server.ServerWide;
-using Sparrow;
+using Sparrow.Server;
 
 namespace Raven.Server.Documents.Indexes.Static
 {

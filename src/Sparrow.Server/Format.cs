@@ -1,11 +1,10 @@
 ﻿using System;
-using System.Collections.Generic;
 using System.Diagnostics;
 using System.Runtime.CompilerServices;
 using System.Text;
-using Sparrow.Utils;
+using Sparrow.Server.Utils;
 
-namespace Sparrow
+namespace Sparrow.Server
 {
     public static unsafe class Format
     {

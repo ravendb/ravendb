@@ -1,5 +1,4 @@
-﻿using System;
-using System.Threading.Tasks;
+﻿using System.Threading.Tasks;
 using Raven.Client.ServerWide.Operations.Logs;
 using Raven.Server.Json;
 using Raven.Server.Routing;

@@ -6,19 +6,12 @@
 
 using System;
 using System.Collections.Generic;
-using System.IO;
 using System.Linq;
-using System.Security.Cryptography;
 using System.Security.Cryptography.X509Certificates;
-using System.Text;
-using System.Threading.Tasks;
 using FastTests;
 using Raven.Client.Documents;
-using Raven.Client.Documents.Operations;
 using Raven.Client.Documents.Operations.ConnectionStrings;
 using Raven.Client.Documents.Operations.ETL;
-using Raven.Client.Documents.Queries;
-using Raven.Client.Documents.Smuggler;
 using Raven.Client.Exceptions;
 using Raven.Client.Exceptions.Security;
 using Raven.Client.ServerWide;
@@ -29,7 +22,6 @@ using Raven.Server.Routing;
 using Raven.Server.ServerWide;
 using Raven.Server.Utils;
 using Sparrow.Json;
-using Tests.Infrastructure;
 using Xunit;
 
 namespace SlowTests.Authentication

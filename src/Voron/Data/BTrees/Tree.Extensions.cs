@@ -1,6 +1,6 @@
 ﻿using System.IO;
 using System.Runtime.CompilerServices;
-using Sparrow;
+using Sparrow.Server;
 using Voron.Data.Fixed;
 
 namespace Voron.Data.BTrees

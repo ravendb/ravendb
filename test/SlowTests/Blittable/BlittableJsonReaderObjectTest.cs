@@ -1,7 +1,5 @@
 ﻿using FastTests;
-using Raven.Client.Documents.Conventions;
 using Raven.Client.Documents.Session;
-using Raven.Client.Json;
 using Sparrow.Json;
 using Xunit;
 

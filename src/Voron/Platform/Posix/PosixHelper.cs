@@ -4,14 +4,12 @@
 //  </copyright>
 // -----------------------------------------------------------------------
 
-using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Runtime.InteropServices;
-using System.Text;
 using Sparrow;
-using Sparrow.Platform.Posix;
-using Sparrow.Utils;
+using Sparrow.Server.Platform.Posix;
+using Sparrow.Server.Utils;
 using Voron.Exceptions;
 using Voron.Impl.FileHeaders;
 using Voron.Util.Settings;

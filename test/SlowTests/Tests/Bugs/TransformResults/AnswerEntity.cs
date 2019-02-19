@@ -1,5 +1,3 @@
-using System;
-
 namespace SlowTests.Tests.Bugs.TransformResults
 {
     public class AnswerEntity

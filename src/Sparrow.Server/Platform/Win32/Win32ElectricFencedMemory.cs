@@ -1,9 +1,8 @@
 ﻿using System;
 using System.ComponentModel;
 using System.Runtime.InteropServices;
-using Sparrow.Platform.Win32;
 
-namespace Sparrow.Platform
+namespace Sparrow.Server.Platform.Win32
 {
     internal unsafe class Win32ElectricFencedMemory
     {

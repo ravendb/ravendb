@@ -1,5 +1,4 @@
 ﻿using System;
-using System.Collections.Generic;
 
 namespace Raven.Server.Documents.Queries.Graph
 {

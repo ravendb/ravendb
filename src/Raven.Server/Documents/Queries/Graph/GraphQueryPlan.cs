@@ -1,9 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Diagnostics;
-using System.Linq;
 using System.Threading.Tasks;
-using Microsoft.Extensions.Primitives;
 using Raven.Client.Exceptions;
 using Raven.Server.Documents.Indexes;
 using Raven.Server.Documents.Queries.AST;
@@ -11,7 +9,7 @@ using Raven.Server.Documents.Queries.Dynamic;
 using Raven.Server.ServerWide;
 using Raven.Server.ServerWide.Context;
 using Raven.Server.Utils;
-using Sparrow;
+using Sparrow.Server;
 using static Raven.Server.Documents.Queries.GraphQueryRunner;
 
 namespace Raven.Server.Documents.Queries.Graph

@@ -5,7 +5,6 @@ using System.IO.Compression;
 using Newtonsoft.Json;
 using Raven.Client.Documents.Conventions;
 using Raven.Client.Json;
-using Raven.Client.Json.Converters;
 using Raven.Client.Properties;
 using Raven.Server.Documents.Expiration;
 using Raven.Server.Documents.Handlers;

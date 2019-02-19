@@ -1,7 +1,6 @@
 using System;
 using System.Linq;
 using FastTests;
-using Raven.Client.Documents.Commands.Batches;
 using Raven.Client.Documents.Operations;
 using Raven.Tests.Core.Utils.Entities;
 using Xunit;

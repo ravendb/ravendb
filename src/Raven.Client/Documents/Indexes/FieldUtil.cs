@@ -1,5 +1,4 @@
 ﻿using System;
-using Raven.Client.Documents.Conventions;
 
 namespace Raven.Client.Documents.Indexes
 {

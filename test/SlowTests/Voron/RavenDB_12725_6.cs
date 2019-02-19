@@ -1,6 +1,4 @@
 ﻿using System;
-using System.IO;
-using System.Linq;
 using FastTests.Voron;
 using Voron;
 using Voron.Data.BTrees;

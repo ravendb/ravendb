@@ -3,7 +3,7 @@ using System.Collections.Concurrent;
 using System.Diagnostics;
 using System.Threading.Tasks;
 
-namespace Sparrow.Collections
+namespace Sparrow.Server.Collections
 {
     public class AsyncQueue<T> 
     {

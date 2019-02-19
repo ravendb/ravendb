@@ -5,7 +5,7 @@
 using System;
 using System.Runtime.CompilerServices;
 
-namespace Sparrow.Collections.LockFree
+namespace Sparrow.Server.Collections.LockFree
 {
     /// <summary>
     /// Scalable counter base.

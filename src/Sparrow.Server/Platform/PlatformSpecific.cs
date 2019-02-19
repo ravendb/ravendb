@@ -2,10 +2,10 @@
 using System.ComponentModel;
 using System.Diagnostics;
 using System.Threading;
-using Sparrow.LowMemory;
 using Sparrow.Platform;
-using Sparrow.Platform.Posix;
-using Sparrow.Platform.Win32;
+using Sparrow.Server.LowMemory;
+using Sparrow.Server.Platform.Posix;
+using Sparrow.Server.Platform.Win32;
 
 namespace Sparrow.Server.Platform
 {
@@ -25,14 +25,14 @@ namespace Sparrow.Server.Platform
 
         public static class NativeMemory
         {
-            public static byte* Allocate4KbAlignedMemory(long size, out Utils.NativeMemory.ThreadStats thread)
+            public static byte* Allocate4KbAlignedMemory(long size, out Sparrow.Utils.NativeMemory.ThreadStats thread)
             {
                 Debug.Assert(size >= 0);
 
-                thread = Utils.NativeMemory.ThreadAllocations.Value;
+                thread = Sparrow.Utils.NativeMemory.ThreadAllocations.Value;
                 thread.Allocations += size;
 
-                Interlocked.Add(ref Utils.NativeMemory._totalAllocatedMemory, size);
+                Interlocked.Add(ref Sparrow.Utils.NativeMemory._totalAllocatedMemory, size);
 
                 if (PlatformDetails.RunningOnPosix)
                 {
@@ -53,22 +53,22 @@ namespace Sparrow.Server.Platform
                 return allocate4KbAllignedMemory;
             }
 
-            public static void Free4KbAlignedMemory(byte* ptr, int size, Utils.NativeMemory.ThreadStats stats)
+            public static void Free4KbAlignedMemory(byte* ptr, int size, Sparrow.Utils.NativeMemory.ThreadStats stats)
             {
                 Debug.Assert(ptr != null);
 
-                var currentThreadValue = Utils.NativeMemory.ThreadAllocations.Value;
+                var currentThreadValue = Sparrow.Utils.NativeMemory.ThreadAllocations.Value;
                 if (currentThreadValue == stats)
                 {
                     currentThreadValue.Allocations -= size;
-                    Utils.NativeMemory.FixupReleasesFromOtherThreads(currentThreadValue);
+                    Sparrow.Utils.NativeMemory.FixupReleasesFromOtherThreads(currentThreadValue);
                 }
                 else
                 {
                     Interlocked.Add(ref stats.ReleasesFromOtherThreads, size);
                 }
 
-                Interlocked.Add(ref Utils.NativeMemory._totalAllocatedMemory, -size);
+                Interlocked.Add(ref Sparrow.Utils.NativeMemory._totalAllocatedMemory, -size);
                 var p = new IntPtr(ptr);
                 if (PlatformDetails.RunningOnPosix)
                 {

@@ -10,11 +10,9 @@ using System.IO;
 using FastTests.Utils;
 using FastTests.Voron;
 using Voron;
-using Voron.Platform.Win32;
 using Xunit;
 using Voron.Data;
 using Voron.Impl.Paging;
-using Voron.Util.Settings;
 
 namespace SlowTests.Voron
 {

@@ -1,5 +1,4 @@
 ﻿using System.Collections.Generic;
-using Sparrow.Global;
 using Voron;
 using Xunit;
 using Constants = Voron.Global.Constants;

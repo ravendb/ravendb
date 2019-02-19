@@ -1,16 +1,12 @@
-﻿using System;
-using System.Collections.Generic;
+﻿using System.Collections.Generic;
 using System.IO;
-using System.Linq;
 using System.Net.Http;
 using System.Threading.Tasks;
 using CsvHelper;
 using FastTests;
 using Raven.Client.Documents.Indexes;
-using Raven.Client.Documents.Operations;
 using Raven.Client.Documents.Operations.Indexes;
 using SlowTests.Core.Utils.Entities;
-using Tests.Infrastructure;
 using Xunit;
 
 namespace SlowTests.Issues

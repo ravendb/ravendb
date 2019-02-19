@@ -4,7 +4,6 @@ using System.Runtime.CompilerServices;
 using Microsoft.Extensions.Primitives;
 using Raven.Client;
 using Raven.Server.Documents.Indexes.Static;
-using Sparrow;
 using Sparrow.Json;
 
 namespace Raven.Server.Documents

@@ -15,6 +15,7 @@ using BenchmarkDotNet.Validators;
 using Sparrow;
 using System.Runtime.Intrinsics;
 using System.Runtime.Intrinsics.X86;
+using Sparrow.Server.Utils;
 using Sparrow.Utils;
 
 namespace Micro.Benchmark.Benchmarks.Hardware

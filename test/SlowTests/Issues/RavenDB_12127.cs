@@ -3,7 +3,7 @@ using System.Threading.Tasks;
 using FastTests;
 using Raven.Client.Documents.Subscriptions;
 using Raven.Client.Exceptions.Documents.Subscriptions;
-using Sparrow;
+using Sparrow.Server;
 using Xunit;
 
 namespace SlowTests.Issues

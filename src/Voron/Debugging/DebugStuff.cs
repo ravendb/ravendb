@@ -7,7 +7,6 @@ using Voron.Data.BTrees;
 using Voron.Data.Fixed;
 using Voron.Global;
 using Voron.Impl;
-using Voron.Impl.FileHeaders;
 
 namespace Voron.Debugging
 {

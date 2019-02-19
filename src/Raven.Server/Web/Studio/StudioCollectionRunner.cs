@@ -6,7 +6,6 @@ using Raven.Server.Documents;
 using Raven.Server.Documents.TransactionCommands;
 using Raven.Server.ServerWide;
 using Raven.Server.ServerWide.Context;
-using Sparrow.Json;
 
 namespace Raven.Server.Web.Studio
 {

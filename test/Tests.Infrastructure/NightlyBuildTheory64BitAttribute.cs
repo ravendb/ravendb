@@ -1,7 +1,5 @@
 ﻿using System;
-using Raven.Client.Util;
 using Sparrow.Platform;
-using Xunit;
 
 namespace Tests.Infrastructure
 {

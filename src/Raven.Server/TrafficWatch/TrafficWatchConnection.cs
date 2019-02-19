@@ -7,9 +7,9 @@ using System.Threading.Tasks;
 using Raven.Client.Documents.Changes;
 using Sparrow.Logging;
 using Raven.Server.Utils;
-using Sparrow;
 using Sparrow.Json;
 using Sparrow.Json.Parsing;
+using Sparrow.Server;
 
 namespace Raven.Server.TrafficWatch
 {

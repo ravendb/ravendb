@@ -6,7 +6,6 @@
 
 using System;
 using FastTests;
-using FastTests.Server.Documents.Queries;
 using Xunit;
 
 namespace SlowTests.Bugs

@@ -1,8 +1,6 @@
 ﻿using System;
 using System.Diagnostics;
-using System.IO;
 using System.Linq;
-using Sparrow;
 using System.Net;
 using System.Threading;
 using System.Threading.Tasks;
@@ -12,7 +10,6 @@ using Raven.Server.Routing;
 using Raven.Server.ServerWide.Context;
 using Raven.Server.Smuggler.Documents;
 using Sparrow.Json;
-using Sparrow.Json.Parsing;
 using Sparrow.Logging;
 
 namespace Raven.Server.Documents.Handlers

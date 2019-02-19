@@ -1,15 +1,9 @@
 ﻿using System;
-using System.Diagnostics;
 using System.IO;
-using System.Linq;
 using System.Runtime.InteropServices;
-using System.Text;
 using FastTests;
-using Sparrow.Utils;
-using Voron.Impl.Journal;
 using Voron.Platform;
 using Xunit;
-using Xunit.Abstractions;
 
 namespace SlowTests.Voron.PalTest
 {

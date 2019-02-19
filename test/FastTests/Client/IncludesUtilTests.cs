@@ -1,9 +1,7 @@
 ﻿using System.Collections.Generic;
-using System.Threading.Tasks;
 using Xunit;
 using System;
 using Raven.Client.Documents.Session;
-using Raven.Client.Util;
 using Sparrow.Json;
 
 namespace FastTests.Client

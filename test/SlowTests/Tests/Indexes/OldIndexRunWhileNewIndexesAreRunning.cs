@@ -6,9 +6,7 @@
 
 using System.Linq;
 using System.Threading;
-using System.Threading.Tasks;
 using FastTests;
-using FastTests.Server.Basic.Entities;
 using Raven.Client.Documents.Indexes;
 using Raven.Client.Documents.Operations.Indexes;
 using Raven.Tests.Core.Utils.Entities;

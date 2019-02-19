@@ -1,6 +1,7 @@
 ﻿using System.Runtime.InteropServices;
+using Sparrow.Platform;
 
-namespace Sparrow.Platform.Posix
+namespace Sparrow.Server.Platform.Posix
 {
     public class PerPlatformValues
     {

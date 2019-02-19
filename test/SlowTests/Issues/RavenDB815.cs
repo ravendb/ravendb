@@ -4,8 +4,6 @@ using FastTests.Utils;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
 using Raven.Client;
-using Sparrow.Json.Parsing;
-using Sparrow.Utils;
 using Xunit;
 
 namespace SlowTests.Issues

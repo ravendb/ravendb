@@ -2,7 +2,6 @@
 using System.Diagnostics;
 using Voron.Global;
 using Voron.Impl;
-using Voron.Impl.FileHeaders;
 
 namespace Voron.Data.BTrees
 {

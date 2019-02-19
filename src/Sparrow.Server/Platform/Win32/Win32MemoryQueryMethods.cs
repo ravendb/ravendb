@@ -1,16 +1,15 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.Diagnostics;
 using System.Runtime.InteropServices;
 using System.Text;
 using Sparrow.Exceptions;
 using Sparrow.Json;
 using Sparrow.Json.Parsing;
 using Sparrow.Utils;
-using static Sparrow.Platform.Win32.Win32MemoryProtectMethods;
+
 // ReSharper disable InconsistentNaming
 
-namespace Sparrow.Platform.Win32
+namespace Sparrow.Server.Platform.Win32
 {
     public static unsafe class Win32MemoryQueryMethods
     {
@@ -103,14 +102,14 @@ namespace Sparrow.Platform.Win32
             }
         }
 
-        private static string GetEncodedFilename(IntPtr processHandle, ref MEMORY_BASIC_INFORMATION memoryBasicInformation)
+        private static string GetEncodedFilename(IntPtr processHandle, ref Win32MemoryProtectMethods.MEMORY_BASIC_INFORMATION memoryBasicInformation)
         {
             var memData = BuffersPool.Allocate(2048);
             var pFilename = memData.Address;
             try
             {
                 int stringLength;
-                stringLength = GetMappedFileName(processHandle, memoryBasicInformation.BaseAddress.ToPointer(), pFilename, 2048);
+                stringLength = Win32MemoryProtectMethods.GetMappedFileName(processHandle, memoryBasicInformation.BaseAddress.ToPointer(), pFilename, 2048);
 
                 if (stringLength == 0)
                     return null;
@@ -153,9 +152,9 @@ namespace Sparrow.Platform.Win32
 
             while (procMinAddress.ToInt64() < procMaxAddress.ToInt64())
             {
-                MEMORY_BASIC_INFORMATION memoryBasicInformation;
-                VirtualQueryEx(processHandle, (byte*)procMinAddress.ToPointer(),
-                    &memoryBasicInformation, new UIntPtr((uint)sizeof(MEMORY_BASIC_INFORMATION)));
+                Win32MemoryProtectMethods.MEMORY_BASIC_INFORMATION memoryBasicInformation;
+                Win32MemoryProtectMethods.VirtualQueryEx(processHandle, (byte*)procMinAddress.ToPointer(),
+                    &memoryBasicInformation, new UIntPtr((uint)sizeof(Win32MemoryProtectMethods.MEMORY_BASIC_INFORMATION)));
 
                 // if this memory chunk is accessible
                 if (memoryBasicInformation.Protect == (uint)MemoryProtectionConstants.PAGE_READWRITE &&

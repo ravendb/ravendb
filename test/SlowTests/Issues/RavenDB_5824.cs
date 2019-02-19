@@ -3,7 +3,6 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Net.Http;
 using FastTests;
-using JetBrains.Annotations;
 using Orders;
 using Raven.Client.Documents.Conventions;
 using Raven.Client.Documents.Indexes;

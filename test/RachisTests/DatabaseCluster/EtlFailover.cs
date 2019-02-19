@@ -11,12 +11,8 @@ using Raven.Client.Documents.Operations.ConnectionStrings;
 using Raven.Client.Documents.Operations.ETL;
 using Raven.Client.Documents.Operations.OngoingTasks;
 using Raven.Client.Exceptions.Cluster;
-using Raven.Client.Exceptions.Database;
 using Raven.Client.ServerWide;
-using Raven.Client.ServerWide.Operations;
-using Raven.Server.ServerWide.Commands;
 using Raven.Tests.Core.Utils.Entities;
-using Tests.Infrastructure;
 using Xunit;
 
 namespace RachisTests.DatabaseCluster

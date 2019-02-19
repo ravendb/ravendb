@@ -11,7 +11,6 @@ using System.Threading;
 using FastTests;
 using Raven.Client.Documents.Subscriptions;
 using Raven.Tests.Core.Utils.Entities;
-using SlowTests.Server.Documents.Notifications;
 using Xunit;
 
 namespace SlowTests.Issues

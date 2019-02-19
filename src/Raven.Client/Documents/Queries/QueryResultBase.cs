@@ -1,6 +1,5 @@
 ﻿using System;
 using System.Collections.Generic;
-using Raven.Client.Documents.Operations.Counters;
 using Raven.Client.Documents.Queries.Timings;
 using Sparrow.Json;
 

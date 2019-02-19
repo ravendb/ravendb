@@ -1,8 +1,5 @@
 using System;
 using System.Linq;
-using System.Collections.Generic;
-using System.Text;
-using System.Threading;
 using FastTests;
 using Raven.Client.Documents.Indexes;
 using Xunit;

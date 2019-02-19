@@ -10,7 +10,6 @@ using System.Text.RegularExpressions;
 using System.Threading;
 using System.Threading.Tasks;
 using Microsoft.AspNetCore.Http;
-using Raven.Client;
 using Raven.Client.Documents.Changes;
 using Raven.Client.Documents.Indexes;
 using Raven.Client.Documents.Indexes.Spatial;
@@ -52,6 +51,7 @@ using Sparrow.Json;
 using Voron;
 using Sparrow.Logging;
 using Sparrow.LowMemory;
+using Sparrow.Server;
 using Sparrow.Threading;
 using Sparrow.Utils;
 using Size = Sparrow.Size;
@@ -59,6 +59,7 @@ using Voron.Debugging;
 using Voron.Exceptions;
 using Voron.Impl;
 using Voron.Impl.Compaction;
+using Constants = Raven.Client.Constants;
 using FacetQuery = Raven.Server.Documents.Queries.Facets.FacetQuery;
 
 namespace Raven.Server.Documents.Indexes

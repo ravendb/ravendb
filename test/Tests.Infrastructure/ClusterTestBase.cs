@@ -20,9 +20,9 @@ using Raven.Server.Documents;
 using Raven.Server.Rachis;
 using Raven.Server.ServerWide;
 using Raven.Server.Utils;
-using Sparrow;
 using Sparrow.Json;
 using Sparrow.Platform;
+using Sparrow.Server;
 using Xunit;
 
 namespace Tests.Infrastructure

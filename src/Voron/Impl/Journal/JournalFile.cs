@@ -6,7 +6,6 @@
 
 using Sparrow;
 using System;
-using System.Buffers;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq;
@@ -14,8 +13,9 @@ using System.Runtime.ExceptionServices;
 using Sparrow.Logging;
 using System.Threading;
 using Sparrow.Collections;
-using Voron.Global;
+using Sparrow.Server;
 using Voron.Util;
+using Constants = Voron.Global.Constants;
 
 namespace Voron.Impl.Journal
 {

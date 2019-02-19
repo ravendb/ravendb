@@ -1,9 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
-using System.Threading;
 using System.Threading.Tasks;
-using FastTests.Server.Documents.Indexing.MapReduce;
 using FastTests.Server.Replication;
 using Raven.Client.Documents.Operations;
 using Raven.Client.Documents.Queries;

@@ -2,29 +2,26 @@
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading;
-using Raven.Client;
 using Raven.Client.Documents.Indexes;
-using Raven.Server.Documents.Indexes.Auto;
 using Raven.Server.Documents.Indexes.MapReduce;
 using Raven.Server.Documents.Indexes.MapReduce.Auto;
 using Raven.Server.Documents.Indexes.MapReduce.Static;
-using Raven.Server.Documents.Indexes.Static;
-using Raven.Server.Documents.Indexes.Static.Roslyn.Rewriters;
 using Raven.Server.Documents.Queries;
 using Raven.Server.Documents.Queries.Results;
 using Raven.Server.ServerWide;
 using Raven.Server.ServerWide.Context;
 using Raven.Server.Utils;
-using Sparrow;
 using Sparrow.Binary;
 using Sparrow.Json;
 using Sparrow.Json.Parsing;
+using Sparrow.Server;
 using Voron;
 using Voron.Data;
 using Voron.Data.BTrees;
 using Voron.Data.Compression;
 using Voron.Data.Fixed;
 using Voron.Data.Tables;
+using Constants = Raven.Client.Constants;
 
 namespace Raven.Server.Documents.Indexes.Debugging
 {

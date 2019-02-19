@@ -1,7 +1,7 @@
 ﻿using System.Threading.Tasks;
 using Raven.Client.Documents.Operations.ETL;
-using Sparrow.Collections;
 using Sparrow.Json.Parsing;
+using Sparrow.Server.Collections;
 using Xunit;
 
 namespace SlowTests.Server.Documents.ETL

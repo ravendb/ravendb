@@ -4,13 +4,12 @@ using System.IO;
 using System.Text;
 using System.Threading;
 using Raven.Server.Utils;
-using Sparrow;
+using Sparrow.Server;
 using Sparrow.Threading;
 using Voron;
 using Voron.Data.BTrees;
-using Voron.Global;
 using Voron.Impl;
-using Xunit;
+using Constants = Voron.Global.Constants;
 
 namespace FastTests.Voron
 {

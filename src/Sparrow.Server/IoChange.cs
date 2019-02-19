@@ -1,6 +1,7 @@
 ﻿using System;
+using Sparrow.Server.Meters;
 
-namespace Sparrow
+namespace Sparrow.Server
 {
     public class IoChange
     {

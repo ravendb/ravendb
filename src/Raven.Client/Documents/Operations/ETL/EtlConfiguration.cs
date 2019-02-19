@@ -3,7 +3,6 @@ using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq;
 using Raven.Client.Documents.Operations.ConnectionStrings;
-using Raven.Client.Documents.Operations.ETL.SQL;
 using Raven.Client.ServerWide;
 using Sparrow.Json;
 using Sparrow.Json.Parsing;

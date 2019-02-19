@@ -12,6 +12,7 @@ using Raven.Server.ServerWide.Context;
 using Raven.Server.Utils;
 using Sparrow;
 using Sparrow.Json;
+using Sparrow.Server;
 using Sparrow.Utils;
 using Voron;
 using Voron.Data;

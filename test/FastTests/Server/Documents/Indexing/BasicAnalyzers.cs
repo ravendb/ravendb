@@ -4,16 +4,13 @@ using System.Collections.Generic;
 using System.IO;
 
 using Lucene.Net.Analysis;
-using Lucene.Net.Analysis.Standard;
 using Raven.Client;
 using Raven.Client.Documents.Indexes;
 using Raven.Server.Documents;
 using Raven.Server.Documents.Includes;
 using Raven.Server.Documents.Indexes;
-using Raven.Server.Documents.Indexes.Auto;
 using Raven.Server.Documents.Indexes.Persistence.Lucene;
 using Raven.Server.Documents.Indexes.Persistence.Lucene.Analyzers;
-using Raven.Server.Documents.Indexes.Static;
 using Raven.Server.Documents.Indexes.Workers;
 using Raven.Server.Documents.Queries;
 using Raven.Server.Documents.Queries.Results;

@@ -1,11 +1,10 @@
 ﻿using System;
 using System.Diagnostics;
 using System.Runtime.CompilerServices;
-using Sparrow;
-using Sparrow.Binary;
 using Sparrow.Logging;
-using Voron.Global;
+using Sparrow.Server;
 using Voron.Impl.Paging;
+using Constants = Voron.Global.Constants;
 
 namespace Voron.Impl.Journal
 {

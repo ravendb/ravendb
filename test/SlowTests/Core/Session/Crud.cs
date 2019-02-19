@@ -10,13 +10,9 @@ using System.Threading.Tasks;
 
 using FastTests;
 using Raven.Client.Exceptions.Documents.Session;
-using Raven.Client.Extensions;
-
 using Xunit;
 
 using Address = SlowTests.Core.Utils.Entities.Address;
-using Post = SlowTests.Core.Utils.Entities.Post;
-using PostContent = SlowTests.Core.Utils.Entities.PostContent;
 using User = SlowTests.Core.Utils.Entities.User;
 
 namespace SlowTests.Core.Session

@@ -1,6 +1,6 @@
 ﻿using System;
 
-namespace Sparrow.Platform
+namespace Sparrow.Server.Platform
 {
     public class IncorrectDllException : Exception
     {

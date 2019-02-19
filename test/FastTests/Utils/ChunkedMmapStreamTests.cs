@@ -1,10 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.IO;
 using System.Linq;
-using System.Runtime.InteropServices;
 using FastTests.Voron.FixedSize;
-using Raven.Client.Extensions;
 using Raven.Client.Extensions.Streams;
 using Raven.Server.Utils;
 using Xunit;

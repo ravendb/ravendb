@@ -1,6 +1,4 @@
 ﻿using System;
-using System.Collections;
-using System.Collections.Generic;
 using Raven.Client.Documents.Queries;
 using Sparrow;
 using Sparrow.Json;

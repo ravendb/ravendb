@@ -1,8 +1,5 @@
 ﻿using System;
 using System.Collections.Generic;
-using Raven.Server.Json;
-using Raven.Server.ServerWide;
-using Raven.Server.ServerWide.Context;
 using Sparrow;
 using Sparrow.Json;
 using Xunit;

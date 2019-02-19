@@ -7,6 +7,7 @@ using Sparrow;
 using Sparrow.Binary;
 using Sparrow.Json;
 using Sparrow.Json.Parsing;
+using Sparrow.Server;
 using Voron;
 
 namespace Raven.Server.Documents.Indexes.MapReduce

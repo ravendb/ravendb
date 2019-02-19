@@ -2,7 +2,7 @@
 using System.Diagnostics;
 using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
-using Sparrow;
+using Sparrow.Server;
 
 namespace Voron.Util
 {

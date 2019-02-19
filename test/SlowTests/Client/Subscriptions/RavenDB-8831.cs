@@ -8,8 +8,8 @@ using Raven.Client.Documents.Session;
 using Raven.Client.Documents.Subscriptions;
 using Raven.Server.Json;
 using Raven.Server.ServerWide.Context;
-using Sparrow;
 using Sparrow.Json;
+using Sparrow.Server;
 using Xunit;
 
 namespace SlowTests.Client.Subscriptions

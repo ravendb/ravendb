@@ -1,7 +1,4 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Text;
-using FastTests;
+﻿using FastTests;
 using Xunit;
 
 namespace SlowTests.Issues

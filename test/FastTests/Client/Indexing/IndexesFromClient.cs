@@ -17,7 +17,6 @@ using Raven.Server.Documents.Indexes.Auto;
 using Raven.Server.Documents.Indexes.Static;
 using Raven.Server.Exceptions;
 using Raven.Tests.Core.Utils.Entities;
-using Sparrow;
 using Xunit;
 
 namespace FastTests.Client.Indexing

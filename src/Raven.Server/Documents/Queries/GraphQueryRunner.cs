@@ -1,16 +1,12 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.Diagnostics;
 using System.Linq;
-using System.Threading;
 using System.Threading.Tasks;
 using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.Primitives;
 using Raven.Client;
-using Raven.Client.Documents.Indexes;
 using Raven.Client.Documents.Operations;
 using Raven.Client.Documents.Queries;
-using Raven.Client.Exceptions;
 using Raven.Server.Documents.Includes;
 using Raven.Server.Config.Categories;
 using Raven.Server.Documents.Queries.AST;
@@ -19,11 +15,8 @@ using Raven.Server.Documents.Queries.Results;
 using Raven.Server.Documents.Queries.Suggestions;
 using Raven.Server.Documents.Queries.Timings;
 using Raven.Server.Exceptions;
-using Raven.Server.Json;
 using Raven.Server.ServerWide;
 using Raven.Server.ServerWide.Context;
-using Raven.Server.Utils;
-using Sparrow;
 using Sparrow.Json;
 using Sparrow.Json.Parsing;
 

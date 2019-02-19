@@ -23,6 +23,7 @@ using Voron.Impl;
 using Sparrow;
 using Sparrow.Binary;
 using Sparrow.Logging;
+using Sparrow.Server;
 using Voron.Data;
 using Voron.Exceptions;
 

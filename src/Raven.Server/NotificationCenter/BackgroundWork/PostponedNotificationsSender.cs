@@ -5,8 +5,8 @@ using System.Threading.Tasks;
 using Raven.Client.Util;
 using Raven.Server.Background;
 using Raven.Server.NotificationCenter.Notifications;
-using Sparrow;
 using Sparrow.Collections;
+using Sparrow.Server;
 
 namespace Raven.Server.NotificationCenter.BackgroundWork
 {

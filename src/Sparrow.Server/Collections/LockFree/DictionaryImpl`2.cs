@@ -7,7 +7,7 @@ using System.Collections;
 using System.Collections.Generic;
 using System.Reflection;
 
-namespace Sparrow.Collections.LockFree
+namespace Sparrow.Server.Collections.LockFree
 {
     internal abstract class DictionaryImpl<TKey, TValue>
         : DictionaryImpl

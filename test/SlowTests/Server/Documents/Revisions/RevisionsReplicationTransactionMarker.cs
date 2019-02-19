@@ -5,9 +5,7 @@
 //-----------------------------------------------------------------------
 
 using System.Threading.Tasks;
-using FastTests.Server.Documents.Revisions;
 using FastTests.Server.Replication;
-using Sparrow;
 using Xunit;
 using System.Threading;
 using FastTests.Utils;

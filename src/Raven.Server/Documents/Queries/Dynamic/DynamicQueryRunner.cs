@@ -12,8 +12,8 @@ using Raven.Server.Documents.Queries.Suggestions;
 using Raven.Server.Documents.Queries.Timings;
 using Raven.Server.ServerWide;
 using Raven.Server.ServerWide.Context;
-using Sparrow;
 using Sparrow.Json;
+using Sparrow.Server;
 using Sparrow.Utils;
 using PatchRequest = Raven.Server.Documents.Patch.PatchRequest;
 

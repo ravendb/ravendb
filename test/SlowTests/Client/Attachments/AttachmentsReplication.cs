@@ -2,10 +2,8 @@
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
-using System.Threading;
 using System.Threading.Tasks;
 using FastTests;
-using FastTests.Server.Documents.Revisions;
 using FastTests.Server.Replication;
 using FastTests.Utils;
 using Orders;
@@ -17,7 +15,6 @@ using Raven.Client.Documents.Operations.Attachments;
 using Raven.Client.Documents.Session;
 using Raven.Client.ServerWide;
 using Raven.Server.Documents;
-using Raven.Server.Utils;
 using Raven.Tests.Core.Utils.Entities;
 using Sparrow.Json;
 using Xunit;

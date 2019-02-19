@@ -1,7 +1,6 @@
 ﻿using System;
 using Raven.Client.Documents.Operations.ETL;
 using Raven.Client.Documents.Operations.OngoingTasks;
-using Raven.Client.ServerWide.Operations;
 using Raven.Tests.Core.Utils.Entities;
 using Xunit;
 

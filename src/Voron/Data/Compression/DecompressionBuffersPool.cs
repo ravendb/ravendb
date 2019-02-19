@@ -3,15 +3,15 @@ using System.Collections.Concurrent;
 using System.Diagnostics;
 using System.Runtime.CompilerServices;
 using System.Threading;
-using Sparrow;
 using Sparrow.Binary;
+using Sparrow.Server;
 using Sparrow.Threading;
 using Voron.Data.BTrees;
-using Voron.Global;
 using Voron.Impl;
 using Voron.Impl.Paging;
 using Voron.Impl.Scratch;
 using Voron.Util;
+using Constants = Voron.Global.Constants;
 
 namespace Voron.Data.Compression
 {

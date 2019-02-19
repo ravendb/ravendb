@@ -1,6 +1,5 @@
 using System;
 using FastTests;
-using Raven.Client.Documents;
 using Raven.Client.Documents.Operations;
 using Raven.Client.ServerWide;
 using Raven.Client.ServerWide.Operations;

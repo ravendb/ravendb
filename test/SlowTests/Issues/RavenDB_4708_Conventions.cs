@@ -13,7 +13,6 @@ using Newtonsoft.Json.Linq;
 using Raven.Client.Documents.Linq;
 using Raven.Client.Documents.Queries.Facets;
 using Raven.Client.Documents.Session;
-using Raven.Client.Extensions;
 using Raven.Tests.Core.Utils.Entities;
 using Xunit;
 

@@ -1,5 +1,4 @@
-﻿using System.Collections.Generic;
-using Sparrow.Json.Parsing;
+﻿using Sparrow.Json.Parsing;
 
 namespace Raven.Client.Documents.Operations
 {

@@ -2,7 +2,6 @@
 using FastTests.Voron;
 using Raven.Server.Documents.Indexes;
 using Raven.Server.ServerWide.Context;
-using Sparrow.LowMemory;
 using Sparrow.Threading;
 using Xunit;
 

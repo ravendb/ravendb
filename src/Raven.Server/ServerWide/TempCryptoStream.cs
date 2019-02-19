@@ -2,7 +2,7 @@
 using System.Diagnostics;
 using System.IO;
 using Raven.Server.Utils;
-using Sparrow;
+using Sparrow.Server;
 using Sparrow.Utils;
 
 namespace Raven.Server.ServerWide

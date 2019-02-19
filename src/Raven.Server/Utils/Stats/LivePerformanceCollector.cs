@@ -5,11 +5,9 @@ using System.IO;
 using System.Net.WebSockets;
 using System.Threading;
 using System.Threading.Tasks;
-using Raven.Server.Documents;
-using Raven.Server.ServerWide.Context;
-using Sparrow.Collections;
 using Sparrow.Json;
 using Sparrow.Logging;
+using Sparrow.Server.Collections;
 using Sparrow.Utils;
 
 namespace Raven.Server.Utils.Stats

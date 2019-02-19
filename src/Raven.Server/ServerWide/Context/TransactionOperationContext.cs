@@ -1,7 +1,7 @@
 ﻿using System;
 using Sparrow.Json;
 using Voron;
-using Sparrow;
+using Sparrow.Server;
 using Sparrow.Threading;
 
 namespace Raven.Server.ServerWide.Context

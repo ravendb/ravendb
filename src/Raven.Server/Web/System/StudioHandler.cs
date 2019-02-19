@@ -25,7 +25,6 @@ using Sparrow.Collections;
 using Sparrow.Threading;
 using Sparrow.Utils;
 using Raven.Client.Extensions;
-using Microsoft.Extensions.Primitives;
 
 namespace Raven.Server.Web.System
 {

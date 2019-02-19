@@ -5,11 +5,9 @@
 // -----------------------------------------------------------------------
 
 using System;
-using System.Globalization;
 using System.Linq;
 using System.Threading;
 using FastTests;
-using Raven.Client;
 using Raven.Client.Documents.Indexes;
 using Tests.Infrastructure;
 using Xunit;

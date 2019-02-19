@@ -7,7 +7,6 @@
 using System.IO;
 using Xunit;
 using Voron;
-using Voron.Data;
 using System.Linq;
 using Voron.Global;
 

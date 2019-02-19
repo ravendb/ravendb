@@ -3,7 +3,6 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Reflection;
 using System.Text;
-using Lucene.Net.Util;
 using Raven.Client.Http;
 using Raven.Server;
 using Xunit;

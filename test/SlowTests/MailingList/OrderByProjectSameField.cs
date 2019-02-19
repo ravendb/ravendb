@@ -11,7 +11,6 @@ using System.Diagnostics;
 using System.Linq;
 using FastTests;
 using Newtonsoft.Json;
-using Raven.Client;
 using Raven.Client.Documents;
 using Raven.Client.Documents.Indexes;
 using Raven.Client.Documents.Session;

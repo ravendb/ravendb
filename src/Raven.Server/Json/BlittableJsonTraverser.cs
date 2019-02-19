@@ -2,7 +2,6 @@
 using System.Collections;
 using System.Collections.Generic;
 using Microsoft.Extensions.Primitives;
-using Sparrow;
 using Sparrow.Json;
 
 namespace Raven.Server.Json

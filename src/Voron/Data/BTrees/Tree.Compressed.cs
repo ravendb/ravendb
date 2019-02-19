@@ -1,5 +1,4 @@
 ﻿using System;
-using System.Diagnostics;
 using Sparrow;
 using Voron.Global;
 using Voron.Impl;

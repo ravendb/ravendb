@@ -7,7 +7,6 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
-using Raven.Client.Extensions;
 using Raven.Server.Documents.Operations;
 using Raven.Server.NotificationCenter.Notifications;
 using Xunit;

@@ -4,10 +4,8 @@ using System.Diagnostics.CodeAnalysis;
 using System.Linq;
 using System.Threading.Tasks;
 using Raven.Client.Documents.Operations.Indexes;
-using Raven.Client.Util;
 using Raven.Tests.Core.Utils.Entities;
 using Xunit;
-using Raven.Server.Documents.Replication;
 
 namespace FastTests.Server.Documents.Queries
 {

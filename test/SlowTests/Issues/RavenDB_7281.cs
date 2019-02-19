@@ -1,7 +1,7 @@
 ﻿using System;
 using FastTests.Voron;
 using FastTests.Voron.FixedSize;
-using Sparrow;
+using Sparrow.Server;
 using Voron;
 using Voron.Data.Fixed;
 using Xunit;

@@ -1,5 +1,5 @@
 ﻿using FastTests.Voron;
-using Sparrow;
+using Sparrow.Server;
 using Voron;
 using Xunit;
 

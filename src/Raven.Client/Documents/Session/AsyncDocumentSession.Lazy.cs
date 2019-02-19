@@ -15,7 +15,6 @@ using Raven.Client.Documents.Commands.MultiGet;
 using Raven.Client.Documents.Session.Loaders;
 using Raven.Client.Documents.Session.Operations;
 using Raven.Client.Documents.Session.Operations.Lazy;
-using Raven.Client.Extensions;
 using Sparrow.Utils;
 
 namespace Raven.Client.Documents.Session

@@ -1,4 +1,4 @@
-﻿namespace Sparrow.Utils
+﻿namespace Sparrow.Server.Utils
 {
     public static class SpecialChars
     {

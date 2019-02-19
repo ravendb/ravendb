@@ -1,6 +1,4 @@
-﻿using System;
-using System.Linq;
-using System.Threading.Tasks;
+﻿using System.Threading.Tasks;
 using Raven.Client;
 using Raven.Client.Documents.Commands;
 using Raven.Tests.Core.Utils.Entities;

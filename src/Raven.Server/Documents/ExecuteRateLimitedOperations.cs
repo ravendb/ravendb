@@ -1,7 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Threading;
-using Lucene.Net.Util;
 using Raven.Client.Util.RateLimiting;
 using Raven.Server.ServerWide;
 using Raven.Server.ServerWide.Context;

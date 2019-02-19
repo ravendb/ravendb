@@ -8,8 +8,6 @@ using System;
 using System.Linq;
 using System.Threading.Tasks;
 using FastTests;
-using FastTests.Server.Basic.Entities;
-using Raven.Client;
 using Raven.Client.Documents.Operations;
 using Raven.Client.Documents.Queries;
 using Raven.Client.Documents.Session;

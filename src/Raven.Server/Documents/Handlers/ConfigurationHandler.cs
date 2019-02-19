@@ -2,7 +2,6 @@
 using System.Threading.Tasks;
 using Raven.Client;
 using Raven.Client.Documents.Operations.Configuration;
-using Raven.Client.ServerWide.Operations.Configuration;
 using Raven.Server.Json;
 using Raven.Server.Routing;
 using Raven.Server.ServerWide.Context;

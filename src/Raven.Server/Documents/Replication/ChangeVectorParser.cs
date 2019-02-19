@@ -1,6 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
-using Sparrow.Utils;
+using Sparrow.Server.Utils;
 
 namespace Raven.Server.Documents.Replication
 {

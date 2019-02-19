@@ -1,10 +1,5 @@
-﻿using System.Collections.Generic;
-using System.Linq;
-using System.Threading.Tasks;
-using Newtonsoft.Json.Linq;
-using Raven.Server.ServerWide.Context;
+﻿using System.Linq;
 using Raven.Server.SqlMigration;
-using Raven.Server.SqlMigration.Model;
 using Raven.Server.SqlMigration.Schema;
 using Tests.Infrastructure;
 using Xunit;

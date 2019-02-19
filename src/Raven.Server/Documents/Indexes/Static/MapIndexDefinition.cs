@@ -1,6 +1,5 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.IO;
 using System.Linq;
 using Raven.Client;
 using Raven.Client.Documents.Indexes;
@@ -9,7 +8,6 @@ using Raven.Server.Json;
 
 using Sparrow.Json;
 using Voron;
-using Voron.Impl;
 
 namespace Raven.Server.Documents.Indexes.Static
 {

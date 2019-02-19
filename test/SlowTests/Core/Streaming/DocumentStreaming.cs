@@ -4,9 +4,7 @@
 //  </copyright>
 // -----------------------------------------------------------------------
 
-using System.Collections.Generic;
 using FastTests;
-using Raven.Client.Documents.Replication.Messages;
 using Xunit;
 
 using User = SlowTests.Core.Utils.Entities.User;

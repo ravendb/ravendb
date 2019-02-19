@@ -3,14 +3,12 @@ using System.Diagnostics;
 using System.IO;
 using System.IO.Pipes;
 using System.Linq;
-using System.Reflection;
 using System.Runtime.InteropServices;
 using System.Threading.Tasks;
 using Raven.Server.Utils.Cli;
 using Sparrow.Logging;
 using Sparrow.Platform;
-using Sparrow.Platform.Posix;
-using Voron.Platform.Posix;
+using Sparrow.Server.Platform.Posix;
 
 namespace Raven.Server.Utils
 {

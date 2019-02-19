@@ -2,11 +2,9 @@
 using System.Collections.Generic;
 using Microsoft.AspNetCore.Http;
 using Raven.Client.Documents.Operations.Counters;
-using Raven.Server.Documents.Handlers;
 using Raven.Server.Documents.Includes;
 using Raven.Server.Documents.Queries.Explanation;
 using Raven.Server.ServerWide;
-using Sparrow.Json;
 
 namespace Raven.Server.Documents.Queries
 {

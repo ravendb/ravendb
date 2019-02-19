@@ -5,7 +5,7 @@ using System.Threading;
 using Sparrow.Extensions;
 using Sparrow.Json.Parsing;
 
-namespace Sparrow
+namespace Sparrow.Server.Meters
 {
     public abstract class PerformanceMetrics
     {

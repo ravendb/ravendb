@@ -1,6 +1,6 @@
 ﻿using System.Runtime.InteropServices;
 
-namespace Sparrow.Platform.Posix
+namespace Sparrow.Server.Platform.Posix
 {
     [StructLayout(LayoutKind.Sequential)]
     public unsafe struct sysinfo_t

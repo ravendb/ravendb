@@ -4,7 +4,6 @@ using Xunit;
 using System.Linq;
 using Raven.Client;
 using Raven.Client.Documents;
-using Raven.Client.Documents.Linq;
 
 namespace SlowTests.Issues
 {

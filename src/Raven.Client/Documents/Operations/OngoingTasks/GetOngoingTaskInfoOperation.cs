@@ -3,7 +3,6 @@ using System.Net.Http;
 using Raven.Client.Documents.Conventions;
 using Raven.Client.Http;
 using Raven.Client.Json.Converters;
-using Raven.Client.ServerWide.Operations;
 using Sparrow.Json;
 
 namespace Raven.Client.Documents.Operations.OngoingTasks

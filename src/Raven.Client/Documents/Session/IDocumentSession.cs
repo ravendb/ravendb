@@ -5,7 +5,6 @@
 //-----------------------------------------------------------------------
 
 using System;
-using System.Collections.Generic;
 
 namespace Raven.Client.Documents.Session
 {

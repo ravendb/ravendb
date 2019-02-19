@@ -1,6 +1,5 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.Text;
 using Esprima.Ast;
 
 namespace Raven.Server.Documents.Indexes.Static

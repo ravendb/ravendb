@@ -8,7 +8,6 @@ using System;
 using System.IO;
 using Xunit;
 using Voron;
-using Voron.Data;
 using Voron.Global;
 
 namespace FastTests.Voron.Journal

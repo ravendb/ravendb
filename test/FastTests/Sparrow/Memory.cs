@@ -1,9 +1,4 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Security.Principal;
-using System.Text;
-using Sparrow;
-using Sparrow.Binary;
+﻿using Sparrow;
 using Xunit;
 
 namespace FastTests.Sparrow

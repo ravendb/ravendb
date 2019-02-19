@@ -1,9 +1,7 @@
 using System;
 using System.Linq;
 using System.Collections.ObjectModel;
-using System.Threading.Tasks;
 using FastTests;
-using Raven.Client;
 using Raven.Client.Documents;
 using Raven.Client.Documents.Linq;
 using Xunit;

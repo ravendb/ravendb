@@ -4,11 +4,9 @@
 //  </copyright>
 // -----------------------------------------------------------------------
 
-using System.IO;
 using System.Runtime.ExceptionServices;
 using Sparrow;
-using Sparrow.Utils;
-using Voron.Platform.Win32;
+using Sparrow.Server.Utils;
 
 namespace Voron.Util
 {

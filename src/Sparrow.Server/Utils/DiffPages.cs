@@ -2,7 +2,7 @@
 using System.Diagnostics;
 using System.Runtime.CompilerServices;
 
-namespace Sparrow.Utils
+namespace Sparrow.Server.Utils
 {
     /// <summary>
     /// This class computes a diff between two buffers and write 

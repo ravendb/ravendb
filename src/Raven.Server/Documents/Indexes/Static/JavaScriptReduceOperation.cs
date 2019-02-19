@@ -6,7 +6,6 @@ using Jint;
 using Jint.Native;
 using Jint.Native.Function;
 using Raven.Server.Documents.Patch;
-using Raven.Server.Extensions;
 using Esprima.Ast;
 using Jint.Native.Array;
 using Jint.Runtime;
@@ -17,7 +16,7 @@ using Sparrow;
 using Raven.Server.Documents.Indexes.MapReduce;
 using Raven.Server.ServerWide;
 using System.Runtime.CompilerServices;
-using Raven.Server.Documents.Indexes.Static.Roslyn.Rewriters;
+using Sparrow.Server;
 
 namespace Raven.Server.Documents.Indexes.Static
 {

@@ -13,7 +13,6 @@ using Raven.Client.Documents.Smuggler;
 using Raven.Client.ServerWide;
 using Raven.Client.ServerWide.Operations;
 using Raven.Client.ServerWide.Operations.Certificates;
-using Raven.Server.Documents.Indexes.Static;
 using SlowTests.Voron.Compaction;
 using Tests.Infrastructure;
 using Xunit;

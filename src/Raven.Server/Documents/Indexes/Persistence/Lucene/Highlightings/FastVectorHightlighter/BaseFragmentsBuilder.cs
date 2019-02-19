@@ -20,12 +20,9 @@ using System.Collections.Generic;
 using System.Text;
 
 using Lucene.Net.Documents;
-using Lucene.Net.Search;
 using Lucene.Net.Index;
 
 using WeightedFragInfo = Lucene.Net.Search.Vectorhighlight.FieldFragList.WeightedFragInfo;
-using SubInfo = Lucene.Net.Search.Vectorhighlight.FieldFragList.WeightedFragInfo.SubInfo;
-using Toffs = Lucene.Net.Search.Vectorhighlight.FieldPhraseList.WeightedPhraseInfo.Toffs;
 using System.Linq;
 using Lucene.Net.Store;
 

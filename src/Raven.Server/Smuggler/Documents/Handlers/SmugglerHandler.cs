@@ -20,7 +20,6 @@ using Microsoft.AspNetCore.WebUtilities;
 using Microsoft.Net.Http.Headers;
 using Raven.Client.Documents.Conventions;
 using Raven.Client.Documents.Operations;
-using Raven.Client.Documents.Operations.Backups;
 using Raven.Client.Documents.Smuggler;
 using Raven.Client.Exceptions.Security;
 using Raven.Client.Properties;

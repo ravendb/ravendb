@@ -9,7 +9,6 @@ using Jint.Native.Object;
 using Jint.Runtime.Interop;
 using Microsoft.CSharp.RuntimeBinder;
 using Sparrow.Json;
-using Raven.Server.Documents.Indexes.Static.Roslyn.Rewriters;
 
 namespace Raven.Server.Documents.Indexes.Persistence.Lucene.Documents
 {

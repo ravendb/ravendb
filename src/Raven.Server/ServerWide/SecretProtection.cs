@@ -19,10 +19,10 @@ using Org.BouncyCastle.Utilities.Encoders;
 using Org.BouncyCastle.X509;
 using Raven.Server.Commercial;
 using Raven.Server.Config.Categories;
-using Sparrow;
 using Sparrow.Logging;
 using Sparrow.Platform;
-using Sparrow.Platform.Posix;
+using Sparrow.Server;
+using Sparrow.Server.Platform.Posix;
 
 namespace Raven.Server.ServerWide
 {
@@ -70,7 +70,7 @@ namespace Raven.Server.ServerWide
                     if (Directory.Exists(dirpath) == false)
                         Directory.CreateDirectory(dirpath);
 
-                    var fd = Syscall.open(filepath, PerPlatformValues.OpenFlags.O_CREAT | Sparrow.Platform.Posix.OpenFlags.O_RDWR,
+                    var fd = Syscall.open(filepath, PerPlatformValues.OpenFlags.O_CREAT | Sparrow.Server.Platform.Posix.OpenFlags.O_RDWR,
                         // octal 01600 - Sticky and only user can read it
                         FilePermissions.S_ISVTX | FilePermissions.S_IRUSR | FilePermissions.S_IWUSR);
                     if (fd == -1)

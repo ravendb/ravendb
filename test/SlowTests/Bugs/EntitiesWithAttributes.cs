@@ -2,7 +2,6 @@ using System.Linq;
 using System.Runtime.Serialization;
 using FastTests;
 using Newtonsoft.Json.Linq;
-using Sparrow.Json.Parsing;
 using Xunit;
 
 namespace SlowTests.Bugs

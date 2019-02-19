@@ -8,14 +8,9 @@ using System;
 using System.IO;
 using System.Net.Http;
 using System.Threading;
-using System.Threading.Tasks;
 using FastTests;
-using Raven.Client.Documents.Commands;
-using Raven.Client.Documents.Operations;
 using Raven.Client.Exceptions.Documents.BulkInsert;
-using Raven.Server.Extensions;
 using SlowTests.Core.Utils.Entities;
-using Sparrow.Json;
 using Xunit;
 
 namespace SlowTests.Issues

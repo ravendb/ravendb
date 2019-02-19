@@ -1,13 +1,9 @@
 ﻿using System;
-using System.Collections.Generic;
 using System.IO;
 using System.Threading.Tasks;
 using FastTests;
-using Raven.Client;
 using Raven.Client.Documents.Operations.Indexes;
 using Raven.Client.Documents.Smuggler;
-using Raven.Client.Exceptions;
-using Raven.Tests.Core.Utils.Entities;
 using Xunit;
 
 namespace SlowTests.Issues

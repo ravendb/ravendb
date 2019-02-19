@@ -1,7 +1,5 @@
 ﻿using System;
 using Raven.Server.Config;
-using Raven.Server.Config.Categories;
-using Raven.Server.ServerWide;
 using Xunit;
 
 namespace FastTests.Issues

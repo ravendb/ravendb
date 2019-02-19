@@ -4,7 +4,6 @@ using System.Diagnostics;
 using System.IO;
 using System.Text;
 using Raven.Client.Documents.Indexes;
-using Raven.Client.Extensions;
 using Raven.Server.ServerWide;
 using Raven.Server.ServerWide.Context;
 
@@ -12,7 +11,9 @@ using Sparrow.Json;
 
 using Voron;
 using Sparrow;
+using Sparrow.Server;
 using Voron.Impl;
+using Raven.Client.Extensions;
 
 namespace Raven.Server.Documents.Indexes
 {

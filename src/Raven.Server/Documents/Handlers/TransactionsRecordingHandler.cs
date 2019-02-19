@@ -6,18 +6,13 @@ using System.Threading;
 using System.Threading.Tasks;
 using Microsoft.AspNetCore.WebUtilities;
 using Microsoft.Net.Http.Headers;
-using Raven.Client.Documents.Conventions;
 using Raven.Client.Documents.Operations;
 using Raven.Client.Documents.Operations.TransactionsRecording;
-using Raven.Client.Documents.Smuggler;
 using Raven.Client.Exceptions;
-using Raven.Client.Util;
 using Raven.Server.Json;
 using Raven.Server.Routing;
-using Raven.Server.ServerWide;
 using Raven.Server.ServerWide.Context;
 using Raven.Server.Smuggler;
-using Raven.Server.Smuggler.Documents.Data;
 using Sparrow.Json;
 using Sparrow.Json.Parsing;
 

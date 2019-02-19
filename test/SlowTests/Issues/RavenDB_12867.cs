@@ -3,18 +3,12 @@ using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Threading;
-using System.Threading.Tasks;
 using FastTests;
 using Raven.Client.Documents;
-using Raven.Client.Documents.Commands;
-using Raven.Client.Documents.Operations;
 using Raven.Client.Documents.Operations.Backups;
-using Raven.Server.Config;
 using Raven.Tests.Core.Utils.Entities;
 using Sparrow.Json;
-using Tests.Infrastructure;
 using Xunit;
-using Employee = Orders.Employee;
 
 namespace SlowTests.Issues
 {

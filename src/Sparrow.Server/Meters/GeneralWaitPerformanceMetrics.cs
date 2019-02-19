@@ -4,7 +4,7 @@ using System.Threading;
 using Sparrow.Extensions;
 using Sparrow.Json.Parsing;
 
-namespace Sparrow.Meters
+namespace Sparrow.Server.Meters
 {
     internal class GeneralWaitPerformanceMetrics : PerformanceMetrics
     {

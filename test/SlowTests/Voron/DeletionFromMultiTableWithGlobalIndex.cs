@@ -1,6 +1,6 @@
 using System;
 using FastTests.Voron;
-using Sparrow;
+using Sparrow.Server;
 using Voron;
 using Voron.Data.Tables;
 using Voron.Impl;

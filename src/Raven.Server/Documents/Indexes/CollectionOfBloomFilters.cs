@@ -6,6 +6,7 @@ using Raven.Server.ServerWide.Context;
 using Sparrow;
 using Sparrow.Binary;
 using Sparrow.Json;
+using Sparrow.Server;
 using Voron;
 using Voron.Data.BTrees;
 

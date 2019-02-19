@@ -1,6 +1,5 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.Diagnostics;
 using System.IO;
 using System.Linq;
 using System.Security.Cryptography;
@@ -9,20 +8,15 @@ using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
 using FastTests;
-using Raven.Client.Documents;
 using Raven.Client.Documents.Operations;
 using Raven.Client.Documents.Operations.Backups;
 using Raven.Client.Exceptions;
-using Raven.Client.Exceptions.Database;
 using Raven.Client.ServerWide.Operations.Certificates;
 using Raven.Server.Config;
-using Raven.Server.Documents.PeriodicBackup;
-using Raven.Server.Utils;
 using Raven.Tests.Core.Utils.Entities;
-using Sparrow;
+using Sparrow.Server;
 using Tests.Infrastructure;
 using Xunit;
-using Xunit.Sdk;
 
 namespace SlowTests.Server.Documents.PeriodicBackup
 {

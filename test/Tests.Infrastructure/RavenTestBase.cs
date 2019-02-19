@@ -26,7 +26,6 @@ using Raven.Client.ServerWide.Operations.Certificates;
 using Raven.Client.Util;
 using Raven.Server;
 using Raven.Server.Config;
-using Raven.Server.Config.Categories;
 using Raven.Server.Documents;
 using Raven.Server.Rachis;
 using Raven.Server.ServerWide.Context;

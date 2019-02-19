@@ -5,7 +5,6 @@
 // -----------------------------------------------------------------------
 
 using System.Text;
-using Raven.Server.Json;
 using Sparrow.Compression;
 using Xunit;
 

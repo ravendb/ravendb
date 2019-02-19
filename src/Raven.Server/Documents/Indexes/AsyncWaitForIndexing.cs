@@ -1,7 +1,7 @@
 ﻿using System;
 using System.Diagnostics;
 using System.Threading.Tasks;
-using Sparrow;
+using Sparrow.Server;
 
 namespace Raven.Server.Documents.Indexes
 {

@@ -3,7 +3,6 @@ using System.Net;
 using System.Security;
 using System.Threading.Tasks;
 using Raven.Client.Extensions;
-using Raven.Server.Extensions;
 
 namespace Raven.Server.Smuggler.Migration.ApiKey
 {

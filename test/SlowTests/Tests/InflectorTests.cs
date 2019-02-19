@@ -6,7 +6,6 @@
 
 using FastTests;
 using Raven.Client.Documents.Conventions;
-using Raven.Client.Util;
 using Xunit;
 
 namespace SlowTests.Tests

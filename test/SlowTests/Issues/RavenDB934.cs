@@ -1,5 +1,4 @@
 using FastTests;
-using Raven.Client.Documents.Replication.Messages;
 using Xunit;
 
 namespace SlowTests.Issues

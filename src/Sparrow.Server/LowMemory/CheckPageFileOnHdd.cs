@@ -14,8 +14,9 @@ using System.Text;
 using System.Text.RegularExpressions;
 using Sparrow.Logging;
 using Sparrow.Platform.Posix;
+using Sparrow.Server.Platform.Win32;
 
-namespace Sparrow.LowMemory
+namespace Sparrow.Server.LowMemory
 {
     public static class CheckPageFileOnHdd
     {

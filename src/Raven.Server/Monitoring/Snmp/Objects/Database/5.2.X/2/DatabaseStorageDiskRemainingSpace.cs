@@ -1,7 +1,7 @@
 using Lextm.SharpSnmpLib;
 using Raven.Server.Documents;
 using Sparrow;
-using Sparrow.Utils;
+using Sparrow.Server.Utils;
 
 namespace Raven.Server.Monitoring.Snmp.Objects.Database
 {

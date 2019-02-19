@@ -3,17 +3,11 @@ using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq;
 using System.Runtime.CompilerServices;
-using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
-using Raven.Client;
-using Raven.Client.Documents.Linq;
 using Raven.Client.Documents.Operations;
 using Raven.Client.Documents.Operations.Revisions;
-using Raven.Client.Exceptions.Documents;
-using Raven.Client.Extensions;
 using Raven.Client.ServerWide;
-using Raven.Server.Documents.Handlers;
 using Raven.Server.NotificationCenter.Notifications;
 using Raven.Server.ServerWide;
 using Raven.Server.ServerWide.Context;
@@ -23,11 +17,13 @@ using Sparrow.Binary;
 using Sparrow.Json;
 using Sparrow.Json.Parsing;
 using Sparrow.Logging;
-using Sparrow.Utils;
+using Sparrow.Server;
+using Sparrow.Server.Utils;
 using Voron;
 using Voron.Data.Tables;
 using Voron.Impl;
 using static Raven.Server.Documents.DocumentsStorage;
+using Constants = Raven.Client.Constants;
 
 namespace Raven.Server.Documents.Revisions
 {

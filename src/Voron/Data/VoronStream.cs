@@ -4,7 +4,6 @@ using System.Runtime.CompilerServices;
 using Sparrow;
 using Voron.Data.BTrees;
 using Voron.Impl;
-using Voron.Impl.Paging;
 
 namespace Voron.Data
 {

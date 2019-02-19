@@ -5,6 +5,7 @@ using System.Text;
 using Raven.Server.Indexing;
 using Sparrow;
 using Sparrow.Json;
+using Sparrow.Server.Utils;
 
 namespace Raven.Server.Json
 {

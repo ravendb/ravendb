@@ -1,9 +1,7 @@
 ﻿using System;
-using System.Diagnostics;
 using System.Threading.Tasks;
 using FastTests.Server.Replication;
 using Raven.Client.Documents.Operations.Replication;
-using Raven.Client.ServerWide;
 using Raven.Tests.Core.Utils.Entities;
 using Xunit;
 

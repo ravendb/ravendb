@@ -11,7 +11,6 @@ using Raven.Client.Documents.Operations;
 using Raven.Client.Documents.Session;
 using Raven.Client.Http;
 using Raven.Client.Json;
-using Sparrow;
 using Sparrow.Json;
 using Sparrow.Logging;
 

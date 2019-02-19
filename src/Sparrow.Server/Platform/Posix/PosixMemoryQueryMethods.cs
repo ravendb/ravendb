@@ -3,7 +3,7 @@ using System.Diagnostics;
 using System.Runtime.InteropServices;
 using Sparrow.Exceptions;
 
-namespace Sparrow.Platform.Posix
+namespace Sparrow.Server.Platform.Posix
 {
     public static unsafe class PosixMemoryQueryMethods
     {

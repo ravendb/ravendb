@@ -4,7 +4,6 @@
 // </copyright>
 //-----------------------------------------------------------------------
 
-using System;
 using System.Threading;
 using System.Threading.Tasks;
 using Raven.Client.Documents.Session.Operations.Lazy;
