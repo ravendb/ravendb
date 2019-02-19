@@ -86,7 +86,7 @@ namespace Sparrow.Server
             }
             catch (Exception ex)
             {
-                throw new IncorrectDllException($"Make sure {LIBSODIUM} is installed on your Linux OS",
+                throw new IncorrectDllException($"Make sure {LIBSODIUM} is installed on your OS (original selected lib was: {fromFilename})",
                     ex);
             }
         }
