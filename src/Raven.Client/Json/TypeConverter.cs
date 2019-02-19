@@ -1,6 +1,5 @@
 ﻿using System;
 using System.Collections;
-using System.Collections.Generic;
 using System.Reflection;
 using Raven.Client.Documents.Conventions;
 using Sparrow.Json;
@@ -14,6 +13,9 @@ namespace Raven.Client.Json
         {
             if (value == null)
                 return null;
+
+            if (value is BlittableJsonReaderObject)
+                return value;
 
             var type = value.GetType();
             var underlyingType = Nullable.GetUnderlyingType(type);
