@@ -2,10 +2,8 @@
 using System.Collections.Generic;
 using System.IO;
 using System.IO.Compression;
-using System.Linq;
 using Raven.Server.Routing;
-using Sparrow.Platform;
-using Voron.Platform.Posix;
+using Sparrow.Platform.Posix;
 
 namespace Raven.Server.ServerWide
 {

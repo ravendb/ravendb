@@ -5,7 +5,6 @@ using System.Runtime.InteropServices;
 using System.Security;
 using System.Text;
 using System.Threading;
-using Voron.Platform.Posix;
 
 namespace Sparrow.Platform.Posix
 {

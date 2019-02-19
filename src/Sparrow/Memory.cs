@@ -3,10 +3,6 @@ using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
 using System.Security;
 using Sparrow.Binary;
-using Sparrow.Platform;
-using Sparrow.Platform.Posix;
-using Sparrow.Platform.Win32;
-using Voron.Platform.Posix;
 
 namespace Sparrow
 {

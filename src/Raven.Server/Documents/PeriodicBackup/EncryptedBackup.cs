@@ -3,9 +3,8 @@ using System.IO;
 using System.Security.Cryptography;
 using System.Threading;
 using System.Threading.Tasks;
-using Raven.Client.Documents.Operations.Backups;
 using Sparrow;
-using Sparrow.Global;
+using Sparrow.Server.Global;
 
 namespace Raven.Server.Documents.PeriodicBackup
 {

@@ -25,7 +25,7 @@
     <PackageReference Include="System.Memory" Version="4.5.2" />
   </ItemGroup>
   <ItemGroup>
-    <ProjectReference Include="..\Sparrow\Sparrow.csproj" />
+    <ProjectReference Include="..\Sparrow.Server\Sparrow.Server.csproj" />
   </ItemGroup>
   <PropertyGroup Condition=" '$(Configuration)' == 'Validate' ">
     <DefineConstants>$(DefineConstants);VALIDATE;VALIDATE_PAGES</DefineConstants>

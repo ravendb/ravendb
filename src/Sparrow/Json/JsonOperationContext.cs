@@ -1,9 +1,7 @@
 ﻿using System;
 using System.Buffers;
 using System.Collections.Generic;
-using System.ComponentModel;
 using System.Diagnostics;
-using System.Globalization;
 using System.IO;
 using System.Net.WebSockets;
 using System.Runtime.CompilerServices;
@@ -14,8 +12,6 @@ using Microsoft.Extensions.Primitives;
 using Sparrow.Collections;
 using Sparrow.Global;
 using Sparrow.Json.Parsing;
-using Sparrow.Platform.Posix.macOS;
-using Sparrow.Platform.Win32;
 using Sparrow.Threading;
 using Sparrow.Utils;
 

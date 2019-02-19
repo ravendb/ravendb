@@ -74,8 +74,8 @@
     <None Include="Web\Studio\EmbeddedData\NorthwindModel.cs" />
   </ItemGroup>
   <ItemGroup>
-    <ProjectReference Include="..\Sparrow\Sparrow.csproj" />
     <ProjectReference Include="..\Raven.Client\Raven.Client.csproj" />
+    <ProjectReference Include="..\Sparrow.Server\Sparrow.Server.csproj" />
     <ProjectReference Include="..\Voron\Voron.csproj" />
   </ItemGroup>
   <ItemGroup>

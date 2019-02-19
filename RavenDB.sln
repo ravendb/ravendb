@@ -75,6 +75,8 @@ Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "BenchmarkTests", "test\Benc
 EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Raven.Debug", "tools\Raven.Debug\Raven.Debug.csproj", "{C3F2337F-1C6E-4505-A0F0-B43FACC0F957}"
 EndProject
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Sparrow.Server", "src\Sparrow.Server\Sparrow.Server.csproj", "{610A56D7-9AC0-46BB-99B0-8A5F730C0865}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -256,6 +258,12 @@ Global
 		{C3F2337F-1C6E-4505-A0F0-B43FACC0F957}.Release|Any CPU.Build.0 = Release|Any CPU
 		{C3F2337F-1C6E-4505-A0F0-B43FACC0F957}.Validate|Any CPU.ActiveCfg = Release|Any CPU
 		{C3F2337F-1C6E-4505-A0F0-B43FACC0F957}.Validate|Any CPU.Build.0 = Release|Any CPU
+		{610A56D7-9AC0-46BB-99B0-8A5F730C0865}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{610A56D7-9AC0-46BB-99B0-8A5F730C0865}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{610A56D7-9AC0-46BB-99B0-8A5F730C0865}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{610A56D7-9AC0-46BB-99B0-8A5F730C0865}.Release|Any CPU.Build.0 = Release|Any CPU
+		{610A56D7-9AC0-46BB-99B0-8A5F730C0865}.Validate|Any CPU.ActiveCfg = Validate|Any CPU
+		{610A56D7-9AC0-46BB-99B0-8A5F730C0865}.Validate|Any CPU.Build.0 = Validate|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
@@ -290,6 +298,7 @@ Global
 		{C8EB93B9-0BB0-40BC-ACAE-40A2B27A78F5} = {FAAED88A-1C25-4853-9A1B-C41BCF9BED1F}
 		{D004BACD-BA77-4BB3-A417-FBB84933D412} = {764C36EA-83A0-4BA3-BA36-53A6808C13A9}
 		{C3F2337F-1C6E-4505-A0F0-B43FACC0F957} = {FAAED88A-1C25-4853-9A1B-C41BCF9BED1F}
+		{610A56D7-9AC0-46BB-99B0-8A5F730C0865} = {02838C57-DE0E-465D-9FBB-248DA87BEAAE}
 	EndGlobalSection
 	GlobalSection(ExtensibilityGlobals) = postSolution
 		SolutionGuid = {032D6274-16A5-43ED-920F-D37BBD4B9628}

@@ -5,7 +5,6 @@ using System.Runtime.CompilerServices;
 using System.Threading;
 using Sparrow.Binary;
 using Sparrow.Global;
-using Sparrow.LowMemory;
 using Sparrow.Platform;
 using Sparrow.Threading;
 #if MEM_GUARD

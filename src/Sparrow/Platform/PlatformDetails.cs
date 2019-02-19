@@ -3,7 +3,6 @@ using System.Globalization;
 using System.Runtime.InteropServices;
 using Sparrow.Platform.Posix;
 using Sparrow.Platform.Posix.macOS;
-using Voron.Platform.Posix;
 
 namespace Sparrow.Platform
 {

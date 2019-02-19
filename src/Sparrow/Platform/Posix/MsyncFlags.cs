@@ -1,4 +1,4 @@
-﻿namespace Voron.Platform.Posix
+﻿namespace Sparrow.Platform.Posix
 {
     public enum MsyncFlags : int
     {
