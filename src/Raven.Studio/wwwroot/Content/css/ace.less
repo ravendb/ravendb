@@ -41,21 +41,21 @@
     }
 
     .ace_marker-layer .ace_code-removed {
-        background: fade(@brand-danger, 8%);
+        background: fade(@brand-danger, 15%);
         position: absolute;
     }
 
     .ace_marker-layer .ace_code-added {
-        background: fade(@brand-success, 8%);
+        background: fade(@brand-success, 15%);
         position: absolute;
     }
-    
+
     .difference_gap {
         background: darken(@pre-bg,5%);
     }
 
     .ace_marker-layer .ace_active-line {
-        background: @pre-bg;
+        background: fade(@gray-lighter,7%);
     }
 
     .ace_gutter-cell.ace_removed {
@@ -63,11 +63,13 @@
         background-position: 2px 2px;
         background-repeat: no-repeat;
     }
+
     .ace_gutter-cell.ace_added {
         background-image: url("data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABAAAAAQCAYAAAAf8/9hAAAAGXRFWHRTb2Z0d2FyZQBBZG9iZSBJbWFnZVJlYWR5ccllPAAAAyxpVFh0WE1MOmNvbS5hZG9iZS54bXAAAAAAADw/eHBhY2tldCBiZWdpbj0i77u/IiBpZD0iVzVNME1wQ2VoaUh6cmVTek5UY3prYzlkIj8+IDx4OnhtcG1ldGEgeG1sbnM6eD0iYWRvYmU6bnM6bWV0YS8iIHg6eG1wdGs9IkFkb2JlIFhNUCBDb3JlIDUuNi1jMDY3IDc5LjE1Nzc0NywgMjAxNS8wMy8zMC0yMzo0MDo0MiAgICAgICAgIj4gPHJkZjpSREYgeG1sbnM6cmRmPSJodHRwOi8vd3d3LnczLm9yZy8xOTk5LzAyLzIyLXJkZi1zeW50YXgtbnMjIj4gPHJkZjpEZXNjcmlwdGlvbiByZGY6YWJvdXQ9IiIgeG1sbnM6eG1wPSJodHRwOi8vbnMuYWRvYmUuY29tL3hhcC8xLjAvIiB4bWxuczp4bXBNTT0iaHR0cDovL25zLmFkb2JlLmNvbS94YXAvMS4wL21tLyIgeG1sbnM6c3RSZWY9Imh0dHA6Ly9ucy5hZG9iZS5jb20veGFwLzEuMC9zVHlwZS9SZXNvdXJjZVJlZiMiIHhtcDpDcmVhdG9yVG9vbD0iQWRvYmUgUGhvdG9zaG9wIEVsZW1lbnRzIDE0LjAgKFdpbmRvd3MpIiB4bXBNTTpJbnN0YW5jZUlEPSJ4bXAuaWlkOjMxNEE5RUNEMkI5RDExRTlCODk3RkM2NzZFMUI4QTgzIiB4bXBNTTpEb2N1bWVudElEPSJ4bXAuZGlkOjMxNEE5RUNFMkI5RDExRTlCODk3RkM2NzZFMUI4QTgzIj4gPHhtcE1NOkRlcml2ZWRGcm9tIHN0UmVmOmluc3RhbmNlSUQ9InhtcC5paWQ6MzE0QTlFQ0IyQjlEMTFFOUI4OTdGQzY3NkUxQjhBODMiIHN0UmVmOmRvY3VtZW50SUQ9InhtcC5kaWQ6MzE0QTlFQ0MyQjlEMTFFOUI4OTdGQzY3NkUxQjhBODMiLz4gPC9yZGY6RGVzY3JpcHRpb24+IDwvcmRmOlJERj4gPC94OnhtcG1ldGE+IDw/eHBhY2tldCBlbmQ9InIiPz6ILZc9AAAARUlEQVR42mL8//8/AyWAiYFCQLEBLMicoMvV6PIw/zEiC67TbR1EXqBuGCD5mYGAOCPNXMBITCwMrkCk2ADGoZ+ZAAIMAGbnDR8u49EbAAAAAElFTkSuQmCC");
         background-position: 2px 2px;
         background-repeat: no-repeat;
     }
+
     .ace_gutter-active-line {
         background-color: @pre-bg;
     }
