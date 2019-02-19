@@ -140,9 +140,9 @@ class connectedDocuments {
                 {
                     extraClass: item => item.deletedRevision ? "deleted-revision" : ""
                 }),
-            new actionColumn<connectedRevisionDocumentItem>(this.gridController() as virtualGridController<any>, (x, idx, e) => this.compareRevision(x, idx, e), "Diff", x => `Compare`, "25%", /* TODO make icon! */ 
+            new actionColumn<connectedRevisionDocumentItem>(this.gridController() as virtualGridController<any>, (x, idx, e) => this.compareRevision(x, idx, e), "Diff", x => `<i title="Compare document with this revision" class="icon-diff"></i>`, "25%", 
                 {
-                    extraClass: () => 'btn-link',
+                    extraClass: () => '',
                     title: (item: connectedRevisionDocumentItem) => "Compare current document with this revision"
                 })
         ];

@@ -54,7 +54,7 @@
                         <i class="icon-trash"></i>
                         <span>Delete</span>
                     </button>
-                    <a  data-bind="attr: { href: latestRevisionUrl }, visible: inReadOnlyMode() && !isDeleteRevision()" class="btn btn-default">
+                    <a data-bind="attr: { href: latestRevisionUrl }, visible: inReadOnlyMode() && !isDeleteRevision()" class="btn btn-default">
                         <i class="icon-latest"></i>
                         <span>See the current document</span>
                     </a>
@@ -76,14 +76,29 @@
                         </ul>
                     </div>
                 </div>
+                <div class="pull-right-sm" data-bind="visible: inDiffMode()">
+                    <button class="btn btn-default" data-bind="click: exitCompareMode">
+                        <i class="icon-cancel"></i>
+                        <span>Exit revisions compare mode</span>
+                    </button>
+                </div>
             </div>
             <div class="row" data-bind="visible: inDiffMode()">
                 <div class="col-md-6 flex-horizontal">
                     <div>Version:</div>
                     <div data-bind="text: document().__metadata.lastModified()"></div>
-                    <div data-bind="visible: currentDiff() && !currentDiff().identicalContent()"><small data-bind="text: $root.leftRevisionIsNewer() ? '(Newer version)' : '(Older version)'"></small></div>
+                    <div class="flex-grow"></div>
+                    <div data-bind="visible: currentDiff() && !currentDiff().identicalContent()">
+                        <small class="text-success" data-bind="visible: $root.leftRevisionIsNewer()">Newer version</small>
+                        <small class="text-warning" data-bind="visible: !$root.leftRevisionIsNewer()">Older version</small>
+                    </div>
                 </div>
                 <div class="col-md-6 flex-horizontal">
+                    <div data-bind="visible: currentDiff() && !currentDiff().identicalContent()">
+                        <small class="text-warning" data-bind="visible: $root.leftRevisionIsNewer()">Older version</small>
+                        <small class="text-success" data-bind="visible: !$root.leftRevisionIsNewer()">Newer version</small>
+                    </div>
+                    <div class="flex-grow"></div>
                     <div class="dropdown" data-bind="if: comparingWith">
                         <button type="button" class="btn btn-sm dropdown-toggle" data-toggle="dropdown">
                             Compare with: <span data-bind="text: comparingWith().__metadata.lastModified()"></span> <span class="caret"></span>
@@ -94,14 +109,9 @@
                             </li>
                         </ul>
                     </div>
-                    <div data-bind="visible: currentDiff() && !currentDiff().identicalContent()"><small data-bind="text: $root.leftRevisionIsNewer() ? '(Older version)' : '(Newer version)'"></small></div>
-                    <div class="flex-separator"></div>
-                    <div>
-                        <button class="btn btn-sm btn-default" data-bind="visible: inDiffMode(), click: exitCompareMode">
-                            <i class="icon-cancel"></i>
-                            <span>Exit revisions compare mode</span>
-                        </button>
-                    </div>
+
+
+
                 </div>
             </div>
             <div class="clearfix" data-bind="visible: !isDeleteRevision() && !inDiffMode()">
