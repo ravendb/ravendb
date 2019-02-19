@@ -1,8 +1,6 @@
 ﻿using System;
 using System.Globalization;
 using System.Runtime.InteropServices;
-using Sparrow.Platform.Posix;
-using Sparrow.Platform.Posix.macOS;
 
 namespace Sparrow.Platform
 {
@@ -36,18 +34,6 @@ namespace Sparrow.Platform
 
             CanPrefetch = IsWindows8OrNewer || RunningOnPosix;
             CanDiscardMemory = IsWindows10OrNewer || RunningOnPosix;
-        }
-
-        public static ulong GetCurrentThreadId()
-        {
-            if (RunningOnPosix == false)
-                return Win32ThreadsMethods.GetCurrentThreadId();
-
-            if (RunningOnLinux)
-                return (ulong)Syscall.syscall0(PerPlatformValues.SyscallNumbers.SYS_gettid);
-
-            // OSX
-            return macSyscall.pthread_self();
         }
 
         private static bool TryGetWindowsVersion(out decimal version)

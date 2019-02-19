@@ -8,7 +8,6 @@ using Sparrow.Logging;
 using Sparrow.Platform;
 using Sparrow.Platform.Posix;
 using Sparrow.Platform.Posix.macOS;
-using Sparrow.Platform.Win32;
 using Sparrow.Utils;
 
 namespace Sparrow.LowMemory
@@ -225,7 +224,7 @@ namespace Sparrow.LowMemory
             }
         }
 
-        public static (Size MemAvailable, Size TotalMemory, Size Commited, Size CommitLimit, Size AvailableWithoutTotalCleanMemory, Size SharedCleanMemory) GetFromProcMemInfo(SmapsReader smapsReader)
+        internal static (Size MemAvailable, Size TotalMemory, Size Commited, Size CommitLimit, Size AvailableWithoutTotalCleanMemory, Size SharedCleanMemory) GetFromProcMemInfo(SmapsReader smapsReader)
         {
             const string path = "/proc/meminfo";
 
@@ -284,7 +283,7 @@ namespace Sparrow.LowMemory
             return (installedMemoryInGb, usableMemoryInGb);
         }
 
-        public static MemoryInfoResult GetMemoryInfo(SmapsReader smapsReader = null, bool extendedInfo = false)
+        internal static MemoryInfoResult GetMemoryInfo(SmapsReader smapsReader = null, bool extendedInfo = false)
         {
             if (_failedToGetAvailablePhysicalMemory)
             {
@@ -616,15 +615,6 @@ namespace Sparrow.LowMemory
             HighLastFiveMinutes = highLastFiveMinutes;
             LowLastFiveMinutes = lowLastFiveMinutes;
         }
-
-        public static string IsSwappingOnHddInsteadOfSsd()
-        {
-            if (PlatformDetails.RunningOnPosix)
-                return CheckPageFileOnHdd.PosixIsSwappingOnHddInsteadOfSsd();
-            return CheckPageFileOnHdd.WindowsIsSwappingOnHddInsteadOfSsd();
-        }
-
-        public static unsafe bool WillCauseHardPageFault(byte* address, long length) => PlatformDetails.RunningOnPosix ? PosixMemoryQueryMethods.WillCauseHardPageFault(address, length) : Win32MemoryQueryMethods.WillCauseHardPageFault(address, length);
     }
 
     public struct MemoryInfoResult

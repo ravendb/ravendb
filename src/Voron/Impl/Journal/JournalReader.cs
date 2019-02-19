@@ -4,6 +4,7 @@ using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
 using Sparrow.Compression;
+using Sparrow.Server.Platform;
 using Sparrow.Utils;
 using Voron.Data;
 using Voron.Exceptions;
@@ -351,7 +352,7 @@ namespace Voron.Impl.Journal
                 var pagesSize = current->CompressedSize != -1 ? current->CompressedSize : current->UncompressedSize;
                 var size = (4 * Constants.Size.Kilobyte) * GetNumberOf4KbFor(sizeof(TransactionHeader) + pagesSize);
 
-                var ptr = NativeMemory.Allocate4KbAlignedMemory(size, out var thread);
+                var ptr = PlatformSpecific.NativeMemory.Allocate4KbAlignedMemory(size, out var thread);
                 var buffer = new EncryptionBuffer
                 {
                     Pointer = ptr,
@@ -491,7 +492,7 @@ namespace Voron.Impl.Journal
             if (_encryptionBuffers != null) // Encryption enabled
             { 
                 foreach (var buffer in _encryptionBuffers)
-                    NativeMemory.Free4KbAlignedMemory(buffer.Pointer, buffer.Size, buffer.AllocatingThread);
+                    PlatformSpecific.NativeMemory.Free4KbAlignedMemory(buffer.Pointer, buffer.Size, buffer.AllocatingThread);
                 BeforeCommitFinalization?.Invoke(this);
             }
             OnDispose?.Invoke(this);

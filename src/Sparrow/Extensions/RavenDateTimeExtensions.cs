@@ -173,7 +173,7 @@ namespace Sparrow.Extensions
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        private static unsafe void ProcessDefaultRavenFormat(long ticks, byte* chars)
+        internal static unsafe void ProcessDefaultRavenFormat(long ticks, byte* chars)
         {
             // n = number of days since 1/1/0001
             int n = (int)(ticks / TicksPerDay);
@@ -286,29 +286,6 @@ namespace Sparrow.Extensions
         /// <param name="dt"></param>
         /// <param name="isUtc"></param>
         /// <returns></returns>
-        public static unsafe ByteStringContext.InternalScope GetDefaultRavenFormat(this DateTime dt, ByteStringContext context, out ByteString value, bool isUtc = false)
-        {
-            ValidateDate(dt, isUtc);
-
-            int size = 27 + (isUtc ? 1 : 0);
-            var ticks = dt.Ticks;
-
-            var scope = context.Allocate(size, out value);
-
-            byte* ptr = value.Ptr;
-            ProcessDefaultRavenFormat(ticks, ptr);
-            ptr[size - 1] = (byte)'Z';
-
-            return scope;
-        }
-
-        /// <summary>
-        /// This function Processes the to string format of the form "yyyy'-'MM'-'dd'T'HH':'mm':'ss.fffffff" for date times in 
-        /// invariant culture scenarios. This implementation takes 20% of the time of a regular .ToString(format) call
-        /// </summary>
-        /// <param name="dt"></param>
-        /// <param name="isUtc"></param>
-        /// <returns></returns>
         public static unsafe int GetDefaultRavenFormat(this DateTime dt, JsonOperationContext context, out AllocatedMemoryData memory, bool isUtc = false)
         {
             ValidateDate(dt, isUtc);
@@ -358,7 +335,7 @@ namespace Sparrow.Extensions
         }
 
         [Conditional("DEBUG")]
-        private static void ValidateDate(DateTime dt, bool isUtc)
+        internal static void ValidateDate(DateTime dt, bool isUtc)
         {
             if (dt.Kind == DateTimeKind.Utc && isUtc == false)
                 throw new InvalidOperationException("Date is in UTC, but will not be formatted into UTC");

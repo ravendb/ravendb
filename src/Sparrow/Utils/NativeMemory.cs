@@ -1,30 +1,20 @@
 ﻿using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
-using System.ComponentModel;
 using System.Diagnostics;
 using System.IO;
 using System.Linq;
 using System.Runtime.InteropServices;
 using System.Threading;
 using Sparrow.LowMemory;
-using Sparrow.Platform;
-using Sparrow.Platform.Posix;
-using Sparrow.Platform.Win32;
 
 namespace Sparrow.Utils
 {
     public static unsafe class NativeMemory
     {
-        static NativeMemory()
-        {
-            // GetCurrentUnmanagedThreadId default to PlatformDetails.GetCurrentThreadId for client purpose
-            // Raven.Server set it to Pal's p/Invoke
-            GetCurrentUnmanagedThreadId = PlatformDetails.GetCurrentThreadId;
-        }
+        public static Func<ulong> GetCurrentUnmanagedThreadId = () => 0xDEAD;
 
-        public static Func<ulong> GetCurrentUnmanagedThreadId;
-        private static readonly ThreadLocal<ThreadStats> ThreadAllocations = new ThreadLocal<ThreadStats>(
+        internal static readonly ThreadLocal<ThreadStats> ThreadAllocations = new ThreadLocal<ThreadStats>(
             () => new ThreadStats(), trackAllValues: true);
 
         public static void NotifyCurrentThreadAboutToClose()
@@ -36,7 +26,7 @@ namespace Sparrow.Utils
 
         public static IEnumerable<ThreadStats> AllThreadStats => ThreadAllocations.Values.Where(x => x != null);
 
-        private static long _totalAllocatedMemory;
+        internal static long _totalAllocatedMemory;
 
         public static long TotalAllocatedMemory => _totalAllocatedMemory;
 
@@ -160,7 +150,7 @@ namespace Sparrow.Utils
                                            $"Un-managed memory: {new Size(unmanagedMemory, SizeUnit.Bytes)}", e);
         }
 
-        private static void FixupReleasesFromOtherThreads(ThreadStats thread)
+        internal static void FixupReleasesFromOtherThreads(ThreadStats thread)
         {
             var released = thread.ReleasesFromOtherThreads;
             if (released > 0)
@@ -235,71 +225,6 @@ namespace Sparrow.Utils
             {
                 FileMapping.TryAdd(name, value);
             }
-        }
-
-        public static byte* Allocate4KbAlignedMemory(long size, out ThreadStats thread)
-        {
-            Debug.Assert(size >= 0);
-
-            thread = ThreadAllocations.Value;
-            thread.Allocations += size;
-
-            Interlocked.Add(ref _totalAllocatedMemory, size);
-
-            if (PlatformDetails.RunningOnPosix)
-            {
-                byte* ptr;
-                var rc = Syscall.posix_memalign(&ptr, (IntPtr)4096, (IntPtr)size);
-                if (rc != 0)
-                    Syscall.ThrowLastError(rc, "Could not allocate memory");
-
-                return ptr;
-            }
-
-            var allocate4KbAllignedMemory = Win32MemoryProtectMethods.VirtualAlloc(null, (UIntPtr)size, Win32MemoryProtectMethods.AllocationType.COMMIT,
-                Win32MemoryProtectMethods.MemoryProtection.READWRITE);
-
-            if (allocate4KbAllignedMemory == null)
-                ThrowFailedToAllocate();
-
-            return allocate4KbAllignedMemory;
-        }
-
-        private static void ThrowFailedToAllocate()
-        {
-            throw new Win32Exception("Could not allocate memory");
-        }
-
-        public static void Free4KbAlignedMemory(byte* ptr, int size, ThreadStats stats)
-        {
-            Debug.Assert(ptr != null);
-
-            var currentThreadValue = ThreadAllocations.Value;
-            if (currentThreadValue == stats)
-            {
-                currentThreadValue.Allocations -= size;
-                FixupReleasesFromOtherThreads(currentThreadValue);
-            }
-            else
-            {
-                Interlocked.Add(ref stats.ReleasesFromOtherThreads, size);
-            }
-
-            Interlocked.Add(ref _totalAllocatedMemory, -size);
-            var p = new IntPtr(ptr);
-            if (PlatformDetails.RunningOnPosix)
-            {
-                Syscall.free(p);
-                return;
-            }
-
-            if (Win32MemoryProtectMethods.VirtualFree(ptr, UIntPtr.Zero, Win32MemoryProtectMethods.FreeType.MEM_RELEASE) == false)
-                ThrowFailedToFree();
-        }
-
-        private static void ThrowFailedToFree()
-        {
-            throw new Win32Exception("Failed to free memory");
         }
 
         public static void EnsureRegistered()

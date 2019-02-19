@@ -4,6 +4,7 @@ using System.Linq;
 using System.Runtime.InteropServices;
 using System.Text;
 using FastTests;
+using Sparrow.Server.Platform;
 using Sparrow.Utils;
 using Voron.Impl.Journal;
 using Voron.Platform;
@@ -71,7 +72,7 @@ namespace SlowTests.Voron.PalTest
             if (ret != PalFlags.FailCodes.Success)
                 PalHelper.ThrowLastError(ret, errno, "");
 
-            var buffer = NativeMemory.Allocate4KbAlignedMemory(4096, out var stats);
+            var buffer = PlatformSpecific.NativeMemory.Allocate4KbAlignedMemory(4096, out var stats);
             for (var i = 0; i < 4096 / sizeof(int); i++)
             {
                 *((int*)buffer + i) = i;
@@ -86,7 +87,7 @@ namespace SlowTests.Voron.PalTest
             }
             finally
             {
-                NativeMemory.Free4KbAlignedMemory(buffer, 4096, stats);
+                PlatformSpecific.NativeMemory.Free4KbAlignedMemory(buffer, 4096, stats);
             }
 
             handle.Dispose();
@@ -107,7 +108,7 @@ namespace SlowTests.Voron.PalTest
             if (ret != PalFlags.FailCodes.Success)
                 PalHelper.ThrowLastError(ret, errno, "");
 
-            var buffer = NativeMemory.Allocate4KbAlignedMemory(4096, out var stats);
+            var buffer = PlatformSpecific.NativeMemory.Allocate4KbAlignedMemory(4096, out var stats);
             for (var i = 0; i < 4096 / sizeof(int); i++)
             {
                 *((int*)buffer + i) = i;
@@ -122,7 +123,7 @@ namespace SlowTests.Voron.PalTest
             }
             finally
             {
-                NativeMemory.Free4KbAlignedMemory(buffer, 4096, stats);
+                PlatformSpecific.NativeMemory.Free4KbAlignedMemory(buffer, 4096, stats);
             }
 
             handle.Dispose();
@@ -145,7 +146,7 @@ namespace SlowTests.Voron.PalTest
             if (ret != PalFlags.FailCodes.Success)
                 PalHelper.ThrowLastError(ret, errno, "");
 
-            var buffer = NativeMemory.Allocate4KbAlignedMemory(4096, out var stats);
+            var buffer = PlatformSpecific.NativeMemory.Allocate4KbAlignedMemory(4096, out var stats);
             for (var i = 0; i < 4096 / sizeof(int); i++)
             {
                 *((int*)buffer + i) = i;
@@ -160,7 +161,7 @@ namespace SlowTests.Voron.PalTest
             }
             finally
             {
-                NativeMemory.Free4KbAlignedMemory(buffer, 4096, stats);
+                PlatformSpecific.NativeMemory.Free4KbAlignedMemory(buffer, 4096, stats);
             }
 
             handle.Dispose();
@@ -195,7 +196,7 @@ namespace SlowTests.Voron.PalTest
             if (ret != PalFlags.FailCodes.Success)
                 PalHelper.ThrowLastError(ret, errno, "");
 
-            var buffer = NativeMemory.Allocate4KbAlignedMemory(4096, out var stats);
+            var buffer = PlatformSpecific.NativeMemory.Allocate4KbAlignedMemory(4096, out var stats);
             for (var i = 0; i < 4096 / sizeof(int); i++)
             {
                 *((int*)buffer + i) = i;
@@ -210,7 +211,7 @@ namespace SlowTests.Voron.PalTest
             }
             finally
             {
-                NativeMemory.Free4KbAlignedMemory(buffer, 4096, stats);
+                PlatformSpecific.NativeMemory.Free4KbAlignedMemory(buffer, 4096, stats);
             }
 
             handle.Dispose();

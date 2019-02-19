@@ -1,6 +1,6 @@
 ﻿namespace Sparrow.Platform.Posix.macOS
 {
-    public enum CtkHwIdentifiers
+    internal enum CtkHwIdentifiers
     {
         HW_MACHINE = 1,         /* string: machine class */
         HW_MODEL = 2,           /* string: specific machine model */

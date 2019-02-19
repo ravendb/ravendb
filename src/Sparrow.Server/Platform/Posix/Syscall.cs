@@ -2,7 +2,6 @@
 using System.Buffers;
 using System.IO;
 using System.Runtime.InteropServices;
-using System.Security;
 using System.Text;
 using System.Threading;
 
@@ -10,7 +9,7 @@ namespace Sparrow.Platform.Posix
 {
     public static unsafe class Syscall
     {
-        internal const string LIBC_6 = "libc";
+        private const string LIBC_6 = "libc";
 
         [DllImport(LIBC_6, EntryPoint = "syscall", SetLastError = true)]
         public static extern long syscall0(long number);

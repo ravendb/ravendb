@@ -7,7 +7,7 @@ using Sparrow.Utils;
 
 namespace Sparrow.Platform.Posix
 {
-    public class SmapsReaderResults
+    internal class SmapsReaderResults
     {
         public string ResultString;
         public long Size;
@@ -18,12 +18,12 @@ namespace Sparrow.Platform.Posix
         public long PrivateDirty;
     }
     
-    public interface ISmapsReaderResultAction
+    internal interface ISmapsReaderResultAction
     {
         void Add(SmapsReaderResults results);
     }
 
-    public struct SmapsReaderJsonResults : ISmapsReaderResultAction
+    internal struct SmapsReaderJsonResults : ISmapsReaderResultAction
     {
         private DynamicJsonArray _dja;
 
@@ -54,7 +54,7 @@ namespace Sparrow.Platform.Posix
         }
     }
     
-    public struct SmapsReaderNoAllocResults : ISmapsReaderResultAction
+    internal struct SmapsReaderNoAllocResults : ISmapsReaderResultAction
     {
         public void Add(SmapsReaderResults results)
         {
@@ -62,7 +62,7 @@ namespace Sparrow.Platform.Posix
         }
     }
     
-    public class SmapsReader
+    internal class SmapsReader
     {
         // this /proc/self/smaps reader assumes the format of smaps will always be with the following order:
         // - filename line (where we count rw-s) where with white-spaces delimeters - rw-s is second word in line and filename is last word

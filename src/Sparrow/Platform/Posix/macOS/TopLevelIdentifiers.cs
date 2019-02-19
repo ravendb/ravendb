@@ -1,6 +1,6 @@
 ﻿namespace Sparrow.Platform.Posix.macOS
 {
-    public enum TopLevelIdentifiers
+    internal enum TopLevelIdentifiers
     {
         CTL_UNSPEC = 0,     /* unused */
         CTL_KERN = 1,       /* "high kernel": proc, limits */

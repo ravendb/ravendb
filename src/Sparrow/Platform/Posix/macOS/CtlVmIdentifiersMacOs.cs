@@ -1,6 +1,6 @@
 namespace Sparrow.Platform.Posix.macOS
 {
-    public enum CtlVmIdentifiers
+    internal enum CtlVmIdentifiers
     {
         VM_METER = 1,		/* struct vmmeter */
         VM_LOADAVG = 2,	    /* struct loadavg */
