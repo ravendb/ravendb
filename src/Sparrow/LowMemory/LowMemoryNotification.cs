@@ -304,7 +304,7 @@ namespace Sparrow.LowMemory
             return isLowMemory;
         }
 
-        public bool IsLowMemory(MemoryInfoResult memInfo, SmapsReader smapsReader, out Size commitChargeThreshold)
+        internal bool IsLowMemory(MemoryInfoResult memInfo, SmapsReader smapsReader, out Size commitChargeThreshold)
         {
             // We consider low memory only if we don't have enough free physical memory or
             // the commited memory size if larger than our physical memory.

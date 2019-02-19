@@ -3,6 +3,7 @@ using System.Collections.Concurrent;
 using Sparrow;
 using Sparrow.Binary;
 using Sparrow.LowMemory;
+using Sparrow.Server.Platform;
 using Sparrow.Threading;
 using Sparrow.Utils;
 using Voron.Global;
@@ -45,7 +46,7 @@ namespace Voron.Impl
             if (size > Constants.Size.Megabyte * 16)
             {
                 // We don't want to pool large buffers
-                return NativeMemory.Allocate4KbAlignedMemory(size, out thread);
+                return PlatformSpecific.NativeMemory.Allocate4KbAlignedMemory(size, out thread);
             }
 
             var index = Bits.MostSignificantBit(size);
@@ -56,7 +57,7 @@ namespace Voron.Impl
                 return (byte*)allocation.Ptr;
             }
 
-            return NativeMemory.Allocate4KbAlignedMemory(size, out thread);
+            return PlatformSpecific.NativeMemory.Allocate4KbAlignedMemory(size, out thread);
         }
 
         public void Return(byte* ptr, int size, NativeMemory.ThreadStats allocatingThread)
@@ -70,7 +71,7 @@ namespace Voron.Impl
             if (size > Constants.Size.Megabyte * 16)
             {
                 // We don't want to pool large buffers
-                NativeMemory.Free4KbAlignedMemory(ptr, size, allocatingThread);
+                PlatformSpecific.NativeMemory.Free4KbAlignedMemory(ptr, size, allocatingThread);
                 return;
             }
 
@@ -89,7 +90,7 @@ namespace Voron.Impl
             {
                 while (stack.TryPop(out var allocation))
                 {
-                    NativeMemory.Free4KbAlignedMemory((byte*)allocation.Ptr, allocation.Size, allocation.AllocatingThread);
+                    PlatformSpecific.NativeMemory.Free4KbAlignedMemory((byte*)allocation.Ptr, allocation.Size, allocation.AllocatingThread);
                 }
             }
         }

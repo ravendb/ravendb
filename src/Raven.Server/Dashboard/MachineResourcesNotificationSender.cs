@@ -75,12 +75,12 @@ namespace Raven.Server.Dashboard
             }
         }
 
-        public MachineResources GetMachineResources(SmapsReader smapsReader)
+        internal MachineResources GetMachineResources(SmapsReader smapsReader)
         {
             return GetMachineResources(smapsReader, _server.CpuUsageCalculator);
         }
 
-        public static MachineResources GetMachineResources(SmapsReader smapsReader, ICpuUsageCalculator cpuUsageCalculator)
+        internal static MachineResources GetMachineResources(SmapsReader smapsReader, ICpuUsageCalculator cpuUsageCalculator)
         {
             var memInfo = MemoryInformation.GetMemoryInfo(smapsReader, extendedInfo: true);
             var cpuInfo = cpuUsageCalculator.Calculate();

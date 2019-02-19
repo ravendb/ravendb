@@ -1,6 +1,6 @@
 namespace Sparrow.Platform.Posix.macOS
 {
-    public struct vm_statistics64
+    internal struct vm_statistics64
     {
         uint free_count;        /* # of pages free */
         uint active_count;      /* # of pages active */

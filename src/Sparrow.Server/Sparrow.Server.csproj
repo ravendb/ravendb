@@ -8,11 +8,11 @@
     <Configurations>Debug;Release;Validate</Configurations>
   </PropertyGroup>
   <ItemGroup Condition="'$(OS)' == 'Windows_NT'">
-    <Compile Remove="Properties\AssemblyInfo.Linux.cs" />
+    <Compile Include="..\Sparrow\Properties\AssemblyInfo.Windows.cs" Link="Properties\AssemblyInfo.Windows.cs" />
     <Compile Include="..\CommonAssemblyInfo.Windows.cs" Link="Properties\CommonAssemblyInfo.Windows.cs" />
   </ItemGroup>
   <ItemGroup Condition="'$(OS)' != 'Windows_NT'">
-    <Compile Remove="Properties\AssemblyInfo.Windows.cs" />
+    <Compile Include="..\Sparrow\Properties\AssemblyInfo.Linux.cs" Link="Properties\AssemblyInfo.Linux.cs" />
     <Compile Include="..\CommonAssemblyInfo.Linux.cs" Link="Properties\CommonAssemblyInfo.Linux.cs" />
   </ItemGroup>
   <ItemGroup>
@@ -39,8 +39,5 @@
   </ItemGroup>
   <ItemGroup>
     <ProjectReference Include="..\Sparrow\Sparrow.csproj" />
-  </ItemGroup>
-  <ItemGroup>
-    <Folder Include="Extensions\" />
   </ItemGroup>
 </Project>

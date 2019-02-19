@@ -63,6 +63,7 @@ using Sparrow.Json.Parsing;
 using Voron;
 using Sparrow.Logging;
 using Sparrow.LowMemory;
+using Sparrow.Server.Platform;
 using Sparrow.Utils;
 
 namespace Raven.Server.ServerWide
@@ -522,7 +523,7 @@ namespace Raven.Server.ServerWide
 
             try
             {
-                var swapping = MemoryInformation.IsSwappingOnHddInsteadOfSsd();
+                var swapping = PlatformSpecific.MemoryInformation.IsSwappingOnHddInsteadOfSsd();
                 if (swapping != null)
                 {
                     var alert = AlertRaised.Create(

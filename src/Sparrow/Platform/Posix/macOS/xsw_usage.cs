@@ -1,6 +1,6 @@
 ﻿namespace Sparrow.Platform.Posix.macOS
 {
-    public struct xsw_usage
+    internal struct xsw_usage
     {
         public ulong xsu_total;
         public ulong xsu_avail;
