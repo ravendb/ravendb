@@ -306,7 +306,7 @@ namespace Raven.Server.Smuggler.Documents
                 _writer.WriteEndObject();
             }
 
-            private static readonly HashSet<string> DoNotBackUp = new HashSet<string>
+            private static readonly HashSet<string> DoNotBackUp = new HashSet<string>(StringComparer.OrdinalIgnoreCase)
             {
                 RavenConfiguration.GetKey(x => x.Core.DataDirectory),
                 RavenConfiguration.GetKey(x => x.Storage.TempPath),
@@ -315,7 +315,7 @@ namespace Raven.Server.Smuggler.Documents
                 RavenConfiguration.GetKey(x => x.Core.RunInMemory)
             };
 
-            private static readonly HashSet<string> ServerWideKeys = DatabaseHelper.GetServerWideOnlyConfigurationKeys().ToHashSet();
+            private static readonly HashSet<string> ServerWideKeys = DatabaseHelper.GetServerWideOnlyConfigurationKeys().ToHashSet(StringComparer.OrdinalIgnoreCase);
 
             private void WriteSettings(Dictionary<string, string> settings)
             {
@@ -329,8 +329,8 @@ namespace Raven.Server.Smuggler.Documents
                 var first = true;
                 foreach (var config in settings)
                 {
-                    if (!(DoNotBackUp.Contains(config.Key, StringComparer.OrdinalIgnoreCase) || 
-                          ServerWideKeys.Contains(config.Key, StringComparer.OrdinalIgnoreCase)))
+                    if (!(DoNotBackUp.Contains(config.Key) || 
+                          ServerWideKeys.Contains(config.Key)))
                     {
                         if (first == false)
                             _writer.WriteComma();
