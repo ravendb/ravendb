@@ -92,7 +92,7 @@ namespace Raven.Server.Documents.Replication
                     if (local != null)
                         conflicts.Add(local);
 
-                    var resolved = _conflictResolver.ResolveToLatest(documentsContext, conflicts);
+                    var resolved = _conflictResolver.ResolveToLatest(conflicts);
                     _conflictResolver.PutResolvedDocument(documentsContext, resolved, conflictedDoc);
 
                     return;

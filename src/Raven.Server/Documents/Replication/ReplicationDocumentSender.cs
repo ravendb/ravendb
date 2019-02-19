@@ -283,6 +283,7 @@ namespace Raven.Server.Documents.Replication
 
                             numberOfItemsSent++;
                         }
+
                     }
                     
                     if (_log.IsInfoEnabled)
@@ -293,7 +294,10 @@ namespace Raven.Server.Documents.Replication
                             _log.Info(message);
                         }
                         
-                        _log.Info($"Found {_orderedReplicaItems.Count:#,#;;0} documents and {_replicaAttachmentStreams.Count} attachment's streams to replicate to {_parent.Node.FromString()}.");
+                        _log.Info($"Found {_orderedReplicaItems.Count:#,#;;0} documents " +
+                                  $"and {_replicaAttachmentStreams.Count} attachment's streams " +
+                                  $"to replicate to {_parent.Node.FromString()}, " +
+                                  $"total size: {new Size(size, SizeUnit.Bytes)}");
                     }
 
                     if (_orderedReplicaItems.Count == 0 && _countersToReplicate.Count == 0)

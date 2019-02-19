@@ -99,7 +99,7 @@ namespace Raven.Server.Documents.Replication
 
                             if (ConflictSolver?.ResolveToLatest == true)
                             {
-                                resolved = ResolveToLatest(context, conflicts);
+                                resolved = ResolveToLatest(conflicts);
                                 resolved.Flags = resolved.Flags.Strip(DocumentFlags.FromReplication);
                                 resolvedConflicts.Add((resolved, maxConflictEtag));
 
@@ -253,7 +253,7 @@ namespace Raven.Server.Documents.Replication
                 using (Slice.External(context.Allocator, resolved.LowerId, out var lowerId))
                 {
                     _database.DocumentsStorage.Delete(context, lowerId, resolved.Id, null,
-                        _database.Time.GetUtcNow().Ticks, resolved.ChangeVector, new CollectionName(resolved.Collection),
+                        resolved.LastModified.Ticks, resolved.ChangeVector, new CollectionName(resolved.Collection),
                         documentFlags: resolved.Flags | DocumentFlags.Resolved | DocumentFlags.HasRevisions, nonPersistentFlags: NonPersistentDocumentFlags.FromResolver | NonPersistentDocumentFlags.Resolved);
                     return;
                 }
@@ -274,7 +274,7 @@ namespace Raven.Server.Documents.Replication
                 // we always want to merge the counters and attachments, even if the user specified a script
                 var nonPersistentFlags = NonPersistentDocumentFlags.ResolveCountersConflict | NonPersistentDocumentFlags.ResolveAttachmentsConflict |
                                          NonPersistentDocumentFlags.FromResolver | NonPersistentDocumentFlags.Resolved;
-                _database.DocumentsStorage.Put(context, resolved.Id, null, clone, null, resolved.ChangeVector, resolved.Flags | DocumentFlags.Resolved, nonPersistentFlags: nonPersistentFlags);
+                _database.DocumentsStorage.Put(context, resolved.Id, null, clone, resolved.LastModified.Ticks, resolved.ChangeVector, resolved.Flags | DocumentFlags.Resolved, nonPersistentFlags: nonPersistentFlags);
             }
         }
 
@@ -364,13 +364,12 @@ namespace Raven.Server.Documents.Replication
             updatedConflict.Doc = resolved;
             updatedConflict.Collection = collection;
             updatedConflict.ChangeVector = ChangeVectorUtils.MergeVectors(conflicts.Select(c => c.ChangeVector).ToList());
-
             resolvedConflict = updatedConflict;
 
             return true;
         }
 
-        public DocumentConflict ResolveToLatest(DocumentsOperationContext context, List<DocumentConflict> conflicts)
+        public DocumentConflict ResolveToLatest(List<DocumentConflict> conflicts)
         {
             // we have to sort this here because we need to ensure that all the nodes are always 
             // arrive to the same conclusion, regardless of what time they go it
@@ -379,12 +378,12 @@ namespace Raven.Server.Documents.Replication
             var latestDoc = conflicts[0];
             var latestTime = latestDoc.LastModified.Ticks;
 
-            foreach (var documentConflict in conflicts)
+            foreach (var conflict in conflicts)
             {
-                if (documentConflict.LastModified.Ticks > latestTime)
+                if (conflict.LastModified.Ticks > latestTime)
                 {
-                    latestDoc = documentConflict;
-                    latestTime = documentConflict.LastModified.Ticks;
+                    latestDoc = conflict;
+                    latestTime = conflict.LastModified.Ticks;
                 }
             }
 

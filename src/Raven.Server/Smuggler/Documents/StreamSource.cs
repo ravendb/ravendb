@@ -388,7 +388,9 @@ namespace Raven.Server.Smuggler.Documents
                 case DatabaseItemType.CompareExchange:
                 case DatabaseItemType.LegacyDocumentDeletions:
                 case DatabaseItemType.LegacyAttachmentDeletions:
+#pragma warning disable 618
                 case DatabaseItemType.Counters:
+#pragma warning restore 618
                 case DatabaseItemType.CountersBatch:
                     return SkipArray(onSkipped, token);
                 case DatabaseItemType.DatabaseRecord:
@@ -1205,8 +1207,10 @@ namespace Raven.Server.Smuggler.Documents
             if (type.Equals(nameof(DatabaseItemType.CountersBatch), StringComparison.OrdinalIgnoreCase))
                 return DatabaseItemType.CountersBatch;
 
+#pragma warning disable 618
             if (type.Equals(nameof(DatabaseItemType.Counters), StringComparison.OrdinalIgnoreCase))
                 return DatabaseItemType.Counters;
+#pragma warning restore 618
 
             if (type.Equals("Attachments", StringComparison.OrdinalIgnoreCase))
                 return DatabaseItemType.LegacyAttachments;

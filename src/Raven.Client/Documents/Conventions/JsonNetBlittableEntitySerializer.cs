@@ -26,6 +26,7 @@ namespace Raven.Client.Documents.Conventions
         public object EntityFromJsonStream(Type type, BlittableJsonReaderObject jsonObject)
         {
             _reader.Value.Init(jsonObject);
+            _serializer.Value.NullValueHandling = NullValueHandling.Ignore;
 
             using (DefaultRavenContractResolver.RegisterExtensionDataSetter((o, key, value) =>
             {

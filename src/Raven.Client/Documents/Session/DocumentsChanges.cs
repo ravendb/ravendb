@@ -1,3 +1,4 @@
+using System;
 using Sparrow.Json;
 
 namespace Raven.Client.Documents.Session
@@ -17,11 +18,13 @@ namespace Raven.Client.Documents.Session
         /// <summary>
         /// Previous field type.
         /// </summary>
+        [Obsolete("DocumentsChanges.FieldOldType is not supported anymore. Will be removed in next major version of the product.")]
         public BlittableJsonToken FieldOldType { get; set; }
 
         /// <summary>
         /// Current field type.
         /// </summary>
+        [Obsolete("DocumentsChanges.FieldNewType is not supported anymore. Will be removed in next major version of the product.")]
         public BlittableJsonToken FieldNewType { get; set; }
 
         /// <summary>
@@ -54,7 +57,9 @@ namespace Raven.Client.Documents.Session
             ArrayValueChanged,
             ArrayValueAdded,
             ArrayValueRemoved,
+            [Obsolete("ChangeType.FieldTypeChanged is not supported anymore. Will be removed in next major version of the product.")]
             FieldTypeChanged,
+            [Obsolete("ChangeType.EntityTypeChanged is not supported anymore. Will be removed in next major version of the product.")]
             EntityTypeChanged
         }
 
@@ -62,10 +67,12 @@ namespace Raven.Client.Documents.Session
         {
             return Equals(FieldOldValue, other.FieldOldValue)
                    && Equals(FieldNewValue, other.FieldNewValue)
-                   && Equals(FieldOldType, other.FieldOldType)
                    && string.Equals(FieldName, other.FieldName)
                    && string.Equals(FieldPath, other.FieldPath)
+#pragma warning disable 618
+                   && Equals(FieldOldType, other.FieldOldType)
                    && Equals(FieldNewType, other.FieldNewType)
+#pragma warning restore 618
                    && Change == other.Change;
         }
 
@@ -75,8 +82,10 @@ namespace Raven.Client.Documents.Session
             {
                 int hashCode = FieldOldValue?.GetHashCode() ?? 0;
                 hashCode = (hashCode * 397) ^ (FieldNewValue?.GetHashCode() ?? 0);
+#pragma warning disable 618
                 hashCode = (hashCode * 397) ^ (FieldOldType.GetHashCode());
                 hashCode = (hashCode * 397) ^ (FieldNewType.GetHashCode());
+#pragma warning restore 618
                 hashCode = (hashCode * 397) ^ (FieldName?.GetHashCode() ?? 0);
                 hashCode = (hashCode * 397) ^ (FieldPath?.GetHashCode() ?? 0);
                 hashCode = (hashCode * 397) ^ (Change.GetHashCode());
@@ -86,9 +95,12 @@ namespace Raven.Client.Documents.Session
 
         public override bool Equals(object obj)
         {
-            if (ReferenceEquals(null, obj)) return false;
-            if (ReferenceEquals(this, obj)) return true;
-            if (obj.GetType() != GetType()) return false;
+            if (ReferenceEquals(null, obj))
+                return false;
+            if (ReferenceEquals(this, obj))
+                return true;
+            if (obj.GetType() != GetType())
+                return false;
             return Equals((DocumentsChanges)obj);
         }
     }
