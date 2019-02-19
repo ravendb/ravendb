@@ -12,6 +12,7 @@ using System.Security;
 using System.Threading;
 using Microsoft.Win32.SafeHandles;
 using Sparrow;
+using Sparrow.Server.Exceptions;
 using Sparrow.Server.Utils;
 using Sparrow.Utils;
 using Voron.Exceptions;

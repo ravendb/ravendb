@@ -52,6 +52,7 @@ using Voron;
 using Sparrow.Logging;
 using Sparrow.LowMemory;
 using Sparrow.Server;
+using Sparrow.Server.Exceptions;
 using Sparrow.Threading;
 using Sparrow.Utils;
 using Size = Sparrow.Size;

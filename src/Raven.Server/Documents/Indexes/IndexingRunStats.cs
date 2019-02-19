@@ -4,7 +4,7 @@ using Raven.Client.Documents.Indexes;
 using Raven.Client.Util;
 using Raven.Server.Documents.Indexes.MapReduce.Exceptions;
 using Raven.Server.Exceptions;
-using Voron.Exceptions;
+using Sparrow.Server.Exceptions;
 
 namespace Raven.Server.Documents.Indexes
 {

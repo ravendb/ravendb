@@ -1,8 +1,8 @@
 using System;
 using System.Runtime.InteropServices;
-using Voron.Global;
+using Sparrow.Global;
 
-namespace Voron.Platform
+namespace Sparrow.Server.Platform
 {
     public unsafe class PalDefinitions
     {

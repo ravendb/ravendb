@@ -8,6 +8,7 @@ using System.Threading;
 using Sparrow;
 using Sparrow.Collections;
 using Sparrow.Server.Meters;
+using Sparrow.Server.Platform;
 using Sparrow.Server.Platform.Posix;
 using Sparrow.Utils;
 using Voron.Data;

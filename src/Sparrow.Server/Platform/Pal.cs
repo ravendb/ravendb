@@ -1,16 +1,12 @@
 using System;
 using System.IO;
 using System.Runtime.InteropServices;
-using Sparrow.Server.Platform;
-using Voron.Impl.Journal;
-using Voron.Impl.Paging;
-using static Voron.Platform.PalDefinitions;
 
-namespace Voron.Platform
+namespace Sparrow.Server.Platform
 {
     public static unsafe class Pal
     {
-        public static SystemInformation SysInfo;
+        public static PalDefinitions.SystemInformation SysInfo;
         public const int PAL_VER = 42002; // Should match auto generated rc from rvn_get_pal_ver() @ src/rvngetpalver.c
 
         static Pal()
@@ -127,7 +123,7 @@ namespace Voron.Platform
 
         [DllImport(LIBRVNPAL, SetLastError = true)]
         private static extern PalFlags.FailCodes rvn_get_system_information(
-            out SystemInformation systemInformation,
+            out PalDefinitions.SystemInformation systemInformation,
             out Int32 errorCode);
 
         [DllImport(LIBRVNPAL, SetLastError = true)]
@@ -150,7 +146,7 @@ namespace Voron.Platform
 
         [DllImport(LIBRVNPAL, SetLastError = true)]
         public static extern PalFlags.FailCodes rvn_prefetch_ranges(
-            PrefetchRanges* list,
+            PalDefinitions.PrefetchRanges* list,
             Int32 count,
             out Int32 errorCode);
 

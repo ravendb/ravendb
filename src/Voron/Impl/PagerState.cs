@@ -4,6 +4,7 @@ using System.IO.MemoryMappedFiles;
 using System.Runtime.CompilerServices;
 using System.Threading;
 using Sparrow.Binary;
+using Sparrow.Server.Platform;
 using Voron.Global;
 using Voron.Impl.Paging;
 using Voron.Platform;

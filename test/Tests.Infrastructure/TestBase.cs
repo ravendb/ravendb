@@ -24,9 +24,9 @@ using Raven.Server.Utils;
 using Sparrow.Collections;
 using Sparrow.Logging;
 using Sparrow.Platform;
+using Sparrow.Server.Platform;
 using Sparrow.Threading;
 using Sparrow.Utils;
-using Voron.Platform;
 using Xunit;
 
 namespace FastTests

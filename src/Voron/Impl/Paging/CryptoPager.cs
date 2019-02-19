@@ -4,6 +4,7 @@ using System.Diagnostics;
 using System.Runtime.CompilerServices;
 using Sparrow;
 using Sparrow.Server;
+using Sparrow.Server.Platform;
 using Sparrow.Utils;
 using Voron.Data;
 using Voron.Platform;

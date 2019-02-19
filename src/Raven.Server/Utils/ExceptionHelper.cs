@@ -1,7 +1,7 @@
 ﻿using System;
 using System.Runtime.CompilerServices;
 using Sparrow.LowMemory;
-using Voron.Exceptions;
+using Sparrow.Server.Exceptions;
 
 namespace Raven.Server.Utils
 {

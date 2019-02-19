@@ -4,6 +4,7 @@ using System.Diagnostics;
 using System.Threading;
 using Sparrow.Platform;
 using Sparrow.Server.Meters;
+using Sparrow.Server.Platform;
 using Sparrow.Threading;
 using Voron.Global;
 using Voron.Impl.Paging;
