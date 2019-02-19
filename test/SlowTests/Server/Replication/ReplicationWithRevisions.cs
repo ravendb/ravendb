@@ -2,10 +2,8 @@
 using System.Collections.Generic;
 using System.IO;
 using System.Threading.Tasks;
-using FastTests.Server.Documents.Revisions;
 using FastTests.Server.Replication;
 using FastTests.Utils;
-using Raven.Client;
 using Raven.Client.Documents;
 using Raven.Client.Documents.Smuggler;
 using Raven.Client.ServerWide;
@@ -166,8 +164,7 @@ namespace SlowTests.Server.Replication
             {
                 await GenerateConflictAndSetupMasterMasterReplication(storeA, storeB);
 
-                Assert.Equal(2, WaitUntilHasConflict(storeA, "foo/bar").Length);
-                Assert.Equal(2, WaitUntilHasConflict(storeB, "foo/bar").Length);
+               
 
                 using (var session = storeA.OpenSession())
                 {
@@ -210,9 +207,6 @@ namespace SlowTests.Server.Replication
             {
                 await GenerateConflictAndSetupMasterMasterReplication(storeA, storeB, configureVersioning);
 
-                Assert.Equal(2, WaitUntilHasConflict(storeA, "foo/bar").Length);
-                Assert.Equal(2, WaitUntilHasConflict(storeB, "foo/bar").Length);
-
                 if (configureVersioning)
                 {
                     using (var session = storeA.OpenSession())
@@ -238,10 +232,33 @@ namespace SlowTests.Server.Replication
                 using (var session = storeA.OpenSession())
                 {
                     Assert.Equal(3, WaitForValue(() => session.Advanced.Revisions.GetMetadataFor("foo/bar").Count, 3));
+
+                    var metadata = session.Advanced.Revisions.GetMetadataFor("foo/bar");
+                    var flags = metadata[0]["@flags"];
+                    Assert.Equal((DocumentFlags.Revision| DocumentFlags.HasRevisions | DocumentFlags.Resolved).ToString(), flags);
+                    flags = metadata[1]["@flags"];
+                    Assert.Equal((DocumentFlags.Revision | DocumentFlags.HasRevisions | DocumentFlags.FromReplication | DocumentFlags.Conflicted).ToString(), flags);
+                    flags = metadata[2]["@flags"];
+                    Assert.Equal((DocumentFlags.Revision | DocumentFlags.HasRevisions | DocumentFlags.Conflicted).ToString(), flags);
                 }
                 using (var session = storeB.OpenSession())
                 {
                     Assert.Equal(3, WaitForValue(() => session.Advanced.Revisions.GetMetadataFor("foo/bar").Count, 3));
+
+                    var metadata = session.Advanced.Revisions.GetMetadataFor("foo/bar");
+                    var flags = metadata[0]["@flags"];
+                    Assert.Equal((DocumentFlags.Revision | DocumentFlags.HasRevisions | DocumentFlags.FromReplication | DocumentFlags.Resolved).ToString(), flags);
+                    flags = metadata[1]["@flags"];
+                    if (configureVersioning)
+                    {
+                        Assert.Equal((DocumentFlags.Revision | DocumentFlags.HasRevisions | DocumentFlags.Conflicted).ToString(), flags);
+                    }
+                    else
+                    {
+                        Assert.Equal((DocumentFlags.Revision | DocumentFlags.HasRevisions | DocumentFlags.FromReplication | DocumentFlags.Conflicted).ToString(), flags);
+                    }
+                    flags = metadata[2]["@flags"];
+                    Assert.Equal((DocumentFlags.Revision | DocumentFlags.HasRevisions | DocumentFlags.FromReplication | DocumentFlags.Conflicted).ToString(), flags);
                 }
             }
         }
@@ -317,24 +334,35 @@ namespace SlowTests.Server.Replication
             }
         }
 
-        [Fact]
-        public async Task RevisionsAreReplicatedBack()
+        [Theory]
+        [InlineData(true)]
+        [InlineData(false)]
+        public async Task RevisionsAreReplicatedBack(bool configureVersioning)
         {
             using (var storeA = GetDocumentStore())
             using (var storeB = GetDocumentStore())
             {
-                var user = new User { Name = "Name" };
-                var user2 = new User { Name = "Name2" };
+                if (configureVersioning)
+                {
+                    await RevisionsHelper.SetupRevisions(Server.ServerStore, storeA.Database);
+                    await RevisionsHelper.SetupRevisions(Server.ServerStore, storeB.Database);
+                }
+
+                var company = new Company { Name = "Name" };
+                var company2 = new Company { Name = "Name2" };
 
                 using (var session = storeA.OpenAsyncSession())
                 {
-                    await session.StoreAsync(user, "foo/bar");
+                    await session.StoreAsync(new User(), "keep-conflicted-revision-insert-order");
+                    await session.SaveChangesAsync();
+
+                    await session.StoreAsync(company, "foo/bar");
                     await session.SaveChangesAsync();
                 }
 
                 using (var session = storeB.OpenAsyncSession())
                 {
-                    await session.StoreAsync(user2, "foo/bar");
+                    await session.StoreAsync(company2, "foo/bar");
                     await session.SaveChangesAsync();
                 }
 
@@ -343,6 +371,14 @@ namespace SlowTests.Server.Replication
                 using (var session = storeB.OpenSession())
                 {
                     Assert.Equal(3, WaitForValue(() => session.Advanced.Revisions.GetMetadataFor("foo/bar").Count, 3));
+
+                    var metadata = session.Advanced.Revisions.GetMetadataFor("foo/bar");
+                    var flags = metadata[0]["@flags"];
+                    Assert.Equal((DocumentFlags.Revision | DocumentFlags.HasRevisions | DocumentFlags.Resolved).ToString(), flags);
+                    flags = metadata[1]["@flags"];
+                    Assert.Equal((DocumentFlags.Revision | DocumentFlags.HasRevisions | DocumentFlags.Conflicted).ToString(), flags);
+                    flags = metadata[2]["@flags"];
+                    Assert.Equal((DocumentFlags.Revision | DocumentFlags.HasRevisions | DocumentFlags.FromReplication | DocumentFlags.Conflicted).ToString(), flags);
                 }
 
                 await SetupReplicationAsync(storeB, storeA);
@@ -350,28 +386,52 @@ namespace SlowTests.Server.Replication
                 using (var session = storeA.OpenSession())
                 {
                     Assert.Equal(3, WaitForValue(() => session.Advanced.Revisions.GetMetadataFor("foo/bar").Count, 3));
+
+                    var metadata = session.Advanced.Revisions.GetMetadataFor("foo/bar");
+                    var flags = metadata[0]["@flags"];
+                    Assert.Equal((DocumentFlags.Revision | DocumentFlags.HasRevisions | DocumentFlags.FromReplication | DocumentFlags.Resolved).ToString(), flags);
+                    flags = metadata[1]["@flags"];
+                    Assert.Equal((DocumentFlags.Revision | DocumentFlags.HasRevisions | DocumentFlags.FromReplication | DocumentFlags.Conflicted).ToString(), flags);
+                    flags = metadata[2]["@flags"];
+                    Assert.Equal(
+                        configureVersioning
+                            ? (DocumentFlags.Revision | DocumentFlags.HasRevisions | DocumentFlags.Conflicted).ToString()
+                            : (DocumentFlags.Revision | DocumentFlags.HasRevisions | DocumentFlags.FromReplication | DocumentFlags.Conflicted).ToString(), flags);
                 }
             }
         }
 
-        [Fact]
-        public async Task RevisionsAreReplicatedBackWithTombstoneAsResolved()
+        [Theory]
+        [InlineData(true)]
+        [InlineData(false)]
+        public async Task RevisionsAreReplicatedBackWithTombstoneAsResolved(bool configureVersioning)
         {
             using (var storeA = GetDocumentStore())
             using (var storeB = GetDocumentStore())
             {
-                var user = new User { Name = "Name" };
-                var user2 = new User { Name = "Name2" };
+                var expectedRevisionsCount = 3;
+                if (configureVersioning)
+                {
+                    await RevisionsHelper.SetupRevisions(Server.ServerStore, storeA.Database);
+                    await RevisionsHelper.SetupRevisions(Server.ServerStore, storeB.Database);
+                    expectedRevisionsCount = 4;
+                }
+
+                var company = new Company { Name = "Name" };
+                var company2 = new Company { Name = "Name2" };
 
                 using (var session = storeA.OpenAsyncSession())
                 {
-                    await session.StoreAsync(user, "foo/bar");
+                    await session.StoreAsync(company, "foo/bar");
                     await session.SaveChangesAsync();
                 }
 
                 using (var session = storeB.OpenAsyncSession())
                 {
-                    await session.StoreAsync(user2, "foo/bar");
+                    await session.StoreAsync(new Company(), "keep-conflicted-revision-insert-order");
+                    await session.SaveChangesAsync();
+
+                    await session.StoreAsync(company2, "foo/bar");
                     await session.SaveChangesAsync();
                     session.Delete("foo/bar");
                     await session.SaveChangesAsync();
@@ -381,30 +441,75 @@ namespace SlowTests.Server.Replication
 
                 using (var session = storeB.OpenSession())
                 {
-                    Assert.Equal(3, WaitForValue(() => session.Advanced.Revisions.GetMetadataFor("foo/bar").Count, 3));
+                    Assert.Equal(expectedRevisionsCount, WaitForValue(() => session.Advanced.Revisions.GetMetadataFor("foo/bar").Count, expectedRevisionsCount));
+
+                    var metadata = session.Advanced.Revisions.GetMetadataFor("foo/bar");
+                    var flags = metadata[0]["@flags"];
+                    Assert.Equal((DocumentFlags.DeleteRevision | DocumentFlags.HasRevisions | DocumentFlags.Resolved).ToString(), flags);
+                    flags = metadata[1]["@flags"];
+                    Assert.Equal((DocumentFlags.DeleteRevision | DocumentFlags.HasRevisions | DocumentFlags.Conflicted).ToString(), flags);
+                    flags = metadata[2]["@flags"];
+                    Assert.Equal((DocumentFlags.Revision | DocumentFlags.HasRevisions | DocumentFlags.FromReplication | DocumentFlags.Conflicted).ToString(), flags);
+
+                    if (configureVersioning)
+                    {
+                        flags = metadata[3]["@flags"];
+                        Assert.Equal((DocumentFlags.Revision | DocumentFlags.HasRevisions).ToString(), flags);
+                    }
                 }
 
                 await SetupReplicationAsync(storeB, storeA);
 
                 using (var session = storeA.OpenSession())
                 {
-                    Assert.Equal(3, WaitForValue(() => session.Advanced.Revisions.GetMetadataFor("foo/bar").Count, 3));
+                    Assert.Equal(expectedRevisionsCount, WaitForValue(() => session.Advanced.Revisions.GetMetadataFor("foo/bar").Count, expectedRevisionsCount));
+
+                    var metadata = session.Advanced.Revisions.GetMetadataFor("foo/bar");
+                    var flags = metadata[0]["@flags"];
+                    Assert.Equal((DocumentFlags.DeleteRevision | DocumentFlags.HasRevisions | DocumentFlags.FromReplication | DocumentFlags.Resolved).ToString(), flags);
+                    flags = metadata[1]["@flags"];
+                    Assert.Equal((DocumentFlags.DeleteRevision | DocumentFlags.HasRevisions | DocumentFlags.FromReplication | DocumentFlags.Conflicted).ToString(), flags);
+                    flags = metadata[2]["@flags"];
+
+                    if (configureVersioning)
+                    {
+                        Assert.Equal((DocumentFlags.Revision | DocumentFlags.HasRevisions | DocumentFlags.Conflicted).ToString(), flags);
+                        flags = metadata[3]["@flags"];
+                        Assert.Equal((DocumentFlags.Revision | DocumentFlags.HasRevisions | DocumentFlags.FromReplication).ToString(), flags);
+                    }
+                    else
+                    {
+                        Assert.Equal((DocumentFlags.Revision | DocumentFlags.HasRevisions | DocumentFlags.FromReplication | DocumentFlags.Conflicted).ToString(), flags);
+                    }
                 }
             }
         }
 
-        [Fact]
-        public async Task RevisionsAreReplicatedBackWithTombstone()
+        [Theory]
+        [InlineData(true)]
+        [InlineData(false)]
+        public async Task RevisionsAreReplicatedBackWithTombstone(bool configureVersioning)
         {
             using (var storeA = GetDocumentStore())
             using (var storeB = GetDocumentStore())
             {
-                var user = new User { Name = "Name" };
-                var user2 = new User { Name = "Name2" };
+                var expectedRevisionsCount = 3;
+                if (configureVersioning)
+                {
+                    await RevisionsHelper.SetupRevisions(Server.ServerStore, storeA.Database);
+                    await RevisionsHelper.SetupRevisions(Server.ServerStore, storeB.Database);
+                    expectedRevisionsCount = 4;
+                }
+
+                var company = new Company { Name = "Name" };
+                var company2 = new Company { Name = "Name2" };
 
                 using (var session = storeA.OpenAsyncSession())
                 {
-                    await session.StoreAsync(user, "foo/bar");
+                    await session.StoreAsync(new Company(), "keep-conflicted-revision-insert-order");
+                    await session.SaveChangesAsync();
+
+                    await session.StoreAsync(company, "foo/bar");
                     await session.SaveChangesAsync();
                     session.Delete("foo/bar");
                     await session.SaveChangesAsync();
@@ -412,7 +517,7 @@ namespace SlowTests.Server.Replication
 
                 using (var session = storeB.OpenAsyncSession())
                 {
-                    await session.StoreAsync(user2, "foo/bar");
+                    await session.StoreAsync(company2, "foo/bar");
                     await session.SaveChangesAsync();
                 }
 
@@ -420,18 +525,49 @@ namespace SlowTests.Server.Replication
 
                 using (var session = storeB.OpenSession())
                 {
-                    Assert.Equal(3, WaitForValue(() => session.Advanced.Revisions.GetMetadataFor("foo/bar").Count, 3));
+                    Assert.Equal(expectedRevisionsCount, WaitForValue(() => session.Advanced.Revisions.GetMetadataFor("foo/bar").Count, expectedRevisionsCount));
+
+                    var metadata = session.Advanced.Revisions.GetMetadataFor("foo/bar");
+                    var flags = metadata[0]["@flags"];
+                    Assert.Equal((DocumentFlags.Revision | DocumentFlags.HasRevisions | DocumentFlags.Resolved).ToString(), flags);
+                    flags = metadata[1]["@flags"];
+                    Assert.Equal((DocumentFlags.Revision | DocumentFlags.HasRevisions | DocumentFlags.Conflicted).ToString(), flags);
+                    flags = metadata[2]["@flags"];
+                    Assert.Equal((DocumentFlags.DeleteRevision | DocumentFlags.HasRevisions | DocumentFlags.FromReplication | DocumentFlags.Conflicted).ToString(), flags);
+
+                    if (configureVersioning)
+                    {
+                        flags = metadata[3]["@flags"];
+                        Assert.Equal((DocumentFlags.Revision | DocumentFlags.HasRevisions | DocumentFlags.FromReplication).ToString(), flags);
+                    }
                 }
 
                 await SetupReplicationAsync(storeB, storeA);
 
                 using (var session = storeA.OpenSession())
                 {
-                    Assert.Equal(3, WaitForValue(() => session.Advanced.Revisions.GetMetadataFor("foo/bar").Count, 3));
+                    Assert.Equal(expectedRevisionsCount, WaitForValue(() => session.Advanced.Revisions.GetMetadataFor("foo/bar").Count, expectedRevisionsCount));
+
+                    var metadata = session.Advanced.Revisions.GetMetadataFor("foo/bar");
+                    var flags = metadata[0]["@flags"];
+                    Assert.Equal((DocumentFlags.Revision | DocumentFlags.HasRevisions | DocumentFlags.FromReplication | DocumentFlags.Resolved).ToString(), flags);
+                    flags = metadata[1]["@flags"];
+                    Assert.Equal((DocumentFlags.Revision | DocumentFlags.HasRevisions | DocumentFlags.FromReplication | DocumentFlags.Conflicted).ToString(), flags);
+                    flags = metadata[2]["@flags"];
+
+                    if (configureVersioning)
+                    {
+                        Assert.Equal((DocumentFlags.DeleteRevision | DocumentFlags.HasRevisions | DocumentFlags.Conflicted).ToString(), flags);
+                        flags = metadata[3]["@flags"];
+                        Assert.Equal((DocumentFlags.Revision | DocumentFlags.HasRevisions).ToString(), flags);
+                    }
+                    else
+                    {
+                        Assert.Equal((DocumentFlags.DeleteRevision | DocumentFlags.HasRevisions | DocumentFlags.FromReplication | DocumentFlags.Conflicted).ToString(), flags);
+                    }
                 }
             }
         }
-
 
         private async Task GenerateConflictAndSetupMasterMasterReplication(DocumentStore storeA, DocumentStore storeB, bool configureVersioning = true)
         {
@@ -444,20 +580,25 @@ namespace SlowTests.Server.Replication
                 await RevisionsHelper.SetupRevisions(Server.ServerStore, storeB.Database);
             }
 
+            using (var session = storeB.OpenAsyncSession())
+            {
+                await session.StoreAsync(new Company(), "keep-conflicted-revision-insert-order");
+                await session.SaveChangesAsync();
+
+                await session.StoreAsync(user2, "foo/bar");
+                await session.SaveChangesAsync();
+            }
+
             using (var session = storeA.OpenAsyncSession())
             {
                 await session.StoreAsync(user, "foo/bar");
                 await session.SaveChangesAsync();
             }
 
-            using (var session = storeB.OpenAsyncSession())
-            {
-                await session.StoreAsync(user2, "foo/bar");
-                await session.SaveChangesAsync();
-            }
-
             await SetupReplicationAsync(storeA, storeB);
+            Assert.Equal(2, WaitUntilHasConflict(storeB, "foo/bar").Length);
             await SetupReplicationAsync(storeB, storeA);
+            Assert.Equal(2, WaitUntilHasConflict(storeA, "foo/bar").Length);
         }
 
         [Fact]
