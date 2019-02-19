@@ -8,6 +8,7 @@ using System.Runtime.InteropServices;
 using Microsoft.Win32.SafeHandles;
 using Sparrow.Logging;
 using Sparrow.Server.Meters;
+using Sparrow.Server.Platform;
 using Sparrow.Server.Platform.Win32;
 using Sparrow.Utils;
 using Voron.Global;

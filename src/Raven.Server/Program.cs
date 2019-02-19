@@ -17,8 +17,8 @@ using Raven.Server.Utils.Cli;
 using Sparrow;
 using Sparrow.Logging;
 using Sparrow.Platform;
+using Sparrow.Server.Platform;
 using Sparrow.Utils;
-using Voron.Platform;
 
 namespace Raven.Server
 {

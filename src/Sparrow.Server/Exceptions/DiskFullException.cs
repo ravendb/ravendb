@@ -7,7 +7,7 @@
 using System.IO;
 using Sparrow.Utils;
 
-namespace Voron.Exceptions
+namespace Sparrow.Server.Exceptions
 {
     public class DiskFullException : IOException
     {

@@ -1,6 +1,6 @@
 using System;
 
-namespace Voron.Platform
+namespace Sparrow.Server.Platform
 {
     public static class PalFlags
     {

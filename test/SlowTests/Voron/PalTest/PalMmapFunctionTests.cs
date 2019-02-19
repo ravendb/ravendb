@@ -2,7 +2,7 @@
 using System.IO;
 using System.Runtime.InteropServices;
 using FastTests;
-using Voron.Platform;
+using Sparrow.Server.Platform;
 using Xunit;
 
 namespace SlowTests.Voron.PalTest

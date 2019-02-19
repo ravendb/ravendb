@@ -26,8 +26,8 @@ using Sparrow.Json;
 using Sparrow.Logging;
 using Sparrow.LowMemory;
 using Sparrow.Platform;
+using Sparrow.Server.Platform;
 using Sparrow.Utils;
-using Voron.Platform;
 using Size = Sparrow.Size;
 using SizeClient = Raven.Client.Util.Size;
 

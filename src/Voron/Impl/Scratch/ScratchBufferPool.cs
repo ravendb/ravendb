@@ -7,6 +7,7 @@ using System.Linq;
 using System.Runtime.CompilerServices;
 using Sparrow.LowMemory;
 using Sparrow.Server;
+using Sparrow.Server.Exceptions;
 using Sparrow.Threading;
 using Voron.Exceptions;
 using Voron.Impl.Paging;

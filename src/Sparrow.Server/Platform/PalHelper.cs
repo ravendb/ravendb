@@ -1,27 +1,26 @@
 using System;
 using System.IO;
 using System.Text;
-using Voron.Exceptions;
-using static Voron.Platform.PalFlags;
+using Sparrow.Server.Exceptions;
 
-namespace Voron.Platform
+namespace Sparrow.Server.Platform
 {
     public static class PalHelper
     {
-        public static void ThrowLastError(FailCodes rc, int lastError, string msg)
+        public static void ThrowLastError(PalFlags.FailCodes rc, int lastError, string msg)
         {
             string txt;
             try
             {
                 txt = $"{GetNativeErrorString(lastError, msg, out var specialErrnoCodes)}. FailCode={rc}.";
 
-                if ((specialErrnoCodes & ErrnoSpecialCodes.NoMem) != 0)
+                if ((specialErrnoCodes & PalFlags.ErrnoSpecialCodes.NoMem) != 0)
                     throw new OutOfMemoryException(txt);
 
-                if ((specialErrnoCodes & ErrnoSpecialCodes.NoEnt) != 0)
+                if ((specialErrnoCodes & PalFlags.ErrnoSpecialCodes.NoEnt) != 0)
                     throw new FileNotFoundException(txt);
 
-                if ((specialErrnoCodes & ErrnoSpecialCodes.NoSpc) != 0)
+                if ((specialErrnoCodes & PalFlags.ErrnoSpecialCodes.NoSpc) != 0)
                     throw new DiskFullException(txt);
             }
             catch (OutOfMemoryException)
@@ -36,7 +35,7 @@ namespace Voron.Platform
             throw new InvalidOperationException(txt);
         }
 
-        public static unsafe string GetNativeErrorString(int lastError, string msg, out ErrnoSpecialCodes errnoSpecialCodes)
+        public static unsafe string GetNativeErrorString(int lastError, string msg, out PalFlags.ErrnoSpecialCodes errnoSpecialCodes)
         {
             const int maxNativeErrorStr = 256;
             var buf = stackalloc byte[maxNativeErrorStr];
@@ -44,7 +43,7 @@ namespace Voron.Platform
             var size = Pal.rvn_get_error_string(lastError, buf, maxNativeErrorStr, out var specialErrnoCodes);
             var nativeMsg = size >= 0 ? Encoding.UTF8.GetString(buf, size) : lastError.ToString();
 
-            errnoSpecialCodes = (ErrnoSpecialCodes)specialErrnoCodes;
+            errnoSpecialCodes = (PalFlags.ErrnoSpecialCodes)specialErrnoCodes;
             return $"Errno: {lastError}='{nativeMsg}' (rc={specialErrnoCodes}) - '{msg}'";
         }
     }

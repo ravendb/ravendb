@@ -20,6 +20,7 @@ using Sparrow.Compression;
 using Sparrow.Logging;
 using Sparrow.LowMemory;
 using Sparrow.Server;
+using Sparrow.Server.Exceptions;
 using Sparrow.Server.Meters;
 using Sparrow.Server.Utils;
 using Sparrow.Threading;

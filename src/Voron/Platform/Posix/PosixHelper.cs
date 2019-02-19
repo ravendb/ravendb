@@ -8,6 +8,8 @@ using System.Collections.Generic;
 using System.IO;
 using System.Runtime.InteropServices;
 using Sparrow;
+using Sparrow.Server.Exceptions;
+using Sparrow.Server.Platform;
 using Sparrow.Server.Platform.Posix;
 using Sparrow.Server.Utils;
 using Voron.Exceptions;

@@ -1,19 +1,20 @@
 using System;
 using System.Diagnostics;
 using System.IO;
-using System.Runtime.InteropServices;
 using Sparrow;
 using Sparrow.Logging;
+using Sparrow.Server.Exceptions;
 using Sparrow.Server.Meters;
+using Sparrow.Server.Platform;
 using Sparrow.Server.Utils;
 using Sparrow.Utils;
 using Voron.Exceptions;
 using Voron.Global;
 using Voron.Platform;
 using Voron.Util.Settings;
-using static Voron.Platform.Pal;
-using static Voron.Platform.PalDefinitions;
-using static Voron.Platform.PalFlags;
+using static Sparrow.Server.Platform.Pal;
+using static Sparrow.Server.Platform.PalDefinitions;
+using static Sparrow.Server.Platform.PalFlags;
 
 namespace Voron.Impl.Paging
 {
@@ -233,25 +234,5 @@ namespace Voron.Impl.Paging
             if (_logger.IsInfoEnabled)
                 _logger.Info($"Unable to un-protect page range for '{FileName.FullPath}'. start={new IntPtr(start).ToInt64():X}, size={size}, ProtectRange = Unprotect, errorCode={errorCode}");
         }
-    }
-
-    public class SafeMmapHandle : SafeHandle
-    {
-        public FailCodes FailCode;
-        public int ErrorNo;
-
-        public SafeMmapHandle() : base(IntPtr.Zero, true)
-        {
-        }
-
-        protected override bool ReleaseHandle()
-        {
-            FailCode = rvn_mmap_dispose_handle(handle, out ErrorNo);
-
-            handle = IntPtr.Zero;
-            return FailCode == FailCodes.Success;
-        }
-
-        public override bool IsInvalid => handle == IntPtr.Zero;
     }
 }

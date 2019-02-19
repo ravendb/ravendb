@@ -12,6 +12,7 @@ using Sparrow;
 using Sparrow.Collections;
 using Sparrow.Server;
 using Sparrow.Server.Meters;
+using Sparrow.Server.Platform;
 using Sparrow.Utils;
 using Voron.Data;
 using Voron.Platform;
