@@ -1470,8 +1470,8 @@ class ongoingTasksStats extends viewModelBase {
         switch (value) {
             case "Document":
                 return "Documents";
-            case "Counter":
-                return "Counters";
+            case "CounterGroup":
+                return "Counter Groups";
             default:
                 return "None";
         }
