@@ -183,7 +183,7 @@ namespace Raven.Server.Smuggler.Documents
 #pragma warning restore 618
                     counts = ProcessLegacyCounters(result);
                     break;
-                case DatabaseItemType.CountersBatch:
+                case DatabaseItemType.CounterGroups:
                     counts = ProcessCounters(result);
                     break;
                 default:
@@ -239,7 +239,7 @@ namespace Raven.Server.Smuggler.Documents
 #pragma warning disable 618
                 case DatabaseItemType.Counters:
 #pragma warning restore 618
-                case DatabaseItemType.CountersBatch:
+                case DatabaseItemType.CounterGroups:
                     counts = result.Counters;
                     break;
                 case DatabaseItemType.LegacyDocumentDeletions:
@@ -605,7 +605,7 @@ namespace Raven.Server.Smuggler.Documents
                 if (_options.OperateOnTypes.HasFlag(DatabaseItemType.RevisionDocuments) == false)
                     item.Document.Flags = item.Document.Flags.Strip(DocumentFlags.HasRevisions);
 
-                if (_options.OperateOnTypes.HasFlag(DatabaseItemType.CountersBatch) == false)
+                if (_options.OperateOnTypes.HasFlag(DatabaseItemType.CounterGroups) == false)
                     item.Document.Flags = item.Document.Flags.Strip(DocumentFlags.HasCounters);
 
                 if (_options.OperateOnTypes.HasFlag(DatabaseItemType.Attachments) == false)

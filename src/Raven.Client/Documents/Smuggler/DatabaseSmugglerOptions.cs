@@ -9,7 +9,7 @@ namespace Raven.Client.Documents.Smuggler
                                                               DatabaseItemType.Conflicts |
                                                               DatabaseItemType.DatabaseRecord |
                                                               DatabaseItemType.Identities | DatabaseItemType.CompareExchange |
-                                                              DatabaseItemType.Attachments | DatabaseItemType.CountersBatch;
+                                                              DatabaseItemType.Attachments | DatabaseItemType.CounterGroups;
 
         public const DatabaseRecordItemType DefaultOperateOnDatabaseRecordTypes = DatabaseRecordItemType.Client |
                                                                                   DatabaseRecordItemType.ConflictSolverConfig |

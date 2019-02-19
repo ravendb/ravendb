@@ -170,7 +170,7 @@ namespace Voron.Recovery
                     WriteSmugglerHeader(documentsWriter, ServerVersion.Build, "Docs");
                     WriteSmugglerHeader(revisionsWriter, ServerVersion.Build, nameof(DatabaseItemType.RevisionDocuments));
                     WriteSmugglerHeader(conflictsWriter, ServerVersion.Build, nameof(DatabaseItemType.Conflicts));
-                    WriteSmugglerHeader(countersWriter, ServerVersion.Build, nameof(DatabaseItemType.CountersBatch));
+                    WriteSmugglerHeader(countersWriter, ServerVersion.Build, nameof(DatabaseItemType.CounterGroups));
 
                     while (mem < eof)
                     {

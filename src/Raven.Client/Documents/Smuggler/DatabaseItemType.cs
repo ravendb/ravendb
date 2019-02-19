@@ -24,7 +24,7 @@ namespace Raven.Client.Documents.Smuggler
         Counters = 1 << 13,
 
         Attachments = 1 << 14,
-        CountersBatch = 1 << 15
+        CounterGroups = 1 << 15
 
     }
 

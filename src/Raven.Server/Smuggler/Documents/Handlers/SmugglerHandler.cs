@@ -159,7 +159,7 @@ namespace Raven.Server.Smuggler.Documents.Handlers
             if (version.Minor < 2 && options.OperateOnTypes.HasFlag(DatabaseItemType.Counters))
 #pragma warning restore 618
             {
-                options.OperateOnTypes |= DatabaseItemType.CountersBatch;
+                options.OperateOnTypes |= DatabaseItemType.CounterGroups;
             }
 
             // only all 4.0 and 4.1 less or equal to 41006
