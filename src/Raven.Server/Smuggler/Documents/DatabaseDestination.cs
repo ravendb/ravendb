@@ -3,7 +3,6 @@ using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
-using System.Linq;
 using System.Runtime.CompilerServices;
 using System.Threading.Tasks;
 using Raven.Client.Documents.Attachments;
@@ -28,6 +27,7 @@ using Sparrow.Logging;
 using Voron;
 using Voron.Global;
 using Sparrow;
+using Sparrow.Json.Parsing;
 using Sparrow.Platform;
 using Sparrow.Utils;
 
@@ -168,7 +168,6 @@ namespace Raven.Server.Smuggler.Documents
                     else
                         progress.Attachments.Skipped = true;
                 }
-
 
                 _command.Add(item);
                 HandleBatchOfDocumentsIfNecessary();
@@ -615,7 +614,7 @@ namespace Raven.Server.Smuggler.Documents
                         if (_database.DocumentsStorage.RevisionsStorage.Configuration == null)
                             ThrowRevisionsDisabled();
 
-                        PutAttachments(context, document);
+                        PutAttachments(context, ref document);
                         if ((document.NonPersistentFlags.Contain(NonPersistentDocumentFlags.FromSmuggler)) &&
                             (_missingDocumentsForRevisions != null))
                         {
@@ -655,7 +654,7 @@ namespace Raven.Server.Smuggler.Documents
                         continue;
                     }
 
-                    PutAttachments(context, document);
+                    PutAttachments(context, ref document);
 
                     _database.DocumentsStorage.Put(context, id, null, document.Data, document.LastModified.Ticks, null, document.Flags, document.NonPersistentFlags);
 
@@ -670,14 +669,13 @@ namespace Raven.Server.Smuggler.Documents
             }
 
             [MethodImpl(MethodImplOptions.AggressiveInlining)]
-            private unsafe void PutAttachments(DocumentsOperationContext context, Document document)
+            private unsafe void PutAttachments(DocumentsOperationContext context, ref Document document)
             {
-                if ((document.Flags & DocumentFlags.HasAttachments) != DocumentFlags.HasAttachments)
-                    return;
-
                 if (document.Data.TryGet(Client.Constants.Documents.Metadata.Key, out BlittableJsonReaderObject metadata) == false ||
                     metadata.TryGet(Client.Constants.Documents.Metadata.Attachments, out BlittableJsonReaderArray attachments) == false)
                     return;
+
+                HashSet<LazyStringValue> attachmentsToRemove = null;
 
                 foreach (BlittableJsonReaderObject attachment in attachments)
                 {
@@ -690,6 +688,15 @@ namespace Raven.Server.Smuggler.Documents
                     var type = (document.Flags & DocumentFlags.Revision) == DocumentFlags.Revision ? AttachmentType.Revision : AttachmentType.Document;
 
                     var attachmentsStorage = _database.DocumentsStorage.AttachmentsStorage;
+                    if (attachmentsStorage.AttachmentExists(context, hash) == false)
+                    {
+                        if (attachmentsToRemove == null)
+                            attachmentsToRemove = new HashSet<LazyStringValue>();
+
+                        attachmentsToRemove.Add(hash);
+                        continue;
+                    }
+
                     using (DocumentIdWorker.GetSliceFromId(_context, document.Id, out Slice lowerDocumentId))
                     using (DocumentIdWorker.GetLowerIdSliceAndStorageKey(_context, name, out Slice lowerName, out Slice nameSlice))
                     using (DocumentIdWorker.GetLowerIdSliceAndStorageKey(_context, contentType, out Slice lowerContentType, out Slice contentTypeSlice))
@@ -701,6 +708,43 @@ namespace Raven.Server.Smuggler.Documents
                         attachmentsStorage.PutDirect(context, keySlice, nameSlice, contentTypeSlice, base64Hash);
                     }
                 }
+
+                if (attachmentsToRemove == null)
+                    return;
+
+                var attachmentsToSave = new DynamicJsonArray();
+
+                foreach (BlittableJsonReaderObject attachment in attachments)
+                {
+                    attachment.TryGet(nameof(AttachmentName.Hash), out LazyStringValue hash);
+
+                    if (attachmentsToRemove.Contains(hash))
+                        continue;
+                    
+                    attachmentsToSave.Add(attachment);
+                }
+
+                metadata.Modifications = new DynamicJsonValue(metadata);
+                document.Data.Modifications = new DynamicJsonValue(document.Data)
+                {
+                    [Client.Constants.Documents.Metadata.Key] = metadata
+                };
+
+                if (attachmentsToSave.Count == 0)
+                {
+                    document.Flags = document.Flags.Strip(DocumentFlags.HasAttachments);
+                    metadata.Modifications.Remove(Client.Constants.Documents.Metadata.Attachments);
+                }
+                else
+                {
+                    document.Flags |= DocumentFlags.HasAttachments;
+                    metadata.Modifications = new DynamicJsonValue(metadata)
+                    {
+                        [Client.Constants.Documents.Metadata.Attachments] = attachmentsToSave
+                    };
+                }
+
+                document.Data = context.ReadObject(document.Data, document.Id, BlittableJsonDocumentBuilder.UsageMode.ToDisk);
             }
 
             private static void ThrowRevisionsDisabled()
