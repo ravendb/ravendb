@@ -104,12 +104,12 @@ namespace SlowTests.Issues
                     Assert.NotNull(order);
                 }
 
-                // dispose the first topology nodes, forcing the requestExecutor to failover to the last one
+                // dispose all topology nodes
                 var requestExecutor = store.GetRequestExecutor();
-                for (var i = 0; i < requestExecutor.TopologyNodes.Count; i++)
+                foreach (var node in requestExecutor.TopologyNodes)
                 {
                     var serverToDispose = Servers.FirstOrDefault(
-                        srv => srv.ServerStore.NodeTag.Equals(requestExecutor.TopologyNodes[i].ClusterTag, StringComparison.OrdinalIgnoreCase));
+                        srv => srv.ServerStore.NodeTag.Equals(node.ClusterTag, StringComparison.OrdinalIgnoreCase));
                     Assert.NotNull(serverToDispose);
 
                     DisposeServerAndWaitForFinishOfDisposal(serverToDispose);
