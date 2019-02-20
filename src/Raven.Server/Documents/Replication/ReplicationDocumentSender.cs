@@ -84,7 +84,7 @@ namespace Raven.Server.Documents.Replication
                         return _documentRead;
                     case ReplicationBatchItem.ReplicationItemType.Attachment:
                         return _attachmentRead;
-                    case ReplicationBatchItem.ReplicationItemType.CounterBatch:
+                    case ReplicationBatchItem.ReplicationItemType.CounterGroup:
                         return _countersRead;
                     case ReplicationBatchItem.ReplicationItemType.DocumentTombstone:
                     case ReplicationBatchItem.ReplicationItemType.AttachmentTombstone:
@@ -164,7 +164,7 @@ namespace Raven.Server.Documents.Replication
                 mergedInEnumerator.AddEnumerator(ReplicationBatchItem.ReplicationItemType.Document, conflictsIt);
                 mergedInEnumerator.AddEnumerator(ReplicationBatchItem.ReplicationItemType.Document, versionsIt);
                 mergedInEnumerator.AddEnumerator(ReplicationBatchItem.ReplicationItemType.Attachment, attachmentsIt);
-                mergedInEnumerator.AddEnumerator(ReplicationBatchItem.ReplicationItemType.CounterBatch, countersIt);
+                mergedInEnumerator.AddEnumerator(ReplicationBatchItem.ReplicationItemType.CounterGroup, countersIt);
 
                 while (mergedInEnumerator.MoveNext())
                 {
@@ -354,11 +354,11 @@ namespace Raven.Server.Documents.Replication
 
         private void AssertNotCounterForLegacyReplication(ReplicationBatchItem item)
         {
-            if (item.Type == ReplicationBatchItem.ReplicationItemType.CounterBatch)
+            if (item.Type == ReplicationBatchItem.ReplicationItemType.CounterGroup)
             {
                 // the other side doesn't support counters, stopping replication
                 var message =
-                    $"{_parent.Node.FromString()} found an item of type `{nameof(ReplicationBatchItem.ReplicationItemType.CounterBatch)}` " +
+                    $"{_parent.Node.FromString()} found an item of type `{nameof(ReplicationBatchItem.ReplicationItemType.CounterGroup)}` " +
                     $"to replicate to {_parent.Destination.FromString()}, " +
                     "while we are in legacy mode (downgraded our replication version to match the destination). " +
                     $"Can't send Counters in legacy mode, destination {_parent.Destination.FromString()} ";
@@ -503,7 +503,7 @@ namespace Raven.Server.Documents.Replication
 
             if (item.Type == ReplicationBatchItem.ReplicationItemType.Attachment)
                 _replicaAttachmentStreams[item.Base64Hash] = item;
-            if (item.Type == ReplicationBatchItem.ReplicationItemType.CounterBatch)
+            if (item.Type == ReplicationBatchItem.ReplicationItemType.CounterGroup)
             {
                 _countersToReplicate.Add(item);
                 return true;

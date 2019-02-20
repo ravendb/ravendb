@@ -837,7 +837,7 @@ namespace Raven.Server.Documents.Replication
                         item.Collection = Encoding.UTF8.GetString(ReadExactly(collectionSize), collectionSize);
                     }
                 }
-                else if (item.Type == ReplicationBatchItem.ReplicationItemType.CounterBatch)
+                else if (item.Type == ReplicationBatchItem.ReplicationItemType.CounterGroup)
                 {
                     var keySize = *(int*)ReadExactly(sizeof(int));
                     item.Id = Encoding.UTF8.GetString(ReadExactly(keySize), keySize);
@@ -1243,7 +1243,7 @@ namespace Raven.Server.Documents.Replication
                             {
                                 database.DocumentsStorage.RevisionsStorage.DeleteRevision(context, item.Key, item.Collection, rcvdChangeVector, item.LastModifiedTicks);
                             }
-                            else if (item.Type == ReplicationBatchItem.ReplicationItemType.CounterBatch)
+                            else if (item.Type == ReplicationBatchItem.ReplicationItemType.CounterGroup)
                             {
                                 database.DocumentsStorage.CountersStorage.PutCounters(context, item.Id, item.Collection, item.ChangeVector, item.CounterValues);
                             }
