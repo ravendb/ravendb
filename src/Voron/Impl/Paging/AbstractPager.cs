@@ -558,7 +558,7 @@ namespace Voron.Impl.Paging
                 {
                     command.VirtualAddress = virtualAddress;
                     command.NumberOfBytes = new IntPtr(bytes);
-                    prefetcher.CommandQueue.TryPush(ref command);
+                    prefetcher.CommandQueue.TryAdd(command, 0);
                 }
             }
             while (pagesToPrefetch.MoveNext());
@@ -638,7 +638,7 @@ namespace Voron.Impl.Paging
 
                 command.VirtualAddress = baseAddress;
                 command.NumberOfBytes = new IntPtr(size);
-                prefetcher.CommandQueue.TryPush(ref command);
+                prefetcher.CommandQueue.TryAdd(command, 0);
 
                 size = 0;
                 baseAddress = null;

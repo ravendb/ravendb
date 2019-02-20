@@ -33,7 +33,7 @@ namespace Voron.Platform.Posix
                 if (this._pagerState.ShouldPrefetchSegment(pageNumber, out void* virtualAddress, out long bytes))
                 {
                     var command = new PalDefinitions.PrefetchRanges(virtualAddress, bytes);
-                    GlobalPrefetchingBehavior.GlobalPrefetcher.Value.CommandQueue.TryPush(ref command);
+                    GlobalPrefetchingBehavior.GlobalPrefetcher.Value.CommandQueue.TryAdd(command, 0);
                 }
             }
 
