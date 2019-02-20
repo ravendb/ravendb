@@ -5,6 +5,7 @@ using System.Linq;
 using System.Runtime.CompilerServices;
 using System.Text;
 using Lucene.Net.Support;
+using Raven.Server.Documents;
 using Raven.Server.Documents.Replication;
 using Sparrow;
 using Sparrow.Utils;
@@ -112,6 +113,16 @@ namespace Raven.Server.Utils
                 num += s[start + i] - '0';
             }
             return num;
+        }
+
+        public static (bool IsValid, string ChangeVector) TryUpdateChangeVector(DocumentDatabase database, string oldChangeVector, long? etag = null)
+        {
+            if (etag == null)
+            {
+                etag = database.DocumentsStorage.GenerateNextEtag();
+            }
+
+            return TryUpdateChangeVector(database.ServerStore.NodeTag, database.DbBase64Id, etag.Value, oldChangeVector);
         }
 
         public static (bool IsValid, string ChangeVector) TryUpdateChangeVector(string nodeTag, string dbIdInBase64, long etag, string oldChangeVector)
@@ -227,6 +238,11 @@ namespace Raven.Server.Utils
             }
 
             return _mergeVectorBuffer.SerializeVector();
+        }
+
+        public static string NewChangeVector(DocumentDatabase database, long etag)
+        {
+            return NewChangeVector(database.ServerStore.NodeTag, etag, database.DbBase64Id);
         }
 
         public static string NewChangeVector(string nodeTag, long etag, string dbIdInBase64)

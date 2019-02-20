@@ -343,6 +343,13 @@ namespace Raven.Server.Documents
             return Encodings.Utf8.GetString(val.Reader.Base, val.Reader.Length);
         }
 
+        public string CreateNextDatabaseChangeVector(DocumentsOperationContext context, string changeVector)
+        {
+            var databaseChangeVector = context.LastDatabaseChangeVector ?? GetDatabaseChangeVector(context);
+            changeVector = ChangeVectorUtils.MergeVectors(databaseChangeVector, changeVector);
+            return ChangeVectorUtils.TryUpdateChangeVector(DocumentDatabase, changeVector).ChangeVector;
+        }
+
         public string GetNewChangeVector(DocumentsOperationContext context, long newEtag)
         {
             var changeVector = context.LastDatabaseChangeVector ??
@@ -350,11 +357,11 @@ namespace Raven.Server.Documents
 
             if (string.IsNullOrEmpty(changeVector))
             {
-                context.LastDatabaseChangeVector = ChangeVectorUtils.NewChangeVector(DocumentDatabase.ServerStore.NodeTag, newEtag, DocumentDatabase.DbBase64Id);
+                context.LastDatabaseChangeVector = ChangeVectorUtils.NewChangeVector(DocumentDatabase, newEtag);
                 return context.LastDatabaseChangeVector;
             }
 
-            var result = ChangeVectorUtils.TryUpdateChangeVector(DocumentDatabase.ServerStore.NodeTag, Environment.Base64Id, newEtag, changeVector);
+            var result = ChangeVectorUtils.TryUpdateChangeVector(DocumentDatabase, changeVector, newEtag);
             if (result.IsValid)
             {
                 context.LastDatabaseChangeVector = result.ChangeVector;
