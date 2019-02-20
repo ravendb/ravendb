@@ -212,17 +212,21 @@ namespace Sparrow.LowMemory
             _simulatedLowMemory.Reset();
             LowMemoryState = !LowMemoryState;
 
-            var memInfoForLog = _lowMemoryMonitor.GetMemoryInfoOnce();
-            var availableMemForLog = memInfoForLog.AvailableWithoutTotalCleanMemory.GetValue(SizeUnit.Bytes);
+            if (_lowMemoryMonitor != null)
+            {
+                var memInfoForLog = _lowMemoryMonitor.GetMemoryInfoOnce();
+                var availableMemForLog = memInfoForLog.AvailableWithoutTotalCleanMemory.GetValue(SizeUnit.Bytes);
 
-            AddLowMemEvent(LowMemoryState ? LowMemReason.LowMemStateSimulation : LowMemReason.BackToNormalSimulation,
-                availableMemForLog,
-                -2,
-                memInfoForLog.TotalPhysicalMemory.GetValue(SizeUnit.Bytes),
-                memInfoForLog.CurrentCommitCharge.GetValue(SizeUnit.Bytes));
+                AddLowMemEvent(LowMemoryState ? LowMemReason.LowMemStateSimulation : LowMemReason.BackToNormalSimulation,
+                    availableMemForLog,
+                    -2,
+                    memInfoForLog.TotalPhysicalMemory.GetValue(SizeUnit.Bytes),
+                    memInfoForLog.CurrentCommitCharge.GetValue(SizeUnit.Bytes));
+            }
 
             if (_logger.IsInfoEnabled)
                 _logger.Info("Simulating : " + (LowMemoryState ? "Low memory event" : "Back to normal memory usage"));
+
             RunLowMemoryHandlers(LowMemoryState);
         }
 
