@@ -146,7 +146,7 @@ namespace Voron.Platform.Win32
                 if (this._pagerState.ShouldPrefetchSegment(pageNumber, out void* virtualAddress, out long bytes))
                 {
                     var command = new PalDefinitions.PrefetchRanges(virtualAddress, bytes);
-                    GlobalPrefetchingBehavior.GlobalPrefetcher.Value.CommandQueue.TryPush(ref command);
+                    GlobalPrefetchingBehavior.GlobalPrefetcher.Value.CommandQueue.TryAdd(command, 0);
                 }
             }
            
