@@ -225,7 +225,7 @@ namespace Raven.Server.Documents
             var data = GetCounterValuesData(context, ref tvh.Reader);
             return new ReplicationBatchItem
             {
-                Type = ReplicationItemType.CounterBatch,
+                Type = ReplicationItemType.CounterGroup,
 
                 Id = TableValueToString(context, (int)CountersTable.CounterKey, ref tvh.Reader),
                 ChangeVector = TableValueToChangeVector(context, (int)CountersTable.ChangeVector, ref tvh.Reader),
