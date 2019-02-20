@@ -612,6 +612,9 @@ namespace Raven.Server.Documents.Replication
                     // down
                 }
 
+                _replicatedItems.Clear();
+                _replicatedAttachmentStreams.Clear();
+
                 incomingReplicationAllocator.Dispose();
             }
         }
@@ -752,8 +755,6 @@ namespace Raven.Server.Documents.Replication
             var documentRead = stats.For(ReplicationOperation.Incoming.DocumentRead, start: false);
             var attachmentRead = stats.For(ReplicationOperation.Incoming.AttachmentRead, start: false);
             var tombstoneRead = stats.For(ReplicationOperation.Incoming.TombstoneRead, start: false);
-
-            _replicatedItems.Clear();
 
             for (int x = 0; x < replicatedDocs; x++)
             {
