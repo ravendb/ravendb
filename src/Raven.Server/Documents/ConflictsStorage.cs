@@ -540,11 +540,12 @@ namespace Raven.Server.Documents
             {
                 documentChangeVector,
                 context.LastDatabaseChangeVector ?? GetDatabaseChangeVector(context),
-                ChangeVectorUtils.NewChangeVector(_documentDatabase.ServerStore.NodeTag, newEtag, _documentsStorage.Environment.Base64Id)
+                ChangeVectorUtils.NewChangeVector(_documentDatabase, newEtag)
             };
             changeVectorList.AddRange(result.ChangeVectors);
+            var merged = ChangeVectorUtils.MergeVectors(changeVectorList);
 
-            return (ChangeVectorUtils.MergeVectors(changeVectorList), result.NonPersistentFlags);
+            return (merged, result.NonPersistentFlags);
         }
 
         public void AddConflict(
