@@ -93,9 +93,9 @@ namespace Voron.Impl.Paging
             Inner.DiscardWholeFile();
         }
 
-        protected internal override void PrefetchRanges(PalDefinitions.PrefetchRanges* list, int count)
+        protected override bool CanPrefetchQuery()
         {
-            Inner.PrefetchRanges(list, count);
+            return Inner.CanPrefetch.Value;
         }
 
         public override int CopyPage(I4KbBatchWrites destwI4KbBatchWrites, long p, PagerState pagerState)

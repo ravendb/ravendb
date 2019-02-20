@@ -164,10 +164,7 @@ namespace Voron.Data.BTrees
 
         private void MaybePrefetchPagesReferencedBy(TreePage page)
         {
-            if (PlatformDetails.CanPrefetch)
-            {
-                _tx.DataPager.MaybePrefetchMemory(new TreePage.PagesReferencedEnumerator(page));
-            }
+            _tx.DataPager.MaybePrefetchMemory(new TreePage.PagesReferencedEnumerator(page));
         }
 
         public bool MoveNext()

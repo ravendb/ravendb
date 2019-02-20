@@ -49,6 +49,11 @@ namespace Voron.Impl.Paging
             return AllocatedInBytesFunc?.Invoke() ?? NumberOfAllocatedPages * Constants.Storage.PageSize;
         }
 
+        protected AbstractPager()
+        {
+            CanPrefetch = new Lazy<bool>(CanPrefetchQuery);
+        }
+
         public void SetPagerState(PagerState newState)
         {
             if (DisposeOnceRunner.Disposed)
@@ -200,7 +205,7 @@ namespace Voron.Impl.Paging
 
         public VoronPathSetting FileName { get; protected set; }
 
-        protected AbstractPager(StorageEnvironmentOptions options, bool canPrefetchAhead, bool usePageProtection = false)
+        protected AbstractPager(StorageEnvironmentOptions options, bool canPrefetchAhead, bool usePageProtection = false) : this()
         {
             DisposeOnceRunner = new DisposeOnce<SingleAttempt>(() =>
             {
@@ -483,7 +488,15 @@ namespace Voron.Impl.Paging
             return true;
         }
 
-        protected internal abstract unsafe void PrefetchRanges(PalDefinitions.PrefetchRanges* list, int count);
+        public readonly Lazy<bool> CanPrefetch;
+
+        protected virtual bool CanPrefetchQuery()
+        {
+            if (PlatformDetails.CanPrefetch == false || _canPrefetchAhead == false)
+                return false; // not supported
+
+            return true;
+        }
 
         private struct PageIterator : IEnumerator<long>
         {
@@ -529,44 +542,26 @@ namespace Voron.Impl.Paging
 
         public void MaybePrefetchMemory<T>(T pagesToPrefetch) where T : struct, IEnumerator<long>
         {
-            if (PlatformDetails.CanPrefetch == false || _canPrefetchAhead == false)
-                return; // not supported
+            if (!this.CanPrefetch.Value)
+                return;
 
             if (pagesToPrefetch.MoveNext() == false)
                 return;
 
-            // the CLR has to zero the stack space, and WIN32_MEMORY_RANGE_ENTRY is 16 bytes on 64 bits
-            // therefor, we want to avoid having too large a value here. We are already zeroing 256 bytes
-            // and with the default behavior can get 16MB prefetched per sys call, so that is quite enough.
-            // We expect that we'll only rarely need to do more than 16 at a go, anyway
-            const int StackSpace = 16;
+            var prefetcher = GlobalPrefetchingBehavior.GlobalPrefetcher.Value;
 
-            int prefetchIdx = 0;
-            var toPrefetch = stackalloc PalDefinitions.PrefetchRanges[StackSpace];
+            var command = default(PalDefinitions.PrefetchRanges);
             do
             {
                 long pageNumber = pagesToPrefetch.Current;
                 if (this._pagerState.ShouldPrefetchSegment(pageNumber, out void* virtualAddress, out long bytes))
                 {
-                    // Prepare the segment information. 
-                    toPrefetch[prefetchIdx].NumberOfBytes = (IntPtr)bytes; // _prefetchSegmentSize;
-                    toPrefetch[prefetchIdx].VirtualAddress = virtualAddress; // baseAddress + segmentNumber * _prefetchSegmentSize;
-                    prefetchIdx++;
-
-                    if (prefetchIdx >= StackSpace)
-                    {
-                        // We dont have enough space, so we send the batch to the kernel
-                        PrefetchRanges(toPrefetch, StackSpace);
-                        prefetchIdx = 0;
-                    }
+                    command.VirtualAddress = virtualAddress;
+                    command.NumberOfBytes = new IntPtr(bytes);
+                    prefetcher.CommandQueue.TryPush(ref command);
                 }
             }
             while (pagesToPrefetch.MoveNext());
-
-            if (prefetchIdx != 0)
-            {
-                PrefetchRanges(toPrefetch, prefetchIdx);
-            }
 
             this._pagerState.CheckResetPrefetchTable();
         }
@@ -619,12 +614,35 @@ namespace Voron.Impl.Paging
 
             var pagerState = PagerState;
             Debug.Assert(pagerState.AllocationInfos.Length == 1);
-            // we will change the array into a single value in next version
-            var allocationInfo = pagerState.AllocationInfos.Single();
 
-            var rc = Pal.rvn_prefetch_virtual_memory(allocationInfo.BaseAddress, allocationInfo.Size, out var errorCode);
-            if(rc != PalFlags.FailCodes.Success)
-                Log.Info(PalHelper.GetNativeErrorString(errorCode, $"Tried to prefetch whole file. Result: {rc} FileName: {FileName.FullPath} Size: {allocationInfo.Size}", out _));
+            var prefetcher = GlobalPrefetchingBehavior.GlobalPrefetcher.Value;
+            var command = default(PalDefinitions.PrefetchRanges);
+
+            long size = 0;
+            byte* baseAddress = null;
+
+            // we will change the array into a single value in next version
+            for (int i = 0; i < pagerState.AllocationInfos.Length; i++)
+            {
+                var allocInfo = pagerState.AllocationInfos[i];
+                size += allocInfo.Size;
+
+                if (baseAddress == null)
+                    baseAddress = allocInfo.BaseAddress;
+
+                if (i != pagerState.AllocationInfos.Length - 1 &&
+                    pagerState.AllocationInfos[i + 1].BaseAddress == allocInfo.BaseAddress + allocInfo.Size)
+                {
+                    continue; // if adjacent ranges make one syscall
+                }
+
+                command.VirtualAddress = baseAddress;
+                command.NumberOfBytes = new IntPtr(size);
+                prefetcher.CommandQueue.TryPush(ref command);
+
+                size = 0;
+                baseAddress = null;
+            }
         }
 
 

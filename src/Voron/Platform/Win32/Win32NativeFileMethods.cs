@@ -418,9 +418,6 @@ namespace Voron.Platform.Win32
         }
 
         [DllImport("kernel32.dll", SetLastError = true)]
-        public static extern IntPtr GetCurrentProcess();
-
-        [DllImport("kernel32.dll", SetLastError = true)]
         public static extern uint SleepEx(uint dwMilliseconds, bool bAlertable);
 
         [DllImport("kernel32.dll", SetLastError = true)]
@@ -530,10 +527,5 @@ namespace Voron.Platform.Win32
         [DllImport("kernel32.dll", SetLastError = true)]
         [return: MarshalAs(UnmanagedType.Bool)]
         public static extern bool CloseHandle(IntPtr hObject);
-
-        [DllImport("msvcrt.dll", EntryPoint = "memset", CallingConvention = CallingConvention.Cdecl,
-             SetLastError = false)]
-        [SecurityCritical]
-        private static extern IntPtr memset(byte* dest, int c, long count);
     }
 }

@@ -59,6 +59,11 @@ namespace Voron.Platform.Posix
             SetPagerState(CreatePagerState());
         }
 
+        protected override bool CanPrefetchQuery()
+        {
+            return false;
+        }
+
         private long NearestSizeToPageSize(long size)
         {
             if (size == 0)

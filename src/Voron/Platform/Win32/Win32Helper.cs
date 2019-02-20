@@ -16,8 +16,6 @@ namespace Voron.Platform.Win32
 {
     public class Win32Helper
     {
-        public static IntPtr CurrentProcess = Win32NativeMethods.GetCurrentProcess();
-
         public static unsafe bool TryReadFileHeader(FileHeader* header, VoronPathSetting path)
         {
             using (var fs = SafeFileStream.Create(path.FullPath, FileMode.Open, FileAccess.ReadWrite, FileShare.Read, 4096, FileOptions.None))

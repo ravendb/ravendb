@@ -16,7 +16,6 @@ namespace Sparrow
         [SecurityCritical]
         public static extern int Compare_windows(byte* b1, byte* b2, long count);
 
-        
         private const int CompareInlineVsCallThreshold = 256;
 
         public static int Compare(byte* p1, byte* p2, int size)
