@@ -4,7 +4,6 @@ using System.Diagnostics;
 using System.Runtime.CompilerServices;
 using System.Threading;
 using Sparrow.Platform;
-using Sparrow.Platform.Win32;
 using Sparrow.Server.LowMemory;
 using Sparrow.Server.Platform.Posix;
 using Sparrow.Server.Platform.Win32;
