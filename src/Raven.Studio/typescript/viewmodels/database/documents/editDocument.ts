@@ -63,7 +63,10 @@ class editDocument extends viewModelBase {
     document = ko.observable<document>();
     documentText = ko.observable("");
     documentTextRight = ko.observable("");
+    
     documentTextStash = ko.observable<string>("");
+    stashedDocumentIsDirty = ko.observable<boolean>(false);
+    
     metadata: KnockoutComputed<documentMetadata>;
     
     changeVector: KnockoutComputed<changeVectorItem[]>;
@@ -850,6 +853,8 @@ class editDocument extends viewModelBase {
                 if (!wasDirty) {
                     this.dirtyFlag().reset();
                 }
+                
+                this.stashedDocumentIsDirty(wasDirty);
 
                 this.renderDifferences();
             });
@@ -1005,6 +1010,9 @@ class editDocument extends viewModelBase {
     exitCompareMode() {
         this.documentText(this.documentTextStash());
         this.documentTextStash("");
+        if (!this.stashedDocumentIsDirty()) {
+            this.dirtyFlag().reset();
+        }
         
         this.documentTextRight("");
         this.revisionsToCompare([]);
