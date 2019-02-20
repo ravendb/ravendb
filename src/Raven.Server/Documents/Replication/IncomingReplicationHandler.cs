@@ -527,6 +527,7 @@ namespace Raven.Server.Documents.Replication
             var incomingReplicationAllocator = new IncomingReplicationAllocator(documentsContext, _database);
             var sw = Stopwatch.StartNew();
             Task task = null;
+            MergedDocumentReplicationCommand replicationCommand = null;
 
             try
             {
@@ -554,7 +555,7 @@ namespace Raven.Server.Documents.Replication
 
                 using (stats.For(ReplicationOperation.Incoming.Storage))
                 {
-                    var replicationCommand = new MergedDocumentReplicationCommand(this, lastEtag);
+                    replicationCommand = new MergedDocumentReplicationCommand(this, lastEtag);
                     task = _database.TxMerger.Enqueue(replicationCommand);
 
                     using (var writer = new BlittableJsonTextWriter(documentsContext, _connectionOptions.Stream))
@@ -612,6 +613,7 @@ namespace Raven.Server.Documents.Replication
                     // down
                 }
 
+                replicationCommand?.Dispose();
                 _replicatedItems.Clear();
                 _replicatedAttachmentStreams.Clear();
 
