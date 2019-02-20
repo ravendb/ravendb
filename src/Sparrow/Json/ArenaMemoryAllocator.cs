@@ -202,7 +202,7 @@ namespace Sparrow.Json
 
         private int GetPreferredSize(int requestedSize)
         {
-            if (AvoidOverAllocation)
+            if (AvoidOverAllocation || PlatformDetails.Is32Bits)
                 return ApplyLimit(Bits.NextPowerOf2(requestedSize));
             
             // we need the next allocation to cover at least the next expansion (also doubling)
