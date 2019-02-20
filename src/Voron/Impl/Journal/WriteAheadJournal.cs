@@ -19,6 +19,7 @@ using System.Threading.Tasks;
 using Sparrow.Compression;
 using Sparrow.Logging;
 using Sparrow.LowMemory;
+using Sparrow.Platform;
 using Sparrow.Server;
 using Sparrow.Server.Exceptions;
 using Sparrow.Server.Meters;
@@ -1358,10 +1359,25 @@ namespace Voron.Impl.Journal
             lock (_writeLock)
             {
                 var sp = Stopwatch.StartNew();
-                var journalEntry = PrepareToWriteToJournal(tx);
+
+                IPagerLevelTransactionState tempEncCompressionPagerTxState = null;
+
+                if (_env.Options.EncryptionEnabled && PlatformDetails.Is32Bits)
+                {
+                    // RavenDB-12854: in 32 bits locking/unlocking the memory is done separately for each mapping
+                    // we use temp tx for dealing with compression buffers pager to avoid locking (zeroing) it's content during tx dispose
+                    // because we might have another transaction already using it
+
+                    tempEncCompressionPagerTxState = new TempPagerTransaction(true);
+                }
+
+                using (tempEncCompressionPagerTxState)
+                {
+                    var journalEntry = PrepareToWriteToJournal(tx, tempEncCompressionPagerTxState);
                 if (_logger.IsInfoEnabled)
                 {
-                    _logger.Info($"Preparing to write tx {tx.Id} to journal with {journalEntry.NumberOfUncompressedPages:#,#} pages ({(journalEntry.NumberOfUncompressedPages * Constants.Storage.PageSize) / Constants.Size.Kilobyte:#,#} kb) in {sp.Elapsed} with {Math.Round(journalEntry.NumberOf4Kbs * 4d, 1):#,#.#;;0} kb compressed.");
+                        _logger.Info(
+                            $"Preparing to write tx {tx.Id} to journal with {journalEntry.NumberOfUncompressedPages:#,#} pages ({(journalEntry.NumberOfUncompressedPages * Constants.Storage.PageSize) / Constants.Size.Kilobyte:#,#} kb) in {sp.Elapsed} with {Math.Round(journalEntry.NumberOf4Kbs * 4d, 1):#,#.#;;0} kb compressed.");
                 }
 
                 if (tx.IsLazyTransaction && _lazyTransactionBuffer == null)
@@ -1394,14 +1410,15 @@ namespace Voron.Impl.Journal
                     CurrentFile = null;
                 }
 
-                ZeroCompressionBufferIfNeeded(tx);
+                    ZeroCompressionBufferIfNeeded(tempEncCompressionPagerTxState ?? tx);
                 ReduceSizeOfCompressionBufferIfNeeded();
 
                 return journalEntry;
             }
         }
+        }
 
-        private CompressedPagesResult PrepareToWriteToJournal(LowLevelTransaction tx)
+        private CompressedPagesResult PrepareToWriteToJournal(LowLevelTransaction tx, IPagerLevelTransactionState tempEncCompressionPagerTxState)
         {
             var txPages = tx.GetTransactionPages();
             var numberOfPages = txPages.Count;
@@ -1435,10 +1452,12 @@ namespace Voron.Impl.Journal
                 throw;
             }
 
-            tx.EnsurePagerStateReference(pagerState);
+            var compressionPagerTxState = tempEncCompressionPagerTxState ?? tx;
 
-            _compressionPager.EnsureMapped(tx, 0, pagesRequired);
-            var txHeaderPtr = _compressionPager.AcquirePagePointer(tx, 0);
+            compressionPagerTxState.EnsurePagerStateReference(pagerState);
+
+            _compressionPager.EnsureMapped(compressionPagerTxState, 0, pagesRequired);
+            var txHeaderPtr = _compressionPager.AcquirePagePointer(compressionPagerTxState, 0);
             var txPageInfoPtr = txHeaderPtr + sizeof(TransactionHeader);
             var pagesInfo = (TransactionHeaderPageInfo*)txPageInfoPtr;
 
@@ -1534,10 +1553,10 @@ namespace Voron.Impl.Journal
                     throw;
                 }
 
-                tx.EnsurePagerStateReference(pagerState);
-                _compressionPager.EnsureMapped(tx, pagesWritten, outputBufferInPages);
+                compressionPagerTxState.EnsurePagerStateReference(pagerState);
+                _compressionPager.EnsureMapped(compressionPagerTxState, pagesWritten, outputBufferInPages);
 
-                txHeaderPtr = _compressionPager.AcquirePagePointer(tx, pagesWritten);
+                txHeaderPtr = _compressionPager.AcquirePagePointer(compressionPagerTxState, pagesWritten);
                 var compressionBuffer = txHeaderPtr + sizeof(TransactionHeader);
 
                 var compressionDuration = Stopwatch.StartNew();

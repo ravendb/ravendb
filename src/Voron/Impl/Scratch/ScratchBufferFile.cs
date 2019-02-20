@@ -1,4 +1,4 @@
-// -----------------------------------------------------------------------
+﻿// -----------------------------------------------------------------------
 //  <copyright file="ScratchBufferFile.cs" company="Hibernating Rhinos LTD">
 //      Copyright (c) Hibernating Rhinos LTD. All rights reserved.
 //  </copyright>
@@ -50,13 +50,20 @@ namespace Voron.Impl.Scratch
             {
                 _scratchPager.PagerState.DiscardOnTxCopy = true;
                 _scratchPager.Dispose();
+                ClearDictionaries();
             });
+        }
+
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        private void ClearDictionaries()
+        {
+            _allocatedPages.Clear();
+            _freePagesBySizeAvailableImmediately.Clear();
+            _freePagesBySize.Clear();
         }
 
         public void Reset()
         {
-            _allocatedPages.Clear();
-
 #if VALIDATE
             foreach (var free in _freePagesBySizeAvailableImmediately)
             {
@@ -70,7 +77,6 @@ namespace Voron.Impl.Scratch
                 }
             }            
 #endif
-            _freePagesBySizeAvailableImmediately.Clear();
             _scratchPager.DiscardWholeFile();
             
 
@@ -87,7 +93,7 @@ namespace Voron.Impl.Scratch
                 }
             }
 #endif
-            _freePagesBySize.Clear();
+            ClearDictionaries();
             _txIdAfterWhichLatestFreePagesBecomeAvailable = -1;
             _lastUsedPage = 0;
             _allocatedPagesCount = 0;
