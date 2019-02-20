@@ -150,11 +150,11 @@ namespace Voron.Impl.Paging
             }
         }
 
-        protected internal override void PrefetchRanges(PrefetchRanges* list, int count)
-        {
-            rvn_prefetch_ranges(list, count, out _);
-            // we explicitly ignore the return code here, this is optimization only
-        }
+        //protected internal override void PrefetchRanges(PrefetchRanges* list, int count)
+        //{
+        //    rvn_prefetch_ranges(list, count, out _);
+        //    // we explicitly ignore the return code here, this is optimization only
+        //}
 
 
         private long NearestSizeToPageSize(long size)

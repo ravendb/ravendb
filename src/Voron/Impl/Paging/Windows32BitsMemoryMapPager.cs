@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.ComponentModel;
@@ -629,9 +629,10 @@ namespace Voron.Impl.Paging
             return _fileInfo.Name;
         }
 
-        protected internal override void PrefetchRanges(PalDefinitions.PrefetchRanges* list, int count)
+        protected override bool CanPrefetchQuery()
         {
-            // explicitly do nothing here
+            // explicitly disable prefetch
+            return false;
         }
 
         protected override void DisposeInternal()

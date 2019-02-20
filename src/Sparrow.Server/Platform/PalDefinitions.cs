@@ -20,6 +20,18 @@ namespace Sparrow.Server.Platform
         [StructLayout(LayoutKind.Sequential, Pack = 1)]
         public struct PrefetchRanges
         {
+            public PrefetchRanges(void* address, int bytes)
+            {
+                this.VirtualAddress = address;
+                this.NumberOfBytes = new IntPtr(bytes);
+            }
+
+            public PrefetchRanges(void* address, long bytes)
+            {
+                this.VirtualAddress = address;
+                this.NumberOfBytes = new IntPtr(bytes);
+            }
+
             public void* VirtualAddress;
             public IntPtr NumberOfBytes;
         }

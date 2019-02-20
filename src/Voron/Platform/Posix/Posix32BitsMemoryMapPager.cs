@@ -505,9 +505,10 @@ namespace Voron.Platform.Posix
             return FileName.FullPath;
         }
 
-        protected internal override void PrefetchRanges(PalDefinitions.PrefetchRanges* list, int count)
+        protected override bool CanPrefetchQuery()
         {
-            // we never want to do this here
+            // explicitly disable prefetch
+            return false;
         }
     }
 }

@@ -141,9 +141,15 @@ namespace Voron.Platform.Win32
             // We need to decide what pager we are going to use right now or risk inconsistencies when performing prefetches from disk.
             var state = pagerState ?? _pagerState;
 
-            if (Pal.SysInfo.CanPrefetch && this._pagerState.ShouldPrefetchSegment(pageNumber, out void* virtualAddress, out long bytes))
-                Pal.rvn_prefetch_virtual_memory(virtualAddress, bytes, out _);
-
+            if (this.CanPrefetch.Value)
+            {
+                if (this._pagerState.ShouldPrefetchSegment(pageNumber, out void* virtualAddress, out long bytes))
+                {
+                    var command = new PalDefinitions.PrefetchRanges(virtualAddress, bytes);
+                    GlobalPrefetchingBehavior.GlobalPrefetcher.Value.CommandQueue.TryPush(ref command);
+                }
+            }
+           
             return base.AcquirePagePointer(tx, pageNumber, state);
         }
 
@@ -341,12 +347,6 @@ namespace Voron.Platform.Win32
         public override int CopyPage(I4KbBatchWrites destwI4KbBatchWrites, long p, PagerState pagerState)
         {
             return CopyPageImpl(destwI4KbBatchWrites, p, pagerState);
-        }
-
-        protected internal override void PrefetchRanges(PalDefinitions.PrefetchRanges* list, int count)
-        {
-            Pal.rvn_prefetch_ranges(list, count, out _);
-            // we explicitly ignore the return code here, this is optimization only
         }
 
         internal override void ProtectPageRange(byte* start, ulong size, bool force = false)
