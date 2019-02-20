@@ -144,7 +144,7 @@ class hitTest {
 class legend {
     imageStr = ko.observable<string>();
     maxSize = ko.observable<number>(0);
-    type: Sparrow.IoMetrics.MeterType;
+    type: Sparrow.Server.Meters.IoMetrics.MeterType;
 
     sizeScale: d3.scale.Linear<number, number>;  // domain: legend pixels, range: item size
     colorScale: d3.scale.Linear<string, string>; // domain: item size,     range: item color    
@@ -156,7 +156,7 @@ class legend {
     static readonly imageHeight = 20;
     static readonly legendArrowBorderSize = 6;
 
-    constructor(lowSizeColor: string, highSizeColor: string, type: Sparrow.IoMetrics.MeterType) {
+    constructor(lowSizeColor: string, highSizeColor: string, type: Sparrow.Server.Meters.IoMetrics.MeterType) {
         this.lowSizeColor = lowSizeColor;
         this.highSizeColor = highSizeColor;
         this.type = type;
@@ -227,7 +227,7 @@ class ioStats extends viewModelBase {
 
     private static readonly indexesString = "Indexes";
 
-    private static readonly meterTypes: Array<Sparrow.IoMetrics.MeterType> = [ "JournalWrite", "DataFlush", "DataSync", "Compression" ];
+    private static readonly meterTypes: Array<Sparrow.Server.Meters.IoMetrics.MeterType> = [ "JournalWrite", "DataFlush", "DataSync", "Compression" ];
 
     /* private observables */
 
@@ -246,9 +246,9 @@ class ioStats extends viewModelBase {
     private allIndexesAreFiltered = ko.observable<boolean>(false);
     private indexesVisible: KnockoutComputed<boolean>; 
 
-    private legends = new Map<Sparrow.IoMetrics.MeterType, KnockoutObservable<legend>>();
-    private itemSizePositions = new Map<Sparrow.IoMetrics.MeterType, KnockoutObservable<string>>();
-    private itemHovered = new Map<Sparrow.IoMetrics.MeterType, KnockoutObservable<boolean>>();
+    private legends = new Map<Sparrow.Server.Meters.IoMetrics.MeterType, KnockoutObservable<legend>>();
+    private itemSizePositions = new Map<Sparrow.Server.Meters.IoMetrics.MeterType, KnockoutObservable<string>>();
+    private itemHovered = new Map<Sparrow.Server.Meters.IoMetrics.MeterType, KnockoutObservable<boolean>>();
 
     /* private */
 
@@ -297,7 +297,7 @@ class ioStats extends viewModelBase {
         text: undefined as string
     };
 
-    private eventsColors: { [typeName in Sparrow.IoMetrics.MeterType]: { low: string; high: string } } = {
+    private eventsColors: { [typeName in Sparrow.Server.Meters.IoMetrics.MeterType]: { low: string; high: string } } = {
         "Compression": { 
             low: undefined as string, high: undefined as string
         },
@@ -1030,7 +1030,7 @@ class ioStats extends viewModelBase {
         // Draw track name
         this.drawTrackName(context, trackName, yStart);
 
-        const yStartPerTypeCache = new Map<Sparrow.IoMetrics.MeterType, number>();
+        const yStartPerTypeCache = new Map<Sparrow.Server.Meters.IoMetrics.MeterType, number>();
         yStartPerTypeCache.set("JournalWrite", yStart + ioStats.closedTrackHeight + ioStats.itemMargin);
         yStartPerTypeCache.set("Compression", yStart + ioStats.closedTrackHeight + ioStats.itemMargin);
         yStartPerTypeCache.set("DataFlush", yStart + ioStats.closedTrackHeight + ioStats.itemMargin * 2 + ioStats.itemHeight);
@@ -1105,7 +1105,7 @@ class ioStats extends viewModelBase {
         // Draw track name
         this.drawTrackName(context, ioStats.indexesString, yStart);
 
-        const yStartPerTypeCache = new Map<Sparrow.IoMetrics.MeterType, number>();
+        const yStartPerTypeCache = new Map<Sparrow.Server.Meters.IoMetrics.MeterType, number>();
         yStartPerTypeCache.set("JournalWrite", yStart + ioStats.closedTrackHeight + ioStats.itemMargin);
         yStartPerTypeCache.set("Compression", yStart + ioStats.closedTrackHeight + ioStats.itemMargin);
         yStartPerTypeCache.set("DataFlush", yStart + ioStats.closedTrackHeight + ioStats.itemMargin * 2 + ioStats.itemHeight);
@@ -1168,7 +1168,7 @@ class ioStats extends viewModelBase {
         if (!this.data) {
             return;
         }
-        const indexesItemsStartEnds = new Map<Sparrow.IoMetrics.MeterType, Array<[Date, Date]>>();
+        const indexesItemsStartEnds = new Map<Sparrow.Server.Meters.IoMetrics.MeterType, Array<[Date, Date]>>();
         ioStats.meterTypes.forEach(type => indexesItemsStartEnds.set(type, []));
         
         const closedIndexesItemsCache = [] as Array<IOMetricsRecentStatsWithCache>;
@@ -1460,7 +1460,7 @@ class ioStats extends viewModelBase {
         return string1.slice(0, i);
     }
 
-    private calcItemColor(type: Sparrow.IoMetrics.MeterType, recentItem?: Raven.Server.Documents.Handlers.IOMetricsRecentStats): string {
+    private calcItemColor(type: Sparrow.Server.Meters.IoMetrics.MeterType, recentItem?: Raven.Server.Documents.Handlers.IOMetricsRecentStats): string {
         if (recentItem) {
             return this.legends.get(type)().colorScale(ioStats.extractItemValue(recentItem));
         } else {
@@ -1511,7 +1511,7 @@ class ioStats extends viewModelBase {
         }
     }
 
-    private static getMeterTypeFriendlyName(type: Sparrow.IoMetrics.MeterType) {
+    private static getMeterTypeFriendlyName(type: Sparrow.Server.Meters.IoMetrics.MeterType) {
         switch (type) {
             case "JournalWrite": 
                 return "Journal Write"; 
