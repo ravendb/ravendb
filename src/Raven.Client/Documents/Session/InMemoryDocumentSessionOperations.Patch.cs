@@ -8,8 +8,10 @@ using System;
 using System.Collections.Generic;
 using System.Linq.Expressions;
 using Lambda2Js;
+using Newtonsoft.Json;
 using Raven.Client.Documents.Commands.Batches;
 using Raven.Client.Documents.Operations;
+using Raven.Client.Json;
 using Raven.Client.Util;
 
 namespace Raven.Client.Documents.Session
@@ -62,10 +64,12 @@ namespace Raven.Client.Documents.Session
         {
             var pathScript = path.CompileToJavascript(_javascriptCompilationOptions);
 
+            var valueToUse = AddTypeNameToValueIfNeeded(path.Body.Type, value);
+
             var patchRequest = new PatchRequest
             {
                 Script = $"this.{pathScript} = args.val_{_valsCount};",
-                Values = { [$"val_{_valsCount}"] = value }
+                Values = { [$"val_{_valsCount}"] = valueToUse }
             };
 
             _valsCount++;
@@ -74,6 +78,38 @@ namespace Raven.Client.Documents.Session
             {
                 Defer(new PatchCommandData(id, null, patchRequest, null));
             }
+        }
+
+
+        private object AddTypeNameToValueIfNeeded(Type propertyType, object value)
+        {
+            var typeOfValue = value.GetType();
+            if (propertyType == typeOfValue || typeOfValue.IsClass == false)
+                return value;
+
+            using (var writer = new BlittableJsonWriter(Context))
+            {
+                // the type of the object that's being serialized 
+                // is not the same as its declared type.
+                // so we need to include $type in json
+
+                var serializer = Conventions.CreateSerializer();
+                serializer.TypeNameHandling = TypeNameHandling.Objects;
+
+                writer.WriteStartObject();
+                writer.WritePropertyName("Value");
+
+                serializer.Serialize(writer, value);
+
+                writer.WriteEndObject();
+
+                writer.FinalizeDocument();
+
+                var reader = writer.CreateReader();
+
+                return reader["Value"];
+            }
+
         }
 
         public void Patch<T, U>(T entity, Expression<Func<T, IEnumerable<U>>> path,

@@ -3,7 +3,7 @@ import endpoints = require("endpoints");
 
 class testClusterNodeConnectionCommand extends commandBase {
 
-    constructor(private serverUrl: string, private databaseName?: string) {
+    constructor(private serverUrl: string, private databaseName?: string, private bidirectional: boolean = true) {
         super();
     }
 
@@ -11,7 +11,7 @@ class testClusterNodeConnectionCommand extends commandBase {
         const args = {
             url: this.serverUrl,
             database: this.databaseName,
-            bidirectional: true
+            bidirectional: this.bidirectional
         };
         const url = endpoints.global.testConnection.adminTestConnection + this.urlEncodeArgs(args);
 

@@ -14,6 +14,9 @@ namespace Raven.Client.Json
             if (value == null)
                 return null;
 
+            if (value is BlittableJsonReaderObject)
+                return value;
+
             var type = value.GetType();
             var underlyingType = Nullable.GetUnderlyingType(type);
             if (underlyingType != null)
