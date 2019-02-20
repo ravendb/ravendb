@@ -22,7 +22,7 @@ namespace Raven.Server.Documents.Queries.Graph
         private List<Match> _temp = new List<Match>();
         private readonly HashSet<Match> _traversedPaths = new HashSet<Match>();
         private readonly HashSet<string> _allLliases = new HashSet<string>();
-        
+
         private readonly HashSet<PathSegment> _visited = new HashSet<PathSegment>();
         private readonly Stack<RecursionState> _path = new Stack<RecursionState>();
         public int _index = -1;
@@ -197,10 +197,10 @@ namespace Raven.Server.Documents.Queries.Graph
                     return new ValueTask(CompleteInitializationForStepAsync(position, stepTask));
                 }
             }
-            if(_next != null)
+            if (_next != null)
             {
                 var nextTask = _next.Initialize();
-                if(nextTask.IsCompleted == false)
+                if (nextTask.IsCompleted == false)
                 {
                     return CompleteNextStepTaskAsync(nextTask);
                 }
@@ -223,7 +223,7 @@ namespace Raven.Server.Documents.Queries.Graph
             {
                 return;
             }
-            
+
             var matches = new List<Match>();
             while (_left.GetNext(out var match))
             {
@@ -273,7 +273,7 @@ namespace Raven.Server.Documents.Queries.Graph
                 {
                     _parent._skipMaterialization = false;
                     return default;
-            }
+                }
                 return CompleteInit(task);
             }
 
@@ -297,7 +297,7 @@ namespace Raven.Server.Documents.Queries.Graph
 
             public void SetPrev(IGraphQueryStep prev)
             {
-             
+
             }
         }
 
@@ -327,12 +327,12 @@ namespace Raven.Server.Documents.Queries.Graph
             if (startingPoint == null)
                 return;
 
-            _visited.Add(new PathSegment(0,startingPoint.Data.Location));
+            _visited.Add(new PathSegment(0, startingPoint.Data.Location));
             _path.Push(new RecursionState { Src = startingPoint.Data, Match = currentMatch });
 
             int aliasBaseIndex = 0;
             Document cur = startingPoint;
-            
+
             var alreadyTraversedPaths = new HashSet<MatchCollection>();
 
             //this function is needed for "documentation" purposes
@@ -396,7 +396,7 @@ namespace Raven.Server.Documents.Queries.Graph
                     if (top.Matches == null || top.Matches.Count == 0)
                     {
                         var current = top.Match.GetSingleDocumentResult(_outputAlias);
-                        if(current == null && _options.Min == 0)
+                        if (current == null && _options.Min == 0)
                         {
                             current = top.Match.GetSingleDocumentResult(_left.GetOutputAlias());
                         }
@@ -408,7 +408,7 @@ namespace Raven.Server.Documents.Queries.Graph
                         _path.Pop();
 
                         //since we are backtracking, remove the node from the top of the path stack
-                        _visited.Remove(new PathSegment(top.Src.Location,cur.Data.Location));
+                        _visited.Remove(new PathSegment(top.Src.Location, cur.Data.Location));
 
                         continue;
                     }
@@ -419,7 +419,7 @@ namespace Raven.Server.Documents.Queries.Graph
                     currentMatch = top.Matches[top.Matches.Count - 1];
                     cur = currentMatch.GetSingleDocumentResult(_outputAlias);
                     top.Matches.RemoveAt(top.Matches.Count - 1);
-                   
+
                     if (_visited.Add(new PathSegment(top.Src.Location, cur.Data.Location)) == false)
                     {
                         continue;
@@ -477,7 +477,7 @@ namespace Raven.Server.Documents.Queries.Graph
                 }
                 else
                 {
-                	matches.Add(match);
+                    matches.Add(match);
                 }
 
                 if (bestPathLength != null)
@@ -548,7 +548,7 @@ namespace Raven.Server.Documents.Queries.Graph
             foreach (var item in matches)
             {
                 ProcessSingleResultRecursive(item, _temp);
-        }
+            }
 
             return _temp;
         }
@@ -582,6 +582,6 @@ namespace Raven.Server.Documents.Queries.Graph
         public ISingleGraphStep GetSingleGraphStepExecution()
         {
             return new RecursionSingleStep(this, _token);
+        }
     }
-}
 }
