@@ -4,23 +4,19 @@ using System.Threading;
 using Sparrow.Collections;
 using Sparrow.Logging;
 using Sparrow.Platform;
-using Sparrow.Platform.Posix;
 using Sparrow.Utils;
 
 namespace Sparrow.LowMemory
 {
-    public interface ILowMemoryHandler
-    {
-        void LowMemory();
-        void LowMemoryOver();
-    }
-
     public class LowMemoryNotification
     {
         private const string NotificationThreadName = "Low memory notification thread";
+
         private readonly Logger _logger;
+
         private readonly ConcurrentSet<WeakReference<ILowMemoryHandler>> _lowMemoryHandlers = new ConcurrentSet<WeakReference<ILowMemoryHandler>>();
-        public enum LowMemReason
+
+        internal enum LowMemReason
         {
             None = 0,
             LowMemOnTimeoutChk,
@@ -31,7 +27,7 @@ namespace Sparrow.LowMemory
             LowMemHandler
         }
 
-        public class LowMemEventDetails
+        internal class LowMemEventDetails
         {
             public LowMemReason Reason;
             public long FreeMem;
@@ -42,7 +38,7 @@ namespace Sparrow.LowMemory
             public long LowMemThreshold { get; set; }
         }
 
-        public LowMemEventDetails[] LowMemEventDetailsStack = new LowMemEventDetails[256];
+        internal LowMemEventDetails[] LowMemEventDetailsStack = new LowMemEventDetails[256];
         private int _lowMemEventDetailsIndex;
         private int _clearInactiveHandlersCounter;
         private bool _wasLowMemory;
@@ -115,41 +111,51 @@ namespace Sparrow.LowMemory
             _lowMemoryHandlers.Add(new WeakReference<ILowMemoryHandler>(handler));
         }
 
-        public static readonly LowMemoryNotification Instance = new LowMemoryNotification(new Size(1024 * 1024 * 256, SizeUnit.Bytes));
+        public static readonly LowMemoryNotification Instance = new LowMemoryNotification();
 
-        public bool LowMemoryState { get; set; }
+        public bool LowMemoryState { get; private set; }
 
         public Size LowMemoryThreshold { get; private set; }
 
-        public static void Initialize(Size lowMemoryThreshold, CancellationToken shutdownNotification)
+        public void Initialize(Size lowMemoryThreshold, AbstractLowMemoryMonitor monitor, CancellationToken shutdownNotification)
         {
-            Instance.LowMemoryThreshold = lowMemoryThreshold;
+            if (_initialized)
+                return;
 
-            shutdownNotification.Register(() => Instance._shutdownRequested.Set());
+            lock (this)
+            {
+                if (_initialized)
+                    return;
+
+                _initialized = true;
+                LowMemoryThreshold = lowMemoryThreshold;
+                _lowMemoryMonitor = monitor;
+
+                var thread = new Thread(MonitorMemoryUsage)
+                {
+                    IsBackground = true,
+                    Name = NotificationThreadName
+                };
+
+                thread.Start();
+
+                shutdownNotification.Register(() => _shutdownRequested.Set());
+            }
         }
 
         private readonly ManualResetEvent _simulatedLowMemory = new ManualResetEvent(false);
         private readonly ManualResetEvent _shutdownRequested = new ManualResetEvent(false);
         private readonly List<WeakReference<ILowMemoryHandler>> _inactiveHandlers = new List<WeakReference<ILowMemoryHandler>>(128);
+        private AbstractLowMemoryMonitor _lowMemoryMonitor;
+        private bool _initialized;
 
-        public LowMemoryNotification(Size lowMemoryThreshold)
+        private LowMemoryNotification()
         {
             _logger = LoggingSource.Instance.GetLogger<LowMemoryNotification>("Server");
-
-            LowMemoryThreshold = lowMemoryThreshold;
-
-            var thread = new Thread(MonitorMemoryUsage)
-            {
-                IsBackground = true,
-                Name = NotificationThreadName
-            };
-
-            thread.Start();
         }
 
         private void MonitorMemoryUsage()
         {
-            SmapsReader smapsReader = PlatformDetails.RunningOnLinux ? new SmapsReader(new[] {new byte[SmapsReader.BufferSize], new byte[SmapsReader.BufferSize]}) : null;
             NativeMemory.EnsureRegistered();
             var memoryAvailableHandles = new WaitHandle[] { _simulatedLowMemory, _shutdownRequested };
             var timeout = 5 * 1000;
@@ -163,7 +169,7 @@ namespace Sparrow.LowMemory
                         switch (result)
                         {
                             case WaitHandle.WaitTimeout:
-                                timeout = CheckMemoryStatus(smapsReader);
+                                timeout = CheckMemoryStatus(_lowMemoryMonitor);
                                 break;
                             case 0:
                                 SimulateLowMemory();
@@ -206,7 +212,7 @@ namespace Sparrow.LowMemory
             _simulatedLowMemory.Reset();
             LowMemoryState = !LowMemoryState;
 
-            var memInfoForLog = MemoryInformation.GetMemInfoUsingOneTimeSmapsReader();
+            var memInfoForLog = _lowMemoryMonitor.GetMemoryInfoOnce();
             var availableMemForLog = memInfoForLog.AvailableWithoutTotalCleanMemory.GetValue(SizeUnit.Bytes);
 
             AddLowMemEvent(LowMemoryState ? LowMemReason.LowMemStateSimulation : LowMemReason.BackToNormalSimulation,
@@ -220,7 +226,7 @@ namespace Sparrow.LowMemory
             RunLowMemoryHandlers(LowMemoryState);
         }
 
-        internal int CheckMemoryStatus(SmapsReader smapsReader)
+        internal int CheckMemoryStatus(AbstractLowMemoryMonitor monitor)
         {
             int timeout;
             bool isLowMemory;
@@ -228,8 +234,8 @@ namespace Sparrow.LowMemory
             (Size AvailableMemory, Size TotalPhysicalMemory, Size CurrentCommitCharge) stats;
             try
             {
-                totalUnmanagedAllocations = MemoryInformation.GetUnManagedAllocationsInBytes();
-                isLowMemory = GetLowMemory(out stats, smapsReader);
+                totalUnmanagedAllocations = AbstractLowMemoryMonitor.GetUnmanagedAllocationsInBytes();
+                isLowMemory = GetLowMemory(out stats, monitor);
             }
             catch (OutOfMemoryException)
             {
@@ -285,9 +291,7 @@ namespace Sparrow.LowMemory
             return timeout;
         }
 
-        private bool GetLowMemory(
-            out (Size AvailableMemory, Size TotalPhysicalMemory, Size CurrentCommitCharge) memStats,
-            SmapsReader smapsReader)
+        private bool GetLowMemory(out (Size AvailableMemory, Size TotalPhysicalMemory, Size CurrentCommitCharge) memStats, AbstractLowMemoryMonitor monitor)
         {
             if (++_clearInactiveHandlersCounter > 60) // 5 minutes == WaitAny 5 Secs * 60
             {
@@ -295,15 +299,15 @@ namespace Sparrow.LowMemory
                 ClearInactiveHandlers();
             }
 
-            var memInfo = MemoryInformation.GetMemoryInfo();
-            var isLowMemory = IsLowMemory(memInfo, smapsReader, out _);
+            var memInfo = monitor.GetMemoryInfo();
+            var isLowMemory = IsLowMemory(memInfo, monitor, out _);
 
             // memInfo.AvailableMemory is updated in IsLowMemory for Linux (adding shared clean)
             memStats = (memInfo.AvailableMemory, memInfo.TotalPhysicalMemory, memInfo.CurrentCommitCharge);
             return isLowMemory;
         }
 
-        internal bool IsLowMemory(MemoryInfoResult memInfo, SmapsReader smapsReader, out Size commitChargeThreshold)
+        internal bool IsLowMemory(MemoryInfoResult memInfo, AbstractLowMemoryMonitor monitor, out Size commitChargeThreshold)
         {
             // We consider low memory only if we don't have enough free physical memory or
             // the commited memory size if larger than our physical memory.
@@ -314,11 +318,11 @@ namespace Sparrow.LowMemory
             {
                 // getting extendedInfo (for windows: Process.GetCurrentProcess) or using the smaps might be expensive
                 // we'll do it if we suspect low memory
-                memInfo = MemoryInformation.GetMemoryInfo(smapsReader, extendedInfo: true);
+                memInfo = monitor.GetMemoryInfo(extended: true);
                 isLowMemory = IsAvailableMemoryBelowThreshold(memInfo);
             }
 
-            isLowMemory |= MemoryInformation.IsEarlyOutOfMemory(memInfo, out commitChargeThreshold);
+            isLowMemory |= monitor.IsEarlyOutOfMemory(memInfo, out commitChargeThreshold);
             return isLowMemory;
         }
 
@@ -348,6 +352,11 @@ namespace Sparrow.LowMemory
         public void SimulateLowMemoryNotification()
         {
             _simulatedLowMemory.Set();
+        }
+
+        internal static void AssertNotAboutToRunOutOfMemory()
+        {
+            Instance._lowMemoryMonitor?.AssertNotAboutToRunOutOfMemory();
         }
     }
 }

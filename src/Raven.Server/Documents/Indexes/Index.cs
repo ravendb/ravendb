@@ -1480,10 +1480,10 @@ namespace Raven.Server.Documents.Indexes
 
         private static string OutOfMemoryDetails(Exception oome)
         {
-            var memoryInfo = MemoryInformation.GetMemInfoUsingOneTimeSmapsReader();
+            var memoryInfo = MemoryInformation.GetMemoryInformationUsingOneTimeSmapsReader();
 
-            return $"Managed memory: {new Size(MemoryInformation.GetManagedMemoryInBytes(), SizeUnit.Bytes)}, " +
-                   $"Unmanaged allocations: {new Size(MemoryInformation.GetUnManagedAllocationsInBytes(), SizeUnit.Bytes)}, " +
+            return $"Managed memory: {new Size(AbstractLowMemoryMonitor.GetManagedMemoryInBytes(), SizeUnit.Bytes)}, " +
+                   $"Unmanaged allocations: {new Size(AbstractLowMemoryMonitor.GetUnmanagedAllocationsInBytes(), SizeUnit.Bytes)}, " +
                    $"Shared clean: {memoryInfo.SharedCleanMemory}, " +
                    $"Working set: {memoryInfo.WorkingSet}, " +
                    $"Available memory: {memoryInfo.AvailableMemory}, " +

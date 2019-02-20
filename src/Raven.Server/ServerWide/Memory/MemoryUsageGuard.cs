@@ -21,7 +21,7 @@ namespace Raven.Server.ServerWide.Memory
             }
 
             // we run out our memory quota, so we need to see if we can increase it or break
-            var memoryInfo = MemoryInformation.GetMemInfoUsingOneTimeSmapsReader();
+            var memoryInfo = MemoryInformation.GetMemoryInformationUsingOneTimeSmapsReader();
             currentUsage = GetProcessMemoryUsage(memoryInfo);
 
             var memoryAssumedFreeOrCheapToFree = memoryInfo.AvailableWithoutTotalCleanMemory;
@@ -89,7 +89,7 @@ namespace Raven.Server.ServerWide.Memory
 
         public static bool CanIncreaseMemoryUsageForThread()
         {
-            var memoryInfo = MemoryInformation.GetMemInfoUsingOneTimeSmapsReader();
+            var memoryInfo = MemoryInformation.GetMemoryInformationUsingOneTimeSmapsReader();
             var memoryAssumedFreeOrCheapToFree = memoryInfo.AvailableWithoutTotalCleanMemory;
             var allocatedForProcessing = GetTotalCurrentlyAllocatedForProcessing();
             return memoryAssumedFreeOrCheapToFree >= allocatedForProcessing;
@@ -98,7 +98,7 @@ namespace Raven.Server.ServerWide.Memory
         private static ProcessMemoryUsage GetProcessMemoryUsage(MemoryInfoResult memoryInfo)
         {
             var workingSetInBytes = memoryInfo.WorkingSet.GetValue(SizeUnit.Bytes);
-            var privateMemory = MemoryInformation.GetManagedMemoryInBytes() + MemoryInformation.GetUnManagedAllocationsInBytes();
+            var privateMemory = AbstractLowMemoryMonitor.GetManagedMemoryInBytes() + AbstractLowMemoryMonitor.GetUnmanagedAllocationsInBytes();
             return new ProcessMemoryUsage(workingSetInBytes, privateMemory);
         }
 

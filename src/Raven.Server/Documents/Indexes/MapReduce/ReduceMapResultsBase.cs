@@ -141,7 +141,7 @@ namespace Raven.Server.Documents.Indexes.MapReduce
             if (stats.Duration >= MinReduceDurationToCalculateProcessMemoryUsage)
             {
                 var workingSet = MemoryInformation.GetWorkingSetInBytes();
-                var privateMemory = MemoryInformation.GetManagedMemoryInBytes() + MemoryInformation.GetUnManagedAllocationsInBytes();
+                var privateMemory = AbstractLowMemoryMonitor.GetManagedMemoryInBytes() + AbstractLowMemoryMonitor.GetUnmanagedAllocationsInBytes();
                 stats.RecordReduceMemoryStats(workingSet, privateMemory);
             }
 

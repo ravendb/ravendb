@@ -195,7 +195,7 @@ namespace Raven.Server.Documents.Handlers.Debugging
 
         private static DynamicJsonValue MemoryStatsInternal()
         {
-            var memInfo = MemoryInformation.GetMemInfoUsingOneTimeSmapsReader();
+            var memInfo = MemoryInformation.GetMemoryInformationUsingOneTimeSmapsReader();
             var memoryUsageRecords = MemoryInformation.GetMemoryUsageRecords();
 
             long totalMapping = 0;
@@ -308,7 +308,7 @@ namespace Raven.Server.Documents.Handlers.Debugging
                 threads.Add(groupStats);
             }
 
-            long managedMemoryInBytes = MemoryInformation.GetManagedMemoryInBytes();
+            long managedMemoryInBytes = AbstractLowMemoryMonitor.GetManagedMemoryInBytes();
             long workingSetInBytes = memInfo.WorkingSet.GetValue(SizeUnit.Bytes);
             var djv = new DynamicJsonValue
             {
