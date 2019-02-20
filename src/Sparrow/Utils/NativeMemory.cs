@@ -79,15 +79,15 @@ namespace Sparrow.Utils
         }
 
         public static void Free(byte* ptr, long size, ThreadStats stats)
-        {            
+        {
             Debug.Assert(ptr != null);
 
-            var currentThreadValue = ThreadAllocations.Value;            
+            var currentThreadValue = ThreadAllocations.Value;
 
             if (currentThreadValue == stats)
             {
                 currentThreadValue.Allocations -= size;
-                
+
                 FixupReleasesFromOtherThreads(currentThreadValue);
             }
             else
@@ -118,7 +118,7 @@ namespace Sparrow.Utils
             // fun, so let's try to avoid it explicitly.
             // This is not expected to be called frequently, since we are caching the memory used here
 
-            MemoryInformation.AssertNotAboutToRunOutOfMemory();
+            LowMemoryNotification.AssertNotAboutToRunOutOfMemory();
 
             try
             {
@@ -132,7 +132,7 @@ namespace Sparrow.Utils
                 return ThrowFailedToAllocate(size, thread, e);
             }
         }
-        
+
         private static byte* ThrowFailedToAllocate(long size, ThreadStats thread, OutOfMemoryException e)
         {
             long allocated = 0;
@@ -141,8 +141,9 @@ namespace Sparrow.Utils
                 allocated += threadAllocationsValue.TotalAllocated;
             }
 
-            var managed = MemoryInformation.GetManagedMemoryInBytes();
-            var unmanagedMemory = MemoryInformation.GetUnManagedAllocationsInBytes();
+            var managed = AbstractLowMemoryMonitor.GetManagedMemoryInBytes();
+            var unmanagedMemory = AbstractLowMemoryMonitor.GetUnmanagedAllocationsInBytes();
+
             throw new OutOfMemoryException($"Failed to allocate additional {new Size(size, SizeUnit.Bytes)} " +
                                            $"to already allocated {new Size(thread.TotalAllocated, SizeUnit.Bytes)} by this thread. " +
                                            $"Total allocated by all threads: {new Size(allocated, SizeUnit.Bytes)}, " +

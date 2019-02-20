@@ -426,7 +426,7 @@ namespace Raven.Server.Utils.Cli
             var genNum = args == null || args.Count == 0 ? 2 : Convert.ToInt32(args.First());
 
             WriteText("Before collecting, managed memory used: ", TextColor, cli, newLine: false);
-            WriteText(new Size(MemoryInformation.GetManagedMemoryInBytes(), SizeUnit.Bytes).ToString(), ConsoleColor.Cyan, cli);
+            WriteText(new Size(AbstractLowMemoryMonitor.GetManagedMemoryInBytes(), SizeUnit.Bytes).ToString(), ConsoleColor.Cyan, cli);
             var startTime = DateTime.UtcNow;
             WriteText("Garbage Collecting... ", TextColor, cli, newLine: false);
 
@@ -451,7 +451,7 @@ namespace Raven.Server.Utils.Cli
 
             WriteText("Collected.", ConsoleColor.Green, cli);
             WriteText("After collecting, managed memory used:  ", TextColor, cli, newLine: false);
-            WriteText(new Size(MemoryInformation.GetManagedMemoryInBytes(), SizeUnit.Bytes).ToString(), ConsoleColor.Cyan, cli, newLine: false);
+            WriteText(new Size(AbstractLowMemoryMonitor.GetManagedMemoryInBytes(), SizeUnit.Bytes).ToString(), ConsoleColor.Cyan, cli, newLine: false);
             WriteText(" at ", TextColor, cli, newLine: false);
             WriteText(actionTime.TotalSeconds + " Seconds", ConsoleColor.Cyan, cli);
             return true;
@@ -540,7 +540,7 @@ namespace Raven.Server.Utils.Cli
 
         public static string GetInfoText()
         {
-            var memoryInfo = MemoryInformation.GetMemInfoUsingOneTimeSmapsReader();
+            var memoryInfo = MemoryInformation.GetMemoryInformationUsingOneTimeSmapsReader();
             using (var currentProcess = Process.GetCurrentProcess())
             {
                 return $" Build {ServerVersion.Build}, Version {ServerVersion.Version}, SemVer {ServerVersion.FullVersion}, Commit {ServerVersion.CommitHash}" +
@@ -1061,8 +1061,8 @@ namespace Raven.Server.Utils.Cli
 
             return (
                 SizeClient.Humane(MemoryInformation.GetWorkingSetInBytes()),
-                SizeClient.Humane(MemoryInformation.GetUnManagedAllocationsInBytes()),
-                SizeClient.Humane(MemoryInformation.GetManagedMemoryInBytes()),
+                SizeClient.Humane(AbstractLowMemoryMonitor.GetUnmanagedAllocationsInBytes()),
+                SizeClient.Humane(AbstractLowMemoryMonitor.GetManagedMemoryInBytes()),
                 SizeClient.Humane(totalMemoryMapped));
         }
 

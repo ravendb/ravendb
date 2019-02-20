@@ -136,7 +136,7 @@ namespace Sparrow.LowMemory
                 // https://fabiokung.com/2014/03/13/memory-inside-linux-containers/
 
                 commitChargeThreshold = GetMinCommittedToKeep(memInfo.TotalPhysicalMemory);
-                overage = 
+                overage =
                     commitChargeThreshold +                                    //extra to keep free
                     (memInfo.TotalPhysicalMemory - memInfo.AvailableMemory);   //actually in use now
 
@@ -198,7 +198,7 @@ namespace Sparrow.LowMemory
             }
         }
 
-        public static MemoryInfoResult GetMemInfoUsingOneTimeSmapsReader()
+        public static MemoryInfoResult GetMemoryInformationUsingOneTimeSmapsReader()
         {
             SmapsReader smapsReader = null;
             byte[][] buffers = null;
@@ -208,11 +208,11 @@ namespace Sparrow.LowMemory
                 {
                     var buffer1 = ArrayPool<byte>.Shared.Rent(SmapsReader.BufferSize);
                     var buffer2 = ArrayPool<byte>.Shared.Rent(SmapsReader.BufferSize);
-                    buffers = new[] {buffer1, buffer2};
-                    smapsReader = new SmapsReader(new[] {buffer1, buffer2});
+                    buffers = new[] { buffer1, buffer2 };
+                    smapsReader = new SmapsReader(new[] { buffer1, buffer2 });
                 }
 
-                return GetMemoryInfo(smapsReader, extendedInfo: true);
+                return GetMemoryInfo(smapsReader, extended: true);
             }
             finally
             {
@@ -283,7 +283,7 @@ namespace Sparrow.LowMemory
             return (installedMemoryInGb, usableMemoryInGb);
         }
 
-        internal static MemoryInfoResult GetMemoryInfo(SmapsReader smapsReader = null, bool extendedInfo = false)
+        internal static MemoryInfoResult GetMemoryInfo(SmapsReader smapsReader = null, bool extended = false)
         {
             if (_failedToGetAvailablePhysicalMemory)
             {
@@ -294,9 +294,9 @@ namespace Sparrow.LowMemory
 
             try
             {
-                extendedInfo &= PlatformDetails.RunningOnLinux == false;
+                extended &= PlatformDetails.RunningOnLinux == false;
 
-                using (var process = extendedInfo ? Process.GetCurrentProcess() : null)
+                using (var process = extended ? Process.GetCurrentProcess() : null)
                 {
                     if (PlatformDetails.RunningOnPosix == false)
                         return GetMemoryInfoWindows(process);
@@ -359,8 +359,8 @@ namespace Sparrow.LowMemory
         }
 
         private static MemoryInfoResult BuildPosixMemoryInfoResult(
-            Size availableRam, Size totalPhysicalMemory, Size commitedMemory, 
-            Size commitLimit, Size availableWithoutTotalCleanMemory, 
+            Size availableRam, Size totalPhysicalMemory, Size commitedMemory,
+            Size commitLimit, Size availableWithoutTotalCleanMemory,
             Size sharedCleanMemory, Size workingSet)
         {
             SetMemoryRecords(availableRam.GetValue(SizeUnit.Bytes));
@@ -462,7 +462,7 @@ namespace Sparrow.LowMemory
 
             var sharedClean = GetSharedCleanInBytes(process);
             SetMemoryRecords((long)memoryStatus.ullAvailPhys);
-            
+
             return new MemoryInfoResult
             {
                 TotalCommittableMemory = new Size((long)memoryStatus.ullTotalPageFile, SizeUnit.Bytes),
@@ -482,7 +482,7 @@ namespace Sparrow.LowMemory
         {
             if (process == null)
                 return 0;
-            
+
             var mappedDirty = 0L;
             foreach (var mapping in NativeMemory.FileMapping)
             {
@@ -508,7 +508,7 @@ namespace Sparrow.LowMemory
                 mappedDirty += totalMapped;
             }
 
-            var sharedClean = process.WorkingSet64 - GetUnManagedAllocationsInBytes() - GetManagedMemoryInBytes() - mappedDirty;
+            var sharedClean = process.WorkingSet64 - AbstractLowMemoryMonitor.GetUnmanagedAllocationsInBytes() - AbstractLowMemoryMonitor.GetManagedMemoryInBytes() - mappedDirty;
 
             // the shared dirty can be larger than the size of the working set
             // this can happen when some of the buffers were paged out
@@ -525,16 +525,6 @@ namespace Sparrow.LowMemory
             }
 
             return totalMapped;
-        }
-
-        public static long GetUnManagedAllocationsInBytes()
-        {
-            return NativeMemory.TotalAllocatedMemory;
-        }
-
-        public static long GetManagedMemoryInBytes()
-        {
-            return GC.GetTotalMemory(false);
         }
 
         public static MemoryInfoResult.MemoryUsageLowHigh GetMemoryUsageRecords()
@@ -615,31 +605,6 @@ namespace Sparrow.LowMemory
             HighLastFiveMinutes = highLastFiveMinutes;
             LowLastFiveMinutes = lowLastFiveMinutes;
         }
-    }
-
-    public struct MemoryInfoResult
-    {
-        public class MemoryUsageIntervals
-        {
-            public Size LastOneMinute;
-            public Size LastFiveMinutes;
-            public Size SinceStartup;
-        }
-        public class MemoryUsageLowHigh
-        {
-            public MemoryUsageIntervals High;
-            public MemoryUsageIntervals Low;
-        }
-
-        public Size TotalCommittableMemory;
-        public Size CurrentCommitCharge;
-
-        public Size TotalPhysicalMemory;
-        public Size InstalledMemory;
-        public Size WorkingSet;
-        public Size AvailableMemory;
-        public Size AvailableWithoutTotalCleanMemory;
-        public Size SharedCleanMemory;
     }
 
     public class EarlyOutOfMemoryException : SystemException

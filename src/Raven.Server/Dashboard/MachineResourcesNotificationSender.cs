@@ -10,6 +10,7 @@ using Sparrow.Collections;
 using Sparrow.LowMemory;
 using Sparrow.Platform;
 using Sparrow.Platform.Posix;
+using Sparrow.Server.LowMemory;
 
 namespace Raven.Server.Dashboard
 {
@@ -82,7 +83,7 @@ namespace Raven.Server.Dashboard
 
         internal static MachineResources GetMachineResources(SmapsReader smapsReader, ICpuUsageCalculator cpuUsageCalculator)
         {
-            var memInfo = MemoryInformation.GetMemoryInfo(smapsReader, extendedInfo: true);
+            var memInfo = MemoryInformation.GetMemoryInfo(smapsReader, extended: true);
             var cpuInfo = cpuUsageCalculator.Calculate();
 
             var machineResources = new MachineResources
@@ -94,7 +95,7 @@ namespace Raven.Server.Dashboard
                 CommittedMemory = memInfo.CurrentCommitCharge.GetValue(SizeUnit.Bytes),
                 ProcessMemoryUsage = memInfo.WorkingSet.GetValue(SizeUnit.Bytes),
                 IsWindows = PlatformDetails.RunningOnPosix == false,
-                IsLowMemory = LowMemoryNotification.Instance.IsLowMemory(memInfo, smapsReader, out var commitChargeThreshold),
+                IsLowMemory = LowMemoryNotification.Instance.IsLowMemory(memInfo, LowMemoryMonitor.Instance, out var commitChargeThreshold),
                 LowMemoryThreshold = LowMemoryNotification.Instance.LowMemoryThreshold.GetValue(SizeUnit.Bytes),
                 CommitChargeThreshold = commitChargeThreshold.GetValue(SizeUnit.Bytes),
                 MachineCpuUsage = cpuInfo.MachineCpuUsage,

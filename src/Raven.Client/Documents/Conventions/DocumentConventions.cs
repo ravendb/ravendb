@@ -23,6 +23,7 @@ using Raven.Client.Util;
 using Sparrow;
 using Sparrow.Json;
 using Sparrow.LowMemory;
+using Sparrow.Platform;
 using Size = Sparrow.Size;
 
 namespace Raven.Client.Documents.Conventions
@@ -123,21 +124,7 @@ namespace Raven.Client.Documents.Conventions
 
             PreserveDocumentPropertiesNotFoundOnModel = true;
 
-            int httpCacheSizeInMb = 32; // Used if 32 bits architecture
-            if (IntPtr.Size == 8)
-            {
-                // This is actual usable memory, not total installed memory. If other
-                // processes are active consuming memory we will be acting accordingly
-                // In the future we may want to be more dynamic about this. 
-                double usableMemory = MemoryInformation.GetMemoryInfoInGb().UsableMemory;
-                if (usableMemory <= 3)
-                    httpCacheSizeInMb = 64; // Used if we are in low memory conditions
-                else if (usableMemory <= 6)
-                    httpCacheSizeInMb = 128; // Used if we are in mid memory conditions
-                else
-                    httpCacheSizeInMb = 512; // We have enough memory to be aggressive.
-            }
-
+            var httpCacheSizeInMb = PlatformDetails.Is32Bits ? 32 : 128;
             MaxHttpCacheSize = new Size(httpCacheSizeInMb, SizeUnit.Megabytes);
 
             OperationStatusFetchMode = OperationStatusFetchMode.ChangesApi;

@@ -62,6 +62,7 @@ using Voron;
 using Sparrow.Logging;
 using Sparrow.LowMemory;
 using Sparrow.Server;
+using Sparrow.Server.LowMemory;
 using Sparrow.Server.Platform;
 using Sparrow.Server.Utils;
 using Sparrow.Utils;
@@ -433,7 +434,7 @@ namespace Raven.Server.ServerWide
         {
             Configuration.CheckDirectoryPermissions();
 
-            LowMemoryNotification.Initialize(Configuration.Memory.LowMemoryLimit, ServerShutdown);
+            LowMemoryNotification.Instance.Initialize(Configuration.Memory.LowMemoryLimit, LowMemoryMonitor.Instance, ServerShutdown);
 
             MemoryInformation.SetFreeCommittedMemory(
                 Configuration.Memory.MinimumFreeCommittedMemoryPercentage,

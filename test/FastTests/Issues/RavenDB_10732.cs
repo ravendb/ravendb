@@ -1,6 +1,5 @@
 ﻿using Sparrow.LowMemory;
-using Sparrow.Platform;
-using Sparrow.Platform.Posix;
+using Sparrow.Server.LowMemory;
 using Xunit;
 
 namespace FastTests.Issues
@@ -10,8 +9,7 @@ namespace FastTests.Issues
         [Fact]
         public void Can_check_memory_status()
         {
-            SmapsReader smapsReader = PlatformDetails.RunningOnLinux ? new SmapsReader(new[] {new byte[SmapsReader.BufferSize], new byte[SmapsReader.BufferSize]}) : null;
-            LowMemoryNotification.Instance.CheckMemoryStatus(smapsReader);
+            LowMemoryNotification.Instance.CheckMemoryStatus(LowMemoryMonitor.Instance);
         }
     }
 }
