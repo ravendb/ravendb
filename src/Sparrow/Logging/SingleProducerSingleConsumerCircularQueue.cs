@@ -3,6 +3,7 @@ using System.IO;
 using System.Net.WebSockets;
 using System.Threading;
 using System.Threading.Tasks;
+using Sparrow.Collections;
 
 namespace Sparrow.Logging
 {
@@ -21,48 +22,23 @@ namespace Sparrow.Logging
 
     public class SingleProducerSingleConsumerCircularQueue<T>
     {
-        private readonly T[] _data;
-        // private readonly MemoryStream[] _data;
-        // private readonly List<WebSocket>[]  _webSocketsList;
-        private readonly int _queueSize;
-        private volatile uint _readPos;
-#pragma warning disable 169 // unused field
-        // cache line padding
-        private long _p1, _p2, _p3, _p4, _p5, _p6, _p7;
-#pragma warning restore 169
-        private volatile uint _writePos;
+        private readonly SingleConsumerRingBuffer<T> _buffer;
 
         public SingleProducerSingleConsumerCircularQueue(int queueSize)
         {
-            _queueSize = queueSize;
-            _data = new T[_queueSize];
-        }
-
-        private int PositionToArrayIndex(uint pos)
-        {
-            return (int)(pos % _queueSize);
+            _buffer = new SingleConsumerRingBuffer<T>(queueSize);
         }
 
         public bool Enqueue(T entry)
         {
-            var readIndex = PositionToArrayIndex(_readPos);
-            var currentWritePos = _writePos;
-            var writeIndex = PositionToArrayIndex(currentWritePos + 1);
-
-            if (readIndex == writeIndex)
-                return false; // queue full
-
-            _data[PositionToArrayIndex(currentWritePos)] = entry;
-
-            _writePos++;
-            return true;
+            return _buffer.TryPush(ref entry);
         }
 
         private int _numberOfTimeWaitedForEnqueue;
 
         public bool Enqueue(T entry, int timeout)
         {
-            if (Enqueue(entry))
+            if (_buffer.TryPush(ref entry))
             {
                 _numberOfTimeWaitedForEnqueue = 0;
                 return true;
@@ -77,28 +53,24 @@ namespace Sparrow.Logging
                     timeToWait = timeout;
                 timeout -= timeToWait;
                 Thread.Sleep(timeToWait);
-                if (Enqueue(entry))
-                {
+                if (_buffer.TryPush(ref entry))
                     return true;
-                }
             }
             return false;
         }
 
         public bool Dequeue(out T entry)
         {
+            if (_buffer.TryAcquireSingle(out RingItem<T> item))
+            {
+                entry = item.Item;
+
+                _buffer.Release();
+                return true;
+            }
+            
             entry = default(T);
-            var readIndex = PositionToArrayIndex(_readPos);
-            var writeIndex = PositionToArrayIndex(_writePos);
-
-            if (readIndex == writeIndex)
-                return false; // queue empty
-
-            entry = _data[readIndex];
-            _data[readIndex] = default(T);
-            _readPos++;
-
-            return true;
+            return false;
         }
     }
 }

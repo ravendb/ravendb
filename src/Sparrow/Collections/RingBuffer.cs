@@ -8,7 +8,7 @@ namespace Sparrow.Collections
     // The RingItem makes sure that it doesn't matter how big the struct for the T, it is always guaranteed that the data
     // will be always on an L0 cache line different from the item that comes before. 
     [StructLayout(LayoutKind.Sequential)]
-    public struct RingItem<T> where T : struct
+    public struct RingItem<T>
     {
         private readonly long _p1, _p2, _p3, _p4;
 
@@ -18,7 +18,7 @@ namespace Sparrow.Collections
         private readonly long _p5, _p6, _p7, _p8;
     }
 
-    public sealed class SingleConsumerRingBuffer<T> where T : struct
+    public sealed class SingleConsumerRingBuffer<T>
     {
         private readonly RingItem<T>[] _buffer;
 
@@ -64,15 +64,39 @@ namespace Sparrow.Collections
             // Very rarely we will go through and try again, the only condition is when we have a huge contention and traffic.
         }
 
-        public Span<RingItem<T>> Acquire()
+        public bool TryAcquireSingle(out RingItem<T> item)
         {
-            Debug.Assert(this._acquiredIdx == -1);
-
             int cidx = Volatile.Read(ref _currentIdx);
             int sidx = Volatile.Read(ref _startIdx);
 
-            int length = cidx - sidx;
+            // We have a pending acquire that hasn't been released. 
+            if (_acquiredIdx != -1)
+                sidx = Math.Max(_acquiredIdx, sidx);
 
+            int length = cidx - sidx;
+            if (length < 1)
+            {
+                item = default(RingItem<T>);
+                return false;
+            }
+
+            item = _buffer[sidx % this._size];
+
+            // No need to use volatile here because this is Single Consumer Ring Buffer. 
+            this._acquiredIdx = sidx + 1;
+            return true;
+        }
+
+        public Span<RingItem<T>> Acquire()
+        {
+            int cidx = Volatile.Read(ref _currentIdx);
+            int sidx = Volatile.Read(ref _startIdx);
+
+            // We have a pending acquire that hasn't been released. 
+            if (_acquiredIdx != -1)
+                sidx = Math.Max(_acquiredIdx, sidx);
+
+            int length = cidx - sidx;
             if (length != 0)
             {
                 int sidxTicket = sidx / this._size;
@@ -105,6 +129,7 @@ namespace Sparrow.Collections
                 }
             }
 
+            // No need to use volatile here because this is Single Consumer Ring Buffer. 
             // Update to the last acquired index
             this._acquiredIdx = sidx + length;
 
