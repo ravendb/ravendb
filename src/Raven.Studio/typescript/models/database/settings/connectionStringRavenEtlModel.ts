@@ -152,7 +152,7 @@ class connectionStringRavenEtlModel extends connectionStringModel {
     }
 
     testConnection(urlToTest: string) : JQueryPromise<Raven.Server.Web.System.NodeConnectionTestResult> {       
-        return new testClusterNodeConnectionCommand(urlToTest, this.database())
+        return new testClusterNodeConnectionCommand(urlToTest, this.database(), false)
             .execute();
     }
 
