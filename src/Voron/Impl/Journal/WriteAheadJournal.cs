@@ -1649,7 +1649,7 @@ namespace Voron.Impl.Journal
             var bytes = pagesRequired * Constants.Storage.PageSize;
             if (bytes < Constants.Size.Megabyte / 2)
             {
-                pagesRequired = Bits.NextPowerOf2(bytes / Constants.Storage.PageSize + bytes % Constants.Storage.PageSize == 0 ? 0 : 1);
+                pagesRequired = Bits.NextPowerOf2(bytes) / Constants.Storage.PageSize ;
             }
             else
             {
