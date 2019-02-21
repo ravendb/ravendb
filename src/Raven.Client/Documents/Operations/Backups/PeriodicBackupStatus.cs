@@ -34,8 +34,6 @@ namespace Raven.Client.Documents.Operations.Backups
 
         public long? LastEtag { get; set; }
 
-        public long? LastCompareExchangeIndex { get; set; }
-
         public LastRaftIndex LastRaftIndex { get; set; }
 
         public string FolderName { get; set; }
@@ -70,7 +68,6 @@ namespace Raven.Client.Documents.Operations.Backups
             json[nameof(UploadToGlacier)] = UploadToGlacier?.ToJson();
             json[nameof(UploadToAzure)] = UploadToAzure?.ToJson();
             json[nameof(LastEtag)] = LastEtag;
-            json[nameof(LastCompareExchangeIndex)] = LastCompareExchangeIndex;
             json[nameof(LastRaftIndex)] = LastRaftIndex?.ToJson();
             json[nameof(FolderName)] = FolderName;
             json[nameof(DurationInMs)] = DurationInMs;

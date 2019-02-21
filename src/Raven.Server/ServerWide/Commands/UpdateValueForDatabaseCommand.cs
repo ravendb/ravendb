@@ -11,18 +11,12 @@ namespace Raven.Server.ServerWide.Commands
     public abstract class UpdateValueForDatabaseCommand : CommandBase
     {
         public string DatabaseName { get; set; }
-        public bool FromBackup = false;
         public abstract string GetItemId();
 
         public abstract void FillJson(DynamicJsonValue json);
 
         protected abstract BlittableJsonReaderObject GetUpdatedValue(long index, DatabaseRecord record, JsonOperationContext context,
             BlittableJsonReaderObject existingValue, RachisState state);
-
-        public static string GetStorageKey(string databaseName, string prefix)
-        {
-            return $"{databaseName.ToLowerInvariant()}/{prefix?.ToLowerInvariant()}";
-        }
 
         public virtual unsafe void Execute(TransactionOperationContext context, Table items, long index, DatabaseRecord record, RachisState state, out object result)
         {
