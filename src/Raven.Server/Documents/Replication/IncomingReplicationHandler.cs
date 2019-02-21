@@ -513,8 +513,6 @@ namespace Raven.Server.Documents.Replication
 
             internal string SourceDatabaseId { get; set; }
 
-            internal StreamsTempFile AttachmentStreamsTempFile { get; set; }
-
             internal ArraySegment<ReplicationItem> ReplicatedItems { get; set; }
 
             internal Dictionary<Slice, ReplicationAttachmentStream> ReplicatedAttachmentStreams { get; set; }
@@ -562,7 +560,6 @@ namespace Raven.Server.Documents.Replication
                 DocumentDatabase = _database,
                 ConflictManager = _conflictManager,
                 SourceDatabaseId = ConnectionInfo.SourceDatabaseId,
-                AttachmentStreamsTempFile = _attachmentStreamsTempFile,
                 SupportedFeatures = SupportedFeatures,
                 Logger = _log
             })
@@ -650,6 +647,8 @@ namespace Raven.Server.Documents.Replication
                         // in a bad state and likely in the process of shutting 
                         // down
                     }
+
+                    _attachmentStreamsTempFile?.Reset();
                 }
             }
         }
@@ -1439,7 +1438,6 @@ namespace Raven.Server.Documents.Replication
                 }
                 finally
                 {
-                    _replicationInfo.AttachmentStreamsTempFile?.Reset();
                     IsIncomingReplication = false;
                 }
             }
@@ -1554,7 +1552,6 @@ namespace Raven.Server.Documents.Replication
                 DocumentDatabase = database,
                 ConflictManager = new ConflictManager(database, database.ReplicationLoader.ConflictResolver),
                 SourceDatabaseId = SourceDatabaseId,
-                AttachmentStreamsTempFile = database.DocumentsStorage.AttachmentsStorage.GetTempFile("MergedDocumentReplicationReplicationCommand"),
                 ReplicatedItems = replicationItems,
                 ReplicatedAttachmentStreams = replicatedAttachmentStreams,
                 SupportedFeatures = SupportedFeatures,
