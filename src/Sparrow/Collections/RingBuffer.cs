@@ -2,6 +2,7 @@
 using System.Diagnostics;
 using System.Runtime.InteropServices;
 using System.Threading;
+using Sparrow.Binary;
 
 namespace Sparrow.Collections
 {
@@ -23,6 +24,8 @@ namespace Sparrow.Collections
         private readonly RingItem<T>[] _buffer;
 
         private readonly int _size;
+        private readonly uint _mask;
+        private readonly int _shift;
 
         private int _startIdx;
         private int _acquiredIdx;
@@ -30,8 +33,13 @@ namespace Sparrow.Collections
 
         public SingleConsumerRingBuffer(int size)
         {
-            // PERF: If we 'limit' size to be power of 2, we can make all operations much more efficient without using idiv operations.
+            // PERF: 'We 'limit' size to be power of 2 in order to make all operations much more efficient without using idiv operations.
+            if (!Bits.IsPowerOfTwo(size) || size < 2)
+                size = Bits.NextPowerOf2(size);
+
             this._size = size;
+            this._mask = (uint)size - 1;
+            this._shift = Bits.MostSignificantBit(size);
             this._buffer = new RingItem<T>[size];
 
             this._startIdx = 0;
@@ -52,7 +60,7 @@ namespace Sparrow.Collections
             int ticker = Interlocked.Increment(ref _currentIdx) - 1;
 
             // Assign the value
-            ref var cl = ref _buffer[ticker % this._size];
+            ref var cl = ref _buffer[ticker & this._mask];
 
             // We assign the item
             cl.Item = item;
@@ -80,7 +88,7 @@ namespace Sparrow.Collections
                 return false;
             }
 
-            item = _buffer[sidx % this._size];
+            item = _buffer[sidx & this._mask];
 
             // No need to use volatile here because this is Single Consumer Ring Buffer. 
             this._acquiredIdx = sidx + 1;
@@ -99,8 +107,8 @@ namespace Sparrow.Collections
             int length = cidx - sidx;
             if (length != 0)
             {
-                int sidxTicket = sidx / this._size;
-                int cidxTicket = cidx / this._size;                
+                int sidxTicket = sidx >> this._shift;
+                int cidxTicket = cidx >> this._shift;                
                 if (sidxTicket != cidxTicket)
                 {
                     // We are in the middle of a circular wrap-around.
@@ -109,7 +117,7 @@ namespace Sparrow.Collections
                 }
             }
 
-            var items = new Span<RingItem<T>>(_buffer, sidx % this._size, length);
+            var items = new Span<RingItem<T>>(_buffer, (int)(sidx & this._mask), length);
 
             // Are all items ready to be acquired?
             int i = 0;
@@ -124,7 +132,7 @@ namespace Sparrow.Collections
                 {
                     // No, therefore we will just return what it is ready. 
                     length = i;
-                    items = new Span<RingItem<T>>(_buffer, sidx % this._size, length);
+                    items = new Span<RingItem<T>>(_buffer, (int)(sidx & this._mask), length);
                     break;
                 }
             }
@@ -143,7 +151,7 @@ namespace Sparrow.Collections
             // PERF: We can make this far more efficient that using idiv operations. 
             for (int i = Volatile.Read(ref _startIdx); i < this._acquiredIdx; i++)
             {
-                ref var item = ref _buffer[i % this._size];
+                ref var item = ref _buffer[i & this._mask];
                 item.Item = default(T);
                 Volatile.Write(ref item.IsReady, false);
             }

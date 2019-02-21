@@ -11,15 +11,21 @@ namespace FastTests.Sparrow
         [Fact]
         public void RingBuffer_SingleItemPush()
         {
-            var rb = new SingleConsumerRingBuffer<long>(1);
+            var rb = new SingleConsumerRingBuffer<long>(3);
 
             long item = 910;
+            Assert.True(rb.TryPush(ref item));
+            Assert.True(rb.TryPush(ref item));
+            Assert.True(rb.TryPush(ref item));
             Assert.True(rb.TryPush(ref item));
             Assert.False(rb.TryPush(ref item));
 
             var span = rb.Acquire();
-            Assert.Equal(1, span.Length);
+            Assert.Equal(4, span.Length);
             Assert.Equal(910, span[0].Item);
+            Assert.Equal(910, span[1].Item);
+            Assert.Equal(910, span[2].Item);
+            Assert.Equal(910, span[3].Item);
 
             item = 911;
             Assert.False(rb.TryPush(ref item));
