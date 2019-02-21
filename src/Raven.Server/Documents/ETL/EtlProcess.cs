@@ -1057,7 +1057,8 @@ namespace Raven.Server.Documents.ETL
 
             var performance = _lastStats?.ToPerformanceLiveStats();
 
-            if (performance != null && performance.DurationInMs > 0)
+            if (performance != null && performance.DurationInMs > 0 &&
+                performance.SuccessfullyLoaded != false && FallbackTime != null)
             {
                 var processedPerSecondInCurrentBatch = performance.NumberOfExtractedItems.Sum(x => x.Value) / (performance.DurationInMs / 1000);
 
