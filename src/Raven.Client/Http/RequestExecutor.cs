@@ -1119,7 +1119,7 @@ namespace Raven.Client.Http
 
             if (nodeIndex.HasValue == false)
             {
-                //We executed request over a node not in the topology. This means no failover...
+                // we executed request over a node not in the topology. This means no failover...
                 return false;
             }
 
@@ -1138,7 +1138,7 @@ namespace Raven.Client.Http
 
             OnFailedRequest(url, e);
 
-            await ExecuteAsync(currentNode, currentIndex, context, command, shouldRetry: default, sessionInfo: sessionInfo, token: token).ConfigureAwait(false);
+            await ExecuteAsync(currentNode, currentIndex, context, command, shouldRetry: true, sessionInfo: sessionInfo, token: token).ConfigureAwait(false);
 
             return true;
         }

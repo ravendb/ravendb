@@ -799,8 +799,12 @@ namespace SlowTests.Cluster
                         var user = await session.LoadAsync<User>("foo/bar");
                         var changeVector = session.Advanced.GetChangeVectorFor(user);
                         Assert.NotNull(await session.Advanced.Revisions.GetAsync<User>(changeVector));
-                        var list = await session.Advanced.Revisions.GetForAsync<User>("foo/bar");
-                        Assert.Equal(2, list.Count);
+                        var count = await WaitForValueAsync((async () =>
+                        {
+                            var list = await session.Advanced.Revisions.GetForAsync<User>("foo/bar");
+                            return list.Count;
+                        }), 2);
+                        Assert.Equal(2, count);
 
                         // revive another node so we should have a functional cluster now
                         Servers[2] = GetNewServer(new Dictionary<string, string>
@@ -817,8 +821,12 @@ namespace SlowTests.Cluster
                         var database = await Servers[1].ServerStore.DatabasesLandlord.TryGetOrCreateResourceStore(leaderStore.Database);
                         await database.RachisLogIndexNotifications.WaitForIndexNotification(lastRaftIndex, TimeSpan.FromSeconds(15));
 
-                        list = await session.Advanced.Revisions.GetForAsync<User>("foo/bar");
-                        Assert.Equal(2, list.Count);
+                        count = await WaitForValueAsync((async () =>
+                        {
+                            var list = await session.Advanced.Revisions.GetForAsync<User>("foo/bar");
+                            return list.Count;
+                        }), 2);
+                        Assert.Equal(2, count);
                     }
                 }
             }

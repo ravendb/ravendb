@@ -10,6 +10,7 @@ using Raven.Client.Documents.Operations;
 using Raven.Client.Documents.Operations.Attachments;
 using Raven.Client.Documents.Queries;
 using Raven.Client.Documents.Replication;
+using Raven.Client.Documents.Session;
 using Raven.Client.Exceptions.Documents;
 using Raven.Client.ServerWide;
 using Raven.Server.Documents;
@@ -1121,11 +1122,12 @@ namespace SlowTests.Server.Replication
         [Fact]
         public async Task BackgroundResolveToLatestInCluster()
         {
-            var leader1 = await CreateRaftClusterAndGetLeader(3);
+            var cluster = await CreateRaftCluster(3);
+            var leader = cluster.Leader;
 
             using (var store1 = GetDocumentStore(new Options
             {
-                Server = leader1,
+                Server = leader,
                 ReplicationFactor = 3,
                 ModifyDatabaseRecord = record =>
                 {
@@ -1138,7 +1140,7 @@ namespace SlowTests.Server.Replication
             }))
             using (var store2 = GetDocumentStore(new Options
             {
-                Server = leader1,
+                Server = leader,
                 ReplicationFactor = 1
             }))
             {
@@ -1160,19 +1162,15 @@ namespace SlowTests.Server.Replication
                         Name = "Grisha"
                     }, "foo/bar");
                     await session.SaveChangesAsync();
+
                 }
 
                 Assert.Equal(2, WaitUntilHasConflict(store1, "foo/bar").Length);
-
                 await SetReplicationConflictResolutionAsync(store1, StraightforwardConflictResolution.ResolveToLatest);
-                Assert.True(WaitForDocument<User>(store1, "foo/bar", u => u.Name == "Grisha"));
-                
-                var database = Servers.Single(s => s.WebUrl == store1.Urls[0]).ServerStore.DatabasesLandlord.TryGetOrCreateResourceStore(store1.Database).Result;
-                using (database.DocumentsStorage.ContextPool.AllocateOperationContext(out DocumentsOperationContext context))
-                using (context.OpenReadTransaction())
+
+                using (var session = store1.OpenSession())
                 {
-                    var count = database.DocumentsStorage.RevisionsStorage.GetNumberOfRevisionDocuments(context);
-                    Assert.Equal(3, count);
+                    Assert.True(await WaitForDocumentInClusterAsync<User>((DocumentSession)session, "foo/bar", u => u.Name == "Grisha", TimeSpan.FromSeconds(15)));
                 }
             }
         }
@@ -1235,8 +1233,15 @@ namespace SlowTests.Server.Replication
 
                 await SetReplicationConflictResolutionAsync(store2, StraightforwardConflictResolution.ResolveToLatest);
                 await SetupReplicationAsync(store3, store2);
-                Assert.True(WaitForDocument<User>(store2, "foo/bar", u => u.Name == "Grisha"));
-                WaitForUserToContinueTheTest(store2);
+
+                using (var session = store3.OpenAsyncSession())
+                {
+                    await session.StoreAsync(new User(), "marker");
+                    await session.SaveChangesAsync();
+                }
+
+                Assert.True(WaitForDocument(store2, "marker"));
+
                 using (var session2 = store2.OpenAsyncSession())
                 using (var session3 = store3.OpenAsyncSession())
                 {
@@ -1244,8 +1249,8 @@ namespace SlowTests.Server.Replication
                     var rev3 = await session3.Advanced.Revisions.GetMetadataForAsync("foo/bar");
 
                     Assert.True(rev3.Count == rev2.Count, $"On the fly has {rev3.Count}, while from background has {rev2.Count}");
-                    Assert.Equal(3, rev3.Count);
-                    Assert.Equal(3, rev2.Count);
+                    Assert.Equal(4, rev3.Count);
+                    Assert.Equal(4, rev2.Count);
                 }
             }
         }

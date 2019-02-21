@@ -246,12 +246,15 @@ namespace Raven.Server.Documents.Replication
         {
             SaveConflictedDocumentsAsRevisions(context, resolved.Id, incoming);
 
+            // Resolved document should generate a new change vector, since it was changed locally. 
+            // In a cluster this may cause a ping-pong replication which will be settled down by the fact that a conflict with identical content doesn't increase the local etag
+            var changeVector = _database.DocumentsStorage.CreateNextDatabaseChangeVector(context, resolved.ChangeVector);
+
             if (resolved.Doc == null)
             {
                 using (Slice.External(context.Allocator, resolved.LowerId, out var lowerId))
                 {
-                    _database.DocumentsStorage.Delete(context, lowerId, resolved.Id, null,
-                        resolved.LastModified.Ticks, resolved.ChangeVector, new CollectionName(resolved.Collection),
+                    _database.DocumentsStorage.Delete(context, lowerId, resolved.Id, null,null, changeVector, new CollectionName(resolved.Collection),
                         documentFlags: resolved.Flags | DocumentFlags.Resolved | DocumentFlags.HasRevisions, nonPersistentFlags: NonPersistentDocumentFlags.FromResolver | NonPersistentDocumentFlags.Resolved);
                     return;
                 }
@@ -272,10 +275,10 @@ namespace Raven.Server.Documents.Replication
                 // we always want to merge the counters and attachments, even if the user specified a script
                 var nonPersistentFlags = NonPersistentDocumentFlags.ResolveCountersConflict | NonPersistentDocumentFlags.ResolveAttachmentsConflict |
                                          NonPersistentDocumentFlags.FromResolver | NonPersistentDocumentFlags.Resolved;
-                _database.DocumentsStorage.Put(context, resolved.Id, null, clone, resolved.LastModified.Ticks, resolved.ChangeVector, resolved.Flags | DocumentFlags.Resolved, nonPersistentFlags: nonPersistentFlags);
+                _database.DocumentsStorage.Put(context, resolved.Id, null, clone, null, changeVector, resolved.Flags | DocumentFlags.Resolved, nonPersistentFlags: nonPersistentFlags);
             }
         }
-
+        
         private void SaveConflictedDocumentsAsRevisions(DocumentsOperationContext context, string id, DocumentConflict incoming)
         {
             if (incoming == null)
