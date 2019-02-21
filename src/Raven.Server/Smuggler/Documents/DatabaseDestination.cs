@@ -744,7 +744,10 @@ namespace Raven.Server.Smuggler.Documents
                     };
                 }
 
-                document.Data = context.ReadObject(document.Data, document.Id, BlittableJsonDocumentBuilder.UsageMode.ToDisk);
+                using (var old = document.Data)
+                {
+                    document.Data = context.ReadObject(old, document.Id, BlittableJsonDocumentBuilder.UsageMode.ToDisk);
+                }
             }
 
             private static void ThrowRevisionsDisabled()
