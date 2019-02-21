@@ -1359,7 +1359,7 @@ namespace Voron.Impl.Journal
 
                 IPagerLevelTransactionState tempEncCompressionPagerTxState = null;
 
-                if (_env.Options.EncryptionEnabled && PlatformDetails.Is32Bits)
+                if (_env.Options.EncryptionEnabled && _is32Bit)
                 {
                     // RavenDB-12854: in 32 bits locking/unlocking the memory is done separately for each mapping
                     // we use temp tx for dealing with compression buffers pager to avoid locking (zeroing) it's content during tx dispose
@@ -1762,7 +1762,7 @@ namespace Voron.Impl.Journal
 
         private DateTime _lastCompressionBufferReduceCheck = DateTime.UtcNow;
         private CompressionAccelerationStats _lastCompressionAccelerationInfo = new CompressionAccelerationStats();
-        private bool _is32Bit;
+        private readonly bool _is32Bit;
 
         public void ReduceSizeOfCompressionBufferIfNeeded(bool forceReduce = false)
         {
