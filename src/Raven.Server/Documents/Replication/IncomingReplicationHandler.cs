@@ -894,6 +894,7 @@ namespace Raven.Server.Documents.Replication
                             ReadExactly(mem, documentSize);
 
                             item.Document = new BlittableJsonReaderObject(mem, documentSize, context);
+                            item.Document.BlittableValidation();
                         }
                         else
                         {
@@ -1275,7 +1276,6 @@ namespace Raven.Server.Documents.Replication
                                         // if something throws at this point, this means something is really wrong and we should stop receiving documents.
                                         // the other side will receive negative ack and will retry sending again.
                                         document = item.Document;
-                                        document.BlittableValidation();
 
                                         try
                                         {
