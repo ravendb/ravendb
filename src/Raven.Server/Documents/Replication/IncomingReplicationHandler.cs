@@ -525,8 +525,24 @@ namespace Raven.Server.Documents.Replication
 
             public void Dispose()
             {
-                if (_isReplayTransaction == false && ReplicatedItems != null)
-                    ArrayPool<ReplicationItem>.Shared.Return(ReplicatedItems.Array, clearArray: true);
+                if (ReplicatedItems != null)
+                {
+                    foreach (var item in ReplicatedItems)
+                    {
+                        item.Document.Dispose();
+                    }
+
+                    if (_isReplayTransaction == false)
+                        ArrayPool<ReplicationItem>.Shared.Return(ReplicatedItems.Array, clearArray: true);
+                }
+
+                if (ReplicatedAttachmentStreams != null)
+                {
+                    foreach (var attachmentStream in ReplicatedAttachmentStreams)
+                    {
+                        attachmentStream.Value.Dispose();
+                    }
+                }
             }
         }
 
@@ -550,7 +566,6 @@ namespace Raven.Server.Documents.Replication
                 SupportedFeatures = SupportedFeatures,
                 Logger = _log
             })
-            using (var replicationCommand = new MergedDocumentReplicationCommand(dataForReplicationCommand, lastEtag))
             {
                 try
                 {
@@ -578,6 +593,7 @@ namespace Raven.Server.Documents.Replication
 
                     using (stats.For(ReplicationOperation.Incoming.Storage))
                     {
+                        var replicationCommand = new MergedDocumentReplicationCommand(dataForReplicationCommand, lastEtag);
                         task = _database.TxMerger.Enqueue(replicationCommand);
 
                         using (var writer = new BlittableJsonTextWriter(documentsContext, _connectionOptions.Stream))
@@ -1193,10 +1209,9 @@ namespace Raven.Server.Documents.Replication
             }
         }
 
-        internal unsafe class MergedDocumentReplicationCommand : TransactionOperationsMerger.MergedTransactionCommand, IDisposable
+        internal unsafe class MergedDocumentReplicationCommand : TransactionOperationsMerger.MergedTransactionCommand
         {
             private readonly long _lastEtag;
-            private readonly List<IDisposable> _disposables = new List<IDisposable>();
             private readonly DataForReplicationCommand _replicationInfo;
 
             public MergedDocumentReplicationCommand(DataForReplicationCommand replicationInfo, long lastEtag)
@@ -1209,7 +1224,6 @@ namespace Raven.Server.Documents.Replication
             {
                 try
                 {
-                    _disposables.Clear();
                     IsIncomingReplication = true;
 
                     var operationsCount = 0;
@@ -1237,7 +1251,6 @@ namespace Raven.Server.Documents.Replication
                                 {
                                     database.DocumentsStorage.AttachmentsStorage.PutAttachmentStream(context, item.Key, attachmentStream.Base64Hash,
                                         attachmentStream.Stream);
-                                    _disposables.Add(attachmentStream);
                                     _replicationInfo.ReplicatedAttachmentStreams.Remove(item.Base64Hash);
                                 }
                             }
@@ -1267,153 +1280,147 @@ namespace Raven.Server.Documents.Replication
                             else
                             {
                                 BlittableJsonReaderObject document = null;
-                                try
+
+                                // no need to load document data for tombstones
+                                // document size == -1 --> doc is a tombstone
+                                if (item.DocumentSize >= 0)
                                 {
-                                    // no need to load document data for tombstones
-                                    // document size == -1 --> doc is a tombstone
-                                    if (item.DocumentSize >= 0)
-                                    {
-                                        // if something throws at this point, this means something is really wrong and we should stop receiving documents.
-                                        // the other side will receive negative ack and will retry sending again.
-                                        document = item.Document;
+                                    // if something throws at this point, this means something is really wrong and we should stop receiving documents.
+                                    // the other side will receive negative ack and will retry sending again.
+                                    document = item.Document;
 
-                                        try
+                                    try
+                                    {
+                                        AssertAttachmentsFromReplication(context, item.Id, document);
+                                    }
+                                    catch (MissingAttachmentException)
+                                    {
+                                        if (_replicationInfo.SupportedFeatures.Replication.MissingAttachments)
                                         {
-                                            AssertAttachmentsFromReplication(context, item.Id, document);
+                                            throw;
                                         }
-                                        catch (MissingAttachmentException)
-                                        {
-                                            if (_replicationInfo.SupportedFeatures.Replication.MissingAttachments)
-                                            {
-                                                throw;
-                                            }
 
-                                            database.NotificationCenter.Add(AlertRaised.Create(
-                                                database.Name,
-                                                IncomingReplicationStr,
-                                                $"Detected missing attachments for document {item.Id} with the following hashes:" +
-                                                $" ({string.Join(',', GetAttachmentsHashesFromDocumentMetadata(document))}).",
-                                                AlertType.ReplicationMissingAttachments,
-                                                NotificationSeverity.Warning));
-                                        }
-                                    }
-
-                                    if (item.Flags.Contain(DocumentFlags.Revision))
-                                    {
-                                        database.DocumentsStorage.RevisionsStorage.Put(
-                                            context,
-                                            item.Id,
-                                            document,
-                                            item.Flags,
-                                            NonPersistentDocumentFlags.FromReplication,
-                                            rcvdChangeVector,
-                                            item.LastModifiedTicks);
-                                        continue;
-                                    }
-
-                                    if (item.Flags.Contain(DocumentFlags.DeleteRevision))
-                                    {
-                                        database.DocumentsStorage.RevisionsStorage.Delete(
-                                            context,
-                                            item.Id,
-                                            document,
-                                            item.Flags,
-                                            NonPersistentDocumentFlags.FromReplication,
-                                            rcvdChangeVector,
-                                            item.LastModifiedTicks);
-                                        continue;
-                                    }
-
-                                    var hasRemoteClusterTx = item.Flags.Contain(DocumentFlags.FromClusterTransaction);
-                                    var conflictStatus = ConflictsStorage.GetConflictStatusForDocument(context, item.Id, item.ChangeVector, out var conflictingVector,
-                                        out var hasLocalClusterTx);
-
-                                    var flags = item.Flags;
-                                    var resolvedDocument = document;
-                                    switch (conflictStatus)
-                                    {
-                                        case ConflictStatus.Update:
-
-                                            if (resolvedDocument != null)
-                                            {
-                                                AttachmentsStorage.AssertAttachments(document, item.Flags);
-
-                                                database.DocumentsStorage.Put(context, item.Id, null, resolvedDocument, item.LastModifiedTicks,
-                                                    rcvdChangeVector, flags, NonPersistentDocumentFlags.FromReplication);
-                                            }
-                                            else
-                                            {
-                                                using (DocumentIdWorker.GetSliceFromId(context, item.Id, out Slice keySlice))
-                                                {
-                                                    database.DocumentsStorage.Delete(
-                                                        context, keySlice, item.Id, null,
-                                                        item.LastModifiedTicks,
-                                                        rcvdChangeVector,
-                                                        new CollectionName(item.Collection),
-                                                        NonPersistentDocumentFlags.FromReplication,
-                                                        flags);
-                                                }
-                                            }
-
-                                            break;
-                                        case ConflictStatus.Conflict:
-                                            if (_replicationInfo.Logger.IsInfoEnabled)
-                                                _replicationInfo.Logger.Info(
-                                                    $"Conflict check resolved to Conflict operation, resolving conflict for doc = {item.Id}, with change vector = {item.ChangeVector}");
-
-                                            // we will always prefer the local
-                                            if (hasLocalClusterTx)
-                                            {
-                                                // we have to strip the cluster tx flag from the local document
-                                                var local = database.DocumentsStorage.GetDocumentOrTombstone(context, item.Id, throwOnConflict: false);
-                                                flags = item.Flags.Strip(DocumentFlags.FromClusterTransaction);
-                                                if (local.Document != null)
-                                                {
-                                                    rcvdChangeVector = ChangeVectorUtils.MergeVectors(rcvdChangeVector, local.Document.ChangeVector);
-                                                    resolvedDocument = local.Document.Data.Clone(context);
-                                                }
-                                                else if (local.Tombstone != null)
-                                                {
-                                                    rcvdChangeVector = ChangeVectorUtils.MergeVectors(rcvdChangeVector, local.Tombstone.ChangeVector);
-                                                    resolvedDocument = null;
-                                                }
-                                                else
-                                                {
-                                                    throw new InvalidOperationException("Local cluster tx but no matching document / tombstone for: " + item.Id +
-                                                                                        ", this should not be possible");
-                                                }
-
-                                                goto case ConflictStatus.Update;
-                                            }
-
-                                            // otherwise we will choose the remote document from the transaction
-                                            if (hasRemoteClusterTx)
-                                            {
-                                                flags = flags.Strip(DocumentFlags.FromClusterTransaction);
-                                                goto case ConflictStatus.Update;
-                                            }
-                                            else
-                                            {
-                                                // if the conflict is going to be resolved locally, that means that we have local work to do
-                                                // that we need to distribute to our siblings
-                                                IsIncomingReplication = false;
-                                                _replicationInfo.ConflictManager.HandleConflictForDocument(context, item.Id, item.Collection, item.LastModifiedTicks,
-                                                    document,
-                                                    rcvdChangeVector, conflictingVector, item.Flags);
-                                            }
-
-                                            break;
-                                        case ConflictStatus.AlreadyMerged:
-                                            // we have to do nothing here
-                                            break;
-                                        default:
-                                            throw new ArgumentOutOfRangeException(nameof(conflictStatus),
-                                                "Invalid ConflictStatus: " + conflictStatus);
+                                        database.NotificationCenter.Add(AlertRaised.Create(
+                                            database.Name,
+                                            IncomingReplicationStr,
+                                            $"Detected missing attachments for document {item.Id} with the following hashes:" +
+                                            $" ({string.Join(',', GetAttachmentsHashesFromDocumentMetadata(document))}).",
+                                            AlertType.ReplicationMissingAttachments,
+                                            NotificationSeverity.Warning));
                                     }
                                 }
-                                finally
+
+                                if (item.Flags.Contain(DocumentFlags.Revision))
                                 {
-                                    _disposables.Add(document);
+                                    database.DocumentsStorage.RevisionsStorage.Put(
+                                        context,
+                                        item.Id,
+                                        document,
+                                        item.Flags,
+                                        NonPersistentDocumentFlags.FromReplication,
+                                        rcvdChangeVector,
+                                        item.LastModifiedTicks);
+                                    continue;
+                                }
+
+                                if (item.Flags.Contain(DocumentFlags.DeleteRevision))
+                                {
+                                    database.DocumentsStorage.RevisionsStorage.Delete(
+                                        context,
+                                        item.Id,
+                                        document,
+                                        item.Flags,
+                                        NonPersistentDocumentFlags.FromReplication,
+                                        rcvdChangeVector,
+                                        item.LastModifiedTicks);
+                                    continue;
+                                }
+
+                                var hasRemoteClusterTx = item.Flags.Contain(DocumentFlags.FromClusterTransaction);
+                                var conflictStatus = ConflictsStorage.GetConflictStatusForDocument(context, item.Id, item.ChangeVector, out var conflictingVector,
+                                    out var hasLocalClusterTx);
+
+                                var flags = item.Flags;
+                                var resolvedDocument = document;
+                                switch (conflictStatus)
+                                {
+                                    case ConflictStatus.Update:
+
+                                        if (resolvedDocument != null)
+                                        {
+                                            AttachmentsStorage.AssertAttachments(document, item.Flags);
+
+                                            database.DocumentsStorage.Put(context, item.Id, null, resolvedDocument, item.LastModifiedTicks,
+                                                rcvdChangeVector, flags, NonPersistentDocumentFlags.FromReplication);
+                                        }
+                                        else
+                                        {
+                                            using (DocumentIdWorker.GetSliceFromId(context, item.Id, out Slice keySlice))
+                                            {
+                                                database.DocumentsStorage.Delete(
+                                                    context, keySlice, item.Id, null,
+                                                    item.LastModifiedTicks,
+                                                    rcvdChangeVector,
+                                                    new CollectionName(item.Collection),
+                                                    NonPersistentDocumentFlags.FromReplication,
+                                                    flags);
+                                            }
+                                        }
+
+                                        break;
+                                    case ConflictStatus.Conflict:
+                                        if (_replicationInfo.Logger.IsInfoEnabled)
+                                            _replicationInfo.Logger.Info(
+                                                $"Conflict check resolved to Conflict operation, resolving conflict for doc = {item.Id}, with change vector = {item.ChangeVector}");
+
+                                        // we will always prefer the local
+                                        if (hasLocalClusterTx)
+                                        {
+                                            // we have to strip the cluster tx flag from the local document
+                                            var local = database.DocumentsStorage.GetDocumentOrTombstone(context, item.Id, throwOnConflict: false);
+                                            flags = item.Flags.Strip(DocumentFlags.FromClusterTransaction);
+                                            if (local.Document != null)
+                                            {
+                                                rcvdChangeVector = ChangeVectorUtils.MergeVectors(rcvdChangeVector, local.Document.ChangeVector);
+                                                resolvedDocument = local.Document.Data.Clone(context);
+                                            }
+                                            else if (local.Tombstone != null)
+                                            {
+                                                rcvdChangeVector = ChangeVectorUtils.MergeVectors(rcvdChangeVector, local.Tombstone.ChangeVector);
+                                                resolvedDocument = null;
+                                            }
+                                            else
+                                            {
+                                                throw new InvalidOperationException("Local cluster tx but no matching document / tombstone for: " + item.Id +
+                                                                                    ", this should not be possible");
+                                            }
+
+                                            goto case ConflictStatus.Update;
+                                        }
+
+                                        // otherwise we will choose the remote document from the transaction
+                                        if (hasRemoteClusterTx)
+                                        {
+                                            flags = flags.Strip(DocumentFlags.FromClusterTransaction);
+                                            goto case ConflictStatus.Update;
+                                        }
+                                        else
+                                        {
+                                            // if the conflict is going to be resolved locally, that means that we have local work to do
+                                            // that we need to distribute to our siblings
+                                            IsIncomingReplication = false;
+                                            _replicationInfo.ConflictManager.HandleConflictForDocument(context, item.Id, item.Collection, item.LastModifiedTicks,
+                                                document,
+                                                rcvdChangeVector, conflictingVector, item.Flags);
+                                        }
+
+                                        break;
+                                    case ConflictStatus.AlreadyMerged:
+                                        // we have to do nothing here
+                                        break;
+                                    default:
+                                        throw new ArgumentOutOfRangeException(nameof(conflictStatus),
+                                            "Invalid ConflictStatus: " + conflictStatus);
                                 }
                             }
                         }
@@ -1465,14 +1472,6 @@ namespace Raven.Server.Documents.Replication
                             yield return hash;
                         }
                     }
-                }
-            }
-
-            public void Dispose()
-            {
-                foreach (var disposable in _disposables)
-                {
-                    disposable?.Dispose();
                 }
             }
 
