@@ -53,6 +53,7 @@ namespace Sparrow
                 }
                 tcs.TrySetResult(t.Result);
             }, token);
+            token.Register(() => tcs.TrySetCanceled(token));
             return tcs.Task;
         }
 
