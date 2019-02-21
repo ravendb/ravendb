@@ -122,6 +122,47 @@ namespace SlowTests.Issues
             }
         }
 
+        [Fact]
+        public void Can_query_4_dimensional_array_using_contains_via_client()
+        {
+            using (var store = GetDocumentStore())
+            {
+                using (var session = store.OpenSession())
+                {
+                    session.Store(new Album
+                    {
+                        Tags4D = new List<List<List<List<string>>>>
+                        {
+                            new List<List<List<string>>>
+                            {
+                                new List<List<string>>
+                                {
+                                    new List<string>
+                                    {
+                                        "Elektro House",
+                                        "100"
+                                    }
+                                }
+                            }
+                        }
+                    });
+
+                    session.SaveChanges();
+                }
+
+                using (var session = store.OpenSession())
+                {
+                    var q = session.Query<Album>().Where(x => x.Tags4D.Any(t1 => t1.Any(t2 => t2.Any(t3 => t3.Contains("Elektro House")))));
+
+                    Assert.Equal("from Albums where Tags4D = $p0", q.ToString());
+
+                    var results = q.ToList();
+
+                    Assert.Equal(1, results.Count);
+                }
+            }
+        }
+
         private class Song
         {
             public List<List<string>> Tags { get; set; }
