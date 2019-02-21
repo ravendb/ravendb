@@ -32,7 +32,90 @@ namespace SlowTests.Issues
 
                     Assert.Equal(1, results.Count);
 
-                    results = session.Query<Song>().Customize(x => x.WaitForNonStaleResults()).Where(x => x.Tags.Any(y => y.Any(z => z == "Elektro House"))).ToList();
+                    var q = session.Query<Song>().Customize(x => x.WaitForNonStaleResults()).Where(x => x.Tags.Any(y => y.Any(z => z == "Elektro House")));
+
+                    Assert.Equal(@"from Songs where Tags = $p0", q.ToString());
+
+                    results = q.ToList();
+
+                    Assert.Equal(1, results.Count);
+                }
+            }
+        }
+
+        [Fact]
+        public void Can_query_3_dimensional_array_via_client()
+        {
+            using (var store = GetDocumentStore())
+            {
+                using (var session = store.OpenSession())
+                {
+                    session.Store(new Album
+                    {
+                        Tags3D = new List<List<List<string>>>
+                        {
+                            new List<List<string>>
+                            {
+                                new List<string>
+                                {
+                                    "Elektro House",
+                                    "100"
+                                }
+                            }
+                        }
+                    });
+
+                    session.SaveChanges();
+                }
+
+                using (var session = store.OpenSession())
+                {
+                    var q = session.Query<Album>().Where(x => x.Tags3D.Any(t1 => t1.Any(t2 => t2.Any(t3 => t3 == "Elektro House"))));
+
+                    Assert.Equal("from Albums where Tags3D = $p0", q.ToString());
+
+                    var results = q.ToList();
+
+                    Assert.Equal(1, results.Count);
+                }
+            }
+        }
+
+        [Fact]
+        public void Can_query_4_dimensional_array_via_client()
+        {
+            using (var store = GetDocumentStore())
+            {
+                using (var session = store.OpenSession())
+                {
+                    session.Store(new Album
+                    {
+                        Tags4D = new List<List<List<List<string>>>>
+                        {
+                            new List<List<List<string>>>
+                            {
+                                new List<List<string>>
+                                {
+                                    new List<string>
+                                    {
+                                        "Elektro House",
+                                        "100"
+                                    }
+                                }
+                            }
+                        }
+                    });
+
+                    session.SaveChanges();
+                }
+
+                using (var session = store.OpenSession())
+                {
+                    var q = session.Query<Album>().Where(x => x.Tags4D.Any(t1 => t1.Any(t2 => t2.Any(t3 => t3.Any(t4 => t4 == "Elektro House")))));
+
+                    Assert.Equal("from Albums where Tags4D = $p0", q.ToString());
+
+                    var results = q.ToList();
 
                     Assert.Equal(1, results.Count);
                 }
@@ -42,6 +125,12 @@ namespace SlowTests.Issues
         private class Song
         {
             public List<List<string>> Tags { get; set; }
+        }
+
+        private class Album
+        {
+            public List<List<List<string>>> Tags3D { get; set; }
+            public List<List<List<List<string>>>> Tags4D { get; set; }
         }
     }
 }
