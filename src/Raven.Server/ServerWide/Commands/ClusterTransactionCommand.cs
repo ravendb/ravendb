@@ -138,7 +138,7 @@ namespace Raven.Server.ServerWide.Commands
             }
         }
 
-        public List<string> ExecuteCompareExchangeCommands(TransactionOperationContext context, long index, Table items)
+        public List<string> ExecuteCompareExchangeCommands(TransactionOperationContext context, long index, Table items, Table tombstones)
         {
             if (ClusterCommands == null || ClusterCommands.Count == 0)
                 return null;
@@ -183,7 +183,7 @@ namespace Raven.Server.ServerWide.Commands
 
             foreach (var command in toExecute)
             {
-                command.Execute(context, items, index);
+                command.Execute(context, items, index, tombstones);
             }
 
             return null;

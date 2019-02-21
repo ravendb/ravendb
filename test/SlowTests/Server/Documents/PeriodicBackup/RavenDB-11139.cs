@@ -132,7 +132,7 @@ namespace SlowTests.Server.Documents.PeriodicBackup
                 config.IncrementalBackupFrequency = "* */300 * * *";
                 config.TaskId = result.TaskId;
                 result = await store.Maintenance.SendAsync(new UpdatePeriodicBackupOperation(config));
-                //WaitForUserToContinueTheTest(store);
+                
                 RunBackup(result.TaskId, documentDatabase, false, store);   // INCREMENTAL
 
                 var backupDirectory = Directory.GetDirectories(backupPath).First();
@@ -916,26 +916,25 @@ namespace SlowTests.Server.Documents.PeriodicBackup
                     var dbs = server.ServerStore.Cluster.GetDatabaseNames(context);
                     var dbsList = dbs.ToList();
 
-                    Assert.Equal(1, dbsList.Count);
-                    var dbName = dbsList.First();
-                    Assert.Equal("testoso", dbName);
+                    Assert.Equal(2, dbsList.Count);
+                    var dbName2 = dbsList[0];
+                    Assert.Equal("demo", dbName2);
+                    var dbName1 = dbsList[1];
+                    Assert.Equal("testoso", dbName1);
 
-                    var numOfIdentities = server.ServerStore.Cluster.GetNumberOfIdentities(context, dbName);
+                    var numOfIdentities = server.ServerStore.Cluster.GetNumberOfIdentities(context, dbName1);
                     Assert.Equal(2, numOfIdentities);
-                    var numOfCompareExchanges = server.ServerStore.Cluster.GetNumberOfCompareExchange(context, dbName);
+                    numOfIdentities = server.ServerStore.Cluster.GetNumberOfIdentities(context, dbName2);
+                    Assert.Equal(1, numOfIdentities);
+
+                    var numOfCompareExchanges = server.ServerStore.Cluster.GetNumberOfCompareExchange(context, dbName1);
                     Assert.Equal(3, numOfCompareExchanges);
+                    numOfCompareExchanges = server.ServerStore.Cluster.GetNumberOfCompareExchange(context, dbName2);
+                    Assert.Equal(2, numOfCompareExchanges);
                 }
             }
         }
 
-        private static void CopyAll(DirectoryInfo source, DirectoryInfo target)
-        {
-            foreach (var fi in source.GetFiles())
-                fi.CopyTo(Path.Combine(target.FullName, fi.Name), true);
-
-            foreach (var diSourceSubDir in source.GetDirectories())
-                CopyAll(diSourceSubDir, target.CreateSubdirectory(diSourceSubDir.Name));
-        }
         private static List<string> ConcatStringInList(List<string> list)
         {
             for (var i = 0; i < list.Count; i++)
