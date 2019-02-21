@@ -191,7 +191,7 @@ namespace Raven.Client.Documents.Smuggler
                 [nameof(Identities)] = Identities.ToJson(),
                 [nameof(Indexes)] = Indexes.ToJson(),
                 [nameof(CompareExchange)] = CompareExchange.ToJson(),
-                [nameof(Counters)] = Counters.ToJson()
+                [nameof(Counters)] = Counters.ToJson(),
                 [nameof(CompareExchangeTombstones)] = CompareExchangeTombstones.ToJson()
             };
         }

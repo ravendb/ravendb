@@ -40,9 +40,9 @@ namespace Raven.Client.ServerWide
 
         public long EtagForBackup;
 
-        public long CompareExchangeIndexForBackup;
-
         public Dictionary<string, DeletionInProgressStatus> DeletionInProgress;
+
+        public DatabaseStateStatus DatabaseState;
 
         public DatabaseTopology Topology;
 
@@ -222,6 +222,12 @@ namespace Raven.Client.ServerWide
 
             return count;
         }
+    }
+
+    public enum DatabaseStateStatus
+    {
+        Normal,
+        RestoreInProgress
     }
 
     public enum DeletionInProgressStatus

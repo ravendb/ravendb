@@ -31,6 +31,11 @@ namespace Raven.Server.ServerWide.Commands
             return _itemId ?? (_itemId = GetStorageKey(DatabaseName, Prefix));
         }
 
+        public static string GetStorageKey(string databaseName, string prefix)
+        {
+            return $"{databaseName.ToLowerInvariant()}/{prefix?.ToLowerInvariant()}";
+        }
+
         protected override BlittableJsonReaderObject GetUpdatedValue(long index, DatabaseRecord record, JsonOperationContext context, BlittableJsonReaderObject existingValue, RachisState state)
         {
             throw new NotImplementedException();

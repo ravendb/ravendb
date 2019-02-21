@@ -433,9 +433,6 @@ namespace Raven.Server.Documents.PeriodicBackup
 
                     BackupTypeValidation();
 
-                    var currentLastEtag = _database.ReadLastEtag();
-                    var currentLastRaftIndexForBackup = GetDatabaseEtagForBackup();
-
                     if (_configuration.BackupType == BackupType.Backup ||
                         _configuration.BackupType == BackupType.Snapshot && _isFullBackup == false)
                     {
@@ -457,21 +454,19 @@ namespace Raven.Server.Documents.PeriodicBackup
                         var currentBackupResult = CreateBackup(options, tempBackupFilePath, startDocumentEtag, startRaftIndex, onProgress);
 
                         if (_isFullBackup)
+                        {
                             internalBackupResult = currentBackupResult;
+                        }
                         else
                         {
-                            var docsNotChanged = currentLastEtag == _previousBackupStatus.LastEtag;
-                            var raftNotChanged = currentLastRaftIndexForBackup == _previousBackupStatus.LastRaftIndex.LastEtag;
-
-                            if (docsNotChanged && raftNotChanged)
+                            if (_backupResult.GetLastEtag() == _previousBackupStatus.LastEtag && _backupResult.GetLastRaftIndex() == _previousBackupStatus.LastRaftIndex.LastEtag)
                             {
                                 internalBackupResult.LastDocumentEtag = startDocumentEtag ?? 0;
                                 internalBackupResult.LastRaftIndex = startRaftIndex ?? 0;
                             }
                             else
                             {
-                                internalBackupResult.LastDocumentEtag = _backupResult.GetLastEtag();
-                                internalBackupResult.LastRaftIndex = _backupResult.GetLastRaftIndex();
+                                internalBackupResult = currentBackupResult;
                             }
                         }
                     }
@@ -481,7 +476,7 @@ namespace Raven.Server.Documents.PeriodicBackup
                         AddInfo("Started a snapshot backup", onProgress);
 
                         internalBackupResult.LastDocumentEtag = _database.ReadLastEtag();
-                        internalBackupResult.LastRaftIndex = currentLastRaftIndexForBackup;
+                        internalBackupResult.LastRaftIndex = GetDatabaseEtagForBackup();
                         var databaseSummary = _database.GetDatabaseSummary();
                         var indexesCount = _database.IndexStore.Count;
 

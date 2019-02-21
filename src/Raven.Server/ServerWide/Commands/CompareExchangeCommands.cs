@@ -15,10 +15,10 @@ namespace Raven.Server.ServerWide.Commands
     public abstract class CompareExchangeCommandBase : CommandBase
     {
         public string Key;
-        public string DatabaseName;
+        public string Database;
         private string _actualKey;
 
-        protected string ActualKey => _actualKey ?? (_actualKey = GetActualKey(DatabaseName, Key));
+        protected string ActualKey => _actualKey ?? (_actualKey = GetActualKey(Database, Key));
 
         public long Index;
         [JsonDeserializationIgnore]
@@ -42,7 +42,7 @@ namespace Raven.Server.ServerWide.Commands
 
             Key = key;
             Index = index;
-            DatabaseName = database;
+            Database = database;
             ContextToWriteResult = context;
         }
 
@@ -78,9 +78,9 @@ namespace Raven.Server.ServerWide.Commands
             }
         }
 
-        public static unsafe void GetPrefixIndexSlices(
+        public static unsafe ByteStringContext<ByteStringMemoryCache>.InternalScope GetPrefixIndexSlices(
            ByteStringContext allocator, string db, long index,
-            out (ByteString Buffer, ByteStringContext<ByteStringMemoryCache>.InternalScope Scope) finalIndex)
+            out ByteString finalIndex)
         {
             var indexScope = allocator.Allocate(Encoding.UTF8.GetMaxByteCount(db.Length) + sizeof(long), out ByteString indexBuffer);
             fixed (char* pDb = db)
@@ -92,7 +92,9 @@ namespace Raven.Server.ServerWide.Commands
 
                 *(long*)(indexBuffer.Ptr + len) = Bits.SwapBytes(index);
 
-                finalIndex = (indexBuffer, indexScope);
+                finalIndex = indexBuffer;
+
+                return indexScope;
             }
         }
 
@@ -115,7 +117,7 @@ namespace Raven.Server.ServerWide.Commands
             var json = base.ToJson(context);
             json[nameof(Key)] = Key;
             json[nameof(Index)] = Index;
-            json[nameof(DatabaseName)] = DatabaseName;
+            json[nameof(Database)] = Database;
             return json;
         }
 
@@ -204,7 +206,7 @@ namespace Raven.Server.ServerWide.Commands
 
         private unsafe void WriteCompareExchangeTombstone(TransactionOperationContext context, Table tombstoneItems, long index)
         {
-            GetKeyAndPrefixIndexSlices(context.Allocator, DatabaseName, Key, index, out var keyTuple, out var indexTuple);
+            GetKeyAndPrefixIndexSlices(context.Allocator, Database, Key, index, out var keyTuple, out var indexTuple);
 
             using (keyTuple.Scope)
             using (indexTuple.Scope)
@@ -224,7 +226,7 @@ namespace Raven.Server.ServerWide.Commands
             var json = base.ToJson(context);
             json[nameof(Key)] = Key;
             json[nameof(Index)] = Index;
-            json[nameof(DatabaseName)] = DatabaseName;
+            json[nameof(Database)] = Database;
             json[nameof(FromBackup)] = FromBackup;
             return json;
         }
@@ -248,7 +250,7 @@ namespace Raven.Server.ServerWide.Commands
             // and it was serialized. In that case, it is an _internal_ object, not a full document,
             // so we have to clone it to get it into a standalone mode.
             Value = Value.Clone(context);
-            GetKeyAndPrefixIndexSlices(context.Allocator, DatabaseName, Key, index, out var keyTuple, out var indexTuple);
+            GetKeyAndPrefixIndexSlices(context.Allocator, Database, Key, index, out var keyTuple, out var indexTuple);
 
             using (keyTuple.Scope)
             using (indexTuple.Scope)

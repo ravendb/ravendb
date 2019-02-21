@@ -15,6 +15,9 @@ namespace Raven.Server.Storage.Schema.Updates.Server
             var dbs = new List<string>();
             const string dbKey = "db/";
 
+            var identities = step.ReadTx.ReadTree(Identities);
+            step.WriteTx.DeleteTree(Identities);
+
             var oldCompareExchangeSchema = new TableSchema().
                 DefineKey(new TableSchema.SchemaIndexDef
             {
@@ -39,16 +42,16 @@ namespace Raven.Server.Storage.Schema.Updates.Server
                 {
                     var writeOldTable = step.WriteTx.OpenTable(oldCompareExchangeSchema, CompareExchange);
                     var writeTable = step.WriteTx.OpenTable(CompareExchangeSchema, CompareExchange);
+                    var compareExchangeOldKey = $"{db.ToLowerInvariant()}/";
 
-                    using (Slice.From(step.ReadTx.Allocator, db.ToLowerInvariant() + "/", out var keyPrefix))
+                    using (Slice.From(step.ReadTx.Allocator, compareExchangeOldKey, out var keyPrefix))
                     {
                         foreach (var item in readTable.SeekByPrimaryKeyPrefix(keyPrefix, Slices.Empty, 0))
                         {
                             var index = TableValueToLong((int)UniqueItems.Index, ref item.Value.Reader);
-                            GetPrefixIndexSlices(step.ReadTx.Allocator, db, index, out var indexTuple);
 
-                            using (indexTuple.Scope)
-                            using (Slice.External(step.WriteTx.Allocator, indexTuple.Buffer.Ptr, indexTuple.Buffer.Length, out var prefixIndexSlice))
+                            using (GetPrefixIndexSlices(step.ReadTx.Allocator, db, index, out var buffer))
+                            using (Slice.External(step.WriteTx.Allocator, buffer.Ptr, buffer.Length, out var prefixIndexSlice))
                             using (writeTable.Allocate(out TableValueBuilder write))
                             using (var ctx = JsonOperationContext.ShortTermSingleUse())
                             {
@@ -64,18 +67,18 @@ namespace Raven.Server.Storage.Schema.Updates.Server
                         }
                     }
                 }
-                var identities = step.ReadTx.ReadTree(Identities);
-
+                
                 if (identities != null)
                 {
-                    step.WriteTx.DeleteTree(ServerWide.ClusterStateMachine.Identities);
-                    Slice.From(step.WriteTx.Allocator, "Identities", out var Identities);
-                    IdentitiesSchema.Create(step.WriteTx, Identities, 32);
-                    var writeTable = step.WriteTx.OpenTable(IdentitiesSchema, Identities);
+                    Slice.From(step.WriteTx.Allocator, "Identities", out var identitySlice);
+                    IdentitiesSchema.Create(step.WriteTx, identitySlice, 32);
+                    var writeTable = step.WriteTx.OpenTable(IdentitiesSchema, identitySlice);
                     using (Slice.From(step.ReadTx.Allocator, $"{dbKey}{db.ToLowerInvariant()}/identities/", out var identityPrefix))
                     {
                         using (var it = identities.Iterate(prefetch: false))
                         {
+                            it.SetRequiredPrefix(identityPrefix);
+
                             if (it.Seek(identityPrefix) == false)
                                 continue;
 

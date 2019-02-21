@@ -1202,6 +1202,14 @@ namespace Raven.Server.ServerWide.Maintenance
                 return disabled;
             }
 
+            public bool? ReadRestoringInProgress()
+            {
+                if(RawDatabase.TryGet(nameof(DatabaseRecord.DatabaseState), out DatabaseStateStatus dbState) == false)
+                    return null;
+
+                return dbState.Equals(DatabaseStateStatus.RestoreInProgress);
+            }
+
             public Dictionary<string, string> ReadSettings()
             {
                 var settings = new Dictionary<string, string>();

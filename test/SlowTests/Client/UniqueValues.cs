@@ -287,7 +287,7 @@ namespace SlowTests.Client
                 using (Server.ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext ctx))
                 using (ctx.OpenReadTransaction())
                 {
-                    var result = Server.ServerStore.Cluster.GetCompareExchangeFrom(ctx, dbName, 0, int.MaxValue);
+                    var result = Server.ServerStore.Cluster.GetCompareExchangeFromPrefix(ctx, dbName, 0, int.MaxValue);
                     foreach (var item in result)
                         resultItems++;
                 }

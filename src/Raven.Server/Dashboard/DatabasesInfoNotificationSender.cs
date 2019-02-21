@@ -362,12 +362,20 @@ namespace Raven.Server.Dashboard
 
         private static bool IsDatabaseDisabled(BlittableJsonReaderObject databaseRecordBlittable)
         {
-            if (databaseRecordBlittable.TryGet(nameof(DatabaseRecord.Disabled), out bool disabled) == false)
-            {
-                return false;
-            }
+            var noDisabled = databaseRecordBlittable.TryGet(nameof(DatabaseRecord.Disabled), out bool disabled) == false;
+            var noDatabaseState = databaseRecordBlittable.TryGet(nameof(DatabaseRecord.DatabaseState), out DatabaseStateStatus dbState) == false;
 
-            return disabled;
+            if (noDisabled && noDatabaseState)
+                return false;
+
+            if (noDatabaseState)
+                return disabled;
+
+            var isRestoring = dbState.Equals(DatabaseStateStatus.RestoreInProgress);
+            if (noDisabled)
+                return isRestoring;
+
+            return disabled || isRestoring;
         }
     }
 }

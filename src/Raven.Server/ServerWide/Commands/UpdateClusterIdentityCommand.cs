@@ -20,12 +20,11 @@ namespace Raven.Server.ServerWide.Commands
         {
         }
 
-        public UpdateClusterIdentityCommand(string databaseName, Dictionary<string, long> identities, bool force, bool fromBackup = false)
+        public UpdateClusterIdentityCommand(string databaseName, Dictionary<string, long> identities, bool force)
             : base(databaseName)
         {
             Identities = new Dictionary<string, long>(identities);
             Force = force;
-            FromBackup = fromBackup;
         }
 
         public bool Force { get; set; }
@@ -137,7 +136,6 @@ namespace Raven.Server.ServerWide.Commands
         public override void FillJson(DynamicJsonValue json)
         {
             json[nameof(Identities)] = (Identities ?? new Dictionary<string, long>()).ToJson();
-            json[nameof(FromBackup)] = FromBackup;
             if (Force)
             {
                 json[nameof(Force)] = true;

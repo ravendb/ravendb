@@ -143,9 +143,9 @@ namespace SlowTests.Issues
             using (Server.ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
             using (context.OpenReadTransaction())
             {
-                Assert.Equal(0, Server.ServerStore.Cluster.GetIdentitiesFrom(context, dbName1, 0, int.MaxValue).Count());
-                Assert.Equal(0, Server.ServerStore.Cluster.GetIdentitiesFrom(context, dbName2, 0, int.MaxValue).Count());
-                Assert.Equal(0, Server.ServerStore.Cluster.GetIdentitiesFrom(context, dbName3, 0, int.MaxValue).Count());
+                Assert.Equal(0, Server.ServerStore.Cluster.GetIdentitiesFromPrefix(context, dbName1, 0, int.MaxValue).Count());
+                Assert.Equal(0, Server.ServerStore.Cluster.GetIdentitiesFromPrefix(context, dbName2, 0, int.MaxValue).Count());
+                Assert.Equal(0, Server.ServerStore.Cluster.GetIdentitiesFromPrefix(context, dbName3, 0, int.MaxValue).Count());
             }
         }
     }

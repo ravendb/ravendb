@@ -4,6 +4,7 @@ using System.Diagnostics;
 using System.IO;
 using System.IO.Compression;
 using System.Linq;
+using System.Threading;
 using System.Threading.Tasks;
 using Raven.Client;
 using Raven.Client.Documents.Indexes;
@@ -31,6 +32,7 @@ using Raven.Server.Web.System;
 using Sparrow;
 using Sparrow.Logging;
 using Sparrow.Platform;
+using Voron;
 using Voron.Impl.Backup;
 using Voron.Util.Settings;
 using DatabaseSmuggler = Raven.Client.Documents.Smuggler.DatabaseSmuggler;
@@ -174,6 +176,17 @@ namespace Raven.Server.Documents.PeriodicBackup.Restore
 
                     database.Initialize(options);
 
+                    databaseRecord.Topology = new DatabaseTopology();
+                    // restoring to the current node only
+                    databaseRecord.Topology.Members.Add(_nodeTag);
+                    // we are currently restoring, shouldn't try to access it
+                    databaseRecord.DatabaseState = DatabaseStateStatus.RestoreInProgress;
+
+                    var (index, _) = await _serverStore.WriteDatabaseRecordAsync(databaseName, databaseRecord, null, restoreSettings.DatabaseValues, isRestore: true);
+                    await _serverStore.Cluster.WaitForIndexNotification(index);
+                    _serverStore.EnsureNotPassive();
+                    DisableOngoingTasksIfNeeded(databaseRecord);
+
                     if (snapshotRestore)
                     {
                         result.SnapshotRestore.Processed = true;
@@ -200,27 +213,15 @@ namespace Raven.Server.Documents.PeriodicBackup.Restore
                         result.Conflicts.Processed = true;
                         result.Indexes.Processed = true;
                         result.Counters.Processed = true;
+                        result.Identities.Processed = true;
+                        result.CompareExchange.Processed = true;
                         onProgress.Invoke(result.Progress);
-
-                        databaseRecord.Topology = new DatabaseTopology();
-                        // restoring to the current node only
-                        databaseRecord.Topology.Members.Add(_nodeTag);
-                        databaseRecord.Disabled = true; // we are currently restoring, shouldn't try to access it
-                        _serverStore.EnsureNotPassive();
-
-                        DisableOngoingTasksIfNeeded(databaseRecord);
-
-                        var (index, _) = await _serverStore.WriteDatabaseRecordAsync(databaseName, databaseRecord, null, restoreSettings.DatabaseValues, isRestore: true);
-                        await _serverStore.Cluster.WaitForIndexNotification(index);
-
-                        // restore identities & cmpXchg values
-                        RestoreFromLastFile(onProgress, database, lastFile, context, result);
                     }
                 }
 
                 // after the db for restore is done, we can safely set the db status to active
                 databaseRecord = _serverStore.LoadDatabaseRecord(databaseName, out _);
-                databaseRecord.Disabled = false;
+                databaseRecord.DatabaseState = DatabaseStateStatus.Normal;
 
                 var (updateIndex, _) = await _serverStore.WriteDatabaseRecordAsync(databaseName, databaseRecord, null);
                 await _serverStore.Cluster.WaitForIndexNotification(updateIndex);
@@ -248,13 +249,18 @@ namespace Raven.Server.Documents.PeriodicBackup.Restore
                     details: new ExceptionDetails(e));
                 _serverStore.NotificationCenter.Add(alert);
 
-                if (_serverStore.LoadDatabaseRecord(_restoreConfiguration.DatabaseName, out var _) == null)
+                var databaseRecord = _serverStore.LoadDatabaseRecord(_restoreConfiguration.DatabaseName, out _);
+
+                if (databaseRecord == null)
                 {
                     // delete any files that we already created during the restore
                     IOExtensions.DeleteDirectory(_restoreConfiguration.DataDirectory);
                 }
                 else
                 {
+                    databaseRecord.Disabled = false;
+                    databaseRecord.DatabaseState = DatabaseStateStatus.Normal;
+
                     var deleteResult = await _serverStore.DeleteDatabaseAsync(_restoreConfiguration.DatabaseName, true, new[] { _serverStore.NodeTag });
                     await _serverStore.Cluster.WaitForIndexNotification(deleteResult.Index);
                 }
@@ -305,51 +311,6 @@ namespace Raven.Server.Documents.PeriodicBackup.Restore
                     task.Disabled = true;
                 }
             }
-        }
-
-        private void RestoreFromLastFile(Action<IOperationProgress> onProgress, DocumentDatabase database, string lastFile, DocumentsOperationContext context, RestoreResult result)
-        {
-            var destination = new DatabaseDestination(database);
-            var smugglerOptions = new DatabaseSmugglerOptionsServerSide
-            {
-                AuthorizationStatus = AuthorizationStatus.DatabaseAdmin,
-                OperateOnTypes = DatabaseItemType.CompareExchange | DatabaseItemType.Identities,
-                SkipRevisionCreation = true
-            };
-            var lastPath = Path.Combine(_restoreConfiguration.BackupLocation, lastFile);
-            var extension = Path.GetExtension(lastPath);
-            if ((extension == Constants.Documents.PeriodicBackup.SnapshotExtension) ||
-                (extension == Constants.Documents.PeriodicBackup.EncryptedSnapshotExtension))
-            {
-                using (var zip = ZipFile.Open(lastPath, ZipArchiveMode.Read, System.Text.Encoding.UTF8))
-                {
-                    foreach (var entry in zip.Entries)
-                    {
-                        if (entry.Name == RestoreSettings.SmugglerValuesFileName)
-                        {
-                            using (var input = entry.Open())
-                            using (var inputStream = GetSnapshotInputStream(input, database.Name))
-                            using (var uncompressed = new GZipStream(inputStream, CompressionMode.Decompress))
-                            {
-                                var source = new StreamSource(uncompressed, context, database);
-                                var smuggler = new Smuggler.Documents.DatabaseSmuggler(database, source, destination,
-                                    database.Time, smugglerOptions, onProgress: onProgress, token: _operationCancelToken.Token);
-
-                                smuggler.Execute();
-                            }
-                            break;
-                        }
-                    }
-                }
-            }
-            else
-            {
-                ImportSingleBackupFile(database, onProgress, null, lastPath, context, destination, smugglerOptions);
-            }
-
-            result.Identities.Processed = true;
-            result.CompareExchange.Processed = true;
-            onProgress.Invoke(result.Progress);
         }
 
         private void ValidateArguments(out bool restoringToDefaultDataDirectory)
@@ -471,7 +432,7 @@ namespace Raven.Server.Documents.PeriodicBackup.Restore
 
             var oldOperateOnTypes = DatabaseSmuggler.ConfigureOptionsForIncrementalImport(options);
             var destination = new DatabaseDestination(database);
-            for (var i = 0; i < _filesToRestore.Count - 1; i++)
+            for (var i = 0; i < _filesToRestore.Count; i++)
             {
                 result.AddInfo($"Restoring file {(i + 1):#,#;;0}/{_filesToRestore.Count:#,#;;0}");
                 onProgress.Invoke(result.Progress);
