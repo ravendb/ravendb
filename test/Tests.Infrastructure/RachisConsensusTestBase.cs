@@ -23,6 +23,8 @@ using Sparrow.Collections;
 using Sparrow.Json;
 using Sparrow.Json.Parsing;
 using Sparrow.Logging;
+using Sparrow.Server.Platform;
+using Sparrow.Utils;
 using Voron;
 using Voron.Data;
 using Xunit;
@@ -34,6 +36,7 @@ namespace Tests.Infrastructure
     {
         static RachisConsensusTestBase()
         {
+            NativeMemory.GetCurrentUnmanagedThreadId = () => (ulong)Pal.rvn_get_current_thread_id();
             JsonDeserializationCluster.Commands.Add(nameof(TestCommand), JsonDeserializationBase.GenerateJsonDeserializationRoutine<TestCommand>());
         }
 
