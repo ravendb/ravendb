@@ -1,6 +1,16 @@
 import documentMetadata = require("models/database/documents/documentMetadata");
 
 class document implements documentBase {
+    
+    static readonly customColumnName = "@@x => x.getId()@@";
+
+    static createDocumentIdProvider() {
+        // we override toString here, so serialized value has our custom text
+        const f = (doc: document) => doc.getId();
+        f.toString = () => document.customColumnName;
+        return f;
+    }
+    
     __metadata: documentMetadata;
 
     constructor(dto: documentDto) {
