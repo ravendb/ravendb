@@ -198,6 +198,9 @@ namespace Raven.Server.Storage.Schema.Updates.Documents
         private void DeleteCounter(UpdateStep step, LazyStringValue tombstoneKey, DocumentsOperationContext context)
         {
             var (docId, counterName) = ExtractDocIdAndNameFromCounterTombstone(context, tombstoneKey);
+
+            using (docId)
+            using (counterName)
             using (DocumentIdWorker.GetLowerIdSliceAndStorageKey(context, docId, out Slice lowerId, out _))
             {
                 string collection = null;
