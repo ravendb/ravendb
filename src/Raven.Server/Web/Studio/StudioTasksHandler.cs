@@ -235,12 +235,19 @@ namespace Raven.Server.Web.Studio
             }
             catch (Exception e)
             {
-                HttpContext.Response.StatusCode = (int)HttpStatusCode.BadRequest;
-                using (var streamWriter = new StreamWriter(ResponseBodyStream()))
+                using (ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
+                using (var writer = new BlittableJsonTextWriter(context, ResponseBodyStream()))
                 {
-                    streamWriter.Write(e.Message);
-                    streamWriter.Flush();
+                    writer.WriteStartObject();
+                    writer.WritePropertyName(nameof(NextCronExpressionOccurrence.IsValid));
+                    writer.WriteBool(false);
+                    writer.WriteComma();
+                    writer.WritePropertyName(nameof(NextCronExpressionOccurrence.ErrorMessage));
+                    writer.WriteString(e.Message);
+                    writer.WriteEndObject();
+                    writer.Flush();
                 }
+
                 return Task.CompletedTask;
             }
 
@@ -250,6 +257,9 @@ namespace Raven.Server.Web.Studio
             using (var writer = new BlittableJsonTextWriter(context, ResponseBodyStream()))
             {
                 writer.WriteStartObject();
+                writer.WritePropertyName(nameof(NextCronExpressionOccurrence.IsValid));
+                writer.WriteBool(true);
+                writer.WriteComma();
                 writer.WritePropertyName(nameof(NextCronExpressionOccurrence.Utc));
                 writer.WriteDateTime(nextOccurrence.ToUniversalTime(), true);
                 writer.WriteComma();
@@ -264,6 +274,10 @@ namespace Raven.Server.Web.Studio
 
         public class NextCronExpressionOccurrence
         {
+            public bool IsValid { get; set; }
+            
+            public string ErrorMessage { get; set; }
+            
             public DateTime Utc { get; set; }
 
             public DateTime ServerTime { get; set; }

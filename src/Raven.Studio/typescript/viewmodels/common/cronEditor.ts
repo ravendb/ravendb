@@ -196,20 +196,21 @@ class cronEditor  {
         new getCronExpressionOccurrenceCommand(cronExpression)
             .execute()
             .done((result: Raven.Server.Web.Studio.StudioTasksHandler.NextCronExpressionOccurrence) => {
-                this.nextOccurrenceServerTime(moment(result.ServerTime).format(dateFormat));
-                const nextOccurrenceUtc = moment.utc(result.Utc);
-                this.nextOccurrenceLocalTime(nextOccurrenceUtc.local().format(dateFormat));
+                if (result.IsValid) {
+                    this.nextOccurrenceServerTime(moment(result.ServerTime).format(dateFormat));
+                    const nextOccurrenceUtc = moment.utc(result.Utc);
+                    this.nextOccurrenceLocalTime(nextOccurrenceUtc.local().format(dateFormat));
 
-                const fromDuration = generalUtils.formatDurationByDate(nextOccurrenceUtc, false);
-                this.nextInterval(`in ${fromDuration}`);
+                    const fromDuration = generalUtils.formatDurationByDate(nextOccurrenceUtc, false);
+                    this.nextInterval(`in ${fromDuration}`);
 
-                this.parsingError(null);
-            })
-            .fail((response: JQueryXHR) => {
-                this.nextOccurrenceServerTime("N/A");
-                this.nextOccurrenceLocalTime("");
-                this.nextInterval("");
-                this.parsingError(response.responseText);
+                    this.parsingError(null);
+                } else {
+                    this.nextOccurrenceServerTime("N/A");
+                    this.nextOccurrenceLocalTime("");
+                    this.nextInterval("");
+                    this.parsingError(result.ErrorMessage);
+                }
             });
     }
 

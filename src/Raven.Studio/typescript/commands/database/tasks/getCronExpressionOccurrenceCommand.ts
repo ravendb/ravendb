@@ -10,7 +10,8 @@ class getCronExpressionOccurrenceCommand extends commandBase {
         const url = endpoints.global.studioTasks.studioTasksNextCronExpressionOccurrence +
             this.urlEncodeArgs({ expression: this.cronExpression });
 
-        return this.query(url, null);
+        return this.query<Raven.Server.Web.Studio.StudioTasksHandler.NextCronExpressionOccurrence>(url, null)
+            .fail((response: JQueryXHR) => this.reportError(`Failed to get next occurrence of cron expression`, response.responseText, response.statusText));
     }
 }
 
