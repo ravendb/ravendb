@@ -70,6 +70,7 @@ namespace Voron.Impl.Journal
         public WriteAheadJournal(StorageEnvironment env)
         {
             _env = env;
+            _is32Bit = env.Options.ForceUsing32BitsPager || PlatformDetails.Is32Bits;
             _logger = LoggingSource.Instance.GetLogger<WriteAheadJournal>(Path.GetFileName(env.ToString()));
             _dataPager = _env.Options.DataPager;
             _currentJournalFileSize = env.Options.InitialLogFileSize;
@@ -1362,7 +1363,7 @@ namespace Voron.Impl.Journal
 
                 IPagerLevelTransactionState tempEncCompressionPagerTxState = null;
 
-                if (_env.Options.EncryptionEnabled && PlatformDetails.Is32Bits)
+                if (_env.Options.EncryptionEnabled && _is32Bit)
                 {
                     // RavenDB-12854: in 32 bits locking/unlocking the memory is done separately for each mapping
                     // we use temp tx for dealing with compression buffers pager to avoid locking (zeroing) it's content during tx dispose
@@ -1436,6 +1437,11 @@ namespace Voron.Impl.Journal
 
             const int transactionHeaderPageOverhead = 1;
             var pagesRequired = (transactionHeaderPageOverhead + pagesCountIncludingAllOverflowPages + overheadInPages);
+
+            if (_is32Bit)
+            {
+                pagesRequired = AdjustPagesRequiredFor32Bits(pagesRequired);
+            }
 
             PagerState pagerState;
             try
@@ -1633,6 +1639,30 @@ namespace Voron.Impl.Journal
             return prepareToWriteToJournal;
         }
 
+        private static int _pagesIn1Mb = Constants.Size.Megabyte / Constants.Storage.PageSize;
+
+        /// <summary>
+        /// The idea of this function is to calculate page sizes that will cause less fragmentation in 32 bit mode
+        /// for allocation smaller than 1MB we will allocate the next power of 2
+        /// for allocation larger than 1MB we will alligned them to be MB alligned 
+        /// </summary>
+        /// <param name="pagesRequired"></param>
+        /// <returns></returns>
+        private static int AdjustPagesRequiredFor32Bits(int pagesRequired)
+        {
+            var bytes = pagesRequired * Constants.Storage.PageSize;
+            if (bytes < Constants.Size.Megabyte / 2)
+            {
+                pagesRequired = Bits.NextPowerOf2(bytes) / Constants.Storage.PageSize ;
+            }
+            else
+            {
+                pagesRequired = pagesRequired - pagesRequired % _pagesIn1Mb + _pagesIn1Mb;
+            }
+
+            return pagesRequired;
+        }
+
         internal static readonly byte[] Context = Encoding.UTF8.GetBytes("Txn-Acid");
 
         private void EncryptTransaction(byte* fullTxBuffer)
@@ -1736,6 +1766,7 @@ namespace Voron.Impl.Journal
 
         private DateTime _lastCompressionBufferReduceCheck = DateTime.UtcNow;
         private CompressionAccelerationStats _lastCompressionAccelerationInfo = new CompressionAccelerationStats();
+        private readonly bool _is32Bit;
 
         public void ReduceSizeOfCompressionBufferIfNeeded(bool forceReduce = false)
         {

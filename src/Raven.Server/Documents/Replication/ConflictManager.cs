@@ -203,7 +203,7 @@ namespace Raven.Server.Documents.Replication
                 if (compareResult == DocumentCompareResult.NotEqual)
                     return false;
 
-                // no real conflict here, both documents have identical content
+                // no real conflict here, both documents have identical content so we only merge the change vector without increasing the local etag to prevent ping-pong replication
                 var mergedChangeVector = ChangeVectorUtils.MergeVectors(incomingChangeVector, existingDoc.ChangeVector);
 
                 var nonPersistentFlags = NonPersistentDocumentFlags.FromResolver;

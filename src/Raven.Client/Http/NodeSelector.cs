@@ -81,7 +81,7 @@ namespace Raven.Client.Http
         {
             // if there are all marked as failed, we'll chose the first
             // one so the user will get an error (or recover :-) );
-            if(state.Nodes.Count == 0)
+            if (state.Nodes.Count == 0)
                 throw new AllTopologyNodesDownException("There are no nodes in the topology at all");
 
             return (0, state.Nodes[0]);

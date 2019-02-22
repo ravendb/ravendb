@@ -153,7 +153,7 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene
                     outputs = new List<BlittableJsonReaderObject>(1);
                     _reduceDocuments.Add(reduceKeyHash, outputs);
                 }
-
+                
                 var djv = new DynamicJsonValue();
 
                 if (_index.OutputReduceToCollectionPropertyAccessor == null)
@@ -176,6 +176,14 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene
             public void DeleteReduce(string reduceKeyHash)
             {
                 _reduceKeyHashesToDelete.Add(reduceKeyHash);
+
+                if (_reduceDocuments.Remove(reduceKeyHash, out var outputs))
+                {
+                    foreach (var bjro in outputs)
+                    {
+                        bjro.Dispose();
+                    }
+                }
             }
 
             private string GetOutputDocumentKey(string reduceKeyHash)

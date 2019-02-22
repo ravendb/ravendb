@@ -114,7 +114,7 @@ namespace Raven.Server.Routing
                 {
                     using (reqCtx.Database.DatabaseInUse(tryMatch.Value.SkipUsagesCount))
                     {
-                        if (context.Response.Headers.TryGetValue(Constants.Headers.LastKnownClusterTransactionIndex, out var value)
+                        if (context.Request.Headers.TryGetValue(Constants.Headers.LastKnownClusterTransactionIndex, out var value)
                             && long.TryParse(value, out var index)
                             && index < reqCtx.Database.RachisLogIndexNotifications.LastModifiedIndex)
                         {
