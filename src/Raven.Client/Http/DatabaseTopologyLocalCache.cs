@@ -68,7 +68,7 @@ namespace Raven.Client.Http
                 var path = GetPath(databaseName, topologyHash, conventions);
                 if (topology == null)
                 {
-                    Clear(databaseName);
+                    Clear(path);
                     return;
                 }
 
