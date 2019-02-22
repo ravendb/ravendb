@@ -91,17 +91,17 @@ namespace Raven.Server.Storage.Schema.Updates.Documents
                 using (step.DocumentsStorage.ContextPool.AllocateOperationContext(out DocumentsOperationContext context))
                 {
                     string currentDocId = null;
-                    var batch = new Dictionary<string, List<CounterDetail>>();
+                    var batch = new CounterBatchUpdate();
                     var dbIds = new HashSet<string>();
 
                     foreach (var counterDetail in GetAllCounters(readTable, context))
                     {
                         if (currentDocId == counterDetail.DocumentId)
                         {
-                            if (batch.TryGetValue(counterDetail.CounterName, out var list) == false)
+                            if (batch.Counters.TryGetValue(counterDetail.CounterName, out var list) == false)
                             {
                                 list = new List<CounterDetail>();
-                                batch.Add(counterDetail.CounterName, list);
+                                batch.Counters.Add(counterDetail.CounterName, list);
                             }
                             list.Add(counterDetail);
                         }
@@ -109,29 +109,29 @@ namespace Raven.Server.Storage.Schema.Updates.Documents
                         {
                             if (currentDocId != null)
                             {
-                                PutCounters(step, context, dbIds, batch, currentDocId);
+                                PutCounters(step, context, dbIds, batch.Counters, currentDocId);
                             }
 
                             currentDocId = counterDetail.DocumentId;
-                            batch = new Dictionary<string, List<CounterDetail>>
+
+                            batch.Dispose();
+
+                            batch.Counters.Add(counterDetail.CounterName, new List<CounterDetail>
                             {
-                                {
-                                    counterDetail.CounterName, new List<CounterDetail>
-                                    {
-                                        counterDetail
-                                    }
-                                }
-                            };
+                                counterDetail
+                            });
                         }
 
-                        var dbId = ExtractDbId(context, counterDetail.CounterKey);
-                        dbIds.Add(dbId);
-
+                        using (var dbId = ExtractDbId(context, counterDetail.CounterKey))
+                        {
+                            dbIds.Add(dbId.ToString());
+                        }
                     }
 
-                    if (batch.Count > 0)
+                    if (batch.Counters.Count > 0)
                     {
-                        PutCounters(step, context, dbIds, batch, currentDocId);
+                        PutCounters(step, context, dbIds, batch.Counters, currentDocId);
+                        batch.Dispose();
                     }
                 }
 
@@ -159,6 +159,8 @@ namespace Raven.Server.Storage.Schema.Updates.Documents
                             continue;
 
                         DeleteCounter(step, t.LowerId, context);
+
+                        t.LowerId.Dispose();
                     }
 
                     // delete counter-tombstones from Tombstones table
@@ -175,19 +177,40 @@ namespace Raven.Server.Storage.Schema.Updates.Documents
             return true;
         }
 
+        private class CounterBatchUpdate : IDisposable
+        {
+            public readonly Dictionary<string, List<CounterDetail>> Counters = new Dictionary<string, List<CounterDetail>>();
+
+            public void Dispose()
+            {
+                foreach (var counter in Counters)
+                {
+                    foreach (var counterDetail in counter.Value)
+                    {
+                        counterDetail.CounterKey.Dispose();
+                    }
+                }
+
+                Counters.Clear();
+            }
+        }
+
         private void DeleteCounter(UpdateStep step, LazyStringValue tombstoneKey, DocumentsOperationContext context)
         {
             var (docId, counterName) = ExtractDocIdAndNameFromCounterTombstone(context, tombstoneKey);
             using (DocumentIdWorker.GetLowerIdSliceAndStorageKey(context, docId, out Slice lowerId, out _))
             {
-                BlittableJsonReaderObject doc = null;
+                string collection = null;
+
                 var docsTable = new Table(DocsSchema, step.ReadTx);
                 if (docsTable.ReadByKey(lowerId, out var tvr))
                 {
-                    doc = new BlittableJsonReaderObject(tvr.Read((int)DocumentsTable.Data, out int size), size, context);
+                    using (var doc = new BlittableJsonReaderObject(tvr.Read((int)DocumentsTable.Data, out int size), size, context))
+                    {
+                        collection = CollectionName.GetCollectionName(doc);
+                    }
                 }
-
-                var collection = CollectionName.GetCollectionName(doc);
+                
                 var collectionName = new CollectionName(collection);
                 var table = step.DocumentsStorage.CountersStorage.GetCountersTable(step.WriteTx, collectionName);
 
@@ -212,6 +235,7 @@ namespace Raven.Server.Storage.Schema.Updates.Documents
 
                 var newEtag = step.DocumentsStorage.GenerateNextEtag();
                 var newChangeVector = ChangeVectorUtils.NewChangeVector(step.DocumentsStorage.DocumentDatabase.ServerStore.NodeTag, newEtag, _dbId);
+                using (data)
                 using (Slice.From(context.Allocator, newChangeVector, out var cv))
                 using (DocumentIdWorker.GetStringPreserveCase(context, collectionName.Name, out Slice collectionSlice))
                 using (table.Allocate(out TableValueBuilder tvb))
@@ -238,43 +262,47 @@ namespace Raven.Server.Storage.Schema.Updates.Documents
 
         private void PutCounters(UpdateStep step, DocumentsOperationContext context, HashSet<string> dbIds, Dictionary<string, List<CounterDetail>> batch, string docId)
         {
-            BlittableJsonReaderObject doc = null;
+            string collection = null;
+
             using (DocumentIdWorker.GetSliceFromId(context, docId, out Slice lowerId))
             {
                 var docsTable = new Table(DocsSchema, step.ReadTx);
                 if (docsTable.ReadByKey(lowerId, out var tvr))
                 {
-                    doc = new BlittableJsonReaderObject(tvr.Read((int)DocumentsTable.Data, out int size), size, context);
+                    using (var doc = new BlittableJsonReaderObject(tvr.Read((int)DocumentsTable.Data, out int size), size, context))
+                    {
+                        collection = CollectionName.GetCollectionName(doc);
+                    }
                 }
             }
 
-            var collection = CollectionName.GetCollectionName(doc);
             var collectionName = new CollectionName(collection);
 
             var table = step.DocumentsStorage.CountersStorage.GetCountersTable(step.WriteTx, collectionName);
 
-            var data = WriteNewCountersDocument(context, dbIds.ToList(), batch);
-            var etag = step.DocumentsStorage.GenerateNextEtag();
-            var changeVector = ChangeVectorUtils.NewChangeVector(
-                step.DocumentsStorage.DocumentDatabase.ServerStore.NodeTag, etag, _dbId);
-
-            using (table.Allocate(out TableValueBuilder tvb))
+            using (var data = WriteNewCountersDocument(context, dbIds.ToList(), batch))
             {
-                using (Slice.From(context.Allocator, changeVector, out var cv))
-                using (DocumentIdWorker.GetStringPreserveCase(context, collectionName.Name, out Slice collectionSlice))
-                using (DocumentIdWorker.GetLowerIdSliceAndStorageKey(context, docId, out Slice counterKey, out _))
-                {
-                    tvb.Add(counterKey);
-                    tvb.Add(Bits.SwapBytes(etag));
-                    tvb.Add(cv);
-                    tvb.Add(data.BasePointer, data.Size);
-                    tvb.Add(collectionSlice);
-                    tvb.Add(context.TransactionMarkerOffset);
+                var etag = step.DocumentsStorage.GenerateNextEtag();
+                var changeVector = ChangeVectorUtils.NewChangeVector(
+                    step.DocumentsStorage.DocumentDatabase.ServerStore.NodeTag, etag, _dbId);
 
-                    table.Set(tvb);
+                using (table.Allocate(out TableValueBuilder tvb))
+                {
+                    using (Slice.From(context.Allocator, changeVector, out var cv))
+                    using (DocumentIdWorker.GetStringPreserveCase(context, collectionName.Name, out Slice collectionSlice))
+                    using (DocumentIdWorker.GetLowerIdSliceAndStorageKey(context, docId, out Slice counterKey, out _))
+                    {
+                        tvb.Add(counterKey);
+                        tvb.Add(Bits.SwapBytes(etag));
+                        tvb.Add(cv);
+                        tvb.Add(data.BasePointer, data.Size);
+                        tvb.Add(collectionSlice);
+                        tvb.Add(context.TransactionMarkerOffset);
+
+                        table.Set(tvb);
+                    }
                 }
             }
-
         }
 
         private static string ReadDbId(UpdateStep step)
@@ -315,13 +343,17 @@ namespace Raven.Server.Storage.Schema.Updates.Documents
         {
             var (doc, name) = ExtractDocIdAndNameFromLegacyCounter(context, ref tvr);
 
-            return new CounterDetail
+            using (name)
+            using (doc)
             {
-                CounterKey = TableValueToString(context, (int)LegacyCountersTable.CounterKey, ref tvr),
-                DocumentId = doc,
-                CounterName = name,
-                TotalValue = TableValueToLong((int)LegacyCountersTable.Value, ref tvr),
-            };
+                return new CounterDetail
+                {
+                    CounterKey = TableValueToString(context, (int)LegacyCountersTable.CounterKey, ref tvr),
+                    DocumentId = doc.ToString(),
+                    CounterName = name.ToString(),
+                    TotalValue = TableValueToLong((int)LegacyCountersTable.Value, ref tvr),
+                };
+            }
         }
 
         private static (LazyStringValue Doc, LazyStringValue Name) ExtractDocIdAndNameFromLegacyCounter(JsonOperationContext context, ref TableValueReader tvr)
