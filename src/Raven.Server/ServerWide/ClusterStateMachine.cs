@@ -360,10 +360,15 @@ namespace Raven.Server.ServerWide
             if (error == null)
             {
                 clusterTransaction.SaveCommandsBatch(context, index);
-                NotifyDatabaseAboutChanged(context, clusterTransaction.DatabaseName, index, nameof(ClusterTransactionCommand),
-                    DatabasesLandlord.ClusterDatabaseChangeType.PendingClusterTransactions);
+                var notify = clusterTransaction.HasDocumentsInTransaction
+                    ? DatabasesLandlord.ClusterDatabaseChangeType.PendingClusterTransactions
+                    : DatabasesLandlord.ClusterDatabaseChangeType.ClusterTransctionCompleted;
+
+                NotifyDatabaseAboutChanged(context, clusterTransaction.DatabaseName, index, nameof(ClusterTransactionCommand), notify);
+
                 return null;
             }
+
             OnTransactionDispose(context, index);
             return error;
         }
