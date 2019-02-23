@@ -383,8 +383,14 @@ namespace Raven.Server.Documents
 
         private readonly AsyncManualResetEvent _hasClusterTransaction;
 
-        public void NotifyOnPendingClusterTransaction()
+        public void NotifyOnPendingClusterTransaction(long index, DatabasesLandlord.ClusterDatabaseChangeType changeType)
         {
+            if (changeType == DatabasesLandlord.ClusterDatabaseChangeType.ClusterTransctionCompleted)
+            {
+                RachisLogIndexNotifications.NotifyListenersAbout(index, null);
+                return;
+            }
+
             _hasClusterTransaction.Set();
         }
 
