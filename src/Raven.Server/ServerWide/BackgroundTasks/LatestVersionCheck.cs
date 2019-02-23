@@ -42,7 +42,7 @@ namespace Raven.Server.ServerWide.BackgroundTasks
         {
         }
 
-        public void Initialize(ServerConfiguration configuration)
+        public void Initialize(UpdatesConfiguration configuration)
         {
             if (_timer != null)
                 return;
@@ -52,7 +52,7 @@ namespace Raven.Server.ServerWide.BackgroundTasks
                 if (_timer != null)
                     return;
 
-                _releaseChannel = configuration.ReleaseChannel.ToString();
+                _releaseChannel = configuration.Channel.ToString();
                 _timer = new Timer(async state => await PerformAsync(), null, (int)TimeSpan.FromMinutes(5).TotalMilliseconds, (int)TimeSpan.FromHours(12).TotalMilliseconds);
             }
         }
