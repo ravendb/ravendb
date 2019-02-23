@@ -87,7 +87,7 @@ namespace Raven.Server
             if (Logger.IsInfoEnabled)
                 Logger.Info($"Logging to {configuration.Logs.Path} set to {configuration.Logs.Mode} level.");
 
-            LatestVersionCheck.Instance.Initialize(configuration.Server);
+            LatestVersionCheck.Instance.Initialize(configuration.Updates);
 
             if (Logger.IsOperationsEnabled)
                 Logger.Operations(RavenCli.GetInfoText());
@@ -345,7 +345,7 @@ namespace Raven.Server
                 //due to the fact, we redirect standard input from the console.
                 consoleColoring = false;
             }
-            
+
             return new RavenCli().Start(server, Console.Out, Console.In, consoleColoring, false);
         }
 

@@ -77,6 +77,8 @@ namespace Raven.Server.Config
 
         public NotificationConfiguration Notifications { get; }
 
+        public UpdatesConfiguration Updates { get; }
+
         internal IConfigurationRoot ServerWideSettings { get; set; }
 
         protected IConfigurationRoot Settings { get; set; }
@@ -124,6 +126,7 @@ namespace Raven.Server.Config
             Subscriptions = new SubscriptionConfiguration();
             TransactionMergerConfiguration = new TransactionMergerConfiguration(Storage.ForceUsing32BitsPager);
             Notifications = new NotificationConfiguration();
+            Updates = new UpdatesConfiguration();
         }
 
         private void AddJsonConfigurationVariables(string customConfigPath = null)
@@ -178,6 +181,7 @@ namespace Raven.Server.Config
             Subscriptions.Initialize(Settings, ServerWideSettings, ResourceType, ResourceName);
             TransactionMergerConfiguration.Initialize(Settings, ServerWideSettings, ResourceType, ResourceName);
             Notifications.Initialize(Settings, ServerWideSettings, ResourceType, ResourceName);
+            Updates.Initialize(Settings, ServerWideSettings, ResourceType, ResourceName);
 
             PostInit();
 
@@ -234,7 +238,7 @@ namespace Raven.Server.Config
 
             return results;
         });
-        
+
 
         public static bool ContainsKey(string key)
         {
@@ -349,7 +353,7 @@ namespace Raven.Server.Config
             _configBuilder.AddCommandLine(args);
             Settings = _configBuilder.Build();
         }
-        
+
         private static int _pathCounter = 0;
 
         public void CheckDirectoryPermissions()
@@ -379,8 +383,8 @@ namespace Raven.Server.Config
                         continue;
 
                     var fileName = Guid.NewGuid().ToString("N");
-                    
-                    
+
+
                     var path = pathSettingValue.ToFullPath();
                     var fullPath = Path.Combine(path, fileName);
 
@@ -433,7 +437,7 @@ namespace Raven.Server.Config
                             IOExtensions.DeleteDirectory(createdDirectory);
                         }
                     }
-                    
+
                 }
             }
 
