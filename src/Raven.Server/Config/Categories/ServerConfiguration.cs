@@ -30,5 +30,17 @@ namespace Raven.Server.Config.Categories
         [DefaultValue(1)]
         [ConfigurationEntry("Server.NumberOfUnusedCoresByIndexes", ConfigurationEntryScope.ServerWideOnly)]
         public int NumberOfUnusedCoresByIndexes { get; set; }
+
+        [Description("Indicates what release channel should be used to perform lastest version checks")]
+        [DefaultValue(ReleaseChannel.Patch)]
+        [ConfigurationEntry("Server.Version.ReleaseChannel", ConfigurationEntryScope.ServerWideOnly)]
+        public ReleaseChannel ReleaseChannel { get; set; }
+    }
+
+    public enum ReleaseChannel
+    {
+        Stable = 1,
+        Patch = 2,
+        Dev = 3
     }
 }

@@ -12,6 +12,7 @@ using Raven.Server.Commercial;
 using Raven.Server.Config;
 using Raven.Server.Config.Settings;
 using Raven.Server.ServerWide;
+using Raven.Server.ServerWide.BackgroundTasks;
 using Raven.Server.Utils;
 using Raven.Server.Utils.Cli;
 using Sparrow;
@@ -85,6 +86,8 @@ namespace Raven.Server
 
             if (Logger.IsInfoEnabled)
                 Logger.Info($"Logging to {configuration.Logs.Path} set to {configuration.Logs.Mode} level.");
+
+            LatestVersionCheck.Instance.Initialize(configuration.Server);
 
             if (Logger.IsOperationsEnabled)
                 Logger.Operations(RavenCli.GetInfoText());

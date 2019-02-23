@@ -614,7 +614,7 @@ namespace Raven.Server.ServerWide
             _engine.Initialize(_env, Configuration, myUrl);
 
             LicenseManager.Initialize(_env, ContextPool);
-            LatestVersionCheck.Check(this);
+            LatestVersionCheck.Instance.Check(this);
 
             ConfigureAuditLog();
 
