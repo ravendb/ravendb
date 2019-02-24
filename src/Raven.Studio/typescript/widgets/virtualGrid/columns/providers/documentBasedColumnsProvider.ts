@@ -108,13 +108,13 @@ class documentBasedColumnsProvider {
         const finalColumns = initialColumns.concat(columnNames.map(p => {
             if (this.createHyperlinks) {
                 if (p === "__metadata") {
-                    return new hyperlinkColumn(this.gridController, (x: document) => x.getId(), x => appUrl.forEditDoc(x.getId(), this.db, x.__metadata.collection), "Id", columnWidth, this.columnOptions);
+                    return new hyperlinkColumn(this.gridController, document.createDocumentIdProvider(), x => appUrl.forEditDoc(x.getId(), this.db, x.__metadata.collection), "Id", columnWidth, this.columnOptions);
                 }
 
                 return new hyperlinkColumn(this.gridController, p, _.partial(this.findLink, _, p).bind(this), p, columnWidth, this.columnOptions);
             } else {
                 if (p === "__metadata") {
-                    return new textColumn(this.gridController, (x: document) => x.getId(), "Id", columnWidth, this.columnOptions);
+                    return new textColumn(this.gridController, document.createDocumentIdProvider(), "Id", columnWidth, this.columnOptions);
                 }
                 return new textColumn(this.gridController, p, p, columnWidth, this.columnOptions);
             }
@@ -130,9 +130,9 @@ class documentBasedColumnsProvider {
     }
 
     reviver(source: virtualColumnDto): virtualColumn {
-        if (source.type === "hyperlink" && source.serializedValue.includes("x.getId()")) {
-            return new hyperlinkColumn(this.gridController, 
-                (x: document) => x.getId(), 
+        if (source.type === "hyperlink" && source.serializedValue === document.customColumnName) {
+            return new hyperlinkColumn(this.gridController,
+                document.createDocumentIdProvider(), 
                     x => appUrl.forEditDoc(x.getId(), this.db, x.__metadata.collection),
                 source.header, source.width, this.columnOptions);    
         }

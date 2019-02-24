@@ -211,7 +211,7 @@ class documents extends viewModelBase {
             if (this.currentCollection().isAllDocuments) {
                 return [
                     new checkedColumn(true),
-                    new hyperlinkColumn<document>(grid, x => x.getId(), x => appUrl.forEditDoc(x.getId(), this.activeDatabase()), "Id", "300px"),
+                    new hyperlinkColumn<document>(grid, document.createDocumentIdProvider(), x => appUrl.forEditDoc(x.getId(), this.activeDatabase()), "Id", "300px"),
                     new textColumn<document>(grid, x => changeVectorUtils.formatChangeVectorAsShortString(x.__metadata.changeVector()), "Change Vector", "200px"),
                     new textColumn<document>(grid, x => generalUtils.formatUtcDateAsLocal(x.__metadata.lastModified()), "Last Modified", "300px"),
                     new hyperlinkColumn<document>(grid, x => x.getCollection(), x => appUrl.forDocuments(x.getCollection(), this.activeDatabase()), "Collection", "200px"),
