@@ -500,13 +500,6 @@ namespace Raven.Server.Documents.Replication
 
         public class DataForReplicationCommand : IDisposable
         {
-            private readonly bool _isReplayTransaction;
-
-            internal DataForReplicationCommand(bool isReplayTransaction = false)
-            {
-                _isReplayTransaction = isReplayTransaction;
-            }
-
             internal DocumentDatabase DocumentDatabase { get; set; }
 
             internal ConflictManager ConflictManager { get; set; }
@@ -525,26 +518,21 @@ namespace Raven.Server.Documents.Replication
 
             public void Dispose()
             {
-                if (ReplicatedItems != null)
+                foreach (var item in ReplicatedItems)
                 {
-                    foreach (var item in ReplicatedItems)
-                    {
-                        item.Document?.Dispose();
-                    }
-
-                    if (_isReplayTransaction == false)
-                        ArrayPool<ReplicationItem>.Shared.Return(ReplicatedItems.Array, clearArray: true);
+                    item.Document?.Dispose();
                 }
 
-                if (AttachmentStreams != null)
+                ArrayPool<ReplicationItem>.Shared.Return(ReplicatedItems.Array, clearArray: true);
+
+                if (AttachmentStreams.Array != null)
                 {
                     foreach (var attachmentStream in AttachmentStreams)
                     {
                         attachmentStream.Dispose();
                     }
 
-                    if (_isReplayTransaction == false)
-                        ArrayPool<ReplicationAttachmentStream>.Shared.Return(AttachmentStreams.Array, clearArray: true);
+                    ArrayPool<ReplicationAttachmentStream>.Shared.Return(AttachmentStreams.Array, clearArray: true);
                 }
             }
         }
@@ -1550,19 +1538,37 @@ namespace Raven.Server.Documents.Replication
 
         public IncomingReplicationHandler.MergedDocumentReplicationCommand ToCommand(DocumentsOperationContext context, DocumentDatabase database)
         {
-            var replicationItems = ReplicatedItemDtos.Select(d => d.ToItem(context)).ToArray();
-            var attachmentStreams = ReplicatedAttachmentStreams?
-                .Select(i => CreateReplicationAttachmentStream(context, i))
-                .ToArray();
+            var replicatedItemsCount = ReplicatedItemDtos.Length;
+            var replicationItems = ArrayPool<IncomingReplicationHandler.ReplicationItem>.Shared.Rent(replicatedItemsCount);
+            for (var i = 0; i < replicatedItemsCount; i++)
+            {
+                replicationItems[i] = ReplicatedItemDtos[i].ToItem(context);
+            }
 
-            var dataForReplicationCommand = new IncomingReplicationHandler.DataForReplicationCommand(isReplayTransaction: true)
+            ArraySegment<IncomingReplicationHandler.ReplicationAttachmentStream> attachmentStreams = null;
+            Dictionary<Slice, IncomingReplicationHandler.ReplicationAttachmentStream> replicatedAttachmentStreams = null;
+            if (ReplicatedAttachmentStreams != null)
+            {
+                var attachmentStreamsCount = ReplicatedAttachmentStreams.Length;
+                var replicationAttachmentStreams = ArrayPool<IncomingReplicationHandler.ReplicationAttachmentStream>.Shared.Rent(attachmentStreamsCount);
+                for (var i = 0; i < attachmentStreamsCount; i++)
+                {
+                    var replicationAttachmentStream = ReplicatedAttachmentStreams[i];
+                    replicationAttachmentStreams[i] = CreateReplicationAttachmentStream(context, replicationAttachmentStream);
+                }
+
+                attachmentStreams = new ArraySegment<IncomingReplicationHandler.ReplicationAttachmentStream>(replicationAttachmentStreams, 0, attachmentStreamsCount);
+                replicatedAttachmentStreams = attachmentStreams.ToDictionary(i => i.Base64Hash, SliceComparer.Instance);
+            }
+
+            var dataForReplicationCommand = new IncomingReplicationHandler.DataForReplicationCommand()
             {
                 DocumentDatabase = database,
                 ConflictManager = new ConflictManager(database, database.ReplicationLoader.ConflictResolver),
                 SourceDatabaseId = SourceDatabaseId,
-                ReplicatedItems = replicationItems,
+                ReplicatedItems = new ArraySegment<IncomingReplicationHandler.ReplicationItem>(replicationItems, 0, replicatedItemsCount),
                 AttachmentStreams = attachmentStreams,
-                ReplicatedAttachmentStreams = attachmentStreams?.ToDictionary(i => i.Base64Hash, SliceComparer.Instance),
+                ReplicatedAttachmentStreams = replicatedAttachmentStreams,
                 SupportedFeatures = SupportedFeatures,
                 Logger = LoggingSource.Instance.GetLogger<IncomingReplicationHandler>(database.Name)
             };
