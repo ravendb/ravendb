@@ -97,7 +97,8 @@ namespace Raven.Server.ServerWide
             [nameof(PutIndexesCommand)] = Base42CommandsVersion,
             [nameof(PutSortersCommand)] = Base42CommandsVersion,
             [nameof(DeleteSorterCommand)] = Base42CommandsVersion,
-            [nameof(UpdatePullReplicationAsHubCommand)] = Base42CommandsVersion
+            [nameof(UpdatePullReplicationAsHubCommand)] = Base42CommandsVersion,
+            [nameof(PutSubscriptionBatchCommand)] = Base42CommandsVersion
         };
 
         public static bool CanPutCommand(string command)

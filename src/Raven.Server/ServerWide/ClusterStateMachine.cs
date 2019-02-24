@@ -142,6 +142,16 @@ namespace Raven.Server.ServerWide
                     case nameof(CleanUpClusterStateCommand):
                         ClusterStateCleanUp(context, cmd, index);
                         break;
+                    case nameof(PutSubscriptionBatchCommand):
+                        if (cmd.TryGet(nameof(PutSubscriptionBatchCommand.Commands), out BlittableJsonReaderArray subscriptionCommands) == false)
+                        {
+                            throw new RachisApplyException($"'{nameof(PutSubscriptionBatchCommand.Commands)}' is missing in '{nameof(PutSubscriptionBatchCommand)}'.");
+                        }
+                        foreach (BlittableJsonReaderObject command in subscriptionCommands)
+                        {
+                            Apply(context, command, index, leader, serverStore);
+                        }
+                        break;
                     case nameof(AddOrUpdateCompareExchangeBatchCommand):
                         if (cmd.TryGet(nameof(AddOrUpdateCompareExchangeBatchCommand.Commands), out BlittableJsonReaderArray commands) == false)
                         {
