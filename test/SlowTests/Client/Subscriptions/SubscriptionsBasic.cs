@@ -1,10 +1,13 @@
 ﻿using System;
 using System.Collections.Concurrent;
 using System.Diagnostics;
+using System.IO;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 using FastTests.Client.Subscriptions;
+using Raven.Client.Documents.Operations.Backups;
+using Raven.Client.Documents.Smuggler;
 using Raven.Client.Documents.Subscriptions;
 using Raven.Client.Extensions;
 using Raven.Server.Documents.Replication;
@@ -55,6 +58,106 @@ namespace SlowTests.Client.Subscriptions
             }
         }
 
+        [Fact]
+        public async Task CanBackupAndRestoreSubscriptions()
+        {
+            var backupPath = NewDataPath(suffix: "BackupFolder");
+            using (var store = GetDocumentStore())
+            {
+                using (var session = store.OpenAsyncSession())
+                {
+                    await session.StoreAsync(new User { Name = "oren" }, "users/1");
+                    await session.SaveChangesAsync();
+                }
+
+                store.Subscriptions.Create(new SubscriptionCreationOptions<User>(){Name = "sub1"});
+                store.Subscriptions.Create(new SubscriptionCreationOptions<User>() { Name = "sub2" });
+                store.Subscriptions.Create(new SubscriptionCreationOptions<User>());
+
+                var subscriptionStataList = store.Subscriptions.GetSubscriptions(0, 10);
+
+                Assert.Equal(3, subscriptionStataList.Count);
+
+                var config = new PeriodicBackupConfiguration
+                {
+                    BackupType = BackupType.Backup,
+                    LocalSettings = new LocalSettings
+                    {
+                        FolderPath = backupPath
+                    },
+                    IncrementalBackupFrequency = "* * * * *" //every minute
+                };
+
+                var backupTaskId = (await store.Maintenance.SendAsync(new UpdatePeriodicBackupOperation(config))).TaskId;
+                await store.Maintenance.SendAsync(new StartBackupOperation(true, backupTaskId));
+                var operation = new GetPeriodicBackupStatusOperation(backupTaskId);
+                var value = WaitForValue(() =>
+                {
+                    var status = store.Maintenance.Send(operation).Status;
+                    return status?.LastEtag;
+                }, 1);
+                Assert.Equal(1, value);
+
+                // restore the database with a different name
+                var databaseName = $"restored_database-{Guid.NewGuid()}";
+
+                using (RestoreDatabase(store, new RestoreBackupConfiguration
+                {
+                    BackupLocation = Directory.GetDirectories(backupPath).First(),
+                    DatabaseName = databaseName
+                }))
+                {
+                    subscriptionStataList = store.Subscriptions.GetSubscriptions(0, 10, databaseName);
+
+                    Assert.Equal(3, subscriptionStataList.Count);
+                    Assert.True(subscriptionStataList.Any(x => x.SubscriptionName.Equals("sub1")));
+                    Assert.True(subscriptionStataList.Any(x => x.SubscriptionName.Equals("sub2")));
+                }
+            }
+        }
+
+        [Fact]
+        public async Task CanExportAndImportSubscriptions()
+        {
+            var file = Path.GetTempFileName();
+            try
+            {
+                using (var store1 = GetDocumentStore(new Options
+                {
+                    ModifyDatabaseName = s => $"{s}_1",
+                }))
+                using (var store2 = GetDocumentStore(new Options
+                {
+                    ModifyDatabaseName = s => $"{s}_2"
+                }))
+                {
+                    store1.Subscriptions.Create(new SubscriptionCreationOptions<User>() { Name = "sub1" });
+                    store1.Subscriptions.Create(new SubscriptionCreationOptions<User>() { Name = "sub2" });
+                    store1.Subscriptions.Create(new SubscriptionCreationOptions<User>());
+
+                    var subscriptionStataList = store1.Subscriptions.GetSubscriptions(0, 10);
+
+                    Assert.Equal(3, subscriptionStataList.Count);
+
+                    var operation = await store1.Smuggler.ExportAsync(new DatabaseSmugglerExportOptions(), file);
+                    await operation.WaitForCompletionAsync(TimeSpan.FromMinutes(1));
+
+                    operation = await store2.Smuggler.ImportAsync(new DatabaseSmugglerImportOptions(), file);
+                    await operation.WaitForCompletionAsync(TimeSpan.FromMinutes(1));
+
+                    subscriptionStataList = store2.Subscriptions.GetSubscriptions(0, 10, store2.Database);
+
+                    Assert.Equal(3, subscriptionStataList.Count);
+                    Assert.True(subscriptionStataList.Any(x => x.SubscriptionName.Equals("sub1")));
+                    Assert.True(subscriptionStataList.Any(x => x.SubscriptionName.Equals("sub2")));
+
+                }
+            }
+            finally
+            {
+                File.Delete(file);
+            }
+        }
 
         [Fact]
         public void CanUseNestedPropertiesInSubscriptionCriteria()

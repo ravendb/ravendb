@@ -6,6 +6,7 @@ using System.Threading;
 using Raven.Client.Documents.Indexes;
 using Raven.Client.Documents.Operations;
 using Raven.Client.Documents.Smuggler;
+using Raven.Client.Documents.Subscriptions;
 using Raven.Client.ServerWide;
 using Raven.Client.Util;
 using Raven.Server.Documents;
@@ -186,6 +187,9 @@ namespace Raven.Server.Smuggler.Documents
                 case DatabaseItemType.CounterGroups:
                     counts = ProcessCounters(result);
                     break;
+                case DatabaseItemType.Subscriptions:
+                    counts = ProcessSubscriptions(result);
+                    break;
                 default:
                     throw new ArgumentOutOfRangeException(nameof(type), type, null);
             }
@@ -241,6 +245,9 @@ namespace Raven.Server.Smuggler.Documents
 #pragma warning restore 618
                 case DatabaseItemType.CounterGroups:
                     counts = result.Counters;
+                    break;
+                case DatabaseItemType.Subscriptions:
+                    counts = result.Subscriptions;
                     break;
                 case DatabaseItemType.LegacyDocumentDeletions:
                     counts = new SmugglerProgressBase.Counts();
@@ -837,6 +844,26 @@ namespace Raven.Server.Smuggler.Documents
             }
 
             return result.Conflicts;
+        }
+
+        private SmugglerProgressBase.Counts ProcessSubscriptions(SmugglerResult result)
+        {
+            using (var actions = _destination.Subscriptions())
+            {
+                foreach (var subscription in _source.GetSubscriptionValues())
+                {
+                    _token.ThrowIfCancellationRequested();
+                    result.Subscriptions.ReadCount++;
+
+                    if (result.Subscriptions.ReadCount % 1000 == 0)
+                        AddInfoToSmugglerResult(result, $"Read {result.Subscriptions.ReadCount:#,#;;0} subscription.");
+
+                    actions.WriteSubscription(subscription);
+
+                }
+            }
+
+            return result.Subscriptions;
         }
 
         private static void SkipDocument(DocumentItem item, SmugglerResult result)
