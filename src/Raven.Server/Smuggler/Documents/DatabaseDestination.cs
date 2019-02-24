@@ -11,6 +11,7 @@ using Raven.Client.Documents.Indexes;
 using Raven.Client.Documents.Operations.Attachments;
 using Raven.Client.Documents.Operations.Counters;
 using Raven.Client.Documents.Smuggler;
+using Raven.Client.Documents.Subscriptions;
 using Raven.Client.ServerWide;
 using Raven.Client.Util;
 using Raven.Server.Documents;
@@ -23,6 +24,7 @@ using Raven.Server.ServerWide.Commands.ConnectionStrings;
 using Raven.Server.ServerWide.Commands.ETL;
 using Raven.Server.ServerWide.Commands.PeriodicBackup;
 using Raven.Server.ServerWide.Commands.Sorters;
+using Raven.Server.ServerWide.Commands.Subscriptions;
 using Raven.Server.ServerWide.Context;
 using Raven.Server.Smuggler.Documents.Data;
 using Raven.Server.Smuggler.Documents.Processors;
@@ -96,6 +98,11 @@ namespace Raven.Server.Smuggler.Documents
         public ICounterActions Counters()
         {
             return new CounterActions(_database);
+        }
+
+        public ISubscriptionActions Subscriptions()
+        {
+            return new SubscriptionActions(_database, _log);
         }
 
         public IIndexActions Indexes()
@@ -1137,6 +1144,163 @@ namespace Raven.Server.Smuggler.Documents
             public Stream GetTempStream()
             {
                 throw new NotSupportedException("GetTempStream is never used in CounterActions. Shouldn't happen");
+            }
+        }
+
+        private class SubscriptionActions : ISubscriptionActions
+        {
+            private readonly DocumentDatabase _database;
+            private MergedBatchPutSubscriptionCommand _command;
+            private MergedBatchPutSubscriptionCommand _prevCommand;
+            private Task _prevCommandTask = Task.CompletedTask;
+            private readonly Sparrow.Size _enqueueThreshold;
+            private readonly Logger _log;
+
+            public SubscriptionActions(DocumentDatabase database, Logger log)
+            {
+                _database = database;
+                _log = log;
+                _enqueueThreshold = new Sparrow.Size(
+                    (sizeof(int) == IntPtr.Size || database.Configuration.Storage.ForceUsing32BitsPager) ? 2 : 32,
+                    SizeUnit.Megabytes);
+                _command = new MergedBatchPutSubscriptionCommand(database, log);
+            }
+
+            public void Dispose()
+            {
+                FinishBatchOfSubscriptions();
+            }
+
+            public void WriteSubscription(SubscriptionState subscriptionState)
+            {
+                _command.Add(subscriptionState);
+                HandleBatchOfSubscriptionssIfNecessary();
+            }
+
+            private void HandleBatchOfSubscriptionssIfNecessary()
+            {
+                var prevDoneAndHasEnough = _command.Context.AllocatedMemory > Constants.Size.Megabyte && _prevCommandTask.IsCompleted;
+                var currentReachedLimit = _command.Context.AllocatedMemory > _enqueueThreshold.GetValue(SizeUnit.Bytes);
+
+                if (currentReachedLimit == false && prevDoneAndHasEnough == false)
+                    return;
+
+                var prevCommand = _prevCommand;
+                var prevCommandTask = _prevCommandTask;
+
+                var commandTask = _database.TxMerger.Enqueue(_command);
+                // we ensure that we first enqueue the command to if we 
+                // fail to do that, we won't be waiting on the previous
+                // one
+                _prevCommand = _command;
+                _prevCommandTask = commandTask;
+
+                if (prevCommand != null)
+                {
+                    using (prevCommand)
+                    {
+                        prevCommandTask.GetAwaiter().GetResult();
+                        Debug.Assert(prevCommand.IsDisposed == false,
+                            "we rely on reusing this context on the next batch, so it has to be disposed here");
+                    }
+                }
+
+                _command = new MergedBatchPutSubscriptionCommand(_database, _log);
+            }
+
+            private void FinishBatchOfSubscriptions()
+            {
+                if (_prevCommand != null)
+                {
+                    using (_prevCommand)
+                        AsyncHelpers.RunSync(() => _prevCommandTask);
+
+                    _prevCommand = null;
+                }
+
+                if (_command.Subscriptions.Count > 0)
+                {
+                    using (_command)
+                        AsyncHelpers.RunSync(() => _database.TxMerger.Enqueue(_command));
+                }
+
+                _command = null;
+            }
+        }
+
+        public class MergedBatchPutSubscriptionCommand : TransactionOperationsMerger.MergedTransactionCommand, IDisposable
+        {
+            private readonly DocumentDatabase _database;
+            private readonly Logger _log;
+            private readonly DocumentsOperationContext _context;
+            public DocumentsOperationContext Context => _context;
+            public readonly List<SubscriptionState> Subscriptions = new List<SubscriptionState>();
+
+            private bool _isDisposed;
+
+            public bool IsDisposed => _isDisposed;
+
+            public MergedBatchPutSubscriptionCommand(DocumentDatabase database, Logger log)
+            {
+                _database = database;
+                _log = log;
+                _database.DocumentsStorage.ContextPool.AllocateOperationContext(out _context);
+            }
+
+            protected override int ExecuteCmd(DocumentsOperationContext context)
+            {
+                if (_log.IsInfoEnabled)
+                    _log.Info($"Importing {Subscriptions.Count:#,#0} subscriptions");
+
+                foreach (var subscription in Subscriptions)
+                {
+                    _database.SubscriptionStorage.PutSubscription(new SubscriptionCreationOptions
+                    {
+                        Name = subscription.SubscriptionName,
+                        Query = subscription.Query
+                    }, disabled: subscription.Disabled).GetAwaiter();
+                }
+                return Subscriptions.Count;
+            }
+
+            public void Add(SubscriptionState subscription)
+            {
+                Subscriptions.Add(subscription);
+            }
+
+            public void Dispose()
+            {
+                if (_isDisposed)
+                    return;
+
+                _isDisposed = true;
+
+                Subscriptions.Clear();
+            }
+
+            public override TransactionOperationsMerger.IReplayableCommandDto<TransactionOperationsMerger.MergedTransactionCommand> ToDto(JsonOperationContext context)
+            {
+                return new MergedBatchPutSubscriptionDto
+                {
+                    Subscriptions = Subscriptions
+                };
+            }
+        }
+
+        public class MergedBatchPutSubscriptionDto : TransactionOperationsMerger.IReplayableCommandDto<MergedBatchPutSubscriptionCommand>
+        {
+            public List<SubscriptionState> Subscriptions;
+
+            public MergedBatchPutSubscriptionCommand ToCommand(DocumentsOperationContext context, DocumentDatabase database)
+            {
+                var log = LoggingSource.Instance.GetLogger<DatabaseDestination>(database.Name);
+                var command = new MergedBatchPutSubscriptionCommand(database, log);
+
+                foreach (var subscription in Subscriptions)
+                {
+                    command.Add(subscription);
+                }
+                return command;
             }
         }
     }

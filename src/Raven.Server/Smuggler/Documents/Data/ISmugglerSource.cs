@@ -4,6 +4,7 @@ using System.Threading;
 using Raven.Client.Documents.Indexes;
 using Raven.Client.Documents.Operations.Counters;
 using Raven.Client.Documents.Smuggler;
+using Raven.Client.Documents.Subscriptions;
 using Raven.Client.ServerWide;
 using Raven.Server.Documents;
 using Sparrow.Json;
@@ -27,6 +28,7 @@ namespace Raven.Server.Smuggler.Documents.Data
         IEnumerable<(string key, long index, BlittableJsonReaderObject value)> GetCompareExchangeValues();
         IEnumerable<CounterGroupDetail> GetCounterValues(ICounterActions actions);
         IEnumerable<CounterDetail> GetLegacyCounterValues();
+        IEnumerable<SubscriptionState> GetSubscriptionValues();
 
         long SkipType(DatabaseItemType type, Action<long> onSkipped, CancellationToken token);
     }

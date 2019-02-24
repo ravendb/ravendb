@@ -3,6 +3,7 @@ using System.IO;
 using Raven.Client.Documents.Indexes;
 using Raven.Client.Documents.Operations.Counters;
 using Raven.Client.Documents.Smuggler;
+using Raven.Client.Documents.Subscriptions;
 using Raven.Client.ServerWide;
 using Raven.Server.Documents;
 using Raven.Server.Documents.Indexes;
@@ -24,6 +25,7 @@ namespace Raven.Server.Smuggler.Documents.Data
         IKeyValueActions<long> Identities();
         IKeyValueActions<BlittableJsonReaderObject> CompareExchange(JsonOperationContext context);
         ICounterActions Counters();
+        ISubscriptionActions Subscriptions();
     }
 
     public interface IDocumentActions : INewDocumentActions, IDisposable
@@ -51,6 +53,11 @@ namespace Raven.Server.Smuggler.Documents.Data
         void WriteCounter(CounterGroupDetail counterDetail);
         void WriteLegacyCounter(CounterDetail counterDetail);
         void RegisterForDisposal(IDisposable data);
+    }
+
+    public interface ISubscriptionActions : IDisposable
+    {
+        void WriteSubscription(SubscriptionState subscriptionState);
     }
 
     public interface IKeyValueActions<in T> : IDisposable

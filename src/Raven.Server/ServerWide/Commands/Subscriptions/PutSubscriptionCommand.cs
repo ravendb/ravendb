@@ -22,6 +22,7 @@ namespace Raven.Server.ServerWide.Commands.Subscriptions
         public string SubscriptionName;
         public bool Disabled;
         public string MentorNode;
+        private string OldName;
 
         // for serialization
         private PutSubscriptionCommand() : base(null) { }
@@ -44,6 +45,7 @@ namespace Raven.Server.ServerWide.Commands.Subscriptions
         {
             result = null;
             var subscriptionId = SubscriptionId ?? index;
+            OldName = SubscriptionName;
             SubscriptionName = string.IsNullOrEmpty(SubscriptionName) ? subscriptionId.ToString() : SubscriptionName;
             
             var subscriptionItemName = SubscriptionState.GenerateSubscriptionItemKeyName(DatabaseName, SubscriptionName);
@@ -59,8 +61,16 @@ namespace Raven.Server.ServerWide.Commands.Subscriptions
                     var existingSubscriptionState = JsonDeserializationClient.SubscriptionState(doc);
 
                     if (SubscriptionId != existingSubscriptionState.SubscriptionId)
+                    {
+                        if (string.IsNullOrEmpty(OldName))
+                        {
+                            SubscriptionName = $"{SubscriptionName}.{new Random().Next()}";
+                            Execute(context, items, index, record, state, out result);
+                            return;
+                        }
                         throw new RachisApplyException("A subscription could not be modified because the name '" + subscriptionItemName +
-                                                            "' is already in use in a subscription with different Id.");
+                                                       "' is already in use in a subscription with different Id.");
+                    }
 
                     if (string.IsNullOrEmpty(InitialChangeVector) == false && InitialChangeVector == nameof(Constants.Documents.SubscriptionChangeVectorSpecialStates.DoNotChange))
                     {

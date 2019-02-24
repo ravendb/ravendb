@@ -8,6 +8,7 @@ using Raven.Client;
 using Raven.Client.Documents.Indexes;
 using Raven.Client.Documents.Operations.Counters;
 using Raven.Client.Documents.Smuggler;
+using Raven.Client.Documents.Subscriptions;
 using Raven.Client.ServerWide;
 using Raven.Client.Util;
 using Raven.Server.Documents;
@@ -46,6 +47,7 @@ namespace Raven.Server.Smuggler.Documents
             DatabaseItemType.Identities,
             DatabaseItemType.CompareExchange,
             DatabaseItemType.CounterGroups,
+            DatabaseItemType.Subscriptions,
             DatabaseItemType.None
         };
 
@@ -276,6 +278,13 @@ namespace Raven.Server.Smuggler.Documents
         {
             // used only in StreamSource
             return Enumerable.Empty<CounterDetail>();
+        }
+
+        public IEnumerable<SubscriptionState> GetSubscriptionValues()
+        {
+            Debug.Assert(_context != null);
+
+            return _database.SubscriptionStorage.GetAllSubscriptions(_serverContext, false, 0, int.MaxValue);
         }
 
         public long SkipType(DatabaseItemType type, Action<long> onSkipped, CancellationToken token)

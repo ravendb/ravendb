@@ -16,6 +16,7 @@ using Raven.Client.Documents.Operations.Replication;
 using Raven.Client.Documents.Operations.Revisions;
 using Raven.Client.Documents.Queries.Sorting;
 using Raven.Client.Documents.Smuggler;
+using Raven.Client.Documents.Subscriptions;
 using Raven.Client.ServerWide;
 using Raven.Client.Util;
 using Raven.Server.Config;
@@ -104,6 +105,11 @@ namespace Raven.Server.Smuggler.Documents
         public ICounterActions Counters()
         {
             return new StreamCounterActions(_writer, _context, nameof(DatabaseItemType.CounterGroups));
+        }
+
+        public ISubscriptionActions Subscriptions()
+        {
+            return new StreamSubscriptionActions(_writer, _context, nameof(DatabaseItemType.Subscriptions));
         }
 
         public IIndexActions Indexes()
@@ -617,6 +623,27 @@ namespace Raven.Server.Smuggler.Documents
                 throw new NotSupportedException("GetTempStream is never used in StreamCounterActions. Shouldn't happen");
             }
         }
+
+        private class StreamSubscriptionActions : StreamActionsBase, ISubscriptionActions
+        {
+            private readonly DocumentsOperationContext _context;
+            private readonly BlittableJsonTextWriter _writer;
+
+            public StreamSubscriptionActions(BlittableJsonTextWriter writer, DocumentsOperationContext context, string propertyName) : base(writer, propertyName)
+            {
+                _context = context;
+                _writer = writer;
+            }
+
+            public void WriteSubscription(SubscriptionState subscriptionState)
+            {
+                if (First == false)
+                    Writer.WriteComma();
+                First = false;
+
+                _context.Write(_writer, subscriptionState.ToJson());
+            }
+         }
 
         private class StreamDocumentActions : StreamActionsBase, IDocumentActions
         {

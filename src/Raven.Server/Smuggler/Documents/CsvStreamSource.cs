@@ -8,6 +8,7 @@ using CsvHelper;
 using Raven.Client;
 using Raven.Client.Documents.Operations.Counters;
 using Raven.Client.Documents.Smuggler;
+using Raven.Client.Documents.Subscriptions;
 using Raven.Client.ServerWide;
 using Raven.Client.Util;
 using Raven.Server.Documents;
@@ -360,6 +361,11 @@ namespace Raven.Server.Smuggler.Documents
         public IEnumerable<CounterDetail> GetLegacyCounterValues()
         {
             return Enumerable.Empty<CounterDetail>();
+        }
+
+        public IEnumerable<SubscriptionState> GetSubscriptionValues()
+        {
+            return Enumerable.Empty<SubscriptionState>();
         }
 
         public long SkipType(DatabaseItemType type, Action<long> onSkipped, CancellationToken token)

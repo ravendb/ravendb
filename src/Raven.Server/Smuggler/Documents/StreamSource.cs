@@ -11,6 +11,7 @@ using Raven.Client.Documents.Operations.ETL.SQL;
 using Raven.Client.Documents.Operations.Replication;
 using Raven.Client.Documents.Queries.Sorting;
 using Raven.Client.Documents.Smuggler;
+using Raven.Client.Documents.Subscriptions;
 using Raven.Client.Properties;
 using Raven.Client.ServerWide;
 using Raven.Client.Util;
@@ -436,6 +437,43 @@ namespace Raven.Server.Smuggler.Documents
             }
         }
 
+        public IEnumerable<SubscriptionState> GetSubscriptionValues()
+        {
+            foreach (var reader in ReadArray())
+            {
+                using (reader)
+                {
+                    if (reader.TryGet(nameof(SubscriptionState.SubscriptionName), out string subscriptionName) == false ||
+                        reader.TryGet(nameof(SubscriptionState.Query), out string query) == false ||
+                        reader.TryGet(nameof(SubscriptionState.ChangeVectorForNextBatchStartingPoint), out string changeVectorForNextBatchStartingPoint) == false ||
+                        reader.TryGet(nameof(SubscriptionState.MentorNode), out string mentorNode) == false ||
+                        reader.TryGet(nameof(SubscriptionState.NodeTag), out string nodeTag) == false ||
+                        reader.TryGet(nameof(SubscriptionState.LastBatchAckTime), out DateTime lastBatchAckTime) == false ||
+                        reader.TryGet(nameof(SubscriptionState.LastClientConnectionTime), out DateTime lastClientConnectionTime) == false ||
+                        reader.TryGet(nameof(SubscriptionState.Disabled), out bool disabled) == false ||
+                        reader.TryGet(nameof(SubscriptionState.SubscriptionId), out long subscriptionId) == false)
+                    {
+                        _result.Subscriptions.ErroredCount++;
+                        _result.AddWarning("Could not read subscriptions entry.");
+
+                        continue;
+                    }
+
+                    yield return new SubscriptionState()
+                    {
+                        Query = query,
+                        ChangeVectorForNextBatchStartingPoint = changeVectorForNextBatchStartingPoint,
+                        SubscriptionName = subscriptionName,
+                        SubscriptionId = subscriptionId,
+                        MentorNode = mentorNode,
+                        NodeTag = nodeTag,
+                        LastBatchAckTime = lastBatchAckTime,
+                        LastClientConnectionTime = lastClientConnectionTime,
+                        Disabled = disabled
+                    };
+                }
+            }
+        }
 
         private unsafe void SetBuffer(UnmanagedJsonParser parser, LazyStringValue value)
         {
@@ -538,12 +576,11 @@ namespace Raven.Server.Smuggler.Documents
                         Ptr = newVal.Ptr,
                         Length = newVal.Length
                     };
-
                 }
 
                 return _context.ReadObject(values, null);
             }
-            finally 
+            finally
             {
                 foreach (var scope in scopes)
                 {
@@ -565,6 +602,7 @@ namespace Raven.Server.Smuggler.Documents
                 case DatabaseItemType.Indexes:
                 case DatabaseItemType.Identities:
                 case DatabaseItemType.CompareExchange:
+                case DatabaseItemType.Subscriptions:
                 case DatabaseItemType.LegacyDocumentDeletions:
                 case DatabaseItemType.LegacyAttachmentDeletions:
 #pragma warning disable 618
@@ -1378,6 +1416,9 @@ namespace Raven.Server.Smuggler.Documents
 
             if (type.Equals(nameof(DatabaseItemType.Identities), StringComparison.OrdinalIgnoreCase))
                 return DatabaseItemType.Identities;
+
+            if (type.Equals(nameof(DatabaseItemType.Subscriptions), StringComparison.OrdinalIgnoreCase))
+                return DatabaseItemType.Subscriptions;
 
             if (type.Equals(nameof(DatabaseItemType.CompareExchange), StringComparison.OrdinalIgnoreCase) ||
                 type.Equals("CmpXchg", StringComparison.OrdinalIgnoreCase)) //support the old name

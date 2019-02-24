@@ -9,7 +9,8 @@ namespace Raven.Client.Documents.Smuggler
                                                               DatabaseItemType.Conflicts |
                                                               DatabaseItemType.DatabaseRecord |
                                                               DatabaseItemType.Identities | DatabaseItemType.CompareExchange |
-                                                              DatabaseItemType.Attachments | DatabaseItemType.CounterGroups;
+                                                              DatabaseItemType.Attachments | DatabaseItemType.CounterGroups |
+                                                              DatabaseItemType.Subscriptions;
 
         public const DatabaseRecordItemType DefaultOperateOnDatabaseRecordTypes = DatabaseRecordItemType.Client |
                                                                                   DatabaseRecordItemType.ConflictSolverConfig |
@@ -25,7 +26,6 @@ namespace Raven.Client.Documents.Smuggler
                                                                                   DatabaseRecordItemType.SqlEtls |
                                                                                   DatabaseRecordItemType.HubPullReplications |
                                                                                   DatabaseRecordItemType.SinkPullReplications;
-
         private const int DefaultMaxStepsForTransformScript = 10 * 1000;
 
         public DatabaseSmugglerOptions()
@@ -45,7 +45,7 @@ namespace Raven.Client.Documents.Smuggler
         public bool RemoveAnalyzers { get; set; }
 
         public string TransformScript { get; set; }
-        
+
         public int MaxStepsForTransformScript { get; set; }
 
         public bool SkipRevisionCreation { get; set; }
