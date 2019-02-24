@@ -527,7 +527,7 @@ namespace Raven.Server.Documents.Replication
                 {
                     foreach (var item in ReplicatedItems)
                     {
-                        item.Document.Dispose();
+                        item.Document?.Dispose();
                     }
 
                     if (_isReplayTransaction == false)
