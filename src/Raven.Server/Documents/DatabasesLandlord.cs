@@ -132,7 +132,7 @@ namespace Raven.Server.Documents
                         });
                         break;
                     case ClusterDatabaseChangeType.PendingClusterTransactions:
-                    case ClusterDatabaseChangeType.ClusterTransctionCompleted:
+                    case ClusterDatabaseChangeType.ClusterTransactionCompleted:
                         if (task.IsCompleted)
                         {
                             task.Result.DatabaseGroupId = record.Topology.DatabaseTopologyIdBase64;
@@ -778,7 +778,7 @@ namespace Raven.Server.Documents
             RecordChanged,
             ValueChanged,
             PendingClusterTransactions,
-            ClusterTransctionCompleted
+            ClusterTransactionCompleted
         }
 
         public void UnloadDirectly(StringSegment databaseName, DateTime? wakeup = null, [CallerMemberName] string caller = null)
