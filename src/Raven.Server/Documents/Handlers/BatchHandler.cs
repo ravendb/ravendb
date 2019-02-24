@@ -17,6 +17,7 @@ using Raven.Server.Smuggler;
 using Sparrow.Json;
 using Sparrow.Json.Parsing;
 using System.Runtime.ExceptionServices;
+using System.Threading;
 using Raven.Client.Documents.Attachments;
 using Raven.Client.Documents.Changes;
 using Raven.Client.Json;
@@ -171,7 +172,12 @@ namespace Raven.Server.Documents.Handlers
             var array = new DynamicJsonArray();
             if (clusterTransactionCommand.DatabaseCommandsCount > 0)
             {
-                var reply = (ClusterTransactionCompletionResult)await Database.ClusterTransactionWaiter.WaitForResults(options.TaskId, HttpContext.RequestAborted);
+                ClusterTransactionCompletionResult reply;
+                using (var timeout = new CancellationTokenSource(ServerStore.Engine.OperationTimeout))
+                using (var cts = CancellationTokenSource.CreateLinkedTokenSource(timeout.Token, HttpContext.RequestAborted))
+                {
+                    reply = (ClusterTransactionCompletionResult)await Database.ClusterTransactionWaiter.WaitForResults(options.TaskId, cts.Token);
+                }
                 if (reply.IndexTask != null)
                 {
                     await reply.IndexTask;
