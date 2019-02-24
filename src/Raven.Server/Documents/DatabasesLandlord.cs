@@ -106,7 +106,7 @@ namespace Raven.Server.Documents
                             NotifyDatabaseAboutStateChange(databaseName, task, index);
                             if (type == ClusterStateMachine.SnapshotInstalled)
                             {
-                                NotifyPendingClusterTransaction(databaseName, task);
+                                NotifyPendingClusterTransaction(databaseName, task, index, changeType);
                             }
                             return;
                         }
@@ -115,7 +115,7 @@ namespace Raven.Server.Documents
                             NotifyDatabaseAboutStateChange(databaseName, done, index);
                             if (type == ClusterStateMachine.SnapshotInstalled)
                             {
-                                NotifyPendingClusterTransaction(databaseName, done);
+                                NotifyPendingClusterTransaction(databaseName, done, index, changeType);
                             }
                         });
                         break;
@@ -132,16 +132,17 @@ namespace Raven.Server.Documents
                         });
                         break;
                     case ClusterDatabaseChangeType.PendingClusterTransactions:
+                    case ClusterDatabaseChangeType.ClusterTransactionCompleted:
                         if (task.IsCompleted)
                         {
                             task.Result.DatabaseGroupId = record.Topology.DatabaseTopologyIdBase64;
-                            NotifyPendingClusterTransaction(databaseName, task);
+                            NotifyPendingClusterTransaction(databaseName, task, index, changeType);
                             return;
                         }
                         task.ContinueWith(done =>
                         {
                             done.Result.DatabaseGroupId = record.Topology.DatabaseTopologyIdBase64;
-                            NotifyPendingClusterTransaction(databaseName, done);
+                            NotifyPendingClusterTransaction(databaseName, done, index, changeType);
                         });
 
                         break;
@@ -178,11 +179,11 @@ namespace Raven.Server.Documents
             }
         }
 
-        public void NotifyPendingClusterTransaction(string name, Task<DocumentDatabase> task)
+        public void NotifyPendingClusterTransaction(string name, Task<DocumentDatabase> task, long index, ClusterDatabaseChangeType changeType)
         {
             try
             {
-                task.Result.NotifyOnPendingClusterTransaction();
+                task.Result.NotifyOnPendingClusterTransaction(index, changeType);
             }
             catch (Exception e)
             {
@@ -776,7 +777,8 @@ namespace Raven.Server.Documents
         {
             RecordChanged,
             ValueChanged,
-            PendingClusterTransactions
+            PendingClusterTransactions,
+            ClusterTransactionCompleted
         }
 
         public void UnloadDirectly(StringSegment databaseName, DateTime? wakeup = null, [CallerMemberName] string caller = null)

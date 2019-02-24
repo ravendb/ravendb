@@ -191,10 +191,8 @@ namespace Raven.Server.ServerWide.Commands
         
         public unsafe void SaveCommandsBatch(TransactionOperationContext context, long index)
         {
-            if (SerializedDatabaseCommands == null || DatabaseCommandsCount == 0)
-            {
+            if (HasDocumentsInTransaction == false)
                 return;
-            }
 
             var items = context.Transaction.InnerTransaction.OpenTable(ClusterStateMachine.TransactionCommandsSchema, ClusterStateMachine.TransactionCommands);
             var commandsCountPerDatabase = context.Transaction.InnerTransaction.ReadTree(ClusterStateMachine.TransactionCommandsCountPerDatabase);
@@ -215,6 +213,8 @@ namespace Raven.Server.ServerWide.Commands
                 }
             }
         }
+
+        public bool HasDocumentsInTransaction => SerializedDatabaseCommands != null && DatabaseCommandsCount != 0;
 
         public enum TransactionCommandsColumn
         {

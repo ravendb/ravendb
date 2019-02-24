@@ -62,6 +62,35 @@ namespace SlowTests.Cluster
                 }
             }
         }
+
+        [Fact]
+        public async Task ServeSeveralClusterTransactionRequests()
+        {
+            using (var store = GetDocumentStore())
+            using (var session = store.OpenAsyncSession(new SessionOptions
+            {
+                TransactionMode = TransactionMode.ClusterWide
+            }))
+            {
+                var user1 = new User()
+                {
+                    Name = "Karmel"
+                };
+
+                session.Advanced.ClusterTransaction.CreateCompareExchangeValue("usernames/karmel", user1);
+                await session.SaveChangesAsync();
+
+                var result = (await session.Advanced.ClusterTransaction.GetCompareExchangeValueAsync<User>("usernames/karmel"));
+                Assert.Equal(user1.Name, result.Value.Name);
+
+                await session.StoreAsync(user1, "users/1");
+                await session.SaveChangesAsync();
+
+                var user = await session.LoadAsync<User>("users/1");
+                Assert.Equal(user1.Name, user.Name);
+            }
+        }
+
         private Random _random = new Random();
         private string RandomString(int length)
         {
