@@ -150,7 +150,7 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene.Documents
 
         internal static IPropertyAccessor CreateMapReduceOutputAccessor(Type type, object instance, HashSet<CompiledIndexField> groupByFields, bool isObjectInstance = false)
         {
-            if (isObjectInstance || type == typeof(ObjectInstance))
+            if (isObjectInstance || type == typeof(ObjectInstance) || type.IsSubclassOf(typeof(ObjectInstance)))
                 return new JintPropertyAccessor(groupByFields);
 
             if (instance is Dictionary<string, object> dict)
