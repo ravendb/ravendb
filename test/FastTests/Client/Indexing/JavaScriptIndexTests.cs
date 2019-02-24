@@ -142,6 +142,37 @@ namespace FastTests.Client.Indexing
         }
 
         [Fact]
+        public void CanIndexMapReduceWithFanoutWhenOutputingBlittableObjectInstance()
+        {
+            using (var store = GetDocumentStore())
+            {
+                store.ExecuteIndex(new FanoutByPaymentsWithReduce());
+                using (var session = store.OpenSession())
+                {
+
+                    session.Store(new Customer
+                    {
+                        Name = "John Smidth",
+                        Status = "Active",
+                        Subscription = "Monthly",
+                        Payments = new []
+                        {
+                            new DateWithAmount("2018-09-01",58),
+                            new DateWithAmount("2018-10-01",48),
+                            new DateWithAmount("2018-11-01",75),
+                            new DateWithAmount("2018-12-01",42),
+                            new DateWithAmount("2019-01-01",34)
+                        }
+                    });
+                    session.SaveChanges();
+                    WaitForIndexing(store);
+                    
+                    var res = session.Query<DateWithAmount, FanoutByPaymentsWithReduce>().Where(x => x.Amount == 42.833333333333336).ToList();
+                    Assert.Equal(3, res.Count);
+                }
+            }
+        }
+        [Fact]
         public void CanIndexMapReduceWithFanout()
         {
             using (var store = GetDocumentStore())
@@ -683,6 +714,75 @@ namespace FastTests.Client.Indexing
             {
                 public string Foo { get; set; }
                 public int Sum { get; set; }
+            }
+        }
+
+        private class Customer
+        {
+            public string Name { get; set; }
+            public string Status { get; set; }
+            public string Subscription { get; set; }
+            public DateWithAmount[] Payments { get; set; }
+        }
+
+        private class DateWithAmount
+        {
+            public DateWithAmount(string date, double amount)
+            {
+                Date = date;
+                Amount = amount;
+            }
+            public string Date { get; set; }
+            public double Amount { get; set; }
+        }
+
+        private class FanoutByPaymentsWithReduce : AbstractJavaScriptIndexCreationTask
+        {
+            public FanoutByPaymentsWithReduce()
+            {
+                Maps = new HashSet<string>
+                {
+                    @"map('Customers', 
+                    cust =>{ var length = cust.Payments.length;
+                    if (length == 0){
+                        return; // nothing to work on
+                        }
+                    var res = [];
+                    var lastPayment = new Date(cust.Payments[length - 1].Date);
+                    
+                    for (var t = 0; t < 3; t++)
+                    {
+                        for (var i = 1, sum = 0; i <= length; i++)
+                        {
+                            sum += cust.Payments[length - i].Amount;
+                        }
+                    
+                        if (cust.Subscription == 'Monthly')
+                        {
+                            lastPayment.setMonth(lastPayment.getMonth() + 1);                        
+                        }
+                        else
+                        {
+                            lastPayment.setYear(lastPayment.getYear() + 1);
+                        }
+
+                        res.push(
+                            { 
+                                Amount: sum / i, 
+                                Date: lastPayment.toISOString().substr(0, 10)
+                            });
+                    }
+                    return res;
+                    })"
+                    };
+
+                Reduce = @"groupBy(x=>x.Date)
+                            .aggregate(g=>{ 
+                                            return {
+                                                    Date: g.key,
+                                                    Amount: g.values.reduce((c,v)=>c+v.Amount,0)
+                                                    };
+                                          });";
             }
         }
 
