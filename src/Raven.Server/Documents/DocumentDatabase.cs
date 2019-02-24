@@ -385,7 +385,7 @@ namespace Raven.Server.Documents
 
         public void NotifyOnPendingClusterTransaction(long index, DatabasesLandlord.ClusterDatabaseChangeType changeType)
         {
-            if (changeType == DatabasesLandlord.ClusterDatabaseChangeType.ClusterTransctionCompleted)
+            if (changeType == DatabasesLandlord.ClusterDatabaseChangeType.ClusterTransactionCompleted)
             {
                 RachisLogIndexNotifications.NotifyListenersAbout(index, null);
                 return;

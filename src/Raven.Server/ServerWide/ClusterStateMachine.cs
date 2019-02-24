@@ -362,7 +362,7 @@ namespace Raven.Server.ServerWide
                 clusterTransaction.SaveCommandsBatch(context, index);
                 var notify = clusterTransaction.HasDocumentsInTransaction
                     ? DatabasesLandlord.ClusterDatabaseChangeType.PendingClusterTransactions
-                    : DatabasesLandlord.ClusterDatabaseChangeType.ClusterTransctionCompleted;
+                    : DatabasesLandlord.ClusterDatabaseChangeType.ClusterTransactionCompleted;
 
                 NotifyDatabaseAboutChanged(context, clusterTransaction.DatabaseName, index, nameof(ClusterTransactionCommand), notify);
 
