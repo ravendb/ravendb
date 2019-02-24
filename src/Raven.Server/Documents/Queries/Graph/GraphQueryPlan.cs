@@ -264,26 +264,36 @@ namespace Raven.Server.Documents.Queries.Graph
             
             if (_context.Transaction == null || _context.Transaction.Disposed)
                 _context.OpenReadTransaction();
-
-            var etag = DocumentsStorage.ReadLastEtag(_context.Transaction.InnerTransaction);
-            var queryDuration = Stopwatch.StartNew();
-            var indexes = new List<Index>();
-            var indexWaiters = new Dictionary<Index, (IndexQueryServerSide, AsyncWaitForIndexing)>();
-            foreach (var queryStepInfo in queryStepsGatherer.QuerySteps)
+            try
             {
-                if(string.IsNullOrWhiteSpace(queryStepInfo.QueryStep.Query.From.From.FieldValue) || queryStepInfo.IsIndexQuery)
-                    continue;
-                var indexQuery = new IndexQueryServerSide(queryStepInfo.QueryStep.GetQueryString, queryStepInfo.QueryStep.QueryParameters);
-                var indexCreationInfo = await _dynamicQueryRunner.CreateAutoIndexIfNeeded(indexQuery, true, null, _context, _database.DatabaseShutdown);
-                if (indexCreationInfo.HasCreatedAutoIndex) //wait for non-stale only IF we just created an auto-index
+                var etag = DocumentsStorage.ReadLastEtag(_context.Transaction.InnerTransaction);
+                var queryDuration = Stopwatch.StartNew();
+                var indexes = new List<Index>();
+                var indexWaiters = new Dictionary<Index, (IndexQueryServerSide, AsyncWaitForIndexing)>();
+                foreach (var queryStepInfo in queryStepsGatherer.QuerySteps)
                 {
-                    indexes.Add(indexCreationInfo.Index);
-                    var queryTimeout = indexQuery.WaitForNonStaleResultsTimeout ?? Index.DefaultWaitForNonStaleResultsTimeout;
-                    indexWaiters.Add(indexCreationInfo.Index, (indexQuery, new AsyncWaitForIndexing(queryDuration, queryTimeout, indexCreationInfo.Index)));
+                    if (string.IsNullOrWhiteSpace(queryStepInfo.QueryStep.Query.From.From.FieldValue) || queryStepInfo.IsIndexQuery)
+                        continue;
+                    var indexQuery = new IndexQueryServerSide(queryStepInfo.QueryStep.GetQueryString, queryStepInfo.QueryStep.QueryParameters);
+                    //No sense creating an index for collection queries
+                    if (indexQuery.Metadata.IsCollectionQuery)
+                        continue;
+                    var indexCreationInfo = await _dynamicQueryRunner.CreateAutoIndexIfNeeded(indexQuery, true, null, _context, _database.DatabaseShutdown);
+                    if (indexCreationInfo.HasCreatedAutoIndex) //wait for non-stale only IF we just created an auto-index
+                    {
+                        indexes.Add(indexCreationInfo.Index);
+                        var queryTimeout = indexQuery.WaitForNonStaleResultsTimeout ?? Index.DefaultWaitForNonStaleResultsTimeout;
+                        indexWaiters.Add(indexCreationInfo.Index, (indexQuery, new AsyncWaitForIndexing(queryDuration, queryTimeout, indexCreationInfo.Index)));
+                    }
                 }
-            }
 
-            await WaitForNonStaleResultsInternal(etag, indexes, indexWaiters);
+                await WaitForNonStaleResultsInternal(etag, indexes, indexWaiters);
+            }
+            finally
+            {
+                //The rest of the code assumes that a Tx is not opened
+                _context.Transaction.Dispose();
+            }
         }
 
         public async Task<bool> WaitForNonStaleResults()
