@@ -502,7 +502,7 @@ namespace Raven.Server.Documents.Replication
         {
             private readonly bool _isReplayTransaction;
 
-            public DataForReplicationCommand(bool isReplayTransaction = false)
+            internal DataForReplicationCommand(bool isReplayTransaction = false)
             {
                 _isReplayTransaction = isReplayTransaction;
             }
@@ -514,6 +514,8 @@ namespace Raven.Server.Documents.Replication
             internal string SourceDatabaseId { get; set; }
 
             internal ArraySegment<ReplicationItem> ReplicatedItems { get; set; }
+
+            internal ArraySegment<ReplicationAttachmentStream> AttachmentStreams { get; set; }
 
             internal Dictionary<Slice, ReplicationAttachmentStream> ReplicatedAttachmentStreams { get; set; }
 
@@ -534,12 +536,15 @@ namespace Raven.Server.Documents.Replication
                         ArrayPool<ReplicationItem>.Shared.Return(ReplicatedItems.Array, clearArray: true);
                 }
 
-                if (ReplicatedAttachmentStreams != null)
+                if (AttachmentStreams != null)
                 {
-                    foreach (var attachmentStream in ReplicatedAttachmentStreams)
+                    foreach (var attachmentStream in AttachmentStreams)
                     {
-                        attachmentStream.Value.Dispose();
+                        attachmentStream.Dispose();
                     }
+
+                    if (_isReplayTransaction == false)
+                        ArrayPool<ReplicationAttachmentStream>.Shared.Return(AttachmentStreams.Array, clearArray: true);
                 }
             }
         }
@@ -574,7 +579,7 @@ namespace Raven.Server.Documents.Replication
 
                         using (networkStats.For(ReplicationOperation.Incoming.AttachmentRead))
                         {
-                            dataForReplicationCommand.ReplicatedAttachmentStreams = ReadAttachmentStreamsFromSource(attachmentStreamCount, documentsContext);
+                            ReadAttachmentStreamsFromSource(attachmentStreamCount, documentsContext, dataForReplicationCommand);
                         }
                     }
 
@@ -1028,11 +1033,13 @@ namespace Raven.Server.Documents.Replication
             }
         }
 
-        private unsafe Dictionary<Slice, ReplicationAttachmentStream> ReadAttachmentStreamsFromSource(int attachmentStreamCount, DocumentsOperationContext context)
+        private unsafe void ReadAttachmentStreamsFromSource(int attachmentStreamCount, 
+            DocumentsOperationContext context, DataForReplicationCommand dataForReplicationCommand)
         {
             if (attachmentStreamCount == 0)
-                return null;
+                return;
 
+            var items = ArrayPool<ReplicationAttachmentStream>.Shared.Rent(attachmentStreamCount);
             var replicatedAttachmentStreams = new Dictionary<Slice, ReplicationAttachmentStream>(SliceComparer.Instance);
 
             for (var i = 0; i < attachmentStreamCount; i++)
@@ -1040,7 +1047,7 @@ namespace Raven.Server.Documents.Replication
                 var type = *(ReplicationBatchItem.ReplicationItemType*)ReadExactly(sizeof(byte));
                 Debug.Assert(type == ReplicationBatchItem.ReplicationItemType.AttachmentStream);
 
-                var attachment = new ReplicationAttachmentStream();
+                ref ReplicationAttachmentStream attachment = ref items[i];
 
                 var base64HashSize = *ReadExactly(sizeof(byte));
                 attachment.Base64HashDispose = Slice.From(context.Allocator, ReadExactly(base64HashSize), base64HashSize, out attachment.Base64Hash);
@@ -1052,7 +1059,8 @@ namespace Raven.Server.Documents.Replication
                 replicatedAttachmentStreams[attachment.Base64Hash] = attachment;
             }
 
-            return replicatedAttachmentStreams;
+            dataForReplicationCommand.AttachmentStreams = new ArraySegment<ReplicationAttachmentStream>(items, 0, attachmentStreamCount);
+            dataForReplicationCommand.ReplicatedAttachmentStreams = replicatedAttachmentStreams;
         }
 
         private void AddReplicationPulse(ReplicationPulseDirection direction, string exceptionMessage = null)
@@ -1543,9 +1551,9 @@ namespace Raven.Server.Documents.Replication
         public IncomingReplicationHandler.MergedDocumentReplicationCommand ToCommand(DocumentsOperationContext context, DocumentDatabase database)
         {
             var replicationItems = ReplicatedItemDtos.Select(d => d.ToItem(context)).ToArray();
-            var replicatedAttachmentStreams = ReplicatedAttachmentStreams?
+            var attachmentStreams = ReplicatedAttachmentStreams?
                 .Select(i => CreateReplicationAttachmentStream(context, i))
-                .ToDictionary(i => i.Base64Hash, SliceComparer.Instance);
+                .ToArray();
 
             var dataForReplicationCommand = new IncomingReplicationHandler.DataForReplicationCommand(isReplayTransaction: true)
             {
@@ -1553,7 +1561,8 @@ namespace Raven.Server.Documents.Replication
                 ConflictManager = new ConflictManager(database, database.ReplicationLoader.ConflictResolver),
                 SourceDatabaseId = SourceDatabaseId,
                 ReplicatedItems = replicationItems,
-                ReplicatedAttachmentStreams = replicatedAttachmentStreams,
+                AttachmentStreams = attachmentStreams,
+                ReplicatedAttachmentStreams = attachmentStreams?.ToDictionary(i => i.Base64Hash, SliceComparer.Instance),
                 SupportedFeatures = SupportedFeatures,
                 Logger = LoggingSource.Instance.GetLogger<IncomingReplicationHandler>(database.Name)
             };
