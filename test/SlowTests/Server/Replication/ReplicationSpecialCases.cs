@@ -1,10 +1,8 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.IO;
-using System.Threading;
 using System.Threading.Tasks;
 using FastTests.Server.Replication;
-using Raven.Client.Documents.Operations.Attachments;
 using Raven.Client.Documents.Replication;
 using Raven.Client.ServerWide;
 using Raven.Tests.Core.Utils.Entities;
@@ -14,7 +12,6 @@ namespace SlowTests.Server.Replication
 {
     public class ReplicationSpecialCases : ReplicationTestBase
     {
-
         [Fact]
         public async Task NonIdenticalContentConflict()
         {
@@ -93,7 +90,6 @@ namespace SlowTests.Server.Replication
                 }
             }))
             {
-
                 await SetupReplicationAsync(master, slave);
 
                 using (var session = slave.OpenSession())
@@ -228,7 +224,6 @@ namespace SlowTests.Server.Replication
                     session.SaveChanges();
                 }
 
-
                 using (var session = master.OpenSession())
                 {
                     session.Store(new User
@@ -327,18 +322,12 @@ namespace SlowTests.Server.Replication
         [Fact]
         public async Task ReplicationShouldSendMissingAttachments()
         {
-            var docId = "users/1";
-            using (var source = GetDocumentStore(options: new Options
-            {
-                ModifyDatabaseName = s => "Source" 
-
-            }))
-            using (var destination = GetDocumentStore(options: new Options
-            {
-                ModifyDatabaseName = s => "Destination"
-            }))
+            using (var source = GetDocumentStore())
+            using (var destination = GetDocumentStore())
             {
                 await SetupReplicationAsync(source, destination);
+
+                const string docId = "users/1";
                 using (var session = source.OpenAsyncSession())
                 using (var fooStream = new MemoryStream(new byte[] { 1, 2, 3 }))
                 {
@@ -368,7 +357,7 @@ namespace SlowTests.Server.Replication
                 {
                     var user = await session.LoadAsync<User>(docId);
                     var attachments = session.Advanced.Attachments.GetNames(user);
-                    Assert.Equal(attachments.Length, 2);
+                    Assert.Equal(2, attachments.Length);
                     foreach (var name in attachments)
                     {
                         using (var attachment = await session.Advanced.Attachments.GetAsync(user, name.Name))
@@ -380,10 +369,83 @@ namespace SlowTests.Server.Replication
                                 Assert.Equal(1, buffer[0]);
                                 Assert.Equal(2, buffer[1]);
                                 Assert.Equal(3, buffer[2]);
-                            }                            
+                            }
                         }
                     }
-                    
+                }
+            }
+        }
+
+        [Fact]
+        public async Task ReplicationShouldSendMissingAttachmentsAlongWithNewOnes()
+        {
+            using (var source = GetDocumentStore())
+            using (var destination = GetDocumentStore())
+            {
+                await SetupReplicationAsync(source, destination);
+
+                const string doc1Id = "users/1";
+                using (var session = source.OpenAsyncSession())
+                using (var fooStream = new MemoryStream(new byte[] { 1, 2, 3 }))
+                {
+                    await session.StoreAsync(new User { Name = "Foo" }, doc1Id);
+                    session.Advanced.Attachments.Store(doc1Id, "foo.png", fooStream, "image/png");
+                    await session.SaveChangesAsync();
+                }
+
+                WaitForDocumentToReplicate<User>(destination, doc1Id, 15 * 1000);
+                using (var session = destination.OpenAsyncSession())
+                {
+                    session.Delete(doc1Id);
+                    await session.SaveChangesAsync();
+                }
+
+                const string doc2Id = "users/2";
+                using (var session = source.OpenAsyncSession())
+                {
+                    var toDispose = new List<IDisposable>();
+
+                    // force replication of the original document (without the attachment)
+                    var doc1 = await session.LoadAsync<User>(doc1Id);
+                    doc1.LastName = "Bar";
+
+                    await session.StoreAsync(new User { Name = "Foo" }, doc2Id);
+
+                    for (var i = 0; i < 30; i++)
+                    {
+                        var fooStream = new MemoryStream(new byte[] { 4, 5, 6, (byte)i });
+                        toDispose.Add(fooStream);
+                        session.Advanced.Attachments.Store(doc2Id, $"foo{i}.png", fooStream, "image/png");
+                    }
+
+                    await session.SaveChangesAsync();
+
+                    session.Advanced.OnAfterSaveChanges += (_, __) => toDispose.ForEach(x => x.Dispose());
+                }
+
+                Assert.NotNull(WaitForDocumentWithAttachmentToReplicate<User>(destination, doc1Id, "foo.png", 15 * 1000));
+                Assert.NotNull(WaitForDocumentWithAttachmentToReplicate<User>(destination, doc2Id, "foo29.png", 15 * 1000));
+
+                var buffer = new byte[3];
+                using (var session = destination.OpenAsyncSession())
+                {
+                    var user = await session.LoadAsync<User>(doc1Id);
+                    var attachments = session.Advanced.Attachments.GetNames(user);
+                    Assert.Equal(1, attachments.Length);
+                    foreach (var name in attachments)
+                    {
+                        using (var attachment = await session.Advanced.Attachments.GetAsync(user, name.Name))
+                        {
+                            Assert.NotNull(attachment);
+                            Assert.Equal(3, await attachment.Stream.ReadAsync(buffer, 0, 3));
+                            if (attachment.Details.Name == "foo.png")
+                            {
+                                Assert.Equal(1, buffer[0]);
+                                Assert.Equal(2, buffer[1]);
+                                Assert.Equal(3, buffer[2]);
+                            }
+                        }
+                    }
                 }
             }
         }
