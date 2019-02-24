@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Collections.Generic;
 using Raven.Client;
 using Raven.Client.Documents.Subscriptions;
 using Raven.Client.Json.Converters;
@@ -64,7 +65,7 @@ namespace Raven.Server.ServerWide.Commands.Subscriptions
                     {
                         if (string.IsNullOrEmpty(OldName))
                         {
-                            SubscriptionName = $"{SubscriptionName}.{new Random().Next()}";
+                            SubscriptionName = $"{SubscriptionName}.{Guid.NewGuid()}";
                             Execute(context, items, index, record, state, out result);
                             return;
                         }
@@ -130,6 +131,33 @@ namespace Raven.Server.ServerWide.Commands.Subscriptions
             json[nameof(SubscriptionId)] = SubscriptionId;
             json[nameof(Disabled)] = Disabled;
             json[nameof(MentorNode)] = MentorNode;
+        }
+    }
+
+    public class PutSubscriptionBatchCommand : CommandBase
+    {
+        public List<PutSubscriptionCommand> Commands;
+
+        public PutSubscriptionBatchCommand()
+        {
+        }
+
+        public PutSubscriptionBatchCommand(List<PutSubscriptionCommand> commands)
+        {
+            Commands = commands;
+        }
+
+        public override DynamicJsonValue ToJson(JsonOperationContext context)
+        {
+            var djv = base.ToJson(context);
+            var dja = new DynamicJsonArray();
+            foreach (var command in Commands)
+            {
+                dja.Add(command.ToJson(context));
+            }
+            djv[nameof(Commands)] = dja;
+
+            return djv;
         }
     }
 }
