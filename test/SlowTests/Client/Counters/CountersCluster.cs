@@ -129,20 +129,11 @@ namespace SlowTests.Client.Counters
 
                 Task.WaitAll(tasks.ToArray());
 
-                //wait for replication 
+                // wait for replication and verify that all 
+                // stores have the correct accumulated counter-value
 
-                WaitForCounterReplication(stores, "users/1", "likes", 30, TimeSpan.FromSeconds(15));
+                Assert.True(WaitForCounterReplication(stores, "users/1", "likes", expected: 30, timeout: TimeSpan.FromSeconds(15)));
 
-                // verify that all stores have the correct accumulated counter-value
-
-                foreach (var store in stores)
-                {
-                    var val = store.Operations
-                        .Send(new GetCountersOperation("users/1", new[] { "likes" }))
-                        .Counters[0]?.TotalValue;
-
-                    Assert.Equal(30, val);
-                }
             }
             finally
             {
@@ -153,14 +144,17 @@ namespace SlowTests.Client.Counters
             }
         }
 
-        private static void WaitForCounterReplication(IEnumerable<IDocumentStore> stores, string docId, string counterName, long? expected, TimeSpan timeout)
+        private static bool WaitForCounterReplication(IEnumerable<IDocumentStore> stores, string docId, string counterName, long expected, TimeSpan timeout)
         {
+            long? val = null;
             var sw = Stopwatch.StartNew();
+
             foreach (var store in stores)
             {
+                val = null;
                 while (sw.Elapsed < timeout)
                 {
-                    var val = store.Operations
+                    val = store.Operations
                         .Send(new GetCountersOperation(docId, new[] { counterName }))
                         .Counters[0]?.TotalValue;
 
@@ -170,6 +164,8 @@ namespace SlowTests.Client.Counters
                     Thread.Sleep(100);
                 }
             }
+
+            return val == expected;
         }
 
         [Fact]
