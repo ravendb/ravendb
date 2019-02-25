@@ -12,7 +12,7 @@ namespace Raven.Server.ServerWide.Commands
             {
                 foreach (var name in Names)
                 {
-                    var read = store.Cluster.Read(context, name);
+                    var read = store.Cluster.GetCertificateByPrimaryKey(context, name);
                     if (read == null)
                         return;
 

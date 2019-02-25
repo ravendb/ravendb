@@ -52,6 +52,7 @@ namespace Raven.Server.ServerWide
             [nameof(ModifyConflictSolverCommand)] = Base40CommandsVersion,
             [nameof(PromoteDatabaseNodeCommand)] = Base40CommandsVersion,
             [nameof(PutCertificateCommand)] = Base40CommandsVersion,
+            [nameof(PutCertificateWithSamePinningHashCommand)] = Base42CommandsVersion,
             [nameof(PutClientConfigurationCommand)] = Base40CommandsVersion,
             [nameof(PutLicenseCommand)] = Base40CommandsVersion,
             [nameof(PutLicenseLimitsCommand)] = Base40CommandsVersion,

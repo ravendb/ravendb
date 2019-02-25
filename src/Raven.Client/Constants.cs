@@ -92,6 +92,7 @@ namespace Raven.Client
             }
 
             public const string Prefix = "certificates/";
+            public const int MaxNumberOfCertsWithSameHash = 5;
         }
 
         public class Configuration

@@ -848,7 +848,7 @@ namespace Raven.Server.ServerWide
             {
                 case nameof(RecheckStatusOfServerCertificateCommand):
                 case nameof(ConfirmReceiptServerCertificateCommand):
-                    ConfirmCertificateReceiptValueChanged(t).Wait(ServerShutdown);
+                    ConfirmCertificateReceiptaValueChanged(t).Wait(ServerShutdown);
                     break;
                 case nameof(InstallUpdatedServerCertificateCommand):
                     InstallUpdatedCertificateValueChanged(t).Wait(ServerShutdown);

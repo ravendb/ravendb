@@ -462,7 +462,7 @@ namespace Raven.Server.Documents.Handlers.Admin
                         using (ctx.OpenReadTransaction())
                         {
                             var key = Constants.Certificates.Prefix + certificate.Thumbprint;
-                            var readCert = ServerStore.Cluster.Read(ctx, key);
+                            var readCert = ServerStore.Cluster.GetCertificateByPrimaryKey(ctx, key);
                             if (readCert != null)
                                 oldServerCert = JsonDeserializationServer.CertificateDefinition(readCert);
                         }
@@ -496,7 +496,7 @@ namespace Raven.Server.Documents.Handlers.Admin
                         {
                             var key = Constants.Certificates.Prefix + certificate.Thumbprint;
 
-                            var modifiedServerCert = JsonDeserializationServer.CertificateDefinition(ServerStore.Cluster.Read(ctx, key));
+                            var modifiedServerCert = JsonDeserializationServer.CertificateDefinition(ServerStore.Cluster.GetCertificateByPrimaryKey(ctx, key));
 
                             if (modifiedServerCert == null)
                                 throw new ConcurrencyException("After adding the certificate, it was removed, shouldn't happen unless another admin removed it midway through.");
