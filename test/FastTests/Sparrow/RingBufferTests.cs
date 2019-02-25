@@ -1,7 +1,4 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Text;
-using Sparrow.Collections;
+﻿using Sparrow.Collections;
 using Xunit;
 
 namespace FastTests.Sparrow

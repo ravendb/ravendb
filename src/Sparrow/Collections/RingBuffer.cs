@@ -9,7 +9,7 @@ namespace Sparrow.Collections
     // The RingItem makes sure that it doesn't matter how big the struct for the T, it is always guaranteed that the data
     // will be always on an L0 cache line different from the item that comes before. 
     [StructLayout(LayoutKind.Sequential)]
-    public struct RingItem<T>
+    internal struct RingItem<T>
     {
         private readonly long _p1, _p2, _p3, _p4;
 
@@ -19,7 +19,7 @@ namespace Sparrow.Collections
         private readonly long _p5, _p6, _p7, _p8;
     }
 
-    public sealed class SingleConsumerRingBuffer<T>
+    internal sealed class SingleConsumerRingBuffer<T>
     {
         private readonly RingItem<T>[] _buffer;
 
@@ -37,14 +37,14 @@ namespace Sparrow.Collections
             if (!Bits.IsPowerOfTwo(size) || size < 2)
                 size = Bits.NextPowerOf2(size);
 
-            this._size = size;
-            this._mask = (uint)size - 1;
-            this._shift = Bits.MostSignificantBit(size);
-            this._buffer = new RingItem<T>[size];
+            _size = size;
+            _mask = (uint)size - 1;
+            _shift = Bits.MostSignificantBit(size);
+            _buffer = new RingItem<T>[size];
 
-            this._startIdx = 0;
-            this._acquiredIdx = -1;
-            this._currentIdx = 0;
+            _startIdx = 0;
+            _acquiredIdx = -1;
+            _currentIdx = 0;
         }
 
         public bool TryPush(ref T item)
@@ -54,13 +54,13 @@ namespace Sparrow.Collections
             int sidx = Volatile.Read(ref _startIdx);
 
             // Check if we have empty spaces in the buffer.
-            if (cidx - sidx >= this._size)
+            if (cidx - sidx >= _size)
                 return false; // No space to do anything
 
             int ticker = Interlocked.Increment(ref _currentIdx) - 1;
 
             // Assign the value
-            ref var cl = ref _buffer[ticker & this._mask];
+            ref var cl = ref _buffer[ticker & _mask];
 
             // We assign the item
             cl.Item = item;
@@ -88,10 +88,10 @@ namespace Sparrow.Collections
                 return false;
             }
 
-            item = _buffer[sidx & this._mask];
+            item = _buffer[sidx & _mask];
 
             // No need to use volatile here because this is Single Consumer Ring Buffer. 
-            this._acquiredIdx = sidx + 1;
+            _acquiredIdx = sidx + 1;
             return true;
         }
 
@@ -107,17 +107,17 @@ namespace Sparrow.Collections
             int length = cidx - sidx;
             if (length != 0)
             {
-                int sidxTicket = sidx >> this._shift;
-                int cidxTicket = cidx >> this._shift;                
+                int sidxTicket = sidx >> _shift;
+                int cidxTicket = cidx >> _shift;
                 if (sidxTicket != cidxTicket)
                 {
                     // We are in the middle of a circular wrap-around.
                     // For simplicity we will acquire items until the wrap around happens
-                    length = (this._size * cidxTicket) - sidx;
+                    length = (_size * cidxTicket) - sidx;
                 }
             }
 
-            var items = new Span<RingItem<T>>(_buffer, (int)(sidx & this._mask), length);
+            var items = new Span<RingItem<T>>(_buffer, (int)(sidx & _mask), length);
 
             // Are all items ready to be acquired?
             int i = 0;
@@ -126,40 +126,40 @@ namespace Sparrow.Collections
                 ref var item = ref items[i];
                 if (Volatile.Read(ref item.IsReady))
                 {
-                    i++;                    
+                    i++;
                 }
                 else
                 {
                     // No, therefore we will just return what it is ready. 
                     length = i;
-                    items = new Span<RingItem<T>>(_buffer, (int)(sidx & this._mask), length);
+                    items = new Span<RingItem<T>>(_buffer, (int)(sidx & _mask), length);
                     break;
                 }
             }
 
             // No need to use volatile here because this is Single Consumer Ring Buffer. 
             // Update to the last acquired index
-            this._acquiredIdx = sidx + length;
+            _acquiredIdx = sidx + length;
 
             return items;
         }
 
         public void Release()
         {
-            Debug.Assert(this._acquiredIdx != -1);
+            Debug.Assert(_acquiredIdx != -1);
 
             // PERF: We can make this far more efficient that using idiv operations. 
-            for (int i = Volatile.Read(ref _startIdx); i < this._acquiredIdx; i++)
+            for (int i = Volatile.Read(ref _startIdx); i < _acquiredIdx; i++)
             {
-                ref var item = ref _buffer[i & this._mask];
+                ref var item = ref _buffer[i & _mask];
                 item.Item = default(T);
                 Volatile.Write(ref item.IsReady, false);
             }
 
-            if (this._acquiredIdx != -1)
-                Volatile.Write(ref _startIdx, this._acquiredIdx);
+            if (_acquiredIdx != -1)
+                Volatile.Write(ref _startIdx, _acquiredIdx);
 
-            this._acquiredIdx = -1;
+            _acquiredIdx = -1;
         }
     }
 }

@@ -1,7 +1,6 @@
 ﻿using System;
 using System.ComponentModel;
 using System.Diagnostics;
-using System.Runtime.CompilerServices;
 using System.Threading;
 using Sparrow.Platform;
 using Sparrow.Server.LowMemory;
@@ -90,7 +89,6 @@ namespace Sparrow.Server.Platform
             {
                 throw new Win32Exception("Failed to free memory");
             }
-           
         }
     }
 }
