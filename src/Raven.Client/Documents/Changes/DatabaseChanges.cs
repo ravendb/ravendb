@@ -488,7 +488,14 @@ namespace Raven.Client.Documents.Changes
                             ConnectionStatusChanged?.Invoke(this, EventArgs.Empty);
 
                         wasConnected = false;
-                        _serverNode = await _requestExecutor.HandleServerNotResponsive(_url.AbsoluteUri, _serverNode, _nodeIndex, e).ConfigureAwait(false);
+                        try
+                        {
+                            _serverNode = await _requestExecutor.HandleServerNotResponsive(_url.AbsoluteUri, _serverNode, _nodeIndex, e).ConfigureAwait(false);
+                        }
+                        catch (Exception)
+                        {
+                            //We don't want to stop observe for changes if server down. we will wait for one to be up
+                        }
 
                         if (ReconnectClient() == false)
                             return;
