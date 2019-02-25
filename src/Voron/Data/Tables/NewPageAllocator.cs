@@ -1,9 +1,11 @@
 ﻿using System;
 using System.Collections;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.Runtime.CompilerServices;
 using Sparrow;
 using Sparrow.Binary;
+using Sparrow.Platform;
 using Voron.Data.BTrees;
 using Voron.Data.Fixed;
 using Voron.Global;
@@ -35,8 +37,8 @@ namespace Voron.Data.Tables
         private readonly LowLevelTransaction _llt;
         private readonly Tree _parentTree;
         internal static readonly Slice AllocationStorage;
-        private const byte BitmapSize = sizeof(long)*4;
-        internal const int NumberOfPagesInSection = BitmapSize*8;
+        private const byte BitmapSize = sizeof(long) * 4;
+        internal const int NumberOfPagesInSection = BitmapSize * 8;
         public const string AllocationStorageName = "Allocation-Storage";
 
         static NewPageAllocator()
@@ -66,20 +68,38 @@ namespace Voron.Data.Tables
 
         private unsafe Page AllocateMoreSpace(FixedSizeTree fst)
         {
-            var allocatePage = _llt.AllocatePage(NumberOfPagesInSection);
+            int numberOfPagesToAllocate = GetNumberOfPagesToAllocate();
+
+            var allocatePage = _llt.AllocatePage(numberOfPagesToAllocate);
             _llt.BreakLargeAllocationToSeparatePages(allocatePage.PageNumber);
 
             var initialPageNumber = allocatePage.PageNumber;
 
             bool isNew;
             byte* ptr;
-            using (fst.DirectAdd(initialPageNumber, out isNew,out ptr))
+            using (fst.DirectAdd(initialPageNumber, out isNew, out ptr))
             {
                 if (isNew == false)
                     ThrowInvalidExistingBuffer();
-                Memory.Set(ptr, 0, BitmapSize); // mark all pages as free 
+
+                // in 32 bits, we pre-allocate just 256 KB, not 2MB
+                Debug.Assert(numberOfPagesToAllocate % 8 == 0);
+                Debug.Assert(numberOfPagesToAllocate % 8 <= BitmapSize);
+                Memory.Set(ptr, 0xFF, BitmapSize); // mark the pages that we haven't allocated as busy
+                Memory.Set(ptr, 0, numberOfPagesToAllocate / 8); // mark just the first part as free
+
             }
             return allocatePage;
+        }
+
+        private unsafe int GetNumberOfPagesToAllocate()
+        {
+            int numberOfPagesToAllocate;
+            if (_llt.Environment.Options.ForceUsing32BitsPager || PlatformDetails.Is32Bits)
+                numberOfPagesToAllocate = BitmapSize;             // 256 KB
+            else
+                numberOfPagesToAllocate = NumberOfPagesInSection; // 2 MB
+            return numberOfPagesToAllocate;
         }
 
         private static void ThrowInvalidExistingBuffer()
@@ -119,7 +139,7 @@ namespace Voron.Data.Tables
                     using (it.Value(out slice))
                     {
                         var hasSpace = false;
-                        var buffer = (ulong*) (slice.Content.Ptr);
+                        var buffer = (ulong*)(slice.Content.Ptr);
                         for (int i = 0; i < BitmapSize / sizeof(ulong); i++)
                         {
                             if (buffer[i] != ulong.MaxValue)
@@ -133,13 +153,13 @@ namespace Voron.Data.Tables
                             if (TryMoveNextCyclic(it, startPage) == false)
                                 break;
                         }
-                        for (int i = 0; i < BitmapSize*8; i++)
+                        for (int i = 0; i < BitmapSize * 8; i++)
                         {
                             if (PtrBitVector.GetBitInPointer(buffer, i) == false)
                             {
                                 var currentSectionStart = it.CurrentKey;
                                 SetValue(fst, currentSectionStart, i);
-                                
+
                                 return _llt.ModifyPage(currentSectionStart + i);
                             }
                         }
@@ -214,11 +234,11 @@ namespace Voron.Data.Tables
                         ThrowInvalidPageReleased(pageNumber);
                 }
 
-                if (it.CurrentKey > pageNumber || 
+                if (it.CurrentKey > pageNumber ||
                     it.CurrentKey + NumberOfPagesInSection < pageNumber)
                     ThrowInvalidPageReleased(pageNumber);
 
-                var positionInBuffer = (int) (pageNumber - it.CurrentKey);
+                var positionInBuffer = (int)(pageNumber - it.CurrentKey);
                 UnsetValue(fst, it.CurrentKey, positionInBuffer);
                 var page = _llt.ModifyPage(pageNumber);
                 Memory.Set(page.Pointer, 0, Constants.Storage.PageSize);
@@ -255,9 +275,11 @@ namespace Voron.Data.Tables
                 }
             }
 
+            int amountOfPagesActuallyAllocated = GetNumberOfPagesToAllocate();
+
             return new Report
             {
-                NumberOfOriginallyAllocatedPages = fst.NumberOfEntries * NumberOfPagesInSection,
+                NumberOfOriginallyAllocatedPages = fst.NumberOfEntries * amountOfPagesActuallyAllocated,
                 NumberOfFreePages = free
             };
         }
@@ -309,7 +331,7 @@ namespace Voron.Data.Tables
                 else
                 {
                     this.Current = this._index + _iterator.CurrentKey;
-                    this._index++;                 
+                    this._index++;
                 }
                 return true;
             }
@@ -328,7 +350,7 @@ namespace Voron.Data.Tables
             }
 
             object IEnumerator.Current => Current;
-            public void Dispose() {}
+            public void Dispose() { }
         }
 
         public static void MaybePrefetchSections(Tree parentTree, LowLevelTransaction llt)
