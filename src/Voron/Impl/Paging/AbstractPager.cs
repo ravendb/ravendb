@@ -225,7 +225,7 @@ namespace Voron.Impl.Paging
             });
 
             _options = options;
-            _canPrefetchAhead = canPrefetchAhead;
+            _canPrefetchAhead = canPrefetchAhead && _options.EnablePrefetching;
             UsePageProtection = usePageProtection;
             Debug.Assert((Constants.Storage.PageSize - Constants.Tree.PageHeaderSize) / Constants.Tree.MinKeysInPage >= 1024);
 

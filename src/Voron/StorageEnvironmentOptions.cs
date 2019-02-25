@@ -55,9 +55,9 @@ namespace Voron
 
         public void SetLastReusedJournalCountOnSync(long journalNum)
         {
-            _lastReusedJournalCountOnSync = journalNum; 
+            _lastReusedJournalCountOnSync = journalNum;
         }
-        
+
         public abstract override string ToString();
 
         private bool _forceUsing32BitsPager;
@@ -72,6 +72,8 @@ namespace Voron
                 MaxNumberOfPagesInJournalBeforeFlush = (value ? 4 : 32) * Constants.Size.Megabyte / Constants.Storage.PageSize;
             }
         }
+
+        public bool EnablePrefetching = true;
 
         public void InvokeRecoveryError(object sender, string message, Exception e)
         {
@@ -451,7 +453,7 @@ namespace Voron
                 if (File.Exists(path.FullPath) == false)
                     AttemptToReuseJournal(path, journalSize);
 
-                var result = _journals.GetOrAdd(name, _ => 
+                var result = _journals.GetOrAdd(name, _ =>
                     new Lazy<IJournalWriter>(() => new JournalWriter(this, path, journalSize)));
 
                 bool createJournal;
@@ -616,9 +618,9 @@ namespace Voron
                     foreach (var reusableFile in _journalsForReuse.Values)
                     {
                         TryDelete(reusableFile);
-                        }
-                        }
                     }
+                }
+            }
 
             public override bool JournalExists(long number)
             {
@@ -852,7 +854,7 @@ namespace Voron
                 new Dictionary<string, IntPtr>(StringComparer.OrdinalIgnoreCase);
             private readonly int _instanceId;
 
-            
+
 
             public PureMemoryStorageEnvironmentOptions(string name, VoronPathSetting tempPath,
                 IoChangesNotifications ioChangesNotifications, CatastrophicFailureNotification catastrophicFailureNotification)
@@ -1238,31 +1240,31 @@ namespace Voron
                 switch (rc)
                 {
                     case PalFlags.FailCodes.FailOpenFile:
-                    {
-                        if (_log.IsInfoEnabled)
-                            _log.Info(
-                                $"Failed to create test file at '{testFile}'. Error:'{PalHelper.GetNativeErrorString(errorCode, "Failed to open test file", out _)}'. Cannot determine if O_DIRECT supported by the file system. Assuming it is");
-                    }
+                        {
+                            if (_log.IsInfoEnabled)
+                                _log.Info(
+                                    $"Failed to create test file at '{testFile}'. Error:'{PalHelper.GetNativeErrorString(errorCode, "Failed to open test file", out _)}'. Cannot determine if O_DIRECT supported by the file system. Assuming it is");
+                        }
                         break;
 
                     case PalFlags.FailCodes.FailAllocFile:
-                    {
-                        if (_log.IsInfoEnabled)
-                            _log.Info(
-                                $"Failed to allocate test file at '{testFile}'. Error:'{PalHelper.GetNativeErrorString(errorCode, "Failed to allocate space for test file", out _)}'. Cannot determine if O_DIRECT supported by the file system. Assuming it is");
-                    }
+                        {
+                            if (_log.IsInfoEnabled)
+                                _log.Info(
+                                    $"Failed to allocate test file at '{testFile}'. Error:'{PalHelper.GetNativeErrorString(errorCode, "Failed to allocate space for test file", out _)}'. Cannot determine if O_DIRECT supported by the file system. Assuming it is");
+                        }
                         break;
 
                     case PalFlags.FailCodes.FailTestDurability:
-                    {
-                        SupportDurabilityFlags = PalFlags.DurabilityMode.DurabilityNotSupported;
+                        {
+                            SupportDurabilityFlags = PalFlags.DurabilityMode.DurabilityNotSupported;
 
-                        var message = "Path " + BasePath +
-                                      " not supporting O_DIRECT writes. As a result - data durability is not guaranteed";
-                        var details =
-                            $"Storage type '{PosixHelper.GetFileSystemOfPath(BasePath.FullPath)}' doesn't support direct write to disk (non durable file system)";
-                        InvokeNonDurableFileSystemError(this, message, new NonDurableFileSystemException(message), details);
-                    }
+                            var message = "Path " + BasePath +
+                                          " not supporting O_DIRECT writes. As a result - data durability is not guaranteed";
+                            var details =
+                                $"Storage type '{PosixHelper.GetFileSystemOfPath(BasePath.FullPath)}' doesn't support direct write to disk (non durable file system)";
+                            InvokeNonDurableFileSystemError(this, message, new NonDurableFileSystemException(message), details);
+                        }
                         break;
                     case PalFlags.FailCodes.Success:
                         break;
