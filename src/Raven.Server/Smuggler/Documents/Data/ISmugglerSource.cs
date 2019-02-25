@@ -28,7 +28,7 @@ namespace Raven.Server.Smuggler.Documents.Data
         IEnumerable<(string key, long index, BlittableJsonReaderObject value)> GetCompareExchangeValues();
         IEnumerable<CounterGroupDetail> GetCounterValues(ICounterActions actions);
         IEnumerable<CounterDetail> GetLegacyCounterValues();
-        IEnumerable<SubscriptionState> GetSubscriptionValues();
+        IEnumerable<SubscriptionState> GetSubscriptions();
 
         long SkipType(DatabaseItemType type, Action<long> onSkipped, CancellationToken token);
     }

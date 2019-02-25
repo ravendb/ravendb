@@ -850,7 +850,7 @@ namespace Raven.Server.Smuggler.Documents
         {
             using (var actions = _destination.Subscriptions())
             {
-                foreach (var subscription in _source.GetSubscriptionValues())
+                foreach (var subscription in _source.GetSubscriptions())
                 {
                     _token.ThrowIfCancellationRequested();
                     result.Subscriptions.ReadCount++;

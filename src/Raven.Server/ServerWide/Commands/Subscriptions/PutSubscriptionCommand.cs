@@ -1,5 +1,4 @@
 ﻿using System;
-using System.Collections.Generic;
 using Raven.Client;
 using Raven.Client.Documents.Subscriptions;
 using Raven.Client.Json.Converters;
@@ -23,7 +22,6 @@ namespace Raven.Server.ServerWide.Commands.Subscriptions
         public string SubscriptionName;
         public bool Disabled;
         public string MentorNode;
-        private string OldName;
 
         // for serialization
         private PutSubscriptionCommand() : base(null) { }
@@ -41,68 +39,77 @@ namespace Raven.Server.ServerWide.Commands.Subscriptions
             throw new NotImplementedException();
         }
 
-
         public override unsafe void Execute(TransactionOperationContext context, Table items, long index, DatabaseRecord record, RachisState state, out object result)
         {
+            long i = 1;
+            var originalName = SubscriptionName;
+            var tryToSetName = true;
             result = null;
             var subscriptionId = SubscriptionId ?? index;
-            OldName = SubscriptionName;
             SubscriptionName = string.IsNullOrEmpty(SubscriptionName) ? subscriptionId.ToString() : SubscriptionName;
             
-            var subscriptionItemName = SubscriptionState.GenerateSubscriptionItemKeyName(DatabaseName, SubscriptionName);
-
-            using (Slice.From(context.Allocator, subscriptionItemName, out Slice valueName))
-            using (Slice.From(context.Allocator, subscriptionItemName.ToLowerInvariant(), out Slice valueNameLowered))
+            while (tryToSetName)
             {
-                if (items.ReadByKey(valueNameLowered, out TableValueReader tvr))
+                var subscriptionItemName = SubscriptionState.GenerateSubscriptionItemKeyName(DatabaseName, SubscriptionName);
+                using (Slice.From(context.Allocator, subscriptionItemName, out Slice valueName))
+                using (Slice.From(context.Allocator, subscriptionItemName.ToLowerInvariant(), out Slice valueNameLowered))
                 {
-                    var ptr = tvr.Read(2, out int size);
-                    var doc = new BlittableJsonReaderObject(ptr, size, context);
-
-                    var existingSubscriptionState = JsonDeserializationClient.SubscriptionState(doc);
-
-                    if (SubscriptionId != existingSubscriptionState.SubscriptionId)
+                    if (items.ReadByKey(valueNameLowered, out TableValueReader tvr))
                     {
-                        if (string.IsNullOrEmpty(OldName))
+                        var ptr = tvr.Read(2, out int size);
+                        var doc = new BlittableJsonReaderObject(ptr, size, context);
+
+                        var existingSubscriptionState = JsonDeserializationClient.SubscriptionState(doc);
+
+                        if (SubscriptionId != existingSubscriptionState.SubscriptionId)
                         {
-                            SubscriptionName = $"{SubscriptionName}.{Guid.NewGuid()}";
-                            Execute(context, items, index, record, state, out result);
-                            return;
-                        }
-                        throw new RachisApplyException("A subscription could not be modified because the name '" + subscriptionItemName +
-                                                       "' is already in use in a subscription with different Id.");
-                    }
+                            if (string.IsNullOrEmpty(originalName))
+                            {
+                                if (i > 1)
+                                {
+                                    var removePoint = SubscriptionName.LastIndexOf('.');
+                                    SubscriptionName = SubscriptionName.Remove(removePoint);
+                                }
 
-                    if (string.IsNullOrEmpty(InitialChangeVector) == false && InitialChangeVector == nameof(Constants.Documents.SubscriptionChangeVectorSpecialStates.DoNotChange))
-                    {
-                        InitialChangeVector = existingSubscriptionState.ChangeVectorForNextBatchStartingPoint;
+                                SubscriptionName = $"{SubscriptionName}.{i}";
+                                i++;
+                                continue;
+                            }
+                            throw new RachisApplyException("A subscription could not be modified because the name '" + subscriptionItemName +
+                                                           "' is already in use in a subscription with different Id.");
+                        }
+
+                        if (string.IsNullOrEmpty(InitialChangeVector) == false && InitialChangeVector == nameof(Constants.Documents.SubscriptionChangeVectorSpecialStates.DoNotChange))
+                        {
+                            InitialChangeVector = existingSubscriptionState.ChangeVectorForNextBatchStartingPoint;
+                        }
+                        else
+                        {
+                            AssertValidChangeVector();
+                        }
                     }
                     else
                     {
                         AssertValidChangeVector();
                     }
-                }
-                else
-                {
-                    AssertValidChangeVector();
-                }
 
-                using (var receivedSubscriptionState = context.ReadObject(new SubscriptionState
-                {
-                    Query = Query,
-                    ChangeVectorForNextBatchStartingPoint = InitialChangeVector,
-                    SubscriptionId = subscriptionId,
-                    SubscriptionName = SubscriptionName,
-                    LastBatchAckTime = null,
-                    Disabled = Disabled,
-                    MentorNode = MentorNode,
-                    LastClientConnectionTime = null
-                }.ToJson(), SubscriptionName))
-                {
-                    ClusterStateMachine.UpdateValue(subscriptionId, items, valueNameLowered, valueName, receivedSubscriptionState);
+                    using (var receivedSubscriptionState = context.ReadObject(new SubscriptionState
+                    {
+                        Query = Query,
+                        ChangeVectorForNextBatchStartingPoint = InitialChangeVector,
+                        SubscriptionId = subscriptionId,
+                        SubscriptionName = SubscriptionName,
+                        LastBatchAckTime = null,
+                        Disabled = Disabled,
+                        MentorNode = MentorNode,
+                        LastClientConnectionTime = null
+                    }.ToJson(), SubscriptionName))
+                    {
+                        ClusterStateMachine.UpdateValue(subscriptionId, items, valueNameLowered, valueName, receivedSubscriptionState);
+                    }
+                    tryToSetName = false;
                 }
             }
-           
         }
 
         private void AssertValidChangeVector()
@@ -131,33 +138,6 @@ namespace Raven.Server.ServerWide.Commands.Subscriptions
             json[nameof(SubscriptionId)] = SubscriptionId;
             json[nameof(Disabled)] = Disabled;
             json[nameof(MentorNode)] = MentorNode;
-        }
-    }
-
-    public class PutSubscriptionBatchCommand : CommandBase
-    {
-        public List<PutSubscriptionCommand> Commands;
-
-        public PutSubscriptionBatchCommand()
-        {
-        }
-
-        public PutSubscriptionBatchCommand(List<PutSubscriptionCommand> commands)
-        {
-            Commands = commands;
-        }
-
-        public override DynamicJsonValue ToJson(JsonOperationContext context)
-        {
-            var djv = base.ToJson(context);
-            var dja = new DynamicJsonArray();
-            foreach (var command in Commands)
-            {
-                dja.Add(command.ToJson(context));
-            }
-            djv[nameof(Commands)] = dja;
-
-            return djv;
         }
     }
 }

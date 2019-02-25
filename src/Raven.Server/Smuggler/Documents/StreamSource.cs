@@ -437,7 +437,7 @@ namespace Raven.Server.Smuggler.Documents
             }
         }
 
-        public IEnumerable<SubscriptionState> GetSubscriptionValues()
+        public IEnumerable<SubscriptionState> GetSubscriptions()
         {
             foreach (var reader in ReadArray())
             {
