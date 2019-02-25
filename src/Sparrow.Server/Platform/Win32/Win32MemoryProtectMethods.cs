@@ -1,6 +1,5 @@
 ﻿using System;
 using System.Runtime.InteropServices;
-using System.Security;
 
 namespace Sparrow.Server.Platform.Win32
 {
@@ -24,13 +23,6 @@ namespace Sparrow.Server.Platform.Win32
             MEMORY_BASIC_INFORMATION* lpBuffer,
             UIntPtr dwLength
         );
-
-        //[DllImport("kernel32.dll", SetLastError = true, CallingConvention = CallingConvention.Winapi)]
-        //[SecurityCritical]
-        //public static extern bool PrefetchVirtualMemory(IntPtr hProcess, UIntPtr NumberOfEntries, MemorySegment* VirtualAddresses, ulong Flags);
-
-        //[DllImport("kernel32.dll", SetLastError = true)]
-        //public static extern bool DiscardVirtualMemory(void* lpAddress, UIntPtr size);
 
         [DllImport("kernel32.dll", SetLastError = true)]
         public static extern int VirtualQueryEx(
