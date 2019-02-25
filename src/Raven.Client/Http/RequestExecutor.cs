@@ -1106,7 +1106,16 @@ namespace Raven.Client.Http
             SpawnHealthChecks(chosenNode, nodeIndex);
             _nodeSelector?.OnFailedRequest(nodeIndex);
             var (_, serverNode) = await GetPreferredNode().ConfigureAwait(false);
-            await UpdateTopologyAsync(serverNode, 0, true, debugTag: "handle-server-not-responsive").ConfigureAwait(false);
+            try
+            {
+                await UpdateTopologyAsync(serverNode, 0, true, debugTag: "handle-server-not-responsive").ConfigureAwait(false);
+            }
+            catch (Exception)
+            {
+                //We don't want to stop observe for changes if server down. we will wait for one to be up
+                return serverNode;
+            }
+
             OnFailedRequest(url, e);
             return serverNode;
         }
