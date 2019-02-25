@@ -1046,7 +1046,7 @@ namespace Raven.Server.Documents
         }        
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        private static Document ParseDocument(JsonOperationContext context, ref TableValueReader tvr)
+        public static Document ParseDocument(JsonOperationContext context, ref TableValueReader tvr)
         {
             var result = new Document
             {
