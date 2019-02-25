@@ -3,7 +3,7 @@ using Xunit;
 
 namespace FastTests.Sparrow
 {
-    public class RingBufferTests
+    public class RingBufferTests : NoDisposalNeeded
     {
         [Fact]
         public void RingBuffer_SingleItemPush()
