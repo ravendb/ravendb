@@ -61,7 +61,7 @@ namespace Raven.Server.ServerWide
 {
     public class ClusterStateMachine : RachisStateMachine
     {
-        private Logger _auditLog = LoggingSource.AuditLog.GetLogger("Cluster", "Audit");
+        private readonly Logger _clusterAuditLog = LoggingSource.AuditLog.GetLogger("ClusterStateMachine", "Audit");
 
         private const string LocalNodeStateTreeName = "LocalNodeState";
         private static readonly StringSegment DatabaseName = new StringSegment("DatabaseName");
@@ -1012,11 +1012,14 @@ namespace Raven.Server.ServerWide
             {
                 var certs = context.Transaction.InnerTransaction.OpenTable(CertificatesSchema, CertificatesSlice);
                 var command = (PutCertificateCommand)CommandBase.CreateFrom(cmd);
-                
+
                 using (Slice.From(context.Allocator, command.PublicKeyPinningHash, out Slice hashSlice))
                 using (Slice.From(context.Allocator, command.Name.ToLowerInvariant(), out Slice lowerKeySlice))
                 using (var rec = context.ReadObject(command.ValueToJson(), "inner-val"))
                 {
+                    if (_clusterAuditLog.IsInfoEnabled)
+                        _clusterAuditLog.Info($"Registering new certificate '{command.Value.Thumbprint}' in the cluster.");
+
                     UpdateCertificate(index, certs, lowerKeySlice, hashSlice, rec);
                     return command.Value;
                 }
@@ -1052,6 +1055,8 @@ namespace Raven.Server.ServerWide
             }
             finally
             {
+                if (_clusterAuditLog.IsInfoEnabled)
+                    _clusterAuditLog.Info($"After allowing a connection based on Public Key Pinning Hash, deleting the following old certificates from the cluster: {string.Join(", ", keysToDelete)}");
                 NotifyValueChanged(context, type, index);
             }
         }
