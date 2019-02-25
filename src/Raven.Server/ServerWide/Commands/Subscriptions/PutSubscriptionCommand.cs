@@ -47,7 +47,8 @@ namespace Raven.Server.ServerWide.Commands.Subscriptions
             result = null;
             var subscriptionId = SubscriptionId ?? index;
             SubscriptionName = string.IsNullOrEmpty(SubscriptionName) ? subscriptionId.ToString() : SubscriptionName;
-            
+            var baseName = SubscriptionName;
+
             while (tryToSetName)
             {
                 var subscriptionItemName = SubscriptionState.GenerateSubscriptionItemKeyName(DatabaseName, SubscriptionName);
@@ -65,13 +66,7 @@ namespace Raven.Server.ServerWide.Commands.Subscriptions
                         {
                             if (string.IsNullOrEmpty(originalName))
                             {
-                                if (i > 1)
-                                {
-                                    var removePoint = SubscriptionName.LastIndexOf('.');
-                                    SubscriptionName = SubscriptionName.Remove(removePoint);
-                                }
-
-                                SubscriptionName = $"{SubscriptionName}.{i}";
+                                SubscriptionName = $"{baseName}.{i}";
                                 i++;
                                 continue;
                             }
