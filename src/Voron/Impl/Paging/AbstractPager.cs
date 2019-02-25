@@ -550,7 +550,7 @@ namespace Voron.Impl.Paging
 
             var prefetcher = GlobalPrefetchingBehavior.GlobalPrefetcher.Value;
 
-            var command = default(PalDefinitions.PrefetchRanges);
+            PalDefinitions.PrefetchRanges command = default;
             do
             {
                 long pageNumber = pagesToPrefetch.Current;
