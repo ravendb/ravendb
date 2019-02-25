@@ -1057,23 +1057,17 @@ namespace Sparrow.Json
             if (_parent != null)
                 return context.ReadObject(this, "cloning nested obj");
 
-            var mem = context.GetMemory(Size);
-
-            CopyTo(mem.Address);
-            var cloned = new BlittableJsonReaderObject(mem.Address, Size, context)
+            if (Modifications == null)
             {
-                _allocatedMemory = mem
-            };
-            if (Modifications != null)
-            {
-                cloned.Modifications = new DynamicJsonValue(cloned);
-                foreach (var property in Modifications.Properties)
+                var mem = context.GetMemory(Size);
+                CopyTo(mem.Address);
+                return new BlittableJsonReaderObject(mem.Address, Size, context)
                 {
-                    cloned.Modifications.Properties.Add(property);
-                }
+                    _allocatedMemory = mem
+                };
             }
 
-            return cloned;
+            return context.ReadObject(this, null);
         }
 
         public void BlittableValidation()
