@@ -17,6 +17,11 @@ namespace Raven.Server.Config.Categories
         [ConfigurationEntry("Storage.ForceUsing32BitsPager", ConfigurationEntryScope.ServerWideOnly)]
         public bool ForceUsing32BitsPager { get; set; }
 
+        [Description("Enables memory prefetching mechanism if OS supports it")]
+        [DefaultValue(true)]
+        [ConfigurationEntry("Storage.EnablePrefetching", ConfigurationEntryScope.ServerWideOnly)]
+        public bool EnablePrefetching { get; set; }
+
         [Description("How long transaction mode (Danger/Lazy) last before returning to Safe mode. Value in Minutes. Default one day. Zero for infinite time")]
         [DefaultValue(1440)]
         [TimeUnit(TimeUnit.Minutes)]
