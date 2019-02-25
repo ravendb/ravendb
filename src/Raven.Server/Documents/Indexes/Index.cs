@@ -1062,7 +1062,7 @@ namespace Raven.Server.Documents.Indexes
                                             // in this case, worst case scenario we'll handle this in the next batch
                                             while (_indexingProcessCancellationTokenSource.IsCancellationRequested == false)
                                             {
-                                                if (DocumentDatabase.IndexStore.TryReplaceIndexes(originalName, Definition.Name))
+                                                if (DocumentDatabase.IndexStore.TryReplaceIndexes(originalName, Definition.Name, _indexingProcessCancellationTokenSource.Token))
                                                 {
                                                     StartIndexingThread();
                                                     return;
