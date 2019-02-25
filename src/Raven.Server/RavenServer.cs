@@ -945,63 +945,60 @@ namespace Raven.Server
                         {
                             // The certificate is not explicitly registered in our server, let's see if we have a certificate
                             // with the same public key pinning hash.
-                            var allCertKeys = ServerStore.Cluster.ItemKeysStartingWith(ctx, Constants.Certificates.Prefix, 0, int.MaxValue).ToList();
-                            allCertKeys.AddRange(ServerStore.Cluster.GetCertificateKeysFromLocalState(ctx));
+                            var pinningHash = CertificateUtils.GetPublicKeyPinningHash(certificate);
+                            var certsWithSameHash = ServerStore.Cluster.GetCertificatesByPinningHashSortedByExpiration(ctx, pinningHash);
 
-                            foreach (var key in allCertKeys)
+                            if (certsWithSameHash.Count > 0)
                             {
-                                var currentCert = ServerStore.Cluster.Read(ctx, key) ??
-                                                  ServerStore.Cluster.GetLocalState(ctx, key);
-
-                                if (currentCert == null)
-                                    continue;
-
-                                if (currentCert.TryGet(nameof(CertificateDefinition.PublicKeyPinningHash), out string hash) == false)
-                                    continue;
-
-                                if (CertificateUtils.GetPublicKeyPinningHash(certificate).Equals(hash) == false)
-                                    continue;
-
-                                if (currentCert.TryGet(nameof(CertificateDefinition.Thumbprint), out string thumbprint) && certificate.Thumbprint.Equals(thumbprint))
-                                    continue;
-                                // Different certificate but same public key pinning hash. We'll allow the connection and register the used certificate
-                                // in the server with the same permissions as the original.
-                                var currentCertDef = JsonDeserializationServer.CertificateDefinition(currentCert);
-                                var certBytes = certificate.Export(X509ContentType.Cert);
-
-                                var newCopy = new CertificateDefinition
+                                // Hash is good, let's validate it was signed by same issuer
+                                var chain = new X509Chain();
+                                try
                                 {
-                                    Name = currentCertDef.Name,
-                                    Certificate = Convert.ToBase64String(certBytes),
-                                    Permissions = currentCertDef.Permissions,
-                                    SecurityClearance = currentCertDef.SecurityClearance,
-                                    Thumbprint = certificate.Thumbprint,
-                                    PublicKeyPinningHash = CertificateUtils.GetPublicKeyPinningHash(certificate),
-                                    NotAfter = certificate.NotAfter,
-                                };
-
-                                lock (_certificatesLock)
-                                {
-                                    ctx.CloseTransaction(); // Exiting the loop, closing the read tx
-
-                                    // Opening a new tx to get the current snapshot,
-                                    // making sure we won't try to store many identical certs
-                                    using (ctx.OpenReadTransaction())
-                                    {
-                                        cert = ServerStore.Cluster.Read(ctx, certKey) ??
-                                               ServerStore.Cluster.GetLocalState(ctx, certKey);
-                                    }
-
-                                    if (cert == null)
-                                    {
-                                        AdminCertificatesHandler.PutCertificateCollectionInCluster(newCopy, certBytes, (string)null, ServerStore, ctx)
-                                            .Wait(ServerStore.ServerShutdown);
-                                        cert = ctx.ReadObject(newCopy.ToJson(), "Client/Certificate/Definition");
-                                    }
+                                    chain.Build(certificate);
                                 }
-                                break;
+                                catch (Exception e)
+                                {
+                                    throw new InvalidOperationException($"Failed to build chain for certificate with thumbprint {certificate.Thumbprint}", e);
+                                } 
+                                
+                                if (chain.ChainElements.Count < 2)
+                                    throw new InvalidOperationException($"Cannot find an issuer in the chain of certificate with thumbprint {certificate.Thumbprint}");
+
+                                var issuerThumbprint = chain.ChainElements[1].Certificate.Thumbprint;
+
+                                // Must check the new cert was signed by the same issuer, otherwise users can use the private key to register a new cert with a different issuer.
+                                if (string.Equals(issuerThumbprint, certificate.Thumbprint) == false)
+                                {
+                                    throw new InvalidOperationException($"You tried to use a certificate which is not registered in the cluster explicitly but is trusted implicitly by its Public Key Pinning Hash. " +
+                                                                        $"Your certificate was signed by a different issuer than the original certificate. This is not allowed - closing the connection.");
+                                }
+
+                                // Success, we'll add the new certificate with same permissions as the original
+                                var existingCert = certsWithSameHash[0];
+                                var newCertBytes = certificate.Export(X509ContentType.Cert);
+
+                                var newCertDef = new CertificateDefinition()
+                                {
+                                    Name = existingCert.Name,
+                                    Certificate = Convert.ToBase64String(newCertBytes),
+                                    Permissions = existingCert.Permissions,
+                                    SecurityClearance = existingCert.SecurityClearance,
+                                    Password = existingCert.Password,
+                                    Thumbprint = certificate.Thumbprint,
+                                    PublicKeyPinningHash = pinningHash,
+                                    NotAfter = certificate.NotAfter
+                                };
+                                
+                                // This command will discard leftover certificates after the new certificate is saved.
+                                ServerStore.SendToLeaderAsync(new PutCertificateWithSamePinningHashCommand(certKey, newCertDef))
+                                    .Wait(ServerStore.ServerShutdown);
+
+                                cert = ctx.ReadObject(newCertDef.ToJson(), "Client/Certificate/Definition");
                             }
-                            authenticationStatus.Status = AuthenticationStatus.UnfamiliarCertificate;
+                            else
+                            {
+                                authenticationStatus.Status = AuthenticationStatus.UnfamiliarCertificate;
+                            }
                         }
 
                         if (cert != null)

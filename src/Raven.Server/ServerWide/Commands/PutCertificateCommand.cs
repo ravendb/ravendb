@@ -6,6 +6,8 @@ namespace Raven.Server.ServerWide.Commands
 {
     public class PutCertificateCommand : PutValueCommand<CertificateDefinition>
     {
+        public string PublicKeyPinningHash;
+
         public PutCertificateCommand()
         {
             // for deserialization
@@ -15,6 +17,7 @@ namespace Raven.Server.ServerWide.Commands
         {
             Name = name;
             Value = value;
+            PublicKeyPinningHash = value.PublicKeyPinningHash;
         }
 
         public override DynamicJsonValue ValueToJson()

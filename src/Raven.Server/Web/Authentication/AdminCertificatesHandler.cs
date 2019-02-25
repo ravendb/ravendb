@@ -429,7 +429,7 @@ namespace Raven.Server.Web.Authentication
 
         private CertificateDefinition ReadCertificateFromCluster(TransactionOperationContext ctx, string key)
         {
-            var certificate = ServerStore.Cluster.Read(ctx, key);
+            var certificate = ServerStore.Cluster.GetCertificateByPrimaryKey(ctx, key);
             if (certificate == null)
                 return null;
 
@@ -498,7 +498,7 @@ namespace Raven.Server.Web.Authentication
 
                         var certificate = ServerStore.CurrentRachisState == RachisState.Passive
                             ? ServerStore.Cluster.GetLocalState(context, key)
-                            : ServerStore.Cluster.Read(context, key);
+                            : ServerStore.Cluster.GetCertificateByPrimaryKey(context, key);
 
                         if (certificate == null)
                         {
@@ -509,7 +509,9 @@ namespace Raven.Server.Web.Authentication
                         var definition = JsonDeserializationServer.CertificateDefinition(certificate);
                         if (string.IsNullOrEmpty(definition.CollectionPrimaryKey) == false)
                         {
-                            certificate = ServerStore.Cluster.Read(context, definition.CollectionPrimaryKey);
+                            certificate = ServerStore.CurrentRachisState == RachisState.Passive
+                                ? ServerStore.Cluster.GetLocalState(context, key)
+                                : ServerStore.Cluster.GetCertificateByPrimaryKey(context, definition.CollectionPrimaryKey);
                             if (certificate == null)
                             {
                                 HttpContext.Response.StatusCode = (int)HttpStatusCode.NotFound;
@@ -598,7 +600,7 @@ namespace Raven.Server.Web.Authentication
             using (ctx.OpenReadTransaction())
             {
                 var certKey = Constants.Certificates.Prefix + clientCert.Thumbprint;
-                var certificate = ServerStore.Cluster.Read(ctx, certKey) ??
+                var certificate = ServerStore.Cluster.GetCertificateByPrimaryKey(ctx, certKey) ??
                                   ServerStore.Cluster.GetLocalState(ctx, certKey);
 
                 if (certificate == null)
@@ -669,7 +671,7 @@ namespace Raven.Server.Web.Authentication
                 CertificateDefinition existingCertificate;
                 using (ctx.OpenWriteTransaction())
                 {
-                    var certificate = ServerStore.Cluster.Read(ctx, key);
+                    var certificate = ServerStore.Cluster.GetCertificateByPrimaryKey(ctx, key);
                     if (certificate == null)
                         throw new InvalidOperationException($"Cannot edit permissions for certificate with thumbprint '{newCertificate.Thumbprint}'. It doesn't exist in the cluster.");
 

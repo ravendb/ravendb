@@ -1,6 +1,8 @@
 ﻿using System;
+using System.Collections;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
+using System.Collections.Immutable;
 using System.Diagnostics;
 using System.IO;
 using System.Linq;
@@ -10,6 +12,7 @@ using System.Security.Cryptography.X509Certificates;
 using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
+using Lucene.Net.Index;
 using Microsoft.Extensions.Primitives;
 using Raven.Client.Documents.Operations.Backups;
 using Raven.Client.Documents.Operations.Configuration;
@@ -44,6 +47,7 @@ using Sparrow;
 using Sparrow.Binary;
 using Sparrow.Json;
 using Sparrow.Json.Parsing;
+using Sparrow.Logging;
 using Sparrow.Server;
 using Sparrow.Server.Utils;
 using Voron;
@@ -57,6 +61,8 @@ namespace Raven.Server.ServerWide
 {
     public class ClusterStateMachine : RachisStateMachine
     {
+        private Logger _auditLog = LoggingSource.AuditLog.GetLogger("Cluster", "Audit");
+
         private const string LocalNodeStateTreeName = "LocalNodeState";
         private static readonly StringSegment DatabaseName = new StringSegment("DatabaseName");
 
@@ -77,7 +83,15 @@ namespace Raven.Server.ServerWide
         public static readonly Slice Identities;
         public static readonly Slice TransactionCommands;
         public static readonly Slice TransactionCommandsCountPerDatabase;
-        public static readonly Slice Certificates;
+        public static readonly Slice CertificatesSlice;
+        public static readonly Slice CertificatesHashSlice;
+
+        public enum CertificatesTable
+        {
+            Key = 0,
+            Hash = 1,
+            Data = 2
+        }
 
         static ClusterStateMachine()
         {
@@ -88,7 +102,8 @@ namespace Raven.Server.ServerWide
                 Slice.From(ctx, "Identities", out Identities);
                 Slice.From(ctx, "TransactionCommands", out TransactionCommands);
                 Slice.From(ctx, "TransactionCommandsIndex", out TransactionCommandsCountPerDatabase);
-                Slice.From(ctx, "Certificates", out Certificates);
+                Slice.From(ctx, "CertificatesSlice", out CertificatesSlice);
+                Slice.From(ctx, "CertificatesHashSlice", out CertificatesHashSlice);
             }
             ItemsSchema = new TableSchema();
 
@@ -114,16 +129,22 @@ namespace Raven.Server.ServerWide
                 Count = 1, // Database, Separator, Commands count
             });
 
+            // We use the follow format for the certificates data
+            // { thumbprint, hash, data }
             CertificatesSchema = new TableSchema();
             CertificatesSchema.DefineKey(new TableSchema.SchemaIndexDef()
             {
-                StartIndex = 0,
+                StartIndex = (int)CertificatesTable.Key,
                 Count = 1,
+                IsGlobal = false, // iftah ?
+                Name = CertificatesSlice
             });
-            CertificatesSchema.DefineKey(new TableSchema.SchemaIndexDef()
+            CertificatesSchema.DefineIndex(new TableSchema.SchemaIndexDef
             {
-                StartIndex = 1,
+                StartIndex = (int)CertificatesTable.Hash,
                 Count = 1,
+                IsGlobal = false,
+                Name = CertificatesHashSlice
             });
         }
 
@@ -291,8 +312,15 @@ namespace Raven.Server.ServerWide
                     case nameof(PutLicenseLimitsCommand):
                         PutValue<LicenseLimits>(context, type, cmd, index, leader);
                         break;
+                    case nameof(PutCertificateWithSamePinningHashCommand):
+                        PutCertificate(context, type, cmd, index, leader);
+                        if (cmd.TryGet(nameof(PutCertificateCommand.Name), out string certKey))
+                            DeleteLocalState(context, certKey);
+                        if (cmd.TryGet(nameof(PutCertificateCommand.PublicKeyPinningHash), out string hash))
+                            DiscardLeftoverCertsWithSamePinningHash(context, hash, type, index);
+                        break;
                     case nameof(PutCertificateCommand):
-                        PutValue<CertificateDefinition>(context, type, cmd, index, leader);
+                        PutCertificate(context, type, cmd, index, leader);
                         // Once the certificate is in the cluster, no need to keep it locally so we delete it.
                         if (cmd.TryGet(nameof(PutCertificateCommand.Name), out string key))
                             DeleteLocalState(context, key);
@@ -796,6 +824,19 @@ namespace Raven.Server.ServerWide
             }
         }
 
+        internal static unsafe void UpdateCertificate(long index, Table certificates, Slice lowerKey, Slice hash, BlittableJsonReaderObject updated)
+        {
+            using (certificates.Allocate(out TableValueBuilder builder))
+            {
+                builder.Add(lowerKey);
+                builder.Add(hash);
+                builder.Add(updated.BasePointer, updated.Size);
+                builder.Add(Bits.SwapBytes(index));
+
+                certificates.Set(builder);
+            }
+        }
+
         private unsafe List<string> AddDatabase(TransactionOperationContext context, BlittableJsonReaderObject cmd, long index, Leader leader)
         {
             var addDatabaseCommand = JsonDeserializationCluster.AddDatabaseCommand(cmd);
@@ -965,6 +1006,56 @@ namespace Raven.Server.ServerWide
             }
         }
 
+        private CertificateDefinition PutCertificate(TransactionOperationContext context, string type, BlittableJsonReaderObject cmd, long index, Leader leader)
+        {
+            try
+            {
+                var certs = context.Transaction.InnerTransaction.OpenTable(CertificatesSchema, CertificatesSlice);
+                var command = (PutCertificateCommand)CommandBase.CreateFrom(cmd);
+                
+                using (Slice.From(context.Allocator, command.PublicKeyPinningHash, out Slice hashSlice))
+                using (Slice.From(context.Allocator, command.Name.ToLowerInvariant(), out Slice lowerKeySlice))
+                using (var rec = context.ReadObject(command.ValueToJson(), "inner-val"))
+                {
+                    UpdateCertificate(index, certs, lowerKeySlice, hashSlice, rec);
+                    return command.Value;
+                }
+            }
+            finally
+            {
+                NotifyValueChanged(context, type, index);
+            }
+        }
+
+        private void DiscardLeftoverCertsWithSamePinningHash(TransactionOperationContext context, string hash, string type, long index)
+        {
+            var certsWithSameHash = GetCertificatesByPinningHashSortedByExpiration(context, hash);
+
+            var keysToDelete = certsWithSameHash.Select(x => Constants.Certificates.Prefix + x.Thumbprint).ToList();
+            if (keysToDelete.Count > Constants.Certificates.MaxNumberOfCertsWithSameHash)
+            {
+                keysToDelete = keysToDelete.GetRange(Constants.Certificates.MaxNumberOfCertsWithSameHash,
+                    keysToDelete.Count - Constants.Certificates.MaxNumberOfCertsWithSameHash);
+            }
+
+            try
+            {
+                var certs = context.Transaction.InnerTransaction.OpenTable(CertificatesSchema, CertificatesSlice);
+
+                foreach (var key in keysToDelete)
+                {
+                    using (Slice.From(context.Allocator, key.ToLowerInvariant(), out Slice lowerKey))
+                    {
+                        certs.DeleteByKey(lowerKey);
+                    }
+                }
+            }
+            finally
+            {
+                NotifyValueChanged(context, type, index);
+            }
+        }
+
         public override void EnsureNodeRemovalOnDeletion(TransactionOperationContext context, long term, string nodeTag)
         {
             var djv = new RemoveNodeFromClusterCommand
@@ -1127,7 +1218,7 @@ namespace Raven.Server.ServerWide
 
             if (ClusterCommandsVersionManager.CurrentClusterMinimalVersion >= ClusterCommandsVersionManager.Base42CommandsVersion)
                 return baseVersion
-                       || slice.Content.Match(Certificates.Content);
+                       || slice.Content.Match(CertificatesSlice.Content);
 
             return baseVersion;
         }
@@ -1142,7 +1233,7 @@ namespace Raven.Server.ServerWide
             context.Transaction.InnerTransaction.CreateTree(TransactionCommandsCountPerDatabase);
             context.Transaction.InnerTransaction.CreateTree(LocalNodeStateTreeName);
             context.Transaction.InnerTransaction.CreateTree(Identities);
-            context.Transaction.InnerTransaction.CreateTree(Certificates);
+            context.Transaction.InnerTransaction.CreateTree(CertificatesSlice);
             parent.StateChanged += OnStateChange;
         }
 
@@ -1243,6 +1334,23 @@ namespace Raven.Server.ServerWide
         public IEnumerable<string> GetCertificateKeysFromLocalState(TransactionOperationContext context)
         {
             var tree = context.Transaction.InnerTransaction.ReadTree(LocalNodeStateTreeName);
+            if (tree == null)
+                yield break;
+
+            using (var it = tree.Iterate(prefetch: false))
+            {
+                if (it.Seek(Slices.BeforeAllKeys) == false)
+                    yield break;
+                do
+                {
+                    yield return it.CurrentKey.ToString();
+                } while (it.MoveNext());
+            }
+        }
+
+        public IEnumerable<string> GetCertificateKeysFromCluster(TransactionOperationContext context)
+        {
+            var tree = context.Transaction.InnerTransaction.ReadTree(CertificatesSlice);
             if (tree == null)
                 yield break;
 
@@ -1458,6 +1566,67 @@ namespace Raven.Server.ServerWide
 
             Transaction.DebugDisposeReaderAfterTransaction(context.Transaction.InnerTransaction, doc);
             return (key, doc);
+        }
+
+        public BlittableJsonReaderObject GetCertificateByPrimaryKey(TransactionOperationContext context, string key)
+        {
+            var certs = context.Transaction.InnerTransaction.OpenTable(CertificatesSchema, CertificatesSlice);
+
+            using (Slice.From(context.Allocator, key, out var k))
+            {
+                var tvh = new Table.TableValueHolder();
+                if (certs.ReadByKey(k, out tvh.Reader) == false)
+                    return null;
+                return GetCertificate(context, tvh).Item2;
+            }
+        }
+
+        private static unsafe (string Key, BlittableJsonReaderObject Cert) GetCertificate(TransactionOperationContext context, Table.TableValueHolder result)
+        {
+            var ptr = result.Reader.Read((int)CertificatesTable.Data, out int size);
+            var doc = new BlittableJsonReaderObject(ptr, size, context);
+            var key = Encoding.UTF8.GetString(result.Reader.Read((int)CertificatesTable.Key, out size), size);
+
+            Transaction.DebugDisposeReaderAfterTransaction(context.Transaction.InnerTransaction, doc);
+            return (key, doc);
+        }
+
+        private static unsafe CertificateDefinition GetCertificateDefinition(TransactionOperationContext context, Table.TableValueHolder result)
+        {
+            return JsonDeserializationServer.CertificateDefinition(GetCertificate(context, result).Cert);
+        }
+
+        public IEnumerable<(string ItemName, BlittableJsonReaderObject Value)> GetCertificatesByPinningHash2(TransactionOperationContext context, string hash, int take = int.MaxValue)
+        {
+            var certs = context.Transaction.InnerTransaction.OpenTable(CertificatesSchema, CertificatesSlice);
+            var index = CertificatesSchema.Indexes[CertificatesHashSlice];
+            using (Slice.From(context.Allocator, hash, out Slice hashSlice))
+            {
+                foreach (var result in certs.SeekForwardFrom(index, Slices.BeforeAllKeys, 0))
+                {
+                    if (take-- <= 0)
+                        yield break;
+
+                    yield return GetCertificate(context, result.Result);
+                }
+            }
+        }
+
+        public List<CertificateDefinition> GetCertificatesByPinningHashSortedByExpiration(TransactionOperationContext context, string hash)
+        {
+            var list = GetCertificatesByPinningHash(context, hash).ToList();
+            list.Sort((x,y) => DateTime.Compare(x.NotAfter, y.NotAfter));
+            return list;
+        }
+
+        public IEnumerable<CertificateDefinition> GetCertificatesByPinningHash(TransactionOperationContext context, string hash)
+        {
+            var certs = context.Transaction.InnerTransaction.OpenTable(CertificatesSchema, CertificatesSlice);
+
+            foreach (var tvr in certs.SeekForwardFrom(CertificatesSchema.Indexes[CertificatesHashSlice], Slices.BeforeAllKeys, 0))
+            {
+                yield return GetCertificateDefinition(context, tvr.Result);
+            }
         }
 
         public DatabaseRecord ReadDatabase(TransactionOperationContext context, string name)
