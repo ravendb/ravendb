@@ -160,7 +160,7 @@ namespace Voron
                     SuggestSyncDataFile(); // let's suggest syncing data file after the recovery
 
                 // Ensure we are always have the prefetcher available.
-                var prefetcher = GlobalPrefetchingBehavior.GlobalPrefetcher.Value;
+                GC.KeepAlive(GlobalPrefetchingBehavior.GlobalPrefetcher.Value);
             }
             catch (Exception)
             {
