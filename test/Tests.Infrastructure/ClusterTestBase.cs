@@ -160,7 +160,7 @@ namespace Tests.Infrastructure
                     var leader = Servers.FirstOrDefault(s => s.ServerStore.IsLeader());
                     leader?.ServerStore.Engine.CurrentLeader?.StepDown();
                 }
-                catch (Exception e) when (e is NotLeadingException)
+                catch (Exception e) when (e is NotLeadingException || e is ObjectDisposedException)
                 {
                     err = e;
                 }

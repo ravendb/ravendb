@@ -73,8 +73,8 @@ namespace Raven.Server.Documents
                 throw new InvalidOperationException($"Task with the id '{id}' was not found.");
             }
 
-            return task.Task.WithCancellation(token);
+            token.Register(() => task.TrySetCanceled());
+            return task.Task;
         }
-
     }
 }
