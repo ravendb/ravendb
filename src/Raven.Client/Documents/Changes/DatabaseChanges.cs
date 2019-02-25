@@ -443,6 +443,7 @@ namespace Raven.Client.Documents.Changes
                 return;
             }
 
+            var wasConnected = false;
             while (_cts.IsCancellationRequested == false)
             {
                 try
@@ -454,7 +455,7 @@ namespace Raven.Client.Documents.Changes
                             .ToWebSocketPath(), UriKind.Absolute);
 
                         await _client.ConnectAsync(_url, _cts.Token).ConfigureAwait(false);
-
+                        wasConnected = true;
                         Interlocked.Exchange(ref _immediateConnection, 1);
 
                         foreach (var counter in _counters)
@@ -483,8 +484,10 @@ namespace Raven.Client.Documents.Changes
                     // recover from the OnError accessing the faulty WebSocket.
                     try
                     {
-                        ConnectionStatusChanged?.Invoke(this, EventArgs.Empty);
+                        if (wasConnected)
+                            ConnectionStatusChanged?.Invoke(this, EventArgs.Empty);
 
+                        wasConnected = false;
                         _serverNode = await _requestExecutor.HandleServerNotResponsive(_url.AbsoluteUri, _serverNode, _nodeIndex, e).ConfigureAwait(false);
 
                         if (ReconnectClient() == false)
@@ -528,7 +531,6 @@ namespace Raven.Client.Documents.Changes
                 _client = CreateClientWebSocket(_requestExecutor);
             }
 
-            ConnectionStatusChanged?.Invoke(this, EventArgs.Empty);
             return true;
         }
 
