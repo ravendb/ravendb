@@ -28,7 +28,10 @@ namespace SlowTests.Client.Subscriptions
                     Name = "Foo"
                 });
 
-                var operation = await store1.Smuggler.ExportAsync(new DatabaseSmugglerExportOptions(), store2.Smuggler);
+                var operation = await store1.Smuggler.ExportAsync(new DatabaseSmugglerExportOptions()
+                {
+                    OperateOnTypes =~ DatabaseItemType.Subscriptions
+                }, store2.Smuggler);
                 await operation.WaitForCompletionAsync(TimeSpan.FromMinutes(1));
 
                 var subscription = store2.Subscriptions.GetSubscriptionWorker(new SubscriptionWorkerOptions(subscriptionId)
