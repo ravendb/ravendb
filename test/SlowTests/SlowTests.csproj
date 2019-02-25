@@ -53,6 +53,7 @@
     <EmbeddedResource Include="Data\data.txt" />
     <EmbeddedResource Include="Data\data2.txt" />
     <EmbeddedResource Include="MailingList\Everett\DocumentWithBytes.txt" />
+    <EmbeddedResource Include="Smuggler\Document_Without_Attachment_Stream.ravendbdump" />
     <EmbeddedResource Include="Smuggler\Indexes_And_Transformers_3.5.ravendbdump" />
     <EmbeddedResource Include="Smuggler\Northwind_3.5.35168.ravendbdump" />
     <EmbeddedResource Include="Smuggler\Revisions_3.5.35220.ravendbdump" />
