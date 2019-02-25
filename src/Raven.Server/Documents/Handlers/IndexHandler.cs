@@ -52,7 +52,7 @@ namespace Raven.Server.Documents.Handlers
 
             while (Database.DatabaseShutdown.IsCancellationRequested == false)
             {
-                if (Database.IndexStore.TryReplaceIndexes(name, newIndex.Name))
+                if (Database.IndexStore.TryReplaceIndexes(name, newIndex.Name, Database.DatabaseShutdown))
                     break;
             }
 
