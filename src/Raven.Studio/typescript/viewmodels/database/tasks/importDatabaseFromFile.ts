@@ -16,6 +16,7 @@ import defaultAceCompleter = require("common/defaultAceCompleter");
 import getDatabaseCommand = require("commands/resources/getDatabaseCommand");
 import validateSmugglerOptionsCommand = require("commands/database/studio/validateSmugglerOptionsCommand");
 import collectionsTracker = require("common/helpers/database/collectionsTracker");
+import viewHelpers = require("common/helpers/view/viewHelpers");
 
 class importDatabaseFromFile extends viewModelBase {
 
@@ -48,7 +49,7 @@ class importDatabaseFromFile extends viewModelBase {
     constructor() {
         super();
 
-        this.bindToCurrentInstance("copyCommandToClipboard", "fileSelected");
+        this.bindToCurrentInstance("copyCommandToClipboard", "fileSelected", "customizeConfigurationClicked");
 
         aceEditorBindingHandler.install();
         this.isUploading.subscribe(v => {
@@ -189,6 +190,20 @@ class importDatabaseFromFile extends viewModelBase {
         this.importedFileName(isFileSelected ? fileName.split(/(\\|\/)/g).pop() : null);
     }
 
+    customizeConfigurationClicked() {
+        this.showAdvancedOptions(true);
+        this.model.databaseModel.customizeDatabaseRecordTypes(true);
+
+        setTimeout(() => {
+            const $customizeRecord = $(".js-customize-record");
+            viewHelpers.animate($customizeRecord, "blink-style");
+
+            const topOffset = $customizeRecord.offset().top;
+            const container = $customizeRecord.closest(".content-container");
+            container.animate({scrollTop: topOffset}, 300);
+        }, 200);
+    }
+    
     importDb() {
         if (!this.isValid(this.validationGroup)) {
             return;

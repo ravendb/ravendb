@@ -1,5 +1,7 @@
 ﻿/// <reference path="../../../../typings/tsd.d.ts"/>
 
+import smugglerDatabaseRecord = require("models/database/tasks/smugglerDatabaseRecord");
+
 class importDatabaseModel {
     includeDatabaseRecord = ko.observable(true);
     includeDocuments = ko.observable(true);
@@ -11,6 +13,8 @@ class importDatabaseModel {
     includeRevisionDocuments = ko.observable(true);
     includeLegacyAttachments = ko.observable(false);
     includeAttachments = ko.observable(true);
+
+    databaseModel = new smugglerDatabaseRecord();
 
     encryptedInput = ko.observable<boolean>(false);
     encryptionKey = ko.observable<string>();
@@ -45,10 +49,24 @@ class importDatabaseModel {
                 this.removeAnalyzers(false);
             }
         });
+
+        this.includeDatabaseRecord.subscribe(dbRecord => {
+            if (!dbRecord) {
+                this.databaseModel.customizeDatabaseRecordTypes(false);
+            }
+        });
+
+        this.databaseModel.customizeDatabaseRecordTypes.subscribe(customize => {
+            if (customize) {
+                this.includeDatabaseRecord(true);
+            }
+        })
     }
     
     toDto(): Raven.Client.Documents.Smuggler.DatabaseSmugglerImportOptions {
         const operateOnTypes: Array<Raven.Client.Documents.Smuggler.DatabaseItemType> = [];
+        const databaseRecordTypes = this.databaseModel.getDatabaseRecordTypes();
+        
         if (this.includeDatabaseRecord()) {
             operateOnTypes.push("DatabaseRecord");
         }
@@ -80,12 +98,15 @@ class importDatabaseModel {
             operateOnTypes.push("LegacyAttachments");
         }
 
+        const recordTypes = databaseRecordTypes.length ? databaseRecordTypes.join(",") : "None" as Raven.Client.Documents.Smuggler.DatabaseRecordItemType;
+        
         return {
             IncludeExpired: this.includeExpiredDocuments(),
             TransformScript: this.transformScript(),
             RemoveAnalyzers: this.removeAnalyzers(),
             EncryptionKey: this.encryptedInput() ? this.encryptionKey() : undefined,
-            OperateOnTypes: operateOnTypes.join(",") as Raven.Client.Documents.Smuggler.DatabaseItemType
+            OperateOnTypes: operateOnTypes.join(",") as Raven.Client.Documents.Smuggler.DatabaseItemType,
+            OperateOnDatabaseRecordTypes: recordTypes
         } as Raven.Client.Documents.Smuggler.DatabaseSmugglerImportOptions;
     }
 
@@ -122,10 +143,20 @@ class importDatabaseModel {
             }
         });
 
+        this.databaseModel.hasIncludes.extend({
+            validation: [
+                {
+                    validator: () => !this.databaseModel.customizeDatabaseRecordTypes() || this.databaseModel.hasIncludes(),
+                    message: "Note: At least one 'configuration' option must be checked..."
+                }
+            ]
+        });
+
         this.validationGroup = ko.validatedObservable({
             transformScript: this.transformScript,
             importDefinitionHasIncludes: this.importDefinitionHasIncludes,
-            encryptionKey: this.encryptionKey
+            encryptionKey: this.encryptionKey,
+            databaseRecordHasIncludes: this.databaseModel.hasIncludes
         });
     }
 }

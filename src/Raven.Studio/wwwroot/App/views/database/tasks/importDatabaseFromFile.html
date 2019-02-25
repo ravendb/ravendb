@@ -74,8 +74,8 @@
                         </div>
                         <div class="toggle">
                             <input id="importConfiguration" type="checkbox" data-bind="checked: includeDatabaseRecord">
-                            <label for="importConfiguration">Include Configuration</label>
-                            <small id="configurationPopover"><i class="icon-info text-info"></i></small>
+                            <label for="importConfiguration" class="margin-right margin-right-sm">Include Configuration</label>
+                            <button class="btn btn-sm" data-bind="enable: includeDatabaseRecord, click: $root.customizeConfigurationClicked">Customize</button>
                         </div>
                         <div class="toggle">
                             <input id="importCmpXch" type="checkbox" data-bind="checked: includeCompareExchange">
@@ -117,47 +117,55 @@
             </div>
             
             <div data-bind="collapse: showAdvancedOptions, with: model">
-                <div>
-                    <div class="toggle">
-                        <input id="useTransformScript" type="checkbox" data-bind="checked: $root.showTransformScript">
-                        <label for="useTransformScript" class="use-transform-script">Use Transform script </label>
-                        <small id="scriptPopover"><i class="icon-info text-info"></i></small>
-                    </div>
-                    <div data-bind="collapse: $root.showTransformScript">
-                        <pre class="form-control" style="height: 200px;" data-bind="aceEditor: { code: transformScript, lang: 'ace/mode/javascript', completer: $root.completer }, validationOptions: { errorsAsTitle: false }, validationElement: transformScript"></pre>
-                        <div data-bind="validationOptions: { errorsAsTitle: false }, validationElement: transformScript">
-                            <div class="help-block" data-bind="validationMessage: transformScript"></div>
+                <hr />
+                <h3>Advanced</h3>
+                <div class="margin-left margin-left-lg">
+                    <div class="margin-bottom">
+                        <div class="toggle">
+                            <input id="useTransformScript" type="checkbox" data-bind="checked: $root.showTransformScript">
+                            <label for="useTransformScript" class="use-transform-script margin-right margin-right-sm">Use Transform script </label>
+                            <small id="scriptPopover"><i class="icon-info text-info"></i></small>
+                        </div>
+                        <div data-bind="collapse: $root.showTransformScript">
+                            <pre class="form-control" style="height: 200px;" data-bind="aceEditor: { code: transformScript, lang: 'ace/mode/javascript', completer: $root.completer }, validationOptions: { errorsAsTitle: false }, validationElement: transformScript"></pre>
+                            <div data-bind="validationOptions: { errorsAsTitle: false }, validationElement: transformScript">
+                                <div class="help-block" data-bind="validationMessage: transformScript"></div>
+                            </div>
+                        </div>
+
+                        <div data-bind="with: databaseModel">
+                            <div data-bind="compose: 'database/tasks/smugglerDatabaseRecord.html'"></div>
                         </div>
                     </div>
-                </div>
 
-                <div class="flex-horizontal">
-                    <div class="btn-group">
-                        <button data-bind="click: _.partial($root.copyCommandToClipboard, $root.importCommandPowerShell())" class="btn btn-default">
-                            <i class="icon-copy"></i>
-                            <span>Copy command as PowerShell</span>
-                        </button>
-                        <button type="button" class="btn btn-default dropdown-toggle" data-toggle="dropdown">
-                            <span class="caret"></span>
-                            <span class="sr-only">Toggle Dropdown</span>
-                        </button>
-                        <ul class="dropdown-menu">
-                            <li>
-                                <a href="#" data-bind="click: _.partial($root.copyCommandToClipboard, $root.importCommandCmd())">
-                                    <i class="icon-copy"></i> Copy as cURL (cmd)
-                                </a>
-                            </li>
-                            <li>
-                                <a href="#" data-bind="click: _.partial($root.copyCommandToClipboard, $root.importCommandBash())">
-                                    <i class="icon-copy"></i> Copy as cURL (bash)
-                                </a>
-                            </li>
-                        </ul>
-                    </div>
-                    <div class="flex-grow">
-                        <input onClick="this.select();" class="form-control" readonly data-bind="value: $root.importCommandPowerShell" />    
-                    </div>
-                    
+                    <div class="flex-horizontal">
+                        <div class="btn-group">
+                            <button data-bind="click: _.partial($root.copyCommandToClipboard, $root.importCommandPowerShell())" class="btn btn-default">
+                                <i class="icon-copy"></i>
+                                <span>Copy command as PowerShell</span>
+                            </button>
+                            <button type="button" class="btn btn-default dropdown-toggle" data-toggle="dropdown">
+                                <span class="caret"></span>
+                                <span class="sr-only">Toggle Dropdown</span>
+                            </button>
+                            <ul class="dropdown-menu">
+                                <li>
+                                    <a href="#" data-bind="click: _.partial($root.copyCommandToClipboard, $root.importCommandCmd())">
+                                        <i class="icon-copy"></i> Copy as cURL (cmd)
+                                    </a>
+                                </li>
+                                <li>
+                                    <a href="#" data-bind="click: _.partial($root.copyCommandToClipboard, $root.importCommandBash())">
+                                        <i class="icon-copy"></i> Copy as cURL (bash)
+                                    </a>
+                                </li>
+                            </ul>
+                        </div>
+                        <div class="flex-grow">
+                            <input onClick="this.select();" class="form-control" readonly data-bind="value: $root.importCommandPowerShell" />
+                        </div>
+
+                    </div>    
                 </div>
             </div>
             <hr />
