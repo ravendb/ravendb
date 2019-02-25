@@ -40,13 +40,11 @@ namespace Raven.Server.Smuggler.Documents
         private readonly Logger _log;
         private BuildVersionType _buildType;
         private static DatabaseSmugglerOptions _options;
-        public ConcurrentDictionary<string, CollectionName> MissingDocumentsForRevisions;
 
         public DatabaseDestination(DocumentDatabase database)
         {
             _database = database;
             _log = LoggingSource.Instance.GetLogger<DatabaseDestination>(database.Name);
-            MissingDocumentsForRevisions = new ConcurrentDictionary<string, CollectionName>();
         }
 
         public IDisposable Initialize(DatabaseSmugglerOptions options, SmugglerResult result, long buildVersion)
@@ -68,7 +66,7 @@ namespace Raven.Server.Smuggler.Documents
 
         public IDocumentActions RevisionDocuments()
         {
-            return new DatabaseDocumentActions(_database, _buildType, isRevision: true, log: _log, MissingDocumentsForRevisions);
+            return new DatabaseDocumentActions(_database, _buildType, isRevision: true, log: _log);
         }
 
         public IDocumentActions Tombstones()
@@ -147,8 +145,7 @@ namespace Raven.Server.Smuggler.Documents
             private readonly ConcurrentDictionary<string, CollectionName> _missingDocumentsForRevisions;
             private readonly HashSet<string> _documentIdsOfMissingAttachments;
 
-            public DatabaseDocumentActions(DocumentDatabase database, BuildVersionType buildType,
-                bool isRevision, Logger log, ConcurrentDictionary<string, CollectionName> missingDocumentsForRevisions = null)
+            public DatabaseDocumentActions(DocumentDatabase database, BuildVersionType buildType, bool isRevision, Logger log)
             {
                 _database = database;
                 _buildType = buildType;
@@ -158,7 +155,7 @@ namespace Raven.Server.Smuggler.Documents
                     (sizeof(int) == IntPtr.Size || database.Configuration.Storage.ForceUsing32BitsPager) ? 2 : 32,
                     SizeUnit.Megabytes);
 
-                _missingDocumentsForRevisions = missingDocumentsForRevisions;
+                _missingDocumentsForRevisions = isRevision ? new ConcurrentDictionary<string, CollectionName>() : null;
                 _documentIdsOfMissingAttachments = isRevision ? null : new HashSet<string>(StringComparer.OrdinalIgnoreCase);
                 _command = new MergedBatchPutCommand(database, buildType, log, _missingDocumentsForRevisions, _documentIdsOfMissingAttachments)
                 {
