@@ -69,6 +69,7 @@ namespace Raven.Server
         }
 
         private static readonly Logger Logger = LoggingSource.Instance.GetLogger<RavenServer>("Server");
+        private readonly Logger _authAuditLog = LoggingSource.AuditLog.GetLogger("AuthenticateCertificate", "Audit");
 
         public readonly RavenConfiguration Configuration;
 
@@ -901,8 +902,6 @@ namespace Raven.Server
             }
         }
 
-        private readonly object _certificatesLock = new object();
-
         internal AuthenticateConnection AuthenticateConnectionCertificate(X509Certificate2 certificate)
         {
             var authenticationStatus = new AuthenticateConnection
@@ -992,6 +991,11 @@ namespace Raven.Server
                                 // This command will discard leftover certificates after the new certificate is saved.
                                 ServerStore.SendToLeaderAsync(new PutCertificateWithSamePinningHashCommand(certKey, newCertDef))
                                     .Wait(ServerStore.ServerShutdown);
+
+                                if (_authAuditLog.IsInfoEnabled)
+                                    _authAuditLog.Info($"Got connection with new certificate: '{certificate.Subject} ({certificate.Thumbprint})' but it's not registered in the cluster. " +
+                                                        "Allowing the connection based on certificate's Public Key Pinning Hash which is trusted by the cluster. " +
+                                                        "Registering the new certificate explicitly with same permissions as the original certificate.");
 
                                 cert = ctx.ReadObject(newCertDef.ToJson(), "Client/Certificate/Definition");
                             }
