@@ -1,0 +1,89 @@
+<div>
+    <div class="toggle">
+        <input id="customizeDatabaseRecordTypes" type="checkbox" data-bind="checked: customizeDatabaseRecordTypes">
+        <label for="customizeDatabaseRecordTypes" class="margin-right margin-right-sm">Customize Configuration</label>
+    </div>
+    <div class="margin-left margin-left-lg js-customize-record" data-bind="visible: customizeDatabaseRecordTypes">
+
+        <div class="row">
+            <div class="col-lg-3">
+                <div>Ongoing tasks</div>
+                <div class="margin-left margin-left-lg">
+                    <div class="toggle">
+                        <input id="includePeriodicBackups" type="checkbox" data-bind="checked: includePeriodicBackups">
+                        <label for="includePeriodicBackups" class="margin-right margin-right-sm">Periodic Backups</label>
+                    </div>
+                    <div class="toggle">
+                        <input id="includeExternalReplications" type="checkbox" data-bind="checked: includeExternalReplications">
+                        <label for="includeExternalReplications" class="margin-right margin-right-sm">External replications</label>
+                    </div>
+                    <div class="toggle">
+                        <input id="includeRavenEtls" type="checkbox" data-bind="checked: includeRavenEtls">
+                        <label for="includeRavenEtls" class="margin-right margin-right-sm">RavenDB ETLs</label>
+                    </div>
+                    <div class="toggle">
+                        <input id="includeSqlEtls" type="checkbox" data-bind="checked: includeSqlEtls">
+                        <label for="includeSqlEtls" class="margin-right margin-right-sm">SQL ETLs</label>
+                    </div>
+                    <div class="toggle">
+                        <input id="includeSinkPullReplications" type="checkbox" data-bind="checked: includeSinkPullReplications">
+                        <label for="includeSinkPullReplications" class="margin-right margin-right-sm">Pull Replication Sinks</label>
+                    </div>
+                    <div class="toggle">
+                        <input id="includeHubPullReplications" type="checkbox" data-bind="checked: includeHubPullReplications">
+                        <label for="includeHubPullReplications" class="margin-right margin-right-sm">Pull Replication Hubs</label>
+                    </div>
+                </div>
+
+                <div>Connection Strings</div>
+                <div class="margin-left margin-left-lg">
+                    <div class="toggle">
+                        <input id="includeRavenConnectionStrings" type="checkbox" data-bind="checked: includeRavenConnectionStrings">
+                        <label for="includeRavenConnectionStrings" class="margin-right margin-right-sm">RavenDB Connection Strings</label>
+                    </div>
+                    <div class="toggle">
+                        <input id="includeSqlConnectionStrings" type="checkbox" data-bind="checked: includeSqlConnectionStrings">
+                        <label for="includeSqlConnectionStrings" class="margin-right margin-right-sm">SQL Connection Strings</label>
+                    </div>
+                </div>
+            </div>
+            <div class="col-lg-3">
+                <div>Other</div>
+                <div class="margin-left margin-left-lg">
+                    <div class="toggle">
+                        <input id="includeSettings" type="checkbox" data-bind="checked: includeSettings">
+                        <label for="includeSettings" class="margin-right margin-right-sm">Settings</label>
+                    </div>
+                    <div class="toggle">
+                        <input id="includeConflictSolverConfig" type="checkbox" data-bind="checked: includeConflictSolverConfig">
+                        <label for="includeConflictSolverConfig" class="margin-right margin-right-sm">Conflict Solver</label>
+                    </div>
+                    <div class="toggle">
+                        <input id="includeRevisions" type="checkbox" data-bind="checked: includeRevisions">
+                        <label for="includeRevisions" class="margin-right margin-right-sm">Revisions</label>
+                    </div>
+                    <div class="toggle">
+                        <input id="includeExpiration" type="checkbox" data-bind="checked: includeExpiration">
+                        <label for="includeExpiration" class="margin-right margin-right-sm">Document Expiration</label>
+                    </div>
+                    <div class="toggle">
+                        <input id="includeClient" type="checkbox" data-bind="checked: includeClient">
+                        <label for="includeClient" class="margin-right margin-right-sm">Client Configuration</label>
+                    </div>
+                    <div class="toggle">
+                        <input id="includeSorters" type="checkbox" data-bind="checked: includeSorters">
+                        <label for="includeSorters" class="margin-right margin-right-sm">Custom Sorters</label>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="row">
+            <div class="col-xs-12 col-sm-6">
+                <div data-bind="validationElement: hasIncludes">
+                    <div class="help-block" data-bind="validationMessage: hasIncludes"></div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>

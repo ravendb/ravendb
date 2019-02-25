@@ -17,6 +17,7 @@ import popoverUtils = require("common/popoverUtils");
 import collectionsTracker = require("common/helpers/database/collectionsTracker");
 import defaultAceCompleter = require("common/defaultAceCompleter");
 import setupEncryptionKey = require("viewmodels/resources/setupEncryptionKey");
+import viewHelpers = require("common/helpers/view/viewHelpers");
 
 class exportDatabase extends viewModelBase {
 
@@ -42,6 +43,8 @@ class exportDatabase extends viewModelBase {
     constructor() {
         super();
         aceEditorBindingHandler.install();
+        
+        this.bindToCurrentInstance("customizeConfigurationClicked");
 
         this.showTransformScript.subscribe(v => {
             if (v) {
@@ -173,13 +176,20 @@ class exportDatabase extends viewModelBase {
                         "<span class=\"token keyword\">this</span>.Freight = <span class=\"token number\">15.3</span>;<br />" +
                         "</pre>"
             });
-        
-        popoverUtils.longWithHover($("#configurationPopover"),
-            {
-                content:
-                    "<div>The following configuration settings will be exported:</div>" +
-                    "<strong>Revisions, Expiration & Client Configuration</strong>"
-            });
+    }
+
+    customizeConfigurationClicked() {
+        this.showAdvancedOptions(true);
+        this.model.databaseModel.customizeDatabaseRecordTypes(true);
+
+        setTimeout(() => {
+            const $customizeRecord = $(".js-customize-record");
+            viewHelpers.animate($customizeRecord, "blink-style");
+            
+            const topOffset = $customizeRecord.offset().top;
+            const container = $customizeRecord.closest(".content-container");
+            container.animate({scrollTop: topOffset}, 300);
+        }, 200);
     }
 
     startExport() {

@@ -64,7 +64,7 @@
                         <div class="toggle">
                             <input id="toggleConfiguration" type="checkbox" data-bind="checked: includeDatabaseRecord">
                             <label for="toggleConfiguration" class="margin-right margin-right-sm">Include Configuration</label>
-                            <a id="configurationPopover"><small><i class="icon-info text-info"></i></small></a>
+                            <button class="btn btn-sm" data-bind="enable: includeDatabaseRecord, click: $root.customizeConfigurationClicked">Customize</button>
                         </div>
 
                         <div class="toggle">
@@ -102,67 +102,76 @@
             </div>
             
             <div id="export-advanced" data-bind="collapse: showAdvancedOptions">
-                <!-- TODO: see issue 8493 ! -->
-                <!--<div class="toggle">
-                    <input id="expiredDocuments" type="checkbox" disabled="disabled" data-bind="checked: model.includeExpiredDocuments">
-                    <label for="expiredDocuments">Include Expired Documents</label>
-                </div>-->
-                <div class="toggle">
-                    <input id="Collections" type="checkbox" data-bind="checked: model.includeAllCollections">
-                    <label for="Collections">Export all collections</label>
-                </div>
-                <div data-bind="visible: !collections().length && !model.includeAllCollections()">
-                    No collections available
-                </div>
-                <div id="collapseCollections" data-bind="collapse: !model.includeAllCollections(), visible: collections().length">
-                    <div class="border">
-                        <div class="row">
-                            <div class="col-sm-6">
-                                <h2>Choose collections:</h2>
+                <hr />
+                <h3>Advanced</h3>
+                <div class="margin-left margin-left-lg">
+                    <!-- TODO: see issue 8493 ! -->
+                    <!--<div class="toggle">
+                        <input id="expiredDocuments" type="checkbox" disabled="disabled" data-bind="checked: model.includeExpiredDocuments">
+                        <label for="expiredDocuments">Include Expired Documents</label>
+                    </div>-->
+                    <div class="toggle">
+                        <input id="Collections" type="checkbox" data-bind="checked: model.includeAllCollections">
+                        <label for="Collections">Export all collections</label>
+                    </div>
+                    <div data-bind="visible: !collections().length && !model.includeAllCollections()">
+                        No collections available
+                    </div>
+                    <div id="collapseCollections" data-bind="collapse: !model.includeAllCollections(), visible: collections().length">
+                        <div class="border">
+                            <div class="row">
+                                <div class="col-sm-6">
+                                    <h4>Choose collections:</h4>
+                                </div>
+                                <div class="col-sm-6">
+                                    <div class="input-group input-group-sm">
+                                        <span class="input-group-addon"><span class="glyphicon glyphicon-filter" aria-hidden="true"></span></span>
+                                        <input class="form-control" placeholder="Filter" data-bind="textInput: filter"/>
+                                    </div>
+                                </div>
                             </div>
-                            <div class="col-sm-6">
-                                <div class="input-group input-group-sm">
-                                    <span class="input-group-addon"><span class="glyphicon glyphicon-filter" aria-hidden="true"></span></span>
-                                    <input class="form-control" placeholder="Filter" data-bind="textInput: filter"/>
+                            <hr/>
+                            <div class="row limit-height" data-bind="foreach: filteredCollections">
+                                <div class="col-sm-6">
+                                    <div class="toggle toggle-info">
+                                        <input class="styled" type="checkbox" data-bind="attr: { id: 'collection_' + $index() }, value: $data, checked: $root.model.includedCollections">
+                                        <label data-bind="attr: { for: 'collection_' + $index() }, text: $data">
+                                        </label>
+                                    </div>
                                 </div>
                             </div>
                         </div>
                         <hr/>
-                        <div class="row limit-height" data-bind="foreach: filteredCollections">
-                            <div class="col-sm-6">
-                                <div class="toggle toggle-info">
-                                    <input class="styled" type="checkbox" data-bind="attr: { id: 'collection_' + $index() }, value: $data, checked: $root.model.includedCollections">
-                                    <label data-bind="attr: { for: 'collection_' + $index() }, text: $data">
-                                    </label>
-                                </div>
-                            </div>
+                    </div>
+                    <div class="form-group">
+                        <div class="toggle">
+                            <input id="useTransformScript" type="checkbox" data-bind="checked: showTransformScript">
+                            <label for="useTransformScript" class="margin-right margin-right-sm">Use Transform script </label>
+                            <a id="scriptPopover" tabindex="0"><small><i class="icon-info text-info"></i></small></a>
                         </div>
-                    </div>
-                    <hr/>
-                </div>
-                <div class="form-group">
-                    <div class="toggle">
-                        <input id="useTransformScript" type="checkbox" data-bind="checked: showTransformScript">
-                        <label for="useTransformScript">Use Transform script </label>
-                        <a id="scriptPopover" tabindex="0"><small><i class="icon-info text-info"></i></small></a>
-                    </div>
-                    <div data-bind="collapse: showTransformScript">
+                        <div data-bind="collapse: showTransformScript">
                         <pre class="form-control" style="height: 200px;" data-bind="aceEditor: { code: model.transformScript, lang: 'ace/mode/javascript', completer: completer }, validationOptions: { errorsAsTitle: false }, validationElement: model.transformScript">
                         </pre>
-                        <div data-bind="validationOptions: { errorsAsTitle: false }, validationElement: model.transformScript">
-                            <div class="help-block" data-bind="validationMessage: model.transformScript"></div>
+                            <div data-bind="validationOptions: { errorsAsTitle: false }, validationElement: model.transformScript">
+                                <div class="help-block" data-bind="validationMessage: model.transformScript"></div>
+                            </div>
+                        </div>
+                        <div data-bind="with: model.databaseModel">
+                            <div data-bind="compose: 'database/tasks/smugglerDatabaseRecord.html'"></div>    
                         </div>
                     </div>
-                </div>
-                <div class="form-group">
-                    <label class="control-label">Command</label>
-                    <div class="input-group">
+
+                    <div class="form-group">
+                        <label class="control-label">Command</label>
+                        <div class="input-group">
                         <span class="input-group-btn">
                             <button class="btn btn-default" data-bind="click: copyCommandToClipboard"><i class="icon-copy"></i> <span>Copy to clipboard</span></button>
                         </span>
-                        <input onClick="this.select();" class="form-control" readonly data-bind="value: exportCommand">
+                            <input onClick="this.select();" class="form-control" readonly data-bind="value: exportCommand">
+                        </div>
                     </div>
                 </div>
+                
             </div>
             <hr/>
             <button class="btn btn-default" type="button" data-bind="click: showAdvancedOptions.toggle.bind(showAdvancedOptions)">
