@@ -363,7 +363,7 @@ namespace Raven.Server.Smuggler.Documents
             return Enumerable.Empty<CounterDetail>();
         }
 
-        public IEnumerable<SubscriptionState> GetSubscriptionValues()
+        public IEnumerable<SubscriptionState> GetSubscriptions()
         {
             return Enumerable.Empty<SubscriptionState>();
         }

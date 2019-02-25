@@ -1168,9 +1168,12 @@ namespace Raven.Server.Smuggler.Documents
             public void WriteSubscription(SubscriptionState subscriptionState)
             {
                 const int batchSize = 1024;
+
                 _subscriptionCommands.Add(new PutSubscriptionCommand(_database.Name, subscriptionState.Query, null)
                 {
-                    SubscriptionName = subscriptionState.SubscriptionName
+                    SubscriptionName = subscriptionState.SubscriptionName,
+                    //After restore/export , subscription will start from the start
+                    InitialChangeVector = null
                 });
 
                 if (_subscriptionCommands.Count < batchSize)
@@ -1181,8 +1184,8 @@ namespace Raven.Server.Smuggler.Documents
 
             private void SendCommands()
             {
-                AsyncHelpers.RunSync(async () =>
-                    await _database.ServerStore.SendToLeaderAsync(new PutSubscriptionBatchCommand(_subscriptionCommands)));
+                AsyncHelpers.RunSync(() =>
+                    _database.ServerStore.SendToLeaderAsync(new PutSubscriptionBatchCommand(_subscriptionCommands)));
 
                 _subscriptionCommands.Clear();
             }
