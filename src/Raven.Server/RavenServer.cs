@@ -937,7 +937,7 @@ namespace Raven.Server
                     try
                     {
                         var certKey = Constants.Certificates.Prefix + certificate.Thumbprint;
-                        var cert = ServerStore.Cluster.Read(ctx, certKey) ??
+                        var cert = ServerStore.Cluster.GetCertificateByPrimaryKey(ctx, certKey) ??
                                    ServerStore.Cluster.GetLocalState(ctx, certKey);
 
                         if (cert == null)
@@ -958,19 +958,24 @@ namespace Raven.Server
                                 catch (Exception e)
                                 {
                                     throw new InvalidOperationException($"Failed to build chain for certificate with thumbprint {certificate.Thumbprint}", e);
-                                } 
-                                
-                                if (chain.ChainElements.Count < 2)
-                                    throw new InvalidOperationException($"Cannot find an issuer in the chain of certificate with thumbprint {certificate.Thumbprint}");
+                                }
 
-                                var issuerThumbprint = chain.ChainElements[1].Certificate.Thumbprint;
+                                /*var isSelfSigned = certificate.SubjectName.RawData.SequenceEqual(certificate.IssuerName.RawData);
+                                var issuerThumbprint = isSelfSigned
+                                    ? chain.ChainElements[0].Certificate.Thumbprint
+                                    : chain.ChainElements[1].Certificate.Thumbprint;
 
                                 // Must check the new cert was signed by the same issuer, otherwise users can use the private key to register a new cert with a different issuer.
                                 if (string.Equals(issuerThumbprint, certificate.Thumbprint) == false)
                                 {
-                                    throw new InvalidOperationException($"You tried to use a certificate which is not registered in the cluster explicitly but is trusted implicitly by its Public Key Pinning Hash. " +
-                                                                        $"Your certificate was signed by a different issuer than the original certificate. This is not allowed - closing the connection.");
-                                }
+                                    if (Logger.IsOperationsEnabled)
+                                        Logger.Operations($"You tried to use a certificate: '{certificate.Subject} ({certificate.Thumbprint})' which is not " +
+                                                          "registered in the cluster explicitly but is trusted implicitly by its Public Key Pinning Hash. " +
+                                                          "Your certificate was signed by a different issuer than the original certificate. This is not allowed - closing the connection.");
+
+                                    authenticationStatus.Status = AuthenticationStatus.UnfamiliarCertificate;
+                                    return authenticationStatus;
+                                }*/
 
                                 // Success, we'll add the new certificate with same permissions as the original
                                 var existingCert = certsWithSameHash[0];
