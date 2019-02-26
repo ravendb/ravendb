@@ -409,16 +409,18 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene
             {
                 if (pageSize == int.MaxValue || pageSize >= _searcher.MaxDoc) // we want all docs, no sorting required
                 {
-                    var gatherAllCollector = new GatherAllCollector(Math.Min(pageSize, _searcher.MaxDoc));
-                    _searcher.Search(documentQuery, gatherAllCollector, _state);
-                    return gatherAllCollector.ToTopDocs();
+                    using (var gatherAllCollector = new GatherAllCollector(Math.Min(pageSize, _searcher.MaxDoc)))
+                    {
+                        _searcher.Search(documentQuery, gatherAllCollector, _state);
+                        return gatherAllCollector.ToTopDocs();
+                    }
                 }
 
-                var noSortingCollector = new NonSortingCollector(Math.Abs(pageSize + start));
-
-                _searcher.Search(documentQuery, noSortingCollector, _state);
-
-                return noSortingCollector.ToTopDocs();
+                using (var noSortingCollector = new NonSortingCollector(Math.Abs(pageSize + start)))
+                {
+                    _searcher.Search(documentQuery, noSortingCollector, _state);
+                    return noSortingCollector.ToTopDocs();
+                }
             }
 
             var minPageSize = GetPageSize(_searcher, (long)pageSize + start);
