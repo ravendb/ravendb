@@ -19,7 +19,8 @@ class accessManager {
     // *** Views Access *** //
     
     dashboardView = {
-        showCPUAndMemGraph: this.operatorAndAbove
+        showCPUAndMemGraph: this.operatorAndAbove,
+        showCertificatesLink: this.operatorAndAbove
     };
     
     clusterView = {
@@ -67,7 +68,8 @@ class accessManager {
         enableTrafficWatchMenuItem: this.clusterAdminOrClusterNode,
         enableGatherDebugInfoMenuItem: this.clusterAdminOrClusterNode,
         enableCaptureStackTraces: this.clusterAdminOrClusterNode,
-        enableAdvancedMenuItem: this.clusterAdminOrClusterNode
+        enableAdvancedMenuItem: this.clusterAdminOrClusterNode,
+        enableRecordTransactionCommands: this.clusterAdminOrClusterNode
     };
     
     databaseSettingsMenu = {
