@@ -86,15 +86,17 @@ class certificates extends viewModelBase {
     activate() {
         this.loadCertificates();
         
-        return new getServerCertificateSetupModeCommand()
-            .execute()
-            .done((setupMode: Raven.Server.Commercial.SetupMode) => {
-                this.serverCertificateSetupMode(setupMode);
-                
-                if (setupMode === "LetsEncrypt") {
-                    this.fetchRenewalDate();
-                }
-             });
+        if (accessManager.default.certificatesView.canRenewLetsEncryptCertificate()) {
+            new getServerCertificateSetupModeCommand()
+                .execute()
+                .done((setupMode: Raven.Server.Commercial.SetupMode) => {
+                    this.serverCertificateSetupMode(setupMode);
+
+                    if (setupMode === "LetsEncrypt") {
+                        this.fetchRenewalDate();
+                    }
+                });
+        }
     }
     
     compositionComplete() {
