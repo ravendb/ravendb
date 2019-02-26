@@ -518,12 +518,15 @@ namespace Raven.Server.Documents.Replication
 
             public void Dispose()
             {
-                foreach (var item in ReplicatedItems)
+                if (ReplicatedItems.Array != null)
                 {
-                    item.Document?.Dispose();
-                }
+                    foreach (var item in ReplicatedItems)
+                    {
+                        item.Document?.Dispose();
+                    }
 
-                ArrayPool<ReplicationItem>.Shared.Return(ReplicatedItems.Array, clearArray: true);
+                    ArrayPool<ReplicationItem>.Shared.Return(ReplicatedItems.Array, clearArray: true);
+                }
 
                 if (AttachmentStreams.Array != null)
                 {
@@ -1561,7 +1564,7 @@ namespace Raven.Server.Documents.Replication
                 replicatedAttachmentStreams = attachmentStreams.ToDictionary(i => i.Base64Hash, SliceComparer.Instance);
             }
 
-            var dataForReplicationCommand = new IncomingReplicationHandler.DataForReplicationCommand()
+            var dataForReplicationCommand = new IncomingReplicationHandler.DataForReplicationCommand
             {
                 DocumentDatabase = database,
                 ConflictManager = new ConflictManager(database, database.ReplicationLoader.ConflictResolver),
