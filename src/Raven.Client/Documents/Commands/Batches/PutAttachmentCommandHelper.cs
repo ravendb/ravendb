@@ -5,7 +5,7 @@ namespace Raven.Client.Documents.Commands.Batches
 {
     internal static class PutAttachmentCommandHelper
     {
-        public static void ThrowStreamAlready()
+        public static void ThrowStreamWasAlreadyUsed()
         {
             throw new InvalidOperationException("It is forbidden to re-use the same stream for more than one attachment. Use a unique stream per put attachment command.");
         }

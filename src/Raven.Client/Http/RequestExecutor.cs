@@ -872,7 +872,7 @@ namespace Raven.Client.Http
 
         private void ThrowFailedToContactAllNodes<TResult>(RavenCommand<TResult> command, HttpRequestMessage request)
         {
-            if (command.FailedNodes.Count == 0) //precaution, should never happen at this point
+            if (command.FailedNodes == null || command.FailedNodes.Count == 0) //precaution, should never happen at this point
                 throw new InvalidOperationException("Received unsuccessful response and couldn't recover from it. Also, no record of exceptions per failed nodes. " +
                                                     "This is weird and should not happen.");
 
@@ -1061,7 +1061,7 @@ namespace Raven.Client.Http
 
                     await UpdateTopologyAsync(chosenNode, Timeout.Infinite, forceUpdate: true, debugTag: "handle-unsuccessful-response").ConfigureAwait(false);
                     var (index, node) = ChooseNodeForRequest(command, sessionInfo);
-                    await ExecuteAsync(node, index, context, command, shouldRetry: false, sessionInfo: sessionInfo, token: token).ConfigureAwait(false);
+                    await ExecuteAsync(node, index, context, command, shouldRetry: true, sessionInfo: sessionInfo, token: token).ConfigureAwait(false);
                     return true;
                 case HttpStatusCode.GatewayTimeout:
                 case HttpStatusCode.RequestTimeout:

@@ -6,8 +6,10 @@ using System.Runtime.CompilerServices;
 using System.Threading;
 using System.Threading.Tasks;
 using Raven.Client.Documents.Operations;
+using Raven.Client;
 using Raven.Client.Documents.Operations.Revisions;
 using Raven.Client.ServerWide;
+using Raven.Server.Json;
 using Raven.Server.NotificationCenter.Notifications;
 using Raven.Server.ServerWide;
 using Raven.Server.ServerWide.Context;
@@ -578,30 +580,56 @@ namespace Raven.Server.Documents.Revisions
             long numberOfRevisionsToDelete, TimeSpan? minimumTimeToKeep, string changeVector, long lastModifiedTicks)
         {
             long maxEtagDeleted = 0;
+            Table writeTable = null;
+            string currentCollection = null;
+            var deletedRevisionsCount = 0;
 
-            var deletedRevisionsCount = table.DeleteForwardFrom(RevisionsSchema.Indexes[IdAndEtagSlice], prefixSlice, true,
-                numberOfRevisionsToDelete,
-                deleted =>
+            while (true)
                 {
-                    var revision = TableValueToRevision(context, ref deleted.Reader);
+                var hasValue = false;
+
+                foreach (var read in table.SeekForwardFrom(RevisionsSchema.Indexes[IdAndEtagSlice], prefixSlice, skip: 0, startsWith: true))
+                {
+                    if (numberOfRevisionsToDelete <= deletedRevisionsCount)
+                        break;
+                   
+                    var tvr = read.Result.Reader;
+                    var revision = TableValueToRevision(context, ref tvr);
 
                     if (minimumTimeToKeep.HasValue &&
                         _database.Time.GetUtcNow() - revision.LastModified <= minimumTimeToKeep.Value)
-                        return false;
+                        return deletedRevisionsCount;
 
-                    using (TableValueToSlice(context, (int)RevisionsTable.ChangeVector, ref deleted.Reader, out Slice key))
+                    hasValue = true;
+
+                    using (Slice.From(context.Allocator, revision.ChangeVector, out var keySlice))
                     {
-                        var revisionEtag = TableValueToEtag((int)RevisionsTable.Etag, ref deleted.Reader);
-                        CreateTombstone(context, key, revisionEtag, collectionName, changeVector, lastModifiedTicks);
-                    }
+                        CreateTombstone(context, keySlice, revision.Etag, collectionName, changeVector, lastModifiedTicks);
 
                     maxEtagDeleted = Math.Max(maxEtagDeleted, revision.Etag);
                     if ((revision.Flags & DocumentFlags.HasAttachments) == DocumentFlags.HasAttachments)
                     {
                         _documentsStorage.AttachmentsStorage.DeleteRevisionAttachments(context, revision, changeVector, lastModifiedTicks);
                     }
-                    return true;
-                });
+
+                        var docCollection = CollectionName.GetCollectionName(revision.Data);
+                        if (writeTable == null || docCollection != currentCollection)
+                        {
+                            currentCollection = docCollection;
+                            writeTable = EnsureRevisionTableCreated(context.Transaction.InnerTransaction, new CollectionName(docCollection));
+                        }
+
+                        writeTable.DeleteByKey(keySlice);
+                    }
+                    
+                    deletedRevisionsCount++;
+                    break;
+                }
+
+                if (hasValue == false)
+                    break;
+            }
+            
             _database.DocumentsStorage.EnsureLastEtagIsPersisted(context, maxEtagDeleted);
             return deletedRevisionsCount;
         }
