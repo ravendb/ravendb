@@ -98,7 +98,7 @@ class exportDatabaseModel {
             operateOnTypes.push("CompareExchange");
         }
         if (this.includeCounters()) {
-            operateOnTypes.push("Counters");
+            operateOnTypes.push("CounterGroups");
         }
         if (this.includeAttachments()) {
             operateOnTypes.push("Attachments");
