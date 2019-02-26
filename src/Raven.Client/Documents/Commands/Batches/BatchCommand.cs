@@ -47,7 +47,7 @@ namespace Raven.Client.Documents.Commands.Batches
                     var stream = putAttachmentCommandData.Stream;
                     PutAttachmentCommandHelper.ValidateStream(stream);
                     if (_uniqueAttachmentStreams.Add(stream) == false)
-                        PutAttachmentCommandHelper.ThrowStreamAlready();
+                        PutAttachmentCommandHelper.ThrowStreamWasAlreadyUsed();
                     _attachmentStreams.Add(stream);
                 }
             }

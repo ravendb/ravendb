@@ -68,7 +68,7 @@ namespace FastTests.Utils
             return index;
         }
 
-        private static async Task<long> SetupRevisions(Raven.Server.ServerWide.ServerStore serverStore, string database, RevisionsConfiguration configuration)
+        public static async Task<long> SetupRevisions(Raven.Server.ServerWide.ServerStore serverStore, string database, RevisionsConfiguration configuration)
         {
             using (var context = JsonOperationContext.ShortTermSingleUse())
             {

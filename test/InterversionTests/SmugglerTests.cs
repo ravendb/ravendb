@@ -137,7 +137,6 @@ namespace InterversionTests
             {
                 File.Delete(file);
             }
-
         }
 
         [Fact]

@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Buffers;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Diagnostics;
@@ -89,26 +90,6 @@ namespace Raven.Server.Documents.Replication
 
             _attachmentStreamsTempFile = _database.DocumentsStorage.AttachmentsStorage.GetTempFile("replication");
             _copiedBuffer = bufferToCopy.Clone(_connectionOptions.ContextPool);
-        }
-
-        ///<summary>
-        ///This constructor should be used for replay transaction commands only!!!
-        ///</summary>
-        internal IncomingReplicationHandler(
-            DocumentDatabase database,
-            List<ReplicationItem> replicatedItems,
-            IncomingConnectionInfo connectionInfo,
-            ReplicationLoader parent,
-            ReplicationAttachmentStream[] replicatedAttachmentStreams)
-        {
-            _parent = parent;
-            _database = database;
-            _replicatedItems = replicatedItems;
-            ConnectionInfo = connectionInfo;
-            _replicatedAttachmentStreams = replicatedAttachmentStreams.ToDictionary(i => i.Base64Hash, SliceComparer.Instance);
-            _attachmentStreamsTempFile = _database.DocumentsStorage.AttachmentsStorage.GetTempFile("replication");
-            _log = LoggingSource.Instance.GetLogger<IncomingReplicationHandler>(_database.Name);
-            _conflictManager = new ConflictManager(_database, _parent.ConflictResolver);
         }
 
         public IncomingReplicationPerformanceStats[] GetReplicationPerformance()
@@ -534,6 +515,48 @@ namespace Raven.Server.Documents.Replication
             return result;
         }
 
+        public class DataForReplicationCommand : IDisposable
+        {
+            internal DocumentDatabase DocumentDatabase { get; set; }
+
+            internal ConflictManager ConflictManager { get; set; }
+
+            internal string SourceDatabaseId { get; set; }
+
+            internal ArraySegment<ReplicationItem> ReplicatedItems { get; set; }
+
+            internal ArraySegment<ReplicationAttachmentStream> AttachmentStreams { get; set; }
+
+            internal Dictionary<Slice, ReplicationAttachmentStream> ReplicatedAttachmentStreams { get; set; }
+
+            public TcpConnectionHeaderMessage.SupportedFeatures SupportedFeatures { get; set; }
+
+            public Logger Logger { get; set; }
+
+            public void Dispose()
+            {
+                if (ReplicatedItems.Array != null)
+                {
+                    foreach (var item in ReplicatedItems)
+                    {
+                        item.Document?.Dispose();
+                    }
+
+                    ArrayPool<ReplicationItem>.Shared.Return(ReplicatedItems.Array, clearArray: true);
+                }
+
+                if (AttachmentStreams.Array != null)
+                {
+                    foreach (var attachmentStream in AttachmentStreams)
+                    {
+                        attachmentStream.Dispose();
+                    }
+
+                    ArrayPool<ReplicationAttachmentStream>.Shared.Return(AttachmentStreams.Array, clearArray: true);
+                }
+            }
+        }
+
         private void ReceiveSingleDocumentsBatch(DocumentsOperationContext documentsContext, int replicatedItemsCount, int attachmentStreamCount, long lastEtag, IncomingReplicationStatsScope stats)
         {
             if (_log.IsInfoEnabled)
@@ -541,21 +564,30 @@ namespace Raven.Server.Documents.Replication
                 _log.Info($"Receiving replication batch with {replicatedItemsCount} documents starting with {lastEtag} from {ConnectionInfo}");
             }
 
-            var incomingReplicationAllocator = new IncomingReplicationAllocator(documentsContext, _database);
             var sw = Stopwatch.StartNew();
             Task task = null;
 
+            using (var incomingReplicationAllocator = new IncomingReplicationAllocator(documentsContext, _database))
+            using (var dataForReplicationCommand = new DataForReplicationCommand
+            {
+                DocumentDatabase = _database,
+                ConflictManager = _conflictManager,
+                SourceDatabaseId = ConnectionInfo.SourceDatabaseId,
+                SupportedFeatures = SupportedFeatures,
+                Logger = _log
+            })
+            {
             try
             {
                 using (var networkStats = stats.For(ReplicationOperation.Incoming.Network))
                 {
                     // this will read the documents to memory from the network
                     // without holding the write tx open
-                    ReadItemsFromSource(replicatedItemsCount, documentsContext, incomingReplicationAllocator, networkStats);
+                        dataForReplicationCommand.ReplicatedItems = ReadItemsFromSource(replicatedItemsCount, documentsContext, incomingReplicationAllocator, networkStats);
 
                     using (networkStats.For(ReplicationOperation.Incoming.AttachmentRead))
                     {
-                        ReadAttachmentStreamsFromSource(attachmentStreamCount, documentsContext);
+                            ReadAttachmentStreamsFromSource(attachmentStreamCount, documentsContext, dataForReplicationCommand);
                     }
                 }
 
@@ -571,7 +603,7 @@ namespace Raven.Server.Documents.Replication
 
                 using (stats.For(ReplicationOperation.Incoming.Storage))
                 {
-                    var replicationCommand = new MergedDocumentReplicationCommand(this, lastEtag);
+                        var replicationCommand = new MergedDocumentReplicationCommand(dataForReplicationCommand, lastEtag);
                     task = _database.TxMerger.Enqueue(replicationCommand);
 
                     using (var writer = new BlittableJsonTextWriter(documentsContext, _connectionOptions.Stream))
@@ -629,8 +661,9 @@ namespace Raven.Server.Documents.Replication
                     // down
                 }
 
-                incomingReplicationAllocator.Dispose();
+                    _attachmentStreamsTempFile?.Reset();
             }
+        }
         }
 
         private void SendHeartbeatStatusToSource(DocumentsOperationContext documentsContext, BlittableJsonTextWriter writer, long lastDocumentEtag, string handledMessageType)
@@ -681,9 +714,7 @@ namespace Raven.Server.Documents.Replication
 
         public IncomingConnectionInfo ConnectionInfo { get; }
 
-        private readonly List<ReplicationItem> _replicatedItems = new List<ReplicationItem>();
         private readonly StreamsTempFile _attachmentStreamsTempFile;
-        private readonly Dictionary<Slice, ReplicationAttachmentStream> _replicatedAttachmentStreams = new Dictionary<Slice, ReplicationAttachmentStream>(SliceComparer.Instance);
         private long _lastDocumentEtag;
         private readonly TcpConnectionOptions _connectionOptions;
         private readonly ConflictManager _conflictManager;
@@ -764,23 +795,21 @@ namespace Raven.Server.Documents.Replication
             }
         }
 
-        private unsafe void ReadItemsFromSource(int replicatedDocs, DocumentsOperationContext context,
+        private unsafe ArraySegment<ReplicationItem> ReadItemsFromSource(int replicatedDocs, DocumentsOperationContext context,
             IncomingReplicationAllocator incomingReplicationAllocator, IncomingReplicationStatsScope stats)
         {
+            var items = ArrayPool<ReplicationItem>.Shared.Rent(replicatedDocs);
+
             var documentRead = stats.For(ReplicationOperation.Incoming.DocumentRead, start: false);
             var attachmentRead = stats.For(ReplicationOperation.Incoming.AttachmentRead, start: false);
             var tombstoneRead = stats.For(ReplicationOperation.Incoming.TombstoneRead, start: false);
 
-            _replicatedItems.Clear();
-
-            for (int x = 0; x < replicatedDocs; x++)
+            for (var i = 0; i < replicatedDocs; i++)
             {
                 stats.RecordInputAttempt();
 
-                var item = new ReplicationItem
-                {
-                    Type = *(ReplicationBatchItem.ReplicationItemType*)ReadExactly(sizeof(byte))
-                };
+                ref ReplicationItem item = ref items[i];
+                item.Type = *(ReplicationBatchItem.ReplicationItemType*)ReadExactly(sizeof(byte));
 
                 var changeVectorSize = *(int*)ReadExactly(sizeof(int));
 
@@ -895,6 +924,7 @@ namespace Raven.Server.Documents.Replication
                             ReadExactly(mem, documentSize);
 
                             item.Document = new BlittableJsonReaderObject(mem, documentSize, context);
+                            item.Document.BlittableValidation();
                         }
                         else
                         {
@@ -907,10 +937,10 @@ namespace Raven.Server.Documents.Replication
                         }
                     }
                 }
-
-                _replicatedItems.Add(item);
             }
-        }
+
+            return new ArraySegment<ReplicationItem>(items, 0, replicatedDocs);
+            }
 
         private unsafe class IncomingReplicationAllocator : IDisposable
         {
@@ -1013,16 +1043,21 @@ namespace Raven.Server.Documents.Replication
             }
         }
 
-        private unsafe void ReadAttachmentStreamsFromSource(int attachmentStreamCount, DocumentsOperationContext context)
+        private unsafe void ReadAttachmentStreamsFromSource(int attachmentStreamCount, 
+            DocumentsOperationContext context, DataForReplicationCommand dataForReplicationCommand)
         {
-            Debug.Assert(_replicatedAttachmentStreams.Count == 0, "We should handle all attachment streams during WriteAttachment.");
+            if (attachmentStreamCount == 0)
+                return;
 
-            for (int x = 0; x < attachmentStreamCount; x++)
+            var items = ArrayPool<ReplicationAttachmentStream>.Shared.Rent(attachmentStreamCount);
+            var replicatedAttachmentStreams = new Dictionary<Slice, ReplicationAttachmentStream>(SliceComparer.Instance);
+
+            for (var i = 0; i < attachmentStreamCount; i++)
             {
                 var type = *(ReplicationBatchItem.ReplicationItemType*)ReadExactly(sizeof(byte));
                 Debug.Assert(type == ReplicationBatchItem.ReplicationItemType.AttachmentStream);
 
-                var attachment = new ReplicationAttachmentStream();
+                ref ReplicationAttachmentStream attachment = ref items[i];
 
                 var base64HashSize = *ReadExactly(sizeof(byte));
                 attachment.Base64HashDispose = Slice.From(context.Allocator, ReadExactly(base64HashSize), base64HashSize, out attachment.Base64Hash);
@@ -1031,8 +1066,11 @@ namespace Raven.Server.Documents.Replication
                 attachment.Stream = _attachmentStreamsTempFile.StartNewStream();
                 ReadExactly(streamLength, attachment.Stream);
                 attachment.Stream.Flush();
-                _replicatedAttachmentStreams[attachment.Base64Hash] = attachment;
+                replicatedAttachmentStreams[attachment.Base64Hash] = attachment;
             }
+
+            dataForReplicationCommand.AttachmentStreams = new ArraySegment<ReplicationAttachmentStream>(items, 0, attachmentStreamCount);
+            dataForReplicationCommand.ReplicatedAttachmentStreams = replicatedAttachmentStreams;
         }
 
         private void AddReplicationPulse(ReplicationPulseDirection direction, string exceptionMessage = null)
@@ -1188,16 +1226,14 @@ namespace Raven.Server.Documents.Replication
             }
         }
 
-        internal unsafe class MergedDocumentReplicationCommand : TransactionOperationsMerger.MergedTransactionCommand, IDisposable
+        internal unsafe class MergedDocumentReplicationCommand : TransactionOperationsMerger.MergedTransactionCommand
         {
-            private readonly IncomingReplicationHandler _incoming;
-
             private readonly long _lastEtag;
-            private readonly List<IDisposable> _disposables = new List<IDisposable>();
+            private readonly DataForReplicationCommand _replicationInfo;
 
-            public MergedDocumentReplicationCommand(IncomingReplicationHandler incoming, long lastEtag)
+            public MergedDocumentReplicationCommand(DataForReplicationCommand replicationInfo, long lastEtag)
             {
-                _incoming = incoming;
+                _replicationInfo = replicationInfo;
                 _lastEtag = lastEtag;
             }
 
@@ -1205,15 +1241,14 @@ namespace Raven.Server.Documents.Replication
             {
                 try
                 {
-                    _disposables.Clear();
                     IsIncomingReplication = true;
 
                     var operationsCount = 0;
 
-                    var database = _incoming._database;
+                    var database = _replicationInfo.DocumentDatabase;
 
                     context.LastDatabaseChangeVector = context.LastDatabaseChangeVector ?? DocumentsStorage.GetDatabaseChangeVector(context);
-                    foreach (var item in _incoming._replicatedItems)
+                    foreach (var item in _replicationInfo.ReplicatedItems)
                     {
                         context.TransactionMarkerOffset = item.TransactionMarker;
                         ++operationsCount;
@@ -1229,16 +1264,17 @@ namespace Raven.Server.Documents.Replication
                                 database.DocumentsStorage.AttachmentsStorage.PutDirect(context, item.Key, item.Name,
                                     item.ContentType, item.Base64Hash, item.ChangeVector);
 
-                                if (_incoming._replicatedAttachmentStreams.TryGetValue(item.Base64Hash, out ReplicationAttachmentStream attachmentStream))
+                                if (_replicationInfo.ReplicatedAttachmentStreams.TryGetValue(item.Base64Hash, out ReplicationAttachmentStream attachmentStream))
                                 {
-                                    database.DocumentsStorage.AttachmentsStorage.PutAttachmentStream(context, item.Key, attachmentStream.Base64Hash, attachmentStream.Stream);
-                                    _disposables.Add(attachmentStream);
-                                    _incoming._replicatedAttachmentStreams.Remove(item.Base64Hash);
+                                    database.DocumentsStorage.AttachmentsStorage.PutAttachmentStream(context, item.Key, attachmentStream.Base64Hash,
+                                        attachmentStream.Stream);
+                                    _replicationInfo.ReplicatedAttachmentStreams.Remove(item.Base64Hash);
                                 }
                             }
                             else if (item.Type == ReplicationBatchItem.ReplicationItemType.AttachmentTombstone)
                             {
-                                database.DocumentsStorage.AttachmentsStorage.DeleteAttachmentDirect(context, item.Key, false, "$fromReplication", null, rcvdChangeVector, item.LastModifiedTicks);
+                                database.DocumentsStorage.AttachmentsStorage.DeleteAttachmentDirect(context, item.Key, false, "$fromReplication", null, rcvdChangeVector,
+                                    item.LastModifiedTicks);
                             }
                             else if (item.Type == ReplicationBatchItem.ReplicationItemType.RevisionTombstone)
                             {
@@ -1251,16 +1287,14 @@ namespace Raven.Server.Documents.Replication
                             else
                             {
                                 BlittableJsonReaderObject document = null;
-                                try
-                                {
+
                                     // no need to load document data for tombstones
                                     // document size == -1 --> doc is a tombstone
                                     if (item.DocumentSize >= 0)
                                     {
-                                        //if something throws at this point, this means something is really wrong and we should stop receiving documents.
-                                        //the other side will receive negative ack and will retry sending again.
+                                        // if something throws at this point, this means something is really wrong and we should stop receiving documents.
+                                        // the other side will receive negative ack and will retry sending again.
                                         document = item.Document;
-                                        document.BlittableValidation();
 
                                         try
                                         {
@@ -1268,13 +1302,13 @@ namespace Raven.Server.Documents.Replication
                                         }
                                         catch (MissingAttachmentException)
                                         {
-                                            if (_incoming.SupportedFeatures.Replication.MissingAttachments)
+                                        if (_replicationInfo.SupportedFeatures.Replication.MissingAttachments)
                                             {
                                                 throw;
                                             }
 
-                                            _incoming._database.NotificationCenter.Add(AlertRaised.Create(
-                                                _incoming._database.Name,
+                                        database.NotificationCenter.Add(AlertRaised.Create(
+                                            database.Name,
                                                 IncomingReplicationStr,
                                                 $"Detected missing attachments for document {item.Id} with the following hashes:" +
                                                 $" ({string.Join(',', GetAttachmentsHashesFromDocumentMetadata(document))}).",
@@ -1339,10 +1373,12 @@ namespace Raven.Server.Documents.Replication
                                                         flags);
                                                 }
                                             }
+
                                             break;
                                         case ConflictStatus.Conflict:
-                                            if (_incoming._log.IsInfoEnabled)
-                                                _incoming._log.Info($"Conflict check resolved to Conflict operation, resolving conflict for doc = {item.Id}, with change vector = {item.ChangeVector}");
+                                        if (_replicationInfo.Logger.IsInfoEnabled)
+                                            _replicationInfo.Logger.Info(
+                                                $"Conflict check resolved to Conflict operation, resolving conflict for doc = {item.Id}, with change vector = {item.ChangeVector}");
 
                                             // we will always prefer the local
                                             if (hasLocalClusterTx)
@@ -1362,10 +1398,13 @@ namespace Raven.Server.Documents.Replication
                                                 }
                                                 else
                                                 {
-                                                    throw new InvalidOperationException("Local cluster tx but no matching document / tombstone for: " + item.Id + ", this should not be possible");
+                                                throw new InvalidOperationException("Local cluster tx but no matching document / tombstone for: " + item.Id +
+                                                                                    ", this should not be possible");
                                                 }
+
                                                 goto case ConflictStatus.Update;
                                             }
+
                                             // otherwise we will choose the remote document from the transaction
                                             if (hasRemoteClusterTx)
                                             {
@@ -1377,9 +1416,11 @@ namespace Raven.Server.Documents.Replication
                                                 // if the conflict is going to be resolved locally, that means that we have local work to do
                                                 // that we need to distribute to our siblings
                                                 IsIncomingReplication = false;
-                                                _incoming._conflictManager.HandleConflictForDocument(context, item.Id, item.Collection, item.LastModifiedTicks, document,
+                                            _replicationInfo.ConflictManager.HandleConflictForDocument(context, item.Id, item.Collection, item.LastModifiedTicks,
+                                                document,
                                                     rcvdChangeVector, conflictingVector, item.Flags);
                                             }
+
                                             break;
                                         case ConflictStatus.AlreadyMerged:
                                             // we have to do nothing here
@@ -1389,26 +1430,22 @@ namespace Raven.Server.Documents.Replication
                                                 "Invalid ConflictStatus: " + conflictStatus);
                                     }
                                 }
-                                finally
-                                {
-                                    _disposables.Add(document);
                                 }
                             }
-                        }
-                    }
 
-                    Debug.Assert(_incoming._replicatedAttachmentStreams.Count == 0, "We should handle all attachment streams during WriteAttachment.");
+                    Debug.Assert(_replicationInfo.ReplicatedAttachmentStreams == null ||
+                                 _replicationInfo.ReplicatedAttachmentStreams.Count == 0,
+                        "We should handle all attachment streams during WriteAttachment.");
                     Debug.Assert(context.LastDatabaseChangeVector != null);
 
                     // instead of : SetLastReplicatedEtagFrom -> _incoming.ConnectionInfo.SourceDatabaseId, _lastEtag , we will store in context and write once right before commit (one time instead of repeating on all docs in the same Tx)
                     if (context.LastReplicationEtagFrom == null)
                         context.LastReplicationEtagFrom = new Dictionary<string, long>();
-                    context.LastReplicationEtagFrom[_incoming.ConnectionInfo.SourceDatabaseId] = _lastEtag;
+                    context.LastReplicationEtagFrom[_replicationInfo.SourceDatabaseId] = _lastEtag;
                     return operationsCount;
                 }
                 finally
                 {
-                    _incoming._attachmentStreamsTempFile?.Reset();
                     IsIncomingReplication = false;
                 }
             }
@@ -1419,10 +1456,11 @@ namespace Raven.Server.Documents.Replication
             {
                 foreach (LazyStringValue hash in GetAttachmentsHashesFromDocumentMetadata(document))
                 {
-                    if (_incoming._database.DocumentsStorage.AttachmentsStorage.AttachmentExists(context, hash) == false)
+                    if (_replicationInfo.DocumentDatabase.DocumentsStorage.AttachmentsStorage.AttachmentExists(context, hash) == false)
                     {
                         var msg = $"Document '{id}' has attachment '{hash?.ToString() ?? "unknown"}' " +
                                   $"listed as one of his attachments but it doesn't exist in the attachment storage";
+
                         throw new MissingAttachmentException(msg);
                     }
                 }
@@ -1443,25 +1481,18 @@ namespace Raven.Server.Documents.Replication
                 }
             }
 
-            public void Dispose()
-            {
-                foreach (var disposable in _disposables)
-                {
-                    disposable?.Dispose();
-                }
-            }
-
             public override TransactionOperationsMerger.IReplayableCommandDto<TransactionOperationsMerger.MergedTransactionCommand> ToDto(JsonOperationContext context)
             {
-                var replicatedAttachmentStreams = _incoming._replicatedAttachmentStreams
+                var replicatedAttachmentStreams = _replicationInfo.ReplicatedAttachmentStreams?
                     .Select(kv => KeyValuePair.Create(kv.Key.ToString(), kv.Value.Stream))
                     .ToArray();
 
                 return new MergedDocumentReplicationCommandDto
                 {
                     LastEtag = _lastEtag,
-                    ReplicatedItemDtos = _incoming._replicatedItems.Select(i => ReplicationItemToDto(context, i)).ToArray(),
-                    SourceDatabaseId = _incoming.ConnectionInfo.SourceDatabaseId,
+                    SupportedFeatures = _replicationInfo.SupportedFeatures,
+                    ReplicatedItemDtos = _replicationInfo.ReplicatedItems.Select(i => ReplicationItemToDto(context, i)).ToArray(),
+                    SourceDatabaseId = _replicationInfo.SourceDatabaseId,
                     ReplicatedAttachmentStreams = replicatedAttachmentStreams
                 };
             }
@@ -1509,30 +1540,56 @@ namespace Raven.Server.Documents.Replication
         }
     }
 
-
     internal class MergedDocumentReplicationCommandDto : TransactionOperationsMerger.IReplayableCommandDto<IncomingReplicationHandler.MergedDocumentReplicationCommand>
     {
         public ReplicationItemDto[] ReplicatedItemDtos;
         public long LastEtag;
+        public TcpConnectionHeaderMessage.SupportedFeatures SupportedFeatures;
         public string SourceDatabaseId;
         public KeyValuePair<string, Stream>[] ReplicatedAttachmentStreams;
 
         public IncomingReplicationHandler.MergedDocumentReplicationCommand ToCommand(DocumentsOperationContext context, DocumentDatabase database)
         {
-            var connectionInfo = new IncomingConnectionInfo
+            var replicatedItemsCount = ReplicatedItemDtos.Length;
+            var replicationItems = ArrayPool<IncomingReplicationHandler.ReplicationItem>.Shared.Rent(replicatedItemsCount);
+            for (var i = 0; i < replicatedItemsCount; i++)
             {
-                SourceDatabaseId = SourceDatabaseId
-            };
-            var replicationItems = ReplicatedItemDtos.Select(d => d.ToItem(context)).ToList();
+                replicationItems[i] = ReplicatedItemDtos[i].ToItem(context);
+            }
 
-            var replicatedAttachmentStreams = ReplicatedAttachmentStreams.Select(i => CreateReplicationAttachmentStream(context, i)).ToArray();
-            var replicationHandler = new IncomingReplicationHandler(database, replicationItems, connectionInfo, database.ReplicationLoader, replicatedAttachmentStreams);
-            return new IncomingReplicationHandler.MergedDocumentReplicationCommand(replicationHandler, LastEtag);
+            ArraySegment<IncomingReplicationHandler.ReplicationAttachmentStream> attachmentStreams = null;
+            Dictionary<Slice, IncomingReplicationHandler.ReplicationAttachmentStream> replicatedAttachmentStreams = null;
+            if (ReplicatedAttachmentStreams != null)
+            {
+                var attachmentStreamsCount = ReplicatedAttachmentStreams.Length;
+                var replicationAttachmentStreams = ArrayPool<IncomingReplicationHandler.ReplicationAttachmentStream>.Shared.Rent(attachmentStreamsCount);
+                for (var i = 0; i < attachmentStreamsCount; i++)
+                {
+                    var replicationAttachmentStream = ReplicatedAttachmentStreams[i];
+                    replicationAttachmentStreams[i] = CreateReplicationAttachmentStream(context, replicationAttachmentStream);
+                }
+
+                attachmentStreams = new ArraySegment<IncomingReplicationHandler.ReplicationAttachmentStream>(replicationAttachmentStreams, 0, attachmentStreamsCount);
+                replicatedAttachmentStreams = attachmentStreams.ToDictionary(i => i.Base64Hash, SliceComparer.Instance);
+            }
+
+            var dataForReplicationCommand = new IncomingReplicationHandler.DataForReplicationCommand
+            {
+                DocumentDatabase = database,
+                ConflictManager = new ConflictManager(database, database.ReplicationLoader.ConflictResolver),
+                SourceDatabaseId = SourceDatabaseId,
+                ReplicatedItems = new ArraySegment<IncomingReplicationHandler.ReplicationItem>(replicationItems, 0, replicatedItemsCount),
+                AttachmentStreams = attachmentStreams,
+                ReplicatedAttachmentStreams = replicatedAttachmentStreams,
+                SupportedFeatures = SupportedFeatures,
+                Logger = LoggingSource.Instance.GetLogger<IncomingReplicationHandler>(database.Name)
+            };
+
+            return new IncomingReplicationHandler.MergedDocumentReplicationCommand(dataForReplicationCommand, LastEtag);
         }
 
         private IncomingReplicationHandler.ReplicationAttachmentStream CreateReplicationAttachmentStream(DocumentsOperationContext context, KeyValuePair<string, Stream> arg)
         {
-
             var attachmentStream = new IncomingReplicationHandler.ReplicationAttachmentStream();
             attachmentStream.Stream = arg.Value;
             attachmentStream.Base64HashDispose = Slice.From(context.Allocator, arg.Key, ByteStringType.Immutable, out attachmentStream.Base64Hash);
