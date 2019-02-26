@@ -18,6 +18,7 @@ namespace SlowTests.Issues
             using (var store = GetDocumentStore())
             {
                 store.Maintenance.Send(new CreateSampleDataOperation());
+                WaitForIndexing(store);
 
                 using (var session = store.OpenSession())
                 {
