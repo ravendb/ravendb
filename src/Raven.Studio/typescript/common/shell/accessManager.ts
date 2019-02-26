@@ -44,6 +44,7 @@ class accessManager {
     };
     
     certificatesView = {
+        canRenewLetsEncryptCertificate: this.clusterAdminOrClusterNode,
         canDeleteClusterNodeCertificate: this.clusterAdminOrClusterNode,
         canDeleteClusterAdminCertificate: this.clusterAdminOrClusterNode,
         canGenerateClientCertificateForAdmin: this.clusterAdminOrClusterNode
