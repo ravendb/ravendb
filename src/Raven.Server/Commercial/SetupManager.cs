@@ -1569,6 +1569,7 @@ namespace Raven.Server.Commercial
                         foreach (var node in setupInfo.NodeSetupInfos)
                         {
                             var currentNodeSettingsJson = settingsJson.Clone(context);
+                            currentNodeSettingsJson.Modifications = currentNodeSettingsJson.Modifications ?? new DynamicJsonValue(currentNodeSettingsJson);
 
                             progress.AddInfo($"Creating settings file 'settings.json' for node {node.Key}.");
                             onProgress(progress);
