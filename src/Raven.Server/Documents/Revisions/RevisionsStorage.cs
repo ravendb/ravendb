@@ -583,39 +583,36 @@ namespace Raven.Server.Documents.Revisions
                 {
                     if (numberOfRevisionsToDelete <= deletedRevisionsCount)
                         break;
+                   
+                    var tvr = read.Result.Reader;
+                    var revision = TableValueToRevision(context, ref tvr);
 
-                    using (TableValueReaderUtil.CloneTableValueReader(context, read.Result))
+                    if (minimumTimeToKeep.HasValue &&
+                        _database.Time.GetUtcNow() - revision.LastModified <= minimumTimeToKeep.Value)
+                        return deletedRevisionsCount;
+
+                    hasValue = true;
+
+                    using (Slice.From(context.Allocator, revision.ChangeVector, out var keySlice))
                     {
-                        var tvr = read.Result.Reader;
-                        var revision = TableValueToRevision(context, ref tvr);
+                        CreateTombstone(context, keySlice, revision.Etag, collectionName, changeVector, lastModifiedTicks);
 
-                        if (minimumTimeToKeep.HasValue &&
-                            _database.Time.GetUtcNow() - revision.LastModified <= minimumTimeToKeep.Value)
-                            return deletedRevisionsCount;
-
-                        hasValue = true;
-
-                        using (Slice.From(context.Allocator, revision.ChangeVector, out var keySlice))
+                        maxEtagDeleted = Math.Max(maxEtagDeleted, revision.Etag);
+                        if ((revision.Flags & DocumentFlags.HasAttachments) == DocumentFlags.HasAttachments)
                         {
-                            CreateTombstone(context, keySlice, revision.Etag, collectionName, changeVector, lastModifiedTicks);
-
-                            maxEtagDeleted = Math.Max(maxEtagDeleted, revision.Etag);
-                            if ((revision.Flags & DocumentFlags.HasAttachments) == DocumentFlags.HasAttachments)
-                            {
-                                _documentsStorage.AttachmentsStorage.DeleteRevisionAttachments(context, revision, changeVector, lastModifiedTicks);
-                            }
-
-                            var docCollection = CollectionName.GetCollectionName(revision.Data);
-                            if (writeTable == null || docCollection != currentCollection)
-                            {
-                                currentCollection = docCollection;
-                                writeTable = EnsureRevisionTableCreated(context.Transaction.InnerTransaction, new CollectionName(docCollection));
-                            }
-
-                            writeTable.DeleteByKey(keySlice);
+                            _documentsStorage.AttachmentsStorage.DeleteRevisionAttachments(context, revision, changeVector, lastModifiedTicks);
                         }
-                    }
 
+                        var docCollection = CollectionName.GetCollectionName(revision.Data);
+                        if (writeTable == null || docCollection != currentCollection)
+                        {
+                            currentCollection = docCollection;
+                            writeTable = EnsureRevisionTableCreated(context.Transaction.InnerTransaction, new CollectionName(docCollection));
+                        }
+
+                        writeTable.DeleteByKey(keySlice);
+                    }
+                    
                     deletedRevisionsCount++;
                     break;
                 }
