@@ -7,6 +7,7 @@ using System.Threading.Tasks;
 using Raven.Client.Documents;
 using Raven.Client.Documents.Conventions;
 using Raven.Client.Documents.Operations.Counters;
+using Raven.Client.ServerWide.Operations;
 using Raven.Tests.Core.Utils.Entities;
 using Tests.Infrastructure;
 using Xunit;
@@ -76,12 +77,15 @@ namespace SlowTests.Client.Counters
             }
         }
 
-        [Fact]
-        public async Task IncrementCounter()
+        [Theory]
+        [InlineData(3)]
+        [InlineData(5)]
+        [InlineData(7)]
+        public async Task IncrementCounter(int clusterSize)
         {
-            var leader = await CreateRaftClusterAndGetLeader(3);
+            var leader = await CreateRaftClusterAndGetLeader(clusterSize);
             var dbName = GetDatabaseName();
-            var db = await CreateDatabaseInCluster(dbName, 3, leader.WebUrl);
+            var db = await CreateDatabaseInCluster(dbName, clusterSize, leader.WebUrl);
             var stores = db.Servers.Select(s => new DocumentStore
             {
                 Database = dbName,
@@ -97,7 +101,7 @@ namespace SlowTests.Client.Counters
             {
                 using (var s = stores[0].OpenSession())
                 {
-                    s.Advanced.WaitForReplicationAfterSaveChanges(replicas: 2);
+                    s.Advanced.WaitForReplicationAfterSaveChanges(replicas: clusterSize - 1);
                     s.Store(new User { Name = "Aviv" }, "users/1");
                     s.SaveChanges();
                 }
@@ -132,7 +136,9 @@ namespace SlowTests.Client.Counters
                 // wait for replication and verify that all 
                 // stores have the correct accumulated counter-value
 
-                Assert.True(WaitForCounterReplication(stores, "users/1", "likes", expected: 30, timeout: TimeSpan.FromSeconds(15)));
+                Assert.True(WaitForCounterReplication(stores, "users/1", "likes", expected: 10 * clusterSize, timeout: TimeSpan.FromSeconds(15)));
+
+                await stores[0].Maintenance.Server.SendAsync(new DeleteDatabasesOperation(dbName, true));
 
             }
             finally

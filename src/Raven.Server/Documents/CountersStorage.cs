@@ -324,7 +324,9 @@ namespace Raven.Server.Documents
                     }
 
                     var groupEtag = _documentsStorage.GenerateNextEtag();
-                    var changeVector = ChangeVectorUtils.NewChangeVector(_documentDatabase.ServerStore.NodeTag, groupEtag, _documentsStorage.Environment.Base64Id);
+                    var databaseChangeVector = context.LastDatabaseChangeVector ?? GetDatabaseChangeVector(context);
+                    var changeVector = ChangeVectorUtils.TryUpdateChangeVector(_documentDatabase, databaseChangeVector, groupEtag).ChangeVector;
+                    context.LastDatabaseChangeVector = changeVector;
 
                     using (Slice.From(context.Allocator, changeVector, out var cv))
                     using (DocumentIdWorker.GetStringPreserveCase(context, collectionName.Name, out Slice collectionSlice))
@@ -503,6 +505,7 @@ namespace Raven.Server.Documents
 
             try
             {
+                string existingChangeVector = null;
                 var collectionName = _documentsStorage.ExtractCollectionName(context, collection);
                 var table = GetCountersTable(context.Transaction.InnerTransaction, collectionName);
 
@@ -518,7 +521,7 @@ namespace Raven.Server.Documents
                         BlittableJsonReaderObject data;
                         if (table.ReadByKey(counterKey, out var existing))
                         {
-                            var existingChangeVector = TableValueToChangeVector(context, (int)CountersTable.ChangeVector, ref existing);
+                            existingChangeVector = TableValueToChangeVector(context, (int)CountersTable.ChangeVector, ref existing);
 
                             if (ChangeVectorUtils.GetConflictStatus(changeVector, existingChangeVector) == ConflictStatus.AlreadyMerged)
                                 return;
@@ -688,8 +691,9 @@ namespace Raven.Server.Documents
                         }
 
                         var etag = _documentsStorage.GenerateNextEtag();
+                        var changeVectorToSave = ChangeVectorUtils.MergeVectors(existingChangeVector, changeVector);
 
-                        using (Slice.From(context.Allocator, changeVector, out var cv))
+                        using (Slice.From(context.Allocator, changeVectorToSave, out var cv))
                         using (DocumentIdWorker.GetStringPreserveCase(context, collectionName.Name, out Slice collectionSlice))
                         {
                             tvb.Add(counterKey);
