@@ -37,6 +37,12 @@ namespace Raven.Server.Documents.Handlers
         }
 
         [RavenAction("/admin/secrets/generate", "GET", AuthorizationStatus.Operator)]
+        public Task LegacyGenerate()
+        {
+            return Generate();
+        }
+
+        [RavenAction("/secrets/generate", "GET", AuthorizationStatus.ValidUser)]
         public unsafe Task Generate()
         {
             HttpContext.Response.ContentType = "application/base64";
