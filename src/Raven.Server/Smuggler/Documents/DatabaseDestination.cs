@@ -916,12 +916,12 @@ namespace Raven.Server.Smuggler.Documents
                 var count = 0;
                 foreach (var id in Ids)
                 {
-                    using (DocumentIdWorker.GetSliceFromId(context, id, out Slice lowerId))
+                    using (DocumentIdWorker.GetSliceFromId(context, id, out var lowerId))
                     {
-                        if (_database.DocumentsStorage.GetTableValueReaderForDocument(context, lowerId, throwOnConflict: true, out var tvr) == false)
+                        var document = _database.DocumentsStorage.Get(context, lowerId, throwOnConflict: false, skipValidationInDebug: true);
+                        if (document == null)
                             continue;
 
-                        var document = DocumentsStorage.ParseDocument(context, ref tvr);
                         if (document.Data.TryGet(Client.Constants.Documents.Metadata.Key, out BlittableJsonReaderObject metadata) == false ||
                             metadata.TryGet(Client.Constants.Documents.Metadata.Attachments, out BlittableJsonReaderArray attachments) == false)
                             continue;

@@ -776,12 +776,12 @@ namespace Raven.Server.Documents
             }
         }
 
-        public Document Get(DocumentsOperationContext context, Slice lowerId, bool throwOnConflict = true)
+        public Document Get(DocumentsOperationContext context, Slice lowerId, bool throwOnConflict = true, bool skipValidationInDebug = false)
         {
             if (GetTableValueReaderForDocument(context, lowerId, throwOnConflict, out TableValueReader tvr) == false)
                 return null;
 
-            var doc = TableValueToDocument(context, ref tvr);
+            var doc = TableValueToDocument(context, ref tvr, skipValidationInDebug);
 
             context.DocumentDatabase.HugeDocuments.AddIfDocIsHuge(doc);
 
@@ -843,6 +843,7 @@ namespace Raven.Server.Documents
                 return (tvr.Size, allocated);
             }
         }
+
         public bool GetTableValueReaderForDocument(DocumentsOperationContext context, Slice lowerId, bool throwOnConflict, out TableValueReader tvr)
         {
             var table = new Table(DocsSchema, context.Transaction.InnerTransaction);
@@ -1034,19 +1035,22 @@ namespace Raven.Server.Documents
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        private static Document TableValueToDocument(DocumentsOperationContext context, ref TableValueReader tvr)
+        private static Document TableValueToDocument(DocumentsOperationContext context, ref TableValueReader tvr, bool skipValidationInDebug = false)
         {
             var document = ParseDocument(context, ref tvr);
 #if DEBUG
-            Transaction.DebugDisposeReaderAfterTransaction(context.Transaction.InnerTransaction, document.Data);
-            DocumentPutAction.AssertMetadataWasFiltered(document.Data);
-            AttachmentsStorage.AssertAttachments(document.Data, document.Flags);
+            if (skipValidationInDebug == false)
+            {
+                Transaction.DebugDisposeReaderAfterTransaction(context.Transaction.InnerTransaction, document.Data);
+                DocumentPutAction.AssertMetadataWasFiltered(document.Data);
+                AttachmentsStorage.AssertAttachments(document.Data, document.Flags);
+            } 
 #endif
             return document;
-        }        
+        }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public static Document ParseDocument(JsonOperationContext context, ref TableValueReader tvr)
+        private static Document ParseDocument(JsonOperationContext context, ref TableValueReader tvr)
         {
             var result = new Document
             {
