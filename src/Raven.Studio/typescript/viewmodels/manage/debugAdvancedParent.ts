@@ -1,6 +1,7 @@
 import viewModelBase = require("viewmodels/viewModelBase");
 import appUrl = require("common/appUrl");
 import durandalRouter = require("plugins/router");
+import accessManager = require("common/shell/accessManager");
 
 class debugAdvanced extends viewModelBase {
     router: DurandalRootRouter;
@@ -41,7 +42,7 @@ class debugAdvanced extends viewModelBase {
                     moduleId: 'viewmodels/manage/debugAdvancedRecordTransactionCommands',
                     title: 'Record Transaction Commands',
                     tabName: "Record Transaction Commands",
-                    nav: true,
+                    nav: accessManager.default.manageServerMenu.enableRecordTransactionCommands(),
                     hash: appUrl.forDebugAdvancedRecordTransactionCommands()
                 },
                 {

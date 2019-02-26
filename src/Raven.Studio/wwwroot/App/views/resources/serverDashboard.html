@@ -14,7 +14,7 @@
                             <i class="icon-clock"></i><span>Up for <strong data-bind="text: formattedUpTime" class="text-success"></strong></span>
                         </div>
                         <div data-bind="visible: usingHttps">
-                            <i class="icon-lock"></i><span>Secured <small><a href="#" data-bind="attr: { href: certificatesUrl }">Manage certificates</a></small></span>
+                            <i class="icon-lock"></i><span>Secured <small><a href="#" data-bind="attr: { href: certificatesUrl }, visible: showCertificatesLink">Manage certificates</a></small></span>
                         </div>
                         <div class="flex-horizontal" data-bind="with: clusterManager.topology">
                             <div><i class="icon-cluster"></i><span>Cluster</span></div>

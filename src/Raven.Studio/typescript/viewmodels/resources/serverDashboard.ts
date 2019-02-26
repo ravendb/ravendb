@@ -698,6 +698,7 @@ class serverDashboard extends viewModelBase {
     usingHttps = location.protocol === "https:";
 
     certificatesUrl = appUrl.forCertificates();
+    showCertificatesLink = this.accessManager.showCertificatesLink;
     
     trafficSection = new trafficSection();
     databasesSection = new databasesSection();
@@ -743,7 +744,7 @@ class serverDashboard extends viewModelBase {
         this.trafficSection.init();
         this.databasesSection.init();
         this.indexingSpeedSection.init();
-        this.machineResourcesSection.init();
+        this.maybeDispatchResourcesCall(s => s.init());
         this.driveUsageSection.init();
         
         $(".drive-usage-container").each((idx, el) => {
@@ -757,8 +758,14 @@ class serverDashboard extends viewModelBase {
     private onResize() {
         this.trafficSection.onResize();
         this.indexingSpeedSection.onResize();
-        this.machineResourcesSection.onResize();
+        this.maybeDispatchResourcesCall(s => s.onResize());
         this.driveUsageSection.onResize();
+    }
+    
+    private maybeDispatchResourcesCall(action: (resources: machineResourcesSection) => void) {
+        if (this.accessManager.showCPUAndMemGraph()) {
+            action(this.machineResourcesSection);
+        }
     }
     
     deactivate() {
@@ -781,7 +788,7 @@ class serverDashboard extends viewModelBase {
                 this.driveUsageSection.onData(data as Raven.Server.Dashboard.DrivesUsage);
                 break;
             case "MachineResources":
-                this.machineResourcesSection.onData(data as Raven.Server.Dashboard.MachineResources);
+                this.maybeDispatchResourcesCall(s => s.onData(data as Raven.Server.Dashboard.MachineResources));
                 break;
             case "TrafficWatch":
                 this.trafficSection.onData(data as Raven.Server.Dashboard.TrafficWatch);
