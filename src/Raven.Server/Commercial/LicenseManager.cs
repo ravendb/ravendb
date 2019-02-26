@@ -1423,7 +1423,7 @@ namespace Raven.Server.Commercial
             if (_licenseStatus.HasHighlyAvailableTasks)
                 return null;
 
-            var lastResponsibleNode = databaseTaskStatus.NodeTag;
+            var lastResponsibleNode = databaseTaskStatus?.NodeTag;
             if (lastResponsibleNode == null)
                 return null;
 
