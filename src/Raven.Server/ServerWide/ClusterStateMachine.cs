@@ -130,7 +130,7 @@ namespace Raven.Server.ServerWide
             });
 
             // We use the follow format for the certificates data
-            // { thumbprint, hash, data }
+            // { key, hash, data }
             CertificatesSchema = new TableSchema();
             CertificatesSchema.DefineKey(new TableSchema.SchemaIndexDef()
             {
@@ -1014,13 +1014,13 @@ namespace Raven.Server.ServerWide
                 var command = (PutCertificateCommand)CommandBase.CreateFrom(cmd);
 
                 using (Slice.From(context.Allocator, command.PublicKeyPinningHash, out Slice hashSlice))
-                using (Slice.From(context.Allocator, command.Name.ToLowerInvariant(), out Slice lowerKeySlice))
+                using (Slice.From(context.Allocator, command.Name, out Slice keySlice))
                 using (var rec = context.ReadObject(command.ValueToJson(), "inner-val"))
                 {
                     if (_clusterAuditLog.IsInfoEnabled)
                         _clusterAuditLog.Info($"Registering new certificate '{command.Value.Thumbprint}' in the cluster.");
 
-                    UpdateCertificate(index, certs, lowerKeySlice, hashSlice, rec);
+                    UpdateCertificate(index, certs, keySlice, hashSlice, rec);
                     return command.Value;
                 }
             }
@@ -1234,11 +1234,10 @@ namespace Raven.Server.ServerWide
             ItemsSchema.Create(context.Transaction.InnerTransaction, Items, 32);
             CompareExchangeSchema.Create(context.Transaction.InnerTransaction, CompareExchange, 32);
             TransactionCommandsSchema.Create(context.Transaction.InnerTransaction, TransactionCommands, 32);
-            CertificatesSchema.Create(context.Transaction.InnerTransaction, TransactionCommands, 32);
+            CertificatesSchema.Create(context.Transaction.InnerTransaction, CertificatesSlice, 32);
             context.Transaction.InnerTransaction.CreateTree(TransactionCommandsCountPerDatabase);
             context.Transaction.InnerTransaction.CreateTree(LocalNodeStateTreeName);
             context.Transaction.InnerTransaction.CreateTree(Identities);
-            context.Transaction.InnerTransaction.CreateTree(CertificatesSlice);
             parent.StateChanged += OnStateChange;
         }
 
@@ -1599,22 +1598,6 @@ namespace Raven.Server.ServerWide
         private static unsafe CertificateDefinition GetCertificateDefinition(TransactionOperationContext context, Table.TableValueHolder result)
         {
             return JsonDeserializationServer.CertificateDefinition(GetCertificate(context, result).Cert);
-        }
-
-        public IEnumerable<(string ItemName, BlittableJsonReaderObject Value)> GetCertificatesByPinningHash2(TransactionOperationContext context, string hash, int take = int.MaxValue)
-        {
-            var certs = context.Transaction.InnerTransaction.OpenTable(CertificatesSchema, CertificatesSlice);
-            var index = CertificatesSchema.Indexes[CertificatesHashSlice];
-            using (Slice.From(context.Allocator, hash, out Slice hashSlice))
-            {
-                foreach (var result in certs.SeekForwardFrom(index, Slices.BeforeAllKeys, 0))
-                {
-                    if (take-- <= 0)
-                        yield break;
-
-                    yield return GetCertificate(context, result.Result);
-                }
-            }
         }
 
         public List<CertificateDefinition> GetCertificatesByPinningHashSortedByExpiration(TransactionOperationContext context, string hash)
@@ -1994,7 +1977,7 @@ namespace Raven.Server.ServerWide
             using (context.OpenWriteTransaction())
             {
                 // lets read all the certificate keys from the cluster, and delete the matching ones from the local state
-                var clusterCertificateKeys = serverStore.Cluster.ItemKeysStartingWith(context, Constants.Certificates.Prefix, 0, int.MaxValue);
+                var clusterCertificateKeys = serverStore.Cluster.GetCertificateKeysFromCluster(context);
 
                 foreach (var key in clusterCertificateKeys)
                 {
