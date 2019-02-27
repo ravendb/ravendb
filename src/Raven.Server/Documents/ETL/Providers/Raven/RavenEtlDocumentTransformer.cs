@@ -391,7 +391,7 @@ namespace Raven.Server.Documents.ETL.Providers.Raven
             else
             {
                 delete = false;
-                value = CountersStorage.InternalGetCounterValue(prop.Value as BlittableJsonReaderObject.RawBlob);
+                value = CountersStorage.InternalGetCounterValue(prop.Value as BlittableJsonReaderObject.RawBlob, docId, prop.Name);
 
                 if (function != null)
                 {
