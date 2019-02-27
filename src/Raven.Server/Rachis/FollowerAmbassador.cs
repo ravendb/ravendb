@@ -204,7 +204,8 @@ namespace Raven.Server.Rachis
                         }
                         catch (Exception e)
                         {
-                            if (e is RachisConcurrencyException == false)
+                            if (e is RachisConcurrencyException == false && 
+                                RachisConsensus.IsExpectedException(e) == false)
                                 NotifyOnException(ref hadConnectionFailure, new Exception($"Failed to create a connection to node {_tag} at {_url}", e));
 
                             _leader.WaitForNewEntries().Wait(TimeSpan.FromMilliseconds(_engine.ElectionTimeout.TotalMilliseconds / 2));
