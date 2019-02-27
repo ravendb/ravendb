@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
+using Sparrow.Platform;
 using Sparrow.Utils;
 
 namespace Raven.Embedded
@@ -19,29 +20,7 @@ namespace Raven.Embedded
             if (string.IsNullOrWhiteSpace(options.LogsPath))
                 throw new ArgumentNullException(nameof(options.LogsPath));
 
-            var serverDllPath = Path.Combine(options.ServerDirectory, "Raven.Server.dll");
-            var serverDllFound = File.Exists(serverDllPath);
-
-            if (serverDllFound == false)
-            {
-                if (string.Equals(options.ServerDirectory, ServerOptions.DefaultServerDirectory, StringComparison.OrdinalIgnoreCase))
-                {
-                    // ASP.NET (not Core) AppContext.BaseDirectory is not in 'bin' folder
-                    // but NuSpec contentFiles are extracting there
-                    var aspNetServerDllPath = Path.Combine(ServerOptions.AltServerDirectory, "Raven.Server.dll");
-                    if (File.Exists(aspNetServerDllPath))
-                    {
-                        serverDllFound = true;
-                        serverDllPath = aspNetServerDllPath;
-                    }
-                }
-
-                if (serverDllFound == false)
-                    throw new FileNotFoundException("Server file was not found", serverDllPath);
-            }
-
-            if (string.IsNullOrWhiteSpace(options.DotNetPath))
-                throw new ArgumentNullException(nameof(options.DotNetPath));
+            (string exec, string fstArg) = GetExecAndFirstArgument(options);
 
             var commandLineArgs = new List<string>(options.CommandLineArgs);
 
@@ -80,16 +59,20 @@ namespace Raven.Embedded
             }
 
             commandLineArgs.Add($"--ServerUrl={options.ServerUrl}");
-            commandLineArgs.Insert(0, CommandLineArgumentEscaper.EscapeSingleArg(serverDllPath));
 
-            if (string.IsNullOrWhiteSpace(options.FrameworkVersion) == false)
-                commandLineArgs.Insert(0, $"--fx-version {options.FrameworkVersion}");
+            if (fstArg != null)
+            {
+                commandLineArgs.Insert(0, CommandLineArgumentEscaper.EscapeSingleArg(fstArg));
+
+                if (string.IsNullOrWhiteSpace(options.FrameworkVersion) == false)
+                    commandLineArgs.Insert(0, $"--fx-version {options.FrameworkVersion}");
+            }
 
             var argumentsString = string.Join(" ", commandLineArgs);
 
             var processStartInfo = new ProcessStartInfo
             {
-                FileName = options.DotNetPath,
+                FileName = exec,
                 Arguments = argumentsString,
                 CreateNoWindow = true,
                 RedirectStandardOutput = true,
@@ -115,6 +98,42 @@ namespace Raven.Embedded
             }
 
             return process;
+        }
+
+        private static (string Exec, string FirstArgument) GetExecAndFirstArgument(ServerOptions options)
+        {
+            string exec = Path.Combine(options.ServerDirectory,
+                PlatformDetails.RunningOnPosix ? "Raven.Server" : "Raven.Server.exe"
+            );
+
+            if (File.Exists(exec))
+                return (exec, null);
+            
+            var serverDllPath = Path.Combine(options.ServerDirectory, "Raven.Server.dll");
+            var serverDllFound = File.Exists(serverDllPath);
+
+            if (serverDllFound == false)
+            {
+                if (string.Equals(options.ServerDirectory, ServerOptions.DefaultServerDirectory, StringComparison.OrdinalIgnoreCase))
+                {
+                    // ASP.NET (not Core) AppContext.BaseDirectory is not in 'bin' folder
+                    // but NuSpec contentFiles are extracting there
+                    var aspNetServerDllPath = Path.Combine(ServerOptions.AltServerDirectory, "Raven.Server.dll");
+                    if (File.Exists(aspNetServerDllPath))
+                    {
+                        serverDllFound = true;
+                        serverDllPath = aspNetServerDllPath;
+                    }
+                }
+
+                if (serverDllFound == false)
+                    throw new FileNotFoundException("Server file was not found", serverDllPath);
+            }
+
+            if (string.IsNullOrWhiteSpace(options.DotNetPath))
+                throw new ArgumentNullException(nameof(options.DotNetPath));
+
+            return (options.DotNetPath, serverDllPath);
         }
 
         private static void RemoveEnvironmentVariables(ProcessStartInfo processStartInfo)

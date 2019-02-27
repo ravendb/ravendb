@@ -5,12 +5,6 @@ namespace Raven.TestDriver
 {
     public class TestServerOptions : ServerOptions
     {
-        public new string ServerDirectory
-        {
-            get => base.ServerDirectory;
-            set => base.ServerDirectory = value;
-        }
-
         public static TestServerOptions UseFiddler()
         {
             return new TestServerOptions

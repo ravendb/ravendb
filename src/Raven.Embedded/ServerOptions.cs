@@ -17,7 +17,7 @@ namespace Raven.Embedded
 
         public string DataDirectory { get; set; } = Path.Combine(AppContext.BaseDirectory, "RavenDB");
 
-        internal string ServerDirectory { get; set; } = DefaultServerDirectory;
+        public string ServerDirectory { get; set; } = DefaultServerDirectory;
 
         public string DotNetPath { get; set; } = "dotnet";
 
