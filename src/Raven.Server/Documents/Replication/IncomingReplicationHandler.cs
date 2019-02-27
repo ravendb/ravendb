@@ -540,6 +540,7 @@ namespace Raven.Server.Documents.Replication
                     foreach (var item in ReplicatedItems)
                     {
                         item.Document?.Dispose();
+                        item.CounterValues?.Dispose();
                     }
 
                     ArrayPool<ReplicationItem>.Shared.Return(ReplicatedItems.Array, clearArray: true);
