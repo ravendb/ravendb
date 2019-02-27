@@ -664,7 +664,7 @@ namespace Raven.Server.Documents
                                 if (modified == false)
                                     continue;
 
-                                var value = InternalGetCounterValue(localCounterValues);
+                                var value = InternalGetCounterValue(localCounterValues, documentId, counterName);
                                 context.Transaction.AddAfterCommitNotification(new CounterChange
                                 {
                                     ChangeVector = changeVector,
@@ -719,17 +719,24 @@ namespace Raven.Server.Documents
             }
         }
 
-        internal static long InternalGetCounterValue(BlittableJsonReaderObject.RawBlob localCounterValues)
+        internal static long InternalGetCounterValue(BlittableJsonReaderObject.RawBlob localCounterValues, string docId, string counterName)
         {
             Debug.Assert(localCounterValues != null);
-
             var count = localCounterValues.Length / SizeOfCounterValues;
             long value = 0;
 
-            for (int index = 0; index < count; index++)
+            try
             {
-                value += ((CounterValues*)localCounterValues.Ptr)[index].Value;
+                for (int index = 0; index < count; index++)
+                {
+                    value = checked(value + ((CounterValues*)localCounterValues.Ptr)[index].Value);
+                }
             }
+            catch (OverflowException e)
+            {
+                CounterOverflowException.ThrowFor(docId, counterName, e);
+            }
+
 
             return value;
         }
@@ -887,7 +894,7 @@ namespace Raven.Server.Documents
             if (TryGetRawBlob(context, docId, counterName, out var blob) == false)
                 return null;
 
-            return InternalGetCounterValue(blob);
+            return InternalGetCounterValue(blob, docId, counterName);
         }
 
         private static bool TryGetRawBlob(DocumentsOperationContext context, string docId, string counterName, out BlittableJsonReaderObject.RawBlob blob)
