@@ -12,7 +12,7 @@ namespace Raven.Server.Dashboard
         
         public virtual DynamicJsonValue ToJson()
         {
-            return new DynamicJsonValue()
+            return new DynamicJsonValue
             {
                 [nameof(Type)] = Type,
                 [nameof(Date)] = Date
