@@ -2,13 +2,14 @@
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq;
+using Raven.Client.Util;
 using Sparrow.Json.Parsing;
 
 namespace Raven.Server.Dashboard
 {
-    public class ThreadsInfo : AbstractDashboardNotification
+    public class ThreadsInfo : IDynamicJson
     {
-        public override DashboardNotificationType Type => DashboardNotificationType.ThreadsInfo;
+        public DateTime Date => SystemTime.UtcNow;
 
         public List<ThreadInfo> List { get; }
 
@@ -21,13 +22,15 @@ namespace Raven.Server.Dashboard
             List = new List<ThreadInfo>();
         }
 
-        public override DynamicJsonValue ToJson()
+        public DynamicJsonValue ToJson()
         {
-            var json = base.ToJson();
-            json[nameof(List)] = new DynamicJsonArray(List.Select(x => x.ToJson()));
-            json[nameof(CpuUsage)] = CpuUsage;
-            json[nameof(ActiveCores)] = ActiveCores;
-            return json;
+            return new DynamicJsonValue
+            {
+                [nameof(Date)] = Date,
+                [nameof(List)] = new DynamicJsonArray(List.Select(x => x.ToJson())),
+                [nameof(CpuUsage)] = CpuUsage,
+                [nameof(ActiveCores)] = ActiveCores
+            };
         }
     }
 
