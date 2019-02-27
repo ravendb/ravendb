@@ -77,9 +77,7 @@ namespace Raven.Client.Json
             }
             else
             {
-                throw new ArgumentException(
-                    "Illegal path, cannot understand how toget tokens from: " 
-                    + result + " <" + result.GetType().FullName +">" ); 
+                throw new ArgumentException($"Illegal path ('{path}'), cannot understand how to get tokens from: {result} <{result.GetType().FullName}>");
             }
         }
     }
