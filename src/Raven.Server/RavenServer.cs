@@ -985,8 +985,9 @@ namespace Raven.Server
 
                                 if (_authAuditLog.IsInfoEnabled)
                                     _authAuditLog.Info($"Got connection with new certificate: '{certificate.Subject} ({certificate.Thumbprint})' but it's not registered in the cluster. " +
-                                                        "Allowing the connection based on certificate's Public Key Pinning Hash which is trusted by the cluster. " +
-                                                        "Registering the new certificate explicitly with same permissions as the original certificate.");
+                                                       "Allowing the connection based on certificate's HTTP Public Key Pinning Hash (HPKP) which is trusted by the cluster. " +
+                                                       $"Registering the new certificate explicitly. Security Clearance: {newCertDef.SecurityClearance}, " +
+                                                       $"Permissions:{Environment.NewLine}{string.Join(Environment.NewLine, newCertDef.Permissions.Select(kvp => kvp.Key + ": " + kvp.Value.ToString()))}");
 
                                 cert = ctx.ReadObject(newCertDef.ToJson(), "Client/Certificate/Definition");
                             }

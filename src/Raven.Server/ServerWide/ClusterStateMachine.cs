@@ -136,7 +136,7 @@ namespace Raven.Server.ServerWide
             {
                 StartIndex = (int)CertificatesTable.Key,
                 Count = 1,
-                IsGlobal = false, // iftah ?
+                IsGlobal = false,
                 Name = CertificatesSlice
             });
             CertificatesSchema.DefineIndex(new TableSchema.SchemaIndexDef
