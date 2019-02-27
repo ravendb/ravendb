@@ -1,4 +1,6 @@
-﻿using System.Threading.Tasks;
+﻿using System;
+using System.Diagnostics;
+using System.Threading.Tasks;
 using FastTests;
 using SlowTests.Server.Replication;
 using Xunit;
@@ -10,7 +12,8 @@ namespace StressTests.Issues
         [Fact]
         public void Should_not_throw_timeout_and_out_of_memory()
         {
-            Parallel.For(0, 10, RavenTestHelper.DefaultParallelOptions, i =>
+            int parallel = Math.Min((int)(Environment.ProcessorCount + 0.5) / 2, 10);
+            Parallel.For(0, parallel, RavenTestHelper.DefaultParallelOptions, i =>
             {
                 using (var store = new ReplicationTombstoneTests())
                 {
