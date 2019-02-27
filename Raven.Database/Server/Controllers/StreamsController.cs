@@ -246,69 +246,67 @@ namespace Raven.Database.Server.Controllers
 
             var msg = GetEmptyMessage();
 
-            using (var cts = new CancellationTokenSource())
+            var cts = new CancellationTokenSource();
+            var timeout = cts.TimeoutAfter(TimeSpan.FromSeconds(timeoutSeconds));
+            var indexQuery = new IndexQuery
             {
-                var timeout = cts.TimeoutAfter(TimeSpan.FromSeconds(timeoutSeconds));
-                var indexQuery = new IndexQuery
+                PageSize = pageSize,
+                Start = 0,
+                Query = "Tag:" + collection,
+                ResultsTransformer = transformerName
+            };
+
+            StreamQueryContent streamQueryContent = null;
+
+            try
+            {
+                var parameters = new StreamQueryContent.InitParameters
                 {
-                    PageSize = pageSize,
-                    Start = 0,
-                    Query = "Tag:" + collection,
-                    ResultsTransformer = transformerName
+                    Req = InnerRequest,
+                    Database = Database,
+                    Cts = cts,
+                    Timeout = timeout,
+                    ContentTypeSetter = mediaType => msg.Content.Headers.ContentType = new MediaTypeHeaderValue(mediaType) { CharSet = "utf-8" },
+                    Query = indexQuery,                        
                 };
+                streamQueryContent = new StreamQueryContent(parameters);
+                msg.Content = streamQueryContent;
 
-                StreamQueryContent streamQueryContent = null;
-
-                try
-                {
-                    var parameters = new StreamQueryContent.InitParameters
+                var header = await Task.Run(async ()=> await streamQueryContent.HeaderReady.ConfigureAwait(false), cts.Token).ConfigureAwait(false);
+                //This is just a callback, it should be invoked in the same thread as the query was invoked at.
+                streamQueryContent.ModifyDocument = (queryOp, o) =>
                     {
-                        Req = InnerRequest,
-                        Database = Database,
-                        Cts = cts,
-                        Timeout = timeout,
-                        ContentTypeSetter = mediaType => msg.Content.Headers.ContentType = new MediaTypeHeaderValue(mediaType) { CharSet = "utf-8" },
-                        Query = indexQuery,                        
-                    };
-                    streamQueryContent = new StreamQueryContent(parameters);
-                    msg.Content = streamQueryContent;
-
-                    var header = await Task.Run(async ()=> await streamQueryContent.HeaderReady.ConfigureAwait(false), cts.Token).ConfigureAwait(false);
-                    //This is just a callback, it should be invoked in the same thread as the query was invoked at.
-                    streamQueryContent.ModifyDocument = (queryOp, o) =>
+                        if (o.Count == 2 &&
+                            o.ContainsKey(Constants.DocumentIdFieldName) &&
+                                o.ContainsKey(Constants.Metadata))
                         {
-                            if (o.Count == 2 &&
-                                o.ContainsKey(Constants.DocumentIdFieldName) &&
-                                    o.ContainsKey(Constants.Metadata))
-                            {
-                                // this is the raw value out of the server, we don't want to get that
-                                var doc = queryOp.DocRetriever.Load(o.Value<string>(Constants.DocumentIdFieldName));
-                                var djo = doc as IDynamicJsonObject;
-                                if (djo != null)
-                                    return djo.Inner;
-                            }
-                            return o;
-                        };
-                    msg.Headers.Add("Raven-Result-Etag", header.ResultEtag.ToString());
-                    msg.Headers.Add("Raven-Index-Etag", header.IndexEtag.ToString());
-                    msg.Headers.Add("Raven-Is-Stale", header.IsStale ? "true" : "false");
-                    msg.Headers.Add("Raven-Index", header.Index);
-                    msg.Headers.Add("Raven-Total-Results", header.TotalResults.ToString(CultureInfo.InvariantCulture));
-                    msg.Headers.Add("Raven-Index-Timestamp", header.IndexTimestamp.GetDefaultRavenFormat());
+                            // this is the raw value out of the server, we don't want to get that
+                            var doc = queryOp.DocRetriever.Load(o.Value<string>(Constants.DocumentIdFieldName));
+                            var djo = doc as IDynamicJsonObject;
+                            if (djo != null)
+                                return djo.Inner;
+                        }
+                        return o;
+                    };
+                msg.Headers.Add("Raven-Result-Etag", header.ResultEtag.ToString());
+                msg.Headers.Add("Raven-Index-Etag", header.IndexEtag.ToString());
+                msg.Headers.Add("Raven-Is-Stale", header.IsStale ? "true" : "false");
+                msg.Headers.Add("Raven-Index", header.Index);
+                msg.Headers.Add("Raven-Total-Results", header.TotalResults.ToString(CultureInfo.InvariantCulture));
+                msg.Headers.Add("Raven-Index-Timestamp", header.IndexTimestamp.GetDefaultRavenFormat());
 
-                    if (IsCsvDownloadRequest(InnerRequest))
-                    {
-                        msg.Content.Headers.Add("Content-Disposition", "attachment; filename=export.csv");
-                    }
-                }
-                catch (Exception)
+                if (IsCsvDownloadRequest(InnerRequest))
                 {
-                    streamQueryContent?.Dispose();
-                    throw;
+                    msg.Content.Headers.Add("Content-Disposition", "attachment; filename=export.csv");
                 }
-
-                return msg;
             }
+            catch (Exception)
+            {
+                streamQueryContent?.Dispose();
+                throw;
+            }
+
+            return msg;
         }
 
         [HttpPost]
@@ -327,7 +325,7 @@ namespace Raven.Database.Server.Controllers
         {
             public QueryActions.DatabaseQueryOperation QueryOp { get; private set; }
             private readonly HttpRequestMessage req;
-
+            private readonly CancellationTokenSource _cts;
             private readonly TaskCompletionSource<QueryHeaderInformation> _headerReady = new TaskCompletionSource<QueryHeaderInformation>();
             private readonly TaskCompletionSource<Stream> _streamReady = new TaskCompletionSource<Stream>();
             public Task<QueryHeaderInformation> HeaderReady => _headerReady.Task;
@@ -362,6 +360,7 @@ namespace Raven.Database.Server.Controllers
                 headers = CurrentOperationContext.Headers.Value;
                 user = CurrentOperationContext.User.Value;
                 req = parameters.Req;
+                _cts = parameters.Cts;
                 _streamTask = Task.Run(() => { ActuallyStreamResults(parameters); }, parameters.Cts.Token);
                 _timeout = parameters.Timeout;
                 outputContentTypeSetter = parameters.ContentTypeSetter;
@@ -406,6 +405,7 @@ namespace Raven.Database.Server.Controllers
                     CurrentOperationContext.User.Value = user;
                     CurrentOperationContext.Headers.Value = headers;
                     var bufferSize = totalResults > 1024 ? 1024 * 64 : 1024 * 8;
+                    using(_cts)
                     using (var bufferedStream = new BufferedStream(stream, bufferSize))
                     using (QueryOp)
                     using (_timeout)
