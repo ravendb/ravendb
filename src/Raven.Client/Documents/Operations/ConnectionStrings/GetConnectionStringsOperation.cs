@@ -45,14 +45,14 @@ namespace Raven.Client.Documents.Operations.ConnectionStrings
                 _type = type;
             }
 
-            public override bool IsReadRequest => false;
+            public override bool IsReadRequest => true;
 
             public override HttpRequestMessage CreateRequest(JsonOperationContext ctx, ServerNode node, out string url)
             {
-                url = $"{node.Url}/databases/{node.Database}/admin/connection-strings?";
+                url = $"{node.Url}/databases/{node.Database}/admin/connection-strings";
                 if (_connectionStringName != null)
                 {
-                    url += $"&connectionStringName={_connectionStringName}&type={_type}";
+                    url += $"?connectionStringName={_connectionStringName}&type={_type}";
                 }
 
                 var request = new HttpRequestMessage
