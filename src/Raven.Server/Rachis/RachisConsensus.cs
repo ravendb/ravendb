@@ -1903,7 +1903,7 @@ namespace Raven.Server.Rachis
             if (e is AggregateException)
                 return IsExpectedException(e.InnerException);
 
-            return e is OperationCanceledException || e is LockAlreadyDisposedException;
+            return e is OperationCanceledException || e is ObjectDisposedException;
         }
     }
 

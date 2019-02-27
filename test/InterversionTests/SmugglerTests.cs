@@ -245,7 +245,9 @@ namespace InterversionTests
                     store41.Maintenance.Send(new CreateSampleDataOperation());
 
                     var options = new DatabaseSmugglerExportOptions();
+#pragma warning disable 618
                     options.OperateOnTypes &= ~DatabaseItemType.Counters;
+#pragma warning restore 618
 
                     var operation = await store41.Smuggler.ExportAsync(options, file);
                     await operation.WaitForCompletionAsync(TimeSpan.FromMinutes(1));
@@ -404,8 +406,8 @@ namespace InterversionTests
                         }
                         session.SaveChanges();
                     }
-                        var operation = await store42.Smuggler.ExportAsync(new DatabaseSmugglerExportOptions(), file);
-                        await operation.WaitForCompletionAsync(TimeSpan.FromMinutes(1));
+                    var operation = await store42.Smuggler.ExportAsync(new DatabaseSmugglerExportOptions(), file);
+                    await operation.WaitForCompletionAsync(TimeSpan.FromMinutes(1));
 
                     var stats = await store42.Maintenance.SendAsync(new GetStatisticsOperation());
 
