@@ -8,7 +8,7 @@ using Raven.Client;
 
 namespace Raven.Server.Documents.Indexes.Persistence.Lucene.Collectors
 {
-    public class IntersectionCollector : Collector
+    public sealed class IntersectionCollector : Collector
     {
         private readonly Dictionary<string, SubQueryResult> _results = new Dictionary<string, SubQueryResult>();
         private IndexReader _currentReader;

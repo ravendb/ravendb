@@ -1,4 +1,5 @@
-﻿using System.Collections.Generic;
+﻿using System;
+using System.Collections.Generic;
 
 using Lucene.Net.Index;
 using Lucene.Net.Search;
@@ -6,7 +7,7 @@ using Lucene.Net.Store;
 
 namespace Raven.Server.Documents.Indexes.Persistence.Lucene.Collectors
 {
-    public class NonSortingCollector : Collector
+    public sealed class NonSortingCollector : Collector, IDisposable
     {
         private readonly int _numberOfDocsToCollect;
         private readonly List<ScoreDoc> _docs;
@@ -19,7 +20,7 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene.Collectors
         public NonSortingCollector(int numberOfDocsToCollect)
         {
             _numberOfDocsToCollect = numberOfDocsToCollect;
-            _docs = new List<ScoreDoc>(_numberOfDocsToCollect);
+            _docs = CollectorsPool.Instance.Allocate();            
         }
 
         public override void SetScorer(Scorer scorer)
@@ -51,6 +52,12 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene.Collectors
         public TopDocs ToTopDocs()
         {
             return new TopDocs(_totalHits, _docs.ToArray(), _maxScore);
+        }
+
+        public void Dispose()
+        {
+            _docs.Clear();
+            CollectorsPool.Instance.Free(_docs);
         }
     }
 }
