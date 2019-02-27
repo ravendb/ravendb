@@ -21,6 +21,12 @@ namespace SlowTests.Server.Documents.Indexing.MapReduce
             {
                 await CreateDataAndIndexes(store);
 
+                var collectionStats = await store.Maintenance.SendAsync(new GetCollectionStatisticsOperation());
+                Assert.Equal(120, collectionStats.Collections["Invoices"]);
+                Assert.Equal(93, collectionStats.Collections["DailyInvoices"]);
+                Assert.Equal(31, collectionStats.Collections["MonthlyInvoices"]);
+                Assert.Equal(4, collectionStats.Collections["YearlyInvoices"]);
+
                 using (var session = store.OpenAsyncSession())
                 {
                     Assert.Equal(120, await session.Query<Invoice>().CountAsync());
@@ -194,6 +200,14 @@ namespace SlowTests.Server.Documents.Indexing.MapReduce
             await store.ExecuteIndexAsync(new YearlyInvoicesIndex());
 
             WaitForIndexing(store);
+
+            WaitForValue(() =>
+            {
+                var stats = store.Maintenance.Send(new GetCollectionStatisticsOperation());
+                return stats.Collections != null && stats.Collections.Count >= 5;
+            }, true);
+
+            RavenTestHelper.AssertNoIndexErrors(store);
         }
 
         public class Marker
