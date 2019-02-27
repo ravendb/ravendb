@@ -510,6 +510,66 @@ namespace Voron.Data.Tables
             return id;
         }
 
+        public long Insert2(TableValueBuilder builder)
+        {
+            AssertWritableTable();
+
+            // Any changes done to this method should be reproduced in the Insert below, as they're used when compacting.
+            // The ids returned from this function MUST NOT be stored outside of the transaction.
+            // These are merely for manipulation within the same transaction, and WILL CHANGE afterwards.
+
+            var size = builder.Size;
+
+            byte* pos;
+            long id;
+
+            if (size + sizeof(RawDataSection.RawDataEntrySizes) < RawDataSection.MaxItemSize)
+            {
+                id = AllocateFromSmallActiveSection(builder, size);
+                Console.WriteLine(id);
+                if (ActiveDataSmallSection.TryWriteDirect(id, size, out pos) == false)
+                    throw new VoronErrorException(
+                        $"After successfully allocating {size:#,#;;0} bytes, failed to write them on {Name}");
+
+                // Memory Copy into final position.
+                builder.CopyTo(pos);
+            }
+            else
+            {
+                var numberOfOverflowPages = VirtualPagerLegacyExtensions.GetNumberOfOverflowPages(size);
+                var page = _tx.LowLevelTransaction.AllocatePage(numberOfOverflowPages);
+                _overflowPageCount += numberOfOverflowPages;
+
+                page.Flags = PageFlags.Overflow | PageFlags.RawData;
+                page.OverflowSize = size;
+
+                ((RawDataOverflowPageHeader*)page.Pointer)->SectionOwnerHash = ActiveDataSmallSection.SectionOwnerHash;
+                ((RawDataOverflowPageHeader*)page.Pointer)->TableType = _tableType;
+
+                pos = page.Pointer + PageHeader.SizeOf;
+
+                builder.CopyTo(pos);
+
+                id = page.PageNumber * Constants.Storage.PageSize;
+            }
+
+            var tvr = new TableValueReader(pos, size);
+            InsertIndexValuesFor(id, ref tvr);
+
+            NumberOfEntries++;
+
+            byte* ptr;
+            using (_tableTree.DirectAdd(TableSchema.StatsSlice, sizeof(TableSchemaStats), out ptr))
+            {
+                var stats = (TableSchemaStats*)ptr;
+
+                stats->NumberOfEntries = NumberOfEntries;
+                stats->OverflowPageCount = _overflowPageCount;
+            }
+
+            return id;
+        }
+
         private void UpdateValuesFromIndex(long id, ref TableValueReader oldVer, TableValueBuilder newVer, bool forceUpdate)
         {
             AssertWritableTable();
@@ -1315,6 +1375,29 @@ namespace Voron.Data.Tables
             }
 
             Insert(builder);
+            return true;
+        }
+
+        public bool Set2(TableValueBuilder builder, bool forceUpdate = false)
+        {
+            AssertWritableTable();
+
+            // The ids returned from this function MUST NOT be stored outside of the transaction.
+            // These are merely for manipulation within the same transaction, and WILL CHANGE afterwards.
+            long id;
+            bool exists;
+
+            using (builder.SliceFromLocation(_tx.Allocator, _schema.Key.StartIndex, out Slice key))
+            {
+                exists = TryFindIdFromPrimaryKey(key, out id);
+            }
+
+            if (exists)
+            {
+                Update(id, builder, forceUpdate);
+                return false;
+            }
+            Insert2(builder);
             return true;
         }
 
