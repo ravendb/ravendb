@@ -598,25 +598,32 @@ namespace Raven.Server.Documents.Handlers
         private static void GetCounterValue(DocumentsOperationContext context, DocumentDatabase database, string docId,
             string counterName, bool addFullValues, CountersDetail result)
         {
-            var fullValues = addFullValues ? new Dictionary<string, long>() : null;
-            long? value = null;
-            foreach (var (cv, val) in database.DocumentsStorage.CountersStorage.GetCounterValues(context,
-                docId, counterName))
-            {
-                value = value ?? 0;
-                try
-                {
-                    value = checked(value + val);
-                }
-                catch (OverflowException e)
-                {
-                    CounterOverflowException.ThrowFor(docId, counterName, e);
-                }
 
-                if (addFullValues)
+            long? value = null;
+            Dictionary<string, long> fullValues = null;
+            if (addFullValues)
+            {
+                fullValues = new Dictionary<string, long>();
+                foreach (var (cv, val) in database.DocumentsStorage.CountersStorage.GetCounterValues(context,
+                    docId, counterName))
                 {
+                    value = value ?? 0;
+                    try
+                    {
+                        value = checked(value + val);
+                    }
+                    catch (OverflowException e)
+                    {
+                        CounterOverflowException.ThrowFor(docId, counterName, e);
+                    }
+
                     fullValues[cv] = val;
+
                 }
+            }
+            else
+            {
+                value = database.DocumentsStorage.CountersStorage.GetCounterValue(context, docId, counterName);
             }
 
             if (value == null)

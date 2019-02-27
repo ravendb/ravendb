@@ -927,13 +927,17 @@ namespace Raven.Server.Documents
                     counterValues is LazyStringValue)
                     yield break;
 
+                var dbCv = context.LastDatabaseChangeVector ?? GetDatabaseChangeVector(context);
+
                 var blob = counterValues as BlittableJsonReaderObject.RawBlob;
                 var existingCount = blob?.Length / SizeOfCounterValues ?? 0;
 
                 for (var dbIdIndex = 0; dbIdIndex < existingCount; dbIdIndex++)
                 {
+                    var dbId = dbIds[dbIdIndex].ToString();
                     var val = GetPartialValue(dbIdIndex, blob);
-                    yield return (dbIds[dbIdIndex].ToString(), val);
+                    var nodeTag = ChangeVectorUtils.GetNodeTagById(dbCv, dbId);
+                    yield return ($"{nodeTag ?? "?"}-{dbId}", val);
                 }
             }
         }
