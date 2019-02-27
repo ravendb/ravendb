@@ -115,9 +115,11 @@ namespace SlowTests.Issues
                     Assert.Equal("users/2-A", details[nameof(WarnIndexOutputsPerDocument.SampleDocumentId)]);
                 }
 
-                var indexStats = store.Maintenance.Send(new GetIndexStatisticsOperation(index.IndexName));
-
-                Assert.Equal(3, indexStats.MaxNumberOfOutputsPerDocument);
+		Assert.Equal(3, WaitForValue(() =>
+                {
+                    var indexStats = store.Maintenance.Send(new GetIndexStatisticsOperation(index.IndexName));
+                    return indexStats.MaxNumberOfOutputsPerDocument;
+                }, 3));
             }
         }
     }
