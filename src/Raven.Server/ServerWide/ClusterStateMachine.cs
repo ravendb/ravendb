@@ -824,16 +824,16 @@ namespace Raven.Server.ServerWide
             }
         }
 
-        internal static unsafe void UpdateCertificate(long index, Table certificates, Slice lowerKey, Slice hash, BlittableJsonReaderObject updated)
+        internal static unsafe void UpdateCertificate(long index, Table certificates, Slice key, Slice hash, BlittableJsonReaderObject updated)
         {
             using (certificates.Allocate(out TableValueBuilder builder))
             {
-                builder.Add(lowerKey);
+                builder.Add(key);
                 builder.Add(hash);
+                Console.WriteLine("Put cert: " + key + " hash: " + hash);
                 builder.Add(updated.BasePointer, updated.Size);
-                builder.Add(Bits.SwapBytes(index));
 
-                certificates.Set(builder);
+                certificates.Set2(builder);
             }
         }
 
@@ -1602,6 +1602,7 @@ namespace Raven.Server.ServerWide
 
         public List<CertificateDefinition> GetCertificatesByPinningHashSortedByExpiration(TransactionOperationContext context, string hash)
         {
+
             var list = GetCertificatesByPinningHash(context, hash).ToList();
             list.Sort((x,y) => DateTime.Compare(x.NotAfter, y.NotAfter));
             return list;
@@ -1611,9 +1612,14 @@ namespace Raven.Server.ServerWide
         {
             var certs = context.Transaction.InnerTransaction.OpenTable(CertificatesSchema, CertificatesSlice);
 
-            foreach (var tvr in certs.SeekForwardFrom(CertificatesSchema.Indexes[CertificatesHashSlice], Slices.BeforeAllKeys, 0))
+            using (Slice.From(context.Allocator, hash, out Slice hashSlice))
             {
-                yield return GetCertificateDefinition(context, tvr.Result);
+                foreach (var tvr in certs.SeekForwardFrom(CertificatesSchema.Indexes[CertificatesHashSlice], hashSlice, 0))
+                {
+                    var def = GetCertificateDefinition(context, tvr.Result);
+                    if (def.PublicKeyPinningHash.Equals(hash))
+                        yield return def;
+                }
             }
         }
 
