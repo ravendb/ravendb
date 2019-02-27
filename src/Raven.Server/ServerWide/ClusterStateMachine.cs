@@ -830,10 +830,9 @@ namespace Raven.Server.ServerWide
             {
                 builder.Add(key);
                 builder.Add(hash);
-                Console.WriteLine("Put cert: " + key + " hash: " + hash);
                 builder.Add(updated.BasePointer, updated.Size);
 
-                certificates.Set2(builder);
+                certificates.Set(builder);
             }
         }
 
