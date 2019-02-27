@@ -1017,8 +1017,32 @@ namespace Raven.Client.Http
                     if (shouldRetry == false)
                         return false;
 
-                    await UpdateTopologyAsync(chosenNode, Timeout.Infinite, forceUpdate: true, debugTag: "handle-unsuccessful-response").ConfigureAwait(false);
+                    if (nodeIndex != null)
+                        _nodeSelector.OnFailedRequest(nodeIndex.Value);
+
+                    if (command.FailedNodes == null)
+                        command.FailedNodes = new Dictionary<ServerNode, Exception>();
+
+                    if (command.IsFailedWithNode(chosenNode) == false)
+                        command.FailedNodes[chosenNode] = new UnsuccessfulRequestException($"Request to '{request.RequestUri}' ({request.Method}) is not relevant for this node anymore.");
+
                     var (index, node) = ChooseNodeForRequest(command, sessionInfo);
+
+                    if (command.FailedNodes.ContainsKey(node))
+                    {
+                        // we tried all the nodes, let's try to update topology and retry one more time
+                        var success = await UpdateTopologyAsync(chosenNode, 60 * 1000, forceUpdate: true, debugTag: "handle-unsuccessful-response").ConfigureAwait(false);
+
+                        if (success == false)
+                            return false;
+
+                        command.FailedNodes.Clear(); // we just updated the topology
+                        (index, node) = ChooseNodeForRequest(command, sessionInfo);
+
+                        await ExecuteAsync(node, index, context, command, shouldRetry: false, sessionInfo: sessionInfo, token: token).ConfigureAwait(false);
+                        return true;
+                    }
+
                     await ExecuteAsync(node, index, context, command, shouldRetry: true, sessionInfo: sessionInfo, token: token).ConfigureAwait(false);
                     return true;
                 case HttpStatusCode.GatewayTimeout:
