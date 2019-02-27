@@ -89,10 +89,15 @@ namespace Raven.Server.Config.Categories
         [ConfigurationEntry("Security.UnsecuredAccessAllowed", ConfigurationEntryScope.ServerWideOnly)]
         public UnsecuredAccessAddressRange UnsecuredAccessAllowed { get; set; }
 
-        [Description("Allow to specify well known certificate thumbprints that will be trusted by the server as cluster admins.")]
+        [Description("Well known certificate thumbprints that will be trusted by the server as cluster admins.")]
         [DefaultValue(null)]
         [ConfigurationEntry("Security.WellKnownCertificates.Admin", ConfigurationEntryScope.ServerWideOnly)]
         public string[] WellKnownAdminCertificates { get; set; }
+
+        [Description("Well known issuer thumbprints that will be used to validate a new certificate's HPKP if the issuer's certificate has changed.")]
+        [DefaultValue(null)]
+        [ConfigurationEntry("Security.WellKnownIssuers.Admin", ConfigurationEntryScope.ServerWideOnly)]
+        public string[] WellKnownIssuersCertificates { get; set; }
 
         internal bool? IsUnsecureAccessSetupValid { get; private set; }
 
