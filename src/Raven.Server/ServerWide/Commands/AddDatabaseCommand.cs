@@ -1,5 +1,4 @@
 ﻿using System.Collections.Generic;
-using System.Dynamic;
 using Raven.Client.Documents.Session;
 using Raven.Client.ServerWide;
 using Sparrow.Json;
@@ -35,16 +34,23 @@ namespace Raven.Server.ServerWide.Commands
 
         public override DynamicJsonValue ToJson(JsonOperationContext context)
         {
-            return new DynamicJsonValue
+            DynamicJsonValue databaseValues = null;
+            if (DatabaseValues != null)
             {
-                ["Type"] = nameof(AddDatabaseCommand),
-                [nameof(Name)] = Name,
-                [nameof(Record)] = EntityToBlittable.ConvertCommandToBlittable(Record, context),
-                [nameof(RaftCommandIndex)] = RaftCommandIndex,
-                [nameof(Encrypted)] = Encrypted,
-                [nameof(DatabaseValues)] = DynamicJsonValue.Convert(DatabaseValues),
-                [nameof(IsRestore)] = IsRestore
-            };
+                databaseValues = new DynamicJsonValue();
+                foreach (var kvp in DatabaseValues)
+                    databaseValues[kvp.Key] = kvp.Value?.Clone(context);
+            }
+
+            var djv = base.ToJson(context);
+            djv[nameof(Name)] = Name;
+            djv[nameof(Record)] = EntityToBlittable.ConvertCommandToBlittable(Record, context);
+            djv[nameof(RaftCommandIndex)] = RaftCommandIndex;
+            djv[nameof(Encrypted)] = Encrypted;
+            djv[nameof(DatabaseValues)] = databaseValues;
+            djv[nameof(IsRestore)] = IsRestore;
+
+            return djv;
         }
     }
 }

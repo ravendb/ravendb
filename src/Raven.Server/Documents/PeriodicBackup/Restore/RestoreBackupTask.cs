@@ -26,6 +26,7 @@ using Raven.Server.Smuggler.Documents;
 using Raven.Server.Smuggler.Documents.Data;
 using Raven.Server.Utils;
 using Raven.Server.Web.System;
+using Sparrow.Json;
 using Sparrow.Logging;
 using Sparrow.Platform;
 using Voron.Impl.Backup;
@@ -69,161 +70,166 @@ namespace Raven.Server.Documents.PeriodicBackup.Restore
 
             try
             {
-                if (onProgress == null)
-                    onProgress = _ => { };
-
-                Stopwatch sw = null;
-                RestoreSettings restoreSettings = null;
-                var firstFile = _filesToRestore[0];
-                var lastFile = _filesToRestore.Last();
-
-                var extension = Path.GetExtension(firstFile);
-                var snapshotRestore = false;
-                if (extension == Constants.Documents.PeriodicBackup.SnapshotExtension)
+                using (_serverStore.ContextPool.AllocateOperationContext(out JsonOperationContext serverContext))
                 {
-                    onProgress.Invoke(result.Progress);
+                    if (onProgress == null)
+                        onProgress = _ => { };
 
-                    snapshotRestore = true;
-                    sw = Stopwatch.StartNew();
-                    // restore the snapshot
-                    restoreSettings = SnapshotRestore(firstFile,
-                        _restoreConfiguration.DataDirectory,
-                        onProgress,
-                        result);
+                    Stopwatch sw = null;
+                    RestoreSettings restoreSettings = null;
+                    var firstFile = _filesToRestore[0];
+                    var lastFile = _filesToRestore.Last();
 
-                    if (restoreSettings != null && _restoreConfiguration.SkipIndexes)
+                    var extension = Path.GetExtension(firstFile);
+                    var snapshotRestore = false;
+                    if (extension == Constants.Documents.PeriodicBackup.SnapshotExtension)
                     {
-                        // remove all indexes from the database record
-                        restoreSettings.DatabaseRecord.AutoIndexes = null;
-                        restoreSettings.DatabaseRecord.Indexes = null;
-                    }
+                        onProgress.Invoke(result.Progress);
 
-                    // removing the snapshot from the list of files
-                    _filesToRestore.RemoveAt(0);
-                }
-                else
-                {
-                    result.SnapshotRestore.Skipped = true;
-                    result.SnapshotRestore.Processed = true;
+                        snapshotRestore = true;
+                        sw = Stopwatch.StartNew();
+                        // restore the snapshot
+                        restoreSettings = SnapshotRestore(
+                            serverContext,
+                            firstFile,
+                            _restoreConfiguration.DataDirectory,
+                            onProgress,
+                            result);
 
-                    onProgress.Invoke(result.Progress);
-                }
-
-                if (restoreSettings == null)
-                {
-                    restoreSettings = new RestoreSettings
-                    {
-                        DatabaseRecord = new DatabaseRecord(databaseName)
+                        if (restoreSettings != null && _restoreConfiguration.SkipIndexes)
                         {
-                            // we only have a smuggler restore
-                            // use the encryption key to encrypt the database
-                            Encrypted = _hasEncryptionKey
+                            // remove all indexes from the database record
+                            restoreSettings.DatabaseRecord.AutoIndexes = null;
+                            restoreSettings.DatabaseRecord.Indexes = null;
                         }
-                    };
 
-                    DatabaseHelper.Validate(databaseName, restoreSettings.DatabaseRecord, _serverStore.Configuration);
-                }
-
-                var databaseRecord = restoreSettings.DatabaseRecord;
-                if (databaseRecord.Settings == null)
-                    databaseRecord.Settings = new Dictionary<string, string>();
-
-                var runInMemoryConfigurationKey = RavenConfiguration.GetKey(x => x.Core.RunInMemory);
-                databaseRecord.Settings.Remove(runInMemoryConfigurationKey);
-                if (_serverStore.Configuration.Core.RunInMemory)
-                    databaseRecord.Settings[runInMemoryConfigurationKey] = "false";
-
-                var dataDirectoryConfigurationKey = RavenConfiguration.GetKey(x => x.Core.DataDirectory);
-                databaseRecord.Settings.Remove(dataDirectoryConfigurationKey); // removing because we want to restore to given location, not to serialized in backup one
-                if (_restoringToDefaultDataDirectory == false)
-                    databaseRecord.Settings[dataDirectoryConfigurationKey] = _restoreConfiguration.DataDirectory;
-
-                if (_hasEncryptionKey)
-                {
-                    // save the encryption key so we'll be able to access the database
-                    _serverStore.PutSecretKey(_restoreConfiguration.EncryptionKey,
-                        databaseName, overwrite: false);
-                }
-
-                var addToInitLog = new Action<string>(txt => // init log is not save in mem during RestoreBackup
-                {
-                    var msg = $"[RestoreBackup] {DateTime.UtcNow} :: Database '{databaseName}' : {txt}";
-                    if (Logger.IsInfoEnabled)
-                        Logger.Info(msg);
-                });
-
-                var configuration = _serverStore
-                    .DatabasesLandlord
-                    .CreateDatabaseConfiguration(databaseName, ignoreDisabledDatabase: true, ignoreBeenDeleted: true, ignoreNotRelevant: true, databaseRecord);
-
-                using (var database = new DocumentDatabase(databaseName, configuration, _serverStore, addToInitLog))
-                {
-                    // smuggler needs an existing document database to operate
-                    var options = InitializeOptions.SkipLoadingDatabaseRecord;
-                    if (snapshotRestore)
-                        options |= InitializeOptions.GenerateNewDatabaseId;
-
-                    database.Initialize(options);
-
-                    if (snapshotRestore)
+                        // removing the snapshot from the list of files
+                        _filesToRestore.RemoveAt(0);
+                    }
+                    else
                     {
+                        result.SnapshotRestore.Skipped = true;
                         result.SnapshotRestore.Processed = true;
 
-                        var summary = database.GetDatabaseSummary();
-                        result.Documents.ReadCount += summary.DocumentsCount;
-                        result.Documents.Attachments.ReadCount += summary.AttachmentsCount;
-                        result.Counters.ReadCount += summary.CountersCount;
-                        result.RevisionDocuments.ReadCount += summary.RevisionsCount;
-                        result.Conflicts.ReadCount += summary.ConflictsCount;
-                        result.Indexes.ReadCount += databaseRecord.GetIndexesCount();
-                        result.AddInfo($"Successfully restored {result.SnapshotRestore.ReadCount} " +
-                                       $"files during snapshot restore, took: {sw.ElapsedMilliseconds:#,#;;0}ms");
                         onProgress.Invoke(result.Progress);
                     }
 
-                    using (database.DocumentsStorage.ContextPool.AllocateOperationContext(out DocumentsOperationContext context))
+                    if (restoreSettings == null)
                     {
-                        SmugglerRestore(_restoreConfiguration.BackupLocation, database, context, databaseRecord, onProgress, result);
+                        restoreSettings = new RestoreSettings
+                        {
+                            DatabaseRecord = new DatabaseRecord(databaseName)
+                            {
+                                // we only have a smuggler restore
+                                // use the encryption key to encrypt the database
+                                Encrypted = _hasEncryptionKey
+                            }
+                        };
 
-                        result.DatabaseRecord.Processed = true;
-                        result.Documents.Processed = true;
-                        result.RevisionDocuments.Processed = true;
-                        result.Conflicts.Processed = true;
-                        result.Indexes.Processed = true;
-                        result.Counters.Processed = true;
-                        onProgress.Invoke(result.Progress);
-
-                        databaseRecord.Topology = new DatabaseTopology();
-                        // restoring to the current node only
-                        databaseRecord.Topology.Members.Add(_nodeTag);
-                        databaseRecord.Disabled = true; // we are currently restoring, shouldn't try to access it
-                        _serverStore.EnsureNotPassive();
-
-                        DisableOngoingTasksIfNeeded(databaseRecord);
-
-                        var (index, _) = await _serverStore.WriteDatabaseRecordAsync(databaseName, databaseRecord, null, restoreSettings.DatabaseValues, isRestore: true);
-                        await _serverStore.Cluster.WaitForIndexNotification(index);
-
-                        // restore identities & cmpXchg values
-                        RestoreFromLastFile(onProgress, database, lastFile, context, result);
+                        DatabaseHelper.Validate(databaseName, restoreSettings.DatabaseRecord, _serverStore.Configuration);
                     }
+
+                    var databaseRecord = restoreSettings.DatabaseRecord;
+                    if (databaseRecord.Settings == null)
+                        databaseRecord.Settings = new Dictionary<string, string>();
+
+                    var runInMemoryConfigurationKey = RavenConfiguration.GetKey(x => x.Core.RunInMemory);
+                    databaseRecord.Settings.Remove(runInMemoryConfigurationKey);
+                    if (_serverStore.Configuration.Core.RunInMemory)
+                        databaseRecord.Settings[runInMemoryConfigurationKey] = "false";
+
+                    var dataDirectoryConfigurationKey = RavenConfiguration.GetKey(x => x.Core.DataDirectory);
+                    databaseRecord.Settings.Remove(dataDirectoryConfigurationKey); // removing because we want to restore to given location, not to serialized in backup one
+                    if (_restoringToDefaultDataDirectory == false)
+                        databaseRecord.Settings[dataDirectoryConfigurationKey] = _restoreConfiguration.DataDirectory;
+
+                    if (_hasEncryptionKey)
+                    {
+                        // save the encryption key so we'll be able to access the database
+                        _serverStore.PutSecretKey(_restoreConfiguration.EncryptionKey,
+                            databaseName, overwrite: false);
+                    }
+
+                    var addToInitLog = new Action<string>(txt => // init log is not save in mem during RestoreBackup
+                    {
+                        var msg = $"[RestoreBackup] {DateTime.UtcNow} :: Database '{databaseName}' : {txt}";
+                        if (Logger.IsInfoEnabled)
+                            Logger.Info(msg);
+                    });
+
+                    var configuration = _serverStore
+                        .DatabasesLandlord
+                        .CreateDatabaseConfiguration(databaseName, ignoreDisabledDatabase: true, ignoreBeenDeleted: true, ignoreNotRelevant: true, databaseRecord);
+
+                    using (var database = new DocumentDatabase(databaseName, configuration, _serverStore, addToInitLog))
+                    {
+                        // smuggler needs an existing document database to operate
+                        var options = InitializeOptions.SkipLoadingDatabaseRecord;
+                        if (snapshotRestore)
+                            options |= InitializeOptions.GenerateNewDatabaseId;
+
+                        database.Initialize(options);
+
+                        if (snapshotRestore)
+                        {
+                            result.SnapshotRestore.Processed = true;
+
+                            var summary = database.GetDatabaseSummary();
+                            result.Documents.ReadCount += summary.DocumentsCount;
+                            result.Documents.Attachments.ReadCount += summary.AttachmentsCount;
+                            result.Counters.ReadCount += summary.CountersCount;
+                            result.RevisionDocuments.ReadCount += summary.RevisionsCount;
+                            result.Conflicts.ReadCount += summary.ConflictsCount;
+                            result.Indexes.ReadCount += databaseRecord.GetIndexesCount();
+                            result.AddInfo($"Successfully restored {result.SnapshotRestore.ReadCount} " +
+                                           $"files during snapshot restore, took: {sw.ElapsedMilliseconds:#,#;;0}ms");
+                            onProgress.Invoke(result.Progress);
+                        }
+
+                        using (database.DocumentsStorage.ContextPool.AllocateOperationContext(out DocumentsOperationContext context))
+                        {
+                            SmugglerRestore(_restoreConfiguration.BackupLocation, database, context, databaseRecord, onProgress, result);
+
+                            result.DatabaseRecord.Processed = true;
+                            result.Documents.Processed = true;
+                            result.RevisionDocuments.Processed = true;
+                            result.Conflicts.Processed = true;
+                            result.Indexes.Processed = true;
+                            result.Counters.Processed = true;
+                            onProgress.Invoke(result.Progress);
+
+                            databaseRecord.Topology = new DatabaseTopology();
+                            // restoring to the current node only
+                            databaseRecord.Topology.Members.Add(_nodeTag);
+                            databaseRecord.Disabled = true; // we are currently restoring, shouldn't try to access it
+                            _serverStore.EnsureNotPassive();
+
+                            DisableOngoingTasksIfNeeded(databaseRecord);
+
+                            var (index, _) = await _serverStore.WriteDatabaseRecordAsync(databaseName, databaseRecord, null, restoreSettings.DatabaseValues, isRestore: true);
+                            await _serverStore.Cluster.WaitForIndexNotification(index);
+
+                            // restore identities & cmpXchg values
+                            RestoreFromLastFile(onProgress, database, lastFile, context, result);
+                        }
+                    }
+
+                    // after the db for restore is done, we can safely set the db status to active
+                    databaseRecord = _serverStore.LoadDatabaseRecord(databaseName, out _);
+                    databaseRecord.Disabled = false;
+
+                    var (updateIndex, _) = await _serverStore.WriteDatabaseRecordAsync(databaseName, databaseRecord, null);
+                    await _serverStore.Cluster.WaitForIndexNotification(updateIndex);
+
+                    if (databaseRecord.Topology.RelevantFor(_serverStore.NodeTag))
+                    {
+                        // we need to wait for the database record change to be propagated properly
+                        var db = await _serverStore.DatabasesLandlord.TryGetOrCreateResourceStore(databaseName);
+                        await db.RachisLogIndexNotifications.WaitForIndexNotification(updateIndex, _operationCancelToken.Token);
+                    }
+
+                    return result;
                 }
-
-                // after the db for restore is done, we can safely set the db status to active
-                databaseRecord = _serverStore.LoadDatabaseRecord(databaseName, out _);
-                databaseRecord.Disabled = false;
-
-                var (updateIndex, _) = await _serverStore.WriteDatabaseRecordAsync(databaseName, databaseRecord, null);
-                await _serverStore.Cluster.WaitForIndexNotification(updateIndex);
-
-                if (databaseRecord.Topology.RelevantFor(_serverStore.NodeTag))
-                {
-                    // we need to wait for the database record change to be propagated properly
-                    var db = await _serverStore.DatabasesLandlord.TryGetOrCreateResourceStore(databaseName);
-                    await db.RachisLogIndexNotifications.WaitForIndexNotification(updateIndex, _operationCancelToken.Token);
-                }
-
-                return result;
             }
             catch (Exception e)
             {
@@ -545,6 +551,7 @@ namespace Raven.Server.Documents.PeriodicBackup.Restore
         }
 
         private RestoreSettings SnapshotRestore(
+            JsonOperationContext context,
             string backupPath,
             string dataDirectory,
             Action<IOperationProgress> onProgress,
@@ -570,7 +577,6 @@ namespace Raven.Server.Documents.PeriodicBackup.Restore
                             if (string.Equals(zipEntry.Name, RestoreSettings.SettingsFileName, StringComparison.OrdinalIgnoreCase))
                             {
                                 using (var entryStream = zipEntry.Open())
-                                using (_serverStore.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
                                 {
                                     var json = context.Read(entryStream, "read database settings for restore");
                                     json.BlittableValidation();

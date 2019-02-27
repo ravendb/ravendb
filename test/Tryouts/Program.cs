@@ -12,6 +12,7 @@ using Raven.Server.Documents;
 using Raven.Server.Documents.Queries.AST;
 using Raven.Server.Documents.Queries.Parser;
 using SlowTests.Cluster;
+using SlowTests.Issues;
 using Sparrow;
 using StressTests.Server.Replication;
 using Xunit.Sdk;
@@ -19,17 +20,17 @@ using Xunit.Sdk;
 namespace Tryouts
 {
     public static class Program
-    {          
+    {
         public static void Main(string[] args)
         {
-            Console.WriteLine($"Press any key to start... (Process ID: {Process.GetCurrentProcess().Id})");
-            Console.ReadKey();
+            //Console.WriteLine($"Press any key to start... (Process ID: {Process.GetCurrentProcess().Id})");
+            //Console.ReadKey();
             for (int i = 0; i < 1000; i++)
             {
                 Console.WriteLine(i);
-                using (var test = new ClusterTransactionTests())
+                using (var test = new RavenDB_12867())
                 {
-                    test.CanPreformSeveralClusterTransactions(5).Wait();
+                    test.CanRestoreSubscriptions();
                 }
             }
         }
