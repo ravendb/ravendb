@@ -25,6 +25,7 @@ using Raven.Server.Smuggler.Documents;
 using Raven.Server.Smuggler.Documents.Data;
 using Raven.Server.Utils;
 using Raven.Server.Web.System;
+using Sparrow.Json;
 using Sparrow.Logging;
 using Sparrow.Platform;
 using Voron.Impl.Backup;
@@ -68,6 +69,8 @@ namespace Raven.Server.Documents.PeriodicBackup.Restore
 
             try
             {
+                using (_serverStore.ContextPool.AllocateOperationContext(out JsonOperationContext serverContext))
+                {
                 if (onProgress == null)
                     onProgress = _ => { };
 
@@ -92,7 +95,9 @@ namespace Raven.Server.Documents.PeriodicBackup.Restore
                                              (_restoreConfiguration.BackupEncryptionSettings?.Key != null));
                     }
                     // restore the snapshot
-                    restoreSettings = SnapshotRestore(firstFile,
+                        restoreSettings = SnapshotRestore(
+                            serverContext,
+                            firstFile,
                         _restoreConfiguration.DataDirectory,
                         onProgress,
                         result);
@@ -229,6 +234,7 @@ namespace Raven.Server.Documents.PeriodicBackup.Restore
                 }
 
                 return result;
+            }
             }
             catch (Exception e)
             {
@@ -585,6 +591,7 @@ namespace Raven.Server.Documents.PeriodicBackup.Restore
         }
 
         private RestoreSettings SnapshotRestore(
+            JsonOperationContext context,
             string backupPath,
             string dataDirectory,
             Action<IOperationProgress> onProgress,
@@ -610,7 +617,6 @@ namespace Raven.Server.Documents.PeriodicBackup.Restore
                             if (string.Equals(zipEntry.Name, RestoreSettings.SettingsFileName, StringComparison.OrdinalIgnoreCase))
                             {
                                 using (var entryStream = zipEntry.Open())
-                                using (_serverStore.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
                                 {
                                     var stream = _restoreConfiguration.BackupEncryptionSettings?.EncryptionMode == EncryptionMode.UseDatabaseKey ?
                                         new DecryptingXChaCha20Oly1305Stream(entryStream, Convert.FromBase64String(_restoreConfiguration.EncryptionKey)) 

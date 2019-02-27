@@ -5,6 +5,7 @@ using System.IO;
 using System.Linq;
 using System.Text;
 using System.Threading;
+using System.Threading.Tasks;
 using Raven.Client.Exceptions;
 using Raven.Client.Http;
 using Raven.Client.ServerWide;
@@ -201,7 +202,8 @@ namespace Raven.Server.Rachis
                         }
                         catch (Exception e)
                         {
-                            if (e is RachisConcurrencyException == false)
+                            if (e is RachisConcurrencyException == false && 
+                                RachisConsensus.IsExpectedException(e) == false)
                                 NotifyOnException(ref hadConnectionFailure, new Exception($"Failed to create a connection to node {_tag} at {_url}", e));
 
                             _leader.WaitForNewEntries().Wait(TimeSpan.FromMilliseconds(_engine.ElectionTimeout.TotalMilliseconds / 2));
@@ -504,8 +506,8 @@ namespace Raven.Server.Rachis
                         LastIncludedTerm = term,
                         Topology = _engine.GetTopologyRaw(context)
                     });
-                    WriteSnapshotToFile(context, new BufferedStream(stream));
 
+                    WriteSnapshotToFile(context, new BufferedStream(stream));
                     UpdateLastMatchFromFollower(_followerMatchIndex);
                 }
 
@@ -527,99 +529,112 @@ namespace Raven.Server.Rachis
             }
         }
 
-        private void MaybeNotifyLeaderThatWeAreSillAlive(long count, Stopwatch sp)
-        {
-            if (count % 100 != 0)
-                return;
-
-            if (sp.ElapsedMilliseconds <= _engine.ElectionTimeout.TotalMilliseconds / 2)
-                return;
-
-            sp.Restart();
-
-            UpdateLastMatchFromFollower(_followerMatchIndex);
-        }
-
         private unsafe void WriteSnapshotToFile(TransactionOperationContext context, Stream dest)
         {
-            var copier = new UnmanagedMemoryToStream(dest);
+            var dueTime = (int)(_engine.ElectionTimeout.TotalMilliseconds / 3);
+            var timer = new Timer(_ => UpdateLastMatchFromFollower(_followerMatchIndex), null, dueTime, dueTime);
+            long totalSizeInBytes = 0;
             var sp = Stopwatch.StartNew();
-            long count = 0;
 
-            using (var binaryWriter = new BinaryWriter(dest, Encoding.UTF8, leaveOpen: true))
+            try
             {
-                var txr = context.Transaction.InnerTransaction;
-                var llt = txr.LowLevelTransaction;
-                using (var rootIterator = llt.RootObjects.Iterate(false))
+                var copier = new UnmanagedMemoryToStream(dest);
+                
+                using (var binaryWriter = new BinaryWriter(dest, Encoding.UTF8, leaveOpen: true))
                 {
-                    if (rootIterator.Seek(Slices.BeforeAllKeys) == false)
-                        throw new InvalidOperationException("Root objects iterations must always have _something_!");
-                    do
+                    var txr = context.Transaction.InnerTransaction;
+                    var llt = txr.LowLevelTransaction;
+                    using (var rootIterator = llt.RootObjects.Iterate(false))
                     {
-                        var rootObjectType = txr.GetRootObjectType(rootIterator.CurrentKey);
-                        if (_engine.ShouldSnapshot(rootIterator.CurrentKey, rootObjectType) == false)
-                            continue;
-
-                        MaybeNotifyLeaderThatWeAreSillAlive(count++, sp);
-
-                        var currentTreeKey = rootIterator.CurrentKey;
-
-                        binaryWriter.Write((int)rootObjectType);
-                        binaryWriter.Write(currentTreeKey.Size);
-                        copier.Copy(currentTreeKey.Content.Ptr, currentTreeKey.Size);
-
-                        switch (rootObjectType)
+                        if (rootIterator.Seek(Slices.BeforeAllKeys) == false)
+                            throw new InvalidOperationException("Root objects iterations must always have _something_!");
+                        do
                         {
-                            case RootObjectType.VariableSizeTree:
-                                var tree = txr.ReadTree(currentTreeKey);
-                                binaryWriter.Write(tree.State.NumberOfEntries);
+                            var rootObjectType = txr.GetRootObjectType(rootIterator.CurrentKey);
+                            if (_engine.ShouldSnapshot(rootIterator.CurrentKey, rootObjectType) == false)
+                                continue;
 
-                                using (var treeIterator = tree.Iterate(false))
-                                {
-                                    if (treeIterator.Seek(Slices.BeforeAllKeys))
+                            var currentTreeKey = rootIterator.CurrentKey;
+
+                            binaryWriter.Write((int)rootObjectType);
+                            binaryWriter.Write(currentTreeKey.Size);
+                            copier.Copy(currentTreeKey.Content.Ptr, currentTreeKey.Size);
+                            totalSizeInBytes += sizeof(long) + currentTreeKey.Size;
+
+                            switch (rootObjectType)
+                            {
+                                case RootObjectType.VariableSizeTree:
+                                    var tree = txr.ReadTree(currentTreeKey);
+                                    binaryWriter.Write(tree.State.NumberOfEntries);
+                                    totalSizeInBytes += sizeof(long);
+
+                                    using (var treeIterator = tree.Iterate(false))
                                     {
-                                        do
+                                        if (treeIterator.Seek(Slices.BeforeAllKeys))
                                         {
-                                            var currentTreeValueKey = treeIterator.CurrentKey;
-                                            binaryWriter.Write(currentTreeValueKey.Size);
-                                            copier.Copy(currentTreeValueKey.Content.Ptr, currentTreeValueKey.Size);
-                                            var reader = treeIterator.CreateReaderForCurrent();
-                                            binaryWriter.Write(reader.Length);
-                                            copier.Copy(reader.Base, reader.Length);
-                                            MaybeNotifyLeaderThatWeAreSillAlive(count++, sp);
-                                        } while (treeIterator.MoveNext());
+                                            do
+                                            {
+                                                var currentTreeValueKey = treeIterator.CurrentKey;
+                                                binaryWriter.Write(currentTreeValueKey.Size);
+                                                copier.Copy(currentTreeValueKey.Content.Ptr, currentTreeValueKey.Size);
+                                                var reader = treeIterator.CreateReaderForCurrent();
+                                                binaryWriter.Write(reader.Length);
+                                                copier.Copy(reader.Base, reader.Length);
+
+                                                totalSizeInBytes += sizeof(long) + currentTreeValueKey.Size + reader.Length;
+                                            } while (treeIterator.MoveNext());
+                                        }
                                     }
-                                }
-                                break;
-                            case RootObjectType.Table:
-                                var tableTree = txr.ReadTree(currentTreeKey, RootObjectType.Table);
+                                    break;
+                                case RootObjectType.Table:
+                                    var tableTree = txr.ReadTree(currentTreeKey, RootObjectType.Table);
 
-                                // Get the table schema
-                                var schemaSize = tableTree.GetDataSize(TableSchema.SchemasSlice);
-                                var schemaPtr = tableTree.DirectRead(TableSchema.SchemasSlice);
-                                var schema = TableSchema.ReadFrom(txr.Allocator, schemaPtr, schemaSize);
+                                    // Get the table schema
+                                    var schemaSize = tableTree.GetDataSize(TableSchema.SchemasSlice);
+                                    var schemaPtr = tableTree.DirectRead(TableSchema.SchemasSlice);
+                                    var schema = TableSchema.ReadFrom(txr.Allocator, schemaPtr, schemaSize);
 
-                                // Load table into structure 
-                                var inputTable = txr.OpenTable(schema, currentTreeKey);
-                                binaryWriter.Write(inputTable.NumberOfEntries);
-                                foreach (var holder in inputTable.SeekByPrimaryKey(Slices.BeforeAllKeys, 0))
-                                {
-                                    MaybeNotifyLeaderThatWeAreSillAlive(count++, sp);
-                                    binaryWriter.Write(holder.Reader.Size);
-                                    copier.Copy(holder.Reader.Pointer, holder.Reader.Size);
-                                }
-                                break;
-                            default:
-                                throw new ArgumentOutOfRangeException(nameof(rootObjectType), rootObjectType + " " + rootIterator.CurrentKey);
-                        }
+                                    // Load table into structure 
+                                    var inputTable = txr.OpenTable(schema, currentTreeKey);
+                                    binaryWriter.Write(inputTable.NumberOfEntries);
+                                    totalSizeInBytes += sizeof(long);
 
-                    } while (rootIterator.MoveNext());
+                                    foreach (var holder in inputTable.SeekByPrimaryKey(Slices.BeforeAllKeys, 0))
+                                    {
+                                        binaryWriter.Write(holder.Reader.Size);
+                                        copier.Copy(holder.Reader.Pointer, holder.Reader.Size);
+                                        totalSizeInBytes += sizeof(int) + holder.Reader.Size;
+                                    }
+                                    break;
+                                default:
+                                    throw new ArgumentOutOfRangeException(nameof(rootObjectType), rootObjectType + " " + rootIterator.CurrentKey);
+                            }
+
+                        } while (rootIterator.MoveNext());
+                    }
+
+                    binaryWriter.Write((int)RootObjectType.None);
+                    totalSizeInBytes += sizeof(int);
                 }
-                binaryWriter.Write((int)RootObjectType.None);
-            }
-            MaybeNotifyLeaderThatWeAreSillAlive(0, sp);
 
-            dest.Flush();
+                dest.Flush();
+            }
+            finally
+            {
+                var mre = new ManualResetEvent(false);
+                timer.Dispose(mre);
+                while (mre.WaitOne(dueTime) == false)
+                {
+                    UpdateLastMatchFromFollower(_followerMatchIndex);
+                }
+            }
+
+            if (_engine.Log.IsInfoEnabled)
+            {
+                _engine.Log.Info($"Sending snapshot to {_tag}, " +
+                                 $"total size: {new Size(totalSizeInBytes, SizeUnit.Bytes)}, " +
+                                 $"took: {sp.ElapsedMilliseconds}ms");
+            }
         }
 
         private unsafe class UnmanagedMemoryToStream
@@ -639,16 +654,17 @@ namespace Raven.Server.Rachis
                 {
                     while (size > 0)
                     {
-                        var count = Math.Min(size, _buffer.Length);
-                        Memory.Copy(pBuffer, ptr, count);
-                        _stream.Write(_buffer, 0, count);
-                        ptr += count;
-                        size -= count;
+                        var written = Math.Min(size, _buffer.Length);
+                        Memory.Copy(pBuffer, ptr, written);
+
+                        _stream.Write(_buffer, 0, written);
+
+                        ptr += written;
+                        size -= written;
                     }
                 }
             }
         }
-
 
         internal static unsafe BlittableJsonReaderObject BuildRachisEntryToSend(TransactionOperationContext context,
             Table.TableValueHolder value)

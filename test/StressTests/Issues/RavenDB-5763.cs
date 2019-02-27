@@ -10,7 +10,7 @@ namespace StressTests.Issues
         [Fact]
         public void Should_not_throw_timeout_and_out_of_memory()
         {
-            Parallel.For(0, 10, RavenTestHelper.DefaultParallelOptions, i =>
+            Parallel.For(0, 3, RavenTestHelper.DefaultParallelOptions, i =>
             {
                 using (var store = new ReplicationTombstoneTests())
                 {
