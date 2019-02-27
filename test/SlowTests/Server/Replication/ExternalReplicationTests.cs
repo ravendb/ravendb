@@ -12,7 +12,7 @@ namespace SlowTests.Server.Replication
     public class ExternalReplicationTests : ReplicationTestBase
     {
         [Theory]
-	[InlineData(3000)]
+        [InlineData(3000)]
         public async Task ExternalReplicationShouldWorkWithSmallTimeoutStress(int timeout)
         {
             using (var store1 = GetDocumentStore(new Options
