@@ -1,10 +1,12 @@
 ﻿using System;
 using System.Collections;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.Runtime.CompilerServices;
 using Sparrow;
 using Sparrow.Binary;
 using Sparrow.Server;
+using Sparrow.Platform;
 using Voron.Data.BTrees;
 using Voron.Data.Fixed;
 using Voron.Impl;
@@ -67,7 +69,9 @@ namespace Voron.Data.Tables
 
         private unsafe Page AllocateMoreSpace(FixedSizeTree fst)
         {
-            var allocatePage = _llt.AllocatePage(NumberOfPagesInSection);
+            int numberOfPagesToAllocate = GetNumberOfPagesToAllocate();
+
+            var allocatePage = _llt.AllocatePage(numberOfPagesToAllocate);
             _llt.BreakLargeAllocationToSeparatePages(allocatePage.PageNumber);
 
             var initialPageNumber = allocatePage.PageNumber;
@@ -78,9 +82,25 @@ namespace Voron.Data.Tables
             {
                 if (isNew == false)
                     ThrowInvalidExistingBuffer();
-                Memory.Set(ptr, 0, BitmapSize); // mark all pages as free 
+
+                // in 32 bits, we pre-allocate just 256 KB, not 2MB
+                Debug.Assert(numberOfPagesToAllocate % 8 == 0);
+                Debug.Assert(numberOfPagesToAllocate % 8 <= BitmapSize);
+                Memory.Set(ptr, 0xFF, BitmapSize); // mark the pages that we haven't allocated as busy
+                Memory.Set(ptr, 0, numberOfPagesToAllocate / 8); // mark just the first part as free
+
             }
             return allocatePage;
+        }
+
+        private unsafe int GetNumberOfPagesToAllocate()
+        {
+            int numberOfPagesToAllocate;
+            if (_llt.Environment.Options.ForceUsing32BitsPager || PlatformDetails.Is32Bits)
+                numberOfPagesToAllocate = BitmapSize;             // 256 KB
+            else
+                numberOfPagesToAllocate = NumberOfPagesInSection; // 2 MB
+            return numberOfPagesToAllocate;
         }
 
         private static void ThrowInvalidExistingBuffer()
@@ -256,9 +276,11 @@ namespace Voron.Data.Tables
                 }
             }
 
+            int amountOfPagesActuallyAllocated = GetNumberOfPagesToAllocate();
+
             return new Report
             {
-                NumberOfOriginallyAllocatedPages = fst.NumberOfEntries * NumberOfPagesInSection,
+                NumberOfOriginallyAllocatedPages = fst.NumberOfEntries * amountOfPagesActuallyAllocated,
                 NumberOfFreePages = free
             };
         }

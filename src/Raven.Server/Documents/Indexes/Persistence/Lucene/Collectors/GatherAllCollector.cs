@@ -4,15 +4,17 @@
 // </copyright>
 //-----------------------------------------------------------------------
 
+using System;
 using System.Collections.Generic;
 using Lucene.Net.Index;
 using Lucene.Net.Search;
 using Lucene.Net.Store;
+using Sparrow;
 
 namespace Raven.Server.Documents.Indexes.Persistence.Lucene.Collectors
 {
-    public class GatherAllCollector : Collector
-    {
+    public sealed class GatherAllCollector : Collector, IDisposable
+    {       
         private int _docBase;
         private readonly List<ScoreDoc> _docs;
 
@@ -21,7 +23,7 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene.Collectors
 
         public GatherAllCollector(int numberOfDocsToCollect)
         {
-            _docs = new List<ScoreDoc>(numberOfDocsToCollect);
+            _docs = CollectorsPool.Instance.Allocate();
         }
 
         public override void SetScorer(Scorer scorer)
@@ -48,6 +50,12 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene.Collectors
         public TopDocs ToTopDocs()
         {
             return new TopDocs(_docs.Count, _docs.ToArray(), _maxScore);
+        }
+
+        public void Dispose()
+        {
+            _docs.Clear();
+            CollectorsPool.Instance.Free(_docs);
         }
     }
 }
