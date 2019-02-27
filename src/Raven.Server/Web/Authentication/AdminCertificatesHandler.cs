@@ -628,7 +628,7 @@ namespace Raven.Server.Web.Authentication
                             certificate = ctx.ReadObject(serverCertDef.ToJson(), "Server/Certificate/Definition");
                         }
                     }
-                    else if (wellKnown != null && wellKnown.Contains(clientCert.Thumbprint, StringComparer.OrdinalIgnoreCase))
+                    else if (wellKnown != null && wellKnown.Contains(clientCert.Thumbprint, StringComparer.Ordinal))
                     {
                         var wellKnownCertDef = new CertificateDefinition
                         {

@@ -37,6 +37,7 @@ using Raven.Client.Util;
 using Raven.Server.Commercial;
 using Raven.Server.Config;
 using Raven.Server.Documents;
+using Raven.Server.Documents.Indexes.Static.Extensions;
 using Raven.Server.Documents.Patch;
 using Raven.Server.Documents.TcpHandlers;
 using Raven.Server.Https;
@@ -925,7 +926,7 @@ namespace Raven.Server
             {
                 authenticationStatus.Status = AuthenticationStatus.ClusterAdmin;
             }
-            else if (wellKnown != null && wellKnown.Contains(certificate.Thumbprint, StringComparer.OrdinalIgnoreCase))
+            else if (wellKnown != null && wellKnown.Contains(certificate.Thumbprint, StringComparer.Ordinal))
             {
                 authenticationStatus.Status = AuthenticationStatus.ClusterAdmin;
             }
@@ -949,33 +950,18 @@ namespace Raven.Server
 
                             if (certsWithSameHash.Count > 0)
                             {
-                                // Hash is good, let's validate it was signed by same issuer
-                                var chain = new X509Chain();
-                                try
-                                {
-                                    chain.Build(certificate);
-                                }
-                                catch (Exception e)
-                                {
-                                    throw new InvalidOperationException($"Failed to build chain for certificate with thumbprint {certificate.Thumbprint}", e);
-                                }
-
-                                /*var isSelfSigned = certificate.SubjectName.RawData.SequenceEqual(certificate.IssuerName.RawData);
-                                var issuerThumbprint = isSelfSigned
-                                    ? chain.ChainElements[0].Certificate.Thumbprint
-                                    : chain.ChainElements[1].Certificate.Thumbprint;
-
-                                // Must check the new cert was signed by the same issuer, otherwise users can use the private key to register a new cert with a different issuer.
-                                if (string.Equals(issuerThumbprint, certificate.Thumbprint) == false)
+                                // Hash is good, let's validate it was signed by same issuer, otherwise users can use the private key to register a new cert with a different issuer.
+                                if (CertHasKnownIssuer(certificate, certsWithSameHash) == false)
                                 {
                                     if (Logger.IsOperationsEnabled)
                                         Logger.Operations($"You tried to use a certificate: '{certificate.Subject} ({certificate.Thumbprint})' which is not " +
-                                                          "registered in the cluster explicitly but is trusted implicitly by its Public Key Pinning Hash. " +
-                                                          "Your certificate was signed by a different issuer than the original certificate. This is not allowed - closing the connection.");
+                                                          "registered in the cluster explicitly but is trusted implicitly by its HTTP Public Key Pinning Hash (HPKP). " +
+                                                          "Your certificate was signed by an unknown issuer. This is not allowed - closing the connection. " +
+                                                          "To fix this, the admin can register the thumbprint of the *issuer* certificate (e.g. Let's Encrypt) in the 'Security.WellKnownIssuers.Admin' configuration entry.");
 
                                     authenticationStatus.Status = AuthenticationStatus.UnfamiliarCertificate;
                                     return authenticationStatus;
-                                }*/
+                                }
 
                                 // Success, we'll add the new certificate with same permissions as the original
                                 var existingCert = certsWithSameHash[0];
@@ -1044,6 +1030,90 @@ namespace Raven.Server
             }
 
             return authenticationStatus;
+        }
+
+        private bool CertHasKnownIssuer(X509Certificate2 certificate, List<CertificateDefinition> certsWithSameHash)
+        {
+            var userCertChain = new X509Chain();
+            var serverCertChain = new X509Chain();
+
+            var userCertChainThumbprints = new HashSet<string>();
+            var serverCertChainThumbprints = new HashSet<string>();
+
+            try
+            {
+                userCertChain.Build(certificate);
+                foreach (var element in userCertChain.ChainElements)
+                {
+                    userCertChainThumbprints.Add(element.Certificate.Thumbprint);
+                }
+            }
+            catch (Exception e)
+            {
+                if (Logger.IsOperationsEnabled)
+                    Logger.Operations($"Cannot validate new certificate '{certificate.FriendlyName} {certificate.Thumbprint}', failed to build the chain.", e);
+                return false;
+            }
+
+            try
+            {
+                serverCertChain.Build(Certificate.Certificate);
+                foreach (var element in serverCertChain.ChainElements)
+                {
+                    serverCertChainThumbprints.Add(element.Certificate.Thumbprint);
+                }
+            }
+            catch (Exception e)
+            {
+                if (Logger.IsOperationsEnabled)
+                    Logger.Operations($"Cannot validate new certificate '{certificate.FriendlyName} {certificate.Thumbprint}'. Failed to build chain for the server certificate '{Certificate.Certificate.Thumbprint}'", e);
+                return false;
+            }
+
+            // Going over all the elements in the chain of the new user certificate. If any of the thumbprints is already known to use we approve the request.
+            // Known thumbprints include: the server cert (the whole chain), all of the registered client certs(the whole chain), and the list of known issuers.
+            foreach (var thumbprint in userCertChainThumbprints)
+            {
+                if (serverCertChainThumbprints.Contains(thumbprint))
+                    return true;
+            }
+
+            foreach (var c in certsWithSameHash)
+            {
+                try
+                {
+                    var existingClientCertChain = new X509Chain();
+                    var existingClientCertChainThumbprints = new HashSet<string>();
+
+                    existingClientCertChain.Build(new X509Certificate2(Convert.FromBase64String(c.Certificate)));
+                    foreach (var element in serverCertChain.ChainElements)
+                    {
+                        existingClientCertChainThumbprints.Add(element.Certificate.Thumbprint);
+                    }
+
+                    foreach (var thumbprint in userCertChainThumbprints)
+                    {
+                        if (existingClientCertChainThumbprints.Contains(thumbprint))
+                            return true;
+                    }
+                }
+                catch (Exception e)
+                {
+                    if (Logger.IsOperationsEnabled)
+                        Logger.Operations(
+                            $"Cannot validate new certificate '{certificate.FriendlyName} {certificate.Thumbprint}'. Failed to build chain for the existing client certificate '{c.Thumbprint}'", e);
+                    return false;
+                }
+            }
+
+            var wellKnown = ServerStore.Configuration.Security.WellKnownIssuersCertificates;
+            foreach (var thumbprint in userCertChainThumbprints)
+            {
+                if (wellKnown != null && wellKnown.Contains(thumbprint, StringComparer.Ordinal))
+                    return true;
+            }
+
+            return false;
         }
 
         public string WebUrl { get; private set; }
