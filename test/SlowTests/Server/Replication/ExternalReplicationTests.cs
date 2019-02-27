@@ -9,8 +9,9 @@ namespace SlowTests.Server.Replication
 {
     public class ExternalReplicationTests : ReplicationTestBase
     {
-        [Fact]
-        public async Task ExternalReplicationShouldWorkWithSmallTimeoutStress()
+        [Theory]
+        [InlineData(3000)]
+        public async Task ExternalReplicationShouldWorkWithSmallTimeoutStress(int timeout)
         {
             using (var store1 = GetDocumentStore(new Options
             {
@@ -33,7 +34,7 @@ namespace SlowTests.Server.Replication
                     s1.SaveChanges();
                 }
 
-                var timeout = 3000;
+                // SlowTests uses the regular old value of 3000mSec. But if called from StressTests - needs more timeout
                 Assert.True(WaitForDocument(store2, "foo/bar", timeout), store2.Identifier);
                 Assert.True(WaitForDocument(store3, "foo/bar", timeout), store3.Identifier);
             }

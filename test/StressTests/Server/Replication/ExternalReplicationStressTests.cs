@@ -18,7 +18,8 @@ namespace StressTests.Server.Replication
                 {
                     using (var test = new ExternalReplicationTests())
                     {
-                        test.ExternalReplicationShouldWorkWithSmallTimeoutStress().Wait();
+                        // this is extreme test for lowend machine - Wait longer for each replication test : 20Secs.
+                        test.ExternalReplicationShouldWorkWithSmallTimeoutStress(20000).Wait();
                     }
                 });
             }
