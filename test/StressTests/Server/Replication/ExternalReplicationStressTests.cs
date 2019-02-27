@@ -19,7 +19,7 @@ namespace StressTests.Server.Replication
                 {
                     using (var test = new ExternalReplicationTests())
                     {
-                        test.ExternalReplicationShouldWorkWithSmallTimeoutStress().Wait();
+                        test.ExternalReplicationShouldWorkWithSmallTimeoutStress(20000).Wait();
                     }
                 });
             }
