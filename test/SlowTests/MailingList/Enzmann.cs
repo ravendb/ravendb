@@ -1,7 +1,5 @@
-﻿using System;
-using System.Collections.Generic;
+﻿using System.Collections.Generic;
 using System.Linq;
-using System.Text;
 using FastTests;
 using Raven.Client.Documents;
 using Raven.Client.Documents.Indexes;
@@ -41,19 +39,18 @@ namespace SlowTests.MailingList
             }
         }
 
-
-        public class Entity
+        private class Entity
         {
             public string Id { get; set; }
             public List<string> SubEntitiesIds { get; set; } = new List<string>();
         }
 
-        public class EntityIndex : AbstractIndexCreationTask<Entity, EntityIndex.Result>
+        private class EntityIndex : AbstractIndexCreationTask<Entity, EntityIndex.Result>
         {
             public class Result
             {
                 public string Id { get; set; }
-                public List<EntityIndex.Result> SubEntities { get; set; }
+                public List<Result> SubEntities { get; set; }
             }
 
             public EntityIndex()
@@ -74,5 +71,4 @@ namespace SlowTests.MailingList
             }
         }
     }
-
 }
