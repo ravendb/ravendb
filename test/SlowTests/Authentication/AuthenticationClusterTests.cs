@@ -139,19 +139,13 @@ namespace SlowTests.Authentication
             var cluster1Cert = new X509Certificate2(cluster1CertFileName);
             var adminCertificate1 = AskServerForClientCertificate(cluster1CertFileName, new Dictionary<string, DatabaseAccess>(), SecurityClearance.ClusterAdmin, server: leader1);
             await CreateDatabaseInCluster(databaseName, clusterSize, leader1.WebUrl, adminCertificate1);
-
-            Console.WriteLine("Cluster1 server cert thumb: " + cluster1Cert.Thumbprint + " hash: " + CertificateUtils.GetPublicKeyPinningHash(cluster1Cert));
-            Console.WriteLine("Cluster1 client cert thumb: " + adminCertificate1.Thumbprint + " hash: " + CertificateUtils.GetPublicKeyPinningHash(adminCertificate1));
-
+            
             // Cluster 2 gets a normal test certificate
             var leader2 = await CreateRaftClusterAndGetLeader(clusterSize, false, useSsl: true);
             var cluster2Cert = new X509Certificate2(_selfSignedCertFileName);
             var adminCertificate2 = AskServerForClientCertificate(_selfSignedCertFileName, new Dictionary<string, DatabaseAccess>(), SecurityClearance.ClusterAdmin, server: leader2);
             await CreateDatabaseInCluster(databaseName, clusterSize, leader2.WebUrl, adminCertificate2);
-
-            Console.WriteLine("Cluster2 server cert thumb: " + cluster2Cert.Thumbprint + " hash: " + CertificateUtils.GetPublicKeyPinningHash(cluster2Cert));
-            Console.WriteLine("Cluster2 client cert thumb: " + adminCertificate2.Thumbprint + " hash: " + CertificateUtils.GetPublicKeyPinningHash(adminCertificate2));
-
+            
             // This will register cluster 1's cert as a user cert in cluster 2
             AskCluster2ToTrustCluster1(cluster1Cert, cluster2Cert, new Dictionary<string, DatabaseAccess>
             {

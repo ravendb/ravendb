@@ -34,7 +34,7 @@ namespace Raven.Server.Utils
             if (IsDisabled)
                 return;
 
-            timespan = TimeSpan.FromMinutes(10);
+            timespan = TimeSpan.FromMinutes(1);
         }
     }
 }
