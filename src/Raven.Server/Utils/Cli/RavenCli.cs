@@ -628,8 +628,6 @@ namespace Raven.Server.Utils.Cli
             WriteText("Successfully read certificate: " + cert.Thumbprint, TextColor, cli);
             WriteText(cert.ToString(), TextColor, cli);
 
-            var certKey = Constants.Certificates.Prefix + cert.Thumbprint;
-
             using (cli._server.ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext ctx))
             {
                 var certDef = new CertificateDefinition
@@ -651,13 +649,13 @@ namespace Raven.Server.Utils.Cli
                         using (var certificate = ctx.ReadObject(certDef.ToJson(), "Server/Certificate/Definition"))
                         using (var tx = ctx.OpenWriteTransaction())
                         {
-                            cli._server.ServerStore.Cluster.PutLocalState(ctx, certKey, certificate);
+                            cli._server.ServerStore.Cluster.PutLocalState(ctx, cert.Thumbprint, certificate);
                             tx.Commit();
                         }
                     }
                     else
                     {
-                        var putResult = cli._server.ServerStore.PutValueInClusterAsync(new PutCertificateCommand(Constants.Certificates.Prefix + certDef.Thumbprint, certDef)).Result;
+                        var putResult = cli._server.ServerStore.PutValueInClusterAsync(new PutCertificateCommand(certDef.Thumbprint, certDef)).Result;
                         cli._server.ServerStore.Cluster.WaitForIndexNotification(putResult.Index).Wait();
                     }
                 }

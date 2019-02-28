@@ -528,9 +528,7 @@ namespace Raven.Server.Commercial
             using (serverStore.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
             using (context.OpenReadTransaction())
             {
-                existingCertificateKeys = serverStore.Cluster.ItemsStartingWith(context, Constants.Certificates.Prefix, 0, int.MaxValue)
-                    .Select(item => Constants.Certificates.Prefix + JsonDeserializationServer.CertificateDefinition(item.Value).Thumbprint)
-                    .ToList();
+                existingCertificateKeys = serverStore.Cluster.GetCertificateKeysFromCluster(context).ToList();
             }
 
             if (existingCertificateKeys.Count == 0)
@@ -1289,7 +1287,7 @@ namespace Raven.Server.Commercial
             {
                 if (continueSetupInfo.NodeTag.Equals(firstNodeTag))
                 {
-                    var res = await serverStore.PutValueInClusterAsync(new PutCertificateCommand(Constants.Certificates.Prefix + clientCert.Thumbprint, certDef));
+                    var res = await serverStore.PutValueInClusterAsync(new PutCertificateCommand(clientCert.Thumbprint, certDef));
                     await serverStore.Cluster.WaitForIndexNotification(res.Index);
                 }
                 else
@@ -1298,7 +1296,7 @@ namespace Raven.Server.Commercial
                     using (var certificate = ctx.ReadObject(certDef.ToJson(), "Client/Certificate/Definition"))
                     using (var tx = ctx.OpenWriteTransaction())
                     {
-                        serverStore.Cluster.PutLocalState(ctx, Constants.Certificates.Prefix + clientCert.Thumbprint, certificate);
+                        serverStore.Cluster.PutLocalState(ctx, clientCert.Thumbprint, certificate);
                         tx.Commit();
                     }
                 }
@@ -2081,7 +2079,7 @@ namespace Raven.Server.Commercial
                 NotAfter = selfSignedCertificate.NotAfter
             };
 
-            var res = await serverStore.PutValueInClusterAsync(new PutCertificateCommand(Constants.Certificates.Prefix + selfSignedCertificate.Thumbprint, newCertDef));
+            var res = await serverStore.PutValueInClusterAsync(new PutCertificateCommand(selfSignedCertificate.Thumbprint, newCertDef));
             await serverStore.Cluster.WaitForIndexNotification(res.Index);
 
             return certBytes;

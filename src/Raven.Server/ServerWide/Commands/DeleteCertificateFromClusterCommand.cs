@@ -10,7 +10,7 @@ namespace Raven.Server.ServerWide.Commands
         {
             using (context.OpenReadTransaction())
             {
-                var read = store.Cluster.GetCertificateByPrimaryKey(context, Name);
+                var read = store.Cluster.GetCertificateByThumbprint(context, Name);
                 if (read == null)
                     return;
 

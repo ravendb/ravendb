@@ -649,7 +649,7 @@ namespace Raven.Server
                 // This is needed for trust in the case where a node replaced its own certificate while another node still runs with the old certificate.
                 // Since both nodes use different certificates, they will only trust each other if the certs are registered in the server store.
                 // When the certificate replacement is finished throughout the cluster, we will delete both these entries.
-                await ServerStore.PutValueInClusterAsync(new PutCertificateCommand(Constants.Certificates.Prefix + newCertificate.Thumbprint, new CertificateDefinition
+                await ServerStore.PutValueInClusterAsync(new PutCertificateCommand(newCertificate.Thumbprint, new CertificateDefinition
                 {
                     Certificate = Convert.ToBase64String(Certificate.Certificate.Export(X509ContentType.Cert)),
                     Thumbprint = Certificate.Certificate.Thumbprint,
@@ -659,7 +659,7 @@ namespace Raven.Server
                     SecurityClearance = SecurityClearance.ClusterNode
                 }));
 
-                var res = await ServerStore.PutValueInClusterAsync(new PutCertificateCommand(Constants.Certificates.Prefix + newCertificate.Thumbprint, new CertificateDefinition
+                var res = await ServerStore.PutValueInClusterAsync(new PutCertificateCommand(newCertificate.Thumbprint, new CertificateDefinition
                 {
                     Certificate = Convert.ToBase64String(newCertificate.Export(X509ContentType.Cert)),
                     Thumbprint = newCertificate.Thumbprint,
@@ -926,7 +926,7 @@ namespace Raven.Server
             {
                 authenticationStatus.Status = AuthenticationStatus.ClusterAdmin;
             }
-            else if (wellKnown != null && wellKnown.Contains(certificate.Thumbprint, StringComparer.Ordinal))
+            else if (wellKnown != null && wellKnown.Contains(certificate.Thumbprint, StringComparer.OrdinalIgnoreCase))
             {
                 authenticationStatus.Status = AuthenticationStatus.ClusterAdmin;
             }
@@ -937,9 +937,8 @@ namespace Raven.Server
                 {
                     try
                     {
-                        var certKey = Constants.Certificates.Prefix + certificate.Thumbprint;
-                        var cert = ServerStore.Cluster.GetCertificateByPrimaryKey(ctx, certKey) ??
-                                   ServerStore.Cluster.GetLocalState(ctx, certKey);
+                        var cert = ServerStore.Cluster.GetCertificateByThumbprint(ctx, certificate.Thumbprint) ??
+                                   ServerStore.Cluster.GetLocalState(ctx, certificate.Thumbprint);
 
                         if (cert == null)
                         {
@@ -980,7 +979,7 @@ namespace Raven.Server
                                 };
                                 
                                 // This command will discard leftover certificates after the new certificate is saved.
-                                ServerStore.SendToLeaderAsync(new PutCertificateWithSamePinningHashCommand(certKey, newCertDef))
+                                ServerStore.SendToLeaderAsync(new PutCertificateWithSamePinningHashCommand(certificate.Thumbprint, newCertDef))
                                     .Wait(ServerStore.ServerShutdown);
 
                                 if (_authAuditLog.IsInfoEnabled)
@@ -1110,7 +1109,7 @@ namespace Raven.Server
             var wellKnown = ServerStore.Configuration.Security.WellKnownIssuersCertificates;
             foreach (var thumbprint in userCertChainThumbprints)
             {
-                if (wellKnown != null && wellKnown.Contains(thumbprint, StringComparer.Ordinal))
+                if (wellKnown != null && wellKnown.Contains(thumbprint, StringComparer.OrdinalIgnoreCase))
                     return true;
             }
 
