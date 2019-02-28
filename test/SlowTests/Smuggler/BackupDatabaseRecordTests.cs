@@ -81,9 +81,7 @@ namespace SlowTests.Smuggler
                                 TaskId = 2,
                                 Name = "Sink",
                                 MentorNode = "A",
-                                DelayReplicationFor = new TimeSpan(3),
                                 HubDefinitionName = "hub"
-
                             }
                         };
                         record.HubPullReplications = new List<PullReplicationDefinition>
@@ -184,7 +182,6 @@ namespace SlowTests.Smuggler
                     Assert.Equal("hub", record.SinkPullReplications[0].HubDefinitionName);
                     Assert.Equal("CertificatePassword", record.SinkPullReplications[0].CertificatePassword);
                     Assert.Equal("CertificateWithPrivateKey", record.SinkPullReplications[0].CertificateWithPrivateKey);
-                    Assert.Equal(new TimeSpan(3), record.SinkPullReplications[0].DelayReplicationFor);
                     Assert.Equal(true, record.SinkPullReplications[0].Disabled);
 
                     Assert.Equal(1, record.HubPullReplications.Count);
@@ -271,7 +268,6 @@ namespace SlowTests.Smuggler
                                 CertificateWithPrivateKey = "CertificateWithPrivateKey",
                                 TaskId = 2,
                                 Name = "Sink",
-                                DelayReplicationFor = new TimeSpan(3),
                                 HubDefinitionName = "hub"
 
                             }
@@ -399,7 +395,6 @@ namespace SlowTests.Smuggler
                         Assert.Equal("hub", record.SinkPullReplications[0].HubDefinitionName);
                         Assert.Equal("CertificatePassword", record.SinkPullReplications[0].CertificatePassword);
                         Assert.Equal("CertificateWithPrivateKey", record.SinkPullReplications[0].CertificateWithPrivateKey);
-                        Assert.Equal(new TimeSpan(3), record.SinkPullReplications[0].DelayReplicationFor);
                         Assert.Equal(false, record.SinkPullReplications[0].Disabled);
 
                         Assert.Equal(1, record.HubPullReplications.Count);

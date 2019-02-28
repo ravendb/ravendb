@@ -42,7 +42,7 @@ namespace Raven.Server.ServerWide.Commands
                     }
                 }
                 
-                ExternalReplication.RemoveExternalReplication(record.SinkPullReplications, PullReplicationAsSink.TaskId);
+                ExternalReplicationBase.RemoveExternalReplication(record.SinkPullReplications, PullReplicationAsSink.TaskId);
             }
 
             if (string.IsNullOrEmpty(PullReplicationAsSink.Name))

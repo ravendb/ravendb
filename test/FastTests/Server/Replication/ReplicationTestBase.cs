@@ -199,7 +199,7 @@ namespace FastTests.Server.Replication
         protected static async Task<ModifyOngoingTaskResult> AddWatcherToReplicationTopology<T>(
             DocumentStore store,
             T watcher,
-            string[] urls = null) where T : ExternalReplication
+            string[] urls = null) where T : ExternalReplicationBase
         {
             await store.Maintenance.SendAsync(new PutConnectionStringOperation<RavenConnectionString>(new RavenConnectionString
             {
@@ -213,10 +213,15 @@ namespace FastTests.Server.Replication
             {
                 op = new UpdatePullReplicationAsSinkOperation(pull);
             }
+            else if (watcher is ExternalReplication ex)
+            {
+                op = new UpdateExternalReplicationOperation(ex);
+            }
             else
             {
-                op = new UpdateExternalReplicationOperation(watcher);
+                throw new ArgumentException($"Unrecognized type: {watcher.GetType().FullName}");
             }
+
             return await store.Maintenance.SendAsync(op);
         }
 
