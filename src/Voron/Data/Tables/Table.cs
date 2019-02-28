@@ -1517,26 +1517,26 @@ namespace Voron.Data.Tables
             TableValueHolder tableValueHolder = null;
             while (true)
             {
-                    using (var it = pkTree.Iterate(true))
-                    {
-                        it.SetRequiredPrefix(startSlice);
-                        if (it.Seek(it.RequiredPrefix) == false)
-                            return;
+                using (var it = pkTree.Iterate(true))
+                {
+                    it.SetRequiredPrefix(startSlice);
+                    if (it.Seek(it.RequiredPrefix) == false)
+                        return;
 
-                        var id = it.CreateReaderForCurrent().ReadLittleEndianInt64();
-                        var ptr = DirectRead(id, out var size);
+                    var id = it.CreateReaderForCurrent().ReadLittleEndianInt64();
+                    var ptr = DirectRead(id, out var size);
 
-                        if (tableValueHolder == null)
-                            tableValueHolder = new Table.TableValueHolder();
+                    if (tableValueHolder == null)
+                        tableValueHolder = new Table.TableValueHolder();
 
-                        tableValueHolder.Reader = new TableValueReader(id, ptr, size);
-                        var currentIndex = *(long*)tableValueHolder.Reader.Read(1, out _);
+                    tableValueHolder.Reader = new TableValueReader(id, ptr, size);
+                    var currentIndex = *(long*)tableValueHolder.Reader.Read(1, out _);
 
-                        if (currentIndex <= upToIndex)
-                            Delete(id);
-                        else
-                            return;
-                    }
+                    if (currentIndex > upToIndex)
+                        return;
+
+                    Delete(id);
+                }
             }
         }
 
