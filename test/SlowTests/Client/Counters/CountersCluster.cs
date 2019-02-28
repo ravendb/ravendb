@@ -150,30 +150,6 @@ namespace SlowTests.Client.Counters
             }
         }
 
-        private static bool WaitForCounterReplication(IEnumerable<IDocumentStore> stores, string docId, string counterName, long expected, TimeSpan timeout)
-        {
-            long? val = null;
-            var sw = Stopwatch.StartNew();
-
-            foreach (var store in stores)
-            {
-                val = null;
-                while (sw.Elapsed < timeout)
-                {
-                    val = store.Operations
-                        .Send(new GetCountersOperation(docId, new[] { counterName }))
-                        .Counters[0]?.TotalValue;
-
-                    if (val == expected)
-                        break;
-
-                    Thread.Sleep(100);
-                }
-            }
-
-            return val == expected;
-        }
-
         [Fact]
         public async Task DeleteCounter()
         {

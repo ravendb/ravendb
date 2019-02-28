@@ -298,16 +298,15 @@ namespace Raven.Server.Documents
                             name = prop.Name; // use original casing
                         }
 
-                        if (existingCounter == null ||
-                            existingCounter is LazyStringValue ||
-                            overrideExisting)
+                        if (existingCounter is BlittableJsonReaderObject.RawBlob blob &&
+                            overrideExisting == false)
                         {
-                            CreateNewCounterOrOverrideExisting(context, name, dbIdIndex, value, counterEtag, counters);
+                            exists = IncrementExistingCounter(context, documentId, name, delta,
+                                blob, dbIdIndex, counterEtag, counters, ref value);
                         }
                         else
                         {
-                            exists = IncrementExistingCounter(context, documentId, name, delta,
-                                existingCounter as BlittableJsonReaderObject.RawBlob, dbIdIndex, counterEtag, counters, ref value);
+                            CreateNewCounterOrOverrideExisting(context, name, dbIdIndex, value, counterEtag, counters);
                         }
 
                         if (counters.Modifications != null)
@@ -442,7 +441,7 @@ namespace Raven.Server.Documents
 
             // counter exists , but not with local DbId
 
-            AddPartialValueToExistingCounter(context, existingCounter, dbIdIndex, value, newETag);
+            existingCounter = AddPartialValueToExistingCounter(context, existingCounter, dbIdIndex, value, newETag);
 
             counters.Modifications = new DynamicJsonValue(counters)
             {
@@ -774,7 +773,7 @@ namespace Raven.Server.Documents
 
                 // counter doesn't have this dbId
                 modified = true;
-                AddPartialValueToExistingCounter(context, existingCounter, localDbIdIndex, sourceValue->Value, sourceValue->Etag);
+                existingCounter = AddPartialValueToExistingCounter(context, existingCounter, localDbIdIndex, sourceValue->Value, sourceValue->Etag);
 
                 existingCount = existingCounter.Length / SizeOfCounterValues;
             }
@@ -788,7 +787,7 @@ namespace Raven.Server.Documents
             return modified;
         }
 
-        private void AddPartialValueToExistingCounter(DocumentsOperationContext context,
+        private BlittableJsonReaderObject.RawBlob AddPartialValueToExistingCounter(DocumentsOperationContext context,
             BlittableJsonReaderObject.RawBlob existingCounter, int dbIdIndex, long sourceValue, long sourceEtag)
         {
             var scope = context.Allocator.Allocate((dbIdIndex + 1) * SizeOfCounterValues, out var newVal);
@@ -807,6 +806,8 @@ namespace Raven.Server.Documents
 
             existingCounter.Ptr = newVal.Ptr;
             existingCounter.Length = newVal.Length;
+
+            return existingCounter;
         }
 
         private void UpdateMetrics(Slice counterKey, string counterName, string changeVector, string collection)
@@ -1025,8 +1026,9 @@ namespace Raven.Server.Documents
 
                 var newEtag = _documentsStorage.GenerateNextEtag();
 
-                var newChangeVector = ChangeVectorUtils.NewChangeVector(_documentDatabase.ServerStore.NodeTag, newEtag, _documentsStorage.Environment.Base64Id);
-                context.LastDatabaseChangeVector = ChangeVectorUtils.MergeVectors(context.LastDatabaseChangeVector ?? GetDatabaseChangeVector(context), newChangeVector);
+                var databaseChangeVector = context.LastDatabaseChangeVector ?? GetDatabaseChangeVector(context);
+                var newChangeVector = ChangeVectorUtils.TryUpdateChangeVector(_documentDatabase, databaseChangeVector, newEtag).ChangeVector;
+                context.LastDatabaseChangeVector = newChangeVector;
 
                 using (Slice.From(context.Allocator, newChangeVector, out var cv))
                 using (DocumentIdWorker.GetStringPreserveCase(context, collectionName.Name, out Slice collectionSlice))

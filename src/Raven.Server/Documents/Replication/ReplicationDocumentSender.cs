@@ -876,63 +876,10 @@ namespace Raven.Server.Documents.Replication
             }
         }
 
-        private unsafe void WriteCounterToServer(DocumentsOperationContext context, ReplicationBatchItem item)
-        {
-            using (Slice.From(context.Allocator, item.ChangeVector, out var cv))
-            fixed (byte* pTemp = _tempBuffer)
-            {
-                    var requiredSize = sizeof(byte) + // type
-                                       sizeof(int) + // change vector size
-                                       cv.Size + // change vector
-                                       sizeof(short) + // transaction marker
-                                       sizeof(int) + // size of doc id
-                                       item.Id.Size +
-                                       sizeof(int) + // size of doc collection
-                                       item.Collection.Size + // doc collection
-                                       sizeof(int) + // size of name
-                                       item.Name.Size +
-                                       sizeof(long); // value
-
-                if (requiredSize > _tempBuffer.Length)
-                    ThrowTooManyChangeVectorEntries(item);
-
-                var tempBufferPos = 0;
-                pTemp[tempBufferPos++] = (byte)item.Type;
-
-                *(int*)(pTemp + tempBufferPos) = cv.Size;
-                tempBufferPos += sizeof(int);
-
-                Memory.Copy(pTemp + tempBufferPos, cv.Content.Ptr, cv.Size);
-                tempBufferPos += cv.Size;
-
-                *(short*)(pTemp + tempBufferPos) = item.TransactionMarker;
-                tempBufferPos += sizeof(short);
-
-                *(int*)(pTemp + tempBufferPos) = item.Id.Size;
-                tempBufferPos += sizeof(int);
-                Memory.Copy(pTemp + tempBufferPos, item.Id.Buffer, item.Id.Size);
-                tempBufferPos += item.Id.Size;
-
-                *(int*)(pTemp + tempBufferPos) = item.Collection.Size;
-                tempBufferPos += sizeof(int);
-                Memory.Copy(pTemp + tempBufferPos, item.Collection.Buffer, item.Collection.Size);
-                tempBufferPos += item.Collection.Size;
-
-                *(int*)(pTemp + tempBufferPos) = item.Name.Size;
-                tempBufferPos += sizeof(int);
-                Memory.Copy(pTemp + tempBufferPos, item.Name.Buffer, item.Name.Size);
-                tempBufferPos += item.Name.Size;
-
-                *(long*)(pTemp + tempBufferPos) = item.Value;
-                tempBufferPos += sizeof(long);
-
-                _stream.Write(_tempBuffer, 0, tempBufferPos);
-            }
-        }
-
         private unsafe void WriteCountersToServer(DocumentsOperationContext context, ReplicationBatchItem item)
         {
             using (Slice.From(context.Allocator, item.ChangeVector, out var cv))
+            {
                 fixed (byte* pTemp = _tempBuffer)
                 {
                     var requiredSize = sizeof(byte) + // type
@@ -979,53 +926,6 @@ namespace Raven.Server.Documents.Replication
 
                     _stream.Write(_tempBuffer, 0, tempBufferPos);
                 }
-        }
-
-
-        private unsafe void WriteCounterTombstoneToServer(DocumentsOperationContext context, ReplicationBatchItem item)
-        {
-            using (Slice.From(context.Allocator, item.ChangeVector, out var cv))
-            fixed (byte* pTemp = _tempBuffer)
-            {
-                var requiredSize = sizeof(byte) + // type
-                                   sizeof(int) + // change vector size
-                                   cv.Size + // change vector size
-                                   sizeof(short) + // transaction marker
-                                   sizeof(int) + // size of tombstone key
-                                   item.Id.Size +
-                                   sizeof(int) + // size of tombstone collection
-                                   item.Collection.Size + // tombstone collection
-                                   sizeof(long); // last modified ticks
-
-                if (requiredSize > _tempBuffer.Length)
-                    ThrowTooManyChangeVectorEntries(item);
-
-                var tempBufferPos = 0;
-                pTemp[tempBufferPos++] = (byte)item.Type;
-
-                *(int*)(pTemp + tempBufferPos) = cv.Size;
-                tempBufferPos += sizeof(int);
-
-                Memory.Copy(pTemp + tempBufferPos, cv.Content.Ptr, cv.Size);
-                tempBufferPos += cv.Size;
-
-                *(short*)(pTemp + tempBufferPos) = item.TransactionMarker;
-                tempBufferPos += sizeof(short);
-
-                *(int*)(pTemp + tempBufferPos) = item.Id.Size;
-                tempBufferPos += sizeof(int);
-                Memory.Copy(pTemp + tempBufferPos, item.Id.Buffer, item.Id.Size);
-                tempBufferPos += item.Id.Size;
-
-                *(int*)(pTemp + tempBufferPos) = item.Collection.Size;
-                tempBufferPos += sizeof(int);
-                Memory.Copy(pTemp + tempBufferPos, item.Collection.Buffer, item.Collection.Size);
-                tempBufferPos += item.Collection.Size;
-
-                *(long*)(pTemp + tempBufferPos) = item.LastModifiedTicks;
-                tempBufferPos += sizeof(long);
-
-                _stream.Write(_tempBuffer, 0, tempBufferPos);
             }
         }
 
