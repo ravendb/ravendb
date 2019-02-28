@@ -942,58 +942,8 @@ namespace Raven.Server
 
                         if (cert == null)
                         {
-                            // The certificate is not explicitly registered in our server, let's see if we have a certificate
-                            // with the same public key pinning hash.
-                            var pinningHash = CertificateUtils.GetPublicKeyPinningHash(certificate);
-                            var certsWithSameHash = ServerStore.Cluster.GetCertificatesByPinningHashSortedByExpiration(ctx, pinningHash);
-
-                            if (certsWithSameHash.Count > 0)
-                            {
-                                // Hash is good, let's validate it was signed by same issuer, otherwise users can use the private key to register a new cert with a different issuer.
-                                if (CertHasKnownIssuer(certificate, certsWithSameHash) == false)
-                                {
-                                    if (Logger.IsOperationsEnabled)
-                                        Logger.Operations($"You tried to use a certificate: '{certificate.Subject} ({certificate.Thumbprint})' which is not " +
-                                                          "registered in the cluster explicitly but is trusted implicitly by its HTTP Public Key Pinning Hash (HPKP). " +
-                                                          "Your certificate was signed by an unknown issuer. This is not allowed - closing the connection. " +
-                                                          "To fix this, the admin can register the thumbprint of the *issuer* certificate (e.g. Let's Encrypt) in the 'Security.WellKnownIssuers.Admin' configuration entry.");
-
-                                    authenticationStatus.Status = AuthenticationStatus.UnfamiliarCertificate;
-                                    return authenticationStatus;
-                                }
-
-                                // Success, we'll add the new certificate with same permissions as the original
-                                var existingCert = certsWithSameHash[0];
-                                var newCertBytes = certificate.Export(X509ContentType.Cert);
-
-                                var newCertDef = new CertificateDefinition()
-                                {
-                                    Name = existingCert.Name,
-                                    Certificate = Convert.ToBase64String(newCertBytes),
-                                    Permissions = existingCert.Permissions,
-                                    SecurityClearance = existingCert.SecurityClearance,
-                                    Password = existingCert.Password,
-                                    Thumbprint = certificate.Thumbprint,
-                                    PublicKeyPinningHash = pinningHash,
-                                    NotAfter = certificate.NotAfter
-                                };
-                                
-                                // This command will discard leftover certificates after the new certificate is saved.
-                                ServerStore.SendToLeaderAsync(new PutCertificateWithSamePinningHashCommand(certificate.Thumbprint, newCertDef))
-                                    .Wait(ServerStore.ServerShutdown);
-
-                                if (_authAuditLog.IsInfoEnabled)
-                                    _authAuditLog.Info($"Got connection with new certificate: '{certificate.Subject} ({certificate.Thumbprint})' but it's not registered in the cluster. " +
-                                                       "Allowing the connection based on certificate's HTTP Public Key Pinning Hash (HPKP) which is trusted by the cluster. " +
-                                                       $"Registering the new certificate explicitly. Security Clearance: {newCertDef.SecurityClearance}, " +
-                                                       $"Permissions:{Environment.NewLine}{string.Join(Environment.NewLine, newCertDef.Permissions.Select(kvp => kvp.Key + ": " + kvp.Value.ToString()))}");
-
-                                cert = ctx.ReadObject(newCertDef.ToJson(), "Client/Certificate/Definition");
-                            }
-                            else
-                            {
-                                authenticationStatus.Status = AuthenticationStatus.UnfamiliarCertificate;
-                            }
+                            // If connection will be approved, cert won't be null anymore and will be assigned the relevant permissions
+                            MaybeAllowConnectionBasedOnPinningHash(certificate, ctx, ref authenticationStatus, ref cert);
                         }
 
                         if (cert != null)
@@ -1030,6 +980,63 @@ namespace Raven.Server
             }
 
             return authenticationStatus;
+        }
+
+        private void MaybeAllowConnectionBasedOnPinningHash(X509Certificate2 certificate, TransactionOperationContext ctx,
+            ref AuthenticateConnection authenticationStatus, ref BlittableJsonReaderObject cert)
+        {
+            // The certificate is not explicitly registered in our server, let's see if we have a certificate
+            // with the same public key pinning hash.
+            var pinningHash = CertificateUtils.GetPublicKeyPinningHash(certificate);
+            var certsWithSameHash = ServerStore.Cluster.GetCertificatesByPinningHashSortedByExpiration(ctx, pinningHash);
+
+            if (certsWithSameHash.Count > 0)
+            {
+                // Hash is good, let's validate it was signed by same issuer, otherwise users can use the private key to register a new cert with a different issuer.
+                if (CertHasKnownIssuer(certificate, certsWithSameHash) == false)
+                {
+                    if (Logger.IsOperationsEnabled)
+                        Logger.Operations($"You tried to use a certificate: '{certificate.Subject} ({certificate.Thumbprint})' which is not " +
+                                          "registered in the cluster explicitly but is trusted implicitly by its HTTP Public Key Pinning Hash (HPKP). " +
+                                          "Your certificate was signed by an unknown issuer. This is not allowed - closing the connection. " +
+                                          "To fix this, the admin can register the thumbprint of the *issuer* certificate (e.g. Let's Encrypt) in the 'Security.WellKnownIssuers.Admin' configuration entry.");
+
+                    authenticationStatus.Status = AuthenticationStatus.UnfamiliarCertificate;
+                    return;
+                }
+
+                // Success, we'll add the new certificate with same permissions as the original
+                var existingCert = certsWithSameHash[0];
+                var newCertBytes = certificate.Export(X509ContentType.Cert);
+
+                var newCertDef = new CertificateDefinition()
+                {
+                    Name = existingCert.Name,
+                    Certificate = Convert.ToBase64String(newCertBytes),
+                    Permissions = existingCert.Permissions,
+                    SecurityClearance = existingCert.SecurityClearance,
+                    Password = existingCert.Password,
+                    Thumbprint = certificate.Thumbprint,
+                    PublicKeyPinningHash = pinningHash,
+                    NotAfter = certificate.NotAfter
+                };
+
+                // This command will discard leftover certificates after the new certificate is saved.
+                ServerStore.SendToLeaderAsync(new PutCertificateWithSamePinningHashCommand(certificate.Thumbprint, newCertDef))
+                    .Wait(ServerStore.ServerShutdown);
+
+                if (_authAuditLog.IsInfoEnabled)
+                    _authAuditLog.Info($"Got connection with new certificate: '{certificate.Subject} ({certificate.Thumbprint})' but it's not registered in the cluster. " +
+                                       "Allowing the connection based on certificate's HTTP Public Key Pinning Hash (HPKP) which is trusted by the cluster. " +
+                                       $"Registering the new certificate explicitly. Security Clearance: {newCertDef.SecurityClearance}, " +
+                                       $"Permissions:{Environment.NewLine}{string.Join(Environment.NewLine, newCertDef.Permissions.Select(kvp => kvp.Key + ": " + kvp.Value.ToString()))}");
+
+                cert = ctx.ReadObject(newCertDef.ToJson(), "Client/Certificate/Definition");
+            }
+            else
+            {
+                authenticationStatus.Status = AuthenticationStatus.UnfamiliarCertificate;
+            }
         }
 
         private bool CertHasKnownIssuer(X509Certificate2 certificate, List<CertificateDefinition> certsWithSameHash)
