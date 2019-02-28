@@ -191,7 +191,7 @@ namespace Raven.Server.Documents.PeriodicBackup.Restore
                     {
                         if (snapshotRestore)
                         {
-                            RestoreCompareExchangeAndIdentitiesFromSnapshotFile(onProgress, database, firstFile, context);
+                            RestoreFromLastFile(onProgress, database, firstFile, context);
                             result.SnapshotRestore.Processed = true;
 
                             var summary = database.GetDatabaseSummary();
@@ -207,6 +207,10 @@ namespace Raven.Server.Documents.PeriodicBackup.Restore
 
                             result.AddInfo($"Successfully restored {result.SnapshotRestore.ReadCount} files during snapshot restore, took: {sw.ElapsedMilliseconds:#,#;;0}ms");
                             onProgress.Invoke(result.Progress);
+                        }
+                        else
+                        {
+                            RestoreFromLastFile(onProgress, database, firstFile, context, true); // restore only subscriptions
                         }
 
                         SmugglerRestore(_restoreConfiguration.BackupLocation, database, context, databaseRecord, onProgress, result, snapshotRestore);
@@ -316,7 +320,6 @@ namespace Raven.Server.Documents.PeriodicBackup.Restore
             }
         }
 
-                OperateOnTypes = DatabaseItemType.CompareExchange | DatabaseItemType.Identities | DatabaseItemType.Subscriptions,
         private void ValidateArguments(out bool restoringToDefaultDataDirectory)
         {
             if (string.IsNullOrWhiteSpace(_restoreConfiguration.BackupLocation))
@@ -427,7 +430,7 @@ namespace Raven.Server.Documents.PeriodicBackup.Restore
             var options = new DatabaseSmugglerOptionsServerSide
             {
                 AuthorizationStatus = AuthorizationStatus.DatabaseAdmin,
-                OperateOnTypes = ~(DatabaseItemType.CompareExchange | DatabaseItemType.Identities | DatabaseItemType.Subscriptions),
+                OperateOnTypes = ~(DatabaseItemType.Subscriptions),
                 SkipRevisionCreation = true
             };
 
@@ -535,13 +538,25 @@ namespace Raven.Server.Documents.PeriodicBackup.Restore
             }
         }
 
-        private void RestoreCompareExchangeAndIdentitiesFromSnapshotFile(Action<IOperationProgress> onProgress, DocumentDatabase database, string snapshotFile, DocumentsOperationContext context)
+        private void RestoreFromLastFile(Action<IOperationProgress> onProgress, DocumentDatabase database, string snapshotFile, DocumentsOperationContext context, bool onlySnapshot = false)
         {
+
+            DatabaseItemType operateOnTypes;
+            if (onlySnapshot)
+            {
+                operateOnTypes = DatabaseItemType.Subscriptions;
+            }
+            else
+            {
+                operateOnTypes = DatabaseItemType.CompareExchange | DatabaseItemType.Identities | DatabaseItemType.Subscriptions;
+            }
+
             var destination = new DatabaseDestination(database);
+
             var smugglerOptions = new DatabaseSmugglerOptionsServerSide
             {
                 AuthorizationStatus = AuthorizationStatus.DatabaseAdmin,
-                OperateOnTypes = DatabaseItemType.CompareExchange | DatabaseItemType.Identities,
+                OperateOnTypes = operateOnTypes,
                 SkipRevisionCreation = true
             };
             var lastPath = Path.Combine(_restoreConfiguration.BackupLocation, snapshotFile);
