@@ -318,6 +318,7 @@ namespace Raven.Server
             }
 
             if (exception is DatabaseDisabledException ||
+                exception is DatabaseRestoringException ||
                 exception is DatabaseLoadFailureException ||
                 exception is DatabaseLoadTimeoutException ||
                 exception is DatabaseConcurrentLoadTimeoutException ||

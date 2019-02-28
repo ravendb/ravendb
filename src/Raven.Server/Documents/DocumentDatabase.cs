@@ -795,7 +795,9 @@ namespace Raven.Server.Documents
         public DatabaseSummary GetDatabaseSummary()
         {
             using (DocumentsStorage.ContextPool.AllocateOperationContext(out DocumentsOperationContext documentsContext))
+            using (ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext transactionContext))
             using (documentsContext.OpenReadTransaction())
+            using (transactionContext.OpenReadTransaction())
             {
                 return new DatabaseSummary
                 {
@@ -804,6 +806,9 @@ namespace Raven.Server.Documents
                     RevisionsCount = DocumentsStorage.RevisionsStorage.GetNumberOfRevisionDocuments(documentsContext),
                     ConflictsCount = DocumentsStorage.ConflictsStorage.GetNumberOfConflicts(documentsContext),
                     CounterEntriesCount = DocumentsStorage.CountersStorage.GetNumberOfCounterEntries(documentsContext),
+                    CompareExchangeCount = ServerStore.Cluster.GetNumberOfCompareExchange(transactionContext, DocumentsStorage.DocumentDatabase.Name),
+                    CompareExchangeTombstonesCount = ServerStore.Cluster.GetNumberOfCompareExchangeTombstones(transactionContext, DocumentsStorage.DocumentDatabase.Name),
+                    IdentitiesCount = ServerStore.Cluster.GetNumberOfIdentities(transactionContext, DocumentsStorage.DocumentDatabase.Name)
                 };
             }
         }

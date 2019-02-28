@@ -79,7 +79,6 @@ namespace Raven.Server.Documents.PeriodicBackup.Restore
                 Stopwatch sw = null;
                 RestoreSettings restoreSettings = null;
                 var firstFile = _filesToRestore[0];
-                var lastFile = _filesToRestore.Last();
 
                 var extension = Path.GetExtension(firstFile);
                 var snapshotRestore = false;
@@ -188,25 +187,29 @@ namespace Raven.Server.Documents.PeriodicBackup.Restore
                     _serverStore.EnsureNotPassive();
                     DisableOngoingTasksIfNeeded(databaseRecord);
 
-                    if (snapshotRestore)
-                    {
-                        result.SnapshotRestore.Processed = true;
-
-                        var summary = database.GetDatabaseSummary();
-                        result.Documents.ReadCount += summary.DocumentsCount;
-                        result.Documents.Attachments.ReadCount += summary.AttachmentsCount;
-                        result.Counters.ReadCount += summary.CounterEntriesCount;
-                        result.RevisionDocuments.ReadCount += summary.RevisionsCount;
-                        result.Conflicts.ReadCount += summary.ConflictsCount;
-                        result.Indexes.ReadCount += databaseRecord.GetIndexesCount();
-                        result.AddInfo($"Successfully restored {result.SnapshotRestore.ReadCount} " +
-                                       $"files during snapshot restore, took: {sw.ElapsedMilliseconds:#,#;;0}ms");
-                        onProgress.Invoke(result.Progress);
-                    }
-
                     using (database.DocumentsStorage.ContextPool.AllocateOperationContext(out DocumentsOperationContext context))
                     {
-                        SmugglerRestore(_restoreConfiguration.BackupLocation, database, context, databaseRecord, onProgress, result);
+                        if (snapshotRestore)
+                        {
+                            RestoreCompareExchangeAndIdentitiesFromSnapshotFile(onProgress, database, firstFile, context);
+                            result.SnapshotRestore.Processed = true;
+
+                            var summary = database.GetDatabaseSummary();
+                            result.Documents.ReadCount += summary.DocumentsCount;
+                            result.Documents.Attachments.ReadCount += summary.AttachmentsCount;
+                            result.Counters.ReadCount += summary.CounterEntriesCount;
+                            result.RevisionDocuments.ReadCount += summary.RevisionsCount;
+                            result.Conflicts.ReadCount += summary.ConflictsCount;
+                            result.Indexes.ReadCount += databaseRecord.GetIndexesCount();
+                            result.CompareExchange.ReadCount += summary.CompareExchangeCount;
+                            result.CompareExchangeTombstones.ReadCount += summary.CompareExchangeTombstonesCount;
+                            result.Identities.ReadCount += summary.IdentitiesCount;
+
+                            result.AddInfo($"Successfully restored {result.SnapshotRestore.ReadCount} files during snapshot restore, took: {sw.ElapsedMilliseconds:#,#;;0}ms");
+                            onProgress.Invoke(result.Progress);
+                        }
+
+                        SmugglerRestore(_restoreConfiguration.BackupLocation, database, context, databaseRecord, onProgress, result, snapshotRestore);
 
                         result.DatabaseRecord.Processed = true;
                         result.Documents.Processed = true;
@@ -220,10 +223,8 @@ namespace Raven.Server.Documents.PeriodicBackup.Restore
                     }
                 }
 
-                // after the db for restore is done, we can safely set the db status to active
-                databaseRecord = _serverStore.LoadDatabaseRecord(databaseName, out _);
+                // after the db for restore is done, we can safely set the db state to normal and write the DatabaseRecord
                 databaseRecord.DatabaseState = DatabaseStateStatus.Normal;
-
                 var (updateIndex, _) = await _serverStore.WriteDatabaseRecordAsync(databaseName, databaseRecord, null);
                 await _serverStore.Cluster.WaitForIndexNotification(updateIndex);
 
@@ -398,13 +399,13 @@ namespace Raven.Server.Documents.PeriodicBackup.Restore
             return filesToRestore;
         }
 
-        private void SmugglerRestore(
-            string backupDirectory,
+        private void SmugglerRestore(string backupDirectory,
             DocumentDatabase database,
             DocumentsOperationContext context,
             DatabaseRecord databaseRecord,
             Action<IOperationProgress> onProgress,
-            RestoreResult result)
+            RestoreResult result,
+            bool snapshotRestore)
         {
             Debug.Assert(onProgress != null);
 
@@ -436,7 +437,9 @@ namespace Raven.Server.Documents.PeriodicBackup.Restore
 
             var oldOperateOnTypes = DatabaseSmuggler.ConfigureOptionsForIncrementalImport(options);
             var destination = new DatabaseDestination(database);
-            for (var i = 0; i < _filesToRestore.Count; i++)
+            var filesCount = snapshotRestore ? _filesToRestore.Count - 1 : _filesToRestore.Count;
+
+            for (var i = 0; i < filesCount; i++)
             {
                 result.AddInfo($"Restoring file {(i + 1):#,#;;0}/{_filesToRestore.Count:#,#;;0}");
                 onProgress.Invoke(result.Progress);
@@ -532,19 +535,39 @@ namespace Raven.Server.Documents.PeriodicBackup.Restore
             }
         }
 
-        private Stream GetSnapshotInputStream(Stream fileStream, string database)
+        private void RestoreCompareExchangeAndIdentitiesFromSnapshotFile(Action<IOperationProgress> onProgress, DocumentDatabase database, string snapshotFile, DocumentsOperationContext context)
         {
-            using (_serverStore.ContextPool.AllocateOperationContext(out TransactionOperationContext ctx))
-            using (ctx.OpenReadTransaction())
+            var destination = new DatabaseDestination(database);
+            var smugglerOptions = new DatabaseSmugglerOptionsServerSide
             {
-                var key = _serverStore.GetSecretKey(ctx, database);
-                if (key != null)
+                AuthorizationStatus = AuthorizationStatus.DatabaseAdmin,
+                OperateOnTypes = DatabaseItemType.CompareExchange | DatabaseItemType.Identities,
+                SkipRevisionCreation = true
+            };
+            var lastPath = Path.Combine(_restoreConfiguration.BackupLocation, snapshotFile);
+
+            if (Path.GetExtension(lastPath) == Constants.Documents.PeriodicBackup.SnapshotExtension)
+            {
+                using (var zip = ZipFile.Open(lastPath, ZipArchiveMode.Read, System.Text.Encoding.UTF8))
                 {
-                    return new DecryptingXChaCha20Oly1305Stream(fileStream, key);
+                    foreach (var entry in zip.Entries)
+                    {
+                        if (entry.Name == RestoreSettings.SmugglerValuesFileName)
+                        {
+                            using (var input = entry.Open())
+                            using (var uncompressed = new GZipStream(input, CompressionMode.Decompress))
+                            {
+                                var source = new StreamSource(uncompressed, context, database);
+                                var smuggler = new Smuggler.Documents.DatabaseSmuggler(database, source, destination,
+                                    database.Time, smugglerOptions, onProgress: onProgress, token: _operationCancelToken.Token);
+
+                                smuggler.Execute();
+                            }
+                            break;
+                        }
+                    }
                 }
             }
-
-            return fileStream;
         }
 
         private Stream GetInputStream(Stream fileStream)

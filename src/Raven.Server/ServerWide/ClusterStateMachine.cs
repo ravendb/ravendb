@@ -73,7 +73,7 @@ namespace Raven.Server.ServerWide
         public static readonly TableSchema IdentitiesSchema;
         public static readonly TableSchema CertificatesSchema;
 
-        public enum UniqueItems
+        public enum CompareExchangeRow
         {
             Key,
             Index,
@@ -81,14 +81,14 @@ namespace Raven.Server.ServerWide
             PrefixIndex
         }
 
-        public enum UniqueTombstoneItems
+        public enum CompareExchangeTombstoneRow
         {
             Key,
             Index,
             PrefixIndex
         }
 
-        public enum UniqueIdentitiesItems
+        public enum IdentitiesRow
         {
             Key,
             Value,
@@ -144,12 +144,12 @@ namespace Raven.Server.ServerWide
             IdentitiesSchema = new TableSchema();
             IdentitiesSchema.DefineKey(new TableSchema.SchemaIndexDef
             {
-                StartIndex = (int)UniqueIdentitiesItems.Key,
+                StartIndex = (int)IdentitiesRow.Key,
                 Count = 1
             });
             IdentitiesSchema.DefineIndex(new TableSchema.SchemaIndexDef
             {
-                StartIndex = (int)UniqueIdentitiesItems.KeyIndex,
+                StartIndex = (int)IdentitiesRow.KeyIndex,
                 Count = 1,
                 IsGlobal = true,
                 Name = IdentitiesIndexSlice
@@ -158,12 +158,12 @@ namespace Raven.Server.ServerWide
             CompareExchangeSchema = new TableSchema();
             CompareExchangeSchema.DefineKey(new TableSchema.SchemaIndexDef
             {
-                StartIndex = (int)UniqueItems.Key,
+                StartIndex = (int)CompareExchangeRow.Key,
                 Count = 1
             });
             CompareExchangeSchema.DefineIndex(new TableSchema.SchemaIndexDef
             {
-                StartIndex = (int)UniqueItems.PrefixIndex,
+                StartIndex = (int)CompareExchangeRow.PrefixIndex,
                 Count = 1,
                 IsGlobal = true,
                 Name = CompareExchangeIndexSlice
@@ -172,12 +172,12 @@ namespace Raven.Server.ServerWide
             CompareExchangeTombstoneSchema = new TableSchema();
             CompareExchangeTombstoneSchema.DefineKey(new TableSchema.SchemaIndexDef
             {
-                StartIndex = (int)UniqueTombstoneItems.Key,
+                StartIndex = (int)CompareExchangeTombstoneRow.Key,
                 Count = 1
             });
             CompareExchangeTombstoneSchema.DefineIndex(new TableSchema.SchemaIndexDef
             {
-                StartIndex = (int)UniqueTombstoneItems.PrefixIndex,
+                StartIndex = (int)CompareExchangeTombstoneRow.PrefixIndex,
                 Count = 1,
                 IsGlobal = true,
                 Name = CompareExchangeTombstoneIndexSlice
@@ -291,6 +291,9 @@ namespace Raven.Server.ServerWide
                         break;
                     case nameof(DeleteMultipleValuesCommand):
                         DeleteMultipleValues(context, type, cmd, index, leader);
+                        break;
+                    case nameof(CleanCompareExchangeTombstonesCommand):
+                        ClearCompareExchangeTombstones(context, type, cmd, index, serverStore);
                         break;
                     case nameof(IncrementClusterIdentityCommand):
                         if (ValidatePropertyExistence(cmd, nameof(IncrementClusterIdentityCommand), nameof(IncrementClusterIdentityCommand.Prefix), out errorMessage) == false)
@@ -1612,7 +1615,7 @@ namespace Raven.Server.ServerWide
             {
                 if (items.ReadByKey(keySlice, out var reader))
                 {
-                    var index = ReadCompareExchangeIndex(reader);
+                    var index = ReadCompareExchangeOrTombstoneIndex(reader);
                     var value = ReadCompareExchangeValue(context, reader);
                     return (index, value);
                 }
@@ -1630,7 +1633,7 @@ namespace Raven.Server.ServerWide
                 {
                     pageSize--;
                     var key = ReadCompareExchangeKey(item.Value.Reader, dbName);
-                    var index = ReadCompareExchangeIndex(item.Value.Reader);
+                    var index = ReadCompareExchangeOrTombstoneIndex(item.Value.Reader);
                     var value = ReadCompareExchangeValue(context, item.Value.Reader);
                     yield return (key, index, value);
 
@@ -1654,7 +1657,7 @@ namespace Raven.Server.ServerWide
                             yield break;
 
                         var key = ReadCompareExchangeKey(tvr.Result.Reader, dbName);
-                        var index = ReadCompareExchangeIndex(tvr.Result.Reader);
+                        var index = ReadCompareExchangeOrTombstoneIndex(tvr.Result.Reader);
                         var value = ReadCompareExchangeValue(context, tvr.Result.Reader);
 
                         yield return (key, index, value);
@@ -1685,30 +1688,58 @@ namespace Raven.Server.ServerWide
             }
         }
 
+        private void ClearCompareExchangeTombstones(TransactionOperationContext context, string type, BlittableJsonReaderObject cmd, long index, ServerStore serverStore)
+        {
+            try
+            {
+                if (cmd.TryGet(DatabaseName, out string databaseName) == false || string.IsNullOrEmpty(databaseName))
+                    throw new RachisApplyException("Update database command must contain a DatabaseName property");
+
+                if (cmd.TryGet("MaxRaftIndex", out long maxEtag) == false)
+                    throw new RachisApplyException("Update database command must contain a MaxRaftIndex property");
+
+                var databaseNameLowered = databaseName.ToLowerInvariant();
+                DeleteCompareExchangeTombstonesUpToPrefix(context, databaseNameLowered, maxEtag);
+            }
+            finally
+            {
+                NotifyValueChanged(context, type, index);
+            }
+        }
+
+        private void DeleteCompareExchangeTombstonesUpToPrefix(TransactionOperationContext context, string dbName, long upToIndex = 0)
+        {
+            using (Slice.From(context.Allocator, dbName, out var dbNameSlice))
+            {
+                var table = context.Transaction.InnerTransaction.OpenTable(CompareExchangeTombstoneSchema, CompareExchangeTombstones);
+                table.DeleteForwardUpToPrefix(dbNameSlice, upToIndex);
+            }
+        }
+
         private static unsafe string ReadCompareExchangeKey(TableValueReader reader, string dbPrefix)
         {
-            var ptr = reader.Read((int)UniqueItems.Key, out var size);
+            var ptr = reader.Read((int)CompareExchangeRow.Key, out var size);
             // we need to read only the key from the format: 'databaseName/key'
             return Encodings.Utf8.GetString(ptr, size).Substring(dbPrefix.Length + 1);
         }
 
         private static unsafe BlittableJsonReaderObject ReadCompareExchangeValue(TransactionOperationContext context, TableValueReader reader)
         {
-            BlittableJsonReaderObject compareExchangeValue = new BlittableJsonReaderObject(reader.Read((int)UniqueItems.Value, out var size), size, context);
+            BlittableJsonReaderObject compareExchangeValue = new BlittableJsonReaderObject(reader.Read((int)CompareExchangeRow.Value, out var size), size, context);
             Transaction.DebugDisposeReaderAfterTransaction(context.Transaction.InnerTransaction, compareExchangeValue);
             return compareExchangeValue;
         }
 
-        private static unsafe long ReadCompareExchangeIndex(TableValueReader reader)
+        private static unsafe long ReadCompareExchangeOrTombstoneIndex(TableValueReader reader)
         {
-            var index = *(long*)reader.Read((int)UniqueItems.Index, out var size);
+            var index = *(long*)reader.Read((int)CompareExchangeRow.Index, out var size);
             Debug.Assert(size == sizeof(long));
             return index;
         }
 
         private static unsafe long ReadIdentitiesIndex(TableValueReader reader)
         {
-            var index =  *(long*)reader.Read((int)UniqueIdentitiesItems.Index, out var size);
+            var index =  *(long*)reader.Read((int)IdentitiesRow.Index, out var size);
             Debug.Assert(size == sizeof(long));
             return index;
         }
@@ -1937,12 +1968,12 @@ namespace Raven.Server.ServerWide
 
         private static unsafe long GetIdentityValue(TableValueReader reader)
         {
-            return *(long*)reader.Read((int)UniqueIdentitiesItems.Value, out var _);
+            return *(long*)reader.Read((int)IdentitiesRow.Value, out var _);
         }
 
         private static unsafe string GetIdentityKey(TableValueReader reader, string dbName)
         {
-            var ptr = reader.Read((int)UniqueIdentitiesItems.Key, out var size);
+            var ptr = reader.Read((int)IdentitiesRow.Key, out var size);
             var key = Encodings.Utf8.GetString(ptr, size).Substring(dbName.Length + 1);
             return key;
         }
@@ -1962,6 +1993,14 @@ namespace Raven.Server.ServerWide
             var compareExchange = items.GetTree(CompareExchangeSchema.Key);
             var prefix = CompareExchangeCommandBase.GetActualKey(databaseName, null);
             return GetNumberOf(compareExchange, prefix, context);
+        }
+
+        public long GetNumberOfCompareExchangeTombstones(TransactionOperationContext context, string databaseName)
+        {
+            var items = context.Transaction.InnerTransaction.OpenTable(CompareExchangeTombstoneSchema, CompareExchangeTombstones);
+            var compareExchangeTombstone = items.GetTree(CompareExchangeTombstoneSchema.Key);
+            var prefix = CompareExchangeCommandBase.GetActualKey(databaseName, null);
+            return GetNumberOf(compareExchangeTombstone, prefix, context);
         }
 
         private static long GetNumberOf(Tree tree, string prefix, TransactionOperationContext context)

@@ -21,6 +21,7 @@ using Raven.Server.NotificationCenter.Notifications.Details;
 using Raven.Server.Rachis;
 using Raven.Server.Routing;
 using Raven.Server.ServerWide;
+using Raven.Server.ServerWide.Commands;
 using Raven.Server.ServerWide.Commands.PeriodicBackup;
 using Raven.Server.ServerWide.Context;
 using Raven.Server.Smuggler.Documents;
@@ -28,6 +29,7 @@ using Raven.Server.Smuggler.Documents.Data;
 using Raven.Server.Utils;
 using Raven.Server.Utils.Metrics;
 using Sparrow;
+using Sparrow.Json;
 using Sparrow.Logging;
 using DatabaseSmuggler = Raven.Server.Smuggler.Documents.DatabaseSmuggler;
 
@@ -251,10 +253,68 @@ namespace Raven.Server.Documents.PeriodicBackup
 
                     _periodicBackup.BackupStatus = runningBackupStatus;
 
+                    var hasTombstones = false;
+                    using (_serverStore.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
+                    using (context.OpenReadTransaction())
+                    {
+                        var dbName = _database.Name;
+                        if (_serverStore.Cluster.GetNumberOfCompareExchangeTombstones(context, dbName) > 0)
+                            hasTombstones = true;
+
+                        if (hasTombstones)
+                        {
+                            var maxEtag = GetMaxTombstonesEtagToDelete(context, dbName);
+                            if (maxEtag > 0)
+                            {
+                                AsyncHelpers.RunSync(async () =>
+                                {
+                                    var result = await _database.ServerStore.SendToLeaderAsync(new CleanCompareExchangeTombstonesCommand(dbName, maxEtag));
+                                    await _database.ServerStore.Cluster.WaitForIndexNotification(result.Index);
+                                });
+                            }
+                        }
+                    }
+
                     // save the backup status
                     await WriteStatus(runningBackupStatus, onProgress);
                 }
             }
+        }
+
+        private long GetMaxTombstonesEtagToDelete(TransactionOperationContext context, string dbName)
+        {
+            var dbRecord = _database.ReadDatabaseRecord();
+
+            var maxEtag = long.MaxValue;
+
+            if (dbRecord.PeriodicBackups.Count == 0)
+                return 0;
+
+            foreach (var pb in dbRecord.PeriodicBackups)
+            {
+                var singleBackupStatus = _database.ServerStore.Cluster.Read(context, PeriodicBackupStatus.GenerateItemName(dbName, pb.TaskId));
+                if (singleBackupStatus == null)
+                    continue;
+
+                if (singleBackupStatus.TryGet(nameof(PeriodicBackupStatus.LocalBackup), out BlittableJsonReaderObject localBackup) == false 
+                    || singleBackupStatus.TryGet(nameof(PeriodicBackupStatus.LastRaftIndex), out BlittableJsonReaderObject lastRaftIndexBlittable) == false)
+                    continue;
+
+                if (localBackup.TryGet(nameof(PeriodicBackupStatus.LastIncrementalBackup), out DateTime? lastIncrementalBackupDate) == false 
+                    || lastRaftIndexBlittable.TryGet(nameof(PeriodicBackupStatus.LastEtag), out long? lastRaftIndex) == false)
+                    continue;
+
+                if (lastIncrementalBackupDate == null || lastRaftIndex == null)
+                    continue;
+
+                if (lastRaftIndex < maxEtag)
+                    maxEtag = lastRaftIndex.Value;
+            }
+
+            if (maxEtag == long.MaxValue)
+                return 0;
+
+            return maxEtag;
         }
 
         private bool CheckIfEncrypted()
