@@ -159,7 +159,7 @@ class editPeriodicBackupTask extends viewModelBase {
                     "<small><i class='icon-star-filled'></i></small>&nbsp;" +
                     "<small><i class='icon-star-filled'></i></small>" +
                     "</span></pre><br/>" +
-                    "For more information see: <a href='http://www.quartz-scheduler.org/documentation/quartz-2.x/tutorials/crontrigger.html' target='_blank'>CronTrigger Tutorial</a></div>"
+                    "For more information see: <a href='http://www.quartz-scheduler.org/documentation/quartz-2.3.0/tutorials/crontrigger.html' target='_blank'>CronTrigger Tutorial</a></div>"
             });
 
         popoverUtils.longWithHover($("#bucket-info"),
