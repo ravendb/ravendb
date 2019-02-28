@@ -141,6 +141,7 @@ namespace Raven.Server.Commercial
                 [nameof(HasEncryption)] = HasEncryption,
                 [nameof(HasSnapshotBackups)] = HasSnapshotBackups,
                 [nameof(HasCloudBackups)] = HasCloudBackups,
+                [nameof(HasEncryptedBackups)] = HasEncryptedBackups,
                 [nameof(HasExternalReplication)] = HasExternalReplication,
                 [nameof(HasDelayedExternalReplication)] = HasDelayedExternalReplication,
                 [nameof(HasRavenEtl)] = HasRavenEtl,
@@ -148,7 +149,8 @@ namespace Raven.Server.Commercial
                 [nameof(HasSnmpMonitoring)] = HasSnmpMonitoring,
                 [nameof(DistributedCluster)] = DistributedCluster,
                 [nameof(HasHighlyAvailableTasks)] = HasHighlyAvailableTasks,
-                [nameof(HasPullReplicationAsHub)] = HasPullReplicationAsHub
+                [nameof(HasPullReplicationAsHub)] = HasPullReplicationAsHub,
+                [nameof(HasPullReplicationAsSink)] = HasPullReplicationAsSink
             };
         }
     }
