@@ -474,7 +474,7 @@ namespace Raven.Server.Documents.Indexes
             if (schemaUpgrader)
             {
                 options.SchemaVersion = SchemaUpgrader.CurrentVersion.IndexVersion;
-                options.SchemaUpgrader = SchemaUpgrader.Upgrader(SchemaUpgrader.StorageType.Index, null, null);
+                options.SchemaUpgrader = SchemaUpgrader.Upgrader(SchemaUpgrader.StorageType.Index, null, null, null);
             }
         }
 

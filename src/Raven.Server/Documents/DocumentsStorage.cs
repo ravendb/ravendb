@@ -275,7 +275,7 @@ namespace Raven.Server.Documents
         public void Initialize(StorageEnvironmentOptions options)
         {
             options.SchemaVersion = SchemaUpgrader.CurrentVersion.DocumentsVersion;
-            options.SchemaUpgrader = SchemaUpgrader.Upgrader(SchemaUpgrader.StorageType.Documents, null, this);
+            options.SchemaUpgrader = SchemaUpgrader.Upgrader(SchemaUpgrader.StorageType.Documents, null, this, null);
             try
             {
                 DirectoryExecUtils.SubscribeToOnDirectoryInitializeExec(options, DocumentDatabase.Configuration.Storage, DocumentDatabase.Name, DirectoryExecUtils.EnvironmentType.Database, _logger);

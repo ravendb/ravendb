@@ -43,7 +43,7 @@ namespace Raven.Server.Documents
             options.OnRecoveryError += db.HandleOnConfigurationRecoveryError;
             options.CompressTxAboveSizeInBytes = db.Configuration.Storage.CompressTxAboveSize.GetValue(SizeUnit.Bytes);
             options.SchemaVersion = SchemaUpgrader.CurrentVersion.ConfigurationVersion;
-            options.SchemaUpgrader = SchemaUpgrader.Upgrader(SchemaUpgrader.StorageType.Configuration, this, null);
+            options.SchemaUpgrader = SchemaUpgrader.Upgrader(SchemaUpgrader.StorageType.Configuration, this, null, null);
             options.ForceUsing32BitsPager = db.Configuration.Storage.ForceUsing32BitsPager;
             options.EnablePrefetching = db.Configuration.Storage.EnablePrefetching;
             options.TimeToSyncAfterFlashInSec = (int)db.Configuration.Storage.TimeToSyncAfterFlash.AsTimeSpan.TotalSeconds;
