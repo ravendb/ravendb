@@ -555,7 +555,7 @@ namespace Raven.Server.ServerWide
             }
 
             options.SchemaVersion = SchemaUpgrader.CurrentVersion.ServerVersion;
-            options.SchemaUpgrader = SchemaUpgrader.Upgrader(SchemaUpgrader.StorageType.Server, null, null);
+            options.SchemaUpgrader = SchemaUpgrader.Upgrader(SchemaUpgrader.StorageType.Server, null, null, this);
             options.ForceUsing32BitsPager = Configuration.Storage.ForceUsing32BitsPager;
             options.EnablePrefetching = Configuration.Storage.EnablePrefetching;
 

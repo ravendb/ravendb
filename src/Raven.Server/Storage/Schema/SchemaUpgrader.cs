@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Linq;
 using Raven.Server.Documents;
+using Raven.Server.ServerWide;
 using Voron;
 using Voron.Impl;
 
@@ -10,7 +11,7 @@ namespace Raven.Server.Storage.Schema
     {
         internal class CurrentVersion
         {
-            public const int ServerVersion = 11;
+            public const int ServerVersion = 12;
 
             public const int ConfigurationVersion = 11;
 
@@ -34,12 +35,14 @@ namespace Raven.Server.Storage.Schema
             private readonly StorageType _storageType;
             private readonly ConfigurationStorage _configurationStorage;
             private readonly DocumentsStorage _documentsStorage;
+            private readonly ServerStore _serverStore;
 
-            internal InternalUpgrader(StorageType storageType, ConfigurationStorage configurationStorage, DocumentsStorage documentsStorage)
+            internal InternalUpgrader(StorageType storageType, ConfigurationStorage configurationStorage, DocumentsStorage documentsStorage, ServerStore serverStore)
             {
                 _storageType = storageType;
                 _configurationStorage = configurationStorage;
                 _documentsStorage = documentsStorage;
+                _serverStore = serverStore;
             }
 
             internal bool Upgrade(Transaction readTx, Transaction writeTx, int currentVersion, out int versionAfterUpgrade)
@@ -95,13 +98,14 @@ namespace Raven.Server.Storage.Schema
                     WriteTx = writeTx,
                     ConfigurationStorage = _configurationStorage,
                     DocumentsStorage = _documentsStorage,
+                    ServerStore = _serverStore
                 });
             }
         }
         
-        public static UpgraderDelegate Upgrader(StorageType storageType, ConfigurationStorage configurationStorage, DocumentsStorage documentsStorage)
+        public static UpgraderDelegate Upgrader(StorageType storageType, ConfigurationStorage configurationStorage, DocumentsStorage documentsStorage, ServerStore serverStore)
         {
-            var upgrade = new InternalUpgrader(storageType, configurationStorage, documentsStorage);
+            var upgrade = new InternalUpgrader(storageType, configurationStorage, documentsStorage, serverStore);
             return upgrade.Upgrade;
         }
     }
