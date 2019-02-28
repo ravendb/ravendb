@@ -1142,6 +1142,8 @@ namespace Raven.Server.Commercial
             var encryptedDatabasesCount = 0;
             var externalReplicationCount = 0;
             var delayedExternalReplicationCount = 0;
+            var pullReplicationAsHubCount = 0;
+            var pullReplicationAsSinkCount = 0;
             var ravenEtlCount = 0;
             var sqlEtlCount = 0;
             var snapshotBackupsCount = 0;
@@ -1161,6 +1163,14 @@ namespace Raven.Server.Commercial
                     if (databaseRecord.ExternalReplications != null &&
                         databaseRecord.ExternalReplications.Count(x => x.DelayReplicationFor != TimeSpan.Zero) > 0)
                         delayedExternalReplicationCount++;
+
+                    if (databaseRecord.HubPullReplications != null &&
+                        databaseRecord.HubPullReplications.Count > 0)
+                        pullReplicationAsHubCount++;
+
+                    if (databaseRecord.SinkPullReplications != null &&
+                        databaseRecord.SinkPullReplications.Count > 0)
+                        pullReplicationAsSinkCount++;
 
                     if (HasRavenEtl(databaseRecord.RavenEtls,
                         databaseRecord.RavenConnectionStrings))
@@ -1197,6 +1207,20 @@ namespace Raven.Server.Commercial
             {
                 var message = GenerateDetails(externalReplicationCount, "delayed external replication");
                 throw GenerateLicenseLimit(LimitType.DelayedExternalReplication, message);
+            }
+
+            if (pullReplicationAsHubCount > 0 &&
+                newLicenseStatus.HasPullReplicationAsHub == false)
+            {
+                var message = GenerateDetails(pullReplicationAsHubCount, "pull replication as hub");
+                throw GenerateLicenseLimit(LimitType.PullReplicationAsHub, message);
+            }
+
+            if (pullReplicationAsSinkCount > 0 &&
+                newLicenseStatus.HasPullReplicationAsSink == false)
+            {
+                var message = GenerateDetails(pullReplicationAsSinkCount, "pull replication as sink");
+                throw GenerateLicenseLimit(LimitType.PullReplicationAsSink, message);
             }
 
             if (ravenEtlCount > 0 &&
@@ -1333,17 +1357,40 @@ namespace Raven.Server.Commercial
             throw GenerateLicenseLimit(LimitType.ExternalReplication, details);
         }
 
-        public void AssertCanAddPullReplication()
+        public void AssertCanDelayReplication()
         {
-            //TODO: add this feature to the license
-//            if (IsValid(out var licenseLimit) == false)
-//                throw licenseLimit;
-//
-//            if (_licenseStatus.HasPullReplication)
-//                return;
-//
-//            var details = $"Your current license ({_licenseStatus.Type}) does not allow adding pull replication";
-//            throw GenerateLicenseLimit(LimitType.ExternalReplication, details);
+            if (IsValid(out var licenseLimit) == false)
+                throw licenseLimit;
+
+            if (_licenseStatus.HasDelayedExternalReplication)
+                return;
+
+            const string message = "Your current license doesn't include the delayed replication feature";
+            throw GenerateLicenseLimit(LimitType.DelayedExternalReplication, message, addNotification: true);
+        }
+
+        public void AssertCanAddPullReplicationAsHub()
+        {
+            if (IsValid(out var licenseLimit) == false)
+                throw licenseLimit;
+
+            if (_licenseStatus.HasPullReplicationAsHub)
+                return;
+
+            var details = $"Your current license ({_licenseStatus.Type}) does not allow adding pull replication as hub";
+            throw GenerateLicenseLimit(LimitType.PullReplicationAsHub, details);
+        }
+
+        public void AssertCanAddPullReplicationAsSink()
+        {
+            if (IsValid(out var licenseLimit) == false)
+                throw licenseLimit;
+
+            if (_licenseStatus.HasPullReplicationAsSink)
+                return;
+
+            var details = $"Your current license ({_licenseStatus.Type}) does not allow adding pull replication as sink";
+            throw GenerateLicenseLimit(LimitType.PullReplicationAsSink, details);
         }
 
         public void AssertCanAddRavenEtl()
@@ -1382,18 +1429,6 @@ namespace Raven.Server.Commercial
                                    "the SNMP monitoring feature";
             GenerateLicenseLimit(LimitType.Snmp, details, addNotification: true);
             return false;
-        }
-
-        public void AssertCanDelayReplication()
-        {
-            if (IsValid(out var licenseLimit) == false)
-                throw licenseLimit;
-
-            if (_licenseStatus.HasDelayedExternalReplication)
-                return;
-
-            const string message = "Your current license doesn't include the delayed replication feature";
-            throw GenerateLicenseLimit(LimitType.DelayedExternalReplication, message, addNotification: true);
         }
 
         public bool CanDynamicallyDistributeNodes(out LicenseLimitException licenseLimit)

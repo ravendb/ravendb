@@ -115,7 +115,9 @@ namespace Raven.Server.Commercial
 
         public bool HasHighlyAvailableTasks => GetValue<bool>("highlyAvailableTasks");
 
-        public bool HasPullReplication => GetValue<bool>("pullReplication");
+        public bool HasPullReplicationAsHub => GetValue<bool>("pullReplicationAsHub");
+
+        public bool HasPullReplicationAsSink => GetValue<bool>("pullReplicationAsSink");
 
         public DynamicJsonValue ToJson()
         {
@@ -144,7 +146,7 @@ namespace Raven.Server.Commercial
                 [nameof(HasSnmpMonitoring)] = HasSnmpMonitoring,
                 [nameof(DistributedCluster)] = DistributedCluster,
                 [nameof(HasHighlyAvailableTasks)] = HasHighlyAvailableTasks,
-                [nameof(HasPullReplication)] = HasPullReplication
+                [nameof(HasPullReplicationAsHub)] = HasPullReplicationAsHub
             };
         }
     }
