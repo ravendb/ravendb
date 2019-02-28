@@ -207,12 +207,16 @@ namespace Raven.Server.ServerWide
                     case nameof(RemoveNodeFromClusterCommand):
                         RemoveNodeFromCluster(context, cmd, index, leader);
                         break;
-                    case nameof(DeleteValueCommand):
                     case nameof(DeleteCertificateFromClusterCommand):
+                        DeleteCertificate(context, type, cmd, index);
+                        break;
+                    case nameof(DeleteValueCommand):
                         DeleteValue(context, type, cmd, index, leader);
                         break;
-                    case nameof(DeleteMultipleValuesCommand):
                     case nameof(DeleteCertificateCollectionFromClusterCommand):
+                        DeleteMultipleCertificates(context, type, cmd, index, leader);
+                        break;
+                    case nameof(DeleteMultipleValuesCommand):
                         DeleteMultipleValues(context, type, cmd, index, leader);
                         break;
                     case nameof(IncrementClusterIdentityCommand):
@@ -824,7 +828,7 @@ namespace Raven.Server.ServerWide
             }
         }
 
-        internal static unsafe void UpdateCertificate(long index, Table certificates, Slice key, Slice hash, BlittableJsonReaderObject updated)
+        internal static unsafe void UpdateCertificate(Table certificates, Slice key, Slice hash, BlittableJsonReaderObject updated)
         {
             using (certificates.Allocate(out TableValueBuilder builder))
             {
@@ -912,6 +916,45 @@ namespace Raven.Server.ServerWide
                 DeleteItem(context, delCmd.Name);
             }
             finally 
+            {
+                NotifyValueChanged(context, type, index);
+            }
+        }
+
+        private void DeleteCertificate(TransactionOperationContext context, string type, BlittableJsonReaderObject cmd, long index)
+        {
+            try
+            {
+                var certs = context.Transaction.InnerTransaction.OpenTable(CertificatesSchema, CertificatesSlice);
+                var command = (DeleteCertificateFromClusterCommand)CommandBase.CreateFrom(cmd);
+
+                using (Slice.From(context.Allocator, command.Name, out Slice keySlice))
+                {
+                    certs.DeleteByKey(keySlice);
+                }
+            }
+            finally
+            {
+                NotifyValueChanged(context, type, index);
+            }
+        }
+
+        private void DeleteMultipleCertificates(TransactionOperationContext context, string type, BlittableJsonReaderObject cmd, long index, Leader leader)
+        {
+            try
+            {
+                var certs = context.Transaction.InnerTransaction.OpenTable(CertificatesSchema, CertificatesSlice);
+                var command = (DeleteCertificateCollectionFromClusterCommand)CommandBase.CreateFrom(cmd);
+
+                foreach (var name in command.Names)
+                {
+                    using (Slice.From(context.Allocator, name, out Slice keySlice))
+                    {
+                        certs.DeleteByKey(keySlice);
+                    }
+                }
+            }
+            finally
             {
                 NotifyValueChanged(context, type, index);
             }
@@ -1014,12 +1057,12 @@ namespace Raven.Server.ServerWide
 
                 using (Slice.From(context.Allocator, command.PublicKeyPinningHash, out Slice hashSlice))
                 using (Slice.From(context.Allocator, command.Name, out Slice keySlice))
-                using (var rec = context.ReadObject(command.ValueToJson(), "inner-val"))
+                using (var cert = context.ReadObject(command.ValueToJson(), "inner-val"))
                 {
                     if (_clusterAuditLog.IsInfoEnabled)
                         _clusterAuditLog.Info($"Registering new certificate '{command.Value.Thumbprint}' in the cluster.");
 
-                    UpdateCertificate(index, certs, keySlice, hashSlice, rec);
+                    UpdateCertificate(certs, keySlice, hashSlice, cert);
                     return command.Value;
                 }
             }
