@@ -56,6 +56,9 @@ namespace Raven.Client.Exceptions.Commercial
         PullReplicationAsHub,
 
         [Description("Pull Replication As Sink")]
-        PullReplicationAsSink
+        PullReplicationAsSink,
+
+        [Description("Encrypted Backup")]
+        EncryptedBackup
     }
 }
