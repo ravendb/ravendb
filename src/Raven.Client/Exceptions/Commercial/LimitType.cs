@@ -50,6 +50,12 @@ namespace Raven.Client.Exceptions.Commercial
         DelayedExternalReplication,
 
         [Description("Highly Available Tasks")]
-        HighlyAvailableTasks
+        HighlyAvailableTasks,
+
+        [Description("Pull Replication As Hub")]
+        PullReplicationAsHub,
+
+        [Description("Pull Replication As Sink")]
+        PullReplicationAsSink
     }
 }
