@@ -919,10 +919,10 @@ namespace Raven.Server.ServerWide
                         using (var tx = context.OpenWriteTransaction())
                         {
                             Cluster.DeleteItem(context, CertificateReplacement.CertificateReplacementDoc);
-                            Cluster.DeleteItem(context, Constants.Certificates.Prefix + thumbprint);
+                            Cluster.DeleteCertificate(context, thumbprint);
 
                             if (oldThumbprint.IsNullOrWhiteSpace() == false)
-                                Cluster.DeleteItem(context, Constants.Certificates.Prefix + oldThumbprint);
+                                Cluster.DeleteCertificate(context, oldThumbprint);
 
                             tx.Commit();
                         }

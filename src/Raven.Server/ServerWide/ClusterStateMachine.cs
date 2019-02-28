@@ -969,6 +969,15 @@ namespace Raven.Server.ServerWide
             }
         }
 
+        public void DeleteCertificate(TransactionOperationContext context, string thumbprint)
+        {
+            var certs = context.Transaction.InnerTransaction.OpenTable(CertificatesSchema, CertificatesSlice);
+            using (Slice.From(context.Allocator, thumbprint, out Slice thumbprintSlice))
+            {
+                certs.DeleteByKey(thumbprintSlice);
+            }
+        }
+
         private void DeleteMultipleValues(TransactionOperationContext context, string type, BlittableJsonReaderObject cmd, long index, Leader leader)
         {
             try
@@ -1076,7 +1085,7 @@ namespace Raven.Server.ServerWide
         {
             var certsWithSameHash = GetCertificatesByPinningHashSortedByExpiration(context, hash);
 
-            var keysToDelete = certsWithSameHash.Select(x => Constants.Certificates.Prefix + x.Thumbprint).ToList();
+            var keysToDelete = certsWithSameHash.Select(x => x.Thumbprint).ToList();
             if (keysToDelete.Count > Constants.Certificates.MaxNumberOfCertsWithSameHash)
             {
                 keysToDelete = keysToDelete.GetRange(Constants.Certificates.MaxNumberOfCertsWithSameHash,
@@ -1426,6 +1435,19 @@ namespace Raven.Server.ServerWide
             }
         }
 
+        public IEnumerable<(string Thumbprint, BlittableJsonReaderObject Certificate)> GetAllCertificatesFromCluster(TransactionOperationContext context, int start, int take)
+        {
+            var certTable = context.Transaction.InnerTransaction.OpenTable(CertificatesSchema, CertificatesSlice);
+            
+            foreach (var result in certTable.SeekByPrimaryKeyPrefix(Slices.Empty, Slices.Empty, start))
+            {
+                if (take-- <= 0)
+                    yield break;
+
+                yield return GetCurrentItem(context, result.Value);
+            }
+        }
+
         public IEnumerable<(string ItemName, BlittableJsonReaderObject Value)> ItemsStartingWith(TransactionOperationContext context, string prefix, int start, int take)
         {
             var items = context.Transaction.InnerTransaction.OpenTable(ItemsSchema, Items);
@@ -1442,7 +1464,6 @@ namespace Raven.Server.ServerWide
                 }
             }
         }
-
 
         public BlittableJsonReaderObject GetItem(TransactionOperationContext context, string key)
         {
@@ -1629,14 +1650,14 @@ namespace Raven.Server.ServerWide
             return (key, doc);
         }
 
-        public BlittableJsonReaderObject GetCertificateByPrimaryKey(TransactionOperationContext context, string key)
+        public BlittableJsonReaderObject GetCertificateByThumbprint(TransactionOperationContext context, string thumbprint)
         {
             var certs = context.Transaction.InnerTransaction.OpenTable(CertificatesSchema, CertificatesSlice);
 
-            using (Slice.From(context.Allocator, key, out var k))
+            using (Slice.From(context.Allocator, thumbprint, out var thumbprintSlice))
             {
                 var tvh = new Table.TableValueHolder();
-                if (certs.ReadByKey(k, out tvh.Reader) == false)
+                if (certs.ReadByKey(thumbprintSlice, out tvh.Reader) == false)
                     return null;
                 return GetCertificate(context, tvh).Item2;
             }

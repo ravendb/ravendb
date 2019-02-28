@@ -461,8 +461,7 @@ namespace Raven.Server.Documents.Handlers.Admin
 
                         using (ctx.OpenReadTransaction())
                         {
-                            var key = Constants.Certificates.Prefix + certificate.Thumbprint;
-                            var readCert = ServerStore.Cluster.GetCertificateByPrimaryKey(ctx, key);
+                            var readCert = ServerStore.Cluster.GetCertificateByThumbprint(ctx, certificate.Thumbprint);
                             if (readCert != null)
                                 oldServerCert = JsonDeserializationServer.CertificateDefinition(readCert);
                         }
@@ -479,7 +478,7 @@ namespace Raven.Server.Documents.Handlers.Admin
                                 SecurityClearance = SecurityClearance.ClusterNode
                             };
 
-                            var res = await ServerStore.PutValueInClusterAsync(new PutCertificateCommand(Constants.Certificates.Prefix + certificate.Thumbprint, certificateDefinition));
+                            var res = await ServerStore.PutValueInClusterAsync(new PutCertificateCommand(certificate.Thumbprint, certificateDefinition));
                             await ServerStore.Cluster.WaitForIndexNotification(res.Index);
                         }
                     }
@@ -494,9 +493,7 @@ namespace Raven.Server.Documents.Handlers.Admin
 
                         if (certificate != null)
                         {
-                            var key = Constants.Certificates.Prefix + certificate.Thumbprint;
-
-                            var modifiedServerCert = JsonDeserializationServer.CertificateDefinition(ServerStore.Cluster.GetCertificateByPrimaryKey(ctx, key));
+                            var modifiedServerCert = JsonDeserializationServer.CertificateDefinition(ServerStore.Cluster.GetCertificateByThumbprint(ctx, certificate.Thumbprint));
 
                             if (modifiedServerCert == null)
                                 throw new ConcurrencyException("After adding the certificate, it was removed, shouldn't happen unless another admin removed it midway through.");
@@ -512,7 +509,7 @@ namespace Raven.Server.Documents.Handlers.Admin
                                     modifiedServerCert.Name += ", " + value;
                             }
 
-                            var res = await ServerStore.PutValueInClusterAsync(new PutCertificateCommand(key, modifiedServerCert));
+                            var res = await ServerStore.PutValueInClusterAsync(new PutCertificateCommand(certificate.Thumbprint, modifiedServerCert));
                             await ServerStore.Cluster.WaitForIndexNotification(res.Index);
                         }
 

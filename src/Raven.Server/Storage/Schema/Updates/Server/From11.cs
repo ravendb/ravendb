@@ -90,20 +90,21 @@ namespace Raven.Server.Storage.Schema.Updates.Server
                 }
 
                 // Read all the certs from the items table, add the pinning hash and store them in the new table. Then delete the original.
-
                 var allClusterCerts = step.ServerStore.Cluster.ItemsStartingWith(context, Constants.Certificates.Prefix, 0, int.MaxValue);
 
                 foreach (var cert in allClusterCerts)
                 {
                     var def = JsonDeserializationServer.CertificateDefinition(cert.Value);
+                    def.Name = def.Thumbprint;
                     def.PublicKeyPinningHash = CertificateUtils.GetPublicKeyPinningHash(new X509Certificate2(Convert.FromBase64String(def.Certificate)));
                                         
                     using (Slice.From(context.Allocator, def.PublicKeyPinningHash, out Slice hashSlice))
-                    using (Slice.From(context.Allocator, cert.ItemName, out Slice keySlice))
-                    using (var newCert = context.ReadObject(def.ToJson(), "updated/certificate"))
+                    using (Slice.From(context.Allocator, cert.ItemName, out Slice oldKeySlice)) // includes the 'certificates/' prefix
+                    using (Slice.From(context.Allocator, def.Thumbprint, out Slice newKeySlice))
+                    using (var newCert = context.ReadObject(def.ToJson(), "certificate/new/schema"))
                     {
-                        ClusterStateMachine.UpdateCertificate(certsTable, keySlice, hashSlice, newCert);
-                        itemsTable.DeleteByKey(keySlice);
+                        ClusterStateMachine.UpdateCertificate(certsTable, newKeySlice, hashSlice, newCert);
+                        itemsTable.DeleteByKey(oldKeySlice);
                     }
                 }
             }
