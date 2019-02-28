@@ -95,9 +95,11 @@ namespace Raven.Server.Commercial
 
         public bool DistributedCluster => GetValue<bool>("distributedCluster");
 
+        public bool HasSnapshotBackups => GetValue<bool>("snapshotBackup");
+
         public bool HasCloudBackups => GetValue<bool>("cloudBackup");
 
-        public bool HasSnapshotBackups => GetValue<bool>("snapshotBackup");
+        public bool HasEncryptedBackups => GetValue<bool>("encryptedBackup");
 
         public bool HasDynamicNodesDistribution => GetValue<bool>("dynamicNodesDistribution");
 
