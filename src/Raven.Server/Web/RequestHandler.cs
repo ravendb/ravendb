@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Globalization;
 using System.IO;
 using System.IO.Compression;
+using System.Linq;
 using System.Net;
 using System.Net.Http;
 using System.Runtime.CompilerServices;
@@ -573,18 +574,72 @@ namespace Raven.Server.Web
             throw new ArgumentOutOfRangeException("Unknown authentication status: " + status);
         }
 
-        public static void SetupCORSHeaders(HttpContext httpContext)
+        public static void SetupCORSHeaders(HttpContext httpContext, ServerStore serverStore)
         {
+            httpContext.Response.Headers.Add("Vary", "Origin");
+            
+            var requestedOrigin = httpContext.Request.Headers["Origin"];
 
-            httpContext.Response.Headers.Add("Access-Control-Allow-Origin", httpContext.Request.Headers["Origin"]);
+            if (requestedOrigin.Count == 0)
+            {
+                // no CORS headers needed
+                return;
+            }
+
+            string allowedOrigin = null; // prevent access by default
+            
+            if (IsOriginAllowed(requestedOrigin, serverStore))
+            {
+                allowedOrigin = requestedOrigin;
+            }
+            
+            httpContext.Response.Headers.Add("Access-Control-Allow-Origin", allowedOrigin);
             httpContext.Response.Headers.Add("Access-Control-Allow-Methods", "PUT, POST, GET, OPTIONS, DELETE");
             httpContext.Response.Headers.Add("Access-Control-Allow-Headers", httpContext.Request.Headers["Access-Control-Request-Headers"]);
             httpContext.Response.Headers.Add("Access-Control-Max-Age", "86400");
         }
 
+        private static bool IsOriginAllowed(string origin, ServerStore serverStore)
+        {
+            if (serverStore.Server.Certificate.Certificate == null)
+            {
+                // running in unsafe mode - since server can be access via multiple urls/aliases accept them 
+                return true;
+            }
+            
+            var topology = serverStore.GetClusterTopology();
+            
+            // check explicitly each topology type to avoid allocations in topology.AllNodes
+            foreach (var kvp in topology.Members)
+            {
+                if (kvp.Value.Equals(origin, StringComparison.OrdinalIgnoreCase))
+                {
+                    return true;
+                }
+            }
+            
+            foreach (var kvp in topology.Watchers)
+            {
+                if (kvp.Value.Equals(origin, StringComparison.OrdinalIgnoreCase))
+                {
+                    return true;
+                }
+            }
+            
+            foreach (var kvp in topology.Promotables)
+            {
+                if (kvp.Value.Equals(origin, StringComparison.OrdinalIgnoreCase))
+                {
+                    return true;
+                }
+            }
+
+            return false;
+        }
+
         protected void SetupCORSHeaders()
         {
-            SetupCORSHeaders(HttpContext);
+            SetupCORSHeaders(HttpContext, ServerStore);
         }
 
         protected void RedirectToLeader()
