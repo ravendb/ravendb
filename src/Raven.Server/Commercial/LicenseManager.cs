@@ -1148,6 +1148,8 @@ namespace Raven.Server.Commercial
             var sqlEtlCount = 0;
             var snapshotBackupsCount = 0;
             var cloudBackupsCount = 0;
+            var encryptedBackupsCount = 0;
+
             using (_serverStore.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
             using (context.OpenReadTransaction())
             {
@@ -1183,8 +1185,12 @@ namespace Raven.Server.Commercial
                     var backupTypes = GetBackupTypes(databaseRecord.PeriodicBackups);
                     if (backupTypes.HasSnapshotBackup)
                         snapshotBackupsCount++;
+
                     if (backupTypes.HasCloudBackup)
                         cloudBackupsCount++;
+
+                    if (backupTypes.HasEncryptedBackup)
+                        encryptedBackupsCount++;
                 }
             }
 
@@ -1250,6 +1256,13 @@ namespace Raven.Server.Commercial
                 var message = GenerateDetails(cloudBackupsCount, "cloud backups");
                 throw GenerateLicenseLimit(LimitType.CloudBackup, message);
             }
+
+            if (encryptedBackupsCount > 0 &&
+                newLicenseStatus.HasEncryptedBackups == false)
+            {
+                var message = GenerateDetails(cloudBackupsCount, "encrypted backups");
+                throw GenerateLicenseLimit(LimitType.EncryptedBackup, message);
+            }
         }
 
         private static string GenerateDetails(int count, string feature)
@@ -1281,21 +1294,23 @@ namespace Raven.Server.Commercial
             return false;
         }
 
-        private static (bool HasSnapshotBackup, bool HasCloudBackup) GetBackupTypes(
+        private static (bool HasSnapshotBackup, bool HasCloudBackup, bool HasEncryptedBackup) GetBackupTypes(
             IEnumerable<PeriodicBackupConfiguration> periodicBackups)
         {
             var hasSnapshotBackup = false;
             var hasCloudBackup = false;
+            var hasEncryptedBackup = false;
             foreach (var configuration in periodicBackups)
             {
                 hasSnapshotBackup |= configuration.BackupType == BackupType.Snapshot;
                 hasCloudBackup |= configuration.HasCloudBackup();
+                hasEncryptedBackup |= HasEncryptedBackup(configuration);
 
-                if (hasSnapshotBackup && hasCloudBackup)
-                    return (true, true);
+                if (hasSnapshotBackup && hasCloudBackup && hasEncryptedBackup)
+                    return (true, true, true);
             }
 
-            return (hasSnapshotBackup, hasCloudBackup);
+            return (hasSnapshotBackup, hasCloudBackup, hasEncryptedBackup);
         }
 
         public void AssertCanAddNode(string nodeUrl, int assignedCores)
@@ -1336,13 +1351,29 @@ namespace Raven.Server.Commercial
                     throw GenerateLicenseLimit(LimitType.SnapshotBackup, details);
                 }
 
-                var hasCloudBackup = configuration.HasCloudBackup();
-                if (hasCloudBackup && _licenseStatus.HasCloudBackups == false)
+                if (configuration.HasCloudBackup() && _licenseStatus.HasCloudBackups == false)
                 {
                     const string details = "Your current license doesn't include the backup to cloud or ftp feature!";
                     throw GenerateLicenseLimit(LimitType.CloudBackup, details);
                 }
+
+                if (HasEncryptedBackup(configuration) && _licenseStatus.HasEncryptedBackups == false)
+                {
+                    const string details = "Your current license doesn't include the encrypted backup feature!";
+                    throw GenerateLicenseLimit(LimitType.CloudBackup, details);
+                }
             }
+        }
+
+        public static bool HasEncryptedBackup(PeriodicBackupConfiguration configuration)
+        {
+            if (configuration.BackupEncryptionSettings == null)
+                return false;
+
+            if (configuration.BackupEncryptionSettings.EncryptionMode == EncryptionMode.None)
+                return false;
+
+            return true;
         }
 
         public void AssertCanAddExternalReplication()
