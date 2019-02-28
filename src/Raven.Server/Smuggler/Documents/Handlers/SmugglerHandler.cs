@@ -110,6 +110,9 @@ namespace Raven.Server.Smuggler.Documents.Handlers
                     }
                 }
 
+                if (string.IsNullOrWhiteSpace(options.EncryptionKey) == false)
+                    ServerStore.LicenseManager.AssertCanCreateEncryptedDatabase();
+
                 ApplyBackwardCompatibility(options);
 
                 var token = CreateOperationToken();
