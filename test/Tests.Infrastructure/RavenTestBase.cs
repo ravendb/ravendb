@@ -17,6 +17,7 @@ using Raven.Client.Documents.Conventions;
 using Raven.Client.Documents.Indexes;
 using Raven.Client.Documents.Operations;
 using Raven.Client.Documents.Operations.Backups;
+using Raven.Client.Documents.Operations.Counters;
 using Raven.Client.Documents.Operations.Indexes;
 using Raven.Client.Exceptions.Cluster;
 using Raven.Client.Exceptions.Database;
@@ -514,6 +515,30 @@ namespace FastTests
             };
 
             return mre;
+        }
+
+        protected static bool WaitForCounterReplication(IEnumerable<IDocumentStore> stores, string docId, string counterName, long expected, TimeSpan timeout)
+        {
+            long? val = null;
+            var sw = Stopwatch.StartNew();
+
+            foreach (var store in stores)
+            {
+                val = null;
+                while (sw.Elapsed < timeout)
+                {
+                    val = store.Operations
+                        .Send(new GetCountersOperation(docId, new[] { counterName }))
+                        .Counters[0]?.TotalValue;
+
+                    if (val == expected)
+                        break;
+
+                    Thread.Sleep(100);
+                }
+            }
+
+            return val == expected;
         }
 
         protected override void Dispose(ExceptionAggregator exceptionAggregator)

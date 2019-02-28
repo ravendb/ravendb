@@ -479,8 +479,7 @@ namespace Raven.Server.Documents
         private void RecreateCounters(DocumentsOperationContext context, string id, BlittableJsonReaderObject document,
             BlittableJsonReaderObject metadata, ref DocumentFlags flags)
         {
-            var countersStorage = context.DocumentDatabase.DocumentsStorage.CountersStorage;
-            var onDiskCounters = countersStorage.GetCountersForDocument(context, id).ToList();
+            var onDiskCounters = _documentsStorage.CountersStorage.GetCountersForDocument(context, id).ToList();
             if (onDiskCounters.Count == 0)
             {
                 if (metadata != null)
@@ -498,7 +497,6 @@ namespace Raven.Server.Documents
             }
 
             flags |= DocumentFlags.HasCounters;
-            onDiskCounters.Sort(StringComparer.OrdinalIgnoreCase);
 
             if (metadata == null)
             {
@@ -549,7 +547,7 @@ namespace Raven.Server.Documents
                     if (document.TryGet(Constants.Documents.Metadata.Key, out BlittableJsonReaderObject metadata) == false ||
                         metadata.TryGet(Constants.Documents.Metadata.Counters, out BlittableJsonReaderArray counters) == false ||
                         counters.Length != oldCounters.Length ||
-                        !counters.All(oldCounters.Contains) )
+                        counters.SequenceEqual(oldCounters) == false)
                     {
                         RecreateCounters(context, id, document, metadata, ref flags);
                         return true;
