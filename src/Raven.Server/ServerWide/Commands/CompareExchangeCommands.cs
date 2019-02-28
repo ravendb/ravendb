@@ -105,7 +105,7 @@ namespace Raven.Server.ServerWide.Commands
             {
                 if (items.ReadByKey(keySlice, out var reader))
                 {
-                    currentIndex = *(long*)reader.Read((int)ClusterStateMachine.UniqueItems.Index, out var _);
+                    currentIndex = *(long*)reader.Read((int)ClusterStateMachine.CompareExchangeRow.Index, out var _);
                     return Index == currentIndex;
                 }
             }
@@ -187,8 +187,8 @@ namespace Raven.Server.ServerWide.Commands
                         items.Delete(reader.Id);
                         return (index, null);
                     }
-                    var itemIndex = *(long*)reader.Read((int)ClusterStateMachine.UniqueItems.Index, out var _);
-                    var storeValue = reader.Read((int)ClusterStateMachine.UniqueItems.Value, out var size);
+                    var itemIndex = *(long*)reader.Read((int)ClusterStateMachine.CompareExchangeRow.Index, out var _);
+                    var storeValue = reader.Read((int)ClusterStateMachine.CompareExchangeRow.Value, out var size);
                     var result = new BlittableJsonReaderObject(storeValue, size, context);
 
                     if (Index == itemIndex)
@@ -265,7 +265,7 @@ namespace Raven.Server.ServerWide.Commands
 
                 if (items.ReadByKey(keySlice, out var reader))
                 {
-                    var itemIndex = *(long*)reader.Read((int)ClusterStateMachine.UniqueItems.Index, out var _);
+                    var itemIndex = *(long*)reader.Read((int)ClusterStateMachine.CompareExchangeRow.Index, out var _);
                     if (Index == itemIndex)
                     {
                         items.Update(reader.Id, tvb);
@@ -273,7 +273,7 @@ namespace Raven.Server.ServerWide.Commands
                     else
                     {
                         // concurrency violation, so we return the current value
-                        return (itemIndex, new BlittableJsonReaderObject(reader.Read((int)ClusterStateMachine.UniqueItems.Value, out var size), size, context));
+                        return (itemIndex, new BlittableJsonReaderObject(reader.Read((int)ClusterStateMachine.CompareExchangeRow.Value, out var size), size, context));
                     }
                 }
                 else

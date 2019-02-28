@@ -94,6 +94,7 @@ namespace Raven.Server.ServerWide
         {
             [nameof(AddOrUpdateCompareExchangeBatchCommand)] = GenerateJsonDeserializationRoutine<AddOrUpdateCompareExchangeBatchCommand>(),
             [nameof(RemoveCompareExchangeBatchCommand)] = GenerateJsonDeserializationRoutine<RemoveCompareExchangeBatchCommand>(),
+            [nameof(CleanCompareExchangeTombstonesCommand)] = GenerateJsonDeserializationRoutine<CleanCompareExchangeTombstonesCommand>(),
             [nameof(PutSubscriptionBatchCommand)] = GenerateJsonDeserializationRoutine<PutSubscriptionBatchCommand>(),
             [nameof(CleanUpClusterStateCommand)] = GenerateJsonDeserializationRoutine<CleanUpClusterStateCommand>(),
             [nameof(ClusterTransactionCommand)] = GenerateJsonDeserializationRoutine<ClusterTransactionCommand>(),

@@ -12,5 +12,10 @@ namespace Raven.Server.Documents.PeriodicBackup
 
         public long CounterEntriesCount { get; set; }
 
+        public long CompareExchangeCount { get; set; }
+
+        public long CompareExchangeTombstonesCount { get; set; }
+
+        public long IdentitiesCount { get; set; }
     }
 }

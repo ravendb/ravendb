@@ -379,7 +379,7 @@ namespace Raven.Server.Dashboard
             if (noDatabaseState)
                 return disabled;
 
-            var isRestoring = dbState.Equals(DatabaseStateStatus.RestoreInProgress);
+            var isRestoring = dbState == DatabaseStateStatus.RestoreInProgress;
             if (noDisabled)
                 return isRestoring;
 

@@ -81,7 +81,7 @@ namespace Raven.Server.Documents
                     return;
 
                 if (record.Disabled ||
-                    record.DatabaseState.Equals(DatabaseStateStatus.RestoreInProgress))
+                    record.DatabaseState == DatabaseStateStatus.RestoreInProgress)
                 {
                     UnloadDatabase(databaseName);
                     return;
@@ -698,8 +698,8 @@ namespace Raven.Server.Documents
             if (databaseRecord.Disabled && ignoreDisabledDatabase == false)
                 throw new DatabaseDisabledException(databaseName + " has been disabled");
 
-            if (databaseRecord.DatabaseState.Equals(DatabaseStateStatus.RestoreInProgress))
-                throw new DatabaseDisabledException(databaseName + " is currently being restored");
+            if (databaseRecord.DatabaseState == DatabaseStateStatus.RestoreInProgress)
+                throw new DatabaseRestoringException(databaseName + " is currently being restored");
 
             var databaseIsBeenDeleted = databaseRecord.DeletionInProgress != null &&
                             databaseRecord.DeletionInProgress.TryGetValue(_serverStore.NodeTag, out DeletionInProgressStatus deletionInProgress) &&
