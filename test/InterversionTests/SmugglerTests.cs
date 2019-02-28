@@ -201,7 +201,6 @@ namespace InterversionTests
                                 TaskId = 2,
                                 Name = "Sink",
                                 MentorNode = "A",
-                                DelayReplicationFor = new TimeSpan(3),
                                 HubDefinitionName = "hub"
 
                             }
@@ -357,7 +356,6 @@ namespace InterversionTests
                                 TaskId = 2,
                                 Name = "Sink",
                                 MentorNode = "A",
-                                DelayReplicationFor = new TimeSpan(3),
                                 HubDefinitionName = "hub"
 
                             }

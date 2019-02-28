@@ -72,7 +72,7 @@ namespace Raven.Server.Documents.Replication
             new ConcurrentSet<ConnectionShutdownInfo>();
 
         private readonly ConcurrentBag<ReplicationNode> _internalDestinations = new ConcurrentBag<ReplicationNode>();
-        private readonly HashSet<ExternalReplication> _externalDestinations = new HashSet<ExternalReplication>();
+        private readonly HashSet<ExternalReplicationBase> _externalDestinations = new HashSet<ExternalReplicationBase>();
 
         private class LastEtagPerDestination
         {
@@ -621,16 +621,16 @@ namespace Raven.Server.Documents.Replication
             }, instancesToDispose);
         }
 
-        private (List<ExternalReplication> AddedDestinations, List<ExternalReplication> RemovedDestiantions) FindExternalReplicationChanges(
-            HashSet<ExternalReplication> current, 
-            List<ExternalReplication> newDestinations)
+        private (List<ExternalReplicationBase> AddedDestinations, List<ExternalReplicationBase> RemovedDestiantions) FindExternalReplicationChanges(
+            HashSet<ExternalReplicationBase> current, 
+            List<ExternalReplicationBase> newDestinations)
         {
             if (newDestinations == null)
-                newDestinations = new List<ExternalReplication>();
+                newDestinations = new List<ExternalReplicationBase>();
 
             var outgoingHandlers = OutgoingHandlers.ToList();
 
-            var addedDestinations = new List<ExternalReplication>();
+            var addedDestinations = new List<ExternalReplicationBase>();
             var removedDestinations = current.ToList();
             foreach (var newDestination in newDestinations.ToArray())
             {
@@ -648,12 +648,14 @@ namespace Raven.Server.Documents.Replication
                     if (handler == null)
                         continue;
 
-                    if (handler.Destination is ExternalReplication ex)
+                    if (handler.Destination is ExternalReplication ex && 
+                        actual is ExternalReplication actualEx &&
+                        newDestination is ExternalReplication newDestinationEx)
                     {
-                        if (ex.DelayReplicationFor != actual.DelayReplicationFor)
+                        if (ex.DelayReplicationFor != actualEx.DelayReplicationFor)
                             handler.NextReplicateTicks = 0;
 
-                        ex.DelayReplicationFor = newDestination.DelayReplicationFor;
+                        ex.DelayReplicationFor = newDestinationEx.DelayReplicationFor;
                         ex.MentorNode = newDestination.MentorNode;
                     }
                     continue;
@@ -667,7 +669,7 @@ namespace Raven.Server.Documents.Replication
 
         private void HandleExternalReplication(DatabaseRecord newRecord, List<IDisposable> instancesToDispose)
         {
-            var externalReplications = newRecord.ExternalReplications.Concat(newRecord.SinkPullReplications).ToList();
+            var externalReplications = newRecord.ExternalReplications.Concat<ExternalReplicationBase>(newRecord.SinkPullReplications).ToList();
             var changes = FindExternalReplicationChanges(_externalDestinations, externalReplications);
 
             DropOutgoingConnections(changes.RemovedDestiantions, instancesToDispose);
@@ -750,7 +752,7 @@ namespace Raven.Server.Documents.Replication
             }
         }
 
-        private bool ValidateConnectionString(DatabaseRecord newRecord, ExternalReplication externalReplication, out RavenConnectionString connectionString)
+        private bool ValidateConnectionString(DatabaseRecord newRecord, ExternalReplicationBase externalReplication, out RavenConnectionString connectionString)
         {
             connectionString = null;
             if (string.IsNullOrEmpty(externalReplication.ConnectionStringName))
@@ -920,7 +922,7 @@ namespace Raven.Server.Documents.Replication
             {
                 var certificate = GetCertificateForReplication(node, out _);
 
-                if (node is ExternalReplication exNode)
+                if (node is ExternalReplicationBase exNode)
                 {
                     var database = exNode.ConnectionString.Database;
                     if (node is PullReplicationAsSink sink)
@@ -929,7 +931,7 @@ namespace Raven.Server.Documents.Replication
                     }
 
                     // normal external replication
-                    return GetExternalReplicationTcpInfo(exNode, certificate, database);
+                    return GetExternalReplicationTcpInfo(exNode as ExternalReplication, certificate, database);
                 }
 
                 if (node is InternalReplication internalNode)
@@ -999,28 +1001,27 @@ namespace Raven.Server.Documents.Replication
 
         public X509Certificate2 GetCertificateForReplication(ReplicationNode node, out TcpConnectionHeaderMessage.AuthorizationInfo authorizationInfo)
         {
-            authorizationInfo = null;
-            var exNode = node as ExternalReplication;
-            if (exNode == null) // internal replication
-                return _server.Server.Certificate.Certificate;
-
-            var sink = exNode as PullReplicationAsSink;
-            if (sink == null) // normal external replication
-                return _server.Server.Certificate.Certificate;
-
-            // pull replication
-            authorizationInfo = new TcpConnectionHeaderMessage.AuthorizationInfo
+            switch (node)
             {
-                AuthorizeAs = TcpConnectionHeaderMessage.AuthorizationInfo.AuthorizeMethod.PullReplication,
-                AuthorizationFor = sink.HubDefinitionName
-            };
+                case InternalReplication _:
+                case ExternalReplication _:
+                    authorizationInfo = null;
+                    return _server.Server.Certificate.Certificate;
+                case PullReplicationAsSink sink:
+                    authorizationInfo = new TcpConnectionHeaderMessage.AuthorizationInfo
+                    {
+                        AuthorizeAs = TcpConnectionHeaderMessage.AuthorizationInfo.AuthorizeMethod.PullReplication,
+                        AuthorizationFor = sink.HubDefinitionName
+                    };
 
-            if (sink.CertificateWithPrivateKey == null)
-                return _server.Server.Certificate.Certificate;
+                    if (sink.CertificateWithPrivateKey == null)
+                        return _server.Server.Certificate.Certificate;
 
-            var certBytes = Convert.FromBase64String(sink.CertificateWithPrivateKey);
-            return new X509Certificate2(certBytes, sink.CertificatePassword, X509KeyStorageFlags.Exportable | X509KeyStorageFlags.MachineKeySet);
-
+                    var certBytes = Convert.FromBase64String(sink.CertificateWithPrivateKey);
+                    return new X509Certificate2(certBytes, sink.CertificatePassword, X509KeyStorageFlags.Exportable | X509KeyStorageFlags.MachineKeySet);
+                default:
+                    throw new ArgumentException($"Unknown node type {node.GetType().FullName}");
+            }
         }
 
         public (string Url, OngoingTaskConnectionStatus Status) GetExternalReplicationDestination(long taskId)

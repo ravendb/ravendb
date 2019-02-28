@@ -4,7 +4,7 @@ using Sparrow.Json.Parsing;
 
 namespace Raven.Client.Documents.Operations.Replication
 {
-    public class PullReplicationAsSink : ExternalReplication
+    public class PullReplicationAsSink : ExternalReplicationBase
     {
         public string CertificateWithPrivateKey; // base64
         public string CertificatePassword;
@@ -26,6 +26,7 @@ namespace Raven.Client.Documents.Operations.Replication
                        string.Equals(CertificatePassword, sink.CertificatePassword) &&
                        string.Equals(CertificateWithPrivateKey, sink.CertificateWithPrivateKey);
             }
+
             return false;
         }
 
