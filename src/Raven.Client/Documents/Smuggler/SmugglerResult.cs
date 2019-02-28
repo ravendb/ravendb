@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Diagnostics;
+using System.Text;
 using Raven.Client.Documents.Operations;
 using Raven.Client.Util;
 using Sparrow.Json.Parsing;
@@ -94,7 +95,7 @@ namespace Raven.Client.Documents.Smuggler
         {
             protected readonly SmugglerResult _result;
 
-            public SmugglerProgress() 
+            public SmugglerProgress()
                 : this(null)
             {
                 // for deserialization
@@ -216,37 +217,97 @@ namespace Raven.Client.Documents.Smuggler
             public override DynamicJsonValue ToJson()
             {
                 var json = base.ToJson();
-                json[nameof(RevisionsConfigurationUpdated)] = RevisionsConfigurationUpdated;
-                json[nameof(ExpirationConfigurationUpdated)] = ExpirationConfigurationUpdated;
-                json[nameof(RavenConnectionStringsUpdated)] = RavenConnectionStringsUpdated;
-                json[nameof(SqlConnectionStringsUpdated)] = SqlConnectionStringsUpdated;
-                json[nameof(ClientConfigurationUpdated)] = ClientConfigurationUpdated;
-                json[nameof(ConflictSolverConfigUpdated)] = ClientConfigurationUpdated;
-                json[nameof(PeriodicBackupsUpdated)] = PeriodicBackupsUpdated;
-                json[nameof(ExternalReplicationsUpdated)] = ExternalReplicationsUpdated;
-                json[nameof(SqlEtlsUpdated)] = SqlEtlsUpdated;
-                json[nameof(RavenEtlsUpdated)] = RavenEtlsUpdated;
-                json[nameof(SortersUpdated)] = SortersUpdated;
-                json[nameof(SinkPullReplicationsUpdated)] = SinkPullReplicationsUpdated;
-                json[nameof(HubPullReplicationsUpdated)] = HubPullReplicationsUpdated;
+
+                if (RevisionsConfigurationUpdated)
+                    json[nameof(RevisionsConfigurationUpdated)] = RevisionsConfigurationUpdated;
+
+                if (ExpirationConfigurationUpdated)
+                    json[nameof(ExpirationConfigurationUpdated)] = ExpirationConfigurationUpdated;
+
+                if (RavenConnectionStringsUpdated)
+                    json[nameof(RavenConnectionStringsUpdated)] = RavenConnectionStringsUpdated;
+
+                if (SqlConnectionStringsUpdated)
+                    json[nameof(SqlConnectionStringsUpdated)] = SqlConnectionStringsUpdated;
+
+                if (ClientConfigurationUpdated)
+                    json[nameof(ClientConfigurationUpdated)] = ClientConfigurationUpdated;
+
+                if (ConflictSolverConfigUpdated)
+                    json[nameof(ConflictSolverConfigUpdated)] = ClientConfigurationUpdated;
+
+                if (PeriodicBackupsUpdated)
+                    json[nameof(PeriodicBackupsUpdated)] = PeriodicBackupsUpdated;
+
+                if (ExternalReplicationsUpdated)
+                    json[nameof(ExternalReplicationsUpdated)] = ExternalReplicationsUpdated;
+
+                if (SqlEtlsUpdated)
+                    json[nameof(SqlEtlsUpdated)] = SqlEtlsUpdated;
+
+                if (RavenEtlsUpdated)
+                    json[nameof(RavenEtlsUpdated)] = RavenEtlsUpdated;
+
+                if (SortersUpdated)
+                    json[nameof(SortersUpdated)] = SortersUpdated;
+
+                if (SinkPullReplicationsUpdated)
+                    json[nameof(SinkPullReplicationsUpdated)] = SinkPullReplicationsUpdated;
+
+                if (HubPullReplicationsUpdated)
+                    json[nameof(HubPullReplicationsUpdated)] = HubPullReplicationsUpdated;
+
                 return json;
             }
 
             public override string ToString()
             {
-                return $"RevisionsConfigurationUpdated: {RevisionsConfigurationUpdated}. " +
-                       $"ExpirationConfigurationUpdated: {ExpirationConfigurationUpdated}. " +
-                       $"RavenConnectionStringsUpdated: {RavenConnectionStringsUpdated}. " +
-                       $"SqlConnectionStringsUpdated: {SqlConnectionStringsUpdated}. " +
-                       $"ConflictSolverConfigUpdated: {ConflictSolverConfigUpdated}. " +
-                       $"PeriodicBackupsUpdated: {PeriodicBackupsUpdated}. " +
-                       $"ExternalReplicationsUpdated: {ExternalReplicationsUpdated}. " +
-                       $"RavenEtlsUpdated: {RavenEtlsUpdated}. " +
-                       $"SqlEtlsUpdated: {SqlEtlsUpdated}. " +
-                       $"SortersUpdated: {SortersUpdated}. " +
-                       $"SinkPullReplicationsUpdated: {SinkPullReplicationsUpdated}. " +
-                       $"HubPullReplicationsUpdated: {HubPullReplicationsUpdated}. " +
-                       $"ClientConfigurationUpdated: {ClientConfigurationUpdated}.";
+                var sb = new StringBuilder();
+                if (RevisionsConfigurationUpdated)
+                    sb.AppendLine("- Revisions");
+
+                if (ExpirationConfigurationUpdated)
+                    sb.AppendLine("- Expiration");
+
+                if (RavenConnectionStringsUpdated)
+                    sb.AppendLine("- RavenDB Connection Strings");
+
+                if (SqlConnectionStringsUpdated)
+                    sb.AppendLine("- SQL Connection Strings");
+
+                if (ConflictSolverConfigUpdated)
+                    sb.AppendLine("- Conflicts Solvers");
+
+                if (PeriodicBackupsUpdated)
+                    sb.AppendLine("- Periodic Backups");
+
+                if (ExternalReplicationsUpdated)
+                    sb.AppendLine("- External Replications");
+
+                if (RavenEtlsUpdated)
+                    sb.AppendLine("- RavenDB ETLs");
+
+                if (SqlEtlsUpdated)
+                    sb.AppendLine("- SQL ETLs");
+
+                if (SortersUpdated)
+                    sb.AppendLine("- Sorters");
+
+                if (SinkPullReplicationsUpdated)
+                    sb.AppendLine("- Pull Replication Sinks");
+
+                if (HubPullReplicationsUpdated)
+                    sb.AppendLine("- Pull Replication Hubs");
+
+                if (ClientConfigurationUpdated)
+                    sb.AppendLine("- Client");
+
+                if (sb.Length == 0)
+                    return string.Empty;
+
+                sb.Insert(0, "Following configurations were updated:" + Environment.NewLine);
+
+                return sb.ToString();
             }
         }
 
