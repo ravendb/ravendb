@@ -19,6 +19,7 @@ import queryCompleter = require("common/queryCompleter");
 import subscriptionRqlSyntax = require("viewmodels/database/tasks/subscriptionRqlSyntax");
 import getPossibleMentorsCommand = require("commands/database/tasks/getPossibleMentorsCommand");
 import eventsCollector = require("common/eventsCollector");
+import generalUtils = require("common/generalUtils");
 
 type testTabName = "results" | perCollectionIncludes;
 type fetcherType = (skip: number, take: number) => JQueryPromise<pagedResult<documentObject>>;
@@ -233,7 +234,7 @@ class editSubscriptionTask extends viewModelBase {
                     const value = column.getCellValue(doc);
                     if (!_.isUndefined(value)) {
                         if (column.header === "Exception" && _.isString(value)) {
-                            const formattedValue = _.replace(value, "\r\n", "<Br />");
+                            const formattedValue = _.replace(generalUtils.escapeHtml(value), "\r\n", "<Br />");
                             onValue(formattedValue, value);
                         } else {
                             const json = JSON.stringify(value, null, 4);

@@ -640,7 +640,9 @@ class visualizerGraphGlobal {
     }
 
     private onTrashClicked(item: documentItem) {
-        viewHelpers.confirmationMessage("Are you sure?", "Do you want to remove document: " + item.name + " from analysis?", ["No", "Yes, delete"])
+        viewHelpers.confirmationMessage("Are you sure?", "Do you want to remove document: " + item.name + " from analysis?", {
+            buttons: ["No", "Yes, delete"]
+        })
             .done(result => {
                 if (result.can) {
                     this.deleteItemCallback(item);

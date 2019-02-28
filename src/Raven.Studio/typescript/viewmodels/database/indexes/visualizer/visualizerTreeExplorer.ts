@@ -1,5 +1,4 @@
-import graphHelper = require("common/helpers/graph/graphHelper");
-import viewHelpers = require("common/helpers/view/viewHelpers");
+import generalUtils = require("common/generalUtils");
 import virtualGridController = require("widgets/virtualGrid/virtualGridController");
 import textColumn = require("widgets/virtualGrid/columns/textColumn");
 import columnPreviewPlugin = require("widgets/virtualGrid/columnPreviewPlugin");
@@ -45,7 +44,7 @@ class visualizerTreeExplorer extends dialogViewModelBase {
         const keys = Object.keys(this.tableItems[0].Data);
         
         const columns = keys.map(key => {
-            return new textColumn<Raven.Server.Documents.Indexes.Debugging.MapResultInLeaf>(this.gridController(), x => x.Data[key], key,  (80 / keys.length) + "%");
+            return new textColumn<Raven.Server.Documents.Indexes.Debugging.MapResultInLeaf>(this.gridController(), x => x.Data[key], generalUtils.escapeHtml(key), (80 / keys.length) + "%");
         });
 
         columns.push(new textColumn<Raven.Server.Documents.Indexes.Debugging.MapResultInLeaf>(this.gridController(), x => x.Source || '-', "Source Document", "20%"));

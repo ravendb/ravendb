@@ -102,8 +102,10 @@ class viewModelBase {
         const discard = "Discard changes";
         const stay = "Stay on this page";
         const discardStayResult = $.Deferred<confirmDialogResult>();
-        const confirmation = this.confirmationMessage("Unsaved changes", "You have unsaved changes. How do you want to proceed?",
-            [discard, stay], true, stay);
+        const confirmation = this.confirmationMessage("Unsaved changes", "You have unsaved changes. How do you want to proceed?", {
+            buttons: [discard, stay],
+            forceRejectWithResolve: true
+        });
 
         confirmation.done((result: confirmDialogResult) => {
             if (!result.can) {
@@ -252,8 +254,8 @@ class viewModelBase {
         viewModelBase.modelPollingHandle = null;
     }
 
-    protected confirmationMessage(title: string, confirmationMessage: string, options: string[] = ["No", "Yes"], forceRejectWithResolve: boolean = false, defaultOption: string = null): JQueryPromise<confirmDialogResult> {
-        return viewHelpers.confirmationMessage(title, confirmationMessage, options, forceRejectWithResolve, defaultOption);
+    protected confirmationMessage(title: string, confirmationMessage: string, options?: confirmationDialogOptions): JQueryPromise<confirmDialogResult> {
+        return viewHelpers.confirmationMessage(title, confirmationMessage, options);
     }
 
     canContinueIfNotDirty(title: string, confirmationMessage: string) {

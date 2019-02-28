@@ -161,7 +161,9 @@ class importDatabaseFromFile extends viewModelBase {
         super.canDeactivate(isClose);
 
         if (this.isUploading()) {
-            this.confirmationMessage("Upload is in progress", "Please wait until uploading is complete.", ["OK"]);
+            this.confirmationMessage("Upload is in progress", "Please wait until uploading is complete.", {
+                buttons: ["OK"]
+            });
             return false;
         }
 

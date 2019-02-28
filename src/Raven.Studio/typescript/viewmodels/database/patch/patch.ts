@@ -19,6 +19,7 @@ import patchSyntax = require("viewmodels/database/patch/patchSyntax");
 import patchTester = require("viewmodels/database/patch/patchTester");
 import savedPatchesStorage = require("common/storage/savedPatchesStorage");
 import queryUtil = require("common/queryUtil");
+import generalUtils = require("common/generalUtils");
 
 type fetcherType = (skip: number, take: number, previewCols: string[], fullCols: string[]) => JQueryPromise<pagedResult<document>>;
 
@@ -256,7 +257,9 @@ class patch extends viewModelBase {
 
     removePatch(item: storedPatchDto) {
 
-        this.confirmationMessage("Patch", `Are you sure you want to delete patch '${item.Name}'?`, ["Cancel", "Delete"])
+        this.confirmationMessage("Patch", `Are you sure you want to delete patch '${generalUtils.escapeHtml(item.Name)}'?`, {
+            buttons: ["Cancel", "Delete"]
+        })
             .done(result => {
                 if (result.can) {
                     savedPatchesStorage.removeSavedPatchByHash(this.activeDatabase(), item.Hash);
@@ -279,7 +282,10 @@ class patch extends viewModelBase {
 
                 // Verify if name already exists
                 if (_.find(savedPatchesStorage.getSavedPatches(this.activeDatabase()), x => x.Name.toUpperCase() === this.patchSaveName().toUpperCase())) { 
-                    this.confirmationMessage(`Patch ${this.patchSaveName()} already exists`, `Overwrite existing patch ?`, ["No", "Overwrite"])
+                    this.confirmationMessage(`Patch ${generalUtils.escapeHtml(this.patchSaveName())} already exists`, `Overwrite existing patch ?`, {
+                        buttons: ["No", "Overwrite"],
+                        html: true
+                    })
                         .done(result => {
                             if (result.can) {
                                 this.savePatchToStorage();
@@ -336,7 +342,9 @@ class patch extends viewModelBase {
         eventsCollector.default.reportEvent("patch", "run");
         const message = `Are you sure you want to apply this patch to matching documents?`;
 
-        this.confirmationMessage("Patch", message, ["Cancel", "Patch all"])
+        this.confirmationMessage("Patch", message, {
+            buttons: ["Cancel", "Patch all"]
+        })
             .done(result => {
                 if (result.can) {
                     new patchCommand(this.patchDocument().query(), this.activeDatabase())

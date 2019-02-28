@@ -5,7 +5,6 @@ import saveConnectionStringCommand = require("commands/database/settings/saveCon
 import getConnectionStringsCommand = require("commands/database/settings/getConnectionStringsCommand");
 import getConnectionStringInfoCommand = require("commands/database/settings/getConnectionStringInfoCommand");
 import deleteConnectionStringCommand = require("commands/database/settings/deleteConnectionStringCommand");
-import ongoingTaskModel = require("models/database/tasks/ongoingTaskModel");
 import ongoingTasksCommand = require("commands/database/tasks/getOngoingTasksCommand");
 import eventsCollector = require("common/eventsCollector");
 import generalUtils = require("common/generalUtils");
@@ -156,7 +155,10 @@ class connectionStrings extends viewModelBase {
 
     confirmDelete(connectionStringName: string, connectionStringtype: Raven.Client.Documents.Operations.ConnectionStrings.ConnectionStringType) {
         const stringType = connectionStringtype === 'Raven' ? 'RavenDB' : 'SQL';
-        this.confirmationMessage("Are you sure?", `Do you want to delete ${stringType} ETL connection string:  ${connectionStringName}`, ["Cancel", "Delete"])
+        this.confirmationMessage("Are you sure?", `Do you want to delete ${stringType} ETL connection string:  ${generalUtils.escapeHtml(connectionStringName)}`, {
+            buttons: ["Cancel", "Delete"],
+            html: true
+        })
             .done(result => {
                 if (result.can) {
                     this.deleteConnectionSring(connectionStringtype, connectionStringName);

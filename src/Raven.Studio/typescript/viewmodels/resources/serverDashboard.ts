@@ -270,7 +270,7 @@ class databasesSection {
             items: this.table
         }), () => {
             return [ 
-                new hyperlinkColumn<databaseItem>(grid, x => iconProvider(x) + '<span>' + utils.escape(x.database()) + '</span>', x => appUrl.forDocuments(null, x.database()), "Database", "30%", {
+                new hyperlinkColumn<databaseItem>(grid, x => iconProvider(x) + '<span>' + generalUtils.escapeHtml(x.database()) + '</span>', x => appUrl.forDocuments(null, x.database()), "Database", "30%", {
                     extraClass: x => x.disabled() ? "disabled" : "",
                     useRawValue: () => true,
                     sortable: x => x.database()

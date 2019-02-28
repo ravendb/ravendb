@@ -494,7 +494,10 @@ class databases extends viewModelBase {
     compactDatabase(db: databaseInfo) {
         eventsCollector.default.reportEvent("databases", "compact");
         
-        this.confirmationMessage("Are you sure?", "Do you want to compact '" + db.name + "'?", ["No", "Yes, compact"])
+        this.confirmationMessage("Are you sure?", `Do you want to compact '${generalUtils.escapeHtml(db.name)}'?`, {
+            buttons: ["No", "Yes, compact"],
+            html: true
+        })
             .done(result => {
                 if (result.can) {
                     

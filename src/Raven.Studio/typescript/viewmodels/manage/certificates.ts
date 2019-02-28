@@ -20,6 +20,7 @@ import eventsCollector = require("common/eventsCollector");
 import changesContext = require("common/changesContext");
 import accessManager = require("common/shell/accessManager");
 import getServerCertificateRenewalDateCommand = require("commands/auth/getServerCertificateRenewalDateCommand");
+import generalUtils = require("common/generalUtils");
 
 interface unifiedCertificateDefinitionWithCache extends unifiedCertificateDefinition {
     expirationClass: string;
@@ -201,7 +202,9 @@ class certificates extends viewModelBase {
     }
     
     renewServerCertificate() {
-        this.confirmationMessage("Server certificate renewal", "Do you want to renew the server certificate?", ["No", "Yes, renew"])
+        this.confirmationMessage("Server certificate renewal", "Do you want to renew the server certificate?", {
+            buttons: ["No", "Yes, renew"]
+        })
             .done(result => {
                 if (result.can) {
                     new forceRenewServerCertificateCommand()
@@ -216,7 +219,9 @@ class certificates extends viewModelBase {
     }
 
     deleteCertificate(certificate: Raven.Client.ServerWide.Operations.Certificates.CertificateDefinition) {
-        this.confirmationMessage("Are you sure?", "Do you want to delete certificate with thumbprint: " + certificate.Thumbprint + "", ["No", "Yes, delete"])
+        this.confirmationMessage("Are you sure?", "Do you want to delete certificate with thumbprint: " + generalUtils.escapeHtml(certificate.Thumbprint) + "", {
+            buttons: ["No", "Yes, delete"]
+        })
             .done(result => {
                 if (result.can) {
                     eventsCollector.default.reportEvent("certificates", "delete");
@@ -289,8 +294,10 @@ class certificates extends viewModelBase {
         if (this.model().mode() !== "replace" && model.securityClearance() === "ValidUser" && model.permissions().length === 0) {
             this.confirmationMessage("Did you forget about assigning database privileges?",
             "Leaving the database privileges section empty is going to prevent users from accessing the database.",
-            ["I want to assign privileges", "Save anyway"],
-                true)
+                {
+                    buttons: ["I want to assign privileges", "Save anyway"],
+                    forceRejectWithResolve: true
+                })
             .done(result => {
                 if (result.can) {
                     maybeWarnTask.resolve();

@@ -977,7 +977,9 @@ class normalCrudActions implements editDocumentCrudActions {
 
     deleteAttachment(file: attachmentItem) {
         eventsCollector.default.reportEvent("attachments", "delete");
-        viewHelpers.confirmationMessage("Delete attachment", `Are you sure you want to delete attachment: ${file.name}?`, ["Cancel", "Delete"])
+        viewHelpers.confirmationMessage("Delete attachment", `Are you sure you want to delete attachment: ${file.name}?`, {
+            buttons: ["Cancel", "Delete"]
+        })
             .done((result) => {
                 if (result.can) {
                     new deleteAttachmentCommand(file.documentId, file.name, this.db())
@@ -989,7 +991,9 @@ class normalCrudActions implements editDocumentCrudActions {
 
     deleteCounter(counter: counterItem) {
         eventsCollector.default.reportEvent("counter", "delete");
-        viewHelpers.confirmationMessage("Delete counter", `Are you sure you want to delete counter ${counter.counterName}?`, ["Cancel", "Delete"])
+        viewHelpers.confirmationMessage("Delete counter", `Are you sure you want to delete counter ${counter.counterName}?`, {
+            buttons: ["Cancel", "Delete"]
+        })
             .done((result) => {
                 if (result.can) {
                     new deleteCounterCommand(counter.counterName, counter.documentId, this.db())

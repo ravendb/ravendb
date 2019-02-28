@@ -40,7 +40,9 @@ class editDocumentUploader {
 
             const nameAlreadyExists = this.findAttachment(file.name);
             if (nameAlreadyExists) {
-                viewHelpers.confirmationMessage(`Attachment '${file.name}' already exists.`, "Do you want to overwrite existing attachment?", ["No", "Yes, overwrite"])
+                viewHelpers.confirmationMessage(`Attachment '${file.name}' already exists.`, "Do you want to overwrite existing attachment?", {
+                    buttons: ["No", "Yes, overwrite"]
+                })
                     .done(result => {
                         if (result.can) {
                             this.uploadInternal(file);

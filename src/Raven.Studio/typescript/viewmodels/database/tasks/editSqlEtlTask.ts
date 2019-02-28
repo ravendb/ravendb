@@ -703,9 +703,11 @@ class editSqlEtlTask extends viewModelBase {
         if (existingSqlTable && (sqlTableToSave.isNew() || existingSqlTable.tableName() !== this.sqlTableSelectedForEdit().tableName()))        
         {
             // Table name exists - offer to overwrite
-            this.confirmationMessage(`Table ${existingSqlTable.tableName()} already exists in SQL Tables list`,
-                                     `Do you want to overwrite table ${existingSqlTable.tableName()} data ?`,
-                                     ["No", "Yes, overwrite"])
+            this.confirmationMessage(`Table ${generalUtils.escapeHtml(existingSqlTable.tableName())} already exists in SQL Tables list`,
+                                     `Do you want to overwrite table ${generalUtils.escapeHtml(existingSqlTable.tableName())} data ?`, {
+                    buttons: ["No", "Yes, overwrite"],
+                    html: true
+                })
                 .done(result => {
                     if (result.can) {
                         this.overwriteExistingSqlTable(existingSqlTable, newSqlTable);
