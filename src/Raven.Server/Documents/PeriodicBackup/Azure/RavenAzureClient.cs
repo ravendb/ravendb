@@ -70,14 +70,14 @@ namespace Raven.Server.Documents.PeriodicBackup.Azure
             return string.Format(template, _accountName);
         }
 
-        public async Task PutBlob(string key, Stream stream, Dictionary<string, string> metadata)
+        public void PutBlob(string key, Stream stream, Dictionary<string, string> metadata)
         {
-            await TestConnection();
+            TestConnection();
 
             if (stream.Length > MaxUploadPutBlobInBytes)
             {
                 // for blobs over 256MB
-                await PutBlockApi(key, stream, metadata);
+                PutBlockApi(key, stream, metadata);
                 return;
             }
 
@@ -104,7 +104,7 @@ namespace Raven.Server.Documents.PeriodicBackup.Azure
             var client = GetClient(TimeSpan.FromHours(3));
             client.DefaultRequestHeaders.Authorization = CalculateAuthorizationHeaderValue(HttpMethods.Put, url, content.Headers);
 
-            var response = await client.PutAsync(url, content, CancellationToken);
+            var response = client.PutAsync(url, content, CancellationToken).Result;
             Progress?.UploadProgress.ChangeState(UploadState.Done);
             if (response.IsSuccessStatusCode)
                 return;
@@ -112,7 +112,7 @@ namespace Raven.Server.Documents.PeriodicBackup.Azure
             throw StorageException.FromResponseMessage(response);
         }
 
-        private async Task PutBlockApi(string key, Stream stream, Dictionary<string, string> metadata)
+        private void PutBlockApi(string key, Stream stream, Dictionary<string, string> metadata)
         {
             var streamLength = stream.Length;
             if (streamLength > TotalBlocksSizeLimitInBytes)
@@ -139,11 +139,11 @@ namespace Raven.Server.Documents.PeriodicBackup.Azure
                     var baseUrlForUpload = baseUrl + "?comp=block&blockid=";
                     var url = baseUrlForUpload + WebUtility.UrlEncode(blockIdString);
 
-                    await PutBlock(stream, client, url, length, retryCount: 0);
+                    PutBlock(stream, client, url, length, retryCount: 0);
                 }
 
                 // put block list
-                await PutBlockList(baseUrl, client, blockIds, metadata);
+                PutBlockList(baseUrl, client, blockIds, metadata);
             }
             finally
             {
@@ -151,7 +151,7 @@ namespace Raven.Server.Documents.PeriodicBackup.Azure
             }
         }
 
-        private async Task PutBlock(Stream baseStream, HttpClient client, string url, long length, int retryCount)
+        private void PutBlock(Stream baseStream, HttpClient client, string url, long length, int retryCount)
         {
             // saving the position if we need to retry
             var position = baseStream.Position;
@@ -173,7 +173,7 @@ namespace Raven.Server.Documents.PeriodicBackup.Azure
 
                 try
                 {
-                    var response = await client.PutAsync(url, content, CancellationToken);
+                    var response = client.PutAsync(url, content, CancellationToken).Result;
                     if (response.IsSuccessStatusCode)
                         return;
 
@@ -198,16 +198,16 @@ namespace Raven.Server.Documents.PeriodicBackup.Azure
 
             // wait for one second before trying again to send the request
             // maybe there was a network issue?
-            await Task.Delay(1000);
+            Thread.Sleep(1000);
 
             CancellationToken.ThrowIfCancellationRequested();
 
             // restore the stream position before retrying
             baseStream.Position = position;
-            await PutBlock(baseStream, client, url, length, ++retryCount);
+            PutBlock(baseStream, client, url, length, ++retryCount);
         }
 
-        private async Task PutBlockList(string baseUrl, HttpClient client,
+        private void PutBlockList(string baseUrl, HttpClient client,
             List<string> blockIds, Dictionary<string, string> metadata)
         {
             var url = baseUrl + "?comp=blocklist";
@@ -230,22 +230,22 @@ namespace Raven.Server.Documents.PeriodicBackup.Azure
 
             client.DefaultRequestHeaders.Authorization = CalculateAuthorizationHeaderValue(HttpMethods.Put, url, content.Headers);
 
-            var response = await client.PutAsync(url, content, CancellationToken);
+            var response = client.PutAsync(url, content, CancellationToken).Result;
             if (response.IsSuccessStatusCode)
                 return;
 
             throw StorageException.FromResponseMessage(response);
         }
 
-        public async Task TestConnection()
+        public void TestConnection()
         {
-            if (await ContainerExists())
+            if (ContainerExists())
                 return;
 
             throw new ContainerNotFoundException($"Container '{_containerName}' not found!");
         }
 
-        private async Task<bool> ContainerExists()
+        private bool ContainerExists()
         {
             var url = _serverUrlForContainer + "?restype=container";
             var now = SystemTime.UtcNow;
@@ -261,7 +261,7 @@ namespace Raven.Server.Documents.PeriodicBackup.Azure
             var client = GetClient();
             client.DefaultRequestHeaders.Authorization = CalculateAuthorizationHeaderValue(HttpMethods.Get, url, requestMessage.Headers);
 
-            var response = await client.SendAsync(requestMessage, CancellationToken);
+            var response = client.SendAsync(requestMessage, CancellationToken).Result;
             if (response.IsSuccessStatusCode)
                 return true;
 

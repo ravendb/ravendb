@@ -125,7 +125,7 @@ namespace SlowTests.Server.Documents.PeriodicBackup
                 var containerNames = await client.GetContainerNames(500);
                 Assert.False(containerNames.Exists(x => x.Equals(containerName)));
 
-                var e = await Assert.ThrowsAsync<ContainerNotFoundException>(async () => await client.TestConnection());
+                var e = Assert.Throws<ContainerNotFoundException>( () => client.TestConnection());
                 Assert.Equal($"Container '{containerName}' not found!", e.Message);
 
                 containerNames = await client.GetContainerNames(500);
@@ -175,7 +175,7 @@ namespace SlowTests.Server.Documents.PeriodicBackup
                     using (var file = File.Open(filePath, FileMode.Open))
                     {
                         streamLength = file.Length;
-                        await client.PutBlob(blobKey, file,
+                        client.PutBlob(blobKey, file,
                             new Dictionary<string, string>
                             {
                                     {"property1", value1},

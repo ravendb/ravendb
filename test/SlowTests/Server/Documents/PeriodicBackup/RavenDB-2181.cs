@@ -46,7 +46,7 @@ namespace SlowTests.Server.Documents.PeriodicBackup
                     await client.DeleteContainer();
                     await client.PutContainer();
 
-                    await client.PutBlob(blobKey, new MemoryStream(Encoding.UTF8.GetBytes("123")), new Dictionary<string, string>
+                    client.PutBlob(blobKey, new MemoryStream(Encoding.UTF8.GetBytes("123")), new Dictionary<string, string>
                     {
                         {"property1", "value1"},
                         {"property2", "value2"}
@@ -83,7 +83,7 @@ namespace SlowTests.Server.Documents.PeriodicBackup
                     await client.DeleteContainer();
                     await client.PutContainer();
 
-                    await client.PutBlob(blobKey, new MemoryStream(Encoding.UTF8.GetBytes("123")), new Dictionary<string, string>
+                    client.PutBlob(blobKey, new MemoryStream(Encoding.UTF8.GetBytes("123")), new Dictionary<string, string>
                     {
                         {"property1", "value1"},
                         {"property2", "value2"}
@@ -127,7 +127,7 @@ namespace SlowTests.Server.Documents.PeriodicBackup
 
                     var value1 = Guid.NewGuid().ToString();
                     var value2 = Guid.NewGuid().ToString();
-                    await client.PutObject(key, new MemoryStream(Encoding.UTF8.GetBytes("231")), new Dictionary<string, string>
+                    client.PutObject(key, new MemoryStream(Encoding.UTF8.GetBytes("231")), new Dictionary<string, string>
                     {
                         {"property1", value1},
                         {"property2", value2}
@@ -183,7 +183,7 @@ namespace SlowTests.Server.Documents.PeriodicBackup
                     {
                         using (var memoryStream = new MemoryStream(Encoding.UTF8.GetBytes(sb.ToString())))
                         {
-                            await clientRegion1.PutObject(key,
+                            clientRegion1.PutObject(key,
                                 memoryStream,
                                 new Dictionary<string, string>());
                         }
@@ -192,11 +192,11 @@ namespace SlowTests.Server.Documents.PeriodicBackup
 
                     await clientRegion1.PutBucket();
 
-                    var error2 = await Assert.ThrowsAsync<InvalidOperationException>(async () =>
+                    var error2 = Assert.Throws<InvalidOperationException>(() =>
                     {
                         using (var memoryStream = new MemoryStream(Encoding.UTF8.GetBytes(sb.ToString())))
                         {
-                            await clientRegion2.PutObject(key,
+                            clientRegion2.PutObject(key,
                                 memoryStream,
                                 new Dictionary<string, string>());
                         }
@@ -276,7 +276,7 @@ namespace SlowTests.Server.Documents.PeriodicBackup
                     using (var memoryStream = new MemoryStream(Encoding.UTF8.GetBytes(sb.ToString())))
                     {
                         streamLength = memoryStream.Length;
-                        await client.PutObject(key,
+                        client.PutObject(key,
                             memoryStream,
                             new Dictionary<string, string>
                             {
@@ -321,7 +321,7 @@ namespace SlowTests.Server.Documents.PeriodicBackup
             {
                 await client.PutVault();
 
-                var archiveId = await client.UploadArchive(
+                var archiveId = client.UploadArchive(
                     new MemoryStream(Encoding.UTF8.GetBytes("321")),
                     "sample description");
 
@@ -340,17 +340,17 @@ namespace SlowTests.Server.Documents.PeriodicBackup
             using (var clientRegion1 = new RavenAwsGlacierClient(AwsAccessKey, AwsSecretKey, region1, vaultName1))
             using (var clientRegion2 = new RavenAwsGlacierClient(AwsAccessKey, AwsSecretKey, region2, vaultName2))
             {
-                var e = await Assert.ThrowsAsync<VaultNotFoundException>(async () =>
+                var e = Assert.Throws<VaultNotFoundException>(() =>
                 {
-                    await clientRegion2.UploadArchive(
+                    clientRegion2.UploadArchive(
                         new MemoryStream(Encoding.UTF8.GetBytes("321")),
                         "sample description");
                 });
                 Assert.Equal(e.Message, $"Vault name '{vaultName2}' doesn't exist in {region2}!");
 
-                e = await Assert.ThrowsAsync<VaultNotFoundException>(async () =>
+                e = Assert.Throws<VaultNotFoundException>( () =>
                 {
-                    await clientRegion1.UploadArchive(
+                    clientRegion1.UploadArchive(
                         new MemoryStream(Encoding.UTF8.GetBytes("321")),
                         "sample description");
                 });
@@ -412,7 +412,7 @@ namespace SlowTests.Server.Documents.PeriodicBackup
                 using (var memoryStream = new MemoryStream(Encoding.UTF8.GetBytes(sb.ToString())))
                 {
                     streamLength = memoryStream.Length;
-                    var archiveId = await client.UploadArchive(memoryStream,
+                    var archiveId = client.UploadArchive(memoryStream,
                         $"testing-upload-archive-{Guid.NewGuid()}");
 
                     Assert.NotNull(archiveId);

@@ -16,6 +16,7 @@ using Sparrow.Logging;
 using System.Collections.Concurrent;
 using System.Linq;
 using NCrontab.Advanced;
+using Raven.Client.Documents.Operations;
 using Raven.Client.Documents.Operations.Backups;
 using Raven.Client.Documents.Operations.OngoingTasks;
 using Raven.Client.Json.Converters;
@@ -394,30 +395,7 @@ namespace Raven.Server.Documents.PeriodicBackup
                     null,
                     backupTaskName,
                     Operations.Operations.OperationType.DatabaseBackup,
-                    taskFactory: onProgress => Task.Run(async () =>
-                    {
-                        try
-                        {
-                            using (_database.PreventFromUnloading())
-                            {
-                                return await backupTask.RunPeriodicBackup(onProgress);
-                            }
-                        }
-                        finally
-                        {
-                            periodicBackup.RunningTask = null;
-                            periodicBackup.RunningBackupTaskId = null;
-                            periodicBackup.CancelToken = null;
-                            periodicBackup.RunningBackupStatus = null;
-
-                            if (periodicBackup.HasScheduledBackup() &&
-                                _cancellationToken.IsCancellationRequested == false)
-                            {
-                                var newBackupTimer = GetTimer(periodicBackup.Configuration, periodicBackup.BackupStatus);
-                                periodicBackup.UpdateTimer(newBackupTimer, discardIfDisabled: true);
-                            }
-                        }
-                    }, backupTask.TaskCancelToken.Token),
+                    taskFactory: onProgress => StartBackupThread(periodicBackup, backupTask, onProgress),
                     id: operationId,
                     token: backupTask.TaskCancelToken);
 
@@ -446,6 +424,45 @@ namespace Raven.Server.Documents.PeriodicBackup
             {
                 periodicBackup.UpdateBackupTaskSemaphore.Release();
             }
+        }
+
+        private Task<IOperationResult> StartBackupThread(PeriodicBackup periodicBackup, BackupTask backupTask, Action<IOperationProgress> onProgress)
+        {
+            var tcs = new TaskCompletionSource<IOperationResult>(TaskCreationOptions.RunContinuationsAsynchronously);
+            var t = PoolOfThreads.GlobalRavenThreadPool.LongRunning(_ =>
+            {
+                try
+                {
+                    using (_database.PreventFromUnloading())
+                    {
+                        var result = backupTask.RunPeriodicBackup(onProgress);
+                        tcs.SetResult(result);
+                    }
+                }
+                catch (Exception e) when (e is OperationCanceledException || e is ObjectDisposedException)
+                {
+                    tcs.SetCanceled();
+                }
+                catch (Exception e)
+                {
+                    tcs.SetException(e);
+                }
+                finally
+                {
+                    periodicBackup.RunningTask = null;
+                    periodicBackup.RunningBackupTaskId = null;
+                    periodicBackup.CancelToken = null;
+                    periodicBackup.RunningBackupStatus = null;
+
+                    if (periodicBackup.HasScheduledBackup() &&
+                        _cancellationToken.IsCancellationRequested == false)
+                    {
+                        var newBackupTimer = GetTimer(periodicBackup.Configuration, periodicBackup.BackupStatus);
+                        periodicBackup.UpdateTimer(newBackupTimer, discardIfDisabled: true);
+                    }
+                }
+            }, null, $"Backup task {periodicBackup.Configuration.Name}");
+            return tcs.Task;
         }
 
         private static string GetBackupTypeText(bool isFullBackup, BackupType backupType)

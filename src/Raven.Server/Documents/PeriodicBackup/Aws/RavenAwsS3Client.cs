@@ -37,14 +37,14 @@ namespace Raven.Server.Documents.PeriodicBackup.Aws
             _bucketName = bucketName;
         }
 
-        public async Task PutObject(string key, Stream stream, Dictionary<string, string> metadata)
+        public void PutObject(string key, Stream stream, Dictionary<string, string> metadata)
         {
-            await TestConnection();
+            TestConnection();
 
             if (stream.Length > MaxUploadPutObjectSizeInBytes)
             {
                 // for objects over 256MB
-                await MultiPartUpload(key, stream, metadata);
+                MultiPartUpload(key, stream, metadata);
                 return;
             }
 
@@ -72,7 +72,7 @@ namespace Raven.Server.Documents.PeriodicBackup.Aws
             var authorizationHeaderValue = CalculateAuthorizationHeaderValue(HttpMethods.Put, url, now, headers);
             client.DefaultRequestHeaders.Authorization = authorizationHeaderValue;
 
-            var response = await client.PutAsync(url, content, CancellationToken);
+            var response = client.PutAsync(url, content, CancellationToken).Result;
             Progress?.UploadProgress.ChangeState(UploadState.Done);
             if (response.IsSuccessStatusCode)
                 return;
@@ -80,7 +80,7 @@ namespace Raven.Server.Documents.PeriodicBackup.Aws
             throw StorageException.FromResponseMessage(response);
         }
 
-        private async Task MultiPartUpload(string key, Stream stream, Dictionary<string, string> metadata)
+        private void MultiPartUpload(string key, Stream stream, Dictionary<string, string> metadata)
         {
             var streamLength = stream.Length;
             if (streamLength > MultiPartUploadLimitInBytes)
@@ -91,7 +91,7 @@ namespace Raven.Server.Documents.PeriodicBackup.Aws
             Progress?.UploadProgress.ChangeType(UploadType.Chunked);
 
             var baseUrl = $"{GetUrl()}/{key}";
-            var uploadId = await GetUploadId(baseUrl, metadata);
+            var uploadId = GetUploadId(baseUrl, metadata);
             var client = GetClient(TimeSpan.FromDays(7));
             var partNumbersWithEtag = new List<Tuple<int, string>>();
             var partNumber = 0;
@@ -107,15 +107,15 @@ namespace Raven.Server.Documents.PeriodicBackup.Aws
                     var length = Math.Min(maxLengthPerPart, streamLength - stream.Position);
                     var url = $"{baseUrl}?partNumber={++partNumber}&uploadId={uploadId}";
 
-                    var etag = await UploadPart(stream, client, url, length, retryCount: 0);
+                    var etag = UploadPart(stream, client, url, length, retryCount: 0);
                     partNumbersWithEtag.Add(new Tuple<int, string>(partNumber, etag));
                 }
 
-                await CompleteMultiUpload(completeUploadUrl, client, partNumbersWithEtag);
+                CompleteMultiUpload(completeUploadUrl, client, partNumbersWithEtag);
             }
             catch (Exception)
             {
-                await AbortMultiUpload(client, completeUploadUrl);
+                AbortMultiUpload(client, completeUploadUrl);
                 throw;
             }
             finally
@@ -124,7 +124,7 @@ namespace Raven.Server.Documents.PeriodicBackup.Aws
             }
         }
 
-        private async Task AbortMultiUpload(HttpClient client, string url)
+        private void AbortMultiUpload(HttpClient client, string url)
         {
             var now = SystemTime.UtcNow;
             var payloadHash = RavenAwsHelper.CalculatePayloadHash(null);
@@ -142,7 +142,7 @@ namespace Raven.Server.Documents.PeriodicBackup.Aws
 
             client.DefaultRequestHeaders.Authorization = CalculateAuthorizationHeaderValue(HttpMethods.Delete, url, now, headers);
 
-            var response = await client.SendAsync(requestMessage, CancellationToken);
+            var response = client.SendAsync(requestMessage, CancellationToken).Result;
             if (response.IsSuccessStatusCode)
                 return;
 
@@ -155,7 +155,7 @@ namespace Raven.Server.Documents.PeriodicBackup.Aws
             throw StorageException.FromResponseMessage(response);
         }
 
-        private async Task CompleteMultiUpload(string url, HttpClient client,
+        private void CompleteMultiUpload(string url, HttpClient client,
             List<Tuple<int, string>> partNumbersWithEtag)
         {
             var now = SystemTime.UtcNow;
@@ -177,7 +177,7 @@ namespace Raven.Server.Documents.PeriodicBackup.Aws
             var authorizationHeaderValue = CalculateAuthorizationHeaderValue(HttpMethods.Post, url, now, headers);
             client.DefaultRequestHeaders.Authorization = authorizationHeaderValue;
 
-            var response = await client.SendAsync(requestMessage, CancellationToken);
+            var response = client.SendAsync(requestMessage, CancellationToken).Result;
             if (response.IsSuccessStatusCode)
                 return;
 
@@ -215,7 +215,7 @@ namespace Raven.Server.Documents.PeriodicBackup.Aws
             return doc;
         }
 
-        private async Task<string> UploadPart(Stream baseStream, HttpClient client, string url, long length, int retryCount)
+        private string UploadPart(Stream baseStream, HttpClient client, string url, long length, int retryCount)
         {
             // saving the position if we need to retry
             var position = baseStream.Position;
@@ -240,7 +240,7 @@ namespace Raven.Server.Documents.PeriodicBackup.Aws
 
                 try
                 {
-                    var response = await client.PutAsync(url, content, CancellationToken);
+                    var response = client.PutAsync(url, content, CancellationToken).Result;
                     if (response.IsSuccessStatusCode)
                     {
                         var etagHeader = response.Headers.GetValues("ETag");
@@ -262,16 +262,16 @@ namespace Raven.Server.Documents.PeriodicBackup.Aws
 
             // wait for one second before trying again to send the request
             // maybe there was a network issue?
-            await Task.Delay(1000);
+            Thread.Sleep(1000);
 
             CancellationToken.ThrowIfCancellationRequested();
 
             // restore the stream position before retrying
             baseStream.Position = position;
-            return await UploadPart(baseStream, client, url, length, ++retryCount);
+            return UploadPart(baseStream, client, url, length, ++retryCount);
         }
 
-        private async Task<string> GetUploadId(string baseUrl, Dictionary<string, string> metadata)
+        private string GetUploadId(string baseUrl, Dictionary<string, string> metadata)
         {
             var url = $"{baseUrl}?uploads";
             var now = SystemTime.UtcNow;
@@ -294,11 +294,11 @@ namespace Raven.Server.Documents.PeriodicBackup.Aws
             var client = GetClient();
             client.DefaultRequestHeaders.Authorization = CalculateAuthorizationHeaderValue(HttpMethods.Post, url, now, headers);
 
-            var response = await client.SendAsync(requestMessage, CancellationToken);
+            var response = client.SendAsync(requestMessage, CancellationToken).Result;
             if (response.IsSuccessStatusCode == false)
                 throw StorageException.FromResponseMessage(response);
 
-            using (var stream = await response.Content.ReadAsStreamAsync())
+            using (var stream = response.Content.ReadAsStreamAsync().Result)
             using (var reader = new StreamReader(stream))
             {
                 var xDocument = XDocument.Load(reader);
@@ -309,9 +309,9 @@ namespace Raven.Server.Documents.PeriodicBackup.Aws
             }
         }
 
-        public async Task TestConnection()
+        public void TestConnection()
         {
-            var bucketLocation = await GetBucketLocation();
+            var bucketLocation = GetBucketLocation();
             if (bucketLocation.Equals(AwsRegion, StringComparison.OrdinalIgnoreCase) == false)
             {
                 throw new InvalidOperationException(
@@ -320,7 +320,7 @@ namespace Raven.Server.Documents.PeriodicBackup.Aws
                     $"is located in: {bucketLocation}");
             }
 
-            var bucketPermission = await GetBucketPermission();
+            var bucketPermission = GetBucketPermission();
             if (bucketPermission != "FULL_CONTROL" && bucketPermission != "WRITE")
             {
                 throw new InvalidOperationException(
@@ -329,7 +329,7 @@ namespace Raven.Server.Documents.PeriodicBackup.Aws
             }
         }
 
-        private async Task<string> GetBucketLocation(bool returnWhenNotFound = false)
+        private string GetBucketLocation(bool returnWhenNotFound = false)
         {
             using (UseRegionInvariantRequest())
             {
@@ -351,7 +351,7 @@ namespace Raven.Server.Documents.PeriodicBackup.Aws
                 var client = GetClient();
                 client.DefaultRequestHeaders.Authorization = CalculateAuthorizationHeaderValue(HttpMethods.Get, url, now, headers);
 
-                var response = await client.SendAsync(requestMessage, CancellationToken);
+                var response = client.SendAsync(requestMessage, CancellationToken).Result;
                 if (response.StatusCode == HttpStatusCode.NotFound)
                 {
                     if (returnWhenNotFound)
@@ -363,7 +363,7 @@ namespace Raven.Server.Documents.PeriodicBackup.Aws
                 if (response.IsSuccessStatusCode == false)
                     throw StorageException.FromResponseMessage(response);
 
-                using (var stream = await response.Content.ReadAsStreamAsync())
+                using (var stream = response.Content.ReadAsStreamAsync().Result)
                 using (var reader = new StreamReader(stream))
                 {
                     var xElement = XElement.Load(reader);
@@ -386,7 +386,7 @@ namespace Raven.Server.Documents.PeriodicBackup.Aws
             }
         }
 
-        private async Task<string> GetBucketPermission()
+        private string GetBucketPermission()
         {
             var url = $"{GetUrl()}?acl";
             var now = SystemTime.UtcNow;
@@ -406,14 +406,14 @@ namespace Raven.Server.Documents.PeriodicBackup.Aws
             var client = GetClient();
             client.DefaultRequestHeaders.Authorization = CalculateAuthorizationHeaderValue(HttpMethods.Get, url, now, headers);
 
-            var response = await client.SendAsync(requestMessage, CancellationToken);
+            var response = client.SendAsync(requestMessage, CancellationToken).Result;
             if (response.StatusCode == HttpStatusCode.NotFound)
                 throw new BucketNotFoundException($"Bucket name '{_bucketName}' doesn't exist!");
 
             if (response.IsSuccessStatusCode == false)
                 throw StorageException.FromResponseMessage(response);
 
-            using (var stream = await response.Content.ReadAsStreamAsync())
+            using (var stream = response.Content.ReadAsStreamAsync().Result)
             using (var reader = new StreamReader(stream))
             {
                 var xDocument = XDocument.Load(reader);
@@ -488,7 +488,7 @@ namespace Raven.Server.Documents.PeriodicBackup.Aws
 
         public async Task DeleteBucket()
         {
-            var region = await GetBucketLocation(returnWhenNotFound: true);
+            var region = GetBucketLocation(returnWhenNotFound: true);
             if (region == null)
                 return;
 

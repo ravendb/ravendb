@@ -315,7 +315,7 @@ namespace Raven.Server.Web.System
                                 s3Settings.AwsAccessKey, s3Settings.AwsSecretKey, s3Settings.AwsRegionName,
                                 s3Settings.BucketName, cancellationToken: ServerStore.ServerShutdown))
                             {
-                                await awsClient.TestConnection();
+                                awsClient.TestConnection();
                             }
                             break;
                         case PeriodicBackupTestConnectionType.Glacier:
@@ -325,7 +325,7 @@ namespace Raven.Server.Web.System
                                 glacierSettings.AwsRegionName, glacierSettings.VaultName,
                                 cancellationToken: ServerStore.ServerShutdown))
                             {
-                                await glacierClient.TestConnection();
+                                glacierClient.TestConnection();
                             }
                             break;
                         case PeriodicBackupTestConnectionType.Azure:
@@ -334,7 +334,7 @@ namespace Raven.Server.Web.System
                                 azureSettings.AccountName, azureSettings.AccountKey,
                                 azureSettings.StorageContainer, cancellationToken: ServerStore.ServerShutdown))
                             {
-                                await azureClient.TestConnection();
+                                azureClient.TestConnection();
                             }
                             break;
                         case PeriodicBackupTestConnectionType.FTP:
@@ -342,7 +342,7 @@ namespace Raven.Server.Web.System
                             using (var ftpClient = new RavenFtpClient(ftpSettings.Url, ftpSettings.Port, ftpSettings.UserName,
                                 ftpSettings.Password, ftpSettings.CertificateAsBase64, ftpSettings.CertificateFileName))
                             {
-                                await ftpClient.TestConnection();
+                                ftpClient.TestConnection();
                             }
                             break;
                         case PeriodicBackupTestConnectionType.Local:
