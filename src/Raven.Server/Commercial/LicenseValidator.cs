@@ -16,7 +16,7 @@ namespace Raven.Server.Commercial
             "type", "version", "expiration", "memory", "cores", "redist", "encryption", "snmp",
             "distributedCluster", "maxClusterSize", "snapshotBackup", "cloudBackup", "dynamicNodesDistribution",
             "externalReplication", "delayedExternalReplication", "ravenEtl", "sqlEtl", "highlyAvailableTasks",
-            "pullReplicationHub", "pullReplicationSink", "encryptedBackup"
+            "pullReplicationAsHub", "pullReplicationAsSink", "encryptedBackup"
         };
 
         private enum ValueType : byte
