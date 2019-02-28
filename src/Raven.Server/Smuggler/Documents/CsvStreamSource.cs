@@ -357,7 +357,7 @@ namespace Raven.Server.Smuggler.Documents
         {
             return Enumerable.Empty<string>();
         }
-   		public IEnumerable<CounterGroupDetail> GetCounterValues(ICounterActions actions)        {
+        public IEnumerable<CounterGroupDetail> GetCounterValues(ICounterActions actions)        {
             return Enumerable.Empty<CounterGroupDetail>();
         }
 
