@@ -403,47 +403,66 @@ namespace Sparrow.Json
             }
         }
 
+
+#if DEBUG || VALIDATE
+        private readonly LongReference _getMemory = new LongReference();
+#endif
+
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public AllocatedMemoryData GetMemory(int requestedSize)
         {
 #if DEBUG || VALIDATE
-            if (requestedSize <= 0)
-                throw new ArgumentException(nameof(requestedSize));
+            using (new SingleThreadAccessAssertion(_getMemory, "GetMemory"))
+            {
+                if (requestedSize <= 0)
+                    throw new ArgumentException(nameof(requestedSize));
 #endif
 
-            var allocatedMemory = _arenaAllocator.Allocate(requestedSize);
-            allocatedMemory.ContextGeneration = Generation;
-            allocatedMemory.Parent = this;
+                var allocatedMemory = _arenaAllocator.Allocate(requestedSize);
+                allocatedMemory.ContextGeneration = Generation;
+                allocatedMemory.Parent = this;
 #if DEBUG
-            allocatedMemory.IsLongLived = false;
+                allocatedMemory.IsLongLived = false;
 #endif
-            return allocatedMemory;
+                return allocatedMemory;
+#if DEBUG || VALIDATE
+            }
+#endif
         }
+
+#if DEBUG || VALIDATE
+        private readonly LongReference _getLongLivedMemory = new LongReference();
+#endif
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public AllocatedMemoryData GetLongLivedMemory(int requestedSize)
         {
 #if DEBUG || VALIDATE
-            if (requestedSize <= 0)
+            using (new SingleThreadAccessAssertion(_getLongLivedMemory, "GetLongLivedMemory"))
+            {
+                if (requestedSize <= 0)
                 throw new ArgumentException(nameof(requestedSize));
 #endif
-            //we should use JsonOperationContext in single thread
-            if (_arenaAllocatorForLongLivedValues == null)
-            {
-                //_arenaAllocatorForLongLivedValues == null when the context is after Reset() but before Renew()
-                ThrowAlreadyDisposedForLongLivedAllocator();
+                //we should use JsonOperationContext in single thread
+                if (_arenaAllocatorForLongLivedValues == null)
+                {
+                    //_arenaAllocatorForLongLivedValues == null when the context is after Reset() but before Renew()
+                    ThrowAlreadyDisposedForLongLivedAllocator();
 
-                //make compiler happy, previous row will throw
-                return null;
+                    //make compiler happy, previous row will throw
+                    return null;
+                }
+
+                var allocatedMemory = _arenaAllocatorForLongLivedValues.Allocate(requestedSize);
+                allocatedMemory.ContextGeneration = Generation;
+                allocatedMemory.Parent = this;
+    #if DEBUG
+                allocatedMemory.IsLongLived = true;
+    #endif
+                return allocatedMemory;
+#if DEBUG || VALIDATE
             }
-
-            var allocatedMemory = _arenaAllocatorForLongLivedValues.Allocate(requestedSize);
-            allocatedMemory.ContextGeneration = Generation;
-            allocatedMemory.Parent = this;
-#if DEBUG
-            allocatedMemory.IsLongLived = true;
 #endif
-            return allocatedMemory;
         }
 
         private static void ThrowAlreadyDisposedForLongLivedAllocator()
@@ -497,15 +516,26 @@ namespace Sparrow.Json
             return GetLazyStringForFieldWithCachingUnlikely(field);
         }
 
+#if DEBUG || VALIDATE
+        private readonly LongReference _getLazyStringForFieldWithCachingUnlikely = new LongReference();
+#endif
+
         private LazyStringValue GetLazyStringForFieldWithCachingUnlikely(StringSegment key)
         {
-            EnsureNotDisposed();
-            LazyStringValue value = GetLazyString(key, longLived: true);
-            _fieldNames[key] = value;
+#if DEBUG || VALIDATE
+            using (new SingleThreadAccessAssertion(_getLazyStringForFieldWithCachingUnlikely, "GetLazyStringForFieldWithCachingUnlikely"))
+            {
+#endif
+                EnsureNotDisposed();
+                LazyStringValue value = GetLazyString(key, longLived: true);
+                _fieldNames[key] = value;
 
-            //sanity check, in case the 'value' is manually disposed outside of this function
-            Debug.Assert(value.IsDisposed == false);
-            return value;
+                //sanity check, in case the 'value' is manually disposed outside of this function
+                Debug.Assert(value.IsDisposed == false);
+                return value;
+#if DEBUG
+            }
+#endif
         }
 
         public LazyStringValue GetLazyString(string field)
@@ -1378,5 +1408,28 @@ namespace Sparrow.Json
             allocationsArray.Array.Add(allocatedArray);
             return allocatedArray;
         }
+
+#if DEBUG || VALIDATE
+        private class LongReference
+        {
+            public long Value;
+        }
+
+        private class SingleThreadAccessAssertion : IDisposable
+        {
+            readonly LongReference _refCount;
+            public SingleThreadAccessAssertion(LongReference refCount, string method)
+            {
+                _refCount = refCount;
+                var actualCount = Interlocked.Increment(ref _refCount.Value);
+                if (actualCount > 1)
+                    throw new InvalidOperationException($"Concurrent access to JsonOperationContext.{method} method detected");
+            }
+            public void Dispose()
+            {
+                Interlocked.Decrement(ref _refCount.Value);
+            }
+        }
+#endif
     }
 }

@@ -588,9 +588,10 @@ namespace Raven.Server.Documents.Replication
                     {
                         var replicationCommand = new MergedDocumentReplicationCommand(dataForReplicationCommand, lastEtag);
                         task = _database.TxMerger.Enqueue(replicationCommand);
-
-                        using (var writer = new BlittableJsonTextWriter(documentsContext, _connectionOptions.Stream))
-                        using (var msg = documentsContext.ReadObject(new DynamicJsonValue
+                        //We need a new context here
+                        using(_database.DocumentsStorage.ContextPool.AllocateOperationContext(out DocumentsOperationContext msgContext))
+                        using (var writer = new BlittableJsonTextWriter(msgContext, _connectionOptions.Stream))
+                        using (var msg = msgContext.ReadObject(new DynamicJsonValue
                         {
                             [nameof(ReplicationMessageReply.MessageType)] = "Processing"
                         }, "heartbeat message"))
@@ -599,7 +600,7 @@ namespace Raven.Server.Documents.Replication
                                    false)
                             {
                                 // send heartbeats while batch is processed in TxMerger. We wait until merger finishes with this command without timeouts
-                                documentsContext.Write(writer, msg);
+                                msgContext.Write(writer, msg);
                                 writer.Flush();
                             }
 
