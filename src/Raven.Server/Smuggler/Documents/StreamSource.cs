@@ -412,7 +412,7 @@ namespace Raven.Server.Smuggler.Documents
 
         public IEnumerable<CounterGroupDetail> GetCounterValues(ICounterActions actions)
         {
-            return InternalGetCounterValues();
+            return InternalGetCounterValues(actions);
         }
 
         public IEnumerable<CounterDetail> GetLegacyCounterValues()
