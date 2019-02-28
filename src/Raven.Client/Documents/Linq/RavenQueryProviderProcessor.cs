@@ -976,6 +976,13 @@ The recommended method is to use full text search (mark the field as Analyzed an
 
         private void VisitMethodCall(MethodCallExpression expression, bool negated = false)
         {
+            if (_conventions.AnyQueryMethodConverters)
+            {
+                var parameters = new QueryMethodConverter.Parameters<T>(expression, _documentQuery, VisitExpression);
+                if (_conventions.TryConvertQueryMethod(parameters))
+                    return;
+            }
+
             var declaringType = expression.Method.DeclaringType;
             Debug.Assert(declaringType != null);
             if (declaringType != typeof(string) && expression.Method.Name == "Equals")

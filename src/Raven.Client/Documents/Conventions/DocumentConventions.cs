@@ -22,7 +22,6 @@ using Raven.Client.Json.Converters;
 using Raven.Client.Util;
 using Sparrow;
 using Sparrow.Json;
-using Sparrow.LowMemory;
 using Sparrow.Platform;
 using Size = Sparrow.Size;
 
@@ -47,6 +46,8 @@ namespace Raven.Client.Documents.Conventions
 
         private readonly List<(Type Type, TryConvertValueToObjectForQueryDelegate<object> Convert)> _listOfQueryValueToObjectConverters =
             new List<(Type, TryConvertValueToObjectForQueryDelegate<object>)>();
+
+        private readonly List<QueryMethodConverter> _listOfQueryMethodConverters = new List<QueryMethodConverter>();
 
         private readonly Dictionary<Type, RangeType> _customRangeTypes = new Dictionary<Type, RangeType>();
 
@@ -876,6 +877,29 @@ namespace Raven.Client.Documents.Conventions
             foreach (var @interface in type.GetInterfaces())
                 foreach (var propertyInfo in GetPropertiesForType(@interface))
                     yield return propertyInfo;
+        }
+
+        public void RegisterQueryMethodConverter(QueryMethodConverter converter)
+        {
+            AssertNotFrozen();
+
+            _listOfQueryMethodConverters.Add(converter);
+        }
+
+        internal bool AnyQueryMethodConverters => _listOfQueryMethodConverters.Count > 0;
+
+        internal bool TryConvertQueryMethod<T>(QueryMethodConverter.Parameters<T> parameters)
+        {
+            if (_listOfQueryMethodConverters.Count == 0)
+                return false;
+
+            foreach (var converter in _listOfQueryMethodConverters)
+            {
+                if (converter.Convert(parameters))
+                    return true;
+            }
+
+            return false;
         }
 
         public void RegisterQueryValueConverter<T>(TryConvertValueForQueryDelegate<T> converter)
