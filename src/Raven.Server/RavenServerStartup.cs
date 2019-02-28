@@ -24,6 +24,7 @@ using Raven.Client.Properties;
 using Raven.Server.Config;
 using Raven.Server.Rachis;
 using Raven.Server.Routing;
+using Raven.Server.ServerWide;
 using Raven.Server.TrafficWatch;
 using Raven.Server.Utils;
 using Raven.Server.Web;
@@ -187,7 +188,7 @@ namespace Raven.Server
                             e);
                 }
 
-                MaybeSetExceptionStatusCode(context, e);
+                MaybeSetExceptionStatusCode(context, _server.ServerStore, e);
 
                 if (context.RequestAborted.IsCancellationRequested)
                     return;
@@ -284,7 +285,7 @@ namespace Raven.Server
             }
         }
 
-        private static void MaybeSetExceptionStatusCode(HttpContext httpContext, Exception exception)
+        private static void MaybeSetExceptionStatusCode(HttpContext httpContext, ServerStore serverStore, Exception exception)
         {
             var response = httpContext.Response;
 
@@ -293,7 +294,7 @@ namespace Raven.Server
 
             if (exception is InsufficientTransportLayerProtectionException)
             {
-                Web.RequestHandler.SetupCORSHeaders(httpContext);
+                Web.RequestHandler.SetupCORSHeaders(httpContext, serverStore);
                 response.StatusCode = (int)HttpStatusCode.BadRequest;
                 return;
             }
