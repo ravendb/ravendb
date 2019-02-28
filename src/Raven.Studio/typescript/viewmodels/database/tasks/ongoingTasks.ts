@@ -244,7 +244,9 @@ class ongoingTasks extends viewModelBase {
     confirmEnableOngoingTask(model: ongoingTaskModel) {
         const db = this.activeDatabase();
 
-        this.confirmationMessage("Enable Task", "You're enabling task of type: " + model.taskType(), ["Cancel", "Enable"])
+        this.confirmationMessage("Enable Task", "You're enabling task of type: " + model.taskType(), {
+            buttons: ["Cancel", "Enable"]
+        })
             .done(result => {
                 if (result.can) {
                     new toggleOngoingTaskCommand(db, model.taskType(), model.taskId, model.taskName(), false)
@@ -258,7 +260,9 @@ class ongoingTasks extends viewModelBase {
     confirmDisableOngoingTask(model: ongoingTaskModel) {
         const db = this.activeDatabase();
 
-        this.confirmationMessage("Disable Task", "You're disabling task of type: " + model.taskType(), ["Cancel", "Disable"])
+        this.confirmationMessage("Disable Task", "You're disabling task of type: " + model.taskType(), {
+            buttons: ["Cancel", "Disable"]
+        } )
             .done(result => {
                 if (result.can) {
                     new toggleOngoingTaskCommand(db, model.taskType(), model.taskId, model.taskName(), true)
@@ -271,8 +275,10 @@ class ongoingTasks extends viewModelBase {
 
     confirmRemoveOngoingTask(model: ongoingTaskModel) {
         const db = this.activeDatabase();
-
-        this.confirmationMessage("Delete Task", "You're deleting task of type: " + model.taskType(), ["Cancel", "Delete"])
+        
+        this.confirmationMessage("Delete Task", "You're deleting task of type: " + model.taskType(), {
+            buttons: ["Cancel", "Delete"]
+        })
             .done(result => {
                 if (result.can) {
                     this.deleteOngoingTask(db, model);

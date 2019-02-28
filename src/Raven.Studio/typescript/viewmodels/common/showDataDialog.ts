@@ -1,6 +1,7 @@
 import dialog = require("plugins/dialog");
 import dialogViewModelBase = require("viewmodels/dialogViewModelBase");
 import copyToClipboard = require("common/copyToClipboard");
+import generalUtils = require("common/generalUtils");
 
 type supportedLangs = "javascript" | "csharp" | "plain";
 
@@ -15,7 +16,7 @@ class showDataDialog extends dialogViewModelBase {
             return "";
         }
         if (this.lang === "plain") {
-            return input;
+            return generalUtils.escapeHtml(input);
         }
         
         return Prism.highlight(input, (Prism.languages as any)[this.lang]);

@@ -2,17 +2,6 @@
 
 import virtualColumn = require("widgets/virtualGrid/columns/virtualColumn");
 
-const entityMap: any = {
-    '&': '&amp;',
-    '<': '&lt;',
-    '>': '&gt;',
-    '"': '&quot;',
-    "'": '&#39;',
-    '/': '&#x2F;',
-    '`': '&#x60;',
-    '=': '&#x3D;'
-};
-
 function deselect() {
     try {
         if ((document as any).selection) {
@@ -27,10 +16,6 @@ function deselect() {
     }
 }
 
-function escapeHtml(string: string) {
-    return String(string).replace(/[&<>"'`=\/]/g, s => entityMap[s]);
-}
-
 function widthToPixels(column: virtualColumn) {
     if (!column.width.endsWith("px")) {
         throw new Error("Excepted column width in pixels (px)");
@@ -39,7 +24,6 @@ function widthToPixels(column: virtualColumn) {
 }
 
 export = {
-    escape: escapeHtml,
     widthToPixels: widthToPixels,
     deselect: deselect
 };

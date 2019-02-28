@@ -7,7 +7,7 @@
             <h4 class="modal-title" data-bind="text: title"></h4>
         </div>
         <div class="modal-body">
-            <p class="confirmationMessage" data-bind="html: confirmationMessage"></p>
+            <p class="confirmationMessage" data-bind="html: confirmationMessageAsHtml"></p>
         </div>
         <div class="modal-footer" data-bind="foreach: options">
             <button type="button" class="btn" data-bind="text: $data, click: $root.onOptionClicked.bind($root), clickBubble: false, 

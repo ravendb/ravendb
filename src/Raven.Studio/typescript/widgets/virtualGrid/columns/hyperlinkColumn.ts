@@ -1,7 +1,7 @@
 ﻿/// <reference path="../../../../typings/tsd.d.ts"/>
 import textColumn = require("widgets/virtualGrid/columns/textColumn");
 import virtualRow = require("widgets/virtualGrid/virtualRow");
-import utils = require("widgets/virtualGrid/virtualGridUtils");
+import generalUtils = require("common/generalUtils");
 import virtualGridController = require("widgets/virtualGrid/virtualGridController");
 
 /**
@@ -35,7 +35,7 @@ class hyperlinkColumn<T> extends textColumn<T> {
         if (hyperlinkValue) {
             // decorate with link
             const preparedValue = this.prepareValue(item);
-            const extraHtml = this.opts.title ? ` title="${utils.escape(this.opts.title(item))}" ` : '';
+            const extraHtml = this.opts.title ? ` title="${generalUtils.escapeHtml(this.opts.title(item))}" ` : '';
             let extraCssClasses = this.opts.extraClass ? this.opts.extraClass(item) : '';
             
             if (isSorted) {

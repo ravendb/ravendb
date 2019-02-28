@@ -5,6 +5,17 @@ import moment = require("moment");
 
 class genUtils {
 
+    static entityMap: any = {
+        '&': '&amp;',
+        '<': '&lt;',
+        '>': '&gt;',
+        '"': '&quot;',
+        "'": '&#39;',
+        '/': '&#x2F;',
+        '`': '&#x60;',
+        '=': '&#x3D;'
+    };
+
     static dateFormat = "YYYY MMMM Do, h:mm A";
     
     /***  IP Address Methods  ***/
@@ -317,6 +328,21 @@ class genUtils {
             }
         }
         return output;
+    }
+
+    static escapeHtml(string: string) {
+        if (!string) {
+            return string;
+        }
+        
+        return String(string).replace(/[&<>"'`=\/]/g, s => genUtils.entityMap[s]);
+    }
+    
+    static unescapeHtml(string: string) {
+        if (!string) {
+            return string;
+        }
+        return $("<div/>").html(string).text();
     }
 
     // Return the inputNumber as a string with separating commas rounded to 'n' decimal digits

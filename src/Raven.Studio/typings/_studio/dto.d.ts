@@ -532,3 +532,10 @@ interface editDocumentCrudActions {
     onDocumentSaved(saveResult: saveDocumentResponseDto, localDoc: any): void;
 }
 
+
+interface confirmationDialogOptions {
+    buttons?: string[];
+    forceRejectWithResolve?: boolean;
+    defaultOption?: string;
+    html?: boolean;
+}

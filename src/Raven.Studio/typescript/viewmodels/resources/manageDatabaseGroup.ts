@@ -16,6 +16,7 @@ import reorderNodesInDatabaseGroupCommand = require("commands/database/dbGroup/r
 import license = require("models/auth/licenseModel");
 import eventsCollector = require("common/eventsCollector");
 import messagePublisher = require("common/messagePublisher");
+import generalUtils = require("common/generalUtils");
 
 class manageDatabaseGroup extends viewModelBase {
 
@@ -216,7 +217,10 @@ class manageDatabaseGroup extends viewModelBase {
     deleteNodeFromGroup(node: databaseGroupNode, hardDelete: boolean) {
         const db = this.activeDatabase();
         const nodeTag = node.tag();
-        this.confirmationMessage("Are you sure", "Do you want to delete database '" + this.activeDatabase().name + "' from node: " + node.tag() + "?", ["Cancel", "Yes, delete"])
+        this.confirmationMessage("Are you sure", "Do you want to delete database '" + generalUtils.escapeHtml(this.activeDatabase().name) + "' from node: " + node.tag() + "?", {
+            buttons: ["Cancel", "Yes, delete"],
+            html: true
+        })
             .done(result => {
                 if (result.can) {
                     new deleteDatabaseFromNodeCommand(db, [nodeTag], hardDelete)

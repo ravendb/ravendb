@@ -2,7 +2,6 @@
 
 import virtualColumn = require("widgets/virtualGrid/columns/virtualColumn");
 import virtualGridController = require("widgets/virtualGrid/virtualGridController");
-import utils = require("widgets/virtualGrid/virtualGridUtils");
 import generalUtils = require("common/generalUtils");
 
 type preparedValue = {
@@ -20,7 +19,7 @@ class textColumn<T> implements virtualColumn {
     }
     
     get headerTitle() {
-        return this.header;
+        return generalUtils.unescapeHtml(this.header);
     }
 
     get headerAsText() {
@@ -60,7 +59,7 @@ class textColumn<T> implements virtualColumn {
     }
 
     renderCell(item: T, isSelected: boolean, isSorted: boolean): string {
-        const extraHtml = this.opts.title ? ` title="${utils.escape(this.opts.title(item))}" ` : '';
+        const extraHtml = this.opts.title ? ` title="${generalUtils.escapeHtml(this.opts.title(item))}" ` : '';
         let extraCssClasses = this.opts.extraClass ? this.opts.extraClass(item) : '';
         
         if (isSorted) {
@@ -80,7 +79,7 @@ class textColumn<T> implements virtualColumn {
         const cellValue = this.getCellValue(item);
 
         if (_.isString(cellValue)) {
-            const rawText = this.opts.useRawValue && this.opts.useRawValue(item) ? cellValue : utils.escape(cellValue);
+            const rawText = this.opts.useRawValue && this.opts.useRawValue(item) ? cellValue : generalUtils.escapeHtml(cellValue);
             return {
                 rawText: rawText,
                 typeCssClass: "token string"
@@ -118,7 +117,7 @@ class textColumn<T> implements virtualColumn {
         }
 
         if (_.isArray(cellValue)) {
-            const value = utils.escape(JSON.stringify(cellValue, null, 2));
+            const value = generalUtils.escapeHtml(JSON.stringify(cellValue, null, 2));
 
             return {
                 rawText: "[ ... ]",
@@ -127,7 +126,7 @@ class textColumn<T> implements virtualColumn {
         }
 
         if (_.isObject(cellValue)) {
-            const value = utils.escape(JSON.stringify(cellValue, null, 2));
+            const value = generalUtils.escapeHtml(JSON.stringify(cellValue, null, 2));
 
             return {
                 rawText: "{ ... }",
@@ -136,7 +135,7 @@ class textColumn<T> implements virtualColumn {
         }
 
         if (cellValue != null) {
-            const value = utils.escape(cellValue.toString());
+            const value = generalUtils.escapeHtml(cellValue.toString());
             return {
                 rawText: value,
                 typeCssClass: ""

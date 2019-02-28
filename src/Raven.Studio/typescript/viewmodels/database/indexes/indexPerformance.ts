@@ -1143,7 +1143,7 @@ class indexPerformance extends viewModelBase {
         }
         
         if (currentDatum !== element || reuseTooltip) {
-            let tooltipHtml = `${element.Name}<br/>Duration: ${generalUtils.formatMillis((element).DurationInMs)}`;
+            let tooltipHtml = `${generalUtils.escapeHtml(element.Name)}<br/>Duration: ${generalUtils.formatMillis((element).DurationInMs)}`;
 
             const opWithParent = element as IndexingPerformanceOperationWithParent;
 
@@ -1170,7 +1170,7 @@ class indexPerformance extends viewModelBase {
                 tooltipHtml += countsDetails;
             }
 
-            if (element.CommitDetails) {   
+            if (element.CommitDetails) {
                 let commitDetails: string;
                 commitDetails = `<br/>*** Commit details ***<br/>`;
                 commitDetails += `Modified pages: ${element.CommitDetails.NumberOfModifiedPages.toLocaleString()}<br/>`;

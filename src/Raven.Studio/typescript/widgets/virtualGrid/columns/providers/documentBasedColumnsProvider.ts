@@ -15,6 +15,7 @@ import document = require("models/database/documents/document");
 import virtualGridUtils = require("widgets/virtualGrid/virtualGridUtils");
 import app = require("durandal/app");
 import showDataDialog = require("viewmodels/common/showDataDialog");
+import generalUtils = require("common/generalUtils");
 
 
 type columnOptionsDto = {
@@ -111,12 +112,12 @@ class documentBasedColumnsProvider {
                     return new hyperlinkColumn(this.gridController, document.createDocumentIdProvider(), x => appUrl.forEditDoc(x.getId(), this.db, x.__metadata.collection), "Id", columnWidth, this.columnOptions);
                 }
 
-                return new hyperlinkColumn(this.gridController, p, _.partial(this.findLink, _, p).bind(this), p, columnWidth, this.columnOptions);
+                return new hyperlinkColumn(this.gridController, p, _.partial(this.findLink, _, p).bind(this), generalUtils.escapeHtml(p), columnWidth, this.columnOptions);
             } else {
                 if (p === "__metadata") {
                     return new textColumn(this.gridController, document.createDocumentIdProvider(), "Id", columnWidth, this.columnOptions);
                 }
-                return new textColumn(this.gridController, p, p, columnWidth, this.columnOptions);
+                return new textColumn(this.gridController, p, generalUtils.escapeHtml(p), columnWidth, this.columnOptions);
             }
         }));
         
@@ -134,7 +135,7 @@ class documentBasedColumnsProvider {
             return new hyperlinkColumn(this.gridController,
                 document.createDocumentIdProvider(), 
                     x => appUrl.forEditDoc(x.getId(), this.db, x.__metadata.collection),
-                source.header, source.width, this.columnOptions);    
+                source.header, source.width, this.columnOptions);
         }
         
         switch (source.type) {

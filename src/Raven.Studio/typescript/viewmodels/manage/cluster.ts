@@ -17,6 +17,7 @@ import assignCores = require("viewmodels/manage/assignCores");
 import license = require("models/auth/licenseModel");
 import eventsCollector = require("common/eventsCollector");
 import accessManager = require("common/shell/accessManager");
+import generalUtils = require("common/generalUtils");
 
 class cluster extends viewModelBase {
 
@@ -127,7 +128,9 @@ class cluster extends viewModelBase {
     }
 
     promote(node: clusterNode) {
-        this.confirmationMessage("Are you sure?", "Do you want to promote current node to become member/promotable?", ["Cancel", "Yes, promote"])
+        this.confirmationMessage("Are you sure?", "Do you want to promote current node to become member/promotable?", {
+            buttons: ["Cancel", "Yes, promote"]
+        })
             .done(result => {
                if (result.can) {
                    eventsCollector.default.reportEvent("cluster", "promote");
@@ -140,7 +143,9 @@ class cluster extends viewModelBase {
     }
 
     demote(node: clusterNode) {
-         this.confirmationMessage("Are you sure?", "Do you want to demote current node to become watcher?", ["Cancel", "Yes, demote"])
+         this.confirmationMessage("Are you sure?", "Do you want to demote current node to become watcher?", {
+             buttons: ["Cancel", "Yes, demote"]
+         })
             .done(result => {
                if (result.can) {
                    eventsCollector.default.reportEvent("cluster", "demote");
@@ -153,7 +158,9 @@ class cluster extends viewModelBase {
     }
 
     stepDown(node: clusterNode) {
-        this.confirmationMessage("Are you sure?", `Do you want current leader to step down?`, ["Cancel", "Step down"])
+        this.confirmationMessage("Are you sure?", `Do you want current leader to step down?`, {
+            buttons: ["Cancel", "Step down"]
+        })
             .done(result => {
                 if (result.can) {
                     eventsCollector.default.reportEvent("cluster", "step-down");
@@ -166,7 +173,9 @@ class cluster extends viewModelBase {
     }
 
     deleteNode(node: clusterNode) {
-        this.confirmationMessage("Are you sure?", `Do you want to remove ${node.serverUrl()} from cluster?`, ["Cancel", "Remove"])
+        this.confirmationMessage("Are you sure?", `Do you want to remove ${generalUtils.escapeHtml(node.serverUrl())} from cluster?`,{
+            buttons: ["Cancel", "Remove"]
+        })
             .done(result => {
                 if (result.can) {
                     eventsCollector.default.reportEvent("cluster", "delete-node");
@@ -190,7 +199,9 @@ class cluster extends viewModelBase {
     }
 
     forceTimeout(node: clusterNode) {
-        this.confirmationMessage("Are you sure?", `Do you want force timeout on waiting for leader?`, ["Cancel", "Yes, force"])
+        this.confirmationMessage("Are you sure?", `Do you want force timeout on waiting for leader?`, {
+            buttons: ["Cancel", "Yes, force"]
+        })
             .done(result => {
                 if (result.can) {
                     eventsCollector.default.reportEvent("cluster", "timeout");
