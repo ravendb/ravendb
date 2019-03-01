@@ -97,6 +97,7 @@ class smugglerDatabaseDetails extends abstractOperationDetails {
             if (this.op.taskType() === "CollectionImportFromCsv" || isDatabaseMigration) {
                 result.push(this.mapToExportListItem("Documents", status.Documents, isDatabaseMigration));
             } else {
+                result.push(this.mapToExportListItem("Database Record", status.DatabaseRecord));
                 result.push(this.mapToExportListItem("Documents", status.Documents, true));
                 result.push(this.mapToExportListItem("Revisions", status.RevisionDocuments, true));
                 result.push(this.mapToExportListItem("Conflicts", status.Conflicts));
@@ -104,6 +105,7 @@ class smugglerDatabaseDetails extends abstractOperationDetails {
                 result.push(this.mapToExportListItem("Identities", status.Identities));
                 result.push(this.mapToExportListItem("Compare Exchange", status.CompareExchange));
                 result.push(this.mapToExportListItem("Counters", status.Counters));
+                result.push(this.mapToExportListItem("Subscriptions", status.Subscriptions));
             }
 
             let shouldUpdateToPending = false;

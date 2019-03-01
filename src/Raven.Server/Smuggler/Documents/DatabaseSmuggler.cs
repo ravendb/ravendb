@@ -478,6 +478,8 @@ namespace Raven.Server.Smuggler.Documents
                     return new SmugglerProgressBase.DatabaseRecordProgress();
                 }
 
+                result.DatabaseRecord.ReadCount++;
+                
                 try
                 {
                     actions.WriteDatabaseRecord(databaseRecord, result.DatabaseRecord, _options.AuthorizationStatus, _options.OperateOnDatabaseRecordTypes);
@@ -485,6 +487,7 @@ namespace Raven.Server.Smuggler.Documents
                 catch (Exception e)
                 {
                     result.AddError($"Could not write database record: {e.Message}");
+                    result.DatabaseRecord.ErroredCount++;
                 }
             }
 
