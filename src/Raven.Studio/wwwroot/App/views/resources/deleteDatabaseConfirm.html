@@ -27,20 +27,31 @@
         </div>
         <div class="modal-footer">
             <div class="margin-top">
-                <hr/>
-                <div>
-                    <h3 class="text-left"><strong>Delete and keep files</strong></h3>
-                    <div class="text-left">
-                        Database will be deleted from the server.<br>
-                        The physical files will be left untouched on disk.<br>
-                        <i class="icon-warning"></i><span style="font-style: italic;">Database Record, Identities &amp; Compare Exchange</span>
-                        data will not be recovered if the database is to be added again in the future. Please export this data before deleting if needed.
-                        <span data-bind="if: encryptedCount > 0">
-                            <br />
-                            <i class="icon-warning"></i><span style="font-style: italic;">The Secret Key<span data-bind="text: encryptedCount === 1 ? '' : 's'"></span></span>
-                            will be deleted for the encrypted database<span data-bind="text: encryptedCount === 1 ? '' : 's'"></span>. In order to export it, please use the rvn tool:
-                            "./rvn offline-operation get-key &lt;path-to-database-dir&gt;"
-                        </span>
+                <div class="text-left">
+                    <h3><strong>Delete and keep files</strong></h3>
+                    
+                    <div>Database will be deleted from the server. The physical files will be left untouched on disk.</div>
+                    
+                        <div class="flex-horizontal">
+                            <div class="flex-start text-warning">
+                                <i class="icon-warning"></i>
+                            </div>
+                            <div>
+                                <i>Database Configuration, Identities &amp; Compare Exchange</i>
+                                data will not be recovered if the database is to be added again in the future. Please export this data before deleting if needed.
+                            </div>
+                        </div>
+                    
+                        <div class="flex-horizontal" data-bind="if: encryptedCount > 0">
+                            <div class="flex-start text-warning">
+                                <i class="icon-warning"></i>
+                            </div>
+                            <div>
+                                <i>The Secret Key<span data-bind="text: encryptedCount === 1 ? '' : 's'"></span></i>
+                                will be deleted for the encrypted database<span data-bind="text: encryptedCount === 1 ? '' : 's'"></span>. In order to export it, please use the rvn tool:
+                                <code>./rvn offline-operation get-key &lt;path-to-database-dir&gt;"</code>
+                            </div>
+                        </div>
                     </div>
                     <div class="padding">
                         <button type="button" class="btn btn-info" data-bind="click: exportDatabase, attr: { title: 'Export Data for database ' + databasesToDelete[0].name }">
