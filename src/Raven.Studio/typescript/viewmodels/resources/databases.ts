@@ -293,7 +293,18 @@ class databases extends viewModelBase {
                 placement: "top",
                 container: "body"
             });
-        })
+        });
+
+        $('.databases [data-toggle="size-tooltip"]').tooltip({
+            container: "body",
+            html: true,
+            title: function () {
+                const $data = ko.dataFor(this) as databaseInfo;
+                return `Data: <strong>${self.formatBytes($data.totalSize())}</strong><br />
+                Temp: <strong>${self.formatBytes($data.totalTempBuffersSize())}</strong><br />
+                Total: <strong>${self.formatBytes($data.totalSize() + $data.totalTempBuffersSize())}</strong>`
+            }
+        });
     }
 
     private filterDatabases(): void {
