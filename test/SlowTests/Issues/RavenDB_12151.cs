@@ -87,7 +87,7 @@ namespace SlowTests.Issues
                 ModifyDatabaseRecord = r =>
                 {
                     r.Settings[RavenConfiguration.GetKey(x => x.Storage.MaxScratchBufferSize)] = "2";
-                    r.Settings[RavenConfiguration.GetKey(x => x.Indexing.ScratchSpaceLimit)] = "32";
+                    r.Settings[RavenConfiguration.GetKey(x => x.Indexing.ScratchSpaceLimit)] = "24";
                 }
             }))
             {
@@ -100,7 +100,7 @@ namespace SlowTests.Issues
         {
             UseNewLocalServer(new Dictionary<string, string>
             {
-                [RavenConfiguration.GetKey(x => x.Indexing.GlobalScratchSpaceLimit)] = "32"
+                [RavenConfiguration.GetKey(x => x.Indexing.GlobalScratchSpaceLimit)] = "24"
             });
 
             using (var store = GetDocumentStore(new Options()
