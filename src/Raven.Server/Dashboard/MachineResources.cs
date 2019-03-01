@@ -1,4 +1,5 @@
-﻿using Sparrow.Json.Parsing;
+﻿using System;
+using Sparrow.Json.Parsing;
 
 namespace Raven.Server.Dashboard
 {
@@ -48,6 +49,12 @@ namespace Raven.Server.Dashboard
             json[nameof(CommitChargeThreshold)] = CommitChargeThreshold;
 
             return json;
+        }
+
+        public override DynamicJsonValue ToJsonWithFilter(Func<string, bool> filter)
+        {
+            // nothing to filter
+            return ToJson();
         }
     }
     

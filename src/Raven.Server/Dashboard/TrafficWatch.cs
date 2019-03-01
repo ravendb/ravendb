@@ -1,4 +1,5 @@
-﻿using System.Collections.Generic;
+﻿using System;
+using System.Collections.Generic;
 using System.Linq;
 using Sparrow.Json.Parsing;
 
@@ -19,6 +20,26 @@ namespace Raven.Server.Dashboard
         {
             var json = base.ToJson();
             json[nameof(Items)] = new DynamicJsonArray(Items.Select(x => x.ToJson()));
+            return json;
+        }
+        
+        public override DynamicJsonValue ToJsonWithFilter(Func<string, bool> filter)
+        {
+            var items = new DynamicJsonArray();
+            
+            foreach (var trafficWatchItem in Items)
+            {
+                if (filter(trafficWatchItem.Database))
+                {
+                    items.Add(trafficWatchItem.ToJson());
+                }
+            }
+
+            if (items.Count == 0)
+                return null;
+            
+            var json = base.ToJson();
+            json[nameof(Items)] = items;
             return json;
         }
     }

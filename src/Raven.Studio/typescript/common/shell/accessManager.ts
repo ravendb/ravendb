@@ -19,7 +19,6 @@ class accessManager {
     // *** Views Access *** //
     
     dashboardView = {
-        showCPUAndMemGraph: this.operatorAndAbove,
         showCertificatesLink: this.operatorAndAbove
     };
     

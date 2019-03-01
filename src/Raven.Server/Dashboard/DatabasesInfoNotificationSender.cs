@@ -63,9 +63,20 @@ namespace Raven.Server.Dashboard
                 {
                     foreach (var info in databasesInfo)
                     {
-                        // serialize to avoid race conditions
-                        // please notice we call ToJson inside a loop since DynamicJsonValue is not thread-safe
-                        watcher.NotificationsQueue.Enqueue(info.ToJson());
+                        if (watcher.Filter != null)
+                        {
+                            var asJson = info.ToJsonWithFilter(watcher.Filter);
+                            if (asJson != null)
+                            {
+                                watcher.NotificationsQueue.Enqueue(asJson);
+                            }
+                        }
+                        else
+                        {
+                            // serialize to avoid race conditions
+                            // please notice we call ToJson inside a loop since DynamicJsonValue is not thread-safe
+                            watcher.NotificationsQueue.Enqueue(info.ToJson());
+                        }
                     }
                 }
             }
