@@ -220,7 +220,8 @@ class certificates extends viewModelBase {
 
     deleteCertificate(certificate: Raven.Client.ServerWide.Operations.Certificates.CertificateDefinition) {
         this.confirmationMessage("Are you sure?", "Do you want to delete certificate with thumbprint: " + generalUtils.escapeHtml(certificate.Thumbprint) + "", {
-            buttons: ["No", "Yes, delete"]
+            buttons: ["No", "Yes, delete"],
+            html: true
         })
             .done(result => {
                 if (result.can) {

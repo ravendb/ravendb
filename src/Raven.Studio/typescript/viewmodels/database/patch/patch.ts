@@ -258,7 +258,8 @@ class patch extends viewModelBase {
     removePatch(item: storedPatchDto) {
 
         this.confirmationMessage("Patch", `Are you sure you want to delete patch '${generalUtils.escapeHtml(item.Name)}'?`, {
-            buttons: ["Cancel", "Delete"]
+            buttons: ["Cancel", "Delete"],
+            html: true
         })
             .done(result => {
                 if (result.can) {
