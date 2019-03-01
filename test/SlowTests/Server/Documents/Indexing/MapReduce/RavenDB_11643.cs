@@ -12,6 +12,7 @@ using Raven.Server.ServerWide.Context;
 using Raven.Server.Utils;
 using Sparrow.Binary;
 using Sparrow.Json.Parsing;
+using Sparrow.Platform;
 using Sparrow.Utils;
 using Voron;
 using Voron.Data.Tables;
@@ -69,6 +70,12 @@ namespace SlowTests.Server.Documents.Indexing.MapReduce
                             // in result the processing of store2 removed page 541 from the table
 
                             long pageNumber = 541;
+
+                            if (tx.InnerTransaction.LowLevelTransaction.Environment.Options.ForceUsing32BitsPager || PlatformDetails.Is32Bits)
+                            {
+                                // in 32 bits we might allocate different pages, 93 is going to be used during store1.Add() calls
+                                pageNumber = 93;
+                            }
 
                             mapReduceContext.FreedPages.Add(pageNumber);
 
