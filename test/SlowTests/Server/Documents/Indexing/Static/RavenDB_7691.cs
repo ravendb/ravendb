@@ -488,8 +488,8 @@ from EdgeCaseValues as e select MyProjection(e)"
 
                     Assert.NotEmpty(await session.Query<EdgeCaseValues>().Customize(x => x.WaitForNonStaleResults()).Where(x => x.DoubleEpsilon == edgeCaseValues.DoubleEpsilon).ToListAsync());
 
-                    var doubleEpsillonTimes2 = edgeCaseValues.DoubleEpsilon * 2;
-                    Assert.Empty(await session.Query<EdgeCaseValues>().Customize(x => x.WaitForNonStaleResults()).Where(x => x.DoubleEpsilon == doubleEpsillonTimes2).ToListAsync());
+                    var doubleEpsillonTimes3 = edgeCaseValues.DoubleEpsilon * 3;
+                    Assert.Empty(await session.Query<EdgeCaseValues>().Customize(x => x.WaitForNonStaleResults()).Where(x => x.DoubleEpsilon == doubleEpsillonTimes3).ToListAsync());
 
                     Assert.NotEmpty(await session.Query<EdgeCaseValues>().Customize(x => x.WaitForNonStaleResults()).Where(x => x.FloatMinVal == edgeCaseValues.FloatMinVal).ToListAsync());
 
