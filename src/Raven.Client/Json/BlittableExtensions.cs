@@ -71,9 +71,13 @@ namespace Raven.Client.Json
                     }
                 }
             }
+            else if (result == null)
+            {
+                yield break;
+            }
             else
             {
-                throw new ArgumentException("Illegal path");
+                throw new ArgumentException($"Illegal path ('{path}'), cannot understand how to get tokens from: {result} <{result.GetType().FullName}>");
             }
         }
     }
