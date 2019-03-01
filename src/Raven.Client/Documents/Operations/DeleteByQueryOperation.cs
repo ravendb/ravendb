@@ -63,6 +63,11 @@ namespace Raven.Client.Documents.Operations
         protected IndexQuery _queryToDelete;
         private readonly QueryOperationOptions _options;
 
+        public DeleteByQueryOperation(string queryToDelete)
+            : this(new IndexQuery { Query = queryToDelete })
+        {
+        }
+
         public DeleteByQueryOperation(IndexQuery queryToDelete, QueryOperationOptions options = null)
         {
             _queryToDelete = queryToDelete ?? throw new ArgumentNullException(nameof(queryToDelete));

@@ -20,6 +20,7 @@ namespace Raven.Server.Documents
     internal class CollectionRunner
     {
         private readonly IndexQueryServerSide _collectionQuery;
+        private IndexQueryServerSide _operationQuery;
 
         protected readonly DocumentsOperationContext Context;
         protected readonly DocumentDatabase Database;
@@ -147,8 +148,11 @@ namespace Raven.Server.Documents
         {
             if (_collectionQuery != null && _collectionQuery.Metadata.WhereFields.Count > 0)
             {
-                return new CollectionQueryEnumerable(Database, Database.DocumentsStorage, new FieldsToFetch(_collectionQuery, null),
-                    collectionName, _collectionQuery, null, context, null, new Reference<int>());
+                if (_operationQuery == null)
+                    _operationQuery = ConvertToOperationQuery(_collectionQuery);
+
+                return new CollectionQueryEnumerable(Database, Database.DocumentsStorage, new FieldsToFetch(_operationQuery, null),
+                    collectionName, _operationQuery, null, context, null, new Reference<int>());
             }
 
             if (isAllDocs)
@@ -176,6 +180,18 @@ namespace Raven.Server.Documents
                 return DocumentsStorage.ReadLastDocumentEtag(context.Transaction.InnerTransaction);
 
             return Database.DocumentsStorage.GetLastDocumentEtag(context, collection);
+        }
+
+        private static IndexQueryServerSide ConvertToOperationQuery(IndexQueryServerSide query)
+        {
+            return new IndexQueryServerSide(query.Metadata)
+            {
+                Query = query.Query,
+                Start = 0,
+                WaitForNonStaleResultsTimeout = query.WaitForNonStaleResultsTimeout,
+                PageSize = int.MaxValue,
+                QueryParameters = query.QueryParameters
+            };
         }
     }
 }

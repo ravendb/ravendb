@@ -5,6 +5,7 @@ using Orders;
 using Raven.Client.Documents;
 using Raven.Client.Documents.Indexes;
 using Raven.Client.Documents.Operations;
+using Raven.Client.Documents.Session;
 using Xunit;
 
 namespace SlowTests.Issues
@@ -12,7 +13,7 @@ namespace SlowTests.Issues
     public class RavenDB_12985 : RavenTestBase
     {
         [Fact]
-        public void CanUsePagingWhilePatching()
+        public void CanUsePagingWhilePatchingOrDeleting()
         {
             using (var store = GetDocumentStore())
             {
@@ -55,22 +56,68 @@ namespace SlowTests.Issues
                 operation.WaitForCompletion(TimeSpan.FromSeconds(30));
 
                 AssertCompaniesByIndex(store, 9, 3, "patch4");
+
+                AssertDelete(store, 3, 5, 50);
+
+                AssertDelete(store, 7, 13, 45);
+
+                AssertDeleteByIndex(store, 9, 2, 32);
+
+                AssertDeleteByIndex(store, 6, 23, 30);
             }
         }
 
-        private class Companies_ByName : AbstractIndexCreationTask<Company>
+        private static void AssertDelete(IDocumentStore store, int start, int take, int count)
         {
-            public Companies_ByName()
+            using (var session = store.OpenSession(new SessionOptions
             {
-                Map = companies => from c in companies
-                                   select new
-                                   {
-                                       c.Name
-                                   };
+                NoTracking = true,
+                NoCaching = true
+            }))
+            {
+                var preCompanies = session.Query<Company>().Select(x => x.Id).ToList();
+                Assert.Equal(count, preCompanies.Count);
+
+                var operation = store.Operations.Send(new DeleteByQueryOperation($"from Companies limit {start},{take}"));
+                operation.WaitForCompletion(TimeSpan.FromSeconds(30));
+
+                var postCompanies = session.Query<Company>().Select(x => x.Id).ToList();
+                Assert.Equal(count - take, postCompanies.Count);
+
+                var idsThatShouldBeDeleted = preCompanies.Skip(start).Take(take).ToList();
+                foreach (var id in idsThatShouldBeDeleted)
+                    Assert.DoesNotContain(id, postCompanies);
             }
         }
 
-        private static void AssertCompanies(IDocumentStore store, int start, int pageSize, string expected)
+        private static void AssertDeleteByIndex(IDocumentStore store, int start, int take, int count)
+        {
+            using (var session = store.OpenSession(new SessionOptions
+            {
+                NoTracking = true,
+                NoCaching = true
+            }))
+            {
+                WaitForIndexing(store);
+
+                var preCompanies = session.Query<Company>().OrderBy(x => x.Name).Select(x => x.Id).ToList();
+                Assert.Equal(count, preCompanies.Count);
+
+                var operation = store.Operations.Send(new DeleteByQueryOperation($"from index 'Companies/ByName' order by Name limit {start},{take}"));
+                operation.WaitForCompletion(TimeSpan.FromSeconds(30));
+
+                WaitForIndexing(store);
+
+                var postCompanies = session.Query<Company>().OrderBy(x => x.Name).Select(x => x.Id).ToList();
+                Assert.Equal(count - take, postCompanies.Count);
+
+                var idsThatShouldBeDeleted = preCompanies.Skip(start).Take(take).ToList();
+                foreach (var id in idsThatShouldBeDeleted)
+                    Assert.DoesNotContain(id, postCompanies);
+            }
+        }
+
+        private static void AssertCompanies(IDocumentStore store, int start, int take, string expected)
         {
             using (var session = store.OpenSession())
             {
@@ -85,7 +132,7 @@ namespace SlowTests.Issues
                 {
                     var company = companies[i];
 
-                    if (i >= start && i < start + pageSize)
+                    if (i >= start && i < start + take)
                         Assert.Equal(expected, company.Name);
                     else
                         Assert.NotEqual(expected, company.Name);
@@ -113,6 +160,18 @@ namespace SlowTests.Issues
                     else
                         Assert.NotEqual(expected, company.Fax);
                 }
+            }
+        }
+
+        private class Companies_ByName : AbstractIndexCreationTask<Company>
+        {
+            public Companies_ByName()
+            {
+                Map = companies => from c in companies
+                    select new
+                    {
+                        c.Name
+                    };
             }
         }
     }
