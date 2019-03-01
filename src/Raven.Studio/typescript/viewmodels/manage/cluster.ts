@@ -174,7 +174,8 @@ class cluster extends viewModelBase {
 
     deleteNode(node: clusterNode) {
         this.confirmationMessage("Are you sure?", `Do you want to remove ${generalUtils.escapeHtml(node.serverUrl())} from cluster?`,{
-            buttons: ["Cancel", "Remove"]
+            buttons: ["Cancel", "Remove"],
+            html: true
         })
             .done(result => {
                 if (result.can) {
