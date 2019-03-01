@@ -38,8 +38,7 @@ namespace Raven.Server.NotificationCenter
 
             try
             {
-                var sp = shouldWriteByDb == null ? null : Stopwatch.StartNew();
-                using (_notificationsBase.TrackActions(asyncQueue, this))
+                using (_notificationsBase.TrackActions(asyncQueue, this, shouldWriteByDb))
                 {
                     while (_resourceShutdown.IsCancellationRequested == false)
                     {
@@ -53,18 +52,6 @@ namespace Raven.Server.NotificationCenter
                         if (tuple.Item1 == false)
                         {
                             await SendHeartbeat();
-                            continue;
-                        }
-
-                        if (shouldWriteByDb != null &&
-                            shouldWriteByDb((string)tuple.Item2["Database"]) == false)
-                        {
-                            if (sp.ElapsedMilliseconds > 5000)
-                            {
-                                sp.Restart();
-                                await SendHeartbeat();
-                            }
-                            
                             continue;
                         }
 

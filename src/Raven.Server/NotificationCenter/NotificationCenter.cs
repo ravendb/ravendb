@@ -96,6 +96,11 @@ namespace Raven.Server.NotificationCenter
 
                 foreach (var watcher in Watchers)
                 {
+                    if (watcher.Filter != null && watcher.Filter(notification.Database) == false)
+                    {
+                        continue;
+                    }
+                    
                     // serialize to avoid race conditions
                     // please notice we call ToJson inside a loop since DynamicJsonValue is not thread-safe
                     watcher.NotificationsQueue.Enqueue(notification.ToJson());
@@ -170,5 +175,7 @@ namespace Raven.Server.NotificationCenter
         public AsyncQueue<DynamicJsonValue> NotificationsQueue;
 
         public IWebsocketWriter Writer;
+
+        public Func<string, bool> Filter;
     }
 }

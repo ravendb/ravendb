@@ -18,5 +18,11 @@ namespace Raven.Server.Dashboard
                 [nameof(Date)] = Date
             };
         }
+
+        /// <summary>
+        /// Convert object to DynamicJsonValue but using provided filter
+        /// Return null when filter matches nothing - such message will be skipped
+        /// </summary>
+        public abstract DynamicJsonValue ToJsonWithFilter(Func<string, bool> filter);
     }
 }

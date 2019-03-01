@@ -1,4 +1,5 @@
-﻿using System.Collections.Generic;
+﻿using System;
+using System.Collections.Generic;
 using System.Linq;
 using Sparrow.Json.Parsing;
 
@@ -19,6 +20,26 @@ namespace Raven.Server.Dashboard
         {
             var json = base.ToJson();
             json[nameof(Items)] = new DynamicJsonArray(Items.Select(x => x.ToJson()));
+            return json;
+        }
+        
+        public override DynamicJsonValue ToJsonWithFilter(Func<string, bool> filter)
+        {
+            var items = new DynamicJsonArray();
+            foreach (var mountPointUsage in Items)
+            {
+                var usageAsJson = mountPointUsage.ToJsonWithFilter(filter);
+                if (usageAsJson != null)
+                {
+                    items.Add(usageAsJson);
+                }
+            }
+            
+            if (items.Count == 0)
+                return null;
+            
+            var json = base.ToJson();
+            json[nameof(Items)] = items;
             return json;
         }
     }
@@ -42,7 +63,7 @@ namespace Raven.Server.Dashboard
             Items = new List<DatabaseDiskUsage>();
         }
 
-        public DynamicJsonValue ToJson()
+        private DynamicJsonValue ToJsonInternal()
         {
             return new DynamicJsonValue
             {
@@ -50,9 +71,35 @@ namespace Raven.Server.Dashboard
                 [nameof(VolumeLabel)] = VolumeLabel,
                 [nameof(TotalCapacity)] = TotalCapacity,
                 [nameof(FreeSpace)] = FreeSpace,
-                [nameof(IsLowSpace)] = IsLowSpace,
-                [nameof(Items)] = new DynamicJsonArray(Items.Select(x => x.ToJson()))
+                [nameof(IsLowSpace)] = IsLowSpace
             };
+        }
+        
+        public DynamicJsonValue ToJson()
+        {
+            var json = ToJsonInternal();
+            json[nameof(Items)] = new DynamicJsonArray(Items.Select(x => x.ToJson()));
+            return json;
+        }
+        
+        public DynamicJsonValue ToJsonWithFilter(Func<string, bool> filter)
+        {
+            var json = ToJsonInternal();
+
+            var items = new DynamicJsonArray();
+            foreach (var databaseDiskUsage in Items)
+            {
+                if (filter(databaseDiskUsage.Database))
+                {
+                    items.Add(databaseDiskUsage.ToJson());
+                }
+            }
+
+            if (items.Count == 0)
+                return null;
+            
+            json[nameof(Items)] = items;
+            return json;
         }
     }
     
