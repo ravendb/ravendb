@@ -94,7 +94,7 @@ namespace Raven.Server.Documents.Handlers
                 configuration = JsonDeserializationServer.RevertRevisions(json);
             }
 
-            var token = CreateOperationToken();
+            var token = CreateTimeLimitedOperationToken();
             var operationId = ServerStore.Operations.GetNextOperationId();
 
             var t = Database.Operations.AddOperation(
