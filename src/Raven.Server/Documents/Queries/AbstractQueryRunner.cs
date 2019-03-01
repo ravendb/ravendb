@@ -210,7 +210,7 @@ namespace Raven.Server.Documents.Queries
                 Query = query.Query,
                 Start = query.Start,
                 WaitForNonStaleResultsTimeout = options.StaleTimeout ?? query.WaitForNonStaleResultsTimeout,
-                PageSize = int.MaxValue,
+                PageSize = query.PageSize,
                 QueryParameters = query.QueryParameters
             };
         }

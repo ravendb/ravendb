@@ -301,7 +301,7 @@ namespace Raven.Server.Web.Studio
                 }
             }
 
-            ExecuteCollectionOperation((runner, collectionName, options, onProgress, token) => Task.Run(async () => await runner.ExecuteDelete(collectionName, options, onProgress, token)),
+            ExecuteCollectionOperation((runner, collectionName, options, onProgress, token) => Task.Run(async () => await runner.ExecuteDelete(collectionName, 0, int.MaxValue, options, onProgress, token)),
                 context, returnContextToPool, Documents.Operations.Operations.OperationType.DeleteByCollection, excludeIds);
             return Task.CompletedTask;
         }
