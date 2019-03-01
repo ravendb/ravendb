@@ -101,8 +101,7 @@ interface updateDatabaseConfigurationsResult {
 
 interface nodeCounterValue {
     nodeTag: string;
-    nodeFullId: string;
-    nodeShortId: string;
+    databaseId: string;
     nodeCounterValue: number;
 }
 
