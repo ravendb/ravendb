@@ -461,7 +461,7 @@ namespace Raven.Server.Documents.PeriodicBackup
                         periodicBackup.UpdateTimer(newBackupTimer, discardIfDisabled: true);
                     }
                 }
-            }, null, $"Backup task {periodicBackup.Configuration.Name}");
+            }, null, $"Backup task {periodicBackup.Configuration.Name} for database '{_database.Name}'");
             return tcs.Task;
         }
 

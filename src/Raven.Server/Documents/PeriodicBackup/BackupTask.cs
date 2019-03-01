@@ -605,7 +605,7 @@ namespace Raven.Server.Documents.PeriodicBackup
 
             var tasks = new List<PoolOfThreads.LongRunningWork>();
 
-            CreateUploadTaskIfNeeded($"Upload to S3 (task: {taskName})", _configuration.S3Settings, tasks, backupPath, _isFullBackup,
+            CreateUploadTaskIfNeeded($"Upload backup of database '{_database.Name}' to S3 (task: {taskName})", _configuration.S3Settings, tasks, backupPath, _isFullBackup,
                 (settings, stream, progress) =>
                 {
                     var archiveDescription = GetArchiveDescription(_isFullBackup, _configuration.BackupType);
@@ -613,12 +613,12 @@ namespace Raven.Server.Documents.PeriodicBackup
                 },
                 _backupResult.S3Backup, onProgress);
 
-            CreateUploadTaskIfNeeded($"Upload to Glacier (task: {taskName})",_configuration.GlacierSettings, tasks, backupPath, _isFullBackup,
+            CreateUploadTaskIfNeeded($"Upload backup of database '{_database.Name}' to Glacier (task: {taskName})",_configuration.GlacierSettings, tasks, backupPath, _isFullBackup,
                 (settings, stream, progress) =>
                     UploadToGlacier(settings, stream, folderName, fileName, progress),
                 _backupResult.GlacierBackup, onProgress);
 
-            CreateUploadTaskIfNeeded($"Upload to Azure (task: {taskName})",_configuration.AzureSettings, tasks, backupPath, _isFullBackup,
+            CreateUploadTaskIfNeeded($"Upload backup of database '{_database.Name}' to Azure (task: {taskName})",_configuration.AzureSettings, tasks, backupPath, _isFullBackup,
                 (settings, stream, progress) =>
                 {
                     var archiveDescription = GetArchiveDescription(_isFullBackup, _configuration.BackupType);
@@ -626,7 +626,7 @@ namespace Raven.Server.Documents.PeriodicBackup
                 },
                 _backupResult.AzureBackup, onProgress);
 
-            CreateUploadTaskIfNeeded($"Upload to Ftp (task: {taskName})",_configuration.FtpSettings, tasks, backupPath, _isFullBackup,
+            CreateUploadTaskIfNeeded($"Upload backup of database '{_database.Name}' to Ftp (task: {taskName})",_configuration.FtpSettings, tasks, backupPath, _isFullBackup,
                 (settings, stream, progress) =>
                     UploadToFtp(settings, stream, folderName, fileName, progress),
                 _backupResult.FtpBackup, onProgress);
