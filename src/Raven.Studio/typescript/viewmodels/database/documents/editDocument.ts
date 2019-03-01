@@ -1204,10 +1204,10 @@ class normalCrudActions implements editDocumentCrudActions {
 
         let valuesPerNode = Array<nodeCounterValue>();
         for (const nodeDetails in counter.CounterValues) {
+            const [nodeTag, dbId] = _.split(nodeDetails, '-', 2);
             valuesPerNode.unshift({
-                nodeTag: nodeDetails[0],
-                nodeFullId: _.split(nodeDetails, ':')[1],
-                nodeShortId: _.split(nodeDetails, '-')[0],
+                nodeTag: nodeTag,
+                databaseId: dbId,
                 nodeCounterValue: counter.CounterValues[nodeDetails]
             })
         }

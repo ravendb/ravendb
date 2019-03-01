@@ -64,13 +64,13 @@
                                     <div class="col-md-4">
                                         <label data-bind="visible: $index() === 0" class="control-label">Values per Node:</label>
                                     </div>
-                                    <div class="col-md-3">
+                                    <div class="col-md-3" data-bind="attr: { title: 'Database ID: ' + databaseId }">
                                         <span class="small">Node:</span>
-                                        <label class="control-label" data-bind="text: $data.nodeShortId"></label>
+                                        <label class="control-label" data-bind="text: nodeTag"></label>
                                     </div>
                                     <div class="col-md-3">
                                         <span class="small">Value:</span>
-                                        <label class="control-label" data-bind="text: $data.nodeCounterValue.toLocaleString()"></label>
+                                        <label class="control-label" data-bind="text: nodeCounterValue.toLocaleString()"></label>
                                     </div>
                                 </div>
                             </div>
