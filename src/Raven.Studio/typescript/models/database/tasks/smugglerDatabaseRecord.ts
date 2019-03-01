@@ -18,6 +18,8 @@ class smugglerDatabaseRecord {
     includeSorters = ko.observable<boolean>(true);
     includeSinkPullReplications = ko.observable<boolean>(true);
     includeHubPullReplications = ko.observable<boolean>(true);
+
+    includeSubscriptions = ko.observable(true);
     
     hasIncludes: KnockoutComputed<boolean>;
 
@@ -36,7 +38,7 @@ class smugglerDatabaseRecord {
         const result = [] as Array<Raven.Client.Documents.Smuggler.DatabaseRecordItemType>;
         
         if (!this.customizeDatabaseRecordTypes()) {
-            return ["None"]; 
+            return ["None"];
         }
         
         if (this.includeConflictSolverConfig()) {
@@ -81,6 +83,8 @@ class smugglerDatabaseRecord {
         if (this.includeHubPullReplications()) {
             result.push("HubPullReplications");
         }
+        
+        // here we ignore includeSubscriptions because it isn't part of DatabaseRecordItemType
         
         return result;
     }

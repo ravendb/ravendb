@@ -76,7 +76,7 @@ class exportDatabaseModel {
         const operateOnTypes: Array<Raven.Client.Documents.Smuggler.DatabaseItemType> = [];
         const databaseRecordTypes = this.databaseModel.getDatabaseRecordTypes();
         
-        if (this.includeDatabaseRecord()) {
+        if (this.includeDatabaseRecord() && databaseRecordTypes.length) {
             operateOnTypes.push("DatabaseRecord");
         }
         if (this.includeDocuments()) {
@@ -103,8 +103,18 @@ class exportDatabaseModel {
         if (this.includeAttachments()) {
             operateOnTypes.push("Attachments");
         }
+        
+        if (this.includeDatabaseRecord()) {
+            if (this.databaseModel.customizeDatabaseRecordTypes()) {
+                if (this.databaseModel.includeSubscriptions()) {
+                    operateOnTypes.push("Subscriptions");
+                }
+            } else {
+                operateOnTypes.push("Subscriptions");
+            }
+        }
 
-        const recordTypes = databaseRecordTypes.length ? databaseRecordTypes.join(",") : "None" as Raven.Client.Documents.Smuggler.DatabaseRecordItemType;
+        const recordTypes = databaseRecordTypes.length ? databaseRecordTypes.join(",") : undefined as Raven.Client.Documents.Smuggler.DatabaseRecordItemType;
         
         return {
             Collections: this.includeAllCollections() ? null : this.includedCollections(),
@@ -124,8 +134,9 @@ class exportDatabaseModel {
             return this.includeDatabaseRecord() 
                 || this.includeAttachments() 
                 || this.includeConflicts() 
-                || this.includeIndexes() 
+                || this.includeIndexes()
                 || this.includeIdentities() 
+                || this.databaseModel.includeSubscriptions()
                 || this.includeCompareExchange() 
                 || this.includeCounters() 
                 || (this.includeRevisionDocuments() && this.revisionsAreConfigured()) 
@@ -141,15 +152,6 @@ class exportDatabaseModel {
                 {
                     validator: () => this.exportDefinitionHasIncludes(),
                     message: "Note: At least one 'include' option must be checked..."
-                }
-            ]
-        });
-        
-        this.databaseModel.hasIncludes.extend({
-            validation: [
-                {
-                    validator: () => !this.databaseModel.customizeDatabaseRecordTypes() || this.databaseModel.hasIncludes(),
-                    message: "Note: At least one 'configuration' option must be checked..."
                 }
             ]
         });

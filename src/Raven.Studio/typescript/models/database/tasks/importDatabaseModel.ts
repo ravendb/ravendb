@@ -68,7 +68,7 @@ class importDatabaseModel {
         const operateOnTypes: Array<Raven.Client.Documents.Smuggler.DatabaseItemType> = [];
         const databaseRecordTypes = this.databaseModel.getDatabaseRecordTypes();
         
-        if (this.includeDatabaseRecord()) {
+        if (this.includeDatabaseRecord() && databaseRecordTypes.length) {
             operateOnTypes.push("DatabaseRecord");
         }
         if (this.includeDocuments()) {
@@ -101,8 +101,17 @@ class importDatabaseModel {
         if (this.includeLegacyAttachments()) {
             operateOnTypes.push("LegacyAttachments");
         }
+        if (this.includeDatabaseRecord()) {
+            if (this.databaseModel.customizeDatabaseRecordTypes()) {
+                if (this.databaseModel.includeSubscriptions()) {
+                    operateOnTypes.push("Subscriptions");
+                }
+            } else {
+                operateOnTypes.push("Subscriptions");
+            }
+        }
 
-        const recordTypes = databaseRecordTypes.length ? databaseRecordTypes.join(",") : "None" as Raven.Client.Documents.Smuggler.DatabaseRecordItemType;
+        const recordTypes = databaseRecordTypes.length ? databaseRecordTypes.join(",") : undefined as Raven.Client.Documents.Smuggler.DatabaseRecordItemType;
         
         return {
             IncludeExpired: this.includeExpiredDocuments(),
@@ -120,6 +129,7 @@ class importDatabaseModel {
                 || this.includeConflicts() 
                 || this.includeIndexes() 
                 || this.includeIdentities() 
+                || this.databaseModel.includeSubscriptions()
                 || this.includeCompareExchange() 
                 || this.includeLegacyAttachments() 
                 || this.includeCounters() 
@@ -146,15 +156,6 @@ class importDatabaseModel {
             required: {
                 onlyIf: () => this.encryptedInput()
             }
-        });
-
-        this.databaseModel.hasIncludes.extend({
-            validation: [
-                {
-                    validator: () => !this.databaseModel.customizeDatabaseRecordTypes() || this.databaseModel.hasIncludes(),
-                    message: "Note: At least one 'configuration' option must be checked..."
-                }
-            ]
         });
 
         this.validationGroup = ko.validatedObservable({
