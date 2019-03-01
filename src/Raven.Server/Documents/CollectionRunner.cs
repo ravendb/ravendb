@@ -33,19 +33,19 @@ namespace Raven.Server.Documents
             _collectionQuery = collectionQuery;
         }
 
-        public virtual Task<IOperationResult> ExecuteDelete(string collectionName, CollectionOperationOptions options, Action<IOperationProgress> onProgress, OperationCancelToken token)
+        public virtual Task<IOperationResult> ExecuteDelete(string collectionName, int start, int take, CollectionOperationOptions options, Action<IOperationProgress> onProgress, OperationCancelToken token)
         {
-            return ExecuteOperation(collectionName, options, Context, onProgress, key => new DeleteDocumentCommand(key, null, Database), token);
+            return ExecuteOperation(collectionName, start, take, options, Context, onProgress, key => new DeleteDocumentCommand(key, null, Database), token);
         }
 
-        public Task<IOperationResult> ExecutePatch(string collectionName, CollectionOperationOptions options, PatchRequest patch,
+        public Task<IOperationResult> ExecutePatch(string collectionName, int start, int take, CollectionOperationOptions options, PatchRequest patch,
             BlittableJsonReaderObject patchArgs, Action<IOperationProgress> onProgress, OperationCancelToken token)
         {
-            return ExecuteOperation(collectionName, options, Context, onProgress,
+            return ExecuteOperation(collectionName, start, take, options, Context, onProgress,
                 key => new PatchDocumentCommand(Context, key, null, false, (patch, patchArgs), (null, null), Database, false, false, false, false), token);
         }
 
-        protected async Task<IOperationResult> ExecuteOperation(string collectionName, CollectionOperationOptions options, DocumentsOperationContext context,
+        protected async Task<IOperationResult> ExecuteOperation(string collectionName, int start, int take, CollectionOperationOptions options, DocumentsOperationContext context,
              Action<DeterminateProgress> onProgress, Func<string, TransactionOperationsMerger.MergedTransactionCommand> action, OperationCancelToken token)
         {
             const int batchSize = 1024;
@@ -95,6 +95,18 @@ namespace Raven.Server.Documents
                             }
 
                             startEtag = document.Etag + 1;
+
+                            if (start > 0)
+                            {
+                                start--;
+                                continue;
+                            }
+
+                            if (take-- <= 0)
+                            {
+                                end = true;
+                                break;
+                            }
 
                             ids.Enqueue(document.Id);
                         }

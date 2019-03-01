@@ -18,13 +18,13 @@ namespace Raven.Server.Web.Studio
             _excludeIds = excludeIds;
         }
 
-        public override Task<IOperationResult> ExecuteDelete(string collectionName, CollectionOperationOptions options, Action<IOperationProgress> onProgress, OperationCancelToken token)
+        public override Task<IOperationResult> ExecuteDelete(string collectionName, int start, int take, CollectionOperationOptions options, Action<IOperationProgress> onProgress, OperationCancelToken token)
         {
             if (_excludeIds.Count == 0)
-                return base.ExecuteDelete(collectionName, options, onProgress, token);
+                return base.ExecuteDelete(collectionName, start, take, options, onProgress, token);
 
             // specific collection w/ exclusions
-            return ExecuteOperation(collectionName, options, Context, onProgress, key =>
+            return ExecuteOperation(collectionName, start, take, options, Context, onProgress, key =>
             {
                 if (_excludeIds.Contains(key) == false)
                     return new DeleteDocumentCommand(key, null, Database);

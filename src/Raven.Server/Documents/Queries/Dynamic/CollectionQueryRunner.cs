@@ -89,7 +89,7 @@ namespace Raven.Server.Documents.Queries.Dynamic
         {
             var runner = new CollectionRunner(Database, context, query);
 
-            return runner.ExecuteDelete(query.Metadata.CollectionName, new CollectionOperationOptions
+            return runner.ExecuteDelete(query.Metadata.CollectionName, query.Start, query.PageSize, new CollectionOperationOptions
             {
                 MaxOpsPerSecond = options.MaxOpsPerSecond
             }, onProgress, token);
@@ -99,7 +99,7 @@ namespace Raven.Server.Documents.Queries.Dynamic
         {
             var runner = new CollectionRunner(Database, context, query);
 
-            return runner.ExecutePatch(query.Metadata.CollectionName, new CollectionOperationOptions
+            return runner.ExecutePatch(query.Metadata.CollectionName, query.Start, query.PageSize, new CollectionOperationOptions
             {
                 MaxOpsPerSecond = options.MaxOpsPerSecond
             }, patch, patchArgs, onProgress, token);
