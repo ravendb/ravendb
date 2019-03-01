@@ -1880,7 +1880,7 @@ namespace Raven.Client.Connection.Async
         {
             var metadata = new RavenJObject();
             AddTransactionInformation(metadata);
-            var createHttpJsonRequestParams = new CreateHttpJsonRequestParams(this, (operationMetadata.Url + "/static/" + key), method, metadata, operationMetadata.Credentials, convention, requestTimeMetric);
+            var createHttpJsonRequestParams = new CreateHttpJsonRequestParams(this, Static(operationMetadata.Url, key), method, metadata, operationMetadata.Credentials, convention, requestTimeMetric);
             using (var request = jsonRequestFactory.CreateHttpJsonRequest(createHttpJsonRequestParams.AddOperationHeaders(OperationsHeaders)).AddRequestExecuterAndReplicationHeaders(this, operationMetadata.Url, operationMetadata.ClusterInformation.WithClusterFailoverHeader))
             {
                 ErrorResponseException responseException;

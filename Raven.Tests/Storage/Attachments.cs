@@ -47,6 +47,18 @@ namespace Raven.Tests.Storage
         }
 
         [Fact]
+        public async Task CanAddAndReadAttachmentsAsyncInEmbedded2()
+        {
+            using (var store = NewDocumentStore())
+            {
+                await store.AsyncDatabaseCommands.PutAttachmentAsync("messagebodies/3f0240a7-9b2e-4e2a-ab39-6114932adad1\\2055783", null, new MemoryStream(new byte[] { 1, 2, 3 }), new RavenJObject());
+
+                Attachment attachment = await store.AsyncDatabaseCommands.GetAttachmentAsync("messagebodies/3f0240a7-9b2e-4e2a-ab39-6114932adad1\\2055783");
+                Assert.Equal(new byte[] { 1, 2, 3 }, attachment.Data().ReadData());
+            }
+        }
+
+        [Fact]
         public void CanScanAttachments()
         {
             using (var tx = NewTransactionalStorage())
