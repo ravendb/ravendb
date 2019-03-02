@@ -105,6 +105,7 @@ namespace Raven.Server.Smuggler.Documents
             EnsureStepProcessed(result.Indexes);
             EnsureStepProcessed(result.Identities);
             EnsureStepProcessed(result.CompareExchange);
+            EnsureStepProcessed(result.Subscriptions);
         }
 
         private static void EnsureStepProcessed(SmugglerProgressBase.Counts counts)

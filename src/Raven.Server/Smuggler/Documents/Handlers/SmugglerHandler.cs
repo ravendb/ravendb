@@ -339,6 +339,9 @@ namespace Raven.Server.Smuggler.Documents.Handlers
                 finalResult.CompareExchange.ReadCount += importResult.CompareExchange.ReadCount;
                 finalResult.CompareExchange.ErroredCount += importResult.CompareExchange.ErroredCount;
 
+                finalResult.Subscriptions.ReadCount += importResult.Subscriptions.ReadCount;
+                finalResult.Subscriptions.ErroredCount += importResult.Subscriptions.ErroredCount;
+
                 finalResult.Indexes.ReadCount += importResult.Indexes.ReadCount;
                 finalResult.Indexes.ErroredCount += importResult.Indexes.ErroredCount;
 
