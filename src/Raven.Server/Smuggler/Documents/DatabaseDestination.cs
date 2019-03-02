@@ -641,6 +641,7 @@ namespace Raven.Server.Smuggler.Documents
                         _log.Info("Configuring sql etls configuration from smuggler");
                     foreach (var etl in databaseRecord.SqlEtls)
                     {
+                        etl.Disabled = true;
                         tasks.Add(_database.ServerStore.SendToLeaderAsync(new AddSqlEtlCommand(etl, _database.Name)));
                     }
                     progress.SqlEtlsUpdated = true;
