@@ -213,7 +213,10 @@
                                             </a>
                                         </li>
                                         <li data-bind="visible: $root.accessManager.canCompactDatabase">
-                                            <a href="#" data-bind="click: $root.compactDatabase">
+                                            <a data-bind="click: $root.compactDatabase, visible: disabled" title="Database is disabled" class="has-disable-reason disabled" data-placement="left">
+                                                <i class="icon-compact"></i> Compact database
+                                            </a>
+                                            <a href="#" data-bind="click: $root.compactDatabase, visible: !disabled()">
                                                 <i class="icon-compact"></i> Compact database
                                             </a>
                                         </li>

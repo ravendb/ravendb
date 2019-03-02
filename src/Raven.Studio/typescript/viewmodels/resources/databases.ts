@@ -154,6 +154,7 @@ class databases extends viewModelBase {
         
         this.initTooltips();
         this.initDatabaseNameResize();
+        this.setupDisableReasons();
     }
     
     deactivate() {
@@ -204,6 +205,7 @@ class databases extends viewModelBase {
                 this.databases().updateDatabase(result);
                 this.filterDatabases();
                 this.initTooltips();
+                this.setupDisableReasons();
             });
     }
     
@@ -551,6 +553,10 @@ class databases extends viewModelBase {
     }
     
     compactDatabase(db: databaseInfo) {
+        if (db.disabled()) {
+            return;
+        }
+        
         eventsCollector.default.reportEvent("databases", "compact");
         
         this.confirmationMessage("Are you sure?", "Do you want to compact '" + db.name + "'?", ["No", "Yes, compact"])
@@ -572,7 +578,7 @@ class databases extends viewModelBase {
                                     notificationCenter.instance.openDetailsForOperationById(null, result.OperationId);
                                 })
                                 .fail(() => db.inProgressAction(null));
-                        });
+                        }).fail((response: JQueryXHR) => messagePublisher.reportError("Failed to load indexes for database", response.responseText, response.statusText));
                 }
             });
     }
