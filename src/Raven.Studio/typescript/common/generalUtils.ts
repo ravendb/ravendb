@@ -381,6 +381,10 @@ class genUtils {
         return output;
     }
 
+    static nl2br(str: string) {
+        return str = str.replace(/(?:\r\n|\r|\n)/g, '<br>');
+    }
+
     static escapeHtml(string: string) {
         if (!string) {
             return string;

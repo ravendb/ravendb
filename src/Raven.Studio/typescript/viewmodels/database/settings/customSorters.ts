@@ -17,6 +17,7 @@ import textColumn = require("widgets/virtualGrid/columns/textColumn");
 import virtualGridController = require("widgets/virtualGrid/virtualGridController");
 import documentBasedColumnsProvider = require("widgets/virtualGrid/columns/providers/documentBasedColumnsProvider");
 import columnPreviewPlugin = require("widgets/virtualGrid/columnPreviewPlugin");
+import generalUtils = require("common/generalUtils");
 
 class sorterListItem {
     
@@ -136,7 +137,10 @@ class customSorters extends viewModelBase {
     }
     
     confirmRemoveSorter(sorter: sorterListItem) {
-        this.confirmationMessage("Delete Custom Sorter", "You're deleting custom sorter with name: " + sorter.name, ["Cancel", "Delete"])
+        this.confirmationMessage("Delete Custom Sorter", "You're deleting custom sorter with name: " + generalUtils.escapeHtml(sorter.name), {
+            buttons: ["Cancel", "Delete"],
+            html: true
+        })
             .done(result => {
                 if (result.can) {
                     this.sorters.remove(sorter);

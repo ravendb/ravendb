@@ -1,6 +1,6 @@
 /// <reference path="../../../../typings/tsd.d.ts" />
 import database = require("models/resources/database");
-import utils = require("widgets/virtualGrid/virtualGridUtils");
+import generalUtils = require("common/generalUtils");
 
 abstract class abstractNotification {
 
@@ -77,8 +77,8 @@ abstract class abstractNotification {
         this.isPersistent(incomingChanges.IsPersistent);
 
         if (incomingChanges.Message) {
-            const escapedMessage = utils.escape(incomingChanges.Message);
-            this.message(utils.nl2br(escapedMessage));    
+            const escapedMessage = generalUtils.escapeHtml(incomingChanges.Message);
+            this.message(generalUtils.nl2br(escapedMessage));    
         } else {
             this.message("");
         }

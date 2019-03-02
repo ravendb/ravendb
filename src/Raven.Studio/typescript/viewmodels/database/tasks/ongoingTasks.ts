@@ -401,7 +401,7 @@ class ongoingTasks extends viewModelBase {
 
         this.confirmationMessage("Disable Task", "You're disabling task of type: " + model.taskType(), {
             buttons: ["Cancel", "Disable"]
-        } )
+        })
             .done(result => {
                 if (result.can) {
                     new toggleOngoingTaskCommand(db, model.taskType(), model.taskId, model.taskName(), true)
