@@ -47,6 +47,8 @@ class registrationDismissStorage {
 }
 
 class registration extends dialogViewModelBase {
+    
+    static readonly licenseDialogSelector = "#licenseModal";
 
     dismissVisible = ko.observable<boolean>(true);
     canBeClosed = ko.observable<boolean>(false);
@@ -102,6 +104,12 @@ class registration extends dialogViewModelBase {
         });
 
         this.registrationUrl(license.generateLicenseRequestUrl());
+        
+        this.registerDisposable(license.licenseStatus.subscribe(statusUpdated => {
+            if (!statusUpdated.Expired && !statusUpdated.ErrorMessage) {
+                app.closeDialog(this);
+            }
+        }))
     }
 
     static showRegistrationDialogIfNeeded(license: Raven.Server.Commercial.LicenseStatus, skipIfNoLicense = false) {

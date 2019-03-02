@@ -77,7 +77,7 @@ class licenseModel {
         }
 
         return true;
-    })
+    });
     
     static licenseCssClass = ko.pureComputed(() => {
         const status = licenseModel.licenseStatus();
@@ -137,7 +137,7 @@ class licenseModel {
     static supportTableCssClass = ko.pureComputed(() => {
         const label = licenseModel.supportLabel();
         return label.toLocaleLowerCase();
-    })
+    });
 }
 
 export = licenseModel;
