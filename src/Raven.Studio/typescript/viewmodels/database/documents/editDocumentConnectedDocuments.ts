@@ -135,17 +135,19 @@ class connectedDocuments {
             new hyperlinkColumn<connectedDocumentItem>(this.gridController() as virtualGridController<any>, x => x.id, x => x.href, "", "100%")
         ];
 
-        this.revisionsColumns = [
-            new hyperlinkColumn<connectedRevisionDocumentItem>(this.gridController() as virtualGridController<any>, x => x.id, x => x.href, "", "75%",
-                {
-                    extraClass: item => item.deletedRevision ? "deleted-revision" : ""
-                }),
-            new actionColumn<connectedRevisionDocumentItem>(this.gridController() as virtualGridController<any>, (x, idx, e) => this.compareRevision(x, idx, e), "Diff", x => `<i title="Compare document with this revision" class="icon-diff"></i>`, "25%", 
-                {
-                    extraClass: () => '',
-                    title: (item: connectedRevisionDocumentItem) => "Compare current document with this revision"
-                })
-        ];
+        const revisionColumn = new hyperlinkColumn<connectedRevisionDocumentItem>(this.gridController() as virtualGridController<any>, x => x.id, x => x.href, "", "75%",
+            {
+                extraClass: item => item.deletedRevision ? "deleted-revision" : ""
+            });
+        const revisionCompareColumn = new actionColumn<connectedRevisionDocumentItem>(this.gridController() as virtualGridController<any>, (x, idx, e) => this.compareRevision(x, idx, e), "Diff", x => `<i title="Compare document with this revision" class="icon-diff"></i>`, "25%",
+            {
+                extraClass: doc => doc.deletedRevision ? 'deleted-revision-compare' : '',
+                title: (item: connectedRevisionDocumentItem) => "Compare current document with this revision"
+            }); 
+        
+        const isDeleteRevision = this.document().__metadata.hasFlag("DeleteRevision");
+        
+        this.revisionsColumns = isDeleteRevision ? [revisionColumn] : [revisionColumn, revisionCompareColumn];
         
         this.attachmentsColumns = [
             new actionColumn<attachmentItem>(this.gridController() as virtualGridController<any>, x => this.downloadAttachment(x), "Name", x => x.name, "160px",
