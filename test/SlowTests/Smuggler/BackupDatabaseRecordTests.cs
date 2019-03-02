@@ -201,7 +201,7 @@ namespace SlowTests.Smuggler
                     Assert.Equal(false, record.SqlEtls.First().ForceQueryRecompile);
                     Assert.Equal("connection", record.SqlEtls.First().ConnectionStringName);
                     Assert.Equal(true, record.SqlEtls.First().AllowEtlOnNonEncryptedChannel);
-                    Assert.Equal(false, record.SqlEtls.First().Disabled);
+                    Assert.Equal(true, record.SqlEtls.First().Disabled);
                 }
             }
             finally
