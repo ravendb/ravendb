@@ -517,6 +517,10 @@ class indexPerformance extends viewModelBase {
     }
 
     scrollToRight() {
+        if (!this.hasAnyData()) {
+            return;
+        }
+        
         const currentExtent = this.brush.extent() as [number, number];
         const extentWidth = currentExtent[1] - currentExtent[0];
 
