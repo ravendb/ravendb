@@ -5,7 +5,6 @@ import saveConnectionStringCommand = require("commands/database/settings/saveCon
 import getConnectionStringsCommand = require("commands/database/settings/getConnectionStringsCommand");
 import getConnectionStringInfoCommand = require("commands/database/settings/getConnectionStringInfoCommand");
 import deleteConnectionStringCommand = require("commands/database/settings/deleteConnectionStringCommand");
-import ongoingTaskModel = require("models/database/tasks/ongoingTaskModel");
 import ongoingTasksCommand = require("commands/database/tasks/getOngoingTasksCommand");
 import eventsCollector = require("common/eventsCollector");
 import generalUtils = require("common/generalUtils");
@@ -36,7 +35,7 @@ class connectionStrings extends viewModelBase {
 
         this.initObservables();
         this.bindToCurrentInstance("onEditSqlEtl", "onEditRavenEtl", "confirmDelete", "isConnectionStringInUse", "onTestConnectionRaven");
-        const currenlyEditedObjectIsDirty = ko.pureComputed(() => {
+        const currentlyEditedObjectIsDirty = ko.pureComputed(() => {
             const ravenEtl = this.editedRavenEtlConnectionString();
             if (ravenEtl) {
                 return ravenEtl.dirtyFlag().isDirty();
@@ -49,7 +48,7 @@ class connectionStrings extends viewModelBase {
             
             return false;
         });
-        this.dirtyFlag = new ko.DirtyFlag([currenlyEditedObjectIsDirty], false); 
+        this.dirtyFlag = new ko.DirtyFlag([currentlyEditedObjectIsDirty], false); 
     }
     
     private initObservables() {
@@ -272,9 +271,26 @@ class connectionStrings extends viewModelBase {
 
         // 1. Validate model
         if (this.editedRavenEtlConnectionString()) {
+            let isValid = true;
+            
+            const discoveryUrl = this.editedRavenEtlConnectionString().inputUrl().discoveryUrlName;
+            if (discoveryUrl()) {
+                if (discoveryUrl.isValid()) {
+                    // user probably forgot to click on 'Add Url' button 
+                    this.editedRavenEtlConnectionString().addDiscoveryUrlWithBlink();
+                } else {
+                    isValid = false;
+                }
+            }
+            
             if (!this.isValid(this.editedRavenEtlConnectionString().validationGroup)) { 
+                isValid = false;
+            }
+            
+            if (!isValid) {
                 return;
             }
+            
             model = this.editedRavenEtlConnectionString();
         } else {
             if (!this.isValid(this.editedSqlEtlConnectionString().validationGroup)) {
@@ -284,8 +300,6 @@ class connectionStrings extends viewModelBase {
         }
 
         // 2. Create/add the new connection string
-        // TODO: change to model.testConnection() instead of calling the command directly when issue 8825 is done
-        
         new saveConnectionStringCommand(this.activeDatabase(), model)
             .execute()
             .done(() => {
