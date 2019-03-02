@@ -821,7 +821,7 @@ class editDocument extends viewModelBase {
             .then(revisions => {
                 const itemToCompare = revisions.items.find(x => x.__metadata.changeVector() === revisionChangeVector);
                 
-                this.revisionsToCompare(revisions.items);
+                this.revisionsToCompare(revisions.items.filter(x => !x.__metadata.hasFlag("DeleteRevision")));
                 
                 if (itemToCompare) {
                     return this.compareRevisions(itemToCompare);    
