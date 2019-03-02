@@ -8,6 +8,7 @@ import databasesManager = require("common/shell/databasesManager");
 import actionColumn = require("widgets/virtualGrid/columns/actionColumn");
 import killQueryCommand = require("commands/database/query/killQueryCommand");
 import messagePublisher = require("common/messagePublisher");
+import generalUtils = require("common/generalUtils");
 
 type ExecutingQueryInfoWithCache = {
     DatabaseName: string;
@@ -132,7 +133,9 @@ class runningQueries extends viewModelBase {
     private killQuery(query: ExecutingQueryInfoWithCache) {
         const db = databasesManager.default.getDatabaseByName(query.DatabaseName);
         
-        this.confirmationMessage("Kill the query", "Do you want to kill query for index: " + query.IndexName + "?")
+        this.confirmationMessage("Kill the query", "Do you want to kill query for index: " + generalUtils.escapeHtml(query.IndexName) + "?", {
+            html: true
+        })
             .done(result => {
                 if (result.can) {
                     new killQueryCommand(db, query.IndexName, query.RunningQuery.QueryId)

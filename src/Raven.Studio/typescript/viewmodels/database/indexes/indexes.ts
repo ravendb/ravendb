@@ -679,7 +679,9 @@ class indexes extends viewModelBase {
     }
 
     startIndexing(): void {
-        this.confirmationMessage("Are you sure?", "Do you want to <strong>resume</strong> indexing?")
+        this.confirmationMessage("Are you sure?", "Do you want to <strong>resume</strong> indexing?", {
+            html: true
+        })
             .done(result => {
                 if (result.can) {
                     eventsCollector.default.reportEvent("indexes", "resume-all");
@@ -698,7 +700,9 @@ class indexes extends viewModelBase {
     }
 
     stopIndexing() {
-        this.confirmationMessage("Are you sure?", "Do you want to <strong>pause indexing</strong> until server restart?")
+        this.confirmationMessage("Are you sure?", "Do you want to <strong>pause indexing</strong> until server restart?", {
+            html: true
+        })
             .done(result => {
                 if (result.can) {
                     eventsCollector.default.reportEvent("indexes", "pause-all");
