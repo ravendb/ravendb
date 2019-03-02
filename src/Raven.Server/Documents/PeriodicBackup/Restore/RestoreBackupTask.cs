@@ -351,6 +351,7 @@ namespace Raven.Server.Documents.PeriodicBackup.Restore
 
             result.Identities.Processed = true;
             result.CompareExchange.Processed = true;
+            result.Subscriptions.Processed = true;
             onProgress.Invoke(result.Progress);
         }
 
