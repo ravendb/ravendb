@@ -407,53 +407,43 @@ namespace Sparrow.Json
         public AllocatedMemoryData GetMemory(int requestedSize)
         {
 #if DEBUG || VALIDATE
-            using (new SingleThreadAccessAssertion(_threadId, "GetMemory"))
-            {
-                if (requestedSize <= 0)
-                    throw new ArgumentException(nameof(requestedSize));
+            if (requestedSize <= 0)
+                throw new ArgumentException(nameof(requestedSize));
 #endif
 
-                var allocatedMemory = _arenaAllocator.Allocate(requestedSize);
-                allocatedMemory.ContextGeneration = Generation;
-                allocatedMemory.Parent = this;
+            var allocatedMemory = _arenaAllocator.Allocate(requestedSize);
+            allocatedMemory.ContextGeneration = Generation;
+            allocatedMemory.Parent = this;
 #if DEBUG
-                allocatedMemory.IsLongLived = false;
+            allocatedMemory.IsLongLived = false;
 #endif
-                return allocatedMemory;
-#if DEBUG || VALIDATE
-            }
-#endif
+            return allocatedMemory;
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public AllocatedMemoryData GetLongLivedMemory(int requestedSize)
         {
 #if DEBUG || VALIDATE
-            using (new SingleThreadAccessAssertion(_threadId, "GetLongLivedMemory"))
+            if (requestedSize <= 0)
+            throw new ArgumentException(nameof(requestedSize));
+#endif
+            //we should use JsonOperationContext in single thread
+            if (_arenaAllocatorForLongLivedValues == null)
             {
-                if (requestedSize <= 0)
-                throw new ArgumentException(nameof(requestedSize));
-#endif
-                //we should use JsonOperationContext in single thread
-                if (_arenaAllocatorForLongLivedValues == null)
-                {
-                    //_arenaAllocatorForLongLivedValues == null when the context is after Reset() but before Renew()
-                    ThrowAlreadyDisposedForLongLivedAllocator();
+                //_arenaAllocatorForLongLivedValues == null when the context is after Reset() but before Renew()
+                ThrowAlreadyDisposedForLongLivedAllocator();
 
-                    //make compiler happy, previous row will throw
-                    return null;
-                }
-
-                var allocatedMemory = _arenaAllocatorForLongLivedValues.Allocate(requestedSize);
-                allocatedMemory.ContextGeneration = Generation;
-                allocatedMemory.Parent = this;
-    #if DEBUG
-                allocatedMemory.IsLongLived = true;
-    #endif
-                return allocatedMemory;
-#if DEBUG || VALIDATE
+                //make compiler happy, previous row will throw
+                 return null;
             }
-#endif
+
+            var allocatedMemory = _arenaAllocatorForLongLivedValues.Allocate(requestedSize);
+            allocatedMemory.ContextGeneration = Generation;
+            allocatedMemory.Parent = this;
+    #if DEBUG
+            allocatedMemory.IsLongLived = true;
+    #endif
+            return allocatedMemory;
         }
 
         private static void ThrowAlreadyDisposedForLongLivedAllocator()
