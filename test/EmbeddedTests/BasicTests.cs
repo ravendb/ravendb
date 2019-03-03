@@ -82,10 +82,13 @@ namespace EmbeddedTests
             if (Directory.Exists(dataDirectory) == false)
                 Directory.CreateDirectory(dataDirectory);
 
-            foreach (var file in Directory.GetFiles(AppContext.BaseDirectory, "*.dll"))
+            foreach (var extention in new[] {"*.dll", "*.so", "*.dylib"})
             {
-                var fileInfo = new FileInfo(file);
-                File.Copy(file, Path.Combine(serverDirectory, fileInfo.Name));
+                foreach (var file in Directory.GetFiles(AppContext.BaseDirectory, extention))
+                {
+                    var fileInfo = new FileInfo(file);
+                    File.Copy(file, Path.Combine(serverDirectory, fileInfo.Name));
+                }
             }
 
 #if DEBUG
