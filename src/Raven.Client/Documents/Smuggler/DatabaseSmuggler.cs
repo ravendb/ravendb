@@ -106,7 +106,7 @@ namespace Raven.Client.Documents.Smuggler
 
             Operation operation = null;
             var importOptions = new DatabaseSmugglerImportOptions(options);
-            
+
             var tcs = new TaskCompletionSource<object>(TaskCreationOptions.RunContinuationsAsynchronously);
 
             await ExportAsync(options, async stream =>
@@ -174,7 +174,7 @@ namespace Raven.Client.Documents.Smuggler
         {
             return ImportInternalAsync(options, stream, leaveOpen: true, token);
         }
-        
+
         private async Task<Operation> ImportInternalAsync(DatabaseSmugglerImportOptions options, Stream stream, bool leaveOpen, CancellationToken token = default)
         {
             var disposeStream = leaveOpen ? null : new DisposeStreamOnce(stream);

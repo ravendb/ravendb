@@ -37,7 +37,7 @@ namespace Raven.Client.Documents.Smuggler
             CompareExchange = new CountsWithLastEtag();
             Counters = new CountsWithLastEtag();
             CompareExchangeTombstones = new Counts();
-			Subscriptions = new Counts();
+            Subscriptions = new Counts();
             _progress = new SmugglerProgress(this);
         }
 
@@ -195,7 +195,7 @@ namespace Raven.Client.Documents.Smuggler
                 [nameof(Indexes)] = Indexes.ToJson(),
                 [nameof(CompareExchange)] = CompareExchange.ToJson(),
                 [nameof(Subscriptions)] = Subscriptions.ToJson(),
-                [nameof(Counters)] = Counters.ToJson()
+                [nameof(Counters)] = Counters.ToJson(),
                 [nameof(CompareExchangeTombstones)] = CompareExchangeTombstones.ToJson()
             };
         }

@@ -538,7 +538,7 @@ namespace Raven.Server.Smuggler.Documents
             }
         }
 
-        
+
         private IEnumerable<CounterGroupDetail> InternalGetCounterValues(ICounterActions actions)
         {
             foreach (var reader in ReadArray(actions))
@@ -561,9 +561,9 @@ namespace Raven.Server.Smuggler.Documents
                     ChangeVector = cv,
                     Values = values
                 };
-                
+
                 actions.RegisterForDisposal(reader);
-            }           
+            }
         }
 
         private unsafe BlittableJsonReaderObject ConvertToBlob(BlittableJsonReaderObject values)

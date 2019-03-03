@@ -249,30 +249,32 @@ namespace Raven.Server.Documents.PeriodicBackup
 
                     _periodicBackup.BackupStatus = runningBackupStatus;
 
-                    var hasTombstones = false;
-                    using (_serverStore.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
-                    using (context.OpenReadTransaction())
-                    {
-                        var dbName = _database.Name;
-                        if (_serverStore.Cluster.GetNumberOfCompareExchangeTombstones(context, dbName) > 0)
-                            hasTombstones = true;
-
-                        if (hasTombstones)
-                        {
-                            var maxEtag = GetMaxTombstonesEtagToDelete(context, dbName);
-                            if (maxEtag > 0)
-                            {
-                                AsyncHelpers.RunSync(async () =>
-                                {
-                                    var result = await _database.ServerStore.SendToLeaderAsync(new CleanCompareExchangeTombstonesCommand(dbName, maxEtag));
-                                    await _database.ServerStore.Cluster.WaitForIndexNotification(result.Index);
-                                });
-                            }
-                        }
-                    }
-
+                    // remove compareExchangeTombstones
+                    await RemoveCompareExchangeTombstones();
                     // save the backup status
                     await WriteStatus(runningBackupStatus, onProgress);
+                }
+            }
+        }
+
+        private async Task RemoveCompareExchangeTombstones()
+        {
+            var hasTombstones = false;
+            using (_serverStore.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
+            using (context.OpenReadTransaction())
+            {
+                var dbName = _database.Name;
+                if (_serverStore.Cluster.GetNumberOfCompareExchangeTombstones(context, dbName) > 0)
+                    hasTombstones = true;
+
+                if (hasTombstones)
+                {
+                    var maxEtag = GetMaxTombstonesEtagToDelete(context, dbName);
+                    if (maxEtag > 0)
+                    {
+                        var result = await _database.ServerStore.SendToLeaderAsync(new CleanCompareExchangeTombstonesCommand(dbName, maxEtag));
+                        await _database.ServerStore.Cluster.WaitForIndexNotification(result.Index);
+                    }
                 }
             }
         }

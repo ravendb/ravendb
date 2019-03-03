@@ -488,7 +488,7 @@ namespace Raven.Server.Smuggler.Documents
                 }
 
                 result.DatabaseRecord.ReadCount++;
-                
+
                 try
                 {
                     actions.WriteDatabaseRecord(databaseRecord, result.DatabaseRecord, _options.AuthorizationStatus, _options.OperateOnDatabaseRecordTypes);
@@ -682,7 +682,7 @@ namespace Raven.Server.Smuggler.Documents
                 foreach (var counterGroup in _source.GetCounterValues(actions))
                 {
                     _token.ThrowIfCancellationRequested();
-                    result.Counters.ReadCount+= counterGroup.Values.Count - 1;
+                    result.Counters.ReadCount += counterGroup.Values.Count - 1;
 
                     if (result.Counters.ReadCount % 1000 == 0)
                         AddInfoToSmugglerResult(result, $"Read {result.Counters.ReadCount:#,#;;0} counters.");

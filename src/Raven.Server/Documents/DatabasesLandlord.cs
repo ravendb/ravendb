@@ -695,11 +695,11 @@ namespace Raven.Server.Documents
 
         public RavenConfiguration CreateDatabaseConfiguration(StringSegment databaseName, bool ignoreDisabledDatabase, bool ignoreBeenDeleted, bool ignoreNotRelevant, DatabaseRecord databaseRecord)
         {
-            if (databaseRecord.Disabled && ignoreDisabledDatabase == false)
-                throw new DatabaseDisabledException(databaseName + " has been disabled");
-
             if (databaseRecord.DatabaseState == DatabaseStateStatus.RestoreInProgress)
                 throw new DatabaseRestoringException(databaseName + " is currently being restored");
+
+            if (databaseRecord.Disabled && ignoreDisabledDatabase == false)
+                throw new DatabaseDisabledException(databaseName + " has been disabled");
 
             var databaseIsBeenDeleted = databaseRecord.DeletionInProgress != null &&
                             databaseRecord.DeletionInProgress.TryGetValue(_serverStore.NodeTag, out DeletionInProgressStatus deletionInProgress) &&
