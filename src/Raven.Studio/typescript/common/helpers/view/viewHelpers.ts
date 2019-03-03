@@ -2,25 +2,36 @@
 
 import app = require("durandal/app");
 import confirmationDialog = require("viewmodels/common/confirmationDialog");
+import generalUtils = require("common/generalUtils");
 
 class viewHelpers {
 
-    static confirmationMessage(title: string, confirmationMessage: string, options: string[] = ["No", "Yes"], forceRejectWithResolve: boolean = false, defaultOption: string = null): JQueryPromise<confirmDialogResult> {
+    static confirmationMessage(title: string, confirmationMessage: string, options?: confirmationDialogOptions): JQueryPromise<confirmDialogResult> {
         const viewTask = $.Deferred<confirmDialogResult>();
+        options = Object.assign({
+            defaultOption: null,
+            forceRejectWithResolve: false,
+            html: false,
+            buttons: ["No", "Yes"]
+        } as confirmationDialogOptions, options);
+        
+        if (!options.html) {
+            confirmationMessage = generalUtils.escapeHtml(confirmationMessage);
+        }
 
-        app.showBootstrapDialog(new confirmationDialog(confirmationMessage, title, options))
+        app.showBootstrapDialog(new confirmationDialog(confirmationMessage, title, options.buttons))
             .done((answer) => {
-                const isConfirmed = answer === _.last(options);
+                const isConfirmed = answer === _.last(options.buttons);
                 if (isConfirmed) {
                     viewTask.resolve({ can: true });
-                } else if (!forceRejectWithResolve) {
+                } else if (!options.forceRejectWithResolve) {
                     viewTask.reject();
                 } else {
                     // answer is null when user 
                     if (answer != null) {
                         viewTask.resolve({ can: false });
                     } else {
-                        viewTask.resolve({ can: _.last(options) === defaultOption });
+                        viewTask.resolve({ can: _.last(options.buttons) === options.defaultOption });
                     }
                 }
             });

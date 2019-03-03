@@ -53,15 +53,21 @@ class messagePublisher {
             ko.postbox.publish(EVENTS.NotificationCenter.RecentError, error);
         }
         
-        let message = generalUtils.trimMessage(messageAndOptionalException.message);
+        let message = generalUtils.escapeHtml(
+            generalUtils.trimMessage(messageAndOptionalException.message)
+        );
+        
         if (error && error.hasDetails()) {
             const extraHtml = "<br /><small>show details</small>";
             message = message ? message + extraHtml : extraHtml;
         }
         
-        toastrMethod(message, title, {
+        const escapedTitle = generalUtils.escapeHtml(title);
+        
+        toastrMethod(message, escapedTitle, {
             showDuration: messagePublisher.getDisplayDuration(type),
             closeButton: true,
+            
             onclick: (error && error.hasDetails()) ? () => {
                 ko.postbox.publish(EVENTS.NotificationCenter.OpenNotification, error);
             }: undefined 

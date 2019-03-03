@@ -7,7 +7,7 @@ import actionColumn = require("widgets/virtualGrid/columns/actionColumn");
 import customColumn = require("widgets/virtualGrid/columns/customColumn");
 import hyperlinkColumn = require("widgets/virtualGrid/columns/hyperlinkColumn");
 import storageKeyProvider = require("common/storage/storageKeyProvider");
-import flagsColumn = require("widgets/virtualGrid/columns/flagsColumn");
+import generalUtils = require("common/generalUtils");
 
 class columnItem {
 
@@ -101,11 +101,11 @@ class customColumnForm {
     asColumnItem(gridController: virtualGridController<any>): columnItem {
         const editedItem = this.editedItem();
         if (editedItem) {
-            editedItem.virtualColumn().header = this.header();
+            editedItem.virtualColumn().header = generalUtils.escapeHtml(this.header());
             (editedItem.virtualColumn() as customColumn<any>).setJsCode(this.expression());
             return editedItem;
         } else {
-            const newColumn = new customColumn(gridController, this.expression(), this.header(), columnsSelector.defaultWidth);
+            const newColumn = new customColumn(gridController, this.expression(), generalUtils.escapeHtml(this.header()), columnsSelector.defaultWidth);
             const newColumnItem = new columnItem(newColumn, true);
             newColumnItem.visible(true);
             return newColumnItem;
@@ -125,7 +125,7 @@ class customColumnForm {
 
         const column = columnToEdit.virtualColumn() as customColumn<any>;
 
-        this.header(column.header);
+        this.header(generalUtils.unescapeHtml(column.header));
         this.expression(column.jsCode);
     }
 }
@@ -324,7 +324,7 @@ class columnsSelector<T> {
 
             const existingColumn = this.columnLayout().find(x => x.virtualColumn().header === name);
             if (!existingColumn) {
-                const virtColumn = new textColumn(this.grid, name, name, columnsSelector.defaultWidth);
+                const virtColumn = new textColumn(this.grid, name, generalUtils.escapeHtml(name), columnsSelector.defaultWidth);
                 this.columnLayout.push(new columnItem(virtColumn, false));
             }
         }

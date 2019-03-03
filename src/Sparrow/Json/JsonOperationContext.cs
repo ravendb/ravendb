@@ -521,6 +521,10 @@ namespace Sparrow.Json
 
         private LazyStringValue GetLazyStringForFieldWithCachingUnlikely(StringSegment key)
         {
+#if DEBUG || VALIDATE
+            using (new SingleThreadAccessAssertion(_threadId, "GetLazyStringForFieldWithCachingUnlikely"))
+            {
+#endif
             EnsureNotDisposed();
             LazyStringValue value = GetLazyString(key, longLived: true);
             _fieldNames[key.Value] = value;
@@ -528,6 +532,9 @@ namespace Sparrow.Json
             //sanity check, in case the 'value' is manually disposed outside of this function
             Debug.Assert(value.IsDisposed == false);
             return value;
+#if DEBUG
+        }
+#endif
         }
 
         public LazyStringValue GetLazyString(string field)
@@ -1270,5 +1277,39 @@ namespace Sparrow.Json
             allocationsArray.Array.Add(allocatedArray);
             return allocatedArray;
         }
+
+#if DEBUG || VALIDATE
+        private class IntReference
+        {
+            public long Value;
+    }
+
+        IntReference _threadId = new IntReference {Value = 0};
+
+        private class SingleThreadAccessAssertion : IDisposable
+        {
+            readonly IntReference _capturedThreadId;
+            private int _currentThreadId;
+            private string _method;
+
+            public SingleThreadAccessAssertion(IntReference expectedCapturedThread, string method)
+            {
+                _capturedThreadId = expectedCapturedThread;
+                _currentThreadId = Environment.CurrentManagedThreadId;
+                _method = method;
+                if (Interlocked.CompareExchange(ref expectedCapturedThread.Value, _currentThreadId, 0) != 0)
+                {
+                    throw new InvalidOperationException($"Concurrent access to JsonOperationContext.{method} method detected");
+}
+            }
+            public void Dispose()
+            {
+                if (Interlocked.CompareExchange(ref _capturedThreadId.Value, 0, _currentThreadId) != _currentThreadId)
+                {
+                    throw new InvalidOperationException($"Concurrent access to JsonOperationContext.{_method} method detected");
+                }
+            }
+        }
+#endif
     }
 }

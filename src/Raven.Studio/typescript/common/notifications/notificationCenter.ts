@@ -405,7 +405,9 @@ class notificationCenter {
     }
 
     killAttachmentUpload(upload: attachmentUpload) {
-        return viewHelpers.confirmationMessage("Are you sure?", "Do you want to abort attachment upload?", ["No", "Yes"], true)
+        return viewHelpers.confirmationMessage("Are you sure?", "Do you want to abort attachment upload?", {
+            forceRejectWithResolve: true
+        })
             .done((result: confirmDialogResult) => {
                 if (result.can) {
                     // no need for spinners here - it is sync call
@@ -417,7 +419,9 @@ class notificationCenter {
     }
     
     killOperation(operationToKill: operation) {
-        return viewHelpers.confirmationMessage("Are you sure?", "Do you want to abort current operation?", ["No", "Yes"], true)
+        return viewHelpers.confirmationMessage("Are you sure?", "Do you want to abort current operation?", {
+            forceRejectWithResolve: true
+        })
             .done((result: confirmDialogResult) => {
                 if (result.can) {
                     const notificationId = operationToKill.id;

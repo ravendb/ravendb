@@ -158,7 +158,9 @@ class clusterObserverLog extends viewModelBase {
     }
 
     suspendObserver() {
-        this.confirmationMessage("Are you sure?", "Do you want to suspend cluster observer?", ["No", "Yes, suspend"])
+        this.confirmationMessage("Are you sure?", "Do you want to suspend cluster observer?", {
+            buttons: ["No", "Yes, suspend"]
+        })
             .done(result => {
                 if (result.can) {
                     eventsCollector.default.reportEvent("observer-log", "suspend");
@@ -174,7 +176,9 @@ class clusterObserverLog extends viewModelBase {
     }
 
     resumeObserver() {
-        this.confirmationMessage("Are you sure?", "Do you want to resume cluster observer?", ["No", "Yes, resume"])
+        this.confirmationMessage("Are you sure?", "Do you want to resume cluster observer?", {
+            buttons: ["No", "Yes, resume"]
+        })
             .done(result => {
                 if (result.can) {
                     eventsCollector.default.reportEvent("observer-log", "resume");
