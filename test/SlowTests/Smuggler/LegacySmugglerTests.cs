@@ -155,7 +155,7 @@ namespace SlowTests.Smuggler
                 var stats = await store.Maintenance.SendAsync(new GetStatisticsOperation());
                 Assert.Equal(2, stats.CountOfDocuments);
                 Assert.Equal(5, stats.CountOfRevisionDocuments);
-                Assert.Equal(6, stats.LastDocEtag);
+                Assert.Equal(8, stats.LastDocEtag);
 
                 var collectionStats = await store.Maintenance.SendAsync(new GetCollectionStatisticsOperation());
                 Assert.Equal(2, collectionStats.CountOfDocuments);
@@ -171,7 +171,7 @@ namespace SlowTests.Smuggler
                     var metadata = session.Advanced.GetMetadataFor(user);
                     Assert.Equal(5, metadata.Count);
                     Assert.Equal("Users", metadata.GetString(Constants.Documents.Metadata.Collection));
-                    Assert.StartsWith("A:6-", metadata.GetString(Constants.Documents.Metadata.ChangeVector));
+                    Assert.StartsWith("A:7-", metadata.GetString(Constants.Documents.Metadata.ChangeVector));
                     Assert.Equal(DocumentFlags.HasRevisions.ToString(), metadata.GetString(Constants.Documents.Metadata.Flags));
                     Assert.Equal("users/1", metadata.GetString(Constants.Documents.Metadata.Id));
                     Assert.NotEqual(DateTime.MinValue.ToString(DefaultFormat.DateTimeOffsetFormatsToWrite), metadata.GetString(Constants.Documents.Metadata.LastModified));
