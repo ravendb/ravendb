@@ -109,6 +109,7 @@ namespace SlowTests.Cluster
         [InlineData(5)]
         public async Task CanPreformSeveralClusterTransactions(int numberOfNodes)
         {
+            NoTimeouts();
             var numOfSessions = 10;
             var docsPerSession = 2;
             var leader = await CreateRaftClusterAndGetLeader(numberOfNodes);
