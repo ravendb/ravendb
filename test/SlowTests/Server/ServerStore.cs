@@ -31,7 +31,7 @@ namespace SlowTests.Server
                         Permissions = new Dictionary<string, DatabaseAccess>(),
                         SecurityClearance = SecurityClearance.ClusterAdmin,
                         Thumbprint = certificate.Thumbprint,
-                        PublicKeyPinningHash = CertificateUtils.GetPublicKeyPinningHash(certificate),
+                        PublicKeyPinningHash = certificate.GetPublicKeyPinningHash(),
                         NotAfter = certificate.NotAfter
                     }));
                 }
@@ -67,7 +67,7 @@ namespace SlowTests.Server
                             Permissions = null,
                             SecurityClearance = SecurityClearance.ClusterAdmin,
                             Thumbprint = certificate.Thumbprint,
-                            PublicKeyPinningHash = CertificateUtils.GetPublicKeyPinningHash(certificate),
+                            PublicKeyPinningHash = certificate.GetPublicKeyPinningHash(),
                             NotAfter = certificate.NotAfter
                         }));
                     }
@@ -83,7 +83,7 @@ namespace SlowTests.Server
                             Permissions = null,
                             SecurityClearance = SecurityClearance.ClusterAdmin,
                             Thumbprint = certificate.Thumbprint,
-                            PublicKeyPinningHash = CertificateUtils.GetPublicKeyPinningHash(certificate),
+                            PublicKeyPinningHash = certificate.GetPublicKeyPinningHash(),
                             NotAfter = certificate.NotAfter
                         }));
                     }

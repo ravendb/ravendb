@@ -220,6 +220,7 @@ namespace Raven.Server.Routing
                             case RavenServer.AuthenticationStatus.NotYetValid:
                             case RavenServer.AuthenticationStatus.None:
                             case RavenServer.AuthenticationStatus.UnfamiliarCertificate:
+                            case RavenServer.AuthenticationStatus.UnfamiliarIssuer:
                                 UnlikelyFailAuthorization(context, database?.Name, feature, route.AuthorizationStatus);
                                 return false;
                         }
@@ -242,7 +243,8 @@ namespace Raven.Server.Routing
                             return false;
 
                         case RavenServer.AuthenticationStatus.UnfamiliarCertificate:
-                            // we allow an access to the restricted endpoints with an unfamilier certificate, since we will authorize it at the endpoint level
+                        case RavenServer.AuthenticationStatus.UnfamiliarIssuer:
+                            // we allow an access to the restricted endpoints with an unfamiliar certificate, since we will authorize it at the endpoint level
                             if (route.AuthorizationStatus == AuthorizationStatus.RestrictedAccess)
                                 return true; 
                             goto case null;
@@ -301,6 +303,11 @@ namespace Raven.Server.Routing
                 if (feature.Status == RavenServer.AuthenticationStatus.UnfamiliarCertificate)
                 {
                     message = "The supplied client certificate '" + name + "' is unknown to the server. In order to register your certificate please contact your system administrator.";
+                }
+                else if (feature.Status == RavenServer.AuthenticationStatus.UnfamiliarIssuer)
+                {
+                    message = "The supplied client certificate '" + name + $"' is unknown to the server but has a known Public Key Pinning Hash. Will not use it to authenticate because the issuer is unknown. " +
+                              $"To fix this, the admin can register the pinning hash of the *issuer* certificate: '{feature.IssuerHash}' in the 'Security.WellKnownIssuerHashes.Admin' configuration entry.";
                 }
                 else if (feature.Status == RavenServer.AuthenticationStatus.Allowed)
                 {

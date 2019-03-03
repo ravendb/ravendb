@@ -105,6 +105,7 @@ namespace Raven.Server.NotificationCenter.Handlers
                 case RavenServer.AuthenticationStatus.None:
                 case RavenServer.AuthenticationStatus.NoCertificateProvided:
                 case RavenServer.AuthenticationStatus.UnfamiliarCertificate:
+                case RavenServer.AuthenticationStatus.UnfamiliarIssuer:
                 case RavenServer.AuthenticationStatus.Expired:
                 case RavenServer.AuthenticationStatus.NotYetValid:
                     if (Server.Configuration.Security.AuthenticationEnabled == false)

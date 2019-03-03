@@ -472,7 +472,7 @@ namespace Raven.Server.Documents.Handlers.Admin
                             {
                                 Certificate = nodeInfo.Certificate,
                                 Thumbprint = certificate.Thumbprint,
-                                PublicKeyPinningHash = CertificateUtils.GetPublicKeyPinningHash(certificate),
+                                PublicKeyPinningHash = certificate.GetPublicKeyPinningHash(),
                                 NotAfter = certificate.NotAfter,
                                 Name = "Server Certificate for " + nodeUrl,
                                 SecurityClearance = SecurityClearance.ClusterNode

@@ -309,8 +309,11 @@ namespace Raven.Server.Utils
         {
             return new SecureRandom(new CryptoApiRandomGenerator());
         }
+    }
 
-        public static string GetPublicKeyPinningHash(X509Certificate2 cert)
+    public static class PublicKeyPinningHashHelpers
+    {
+        public static string GetPublicKeyPinningHash(this X509Certificate2 cert)
         {
             //Get the SubjectPublicKeyInfo member of the certificate
             var subjectPublicKeyInfo = GetSubjectPublicKeyInfoRaw(cert);
@@ -389,10 +392,10 @@ namespace Raven.Server.Utils
 
             var index = 0;
             //var entityType = buffer[index];
-            index ++;
+            index++;
 
             int length = buffer[index];
-            index ++;
+            index++;
 
             var lengthBytes = 1;
             if (length >= 0x80)

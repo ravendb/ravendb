@@ -108,7 +108,7 @@ namespace Raven.Server.Web.Authentication
                 Permissions = certificate.Permissions,
                 SecurityClearance = certificate.SecurityClearance,
                 Thumbprint = selfSignedCertificate.Thumbprint,
-                PublicKeyPinningHash = CertificateUtils.GetPublicKeyPinningHash(selfSignedCertificate),
+                PublicKeyPinningHash = selfSignedCertificate.GetPublicKeyPinningHash(),
                 NotAfter = selfSignedCertificate.NotAfter
             };
 
@@ -308,7 +308,7 @@ namespace Raven.Server.Web.Authentication
                 // The first certificate in the collection will be the primary certificate and its thumbprint will be the one shown in a GET request
                 // The other certificates are secondary certificates and will contain a link to the primary certificate.
                 currentCertDef.Thumbprint = x509Certificate.Thumbprint;
-                currentCertDef.PublicKeyPinningHash = CertificateUtils.GetPublicKeyPinningHash(x509Certificate);
+                currentCertDef.PublicKeyPinningHash = x509Certificate.GetPublicKeyPinningHash();
                 currentCertDef.NotAfter = x509Certificate.NotAfter;
                 currentCertDef.Certificate = Convert.ToBase64String(x509Certificate.Export(X509ContentType.Cert));
 
@@ -479,7 +479,7 @@ namespace Raven.Server.Web.Authentication
                                 Permissions = new Dictionary<string, DatabaseAccess>(),
                                 SecurityClearance = SecurityClearance.ClusterNode,
                                 Thumbprint = Server.Certificate.Certificate.Thumbprint,
-                                PublicKeyPinningHash = CertificateUtils.GetPublicKeyPinningHash(Server.Certificate.Certificate),
+                                PublicKeyPinningHash = Server.Certificate.Certificate.GetPublicKeyPinningHash(),
                                 NotAfter = Server.Certificate.Certificate.NotAfter
                             };
 
@@ -616,7 +616,7 @@ namespace Raven.Server.Web.Authentication
                                 Permissions = new Dictionary<string, DatabaseAccess>(),
                                 SecurityClearance = SecurityClearance.ClusterNode,
                                 Thumbprint = Server.Certificate.Certificate.Thumbprint,
-                                PublicKeyPinningHash = CertificateUtils.GetPublicKeyPinningHash(Server.Certificate.Certificate),
+                                PublicKeyPinningHash = Server.Certificate.Certificate.GetPublicKeyPinningHash(),
                                 NotAfter = Server.Certificate.Certificate.NotAfter
                             };
 
@@ -631,7 +631,7 @@ namespace Raven.Server.Web.Authentication
                             Permissions = new Dictionary<string, DatabaseAccess>(),
                             SecurityClearance = SecurityClearance.ClusterAdmin,
                             Thumbprint = clientCert.Thumbprint,
-                            PublicKeyPinningHash = CertificateUtils.GetPublicKeyPinningHash(clientCert)
+                            PublicKeyPinningHash = clientCert.GetPublicKeyPinningHash()
                         };
                         certificate = ctx.ReadObject(wellKnownCertDef.ToJson(), "WellKnown/Certificate/Definition");
                     }

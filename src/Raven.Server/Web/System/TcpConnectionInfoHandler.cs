@@ -109,7 +109,9 @@ namespace Raven.Server.Web.System
 
                     RequestRouter.UnlikelyFailAuthorization(httpContext, database, feature, AuthorizationStatus.RestrictedAccess);
                     return false;
-
+                case RavenServer.AuthenticationStatus.UnfamiliarIssuer:
+                    RequestRouter.UnlikelyFailAuthorization(httpContext, database, feature, AuthorizationStatus.RestrictedAccess);
+                    return false;
                 case RavenServer.AuthenticationStatus.UnfamiliarCertificate:
                     using (serverStore.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
                     using (context.OpenReadTransaction())

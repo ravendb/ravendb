@@ -1279,7 +1279,7 @@ namespace Raven.Server.Commercial
                 Permissions = new Dictionary<string, DatabaseAccess>(),
                 SecurityClearance = SecurityClearance.ClusterAdmin,
                 Thumbprint = clientCert.Thumbprint,
-                PublicKeyPinningHash = CertificateUtils.GetPublicKeyPinningHash(clientCert),
+                PublicKeyPinningHash = clientCert.GetPublicKeyPinningHash(),
                 NotAfter = clientCert.NotAfter
             };
 
@@ -2075,7 +2075,7 @@ namespace Raven.Server.Commercial
                 Permissions = new Dictionary<string, DatabaseAccess>(),
                 SecurityClearance = SecurityClearance.ClusterAdmin,
                 Thumbprint = selfSignedCertificate.Thumbprint,
-                PublicKeyPinningHash = CertificateUtils.GetPublicKeyPinningHash(selfSignedCertificate),
+                PublicKeyPinningHash = selfSignedCertificate.GetPublicKeyPinningHash(),
                 NotAfter = selfSignedCertificate.NotAfter
             };
 
