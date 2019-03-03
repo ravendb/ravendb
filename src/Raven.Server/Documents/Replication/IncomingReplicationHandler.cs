@@ -578,94 +578,94 @@ namespace Raven.Server.Documents.Replication
                 Logger = _log
             })
             {
-            try
-            {
-                using (var networkStats = stats.For(ReplicationOperation.Incoming.Network))
-                {
-                    // this will read the documents to memory from the network
-                    // without holding the write tx open
-                        dataForReplicationCommand.ReplicatedItems = ReadItemsFromSource(replicatedItemsCount, documentsContext, incomingReplicationAllocator, networkStats);
-
-                    using (networkStats.For(ReplicationOperation.Incoming.AttachmentRead))
-                    {
-                            ReadAttachmentStreamsFromSource(attachmentStreamCount, documentsContext, dataForReplicationCommand);
-                    }
-                }
-
-                if (_log.IsInfoEnabled)
-                {
-                    _log.Info(
-                        $"Replication connection {FromToString}: " +
-                        $"received {replicatedItemsCount:#,#;;0} items, " +
-                        $"{attachmentStreamCount:#,#;;0} attachment streams, " +
-                        $"total size: {new Size(incomingReplicationAllocator.TotalDocumentsSizeInBytes, SizeUnit.Bytes)}, " +
-                        $"took: {sw.ElapsedMilliseconds:#,#;;0}ms");
-                }
-
-                using (stats.For(ReplicationOperation.Incoming.Storage))
-                {
-                        var replicationCommand = new MergedDocumentReplicationCommand(dataForReplicationCommand, lastEtag);
-                    task = _database.TxMerger.Enqueue(replicationCommand);
-                        //We need a new context here
-                        using(_database.DocumentsStorage.ContextPool.AllocateOperationContext(out DocumentsOperationContext msgContext))
-                        using (var writer = new BlittableJsonTextWriter(msgContext, _connectionOptions.Stream))
-                        using (var msg = msgContext.ReadObject(new DynamicJsonValue
-                    {
-                        [nameof(ReplicationMessageReply.MessageType)] = "Processing"
-                    }, "heartbeat message"))
-                    {
-                        while (task.Wait(Math.Min(3000, (int)(_database.Configuration.Replication.ActiveConnectionTimeout.AsTimeSpan.TotalMilliseconds * 2 / 3))) ==
-                               false)
-                        {
-                            // send heartbeats while batch is processed in TxMerger. We wait until merger finishes with this command without timeouts
-                                msgContext.Write(writer, msg);
-                            writer.Flush();
-                        }
-
-                        task = null;
-                    }
-                }
-
-                sw.Stop();
-
-                if (_log.IsInfoEnabled)
-                    _log.Info($"Replication connection {FromToString}: " +
-                              $"received and written {replicatedItemsCount:#,#;;0} items to database in {sw.ElapsedMilliseconds:#,#;;0}ms, " +
-                              $"with last etag = {lastEtag}.");
-            }
-            catch (Exception e)
-            {
-                if (_log.IsInfoEnabled)
-                {
-                    //This is the case where we had a missing attachment, it is rare but expected.
-                    if (e.ExtractSingleInnerException() is MissingAttachmentException mae)
-                    {
-                        _log.Info("Replication batch contained missing attachments will request the batch to be re-sent with those attachments.", mae);
-                    }
-                    else
-                    {
-                        _log.Info("Failed to receive documents replication batch. This is not supposed to happen, and is likely a bug.", e);
-                    }
-                }
-                throw;
-            }
-            finally
-            {
-                // before we dispose the buffer we must ensure it is not being processed in TxMerger, so we wait for it
                 try
                 {
-                    task?.Wait();
+                    using (var networkStats = stats.For(ReplicationOperation.Incoming.Network))
+                    {
+                        // this will read the documents to memory from the network
+                        // without holding the write tx open
+                        dataForReplicationCommand.ReplicatedItems = ReadItemsFromSource(replicatedItemsCount, documentsContext, incomingReplicationAllocator, networkStats);
+
+                        using (networkStats.For(ReplicationOperation.Incoming.AttachmentRead))
+                        {
+                            ReadAttachmentStreamsFromSource(attachmentStreamCount, documentsContext, dataForReplicationCommand);
+                        }
+                    }
+
+                    if (_log.IsInfoEnabled)
+                    {
+                        _log.Info(
+                            $"Replication connection {FromToString}: " +
+                            $"received {replicatedItemsCount:#,#;;0} items, " +
+                            $"{attachmentStreamCount:#,#;;0} attachment streams, " +
+                            $"total size: {new Size(incomingReplicationAllocator.TotalDocumentsSizeInBytes, SizeUnit.Bytes)}, " +
+                            $"took: {sw.ElapsedMilliseconds:#,#;;0}ms");
+                    }
+
+                    using (stats.For(ReplicationOperation.Incoming.Storage))
+                    {
+                        var replicationCommand = new MergedDocumentReplicationCommand(dataForReplicationCommand, lastEtag);
+                        task = _database.TxMerger.Enqueue(replicationCommand);
+                        //We need a new context here
+                        using (_database.DocumentsStorage.ContextPool.AllocateOperationContext(out DocumentsOperationContext msgContext))
+                        using (var writer = new BlittableJsonTextWriter(msgContext, _connectionOptions.Stream))
+                        using (var msg = msgContext.ReadObject(new DynamicJsonValue
+                        {
+                            [nameof(ReplicationMessageReply.MessageType)] = "Processing"
+                        }, "heartbeat message"))
+                        {
+                            while (task.Wait(Math.Min(3000, (int)(_database.Configuration.Replication.ActiveConnectionTimeout.AsTimeSpan.TotalMilliseconds * 2 / 3))) ==
+                                   false)
+                            {
+                                // send heartbeats while batch is processed in TxMerger. We wait until merger finishes with this command without timeouts
+                                msgContext.Write(writer, msg);
+                                writer.Flush();
+                            }
+
+                            task = null;
+                        }
+                    }
+
+                    sw.Stop();
+
+                    if (_log.IsInfoEnabled)
+                        _log.Info($"Replication connection {FromToString}: " +
+                                  $"received and written {replicatedItemsCount:#,#;;0} items to database in {sw.ElapsedMilliseconds:#,#;;0}ms, " +
+                                  $"with last etag = {lastEtag}.");
                 }
-                catch (Exception)
+                catch (Exception e)
                 {
-                    // ignore this failure, if this failed, we are already
-                    // in a bad state and likely in the process of shutting 
-                    // down
+                    if (_log.IsInfoEnabled)
+                    {
+                        //This is the case where we had a missing attachment, it is rare but expected.
+                        if (e.ExtractSingleInnerException() is MissingAttachmentException mae)
+                        {
+                            _log.Info("Replication batch contained missing attachments will request the batch to be re-sent with those attachments.", mae);
+                        }
+                        else
+                        {
+                            _log.Info("Failed to receive documents replication batch. This is not supposed to happen, and is likely a bug.", e);
+                        }
+                    }
+                    throw;
                 }
+                finally
+                {
+                    // before we dispose the buffer we must ensure it is not being processed in TxMerger, so we wait for it
+                    try
+                    {
+                        task?.Wait();
+                    }
+                    catch (Exception)
+                    {
+                        // ignore this failure, if this failed, we are already
+                        // in a bad state and likely in the process of shutting 
+                        // down
+                    }
 
                     _attachmentStreamsTempFile?.Reset();
+                }
             }
-        }
         }
 
         private void SendHeartbeatStatusToSource(DocumentsOperationContext documentsContext, BlittableJsonTextWriter writer, long lastDocumentEtag, string handledMessageType)
@@ -942,7 +942,7 @@ namespace Raven.Server.Documents.Replication
             }
 
             return new ArraySegment<ReplicationItem>(items, 0, replicatedDocs);
-            }
+        }
 
         private unsafe class IncomingReplicationAllocator : IDisposable
         {
@@ -1045,7 +1045,7 @@ namespace Raven.Server.Documents.Replication
             }
         }
 
-        private unsafe void ReadAttachmentStreamsFromSource(int attachmentStreamCount, 
+        private unsafe void ReadAttachmentStreamsFromSource(int attachmentStreamCount,
             DocumentsOperationContext context, DataForReplicationCommand dataForReplicationCommand)
         {
             if (attachmentStreamCount == 0)
@@ -1290,24 +1290,24 @@ namespace Raven.Server.Documents.Replication
                             {
                                 BlittableJsonReaderObject document = null;
 
-                                    // no need to load document data for tombstones
-                                    // document size == -1 --> doc is a tombstone
-                                    if (item.DocumentSize >= 0)
-                                    {
-                                        // if something throws at this point, this means something is really wrong and we should stop receiving documents.
-                                        // the other side will receive negative ack and will retry sending again.
-                                        document = item.Document;
+                                // no need to load document data for tombstones
+                                // document size == -1 --> doc is a tombstone
+                                if (item.DocumentSize >= 0)
+                                {
+                                    // if something throws at this point, this means something is really wrong and we should stop receiving documents.
+                                    // the other side will receive negative ack and will retry sending again.
+                                    document = item.Document;
 
-                                        try
-                                        {
-                                            AssertAttachmentsFromReplication(context, item.Id, document);
-                                        }
-                                        catch (MissingAttachmentException)
-                                        {
+                                    try
+                                    {
+                                        AssertAttachmentsFromReplication(context, item.Id, document);
+                                    }
+                                    catch (MissingAttachmentException)
+                                    {
                                         if (_replicationInfo.SupportedFeatures.Replication.MissingAttachments)
-                                            {
-                                                throw;
-                                            }
+                                        {
+                                            throw;
+                                        }
 
                                         database.NotificationCenter.Add(AlertRaised.Create(
                                             database.Name,
@@ -1316,124 +1316,124 @@ namespace Raven.Server.Documents.Replication
                                                 $" ({string.Join(',', GetAttachmentsHashesFromDocumentMetadata(document))}).",
                                                 AlertType.ReplicationMissingAttachments,
                                                 NotificationSeverity.Warning));
+                                    }
+                                }
+
+                                if (item.Flags.Contain(DocumentFlags.Revision))
+                                {
+                                    database.DocumentsStorage.RevisionsStorage.Put(
+                                        context,
+                                        item.Id,
+                                        document,
+                                        item.Flags,
+                                        NonPersistentDocumentFlags.FromReplication,
+                                        rcvdChangeVector,
+                                        item.LastModifiedTicks);
+                                    continue;
+                                }
+
+                                if (item.Flags.Contain(DocumentFlags.DeleteRevision))
+                                {
+                                    database.DocumentsStorage.RevisionsStorage.Delete(
+                                        context,
+                                        item.Id,
+                                        document,
+                                        item.Flags,
+                                        NonPersistentDocumentFlags.FromReplication,
+                                        rcvdChangeVector,
+                                        item.LastModifiedTicks);
+                                    continue;
+                                }
+
+                                var hasRemoteClusterTx = item.Flags.Contain(DocumentFlags.FromClusterTransaction);
+                                var conflictStatus = ConflictsStorage.GetConflictStatusForDocument(context, item.Id, item.ChangeVector, out var conflictingVector,
+                                    out var hasLocalClusterTx);
+
+                                var flags = item.Flags;
+                                var resolvedDocument = document;
+                                switch (conflictStatus)
+                                {
+                                    case ConflictStatus.Update:
+
+                                        if (resolvedDocument != null)
+                                        {
+                                            AttachmentsStorage.AssertAttachments(document, item.Flags);
+
+                                            database.DocumentsStorage.Put(context, item.Id, null, resolvedDocument, item.LastModifiedTicks,
+                                                rcvdChangeVector, flags, NonPersistentDocumentFlags.FromReplication);
                                         }
-                                    }
-
-                                    if (item.Flags.Contain(DocumentFlags.Revision))
-                                    {
-                                        database.DocumentsStorage.RevisionsStorage.Put(
-                                            context,
-                                            item.Id,
-                                            document,
-                                            item.Flags,
-                                            NonPersistentDocumentFlags.FromReplication,
-                                            rcvdChangeVector,
-                                            item.LastModifiedTicks);
-                                        continue;
-                                    }
-
-                                    if (item.Flags.Contain(DocumentFlags.DeleteRevision))
-                                    {
-                                        database.DocumentsStorage.RevisionsStorage.Delete(
-                                            context,
-                                            item.Id,
-                                            document,
-                                            item.Flags,
-                                            NonPersistentDocumentFlags.FromReplication,
-                                            rcvdChangeVector,
-                                            item.LastModifiedTicks);
-                                        continue;
-                                    }
-
-                                    var hasRemoteClusterTx = item.Flags.Contain(DocumentFlags.FromClusterTransaction);
-                                    var conflictStatus = ConflictsStorage.GetConflictStatusForDocument(context, item.Id, item.ChangeVector, out var conflictingVector,
-                                        out var hasLocalClusterTx);
-
-                                    var flags = item.Flags;
-                                    var resolvedDocument = document;
-                                    switch (conflictStatus)
-                                    {
-                                        case ConflictStatus.Update:
-
-                                            if (resolvedDocument != null)
+                                        else
+                                        {
+                                            using (DocumentIdWorker.GetSliceFromId(context, item.Id, out Slice keySlice))
                                             {
-                                                AttachmentsStorage.AssertAttachments(document, item.Flags);
-
-                                                database.DocumentsStorage.Put(context, item.Id, null, resolvedDocument, item.LastModifiedTicks,
-                                                    rcvdChangeVector, flags, NonPersistentDocumentFlags.FromReplication);
+                                                database.DocumentsStorage.Delete(
+                                                    context, keySlice, item.Id, null,
+                                                    item.LastModifiedTicks,
+                                                    rcvdChangeVector,
+                                                    new CollectionName(item.Collection),
+                                                    NonPersistentDocumentFlags.FromReplication,
+                                                    flags);
                                             }
-                                            else
-                                            {
-                                                using (DocumentIdWorker.GetSliceFromId(context, item.Id, out Slice keySlice))
-                                                {
-                                                    database.DocumentsStorage.Delete(
-                                                        context, keySlice, item.Id, null,
-                                                        item.LastModifiedTicks,
-                                                        rcvdChangeVector,
-                                                        new CollectionName(item.Collection),
-                                                        NonPersistentDocumentFlags.FromReplication,
-                                                        flags);
-                                                }
-                                            }
+                                        }
 
-                                            break;
-                                        case ConflictStatus.Conflict:
+                                        break;
+                                    case ConflictStatus.Conflict:
                                         if (_replicationInfo.Logger.IsInfoEnabled)
                                             _replicationInfo.Logger.Info(
                                                 $"Conflict check resolved to Conflict operation, resolving conflict for doc = {item.Id}, with change vector = {item.ChangeVector}");
 
-                                            // we will always prefer the local
-                                            if (hasLocalClusterTx)
+                                        // we will always prefer the local
+                                        if (hasLocalClusterTx)
+                                        {
+                                            // we have to strip the cluster tx flag from the local document
+                                            var local = database.DocumentsStorage.GetDocumentOrTombstone(context, item.Id, throwOnConflict: false);
+                                            flags = item.Flags.Strip(DocumentFlags.FromClusterTransaction);
+                                            if (local.Document != null)
                                             {
-                                                // we have to strip the cluster tx flag from the local document
-                                                var local = database.DocumentsStorage.GetDocumentOrTombstone(context, item.Id, throwOnConflict: false);
-                                                flags = item.Flags.Strip(DocumentFlags.FromClusterTransaction);
-                                                if (local.Document != null)
-                                                {
-                                                    rcvdChangeVector = ChangeVectorUtils.MergeVectors(rcvdChangeVector, local.Document.ChangeVector);
-                                                    resolvedDocument = local.Document.Data.Clone(context);
-                                                }
-                                                else if (local.Tombstone != null)
-                                                {
-                                                    rcvdChangeVector = ChangeVectorUtils.MergeVectors(rcvdChangeVector, local.Tombstone.ChangeVector);
-                                                    resolvedDocument = null;
-                                                }
-                                                else
-                                                {
-                                                throw new InvalidOperationException("Local cluster tx but no matching document / tombstone for: " + item.Id +
-                                                                                    ", this should not be possible");
-                                                }
-
-                                                goto case ConflictStatus.Update;
+                                                rcvdChangeVector = ChangeVectorUtils.MergeVectors(rcvdChangeVector, local.Document.ChangeVector);
+                                                resolvedDocument = local.Document.Data.Clone(context);
                                             }
-
-                                            // otherwise we will choose the remote document from the transaction
-                                            if (hasRemoteClusterTx)
+                                            else if (local.Tombstone != null)
                                             {
-                                                flags = flags.Strip(DocumentFlags.FromClusterTransaction);
-                                                goto case ConflictStatus.Update;
+                                                rcvdChangeVector = ChangeVectorUtils.MergeVectors(rcvdChangeVector, local.Tombstone.ChangeVector);
+                                                resolvedDocument = null;
                                             }
                                             else
                                             {
-                                                // if the conflict is going to be resolved locally, that means that we have local work to do
-                                                // that we need to distribute to our siblings
-                                                IsIncomingReplication = false;
+                                                throw new InvalidOperationException("Local cluster tx but no matching document / tombstone for: " + item.Id +
+                                                                                    ", this should not be possible");
+                                            }
+
+                                            goto case ConflictStatus.Update;
+                                        }
+
+                                        // otherwise we will choose the remote document from the transaction
+                                        if (hasRemoteClusterTx)
+                                        {
+                                            flags = flags.Strip(DocumentFlags.FromClusterTransaction);
+                                            goto case ConflictStatus.Update;
+                                        }
+                                        else
+                                        {
+                                            // if the conflict is going to be resolved locally, that means that we have local work to do
+                                            // that we need to distribute to our siblings
+                                            IsIncomingReplication = false;
                                             _replicationInfo.ConflictManager.HandleConflictForDocument(context, item.Id, item.Collection, item.LastModifiedTicks,
                                                 document,
                                                     rcvdChangeVector, conflictingVector, item.Flags);
-                                            }
+                                        }
 
-                                            break;
-                                        case ConflictStatus.AlreadyMerged:
-                                            // we have to do nothing here
-                                            break;
-                                        default:
-                                            throw new ArgumentOutOfRangeException(nameof(conflictStatus),
-                                                "Invalid ConflictStatus: " + conflictStatus);
-                                    }
-                                }
+                                        break;
+                                    case ConflictStatus.AlreadyMerged:
+                                        // we have to do nothing here
+                                        break;
+                                    default:
+                                        throw new ArgumentOutOfRangeException(nameof(conflictStatus),
+                                            "Invalid ConflictStatus: " + conflictStatus);
                                 }
                             }
+                        }
+                    }
 
                     Debug.Assert(_replicationInfo.ReplicatedAttachmentStreams == null ||
                                  _replicationInfo.ReplicatedAttachmentStreams.Count == 0,
