@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
+using System.IO;
 using System.Linq;
 using System.Text;
 using System.Threading;
@@ -23,7 +24,7 @@ namespace SlowTests.Issues
             var server = GetNewServer(runInMemory: false);
             try
             {
-                using (var store = GetDocumentStore(new Options { Server = server }))
+                using (var store = GetDocumentStore(new Options { Server = server, Path = Path.Combine(server.Configuration.Core.DataDirectory.FullPath, "ChangesApiShouldReconnectToServerWhenServerReturn") }))
                 {
                     var list = new BlockingCollection<DocumentChange>();
                     var taskObservable = store.Changes();
@@ -36,8 +37,8 @@ namespace SlowTests.Issues
 
                     var value = WaitForValue(() => list.Count, 1);
                     Assert.Equal(1, value);
-
-                    var nodePath = server.Configuration.Core.DataDirectory.FullPath.Split('/').Last();
+                    var serverPath = server.Configuration.Core.DataDirectory.FullPath;
+                    var nodePath = serverPath.Split('/').Last();
                     var url = server.WebUrl;
                     await DisposeServerAndWaitForFinishOfDisposalAsync(server);
                     var settings = new Dictionary<string, string>
@@ -45,10 +46,8 @@ namespace SlowTests.Issues
                         {RavenConfiguration.GetKey(x => x.Core.ServerUrls), url}
                     };
                     server = GetNewServer(runInMemory: false, deletePrevious: false, partialPath: nodePath, customSettings: settings);
-
-                    var url2 = server.WebUrl;
+                    await taskObservable.EnsureConnectedNow();
                     PushUser(store);
-
                     value = WaitForValue(() => list.Count, 2);
                     Assert.Equal(2, value);
                 }
