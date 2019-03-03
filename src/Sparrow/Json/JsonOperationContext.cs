@@ -403,16 +403,11 @@ namespace Sparrow.Json
             }
         }
 
-
-#if DEBUG || VALIDATE
-        private readonly LongReference _getMemory = new LongReference();
-#endif
-
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public AllocatedMemoryData GetMemory(int requestedSize)
         {
 #if DEBUG || VALIDATE
-            using (new SingleThreadAccessAssertion(_getMemory, "GetMemory"))
+            using (new SingleThreadAccessAssertion(_threadId, "GetMemory"))
             {
                 if (requestedSize <= 0)
                     throw new ArgumentException(nameof(requestedSize));
@@ -430,15 +425,11 @@ namespace Sparrow.Json
 #endif
         }
 
-#if DEBUG || VALIDATE
-        private readonly LongReference _getLongLivedMemory = new LongReference();
-#endif
-
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public AllocatedMemoryData GetLongLivedMemory(int requestedSize)
         {
 #if DEBUG || VALIDATE
-            using (new SingleThreadAccessAssertion(_getLongLivedMemory, "GetLongLivedMemory"))
+            using (new SingleThreadAccessAssertion(_threadId, "GetLongLivedMemory"))
             {
                 if (requestedSize <= 0)
                 throw new ArgumentException(nameof(requestedSize));
@@ -516,14 +507,10 @@ namespace Sparrow.Json
             return GetLazyStringForFieldWithCachingUnlikely(field);
         }
 
-#if DEBUG || VALIDATE
-        private readonly LongReference _getLazyStringForFieldWithCachingUnlikely = new LongReference();
-#endif
-
         private LazyStringValue GetLazyStringForFieldWithCachingUnlikely(StringSegment key)
         {
 #if DEBUG || VALIDATE
-            using (new SingleThreadAccessAssertion(_getLazyStringForFieldWithCachingUnlikely, "GetLazyStringForFieldWithCachingUnlikely"))
+            using (new SingleThreadAccessAssertion(_threadId, "GetLazyStringForFieldWithCachingUnlikely"))
             {
 #endif
                 EnsureNotDisposed();
@@ -1410,24 +1397,35 @@ namespace Sparrow.Json
         }
 
 #if DEBUG || VALIDATE
-        private class LongReference
+        private class IntReference
         {
             public long Value;
         }
 
+        IntReference _threadId = new IntReference {Value = 0};
+
         private class SingleThreadAccessAssertion : IDisposable
         {
-            readonly LongReference _refCount;
-            public SingleThreadAccessAssertion(LongReference refCount, string method)
+            readonly IntReference _capturedThreadId;
+            private int _currentThreadId;
+            private string _method;
+
+            public SingleThreadAccessAssertion(IntReference expectedCapturedThread, string method)
             {
-                _refCount = refCount;
-                var actualCount = Interlocked.Increment(ref _refCount.Value);
-                if (actualCount > 1)
+                _capturedThreadId = expectedCapturedThread;
+                _currentThreadId = Environment.CurrentManagedThreadId;
+                _method = method;
+                if (Interlocked.CompareExchange(ref expectedCapturedThread.Value, _currentThreadId, 0) != 0)
+                {
                     throw new InvalidOperationException($"Concurrent access to JsonOperationContext.{method} method detected");
+                }
             }
             public void Dispose()
             {
-                Interlocked.Decrement(ref _refCount.Value);
+                if (Interlocked.CompareExchange(ref _capturedThreadId.Value, 0, _currentThreadId) != _currentThreadId)
+                {
+                    throw new InvalidOperationException($"Concurrent access to JsonOperationContext.{_method} method detected");
+                }
             }
         }
 #endif
