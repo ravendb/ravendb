@@ -60,7 +60,7 @@ namespace Raven.Server.ServerWide.Commands
 
         public static unsafe long GetValue(TableValueReader tvr)
         {
-            return *(long*)tvr.Read((int)ClusterStateMachine.IdentitiesRow.Value, out _);
+            return *(long*)tvr.Read((int)ClusterStateMachine.IdentitiesTable.Value, out _);
         }
 
         public static void UpdateTableRow(long index, Table identitiesItems, long value, Slice keySlice, Slice prefixIndexSlice)
