@@ -564,6 +564,13 @@ interface editDocumentCrudActions {
 }
 
 
+interface confirmationDialogOptions {
+    buttons?: string[];
+    forceRejectWithResolve?: boolean;
+    defaultOption?: string;
+    html?: boolean;
+}
+
 
 interface getIndexEntriesFieldsCommandResult {
     Static: string[];

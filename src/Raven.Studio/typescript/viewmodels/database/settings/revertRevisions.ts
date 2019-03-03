@@ -33,8 +33,9 @@ class revertRevisions extends viewModelBase {
         if (this.isValid(this.model.validationGroup)) {
             const db = this.activeDatabase();
             
-            this.confirmationMessage("Revert revisions", "Do you want to revert documents state to date: " + this.model.pointInTimeFormatted() + " UTC?", 
-                ["No", "Yes, revert"])
+            this.confirmationMessage("Revert revisions", "Do you want to revert documents state to date: " + this.model.pointInTimeFormatted() + " UTC?", {
+                buttons: ["No", "Yes, revert"]
+                })
                 .done(result => {
                     if (result.can) {
                         this.spinners.revert(true);

@@ -33,6 +33,7 @@ import explainQueryCommand = require("commands/database/index/explainQueryComman
 import timingsChart = require("common/timingsChart");
 import graphQueryResults = require("common/query/graphQueryResults");
 import debugGraphOutputCommand = require("commands/database/query/debugGraphOutputCommand");
+import generalUtils = require("common/generalUtils");
 
 type queryResultTab = "results" | "explanations" | "timings" | "graph";
 
@@ -778,7 +779,10 @@ class query extends viewModelBase {
                 
                 // Verify if name already exists
                 if (_.find(savedQueriesStorage.getSavedQueries(this.activeDatabase()), x => x.name.toUpperCase() === this.querySaveName().toUpperCase())) {
-                    this.confirmationMessage(`Query ${this.querySaveName()} already exists`, `Overwrite existing query ?`, ["No", "Overwrite"])
+                    this.confirmationMessage(`Query ${generalUtils.escapeHtml(this.querySaveName())} already exists`, `Overwrite existing query?`, {
+                        buttons: ["No", "Overwrite"],
+                        html: true
+                    })
                         .done(result => {
                             if (result.can) {
                                 this.saveQueryToStorage(this.criteria().toStorageDto());   
@@ -883,7 +887,10 @@ class query extends viewModelBase {
     }
 
     removeQuery(item: storedQueryDto) {
-        this.confirmationMessage("Query", `Are you sure you want to delete query '${item.name}'?`, ["Cancel", "Delete"])
+        this.confirmationMessage("Query", `Are you sure you want to delete query '${generalUtils.escapeHtml(item.name)}'?`, {
+            buttons: ["Cancel", "Delete"],
+            html: true
+        })
             .done(result => {
                 if (result.can) {
 
