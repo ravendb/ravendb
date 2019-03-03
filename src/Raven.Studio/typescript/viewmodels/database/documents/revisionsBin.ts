@@ -133,7 +133,9 @@ class revisionsBin extends viewModelBase {
 
         eventsCollector.default.reportEvent("revisionsBin", "delete-selected");
         
-        this.confirmationMessage("Are you sure?", "Do you want to delete selected items and its revisions?", ["Cancel", "Yes, delete"])
+        this.confirmationMessage("Are you sure?", "Do you want to delete selected items and its revisions?", {
+            buttons: ["Cancel", "Yes, delete"]
+        })
             .done(result => {
                 if (result.can) {
 

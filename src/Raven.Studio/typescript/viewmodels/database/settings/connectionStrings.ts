@@ -155,7 +155,10 @@ class connectionStrings extends viewModelBase {
 
     confirmDelete(connectionStringName: string, connectionStringtype: Raven.Client.Documents.Operations.ConnectionStrings.ConnectionStringType) {
         const stringType = connectionStringtype === 'Raven' ? 'RavenDB' : 'SQL';
-        this.confirmationMessage("Are you sure?", `Do you want to delete ${stringType} ETL connection string:  ${connectionStringName}`, ["Cancel", "Delete"])
+        this.confirmationMessage("Are you sure?", `Do you want to delete ${stringType} ETL connection string:  ${generalUtils.escapeHtml(connectionStringName)}`, {
+            buttons: ["Cancel", "Delete"],
+            html: true
+        })
             .done(result => {
                 if (result.can) {
                     this.deleteConnectionSring(connectionStringtype, connectionStringName);

@@ -50,6 +50,14 @@ namespace Tests.Infrastructure
             }
         }
 
+        protected void SetTimeouts()
+        {
+            foreach (var server in Servers)
+            {
+                server.ServerStore.Engine.Timeout.Disable = false;
+            }
+        }
+
         protected async Task CreateAndWaitForClusterDatabase(string databaseName, IDocumentStore store, int replicationFactor = 2)
         {
             if (Servers.Count == 0)

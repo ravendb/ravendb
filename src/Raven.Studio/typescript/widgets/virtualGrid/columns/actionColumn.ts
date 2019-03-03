@@ -3,7 +3,7 @@
 import virtualColumn = require("widgets/virtualGrid/columns/virtualColumn");
 import virtualRow = require("widgets/virtualGrid/virtualRow");
 import virtualGridController = require("widgets/virtualGrid/virtualGridController");
-import utils = require("widgets/virtualGrid/virtualGridUtils");
+import generalUtils = require("common/generalUtils");
 
 type actionColumnOpts<T> = {
     extraClass?: (item: T) => string;
@@ -55,7 +55,7 @@ class actionColumn<T> implements virtualColumn {
     }
 
     renderCell(item: T, isSelected: boolean, isSorted: boolean): string {
-        const extraButtonHtml = this.opts.title ? ` title="${utils.escape(this.opts.title(item))}" ` : '';
+        const extraButtonHtml = this.opts.title ? ` title="${generalUtils.escapeHtml(this.opts.title(item))}" ` : '';
         let extraCssClasses = this.opts.extraClass ? this.opts.extraClass(item) : '';
         
         if (isSorted) {
