@@ -22,6 +22,7 @@ using Raven.Server.ServerWide.Commands.ConnectionStrings;
 using Raven.Server.ServerWide.Context;
 using Raven.Server.Smuggler.Documents.Data;
 using Raven.Server.Smuggler.Documents.Processors;
+using Raven.Server.Utils;
 using Sparrow.Json;
 using Sparrow.Logging;
 using Voron;
@@ -39,7 +40,7 @@ namespace Raven.Server.Smuggler.Documents
 
         private readonly Logger _log;
         private BuildVersionType _buildType;
-        private static DatabaseSmugglerOptions _options;
+        private static DatabaseSmugglerOptionsServerSide _options;
 
         public DatabaseDestination(DocumentDatabase database)
         {
@@ -47,7 +48,7 @@ namespace Raven.Server.Smuggler.Documents
             _log = LoggingSource.Instance.GetLogger<DatabaseDestination>(database.Name);
         }
 
-        public IDisposable Initialize(DatabaseSmugglerOptions options, SmugglerResult result, long buildVersion)
+        public IDisposable Initialize(DatabaseSmugglerOptionsServerSide options, SmugglerResult result, long buildVersion)
         {
             _buildType = BuildVersion.Type(buildVersion);
             _options = options;
@@ -628,7 +629,7 @@ namespace Raven.Server.Smuggler.Documents
                     _log.Info($"Importing {Documents.Count:#,#0} documents");
 
                 var idsOfDocumentsToUpdateAfterAttachmentDeletion = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
-
+                var databaseChangeVector = context.LastDatabaseChangeVector ?? DocumentsStorage.GetDatabaseChangeVector(context);
                 foreach (var documentType in Documents)
                 {
                     var tombstone = documentType.Tombstone;
@@ -636,12 +637,17 @@ namespace Raven.Server.Smuggler.Documents
                     {
                         using (Slice.External(context.Allocator, tombstone.LowerId, out Slice key))
                         {
-                            var newEtag = _database.DocumentsStorage.GenerateNextEtag();
-                            var changeVector = _database.DocumentsStorage.GetNewChangeVector(context, newEtag);
+                            if (_options.KeepOriginalChangeVector == false)
+                            {
+                                var newEtag = _database.DocumentsStorage.GenerateNextEtag();
+                                tombstone.ChangeVector = _database.DocumentsStorage.GetNewChangeVector(context, newEtag);
+                            }
+
+                            databaseChangeVector = ChangeVectorUtils.MergeVectors(databaseChangeVector, tombstone.ChangeVector);
                             switch (tombstone.Type)
                             {
                                 case Tombstone.TombstoneType.Document:
-                                    _database.DocumentsStorage.Delete(context, key, tombstone.LowerId, null, tombstone.LastModified.Ticks, changeVector, new CollectionName(tombstone.Collection));
+                                    _database.DocumentsStorage.Delete(context, key, tombstone.LowerId, null, tombstone.LastModified.Ticks, tombstone.ChangeVector, new CollectionName(tombstone.Collection));
                                     break;
                                 case Tombstone.TombstoneType.Attachment:
                                     var idEnd = key.Content.IndexOf(SpecialChars.RecordSeparator);
@@ -650,10 +656,10 @@ namespace Raven.Server.Smuggler.Documents
                                     var attachmentId = key.Content.Substring(idEnd);
                                     idsOfDocumentsToUpdateAfterAttachmentDeletion.Add(attachmentId);
 
-                                    _database.DocumentsStorage.AttachmentsStorage.DeleteAttachmentDirect(context, key, false, "$fromReplication", null, changeVector, tombstone.LastModified.Ticks);
+                                    _database.DocumentsStorage.AttachmentsStorage.DeleteAttachmentDirect(context, key, false, "$fromReplication", null, tombstone.ChangeVector, tombstone.LastModified.Ticks);
                                     break;
                                 case Tombstone.TombstoneType.Revision:
-                                    _database.DocumentsStorage.RevisionsStorage.DeleteRevision(context, key, tombstone.Collection, changeVector, tombstone.LastModified.Ticks);
+                                    _database.DocumentsStorage.RevisionsStorage.DeleteRevision(context, key, tombstone.Collection, tombstone.ChangeVector, tombstone.LastModified.Ticks);
                                     break;
                                 case Tombstone.TombstoneType.Counter:
                                     _database.DocumentsStorage.CountersStorage.DeleteCounter(context, key, tombstone.Collection, null,
@@ -668,6 +674,7 @@ namespace Raven.Server.Smuggler.Documents
                     var conflict = documentType.Conflict;
                     if (conflict != null)
                     {
+                        databaseChangeVector = ChangeVectorUtils.MergeVectors(databaseChangeVector, documentType.Conflict.ChangeVector);
                         _database.DocumentsStorage.ConflictsStorage.AddConflict(context, conflict.Id, conflict.LastModified.Ticks, conflict.Doc, conflict.ChangeVector,
                             conflict.Collection, conflict.Flags, NonPersistentDocumentFlags.FromSmuggler);
 
@@ -684,7 +691,6 @@ namespace Raven.Server.Smuggler.Documents
 
                     var document = documentType.Document;
                     var id = document.Id;
-
 
                     if (IsRevision)
                     {
@@ -731,11 +737,20 @@ namespace Raven.Server.Smuggler.Documents
                         continue;
                     }
 
+                    if (_options.KeepOriginalChangeVector == false)
+                    {
+                        var newEtag = _database.DocumentsStorage.GenerateNextEtag();
+                        document.ChangeVector = _database.DocumentsStorage.GetNewChangeVector(context, newEtag);
+                    }
+
+                    databaseChangeVector = ChangeVectorUtils.MergeVectors(databaseChangeVector, document.ChangeVector);
+
                     PutAttachments(context, document, isRevision: false);
 
-                    _database.DocumentsStorage.Put(context, id, null, document.Data, document.LastModified.Ticks, null, document.Flags, document.NonPersistentFlags);
-
+                    _database.DocumentsStorage.Put(context, id, null, document.Data, document.LastModified.Ticks, document.ChangeVector, document.Flags, document.NonPersistentFlags);
                 }
+
+                context.LastDatabaseChangeVector = databaseChangeVector;
 
                 foreach (var idToUpdate in idsOfDocumentsToUpdateAfterAttachmentDeletion)
                 {

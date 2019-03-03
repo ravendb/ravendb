@@ -14,7 +14,7 @@ namespace Raven.Server.Smuggler.Documents.Data
 {
     public interface ISmugglerDestination
     {
-        IDisposable Initialize(DatabaseSmugglerOptions options, SmugglerResult result, long buildVersion);
+        IDisposable Initialize(DatabaseSmugglerOptionsServerSide options, SmugglerResult result, long buildVersion);
         IDatabaseRecordActions DatabaseRecord();
         IDocumentActions Documents();
         IDocumentActions RevisionDocuments();
