@@ -132,7 +132,7 @@ namespace SlowTests.Authentication
 
             var cert = new X509Certificate2(cluster1CertBytes);
             var replacementCert = new X509Certificate2(cluster1ReplacementCertBytes);
-            Assert.Equal(CertificateUtils.GetPublicKeyPinningHash(cert), CertificateUtils.GetPublicKeyPinningHash(replacementCert));
+            Assert.Equal(cert.GetPublicKeyPinningHash(), replacementCert.GetPublicKeyPinningHash());
 
             // Create cluster 1 with the original certificate. Later we will replace that with the renewed certificate.
             var leader1 = await CreateRaftClusterAndGetLeader(clusterSize, false, useSsl: true, serverCertPath: cluster1CertFileName);
@@ -350,8 +350,9 @@ namespace SlowTests.Authentication
                     await session.SaveChangesAsync();
                 }
 
-                var replicated = WaitForDocumentToReplicate<User>(store2, "users/2", 10000);
-                Assert.Null(replicated);
+                var stats = store2.Maintenance.Send(new GetReplicationPerformanceStatisticsOperation());
+                var errors = stats.Incoming.SelectMany(x => x.Performance.Where(y => y.Errors != null).SelectMany(z => z.Errors)).ToList();
+                Assert.NotEmpty(errors);
             }
         }
 
@@ -362,8 +363,8 @@ namespace SlowTests.Authentication
             var c1Cert = new X509Certificate2(c1);
             var c2Cert = new X509Certificate2(c2);
 
-            var h1 = CertificateUtils.GetPublicKeyPinningHash(c1Cert);
-            var h2 = CertificateUtils.GetPublicKeyPinningHash(c2Cert);
+            var h1 = c1Cert.GetPublicKeyPinningHash();
+            var h2 = c2Cert.GetPublicKeyPinningHash();
             Assert.Equal(h1, h2);
         }
 
@@ -377,8 +378,8 @@ namespace SlowTests.Authentication
             var c1Cert = new X509Certificate2(c1);
             var c2Cert = new X509Certificate2(c2);
 
-            var h1 = CertificateUtils.GetPublicKeyPinningHash(c1Cert);
-            var h2 = CertificateUtils.GetPublicKeyPinningHash(c2Cert);
+            var h1 = c1Cert.GetPublicKeyPinningHash();
+            var h2 = c2Cert.GetPublicKeyPinningHash();
             Assert.NotEqual(h1, h2);
         }
     }

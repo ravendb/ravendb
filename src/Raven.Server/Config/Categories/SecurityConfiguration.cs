@@ -94,10 +94,10 @@ namespace Raven.Server.Config.Categories
         [ConfigurationEntry("Security.WellKnownCertificates.Admin", ConfigurationEntryScope.ServerWideOnly)]
         public string[] WellKnownAdminCertificates { get; set; }
 
-        [Description("Well known issuer thumbprints that will be used to validate a new certificate's HPKP if the issuer's certificate has changed.")]
+        [Description("Well known issuer 'Public Key Pinning Hashes' that will be used to validate a new client certificate when the issuer's certificate has changed.")]
         [DefaultValue(null)]
-        [ConfigurationEntry("Security.WellKnownIssuers.Admin", ConfigurationEntryScope.ServerWideOnly)]
-        public string[] WellKnownIssuersCertificates { get; set; }
+        [ConfigurationEntry("Security.WellKnownIssuerHashes.Admin", ConfigurationEntryScope.ServerWideOnly)]
+        public string[] WellKnownIssuerHashes { get; set; }
 
         internal bool? IsUnsecureAccessSetupValid { get; private set; }
 

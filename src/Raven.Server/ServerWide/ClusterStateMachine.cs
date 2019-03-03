@@ -317,14 +317,14 @@ namespace Raven.Server.ServerWide
                         PutValue<LicenseLimits>(context, type, cmd, index, leader);
                         break;
                     case nameof(PutCertificateWithSamePinningHashCommand):
-                        PutCertificate(context, type, cmd, index, leader);
+                        PutCertificate(context, type, cmd, index, serverStore);
                         if (cmd.TryGet(nameof(PutCertificateCommand.Name), out string certKey))
                             DeleteLocalState(context, certKey);
                         if (cmd.TryGet(nameof(PutCertificateCommand.PublicKeyPinningHash), out string hash))
                             DiscardLeftoverCertsWithSamePinningHash(context, hash, type, index);
                         break;
                     case nameof(PutCertificateCommand):
-                        PutCertificate(context, type, cmd, index, leader);
+                        PutCertificate(context, type, cmd, index, serverStore);
                         // Once the certificate is in the cluster, no need to keep it locally so we delete it.
                         if (cmd.TryGet(nameof(PutCertificateCommand.Name), out string key))
                             DeleteLocalState(context, key);
@@ -1057,7 +1057,7 @@ namespace Raven.Server.ServerWide
             }
         }
 
-        private CertificateDefinition PutCertificate(TransactionOperationContext context, string type, BlittableJsonReaderObject cmd, long index, Leader leader)
+        private void PutCertificate(TransactionOperationContext context, string type, BlittableJsonReaderObject cmd, long index, ServerStore serverStore)
         {
             try
             {
@@ -1068,11 +1068,19 @@ namespace Raven.Server.ServerWide
                 using (Slice.From(context.Allocator, command.Name, out Slice keySlice))
                 using (var cert = context.ReadObject(command.ValueToJson(), "inner-val"))
                 {
+                    var existing = serverStore.Cluster.GetCertificateByThumbprint(context, command.Name) ??
+                                  serverStore.Cluster.GetLocalState(context, command.Name);
+
+                    // Ignore repeated registration of certificates
+                    if (existing != null)
+                        return;
+
                     if (_clusterAuditLog.IsInfoEnabled)
-                        _clusterAuditLog.Info($"Registering new certificate '{command.Value.Thumbprint}' in the cluster.");
+                        _clusterAuditLog.Info($"Registering new certificate '{command.Value.Thumbprint}' in the cluster. Security Clearance: {command.Value.SecurityClearance}. " +
+                                              $"Permissions:{Environment.NewLine}{string.Join(Environment.NewLine, command.Value.Permissions.Select(kvp => kvp.Key + ": " + kvp.Value.ToString()))}");
 
                     UpdateCertificate(certs, keySlice, hashSlice, cert);
-                    return command.Value;
+                    return;
                 }
             }
             finally
@@ -1695,8 +1703,9 @@ namespace Raven.Server.ServerWide
                 foreach (var tvr in certs.SeekForwardFrom(CertificatesSchema.Indexes[CertificatesHashSlice], hashSlice, 0))
                 {
                     var def = GetCertificateDefinition(context, tvr.Result);
-                    if (def.PublicKeyPinningHash.Equals(hash))
-                        yield return def;
+                    if (def.PublicKeyPinningHash.Equals(hash) == false)
+                        break;
+                    yield return def;
                 }
             }
         }

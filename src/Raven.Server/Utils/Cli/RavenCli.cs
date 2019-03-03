@@ -638,7 +638,7 @@ namespace Raven.Server.Utils.Cli
                     Permissions = new Dictionary<string, DatabaseAccess>(),
                     SecurityClearance = SecurityClearance.ClusterNode,
                     Thumbprint = cert.Thumbprint,
-                    PublicKeyPinningHash = CertificateUtils.GetPublicKeyPinningHash(cert),
+                    PublicKeyPinningHash = cert.GetPublicKeyPinningHash(),
                     NotAfter = cert.NotAfter
                 };
 
@@ -725,7 +725,7 @@ namespace Raven.Server.Utils.Cli
                     Permissions = new Dictionary<string, DatabaseAccess>(),
                     SecurityClearance = SecurityClearance.ClusterAdmin,
                     Thumbprint = cert.Thumbprint,
-                    PublicKeyPinningHash = CertificateUtils.GetPublicKeyPinningHash(cert),
+                    PublicKeyPinningHash = cert.GetPublicKeyPinningHash(),
                     NotAfter = cert.NotAfter
                 };
 

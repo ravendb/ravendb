@@ -487,6 +487,7 @@ namespace Raven.Server.Web
                 case null:
                 case RavenServer.AuthenticationStatus.None:
                 case RavenServer.AuthenticationStatus.NoCertificateProvided:
+                case RavenServer.AuthenticationStatus.UnfamiliarIssuer:
                 case RavenServer.AuthenticationStatus.UnfamiliarCertificate:
                 case RavenServer.AuthenticationStatus.Expired:
                 case RavenServer.AuthenticationStatus.Allowed:
@@ -513,6 +514,7 @@ namespace Raven.Server.Web
                 case null:
                 case RavenServer.AuthenticationStatus.None:
                 case RavenServer.AuthenticationStatus.NoCertificateProvided:
+                case RavenServer.AuthenticationStatus.UnfamiliarIssuer:
                 case RavenServer.AuthenticationStatus.UnfamiliarCertificate:
                 case RavenServer.AuthenticationStatus.Expired:
                 case RavenServer.AuthenticationStatus.Allowed:
@@ -542,6 +544,7 @@ namespace Raven.Server.Web
                 case null:
                 case RavenServer.AuthenticationStatus.None:
                 case RavenServer.AuthenticationStatus.NoCertificateProvided:
+                case RavenServer.AuthenticationStatus.UnfamiliarIssuer:
                 case RavenServer.AuthenticationStatus.UnfamiliarCertificate:
                 case RavenServer.AuthenticationStatus.Expired:
                 case RavenServer.AuthenticationStatus.NotYetValid:
