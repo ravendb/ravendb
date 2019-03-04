@@ -131,7 +131,7 @@ namespace StressTests.Voron
             Assert.Equal(desired, val);
         }
 
-        [Theory64Bit(Skip = "RavenDB-11725")]
+        [Theory64Bit]
         [InlineData(3L * 1024 * 1024 * 1024)] // in = 3GB, out ~= 4MB
         [InlineData(2)] // in = 3GB, out ~= 1.5GB
         [InlineData(1)] // in = 3GB, out > 3GB (rare case)
@@ -147,7 +147,8 @@ namespace StressTests.Voron
                     long inputSize = 3L * gb;
                     var guid = Guid.NewGuid();
 
-                    using (var outputPager = CreateScratchFile($"output-{divider}-{guid}", env, inputSize, out byte* outputBuffer))
+                    var outputSize = LZ4.MaximumOutputLength(inputSize);
+                    using (var outputPager = CreateScratchFile($"output-{divider}-{guid}", env, outputSize, out byte* outputBuffer))
                     using (var inputPager = CreateScratchFile($"input-{divider}-{guid}", env, inputSize, out byte* inputBuffer))
                     using (var checkedPager = CreateScratchFile($"checked-{divider}-{guid}", env, inputSize, out byte* checkedBuffer))
                     {
