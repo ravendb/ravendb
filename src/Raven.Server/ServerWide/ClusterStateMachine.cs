@@ -1426,23 +1426,6 @@ namespace Raven.Server.ServerWide
             }
         }
 
-        public IEnumerable<string> GetCertificateKeysFromCluster(TransactionOperationContext context)
-        {
-            var tree = context.Transaction.InnerTransaction.ReadTree(CertificatesSlice);
-            if (tree == null)
-                yield break;
-
-            using (var it = tree.Iterate(prefetch: false))
-            {
-                if (it.Seek(Slices.BeforeAllKeys) == false)
-                    yield break;
-                do
-                {
-                    yield return it.CurrentKey.ToString();
-                } while (it.MoveNext());
-            }
-        }
-
         public IEnumerable<(string Thumbprint, BlittableJsonReaderObject Certificate)> GetAllCertificatesFromCluster(TransactionOperationContext context, int start, int take)
         {
             var certTable = context.Transaction.InnerTransaction.OpenTable(CertificatesSchema, CertificatesSlice);
@@ -1453,6 +1436,16 @@ namespace Raven.Server.ServerWide
                     yield break;
 
                 yield return GetCurrentItem(context, result.Value);
+            }
+        }
+
+        public IEnumerable<string> GetCertificateKeysFromCluster(TransactionOperationContext context)
+        {
+            var certTable = context.Transaction.InnerTransaction.OpenTable(CertificatesSchema, CertificatesSlice);
+
+            foreach (var result in certTable.SeekByPrimaryKeyPrefix(Slices.Empty, Slices.Empty, 0))
+            {
+                yield return result.Key.ToString();
             }
         }
 
@@ -1690,7 +1683,7 @@ namespace Raven.Server.ServerWide
         {
 
             var list = GetCertificatesByPinningHash(context, hash).ToList();
-            list.Sort((x,y) => DateTime.Compare(x.NotAfter, y.NotAfter));
+            list.Sort((x,y) => DateTime.Compare(y.NotAfter, x.NotAfter));
             return list;
         }
 

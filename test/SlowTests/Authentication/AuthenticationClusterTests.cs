@@ -19,6 +19,7 @@ using Raven.Client.Documents.Operations.ConnectionStrings;
 using Raven.Client.Documents.Operations.ETL;
 using Raven.Client.Documents.Operations.OngoingTasks;
 using Raven.Client.Documents.Operations.Replication;
+using Raven.Client.Documents.Replication;
 using Raven.Client.ServerWide;
 using Raven.Client.ServerWide.Operations;
 using Raven.Client.ServerWide.Operations.Certificates;
@@ -342,17 +343,28 @@ namespace SlowTests.Authentication
                 // Enable external replication
                 external.Disabled = false;
                 res = await store1.Maintenance.SendAsync(new UpdateExternalReplicationOperation(external));
+                await db1.ServerStore.Cluster.WaitForIndexNotification(res.RaftCommandIndex);
+
                 Assert.Equal(externalList.First().TaskId, res.TaskId);
 
                 using (var session = store1.OpenAsyncSession())
                 {
-                    await session.StoreAsync(new User { Name = "Avivush" }, "users/2");
+                    await session.StoreAsync(new User { Name = "Avivush" }, "users/2").ConfigureAwait(false);
                     await session.SaveChangesAsync();
                 }
+                
+                // WaitForUserToContinueTheTest(store1, clientCert: adminCertificate1);
+                // WaitForUserToContinueTheTest(store2, clientCert: adminCertificate2);
 
-                var stats = store2.Maintenance.Send(new GetReplicationPerformanceStatisticsOperation());
-                var errors = stats.Incoming.SelectMany(x => x.Performance.Where(y => y.Errors != null).SelectMany(z => z.Errors)).ToList();
-                Assert.NotEmpty(errors);
+                var replicated = WaitForDocumentToReplicate<User>(store2, "users/2", 10000);
+                Assert.Null(replicated);
+
+                // RavenDB-13010
+                /*Assert.True(WaitForValue(() =>
+                {
+                    var repStats = store1.Maintenance.Send(new GetReplicationPerformanceStatisticsOperation());
+                    return repStats.Outgoing.SelectMany(x => x.Performance).Count(x => x.Errors.Count > 0) > 0;
+                }, true));*/
             }
         }
 

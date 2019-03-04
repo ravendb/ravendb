@@ -500,6 +500,8 @@ namespace FastTests
                     return;
 
                 var urls = documentStore.Urls;
+                if (clientCert != null)
+                    Console.WriteLine($"Using certificate with serial: {clientCert.SerialNumber}");
 
                 var databaseNameEncoded = Uri.EscapeDataString(database ?? documentStore.Database);
                 var documentsPage = urls.First() + "/studio/index.html#databases/documents?&database=" + databaseNameEncoded + "&withStop=true";

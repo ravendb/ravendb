@@ -110,7 +110,7 @@ namespace Raven.Server.Https
 
             var tls = context.Features.Get<ITlsConnectionFeature>();
             var certificate = tls?.ClientCertificate;
-            var conn = context.Features.Get<HttpConnectionFeature>();
+            var conn = context.Features.Get<IHttpConnectionFeature>();
             var address = $"{conn?.RemoteIpAddress}:{conn?.RemotePort}";
             var authenticationStatus = _server.AuthenticateConnectionCertificate(certificate, address);
 
