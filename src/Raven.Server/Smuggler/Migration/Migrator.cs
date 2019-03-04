@@ -115,9 +115,17 @@ namespace Raven.Server.Smuggler.Migration
                 {
                     version = MajorVersion.V35;
                 }
+                else if (buildVersion >= 30000)
+                {
+                    version = MajorVersion.V30;
+                }
                 else if (buildVersion >= 20000)
                 {
                     version = MajorVersion.V2;
+                }
+                else if (buildVersion >= 3500)
+                {
+                    version = MajorVersion.V35;
                 }
                 else if (buildVersion >= 3000)
                 {
