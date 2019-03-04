@@ -20,11 +20,11 @@ namespace Raven.Client.Util
             client.ReceiveTimeout = (int)timeout.TotalMilliseconds;
         }
 
-        internal static async Task<TcpClient> ConnectSocketAsync(TcpConnectionInfo connection, TimeSpan timeout, Logger log)
+        internal static async Task<(TcpClient Client, string Url)> ConnectSocketAsync(TcpConnectionInfo connection, TimeSpan timeout, Logger log)
         {
             try
             {
-                return await ConnectAsync(connection.Url, timeout).ConfigureAwait(false);
+                return await ConnectAsyncWithPriority(connection, timeout).ConfigureAwait(false);
             }
             catch (AggregateException ae) when (ae.InnerException is SocketException)
             {
@@ -143,6 +143,35 @@ namespace Raven.Client.Util
 
             Debug.Assert(tcpClient.Client != null);
             return tcpClient;
+        }
+
+        internal static async Task<(TcpClient Client, string Url)> ConnectAsyncWithPriority(TcpConnectionInfo info, TimeSpan? tcpConnectionTimeout)
+        {
+            string selectedUrl = null;
+            TcpClient tcpClient = null;
+            
+            foreach (var url in info.TcpServerUrls)
+            {
+                try
+                {
+                    tcpClient = await ConnectAsync(url, tcpConnectionTimeout).ConfigureAwait(false);
+                    selectedUrl = url;
+                    break;
+                }
+                catch
+                {
+                    // ignored
+                }
+            }
+            
+
+            if (selectedUrl == null)
+            {
+                tcpClient = await ConnectAsync(info.Url, tcpConnectionTimeout).ConfigureAwait(false);
+                selectedUrl = info.Url;
+            }
+
+            return (tcpClient, selectedUrl);
         }
     }
 }

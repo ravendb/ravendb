@@ -1735,10 +1735,11 @@ namespace Raven.Server.ServerWide
             }
 
             TcpClient tcpClient = null;
+            string choosenUrl = null;
             Stream stream = null;
             try
             {
-                tcpClient = await TcpUtils.ConnectAsync(info.Url, _parent.TcpConnectionTimeout).ConfigureAwait(false);
+                (tcpClient, choosenUrl) = await TcpUtils.ConnectAsyncWithPriority(info, _parent.TcpConnectionTimeout).ConfigureAwait(false);
                 stream = await TcpUtils.WrapStreamWithSslAsync(tcpClient, info, _parent.ClusterCertificate, _parent.TcpConnectionTimeout);
 
                 var parameters = new TcpNegotiateParameters
@@ -1747,7 +1748,7 @@ namespace Raven.Server.ServerWide
                     Operation = TcpConnectionHeaderMessage.OperationTypes.Cluster,
                     Version = TcpConnectionHeaderMessage.ClusterTcpVersion,
                     ReadResponseAndGetVersionCallback = ClusterReadResponseAndGetVersion,
-                    DestinationUrl = info.Url,
+                    DestinationUrl = choosenUrl,
                     DestinationNodeTag = tag,
                     SourceNodeTag = _parent.Tag
                 };

@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Net.Http;
+using System.Net.Sockets;
 using System.Threading.Tasks;
 using Raven.Client.Http;
 using Raven.Client.ServerWide.Commands;
@@ -46,7 +47,9 @@ namespace Raven.Server.Web.System
 
         public static async Task ConnectToClientNodeAsync(RavenServer server, TcpConnectionInfo tcpConnectionInfo, TimeSpan timeout, Logger log, string database, NodeConnectionTestResult result)
         {
-            var tcpClient = await TcpUtils.ConnectSocketAsync(tcpConnectionInfo, timeout, log);
+            TcpClient tcpClient;
+            string url;
+            (tcpClient, url) =  await TcpUtils.ConnectSocketAsync(tcpConnectionInfo, timeout, log);
             var connection = await TcpUtils.WrapStreamWithSslAsync(tcpClient, tcpConnectionInfo, server.Certificate.Certificate, timeout);
             using (tcpClient)
             {
@@ -54,7 +57,7 @@ namespace Raven.Server.Web.System
                 using (var writer = new BlittableJsonTextWriter(ctx, connection))
                 {
                     WriteOperationHeaderToRemote(writer, TcpConnectionHeaderMessage.OperationTypes.TestConnection, database);
-                    using (var responseJson = await ctx.ReadForMemoryAsync(connection, $"TestConnectionHandler/{tcpConnectionInfo.Url}/Read-Handshake-Response"))
+                    using (var responseJson = await ctx.ReadForMemoryAsync(connection, $"TestConnectionHandler/{url}/Read-Handshake-Response"))
                     {
                         var headerResponse = JsonDeserializationServer.TcpConnectionHeaderResponse(responseJson);
                         switch (headerResponse.Status)
@@ -64,11 +67,11 @@ namespace Raven.Server.Web.System
                                 break;
                             case TcpConnectionStatus.AuthorizationFailed:
                                 result.Success = false;
-                                result.Error = $"Connection to {tcpConnectionInfo.Url} failed because of authorization failure: {headerResponse.Message}";
+                                result.Error = $"Connection to {url} failed because of authorization failure: {headerResponse.Message}";
                                 break;
                             case TcpConnectionStatus.TcpVersionMismatch:
                                 result.Success = false;
-                                result.Error = $"Connection to {tcpConnectionInfo.Url} failed because of mismatching tcp version: {headerResponse.Message}";
+                                result.Error = $"Connection to {url} failed because of mismatching tcp version: {headerResponse.Message}";
                                 WriteOperationHeaderToRemote(writer, TcpConnectionHeaderMessage.OperationTypes.Drop, database);
                                 break;
                         }
