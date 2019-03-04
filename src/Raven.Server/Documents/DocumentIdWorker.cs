@@ -21,7 +21,8 @@ namespace Raven.Server.Documents
         }
 
         public static ByteStringContext.ExternalScope GetSliceFromId<TTransaction>(
-            TransactionOperationContext<TTransaction> context, string id, out Slice idSlice)
+            TransactionOperationContext<TTransaction> context, string id, out Slice idSlice, 
+            byte? separator = null)
             where TTransaction : RavenTransaction
         {
             if (_jsonParserState == null)
@@ -30,13 +31,16 @@ namespace Raven.Server.Documents
             _jsonParserState.Reset();
 
             var strLength = id.Length;
+          
             var maxStrSize = Encoding.GetMaxByteCount(strLength);
             var escapePositionsSize = JsonParserState.FindEscapePositionsMaxSize(id);
 
+            
             var buffer = context.GetMemory(
                 maxStrSize  // this buffer is allocated to also serve the GetSliceFromUnicodeKey
                 + sizeof(char) * id.Length
-                + escapePositionsSize);
+                + escapePositionsSize
+                + (separator != null ? 1 : 0) );
 
             if (id.Length > 512)
                 ThrowDocumentIdTooBig(id);
@@ -53,18 +57,23 @@ namespace Raven.Server.Documents
             }
 
             _jsonParserState.FindEscapePositionsIn(buffer.Address, ref strLength, escapePositionsSize);
-
+            if (separator != null)
+            {
+                buffer.Address[strLength] = separator.Value;
+                strLength++;
+            }
             return Slice.External(context.Allocator, buffer.Address, strLength, out idSlice);
 
         UnlikelyUnicode:
-            return GetSliceFromUnicodeKey(context, id, out idSlice, buffer.Address, maxStrSize);
+            return GetSliceFromUnicodeKey(context, id, out idSlice, buffer.Address, maxStrSize, separator);
         }
 
         private static ByteStringContext.ExternalScope GetSliceFromUnicodeKey<TTransaction>(
             TransactionOperationContext<TTransaction> context,
             string key,
             out Slice keySlice,
-            byte* buffer, int byteCount)
+            byte* buffer, int byteCount,
+            byte? separator)
             where TTransaction : RavenTransaction
         {
             fixed (char* pChars = key)
@@ -73,14 +82,20 @@ namespace Raven.Server.Documents
                 for (var i = 0; i < key.Length; i++)
                     destChars[i] = char.ToLowerInvariant(pChars[i]);
 
-                var keyBytes = buffer + key.Length * sizeof(char);
+                var keyBytes = buffer + key.Length * sizeof(char) ;
 
                 var size = Encoding.GetBytes(destChars, key.Length, keyBytes, byteCount);
 
                 if (size > 512)
                     ThrowDocumentIdTooBig(key);
 
-                return Slice.External(context.Allocator, keyBytes, (ushort)size, out keySlice);
+                if (separator != null)
+                {
+                    keyBytes[size] = separator.Value;
+                    size++;
+                }
+
+                return Slice.External(context.Allocator, keyBytes, (ushort)(size), out keySlice);
             }
         }
 

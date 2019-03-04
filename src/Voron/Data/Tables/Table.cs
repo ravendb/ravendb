@@ -1151,6 +1151,36 @@ DeleteThenInsert:
                 while (it.MoveNext());
             }
         }
+        public bool SeekOneBackwardByPrimaryKeyPrefix(Slice prefix, Slice value, out TableValueReader reader)
+        {
+            reader = default;
+            var pk = _schema.Key;
+            var tree = GetTree(pk);
+            using (var it = tree.Iterate(true))
+            {
+                if (it.Seek(value) == false)
+                {
+                    if (it.Seek(Slices.AfterAllKeys) == false)
+                        return false;
+
+                    if (SliceComparer.StartWith(it.CurrentKey, prefix) == false)
+                    {
+                        it.SetRequiredPrefix(prefix);
+                        if (it.MovePrev() == false)
+                            return false;
+                    }
+                }
+                else if (SliceComparer.AreEqual(it.CurrentKey, value) == false)
+                {
+                    it.SetRequiredPrefix(prefix);
+                    if (it.MovePrev() == false)
+                        return false;
+                }
+
+                GetTableValueReader(it, out reader);
+                return true;
+            }
+        }
 
         public void DeleteByPrimaryKey(Slice value, Func<TableValueHolder, bool> deletePredicate)
         {

@@ -83,6 +83,11 @@ namespace Sparrow.Json
             }
         }
 
+        public void CopyTo(byte* dest)
+        {
+            Memory.Copy(dest, _buffer, _size);
+        }
+
         public bool HasStringValue => _string != null;
 
         [ThreadStatic]
