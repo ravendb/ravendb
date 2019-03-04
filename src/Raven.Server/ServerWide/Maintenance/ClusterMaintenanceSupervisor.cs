@@ -2,6 +2,7 @@
 using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.IO;
+using System.Net.Sockets;
 using System.Threading;
 using System.Threading.Tasks;
 using Raven.Client.Exceptions.Security;
@@ -355,7 +356,10 @@ namespace Raven.Server.ServerWide.Maintenance
             private async Task<ClusterMaintenanceConnection> ConnectToClientNodeAsync(TcpConnectionInfo tcpConnectionInfo, TimeSpan timeout)
             {
                 TcpConnectionHeaderMessage.SupportedFeatures supportedFeatures;
-                var tcpClient = await TcpUtils.ConnectSocketAsync(tcpConnectionInfo, timeout, _log);
+                TcpClient tcpClient;
+                string url;
+                (tcpClient, url) = await TcpUtils.ConnectSocketAsync(tcpConnectionInfo, timeout, _log);
+
                 var connection = await TcpUtils.WrapStreamWithSslAsync(tcpClient, tcpConnectionInfo, _parent._server.Server.Certificate.Certificate, timeout);
                 using (_contextPool.AllocateOperationContext(out JsonOperationContext ctx))
                 using (var writer = new BlittableJsonTextWriter(ctx, connection))
@@ -366,7 +370,7 @@ namespace Raven.Server.ServerWide.Maintenance
                         Operation = TcpConnectionHeaderMessage.OperationTypes.Heartbeats,
                         Version = TcpConnectionHeaderMessage.HeartbeatsTcpVersion,
                         ReadResponseAndGetVersionCallback = SupervisorReadResponseAndGetVersion,
-                        DestinationUrl = tcpConnectionInfo.Url,
+                        DestinationUrl = url,
                         DestinationNodeTag = ClusterTag
                         
                     };

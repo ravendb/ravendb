@@ -31,6 +31,7 @@ using Raven.Client.ServerWide.Commands;
 using Raven.Client.ServerWide.Tcp;
 using Raven.Server.Commercial;
 using Raven.Server.Config;
+using Raven.Server.Config.Settings;
 using Raven.Server.Dashboard;
 using Raven.Server.Documents;
 using Raven.Server.Documents.Indexes;
@@ -2313,6 +2314,20 @@ namespace Raven.Server.ServerWide
             return Configuration.Core.GetNodeTcpServerUrl(ravenServerWebUrl, status.Port);
         }
 
+        public string[] GetNodeClusterTcpServerUrls(string clientRequestedNodeUrl = null, bool forExternalUse = false)
+        {
+            UriSetting[] urls = forExternalUse ? Configuration.Core.ExternalPublicTcpServerUrl : Configuration.Core.ClusterPublicTcpServerUrl;
+            if (urls == null)
+                return new[] {GetNodeTcpServerUrl(clientRequestedNodeUrl)};
+            var length = urls.Length;
+            var res = new string[length];
+            for (var i = 0; i <= length; i++)
+            {
+                res[i] = urls[i].UriValue;
+            }
+            return res;
+        }
+
         public async Task<NodeConnectionTestResult> TestConnectionFromRemote(RequestExecutor requestExecutor, JsonOperationContext context, string nodeUrl)
         {
             var myUrl = GetNodeHttpServerUrl();
@@ -2396,17 +2411,28 @@ namespace Raven.Server.ServerWide
             throw new InvalidOperationException("The server has yet to complete startup, cannot get NodeTcpServerUtl");
         }
 
-        public DynamicJsonValue GetTcpInfoAndCertificates(string clientRequestedNodeUrl)
+        public DynamicJsonValue GetTcpInfoAndCertificates(string clientRequestedNodeUrl, bool forExternalUse = false)
         {
             var tcpServerUrl = GetNodeTcpServerUrl(clientRequestedNodeUrl);
             if (tcpServerUrl.StartsWith("tcp://localhost.fiddler:", StringComparison.OrdinalIgnoreCase))
                 tcpServerUrl = tcpServerUrl.Remove(15, 8);
 
-            return new DynamicJsonValue
+            var res = new DynamicJsonValue
             {
                 [nameof(TcpConnectionInfo.Url)] = tcpServerUrl,
                 [nameof(TcpConnectionInfo.Certificate)] = _server.Certificate.CertificateForClients
             };
+
+            var urls = GetNodeClusterTcpServerUrls(clientRequestedNodeUrl, forExternalUse);
+            var array = new DynamicJsonArray();
+            foreach (var url in urls)
+            {
+                array.Add(url);
+            }
+
+            res[nameof(TcpConnectionInfo.TcpServerUrls)] = array;
+           
+            return res;
         }
 
         public DynamicJsonValue GetLogDetails(TransactionOperationContext context, int max = 100)

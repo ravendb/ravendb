@@ -976,7 +976,7 @@ namespace Raven.Server.Documents.Replication
                 using (var requestExecutor = RequestExecutor.CreateForFixedTopology(remoteDatabaseUrls,
                     pullReplicationAsSink.ConnectionString.Database, certificate, DocumentConventions.Default))
                 {
-                    var cmd = new GetTcpInfoForRemoteTaskCommand(database, remoteTask);
+                    var cmd = new GetTcpInfoForRemoteTaskCommand(ExternalReplicationTag , database, remoteTask);
                     requestExecutor.Execute(cmd, ctx);
                     pullReplicationAsSink.Url = requestExecutor.Url;
                     pullReplicationAsSink.Database = database;
@@ -985,6 +985,7 @@ namespace Raven.Server.Documents.Replication
             }
         }
 
+        private static readonly string ExternalReplicationTag = "external-replication";
         private TcpConnectionInfo GetExternalReplicationTcpInfo(ExternalReplication exNode, X509Certificate2 certificate, string database)
         {
             using (var requestExecutor = RequestExecutor.Create(exNode.ConnectionString.TopologyDiscoveryUrls, exNode.ConnectionString.Database, certificate,

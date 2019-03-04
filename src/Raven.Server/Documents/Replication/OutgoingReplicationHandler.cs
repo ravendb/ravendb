@@ -178,7 +178,10 @@ namespace Raven.Server.Documents.Replication
 
             var task = TcpUtils.ConnectSocketAsync(_connectionInfo, _parent._server.Engine.TcpConnectionTimeout, _log);
             task.Wait(CancellationToken);
-            using (Interlocked.Exchange(ref _tcpClient, task.Result))
+            TcpClient tcpClient;
+            string url;
+            (tcpClient, url) = task.Result;
+            using (Interlocked.Exchange(ref _tcpClient, tcpClient))
             {
                 var wrapSsl = TcpUtils.WrapStreamWithSslAsync(_tcpClient, _connectionInfo, certificate, _parent._server.Engine.TcpConnectionTimeout);
                 wrapSsl.Wait(CancellationToken);
@@ -201,7 +204,7 @@ namespace Raven.Server.Documents.Replication
 
                     AddReplicationPulse(ReplicationPulseDirection.OutgoingInitiate);
                     if (_log.IsInfoEnabled)
-                        _log.Info($"Will replicate to {Destination.FromString()} via {_connectionInfo.Url}");
+                        _log.Info($"Will replicate to {Destination.FromString()} via {url}");
 
                     using (_stream) // note that _stream is being disposed by the interruptible read
                     using (_interruptibleRead)

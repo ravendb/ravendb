@@ -12,6 +12,7 @@ using System.Net.Sockets;
 using System.Threading;
 using System.Threading.Tasks;
 using Newtonsoft.Json;
+using Raven.Client.Documents.Commands;
 using Raven.Client.Exceptions;
 using Raven.Client.Exceptions.Database;
 using Raven.Client.Exceptions.Documents.Subscriptions;
@@ -156,7 +157,7 @@ namespace Raven.Client.Documents.Subscriptions
 
         private async Task<Stream> ConnectToServer(CancellationToken token)
         {
-            var command = new GetTcpInfoCommand("Subscription/" + _dbName, _dbName);
+            var command = new GetTcpInfoForRemoteTaskCommand("Subscription/" + _dbName, _dbName, _options?.SubscriptionName);
 
             var requestExecutor = _store.GetRequestExecutor(_dbName);
 
@@ -181,7 +182,8 @@ namespace Raven.Client.Documents.Subscriptions
                     await requestExecutor.ExecuteAsync(command, context, sessionInfo: null, token: token).ConfigureAwait(false);
                 }
 
-                _tcpClient = await TcpUtils.ConnectAsync(command.Result.Url, requestExecutor.DefaultTimeout).ConfigureAwait(false);
+                string choosenUrl = null;
+                (_tcpClient, choosenUrl) = await TcpUtils.ConnectAsyncWithPriority(command.Result, requestExecutor.DefaultTimeout).ConfigureAwait(false);
                 _tcpClient.NoDelay = true;
                 _tcpClient.SendBufferSize = 32 * 1024;
                 _tcpClient.ReceiveBufferSize = 4096;

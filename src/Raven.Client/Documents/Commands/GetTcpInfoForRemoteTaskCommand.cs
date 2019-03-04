@@ -11,18 +11,21 @@ namespace Raven.Client.Documents.Commands
     {
         private readonly string _remoteDatabase;
         private readonly string _remoteTask;
+        private readonly string _tag;
 
-        public GetTcpInfoForRemoteTaskCommand(string remoteDatabase, string remoteTask)
+        public GetTcpInfoForRemoteTaskCommand(string tag, string remoteDatabase, string remoteTask)
         {
             _remoteDatabase = remoteDatabase ?? throw new ArgumentNullException(nameof(remoteDatabase));
             _remoteTask = remoteTask ?? throw new ArgumentNullException(nameof(remoteTask));
+            _tag = tag;
         }
 
         public override HttpRequestMessage CreateRequest(JsonOperationContext ctx, ServerNode node, out string url)
         {
             url = $"{node.Url}/info/remote-task/tcp?" +
                   $"database={Uri.EscapeDataString(_remoteDatabase)}" +
-                  $"&remote-task={Uri.EscapeDataString(_remoteTask)}";
+                  $"&remote-task={Uri.EscapeDataString(_remoteTask)}" +
+                  $"&tag={Uri.EscapeDataString(_tag)}";
 
             RequestedNode = node;
             var request = new HttpRequestMessage
