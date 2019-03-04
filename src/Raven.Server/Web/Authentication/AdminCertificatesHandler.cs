@@ -493,7 +493,7 @@ namespace Raven.Server.Web.Authentication
                     else
                     {
                         var certificate = ServerStore.CurrentRachisState == RachisState.Passive
-                            ? ServerStore.Cluster.GetLocalState(context, thumbprint)
+                            ? ServerStore.Cluster.GetLocalStateByThumbprint(context, thumbprint)
                             : ServerStore.Cluster.GetCertificateByThumbprint(context, thumbprint);
 
                         if (certificate == null)
@@ -506,7 +506,7 @@ namespace Raven.Server.Web.Authentication
                         if (string.IsNullOrEmpty(definition.CollectionPrimaryKey) == false)
                         {
                             certificate = ServerStore.CurrentRachisState == RachisState.Passive
-                                ? ServerStore.Cluster.GetLocalState(context, thumbprint)
+                                ? ServerStore.Cluster.GetLocalStateByThumbprint(context, thumbprint)
                                 : ServerStore.Cluster.GetCertificateByThumbprint(context, definition.CollectionPrimaryKey);
                             if (certificate == null)
                             {
@@ -555,7 +555,7 @@ namespace Raven.Server.Web.Authentication
 
                 foreach (var localCertKey in localCertKeys)
                 {
-                    var localCertificate = ServerStore.Cluster.GetLocalState(context, localCertKey);
+                    var localCertificate = ServerStore.Cluster.GetLocalStateByThumbprint(context, localCertKey);
                     if (localCertificate == null)
                         continue;
 
@@ -596,7 +596,7 @@ namespace Raven.Server.Web.Authentication
             using (ctx.OpenReadTransaction())
             {
                 var certificate = ServerStore.Cluster.GetCertificateByThumbprint(ctx, clientCert.Thumbprint) ??
-                                  ServerStore.Cluster.GetLocalState(ctx, clientCert.Thumbprint);
+                                  ServerStore.Cluster.GetLocalStateByThumbprint(ctx, clientCert.Thumbprint);
 
                 if (certificate == null)
                 {
