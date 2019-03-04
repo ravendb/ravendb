@@ -92,5 +92,10 @@ namespace Raven.Server.Config.Categories
         [DefaultValue(null)]
         [ConfigurationEntry("Storage.Dangerous.IgnoreInvalidJournalErrors", ConfigurationEntryScope.ServerWideOnly)]
         public bool? IgnoreInvalidJournalErrors { get; set; }
+
+        [Description("EXPERT: Skip checksum validation on database loading process (applicable only for ARM 32/64)")]
+        [DefaultValue(false)]
+        [ConfigurationEntry("Storage.Dangerous.SkipChecksumValidationOnDatabaseLoading", ConfigurationEntryScope.ServerWideOnly)]
+        public bool SkipChecksumValidationOnDatabaseLoading { get; set; }
     }
 }

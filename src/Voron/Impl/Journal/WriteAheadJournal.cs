@@ -13,6 +13,7 @@ using System.Diagnostics;
 using System.IO;
 using System.Linq;
 using System.Runtime.ExceptionServices;
+using System.Runtime.InteropServices;
 using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
@@ -223,12 +224,14 @@ namespace Voron.Impl.Journal
                             }
                         }
                     }
+                    addToInitLog?.Invoke($"Journal {journalNumber} Recovered");
                 }
                 catch (InvalidJournalException)
                 {
                     if (_env.Options.IgnoreInvalidJournalErrors == true)
                     {
-                        addToInitLog?.Invoke($"Encountered invalid journal {journalNumber} @ {_env.Options}. Skipping this journal and keep going the recovery operation because '{nameof(_env.Options.IgnoreInvalidJournalErrors)}' options is set");
+                        addToInitLog?.Invoke(
+                            $"Encountered invalid journal {journalNumber} @ {_env.Options}. Skipping this journal and keep going the recovery operation because '{nameof(_env.Options.IgnoreInvalidJournalErrors)}' options is set");
                         continue;
                     }
                     
@@ -249,26 +252,50 @@ namespace Voron.Impl.Journal
 
                 long minPageChecked = -1;
 
-                // we need to iterate from the end in order to filter out pages that was overwritten by later transaction
-
-                for (var i = sortedPages.Length - 1; i >= 0; i--)
+                if (_env.Options.SkipChecksumValidationOnDatabaseLoading == false)
                 {
-                    using (tempTx) // release any resources, we just wanted to validate things
+                    // we need to iterate from the end in order to filter out pages that was overwritten by later transaction
+                    addToInitLog?.Invoke($"Validate checksum on {sortedPages.Length} pages");
+                    var sp = Stopwatch.StartNew();
+                    for (var i = sortedPages.Length - 1; i >= 0; i--)
                     {
-                        var modifiedPage = sortedPages[i];
-
-                        var ptr = (PageHeader*)_dataPager.AcquirePagePointerWithOverflowHandling(tempTx, modifiedPage, null);
-
-                        var maxPageRange = modifiedPage + VirtualPagerLegacyExtensions.GetNumberOfPages(ptr) - 1;
-
-                        if (minPageChecked != -1 && maxPageRange >= minPageChecked)
+                        if (sp.Elapsed.TotalSeconds >= 60)
                         {
-                            continue;
+                            sp.Restart();
+                            addToInitLog?.Invoke($"Still calculating checksum.. ({sortedPages.Length - i} out of {sortedPages.Length}");
                         }
 
-                        _env.ValidatePageChecksum(modifiedPage, ptr);
+                        using (tempTx) // release any resources, we just wanted to validate things
+                        {
+                            var modifiedPage = sortedPages[i];
 
-                        minPageChecked = modifiedPage;
+                            var ptr = (PageHeader*)_dataPager.AcquirePagePointerWithOverflowHandling(tempTx, modifiedPage, null);
+
+                            var maxPageRange = modifiedPage + VirtualPagerLegacyExtensions.GetNumberOfPages(ptr) - 1;
+
+                            if (minPageChecked != -1 && maxPageRange >= minPageChecked)
+                            {
+                                continue;
+                            }
+
+                            _env.ValidatePageChecksum(modifiedPage, ptr);
+
+                            minPageChecked = modifiedPage;
+                        }
+                    }
+
+                    addToInitLog?.Invoke($"Validate completed");
+                }
+                else
+                {
+                    if (RuntimeInformation.OSArchitecture == Architecture.Arm || RuntimeInformation.OSArchitecture == Architecture.Arm64)
+                    {
+                        addToInitLog?.Invoke($"SkipChecksumValidationOnDbLoading set to true. Skipping checksum validation of {sortedPages.Length} pages.");
+                    }
+                    else
+                    {
+                        throw new InvalidDataException( // RavenDB-13017
+                            $"Storage.SkipChecksumValidationOnDatabaseLoading set to true is not allowed on non ARM architecture. This instance running on {RuntimeInformation.OSArchitecture}");
                     }
                 }
             }
@@ -304,6 +331,7 @@ namespace Voron.Impl.Journal
 
             _journalIndex = lastFlushedJournal;
 
+            addToInitLog?.Invoke($"Cleanup Newer Invalid Journal Files");
             if (_env.Options.CopyOnWriteMode == false)
             {
                 CleanupNewerInvalidJournalFiles(lastFlushedJournal);
@@ -316,7 +344,7 @@ namespace Voron.Impl.Journal
                     // it must have at least one page for the next transaction header and one 4kb for data
                     CurrentFile = lastFile;
             }
-
+            addToInitLog?.Invoke($"Require Header Update = {requireHeaderUpdate}");
             return requireHeaderUpdate;
         }
 
