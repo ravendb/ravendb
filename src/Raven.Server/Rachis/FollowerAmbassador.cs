@@ -472,7 +472,9 @@ namespace Raven.Server.Rachis
             using (context.OpenReadTransaction())
             {
                 var earliestIndexEntry = _engine.GetFirstEntryIndex(context);
-                if (_followerMatchIndex >= earliestIndexEntry)
+               
+                if (_followerMatchIndex >= earliestIndexEntry ||
+                    _followerMatchIndex == earliestIndexEntry - 1) // In case the first entry is the next entry to send
                 {
                     // we don't need a snapshot, so just send updated topology
                     UpdateLastSend("Send empty snapshot");
