@@ -176,6 +176,10 @@ class exportDatabase extends viewModelBase {
                         "<span class=\"token keyword\">this</span>.Freight = <span class=\"token number\">15.3</span>;<br />" +
                         "</pre>"
             });
+
+        popoverUtils.longWithHover($("#js-ongoing-tasks-disabled"), {
+            content: "Imported ongoing tasks will be disabled by default."
+        });
     }
 
     customizeConfigurationClicked() {
