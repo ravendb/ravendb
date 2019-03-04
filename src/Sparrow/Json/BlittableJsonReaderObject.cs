@@ -734,16 +734,16 @@ namespace Sparrow.Json
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public int GetPropertyIndex(StringSegment name, bool ignoreCase = false)
+        public int GetPropertyIndex(StringSegment name)
         {
             AssertContextNotDisposed();
 
             var comparer = _context.GetLazyStringForFieldWithCaching(name);
-            return GetPropertyIndex(comparer, ignoreCase);
+            return GetPropertyIndex(comparer);
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public int GetPropertyIndex(LazyStringValue comparer, bool ignoreCase = false)
+        public int GetPropertyIndex(LazyStringValue comparer)
         {
             AssertContextNotDisposed();
 
@@ -767,7 +767,7 @@ namespace Sparrow.Json
 
                 var propertyId = ReadNumber(propertyIntPtr + currentOffsetSize, currentPropertyIdSize);
 
-                var cmpResult = ComparePropertyName(propertyId, comparer, ignoreCase);
+                var cmpResult = ComparePropertyName(propertyId, comparer);
                 if (cmpResult == 0)
                 {
                     return mid;
@@ -797,7 +797,7 @@ namespace Sparrow.Json
         /// <param name="ignoreCase">Indicates if the comparassion should be case insensitive</param>
         /// <returns></returns>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        private int ComparePropertyName(int propertyId, LazyStringValue comparer, bool ignoreCase = false)
+        private int ComparePropertyName(int propertyId, LazyStringValue comparer)
         {
             AssertContextNotDisposed();
 
@@ -812,54 +812,8 @@ namespace Sparrow.Json
             // Get the property name size
             var size = ReadVariableSizeInt((int)position, out byte propertyNameLengthDataLength);
 
-            if (ignoreCase)
-            {
-                return CompareCaseInsensitive(comparer, propertyNameRelativePosition + propertyNameLengthDataLength, size);
-            }
-
             // Return result of comparison between property name and received comparer
             return comparer.Compare(propertyNameRelativePosition + propertyNameLengthDataLength, size);
-
-        }
-
-        [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        private static int CompareCaseInsensitive(LazyStringValue lsv, byte* p, int pSize)
-        {
-            char[] buffer = null;
-
-            try
-            {
-                if (lsv.HasStringValue == false)
-                {
-                    buffer = ArrayPool<char>.Shared.Rent(lsv.Size + pSize);
-                    fixed (char* chars = buffer)
-                    {
-                        System.Text.Encoding.UTF8.GetChars(lsv.Buffer, lsv.Size, chars, lsv.Size);
-                        var pCount = System.Text.Encoding.UTF8.GetChars(p, pSize, chars + lsv.Length, pSize);
-                        var span = new ReadOnlySpan<char>(chars, pCount + lsv.Length);
-
-                        return span.Slice(0, lsv.Length).CompareTo(span.Slice(lsv.Length), StringComparison.OrdinalIgnoreCase);
-                    }
-                }
-
-                buffer = ArrayPool<char>.Shared.Rent(pSize);
-                fixed (char* pChars = buffer)
-                {
-                    var pCount = System.Text.Encoding.UTF8.GetChars(p, pSize, pChars, pSize);
-                    var pSpan = new ReadOnlySpan<char>(pChars, pCount);
-
-                    var lsvSpan = lsv.ToString().AsSpan();
-
-                    return lsvSpan.CompareTo(pSpan, StringComparison.OrdinalIgnoreCase);
-                }
-            }
-            finally
-            {
-                if (buffer != null)
-                {
-                    ArrayPool<char>.Shared.Return(buffer);
-                }
-            }
         }
 
         public struct InsertionOrderProperties : IDisposable
