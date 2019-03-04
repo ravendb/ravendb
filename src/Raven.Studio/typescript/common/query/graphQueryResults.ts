@@ -61,16 +61,19 @@ class graphQueryResults {
             })
             .attr("viewBox", "0 0 " + this.width + " " + this.height);
 
-        this.svg.append("rect")
+        const zoomContainer = this.svg.append("g")
+            .attr("class", "container")
+            .call(this.zoom)
+            .on("dblclick.zoom", null);
+        
+        zoomContainer.append("rect")
             .attr("class", "zoomRect")
             .attr("width", this.width)
             .attr("height", this.height)
             .style("fill", "none")
-            .style("pointer-events", "all")
-            .call(this.zoom)
-            .on("dblclick.zoom", null);
+            .style("pointer-events", "all");
 
-        const transform = this.svg.append("g")
+        const transform = zoomContainer.append("g")
             .attr("class", "zoom")
             .attr("transform", "translate(" + (this.width / 2) + "," + (this.height / 2) + ")scale(1)");
 
