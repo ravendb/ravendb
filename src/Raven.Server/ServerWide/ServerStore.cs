@@ -1878,7 +1878,7 @@ namespace Raven.Server.ServerWide
                     foreach (var localCertKey in Cluster.GetCertificateKeysFromLocalState(ctx))
                     {
                         // if there are trusted certificates in the local state, we will register them in the cluster now
-                        using (var localCertificate = Cluster.GetLocalState(ctx, localCertKey))
+                        using (var localCertificate = Cluster.GetLocalStateByThumbprint(ctx, localCertKey))
                         {
                             var certificateDefinition = JsonDeserializationServer.CertificateDefinition(localCertificate);
                             PutValueInClusterAsync(new PutCertificateCommand(localCertKey, certificateDefinition)).Wait(ServerShutdown);

@@ -1069,7 +1069,7 @@ namespace Raven.Server.ServerWide
                 using (var cert = context.ReadObject(command.ValueToJson(), "inner-val"))
                 {
                     var existing = serverStore.Cluster.GetCertificateByThumbprint(context, command.Name) ??
-                                  serverStore.Cluster.GetLocalState(context, command.Name);
+                                  serverStore.Cluster.GetLocalStateByThumbprint(context, command.Name);
 
                     // Ignore repeated registration of certificates
                     if (existing != null)
@@ -1387,12 +1387,12 @@ namespace Raven.Server.ServerWide
             }
         }
 
-        public BlittableJsonReaderObject GetLocalState(TransactionOperationContext context, string key)
+        public BlittableJsonReaderObject GetLocalStateByThumbprint(TransactionOperationContext context, string key)
         {
-            return GetLocalState(context.Transaction.InnerTransaction, context, key);
+            return GetLocalStateByThumbprint(context.Transaction.InnerTransaction, context, key);
         }
 
-        public unsafe BlittableJsonReaderObject GetLocalState(Transaction tx, TransactionOperationContext context, string key)
+        public unsafe BlittableJsonReaderObject GetLocalStateByThumbprint(Transaction tx, TransactionOperationContext context, string key)
         {
             var localState = tx.ReadTree(LocalNodeStateTreeName);
             var read = localState.Read(key);
@@ -2067,7 +2067,7 @@ namespace Raven.Server.ServerWide
 
                 foreach (var key in clusterCertificateKeys)
                 {
-                    using (GetLocalState(context, key))
+                    using (GetLocalStateByThumbprint(context, key))
                     {
                         DeleteLocalState(context, key);
                     }

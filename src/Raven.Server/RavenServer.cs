@@ -941,7 +941,7 @@ namespace Raven.Server
                     try
                     {
                         var cert = ServerStore.Cluster.GetCertificateByThumbprint(ctx, certificate.Thumbprint) ??
-                                   ServerStore.Cluster.GetLocalState(ctx, certificate.Thumbprint);
+                                   ServerStore.Cluster.GetLocalStateByThumbprint(ctx, certificate.Thumbprint);
 
                         if (cert == null)
                         {
@@ -1027,7 +1027,7 @@ namespace Raven.Server
                 };
 
                 cert = ServerStore.Cluster.GetCertificateByThumbprint(ctx, certificate.Thumbprint) ??
-                           ServerStore.Cluster.GetLocalState(ctx, certificate.Thumbprint);
+                           ServerStore.Cluster.GetLocalStateByThumbprint(ctx, certificate.Thumbprint);
                 if (cert != null)
                     return;
 

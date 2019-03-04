@@ -75,7 +75,7 @@ namespace Raven.Server.Storage.Schema.Updates.Server
 
                 foreach (var localCertKey in localCertKeys)
                 {
-                    using (var localCertificate = step.ServerStore.Cluster.GetLocalState(step.ReadTx, context, localCertKey))
+                    using (var localCertificate = step.ServerStore.Cluster.GetLocalStateByThumbprint(step.ReadTx, context, localCertKey))
                     {
                         if (localCertificate == null)
                             continue;
