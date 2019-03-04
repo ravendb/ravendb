@@ -996,7 +996,8 @@ namespace Raven.Server
             if (certsWithSameHash.Count > 0)
             {
                 // Hash is good, let's validate it was signed by a known issuer, otherwise users can use the private key to register a new cert with a different issuer.
-                if (CertHasKnownIssuer(certificate, out var issuerHash) == false)
+                var goodKnownCert = new X509Certificate2(Convert.FromBase64String(certsWithSameHash[0].Certificate));
+                if (CertHasKnownIssuer(certificate, goodKnownCert, out var issuerHash) == false)
                 {
                     if (_authAuditLog.IsInfoEnabled)
                         _authAuditLog.Info($"Connection from {remoteAddress} with certificate '{certificate.Subject} ({certificate.Thumbprint})'. " +
@@ -1025,13 +1026,17 @@ namespace Raven.Server
                     NotAfter = certificate.NotAfter
                 };
 
+                cert = ServerStore.Cluster.GetCertificateByThumbprint(ctx, certificate.Thumbprint) ??
+                           ServerStore.Cluster.GetLocalState(ctx, certificate.Thumbprint);
+                if (cert != null)
+                    return;
+
                 // This command will discard leftover certificates after the new certificate is saved.
                 ServerStore.SendToLeaderAsync(new PutCertificateWithSamePinningHashCommand(certificate.Thumbprint, newCertDef));
-
-
+                
                 if (_authAuditLog.IsInfoEnabled)
                     _authAuditLog.Info($"Connection from {remoteAddress} with new certificate '{certificate.Subject} ({certificate.Thumbprint})' which is not registered in the cluster. " +
-                                       "Allowing the connection based on the certificate's 'Public Key Pinning Hash' which is trusted by the cluster. " +
+                                       "Allowing the connection based on the certificate's Public Key Pinning Hash which is trusted by the cluster. " +
                                        $"Registering the new certificate explicitly. Security Clearance: {newCertDef.SecurityClearance}, " +
                                        $"Permissions:{Environment.NewLine}{string.Join(Environment.NewLine, newCertDef.Permissions.Select(kvp => kvp.Key + ": " + kvp.Value.ToString()))}");
 
@@ -1043,22 +1048,22 @@ namespace Raven.Server
             }
         }
 
-        private bool CertHasKnownIssuer(X509Certificate2 certificate, out string issuerPinningHash)
+        private bool CertHasKnownIssuer(X509Certificate2 userCertificate, X509Certificate2 knownCertificate, out string issuerPinningHash)
         {
             issuerPinningHash = null;
             X509Certificate2 issuerCertificate = null;
 
             var userChain = new X509Chain();
-            var serverChain = new X509Chain();
+            var knownCertChain = new X509Chain();
 
             try
             {
-                userChain.Build(certificate);
+                userChain.Build(userCertificate);
             }
             catch (Exception e)
             {
                 if (Logger.IsOperationsEnabled)
-                    Logger.Operations($"Cannot validate new client certificate '{certificate.FriendlyName} {certificate.Thumbprint}', failed to build the chain.", e);
+                    Logger.Operations($"Cannot validate new client certificate '{userCertificate.FriendlyName} {userCertificate.Thumbprint}', failed to build the chain.", e);
                 return false;
             }
 
@@ -1082,19 +1087,25 @@ namespace Raven.Server
 
             try
             {
-                serverChain.Build(Certificate.Certificate);
+                knownCertChain.Build(knownCertificate);
             }
             catch (Exception e)
             {
                 if (Logger.IsOperationsEnabled)
-                    Logger.Operations($"Cannot validate new client certificate '{certificate.FriendlyName} {certificate.Thumbprint}'. Failed to build chain for the server certificate '{Certificate.Certificate.Thumbprint}'", e);
+                    Logger.Operations($"Cannot validate new client certificate '{userCertificate.FriendlyName} {userCertificate.Thumbprint}'. Found a known certificate '{knownCertificate.Thumbprint}' with the same hash but failed to build its chain.", e);
                 return false;
             }
 
             for (var i = 0; i < userChain.ChainElements.Count; i++)
             {
-                if (userChain.ChainElements[i].Certificate.GetPublicKeyPinningHash() != serverChain.ChainElements[i].Certificate.GetPublicKeyPinningHash())
+                // We walk the chain and compare the user certificate vs one of the existing certificate with same pinning hash
+                var currentElementPinningHash = userChain.ChainElements[i].Certificate.GetPublicKeyPinningHash();
+                if (currentElementPinningHash != knownCertChain.ChainElements[i].Certificate.GetPublicKeyPinningHash())
+                {
+                    issuerPinningHash = currentElementPinningHash;
                     return false;
+                }
+                    
             }
 
             return true;
