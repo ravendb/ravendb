@@ -156,6 +156,10 @@ class importDatabaseFromFile extends viewModelBase {
                     "<strong>Revisions, Expiration & Client Configuration</strong>"
             });
         
+        popoverUtils.longWithHover($("#js-ongoing-tasks-disabled"), {
+            content: "Imported ongoing tasks will be disabled by default."
+        });
+        
         this.updateHelpLink("YD9M1R");
     }
 
