@@ -411,7 +411,74 @@ namespace Raven.Server.Rachis
             // the reason we send this is to simplify the # of states in the protocol
 
             var snapshot = _connection.ReadInstallSnapshot(context);
-            _debugRecorder.Record("Snapshot received");
+            _debugRecorder.Record("Start receiving snapshot");
+
+            // reading the snapshot from network and committing it to the disk might take a long time. 
+            using (var cts = new CancellationTokenSource())
+            {
+                var readAndCommitSnapshotTask = Task.Run(() => ReadAndCommitSnapshot(context, snapshot, cts.Token), cts.Token);
+                try
+                {
+                    WaitForTaskCompletion(readAndCommitSnapshotTask, "ReadAndCommitSnapshot");
+                }
+                catch
+                {
+                    cts.Cancel();
+                    throw;
+                }
+            }
+
+            _debugRecorder.Record("Snapshot was received and committed");
+
+            // notify the state machine, we do this in an async manner, and start
+            // the operator in a separate thread to avoid timeouts while this is
+            // going on
+            var task = Task.Run(() => _engine.SnapshotInstalledAsync(snapshot.LastIncludedIndex));
+            WaitForTaskCompletion(task, "SnapshotInstalledAsync");
+
+            _debugRecorder.Record("Done with StateMachine.SnapshotInstalled");
+
+            // we might have moved from passive node, so we need to start the timeout clock
+            _engine.Timeout.Start(_engine.SwitchToCandidateStateOnTimeout);
+
+            _debugRecorder.Record("Snapshot installed");
+            //Here we send the LastIncludedIndex as our matched index even for the case where our lastCommitIndex is greater
+            //So we could validate that the entries sent by the leader are indeed the same as the ones we have.
+            _connection.Send(context, new InstallSnapshotResponse
+            {
+                Done = true,
+                CurrentTerm = _term,
+                LastLogIndex = snapshot.LastIncludedIndex
+            });
+
+            _engine.Timeout.Defer(_connection.Source);
+        }
+
+        private void WaitForTaskCompletion(Task task, string debug)
+        {
+            var sp = Stopwatch.StartNew();
+
+            var timeToWait = (int)(_engine.ElectionTimeout.TotalMilliseconds / 4);
+
+            using (_engine.ContextPool.AllocateOperationContext(out JsonOperationContext context))
+            {
+                while (task.Wait(timeToWait) == false)
+                {
+                    // this may take a while, so we let the other side know that
+                    // we are still processing, and we reset our own timer while
+                    // this is happening
+                    MaybeNotifyLeaderThatWeAreStillAlive(context, sp);
+                }
+            }
+
+            if (task.IsFaulted)
+            {
+                throw new InvalidOperationException($"{ToString()} encounter an error during {debug}", task.Exception);
+            }
+        }
+
+        private void ReadAndCommitSnapshot(TransactionOperationContext context, InstallSnapshot snapshot, CancellationToken token)
+        {
             using (context.OpenWriteTransaction())
             {
                 var lastTerm = _engine.GetTermFor(context, snapshot.LastIncludedIndex);
@@ -425,9 +492,9 @@ namespace Raven.Server.Rachis
                     }
 
                     //This is okay to ignore because we will just get the committed entries again and skip them
-                    ReadInstallSnapshotAndIgnoreContent(context);
+                    ReadInstallSnapshotAndIgnoreContent();
                 }
-                else if (InstallSnapshot(context))
+                else if (InstallSnapshot(context, token))
                 {
                     if (_engine.Log.IsInfoEnabled)
                     {
@@ -449,6 +516,7 @@ namespace Raven.Server.Rachis
                         {
                             _engine.Log.Info($"{ToString()}: {message}");
                         }
+
                         throw new InvalidOperationException(message);
                     }
                 }
@@ -461,8 +529,10 @@ namespace Raven.Server.Rachis
                     {
                         _engine.Log.Info($"{ToString()}: {message}");
                     }
+
                     throw new InvalidOperationException(message);
                 }
+
                 using (var topologyJson = context.ReadObject(snapshot.Topology, "topology"))
                 {
                     if (_engine.Log.IsInfoEnabled)
@@ -477,53 +547,15 @@ namespace Raven.Server.Rachis
 
                 context.Transaction.Commit();
             }
-
-            _engine.Timeout.Defer(_connection.Source);
-            _debugRecorder.Record("Invoking StateMachine.SnapshotInstalled");
-
-            // notify the state machine, we do this in an async manner, and start
-            // the operator in a separate thread to avoid timeouts while this is
-            // going on
-
-            var task = Task.Run(() => _engine.SnapshotInstalledAsync(snapshot.LastIncludedIndex));
-
-            var sp = Stopwatch.StartNew();
-
-            var timeToWait = (int)(_engine.ElectionTimeout.TotalMilliseconds / 4);
-
-            while (task.Wait(timeToWait) == false)
-            {
-                // this may take a while, so we let the other side know that
-                // we are still processing, and we reset our own timer while
-                // this is happening
-                MaybeNotifyLeaderThatWeAreStillAlive(context, sp);
-            }
-
-            _debugRecorder.Record("Done with StateMachine.SnapshotInstalled");
-
-            // we might have moved from passive node, so we need to start the timeout clock
-            _engine.Timeout.Start(_engine.SwitchToCandidateStateOnTimeout);
-
-            _debugRecorder.Record("Snapshot installed");
-            //Here we send the LastIncludedIndex as our matched index even for the case where our lastCommitIndex is greater
-            //So we could validate that the entries sent by the leader are indeed the same as the ones we have.
-            _connection.Send(context, new InstallSnapshotResponse
-            {
-                Done = true,
-                CurrentTerm = _term,
-                LastLogIndex = snapshot.LastIncludedIndex
-            });
-
-            _engine.Timeout.Defer(_connection.Source);
         }
 
-        private unsafe bool InstallSnapshot(TransactionOperationContext context)
+        private unsafe bool InstallSnapshot(TransactionOperationContext context, CancellationToken token)
         {
             var txw = context.Transaction.InnerTransaction;
-            var sp = Stopwatch.StartNew();
             var reader = _connection.CreateReader();
             while (true)
             {
+                token.ThrowIfCancellationRequested();
                 var type = reader.ReadInt32();
                 if (type == -1)
                     return false;
@@ -546,8 +578,7 @@ namespace Raven.Server.Rachis
                         entries = reader.ReadInt64();
                         for (long i = 0; i < entries; i++)
                         {
-                            MaybeNotifyLeaderThatWeAreStillAlive(context, sp);
-
+                            token.ThrowIfCancellationRequested();
                             size = reader.ReadInt32();
                             reader.ReadExactly(size);
                             using (Slice.From(context.Allocator, reader.Buffer, 0, size, ByteStringType.Immutable, out Slice valKey))
@@ -591,18 +622,16 @@ namespace Raven.Server.Rachis
                         TableValueReader tvr;
                         while (true)
                         {
+                            token.ThrowIfCancellationRequested();
                             if (table.SeekOnePrimaryKey(Slices.AfterAllKeys, out tvr) == false)
                                 break;
                             table.Delete(tvr.Id);
-
-                            MaybeNotifyLeaderThatWeAreStillAlive(context, sp);
                         }
 
                         entries = reader.ReadInt64();
                         for (long i = 0; i < entries; i++)
                         {
-                            MaybeNotifyLeaderThatWeAreStillAlive(context, sp);
-
+                            token.ThrowIfCancellationRequested();
                             size = reader.ReadInt32();
                             reader.ReadExactly(size);
                             fixed (byte* pBuffer = reader.Buffer)
@@ -618,9 +647,8 @@ namespace Raven.Server.Rachis
             }
         }
 
-        private void ReadInstallSnapshotAndIgnoreContent(TransactionOperationContext context)
+        private void ReadInstallSnapshotAndIgnoreContent()
         {
-            var sp = Stopwatch.StartNew();
             var reader = _connection.CreateReader();
             while (true)
             {
@@ -642,8 +670,6 @@ namespace Raven.Server.Rachis
                         entries = reader.ReadInt64();
                         for (long i = 0; i < entries; i++)
                         {
-                            MaybeNotifyLeaderThatWeAreStillAlive(context, sp);
-
                             size = reader.ReadInt32();
                             reader.ReadExactly(size);
                             size = reader.ReadInt32();
@@ -658,8 +684,6 @@ namespace Raven.Server.Rachis
                         entries = reader.ReadInt64();
                         for (long i = 0; i < entries; i++)
                         {
-                            MaybeNotifyLeaderThatWeAreStillAlive(context, sp);
-
                             size = reader.ReadInt32();
                             reader.ReadExactly(size);
                         }
@@ -670,7 +694,7 @@ namespace Raven.Server.Rachis
             }
         }
 
-        private void MaybeNotifyLeaderThatWeAreStillAlive(TransactionOperationContext context, Stopwatch sp)
+        private void MaybeNotifyLeaderThatWeAreStillAlive(JsonOperationContext context, Stopwatch sp)
         {
             if (sp.ElapsedMilliseconds <= _engine.ElectionTimeout.TotalMilliseconds / 4)
                 return;
