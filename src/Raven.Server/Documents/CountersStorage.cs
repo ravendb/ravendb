@@ -260,9 +260,6 @@ namespace Raven.Server.Documents
                 var collectionName = _documentsStorage.ExtractCollectionName(context, collection);
                 var table = GetCountersTable(context.Transaction.InnerTransaction, collectionName);
 
-                var nameLen = Encoding.UTF8.GetByteCount(name);
-
-                Slice countersGroupKey;
                 ByteStringContext.InternalScope countersGroupKeyScope = default;
                 using (DocumentIdWorker.GetSliceFromId(context, documentId, out Slice documentKeyPrefix, separator: SpecialChars.RecordSeparator))
                 using (DocumentIdWorker.GetSliceFromId(context, name, out Slice counterName))
@@ -277,6 +274,7 @@ namespace Raven.Server.Documents
                     var value = delta;
 
 
+                    Slice countersGroupKey;
                     if (table.SeekOneBackwardByPrimaryKeyPrefix(documentKeyPrefix, counterKey, out var existing))
                     {
                         countersGroupKeyScope = Slice.From(context.Allocator, existing.Read((int)CountersTable.CounterKey, out var size), size, out countersGroupKey);
@@ -649,43 +647,39 @@ namespace Raven.Server.Documents
 
             try
             {
-                string existingChangeVector = null;
                 var collectionName = _documentsStorage.ExtractCollectionName(context, collection);
                 var table = GetCountersTable(context.Transaction.InnerTransaction, collectionName);
 
-                using (DocumentIdWorker.GetSliceFromId(context, documentId, out Slice counterKey))
+                using (DocumentIdWorker.GetSliceFromId(context, documentId, out Slice documentKeyPrefix, separator: SpecialChars.RecordSeparator))
                 {
                     if (sourceData.TryGet(Values, out BlittableJsonReaderObject sourceCounters) == false)
                     {
-                        throw new InvalidDataException($"Remote Counter-Group document '{counterKey}' is missing '{Values}' property. Shouldn't happen");
+                        throw new InvalidDataException($"Remote Counter-Group document '{documentId}' is missing '{Values}' property. Shouldn't happen");
                     }
 
                     using (table.Allocate(out TableValueBuilder tvb))
                     {
                         BlittableJsonReaderObject data;
-                        if (table.ReadByKey(counterKey, out var existing))
+
+                        if (table.SeekOnePrimaryKeyPrefix(documentKeyPrefix, out _) == false)
                         {
-                            existingChangeVector = TableValueToChangeVector(context, (int)CountersTable.ChangeVector, ref existing);
-
-                            if (ChangeVectorUtils.GetConflictStatus(changeVector, existingChangeVector) == ConflictStatus.AlreadyMerged)
-                                return;
-
-                            using (data = GetCounterValuesData(context, ref existing))
+                            data = context.ReadObject(sourceData, documentId, BlittableJsonDocumentBuilder.UsageMode.ToDisk);
+                            using (Slice.From(context.Allocator, changeVector, out var cv))
+                            using (DocumentIdWorker.GetStringPreserveCase(context, collectionName.Name, out Slice collectionSlice))
                             {
-                                data = data.Clone(context);
-                            }
+                                tvb.Add(documentKeyPrefix);
+                                tvb.Add(Bits.SwapBytes(_documentsStorage.GenerateNextEtag()));
+                                tvb.Add(cv);
+                                tvb.Add(data.BasePointer, data.Size);
+                                tvb.Add(collectionSlice);
+                                tvb.Add(context.TransactionMarkerOffset);
 
-                            if (data.TryGet(DbIds, out BlittableJsonReaderArray dbIds) == false)
-                            {
-                                throw new InvalidDataException($"Local Counter-Group document '{counterKey}' is missing '{DbIds}' property. Shouldn't happen");
+                                table.Set(tvb);
                             }
-                            var dbIdsHolder = new DbIdsHolder(dbIds);
+                        }
 
-                            if (data.TryGet(Values, out BlittableJsonReaderObject localCounters) == false)
-                            {
-                                throw new InvalidDataException($"Local Counter-Group document is missing '{Values}' property. Shouldn't happen");
-                            }
-
+                        else
+                        {
                             if (sourceData.TryGet(DbIds, out BlittableJsonReaderArray sourceDbIds) == false)
                             {
                                 throw new InvalidDataException($"Remote Counter-Group document is missing '{DbIds}' property. Shouldn't happen");
@@ -700,155 +694,186 @@ namespace Raven.Server.Documents
                                 var modified = false;
                                 var changeType = CounterChangeTypes.Put;
 
-                                LazyStringValue deletedLocalCounter = null;
-                                BlittableJsonReaderObject.RawBlob localCounterValues = null;
-
-                                var propIndex = localCounters.GetPropertyIndex(counterName);
-                                if (propIndex != -1)
+                                using (DocumentIdWorker.GetSliceFromId(context, prop.Name, out Slice counterNameSlice))
+                                using (context.Allocator.Allocate(documentKeyPrefix.Size + counterNameSlice.Size, out var counterKeyBuffer))
+                                using (Slice.External(context.Allocator, counterKeyBuffer.Ptr, counterKeyBuffer.Length, out var counterKey))
                                 {
-                                    var localProp = new BlittableJsonReaderObject.PropertyDetails();
-                                    localCounters.GetPropertyByIndex(propIndex, ref localProp);
+                                    documentKeyPrefix.CopyTo(counterKeyBuffer.Ptr);
+                                    counterNameSlice.CopyTo(counterKeyBuffer.Ptr + documentKeyPrefix.Size);
 
-                                    counterName = prop.Name; // use original casing
 
-                                    if (localProp.Value is LazyStringValue lsv)
-                                    {
-                                        deletedLocalCounter = lsv;
-                                    }
-                                    else
-                                    {
-                                        localCounterValues = localProp.Value as BlittableJsonReaderObject.RawBlob;
-                                    }
-                                }
-
-                                if (prop.Value is LazyStringValue deletedSourceCounter)
-                                {
-                                    if (deletedLocalCounter != null)
-                                    {
-                                        // delete + delete => merge change vectors
-
-                                        if (deletedLocalCounter == deletedSourceCounter == false)
-                                        {
-                                            var mergedCv = MergeDeletedCounterVectors(deletedLocalCounter, deletedSourceCounter);
-
-                                            localCounters.Modifications = localCounters.Modifications ?? new DynamicJsonValue(localCounters);
-                                            localCounters.Modifications[counterName] = mergedCv;
-                                        }
-
+                                    if (table.SeekOneBackwardByPrimaryKeyPrefix(documentKeyPrefix, counterKey, out var tvr) == false)
                                         continue;
+
+                                    var existingChangeVector = TableValueToChangeVector(context, (int)CountersTable.ChangeVector, ref tvr);
+                                    if (ChangeVectorUtils.GetConflictStatus(changeVector, existingChangeVector) == ConflictStatus.AlreadyMerged)
+                                        continue;
+
+                                    LazyStringValue deletedLocalCounter = null;
+                                    BlittableJsonReaderObject.RawBlob localCounterValues = null;
+
+                                    using (data = GetCounterValuesData(context, ref tvr))
+                                    {
+                                        data = data.Clone(context);
                                     }
 
-                                    if (localCounterValues != null)
+                                    if (data.TryGet(DbIds, out BlittableJsonReaderArray dbIds) == false)
                                     {
-                                        // delete + blob => resolve conflict
+                                        throw new InvalidDataException($"Local Counter-Group document '{counterKey}' is missing '{DbIds}' property. Shouldn't happen");
+                                    }
+                                    var dbIdsHolder = new DbIdsHolder(dbIds);
 
-                                        var conflictStatus = CompareCounterValuesAndDeletedCounter(localCounterValues, deletedSourceCounter, dbIdsHolder.dbIdsList, true);
+                                    if (data.TryGet(Values, out BlittableJsonReaderObject localCounters) == false)
+                                    {
+                                        throw new InvalidDataException($"Local Counter-Group document is missing '{Values}' property. Shouldn't happen");
+                                    }
 
-                                        switch (conflictStatus)
+                                    if (localCounters.TryGetMember(prop.Name, out object localVal))
+                                    {
+                                        if (localVal is LazyStringValue lsv)
                                         {
-                                            case ConflictStatus.Update:
-                                                //delete is more up do date
-                                                modified = true;
-                                                changeType = CounterChangeTypes.Delete;
+                                            deletedLocalCounter = lsv;
+                                        }
+                                        else
+                                        {
+                                            localCounterValues = localVal as BlittableJsonReaderObject.RawBlob;
+                                        }
+                                    }
+
+                                    if (prop.Value is BlittableJsonReaderObject.RawBlob sourceBlob)
+                                    {
+                                        if (deletedLocalCounter != null)
+                                        {
+                                            // blob + delete => resolve conflict
+
+                                            var conflictStatus = CompareCounterValuesAndDeletedCounter(sourceBlob, deletedLocalCounter, dbIdsHolder.dbIdsList, false);
+
+                                            switch (conflictStatus)
+                                            {
+                                                case ConflictStatus.Update:
+                                                // raw blob is more up to date => put counter
+                                                case ConflictStatus.Conflict:
+                                                    // conflict => resolve to raw blob 
+                                                    localCounterValues = new BlittableJsonReaderObject.RawBlob();
+                                                    break;
+                                                case ConflictStatus.AlreadyMerged:
+                                                    //delete is more up do date (no change)
+                                                    continue;
+                                            }
+                                        }
+                                        else if (localCounterValues == null)
+                                        {
+                                            // put new counter
+                                            localCounterValues = new BlittableJsonReaderObject.RawBlob();
+                                        }
+
+                                        // blob + blob => put counter
+                                        modified = InternalPutCounter(context, localCounters, counterName, dbIdsHolder, sourceDbIds, localCounterValues, sourceBlob);
+
+                                    }
+                                    else if (prop.Value is LazyStringValue deletedSourceCounter)
+                                    {
+                                        if (deletedLocalCounter != null)
+                                        {
+                                            // delete + delete => merge change vectors
+
+                                            if (deletedLocalCounter == deletedSourceCounter == false)
+                                            {
+                                                var mergedCv = MergeDeletedCounterVectors(deletedLocalCounter, deletedSourceCounter);
+
                                                 localCounters.Modifications = localCounters.Modifications ?? new DynamicJsonValue(localCounters);
-                                                localCounters.Modifications[counterName] = deletedSourceCounter;
-                                                break;
-                                            case ConflictStatus.Conflict:
-                                            // conflict => resolve to raw blob (no change)
-                                            case ConflictStatus.AlreadyMerged:
-                                                // raw blob is more up to date (no change)
-                                                continue;
+                                                localCounters.Modifications[counterName] = mergedCv;
+                                            }
+
+                                            continue;
                                         }
 
-                                    }
-                                    else
-                                    {
-                                        // put deleted counter
-
-                                        modified = true;
-                                        changeType = CounterChangeTypes.Delete;
-                                        localCounters.Modifications = localCounters.Modifications ?? new DynamicJsonValue(localCounters);
-                                        localCounters.Modifications[counterName] = deletedSourceCounter;
-                                    }
-                                }
-
-                                else if (prop.Value is BlittableJsonReaderObject.RawBlob sourceBlob)
-                                {
-                                    if (deletedLocalCounter != null)
-                                    {
-                                        // blob + delete => resolve conflict
-
-                                        var conflictStatus = CompareCounterValuesAndDeletedCounter(sourceBlob, deletedLocalCounter, dbIdsHolder.dbIdsList, false);
-
-                                        switch (conflictStatus)
+                                        if (localCounterValues != null)
                                         {
-                                            case ConflictStatus.Update:
-                                            // raw blob is more up to date => put counter
-                                            case ConflictStatus.Conflict:
-                                                // conflict => resolve to raw blob 
-                                                localCounterValues = new BlittableJsonReaderObject.RawBlob();
-                                                break;
-                                            case ConflictStatus.AlreadyMerged:
-                                                //delete is more up do date (no change)
-                                                continue;
+                                            // delete + blob => resolve conflict
+
+                                            var conflictStatus =
+                                                CompareCounterValuesAndDeletedCounter(localCounterValues, deletedSourceCounter, dbIdsHolder.dbIdsList, true);
+
+                                            switch (conflictStatus)
+                                            {
+                                                case ConflictStatus.Update:
+                                                    //delete is more up do date
+                                                    modified = true;
+                                                    changeType = CounterChangeTypes.Delete;
+                                                    localCounters.Modifications = localCounters.Modifications ?? new DynamicJsonValue(localCounters);
+                                                    localCounters.Modifications[counterName] = deletedSourceCounter;
+                                                    break;
+                                                case ConflictStatus.Conflict:
+                                                // conflict => resolve to raw blob (no change)
+                                                case ConflictStatus.AlreadyMerged:
+                                                    // raw blob is more up to date (no change)
+                                                    continue;
+                                            }
+                                        }
+                                        else
+                                        {
+                                            // put deleted counter
+
+                                            modified = true;
+                                            changeType = CounterChangeTypes.Delete;
+                                            localCounters.Modifications = localCounters.Modifications ?? new DynamicJsonValue(localCounters);
+                                            localCounters.Modifications[counterName] = deletedSourceCounter;
+                                        }
+                                    }
+
+                                    Slice.From(context.Allocator, tvr.Read((int)CountersTable.CounterKey, out var size), size, out var countersGroupKey);
+
+                                    if (modified)
+                                    {
+                                        using (var old = data)
+                                        {
+                                            data = context.ReadObject(data, documentId, BlittableJsonDocumentBuilder.UsageMode.ToDisk);
                                         }
 
+                                        var value = InternalGetCounterValue(localCounterValues, documentId, counterName);
+                                        context.Transaction.AddAfterCommitNotification(new CounterChange
+                                        {
+                                            ChangeVector = changeVector,
+                                            DocumentId = documentId,
+                                            Name = counterName,
+                                            Value = value,
+                                            Type = changeType
+                                        });
+
+                                        UpdateMetrics(counterKey, counterName, changeVector, collection);
+
+                                        if (data.Size + sizeof(long) * 3 > 2048)
+                                        {
+                                            // after adding a new counter to the counters blittable
+                                            // we caused the blittable to grow beyond 2KB (the 24bytes is an 
+                                            // estimate, we don't actually depend on hard 2KB limit).
+                                            SplitCounterGroup(context, collectionName, table, documentKeyPrefix, countersGroupKey, data, tvr);
+
+                                            continue;
+                                        }
 
                                     }
-                                    else if (localCounterValues == null)
+
+                                    var etag = _documentsStorage.GenerateNextEtag();
+                                    var changeVectorToSave = ChangeVectorUtils.MergeVectors(existingChangeVector, changeVector);
+
+                                    using (Slice.From(context.Allocator, changeVectorToSave, out var cv))
+                                    using (DocumentIdWorker.GetStringPreserveCase(context, collectionName.Name, out Slice collectionSlice))
                                     {
-                                        // put new counter
-                                        localCounterValues = new BlittableJsonReaderObject.RawBlob();
+                                        tvb.Add(countersGroupKey);
+                                        tvb.Add(Bits.SwapBytes(etag));
+                                        tvb.Add(cv);
+                                        tvb.Add(data.BasePointer, data.Size);
+                                        tvb.Add(collectionSlice);
+                                        tvb.Add(context.TransactionMarkerOffset);
+
+                                        table.Set(tvb);
                                     }
-
-                                    // blob + blob => put counter
-                                    modified = InternalPutCounter(context, localCounters, counterName, dbIdsHolder, sourceDbIds, localCounterValues, sourceBlob);
                                 }
 
-                                if (modified == false)
-                                    continue;
-
-                                var value = InternalGetCounterValue(localCounterValues, documentId, counterName);
-                                context.Transaction.AddAfterCommitNotification(new CounterChange
-                                {
-                                    ChangeVector = changeVector,
-                                    DocumentId = documentId,
-                                    Name = counterName,
-                                    Value = value,
-                                    Type = changeType
-                                });
-
-                                UpdateMetrics(counterKey, counterName, changeVector, collection);
                             }
 
-                            if (localCounters.Modifications != null)
-                            {
-                                using (var old = data)
-                                {
-                                    data = context.ReadObject(data, documentId, BlittableJsonDocumentBuilder.UsageMode.ToDisk);
-                                }
-                            }
-                        }
-                        else
-                        {
-                            data = context.ReadObject(sourceData, documentId, BlittableJsonDocumentBuilder.UsageMode.ToDisk);
-                        }
-
-                        //TODO: We need to handle splitting the counter group docs here as well
-                        var etag = _documentsStorage.GenerateNextEtag();
-                        var changeVectorToSave = ChangeVectorUtils.MergeVectors(existingChangeVector, changeVector);
-
-                        using (Slice.From(context.Allocator, changeVectorToSave, out var cv))
-                        using (DocumentIdWorker.GetStringPreserveCase(context, collectionName.Name, out Slice collectionSlice))
-                        {
-                            tvb.Add(counterKey);
-                            tvb.Add(Bits.SwapBytes(etag));
-                            tvb.Add(cv);
-                            tvb.Add(data.BasePointer, data.Size);
-                            tvb.Add(collectionSlice);
-                            tvb.Add(context.TransactionMarkerOffset);
-
-                            table.Set(tvb);
                         }
                     }
                 }
