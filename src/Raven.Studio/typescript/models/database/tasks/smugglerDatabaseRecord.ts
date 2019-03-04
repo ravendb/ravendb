@@ -19,8 +19,6 @@ class smugglerDatabaseRecord {
     includeSinkPullReplications = ko.observable<boolean>(true);
     includeHubPullReplications = ko.observable<boolean>(true);
 
-    includeSubscriptions = ko.observable(true);
-    
     hasIncludes: KnockoutComputed<boolean>;
 
     constructor() {
@@ -83,8 +81,6 @@ class smugglerDatabaseRecord {
         if (this.includeHubPullReplications()) {
             result.push("HubPullReplications");
         }
-        
-        // here we ignore includeSubscriptions because it isn't part of DatabaseRecordItemType
         
         return result;
     }

@@ -1,7 +1,7 @@
 <div>
     <div class="toggle">
         <input id="customizeDatabaseRecordTypes" type="checkbox" data-bind="checked: customizeDatabaseRecordTypes">
-        <label for="customizeDatabaseRecordTypes" class="margin-right margin-right-sm">Customize Configuration</label>
+        <label for="customizeDatabaseRecordTypes" class="margin-right margin-right-sm">Customize Configuration and Ongoing Tasks</label>
     </div>
     <div class="margin-left margin-left-lg js-customize-record" data-bind="visible: customizeDatabaseRecordTypes">
 
@@ -33,10 +33,6 @@
                         <input id="includeHubPullReplications" type="checkbox" data-bind="checked: includeHubPullReplications">
                         <label for="includeHubPullReplications" class="margin-right margin-right-sm">Pull Replication Hubs</label>
                     </div>
-                    <div class="toggle">
-                        <input id="includeSubscriptions" type="checkbox" data-bind="checked: includeSubscriptions">
-                        <label for="includeSubscriptions" class="margin-right margin-right-sm">Subscriptions</label>
-                    </div>
                 </div>
 
                 <div>Connection Strings</div>
@@ -60,11 +56,11 @@
                     </div>
                     <div class="toggle">
                         <input id="includeConflictSolverConfig" type="checkbox" data-bind="checked: includeConflictSolverConfig">
-                        <label for="includeConflictSolverConfig" class="margin-right margin-right-sm">Conflict Solver</label>
+                        <label for="includeConflictSolverConfig" class="margin-right margin-right-sm">Conflict Solver Configuration</label>
                     </div>
                     <div class="toggle">
                         <input id="includeRevisions" type="checkbox" data-bind="checked: includeRevisions">
-                        <label for="includeRevisions" class="margin-right margin-right-sm">Revisions</label>
+                        <label for="includeRevisions" class="margin-right margin-right-sm">Revisions Configuration</label>
                     </div>
                     <div class="toggle">
                         <input id="includeExpiration" type="checkbox" data-bind="checked: includeExpiration">

@@ -62,7 +62,7 @@
                            
                         </div>
                     </div>
-                    <div class="col-lg-3">
+                    <div class="col-lg-5">
                         <div class="toggle">
                             <input id="importIndexes" type="checkbox" data-bind="checked: includeIndexes">
                             <label for="importIndexes">Include Indexes</label>
@@ -78,14 +78,22 @@
                             <label for="importIdentities">Include Identities</label>
                         </div>
                         <div class="toggle">
-                            <input id="importConfiguration" type="checkbox" data-bind="checked: includeDatabaseRecord">
-                            <label for="importConfiguration" class="margin-right margin-right-sm">Include Configuration</label>
-                            <button class="btn btn-sm" data-bind="enable: includeDatabaseRecord, click: $root.customizeConfigurationClicked">Customize</button>
-                        </div>
-                        <div class="toggle">
                             <input id="importCmpXch" type="checkbox" data-bind="checked: includeCompareExchange">
                             <label for="importCmpXch">Include Compare Exchange</label>
                         </div>
+                        <div class="toggle">
+                            <input id="includeSubscriptions" type="checkbox" data-bind="checked: includeSubscriptions">
+                            <label for="includeSubscriptions" class="margin-right margin-right-sm">Include Subscriptions</label>
+                        </div>
+                        <div class="flex-horizontal">
+                            <div class="toggle">
+                                <input id="importConfiguration" type="checkbox" data-bind="checked: includeDatabaseRecord">
+                                <label for="importConfiguration" class="margin-right margin-right-sm">Include Configuration and Ongoing Tasks</label>
+                            </div>
+                            <button class="btn btn-sm" data-bind="enable: includeDatabaseRecord, click: $root.customizeConfigurationClicked">Customize</button>
+                        </div>
+                        
+                        
                     </div>
                 </div>
                 <div class="row">
