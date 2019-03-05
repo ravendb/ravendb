@@ -1357,13 +1357,8 @@ namespace Raven.Server.ServerWide
                 }
             }
         }
-
-        public void PutLocalState(TransactionOperationContext context, string key, BlittableJsonReaderObject value)
-        {
-            PutLocalState(context.Transaction.InnerTransaction, context, key, value);
-        }
-
-        public unsafe void PutLocalState(Transaction tx, TransactionOperationContext context, string key, BlittableJsonReaderObject value)
+        
+        public unsafe void PutLocalState(TransactionOperationContext context, string key, BlittableJsonReaderObject value)
         {
             var localState = context.Transaction.InnerTransaction.CreateTree(LocalNodeStateTreeName);
             using (localState.DirectAdd(key, value.Size, out var ptr))
@@ -1387,31 +1382,21 @@ namespace Raven.Server.ServerWide
             }
         }
 
-        public BlittableJsonReaderObject GetLocalStateByThumbprint(TransactionOperationContext context, string key)
+        public unsafe BlittableJsonReaderObject GetLocalStateByThumbprint(TransactionOperationContext context, string key)
         {
-            return GetLocalStateByThumbprint(context.Transaction.InnerTransaction, context, key);
-        }
-
-        public unsafe BlittableJsonReaderObject GetLocalStateByThumbprint(Transaction tx, TransactionOperationContext context, string key)
-        {
-            var localState = tx.ReadTree(LocalNodeStateTreeName);
+            var localState = context.Transaction.InnerTransaction.ReadTree(LocalNodeStateTreeName);
             var read = localState.Read(key);
             if (read == null)
                 return null;
             BlittableJsonReaderObject localStateBlittable = new BlittableJsonReaderObject(read.Reader.Base, read.Reader.Length, context);
 
-            Transaction.DebugDisposeReaderAfterTransaction(tx, localStateBlittable);
+            Transaction.DebugDisposeReaderAfterTransaction(context.Transaction.InnerTransaction, localStateBlittable);
             return localStateBlittable;
         }
-
+        
         public IEnumerable<string> GetCertificateKeysFromLocalState(TransactionOperationContext context)
         {
-            return GetCertificateKeysFromLocalState(context.Transaction.InnerTransaction);
-        }
-
-        public IEnumerable<string> GetCertificateKeysFromLocalState(Transaction tx)
-        {
-            var tree = tx.ReadTree(LocalNodeStateTreeName);
+            var tree = context.Transaction.InnerTransaction.ReadTree(LocalNodeStateTreeName);
             if (tree == null)
                 yield break;
 
