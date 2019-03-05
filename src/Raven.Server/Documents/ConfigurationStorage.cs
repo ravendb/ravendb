@@ -56,9 +56,10 @@ namespace Raven.Server.Documents
             options.PrefetchResetThreshold = db.Configuration.Storage.PrefetchResetThreshold.GetValue(SizeUnit.Bytes);
             options.SyncJournalsCountThreshold = db.Configuration.Storage.SyncJournalsCountThreshold;
             options.IgnoreInvalidJournalErrors = db.Configuration.Storage.IgnoreInvalidJournalErrors;
+            options.SkipChecksumValidationOnDatabaseLoading = db.Configuration.Storage.SkipChecksumValidationOnDatabaseLoading;
 
             DirectoryExecUtils.SubscribeToOnDirectoryInitializeExec(options, db.Configuration.Storage, db.Name, DirectoryExecUtils.EnvironmentType.Configuration, Logger);
-            
+
             NotificationsStorage = new NotificationsStorage(db.Name);
 
             OperationsStorage = new OperationsStorage();
