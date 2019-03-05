@@ -18,6 +18,7 @@ using Raven.Client.Exceptions;
 using Raven.Client.Exceptions.Routing;
 using Raven.Client.Properties;
 using Raven.Client.Util;
+using Raven.Server.Config;
 using Raven.Server.Documents;
 using Raven.Server.ServerWide;
 using Raven.Server.Utils;
@@ -298,32 +299,34 @@ namespace Raven.Server.Routing
                 if (string.IsNullOrWhiteSpace(name))
                     name = feature.Certificate.ToString(false);
 
-                name += "(Thumbprint: " + feature.Certificate.Thumbprint + ")";
+                name += $"(Thumbprint: {feature.Certificate.Thumbprint})";
 
                 if (feature.Status == RavenServer.AuthenticationStatus.UnfamiliarCertificate)
                 {
-                    message = "The supplied client certificate '" + name + "' is unknown to the server. In order to register your certificate please contact your system administrator.";
+                    message =
+                        $"The supplied client certificate '{name}' is unknown to the server. In order to register your certificate please contact your system administrator.";
                 }
                 else if (feature.Status == RavenServer.AuthenticationStatus.UnfamiliarIssuer)
                 {
-                    message = "The supplied client certificate '" + name + $"' is unknown to the server but has a known Public Key Pinning Hash. Will not use it to authenticate because the issuer is unknown. " +
-                              $"To fix this, the admin can register the pinning hash of the *issuer* certificate: '{feature.IssuerHash}' in the 'Security.WellKnownIssuerHashes.Admin' configuration entry.";
+                    message =
+                        $"The supplied client certificate '{name}' is unknown to the server but has a known Public Key Pinning Hash. Will not use it to authenticate because the issuer is unknown. To fix this, the admin can register the pinning hash of the *issuer* certificate: '{feature.IssuerHash}' in the '{RavenConfiguration.GetKey(x => x.Security.WellKnownIssuerHashes)}' configuration entry.";
                 }
                 else if (feature.Status == RavenServer.AuthenticationStatus.Allowed)
                 {
-                    message = "Could not authorize access to " + (database ?? "the server") + " using provided client certificate '" + name + "'.";
+                    message = $"Could not authorize access to {(database ?? "the server")} using provided client certificate '{name}'.";
                 }
                 else if (feature.Status == RavenServer.AuthenticationStatus.Operator)
                 {
-                    message = "Insufficient security clearance to access " + (database ?? "the server") + " using provided client certificate '" + name + "'.";
+                    message = $"Insufficient security clearance to access {(database ?? "the server")} using provided client certificate '{name}'.";
                 }
                 else if (feature.Status == RavenServer.AuthenticationStatus.Expired)
                 {
-                    message = "The supplied client certificate '" + name + "' has expired on " + feature.Certificate.NotAfter.ToString("D") + ". Please contact your system administrator in order to obtain a new one.";
+                    message =
+                        $"The supplied client certificate '{name}' has expired on {feature.Certificate.NotAfter:D}. Please contact your system administrator in order to obtain a new one.";
                 }
                 else if (feature.Status == RavenServer.AuthenticationStatus.NotYetValid)
                 {
-                    message = "The supplied client certificate '" + name + "'cannot be used before " + feature.Certificate.NotBefore.ToString("D");
+                    message = $"The supplied client certificate '{name}'cannot be used before {feature.Certificate.NotBefore:D}";
                 }
                 else
                 {
