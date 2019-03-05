@@ -316,7 +316,8 @@ namespace Raven.Server.Documents.PeriodicBackup.Restore
             {
                 AuthorizationStatus = AuthorizationStatus.DatabaseAdmin,
                 OperateOnTypes = DatabaseItemType.CompareExchange | DatabaseItemType.Identities | DatabaseItemType.Subscriptions,
-                SkipRevisionCreation = true
+                SkipRevisionCreation = true,
+                KeepOriginalChangeVector = true
             };
             var lastPath = Path.Combine(_restoreConfiguration.BackupLocation, lastFile);
             var extension = Path.GetExtension(lastPath);
@@ -466,7 +467,8 @@ namespace Raven.Server.Documents.PeriodicBackup.Restore
             {
                 AuthorizationStatus = AuthorizationStatus.DatabaseAdmin,
                 OperateOnTypes = ~(DatabaseItemType.CompareExchange | DatabaseItemType.Identities | DatabaseItemType.Subscriptions),
-                SkipRevisionCreation = true
+                SkipRevisionCreation = true,
+                KeepOriginalChangeVector = true
             };
 
             options.OperateOnTypes |= DatabaseItemType.LegacyDocumentDeletions;
