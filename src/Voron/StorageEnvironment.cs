@@ -28,13 +28,14 @@ using Voron.Impl.FreeSpace;
 using Voron.Impl.Journal;
 using Voron.Impl.Paging;
 using Voron.Impl.Scratch;
+using Voron.Schema;
 using Voron.Util;
 using Voron.Util.Conversion;
 using Constants = Voron.Global.Constants;
 
 namespace Voron
 {
-    public delegate bool UpgraderDelegate(Transaction readTx, Transaction writeTx, int currentVersion, out int versionAfterUpgrade);
+    public delegate bool UpgraderDelegate(SchemaUpgradeTransactions transactions, int currentVersion, out int versionAfterUpgrade);
 
     public class StorageEnvironment : IDisposable
     {
@@ -323,22 +324,16 @@ namespace Voron
         {
             while (schemaVersionVal < Options.SchemaVersion)
             {
-                var readPersistentContext = new TransactionPersistentContext(true);
-                var writePersistentContext = new TransactionPersistentContext(true);
-                using (var readTxInner = NewLowLevelTransaction(readPersistentContext, TransactionFlags.Read))
-                using (var readTx = new Transaction(readTxInner))
-                using (var writeTxInner = NewLowLevelTransaction(writePersistentContext, TransactionFlags.ReadWrite))
-                using (var writeTx = new Transaction(writeTxInner))
+                using (var transactions = new SchemaUpgradeTransactions(this))
                 {
                     // ReSharper disable once PossibleNullReferenceException
-                    if (upgrader(readTx, writeTx, schemaVersionVal, out schemaVersionVal) == false)
+                    if (upgrader(transactions, schemaVersionVal, out schemaVersionVal) == false)
                         break;
 
-                    var metadataTree = writeTx.ReadTree(Constants.MetadataTreeNameSlice);
+                    var metadataTree = transactions.Write.ReadTree(Constants.MetadataTreeNameSlice);
                     //schemaVersionVal++;
 
                     metadataTree.Add("schema-version", EndianBitConverter.Little.GetBytes(schemaVersionVal));
-                    writeTx.Commit();
                 }
             }
 

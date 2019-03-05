@@ -7,6 +7,7 @@ using Raven.Client.Documents.Operations.Backups;
 using Raven.Client.Documents.Operations.Counters;
 using Raven.Server.Documents;
 using Raven.Server.ServerWide.Context;
+using Raven.Server.Storage.Schema.Updates.Documents;
 using Raven.Tests.Core.Utils.Entities;
 using Xunit;
 
@@ -17,6 +18,8 @@ namespace SlowTests.Issues
         [Fact]
         public void CanMigrateLegacyCounters()
         {
+            From16.NumberOfCountersToMigrateInSingleTransaction = 20;
+
             var backupPath = NewDataPath(forceCreateDir: true);
             var fullBackupPath = Path.Combine(backupPath, "northwind.ravendb-snapshot");
 
@@ -88,6 +91,7 @@ namespace SlowTests.Issues
 
                     }
                 }
+
             }
         }
 

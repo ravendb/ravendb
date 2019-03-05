@@ -13,6 +13,7 @@ using Sparrow.Json.Parsing;
 using Sparrow.Server;
 using Sparrow.Server.Utils;
 using Voron;
+using Voron.Data;
 using Voron.Data.Tables;
 using Voron.Exceptions;
 using static Raven.Server.Documents.DocumentsStorage;
@@ -22,6 +23,8 @@ namespace Raven.Server.Storage.Schema.Updates.Documents
 {
     public unsafe class From16 : ISchemaUpdate
     {
+        internal static int NumberOfCountersToMigrateInSingleTransaction = 100_000;
+
         private static readonly Slice CountersTombstonesSlice;
         private static readonly Slice AllCountersEtagSlice;
         private static readonly Slice CollectionCountersEtagsSlice;
@@ -83,63 +86,184 @@ namespace Raven.Server.Storage.Schema.Updates.Documents
 
         public bool Update(UpdateStep step)
         {
+            var legacyCounterRootObjectTypes = new Dictionary<string, RootObjectType>();
+
+            using (var it = step.ReadTx.LowLevelTransaction.RootObjects.Iterate(prefetch: false))
+            {
+                if (it.Seek(Slices.BeforeAllKeys) == false)
+                    return true;
+
+                do
+                {
+                    var current = it.CurrentKey;
+                    var currentAsString = current.ToString();
+
+                    if (currentAsString.Contains("counter", StringComparison.OrdinalIgnoreCase) && currentAsString != CountersTombstones)
+                    {
+                        var type = step.ReadTx.GetRootObjectType(current);
+
+                        legacyCounterRootObjectTypes.Add(currentAsString, type);
+                    }
+
+                } while (it.MoveNext());
+            }
+
             step.DocumentsStorage.CountersStorage = new CountersStorage(step.DocumentsStorage.DocumentDatabase, step.WriteTx);
 
-            var readTable = new Table(LegacyCountersSchema, step.ReadTx);
-            if (readTable.GetTree(LegacyCountersSchema.Key) != null)
+            _dbId = ReadDbId(step);
+
+            // legacy counters processing
+
+            string currentDocId = null;
+            var batch = new CounterBatchUpdate();
+            var dbIds = new HashSet<string>();
+
+            var done = false;
+
+            while (done == false)
             {
-                _dbId = ReadDbId(step);
-                using (step.DocumentsStorage.ContextPool.AllocateOperationContext(out DocumentsOperationContext context))
+                var readTable = new Table(LegacyCountersSchema, step.WriteTx);
+
+                var countersTree = readTable.GetTree(LegacyCountersSchema.Key);
+
+                if (countersTree != null)
                 {
-                    string currentDocId = null;
-                    var batch = new CounterBatchUpdate();
-                    var dbIds = new HashSet<string>();
+                    var processedInCurrentTx = 0;
+                    
+                    var toDeleteCounterEtagsByCollection = new Dictionary<CollectionName, List<long>>();
+                    var toDeleteEtagsForCurrentDocumentId = new List<long>();
 
-                    foreach (var counterDetail in GetAllCounters(readTable, context))
+                    using (step.DocumentsStorage.ContextPool.AllocateOperationContext(out DocumentsOperationContext context))
                     {
-                        if (currentDocId == counterDetail.DocumentId)
+                        var commit = false;
+
+                        foreach (var item in GetCounters(readTable, context))
                         {
-                            if (batch.Counters.TryGetValue(counterDetail.CounterName, out var list) == false)
+                            var counterDetail = item.Counter;
+
+                            if (currentDocId == counterDetail.DocumentId)
                             {
-                                list = new List<CounterDetail>();
-                                batch.Counters.Add(counterDetail.CounterName, list);
+                                if (batch.Counters.TryGetValue(counterDetail.CounterName, out var list) == false)
+                                {
+                                    list = new List<CounterDetail>();
+                                    batch.Counters.Add(counterDetail.CounterName, list);
+                                }
+                                list.Add(counterDetail);
                             }
-                            list.Add(counterDetail);
-                        }
-                        else
-                        {
-                            if (currentDocId != null)
+                            else
                             {
-                                PutCounters(step, context, dbIds, batch.Counters, currentDocId);
+                                if (currentDocId != null)
+                                {
+                                    var docCollection = PutCounters(step, context, dbIds, batch.Counters, currentDocId);
+
+                                    if (docCollection != null)
+                                    {
+                                        if (toDeleteCounterEtagsByCollection.TryGetValue(docCollection, out var toDeleteList) == false)
+                                        {
+                                            toDeleteList = new List<long>();
+                                            toDeleteCounterEtagsByCollection.Add(docCollection, toDeleteList);
+                                        }
+
+                                        toDeleteList.AddRange(toDeleteEtagsForCurrentDocumentId);
+                                        toDeleteEtagsForCurrentDocumentId.Clear();
+                                    }
+
+                                    batch.Clear();
+
+                                    if (processedInCurrentTx >= NumberOfCountersToMigrateInSingleTransaction)
+                                    {
+                                        foreach (var toDeleteForCollection in toDeleteCounterEtagsByCollection)
+                                        {
+                                            var table = step.WriteTx.OpenTable(LegacyCountersSchema, toDeleteForCollection.Key.GetTableName(CollectionTableType.Counters));
+
+                                            DeleteMigratedLegacyCounters(table, toDeleteForCollection.Value);
+                                        }
+
+                                        toDeleteCounterEtagsByCollection.Clear();
+
+                                        commit = true;
+                                        break;
+                                    }
+                                }
+
+                                batch.Clear();
+
+                                currentDocId = counterDetail.DocumentId;
+
+                                batch.Counters.Add(counterDetail.CounterName, new List<CounterDetail>
+                                {
+                                    counterDetail
+                                });
                             }
 
-                            currentDocId = counterDetail.DocumentId;
+                            toDeleteEtagsForCurrentDocumentId.Add(item.Counter.Etag);
 
-                            batch.Dispose();
-
-                            batch.Counters.Add(counterDetail.CounterName, new List<CounterDetail>
+                            using (var dbId = ExtractDbId(context, counterDetail.CounterKey))
                             {
-                                counterDetail
-                            });
+                                dbIds.Add(dbId.ToString());
+                            }
+                            
+                            processedInCurrentTx++;
                         }
 
-                        using (var dbId = ExtractDbId(context, counterDetail.CounterKey))
+                        if (commit)
                         {
-                            dbIds.Add(dbId.ToString());
+                            step.Commit();
+                            step.RenewTransactions();
+
+                            step.DocumentsStorage.CountersStorage = new CountersStorage(step.DocumentsStorage.DocumentDatabase, step.WriteTx);
+
+                            currentDocId = null;
+                            continue;
                         }
+
+                        if (batch.Counters.Count > 0)
+                        {
+                            PutCounters(step, context, dbIds, batch.Counters, currentDocId);
+                            batch.Clear();
+                        }
+
+                        if (toDeleteCounterEtagsByCollection.Count > 0)
+                        {
+                            foreach (var toDeleteForCollection in toDeleteCounterEtagsByCollection)
+                            {
+                                var table = step.WriteTx.OpenTable(LegacyCountersSchema, toDeleteForCollection.Key.GetTableName(CollectionTableType.Counters));
+
+                                DeleteMigratedLegacyCounters(table, toDeleteForCollection.Value);
+                            }
+                        }
+
+                        done = true;
                     }
 
-                    if (batch.Counters.Count > 0)
+                    // we must delete tables first before deleting any global index trees from the root that can be in use by tables
+                    foreach (var item in legacyCounterRootObjectTypes.Where(x => x.Value == RootObjectType.Table))
                     {
-                        PutCounters(step, context, dbIds, batch.Counters, currentDocId);
-                        batch.Dispose();
+                        step.WriteTx.DeleteTable(item.Key);
+                    }
+                    
+                    // let's remove remaining counter trees from the root
+                    foreach (var item in legacyCounterRootObjectTypes.Where(x => x.Value != RootObjectType.Table))
+                    {
+                        if (step.WriteTx.LowLevelTransaction.RootObjects.Read(item.Key) == null)
+                            continue;
+
+                        switch (item.Value)
+                        {
+                            case RootObjectType.VariableSizeTree:
+                                step.WriteTx.DeleteTree(item.Key);
+                                break;
+                            case RootObjectType.FixedSizeTree:
+                                step.WriteTx.DeleteFixedTree(item.Key);
+                                break;
+                            default:
+                                throw new InvalidOperationException($"Encountered unexpected root object type '{item.Value}' for '{item.Key}'");
+                        }
                     }
                 }
-
-                // delete all data from LegacyCounters table
-                step.WriteTx.DeleteTree(CounterKeysSlice);
-
             }
+
+            // legacy counter tombstones processing
 
             var counterTombstones = step.ReadTx.OpenTable(TombstonesSchema, CountersTombstonesSlice);
             if (counterTombstones != null)
@@ -174,15 +298,22 @@ namespace Raven.Server.Storage.Schema.Updates.Documents
                 }
             }
 
-
             return true;
         }
 
-        private class CounterBatchUpdate : IDisposable
+        private void DeleteMigratedLegacyCounters(Table table, List<long> etags)
+        {
+            foreach (var etag in etags)
+            {
+                table.DeleteByIndex(LegacyCountersSchema.FixedSizeIndexes[CollectionCountersEtagsSlice], etag);
+            }
+        }
+
+        private class CounterBatchUpdate
         {
             public readonly Dictionary<string, List<CounterDetail>> Counters = new Dictionary<string, List<CounterDetail>>();
 
-            public void Dispose()
+            public void Clear()
             {
                 foreach (var counter in Counters)
                 {
@@ -214,7 +345,7 @@ namespace Raven.Server.Storage.Schema.Updates.Documents
                         collection = CollectionName.GetCollectionName(doc);
                     }
                 }
-                
+
                 var collectionName = new CollectionName(collection);
                 var table = step.DocumentsStorage.CountersStorage.GetCountersTable(step.WriteTx, collectionName);
 
@@ -230,7 +361,7 @@ namespace Raven.Server.Storage.Schema.Updates.Documents
                     return;
 
                 var deleteCv = step.DocumentsStorage.CountersStorage.GenerateDeleteChangeVectorFromRawBlob(data, counterToDelete as BlittableJsonReaderObject.RawBlob);
-                counters.Modifications = new DynamicJsonValue(counters) {[counterName] = deleteCv};
+                counters.Modifications = new DynamicJsonValue(counters) { [counterName] = deleteCv };
 
                 using (var old = data)
                 {
@@ -256,15 +387,15 @@ namespace Raven.Server.Storage.Schema.Updates.Documents
             }
         }
 
-        private static IEnumerable<CounterDetail> GetAllCounters(Table table, DocumentsOperationContext ctx)
+        private static IEnumerable<(CounterDetail Counter, long Id)> GetCounters(Table table, DocumentsOperationContext ctx)
         {
-            foreach (var result in table.SeekByPrimaryKeyPrefix(Slices.BeforeAllKeys, Slices.Empty, 0))
+            foreach (var result in table.SeekByPrimaryKeyPrefix(Slices.BeforeAllKeys, Slices.Empty, skip: 0))
             {
-                yield return TableValueToCounterDetail(ctx, result.Value.Reader);
+                yield return (TableValueToCounterDetail(ctx, result.Value.Reader), result.Value.Reader.Id);
             }
         }
 
-        private void PutCounters(UpdateStep step, DocumentsOperationContext context, HashSet<string> dbIds, Dictionary<string, List<CounterDetail>> allCountersBatch, string docId)
+        private CollectionName PutCounters(UpdateStep step, DocumentsOperationContext context, HashSet<string> dbIds, Dictionary<string, List<CounterDetail>> allCountersBatch, string docId)
         {
             string collection = null;
 
@@ -277,6 +408,11 @@ namespace Raven.Server.Storage.Schema.Updates.Documents
                     {
                         collection = CollectionName.GetCollectionName(doc);
                     }
+                }
+                else
+                {
+                    // document does not exist
+                    return null;
                 }
             }
 
@@ -325,7 +461,8 @@ namespace Raven.Server.Storage.Schema.Updates.Documents
                     }
                 }
             }
-           
+
+            return collectionName;
         }
 
         private static ByteStringContext.ExternalScope CreateCounterKeySlice(DocumentsOperationContext context, ByteString buffer, Slice documentIdPrefix, Slice counterName, out Slice counterKeySlice)
@@ -385,6 +522,7 @@ namespace Raven.Server.Storage.Schema.Updates.Documents
                     DocumentId = doc.ToString(),
                     CounterName = name.ToString(),
                     TotalValue = TableValueToLong((int)LegacyCountersTable.Value, ref tvr),
+                    Etag = TableValueToEtag((int)LegacyCountersTable.Etag, ref tvr),
                 };
             }
         }
@@ -483,11 +621,11 @@ namespace Raven.Server.Storage.Schema.Updates.Documents
                 return data;
             }
 
-            finally 
+            finally
             {
                 foreach (var scope in toDispose)
                 {
-                    scope.Dispose();                 
+                    scope.Dispose();
                 }
             }
 

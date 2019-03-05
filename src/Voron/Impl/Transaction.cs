@@ -9,6 +9,7 @@ using Voron.Data.Tables;
 using System.Diagnostics;
 using Sparrow.Json;
 using Sparrow.Server;
+using Voron.Data.RawData;
 using Constants = Voron.Global.Constants;
 
 namespace Voron.Impl
@@ -258,6 +259,11 @@ namespace Voron.Impl
         {
             var tree = FixedTreeFor(name);
 
+            DeleteFixedTree(tree);
+        }
+
+        public void DeleteFixedTree(FixedSizeTree tree, bool isInRoot = true)
+        {
             while (true)
             {
                 using (var it = tree.Iterate())
@@ -268,8 +274,12 @@ namespace Voron.Impl
                     var currentKey = it.CurrentKey;
                     tree.Delete(currentKey);
                 }
-            }   
+            }
+
+            if (isInRoot)
+                _lowLevelTransaction.RootObjects.Delete(tree.Name);
         }
+
 
         public void DeleteTree(Slice name)
         {
@@ -280,12 +290,7 @@ namespace Voron.Impl
             if (tree == null)
                 return;
 
-            foreach (var page in tree.AllPages())
-            {
-                _lowLevelTransaction.FreePage(page);
-            }
-
-            _lowLevelTransaction.RootObjects.Delete(name);
+            DeleteTree(tree);
 
             if (_multiValueTrees != null)
             {
@@ -308,6 +313,17 @@ namespace Voron.Impl
             }
             // already created in ReadTree
             _trees.Remove(name);
+        }
+
+        private void DeleteTree(Tree tree, bool isInRoot = true)
+        {
+            foreach (var page in tree.AllPages())
+            {
+                _lowLevelTransaction.FreePage(page);
+            }
+
+            if (isInRoot)
+                _lowLevelTransaction.RootObjects.Delete(tree.Name);
         }
 
         [MethodImpl(MethodImplOptions.NoInlining)]
@@ -379,8 +395,7 @@ namespace Voron.Impl
 
             return tree;
         }
-
-
+        
         public void Dispose()
         {
             if (_trees != null)
@@ -481,6 +496,83 @@ namespace Voron.Impl
             // so we won't have read-after-tx use scenario, which can in rare case corrupt memory. This is a debug
             // helper that is used across the board, but it is meant to assert stuff during debug only
             tx.LowLevelTransaction.OnDispose += state => reader.Dispose();
+        }
+
+        public void DeleteTable(string name)
+        {
+            var tableTree = ReadTree(name, RootObjectType.Table);
+            
+            var writtenSchemaData = tableTree.DirectRead(TableSchema.SchemasSlice);
+            var writtenSchemaDataSize = tableTree.GetDataSize(TableSchema.SchemasSlice);
+            var schema = TableSchema.ReadFrom(Allocator, writtenSchemaData, writtenSchemaDataSize);
+
+            var table = OpenTable(schema, name);
+
+            // delete table data
+
+            table.DeleteByPrimaryKey(Slices.BeforeAllKeys, x =>
+            {
+                bool isOwned = table.IsOwned(x.Reader.Id);
+                return isOwned;
+            });
+
+            // index trees should be already removed but just in case let's go over them and ensure they're really deleted
+
+            foreach (var indexDef in schema.Indexes.Values)
+            {
+                if (indexDef.IsGlobal) // must not delete global indexes
+                    continue;
+
+                if (tableTree.Read(indexDef.Name) == null)
+                    continue;
+
+                var indexTree = table.GetTree(indexDef);
+
+                DeleteTree(indexTree, isInRoot: false);
+            }
+
+            foreach (var indexDef in schema.FixedSizeIndexes.Values)
+            {
+                if (indexDef.IsGlobal)  // must not delete global indexes
+                    continue;
+
+                if (tableTree.Read(indexDef.Name) == null)
+                    continue;
+
+                var index = table.GetFixedSizeTree(indexDef);
+
+                DeleteFixedTree(index, isInRoot: false);
+            }
+
+            // raw data sections
+
+            table.ActiveDataSmallSection.FreeRawDataSectionPages();
+
+            if (tableTree.Read(TableSchema.ActiveCandidateSectionSlice) != null)
+            {
+                using (var it = table.ActiveCandidateSection.Iterate())
+                {
+                    if (it.Seek(long.MinValue))
+                    {
+                        var sectionPageNumber = it.CurrentKey;
+                        var section = new ActiveRawDataSmallSection(_lowLevelTransaction, sectionPageNumber);
+
+                        section.FreeRawDataSectionPages();
+                    }
+                }
+
+                DeleteFixedTree(table.ActiveCandidateSection, isInRoot: false);
+            }
+
+            if (tableTree.Read(TableSchema.InactiveSectionSlice) != null)
+                DeleteFixedTree(table.InactiveSections, isInRoot: false);
+
+            DeleteTree(name);
+
+            using (Slice.From(Allocator, name, ByteStringType.Immutable, out var nameSlice))
+            {
+                _tables.Remove(nameSlice);
+            }
         }
     }
 }
