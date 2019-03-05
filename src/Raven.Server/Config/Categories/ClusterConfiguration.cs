@@ -75,5 +75,11 @@ namespace Raven.Server.Config.Categories
         [DefaultValue(null)]
         [ConfigurationEntry("Cluster.MaximalAllowedClusterVersion", ConfigurationEntryScope.ServerWideOnly)]
         public int? MaximalAllowedClusterVersion { get; set; }
+
+        [Description("Time (in minutes) between compare exchange tombstones cleanup")]
+        [DefaultValue(10)]
+        [TimeUnit(TimeUnit.Minutes)]
+        [ConfigurationEntry("Cluster.TombstonesCleanupIntervalInMin", ConfigurationEntryScope.ServerWideOnly)]
+        public TimeSetting TombstonesCleanupInterval { get; set; }
     }
 }
