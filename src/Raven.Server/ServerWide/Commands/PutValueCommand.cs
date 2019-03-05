@@ -27,7 +27,7 @@ namespace Raven.Server.ServerWide.Commands
         {
             if (Name == ServerStore.LicenseStorageKey ||
                 Name == ServerStore.LicenseLimitsStorageKey)
-                throw new InvalidOperationException("Attempted to use PutValueCommand to delete a license, use dedicated command for this.");
+                throw new InvalidOperationException($"Attempted to use {nameof(PutValueCommand<T>)} to delete a license, use dedicated command for this.");
         }
     }
 }
