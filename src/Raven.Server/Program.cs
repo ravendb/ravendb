@@ -82,7 +82,7 @@ namespace Raven.Server
 
             LoggingSource.UseUtcTime = configuration.Logs.UseUtcTime;
             LoggingSource.MaxFileSizeInBytes = configuration.Logs.MaxFileSize.GetValue(SizeUnit.Bytes);
-            LoggingSource.Instance.SetupLogMode(configuration.Logs.Mode, configuration.Logs.Path.FullPath);
+            LoggingSource.Instance.SetupLogMode(configuration.Logs.Mode, configuration.Logs.Path.FullPath, configuration.Logs.LogRetention.AsTimeSpan);
 
             if (Logger.IsInfoEnabled)
                 Logger.Info($"Logging to {configuration.Logs.Path} set to {configuration.Logs.Mode} level.");

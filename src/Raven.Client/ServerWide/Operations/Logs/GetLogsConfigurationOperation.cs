@@ -1,4 +1,5 @@
-﻿using System.Net.Http;
+﻿using System;
+using System.Net.Http;
 using Raven.Client.Documents.Conventions;
 using Raven.Client.Http;
 using Raven.Client.Json.Converters;
@@ -56,5 +57,10 @@ namespace Raven.Client.ServerWide.Operations.Logs
         /// Indicates if logs will be written in UTC or in server local time
         /// </summary>
         public bool UseUtcTime { get; set; }
+
+        /// <summary>
+        /// Logs retention time
+        /// </summary>
+        public TimeSpan LogRetention { get; set; }
     }
 }
