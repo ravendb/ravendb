@@ -352,9 +352,6 @@ namespace Raven.Server.Web.Authentication
         [RavenAction("/admin/certificates/purge", "DELETE", AuthorizationStatus.Operator)]
         public async Task PurgeExpired()
         {
-            var feature = HttpContext.Features.Get<IHttpAuthenticationFeature>() as RavenServer.AuthenticateConnection;
-            var clientCert = feature?.Certificate;
-
             using (ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
             using (context.OpenReadTransaction())
             {

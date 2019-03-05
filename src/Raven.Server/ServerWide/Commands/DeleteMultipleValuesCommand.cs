@@ -23,7 +23,7 @@ namespace Raven.Server.ServerWide.Commands
         public override void VerifyCanExecuteCommand(ServerStore store, TransactionOperationContext context, bool isClusterAdmin)
         {
             if (Names.Contains(ServerStore.LicenseStorageKey))
-                throw new RachisApplyException("Attempted to use DeleteMultipleValuesCommand to delete a license, use dedicated command for this.");
+                throw new RachisApplyException($"Attempted to use {nameof(DeleteMultipleValuesCommand)} to delete a license, use dedicated command for this.");
         }
     }
 }

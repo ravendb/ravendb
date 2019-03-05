@@ -1093,12 +1093,10 @@ namespace Raven.Server.ServerWide
         {
             var certsWithSameHash = GetCertificatesByPinningHashSortedByExpiration(context, hash);
 
-            var keysToDelete = certsWithSameHash.Select(x => x.Thumbprint).ToList();
-            if (keysToDelete.Count > Constants.Certificates.MaxNumberOfCertsWithSameHash)
-            {
-                keysToDelete = keysToDelete.GetRange(Constants.Certificates.MaxNumberOfCertsWithSameHash,
-                    keysToDelete.Count - Constants.Certificates.MaxNumberOfCertsWithSameHash);
-            }
+            var keysToDelete = certsWithSameHash.Select(x => x.Thumbprint).Skip(Constants.Certificates.MaxNumberOfCertsWithSameHash).ToList();
+
+            if (keysToDelete.Count == 0)
+                return;
 
             try
             {
