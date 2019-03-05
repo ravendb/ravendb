@@ -1317,6 +1317,7 @@ namespace SlowTests.Server.Documents.PeriodicBackup
 
                         str += list[k];
                     }
+
                     var res = await store.Operations.SendAsync(new PutCompareExchangeValueOperation<User>($"emojis/{str}", user, 0));
                     indexesList.Add(res.Index);
 
@@ -1358,6 +1359,7 @@ namespace SlowTests.Server.Documents.PeriodicBackup
                     {
                         str += list[k];
                     }
+
                     if (k < 10)
                     {
                         var res = await store.Operations.SendAsync(new DeleteCompareExchangeValueOperation<User>($"emojis/{str}", indexesList[i]));
@@ -1371,6 +1373,7 @@ namespace SlowTests.Server.Documents.PeriodicBackup
                     if (k == 0)
                         count++;
                 }
+
                 Assert.True(delCount > 0);
 
                 using (Server.ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
@@ -1382,6 +1385,7 @@ namespace SlowTests.Server.Documents.PeriodicBackup
                     Assert.Equal(delCount, numOfCompareExchangeTombstones);
                     Assert.Equal(allCount, numOfCompareExchanges);
                 }
+
                 config.IncrementalBackupFrequency = "* */300 * * *";
                 config.TaskId = result.TaskId;
                 result = await store.Maintenance.SendAsync(new UpdatePeriodicBackupOperation(config));
@@ -1390,7 +1394,10 @@ namespace SlowTests.Server.Documents.PeriodicBackup
                 config.IncrementalBackupFrequency = "* */300 * * *";
                 config.TaskId = result.TaskId;
                 result = await store.Maintenance.SendAsync(new UpdatePeriodicBackupOperation(config));
-                RunBackup(result.TaskId, documentDatabase, false, store);   // INCREMENTAL 2
+                RunBackup(result.TaskId, documentDatabase, false, store); // INCREMENTAL 2
+
+                // clean tombstones
+                await Server.ServerStore.Observer.CleanUpCompareExchangeTombstones();
 
                 using (Server.ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
                 using (context.OpenReadTransaction())

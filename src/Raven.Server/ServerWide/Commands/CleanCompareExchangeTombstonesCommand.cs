@@ -5,8 +5,8 @@ namespace Raven.Server.ServerWide.Commands
 {
     public class CleanCompareExchangeTombstonesCommand : CommandBase
     {
-        public readonly string DatabaseName;
-        public readonly long MaxRaftIndex;
+        public string DatabaseName;
+        public long MaxRaftIndex;
 
         public CleanCompareExchangeTombstonesCommand()
         {}

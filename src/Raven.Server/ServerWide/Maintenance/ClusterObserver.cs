@@ -7,6 +7,7 @@ using System.Threading;
 using System.Threading.Tasks;
 using Raven.Client;
 using Raven.Client.Documents.Indexes;
+using Raven.Client.Documents.Operations.Backups;
 using Raven.Client.Exceptions;
 using Raven.Client.Http;
 using Raven.Client.ServerWide;
@@ -90,6 +91,7 @@ namespace Raven.Server.ServerWide.Maintenance
         private readonly long _term;
         private readonly long _moveToRehabTime;
         private long _lastIndexCleanupTimeInTicks;
+        private long _lastTombstonesCleanupTimeInTicks;
 
         public (ClusterObserverLogEntry[] List, long Iteration) ReadDecisionsForDatabase()
         {
@@ -180,6 +182,7 @@ namespace Raven.Server.ServerWide.Maintenance
                 {
                     var now = SystemTime.UtcNow;
                     var cleanupIndexes = now.Ticks - _lastIndexCleanupTimeInTicks >= _server.Configuration.Indexing.CleanupInterval.AsTimeSpan.Ticks;
+                    var cleanupTombstones = now.Ticks - _lastTombstonesCleanupTimeInTicks >= _server.Configuration.Cluster.TombstonesCleanupInterval.AsTimeSpan.Ticks;
 
                     var clusterTopology = _server.GetClusterTopology(context);
                     foreach (var database in _engine.StateMachine.GetDatabaseNames(context))
@@ -247,14 +250,19 @@ namespace Raven.Server.ServerWide.Maintenance
                             }
 
                             if (cleanupIndexes)
-                            {
                                 await CleanUpUnusedAutoIndexes(state);
-                            }
+
+                            if (cleanupTombstones)
+                                await CleanUpCompareExchangeTombstones();
+
                         }
                     }
 
                     if (cleanupIndexes)
                         _lastIndexCleanupTimeInTicks = now.Ticks;
+
+                    if (cleanupTombstones)
+                        _lastTombstonesCleanupTimeInTicks = now.Ticks;
                 }
 
                 foreach (var command in updateCommands)
@@ -395,6 +403,62 @@ namespace Raven.Server.ServerWide.Maintenance
                     AddToDecisionLog(databaseState.Name, $"Marking idle auto-index '{kvp.Key}' as normal because last query time value is '{difference}' and threshold is set to '{timeToWaitBeforeMarkingAutoIndexAsIdle.AsTimeSpan}'.");
                 }
             }
+        }
+
+        internal async Task CleanUpCompareExchangeTombstones()
+        {
+            using (_server.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
+            using (context.OpenReadTransaction())
+            {
+                foreach (var dbName in _server.Cluster.GetDatabaseNames(context))
+                {
+                    if (_server.Cluster.GetNumberOfCompareExchangeTombstones(context, dbName) > 0)
+                    {
+                        var maxEtag = GetMaxTombstonesEtagToDelete(context, dbName);
+                        if (maxEtag > 0)
+                        {
+                            var result = await _server.SendToLeaderAsync(new CleanCompareExchangeTombstonesCommand(dbName, maxEtag));
+                            await _server.Cluster.WaitForIndexNotification(result.Index);
+                        }
+                    }
+                }
+            }
+        }
+
+        private long GetMaxTombstonesEtagToDelete(TransactionOperationContext context, string dbName)
+        {
+            var dbRecord = _server.LoadDatabaseRecord(dbName, out _);
+
+            var maxEtag = long.MaxValue;
+
+            if (dbRecord.PeriodicBackups.Count == 0)
+                return 0;
+
+            foreach (var pb in dbRecord.PeriodicBackups)
+            {
+                var singleBackupStatus = _server.Cluster.Read(context, PeriodicBackupStatus.GenerateItemName(dbName, pb.TaskId));
+                if (singleBackupStatus == null)
+                    continue;
+
+                if (singleBackupStatus.TryGet(nameof(PeriodicBackupStatus.LocalBackup), out BlittableJsonReaderObject localBackup) == false
+                    || singleBackupStatus.TryGet(nameof(PeriodicBackupStatus.LastRaftIndex), out BlittableJsonReaderObject lastRaftIndexBlittable) == false)
+                    continue;
+
+                if (localBackup.TryGet(nameof(PeriodicBackupStatus.LastIncrementalBackup), out DateTime? lastIncrementalBackupDate) == false
+                    || lastRaftIndexBlittable.TryGet(nameof(PeriodicBackupStatus.LastEtag), out long? lastRaftIndex) == false)
+                    continue;
+
+                if (lastIncrementalBackupDate == null || lastRaftIndex == null)
+                    continue;
+
+                if (lastRaftIndex < maxEtag)
+                    maxEtag = lastRaftIndex.Value;
+            }
+
+            if (maxEtag == long.MaxValue)
+                return 0;
+
+            return maxEtag;
         }
 
         private long? CleanUpDatabaseValues(DatabaseObservationState state)
