@@ -4,6 +4,7 @@ using Raven.Server.Documents;
 using Raven.Server.ServerWide;
 using Voron;
 using Voron.Impl;
+using Voron.Schema;
 
 namespace Raven.Server.Storage.Schema
 {
@@ -45,7 +46,7 @@ namespace Raven.Server.Storage.Schema
                 _serverStore = serverStore;
             }
 
-            internal bool Upgrade(Transaction readTx, Transaction writeTx, int currentVersion, out int versionAfterUpgrade)
+            internal bool Upgrade(SchemaUpgradeTransactions transactions, int currentVersion, out int versionAfterUpgrade)
             {
                 switch (_storageType)
                 {
@@ -92,12 +93,10 @@ namespace Raven.Server.Storage.Schema
                 }
                 
                 var schemaUpdate = (ISchemaUpdate)Activator.CreateInstance(schemaUpdateType);
-                return schemaUpdate.Update(new UpdateStep
+                return schemaUpdate.Update(new UpdateStep(transactions)
                 {
-                    ReadTx = readTx,
-                    WriteTx = writeTx,
                     ConfigurationStorage = _configurationStorage,
-                    DocumentsStorage = _documentsStorage,
+                    DocumentsStorage = _documentsStorage
                 });
             }
         }

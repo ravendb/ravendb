@@ -376,5 +376,16 @@ namespace Voron.Data.RawData
                 throw new InvalidOperationException("Trying to move data, but no one is listening to the move!");
             onDataMoved(previousid, newid, data, size);
         }
+
+        internal void FreeRawDataSectionPages()
+        {
+            var rawDataSmallPageHeader = PageHeaderFor(PageNumber);
+            var rawDataSectionPageHeader = (RawDataSmallSectionPageHeader*)rawDataSmallPageHeader;
+
+            for (var i = 0; i < rawDataSectionPageHeader->NumberOfPages; i++)
+            {
+                _tx.FreePage(rawDataSmallPageHeader->PageNumber + i);
+            }
+        }
     }
 }

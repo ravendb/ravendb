@@ -1428,6 +1428,22 @@ DeleteThenInsert:
             return deleted;
         }
 
+        public bool DeleteByIndex(TableSchema.FixedSizeSchemaIndexDef index, long value)
+        {
+            AssertWritableTable();
+
+            var fst = GetFixedSizeTree(index);
+
+            using (var it = fst.Iterate())
+            {
+                if (it.Seek(value) == false)
+                    return true;
+
+                Delete(it.CreateReaderForCurrent().ReadLittleEndianInt64());
+                return true;
+            }
+        }
+
         public bool DeleteByPrimaryKeyPrefix(Slice startSlice, Action<TableValueHolder> beforeDelete = null, Func<TableValueHolder, bool> shouldAbort = null)
         {
             AssertWritableTable();

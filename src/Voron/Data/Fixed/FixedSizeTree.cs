@@ -14,6 +14,7 @@ using Sparrow.Server;
 using Voron.Data.BTrees;
 using Voron.Data.Tables;
 using Voron.Debugging;
+using Voron.Exceptions;
 using Voron.Impl;
 using Voron.Impl.Paging;
 using Constants = Voron.Global.Constants;
@@ -146,13 +147,13 @@ namespace Voron.Data.Fixed
 
         private void ThrowInvalidFixedSizeTreeSize(FixedSizeTreeHeader.Embedded* header)
         {
-            throw new InvalidOperationException("The expected value len " + _valSize + " does not match actual value len " +
+            throw new InvalidFixedSizeTree("The expected value len " + _valSize + " does not match actual value len " +
                                                 header->ValueSize + " for " + _treeName);
         }
 
         private static void ThrowInvalidFixedSizeTree(Slice treeName, FixedSizeTreeHeader.Embedded* header)
         {
-            throw new ArgumentOutOfRangeException("Tried to open '" + treeName + "' as FixedSizeTree, but is actually " +
+            throw new InvalidFixedSizeTree("Tried to open '" + treeName + "' as FixedSizeTree, but is actually " +
                                                   header->RootObjectType);
         }
 
@@ -176,7 +177,7 @@ namespace Voron.Data.Fixed
 
         private static void ThrowInvalidFixedTreeValueSize()
         {
-            throw new ArgumentException("The value size must be small than " + (Constants.Storage.PageSize / 8));
+            throw new InvalidFixedSizeTree("The value size must be small than " + (Constants.Storage.PageSize / 8));
         }
 
         public long[] Debug(FixedSizeTreePage p)
@@ -270,7 +271,7 @@ namespace Voron.Data.Fixed
 
         private void ThrowInvalidFixedSizeTreeType()
         {
-            throw new ArgumentOutOfRangeException(Type?.ToString());
+            throw new InvalidFixedSizeTree(Type?.ToString());
         }
 
         private byte* AddLargeEntry(long key, out bool isNew)
