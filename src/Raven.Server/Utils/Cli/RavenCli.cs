@@ -320,9 +320,9 @@ namespace Raven.Server.Utils.Cli
 
             LoggingSource.Instance.DisableConsoleLogging();
             var prevLogMode = LoggingSource.Instance.LogMode;
-            LoggingSource.Instance.SetupLogMode(LogMode.None, cli._server.Configuration.Logs.Path.FullPath);
+            LoggingSource.Instance.SetupLogMode(LogMode.None, cli._server.Configuration.Logs.Path.FullPath, cli._server.Configuration.Logs.LogRetention.AsTimeSpan);
             Program.WriteServerStatsAndWaitForEsc(cli._server);
-            LoggingSource.Instance.SetupLogMode(prevLogMode, cli._server.Configuration.Logs.Path.FullPath);
+            LoggingSource.Instance.SetupLogMode(prevLogMode, cli._server.Configuration.Logs.Path.FullPath, cli._server.Configuration.Logs.LogRetention.AsTimeSpan);
             Console.WriteLine($"LogMode set back to {prevLogMode}.");
             return true;
         }
@@ -376,9 +376,9 @@ namespace Raven.Server.Utils.Cli
 
             LoggingSource.Instance.DisableConsoleLogging();
             var prevLogMode = LoggingSource.Instance.LogMode;
-            LoggingSource.Instance.SetupLogMode(LogMode.None, cli._server.Configuration.Logs.Path.FullPath);
+            LoggingSource.Instance.SetupLogMode(LogMode.None, cli._server.Configuration.Logs.Path.FullPath, cli._server.Configuration.Logs.LogRetention.AsTimeSpan);
             Program.WriteThreadsInfoAndWaitForEsc(cli._server, maxTopThreads, updateIntervalInMs, cpuUsageThreshold);
-            LoggingSource.Instance.SetupLogMode(prevLogMode, cli._server.Configuration.Logs.Path.FullPath);
+            LoggingSource.Instance.SetupLogMode(prevLogMode, cli._server.Configuration.Logs.Path.FullPath, cli._server.Configuration.Logs.LogRetention.AsTimeSpan);
             Console.WriteLine($"LogMode set back to {prevLogMode}.");
             return true;
         }
@@ -488,19 +488,19 @@ namespace Raven.Server.Utils.Cli
                 case "information":
                     if (withConsole)
                         LoggingSource.Instance.EnableConsoleLogging();
-                    LoggingSource.Instance.SetupLogMode(LogMode.Information, cli._server.Configuration.Logs.Path.FullPath);
+                    LoggingSource.Instance.SetupLogMode(LogMode.Information, cli._server.Configuration.Logs.Path.FullPath, cli._server.Configuration.Logs.LogRetention.AsTimeSpan);
                     WriteText("Logging set to ON (information)", ConsoleColor.Green, cli);
                     break;
                 case "off":
                 case "none":
                     LoggingSource.Instance.DisableConsoleLogging();
-                    LoggingSource.Instance.SetupLogMode(LogMode.None, cli._server.Configuration.Logs.Path.FullPath);
+                    LoggingSource.Instance.SetupLogMode(LogMode.None, cli._server.Configuration.Logs.Path.FullPath, cli._server.Configuration.Logs.LogRetention.AsTimeSpan);
                     WriteText("Logging set to OFF (none)", ConsoleColor.DarkGreen, cli);
                     break;
                 case "operations":
                     if (withConsole)
                         LoggingSource.Instance.EnableConsoleLogging();
-                    LoggingSource.Instance.SetupLogMode(LogMode.None, cli._server.Configuration.Logs.Path.FullPath);
+                    LoggingSource.Instance.SetupLogMode(LogMode.None, cli._server.Configuration.Logs.Path.FullPath, cli._server.Configuration.Logs.LogRetention.AsTimeSpan);
                     WriteText("Logging set to ON (operations)", ConsoleColor.DarkGreen, cli);
                     break;
                 case "http-off":
@@ -1265,11 +1265,11 @@ namespace Raven.Server.Utils.Cli
                             return true;
                         case "log":
                             LoggingSource.Instance.EnableConsoleLogging();
-                            LoggingSource.Instance.SetupLogMode(LogMode.Information, _server.Configuration.Logs.Path.FullPath);
+                            LoggingSource.Instance.SetupLogMode(LogMode.Information, _server.Configuration.Logs.Path.FullPath, _server.Configuration.Logs.LogRetention.AsTimeSpan);
                             break;
                         case "logoff":
                             LoggingSource.Instance.DisableConsoleLogging();
-                            LoggingSource.Instance.SetupLogMode(LogMode.None, _server.Configuration.Logs.Path.FullPath);
+                            LoggingSource.Instance.SetupLogMode(LogMode.None, _server.Configuration.Logs.Path.FullPath, _server.Configuration.Logs.LogRetention.AsTimeSpan);
                             break;
                         case "h":
                         case "help":
