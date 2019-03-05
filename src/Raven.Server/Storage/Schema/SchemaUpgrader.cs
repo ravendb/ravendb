@@ -98,7 +98,6 @@ namespace Raven.Server.Storage.Schema
                     WriteTx = writeTx,
                     ConfigurationStorage = _configurationStorage,
                     DocumentsStorage = _documentsStorage,
-                    ServerStore = _serverStore
                 });
             }
         }
