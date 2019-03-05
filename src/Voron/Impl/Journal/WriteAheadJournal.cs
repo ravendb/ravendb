@@ -262,7 +262,7 @@ namespace Voron.Impl.Journal
                         if (sp.Elapsed.TotalSeconds >= 60)
                         {
                             sp.Restart();
-                            addToInitLog?.Invoke($"Still calculating checksum.. ({sortedPages.Length - i} out of {sortedPages.Length}");
+                            addToInitLog?.Invoke($"Still calculating checksum... ({sortedPages.Length - i} out of {sortedPages.Length}");
                         }
 
                         using (tempTx) // release any resources, we just wanted to validate things
@@ -283,8 +283,8 @@ namespace Voron.Impl.Journal
                             minPageChecked = modifiedPage;
                         }
                     }
-
-                    addToInitLog?.Invoke($"Validate completed");
+                    sp.Stop();
+                    addToInitLog?.Invoke($"Validate of {sortedPages.Length} pages completed in {sp.Elapsed}");
                 }
                 else
                 {
@@ -295,7 +295,7 @@ namespace Voron.Impl.Journal
                     else
                     {
                         throw new InvalidDataException( // RavenDB-13017
-                            $"Storage.SkipChecksumValidationOnDatabaseLoading set to true is not allowed on non ARM architecture. This instance running on {RuntimeInformation.OSArchitecture}");
+                            $"{nameof(_env.Options.SkipChecksumValidationOnDatabaseLoading)} set to true is not allowed on non ARM architecture. This instance running on {RuntimeInformation.OSArchitecture}");
                     }
                 }
             }
@@ -331,7 +331,7 @@ namespace Voron.Impl.Journal
 
             _journalIndex = lastFlushedJournal;
 
-            addToInitLog?.Invoke($"Cleanup Newer Invalid Journal Files");
+            addToInitLog?.Invoke($"Cleanup Newer Invalid Journal Files (Last Flushed Journal={lastFlushedJournal})");
             if (_env.Options.CopyOnWriteMode == false)
             {
                 CleanupNewerInvalidJournalFiles(lastFlushedJournal);
@@ -344,7 +344,7 @@ namespace Voron.Impl.Journal
                     // it must have at least one page for the next transaction header and one 4kb for data
                     CurrentFile = lastFile;
             }
-            addToInitLog?.Invoke($"Require Header Update = {requireHeaderUpdate}");
+            addToInitLog?.Invoke($"Info: Current File = '{CurrentFile?.Number}', Position (4KB)='{CurrentFile?.WritePosIn4KbPosition}'. Require Header Update = {requireHeaderUpdate}");
             return requireHeaderUpdate;
         }
 
