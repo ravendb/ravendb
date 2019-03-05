@@ -1727,7 +1727,7 @@ namespace Raven.Server.ServerWide
 
         public const string SnapshotInstalled = "SnapshotInstalled";
 
-        public override async Task OnSnapshotInstalledAsync(long lastIncludedIndex, ServerStore serverStore)
+        public override async Task OnSnapshotInstalledAsync(long lastIncludedIndex, ServerStore serverStore, CancellationToken token)
         {
             using (serverStore.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
             using (context.OpenWriteTransaction())
@@ -1742,6 +1742,7 @@ namespace Raven.Server.ServerWide
                         DeleteLocalState(context, key);
                     }
                 }
+                token.ThrowIfCancellationRequested();
 
                 // there is potentially a lot of work to be done here so we are responding to the change on a separate task.
                 var onDatabaseChanged = DatabaseChanged;
@@ -1767,6 +1768,7 @@ namespace Raven.Server.ServerWide
                 }
                 context.Transaction.Commit();
             }
+            token.ThrowIfCancellationRequested();
 
             // reload license can send a notification which will open a write tx
             serverStore.LicenseManager.ReloadLicense();

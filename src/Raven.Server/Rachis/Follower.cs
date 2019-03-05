@@ -416,16 +416,7 @@ namespace Raven.Server.Rachis
             // reading the snapshot from network and committing it to the disk might take a long time. 
             using (var cts = new CancellationTokenSource())
             {
-                var readAndCommitSnapshotTask = Task.Run(() => ReadAndCommitSnapshot(context, snapshot, cts.Token), cts.Token);
-                try
-                {
-                    WaitForTaskCompletion(readAndCommitSnapshotTask, "ReadAndCommitSnapshot");
-                }
-                catch
-                {
-                    cts.Cancel();
-                    throw;
-                }
+                KeepAliveAndExecuteAction(() => ReadAndCommitSnapshot(context, snapshot, cts.Token), cts, "ReadAndCommitSnapshot");
             }
 
             _debugRecorder.Record("Snapshot was received and committed");
@@ -433,8 +424,10 @@ namespace Raven.Server.Rachis
             // notify the state machine, we do this in an async manner, and start
             // the operator in a separate thread to avoid timeouts while this is
             // going on
-            var task = Task.Run(() => _engine.SnapshotInstalledAsync(snapshot.LastIncludedIndex));
-            WaitForTaskCompletion(task, "SnapshotInstalledAsync");
+            using (var cts = new CancellationTokenSource())
+            {
+                KeepAliveAndExecuteAction(() => _engine.SnapshotInstalledAsync(snapshot.LastIncludedIndex, cts.Token), cts, "SnapshotInstalledAsync");
+            }
 
             _debugRecorder.Record("Done with StateMachine.SnapshotInstalled");
 
@@ -454,22 +447,38 @@ namespace Raven.Server.Rachis
             _engine.Timeout.Defer(_connection.Source);
         }
 
+        private void KeepAliveAndExecuteAction(Action action, CancellationTokenSource cts, string debug)
+        {
+            var task = Task.Run(action, cts.Token);
+            try
+            {
+                WaitForTaskCompletion(task, debug);
+            }
+            catch
+            {
+                cts.Cancel();
+                task.Wait(TimeSpan.FromSeconds(60));
+                throw;
+            }
+        }
+
         private void WaitForTaskCompletion(Task task, string debug)
         {
             var sp = Stopwatch.StartNew();
 
             var timeToWait = (int)(_engine.ElectionTimeout.TotalMilliseconds / 4);
 
-            using (_engine.ContextPool.AllocateOperationContext(out JsonOperationContext context))
-            {
+            
                 while (task.Wait(timeToWait) == false)
                 {
-                    // this may take a while, so we let the other side know that
-                    // we are still processing, and we reset our own timer while
-                    // this is happening
-                    MaybeNotifyLeaderThatWeAreStillAlive(context, sp);
+                    using (_engine.ContextPool.AllocateOperationContext(out JsonOperationContext context))
+                    {
+                        // this may take a while, so we let the other side know that
+                        // we are still processing, and we reset our own timer while
+                        // this is happening
+                        MaybeNotifyLeaderThatWeAreStillAlive(context, sp);
+                    }
                 }
-            }
 
             if (task.IsFaulted)
             {
@@ -492,7 +501,7 @@ namespace Raven.Server.Rachis
                     }
 
                     //This is okay to ignore because we will just get the committed entries again and skip them
-                    ReadInstallSnapshotAndIgnoreContent();
+                    ReadInstallSnapshotAndIgnoreContent(token);
                 }
                 else if (InstallSnapshot(context, token))
                 {
@@ -647,11 +656,13 @@ namespace Raven.Server.Rachis
             }
         }
 
-        private void ReadInstallSnapshotAndIgnoreContent()
+        private void ReadInstallSnapshotAndIgnoreContent(CancellationToken token)
         {
             var reader = _connection.CreateReader();
             while (true)
             {
+                token.ThrowIfCancellationRequested();
+
                 var type = reader.ReadInt32();
                 if (type == -1)
                     return;
@@ -670,6 +681,8 @@ namespace Raven.Server.Rachis
                         entries = reader.ReadInt64();
                         for (long i = 0; i < entries; i++)
                         {
+                            token.ThrowIfCancellationRequested();
+
                             size = reader.ReadInt32();
                             reader.ReadExactly(size);
                             size = reader.ReadInt32();
@@ -684,6 +697,8 @@ namespace Raven.Server.Rachis
                         entries = reader.ReadInt64();
                         for (long i = 0; i < entries; i++)
                         {
+                            token.ThrowIfCancellationRequested();
+
                             size = reader.ReadInt32();
                             reader.ReadExactly(size);
                         }
