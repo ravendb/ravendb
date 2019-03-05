@@ -470,7 +470,9 @@ namespace Raven.Server.Rachis
             using (context.OpenReadTransaction())
             {
                 var earliestIndexEntry = _engine.GetFirstEntryIndex(context);
-                if (_followerMatchIndex >= earliestIndexEntry)
+               
+                if (_followerMatchIndex >= earliestIndexEntry ||
+                    _followerMatchIndex == earliestIndexEntry - 1) // In case the first entry is the next entry to send
                 {
                     // we don't need a snapshot, so just send updated topology
                     UpdateLastSend("Send empty snapshot");
@@ -478,10 +480,12 @@ namespace Raven.Server.Rachis
                     {
                         _engine.Log.Info($"{ToString()}: sending empty snapshot to {_tag}");
                     }
+
+                    var index = Math.Min(earliestIndexEntry, _followerMatchIndex);
                     _connection.Send(context, new InstallSnapshot
                     {
-                        LastIncludedIndex = earliestIndexEntry,
-                        LastIncludedTerm = _engine.GetTermForKnownExisting(context, earliestIndexEntry),
+                        LastIncludedIndex = index,
+                        LastIncludedTerm = _engine.GetTermForKnownExisting(context, index),
                         Topology = _engine.GetTopologyRaw(context)
                     });
                     using (var binaryWriter = new BinaryWriter(stream, Encoding.UTF8, leaveOpen: true))
