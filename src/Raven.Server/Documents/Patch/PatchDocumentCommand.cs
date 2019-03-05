@@ -6,6 +6,7 @@ using Jint.Native;
 using Raven.Client;
 using Raven.Client.Documents.Commands.Batches;
 using Raven.Client.Documents.Operations;
+using Raven.Client.Documents.Operations.Attachments;
 using Raven.Client.Exceptions;
 using Raven.Client.Extensions;
 using Raven.Server.Documents.Handlers;
@@ -185,6 +186,7 @@ namespace Raven.Server.Documents.Patch
                         else if (DocumentCompare.IsEqualTo(originalDoc, modifiedDocument, tryMergeMetadataConflicts: true) != DocumentCompareResult.Equal)
                         {
                             Debug.Assert(originalDocument != null);
+                            AssertNoModificationsToAttachments(originalDoc, modifiedDocument, id);
                             if (_isTest == false || run.PutOrDeleteCalled)
                             {
                                 putResult = _database.DocumentsStorage.Put(context, originalDocument.Id,
@@ -231,6 +233,73 @@ namespace Raven.Server.Documents.Patch
                     return null;
                 }
             }
+        }
+
+        private void AssertNoModificationsToAttachments(BlittableJsonReaderObject originalDoc, BlittableJsonReaderObject modifiedDocument, string id)
+        {
+            originalDoc.TryGet(Constants.Documents.Metadata.Key, out BlittableJsonReaderObject originalMetadata);
+            modifiedDocument.TryGet(Constants.Documents.Metadata.Key, out BlittableJsonReaderObject modifiedMetadata);
+            if (originalMetadata == null && modifiedMetadata == null)
+                return;
+            BlittableJsonReaderArray originalAttachments = null;
+            BlittableJsonReaderArray modifiedAttachments = null;
+            originalMetadata?.TryGet(Constants.Documents.Metadata.Attachments, out originalAttachments);
+            modifiedMetadata?.TryGet(Constants.Documents.Metadata.Attachments, out modifiedAttachments);
+            if(originalAttachments == null && modifiedAttachments == null)
+                return;
+
+            if (originalAttachments == null || modifiedAttachments == null)
+            {
+                ThrowPatchModificationToAttachments(id);
+            }
+
+            if (originalAttachments.Length != modifiedAttachments.Length)
+            {
+                ThrowPatchModificationToAttachments(id);
+            }
+
+            for (int i = 0; i< originalAttachments.Length; i++)
+            {
+                var attachmentsForOriginalDocument = originalAttachments[i] as BlittableJsonReaderObject;
+                var attachmentsForModifiedDocument = modifiedAttachments[i] as BlittableJsonReaderObject;
+
+                if(attachmentsForOriginalDocument == null || attachmentsForModifiedDocument == null)
+                {
+                    ThrowPatchModificationToAttachments(id);
+                }
+
+                if (attachmentsForOriginalDocument.Count != attachmentsForModifiedDocument.Count)
+                {
+                    ThrowPatchModificationToAttachments(id);
+                }
+
+                unsafe
+                {
+                    if(Sparrow.Memory.Compare(attachmentsForOriginalDocument.BasePointer, attachmentsForModifiedDocument.BasePointer, attachmentsForOriginalDocument.Count) != 0)
+                    {
+                        ThrowPatchModificationToAttachments(id);
+                    }
+                }
+
+            }
+        }
+
+        private static Dictionary<string, BlittableJsonReaderObject> GetAttachmentsFromArray(BlittableJsonReaderArray attachmentsArray)
+        {
+            Dictionary<string, BlittableJsonReaderObject> attachments = new Dictionary<string, BlittableJsonReaderObject>();
+            foreach (BlittableJsonReaderObject attachment in attachmentsArray)
+            {
+                if (attachment.TryGet(nameof(AttachmentName.Name), out string name))
+                {
+                    attachments.Add(name, attachment);
+                }
+            }
+            return attachments;
+        }
+
+        private static void ThrowPatchModificationToAttachments(string id)
+        {
+            throw new InvalidOperationException($"Modifiying the {Constants.Documents.Metadata.Attachments} property in document metadata via patch is forbbiden (document id ={id}).");
         }
 
         protected string HandleReply(string id, PatchResult patchResult, DynamicJsonArray reply, HashSet<string> modifiedCollections)
