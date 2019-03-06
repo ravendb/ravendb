@@ -1,4 +1,5 @@
-﻿using System.Threading.Tasks;
+﻿using System;
+using System.Threading.Tasks;
 using Raven.Client.ServerWide.Operations.Logs;
 using Raven.Server.Json;
 using Raven.Server.Routing;
@@ -23,7 +24,7 @@ namespace Raven.Server.Documents.Handlers.Admin
                     [nameof(GetLogsConfigurationResult.Mode)] = ServerStore.Configuration.Logs.Mode,
                     [nameof(GetLogsConfigurationResult.Path)] = ServerStore.Configuration.Logs.Path.FullPath,
                     [nameof(GetLogsConfigurationResult.UseUtcTime)] = ServerStore.Configuration.Logs.UseUtcTime,
-                    [nameof(GetLogsConfigurationResult.LogRetention)] = LoggingSource.Instance.RetentionTime
+                    [nameof(GetLogsConfigurationResult.RetentionTime)] = LoggingSource.Instance.RetentionTime
                 };
 
                 var json = context.ReadObject(djv, "logs/configuration");
@@ -43,7 +44,10 @@ namespace Raven.Server.Documents.Handlers.Admin
 
                 var configuration = JsonDeserializationServer.Parameters.SetLogsConfigurationParameters(json);
 
-                LoggingSource.Instance.SetupLogMode(configuration.Mode, Server.Configuration.Logs.Path.FullPath, configuration.LogRetention);
+                if (configuration.RetentionTime == null)
+                    configuration.RetentionTime = ServerStore.Configuration.Logs.RetentionTime.AsTimeSpan;
+
+                LoggingSource.Instance.SetupLogMode(configuration.Mode, Server.Configuration.Logs.Path.FullPath, configuration.RetentionTime.Value);
             }
 
             NoContentStatus();

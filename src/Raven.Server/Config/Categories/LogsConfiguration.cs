@@ -30,7 +30,6 @@ namespace Raven.Server.Config.Categories
         [DefaultValue(3 * 24)]
         [TimeUnit(TimeUnit.Hours)]
         [ConfigurationEntry("Logs.RetentionTimeInHrs", ConfigurationEntryScope.ServerWideOnly)]
-        [ConfigurationEntry("Logs.RetentionTimeInHours", ConfigurationEntryScope.ServerWideOnly)]
-        public TimeSetting LogRetention { get; set; }
+        public TimeSetting RetentionTime { get; set; }
     }
 }

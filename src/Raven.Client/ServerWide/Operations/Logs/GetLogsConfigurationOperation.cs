@@ -61,6 +61,6 @@ namespace Raven.Client.ServerWide.Operations.Logs
         /// <summary>
         /// Logs retention time
         /// </summary>
-        public TimeSpan LogRetention { get; set; }
+        public TimeSpan RetentionTime { get; set; }
     }
 }
