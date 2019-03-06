@@ -29,7 +29,7 @@ namespace Raven.Server.Documents.ETL
             {
                 var current = _counters.Current;
 
-                var doc = _docsStorage.Get(_context, current.CounterKey);
+                var doc = _docsStorage.Get(_context, current.DocumentId);
 
                 if (doc != null && current.Etag > doc.Etag)
                 {

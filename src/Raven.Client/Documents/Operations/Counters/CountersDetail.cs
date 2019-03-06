@@ -50,7 +50,7 @@ namespace Raven.Client.Documents.Operations.Counters
 
     public class CounterGroupDetail
     {
-        public LazyStringValue CounterKey { get; set; }
+        public LazyStringValue DocumentId { get; set; }
 
         public LazyStringValue ChangeVector { get; set; }
 
@@ -62,7 +62,7 @@ namespace Raven.Client.Documents.Operations.Counters
         {
             return new DynamicJsonValue
             {
-                [nameof(CounterKey)] = CounterKey,
+                [nameof(DocumentId)] = DocumentId,
                 [nameof(ChangeVector)] = ChangeVector,
                 [nameof(Values)] = Values,
                 [nameof(Etag)] = Etag

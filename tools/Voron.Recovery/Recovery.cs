@@ -908,7 +908,7 @@ namespace Voron.Recovery
                 CounterGroupDetail counterGroup = null;
                 try
                 {
-                    counterGroup = CountersStorage.TableValueToCounterGroupDetail(context, tvr);
+                    counterGroup = CountersStorage.TableValueToCounterGroupDetail(context, ref tvr);
                     if (counterGroup == null)
                     {
                         if (_logger.IsOperationsEnabled)
@@ -922,23 +922,23 @@ namespace Voron.Recovery
                 catch (Exception e)
                 {
                     if (_logger.IsOperationsEnabled)
-                        _logger.Operations($"Found invalid counter item at position={GetFilePosition(startOffset, mem)} with document Id={counterGroup?.CounterKey ?? "null"} and counter values={counterGroup?.Values}{Environment.NewLine}{e}");
+                        _logger.Operations($"Found invalid counter item at position={GetFilePosition(startOffset, mem)} with document Id={counterGroup?.DocumentId ?? "null"} and counter values={counterGroup?.Values}{Environment.NewLine}{e}");
                     return false;
                 }
 
                 context.Write(countersWriter, new DynamicJsonValue
                 {
-                    [nameof(CounterItem.DocId)] = counterGroup.CounterKey.ToString(),
+                    [nameof(CounterItem.DocId)] = counterGroup.DocumentId.ToString(),
                     [nameof(CounterItem.ChangeVector)] = counterGroup.ChangeVector.ToString(),
                     [nameof(CounterItem.Batch.Values)] = counterGroup.Values
                 });
 
                 _counterWritten = true;
                 if (_logger.IsInfoEnabled)
-                    _logger.Info($"Found counter item with document Id={counterGroup.CounterKey} and counter values={counterGroup.Values}");
+                    _logger.Info($"Found counter item with document Id={counterGroup.DocumentId} and counter values={counterGroup.Values}");
 
-                _lastRecoveredDocumentKey = counterGroup.CounterKey;
-                _uniqueCountersDiscovered.Add((null, counterGroup.CounterKey));
+                _lastRecoveredDocumentKey = counterGroup.DocumentId;
+                _uniqueCountersDiscovered.Add((null, counterGroup.DocumentId));
                 _numberOfCountersRetrieved++;
 
                 return true;
