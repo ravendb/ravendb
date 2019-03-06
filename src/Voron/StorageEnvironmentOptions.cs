@@ -216,10 +216,10 @@ namespace Voron
 
             _log = LoggingSource.Instance.GetLogger<StorageEnvironmentOptions>(tempPath.FullPath);
 
-            _catastrophicFailureNotification = catastrophicFailureNotification ?? new CatastrophicFailureNotification((id, path, e) =>
+            _catastrophicFailureNotification = catastrophicFailureNotification ?? new CatastrophicFailureNotification((id, path, e, stacktrace) =>
             {
                 if (_log.IsOperationsEnabled)
-                    _log.Operations($"Catastrophic failure in {this}", e);
+                    _log.Operations($"Catastrophic failure in {this}, StackTrace:'{stacktrace}'", e);
             });
 
             var shouldForceEnvVar = Environment.GetEnvironmentVariable("VORON_INTERNAL_ForceUsing32BitsPager");
@@ -238,7 +238,7 @@ namespace Voron
         public void SetCatastrophicFailure(ExceptionDispatchInfo exception)
         {
             _catastrophicFailure = exception;
-            _catastrophicFailureNotification.RaiseNotificationOnce(_environmentId, ToString(), exception.SourceException);
+            _catastrophicFailureNotification.RaiseNotificationOnce(_environmentId, ToString(), exception.SourceException, Environment.StackTrace);
         }
 
         public bool IsCatastrophicFailureSet => _catastrophicFailure != null;
