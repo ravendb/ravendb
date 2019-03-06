@@ -80,8 +80,8 @@ namespace Raven.Client.Documents.Session
                 throw new ArgumentNullException(nameof(ids));
 
             var loadOperation = new LoadOperation(this);
-            loadOperation.ByIds(ids);
             loadOperation.WithIncludes(includes);
+            loadOperation.ByIds(ids);
 
             if (includeAllCounters)
             {
