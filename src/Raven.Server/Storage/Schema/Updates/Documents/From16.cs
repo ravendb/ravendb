@@ -6,6 +6,7 @@ using Raven.Client.Documents.Operations.Counters;
 using Raven.Server.Documents;
 using Raven.Server.ServerWide.Context;
 using Raven.Server.Utils;
+using Sparrow;
 using Sparrow.Binary;
 using Sparrow.Json;
 using Sparrow.Json.Parsing;
@@ -281,28 +282,99 @@ namespace Raven.Server.Storage.Schema.Updates.Documents
 
             var collectionName = new CollectionName(collection);
 
-            var table = step.DocumentsStorage.CountersStorage.GetCountersTable(step.WriteTx, collectionName);
-
+            using (DocumentIdWorker.GetSliceFromId(context, docId, out Slice documentKeyPrefix, separator: SpecialChars.RecordSeparator))
             using (var data = WriteNewCountersDocument(context, dbIds.ToList(), batch))
             {
                 var etag = step.DocumentsStorage.GenerateNextEtag();
                 var changeVector = ChangeVectorUtils.NewChangeVector(
                     step.DocumentsStorage.DocumentDatabase.ServerStore.NodeTag, etag, _dbId);
 
-                using (table.Allocate(out TableValueBuilder tvb))
+                var table = step.DocumentsStorage.CountersStorage.GetCountersTable(step.WriteTx, collectionName);
+
+                if (data.Size <= CountersStorage.MaxCounterDocumentSize)
                 {
-                    using (Slice.From(context.Allocator, changeVector, out var cv))
-                    using (DocumentIdWorker.GetStringPreserveCase(context, collectionName.Name, out Slice collectionSlice))
-                    using (DocumentIdWorker.GetLowerIdSliceAndStorageKey(context, docId, out Slice counterKey, out _))
+                    using (table.Allocate(out TableValueBuilder tvb))
                     {
-                        tvb.Add(counterKey);
-                        tvb.Add(Bits.SwapBytes(etag));
+                        using (Slice.From(context.Allocator, changeVector, out var cv))
+                        using (DocumentIdWorker.GetStringPreserveCase(context, collectionName.Name, out Slice collectionSlice))
+                        {
+                            tvb.Add(documentKeyPrefix);
+                            tvb.Add(Bits.SwapBytes(etag));
+                            tvb.Add(cv);
+                            tvb.Add(data.BasePointer, data.Size);
+                            tvb.Add(collectionSlice);
+                            tvb.Add(context.TransactionMarkerOffset);
+
+                            table.Set(tvb);
+                        }
+                    }
+                }
+                else
+                {
+                    SplitDocumet(context, dbIds, data, documentKeyPrefix, changeVector, collectionName, table, documentKeyPrefix);
+                }
+            }
+        }
+
+        private static void SplitDocumet(DocumentsOperationContext context, HashSet<string> dbIds, BlittableJsonReaderObject data, Slice documentKeyPrefix, string changeVector,
+            CollectionName collectionName, Table table, Slice countersGroupKey)
+        {
+            data.TryGet(CountersStorage.Values, out BlittableJsonReaderObject counters);
+            data.TryGet(CountersStorage.DbIds, out BlittableJsonReaderArray dbIdsArray);
+
+            var (fst, snd) = CountersStorage.SplitCounterDocument(context, counters, dbIdsArray);
+
+            fst.TryGet(CountersStorage.Values, out BlittableJsonReaderObject fstValues);
+            snd.TryGet(CountersStorage.Values, out BlittableJsonReaderObject sndValues);
+            BlittableJsonReaderObject.PropertyDetails firstPropertySnd = default, lastPropertyFirst = default;
+            sndValues.GetPropertyByIndex(0, ref firstPropertySnd);
+            fstValues.GetPropertyByIndex(fstValues.Count - 1, ref lastPropertyFirst);
+
+            var firstChange = 0;
+            for (; firstChange < lastPropertyFirst.Name.Length; firstChange++)
+            {
+                if (firstPropertySnd.Name[firstChange] != lastPropertyFirst.Name[firstChange])
+                    break;
+            }
+
+            using (context.Allocator.Allocate(documentKeyPrefix.Size + firstChange + 1, out ByteString newCounterKey))
+            {
+                documentKeyPrefix.CopyTo(newCounterKey.Ptr);
+                Memory.Copy(newCounterKey.Ptr + documentKeyPrefix.Size, firstPropertySnd.Name.Buffer, firstChange + 1);
+                
+                if (fst.Size > CountersStorage.MaxCounterDocumentSize)
+                {
+                    using (Slice.External(context.Allocator, newCounterKey, newCounterKey.Length, out var newCounterKeySlice))
+                    {
+                        SplitDocumet(context, dbIds, fst, documentKeyPrefix, changeVector, collectionName, table, countersGroupKey);
+                        SplitDocumet(context, dbIds, snd, documentKeyPrefix, changeVector, collectionName, table, newCounterKeySlice);
+                        return;
+                    }
+                }
+
+                using (Slice.From(context.Allocator, changeVector, out var cv))
+                using (DocumentIdWorker.GetStringPreserveCase(context, collectionName.Name, out Slice collectionSlice))
+                {
+                    using (table.Allocate(out TableValueBuilder tvb))
+                    {
+                        tvb.Add(countersGroupKey);
+                        tvb.Add(Bits.SwapBytes(context.DocumentDatabase.DocumentsStorage.GenerateNextEtag()));
                         tvb.Add(cv);
-                        tvb.Add(data.BasePointer, data.Size);
+                        tvb.Add(fst.BasePointer, fst.Size);
                         tvb.Add(collectionSlice);
                         tvb.Add(context.TransactionMarkerOffset);
+                        table.Insert(tvb);
+                    }
 
-                        table.Set(tvb);
+                    using (table.Allocate(out TableValueBuilder tvb))
+                    {
+                        tvb.Add(newCounterKey);
+                        tvb.Add(Bits.SwapBytes(context.DocumentDatabase.DocumentsStorage.GenerateNextEtag()));
+                        tvb.Add(cv);
+                        tvb.Add(snd.BasePointer, snd.Size);
+                        tvb.Add(collectionSlice);
+                        tvb.Add(context.TransactionMarkerOffset);
+                        table.Insert(tvb);
                     }
                 }
             }
