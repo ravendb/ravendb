@@ -6,7 +6,6 @@ using Jint.Native;
 using Raven.Client;
 using Raven.Client.Documents.Commands.Batches;
 using Raven.Client.Documents.Operations;
-using Raven.Client.Documents.Operations.Attachments;
 using Raven.Client.Exceptions;
 using Raven.Client.Extensions;
 using Raven.Server.Documents.Handlers;
@@ -282,19 +281,6 @@ namespace Raven.Server.Documents.Patch
                 }
 
             }
-        }
-
-        private static Dictionary<string, BlittableJsonReaderObject> GetAttachmentsFromArray(BlittableJsonReaderArray attachmentsArray)
-        {
-            Dictionary<string, BlittableJsonReaderObject> attachments = new Dictionary<string, BlittableJsonReaderObject>();
-            foreach (BlittableJsonReaderObject attachment in attachmentsArray)
-            {
-                if (attachment.TryGet(nameof(AttachmentName.Name), out string name))
-                {
-                    attachments.Add(name, attachment);
-                }
-            }
-            return attachments;
         }
 
         private static void ThrowPatchModificationToAttachments(string id)
