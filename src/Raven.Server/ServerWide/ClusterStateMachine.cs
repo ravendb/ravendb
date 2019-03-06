@@ -229,7 +229,8 @@ namespace Raven.Server.ServerWide
                     case nameof(RemoveSqlConnectionStringCommand):
                     case nameof(UpdatePullReplicationAsHubCommand):
                     case nameof(UpdatePullReplicationAsSinkCommand):
-                        UpdateDatabase(context, type, cmd, index, leader, serverStore);
+                    case nameof(EditDatabaseClientConfigurationCommand):
+                    UpdateDatabase(context, type, cmd, index, leader, serverStore);
                         break;
                     case nameof(UpdatePeriodicBackupStatusCommand):
                     case nameof(UpdateExternalReplicationStateCommand):
@@ -1093,6 +1094,7 @@ namespace Raven.Server.ServerWide
                 case nameof(SetIndexStateCommand):
                 case nameof(EditRevisionsConfigurationCommand):
                 case nameof(EditExpirationCommand):
+                case nameof(EditDatabaseClientConfigurationCommand):
                     databaseRecord.EtagForBackup = index;
                     break;
             }
