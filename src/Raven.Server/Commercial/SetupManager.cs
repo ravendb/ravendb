@@ -528,7 +528,7 @@ namespace Raven.Server.Commercial
             using (serverStore.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
             using (context.OpenReadTransaction())
             {
-                existingCertificateKeys = serverStore.Cluster.GetCertificateKeysFromCluster(context).ToList();
+                existingCertificateKeys = serverStore.Cluster.GetCertificateThumbprintsFromCluster(context).ToList();
             }
 
             if (existingCertificateKeys.Count == 0)

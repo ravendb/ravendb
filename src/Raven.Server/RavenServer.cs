@@ -906,7 +906,7 @@ namespace Raven.Server
             }
         }
 
-        internal AuthenticateConnection AuthenticateConnectionCertificate(X509Certificate2 certificate, string remoteAddress)
+        internal AuthenticateConnection AuthenticateConnectionCertificate(X509Certificate2 certificate, object connectionInfo)
         {
             var authenticationStatus = new AuthenticateConnection
             {
@@ -938,46 +938,39 @@ namespace Raven.Server
                 using (ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext ctx))
                 using (ctx.OpenReadTransaction())
                 {
-                    try
+                    var cert = ServerStore.Cluster.GetCertificateByThumbprint(ctx, certificate.Thumbprint) ??
+                               ServerStore.Cluster.GetLocalStateByThumbprint(ctx, certificate.Thumbprint);
+
+                    if (cert == null)
                     {
-                        var cert = ServerStore.Cluster.GetCertificateByThumbprint(ctx, certificate.Thumbprint) ??
-                                   ServerStore.Cluster.GetLocalStateByThumbprint(ctx, certificate.Thumbprint);
-
-                        if (cert == null)
-                        {
-                            // If connection will be approved, cert won't be null anymore and will be assigned the relevant permissions
-                            MaybeAllowConnectionBasedOnPinningHash(certificate, ctx, ref authenticationStatus, ref cert, remoteAddress);
-                        }
-
-                        if (cert != null)
-                        {
-                            var definition = JsonDeserializationServer.CertificateDefinition(cert);
-                            authenticationStatus.Definition = definition;
-                            if (definition.SecurityClearance == SecurityClearance.ClusterAdmin)
-                            {
-                                authenticationStatus.Status = AuthenticationStatus.ClusterAdmin;
-                            }
-                            else if (definition.SecurityClearance == SecurityClearance.ClusterNode)
-                            {
-                                authenticationStatus.Status = AuthenticationStatus.ClusterAdmin;
-                            }
-                            else if (definition.SecurityClearance == SecurityClearance.Operator)
-                            {
-                                authenticationStatus.Status = AuthenticationStatus.Operator;
-                            }
-                            else
-                            {
-                                authenticationStatus.Status = AuthenticationStatus.Allowed;
-                                foreach (var kvp in definition.Permissions)
-                                {
-                                    authenticationStatus.AuthorizedDatabases.Add(kvp.Key, kvp.Value);
-                                }
-                            }
-                        }
+                        // If connection will be approved, cert won't be null anymore and will be assigned the relevant permissions
+                        MaybeAllowConnectionBasedOnPinningHash(certificate, ctx, ref authenticationStatus, ref cert, connectionInfo);
                     }
-                    finally
+
+                    if (cert != null)
                     {
-                        ctx.CloseTransaction();
+                        var definition = JsonDeserializationServer.CertificateDefinition(cert);
+                        authenticationStatus.Definition = definition;
+                        if (definition.SecurityClearance == SecurityClearance.ClusterAdmin)
+                        {
+                            authenticationStatus.Status = AuthenticationStatus.ClusterAdmin;
+                        }
+                        else if (definition.SecurityClearance == SecurityClearance.ClusterNode)
+                        {
+                            authenticationStatus.Status = AuthenticationStatus.ClusterAdmin;
+                        }
+                        else if (definition.SecurityClearance == SecurityClearance.Operator)
+                        {
+                            authenticationStatus.Status = AuthenticationStatus.Operator;
+                        }
+                        else
+                        {
+                            authenticationStatus.Status = AuthenticationStatus.Allowed;
+                            foreach (var kvp in definition.Permissions)
+                            {
+                                authenticationStatus.AuthorizedDatabases.Add(kvp.Key, kvp.Value);
+                            }
+                        }
                     }
                 }
             }
@@ -986,66 +979,88 @@ namespace Raven.Server
         }
 
         private void MaybeAllowConnectionBasedOnPinningHash(X509Certificate2 certificate, TransactionOperationContext ctx,
-            ref AuthenticateConnection authenticationStatus, ref BlittableJsonReaderObject cert, string remoteAddress)
+            ref AuthenticateConnection authenticationStatus, ref BlittableJsonReaderObject cert, object connectionInfo)
         {
             // The certificate is not explicitly registered in our server, let's see if we have a certificate
             // with the same public key pinning hash.
             var pinningHash = certificate.GetPublicKeyPinningHash();
-            var certsWithSameHash = ServerStore.Cluster.GetCertificatesByPinningHashSortedByExpiration(ctx, pinningHash);
+            var certWithSameHash = ServerStore.Cluster.GetCertificatesByPinningHash(ctx, pinningHash).FirstOrDefault();
 
-            if (certsWithSameHash.Count > 0)
-            {
-                // Hash is good, let's validate it was signed by a known issuer, otherwise users can use the private key to register a new cert with a different issuer.
-                var goodKnownCert = new X509Certificate2(Convert.FromBase64String(certsWithSameHash[0].Certificate));
-                if (CertHasKnownIssuer(certificate, goodKnownCert, out var issuerHash) == false)
-                {
-                    if (_authAuditLog.IsInfoEnabled)
-                        _authAuditLog.Info($"Connection from {remoteAddress} with certificate '{certificate.Subject} ({certificate.Thumbprint})'. " +
-                                          "The client certificate is not registered in the cluster explicitly but is trusted implicitly by its Public Key Pinning Hash. " +
-                                          "The client certificate was signed by an unknown issuer - closing the connection. " +
-                                          $"To fix this, the admin can register the pinning hash of the *issuer* certificate: '{issuerHash}' in the 'Security.WellKnownIssuerHashes.Admin' configuration entry.");
-
-                    authenticationStatus.Status = AuthenticationStatus.UnfamiliarIssuer;
-                    authenticationStatus.IssuerHash = issuerHash;
-                    return;
-                }
-
-                // Success, we'll add the new certificate with same permissions as the original
-                var existingCert = certsWithSameHash[0];
-                var newCertBytes = certificate.Export(X509ContentType.Cert);
-
-                var newCertDef = new CertificateDefinition()
-                {
-                    Name = existingCert.Name,
-                    Certificate = Convert.ToBase64String(newCertBytes),
-                    Permissions = existingCert.Permissions,
-                    SecurityClearance = existingCert.SecurityClearance,
-                    Password = existingCert.Password,
-                    Thumbprint = certificate.Thumbprint,
-                    PublicKeyPinningHash = pinningHash,
-                    NotAfter = certificate.NotAfter
-                };
-
-                cert = ServerStore.Cluster.GetCertificateByThumbprint(ctx, certificate.Thumbprint) ??
-                           ServerStore.Cluster.GetLocalStateByThumbprint(ctx, certificate.Thumbprint);
-                if (cert != null)
-                    return;
-
-                // This command will discard leftover certificates after the new certificate is saved.
-                ServerStore.SendToLeaderAsync(new PutCertificateWithSamePinningHashCommand(certificate.Thumbprint, newCertDef));
-                
-                if (_authAuditLog.IsInfoEnabled)
-                    _authAuditLog.Info($"Connection from {remoteAddress} with new certificate '{certificate.Subject} ({certificate.Thumbprint})' which is not registered in the cluster. " +
-                                       "Allowing the connection based on the certificate's Public Key Pinning Hash which is trusted by the cluster. " +
-                                       $"Registering the new certificate explicitly. Security Clearance: {newCertDef.SecurityClearance}, " +
-                                       $"Permissions:{Environment.NewLine}{string.Join(Environment.NewLine, newCertDef.Permissions.Select(kvp => kvp.Key + ": " + kvp.Value.ToString()))}");
-
-                cert = ctx.ReadObject(newCertDef.ToJson(), "Client/Certificate/Definition");
-            }
-            else
+            if (certWithSameHash == null)
             {
                 authenticationStatus.Status = AuthenticationStatus.UnfamiliarCertificate;
+                return;
             }
+
+            string remoteAddress = null;
+            switch (connectionInfo)
+            {
+                case TcpClient tcp:
+                    remoteAddress = tcp.Client.RemoteEndPoint.ToString();
+                    break;
+                case HttpConnectionFeature http:
+                    remoteAddress = $"{http.RemoteIpAddress}:{http.RemotePort}";
+                    break;
+            }
+
+            // Hash is good, let's validate it was signed by a known issuer, otherwise users can use the private key to register a new cert with a different issuer.
+            var goodKnownCert = new X509Certificate2(Convert.FromBase64String(certWithSameHash.Certificate));
+            if (CertHasKnownIssuer(certificate, goodKnownCert, out var issuerHash) == false)
+            {
+                if (_authAuditLog.IsInfoEnabled)
+                    _authAuditLog.Info($"Connection from {remoteAddress} with certificate '{certificate.Subject} ({certificate.Thumbprint})'. " +
+                                       "The client certificate is not registered in the cluster explicitly but is trusted implicitly by its Public Key Pinning Hash. " +
+                                       "The client certificate was signed by an unknown issuer - closing the connection. " +
+                                       $"To fix this, the admin can register the pinning hash of the *issuer* certificate: '{issuerHash}' in the 'Security.WellKnownIssuerHashes.Admin' configuration entry.");
+
+                authenticationStatus.Status = AuthenticationStatus.UnfamiliarIssuer;
+                authenticationStatus.IssuerHash = issuerHash;
+                return;
+            }
+
+            // Success, we'll add the new certificate with same permissions as the original
+            var newCertBytes = certificate.Export(X509ContentType.Cert);
+
+            var newCertDef = new CertificateDefinition()
+            {
+                Name = certWithSameHash.Name,
+                Certificate = Convert.ToBase64String(newCertBytes),
+                Permissions = certWithSameHash.Permissions,
+                SecurityClearance = certWithSameHash.SecurityClearance,
+                Password = certWithSameHash.Password,
+                Thumbprint = certificate.Thumbprint,
+                PublicKeyPinningHash = pinningHash,
+                NotAfter = certificate.NotAfter
+            };
+
+            cert = ServerStore.Cluster.GetCertificateByThumbprint(ctx, certificate.Thumbprint) ??
+                   ServerStore.Cluster.GetLocalStateByThumbprint(ctx, certificate.Thumbprint);
+            if (cert != null)
+                return;
+
+            // This command will discard leftover certificates after the new certificate is saved.
+            GC.KeepAlive(Task.Run(async () =>
+            {
+                try
+                {
+                    await ServerStore.SendToLeaderAsync(new PutCertificateWithSamePinningHashCommand(certificate.Thumbprint, newCertDef))
+                        .ConfigureAwait(false);
+                }
+                catch (Exception e)
+                {
+                    if (Logger.IsInfoEnabled)
+                        Logger.Info($"Failed to run command '{nameof(PutCertificateWithSamePinningHashCommand)}'.", e);
+                }
+            }));
+
+            if (_authAuditLog.IsInfoEnabled)
+                _authAuditLog.Info(
+                    $"Connection from {remoteAddress} with new certificate '{certificate.Subject} ({certificate.Thumbprint})' which is not registered in the cluster. " +
+                    "Allowing the connection based on the certificate's Public Key Pinning Hash which is trusted by the cluster. " +
+                    $"Registering the new certificate explicitly based on permissions of existing certificate '{certWithSameHash.Thumbprint}'. Security Clearance: {newCertDef.SecurityClearance}, " +
+                    $"Permissions:{Environment.NewLine}{string.Join(Environment.NewLine, newCertDef.Permissions.Select(kvp => kvp.Key + ": " + kvp.Value.ToString()))}");
+
+            cert = ctx.ReadObject(newCertDef.ToJson(), "Client/Certificate/Definition");
         }
 
         private bool CertHasKnownIssuer(X509Certificate2 userCertificate, X509Certificate2 knownCertificate, out string issuerPinningHash)
@@ -1062,8 +1077,8 @@ namespace Raven.Server
             }
             catch (Exception e)
             {
-                if (Logger.IsOperationsEnabled)
-                    Logger.Operations($"Cannot validate new client certificate '{userCertificate.FriendlyName} {userCertificate.Thumbprint}', failed to build the chain.", e);
+                if (Logger.IsInfoEnabled)
+                    Logger.Info($"Cannot validate new client certificate '{userCertificate.FriendlyName} {userCertificate.Thumbprint}', failed to build the chain.", e);
                 return false;
             }
 
@@ -1076,8 +1091,8 @@ namespace Raven.Server
             }
             catch (Exception e)
             {
-                if (Logger.IsOperationsEnabled)
-                    Logger.Operations($"Cannot extract pinning hash from the client certificate's issuer '{issuerCertificate?.FriendlyName} {issuerCertificate?.Thumbprint}'.", e);
+                if (Logger.IsInfoEnabled)
+                    Logger.Info($"Cannot extract pinning hash from the client certificate's issuer '{issuerCertificate?.FriendlyName} {issuerCertificate?.Thumbprint}'.", e);
                 return false;
             }
 
@@ -1091,8 +1106,8 @@ namespace Raven.Server
             }
             catch (Exception e)
             {
-                if (Logger.IsOperationsEnabled)
-                    Logger.Operations($"Cannot validate new client certificate '{userCertificate.FriendlyName} {userCertificate.Thumbprint}'. Found a known certificate '{knownCertificate.Thumbprint}' with the same hash but failed to build its chain.", e);
+                if (Logger.IsInfoEnabled)
+                    Logger.Info($"Cannot validate new client certificate '{userCertificate.FriendlyName} {userCertificate.Thumbprint}'. Found a known certificate '{knownCertificate.Thumbprint}' with the same hash but failed to build its chain.", e);
                 return false;
             }
 
@@ -1457,7 +1472,7 @@ namespace Raven.Server
                         supported);
                 }
 
-                bool authSuccessful = TryAuthorize(Configuration, tcp.Stream, header, tcpClient.Client.RemoteEndPoint.ToString(), out var err);
+                bool authSuccessful = TryAuthorize(Configuration, tcp.Stream, header, tcpClient, out var err);
                 //At this stage the error is not relevant.
                 RespondToTcpConnection(stream, context, null,
                     authSuccessful ? TcpConnectionStatus.Ok : TcpConnectionStatus.AuthorizationFailed,
@@ -1689,7 +1704,7 @@ namespace Raven.Server
         }
 
 
-        private bool TryAuthorize(RavenConfiguration configuration, Stream stream, TcpConnectionHeaderMessage header, string remoteAddress, out string msg)
+        private bool TryAuthorize(RavenConfiguration configuration, Stream stream, TcpConnectionHeaderMessage header, TcpClient tcpClient, out string msg)
         {
             msg = null;
 
@@ -1703,15 +1718,15 @@ namespace Raven.Server
             }
 
             var certificate = (X509Certificate2)sslStream.RemoteCertificate;
-            var auth = AuthenticateConnectionCertificate(certificate, remoteAddress);
+            var auth = AuthenticateConnectionCertificate(certificate, tcpClient);
 
             switch (auth.Status)
             {
                 case AuthenticationStatus.Expired:
-                    msg = "The provided client certificate " + certificate?.FriendlyName + " is expired on " + certificate?.NotAfter;
+                    msg = $"The provided client certificate ({certificate?.FriendlyName} '{certificate?.Thumbprint}') is expired on {certificate?.NotAfter}";
                     return false;
                 case AuthenticationStatus.NotYetValid:
-                    msg = "The provided client certificate " + certificate?.FriendlyName + " is not yet valid because it starts on " + certificate?.NotBefore;
+                    msg = $"The provided client certificate ({certificate?.FriendlyName} '{certificate?.Thumbprint}') is not yet valid because it starts on {certificate?.NotBefore}";
                     return false;
                 case AuthenticationStatus.ClusterAdmin:
                 case AuthenticationStatus.Operator:
@@ -1722,7 +1737,7 @@ namespace Raven.Server
                     {
                         case TcpConnectionHeaderMessage.OperationTypes.Cluster:
                         case TcpConnectionHeaderMessage.OperationTypes.Heartbeats:
-                            msg = header.Operation + " is a server wide operation and the certificate " + certificate?.FriendlyName + "is not ClusterAdmin/Operator";
+                            msg = $"{header.Operation} is a server wide operation and the certificate ({certificate?.FriendlyName} '{certificate?.Thumbprint}') is not ClusterAdmin/Operator";
                             return false;
                         case TcpConnectionHeaderMessage.OperationTypes.Subscription:
                         case TcpConnectionHeaderMessage.OperationTypes.Replication:
@@ -1734,14 +1749,14 @@ namespace Raven.Server
                             }
                             if (auth.CanAccess(header.DatabaseName, requireAdmin: false))
                                 return true;
-                            msg = "The certificate " + certificate?.FriendlyName + " does not allow access to " + header.DatabaseName;
+                            msg = $"The certificate {certificate?.FriendlyName} does not allow access to {header.DatabaseName}";
                             return false;
                         default:
                             throw new InvalidOperationException("Unknown operation " + header.Operation);
                     }
                 case AuthenticationStatus.UnfamiliarIssuer:
-                    msg = $"The client certificate {certificate?.FriendlyName} is not registered in the cluster explicitly but is trusted implicitly by its Public Key Pinning Hash. " +
-                          $"The client certificate was signed by an unknown issuer - closing the connection. To fix this, the admin can register the pinning hash of the *issuer* certificate: '{auth.IssuerHash}' in the 'Security.WellKnownIssuerHashes.Admin' configuration entry.";
+                    msg = $"The client certificate {certificate?.FriendlyName} is not registered in the cluster explicitly but it can be trusted implicitly by its Public Key Pinning Hash. " +
+                          $"The client certificate was signed by an unknown issuer - closing the connection. To fix this, the admin can register the pinning hash of the *issuer* certificate: '{auth.IssuerHash}' in the '{RavenConfiguration.GetKey(x => x.Security.WellKnownIssuerHashes)}' configuration entry. Alternatively, the admin can register the actual certificate ({certificate?.FriendlyName} '{certificate?.Thumbprint}') explicitly in the cluster.";
                     return false;
                 case AuthenticationStatus.UnfamiliarCertificate:
                     var info = header.AuthorizeInfo;

@@ -88,8 +88,8 @@ namespace Raven.Server.ServerWide
 
         public enum CertificatesTable
         {
-            Key = 0,
-            Hash = 1,
+            Thumbprint = 0,
+            PublicKeyHash = 1,
             Data = 2
         }
 
@@ -130,18 +130,18 @@ namespace Raven.Server.ServerWide
             });
 
             // We use the follow format for the certificates data
-            // { key, hash, data }
+            // { thumbprint, public key hash, data }
             CertificatesSchema = new TableSchema();
             CertificatesSchema.DefineKey(new TableSchema.SchemaIndexDef()
             {
-                StartIndex = (int)CertificatesTable.Key,
+                StartIndex = (int)CertificatesTable.Thumbprint,
                 Count = 1,
                 IsGlobal = false,
                 Name = CertificatesSlice
             });
             CertificatesSchema.DefineIndex(new TableSchema.SchemaIndexDef
             {
-                StartIndex = (int)CertificatesTable.Hash,
+                StartIndex = (int)CertificatesTable.PublicKeyHash,
                 Count = 1,
                 IsGlobal = false,
                 Name = CertificatesHashSlice
@@ -214,7 +214,7 @@ namespace Raven.Server.ServerWide
                         DeleteValue(context, type, cmd, index, leader);
                         break;
                     case nameof(DeleteCertificateCollectionFromClusterCommand):
-                        DeleteMultipleCertificates(context, type, cmd, index, leader);
+                        DeleteMultipleCertificates(context, type, cmd, index);
                         break;
                     case nameof(DeleteMultipleValuesCommand):
                         DeleteMultipleValues(context, type, cmd, index, leader);
@@ -318,9 +318,9 @@ namespace Raven.Server.ServerWide
                         break;
                     case nameof(PutCertificateWithSamePinningHashCommand):
                         PutCertificate(context, type, cmd, index, serverStore);
-                        if (cmd.TryGet(nameof(PutCertificateCommand.Name), out string certKey))
-                            DeleteLocalState(context, certKey);
-                        if (cmd.TryGet(nameof(PutCertificateCommand.PublicKeyPinningHash), out string hash))
+                        if (cmd.TryGet(nameof(PutCertificateWithSamePinningHashCommand.Name), out string thumbprint))
+                            DeleteLocalState(context, thumbprint);
+                        if (cmd.TryGet(nameof(PutCertificateWithSamePinningHashCommand.PublicKeyPinningHash), out string hash))
                             DiscardLeftoverCertsWithSamePinningHash(context, hash, type, index);
                         break;
                     case nameof(PutCertificateCommand):
@@ -925,13 +925,9 @@ namespace Raven.Server.ServerWide
         {
             try
             {
-                var certs = context.Transaction.InnerTransaction.OpenTable(CertificatesSchema, CertificatesSlice);
                 var command = (DeleteCertificateFromClusterCommand)CommandBase.CreateFrom(cmd);
 
-                using (Slice.From(context.Allocator, command.Name, out Slice keySlice))
-                {
-                    certs.DeleteByKey(keySlice);
-                }
+                DeleteCertificate(context, command.Name.ToLowerInvariant());
             }
             finally
             {
@@ -939,19 +935,15 @@ namespace Raven.Server.ServerWide
             }
         }
 
-        private void DeleteMultipleCertificates(TransactionOperationContext context, string type, BlittableJsonReaderObject cmd, long index, Leader leader)
+        private void DeleteMultipleCertificates(TransactionOperationContext context, string type, BlittableJsonReaderObject cmd, long index)
         {
             try
             {
-                var certs = context.Transaction.InnerTransaction.OpenTable(CertificatesSchema, CertificatesSlice);
                 var command = (DeleteCertificateCollectionFromClusterCommand)CommandBase.CreateFrom(cmd);
 
-                foreach (var name in command.Names)
+                foreach (var thumbprint in command.Names)
                 {
-                    using (Slice.From(context.Allocator, name, out Slice keySlice))
-                    {
-                        certs.DeleteByKey(keySlice);
-                    }
+                    DeleteCertificate(context, thumbprint);
                 }
             }
             finally
@@ -972,7 +964,7 @@ namespace Raven.Server.ServerWide
         public void DeleteCertificate(TransactionOperationContext context, string thumbprint)
         {
             var certs = context.Transaction.InnerTransaction.OpenTable(CertificatesSchema, CertificatesSlice);
-            using (Slice.From(context.Allocator, thumbprint, out Slice thumbprintSlice))
+            using (Slice.From(context.Allocator, thumbprint.ToLowerInvariant(), out var thumbprintSlice))
             {
                 certs.DeleteByKey(thumbprintSlice);
             }
@@ -1064,8 +1056,8 @@ namespace Raven.Server.ServerWide
                 var certs = context.Transaction.InnerTransaction.OpenTable(CertificatesSchema, CertificatesSlice);
                 var command = (PutCertificateCommand)CommandBase.CreateFrom(cmd);
 
-                using (Slice.From(context.Allocator, command.PublicKeyPinningHash, out Slice hashSlice))
-                using (Slice.From(context.Allocator, command.Name, out Slice keySlice))
+                using (Slice.From(context.Allocator, command.PublicKeyPinningHash, out var hashSlice))
+                using (Slice.From(context.Allocator, command.Name.ToLowerInvariant(), out var thumbprintSlice))
                 using (var cert = context.ReadObject(command.ValueToJson(), "inner-val"))
                 {
                     var existing = serverStore.Cluster.GetCertificateByThumbprint(context, command.Name) ??
@@ -1079,7 +1071,7 @@ namespace Raven.Server.ServerWide
                         _clusterAuditLog.Info($"Registering new certificate '{command.Value.Thumbprint}' in the cluster. Security Clearance: {command.Value.SecurityClearance}. " +
                                               $"Permissions:{Environment.NewLine}{string.Join(Environment.NewLine, command.Value.Permissions.Select(kvp => kvp.Key + ": " + kvp.Value.ToString()))}");
 
-                    UpdateCertificate(certs, keySlice, hashSlice, cert);
+                    UpdateCertificate(certs, thumbprintSlice, hashSlice, cert);
                     return;
                 }
             }
@@ -1093,27 +1085,22 @@ namespace Raven.Server.ServerWide
         {
             var certsWithSameHash = GetCertificatesByPinningHashSortedByExpiration(context, hash);
 
-            var keysToDelete = certsWithSameHash.Select(x => x.Thumbprint).Skip(Constants.Certificates.MaxNumberOfCertsWithSameHash).ToList();
+            var thumbprintsToDelete = certsWithSameHash.Select(x => x.Thumbprint).Skip(Constants.Certificates.MaxNumberOfCertsWithSameHash).ToList();
 
-            if (keysToDelete.Count == 0)
+            if (thumbprintsToDelete.Count == 0)
                 return;
 
             try
             {
-                var certs = context.Transaction.InnerTransaction.OpenTable(CertificatesSchema, CertificatesSlice);
-
-                foreach (var key in keysToDelete)
+                foreach (var thumbprint in thumbprintsToDelete)
                 {
-                    using (Slice.From(context.Allocator, key.ToLowerInvariant(), out Slice lowerKey))
-                    {
-                        certs.DeleteByKey(lowerKey);
-                    }
+                    DeleteCertificate(context, thumbprint);
                 }
             }
             finally
             {
                 if (_clusterAuditLog.IsInfoEnabled)
-                    _clusterAuditLog.Info($"After allowing a connection based on Public Key Pinning Hash, deleting the following old certificates from the cluster: {string.Join(", ", keysToDelete)}");
+                    _clusterAuditLog.Info($"After allowing a connection based on Public Key Pinning Hash, deleting the following old certificates from the cluster: {string.Join(", ", thumbprintsToDelete)}");
                 NotifyValueChanged(context, type, index);
             }
         }
@@ -1356,34 +1343,34 @@ namespace Raven.Server.ServerWide
             }
         }
         
-        public unsafe void PutLocalState(TransactionOperationContext context, string key, BlittableJsonReaderObject value)
+        public unsafe void PutLocalState(TransactionOperationContext context, string thumbprint, BlittableJsonReaderObject value)
         {
             var localState = context.Transaction.InnerTransaction.CreateTree(LocalNodeStateTreeName);
-            using (localState.DirectAdd(key, value.Size, out var ptr))
+            using (localState.DirectAdd(thumbprint, value.Size, out var ptr))
             {
                 value.CopyTo(ptr);
             }
         }
 
-        public void DeleteLocalState(TransactionOperationContext context, string key)
+        public void DeleteLocalState(TransactionOperationContext context, string thumbprint)
         {
             var localState = context.Transaction.InnerTransaction.CreateTree(LocalNodeStateTreeName);
-            localState.Delete(key);
+            localState.Delete(thumbprint);
         }
 
-        public void DeleteLocalState(TransactionOperationContext context, List<string> keys)
+        public void DeleteLocalState(TransactionOperationContext context, List<string> thumbprints)
         {
             var localState = context.Transaction.InnerTransaction.CreateTree(LocalNodeStateTreeName);
-            foreach (var key in keys)
+            foreach (var thumbprint in thumbprints)
             {
-                localState.Delete(key);
+                localState.Delete(thumbprint);
             }
         }
 
-        public unsafe BlittableJsonReaderObject GetLocalStateByThumbprint(TransactionOperationContext context, string key)
+        public unsafe BlittableJsonReaderObject GetLocalStateByThumbprint(TransactionOperationContext context, string thumbprint)
         {
             var localState = context.Transaction.InnerTransaction.ReadTree(LocalNodeStateTreeName);
-            var read = localState.Read(key);
+            var read = localState.Read(thumbprint);
             if (read == null)
                 return null;
             BlittableJsonReaderObject localStateBlittable = new BlittableJsonReaderObject(read.Reader.Base, read.Reader.Length, context);
@@ -1392,7 +1379,7 @@ namespace Raven.Server.ServerWide
             return localStateBlittable;
         }
         
-        public IEnumerable<string> GetCertificateKeysFromLocalState(TransactionOperationContext context)
+        public IEnumerable<string> GetCertificateThumbprintsFromLocalState(TransactionOperationContext context)
         {
             var tree = context.Transaction.InnerTransaction.ReadTree(LocalNodeStateTreeName);
             if (tree == null)
@@ -1422,7 +1409,7 @@ namespace Raven.Server.ServerWide
             }
         }
 
-        public IEnumerable<string> GetCertificateKeysFromCluster(TransactionOperationContext context)
+        public IEnumerable<string> GetCertificateThumbprintsFromCluster(TransactionOperationContext context)
         {
             var certTable = context.Transaction.InnerTransaction.OpenTable(CertificatesSchema, CertificatesSlice);
 
@@ -1638,7 +1625,7 @@ namespace Raven.Server.ServerWide
         {
             var certs = context.Transaction.InnerTransaction.OpenTable(CertificatesSchema, CertificatesSlice);
 
-            using (Slice.From(context.Allocator, thumbprint, out var thumbprintSlice))
+            using (Slice.From(context.Allocator, thumbprint.ToLowerInvariant(), out var thumbprintSlice))
             {
                 var tvh = new Table.TableValueHolder();
                 if (certs.ReadByKey(thumbprintSlice, out tvh.Reader) == false)
@@ -1651,7 +1638,7 @@ namespace Raven.Server.ServerWide
         {
             var ptr = result.Reader.Read((int)CertificatesTable.Data, out int size);
             var doc = new BlittableJsonReaderObject(ptr, size, context);
-            var key = Encoding.UTF8.GetString(result.Reader.Read((int)CertificatesTable.Key, out size), size);
+            var key = Encoding.UTF8.GetString(result.Reader.Read((int)CertificatesTable.Thumbprint, out size), size);
 
             Transaction.DebugDisposeReaderAfterTransaction(context.Transaction.InnerTransaction, doc);
             return (key, doc);
@@ -2046,7 +2033,7 @@ namespace Raven.Server.ServerWide
             using (context.OpenWriteTransaction())
             {
                 // lets read all the certificate keys from the cluster, and delete the matching ones from the local state
-                var clusterCertificateKeys = serverStore.Cluster.GetCertificateKeysFromCluster(context);
+                var clusterCertificateKeys = serverStore.Cluster.GetCertificateThumbprintsFromCluster(context);
 
                 foreach (var key in clusterCertificateKeys)
                 {
