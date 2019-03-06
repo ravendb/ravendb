@@ -8,6 +8,7 @@
             </div>
             <div class="row flex-row">
                 <div class="col-xs-12 col-lg-6 flex-vertical">
+
                     <div class="panel">
                         <div class="panel-body">
                             <h3>Studio Configuration</h3>
@@ -28,8 +29,24 @@
                             </div>
                         </div>
                     </div>
+
+                    <div class="panel" data-bind="visible: canInstallPwa">
+                        <div class="panel-body">
+                            <h3>Studio App -<span data-bind="text: canInstallPwa"></span>-</h3>
+                            <div class="form-group">
+                                <div>
+                                    <label class="control-label"></label>
+                                </div>
+                                <div style="position: relative">
+                                    <button class="btn btn-default">Install Raven Studio</button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
                 </div>
             </div>
+
+
         </div>
     </form>
 </div>

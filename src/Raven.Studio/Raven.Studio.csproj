@@ -13,6 +13,9 @@
     <CodeAnalysisRuleSet>..\..\RavenDB.ruleset</CodeAnalysisRuleSet>
   </PropertyGroup>
   <ItemGroup>
+    <None Remove="typescript\common\pwaInstaller.ts" />
+  </ItemGroup>
+  <ItemGroup>
     <Content Update="wwwroot\**\*">
       <CopyToPublishDirectory>PreserveNewest</CopyToPublishDirectory>
     </Content>
@@ -50,5 +53,11 @@
   </ItemGroup>
   <ItemGroup>
     <ProjectReference Include="..\..\tools\TypingsGenerator\TypingsGenerator.csproj" />
+  </ItemGroup>
+  <ItemGroup>
+    <Folder Include="wwwroot\Content\img\app\" />
+  </ItemGroup>
+  <ItemGroup>
+    <TypeScriptCompile Include="typescript\common\pwaInstaller.ts" />
   </ItemGroup>
 </Project>

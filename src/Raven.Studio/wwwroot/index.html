@@ -16,7 +16,7 @@
         <link rel="icon" type="image/png" sizes="16x16" href="favicon-16x16.png">
         <link rel="manifest" href="manifest.json">
         <link rel="mask-icon" href="safari-pinned-tab.svg" color="#ca1c59">
-        <meta name="theme-color" content="#2c343c">
+        <meta name="theme-color" content="#22252b">
 
         <!-- build:css Content/css/styles-common.css -->
             <link rel="stylesheet" href="lib/Durandal/css/durandal.css" />
@@ -108,5 +108,10 @@
         <script type="text/javascript" src="Content/ace/worker-json.js"></script>
     <!-- /build -->
 
+    <script type="text/javascript">
+        if ('serviceWorker' in navigator) {
+            navigator.serviceWorker.register('service-worker.js');
+        }
+    </script>
 </body>
 </html>

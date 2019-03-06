@@ -3,6 +3,7 @@ import getStudioConfigurationCommand = require("commands/resources/getStudioConf
 import databaseStudioConfigurationModel = require("models/database/settings/databaseStudioConfigurationModel");
 import eventsCollector = require("common/eventsCollector");
 import saveStudioConfigurationCommand = require("commands/resources/saveStudioConfigurationCommand");
+import pwaInstaller = require("../../../common/pwaInstaller");
 
 class studioConfiguration extends viewModelBase {
 
@@ -13,6 +14,8 @@ class studioConfiguration extends viewModelBase {
     spinners = {
         save: ko.observable<boolean>(false)
     };
+    
+    canInstallPwa = pwaInstaller.instance.canInstall;
 
     activate(args: any) {
         super.activate(args);
