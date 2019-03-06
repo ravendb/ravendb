@@ -427,7 +427,8 @@ namespace Raven.Server.Documents.PeriodicBackup.Restore
             {
                 AuthorizationStatus = AuthorizationStatus.DatabaseAdmin,
                 OperateOnTypes = ~DatabaseItemType.Subscriptions,
-                SkipRevisionCreation = true
+                SkipRevisionCreation = true,
+                KeepOriginalChangeVector = true
             };
 
             options.OperateOnTypes |= DatabaseItemType.LegacyDocumentDeletions;
@@ -541,7 +542,8 @@ namespace Raven.Server.Documents.PeriodicBackup.Restore
             {
                 AuthorizationStatus = AuthorizationStatus.DatabaseAdmin,
                 OperateOnTypes = snapshotRestore ? DatabaseItemType.CompareExchange | DatabaseItemType.Identities | DatabaseItemType.Subscriptions : DatabaseItemType.Subscriptions,
-                SkipRevisionCreation = true
+                SkipRevisionCreation = true,
+                KeepOriginalChangeVector = true
             };
             var lastPath = Path.Combine(_restoreConfiguration.BackupLocation, smugglerFile);
 
