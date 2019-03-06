@@ -204,10 +204,10 @@ namespace Raven.Server.Documents.ETL.Providers.Raven
 
                             if (_script.HasLoadCounterBehaviors && _script.TryGetLoadCounterBehaviorFunctionFor(item.Collection, out var function))
                             {
-                                var counterGroupDetail = GetCounterGroupFor(item);
-                                if (counterGroupDetail != null)
+                                var counterGroups = GetCounterGroupsFor(item);
+                                if (counterGroups != null)
                                 {
-                                    AddCounters(item.DocumentId, counterGroupDetail.Values, function);    
+                                    AddCounters(item.DocumentId, counterGroups, function);    
                                 }
                             }
                         }
@@ -226,11 +226,11 @@ namespace Raven.Server.Documents.ETL.Providers.Raven
                             if (_script.TryGetLoadCounterBehaviorFunctionFor(item.Collection, out var function) == false)
                                 break;
 
-                            AddCounters(item.DocumentId, item.CounterGroupDocument, function);
+                            AddSingleCounterGroup(item.DocumentId, item.CounterGroupDocument, function);
                         }
                         else
                         {
-                            AddCounters(item.DocumentId, item.CounterGroupDocument);
+                            AddSingleCounterGroup(item.DocumentId, item.CounterGroupDocument);
                         }
 
                         break;
@@ -315,9 +315,18 @@ namespace Raven.Server.Documents.ETL.Providers.Raven
         }
 
 
-        private void AddCounters(LazyStringValue docId, BlittableJsonReaderObject counterGroupDocument, string function = null)
+        private void AddCounters(LazyStringValue docId, IEnumerable<CounterGroupDetail> counterGroups, string function = null)
         {
-            if (!counterGroupDocument.TryGet(CountersStorage.Values, out BlittableJsonReaderObject counters))
+            foreach (var cgd in counterGroups)
+            {
+                AddSingleCounterGroup(docId, cgd.Values, function);
+            }
+
+        }
+
+        private void AddSingleCounterGroup(LazyStringValue docId, BlittableJsonReaderObject counerGroupDocument, string function = null)
+        {
+            if (counerGroupDocument.TryGet(CountersStorage.Values, out BlittableJsonReaderObject counters) == false)
                 return;
 
             var prop = new BlittableJsonReaderObject.PropertyDetails();
@@ -337,39 +346,41 @@ namespace Raven.Server.Documents.ETL.Providers.Raven
 
         private List<CounterOperation> GetCounterOperationsFor(RavenEtlItem item)
         {
-            var cgd = Database.DocumentsStorage.CountersStorage.GetCounterValuesForDocument(Context, item.DocumentId);
-
-            if (cgd == null || cgd.Values.TryGet(CountersStorage.Values, out BlittableJsonReaderObject counters) == false)
-                return null;
-
             var counterOperations = new List<CounterOperation>();
-            var prop = new BlittableJsonReaderObject.PropertyDetails();
-            for (var i = 0; i < counters.Count; i++)
+
+            foreach (var cgd in Database.DocumentsStorage.CountersStorage.GetCounterValuesForDocument(Context, item.DocumentId))
             {
-                counters.GetPropertyByIndex(i, ref prop);
+                if (cgd.Values.TryGet(CountersStorage.Values, out BlittableJsonReaderObject counters) == false)
+                    return null;
 
-                if (GetCounterValueAndCheckIfShouldSkip(item.DocumentId, null, prop, out long value, out bool delete))
-                    continue;
+                var prop = new BlittableJsonReaderObject.PropertyDetails();
+                for (var i = 0; i < counters.Count; i++)
+                {
+                    counters.GetPropertyByIndex(i, ref prop);
 
-                if (delete == false)
-                {
-                    counterOperations.Add(new CounterOperation
-                    {
-                        Type = CounterOperationType.Put,
-                        CounterName = prop.Name,
-                        Delta = value
-                    });
-                }
-                else
-                {
-                    if (ShouldFilterOutDeletion(item))
+                    if (GetCounterValueAndCheckIfShouldSkip(item.DocumentId, null, prop, out long value, out bool delete))
                         continue;
 
-                    counterOperations.Add(new CounterOperation
+                    if (delete == false)
                     {
-                        Type = CounterOperationType.Delete,
-                        CounterName = prop.Name,
-                    });
+                        counterOperations.Add(new CounterOperation
+                        {
+                            Type = CounterOperationType.Put,
+                            CounterName = prop.Name,
+                            Delta = value
+                        });
+                    }
+                    else
+                    {
+                        if (ShouldFilterOutDeletion(item))
+                            continue;
+
+                        counterOperations.Add(new CounterOperation
+                        {
+                            Type = CounterOperationType.Delete,
+                            CounterName = prop.Name,
+                        });
+                    }
                 }
             }
 
@@ -406,7 +417,7 @@ namespace Raven.Server.Documents.ETL.Providers.Raven
             return false;
         }
 
-        private CounterGroupDetail GetCounterGroupFor(RavenEtlItem item)
+        private IEnumerable<CounterGroupDetail> GetCounterGroupsFor(RavenEtlItem item)
         {
             return Database.DocumentsStorage.CountersStorage.GetCounterValuesForDocument(Context, item.DocumentId);
         }
