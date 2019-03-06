@@ -7,14 +7,16 @@ namespace Raven.Server.ServerWide.Commands
     {
         public string DatabaseName;
         public long MaxRaftIndex;
+        public int Take;
 
         public CleanCompareExchangeTombstonesCommand()
         {}
 
-        public CleanCompareExchangeTombstonesCommand(string databaseName, long maxRaftIndex)
+        public CleanCompareExchangeTombstonesCommand(string databaseName, long maxRaftIndex, int take)
         {
             DatabaseName = databaseName;
             MaxRaftIndex = maxRaftIndex;
+            Take = take;
         }
 
         public override DynamicJsonValue ToJson(JsonOperationContext context)
@@ -22,6 +24,7 @@ namespace Raven.Server.ServerWide.Commands
             var json = base.ToJson(context);
             json[nameof(DatabaseName)] = DatabaseName;
             json[nameof(MaxRaftIndex)] = MaxRaftIndex;
+            json[nameof(Take)] = Take;
             return json;
         }
     }

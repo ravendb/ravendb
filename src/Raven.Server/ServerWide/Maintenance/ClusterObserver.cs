@@ -92,6 +92,7 @@ namespace Raven.Server.ServerWide.Maintenance
         private readonly long _moveToRehabTime;
         private long _lastIndexCleanupTimeInTicks;
         private long _lastTombstonesCleanupTimeInTicks;
+        private bool _hasMoreTombstones = false;
 
         public (ClusterObserverLogEntry[] List, long Iteration) ReadDecisionsForDatabase()
         {
@@ -253,15 +254,14 @@ namespace Raven.Server.ServerWide.Maintenance
                                 await CleanUpUnusedAutoIndexes(state);
 
                             if (cleanupTombstones)
-                                await CleanUpCompareExchangeTombstones();
-
+                                _hasMoreTombstones = await CleanUpCompareExchangeTombstones(database, context);
                         }
                     }
 
                     if (cleanupIndexes)
                         _lastIndexCleanupTimeInTicks = now.Ticks;
 
-                    if (cleanupTombstones)
+                    if (cleanupTombstones && _hasMoreTombstones == false)
                         _lastTombstonesCleanupTimeInTicks = now.Ticks;
                 }
 
@@ -405,24 +405,25 @@ namespace Raven.Server.ServerWide.Maintenance
             }
         }
 
-        internal async Task CleanUpCompareExchangeTombstones()
+        internal async Task<bool> CleanUpCompareExchangeTombstones(string dbName, TransactionOperationContext context)
         {
-            using (_server.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
-            using (context.OpenReadTransaction())
+            const int amountToDelete = 8192;
+            var hasMore = false;
+
+            if (_server.Cluster.HasCompareExchangeTombstones(context, dbName))
             {
-                foreach (var dbName in _server.Cluster.GetDatabaseNames(context))
-                {
-                    if (_server.Cluster.GetNumberOfCompareExchangeTombstones(context, dbName) > 0)
-                    {
-                        var maxEtag = GetMaxTombstonesEtagToDelete(context, dbName);
-                        if (maxEtag > 0)
-                        {
-                            var result = await _server.SendToLeaderAsync(new CleanCompareExchangeTombstonesCommand(dbName, maxEtag));
-                            await _server.Cluster.WaitForIndexNotification(result.Index);
-                        }
-                    }
-                }
+                var maxEtag = GetMaxTombstonesEtagToDelete(context, dbName);
+                if (maxEtag < 0)
+                    return false;
+                if (maxEtag == 0)
+                    maxEtag = long.MaxValue;
+
+                var result = await _server.SendToLeaderAsync(new CleanCompareExchangeTombstonesCommand(dbName, maxEtag, amountToDelete));
+                await _server.Cluster.WaitForIndexNotification(result.Index);
+                hasMore = (bool)result.Result;
             }
+
+            return hasMore;
         }
 
         private long GetMaxTombstonesEtagToDelete(TransactionOperationContext context, string dbName)
@@ -456,7 +457,7 @@ namespace Raven.Server.ServerWide.Maintenance
             }
 
             if (maxEtag == long.MaxValue)
-                return 0;
+                return -1;
 
             return maxEtag;
         }

@@ -1508,36 +1508,43 @@ namespace Voron.Data.Tables
             return deleted;
         }
 
-        public void DeleteForwardUpToPrefix(Slice startSlice, long upToIndex)
+        public bool DeleteForwardUpToPrefix(Slice startSlice, long upToIndex, int numberOfEntriesToDelete)
         {
             AssertWritableTable();
 
+            if (numberOfEntriesToDelete < 0)
+                ThrowNonNegativeNumberOfEntriesToDelete();
+
+            var deleted = 0;
             var pk = _schema.Key;
             var pkTree = GetTree(pk);
             TableValueHolder tableValueHolder = null;
-            while (true)
+            while (deleted < numberOfEntriesToDelete)
             {
                 using (var it = pkTree.Iterate(true))
                 {
                     it.SetRequiredPrefix(startSlice);
                     if (it.Seek(it.RequiredPrefix) == false)
-                        return;
+                        return false;
 
                     var id = it.CreateReaderForCurrent().ReadLittleEndianInt64();
                     var ptr = DirectRead(id, out var size);
 
                     if (tableValueHolder == null)
-                        tableValueHolder = new Table.TableValueHolder();
+                        tableValueHolder = new TableValueHolder();
 
                     tableValueHolder.Reader = new TableValueReader(id, ptr, size);
                     var currentIndex = *(long*)tableValueHolder.Reader.Read(1, out _);
 
                     if (currentIndex > upToIndex)
-                        return;
+                        return false;
 
                     Delete(id);
+                    deleted++;
                 }
             }
+
+            return true;
         }
 
         private static void ThrowNonNegativeNumberOfEntriesToDelete()
