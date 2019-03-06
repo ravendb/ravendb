@@ -1,5 +1,5 @@
 <div class="flex-window stretch query content-margin" id="queryContainer">
-    <div class="flex-window-head">
+    <div class="flex-window-head" data-bind="visible: !resultsExpanded()">
         <div class="row">
         </div>
         <div class="row margin-bottom">
@@ -148,6 +148,10 @@
                             <div data-bind="compose: $root.columnsSelector"></div>
                         </ul>
                     </div>
+                    <button class="btn btn-default" data-bind="click: toggleResults">
+                        <i data-bind="attr: { class: resultsExpanded() ? 'icon-fold' : 'icon-unfold'} "></i>
+                        <span data-bind="text: resultsExpanded() ? 'Collapse results' : 'Expand results'"></span>
+                    </button>
                 </div>
             </div>
         </div>

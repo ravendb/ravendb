@@ -13,6 +13,26 @@ class graphHelper {
 
         return prefix + value;
     }
+    
+    static quadraticBezierCurve(start: { x: number, y: number }, end: {x: number, y: number }, delta: number, shorten: number = 0) {
+        let x1 = start.x;
+        let y1 = start.y;
+        let x2 = end.x;
+        let y2 = end.y;
+        
+        if (shorten) {
+            ({x1, x2, y1, y2} = graphHelper.shortenLine(x1, y1, x2, y2, shorten));
+        }
+        
+        const pX = (x1 + x2) / 2;
+        const pY = (y1 + y2) / 2;
+        const sign = Math.sign(y1 - y2);
+        
+        const coeff = sign ?  (-x2 + x1) / (y2 - y1) : (-x2 + x1) / 1e-6;
+        const alpha = Math.atan(coeff);
+        
+        return `M ${x1} ${y1} Q ${pX + sign * delta * Math.cos(alpha)} ${pY + sign * delta * Math.sin(alpha)} ${x2} ${y2}`;
+    }
 
     static truncText(input: string, measuredWidth: number, availableWidth: number, minWidth = 5): string {
         if (availableWidth >= measuredWidth) {
@@ -330,11 +350,18 @@ class graphHelper {
         }
 
         if (radius * 2 > length) {
-            throw new Error("Line is too short!");
+            // return point which is average
+            return {
+                x1: (x1 + x2) / 2,
+                x2: (x1 + x2) / 2,
+                y1: (y1 + y2) / 2,
+                y2: (y1 + y2) / 2
+            };
         }
 
-        dx *= length - radius;
-        dy *= length - radius;
+        dx *= radius;
+        dy *= radius;
+        
 
         return {
             x1: x1 + dx,
@@ -380,10 +407,31 @@ class graphHelper {
                     fill: fill
                 });
         }
-        
     }
-
     
+    static movePoints(start: { x: number, y: number }, end: {x: number, y: number }, delta: number): [{ x: number, y: number }, { x: number, y: number }] {
+        let x1 = start.x;
+        let y1 = start.y;
+        let x2 = end.x;
+        let y2 = end.y;
+
+        const sign = Math.sign(y1 - y2);
+        const coeff = sign ? (-x2 + x1) / (y2 - y1) : (-x2 + x1) / 1e-6;
+        const alpha = Math.atan(coeff);
+        
+        const dx = sign * delta * Math.cos(alpha);
+        const dy = sign * delta * Math.sin(alpha);
+        
+        return [
+            {
+                x: x1 + dx,
+                y: y1 + dy
+            }, {
+                x: x2 + dx,
+                y: y2 + dy
+            }
+        ];
+    }
 }
 
 export = graphHelper;
