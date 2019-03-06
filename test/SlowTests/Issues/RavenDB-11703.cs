@@ -94,7 +94,7 @@ namespace SlowTests.Issues
 
                 using (var session = store.OpenAsyncSession())
                 {
-                    session.CountersFor("users/1").Delete("likes");
+                    session.CountersFor("users/1").Delete("Likes");
                     await session.SaveChangesAsync();
                 }
 
