@@ -111,8 +111,7 @@ namespace Raven.Server.Https
             var tls = context.Features.Get<ITlsConnectionFeature>();
             var certificate = tls?.ClientCertificate;
             var conn = context.Features.Get<IHttpConnectionFeature>();
-            var address = $"{conn?.RemoteIpAddress}:{conn?.RemotePort}";
-            var authenticationStatus = _server.AuthenticateConnectionCertificate(certificate, address);
+            var authenticationStatus = _server.AuthenticateConnectionCertificate(certificate, conn);
 
             // build the token
             context.Features.Set<IHttpAuthenticationFeature>(authenticationStatus);

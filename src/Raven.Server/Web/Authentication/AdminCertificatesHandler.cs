@@ -548,7 +548,7 @@ namespace Raven.Server.Web.Authentication
             // If we are passive, we take the certs from the local state
             if (ServerStore.CurrentRachisState == RachisState.Passive)
             {
-                var localCertKeys = ServerStore.Cluster.GetCertificateKeysFromLocalState(context).ToList();
+                var localCertKeys = ServerStore.Cluster.GetCertificateThumbprintsFromLocalState(context).ToList();
 
                 foreach (var localCertKey in localCertKeys)
                 {

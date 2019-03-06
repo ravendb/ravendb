@@ -1875,7 +1875,7 @@ namespace Raven.Server.ServerWide
             {
                 using (ctx.OpenReadTransaction())
                 {
-                    foreach (var localCertKey in Cluster.GetCertificateKeysFromLocalState(ctx))
+                    foreach (var localCertKey in Cluster.GetCertificateThumbprintsFromLocalState(ctx))
                     {
                         // if there are trusted certificates in the local state, we will register them in the cluster now
                         using (var localCertificate = Cluster.GetLocalStateByThumbprint(ctx, localCertKey))
