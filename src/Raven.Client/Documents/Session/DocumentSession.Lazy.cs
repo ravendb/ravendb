@@ -115,9 +115,10 @@ namespace Raven.Client.Documents.Session
             {
                 return new Lazy<Dictionary<string, T>>(() => Load<T>(ids));
             }
+
             var loadOperation = new LoadOperation(this)
-                .ByIds(ids)
-                .WithIncludes(includes);
+                .WithIncludes(includes)
+                .ByIds(ids);
 
             var lazyOp = new LazyLoadOperation<T>(this, loadOperation).ByIds(ids).WithIncludes(includes);
             return AddLazyOperation(lazyOp, onEval);

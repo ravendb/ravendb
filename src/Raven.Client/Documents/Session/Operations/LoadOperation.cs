@@ -52,7 +52,7 @@ namespace Raven.Client.Documents.Session.Operations
             if (_ids == null)
                 _ids = new[] { id };
 
-            if (_session.IsLoadedOrDeleted(id))
+            if (_session.IsLoadedOrDeleted(id) && (_includes == null))
                 return this;
 
             _idsToCheckOnServer.Add(id);
