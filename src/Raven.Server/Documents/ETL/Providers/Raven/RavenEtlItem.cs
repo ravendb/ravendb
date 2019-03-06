@@ -20,7 +20,7 @@ namespace Raven.Server.Documents.ETL.Providers.Raven
 
         public RavenEtlItem(CounterGroupDetail counter, string collection)
         {
-            DocumentId = counter.CounterKey;
+            DocumentId = counter.DocumentId;
             Etag = counter.Etag;
             Collection = collection;
             ChangeVector = counter.ChangeVector;

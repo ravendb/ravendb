@@ -213,9 +213,11 @@ namespace Raven.Server.Documents
 
         public static CounterGroupDetail TableValueToCounterGroupDetail(JsonOperationContext context, ref TableValueReader tvr)
         {
+            var docId = ExtractDocId(context, ref tvr);
+
             return new CounterGroupDetail
             {
-                CounterKey = TableValueToString(context, (int)CountersTable.CounterKey, ref tvr),
+                DocumentId = docId,
                 ChangeVector = TableValueToString(context, (int)CountersTable.ChangeVector, ref tvr),
                 Etag = TableValueToEtag((int)CountersTable.Etag, ref tvr),
                 Values = GetCounterValuesData(context, ref tvr)
@@ -1329,11 +1331,9 @@ namespace Raven.Server.Documents
             return sb.ToString();
         }
 
-        private static LazyStringValue ExtractDocId(DocumentsOperationContext context, ref TableValueReader tvr)
+        public static LazyStringValue ExtractDocId(JsonOperationContext context, ref TableValueReader tvr)
         {
-            Slice.From(context.Allocator, tvr.Read((int)CountersTable.CounterKey, out var size), size, out var counterKey);
-
-            var p = counterKey.Content.Ptr;
+            var p = tvr.Read((int)CountersTable.CounterKey, out var size);
             int sizeOfDocId = 0;
             for (; sizeOfDocId < size; sizeOfDocId++)
             {

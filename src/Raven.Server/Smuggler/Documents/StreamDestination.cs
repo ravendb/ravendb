@@ -586,8 +586,8 @@ namespace Raven.Server.Smuggler.Documents
 
                 Writer.WriteStartObject();
 
-                Writer.WritePropertyName(nameof(CounterItem.Batch.CounterKey));
-                Writer.WriteString(counterDetail.CounterKey, skipEscaping: true);
+                Writer.WritePropertyName(nameof(CounterItem.DocId));
+                Writer.WriteString(counterDetail.DocumentId, skipEscaping: true);
                 Writer.WriteComma();
 
                 Writer.WritePropertyName(nameof(CounterItem.ChangeVector));

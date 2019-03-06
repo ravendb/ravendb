@@ -334,7 +334,7 @@ namespace Raven.Server.Documents.Handlers
                             PutCounters(context, new CounterGroupDetail
                             {
                                 ChangeVector = cvLsv,
-                                CounterKey = keyLsv,
+                                DocumentId = keyLsv,
                                 Values = values
                             }, countersToAdd);
                         }
@@ -372,8 +372,7 @@ namespace Raven.Server.Documents.Handlers
                 if (doc != null)
                     docCollection = CollectionName.GetCollectionName(doc.Data);
 
-
-                _database.DocumentsStorage.CountersStorage.PutCounters(context, counterGroupDetail.CounterKey, docCollection,
+                _database.DocumentsStorage.CountersStorage.PutCounters(context, counterGroupDetail.DocumentId, docCollection,
                     counterGroupDetail.ChangeVector, counterGroupDetail.Values);
 
                 context.LastDatabaseChangeVector = ChangeVectorUtils.MergeVectors(counterGroupDetail.ChangeVector, context.LastDatabaseChangeVector ?? DocumentsStorage.GetDatabaseChangeVector(context));
@@ -389,7 +388,7 @@ namespace Raven.Server.Documents.Handlers
                     var nonPersistentFlags = NonPersistentDocumentFlags.ByCountersUpdate |
                                              NonPersistentDocumentFlags.FromSmuggler;
 
-                    _database.DocumentsStorage.CountersStorage.UpdateDocumentCounters(context, doc, counterGroupDetail.CounterKey, countersToAdd, new HashSet<string>(), nonPersistentFlags);
+                    _database.DocumentsStorage.CountersStorage.UpdateDocumentCounters(context, doc, counterGroupDetail.DocumentId, countersToAdd, new HashSet<string>(), nonPersistentFlags);
                     doc.Data?.Dispose(); // we cloned the data, so we can dispose it.
                 }
 
@@ -399,11 +398,11 @@ namespace Raven.Server.Documents.Handlers
                 {
                     try
                     {
-                        doc = _database.DocumentsStorage.Get(context, counterGroupDetail.CounterKey,
+                        doc = _database.DocumentsStorage.Get(context, counterGroupDetail.DocumentId,
                             throwOnConflict: true);
                         if (doc == null)
                         {
-                            ThrowMissingDocument(counterGroupDetail.CounterKey);
+                            ThrowMissingDocument(counterGroupDetail.DocumentId);
                             return; // never hit
                         }
 
@@ -420,7 +419,7 @@ namespace Raven.Server.Documents.Handlers
 
                         // avoid loading same document again, we validate write using the metadata instance
                         doc = new Document();
-                        docCollection = _database.DocumentsStorage.ConflictsStorage.GetCollection(context, counterGroupDetail.CounterKey);
+                        docCollection = _database.DocumentsStorage.ConflictsStorage.GetCollection(context, counterGroupDetail.DocumentId);
                     }
                 }
 
