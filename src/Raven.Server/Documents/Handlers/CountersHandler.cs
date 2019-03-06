@@ -346,6 +346,7 @@ namespace Raven.Server.Documents.Handlers
                 foreach (var cgd in _counterGroups)
                 {
                     PutCounters(context, cgd, countersToAdd);
+                    
                 }
 
                 return _counterGroups.Count;
@@ -371,8 +372,11 @@ namespace Raven.Server.Documents.Handlers
                 if (doc != null)
                     docCollection = CollectionName.GetCollectionName(doc.Data);
 
+
                 _database.DocumentsStorage.CountersStorage.PutCounters(context, counterGroupDetail.CounterKey, docCollection,
                     counterGroupDetail.ChangeVector, counterGroupDetail.Values);
+
+                context.LastDatabaseChangeVector = ChangeVectorUtils.MergeVectors(counterGroupDetail.ChangeVector, context.LastDatabaseChangeVector ?? DocumentsStorage.GetDatabaseChangeVector(context));
 
                 counterGroupDetail.Values.TryGet(CountersStorage.Values, out values);
                 foreach (var counter in values.GetPropertyNames())
