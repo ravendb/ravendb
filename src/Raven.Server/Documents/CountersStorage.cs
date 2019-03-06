@@ -29,7 +29,7 @@ namespace Raven.Server.Documents
     {
         public const int DbIdAsBase64Size = 22;
 
-        public const int MaxCounterDocumentSize = 128;
+        public const int MaxCounterDocumentSize = 2048;
 
         private readonly DocumentDatabase _documentDatabase;
         private readonly DocumentsStorage _documentsStorage;
@@ -311,15 +311,14 @@ namespace Raven.Server.Documents
                         else
                         {
                             if (existingCounter == null &&
-                                data.Size + sizeof(long) * 3 > MaxCounterDocumentSize &&
-                                counters.Count > 1)
+                                data.Size + sizeof(long) * 3 > MaxCounterDocumentSize)
                             {
                                 // we now need to add a new counter to the counters blittable
                                 // and adding it will cause to grow beyond 2KB (the 24bytes is an 
                                 // estimate, we don't actually depend on hard 2KB limit).
 
                                 var existingChangeVector = TableValueToChangeVector(context, (int)CountersTable.ChangeVector, ref existing);
-                                SplitCounterGroup(context, collectionName, table, documentKeyPrefix, countersGroupKey, counters, dbIds, existingChangeVector, ref existing);
+                                SplitCounterGroup(context, collectionName, table, documentKeyPrefix, countersGroupKey, counters, dbIds, existingChangeVector, existing.Id);
 
                                 // now we retry and know that we have enough space
                                 return PutOrIncrementCounter(context, documentId, collection, name, delta, out exists, overrideExisting);
@@ -397,7 +396,7 @@ namespace Raven.Server.Documents
             }
         }
 
-        private void SplitCounterGroup(DocumentsOperationContext context, CollectionName collectionName, Table table, Slice documentKeyPrefix, Slice countersGroupKey, BlittableJsonReaderObject values, BlittableJsonReaderArray dbIds, string changeVector, ref TableValueReader existing)
+        private static void SplitCounterGroup(DocumentsOperationContext context, CollectionName collectionName, Table table, Slice documentKeyPrefix, Slice countersGroupKey, BlittableJsonReaderObject values, BlittableJsonReaderArray dbIds, string changeVector, long storageId)
         {
             var (fst, snd) = SplitCounterDocument(context, values, dbIds);
 
@@ -407,12 +406,13 @@ namespace Raven.Server.Documents
                 using (table.Allocate(out TableValueBuilder tvb))
                 {
                     tvb.Add(countersGroupKey);
-                    tvb.Add(Bits.SwapBytes(_documentsStorage.GenerateNextEtag()));
+                    tvb.Add(Bits.SwapBytes(context.DocumentDatabase.DocumentsStorage.GenerateNextEtag()));
                     tvb.Add(cv);
                     tvb.Add(fst.BasePointer, fst.Size);
                     tvb.Add(collectionSlice);
                     tvb.Add(context.TransactionMarkerOffset);
-                    table.Update(existing.Id, tvb);
+                    table.Update(storageId, tvb);
+
                 }
 
                 fst.TryGet(Values, out BlittableJsonReaderObject fstValues);
@@ -435,7 +435,7 @@ namespace Raven.Server.Documents
                     Memory.Copy(newCounterKey.Ptr + documentKeyPrefix.Size, firstPropertySnd.Name.Buffer, firstChange + 1);
 
                     tvb.Add(newCounterKey);
-                    tvb.Add(Bits.SwapBytes(_documentsStorage.GenerateNextEtag()));
+                    tvb.Add(Bits.SwapBytes(context.DocumentDatabase.DocumentsStorage.GenerateNextEtag()));
                     tvb.Add(cv);
                     tvb.Add(snd.BasePointer, snd.Size);
                     tvb.Add(collectionSlice);
@@ -565,7 +565,7 @@ namespace Raven.Server.Documents
             return data;
         }
 
-        private (BlittableJsonReaderObject First, BlittableJsonReaderObject Second) SplitCounterDocument(DocumentsOperationContext context, BlittableJsonReaderObject values, BlittableJsonReaderArray dbIds)
+        internal static (BlittableJsonReaderObject First, BlittableJsonReaderObject Second) SplitCounterDocument(DocumentsOperationContext context, BlittableJsonReaderObject values, BlittableJsonReaderArray dbIds)
         {
             // here we rely on the internal sort order of the blittables, because we go through them
             // in lexical order
@@ -687,7 +687,7 @@ namespace Raven.Server.Documents
 
                                     var existingChangeVector = TableValueToChangeVector(context, (int)CountersTable.ChangeVector, ref tvr);
 
-                                    var firstOccurance = false;
+                                    var firstOccurrence = false;
                                     if (canSkip.TryGetValue(existingChangeVector, out var alreadyMerged))
                                     {
                                         if (alreadyMerged)
@@ -701,7 +701,7 @@ namespace Raven.Server.Documents
                                             continue;
                                         }
 
-                                        firstOccurance = true;
+                                        firstOccurrence = true;
                                     }
 
                                     using (data = GetCounterValuesData(context, ref tvr))
@@ -748,22 +748,22 @@ namespace Raven.Server.Documents
 
                                             UpdateMetrics(counterKeySlice, counterName, changeVector, collection);
 
-                                            if (data.Size + sizeof(long) * 3 > 2048)
+                                            if (data.Size > MaxCounterDocumentSize)
                                             {
                                                 // after adding a new counter to the counters blittable
                                                 // we caused the blittable to grow beyond 2KB (the 24bytes is an 
                                                 // estimate, we don't actually depend on hard 2KB limit).
 
-                                                changeVectorToSave = GetChangeVectorToSave(changeVector, firstOccurance, existingChangeVector, canSkip);
+                                                changeVectorToSave = GetChangeVectorToSave(changeVector, firstOccurrence, existingChangeVector, canSkip);
 
-                                                SplitCounterGroup(context, collectionName, table, documentKeyPrefix, countersGroupKey, localCounters, dbIds, changeVectorToSave, ref tvr);
+                                                SplitCounterGroup(context, collectionName, table, documentKeyPrefix, countersGroupKey, localCounters, dbIds, changeVectorToSave, tvr.Id);
 
                                                 continue;
                                             }
 
                                         }
 
-                                        changeVectorToSave = GetChangeVectorToSave(changeVector, firstOccurance, existingChangeVector, canSkip);
+                                        changeVectorToSave = GetChangeVectorToSave(changeVector, firstOccurrence, existingChangeVector, canSkip);
 
                                         var etag = _documentsStorage.GenerateNextEtag();
                                         using (Slice.From(context.Allocator, changeVectorToSave, out var cv))
@@ -799,9 +799,9 @@ namespace Raven.Server.Documents
             }
         }
 
-        private static string GetChangeVectorToSave(string changeVector, bool firstOccurance, string existingChangeVector, Dictionary<string, bool> canSkip)
+        private static string GetChangeVectorToSave(string changeVector, bool firstOccurrence, string existingChangeVector, Dictionary<string, bool> canSkip)
         {
-            if (firstOccurance == false)
+            if (firstOccurrence == false)
                 return existingChangeVector;
 
             var changeVectorToSave = ChangeVectorUtils.MergeVectors(existingChangeVector, changeVector);
