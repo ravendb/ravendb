@@ -16,7 +16,7 @@ namespace Raven.Client.ServerWide.Operations.Logs
         public class Parameters
         {
             public LogMode Mode { get; set; }
-            public TimeSpan LogRetention { get; set; }
+            public TimeSpan? RetentionTime { get; set; }
         }
 
         public SetLogsConfigurationOperation(Parameters parameters)
