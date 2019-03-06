@@ -344,7 +344,7 @@ namespace Raven.Server.Smuggler.Documents
                             }
 
                             var connectionString = JsonDeserializationCluster.RavenConnectionString(connection);
-                            databaseRecord.RavenConnectionStrings[connectionString.Name] = connectionString;
+                            databaseRecord.RavenConnectionStrings[connectionName] = connectionString;
                         }
                     }
                     catch (Exception e)
@@ -387,7 +387,7 @@ namespace Raven.Server.Smuggler.Documents
                 {
                     try
                     {
-                        databaseRecord.Client = JsonDeserializationCluster.ClientConfiguration(expiration);
+                        databaseRecord.Client = JsonDeserializationCluster.ClientConfiguration(client);
                     }
                     catch (Exception e)
                     {

@@ -5,12 +5,16 @@ using System.Linq;
 using System.Threading.Tasks;
 using FastTests;
 using Raven.Client.Documents.Operations.Backups;
+using Raven.Client.Documents.Operations.Configuration;
 using Raven.Client.Documents.Operations.ConnectionStrings;
 using Raven.Client.Documents.Operations.ETL;
 using Raven.Client.Documents.Operations.ETL.SQL;
+using Raven.Client.Documents.Operations.Expiration;
 using Raven.Client.Documents.Operations.Replication;
+using Raven.Client.Documents.Operations.Revisions;
 using Raven.Client.Documents.Queries.Sorting;
 using Raven.Client.Documents.Smuggler;
+using Raven.Client.Http;
 using Raven.Client.ServerWide;
 using Raven.Client.ServerWide.Operations;
 using Raven.Server.Config;
@@ -202,6 +206,563 @@ namespace SlowTests.Smuggler
                     Assert.Equal("connection", record.SqlEtls.First().ConnectionStringName);
                     Assert.Equal(true, record.SqlEtls.First().AllowEtlOnNonEncryptedChannel);
                     Assert.Equal(true, record.SqlEtls.First().Disabled);
+                }
+            }
+            finally
+            {
+                File.Delete(file);
+            }
+        }
+
+        [Fact]
+        public async Task CanExportAndImportMergedDatabaseRecord()
+        {
+            var file = Path.GetTempFileName();
+            try
+            {
+                using (var store1 = GetDocumentStore(new Options
+                {
+                    ModifyDatabaseName = s => $"{s}_1",
+                }))
+                using (var store2 = GetDocumentStore(new Options
+                {
+                    ModifyDatabaseName = s => $"{s}_2",
+                }))
+                {
+                    var collection = new Dictionary<string, ScriptResolver>
+                    {
+                        {
+                            "ConflictSolver1", new ScriptResolver()
+                            {
+                                Script = "Script1"
+                            }
+                        },
+                        {
+                            "ConflictSolver2", new ScriptResolver()
+                            {
+                                Script = "Script2"
+                            }
+                        }
+                    };
+                    var collection2 = new Dictionary<string, ScriptResolver>
+                    {
+                        {
+                            "ConflictSolver1", new ScriptResolver()
+                            {
+                                Script = "Script4"
+                            }
+                        },
+                        {
+                            "ConflictSolver3", new ScriptResolver()
+                            {
+                                Script = "Script3"
+                            }
+                        }
+                    };
+                    store1.Maintenance.Server.Send(new ModifyConflictSolverOperation(store1.Database, collection, false));
+                    store2.Maintenance.Server.Send(new ModifyConflictSolverOperation(store2.Database, collection2, false));
+
+                    var configuration = new ClientConfiguration
+                    {
+                        Etag = 10,
+                        Disabled = false,
+                        MaxNumberOfRequestsPerSession = 1024,
+                        ReadBalanceBehavior = ReadBalanceBehavior.FastestNode
+                    };
+                    var configuration2 = new ClientConfiguration
+                    {
+                        Etag = 10,
+                        Disabled = false,
+                        MaxNumberOfRequestsPerSession = 512,
+                        ReadBalanceBehavior = ReadBalanceBehavior.RoundRobin
+                    };
+                    await store1.Maintenance.SendAsync(new PutClientConfigurationOperation(configuration));
+                    await store2.Maintenance.SendAsync(new PutClientConfigurationOperation(configuration2));
+
+                    var revisionConfig = new RevisionsConfiguration
+                    {
+                        Default = new RevisionsCollectionConfiguration
+                        {
+                            Disabled = false,
+                            PurgeOnDelete = true
+                        },
+                        Collections = new Dictionary<string, RevisionsCollectionConfiguration>
+                        {
+                            {"rev1", new RevisionsCollectionConfiguration
+                                {
+                                    Disabled = true,
+                                    PurgeOnDelete = false,
+                                    MinimumRevisionsToKeep = 10
+                                }
+                            },
+                            {"rev2", new RevisionsCollectionConfiguration
+                                {
+                                    Disabled = true,
+                                    PurgeOnDelete = false,
+                                    MinimumRevisionsToKeep = 20
+                                }
+
+                            }
+                        }
+
+                    };
+                    var revisionConfig2 = new RevisionsConfiguration
+                    {
+                        Default = new RevisionsCollectionConfiguration
+                        {
+                            Disabled = true,
+                            PurgeOnDelete = false
+                        },
+                        Collections = new Dictionary<string, RevisionsCollectionConfiguration>
+                        {
+                            {"rev1", new RevisionsCollectionConfiguration
+                                {
+                                    Disabled = true,
+                                    PurgeOnDelete = false,
+                                    MinimumRevisionsToKeep = 20
+                                }
+                            },
+                            {"rev3", new RevisionsCollectionConfiguration
+                                {
+                                    Disabled = true,
+                                    PurgeOnDelete = false,
+                                    MinimumRevisionsToKeep = 20
+                                }
+
+                            }
+                        }
+
+                    };
+                    await store1.Maintenance.SendAsync(new ConfigureRevisionsOperation(revisionConfig));
+                    await store2.Maintenance.SendAsync(new ConfigureRevisionsOperation(revisionConfig2));
+
+                    var exConfig = new ExpirationConfiguration
+                    {
+                        DeleteFrequencyInSec = 60,
+                        Disabled = false
+                    };
+                    var exConfig2 = new ExpirationConfiguration
+                    {
+                        DeleteFrequencyInSec = 30,
+                        Disabled = true
+                    };
+                    await store1.Maintenance.SendAsync(new ConfigureExpirationOperation(exConfig));
+                    await store2.Maintenance.SendAsync(new ConfigureExpirationOperation(exConfig2));
+
+                    var hub1 = new PullReplicationDefinition
+                    {
+                        Name = "hub1",
+                        DelayReplicationFor = new TimeSpan(3),
+                    };
+                    var hub2 = new PullReplicationDefinition
+                    {
+                        Name = "hub2",
+                        DelayReplicationFor = new TimeSpan(3),
+                    };
+                    var hub3 = new PullReplicationDefinition
+                    {
+                        Name = "hub1",
+                        DelayReplicationFor = new TimeSpan(5),
+                    };
+                    var hub4 = new PullReplicationDefinition
+                    {
+                        Name = "hub4",
+                        DelayReplicationFor = new TimeSpan(3),
+                    };
+                    await store1.Maintenance.SendAsync(new PutPullReplicationAsHubOperation(hub1));
+                    await store1.Maintenance.SendAsync(new PutPullReplicationAsHubOperation(hub2));
+                    await store2.Maintenance.SendAsync(new PutPullReplicationAsHubOperation(hub3));
+                    await store2.Maintenance.SendAsync(new PutPullReplicationAsHubOperation(hub4));
+
+                    var con1 = new RavenConnectionString
+                    {
+                        Database = "db1",
+                        Name = "con1",
+                        TopologyDiscoveryUrls = new[] { "http://127.0.0.1:8081" }
+                    };
+                    var con2 = new RavenConnectionString
+                    {
+                        Database = "db2",
+                        Name = "con2",
+                        TopologyDiscoveryUrls = new[] { "http://127.0.0.1:8082" }
+                    };
+                    var con3 = new RavenConnectionString
+                    {
+                        Database = "db3",
+                        Name = "con3",
+                        TopologyDiscoveryUrls = new[] { "http://127.0.0.1:8083" }
+                    };
+                    var con4 = new RavenConnectionString
+                    {
+                        Database = "db4",
+                        Name = "con4",
+                        TopologyDiscoveryUrls = new[] { "http://127.0.0.1:8084" }
+                    };
+                    await store1.Maintenance.SendAsync(new PutConnectionStringOperation<RavenConnectionString>(con1));
+                    await store1.Maintenance.SendAsync(new PutConnectionStringOperation<RavenConnectionString>(con2));
+                    await store2.Maintenance.SendAsync(new PutConnectionStringOperation<RavenConnectionString>(con3));
+                    await store2.Maintenance.SendAsync(new PutConnectionStringOperation<RavenConnectionString>(con4));
+
+                    var sink1 = new PullReplicationAsSink()
+                    {
+                        Name = "sink1",
+                        ConnectionString = con1,
+                        ConnectionStringName = "con1",
+                        Database = "db1",
+                        HubDefinitionName = "hub1"
+                    };
+                    var sink2 = new PullReplicationAsSink()
+                    {
+                        Name = "sink2",
+                        ConnectionString = con2,
+                        ConnectionStringName = "con2",
+                        Database = "db2",
+                        HubDefinitionName = "hub2"
+                    };
+                    var sink3 = new PullReplicationAsSink()
+                    {
+                        Name = "sink1",
+                        ConnectionString = con3,
+                        ConnectionStringName = "con3",
+                        Database = "db3",
+                        HubDefinitionName = "hub3"
+                    };
+                    var sink4 = new PullReplicationAsSink()
+                    {
+                        Name = "sink4",
+                        ConnectionString = con4,
+                        ConnectionStringName = "con4",
+                        Database = "db4",
+                        HubDefinitionName = "hub4"
+                    };
+                    await store1.Maintenance.SendAsync(new UpdatePullReplicationAsSinkOperation(sink1));
+                    await store1.Maintenance.SendAsync(new UpdatePullReplicationAsSinkOperation(sink2));
+                    await store2.Maintenance.SendAsync(new UpdatePullReplicationAsSinkOperation(sink3));
+                    await store2.Maintenance.SendAsync(new UpdatePullReplicationAsSinkOperation(sink4));
+
+                    var external = new ExternalReplication
+                    {
+                        ConnectionString = con1,
+                        ConnectionStringName = "con1",
+                        Database = "db1",
+                        DelayReplicationFor = new TimeSpan(1),
+                        Name = "external1",
+                        Url = "http://127.0.0.1:8081"
+                    };
+                    var external2 = new ExternalReplication
+                    {
+                        ConnectionString = con2,
+                        ConnectionStringName = "con2",
+                        Database = "db2",
+                        DelayReplicationFor = new TimeSpan(2),
+                        Name = "external2",
+                        Url = "http://127.0.0.1:8081"
+                    };
+                    var external3 = new ExternalReplication
+                    {
+                        ConnectionString = con3,
+                        ConnectionStringName = "con3",
+                        Database = "db3",
+                        DelayReplicationFor = new TimeSpan(3),
+                        Name = "external1",
+                        Url = "http://127.0.0.1:8083"
+                    };
+                    var external4 = new ExternalReplication
+                    {
+                        ConnectionString = con4,
+                        ConnectionStringName = "con4",
+                        Database = "db4",
+                        DelayReplicationFor = new TimeSpan(4),
+                        Name = "external4",
+                        Url = "http://127.0.0.1:8084"
+                    };
+                    await store1.Maintenance.SendAsync(new UpdateExternalReplicationOperation(external));
+                    await store1.Maintenance.SendAsync(new UpdateExternalReplicationOperation(external2));
+                    await store2.Maintenance.SendAsync(new UpdateExternalReplicationOperation(external3));
+                    await store2.Maintenance.SendAsync(new UpdateExternalReplicationOperation(external4));
+
+                    var etlConfiguration = new RavenEtlConfiguration
+                    {
+                        ConnectionStringName = "con1",
+                        Name = "etl1",
+                        AllowEtlOnNonEncryptedChannel = true
+                    };
+                    var etlConfiguration2 = new RavenEtlConfiguration
+                    {
+                        ConnectionStringName = "con2",
+                        Name = "etl2",
+                        AllowEtlOnNonEncryptedChannel = true
+                    };
+                    var etlConfiguration3 = new RavenEtlConfiguration
+                    {
+                        ConnectionStringName = "con3",
+                        Name = "etl1",
+                        AllowEtlOnNonEncryptedChannel = false
+                    };
+                    var etlConfiguration4 = new RavenEtlConfiguration
+                    {
+                        ConnectionStringName = "con4",
+                        Name = "etl4",
+                        AllowEtlOnNonEncryptedChannel = true
+                    };
+                    WaitForUserToContinueTheTest(store1);
+                    await store1.Maintenance.SendAsync(new AddEtlOperation<RavenConnectionString>(etlConfiguration));
+                    await store1.Maintenance.SendAsync(new AddEtlOperation<RavenConnectionString>(etlConfiguration2));
+                    await store2.Maintenance.SendAsync(new AddEtlOperation<RavenConnectionString>(etlConfiguration3));
+                    await store2.Maintenance.SendAsync(new AddEtlOperation<RavenConnectionString>(etlConfiguration4));
+
+                    var scon1 = new SqlConnectionString()
+                    {
+                        Name = "scon1",
+                        ConnectionString = "http://127.0.0.1:8081",
+                        FactoryName = "System.Data.SqlClient"
+                    };
+                    var scon2 = new SqlConnectionString()
+                    {
+                        Name = "scon2",
+                        ConnectionString = "http://127.0.0.1:8082",
+                        FactoryName = "System.Data.SqlClient"
+                    };
+                    var scon3 = new SqlConnectionString()
+                    {
+                        Name = "scon3",
+                        ConnectionString = "http://127.0.0.1:8083",
+                        FactoryName = "System.Data.SqlClient"
+                    };
+                    var scon4 = new SqlConnectionString()
+                    {
+                        Name = "scon4",
+                        ConnectionString = "http://127.0.0.1:8084",
+                        FactoryName = "System.Data.SqlClient"
+                    };
+                    await store1.Maintenance.SendAsync(new PutConnectionStringOperation<SqlConnectionString>(scon1));
+                    await store1.Maintenance.SendAsync(new PutConnectionStringOperation<SqlConnectionString>(scon2));
+                    await store2.Maintenance.SendAsync(new PutConnectionStringOperation<SqlConnectionString>(scon3));
+                    await store2.Maintenance.SendAsync(new PutConnectionStringOperation<SqlConnectionString>(scon4));
+
+                    var sqlEtl =new SqlEtlConfiguration
+                    {
+                        ConnectionStringName = "scon1",
+                        Name = "setl1",
+                        AllowEtlOnNonEncryptedChannel = true,
+                        SqlTables =
+                        {
+                            new SqlEtlTable {TableName = "Orders", DocumentIdColumn = "Id"},
+                            new SqlEtlTable {TableName = "OrderLines", DocumentIdColumn = "OrderId"},
+                            new SqlEtlTable {TableName = "NotUsedInScript", DocumentIdColumn = "OrderId"},
+                        }
+                    };
+                    var sqlEtl2 = new SqlEtlConfiguration
+                    {
+                        ConnectionStringName = "scon2",
+                        Name = "setl2",
+                        AllowEtlOnNonEncryptedChannel = true,
+                        SqlTables =
+                        {
+                            new SqlEtlTable {TableName = "Orders", DocumentIdColumn = "Id"},
+                            new SqlEtlTable {TableName = "OrderLines", DocumentIdColumn = "OrderId"},
+                            new SqlEtlTable {TableName = "NotUsedInScript", DocumentIdColumn = "OrderId"},
+                        }
+                    };
+                    var sqlEtl3 = new SqlEtlConfiguration
+                    {
+                        ConnectionStringName = "scon3",
+                        Name = "setl1",
+                        AllowEtlOnNonEncryptedChannel = true,
+                        SqlTables =
+                        {
+                            new SqlEtlTable {TableName = "Orders", DocumentIdColumn = "Id"},
+                            new SqlEtlTable {TableName = "OrderLines", DocumentIdColumn = "OrderId"},
+                            new SqlEtlTable {TableName = "NotUsedInScript", DocumentIdColumn = "OrderId"},
+                        }
+                    };
+                    var sqlEtl4 = new SqlEtlConfiguration
+                    {
+                        ConnectionStringName = "scon4",
+                        Name = "setl4",
+                        AllowEtlOnNonEncryptedChannel = true,
+                        SqlTables =
+                        {
+                            new SqlEtlTable {TableName = "Orders", DocumentIdColumn = "Id"},
+                            new SqlEtlTable {TableName = "OrderLines", DocumentIdColumn = "OrderId"},
+                            new SqlEtlTable {TableName = "NotUsedInScript", DocumentIdColumn = "OrderId"},
+                        }
+                    };
+                    await store1.Maintenance.SendAsync(new AddEtlOperation<SqlConnectionString>(sqlEtl));
+                    await store1.Maintenance.SendAsync(new AddEtlOperation<SqlConnectionString>(sqlEtl2));
+                    await store2.Maintenance.SendAsync(new AddEtlOperation<SqlConnectionString>(sqlEtl3));
+                    await store2.Maintenance.SendAsync(new AddEtlOperation<SqlConnectionString>(sqlEtl4));
+
+                    var config = new PeriodicBackupConfiguration
+                    {
+                        Disabled = false,
+                        MentorNode = "A",
+                        Name = "Backup",
+                        BackupType = BackupType.Backup,
+                        FullBackupFrequency = "0 1 * * *",
+                        IncrementalBackupFrequency = "0 6 * * *",
+                        LocalSettings = new LocalSettings()
+                        {
+                            FolderPath = "FolderPath"
+                        }
+                    };
+                    var config2 = new PeriodicBackupConfiguration
+                    {
+                        Disabled = false,
+                        MentorNode = "A",
+                        Name = "Backup2",
+                        BackupType = BackupType.Backup,
+                        FullBackupFrequency = "0 1 * * *",
+                        IncrementalBackupFrequency = "0 6 * * *",
+                        LocalSettings = new LocalSettings()
+                        {
+                            FolderPath = "FolderPath"
+                        }
+                    };
+                    var config3 = new PeriodicBackupConfiguration
+                    {
+                        Disabled = false,
+                        MentorNode = "A",
+                        Name = "Backup",
+                        BackupType = BackupType.Snapshot,
+                        FullBackupFrequency = "0 8 * * *",
+                        IncrementalBackupFrequency = "0 6 * * *",
+                        LocalSettings = new LocalSettings()
+                        {
+                            FolderPath = "FolderPath"
+                        }
+                    };
+                    var config4 = new PeriodicBackupConfiguration
+                    {
+                        Disabled = false,
+                        MentorNode = "A",
+                        Name = "Backup4",
+                        BackupType = BackupType.Backup,
+                        FullBackupFrequency = "0 1 * * *",
+                        IncrementalBackupFrequency = "0 6 * * *",
+                        LocalSettings = new LocalSettings()
+                        {
+                            FolderPath = "FolderPath"
+                        }
+                    };
+                    await store1.Maintenance.SendAsync(new UpdatePeriodicBackupOperation(config));
+                    await store1.Maintenance.SendAsync(new UpdatePeriodicBackupOperation(config2));
+                    await store2.Maintenance.SendAsync(new UpdatePeriodicBackupOperation(config3));
+                    await store2.Maintenance.SendAsync(new UpdatePeriodicBackupOperation(config4));
+
+                    var operation = await store1.Smuggler.ExportAsync(new DatabaseSmugglerExportOptions(), file);
+                    await operation.WaitForCompletionAsync(TimeSpan.FromMinutes(1));
+
+                    operation = await store2.Smuggler.ImportAsync(new DatabaseSmugglerImportOptions(), file);
+                    await operation.WaitForCompletionAsync(TimeSpan.FromMinutes(1));
+
+                    WaitForUserToContinueTheTest(store2);
+
+                    int disabled = 0;
+
+                    var periodicBackupRunner = (await GetDocumentDatabaseInstanceFor(store2)).PeriodicBackupRunner;
+                    var backups = periodicBackupRunner.PeriodicBackups;
+
+                    disabled = 0;
+                    Assert.Equal(3, backups.Count);
+                    Assert.Equal(true, backups.Any(x => x.Configuration.Name.Equals("Backup")));
+                    foreach (var backup in backups)
+                    {
+                        if (backup.Configuration.Disabled)
+                            disabled++;
+                        if (!backup.Configuration.Name.Equals("Backup")) continue;
+                        Assert.Equal(true, backup.Configuration.IncrementalBackupFrequency.Equals("0 6 * * *"));
+                        Assert.Equal(true, backup.Configuration.FullBackupFrequency.Equals("0 1 * * *"));
+                        Assert.Equal(BackupType.Backup, backup.Configuration.BackupType);
+                    }
+                    Assert.Equal(2, disabled);
+
+                    
+
+                    var record = await store2.Maintenance.Server.SendAsync(new GetDatabaseRecordOperation(store2.Database));
+
+                    Assert.Equal(3, record.ConflictSolverConfig.ResolveByCollection.Count);
+                    Assert.Equal(false, record.ConflictSolverConfig.ResolveToLatest);
+                    Assert.Equal(true, record.ConflictSolverConfig.ResolveByCollection.TryGetValue("ConflictSolver1", out ScriptResolver sr));
+                    Assert.Equal("Script1", sr.Script);
+
+                    Assert.Equal(1024, record.Client.MaxNumberOfRequestsPerSession);
+                    Assert.Equal(ReadBalanceBehavior.FastestNode, record.Client.ReadBalanceBehavior);
+
+                    Assert.Equal(true, record.Revisions.Default.PurgeOnDelete);
+                    Assert.Equal(true, record.Revisions.Collections.TryGetValue("rev1", out RevisionsCollectionConfiguration rcc));
+                    Assert.Equal(10, rcc.MinimumRevisionsToKeep);
+
+                    Assert.Equal(60, record.Expiration.DeleteFrequencyInSec);
+
+                    disabled = 0;
+                    Assert.Equal(3, record.HubPullReplications.Count);
+                    Assert.Equal(true, record.HubPullReplications.Any(x => x.Name.Equals("hub1")));
+                    record.HubPullReplications.ForEach(x =>
+                    {
+                        if (x.Disabled)
+                            disabled++;
+                        if (!x.Name.Equals("hub1"))
+                            return;
+                        Assert.Equal(new TimeSpan(3), x.DelayReplicationFor);
+                    });
+                    Assert.Equal(2, disabled);
+
+                    disabled = 0;
+                    Assert.Equal(3, record.SinkPullReplications.Count);
+                    Assert.Equal(true, record.SinkPullReplications.Any(x => x.Name.Equals("sink1")));
+                    record.SinkPullReplications.ForEach(x =>
+                    {
+                        if (x.Disabled)
+                            disabled++;
+                        if (!x.Name.Equals("sink1"))
+                            return;
+                        Assert.Equal("hub1", x.HubDefinitionName);
+                        Assert.Equal("con1", x.ConnectionStringName);
+                    });
+                    Assert.Equal(2, disabled);
+
+                    disabled = 0;
+                    Assert.Equal(3, record.ExternalReplications.Count);
+                    Assert.Equal(true, record.ExternalReplications.Any(x => x.Name.Equals("external1")));
+                    record.ExternalReplications.ForEach(x =>
+                    {
+                        if (x.Disabled)
+                            disabled++;
+                        if (!x.Name.Equals("external1"))
+                            return;
+                        Assert.Equal("db1", x.Database);
+                        Assert.Equal("con1", x.ConnectionStringName);
+                    });
+                    Assert.Equal(2, disabled);
+
+                    disabled = 0;
+                    Assert.Equal(3, record.RavenEtls.Count);
+                    Assert.Equal(true, record.RavenEtls.Any(x => x.Name.Equals("etl1")));
+                    record.RavenEtls.ForEach(x =>
+                    {
+                        if (x.Disabled)
+                            disabled++;
+                        if (!x.Name.Equals("etl1"))
+                            return;
+                        Assert.Equal("con1", x.ConnectionStringName);
+                        Assert.Equal(true, x.AllowEtlOnNonEncryptedChannel);
+                    });
+                    Assert.Equal(2, disabled);
+
+                    disabled = 0;
+                    Assert.Equal(3, record.SqlEtls.Count);
+                    Assert.Equal(true, record.SqlEtls.Any(x => x.Name.Equals("setl1")));
+                    record.SqlEtls.ForEach(x =>
+                    {
+                        if (x.Disabled)
+                            disabled++;
+                        if (!x.Name.Equals("setl1"))
+                            return;
+                        Assert.Equal("scon1", x.ConnectionStringName);
+                        Assert.Equal(true, x.AllowEtlOnNonEncryptedChannel);
+                    });
+                    Assert.Equal(2, disabled);
                 }
             }
             finally
