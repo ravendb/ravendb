@@ -200,7 +200,7 @@ namespace Raven.Server.Documents.Replication
             if (existingDoc != null)
             {
                 var compareResult = DocumentCompare.IsEqualTo(existingDoc.Data, incomingDoc, true);
-                if (compareResult == DocumentCompareResult.NotEqual)
+                if (compareResult != DocumentCompareResult.Equal)
                     return false;
 
                 // no real conflict here, both documents have identical content so we only merge the change vector without increasing the local etag to prevent ping-pong replication

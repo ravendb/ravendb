@@ -34,8 +34,8 @@ namespace Raven.Server.Documents
             // because that most of the time the metadata itself won't be the equal, so no need to compare all values
 
             var result = IsMetadataEqualTo(original, modified, tryMergeMetadataConflicts);
-            if (result == DocumentCompareResult.NotEqual)
-                return DocumentCompareResult.NotEqual;
+            if (result != DocumentCompareResult.Equal)
+                return result;
 
             if (ComparePropertiesExceptStartingWithAt(original, modified) == DocumentCompareResult.NotEqual)
                 return DocumentCompareResult.NotEqual;
