@@ -9,6 +9,7 @@ namespace Raven.Client.Documents.Operations.OngoingTasks
 {
     public class GetOngoingTaskInfoOperation : IMaintenanceOperation<OngoingTask>
     {
+        private readonly string _taskName;
         private readonly long _taskId;
         private readonly OngoingTaskType _type;
 
@@ -18,13 +19,22 @@ namespace Raven.Client.Documents.Operations.OngoingTasks
             _type = type;
         }
 
+        public GetOngoingTaskInfoOperation(string taskName, OngoingTaskType type)
+        {
+            _taskName = taskName;
+            _type = type;
+        }
+
         public RavenCommand<OngoingTask> GetCommand(DocumentConventions conventions, JsonOperationContext ctx)
         {
+            if (_taskName != null)
+                return new GetOngoingTaskInfoCommand(_taskName, _type);
             return new GetOngoingTaskInfoCommand(_taskId, _type);
         }
 
         private class GetOngoingTaskInfoCommand : RavenCommand<OngoingTask>
         {
+            private readonly string _taskName;
             private readonly long _taskId;
             private readonly OngoingTaskType _type;
 
@@ -34,9 +44,15 @@ namespace Raven.Client.Documents.Operations.OngoingTasks
                 _type = type;
             }
 
+            public GetOngoingTaskInfoCommand(string taskName, OngoingTaskType type)
+            {
+                _taskName = taskName;
+                _type = type;
+            }
+
             public override HttpRequestMessage CreateRequest(JsonOperationContext ctx, ServerNode node, out string url)
             {
-                url = $"{node.Url}/databases/{node.Database}/task?key={_taskId}&type={_type}";
+                url = _taskName != null ? $"{node.Url}/databases/{node.Database}/task?name={_taskName}&type={_type}" : $"{node.Url}/databases/{node.Database}/task?key={_taskId}&type={_type}";
 
                 var request = new HttpRequestMessage
                 {
