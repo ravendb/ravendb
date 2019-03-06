@@ -221,12 +221,13 @@ namespace Raven.Server.ServerWide
                             while (cancelTask.IsCompleted == false)
                             {
                                 var topology = GetClusterTopology();
-                                var leaderUrl = topology.GetUrlFromTag(_engine.LeaderTag);
+                                var leader = _engine.LeaderTag;
+                                if (leader == null || leader == _engine.Tag)
+                                    break;
+
+                                var leaderUrl = topology.GetUrlFromTag(leader);
                                 if (leaderUrl == null)
                                     break; // will continue from the top of the loop
-
-                                if (IsLeader())
-                                    break;
 
                                 using (var ws = new ClientWebSocket())
                                 using (ContextPool.AllocateOperationContext(out JsonOperationContext context))
@@ -239,7 +240,8 @@ namespace Raven.Server.ServerWide
                                     }
 
                                     ws.ConnectAsync(leaderWsUrl, cts.Token).Wait(cts.Token);
-                                    while (ws.State == WebSocketState.Open || ws.State == WebSocketState.CloseSent)
+                                    while (cancelTask.IsCompleted == false && 
+                                           (ws.State == WebSocketState.Open || ws.State == WebSocketState.CloseSent))
                                     {
                                         var readTask = context.ReadFromWebSocket(ws, "ws from Leader", cts.Token);
                                         using (var notification = readTask.Result)
