@@ -1175,17 +1175,16 @@ namespace Raven.Server.Documents
             return ((CounterValues*)counterValues.Ptr)[index].Value;
         }
 
-        //TODO: Should delete this, they may be many of these
-        internal CounterGroupDetail GetCounterValuesForDocument(DocumentsOperationContext context, string docId)
+        internal IEnumerable<CounterGroupDetail> GetCounterValuesForDocument(DocumentsOperationContext context, string docId)
         {
             var table = new Table(CountersSchema, context.Transaction.InnerTransaction);
 
-            using (DocumentIdWorker.GetSliceFromId(context, docId, out Slice key))
+            using (DocumentIdWorker.GetSliceFromId(context, docId, out Slice key, separator: SpecialChars.RecordSeparator))
             {
-                if (table.ReadByKey(key, out var existing) == false)
-                    return null;
-
-                return TableValueToCounterGroupDetail(context, ref existing);
+                foreach (var result in table.SeekByPrimaryKeyPrefix(key, Slices.Empty, 0))
+                {
+                    yield return TableValueToCounterGroupDetail(context, ref result.Value.Reader);
+                }
             }
         }
 
