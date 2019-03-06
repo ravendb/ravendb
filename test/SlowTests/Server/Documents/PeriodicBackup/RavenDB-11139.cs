@@ -1396,8 +1396,12 @@ namespace SlowTests.Server.Documents.PeriodicBackup
                 result = await store.Maintenance.SendAsync(new UpdatePeriodicBackupOperation(config));
                 RunBackup(result.TaskId, documentDatabase, false, store); // INCREMENTAL 2
 
-                // clean tombstones
-                await Server.ServerStore.Observer.CleanUpCompareExchangeTombstones();
+                using (Server.ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
+                using (context.OpenReadTransaction())
+                {
+                    // clean tombstones
+                    await Server.ServerStore.Observer.CleanUpCompareExchangeTombstones(store.Database, context);
+                }
 
                 using (Server.ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
                 using (context.OpenReadTransaction())
@@ -1410,6 +1414,105 @@ namespace SlowTests.Server.Documents.PeriodicBackup
                 }
             }
         }
+
+        [Theory]
+        [InlineData(1)]
+        [InlineData(1024)]
+        public async Task CompareExchangeTombstonesShouldBeClearedIfThereIsNoIncrementalBackup(int number)
+        {
+            var list = new List<string>(new[] { "🐃", "🐂", "🐄", "🐎", "🐖",
+                                                "🐏", "🐑", "🐐", "🦌", "🐕",
+                                                "🐩", "🐈", "🐓", "🦃", "🕊",
+                                                "🐇", "🐁", "🐀", "🐿", "🦔" });
+
+            using (var store = GetDocumentStore())
+            {
+                var count = 1;
+                var indexesList = new List<long>();
+
+                for (int i = 0; i < number; i++)
+                {
+                    var k = i % 20;
+                    var user = new User
+                    {
+                        Name = $"emoji_{i}"
+                    };
+                    var str = "";
+                    for (int j = 0; j < count; j++)
+                    {
+
+                        str += list[k];
+                    }
+
+                    var res = await store.Operations.SendAsync(new PutCompareExchangeValueOperation<User>($"emojis/{str}", user, 0));
+                    indexesList.Add(res.Index);
+
+                    if (k == 0)
+                        count++;
+                }
+
+                var stats = store.Maintenance.ForDatabase(store.Database).Send(new GetDetailedStatisticsOperation());
+                Assert.Equal(number, stats.CountOfCompareExchange);
+                Assert.Equal(number, indexesList.Count);
+
+                var delCount = 0;
+                var allCount = number;
+                count = 1;
+                for (var i = 0; i < number; i++)
+                {
+                    var k = i % 20;
+
+                    var str = "";
+                    for (int j = 0; j < count; j++)
+                    {
+                        str += list[k];
+                    }
+
+                    if (k < 10)
+                    {
+                        var res = await store.Operations.SendAsync(new DeleteCompareExchangeValueOperation<User>($"emojis/{str}", indexesList[i]));
+                        if (res.Value != null)
+                        {
+                            delCount++;
+                            allCount--;
+                        }
+                    }
+
+                    if (k == 0)
+                        count++;
+                }
+
+                Assert.True(delCount > 0);
+
+                using (Server.ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
+                using (context.OpenReadTransaction())
+                {
+                    var numOfCompareExchangeTombstones = Server.ServerStore.Cluster.GetNumberOfCompareExchangeTombstones(context, store.Database);
+                    var numOfCompareExchanges = Server.ServerStore.Cluster.GetNumberOfCompareExchange(context, store.Database);
+
+                    Assert.Equal(delCount, numOfCompareExchangeTombstones);
+                    Assert.Equal(allCount, numOfCompareExchanges);
+                }
+
+                using (Server.ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
+                using (context.OpenReadTransaction())
+                {
+                    // clean tombstones
+                    await Server.ServerStore.Observer.CleanUpCompareExchangeTombstones(store.Database, context);
+                }
+
+                using (Server.ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
+                using (context.OpenReadTransaction())
+                {
+                    var numOfCompareExchangeTombstones = Server.ServerStore.Cluster.GetNumberOfCompareExchangeTombstones(context, store.Database);
+                    var numOfCompareExchanges = Server.ServerStore.Cluster.GetNumberOfCompareExchange(context, store.Database);
+
+                    Assert.Equal(0, numOfCompareExchangeTombstones);
+                    Assert.Equal(allCount, numOfCompareExchanges);
+                }
+            }
+        }
+
 
         private static List<string> ConcatStringInList(List<string> list)
         {

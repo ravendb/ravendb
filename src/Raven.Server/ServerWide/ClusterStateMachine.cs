@@ -293,7 +293,8 @@ namespace Raven.Server.ServerWide
                         DeleteMultipleValues(context, type, cmd, index, leader);
                         break;
                     case nameof(CleanCompareExchangeTombstonesCommand):
-                        ClearCompareExchangeTombstones(context, type, cmd, index, serverStore);
+                        ClearCompareExchangeTombstones(context, type, cmd, index, out bool hasMore);
+                        leader?.SetStateOf(index, hasMore);
                         break;
                     case nameof(IncrementClusterIdentityCommand):
                         if (ValidatePropertyExistence(cmd, nameof(IncrementClusterIdentityCommand), nameof(IncrementClusterIdentityCommand.Prefix), out errorMessage) == false)
@@ -1688,31 +1689,36 @@ namespace Raven.Server.ServerWide
             }
         }
 
-        private void ClearCompareExchangeTombstones(TransactionOperationContext context, string type, BlittableJsonReaderObject cmd, long index, ServerStore serverStore)
+        private void ClearCompareExchangeTombstones(TransactionOperationContext context, string type, BlittableJsonReaderObject cmd, long index, out bool result)
         {
+            string databaseName = null;
+
             try
             {
-                if (cmd.TryGet(DatabaseName, out string databaseName) == false || string.IsNullOrEmpty(databaseName))
-                    throw new RachisApplyException("Update database command must contain a DatabaseName property");
+                if (cmd.TryGet(DatabaseName, out databaseName) == false || string.IsNullOrEmpty(databaseName))
+                    throw new RachisApplyException("Clear Compare Exchange command must contain a DatabaseName property");
 
                 if (cmd.TryGet("MaxRaftIndex", out long maxEtag) == false)
-                    throw new RachisApplyException("Update database command must contain a MaxRaftIndex property");
+                    throw new RachisApplyException("Clear Compare Exchange command must contain a MaxRaftIndex property");
+
+                if (cmd.TryGet("Take", out int take) == false)
+                    throw new RachisApplyException("Clear Compare Exchange command must contain a Take property");
 
                 var databaseNameLowered = databaseName.ToLowerInvariant();
-                DeleteCompareExchangeTombstonesUpToPrefix(context, databaseNameLowered, maxEtag);
+                result = DeleteCompareExchangeTombstonesUpToPrefix(context, databaseNameLowered, maxEtag, take);
             }
             finally
             {
-                NotifyValueChanged(context, type, index);
+                NotifyDatabaseAboutChanged(context, databaseName, index, type, DatabasesLandlord.ClusterDatabaseChangeType.ValueChanged);
             }
         }
 
-        private void DeleteCompareExchangeTombstonesUpToPrefix(TransactionOperationContext context, string dbName, long upToIndex = 0)
+        private static bool DeleteCompareExchangeTombstonesUpToPrefix(TransactionOperationContext context, string dbName, long upToIndex, int take = int.MaxValue)
         {
             using (Slice.From(context.Allocator, dbName, out var dbNameSlice))
             {
                 var table = context.Transaction.InnerTransaction.OpenTable(CompareExchangeTombstoneSchema, CompareExchangeTombstones);
-                table.DeleteForwardUpToPrefix(dbNameSlice, upToIndex);
+                return table.DeleteForwardUpToPrefix(dbNameSlice, upToIndex, take);
             }
         }
 
@@ -2001,6 +2007,30 @@ namespace Raven.Server.ServerWide
             var compareExchangeTombstone = items.GetTree(CompareExchangeTombstoneSchema.Key);
             var prefix = CompareExchangeCommandBase.GetActualKey(databaseName, null);
             return GetNumberOf(compareExchangeTombstone, prefix, context);
+        }
+
+        public bool HasCompareExchangeTombstones(TransactionOperationContext context, string databaseName)
+        {
+            var items = context.Transaction.InnerTransaction.OpenTable(CompareExchangeTombstoneSchema, CompareExchangeTombstones);
+            var compareExchangeTombstone = items.GetTree(CompareExchangeTombstoneSchema.Key);
+            var prefix = CompareExchangeCommandBase.GetActualKey(databaseName, null);
+            return HasPrefixOf(compareExchangeTombstone, prefix, context);
+        }
+
+        private static bool HasPrefixOf(Tree tree, string prefix, TransactionOperationContext context)
+        {
+            using (Slice.From(context.Allocator, prefix, out var prefixAsSlice))
+            {
+                using (var it = tree.Iterate(prefetch: false))
+                {
+                    it.SetRequiredPrefix(prefixAsSlice);
+
+                    if (it.Seek(prefixAsSlice) == false)
+                        return false;
+
+                    return true;
+                }
+            }
         }
 
         private static long GetNumberOf(Tree tree, string prefix, TransactionOperationContext context)
