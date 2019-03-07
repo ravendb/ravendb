@@ -663,7 +663,7 @@ namespace Raven.Server.Documents
 
                     if (table.SeekOnePrimaryKeyPrefix(documentKeyPrefix, out _) == false)
                     {
-                        // simplest case of having no counters for this documents, can use the raw data from the source as-is
+                        // simplest case of having no counters for this document, can use the raw data from the source as-is
 
                         data = context.ReadObject(sourceData, documentId, BlittableJsonDocumentBuilder.UsageMode.ToDisk);
                         using (Slice.From(context.Allocator, changeVector, out var cv))
@@ -679,140 +679,143 @@ namespace Raven.Server.Documents
 
                             table.Set(tvb);
                         }
+
+                        return;
                     }
 
-                    else
+                    var prop = new BlittableJsonReaderObject.PropertyDetails();
+                    for (var i = 0; i < sourceCounters.Count; i++)
                     {
-                        var prop = new BlittableJsonReaderObject.PropertyDetails();
-                        for (var i = 0; i < sourceCounters.Count; i++)
+                        sourceCounters.GetPropertyByIndex(i, ref prop);
+
+                        using (Slice.From(context.Allocator, prop.Name, out Slice counterNameSlice))
+                        using (context.Allocator.Allocate(documentKeyPrefix.Size + counterNameSlice.Size, out var counterKeyBuffer))
+                        using (CreateCounterKeySlice(context, counterKeyBuffer, documentKeyPrefix, counterNameSlice, out var counterKeySlice))
                         {
-                            sourceCounters.GetPropertyByIndex(i, ref prop);
+                            if (table.SeekOneBackwardByPrimaryKeyPrefix(documentKeyPrefix, counterKeySlice, out var tvr) == false)
+                                continue;
 
-                            using (Slice.From(context.Allocator, prop.Name, out Slice counterNameSlice))
-                            using (context.Allocator.Allocate(documentKeyPrefix.Size + counterNameSlice.Size, out var counterKeyBuffer))
-                            using (CreateCounterKeySlice(context, counterKeyBuffer, documentKeyPrefix, counterNameSlice, out var counterKeySlice))
+                            using (var counterGroupKey = TableValueToString(context, (int)CountersTable.CounterKey, ref tvr))
                             {
-                                if (table.SeekOneBackwardByPrimaryKeyPrefix(documentKeyPrefix, counterKeySlice, out var tvr) == false)
-                                    continue;
-
-                                using (var counterGroupKey = TableValueToString(context, (int)CountersTable.CounterKey, ref tvr))
+                                if (entriesToUpdate.TryGetValue(counterGroupKey, out var tuple))
                                 {
-                                    if (entriesToUpdate.TryGetValue(counterGroupKey, out var tuple))
+                                    data = tuple.Data;
+                                }
+                                else
+                                {
+                                    var existingChangeVector = TableValueToChangeVector(context, (int)CountersTable.ChangeVector, ref tvr);
+                                    if (ChangeVectorUtils.GetConflictStatus(changeVector, existingChangeVector) == ConflictStatus.AlreadyMerged)
+                                        continue;
+
+                                    using (data = GetCounterValuesData(context, ref tvr))
                                     {
-                                        data = tuple.Data;
-                                    }
-                                    else
-                                    {
-                                        var existingChangeVector = TableValueToChangeVector(context, (int)CountersTable.ChangeVector, ref tvr);
-                                        if (ChangeVectorUtils.GetConflictStatus(changeVector, existingChangeVector) == ConflictStatus.AlreadyMerged)
-                                            continue;
-
-                                        using (data = GetCounterValuesData(context, ref tvr))
-                                        {
-                                            data = data.Clone(context);
-                                        }
-
-                                        if (data.TryGet(DbIds, out BlittableJsonReaderArray dbIds) == false)
-                                        {
-                                            throw new InvalidDataException(
-                                                $"Local Counter-Group document '{counterKeySlice}' is missing '{DbIds}' property. Shouldn't happen");
-                                        }
-
-                                        tuple = (data, new DbIdsHolder(dbIds), existingChangeVector, false);
-
-                                        // clone counter group key  
-                                        context.Allocator.Allocate(counterGroupKey.Size, out var output);
-                                        counterGroupKey.CopyTo(output.Ptr);
-                                        var clonedKey = context.AllocateStringValue(null, output.Ptr, output.Length);
-
-                                        entriesToUpdate.Add(clonedKey, tuple);
+                                        data = data.Clone(context);
                                     }
 
-                                    if (data.TryGet(Values, out BlittableJsonReaderObject localCounters) == false)
+                                    if (data.TryGet(DbIds, out BlittableJsonReaderArray dbIds) == false)
                                     {
                                         throw new InvalidDataException(
-                                            $"Local Counter-Group document '{counterKeySlice}' is missing '{Values}' property. Shouldn't happen");
+                                            $"Local Counter-Group document '{counterKeySlice}' is missing '{DbIds}' property. Shouldn't happen");
                                     }
 
-                                    if (MergeCounterIfNeeded(context, localCounters, ref prop, tuple.dbIdsHolder, sourceDbIds,
-                                            out var localCounterValues, out var modified, out var changeType) == false)
-                                    {
-                                        continue;
-                                    }
+                                    tuple = (data, new DbIdsHolder(dbIds), existingChangeVector, false);
 
-                                    if (modified)
-                                    {
-                                        var counterName = prop.Name;
-                                        var value = InternalGetCounterValue(localCounterValues, documentId, counterName);
-                                        context.Transaction.AddAfterCommitNotification(new CounterChange
-                                        {
-                                            ChangeVector = changeVector,
-                                            DocumentId = documentId,
-                                            Name = counterName,
-                                            Value = value,
-                                            Type = changeType
-                                        });
+                                    // clone counter group key  
 
-                                        UpdateMetrics(counterKeySlice, counterName, changeVector, collection);
+                                    //TODO need to dispose this
 
-                                        tuple.Modified = true;
+                                    context.Allocator.Allocate(counterGroupKey.Size, out var output);
 
-                                    }
 
-                                    entriesToUpdate[counterGroupKey] = tuple;
+                                    counterGroupKey.CopyTo(output.Ptr);
+                                    var clonedKey = context.AllocateStringValue(null, output.Ptr, output.Length);
+
+                                    entriesToUpdate.Add(clonedKey, tuple);
                                 }
+
+                                if (data.TryGet(Values, out BlittableJsonReaderObject localCounters) == false)
+                                {
+                                    throw new InvalidDataException(
+                                        $"Local Counter-Group document '{counterKeySlice}' is missing '{Values}' property. Shouldn't happen");
+                                }
+
+                                if (MergeCounterIfNeeded(context, localCounters, ref prop, tuple.dbIdsHolder, sourceDbIds,
+                                        out var localCounterValues, out var modified, out var changeType) == false)
+                                {
+                                    continue;
+                                }
+
+                                if (modified)
+                                {
+                                    var counterName = prop.Name;
+                                    var value = InternalGetCounterValue(localCounterValues, documentId, counterName);
+                                    context.Transaction.AddAfterCommitNotification(new CounterChange
+                                    {
+                                        ChangeVector = changeVector,
+                                        DocumentId = documentId,
+                                        Name = counterName,
+                                        Value = value,
+                                        Type = changeType
+                                    });
+
+                                    UpdateMetrics(counterKeySlice, counterName, changeVector, collection);
+
+                                    tuple.Modified = true;
+
+                                }
+
+                                entriesToUpdate[counterGroupKey] = tuple;
+                            }
+                        }
+                    }
+
+                    foreach (var kvp in entriesToUpdate)
+                    {
+                        var tuple = kvp.Value;
+                        var currentData = tuple.Data;
+
+                        if (tuple.Modified)
+                        {
+                            using (var old = currentData)
+                            {
+                                currentData = context.ReadObject(currentData, documentId, BlittableJsonDocumentBuilder.UsageMode.ToDisk);
                             }
                         }
 
-                        foreach (var kvp in entriesToUpdate)
-                        {
-                            var tuple = kvp.Value;
-                            var currentData = tuple.Data;
+                        var changeVectorToSave = ChangeVectorUtils.MergeVectors(tuple.ChangeVector, changeVector);
 
-                            if (tuple.Modified)
+                        using (Slice.External(context.Allocator, kvp.Key, out var countersGroupKey))
+                        {
+                            if (currentData.Size > MaxCounterDocumentSize)
                             {
-                                using (var old = currentData)
+                                // after adding new counters to the counters blittable
+                                // we caused the blittable to grow beyond 2KB 
+
+                                currentData.TryGet(Values, out BlittableJsonReaderObject localCounters);
+                                currentData.TryGet(DbIds, out BlittableJsonReaderArray dbIds);
+
+                                using (currentData)
                                 {
-                                    currentData = context.ReadObject(currentData, documentId, BlittableJsonDocumentBuilder.UsageMode.ToDisk);
+                                    SplitCounterGroup(context, collectionName, table, documentKeyPrefix, countersGroupKey, localCounters, dbIds,
+                                        changeVectorToSave);
                                 }
+
+                                continue;
                             }
 
-                            var changeVectorToSave = ChangeVectorUtils.MergeVectors(tuple.ChangeVector, changeVector);
-
-                            using (Slice.External(context.Allocator, kvp.Key, out var countersGroupKey))
+                            var etag = _documentsStorage.GenerateNextEtag();
+                            using (Slice.From(context.Allocator, changeVectorToSave, out var cv))
+                            using (DocumentIdWorker.GetStringPreserveCase(context, collectionName.Name, out Slice collectionSlice))
+                            using (table.Allocate(out TableValueBuilder tvb))
                             {
+                                tvb.Add(countersGroupKey);
+                                tvb.Add(Bits.SwapBytes(etag));
+                                tvb.Add(cv);
+                                tvb.Add(currentData.BasePointer, currentData.Size);
+                                tvb.Add(collectionSlice);
+                                tvb.Add(context.TransactionMarkerOffset);
 
-                                if (currentData.Size > MaxCounterDocumentSize)
-                                {
-                                    // after adding new counters to the counters blittable
-                                    // we caused the blittable to grow beyond 2KB 
-
-                                    currentData.TryGet(Values, out BlittableJsonReaderObject localCounters);
-                                    currentData.TryGet(DbIds, out BlittableJsonReaderArray dbIds);
-
-                                    using (currentData)
-                                    {
-                                        SplitCounterGroup(context, collectionName, table, documentKeyPrefix, countersGroupKey, localCounters, dbIds,
-                                            changeVectorToSave);
-                                    }
-
-                                    continue;
-                                }
-
-                                var etag = _documentsStorage.GenerateNextEtag();
-                                using (Slice.From(context.Allocator, changeVectorToSave, out var cv))
-                                using (DocumentIdWorker.GetStringPreserveCase(context, collectionName.Name, out Slice collectionSlice))
-                                using (table.Allocate(out TableValueBuilder tvb))
-                                {
-                                    tvb.Add(countersGroupKey);
-                                    tvb.Add(Bits.SwapBytes(etag));
-                                    tvb.Add(cv);
-                                    tvb.Add(currentData.BasePointer, currentData.Size);
-                                    tvb.Add(collectionSlice);
-                                    tvb.Add(context.TransactionMarkerOffset);
-
-                                    table.Set(tvb);
-                                }
+                                table.Set(tvb);
                             }
                         }
                     }
@@ -831,7 +834,6 @@ namespace Raven.Server.Documents
                 }
 
                 _counterModificationMemoryScopes.Clear();
-                entriesToUpdate.Clear();
             }
         }
 
