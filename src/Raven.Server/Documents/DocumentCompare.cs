@@ -11,25 +11,27 @@ namespace Raven.Server.Documents
 {
     public static class DocumentCompare
     {
-        public struct DocumentCompareOptions
+        public readonly struct DocumentCompareOptions
         {
-            public bool TryMergeMetadataConflicts;
-            public bool ThrowOnAttachmentModifications;
+            private DocumentCompareOptions(bool tryMergeMetadataConflicts, bool throwOnAttachmentModifications)
+            {
+                TryMergeMetadataConflicts = tryMergeMetadataConflicts;
+                ThrowOnAttachmentModifications = throwOnAttachmentModifications;
+            }
+
+            public readonly bool TryMergeMetadataConflicts;
+            public readonly bool ThrowOnAttachmentModifications;
+
             public static DocumentCompareOptions Default = new DocumentCompareOptions();
-            public static DocumentCompareOptions MergeMetadata = 
-                new DocumentCompareOptions
-                {
-                    TryMergeMetadataConflicts = true
-                };
-            public static DocumentCompareOptions MergeMetadataAndThrowOnAttachmentModification = 
-                new DocumentCompareOptions
-                {
-                    TryMergeMetadataConflicts = true,
-                    ThrowOnAttachmentModifications = true
-                };
+
+            public static DocumentCompareOptions MergeMetadata =
+                new DocumentCompareOptions(tryMergeMetadataConflicts: true, throwOnAttachmentModifications: false);
+
+            public static DocumentCompareOptions MergeMetadataAndThrowOnAttachmentModification =
+                new DocumentCompareOptions(tryMergeMetadataConflicts: true, throwOnAttachmentModifications: true);
         }
-        public static unsafe DocumentCompareResult IsEqualTo(BlittableJsonReaderObject original, BlittableJsonReaderObject modified,
-            DocumentCompareOptions options)
+
+        public static unsafe DocumentCompareResult IsEqualTo(BlittableJsonReaderObject original, BlittableJsonReaderObject modified, in DocumentCompareOptions options)
         {
             if (ReferenceEquals(original, modified))
                 return DocumentCompareResult.Equal;
@@ -43,7 +45,7 @@ namespace Raven.Server.Documents
             if (original.Size == modified.Size)
             {
                 // if this didn't change, we can check the raw memory directly.
-                if(Memory.Compare(original.BasePointer, modified.BasePointer, original.Size) == 0)
+                if (Memory.Compare(original.BasePointer, modified.BasePointer, original.Size) == 0)
                     return DocumentCompareResult.Equal;
             }
 
@@ -60,7 +62,7 @@ namespace Raven.Server.Documents
             return result;
         }
 
-        private static DocumentCompareResult IsMetadataEqualTo(BlittableJsonReaderObject current, BlittableJsonReaderObject modified, DocumentCompareOptions options)
+        private static DocumentCompareResult IsMetadataEqualTo(BlittableJsonReaderObject current, BlittableJsonReaderObject modified, in DocumentCompareOptions options)
         {
             if (modified == null)
                 return DocumentCompareResult.NotEqual;
@@ -108,8 +110,11 @@ namespace Raven.Server.Documents
             throw new InvalidOperationException("Illegal modifications of '@attachments' detected");
         }
 
-        private static DocumentCompareResult ComparePropertiesExceptStartingWithAt(BlittableJsonReaderObject current, BlittableJsonReaderObject modified, 
-            bool isMetadata, DocumentCompareOptions options)
+        private static DocumentCompareResult ComparePropertiesExceptStartingWithAt(
+            BlittableJsonReaderObject current,
+            BlittableJsonReaderObject modified,
+            bool isMetadata,
+            in DocumentCompareOptions options)
         {
             var resolvedAttachmentConflict = false;
             var resolvedCountersConflict = false;
@@ -138,11 +143,11 @@ namespace Raven.Server.Documents
                                     continue;
                                 }
 
-                                resolvedAttachmentConflict = ShouldResolveAttachmentsConflict(current, modified,options);
+                                resolvedAttachmentConflict = ShouldResolveAttachmentsConflict(current, modified, options);
                                 if (resolvedAttachmentConflict)
                                     continue;
 
-                                if(options.ThrowOnAttachmentModifications)
+                                if (options.ThrowOnAttachmentModifications)
                                 {
                                     ThrowAttachmentsModificationsDetected();
                                 }
@@ -188,11 +193,11 @@ namespace Raven.Server.Documents
 
             var shouldRecreateAttachment = resolvedAttachmentConflict ? DocumentCompareResult.AttachmentsNotEqual : DocumentCompareResult.None;
             var shouldRecreateCounters = resolvedCountersConflict ? DocumentCompareResult.CountersNotEqual : DocumentCompareResult.None;
-            
+
             return DocumentCompareResult.Equal | shouldRecreateAttachment | shouldRecreateCounters;
         }
 
-        private static bool ShouldResolveAttachmentsConflict(BlittableJsonReaderObject currentMetadata, BlittableJsonReaderObject modifiedMetadata, DocumentCompareOptions options)
+        private static bool ShouldResolveAttachmentsConflict(BlittableJsonReaderObject currentMetadata, BlittableJsonReaderObject modifiedMetadata, in DocumentCompareOptions options)
         {
             currentMetadata.TryGet(Constants.Documents.Metadata.Attachments, out BlittableJsonReaderArray currentAttachments);
             modifiedMetadata.TryGet(Constants.Documents.Metadata.Attachments, out BlittableJsonReaderArray modifiedAttachments);
@@ -266,7 +271,6 @@ namespace Raven.Server.Documents
             return currentCounters.Length != modifiedCounters.Length ||
                    !currentCounters.All(modifiedCounters.Contains);
         }
-
     }
 
     [Flags]

@@ -182,7 +182,7 @@ namespace Raven.Server.Documents.Patch
 
                             result.Status = PatchStatus.Created;
                         }
-                        else 
+                        else
                         {
                             DocumentCompareResult compareResult;
                             try
@@ -192,7 +192,7 @@ namespace Raven.Server.Documents.Patch
                             }
                             catch (InvalidOperationException ioe)
                             {
-                                throw new InvalidOperationException("Illegal modifications of '@attachments' detected for document: " + id);
+                                throw new InvalidOperationException($"Could not patch document '{id}'.", ioe);
                             }
 
                             if (compareResult != DocumentCompareResult.Equal)
