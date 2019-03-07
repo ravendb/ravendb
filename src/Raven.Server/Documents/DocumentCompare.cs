@@ -95,7 +95,7 @@ namespace Raven.Server.Documents
 
         private static void ThrowAttachmentsModificationsDetected(string documentId)
         {
-            throw new InvalidOperationException("Illegal modifications of '@attachmetns' detected for document: " + documentId);
+            throw new InvalidOperationException("Illegal modifications of '@attachments' detected for document: " + documentId);
         }
 
         private static DocumentCompareResult ComparePropertiesExceptStartingWithAt(BlittableJsonReaderObject current, BlittableJsonReaderObject modified, 
