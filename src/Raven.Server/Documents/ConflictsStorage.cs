@@ -675,7 +675,7 @@ namespace Raven.Server.Documents
                                     break;
                                 case ConflictStatus.Conflict:
                                     if (fromSmuggler &&
-                                        DocumentCompare.IsEqualTo(conflict.Doc, incomingDoc, false) == DocumentCompareResult.Equal)
+                                        DocumentCompare.IsEqualTo(conflict.Doc, incomingDoc, DocumentCompare.DocumentCompareOptions.Default) == DocumentCompareResult.Equal)
                                     {
                                         return; // we already have a conflict with equal content, no need to create another one
                                     }

@@ -199,7 +199,7 @@ namespace Raven.Server.Documents.Replication
 
             if (existingDoc != null)
             {
-                var compareResult = DocumentCompare.IsEqualTo(existingDoc.Data, incomingDoc, true);
+                var compareResult = DocumentCompare.IsEqualTo(existingDoc.Data, incomingDoc, new DocumentCompare.DocumentCompareOptions{TryMergeMetadataConflicts = true});
                 if (compareResult == DocumentCompareResult.NotEqual)
                     return false;
 
