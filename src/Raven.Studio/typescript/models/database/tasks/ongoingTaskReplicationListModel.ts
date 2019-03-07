@@ -16,6 +16,7 @@ class ongoingTaskReplicationListModel extends ongoingTaskListModel {
     delayReplicationTime = ko.observable<number>();
     delayHumane: KnockoutComputed<string>;
 
+    connectionStringDefined: KnockoutComputed<boolean>;
     connectionStringsUrl: string; 
     
     showDetails = ko.observable(false);
@@ -33,6 +34,7 @@ class ongoingTaskReplicationListModel extends ongoingTaskListModel {
         super.initializeObservables();
 
         const urls = appUrl.forCurrentDatabase();
+        this.connectionStringDefined = ko.pureComputed(() => !!this.destinationDB());
         this.editUrl = urls.editExternalReplication(this.taskId); 
         this.delayHumane = ko.pureComputed(() => generalUtils.formatTimeSpan(this.delayReplicationTime() * 1000, true));
     }

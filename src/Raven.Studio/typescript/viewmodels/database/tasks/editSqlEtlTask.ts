@@ -187,9 +187,9 @@ class editSqlEtlTask extends viewModelBase {
     editedSqlTableSandbox = ko.observable<ongoingTaskSqlEtlTableModel>();
 
     possibleMentors = ko.observableArray<string>([]);
-    sqlEtlConnectionStringsNames = ko.observableArray<string>([]); 
-    
-    connectionStingDefined: KnockoutComputed<boolean>;
+    sqlEtlConnectionStringsNames = ko.observableArray<string>([]);
+
+    connectionStringDefined: KnockoutComputed<boolean>;
     testConnectionResult = ko.observable<Raven.Server.Web.System.NodeConnectionTestResult>();
     
     spinners = {
@@ -257,11 +257,10 @@ class editSqlEtlTask extends viewModelBase {
             deferred.resolve();
         }
         
-        deferred.done(() => {
-            this.initObservables();
-        });
-
-        return $.when<any>(this.getAllConnectionStrings(), this.loadPossibleMentors(), deferred);
+        return $.when<any>(this.getAllConnectionStrings(), this.loadPossibleMentors(), deferred)
+            .done(() => {
+                this.initObservables();
+            });
     }
 
     private loadPossibleMentors() {
@@ -313,10 +312,21 @@ class editSqlEtlTask extends viewModelBase {
         this.newConnectionString(connectionStringSqlEtlModel.empty());
         this.newConnectionString().setNameUniquenessValidator(name => !this.sqlEtlConnectionStringsNames().find(x => x.toLocaleLowerCase() === name.toLocaleLowerCase()));
 
-        // Open the 'Create new conn. str.' area if no connection strings are yet defined 
-        this.sqlEtlConnectionStringsNames.subscribe((value) => { this.createNewConnectionString(!value.length) });
-
-        this.connectionStingDefined = ko.pureComputed(() => {
+        const connectionStringName = this.editedSqlEtl().connectionStringName();
+        const connectionStringIsMissing = connectionStringName && !this.sqlEtlConnectionStringsNames()
+            .find(x => x.toLocaleLowerCase() === connectionStringName.toLocaleLowerCase());
+        
+        if (!this.sqlEtlConnectionStringsNames().length || connectionStringIsMissing) {
+            this.createNewConnectionString(true);
+        }
+        
+        if (connectionStringIsMissing) {
+            // looks like user imported data w/o connection strings, prefill form with desired name
+            this.newConnectionString().connectionStringName(connectionStringName);
+            this.editedSqlEtl().connectionStringName(null);
+        }
+        
+        this.connectionStringDefined = ko.pureComputed(() => {
             const editedEtl = this.editedSqlEtl();
             if (this.createNewConnectionString()) {
                 return !!this.newConnectionString().connectionString();
@@ -353,12 +363,12 @@ class editSqlEtlTask extends viewModelBase {
         
         this.test = new sqlTaskTestMode(this.activeDatabase, () => {
             const transformationValidationGroup = this.isValid(this.editedTransformationScriptSandbox().validationGroup);
-            const connectionStringValid = this.connectionStingDefined();
+            const connectionStringValid = this.connectionStringDefined();
             
             if (this.test.performRolledBackTransaction()) {
                 if (transformationValidationGroup && !connectionStringValid) {
                     // close test mode, as connection string is invalid, 
-                    // but user requested rolled back transation
+                    // but user requested rolled back transaction
                     
                     // by closing we let user know that connection string is required
                     this.enableTestArea(false);

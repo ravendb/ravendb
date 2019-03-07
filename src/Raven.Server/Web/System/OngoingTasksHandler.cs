@@ -142,7 +142,8 @@ namespace Raven.Server.Web.System
             {
                 res.Status = OngoingTaskConnectionStatus.NotOnThisNode;
             }
-            
+
+            connectionStrings.TryGetValue(sinkReplication.ConnectionStringName, out var connection);
 
             var sinkInfo = new OngoingTaskPullReplicationAsSink
             {
@@ -151,10 +152,10 @@ namespace Raven.Server.Web.System
                 ResponsibleNode = new NodeId {NodeTag = tag, NodeUrl = clusterTopology.GetUrlFromTag(tag)},
                 ConnectionStringName = sinkReplication.ConnectionStringName,
                 TaskState = sinkReplication.Disabled ? OngoingTaskState.Disabled : OngoingTaskState.Enabled,
-                DestinationDatabase = connectionStrings[sinkReplication.ConnectionStringName].Database,
+                DestinationDatabase = connection?.Database,
                 HubDefinitionName = sinkReplication.HubDefinitionName,
                 DestinationUrl = res.Url,
-                TopologyDiscoveryUrls = connectionStrings[sinkReplication.ConnectionStringName].TopologyDiscoveryUrls,
+                TopologyDiscoveryUrls = connection?.TopologyDiscoveryUrls,
                 MentorNode = sinkReplication.MentorNode,
                 TaskConnectionStatus = res.Status,
             };
@@ -270,6 +271,8 @@ namespace Raven.Server.Web.System
             {
                 res.Status = OngoingTaskConnectionStatus.NotOnThisNode;
             }
+            
+            connectionStrings.TryGetValue(watcher.ConnectionStringName, out var connection);
 
             var taskInfo = new OngoingTaskReplication
             {
@@ -282,9 +285,9 @@ namespace Raven.Server.Web.System
                 },
                 ConnectionStringName = watcher.ConnectionStringName,
                 TaskState = watcher.Disabled ? OngoingTaskState.Disabled : OngoingTaskState.Enabled,
-                DestinationDatabase = connectionStrings[watcher.ConnectionStringName].Database,
+                DestinationDatabase = connection?.Database,
                 DestinationUrl = res.Url,
-                TopologyDiscoveryUrls = connectionStrings[watcher.ConnectionStringName].TopologyDiscoveryUrls,
+                TopologyDiscoveryUrls = connection?.TopologyDiscoveryUrls,
                 MentorNode = watcher.MentorNode,
                 TaskConnectionStatus = res.Status,
                 DelayReplicationFor = watcher.DelayReplicationFor
@@ -858,9 +861,7 @@ namespace Raven.Server.Web.System
 
                     var taskState = GetEtlTaskState(ravenEtl);
 
-                    if (databaseRecord.RavenConnectionStrings.TryGetValue(ravenEtl.ConnectionStringName, out var connection) == false)
-                        throw new InvalidOperationException(
-                            $"Could not find connection string named '{ravenEtl.ConnectionStringName}' in the database record for '{ravenEtl.Name}' ETL");
+                    databaseRecord.RavenConnectionStrings.TryGetValue(ravenEtl.ConnectionStringName, out var connection);
 
                     var process = Database.EtlLoader.Processes.OfType<RavenEtl>().FirstOrDefault(x => x.ConfigurationName == ravenEtl.Name);
 
@@ -879,9 +880,9 @@ namespace Raven.Server.Web.System
                         },
                         DestinationUrl = process?.Url,
                         TaskConnectionStatus = connectionStatus,
-                        DestinationDatabase = connection.Database,
+                        DestinationDatabase = connection?.Database,
                         ConnectionStringName = ravenEtl.ConnectionStringName,
-                        TopologyDiscoveryUrls = connection.TopologyDiscoveryUrls,
+                        TopologyDiscoveryUrls = connection?.TopologyDiscoveryUrls,
                         Error = error
                     };
                 }
@@ -891,19 +892,21 @@ namespace Raven.Server.Web.System
             {
                 foreach (var sqlEtl in databaseRecord.SqlEtls)
                 {
-                    if (databaseRecord.SqlConnectionStrings.TryGetValue(sqlEtl.ConnectionStringName, out var sqlConnection) == false)
-                        throw new InvalidOperationException(
-                            $"Could not find connection string named '{sqlEtl.ConnectionStringName}' in the database record for '{sqlEtl.Name}' ETL");
+                    string database = null;
+                    string server = null;
 
+                    if (databaseRecord.SqlConnectionStrings.TryGetValue(sqlEtl.ConnectionStringName, out var sqlConnection))
+                    {
 #pragma warning disable 618
-                    var (database, server) = SqlConnectionStringParser.GetDatabaseAndServerFromConnectionString(sqlConnection.FactoryName ?? sqlEtl.FactoryName, sqlConnection.ConnectionString);
+                        (database, server) = SqlConnectionStringParser.GetDatabaseAndServerFromConnectionString(sqlConnection.FactoryName ?? sqlEtl.FactoryName, sqlConnection.ConnectionString);
 #pragma warning restore 618
+                    }
 
                     var connectionStatus = GetEtlTaskConnectionStatus(databaseRecord, sqlEtl, out var tag, out var error);
 
                     var taskState = GetEtlTaskState(sqlEtl);
 
-                    yield return new OngoingTaskSqlEtlListView()
+                    yield return new OngoingTaskSqlEtlListView
                     {
                         TaskId = sqlEtl.TaskId,
                         TaskName = sqlEtl.Name,
@@ -917,6 +920,7 @@ namespace Raven.Server.Web.System
                         },
                         DestinationServer = server,
                         DestinationDatabase = database,
+                        ConnectionStringDefined = sqlConnection != null,
                         ConnectionStringName = sqlEtl.ConnectionStringName,
                         Error = error
                     };
