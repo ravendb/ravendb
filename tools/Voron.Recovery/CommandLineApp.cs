@@ -184,8 +184,8 @@ namespace Voron.Recovery
                         }
                         catch (Exception e)
                         {
-                            if (e is OutOfMemoryException && e.InnerException is Win32Exception)
-                                return 1;
+                            if (e.Data["ReturnCode"] is int returnCode)
+                                return returnCode;
 
                             return ExitWithError(e.Message, _app);
                         }
