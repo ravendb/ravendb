@@ -256,8 +256,8 @@ namespace Raven.Server.Documents.Revisions
         }
 
         public bool ShouldVersionDocument(CollectionName collectionName, NonPersistentDocumentFlags nonPersistentFlags,
-            BlittableJsonReaderObject existingDocument, BlittableJsonReaderObject document, 
-            DocumentsOperationContext context, string id, 
+            BlittableJsonReaderObject existingDocument, BlittableJsonReaderObject document,
+            DocumentsOperationContext context, string id,
             ref DocumentFlags documentFlags, out RevisionsCollectionConfiguration configuration)
         {
             configuration = GetRevisionsConfiguration(collectionName.Name);
@@ -344,7 +344,7 @@ namespace Raven.Server.Documents.Revisions
             {
                 var table = EnsureRevisionTableCreated(context.Transaction.InnerTransaction, collectionName);
                 var revisionExists = table.ReadByKey(changeVectorSlice, out var tvr);
-                
+
                 if (revisionExists)
                 {
                     MarkRevisionsAsConflictedIfNeeded(context, lowerId, idSlice, flags, tvr, table, changeVectorSlice);
@@ -585,14 +585,14 @@ namespace Raven.Server.Documents.Revisions
             var deletedRevisionsCount = 0;
 
             while (true)
-                {
+            {
                 var hasValue = false;
 
                 foreach (var read in table.SeekForwardFrom(RevisionsSchema.Indexes[IdAndEtagSlice], prefixSlice, skip: 0, startsWith: true))
                 {
                     if (numberOfRevisionsToDelete <= deletedRevisionsCount)
                         break;
-                   
+
                     var tvr = read.Result.Reader;
                     var revision = TableValueToRevision(context, ref tvr);
 
@@ -606,11 +606,11 @@ namespace Raven.Server.Documents.Revisions
                     {
                         CreateTombstone(context, keySlice, revision.Etag, collectionName, changeVector, lastModifiedTicks);
 
-                    maxEtagDeleted = Math.Max(maxEtagDeleted, revision.Etag);
-                    if ((revision.Flags & DocumentFlags.HasAttachments) == DocumentFlags.HasAttachments)
-                    {
-                        _documentsStorage.AttachmentsStorage.DeleteRevisionAttachments(context, revision, changeVector, lastModifiedTicks);
-                    }
+                        maxEtagDeleted = Math.Max(maxEtagDeleted, revision.Etag);
+                        if ((revision.Flags & DocumentFlags.HasAttachments) == DocumentFlags.HasAttachments)
+                        {
+                            _documentsStorage.AttachmentsStorage.DeleteRevisionAttachments(context, revision, changeVector, lastModifiedTicks);
+                        }
 
                         var docCollection = CollectionName.GetCollectionName(revision.Data);
                         if (writeTable == null || docCollection != currentCollection)
@@ -621,7 +621,7 @@ namespace Raven.Server.Documents.Revisions
 
                         writeTable.DeleteByKey(keySlice);
                     }
-                    
+
                     deletedRevisionsCount++;
                     break;
                 }
@@ -629,7 +629,7 @@ namespace Raven.Server.Documents.Revisions
                 if (hasValue == false)
                     break;
             }
-            
+
             _database.DocumentsStorage.EnsureLastEtagIsPersisted(context, maxEtagDeleted);
             return deletedRevisionsCount;
         }
@@ -754,7 +754,7 @@ namespace Raven.Server.Documents.Revisions
 
             using (Slice.From(context.Allocator, changeVector, out var changeVectorSlice))
             {
-                var revisionExists = table.ReadByKey(changeVectorSlice,out var tvr);
+                var revisionExists = table.ReadByKey(changeVectorSlice, out var tvr);
                 if (revisionExists)
                 {
                     MarkRevisionsAsConflictedIfNeeded(context, lowerId, idSlice, flags, tvr, table, changeVectorSlice);
@@ -1084,7 +1084,7 @@ namespace Raven.Server.Documents.Revisions
 
             // send initial progress
             parameters.OnProgress?.Invoke(result);
-            
+
             var hasMore = true;
             while (hasMore)
             {
@@ -1142,7 +1142,7 @@ namespace Raven.Server.Documents.Revisions
                     {
                         result.Warn(id, "The document is conflicted and wouldn't be reverted.");
                         continue;
-                    } 
+                    }
 
                     var date = TableValueToDateTime((int)RevisionsTable.LastModified, ref tvr.Reader);
                     if (date < parameters.MinimalDate)
@@ -1173,7 +1173,7 @@ namespace Raven.Server.Documents.Revisions
             var revision = GetRevisionBefore(readCtx, parameters, id, result);
             if (revision == null)
                 return;
-         
+
             result.RevertedDocuments++;
 
             revision.Data = revision.Flags.Contain(DocumentFlags.DeleteRevision) ? null : revision.Data?.Clone(writeCtx);
