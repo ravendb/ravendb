@@ -182,8 +182,8 @@ namespace Raven.Client.Documents.Subscriptions
                     await requestExecutor.ExecuteAsync(command, context, sessionInfo: null, token: token).ConfigureAwait(false);
                 }
 
-                string choosenUrl = null;
-                (_tcpClient, choosenUrl) = await TcpUtils.ConnectAsyncWithPriority(command.Result, requestExecutor.DefaultTimeout).ConfigureAwait(false);
+                string chosenUrl = null;
+                (_tcpClient, chosenUrl) = await TcpUtils.ConnectAsyncWithPriority(command.Result, requestExecutor.DefaultTimeout).ConfigureAwait(false);
                 _tcpClient.NoDelay = true;
                 _tcpClient.SendBufferSize = 32 * 1024;
                 _tcpClient.ReceiveBufferSize = 4096;
@@ -199,7 +199,7 @@ namespace Raven.Client.Documents.Subscriptions
                     Version = SubscriptionTcpVersion ?? TcpConnectionHeaderMessage.SubscriptionTcpVersion,
                     ReadResponseAndGetVersionCallback = ReadServerResponseAndGetVersion,
                     DestinationNodeTag = CurrentNodeTag,
-                    DestinationUrl = command.Result.Url
+                    DestinationUrl = chosenUrl
                 };
                 _supportedFeatures = TcpNegotiation.NegotiateProtocolVersion(context, _stream, parameters);
 
