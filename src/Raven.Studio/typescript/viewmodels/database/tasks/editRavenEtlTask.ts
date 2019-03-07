@@ -230,11 +230,10 @@ class editRavenEtlTask extends viewModelBase {
             deferred.resolve();
         }
 
-        deferred.done(() => {
-            this.initObservables();
-        });
-
-        return $.when<any>(this.getAllConnectionStrings(), this.loadPossibleMentors(), deferred); 
+        return $.when<any>(this.getAllConnectionStrings(), this.loadPossibleMentors(), deferred)
+            .done(() => {
+                this.initObservables();
+            })
     }
 
     private loadPossibleMentors() {
@@ -275,9 +274,20 @@ class editRavenEtlTask extends viewModelBase {
         this.newConnectionString(connectionStringRavenEtlModel.empty());
         this.newConnectionString().setNameUniquenessValidator(name => !this.ravenEtlConnectionStringsDetails().find(x => x.Name.toLocaleLowerCase() === name.toLocaleLowerCase()));
         
-        // Open the 'Create new conn. str.' area if no connection strings are yet defined 
-        this.ravenEtlConnectionStringsDetails.subscribe((value) => { this.createNewConnectionString(!value.length) });
+        const connectionStringName = this.editedRavenEtl().connectionStringName();
+        const connectionStringIsMissing = connectionStringName && !this.ravenEtlConnectionStringsDetails()
+            .find(x => x.Name.toLocaleLowerCase() === connectionStringName.toLocaleLowerCase());
 
+        if (!this.ravenEtlConnectionStringsDetails().length || connectionStringIsMissing) {
+            this.createNewConnectionString(true);
+        }
+
+        if (connectionStringIsMissing) {
+            // looks like user imported data w/o connection strings, prefill form with desired name
+            this.newConnectionString().connectionStringName(connectionStringName);
+            this.editedRavenEtl().connectionStringName(null);
+        }
+        
         // Discard test connection result when needed
         this.createNewConnectionString.subscribe(() => this.testConnectionResult(null));
         this.newConnectionString().inputUrl().discoveryUrlName.subscribe(() => this.testConnectionResult(null));

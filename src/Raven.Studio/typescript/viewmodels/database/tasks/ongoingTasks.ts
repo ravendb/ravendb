@@ -125,6 +125,20 @@ class ongoingTasks extends viewModelBase {
                             break;
                     }
                 });
+                
+                // tasks w/o defined connection string won't get progress update - update them manually 
+                
+                this.sqlTasks().forEach(task => {
+                    if (task.loadingProgress()) {
+                        task.loadingProgress(false);
+                    }
+                });
+                
+                this.etlTasks().forEach(task => {
+                    if (task.loadingProgress()) {
+                        task.loadingProgress(false);
+                    }
+                });
             });
     }
     

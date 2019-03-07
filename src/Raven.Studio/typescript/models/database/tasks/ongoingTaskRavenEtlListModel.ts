@@ -9,6 +9,8 @@ class ongoingTaskRavenEtlListModel extends abstractOngoingTaskEtlListModel {
     connectionStringName = ko.observable<string>();
     topologyDiscoveryUrls = ko.observableArray<string>([]);
 
+    connectionStringDefined: KnockoutComputed<boolean>;
+
     connectionStringsUrl: string;
     
     constructor(dto: Raven.Client.Documents.Operations.OngoingTasks.OngoingTaskRavenEtlListView) {
@@ -25,6 +27,8 @@ class ongoingTaskRavenEtlListModel extends abstractOngoingTaskEtlListModel {
 
         const urls = appUrl.forCurrentDatabase();
         this.editUrl = urls.editRavenEtl(this.taskId);
+
+        this.connectionStringDefined = ko.pureComputed(() => !!this.destinationDB());
     }
 
     update(dto: Raven.Client.Documents.Operations.OngoingTasks.OngoingTaskRavenEtlListView) {

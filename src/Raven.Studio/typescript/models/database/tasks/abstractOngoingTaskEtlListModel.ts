@@ -62,6 +62,8 @@ abstract class abstractOngoingTaskEtlListModel extends ongoingTaskListModel {
     editUrl: KnockoutComputed<string>;
     showDetails = ko.observable(false);
     showProgress = ko.observable(false); // we use separate property for progress and details to smooth toggle animation, first we show progress then expand details 
+    
+    loadingProgress = ko.observable<boolean>(true);
 
     canShowProgress = ko.pureComputed(() => {
         const status = this.taskConnectionStatus();
@@ -103,6 +105,8 @@ abstract class abstractOngoingTaskEtlListModel extends ongoingTaskListModel {
                 this.scriptProgress.remove(item);
             })
         }
+        
+        this.loadingProgress(false);
     }
 
 }

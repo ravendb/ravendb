@@ -112,9 +112,20 @@ class editExternalReplicationTask extends viewModelBase {
         this.newConnectionString(connectionStringRavenEtlModel.empty());
         
         this.newConnectionString().setNameUniquenessValidator(name => !this.ravenEtlConnectionStringsDetails().find(x => x.Name.toLocaleLowerCase() === name.toLocaleLowerCase()));
+        
+        const connectionStringName = this.editedExternalReplication().connectionStringName();
+        const connectionStringIsMissing = connectionStringName && !this.ravenEtlConnectionStringsDetails()
+            .find(x => x.Name.toLocaleLowerCase() === connectionStringName.toLocaleLowerCase());
 
-        // Open the 'Create new conn. str.' area if no connection strings are yet defined 
-        this.ravenEtlConnectionStringsDetails.subscribe((value) => { this.createNewConnectionString(!value.length) }); 
+        if (!this.ravenEtlConnectionStringsDetails().length || connectionStringIsMissing) {
+            this.createNewConnectionString(true);
+        }
+
+        if (connectionStringIsMissing) {
+            // looks like user imported data w/o connection strings, prefill form with desired name
+            this.newConnectionString().connectionStringName(connectionStringName);
+            this.editedExternalReplication().connectionStringName(null);
+        }
         
         // Discard test connection result when needed
         this.createNewConnectionString.subscribe(() => this.testConnectionResult(null));

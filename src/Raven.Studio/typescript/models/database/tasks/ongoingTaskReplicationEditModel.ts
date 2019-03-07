@@ -21,13 +21,13 @@ class ongoingTaskReplicationEditModel extends ongoingTaskEditModel {
     }
 
     initializeObservables() {
-     super.initializeObservables();
+        super.initializeObservables();
 
-     this.humaneDelayDescription = ko.pureComputed(() => {
-         const delayTimeHumane = generalUtils.formatTimeSpan(this.delayReplicationTime() * 1000, true);
-         return this.showDelayReplication() && this.delayReplicationTime.isValid() && this.delayReplicationTime() !== 0 ? 
-             `Documents will be replicated after a delay time of <strong>${delayTimeHumane}</strong>` : "";
-     });
+        this.humaneDelayDescription = ko.pureComputed(() => {
+            const delayTimeHumane = generalUtils.formatTimeSpan(this.delayReplicationTime() * 1000, true);
+            return this.showDelayReplication() && this.delayReplicationTime.isValid() && this.delayReplicationTime() !== 0 ?
+                `Documents will be replicated after a delay time of <strong>${delayTimeHumane}</strong>` : "";
+        });
     }
     
     update(dto: Raven.Client.Documents.Operations.OngoingTasks.OngoingTaskReplication) {

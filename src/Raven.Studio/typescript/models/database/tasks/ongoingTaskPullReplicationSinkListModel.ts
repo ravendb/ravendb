@@ -12,6 +12,8 @@ class ongoingTaskPullReplicationSinkListModel extends ongoingTaskListModel {
     connectionStringName = ko.observable<string>();
     topologyDiscoveryUrls = ko.observableArray<string>([]);
     hubDefinitionName = ko.observable<string>();
+
+    connectionStringDefined: KnockoutComputed<boolean>;
     
     connectionStringsUrl: string; 
     
@@ -30,7 +32,8 @@ class ongoingTaskPullReplicationSinkListModel extends ongoingTaskListModel {
         super.initializeObservables();
 
         const urls = appUrl.forCurrentDatabase();
-        this.editUrl = urls.editPullReplicationSink(this.taskId); 
+        this.editUrl = urls.editPullReplicationSink(this.taskId);
+        this.connectionStringDefined = ko.pureComputed(() => !!this.destinationDB());
     }
 
     update(dto: Raven.Client.Documents.Operations.OngoingTasks.OngoingTaskPullReplicationAsSink) {
