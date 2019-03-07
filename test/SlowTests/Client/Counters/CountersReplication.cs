@@ -1,4 +1,5 @@
 ﻿using System.Collections.Generic;
+using System.Threading;
 using System.Threading.Tasks;
 using FastTests.Server.Replication;
 using Raven.Client;
@@ -299,6 +300,99 @@ namespace SlowTests.Client.Counters
                     var user = await session.LoadAsync<User>("users/1");
                     var list = session.Advanced.GetCountersFor(user);
                     Assert.Equal(2, list.Count);
+                }
+            }
+        }
+
+        [Fact]
+        public async Task CanHandleIncomingCounterReplicationWhenCounterGroupDocumentsAreSplitDifferently()
+        {
+            using (var storeA = GetDocumentStore())
+            using (var storeB = GetDocumentStore())
+            {
+                using (var session = storeA.OpenAsyncSession())
+                {
+                    await session.StoreAsync(new User { Name = "Aviv" }, "users/1-A");
+                    await session.SaveChangesAsync();
+                }
+
+                // put counters 'likes1', 'likes2', ... , 'likes999'
+                // on users/1-A document in store A
+
+                var ops = new List<CounterOperation>();
+                for (int i = 0; i < 1000; i++)
+                {
+                    ops.Add(new CounterOperation
+                    {
+                        Type = CounterOperationType.Increment,
+                        CounterName = "likes" + i,
+                        Delta = i
+                    });
+                }
+              
+                await storeA.Operations.SendAsync(new CounterBatchOperation(new CounterBatch
+                {
+                    Documents = new List<DocumentCountersOperation>
+                    {
+                        new DocumentCountersOperation
+                        {
+                            DocumentId = "users/1-A",
+                            Operations = ops
+                        }
+                    }
+                }));
+
+                ops.Clear();
+
+                using (var session = storeB.OpenAsyncSession())
+                {
+                    await session.StoreAsync(new User { Name = "Aviv" }, "users/1-A");
+                    await session.SaveChangesAsync();
+                }
+
+                // put counters 'likes1', 'likes101', ... , 'likes901'
+                // on users/1-A document in store B
+
+                var delta = 9999;
+                for (int i = 0; i < 10; i++)
+                {
+                    var id = i * 100 + 1;
+
+                    ops.Add(new CounterOperation
+                    {
+                        Type = CounterOperationType.Increment,
+                        CounterName = "likes" + id,
+                        Delta = delta
+                    });
+                }
+
+                await storeB.Operations.SendAsync(new CounterBatchOperation(new CounterBatch
+                {
+                    Documents = new List<DocumentCountersOperation>
+                    {
+                        new DocumentCountersOperation
+                        {
+                            DocumentId = "users/1-A",
+                            Operations = ops
+                        }
+                    }
+                }));
+
+                // set up replication from storeB to storeA
+
+                await SetupReplicationAsync(storeB, storeA);
+                EnsureReplicating(storeB, storeA);
+
+
+                // assert counter values
+
+                for (int i = 0; i < 10; i++)
+                {
+                    var id = i * 100 + 1;
+                    var val = storeA.Operations
+                        .Send(new GetCountersOperation("users/1-A", new[] { "likes" + id  }))
+                        .Counters[0]?.TotalValue;
+                    Assert.Equal(id + delta, val);
                 }
             }
         }
