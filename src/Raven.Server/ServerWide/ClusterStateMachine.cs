@@ -250,23 +250,23 @@ namespace Raven.Server.ServerWide
                         }
                         break;
                     case nameof(AddOrUpdateCompareExchangeBatchCommand):
-                        var noAddCommands = cmd.TryGet(nameof(AddOrUpdateCompareExchangeBatchCommand.AddOrUpdateCommands), out BlittableJsonReaderArray addCommands) == false;
-                        var noRemoveCommands = cmd.TryGet(nameof(AddOrUpdateCompareExchangeBatchCommand.RemoveCommands), out BlittableJsonReaderArray removeCommands) == false;
-                        if (noAddCommands && noRemoveCommands)
+                        var hasAddCommands = cmd.TryGet(nameof(AddOrUpdateCompareExchangeBatchCommand.Commands), out BlittableJsonReaderArray addCommands);
+                        var hasRemoveCommands = cmd.TryGet(nameof(AddOrUpdateCompareExchangeBatchCommand.RemoveCommands), out BlittableJsonReaderArray removeCommands);
+                        if (hasAddCommands == false && hasRemoveCommands == false)
                         {
-                            throw new RachisApplyException($"'{nameof(AddOrUpdateCompareExchangeBatchCommand.AddOrUpdateCommands)}' and '{nameof(AddOrUpdateCompareExchangeBatchCommand.RemoveCommands)}' are missing in '{nameof(AddOrUpdateCompareExchangeBatchCommand)}'.");
+                            throw new RachisApplyException($"'{nameof(AddOrUpdateCompareExchangeBatchCommand.Commands)}' and '{nameof(AddOrUpdateCompareExchangeBatchCommand.RemoveCommands)}' are missing in '{nameof(AddOrUpdateCompareExchangeBatchCommand)}'.");
                         }
-                        if (noAddCommands)
+                        if (hasAddCommands)
                         {
-                            foreach (BlittableJsonReaderObject command in removeCommands)
+                            foreach (BlittableJsonReaderObject command in addCommands)
                             {
                                 Apply(context, command, index, leader, serverStore);
                             }
                             SetIndexForBackup(context, cmd, index, type);
                         }
-                        if (noRemoveCommands)
+                        if (hasRemoveCommands)
                         {
-                            foreach (BlittableJsonReaderObject command in addCommands)
+                            foreach (BlittableJsonReaderObject command in removeCommands)
                             {
                                 Apply(context, command, index, leader, serverStore);
                             }
@@ -1349,7 +1349,6 @@ namespace Raven.Server.ServerWide
                 case nameof(AddOrUpdateCompareExchangeCommand):
                 case nameof(RemoveCompareExchangeCommand):
                 case nameof(AddOrUpdateCompareExchangeBatchCommand):
-                //case nameof(RemoveCompareExchangeBatchCommand):
                 case nameof(UpdatePeriodicBackupCommand):
                 case nameof(UpdateExternalReplicationCommand):
                 case nameof(AddRavenEtlCommand):
