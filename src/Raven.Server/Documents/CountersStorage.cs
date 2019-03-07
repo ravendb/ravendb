@@ -781,13 +781,13 @@ namespace Raven.Server.Documents
 
                             using (Slice.External(context.Allocator, kvp.Key, out var countersGroupKey))
                             {
-                                currentData.TryGet(Values, out BlittableJsonReaderObject localCounters);
 
                                 if (currentData.Size > MaxCounterDocumentSize)
                                 {
                                     // after adding new counters to the counters blittable
                                     // we caused the blittable to grow beyond 2KB 
 
+                                    currentData.TryGet(Values, out BlittableJsonReaderObject localCounters);
                                     currentData.TryGet(DbIds, out BlittableJsonReaderArray dbIds);
 
                                     using (currentData)
