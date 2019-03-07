@@ -6,7 +6,7 @@ namespace Raven.Server.ServerWide.Commands
 {
     public class AddOrUpdateCompareExchangeBatchCommand : CommandBase
     {
-        public List<AddOrUpdateCompareExchangeCommand> AddOrUpdateCommands;
+        public List<AddOrUpdateCompareExchangeCommand> Commands;
         public List<RemoveCompareExchangeCommand> RemoveCommands;
         [JsonDeserializationIgnore]
         public JsonOperationContext ContextToWriteResult;
@@ -15,29 +15,29 @@ namespace Raven.Server.ServerWide.Commands
         {
         }
 
-        public AddOrUpdateCompareExchangeBatchCommand(List<AddOrUpdateCompareExchangeCommand> commands, JsonOperationContext contextToWriteResult)
+        public AddOrUpdateCompareExchangeBatchCommand(List<AddOrUpdateCompareExchangeCommand> addCommands, JsonOperationContext contextToWriteResult)
         {
-            AddOrUpdateCommands = commands;
+            Commands = addCommands;
             ContextToWriteResult = contextToWriteResult;
         }
 
-        public AddOrUpdateCompareExchangeBatchCommand(List<RemoveCompareExchangeCommand> commands, JsonOperationContext contextToWriteResult)
+        public AddOrUpdateCompareExchangeBatchCommand(List<RemoveCompareExchangeCommand> removeCommands, JsonOperationContext contextToWriteResult)
         {
-            RemoveCommands = commands;
+            RemoveCommands = removeCommands;
             ContextToWriteResult = contextToWriteResult;
         }
 
         public override DynamicJsonValue ToJson(JsonOperationContext context)
         {
             var djv = base.ToJson(context);
-            if (AddOrUpdateCommands != null)
+            if (Commands != null)
             {
                 var dja = new DynamicJsonArray();
-                foreach (var command in AddOrUpdateCommands)
+                foreach (var command in Commands)
                 {
                     dja.Add(command.ToJson(context));
                 }
-                djv[nameof(AddOrUpdateCommands)] = dja;
+                djv[nameof(Commands)] = dja;
             }
 
             if (RemoveCommands != null)
