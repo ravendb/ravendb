@@ -15,7 +15,6 @@ namespace Raven.Server.Documents
         {
             public bool TryMergeMetadataConflicts;
             public bool ThrowOnAttachmentModifications;
-            public string DocumentId;
             public static DocumentCompareOptions Default = new DocumentCompareOptions();
             public static DocumentCompareOptions MergeMetadata = 
                 new DocumentCompareOptions
@@ -90,7 +89,7 @@ namespace Raven.Server.Documents
                     {
                         if (options.ThrowOnAttachmentModifications)
                         {
-                            ThrowAttachmentsModificationsDetected(options.DocumentId);
+                            ThrowAttachmentsModificationsDetected();
                         }
                         result |= DocumentCompareResult.AttachmentsNotEqual;
                     }
@@ -104,9 +103,9 @@ namespace Raven.Server.Documents
             return ComparePropertiesExceptStartingWithAt(currentMetadata, objMetadata, true, options);
         }
 
-        private static void ThrowAttachmentsModificationsDetected(string documentId)
+        private static void ThrowAttachmentsModificationsDetected()
         {
-            throw new InvalidOperationException("Illegal modifications of '@attachments' detected for document: " + documentId);
+            throw new InvalidOperationException("Illegal modifications of '@attachments' detected");
         }
 
         private static DocumentCompareResult ComparePropertiesExceptStartingWithAt(BlittableJsonReaderObject current, BlittableJsonReaderObject modified, 
@@ -145,7 +144,7 @@ namespace Raven.Server.Documents
 
                                 if(options.ThrowOnAttachmentModifications)
                                 {
-                                    ThrowAttachmentsModificationsDetected(options.DocumentId);
+                                    ThrowAttachmentsModificationsDetected();
                                 }
                                 return DocumentCompareResult.NotEqual;
                             }
@@ -242,14 +241,14 @@ namespace Raven.Server.Documents
                 {
                     if (options.ThrowOnAttachmentModifications)
                     {
-                        ThrowAttachmentsModificationsDetected(options.DocumentId);
+                        ThrowAttachmentsModificationsDetected();
                     }
                 }
             }
 
             if (options.ThrowOnAttachmentModifications && modifiedAttachmentNames.Count != 0)
             {
-                ThrowAttachmentsModificationsDetected(options.DocumentId);
+                ThrowAttachmentsModificationsDetected();
             }
             return true;
         }
