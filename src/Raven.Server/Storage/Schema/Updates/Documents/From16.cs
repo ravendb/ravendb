@@ -311,12 +311,15 @@ namespace Raven.Server.Storage.Schema.Updates.Documents
                 }
                 else
                 {
-                    SplitDocumet(context, dbIds, data, documentKeyPrefix, changeVector, collectionName, table, documentKeyPrefix);
+                    using (data)
+                    {
+                        SplitDocument(context, data, documentKeyPrefix, changeVector, collectionName, table, documentKeyPrefix);
+                    }
                 }
             }
         }
 
-        private static void SplitDocumet(DocumentsOperationContext context, HashSet<string> dbIds, BlittableJsonReaderObject data, Slice documentKeyPrefix, string changeVector,
+        private static void SplitDocument(DocumentsOperationContext context, BlittableJsonReaderObject data, Slice documentKeyPrefix, string changeVector,
             CollectionName collectionName, Table table, Slice countersGroupKey)
         {
             data.TryGet(CountersStorage.Values, out BlittableJsonReaderObject counters);
@@ -344,10 +347,15 @@ namespace Raven.Server.Storage.Schema.Updates.Documents
                 
                 if (fst.Size > CountersStorage.MaxCounterDocumentSize)
                 {
+                    using (fst)
+                    {
+                        SplitDocument(context, fst, documentKeyPrefix, changeVector, collectionName, table, countersGroupKey);
+                    }
+
+                    using (snd)
                     using (Slice.External(context.Allocator, newCounterKey, newCounterKey.Length, out var newCounterKeySlice))
                     {
-                        SplitDocumet(context, dbIds, fst, documentKeyPrefix, changeVector, collectionName, table, countersGroupKey);
-                        SplitDocumet(context, dbIds, snd, documentKeyPrefix, changeVector, collectionName, table, newCounterKeySlice);
+                        SplitDocument(context, snd, documentKeyPrefix, changeVector, collectionName, table, newCounterKeySlice);
                         return;
                     }
                 }
