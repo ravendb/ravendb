@@ -99,7 +99,6 @@ namespace Raven.Server.ServerWide
             [nameof(PutSortersCommand)] = Base42CommandsVersion,
             [nameof(DeleteSorterCommand)] = Base42CommandsVersion,
             [nameof(UpdatePullReplicationAsHubCommand)] = Base42CommandsVersion,
-            [nameof(RemoveCompareExchangeBatchCommand)] = Base42CommandsVersion,
             [nameof(CleanCompareExchangeTombstonesCommand)] = Base42CommandsVersion,
             [nameof(PutSubscriptionBatchCommand)] = Base42CommandsVersion,
             [nameof(EditDatabaseClientConfigurationCommand)] = Base42CommandsVersion

@@ -47,7 +47,7 @@ namespace Raven.Server.ServerWide.Commands
             ContextToWriteResult = context;
         }
 
-        public abstract (long Index, object Value) Execute(TransactionOperationContext context, Table items, long index, Table tombstoneItems = null, bool fromBackup = false);
+        public abstract (long Index, object Value) Execute(TransactionOperationContext context, Table items, long index, bool fromBackup = false);
 
         public static unsafe void GetKeyAndPrefixIndexSlices(
             ByteStringContext allocator, string db, string key, long index,
@@ -177,7 +177,7 @@ namespace Raven.Server.ServerWide.Commands
             FromBackup = fromBackup;
         }
 
-        public override unsafe (long Index, object Value) Execute(TransactionOperationContext context, Table items, long index, Table tombstoneItems, bool fromBackup = false)
+        public override unsafe (long Index, object Value) Execute(TransactionOperationContext context, Table items, long index, bool fromBackup = false)
         {
             using (Slice.From(context.Allocator, ActualKey, out Slice keySlice))
             {
@@ -196,7 +196,7 @@ namespace Raven.Server.ServerWide.Commands
                     {
                         result = result.Clone(context);
                         items.Delete(reader.Id);
-                        WriteCompareExchangeTombstone(context, tombstoneItems, index);
+                        WriteCompareExchangeTombstone(context, index);
                         return (index, result);
                     }
                     return (itemIndex, result);
@@ -205,10 +205,10 @@ namespace Raven.Server.ServerWide.Commands
             return (index, null);
         }
 
-        private unsafe void WriteCompareExchangeTombstone(TransactionOperationContext context, Table tombstoneItems, long index)
+        private unsafe void WriteCompareExchangeTombstone(TransactionOperationContext context, long index)
         {
             GetKeyAndPrefixIndexSlices(context.Allocator, Database, Key, index, out var keyTuple, out var indexTuple);
-
+            var tombstoneItems = context.Transaction.InnerTransaction.OpenTable(ClusterStateMachine.CompareExchangeTombstoneSchema, ClusterStateMachine.CompareExchangeTombstones);
             using (keyTuple.Scope)
             using (indexTuple.Scope)
             using (Slice.External(context.Allocator, keyTuple.Buffer.Ptr, keyTuple.Buffer.Length, out var keySlice))
@@ -245,7 +245,7 @@ namespace Raven.Server.ServerWide.Commands
             Value = value;
         }
 
-        public override unsafe (long Index, object Value) Execute(TransactionOperationContext context, Table items, long index, Table tombstoneItems, bool fromBackup)
+        public override unsafe (long Index, object Value) Execute(TransactionOperationContext context, Table items, long index, bool fromBackup)
         {
             // We have to clone the Value because we might have gotten this command from another node
             // and it was serialized. In that case, it is an _internal_ object, not a full document,

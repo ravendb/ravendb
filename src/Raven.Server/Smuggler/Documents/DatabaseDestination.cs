@@ -499,10 +499,10 @@ namespace Raven.Server.Smuggler.Documents
                     AsyncHelpers.RunSync(async () => await _database.ServerStore.SendToLeaderAsync(new AddOrUpdateCompareExchangeBatchCommand(_compareExchangeAddOrUpdateCommands, context)));
                     _compareExchangeAddOrUpdateCommands.Clear();
                 }
+
                 if (_compareExchangeRemoveCommands.Count > 0)
                 {
-                    AsyncHelpers.RunSync(async () => await _database.ServerStore.SendToLeaderAsync(new RemoveCompareExchangeBatchCommand(_compareExchangeRemoveCommands, context)));
-
+                    AsyncHelpers.RunSync(async () => await _database.ServerStore.SendToLeaderAsync(new AddOrUpdateCompareExchangeBatchCommand(_compareExchangeRemoveCommands, context)));
                     _compareExchangeRemoveCommands.Clear();
                 }
             }
