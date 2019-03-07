@@ -183,11 +183,7 @@ namespace Raven.Server.Documents.Patch
                             result.Status = PatchStatus.Created;
                         }
                         else if (DocumentCompare.IsEqualTo(originalDoc, modifiedDocument, 
-                                    new DocumentCompare.DocumentCompareOptions
-                                    {
-                                        TryMergeMetadataConflicts = true,
-                                        ThrowOnAttachmentModifications = true
-                                    }) != DocumentCompareResult.Equal)
+                                    DocumentCompare.DocumentCompareOptions.MergeMetadataAndThrowOnAttachmentModification) != DocumentCompareResult.Equal)
                         {
                             Debug.Assert(originalDocument != null);
                             if (_isTest == false || run.PutOrDeleteCalled)

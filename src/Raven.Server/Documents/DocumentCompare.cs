@@ -17,6 +17,17 @@ namespace Raven.Server.Documents
             public bool ThrowOnAttachmentModifications;
             public string DocumentId;
             public static DocumentCompareOptions Default = new DocumentCompareOptions();
+            public static DocumentCompareOptions MergeMetadata = 
+                new DocumentCompareOptions
+                {
+                    TryMergeMetadataConflicts = true
+                };
+            public static DocumentCompareOptions MergeMetadataAndThrowOnAttachmentModification = 
+                new DocumentCompareOptions
+                {
+                    TryMergeMetadataConflicts = true,
+                    ThrowOnAttachmentModifications = true
+                };
         }
         public static unsafe DocumentCompareResult IsEqualTo(BlittableJsonReaderObject original, BlittableJsonReaderObject modified,
             DocumentCompareOptions options)
