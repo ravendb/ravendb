@@ -94,6 +94,8 @@ class exportDatabase extends viewModelBase {
             // reset confirmation
             this.model.savedKeyConfirmation(false);
         });
+        
+        this.model.databaseModel.init();
     }
 
     private fetchCollections(): JQueryPromise<Array<string>> {
