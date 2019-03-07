@@ -79,7 +79,7 @@ namespace Raven.Server.Config.Categories
         [Description("Time (in minutes) between compare exchange tombstones cleanup")]
         [DefaultValue(10)]
         [TimeUnit(TimeUnit.Minutes)]
-        [ConfigurationEntry("Cluster.TombstonesCleanupIntervalInMin", ConfigurationEntryScope.ServerWideOnly)]
-        public TimeSetting TombstonesCleanupInterval { get; set; }
+        [ConfigurationEntry("Cluster.CompareExchangeTombstonesCleanupIntervalInMin", ConfigurationEntryScope.ServerWideOnly)]
+        public TimeSetting CompareExchangeTombstonesCleanupInterval { get; set; }
     }
 }

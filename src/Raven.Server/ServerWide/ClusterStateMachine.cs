@@ -100,11 +100,11 @@ namespace Raven.Server.ServerWide
         public static readonly Slice CompareExchange;
         public static readonly Slice CompareExchangeTombstones;
         public static readonly Slice Identities;
-        public static readonly Slice IdentitiesIndexSlice;
+        public static readonly Slice IdentitiesIndex;
         public static readonly Slice TransactionCommands;
         public static readonly Slice TransactionCommandsCountPerDatabase;
-        public static readonly Slice CompareExchangeIndexSlice;
-        public static readonly Slice CompareExchangeTombstoneIndexSlice;
+        public static readonly Slice CompareExchangeIndex;
+        public static readonly Slice CompareExchangeTombstoneIndex;
         public static readonly Slice CertificatesSlice;
         public static readonly Slice CertificatesHashSlice;
 
@@ -123,11 +123,11 @@ namespace Raven.Server.ServerWide
                 Slice.From(ctx, "CmpXchg", out CompareExchange);
                 Slice.From(ctx, "CmpXchgTombstones", out CompareExchangeTombstones);
                 Slice.From(ctx, "Identities", out Identities);
-                Slice.From(ctx, "IdentitiesIndexSlice", out IdentitiesIndexSlice);
+                Slice.From(ctx, "IdentitiesIndex", out IdentitiesIndex);
                 Slice.From(ctx, "TransactionCommands", out TransactionCommands);
                 Slice.From(ctx, "TransactionCommandsIndex", out TransactionCommandsCountPerDatabase);
-                Slice.From(ctx, "CompareExchangeIndexSlice", out CompareExchangeIndexSlice);
-                Slice.From(ctx, "CompareExchangeTombstoneIndexSlice", out CompareExchangeTombstoneIndexSlice);
+                Slice.From(ctx, "CompareExchangeIndex", out CompareExchangeIndex);
+                Slice.From(ctx, "CompareExchangeTombstoneIndex", out CompareExchangeTombstoneIndex);
                 Slice.From(ctx, "CertificatesSlice", out CertificatesSlice);
                 Slice.From(ctx, "CertificatesHashSlice", out CertificatesHashSlice);
             }
@@ -152,7 +152,7 @@ namespace Raven.Server.ServerWide
                 StartIndex = (int)IdentitiesTable.KeyIndex,
                 Count = 1,
                 IsGlobal = true,
-                Name = IdentitiesIndexSlice
+                Name = IdentitiesIndex
             });
 
             CompareExchangeSchema = new TableSchema();
@@ -166,7 +166,7 @@ namespace Raven.Server.ServerWide
                 StartIndex = (int)CompareExchangeTable.PrefixIndex,
                 Count = 1,
                 IsGlobal = true,
-                Name = CompareExchangeIndexSlice
+                Name = CompareExchangeIndex
             });
 
             CompareExchangeTombstoneSchema = new TableSchema();
@@ -180,7 +180,7 @@ namespace Raven.Server.ServerWide
                 StartIndex = (int)CompareExchangeTombstoneTable.PrefixIndex,
                 Count = 1,
                 IsGlobal = true,
-                Name = CompareExchangeTombstoneIndexSlice
+                Name = CompareExchangeTombstoneIndex
             });
 
             TransactionCommandsSchema = new TableSchema();
@@ -1652,7 +1652,7 @@ namespace Raven.Server.ServerWide
                 using (Slice.External(context.Allocator, buffer, buffer.Length, out var keySlice))
                 using (Slice.External(context.Allocator, buffer, buffer.Length - sizeof(long), out var prefix))
                 {
-                    foreach (var tvr in table.SeekForwardFromPrefix(CompareExchangeSchema.Indexes[CompareExchangeIndexSlice], keySlice, prefix, 0))
+                    foreach (var tvr in table.SeekForwardFromPrefix(CompareExchangeSchema.Indexes[CompareExchangeIndex], keySlice, prefix, 0))
                     {
                         if (take-- <= 0)
                             yield break;
@@ -1676,7 +1676,7 @@ namespace Raven.Server.ServerWide
                 using (Slice.External(context.Allocator, buffer, buffer.Length, out var keySlice))
                 using (Slice.External(context.Allocator, buffer, buffer.Length - sizeof(long), out var prefix))
                 {
-                    foreach (var tvr in table.SeekForwardFromPrefix(CompareExchangeTombstoneSchema.Indexes[CompareExchangeTombstoneIndexSlice], keySlice, prefix, 0))
+                    foreach (var tvr in table.SeekForwardFromPrefix(CompareExchangeTombstoneSchema.Indexes[CompareExchangeTombstoneIndex], keySlice, prefix, 0))
                     {
                         if (take-- <= 0)
                             yield break;
@@ -1695,13 +1695,13 @@ namespace Raven.Server.ServerWide
 
             try
             {
-                if (cmd.TryGet(DatabaseName, out databaseName) == false || string.IsNullOrEmpty(databaseName))
+                if (cmd.TryGet(nameof(CleanCompareExchangeTombstonesCommand.DatabaseName), out databaseName) == false || string.IsNullOrEmpty(databaseName))
                     throw new RachisApplyException("Clear Compare Exchange command must contain a DatabaseName property");
 
-                if (cmd.TryGet("MaxRaftIndex", out long maxEtag) == false)
+                if (cmd.TryGet(nameof(CleanCompareExchangeTombstonesCommand.MaxRaftIndex), out long maxEtag) == false)
                     throw new RachisApplyException("Clear Compare Exchange command must contain a MaxRaftIndex property");
 
-                if (cmd.TryGet("Take", out int take) == false)
+                if (cmd.TryGet(nameof(CleanCompareExchangeTombstonesCommand.Take), out int take) == false)
                     throw new RachisApplyException("Clear Compare Exchange command must contain a Take property");
 
                 var databaseNameLowered = databaseName.ToLowerInvariant();
@@ -1957,7 +1957,7 @@ namespace Raven.Server.ServerWide
                 using (Slice.External(context.Allocator, buffer, buffer.Length, out var keySlice))
                 using (Slice.External(context.Allocator, buffer, buffer.Length - sizeof(long), out var prefix))
                 {
-                    foreach (var tvr in items.SeekForwardFromPrefix(IdentitiesSchema.Indexes[IdentitiesIndexSlice], keySlice, prefix, 0))
+                    foreach (var tvr in items.SeekForwardFromPrefix(IdentitiesSchema.Indexes[IdentitiesIndex], keySlice, prefix, 0))
                     {
                         if (take-- <= 0)
                             yield break;
