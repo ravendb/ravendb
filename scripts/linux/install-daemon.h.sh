@@ -44,6 +44,8 @@ function get_installation_type { # returns IS_UPSTART, IS_SYSTEMD
         IS_UPSTART=1
     elif [ "${OS}" == "Ubuntu" ] && [ "${VER}" == "18.04" ]; then
         IS_SYSTEMD=1
+    elif [ $(which systemctl | wc -l) -eq 1 ]; then
+        IS_SYSTEMD=1
     else
         echo -ne "${C_L_MAGENTA}Select type of installation: Upstart or Systemd [u/s]: ${NC}"
         read -n 1 ANS
