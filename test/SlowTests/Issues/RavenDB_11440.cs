@@ -22,6 +22,7 @@ namespace SlowTests.Issues
                     var configuration = await store.Maintenance.Server.SendAsync(new GetLogsConfigurationOperation(), cts.Token);
 
                     LogMode modeToSet;
+                    var time = TimeSpan.MaxValue;
                     switch (configuration.CurrentMode)
                     {
                         case LogMode.None:
@@ -41,12 +42,14 @@ namespace SlowTests.Issues
                     {
                         await store.Maintenance.Server.SendAsync(new SetLogsConfigurationOperation(new SetLogsConfigurationOperation.Parameters
                         {
-                            Mode = modeToSet
+                            Mode = modeToSet,
+                            RetentionTime = time
                         }), cts.Token);
 
                         var configuration2 = await store.Maintenance.Server.SendAsync(new GetLogsConfigurationOperation(), cts.Token);
 
                         Assert.Equal(modeToSet, configuration2.CurrentMode);
+                        Assert.Equal(time, configuration2.RetentionTime);
                         Assert.Equal(configuration.Mode, configuration2.Mode);
                         Assert.Equal(configuration.Path, configuration2.Path);
                         Assert.Equal(configuration.UseUtcTime, configuration2.UseUtcTime);
@@ -55,7 +58,8 @@ namespace SlowTests.Issues
                     {
                         await store.Maintenance.Server.SendAsync(new SetLogsConfigurationOperation(new SetLogsConfigurationOperation.Parameters
                         {
-                            Mode = configuration.CurrentMode
+                            Mode = configuration.CurrentMode,
+                            RetentionTime = configuration.RetentionTime
                         }), cts.Token);
                     }
                 }

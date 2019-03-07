@@ -301,6 +301,10 @@ namespace Raven.Client.ServerWide
             Members.RemoveAll(m => m == delDbFromNode);
             Promotables.RemoveAll(p => p == delDbFromNode);
             Rehabs.RemoveAll(r => r == delDbFromNode);
+
+            DemotionReasons.Remove(delDbFromNode);
+            PromotablesStatus.Remove(delDbFromNode);
+            PredefinedMentors.Remove(delDbFromNode);
         }
 
         public string WhoseTaskIsIt(

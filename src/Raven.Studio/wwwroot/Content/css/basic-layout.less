@@ -18,9 +18,8 @@ html {
 
 .no-transition {
     &, * {
-        transition: none !important;    
+        transition: none !important;
     }
-        
 }
 
 .browser-alert {
@@ -377,11 +376,11 @@ body {
                 opacity: 1;
             }
         }
-        
+
         &.indexes-link {
             padding-right: 0;
         }
-        
+
         &.stale-indexes-link {
             padding-left: 0;
         }
@@ -970,7 +969,6 @@ body {
         flex-grow: 1;
         margin: @grid-gutter-width;
         position: relative;
-        max-width: 1700px;
     }
 }
 
@@ -985,15 +983,38 @@ body {
     color: @brand-primary;
 }
 
+@media (orientation: portrait) {
+    .editDocument {
+        flex-direction: column;
+    }
+}
+
 #right-options-panel {
     -webkit-transition: transform @menu-transition-ease;
     -moz-transition: transform @menu-transition-ease;
     -ms-transition: transform @menu-transition-ease;
     -o-transition: transform @menu-transition-ease;
     transition: transform @menu-transition-ease;
-    width: @right-panel-width;
-    flex-basis: @right-panel-width;
     flex-shrink: 0;
+
+    @media (orientation: portrait) {
+        flex-direction: row;
+        height: 450px;
+        padding: 0 @gutter @gutter;
+
+        .document-properties {
+            width: 45%;
+            flex-basis: 45%;
+            margin-right: @gutter;
+            margin-bottom: 0;
+            flex-shrink: 0;
+        }
+    }
+
+    @media (orientation: landscape) {
+        width: @right-panel-width;
+        flex-basis: @right-panel-width;
+    }
 
     @media (min-width: @screen-md) {
         top: @navbar-height;
@@ -1073,7 +1094,6 @@ body {
         margin-bottom: @grid-gutter-width/2;
     }
 }
-
 
 .color-definitions {
     display: none;

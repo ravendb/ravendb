@@ -4,27 +4,34 @@ import app = require("durandal/app");
 import cola = require("cola");
 import document = require("models/database/documents/document");
 import showDataDialog = require("viewmodels/common/showDataDialog");
+import graphHelper = require("common/helpers/graph/graphHelper");
 
 interface debugGraphOutputNodeWithLayout extends debugGraphOutputNode, cola.Node {
-    
+    fixed: boolean;
 }
 
 interface debugGraphOutputEdge extends cola.Link<debugGraphOutputNodeWithLayout> {
     payload: any;
     name: string;
+    cacheKey: string;
+    connectionNumber: number;
+    totalConnections: number;
 }
 
 class graphQueryResults {
     
     public static readonly circleRadius = 40;
+    public static readonly circleTextLineHeight = 14;
     public static readonly linkLength = 160;
     public static readonly clickDetectionRadius = 6;
+    public static readonly circlePadding = 5;
     
     private width: number;
     private height: number;
     private svg: d3.Selection<void>;
     private zoom: d3.behavior.Zoom<void>;
     private d3cola: cola.D3StyleLayoutAdaptor;
+    private mousePressed: boolean = false;
 
     private edgesContainer: d3.Selection<void>;
     private nodesContainer: d3.Selection<void>;
@@ -36,9 +43,14 @@ class graphQueryResults {
             .range(_.range(1, 11).map(x => "color-" + x));
     }
     
-    private init() {
+    clear() {
         const $container = $(this.selector);
         $container.empty();
+    }
+    
+    private init() {
+        this.clear();
+        const $container = $(this.selector);
         const container = d3.select($container[0]);
 
         this.width = Math.floor($container.innerWidth());
@@ -61,7 +73,10 @@ class graphQueryResults {
             })
             .attr("viewBox", "0 0 " + this.width + " " + this.height);
 
-        this.svg.append("rect")
+        const zoomContainer = this.svg.append("g")
+            .attr("class", "container");
+        
+        zoomContainer.append("rect")
             .attr("class", "zoomRect")
             .attr("width", this.width)
             .attr("height", this.height)
@@ -70,9 +85,13 @@ class graphQueryResults {
             .call(this.zoom)
             .on("dblclick.zoom", null);
 
-        const transform = this.svg.append("g")
+        const transform = zoomContainer.append("g")
             .attr("class", "zoom")
             .attr("transform", "translate(" + (this.width / 2) + "," + (this.height / 2) + ")scale(1)");
+            
+        transform
+            .on("mousedown", () => this.mousePressed = true)
+            .on("mouseup", () => this.mousePressed = false);
 
         this.edgesContainer = transform.append("g")
             .attr("class", "edges");
@@ -88,27 +107,31 @@ class graphQueryResults {
 
         this.svg.append("defs").append("marker")
             .attr({"id":"arrowhead",
-                    "viewBox":"-0 -2.5 5 5",
-                    "refX":25,
-                    "refY":0,
+                    "refX": 5,
+                    "refY": 3,
                     "orient":"auto",
-                    "markerWidth":5,
-                    "markerHeight":5,
+                    "markerWidth":10,
+                    "markerHeight":10,
+                    "viewBox": "0 0 20 20",
+                    "markerUnits": "strokeWidth",
                     "xoverflow":"visible"})
             .append("svg:path")
-            .attr("d", "M 0,-2.5 L 2.5 ,0 L 0,2.5")
-            .attr("fill", "#ccc")
-            .attr("stroke","#ccc");
+            .attr("d", "M0,0 L0,6 L9,3 z")
+            .attr("fill", "#aaa")
+            .attr("stroke","#aaa");
     }
 
     private updateElementDecorators() {
         this.updateNodes(this.nodesContainer.selectAll(".node"));
         this.updateEdges(this.edgesContainer.selectAll(".edge"));
         this.updateEdgePaths(this.edgesContainer.selectAll(".edgePath"));
-        this.updateEdgeLabels(this.edgesContainer.selectAll(".edgeLabel"));
     }
 
     private zoomed() {
+        if (this.mousePressed) {
+            return;
+        }
+        
         const event = d3.event as d3.ZoomEvent;
         this.svg
             .select(".zoom")
@@ -145,22 +168,38 @@ class graphQueryResults {
         const enteringNodes = graphNodes
             .enter()
             .append("g")
-            .attr("class", "node")
-            .call(this.d3cola.drag);
+            .attr("class", "node");
 
+        const nodes = data.Nodes as Array<debugGraphOutputNodeWithLayout>;
+
+        this.d3cola
+            .linkDistance(() => graphQueryResults.linkLength)
+            .nodes(nodes)
+            .links(links)
+            .avoidOverlaps(true)
+            .start(30, 0, 20);
+        
         let mouseDownPosition: [number, number] = null;
         let hasMouseDown = false; //used to control mouse button and down event
+        
+        const self = this;
         
         enteringNodes
             .append("circle")
             .attr("class", d => "node-bg " + this.getCollectionColorClass(d))
             .attr("r", 0)
-            .on("mousedown", () => {
-                mouseDownPosition = d3.mouse(this.nodesContainer.node());
-                hasMouseDown = (d3.event as MouseEvent).button === 0; // left mouse button
+            .on("mousedown", function(d) {
+                mouseDownPosition = d3.mouse(self.nodesContainer.node());
+                const mouseEvent = d3.event as MouseEvent;
+                hasMouseDown = mouseEvent.button === 0; // left mouse button
+                
+                // lock node position
+                d.fixed = true;
+                d3.select(this.parentNode).classed("locked", true);
             })
             .on("mouseup", d => {
                 if (hasMouseDown) {
+                    const mouseEvent = d3.event as MouseEvent;
                     const upPosition = d3.mouse(this.nodesContainer.node());
 
                     const distanceSquared = Math.pow(mouseDownPosition[0] - upPosition[0], 2) + Math.pow(mouseDownPosition[1] - upPosition[1], 2);
@@ -172,23 +211,61 @@ class graphQueryResults {
             })
             .transition()
             .attr("r", graphQueryResults.circleRadius);
+        
+        enteringNodes
+            .call(this.d3cola.drag);
 
+        enteringNodes
+            .append("text")
+            .attr("class", "icon-style lock-icon")
+            .html("&#xe904;")
+            .attr("y", 30);
+        
         enteringNodes
             .append("text")
             .attr("class", "node-name")
             .text(x => x.Id)
-            .attr("y", 5);
+            .attr("y", 5)
+            .each(function (d, i) {
+                const textWidth = this.getComputedTextLength();
+                const maxWidth = 2 * (graphQueryResults.circleRadius - graphQueryResults.circlePadding);
+                
+                const numberOfLines = Math.ceil(textWidth / maxWidth);
+                
+                const textToPrint = numberOfLines > 3 ? d.Id.substr(0, Math.floor(3 * maxWidth * d.Id.length / textWidth)) : d.Id;
+                
+                if (numberOfLines > 1) {
+                    const textNode = d3.select(this);
+                    
+                    const textToBreak = textToPrint;
+                    const charactersPerLine = Math.ceil((textToBreak.length + 2) / numberOfLines);
+
+                    textNode.text("");
+                    
+                    const lines = [] as Array<string>;
+                    for (let l = 0; l < numberOfLines; l++) {
+                        textNode.append("tspan")
+                            .text(textToBreak.substr(l * charactersPerLine, charactersPerLine))
+                            .attr("x", 0)
+                            .attr("dy", l === 0 ? 0 : 14);
+                        lines.push();
+                    } 
+                    
+                    textNode.attr("y", 5  - graphQueryResults.circleTextLineHeight * (numberOfLines - 1) / 2);
+                }
+            });
 
         const edges = this.edgesContainer
             .selectAll(".edge")
-            .data(links, x => x.source.Id + "-" + x.target.Id);
+            .data(links, x =>  x.cacheKey + "@" + x.connectionNumber);
 
         edges.exit()
             .remove();
         
         const enteringLines = edges
             .enter()
-            .append("line");
+            .append("path")
+            .attr("d", d => graphHelper.quadraticBezierCurve(d.source, d.target, 0));
 
         enteringLines
             .attr('marker-end','url(#arrowhead)')
@@ -198,12 +275,11 @@ class graphQueryResults {
             .transition()
             .attr("opacity", 1);
 
-
         const edgePaths = this.edgesContainer.selectAll(".edgePath")
             .data(links)
             .enter()
             .append("path")
-            .attr({"d": d => "M " + d.source.x + " " + d.source.y + " L " + d.target.x + " " + d.target.y,
+            .attr({
                 "class":"edgePath",
                 "fill-opacity":0,
                 "stroke-opacity":0,
@@ -219,25 +295,16 @@ class graphQueryResults {
             .style("pointer-events", "none")
             .attr({"class":"edgeLabel",
                 "id": (d, i) => "edgeLabel" + i,
-                "dx":60,
-                "dy":0,
+                "dy":-2,
                 "font-size":10,
                 "fill":"#aaa"});
 
         edgeLabels.append("textPath")
             .attr("xlink:href",(d, i) => "#edgePath" + i)
+            .attr("startOffset", "50%")
             .style("pointer-events", "none")
             .text(d => d.name);
         
-        const nodes = data.Nodes as Array<debugGraphOutputNodeWithLayout>;
-        
-        this.d3cola
-            .linkDistance(() => graphQueryResults.linkLength)
-            .nodes(nodes)
-            .links(links)
-            .avoidOverlaps(true)
-            .start(30);
-
         enteringNodes
             .call(selection => this.updateNodes(selection));
 
@@ -246,11 +313,6 @@ class graphQueryResults {
 
         edgePaths
             .call(selection => this.updateEdgePaths(selection));
-        
-        edgeLabels
-            .call(selection => this.updateEdgeLabels(selection));
-        
-        //TODO: set initial scale?
     }
 
     private showPreview(data: debugGraphOutputNode) {
@@ -268,16 +330,30 @@ class graphQueryResults {
             nodesCache.set(node.Id, node as debugGraphOutputNodeWithLayout);
         });
         
-        return _.flatMap(data.Edges, edgesByType => {
+        const linkCardinalityCache = new Map<String, number>();
+        
+        const results = _.flatMap(data.Edges, edgesByType => {
            return edgesByType.Results.map(edge => {
+               const cacheKey = edge.From + "->" + edge.To;
+               const count = linkCardinalityCache.get(cacheKey) || 0;
+               linkCardinalityCache.set(cacheKey, count + 1);
+               
                return {
                    source: nodesCache.get(edge.From),
                    target: nodesCache.get(edge.To),
+                   cacheKey: cacheKey,
                    name: edgesByType.Name,
-                   payload: edge.Edge
+                   payload: edge.Edge,
+                   connectionNumber: count
                } as debugGraphOutputEdge;
            });
         }); 
+        
+        results.forEach(r => {
+            r.totalConnections = linkCardinalityCache.get(r.cacheKey);
+        });
+        
+        return results;
     }
 
     private updateNodes(selection: d3.Selection<debugGraphOutputNodeWithLayout>) {
@@ -287,28 +363,54 @@ class graphQueryResults {
 
     private updateEdges(selection: d3.Selection<debugGraphOutputEdge>) {
         selection
-            .attr("x1", x => x.source.x)
-            .attr("y1", x => x.source.y)
-            .attr("x2", x => x.target.x)
-            .attr("y2", x => x.target.y);
+            .attr("d", d => { 
+                const delta = this.getDelta(d);
+                const shift = Math.sign(delta) * 7;
+                const [source, target] = graphHelper.movePoints(d.source, d.target, shift);
+                
+                return graphHelper.quadraticBezierCurve(source, target, delta, graphQueryResults.circleRadius + graphQueryResults.circlePadding);
+            });
     }
     
     private updateEdgePaths(selection: d3.Selection<debugGraphOutputEdge>) {
         selection
-            .attr("d", d => "M " + d.source.x + " " + d.source.y + " L " + d.target.x + " " + d.target.y);
+            .attr("d", d => {
+                const delta = this.getDelta(d);
+                const shift = Math.sign(delta) * 7;
+                const [source, target] = graphHelper.movePoints(d.source, d.target, shift);
+
+                if (target.x > source.x) {
+                    return graphHelper.quadraticBezierCurve(source, target, delta, graphQueryResults.circleRadius + graphQueryResults.circlePadding);
+                } else {
+                    return graphHelper.quadraticBezierCurve(target, source, -delta, graphQueryResults.circleRadius + graphQueryResults.circlePadding);
+                }
+            });
     }
     
-    private updateEdgeLabels(selection: d3.Selection<debugGraphOutputEdge>) {
-        selection.attr('transform',function(d,i){
-            if (d.target.x < d.source.x){
-                const bbox = this.getBBox();
-                const rx = bbox.x+bbox.width/2;
-                const ry = bbox.y+bbox.height/2;
-                return "rotate(180 " + rx + " " + ry + ")";
-            } else {
-                return "rotate(0)";
-            }
-        });
+    private getDelta(d: debugGraphOutputEdge): number {
+        return 30 * (d.connectionNumber + 0.5 - d.totalConnections / 2);
+    }
+    
+    onResize() {
+        if (!this.svg) {
+            // svg is not yet initialized 
+            return;
+        }
+        const $container = $(this.selector);
+
+        this.width = Math.floor($container.innerWidth());
+        this.height = Math.floor($container.innerHeight());
+
+        this.svg
+            .style({
+                width: this.width + "px",
+                height: this.height + "px"
+            })
+            .attr("viewBox", "0 0 " + this.width + " " + this.height);
+
+        this.svg.select(".zoomRect")
+            .attr("width", this.width)
+            .attr("height", this.height);
     }
     
 }

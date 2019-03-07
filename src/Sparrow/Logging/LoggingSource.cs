@@ -43,7 +43,6 @@ namespace Sparrow.Logging
         private bool _updateLocalTimeOffset;
         private string _path;
         private readonly string _name;
-        private TimeSpan _retentionTime;
         private string _dateString;
         private readonly MultipleUseFlag _keepLogging = new MultipleUseFlag(true);
         private int _logNumber;
@@ -74,6 +73,8 @@ namespace Sparrow.Logging
             new ConcurrentDictionary<WebSocket, WebSocketContext>();
 
         public LogMode LogMode { get; private set; }
+        public TimeSpan RetentionTime { get; private set; }
+
         private LogMode _oldLogMode;
 
         public async Task Register(WebSocket source, WebSocketContext context, CancellationToken token)
@@ -85,7 +86,7 @@ namespace Sparrow.Logging
                 if (_listeners.IsEmpty)
                 {
                     _oldLogMode = LogMode;
-                    SetupLogMode(LogMode.Information, _path);
+                    SetupLogMode(LogMode.Information, _path, RetentionTime);
                 }
                 if (_listeners.TryAdd(source, context) == false)
                     throw new InvalidOperationException("Socket was already added?");
@@ -136,15 +137,15 @@ namespace Sparrow.Logging
             SetupLogMode(logMode, path, retentionTime);
         }
 
-        public void SetupLogMode(LogMode logMode, string path, TimeSpan retentionTime = default)
+        public void SetupLogMode(LogMode logMode, string path, TimeSpan retentionTime)
         {
             lock (this)
             {
-                if (LogMode == logMode && path == _path && retentionTime == _retentionTime)
+                if (LogMode == logMode && path == _path && retentionTime == RetentionTime)
                     return;
                 LogMode = logMode;
                 _path = path;
-                _retentionTime = retentionTime == default ? TimeSpan.FromDays(3) : retentionTime;
+                RetentionTime = retentionTime;
 
                 IsInfoEnabled = (logMode & LogMode.Information) == LogMode.Information;
                 IsOperationsEnabled = (logMode & LogMode.Operations) == LogMode.Operations;
@@ -286,7 +287,7 @@ namespace Sparrow.Logging
             {
                 try
                 {
-                    if (_today - File.GetLastWriteTimeUtc(existingLogFile) > _retentionTime)
+                    if (_today - File.GetLastWriteTimeUtc(existingLogFile) > RetentionTime)
                     {
                         File.Delete(existingLogFile);
                     }
@@ -624,7 +625,7 @@ namespace Sparrow.Logging
             {
                 if (_listeners.IsEmpty)
                 {
-                    SetupLogMode(_oldLogMode, _path);
+                    SetupLogMode(_oldLogMode, _path, RetentionTime);
                 }
             }
         }

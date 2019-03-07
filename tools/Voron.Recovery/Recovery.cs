@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections;
 using System.Collections.Generic;
+using System.ComponentModel;
 using System.Diagnostics;
 using System.IO;
 using System.IO.Compression;
@@ -53,7 +54,7 @@ namespace Voron.Recovery
             _progressIntervalInSec = config.ProgressIntervalInSec;
             _previouslyWrittenDocs = new Dictionary<string, long>();
             if(config.LoggingMode != LogMode.None)
-                LoggingSource.Instance.SetupLogMode(config.LoggingMode, Path.Combine(Path.GetDirectoryName(_output), LogFileName));
+                LoggingSource.Instance.SetupLogMode(config.LoggingMode, Path.Combine(Path.GetDirectoryName(_output), LogFileName), TimeSpan.FromDays(3));
             _logger = LoggingSource.Instance.GetLogger<Recovery>("Voron Recovery");
         }
 
@@ -110,16 +111,23 @@ namespace Voron.Recovery
                                 se = new StorageEnvironment(_option);
                                 break;
                             }
-                            catch (IncreasingDataFileInCopyOnWriteModeException e)
+                            catch (Exception e)
                             {
-                                _option.Dispose();
-
-                                using (var file = File.Open(e.DataFilePath, FileMode.Open))
+                                if (e is IncreasingDataFileInCopyOnWriteModeException ex)
                                 {
-                                    file.SetLength(e.RequestedSize);
-                                }
+                                    _option.Dispose();
 
-                                _option = CreateOptions();
+                                    using (var file = File.Open(ex.DataFilePath, FileMode.Open))
+                                    {
+                                        file.SetLength(ex.RequestedSize);
+                                    }
+
+                                    _option = CreateOptions();
+                                }
+                                else if (e is OutOfMemoryException && e.InnerException is Win32Exception)
+                                {
+                                    throw;
+                                }
                             }
                         }
 
@@ -130,6 +138,17 @@ namespace Voron.Recovery
                     catch (Exception e)
                     {
                         se?.Dispose();
+
+                        if (e is OutOfMemoryException && e.InnerException is Win32Exception)
+                        {
+                            e.Data["ReturnCode"] = 0xDEAD;
+                            writer.WriteLine($"{e.InnerException.Message}. {e.Message}.");
+                            writer.WriteLine();
+                            writer.WriteLine("Journal recovery failed. To continue, please backup your files and run again with --DisableCopyOnWriteMode flag.");
+                            writer.WriteLine("Please note that this is usafe operation and we highly recommend to backup you files.");
+
+                            throw;
+                        }
                         writer.WriteLine("Journal recovery failed, don't worry we will continue with data recovery.");
                         writer.WriteLine("The reason for the Jornal recovery failure was:");
                         writer.WriteLine(e);

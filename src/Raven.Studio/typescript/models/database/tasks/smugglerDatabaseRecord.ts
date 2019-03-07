@@ -1,5 +1,7 @@
 ﻿/// <reference path="../../../../typings/tsd.d.ts"/>
 
+import popoverUtils = require("common/popoverUtils");
+
 class smugglerDatabaseRecord {
 
     customizeDatabaseRecordTypes = ko.observable<boolean>(false);
@@ -30,6 +32,23 @@ class smugglerDatabaseRecord {
             const options = this.getDatabaseRecordTypes();
             return options.length > 0;
         });
+    }
+    
+    init() {
+        [".js-warning-pull-replication-sink", ".js-warning-raven-etl", ".js-warning-external-replication"]
+            .forEach(selector => {
+                popoverUtils.longWithHover($(selector),
+                    {
+                        content: `RavenDB Connection strings were not selected.`,
+                        placement: 'right'
+                    });
+            });
+
+        popoverUtils.longWithHover($(".js-warning-sql-etl"),
+            {
+                content: `SQL Connection strings were not selected.`,
+                placement: 'right'
+            });
     }
     
     getDatabaseRecordTypes(): Array<Raven.Client.Documents.Smuggler.DatabaseRecordItemType> {
