@@ -316,7 +316,7 @@ namespace Raven.Server.Documents.Revisions
                 return true; // we always want to create a new version for a reverted document
 
             // compare the contents of the existing and the new document
-            if (DocumentCompare.IsEqualTo(existingDocument, document, false) != DocumentCompareResult.NotEqual)
+            if (DocumentCompare.IsEqualTo(existingDocument, document, DocumentCompare.DocumentCompareOptions.Default) != DocumentCompareResult.NotEqual)
             {
                 // no need to create a new revision, both documents have identical content
                 return false;
