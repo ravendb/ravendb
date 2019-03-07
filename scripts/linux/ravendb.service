@@ -12,7 +12,7 @@ StartLimitBurst=0
 Restart=on-failure
 Type=simple
 TimeoutStopSec=300
-ExecStart=/RAVENDB_PATH/run.sh
+ExecStart=RAVENDB_PATH/run.sh
 
 [Install]
 WantedBy=multi-user.target
