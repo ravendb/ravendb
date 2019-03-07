@@ -183,7 +183,7 @@ namespace Raven.Server.ServerWide.Maintenance
                 {
                     var now = SystemTime.UtcNow;
                     var cleanupIndexes = now.Ticks - _lastIndexCleanupTimeInTicks >= _server.Configuration.Indexing.CleanupInterval.AsTimeSpan.Ticks;
-                    var cleanupTombstones = now.Ticks - _lastTombstonesCleanupTimeInTicks >= _server.Configuration.Cluster.TombstonesCleanupInterval.AsTimeSpan.Ticks;
+                    var cleanupTombstones = now.Ticks - _lastTombstonesCleanupTimeInTicks >= _server.Configuration.Cluster.CompareExchangeTombstonesCleanupInterval.AsTimeSpan.Ticks;
 
                     var clusterTopology = _server.GetClusterTopology(context);
                     foreach (var database in _engine.StateMachine.GetDatabaseNames(context))
