@@ -141,6 +141,7 @@ namespace Voron.Recovery
 
                         if (e is OutOfMemoryException && e.InnerException is Win32Exception)
                         {
+                            e.Data["ReturnCode"] = 0xDEAD;
                             writer.WriteLine($"{e.InnerException.Message}. {e.Message}.");
                             writer.WriteLine();
                             writer.WriteLine("Journal recovery failed. To continue, please backup your files and run again with --DisableCopyOnWriteMode flag.");
