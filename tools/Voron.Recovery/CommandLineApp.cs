@@ -1,4 +1,5 @@
 ﻿using System;
+using System.ComponentModel;
 using System.IO;
 using System.Threading;
 using System.Threading.Tasks;
@@ -176,7 +177,19 @@ namespace Voron.Recovery
                             //That said i'm still going to give it a while to do a proper exit
                             Task.Delay(5000).ContinueWith(_ => { Environment.Exit(1); });
                         }, cts.Token);
-                        recovery.Execute(Console.Out, cts.Token);
+
+                        try
+                        {
+                            recovery.Execute(Console.Out, cts.Token);
+                        }
+                        catch (Exception e)
+                        {
+                            if (e is OutOfMemoryException && e.InnerException is Win32Exception)
+                                return 1;
+
+                            return ExitWithError(e.Message, _app);
+                        }
+
                         cts.Cancel();
                     }
 
