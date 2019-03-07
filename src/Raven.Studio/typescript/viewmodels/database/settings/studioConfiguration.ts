@@ -14,12 +14,14 @@ class studioConfiguration extends viewModelBase {
     spinners = {
         save: ko.observable<boolean>(false)
     };
-    
-    canInstallPwa = pwaInstaller.instance.canInstall;
+
+    pwaInstaller = new pwaInstaller();
+    canInstallApp = ko.observable(false);
 
     activate(args: any) {
         super.activate(args);
-        
+        this.canInstallApp(this.pwaInstaller.canInstallApp);
+
         return new getStudioConfigurationCommand(this.activeDatabase())
             .execute()
             .done((settings: Raven.Client.Documents.Operations.Configuration.StudioConfiguration) => {
@@ -39,6 +41,16 @@ class studioConfiguration extends viewModelBase {
         new saveStudioConfigurationCommand(this.model.toDto(), this.activeDatabase())
             .execute()
             .always(() => this.spinners.save(false));
+    }
+
+    installApp() {
+        this.pwaInstaller.promptInstallApp()
+            .then(result => {
+                // If the user said no, then we can't install; hide the prompt.
+                if (result.outcome === "dismissed") {
+                    this.canInstallApp(false);
+                }
+            });
     }
 }
 

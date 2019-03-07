@@ -30,15 +30,15 @@
                         </div>
                     </div>
 
-                    <div class="panel" data-bind="visible: canInstallPwa">
+                    <div class="panel" data-bind="visible: canInstallApp">
                         <div class="panel-body">
-                            <h3>Studio App -<span data-bind="text: canInstallPwa"></span>-</h3>
+                            <h3>Studio App</h3>
                             <div class="form-group">
                                 <div>
                                     <label class="control-label"></label>
                                 </div>
                                 <div style="position: relative">
-                                    <button class="btn btn-default">Install Raven Studio</button>
+                                    <button class="btn btn-default" data-bind="click: installApp">Install Raven Studio</button>
                                 </div>
                             </div>
                         </div>

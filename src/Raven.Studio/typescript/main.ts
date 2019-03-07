@@ -44,7 +44,16 @@ define(["durandal/system", "durandal/app", "durandal/viewLocator", "plugins/dial
         bootstrapModal: true
     });
 
+    // Listen for app install prompt. This must be done here, before the browser sends the event.
+    window.addEventListener('beforeinstallprompt', e => {
+        // Prevent Chrome 67 and earlier from automatically showing the prompt
+        e.preventDefault();
+        // Stash the event so it can be triggered later.
+        (window as any).ravenStudioInstallPrompt = e;
+    });
+        
     app.start().then(() => {
+
         //Replace 'viewmodels' in the moduleId with 'views' to locate the view.
         //Look for partial views in a 'views' folder in the root.
         viewLocator.useConvention();

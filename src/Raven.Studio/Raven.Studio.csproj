@@ -55,9 +55,6 @@
     <ProjectReference Include="..\..\tools\TypingsGenerator\TypingsGenerator.csproj" />
   </ItemGroup>
   <ItemGroup>
-    <Folder Include="wwwroot\Content\img\app\" />
-  </ItemGroup>
-  <ItemGroup>
     <TypeScriptCompile Include="typescript\common\pwaInstaller.ts" />
   </ItemGroup>
 </Project>

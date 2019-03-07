@@ -1,31 +1,28 @@
 ﻿/// <reference path="../../typings/tsd.d.ts" />
 
 /**
- * Listens for browser events allowing progressive web apps (PWAs) to be installed.
+ * Service that aids in performing installation for progressive web apps (PWAs).
  * For more info, see https://developers.google.com/web/fundamentals/app-install-banners
  * */
 class pwaInstaller {
-
-    static readonly instance = new pwaInstaller();
-
+    
     private deferredInstallPrompt: BeforeInstallPromptEvent | null = null;
 
     constructor() {
-        // Browsers will trigger this event when it deems appropriate (e.g. the user has used our app often).
-        window.addEventListener('beforeinstallprompt', (e: BeforeInstallPromptEvent) => {
-            // Prevent Chrome 67 and earlier from automatically showing the prompt
-            e.preventDefault();
-            // Stash the event so it can be triggered later.
-            this.deferredInstallPrompt = e;
-        });
+        // This install prompt sent to us by the browser at app initialization time (see main.ts)
+        // It will be sent to us if the browser has determined installation is allowed (e.g. we've used the Studio for awhile).
+        const installPrompt = (window as any).ravenStudioInstallPrompt;
+        if (installPrompt) {
+            this.deferredInstallPrompt = installPrompt;
+        }
     }
 
-    get canInstall(): boolean {
+    get canInstallApp(): boolean {
         return !!this.deferredInstallPrompt;
     }
 
-    install(): Promise<InstallPromptResult> | null {
-        if (this.canInstall && !!this.deferredInstallPrompt) {
+    promptInstallApp(): Promise<InstallPromptResult> | null {
+        if (!!this.deferredInstallPrompt) {
             // Show the prompt
             this.deferredInstallPrompt.prompt();
 

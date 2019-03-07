@@ -149,6 +149,28 @@ namespace Raven.Server.Web.System
             return GetStudioFileInternal("favicon.ico");
         }
 
+        [RavenAction("/service-worker.js", "GET", AuthorizationStatus.UnauthenticatedClients)]
+        public Task ServiceWorker()
+        {
+            return GetStudioFileInternal("service-worker.js");
+        }
+
+        [RavenAction("/manifest.json", "GET", AuthorizationStatus.UnauthenticatedClients)]
+        public Task Manifest()
+        {
+            return GetStudioFileInternal("manifest.json");
+        }
+
+        [RavenAction("/app-icon/$", "GET", AuthorizationStatus.UnauthenticatedClients)]
+        public Task AppIcon()
+        {
+            var fileName = RouteMatch.Url.Substring(
+                   RouteMatch.MatchLength,
+                   RouteMatch.Url.Length - RouteMatch.MatchLength
+               );
+            return GetStudioFileInternal($"Content/img/app/{fileName}");
+        }
+        
         [RavenAction("/auth-error.html", "GET", AuthorizationStatus.UnauthenticatedClients)]
         public Task StudioAuthError()
         {
