@@ -12,9 +12,9 @@ fi
 # install .netcore runtime dependencies
 sudo apt-get install -y --no-install-recommends libunwind8 ca-certificates libcurl3
 
-if [ "$UBUNTU_VERSION" = "16.04" ] ; then
+if [ "$UBUNTU_VERSION" = "14.04" ] ; then
     sudo apt-get install -y libicu52 
-elif [ "$UBUNTU_VERSION" = "14.04" ] ; then
+elif [ "$UBUNTU_VERSION" = "16.04" ] ; then
     sudo apt-get install -y libicu55
 elif [ "$UBUNTU_VERSION" = "18.04" ] ; then
     sudo apt-get install -y libicu60
