@@ -250,26 +250,28 @@ namespace Raven.Server.ServerWide
                         }
                         break;
                     case nameof(AddOrUpdateCompareExchangeBatchCommand):
-                        if (cmd.TryGet(nameof(AddOrUpdateCompareExchangeBatchCommand.Commands), out BlittableJsonReaderArray addCommands) == false)
+                        var noAddCommands = cmd.TryGet(nameof(AddOrUpdateCompareExchangeBatchCommand.AddOrUpdateCommands), out BlittableJsonReaderArray addCommands) == false;
+                        var noRemoveCommands = cmd.TryGet(nameof(AddOrUpdateCompareExchangeBatchCommand.RemoveCommands), out BlittableJsonReaderArray removeCommands) == false;
+                        if (noAddCommands && noRemoveCommands)
                         {
-                            throw new RachisApplyException($"'{nameof(AddOrUpdateCompareExchangeBatchCommand.Commands)}' is missing in '{nameof(AddOrUpdateCompareExchangeBatchCommand)}'.");
+                            throw new RachisApplyException($"'{nameof(AddOrUpdateCompareExchangeBatchCommand.AddOrUpdateCommands)}' and '{nameof(AddOrUpdateCompareExchangeBatchCommand.RemoveCommands)}' are missing in '{nameof(AddOrUpdateCompareExchangeBatchCommand)}'.");
                         }
-                        foreach (BlittableJsonReaderObject command in addCommands)
+                        if (noAddCommands)
                         {
-                            Apply(context, command, index, leader, serverStore);
+                            foreach (BlittableJsonReaderObject command in removeCommands)
+                            {
+                                Apply(context, command, index, leader, serverStore);
+                            }
+                            SetIndexForBackup(context, cmd, index, type);
                         }
-                        SetIndexForBackup(context, cmd, index, type);
-                        break;
-                    case nameof(RemoveCompareExchangeBatchCommand):
-                        if (cmd.TryGet(nameof(RemoveCompareExchangeBatchCommand.Commands), out BlittableJsonReaderArray removeCommands) == false)
+                        if (noRemoveCommands)
                         {
-                            throw new RachisApplyException($"'{nameof(RemoveCompareExchangeBatchCommand.Commands)}' is missing in '{nameof(RemoveCompareExchangeBatchCommand)}'.");
+                            foreach (BlittableJsonReaderObject command in addCommands)
+                            {
+                                Apply(context, command, index, leader, serverStore);
+                            }
+                            SetIndexForBackup(context, cmd, index, type);
                         }
-                        foreach (BlittableJsonReaderObject command in removeCommands)
-                        {
-                            Apply(context, command, index, leader, serverStore);
-                        }
-                        SetIndexForBackup(context, cmd, index, type);
                         break;
                     //The reason we have a separate case for removing node from database is because we must 
                     //actually delete the database before we notify about changes to the record otherwise we 
@@ -532,8 +534,7 @@ namespace Raven.Server.ServerWide
             UpdateDatabaseRecordId(context, index, clusterTransaction);
 
             var compareExchangeItems = context.Transaction.InnerTransaction.OpenTable(CompareExchangeSchema, CompareExchange);
-            var compareExchangeTombstoneItems = context.Transaction.InnerTransaction.OpenTable(CompareExchangeTombstoneSchema, CompareExchangeTombstones);
-            var error = clusterTransaction.ExecuteCompareExchangeCommands(context, index, compareExchangeItems, compareExchangeTombstoneItems);
+            var error = clusterTransaction.ExecuteCompareExchangeCommands(context, index, compareExchangeItems);
             if (error == null)
             {
                 clusterTransaction.SaveCommandsBatch(context, index);
@@ -1348,7 +1349,7 @@ namespace Raven.Server.ServerWide
                 case nameof(AddOrUpdateCompareExchangeCommand):
                 case nameof(RemoveCompareExchangeCommand):
                 case nameof(AddOrUpdateCompareExchangeBatchCommand):
-                case nameof(RemoveCompareExchangeBatchCommand):
+                //case nameof(RemoveCompareExchangeBatchCommand):
                 case nameof(UpdatePeriodicBackupCommand):
                 case nameof(UpdateExternalReplicationCommand):
                 case nameof(AddRavenEtlCommand):
@@ -1583,8 +1584,7 @@ namespace Raven.Server.ServerWide
                 if (cmd.TryGet(nameof(RemoveCompareExchangeCommand.FromBackup), out bool fromBackup) == false)
                     throw new ArgumentException("Missing fromBackup argument");
 
-                var tombstoneItems = context.Transaction.InnerTransaction.OpenTable(CompareExchangeTombstoneSchema, CompareExchangeTombstones);
-                result = compareExchange.Execute(context, items, index, tombstoneItems, fromBackup);
+                result = compareExchange.Execute(context, items, index, fromBackup);
             }
 
             OnTransactionDispose(context, index);

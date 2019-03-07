@@ -6,8 +6,8 @@ namespace Raven.Server.ServerWide.Commands
 {
     public class AddOrUpdateCompareExchangeBatchCommand : CommandBase
     {
-        public List<AddOrUpdateCompareExchangeCommand> Commands;
-
+        public List<AddOrUpdateCompareExchangeCommand> AddOrUpdateCommands;
+        public List<RemoveCompareExchangeCommand> RemoveCommands;
         [JsonDeserializationIgnore]
         public JsonOperationContext ContextToWriteResult;
 
@@ -17,19 +17,39 @@ namespace Raven.Server.ServerWide.Commands
 
         public AddOrUpdateCompareExchangeBatchCommand(List<AddOrUpdateCompareExchangeCommand> commands, JsonOperationContext contextToWriteResult)
         {
-            Commands = commands;
+            AddOrUpdateCommands = commands;
             ContextToWriteResult = contextToWriteResult;
         }
-        
+
+        public AddOrUpdateCompareExchangeBatchCommand(List<RemoveCompareExchangeCommand> commands, JsonOperationContext contextToWriteResult)
+        {
+            RemoveCommands = commands;
+            ContextToWriteResult = contextToWriteResult;
+        }
+
         public override DynamicJsonValue ToJson(JsonOperationContext context)
         {
             var djv = base.ToJson(context);
-            var dja = new DynamicJsonArray();
-            foreach (var command in Commands)
+            if (AddOrUpdateCommands != null)
             {
-                dja.Add(command.ToJson(context));
+                var dja = new DynamicJsonArray();
+                foreach (var command in AddOrUpdateCommands)
+                {
+                    dja.Add(command.ToJson(context));
+                }
+                djv[nameof(AddOrUpdateCommands)] = dja;
             }
-            djv[nameof(Commands)] = dja;
+
+            if (RemoveCommands != null)
+            {
+                var dja2 = new DynamicJsonArray();
+                foreach (var command in RemoveCommands)
+                {
+                    dja2.Add(command.ToJson(context));
+                }
+
+                djv[nameof(RemoveCommands)] = dja2;
+            }
 
             return djv;
         }
