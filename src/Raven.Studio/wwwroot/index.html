@@ -1,61 +1,61 @@
 ﻿<!DOCTYPE html>
 <html>
-<head>
-    <title>Raven.Studio</title>
+    <head>
+        <title>Raven.Studio</title>
 
-    <meta charset="utf-8" />
-    <meta http-equiv="X-UA-Compatible" content="IE=edge, chrome=1" />
-    <meta name="apple-mobile-web-app-capable" content="yes" />
-    <meta name="apple-mobile-web-app-status-bar-style" content="black" />
-    <meta name="format-detection" content="telephone=no" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+        <meta charset="utf-8" />
+        <meta http-equiv="X-UA-Compatible" content="IE=edge, chrome=1" />
+        <meta name="apple-mobile-web-app-capable" content="yes" />
+        <meta name="apple-mobile-web-app-status-bar-style" content="black" />
+        <meta name="format-detection" content="telephone=no"/>
+        <meta name="viewport" content="width=device-width, initial-scale=1.0" />
 
-    <link rel="icon" href="favicon.ico">
-    <link rel="icon" type="image/png" sizes="64x64" href="/app-icon/64x64.png">
-    <link rel="icon" type="image/png" sizes="32x32" href="/app-icon/32x32.png">
-    <link rel="icon" type="image/png" sizes="16x16" href="/app-icon/16x16.png">
-    <link rel="mask-icon" href="safari-pinned-tab.svg" color="#ca1c59">
-    <link rel="apple-touch-icon" sizes="180x180" href="/app-icon/180x180.png">
-    <link rel="manifest" href="manifest.json">
-    <meta name="theme-color" content="#22252b">
+        <link rel="icon" href="favicon.ico">
+        <link rel="icon" type="image/png" sizes="64x64" href="/app-icon/64x64.png">
+        <link rel="icon" type="image/png" sizes="32x32" href="/app-icon/32x32.png">
+        <link rel="icon" type="image/png" sizes="16x16" href="/app-icon/16x16.png">
+        <link rel="mask-icon" href="safari-pinned-tab.svg" color="#ca1c59">
+        <link rel="apple-touch-icon" sizes="180x180" href="/app-icon/180x180.png">
+        <link rel="manifest" href="manifest.json">
+        <meta name="theme-color" content="#22252b">
 
-    <!-- build:css Content/css/styles-common.css -->
-    <link rel="stylesheet" href="lib/Durandal/css/durandal.css" />
-    <link rel="stylesheet" href="lib/eonasdan-bootstrap-datetimepicker/build/css/bootstrap-datetimepicker.css" />
-    <link rel="stylesheet" href="lib/bootstrap-duration-picker/dist/bootstrap-duration-picker.css" />
-    <!-- /build -->
+        <!-- build:css Content/css/styles-common.css -->
+            <link rel="stylesheet" href="lib/Durandal/css/durandal.css" />
+            <link rel="stylesheet" href="lib/eonasdan-bootstrap-datetimepicker/build/css/bootstrap-datetimepicker.css" />
+            <link rel="stylesheet" href="lib/bootstrap-duration-picker/dist/bootstrap-duration-picker.css" />
+        <!-- /build -->
+        
+        <script type="text/javascript">
+            var themeToCss = {
+                "dark": "styles.css",
+                "blue": "styles-blue.css",
+                "light": "styles-light.css"
+            };
+            
+            var savedTheme = localStorage.getItem("raven-theme");
+            var supportedThemes = ["blue", "dark", "light"];
+            var themeToUse = savedTheme && supportedThemes.indexOf(savedTheme) !== -1 
+                ? savedTheme 
+                : "dark";
 
-    <script type="text/javascript">
-        var themeToCss = {
-            "dark": "styles.css",
-            "blue": "styles-blue.css",
-            "light": "styles-light.css"
-        };
+            var link = document.createElement("link");
+            link.rel = "stylesheet";
+            link.id  = "raven-theme";
+            link.href = "Content/css/" + themeToCss[themeToUse];
 
-        var savedTheme = localStorage.getItem("raven-theme");
-        var supportedThemes = ["blue", "dark", "light"];
-        var themeToUse = savedTheme && supportedThemes.indexOf(savedTheme) !== -1
-            ? savedTheme
-            : "dark";
+            var head = document.getElementsByTagName("head")[0];
+            head.appendChild(link);
+        </script>
 
-        var link = document.createElement("link");
-        link.rel = "stylesheet";
-        link.id = "raven-theme";
-        link.href = "Content/css/" + themeToCss[themeToUse];
-
-        var head = document.getElementsByTagName("head")[0];
-        head.appendChild(link);
-    </script>
-
-    <script type="text/javascript">
-        if (navigator.userAgent.match(/IEMobile\/10\.0/)) {
-            var msViewportStyle = document.createElement("style");
-            var mq = "@@-ms-viewport{width:auto!important}";
-            msViewportStyle.appendChild(document.createTextNode(mq));
-            document.getElementsByTagName("head")[0].appendChild(msViewportStyle);
-        }
-    </script>
-</head>
+        <script type="text/javascript">
+            if (navigator.userAgent.match(/IEMobile\/10\.0/)) {
+                var msViewportStyle = document.createElement("style");
+                var mq = "@@-ms-viewport{width:auto!important}";
+                msViewportStyle.appendChild(document.createTextNode(mq));
+                document.getElementsByTagName("head")[0].appendChild(msViewportStyle);
+            }
+        </script>
+    </head>
     <body class="loading-active processing">
     <div class="loading-overlay">
         <div class="loading-info">
@@ -109,11 +109,5 @@
         <script type="text/javascript" src="Content/ace/worker-json.js"></script>
     <!-- /build -->
 
-    <script type="text/javascript">
-        // Register our service worker.
-        if ('serviceWorker' in navigator) {
-            navigator.serviceWorker.register("service-worker.js");
-        }
-    </script>
 </body>
 </html>

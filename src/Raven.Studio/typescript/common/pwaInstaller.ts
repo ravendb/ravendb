@@ -6,7 +6,7 @@
  * */
 class pwaInstaller {
     
-    private deferredInstallPrompt: BeforeInstallPromptEvent | null = null;
+    private deferredInstallPrompt: BeforeInstallPromptEvent = null;
 
     constructor() {
         // This install prompt sent to us by the browser at app initialization time (see main.ts)
@@ -21,7 +21,7 @@ class pwaInstaller {
         return !!this.deferredInstallPrompt;
     }
 
-    promptInstallApp(): Promise<InstallPromptResult> | null {
+    promptInstallApp(): Promise<InstallPromptResult> {
         if (!!this.deferredInstallPrompt) {
             // Show the prompt
             this.deferredInstallPrompt.prompt();

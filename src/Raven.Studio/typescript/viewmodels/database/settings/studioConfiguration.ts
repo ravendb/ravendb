@@ -3,7 +3,6 @@ import getStudioConfigurationCommand = require("commands/resources/getStudioConf
 import databaseStudioConfigurationModel = require("models/database/settings/databaseStudioConfigurationModel");
 import eventsCollector = require("common/eventsCollector");
 import saveStudioConfigurationCommand = require("commands/resources/saveStudioConfigurationCommand");
-import pwaInstaller = require("../../../common/pwaInstaller");
 
 class studioConfiguration extends viewModelBase {
 
@@ -15,12 +14,8 @@ class studioConfiguration extends viewModelBase {
         save: ko.observable<boolean>(false)
     };
 
-    pwaInstaller = new pwaInstaller();
-    canInstallApp = ko.observable(false);
-
     activate(args: any) {
         super.activate(args);
-        this.canInstallApp(this.pwaInstaller.canInstallApp);
 
         return new getStudioConfigurationCommand(this.activeDatabase())
             .execute()
@@ -41,16 +36,6 @@ class studioConfiguration extends viewModelBase {
         new saveStudioConfigurationCommand(this.model.toDto(), this.activeDatabase())
             .execute()
             .always(() => this.spinners.save(false));
-    }
-
-    installApp() {
-        this.pwaInstaller.promptInstallApp()
-            .then(result => {
-                // If the user said no, then we can't install; hide the prompt.
-                if (result.outcome === "dismissed") {
-                    this.canInstallApp(false);
-                }
-            });
     }
 }
 
