@@ -108,6 +108,8 @@ class query extends viewModelBase {
     
     timingsGraph = new timingsChart(".js-timings-container");
     graphQueryResults = new graphQueryResults(".js-graph-container");
+    
+    resultsExpanded = ko.observable<boolean>(false);
 
     previewCode = ko.pureComputed(() => {
         const item = this.previewItem();
@@ -148,6 +150,7 @@ class query extends viewModelBase {
     currentTab = ko.observable<queryResultTab | highlightSection | perCollectionIncludes>("results");
     totalResultsForUi = ko.observable<number>(0);
     hasMoreUnboundedResults = ko.observable<boolean>(false);
+    graphTabIsDirty = ko.observable<boolean>(true);
 
     includesCache = ko.observableArray<perCollectionIncludes>([]);
     highlightsCache = ko.observableArray<highlightSection>([]);
@@ -213,7 +216,7 @@ class query extends viewModelBase {
 
     constructor() {
         super();
-
+        
         this.queryCompleter = queryCompleter.remoteCompleter(this.activeDatabase, this.indexes, "Select");
         aceEditorBindingHandler.install();
         datePickerBindingHandler.install();
@@ -222,7 +225,7 @@ class query extends viewModelBase {
         this.initValidation();
 
         this.bindToCurrentInstance("runRecentQuery", "previewQuery", "removeQuery", "useQuery", "useQueryItem", 
-            "goToHighlightsTab", "goToIncludesTab", "goToGraphTab");
+            "goToHighlightsTab", "goToIncludesTab", "goToGraphTab", "toggleResults");
     }
 
     private initObservables() {
@@ -599,6 +602,7 @@ class query extends viewModelBase {
             return;
         }
         
+        this.graphTabIsDirty(true);
         this.columnsSelector.reset();
         
         this.effectiveFetcher = this.queryFetcher;
@@ -1110,16 +1114,24 @@ class query extends viewModelBase {
     
     goToGraphTab() {
         this.currentTab("graph");
-        
-        //TODO: add spinner? 
-        
-        new debugGraphOutputCommand(this.activeDatabase(), this.criteria().queryText())
-            .execute()
-            .done((result) => {
-                this.graphQueryResults.draw(result);
-            });
+        if (this.graphTabIsDirty()) {
+            this.graphQueryResults.clear();
+            
+            new debugGraphOutputCommand(this.activeDatabase(), this.criteria().queryText())
+                .execute()
+                .done((result) => {
+                    this.graphTabIsDirty(false);
+                    this.graphQueryResults.draw(result);
+                });    
+        }
     }
 
+    toggleResults() {
+        this.resultsExpanded.toggle();
+        this.gridController().reset(true);
+        this.graphQueryResults.onResize();
+    }
+    
     exportCsv() {
         eventsCollector.default.reportEvent("query", "export-csv");
 

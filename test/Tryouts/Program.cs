@@ -21,16 +21,16 @@ namespace Tryouts
 {
     public static class Program
     {
-        public static void Main(string[] args)
+        public static async Task Main(string[] args)
         {
             //Console.WriteLine($"Press any key to start... (Process ID: {Process.GetCurrentProcess().Id})");
             //Console.ReadKey();
             for (int i = 0; i < 1000; i++)
             {
                 Console.WriteLine(i);
-                using (var test = new ClusterTransactionTests())
+                using (var test = new RavenDB_11440())
                 {
-                    test.CreateUniqueUser().Wait();
+                    await test.CanGetLogsConfigurationAndChangeMode();
                 }
             }
         }

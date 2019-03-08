@@ -49,7 +49,6 @@ class virtualGrid<T> {
     private settings = new virtualGridConfig();
     private controller: virtualGridController<T>;
     private previousScroll: [number, number] = [0, 0];
-    private previousWindowSize: [number, number] = [0, 0];
     private condensed = false;
     private rowHeight: number;
 
@@ -378,17 +377,6 @@ class virtualGrid<T> {
     }
 
     private checkForUpdatedGridHeight(): number {
-        const windowWidth = window.innerWidth || document.body.clientWidth;
-        const windowHeight = window.innerHeight || document.body.clientHeight;
-        
-        const [prevWidth, prevHeight] = this.previousWindowSize;
-        
-        if (prevWidth === windowWidth && prevHeight === windowHeight) {
-            return this.gridElementHeight;
-        }
-        
-        this.previousWindowSize = [windowWidth, windowHeight];
-        
         const oldHeight = this.gridElementHeight;
         const newHeight = this.$gridElement.height();
         this.gridElementHeight = newHeight;

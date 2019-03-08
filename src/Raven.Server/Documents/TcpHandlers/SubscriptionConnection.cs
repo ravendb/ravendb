@@ -486,46 +486,49 @@ namespace Raven.Server.Documents.TcpHandlers
                 {
                     _buffer.SetLength(0);
 
-                    using (TcpConnection.DocumentDatabase.DocumentsStorage.ContextPool.AllocateOperationContext(out DocumentsOperationContext docsContext))
+                    using (this.TcpConnection.DocumentDatabase.DatabaseInUse(false))
                     {
-                        var sendingCurrentBatchStopwatch = Stopwatch.StartNew();
-
-                        var anyDocumentsSentInCurrentIteration = await TrySendingBatchToClient(docsContext, sendingCurrentBatchStopwatch);
-
-                        if (anyDocumentsSentInCurrentIteration == false)
+                        using (TcpConnection.DocumentDatabase.DocumentsStorage.ContextPool.AllocateOperationContext(out DocumentsOperationContext docsContext))
                         {
-                            if (_logger.IsInfoEnabled)
+                            var sendingCurrentBatchStopwatch = Stopwatch.StartNew();
+
+                            var anyDocumentsSentInCurrentIteration = await TrySendingBatchToClient(docsContext, sendingCurrentBatchStopwatch);
+
+                            if (anyDocumentsSentInCurrentIteration == false)
                             {
-                                _logger.Info(
-                                    $"Did not find any documents to send for subscription {Options.SubscriptionName}");
-                            }
+                                if (_logger.IsInfoEnabled)
+                                {
+                                    _logger.Info(
+                                        $"Did not find any documents to send for subscription {Options.SubscriptionName}");
+                                }
 
-                            await TcpConnection.DocumentDatabase.SubscriptionStorage.AcknowledgeBatchProcessed(SubscriptionId,
-                                Options.SubscriptionName,
-                                // if this is a new subscription that we sent anything in this iteration, 
-                                // _lastChangeVector is null, so let's not change it
-                                _lastChangeVector ??
-                                    nameof(Client.Constants.Documents.SubscriptionChangeVectorSpecialStates.DoNotChange),
-                                subscriptionChangeVectorBeforeCurrentBatch);
+                                await TcpConnection.DocumentDatabase.SubscriptionStorage.AcknowledgeBatchProcessed(SubscriptionId,
+                                    Options.SubscriptionName,
+                                    // if this is a new subscription that we sent anything in this iteration, 
+                                    // _lastChangeVector is null, so let's not change it
+                                    _lastChangeVector ??
+                                        nameof(Client.Constants.Documents.SubscriptionChangeVectorSpecialStates.DoNotChange),
+                                    subscriptionChangeVectorBeforeCurrentBatch);
 
 
-                            subscriptionChangeVectorBeforeCurrentBatch = _lastChangeVector ?? SubscriptionState.ChangeVectorForNextBatchStartingPoint;
+                                subscriptionChangeVectorBeforeCurrentBatch = _lastChangeVector ?? SubscriptionState.ChangeVectorForNextBatchStartingPoint;
 
-                            if (sendingCurrentBatchStopwatch.ElapsedMilliseconds > 1000)
-                                await SendHeartBeat();
+                                if (sendingCurrentBatchStopwatch.ElapsedMilliseconds > 1000)
+                                    await SendHeartBeat();
 
-                            using (docsContext.OpenReadTransaction())
-                            {
-                                long globalEtag = TcpConnection.DocumentDatabase.DocumentsStorage.GetLastDocumentEtag(docsContext, Subscription.Collection);
+                                using (docsContext.OpenReadTransaction())
+                                {
+                                    long globalEtag = TcpConnection.DocumentDatabase.DocumentsStorage.GetLastDocumentEtag(docsContext, Subscription.Collection);
 
-                                if (globalEtag > _startEtag)
+                                    if (globalEtag > _startEtag)
+                                        continue;
+                                }
+
+                                AssertCloseWhenNoDocsLeft();
+
+                                if (await WaitForChangedDocuments(replyFromClientTask))
                                     continue;
                             }
-
-                            AssertCloseWhenNoDocsLeft();
-
-                            if (await WaitForChangedDocuments(replyFromClientTask))
-                                continue;
                         }
                     }
 
@@ -628,6 +631,8 @@ namespace Raven.Server.Documents.TcpHandlers
 
                     foreach (var result in _documentsFetcher.GetDataToSend(docsContext, includeCmd, _startEtag))
                     {
+                        CancellationTokenSource.Token.ThrowIfCancellationRequested();
+
                         _startEtag = result.Doc.Etag;
                         _lastChangeVector = string.IsNullOrEmpty(SubscriptionState.ChangeVectorForNextBatchStartingPoint)
                             ? result.Doc.ChangeVector
