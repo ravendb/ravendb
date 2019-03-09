@@ -972,7 +972,7 @@ Use session.Query<T>() instead of session.Advanced.DocumentQuery<T>. The session
                 throw new InvalidOperationException("Missing where clause");
 
             if (boost < 0m)
-                throw new ArgumentOutOfRangeException(nameof(boost), "Boost factor must be a positive number");
+                throw new ArgumentOutOfRangeException(nameof(boost), "Boost factor must be a non-negative number");
 
             whereToken.Options.Boost = boost;
         }
