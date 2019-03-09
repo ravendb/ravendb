@@ -532,7 +532,7 @@ namespace Sparrow.Json
             //sanity check, in case the 'value' is manually disposed outside of this function
             Debug.Assert(value.IsDisposed == false);
             return value;
-#if DEBUG
+#if DEBUG || VALIDATE
         }
 #endif
         }
