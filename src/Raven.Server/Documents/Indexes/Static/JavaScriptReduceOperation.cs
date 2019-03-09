@@ -22,10 +22,10 @@ namespace Raven.Server.Documents.Indexes.Static
 {
     public class JavaScriptReduceOperation
     {
-        public JavaScriptReduceOperation(ScriptFunctionInstance reduce, ScriptFunctionInstance key, Engine engine, JintPreventResolvingTasksReferenceResolver resolver)
+        public JavaScriptReduceOperation(ArrowFunctionInstance reduce, ArrowFunctionInstance key, Engine engine, JintPreventResolvingTasksReferenceResolver resolver)
         {
-            Reduce = reduce;
-            Key = key;
+            Reduce = reduce ?? throw new ArgumentNullException(nameof(reduce));
+            Key = key ?? throw new ArgumentNullException(nameof(key));
             Engine = engine;
             _resolver = resolver;
             GetReduceFieldsNames();
@@ -289,8 +289,8 @@ namespace Raven.Server.Documents.Indexes.Static
 
         public Engine Engine { get; }
 
-        public ScriptFunctionInstance Reduce { get; }
-        public ScriptFunctionInstance Key { get; }
+        public ArrowFunctionInstance Reduce { get; }
+        public ArrowFunctionInstance Key { get; }
         public string ReduceString { get; internal set; }
 
         private CompiledIndexField[] _groupByFields;
@@ -304,9 +304,9 @@ namespace Raven.Server.Documents.Indexes.Static
                 return _groupByFields;
 
             var ast = Key.FunctionDeclaration;
-            var body = ast.Body.Body;
+            var body = ast.ChildNodes.ToList();
 
-            if (body.Count != 1)
+            if (body.Count != 2)
             {
                 throw new InvalidOperationException($"Was requested to get reduce fields from a scripted function in an unexpected format, expected a single return statement got {body.Count}.");
             }
@@ -322,38 +322,37 @@ namespace Raven.Server.Documents.Indexes.Static
                 throw new InvalidOperationException($"Was requested to get reduce fields from a scripted function in an unexpected format, expected a single argument of type 'Identifier' but got {parameters[0].GetType().Name}.");
             }
 
-            var actualBody = body[0];
-            if (!(actualBody is ReturnStatement returnStatement))
+            var actualBody = body[1];
+            switch (actualBody)
             {
-                throw new InvalidOperationException($"Was requested to get reduce fields from a scripted function in an unexpected format, expected a single return statement got a statement of type {actualBody.GetType().Name}.");
-            }
+                case StaticMemberExpression sme:
+                    if (sme.Property is Identifier id)
+                    {
+                        _groupByFields = new[] { CreateField(id.Name, GetPropertyPath(sme).ToArray()) };
+                        _singleField = true;
 
-            if (!(returnStatement.Argument is ObjectExpression oe))
-            {
-                if (returnStatement.Argument is StaticMemberExpression sme && sme.Property is Identifier id)
-                {
-                    _groupByFields = new[] { CreateField(id.Name, GetPropertyPath(sme).ToArray()) };
-                    _singleField = true;
+                        return _groupByFields;
+                    }
+
+                    throw new InvalidOperationException($"Was requested to get reduce fields from a scripted function in an unexpected format, expected a single return object expression statement got a statement of type {actualBody.GetType().Name}.");
+                case ObjectExpression oe:
+                    var cur = new HashSet<CompiledIndexField>();
+                    foreach (var prop in oe.Properties)
+                    {
+                        string[] path = null;
+                        if (prop.Value is MemberExpression me)
+                            path = GetPropertyPath(me).ToArray();
+
+                        var propertyName = prop.Key.GetKey(Engine);
+                        cur.Add(CreateField(propertyName, path));
+                    }
+
+                    _groupByFields = cur.ToArray();
 
                     return _groupByFields;
-                }
-                throw new InvalidOperationException($"Was requested to get reduce fields from a scripted function in an unexpected format, expected a single return object expression statement got a statement of type {actualBody.GetType().Name}.");
+                default:
+                    throw new InvalidOperationException($"Unknown body type: {actualBody.GetType().Name}");
             }
-
-            var cur = new HashSet<CompiledIndexField>();
-            foreach (var prop in oe.Properties)
-            {
-                string[] path = null;
-                if (prop.Value is MemberExpression me)
-                    path = GetPropertyPath(me).ToArray();
-
-                var propertyName = prop.Key.GetKey();
-                cur.Add(CreateField(propertyName, path));
-            }
-
-            _groupByFields = cur.ToArray();
-
-            return _groupByFields;
 
             CompiledIndexField CreateField(string propertyName, string[] path)
             {

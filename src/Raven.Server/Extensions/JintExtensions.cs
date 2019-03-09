@@ -9,15 +9,29 @@ namespace Raven.Server.Extensions
         {
             if (!(function.Params.FirstOrDefault() is Identifier identifier))
                 return null;
-            if (!(function.Body.Body.FirstOrDefault() is ReturnStatement returnStatement))
+
+            var me = GetMemberExpression(function);
+            if (me == null)
                 return null;
-            if (!(returnStatement.Argument is MemberExpression me))
-                return null;
+
             if (!(me.Property is Identifier property))
                 return null;
             if ((!(me.Object is Identifier reference) || reference.Name != identifier.Name))
                 return null;
             return property.Name;
+        }
+
+        private static MemberExpression GetMemberExpression(IFunction function)
+        {
+            switch (function)
+            {
+                case ArrowFunctionExpression afe:
+                    return afe.ChildNodes.LastOrDefault() as StaticMemberExpression;
+                default:
+                    if (!(function.Body.ChildNodes.FirstOrDefault() is ReturnStatement rs))
+                        return null;
+                    return rs.Argument as MemberExpression;
+            }
         }
     }
 }

@@ -96,8 +96,8 @@ namespace Raven.Server.Documents.Indexes.Static
             if (reduceObj != null && reduceObj.IsObject())
             {
                 var reduceAsObj = reduceObj.AsObject();
-                var groupByKey = reduceAsObj.GetProperty(KeyProperty).Value.As<ScriptFunctionInstance>();
-                var reduce = reduceAsObj.GetProperty(AggregateByProperty).Value.As<ScriptFunctionInstance>();
+                var groupByKey = reduceAsObj.GetProperty(KeyProperty).Value.As<ArrowFunctionInstance>();
+                var reduce = reduceAsObj.GetProperty(AggregateByProperty).Value.As<ArrowFunctionInstance>();
                 ReduceOperation = new JavaScriptReduceOperation(reduce, groupByKey, _engine, resolver) { ReduceString = definition.Reduce };
                 GroupByFields = ReduceOperation.GetReduceFieldsNames();
                 Reduce = ReduceOperation.IndexingFunction;
