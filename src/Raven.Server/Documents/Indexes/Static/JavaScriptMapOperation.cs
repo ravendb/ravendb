@@ -99,10 +99,18 @@ namespace Raven.Server.Documents.Indexes.Static
         {
             HasDynamicReturns = false;
 
-            if (!(MapFunc is ScriptFunctionInstance sfi))
-                return;
-
-            var theFuncAst = sfi.FunctionDeclaration;
+            IFunction theFuncAst;
+            switch (MapFunc)
+            {
+                case ArrowFunctionInstance afi:
+                    theFuncAst = afi.FunctionDeclaration;
+                    break;
+                case ScriptFunctionInstance sfi:
+                    theFuncAst = sfi.FunctionDeclaration;
+                    break;
+                default:
+                    return;
+            }
 
             var res = CheckIfSimpleMapExpression(engine, theFuncAst);
             if (res != null)
@@ -127,7 +135,7 @@ namespace Raven.Server.Documents.Indexes.Static
                 {
                     foreach (var prop in oe.Properties)
                     {
-                        var fieldName = prop.Key.GetKey();
+                        var fieldName = prop.Key.GetKey(engine);
                         if (fieldName == "_")
                             HasDynamicReturns = true;
 
@@ -137,7 +145,7 @@ namespace Raven.Server.Documents.Indexes.Static
                 else if (CompareFields(oe) == false)
                 {
                     throw new InvalidOperationException($"Index {IndexName} contains different return structure from different code paths," +
-                                                        $" expected properties: {string.Join(", ", Fields)} but also got:{string.Join(", ", oe.Properties.Select(x => x.Key.GetKey()))}");
+                                                        $" expected properties: {string.Join(", ", Fields)} but also got:{string.Join(", ", oe.Properties.Select(x => x.Key.GetKey(engine)))}");
                 }
             }
         }
@@ -172,11 +180,11 @@ namespace Raven.Server.Documents.Indexes.Static
                 }
             }
 
-            var functionExp = new FunctionExpression(function.Id, new List<INode> { new Identifier("self") },
-                new BlockStatement(new List<StatementListItem>
+            var functionExp = new FunctionExpression(function.Id, NodeList.Create(new List<INode> { new Identifier("self") }),
+                new BlockStatement(NodeList.Create(new List<IStatementListItem>
                 {
-                    new ReturnStatement(new ObjectExpression(properties))
-                }), false, function.HoistingScope, function.Strict);
+                    new ReturnStatement(new ObjectExpression(NodeList.Create(properties)))
+                })), false, function.HoistingScope, function.Strict);
             var functionObject = new ScriptFunctionInstance(
                     engine,
                     functionExp,
@@ -194,11 +202,11 @@ namespace Raven.Server.Documents.Indexes.Static
 
         private bool CompareFields(ObjectExpression oe)
         {
-            if (Fields.Count != oe.Properties.Count())
+            if (Fields.Count != oe.Properties.Count)
                 return false;
             foreach (var p in oe.Properties)
             {
-                if (Fields.Contains(p.Key.GetKey()) == false)
+                if (Fields.Contains(p.Key.GetKey(_engine)) == false)
                     return false;
             }
 

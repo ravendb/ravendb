@@ -340,7 +340,7 @@ namespace Raven.Server.Documents.Queries
             }
         }
 
-        private void HandleDeclaredFunctionBody(IEnumerable<StatementListItem> body)
+        private void HandleDeclaredFunctionBody(IEnumerable<INode> body)
         {
             foreach (var statement in body)
             {
@@ -367,7 +367,7 @@ namespace Raven.Server.Documents.Queries
                 }
                 else if (statement is FunctionDeclaration functionDeclaration)
                 {
-                    HandleDeclaredFunctionBody(functionDeclaration.Body.Body);
+                    HandleDeclaredFunctionBody(functionDeclaration.Body.ChildNodes);
                 }
             }
         }
@@ -2184,9 +2184,9 @@ namespace Raven.Server.Documents.Queries
                         parameters.TryGet(identifier.Substring(1), out object _) == false);
             }
 
-            void RemoveFromUnknowns(List<INode> functionParameters)
+            void RemoveFromUnknowns(NodeList<INode> functionParameters)
             {
-                if (maybeUnknowns?.Count > 0 == false)
+                if (maybeUnknowns == null || maybeUnknowns.Count == 0)
                     return;
 
                 foreach (var p in functionParameters)

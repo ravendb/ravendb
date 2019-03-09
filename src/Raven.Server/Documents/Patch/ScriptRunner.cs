@@ -887,7 +887,7 @@ namespace Raven.Server.Documents.Patch
                 }
 
                 dynamic date1, date2;
-                if ((binaryOperationType == ExpressionType.Equal || 
+                if ((binaryOperationType == ExpressionType.Equal ||
                      binaryOperationType == ExpressionType.NotEqual) &&
                     args[0].IsString() && args[1].IsString())
                 {
@@ -1062,7 +1062,7 @@ namespace Raven.Server.Documents.Patch
                 if (firstParam.IsObject() && args[0].AsObject() is BlittableObjectInstance selfInstance)
                 {
                     JsValue secondParam = args[1];
-                    if (secondParam.IsObject() && secondParam.AsObject() is ScriptFunctionInstance lambda)
+                    if (secondParam.IsObject() && secondParam.AsObject() is ArrowFunctionInstance lambda)
                     {
 
                         var functionAst = lambda.FunctionDeclaration;

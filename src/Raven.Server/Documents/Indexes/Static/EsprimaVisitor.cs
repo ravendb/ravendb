@@ -329,7 +329,7 @@ namespace Raven.Server.Documents.Indexes.Static
             //Here we construct the function so if we iterate only functions we will be able to iterate ArrowFunctions too
             var statement =
                 arrowFunctionExpression.Expression
-                    ? new BlockStatement(new List<StatementListItem> { new ReturnStatement(arrowFunctionExpression.Body.As<Expression>()) })
+                    ? new BlockStatement(NodeList.Create(new List<IStatementListItem> { new ReturnStatement(arrowFunctionExpression.Body.As<Expression>()) }))
                     : arrowFunctionExpression.Body.As<BlockStatement>();
             var func = new FunctionExpression(new Identifier(null),
                 arrowFunctionExpression.Params,
@@ -790,9 +790,9 @@ namespace Raven.Server.Documents.Indexes.Static
         {
         }
 
-        public virtual void VisitBlockStatement(BlockStatement BlockStatement)
+        public virtual void VisitBlockStatement(INode blockStatement)
         {
-            foreach (var statement in BlockStatement.Body)
+            foreach (var statement in blockStatement.ChildNodes)
             {
                 VisitStatement(statement.As<Statement>());
             }

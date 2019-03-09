@@ -11,7 +11,7 @@ namespace Raven.Server.Documents.Indexes.Static
 {
     public static class JavaScriptIndexUtils
     {
-        public static IEnumerable<ReturnStatement> GetReturnStatements(Statement stmt)
+        public static IEnumerable<ReturnStatement> GetReturnStatements(INode stmt)
         {
             // here we only traverse the single statement, we don't try to traverse into
             // complex expression, etc. This is to avoid too much complexity such as:
@@ -70,7 +70,7 @@ namespace Raven.Server.Documents.Indexes.Static
             }
         }
 
-        private static IEnumerable<ReturnStatement> GetReturnStatements(IEnumerable<StatementListItem> items)
+        private static IEnumerable<ReturnStatement> GetReturnStatements(IEnumerable<IStatementListItem> items)
         {
             foreach (var item in items)
             {
