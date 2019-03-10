@@ -157,17 +157,49 @@ namespace Raven.Client.Documents.Subscriptions
 
         private async Task<Stream> ConnectToServer(CancellationToken token)
         {
+            async Task<TcpConnectionInfo> LegacyTryGetTcpInfo(RequestExecutor requestExecutor1, JsonOperationContext context, ServerNode node = null)
+            {
+                var tcpCommand = new GetTcpInfoCommand("Subscription/" + _dbName, _dbName);
+                try
+                {
+                    if(node != null)
+                    {
+                        await requestExecutor1.ExecuteAsync(node, null, context, tcpCommand, shouldRetry: false, sessionInfo: null, token: token)
+                        .ConfigureAwait(false);
+                    }
+                    else
+                    {
+                        await requestExecutor1.ExecuteAsync(tcpCommand, context, sessionInfo: null, token: token)
+                            .ConfigureAwait(false);
+                    }                    
+                }
+                catch (Exception _)
+                {
+                    _redirectNode = null;
+                    throw;
+                }
+
+                return tcpCommand.Result;
+            }
+
             var command = new GetTcpInfoForRemoteTaskCommand("Subscription/" + _dbName, _dbName, _options?.SubscriptionName, verifyDatabase:true);
 
             var requestExecutor = _store.GetRequestExecutor(_dbName);
 
+            TcpConnectionInfo tcpInfo;
             using (requestExecutor.ContextPool.AllocateOperationContext(out JsonOperationContext context))
             {
                 if (_redirectNode != null)
                 {
                     try
                     {
-                        await requestExecutor.ExecuteAsync(_redirectNode, null, context, command, shouldRetry: false, sessionInfo: null, token: token).ConfigureAwait(false);
+                        await requestExecutor.ExecuteAsync(_redirectNode, null, context, command, shouldRetry: false, sessionInfo: null, token: token)
+                            .ConfigureAwait(false);
+                        tcpInfo = command.Result;
+                    }
+                    catch (ClientVersionMismatchException)
+                    {
+                        tcpInfo = await LegacyTryGetTcpInfo(requestExecutor, context, _redirectNode).ConfigureAwait(false);
                     }
                     catch (Exception)
                     {
@@ -179,16 +211,24 @@ namespace Raven.Client.Documents.Subscriptions
                 }
                 else
                 {
-                    await requestExecutor.ExecuteAsync(command, context, sessionInfo: null, token: token).ConfigureAwait(false);
+                    try
+                    {
+                        await requestExecutor.ExecuteAsync(command, context, sessionInfo: null, token: token).ConfigureAwait(false);
+                        tcpInfo = command.Result;
+                    }
+                    catch (ClientVersionMismatchException)
+                    {
+                        tcpInfo = await LegacyTryGetTcpInfo(requestExecutor, context).ConfigureAwait(false);
+                    }
                 }
 
                 string chosenUrl = null;
-                (_tcpClient, chosenUrl) = await TcpUtils.ConnectAsyncWithPriority(command.Result, requestExecutor.DefaultTimeout).ConfigureAwait(false);
+                (_tcpClient, chosenUrl) = await TcpUtils.ConnectAsyncWithPriority(tcpInfo, requestExecutor.DefaultTimeout).ConfigureAwait(false);
                 _tcpClient.NoDelay = true;
                 _tcpClient.SendBufferSize = 32 * 1024;
                 _tcpClient.ReceiveBufferSize = 4096;
                 _stream = _tcpClient.GetStream();
-                _stream = await TcpUtils.WrapStreamWithSslAsync(_tcpClient, command.Result, _store.Certificate, requestExecutor.DefaultTimeout).ConfigureAwait(false);
+                _stream = await TcpUtils.WrapStreamWithSslAsync(_tcpClient, tcpInfo, _store.Certificate, requestExecutor.DefaultTimeout).ConfigureAwait(false);
 
                 var databaseName = _dbName ?? _store.Database;
 

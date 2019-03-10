@@ -169,6 +169,16 @@ namespace Raven.Server.Config.Categories
 
                                 property.SetValue(this, hashSet);
                             }
+                            else if (property.PropertyType == typeof(UriSetting[]))
+                            {
+                                var values = SplitValue(value);
+                                UriSetting[] settings = new UriSetting[values.Length];
+                                for (var i = 0; i < values.Length; i++)
+                                {
+                                    settings[i] = new UriSetting(values[i]);
+                                }
+                                property.SetValue(this, settings);
+                            }
                             else if (timeUnit != null)
                             {
                                 property.SetValue(this, new TimeSetting(Convert.ToInt64(value), timeUnit.Unit));

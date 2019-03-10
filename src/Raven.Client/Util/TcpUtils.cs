@@ -147,31 +147,27 @@ namespace Raven.Client.Util
 
         internal static async Task<(TcpClient Client, string Url)> ConnectAsyncWithPriority(TcpConnectionInfo info, TimeSpan? tcpConnectionTimeout)
         {
-            string selectedUrl = null;
-            TcpClient tcpClient = null;
-            
-            foreach (var url in info.TcpServerUrls)
+            TcpClient tcpClient;
+
+            if (info.ServerUrls != null)
             {
-                try
+                foreach (var url in info.ServerUrls)
                 {
-                    tcpClient = await ConnectAsync(url, tcpConnectionTimeout).ConfigureAwait(false);
-                    selectedUrl = url;
-                    break;
-                }
-                catch
-                {
-                    // ignored
+                    try
+                    {
+                        tcpClient = await ConnectAsync(url, tcpConnectionTimeout).ConfigureAwait(false);
+                        return (tcpClient, url);
+                    }
+                    catch
+                    {
+                        // ignored
+                    }
                 }
             }
-            
 
-            if (selectedUrl == null)
-            {
-                tcpClient = await ConnectAsync(info.Url, tcpConnectionTimeout).ConfigureAwait(false);
-                selectedUrl = info.Url;
-            }
+            tcpClient = await ConnectAsync(info.Url, tcpConnectionTimeout).ConfigureAwait(false);            
 
-            return (tcpClient, selectedUrl);
+            return (tcpClient, info.Url);
         }
     }
 }
