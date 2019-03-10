@@ -196,6 +196,33 @@ namespace Raven.Server.Web.Studio
             return Task.CompletedTask;
         }
 
+        [RavenAction("/admin/debug/storage/environment/report", "GET", AuthorizationStatus.ClusterAdmin)]
+        public Task EnvironmentReport()
+        {
+            var details = GetBoolValueQueryString("details", required: false) ?? false;
+            var env = ServerStore._env;
+
+            using (ServerStore.ContextPool.AllocateOperationContext(out JsonOperationContext context))
+            using (var writer = new BlittableJsonTextWriter(context, ResponseBodyStream()))
+            {
+                writer.WriteStartObject();
+                writer.WritePropertyName("Environment");
+                writer.WriteString("System");
+                writer.WriteComma();
+
+                using (var tx = env.ReadTransaction())
+                {
+                    var djv = (DynamicJsonValue)TypeConverter.ToBlittableSupportedType(env.GenerateDetailedReport(tx, details));
+                    writer.WritePropertyName("Report");
+                    writer.WriteObject(context.ReadObject(djv, "System"));
+                }
+
+                writer.WriteEndObject();
+            }
+
+            return Task.CompletedTask;
+        }
+
         public class FormattedExpression : IDynamicJson
         {
             public string Expression { get; set; }
