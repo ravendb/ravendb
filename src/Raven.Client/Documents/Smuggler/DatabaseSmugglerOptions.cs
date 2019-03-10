@@ -30,6 +30,7 @@ namespace Raven.Client.Documents.Smuggler
 
         public int MaxStepsForTransformScript { get; set; }
 
+        [Obsolete("Not used in export. Will be moved to import options in next major version of the product.")]
         public bool SkipRevisionCreation { get; set; }
 
         [Obsolete("Not used. Will be removed in next major version of the product.")]
