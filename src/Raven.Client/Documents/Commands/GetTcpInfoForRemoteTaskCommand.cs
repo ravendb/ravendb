@@ -12,12 +12,14 @@ namespace Raven.Client.Documents.Commands
         private readonly string _remoteDatabase;
         private readonly string _remoteTask;
         private readonly string _tag;
+        private bool _verifyDatabase;
 
-        public GetTcpInfoForRemoteTaskCommand(string tag, string remoteDatabase, string remoteTask)
+        public GetTcpInfoForRemoteTaskCommand(string tag, string remoteDatabase, string remoteTask, bool verifyDatabase = false)
         {
             _remoteDatabase = remoteDatabase ?? throw new ArgumentNullException(nameof(remoteDatabase));
             _remoteTask = remoteTask ?? throw new ArgumentNullException(nameof(remoteTask));
             _tag = tag;
+            _verifyDatabase = verifyDatabase;
         }
 
         public override HttpRequestMessage CreateRequest(JsonOperationContext ctx, ServerNode node, out string url)
@@ -26,6 +28,10 @@ namespace Raven.Client.Documents.Commands
                   $"database={Uri.EscapeDataString(_remoteDatabase)}" +
                   $"&remote-task={Uri.EscapeDataString(_remoteTask)}" +
                   $"&tag={Uri.EscapeDataString(_tag)}";
+            if (_verifyDatabase)
+            {
+                url += "&verify-database=true";
+            }
 
             RequestedNode = node;
             var request = new HttpRequestMessage
