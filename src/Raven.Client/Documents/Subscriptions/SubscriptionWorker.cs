@@ -157,7 +157,7 @@ namespace Raven.Client.Documents.Subscriptions
 
         private async Task<Stream> ConnectToServer(CancellationToken token)
         {
-            var command = new GetTcpInfoForRemoteTaskCommand("Subscription/" + _dbName, _dbName, _options?.SubscriptionName);
+            var command = new GetTcpInfoForRemoteTaskCommand("Subscription/" + _dbName, _dbName, _options?.SubscriptionName, verifyDatabase:true);
 
             var requestExecutor = _store.GetRequestExecutor(_dbName);
 
@@ -266,8 +266,6 @@ namespace Raven.Client.Documents.Subscriptions
             {
                 if (connectionStatus.Exception.Contains(nameof(DatabaseDoesNotExistException)))
                     DatabaseDoesNotExistException.ThrowWithMessage(_dbName, connectionStatus.Message);
-                if (connectionStatus.Exception.Contains(nameof(DatabaseDisabledException)))
-                    throw new DatabaseDisabledException(_dbName + " is disabled");
             }
             if (connectionStatus.Type != SubscriptionConnectionServerMessage.MessageType.ConnectionStatus)
                 throw new Exception("Server returned illegal type message when expecting connection status, was: " +

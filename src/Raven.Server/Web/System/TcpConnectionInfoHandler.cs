@@ -4,8 +4,10 @@ using System.Threading.Tasks;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Http.Features.Authentication;
 using Raven.Client.Documents.Operations.Replication;
+using Raven.Client.Exceptions.Database;
 using Raven.Client.ServerWide;
 using Raven.Server.Extensions;
+using Raven.Server.Monitoring.Snmp.Objects.Database;
 using Raven.Server.Routing;
 using Raven.Server.ServerWide;
 using Raven.Server.ServerWide.Context;
@@ -70,13 +72,18 @@ namespace Raven.Server.Web.System
         }
 
         [RavenAction("/info/remote-task/tcp", "GET", AuthorizationStatus.RestrictedAccess)]
-        public Task GetRemoteTaskTcp()
+        public async Task GetRemoteTaskTcp()
         {
             var remoteTask = GetStringQueryString("remote-task");
             var database = GetStringQueryString("database");
+            var verifyDatabase = GetBoolValueQueryString("verify-database", false);
+            if (verifyDatabase.HasValue && verifyDatabase.Value)
+            {
+                await ServerStore.DatabasesLandlord.TryGetOrCreateResourceStore(database);
+            }
 
             if (Authenticate(HttpContext, ServerStore, database, remoteTask) == false)
-                return Task.CompletedTask;
+                return;
 
             using (ServerStore.ContextPool.AllocateOperationContext(out JsonOperationContext context))
             using (var writer = new BlittableJsonTextWriter(context, ResponseBodyStream()))
@@ -84,8 +91,6 @@ namespace Raven.Server.Web.System
                 var output = Server.ServerStore.GetTcpInfoAndCertificates(HttpContext.Request.GetClientRequestedNodeUrl(), forExternalUse:true);
                 context.Write(writer, output);
             }
-
-            return Task.CompletedTask;
         }
 
         public static bool Authenticate(HttpContext httpContext, ServerStore serverStore, string database, string remoteTask)
