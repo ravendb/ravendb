@@ -182,16 +182,30 @@ namespace Raven.Server.Documents.Patch
 
                             result.Status = PatchStatus.Created;
                         }
-                        else if (DocumentCompare.IsEqualTo(originalDoc, modifiedDocument, tryMergeMetadataConflicts: true) != DocumentCompareResult.Equal)
+                        else
                         {
-                            Debug.Assert(originalDocument != null);
-                            if (_isTest == false || run.PutOrDeleteCalled)
+                            DocumentCompareResult compareResult;
+                            try
                             {
-                                putResult = _database.DocumentsStorage.Put(context, originalDocument.Id,
-                                    originalDocument.ChangeVector, modifiedDocument, null, null, originalDocument.Flags);
+                                compareResult = DocumentCompare.IsEqualTo(originalDoc, modifiedDocument,
+                                    DocumentCompare.DocumentCompareOptions.MergeMetadataAndThrowOnAttachmentModification);
+                            }
+                            catch (InvalidOperationException ioe)
+                            {
+                                throw new InvalidOperationException($"Could not patch document '{id}'.", ioe);
                             }
 
-                            result.Status = PatchStatus.Patched;
+                            if (compareResult != DocumentCompareResult.Equal)
+                            {
+                                Debug.Assert(originalDocument != null);
+                                if (_isTest == false || run.PutOrDeleteCalled)
+                                {
+                                    putResult = _database.DocumentsStorage.Put(context, originalDocument.Id,
+                                        originalDocument.ChangeVector, modifiedDocument, null, null, originalDocument.Flags);
+                                }
+
+                                result.Status = PatchStatus.Patched;
+                            }
                         }
 
                         if (putResult != null)

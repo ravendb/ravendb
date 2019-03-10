@@ -16,18 +16,22 @@
                     <div class="toggle">
                         <input id="includeExternalReplications" type="checkbox" data-bind="checked: includeExternalReplications">
                         <label for="includeExternalReplications" class="margin-right margin-right-sm">External replications</label>
+                        <a class="js-warning-external-replication" tabindex="0" data-bind="visible: includeExternalReplications() && !includeRavenConnectionStrings()"><small><i class="icon-warning text-warning"></i></small></a>
                     </div>
                     <div class="toggle">
                         <input id="includeRavenEtls" type="checkbox" data-bind="checked: includeRavenEtls">
                         <label for="includeRavenEtls" class="margin-right margin-right-sm">RavenDB ETLs</label>
+                        <a class="js-warning-raven-etl" tabindex="0" data-bind="visible: includeRavenEtls() && !includeRavenConnectionStrings()"><small><i class="icon-warning text-warning"></i></small></a>
                     </div>
                     <div class="toggle">
                         <input id="includeSqlEtls" type="checkbox" data-bind="checked: includeSqlEtls">
                         <label for="includeSqlEtls" class="margin-right margin-right-sm">SQL ETLs</label>
+                        <a class="js-warning-sql-etl" tabindex="0" data-bind="visible: includeSqlEtls() && !includeSqlConnectionStrings()"><small><i class="icon-warning text-warning"></i></small></a>
                     </div>
                     <div class="toggle">
                         <input id="includeSinkPullReplications" type="checkbox" data-bind="checked: includeSinkPullReplications">
                         <label for="includeSinkPullReplications" class="margin-right margin-right-sm">Pull Replication Sinks</label>
+                        <a class="js-warning-pull-replication-sink" tabindex="0" data-bind="visible: includeSinkPullReplications() && !includeRavenConnectionStrings()"><small><i class="icon-warning text-warning"></i></small></a>
                     </div>
                     <div class="toggle">
                         <input id="includeHubPullReplications" type="checkbox" data-bind="checked: includeHubPullReplications">

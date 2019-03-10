@@ -179,7 +179,7 @@ namespace Raven.Server.Documents.Replication
                 var merged = ChangeVectorUtils.MergeVectors(conflicts.Select(c => c.ChangeVector).ToList());
                 mergedChangeVector = ChangeVectorUtils.MergeVectors(merged, changeVector);
             }
-            _database.DocumentsStorage.Put(context, id, null, resolvedHiLoDoc,changeVector: mergedChangeVector, nonPersistentFlags: NonPersistentDocumentFlags.FromResolver);
+            _database.DocumentsStorage.Put(context, id, null, resolvedHiLoDoc, changeVector: mergedChangeVector, nonPersistentFlags: NonPersistentDocumentFlags.FromResolver);
         }
 
         private static void InvalidConflictWhenThereIsNone(string id)
@@ -199,7 +199,7 @@ namespace Raven.Server.Documents.Replication
 
             if (existingDoc != null)
             {
-                var compareResult = DocumentCompare.IsEqualTo(existingDoc.Data, incomingDoc, true);
+                var compareResult = DocumentCompare.IsEqualTo(existingDoc.Data, incomingDoc, DocumentCompare.DocumentCompareOptions.MergeMetadata);
                 if (compareResult == DocumentCompareResult.NotEqual)
                     return false;
 
@@ -210,8 +210,8 @@ namespace Raven.Server.Documents.Replication
 
                 nonPersistentFlags |= compareResult.HasFlag(DocumentCompareResult.AttachmentsNotEqual)
                     ? NonPersistentDocumentFlags.ResolveAttachmentsConflict : NonPersistentDocumentFlags.None;
-                
-                if (compareResult.HasFlag(DocumentCompareResult.CountersNotEqual))                
+
+                if (compareResult.HasFlag(DocumentCompareResult.CountersNotEqual))
                     nonPersistentFlags |= NonPersistentDocumentFlags.ResolveCountersConflict;
 
                 _database.DocumentsStorage.Put(context, id, null, incomingDoc, lastModifiedTicks, mergedChangeVector, nonPersistentFlags: nonPersistentFlags);

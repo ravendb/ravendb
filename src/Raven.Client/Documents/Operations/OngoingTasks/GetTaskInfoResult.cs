@@ -211,6 +211,8 @@ namespace Raven.Client.Documents.Operations.OngoingTasks
         public string DestinationDatabase { get; set; }
         
         public string ConnectionStringName { get; set; }
+        
+        public bool ConnectionStringDefined { get; set; } 
 
         public override DynamicJsonValue ToJson()
         {
@@ -219,6 +221,7 @@ namespace Raven.Client.Documents.Operations.OngoingTasks
             json[nameof(DestinationServer)] = DestinationServer;
             json[nameof(DestinationDatabase)] = DestinationDatabase;
             json[nameof(ConnectionStringName)] = ConnectionStringName;
+            json[nameof(ConnectionStringDefined)] = ConnectionStringDefined;
 
             return json;
         }

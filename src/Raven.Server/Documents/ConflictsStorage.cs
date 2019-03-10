@@ -238,7 +238,7 @@ namespace Raven.Server.Documents
                 Collection = TableValueToId(context, (int)ConflictsTable.Collection, ref tvr),
                 LastModified = TableValueToDateTime((int)ConflictsTable.LastModified, ref tvr),
                 Flags = TableValueToFlags((int)ConflictsTable.Flags, ref tvr)
-            };         
+            };
 
             return result;
         }
@@ -374,7 +374,7 @@ namespace Raven.Server.Documents
             var listCount = changeVectors.Count;
             if (listCount == 0) // there were no conflicts for this document
                 return (changeVectors, nonPersistentFlags);
-            
+
             // Only register the event if we actually deleted any conflicts
             var tx = context.Transaction.InnerTransaction.LowLevelTransaction;
             tx.AfterCommitWhenNewReadTransactionsPrevented += () =>
@@ -675,7 +675,7 @@ namespace Raven.Server.Documents
                                     break;
                                 case ConflictStatus.Conflict:
                                     if (fromSmuggler &&
-                                        DocumentCompare.IsEqualTo(conflict.Doc, incomingDoc, false) == DocumentCompareResult.Equal)
+                                        DocumentCompare.IsEqualTo(conflict.Doc, incomingDoc, DocumentCompare.DocumentCompareOptions.Default) == DocumentCompareResult.Equal)
                                     {
                                         return; // we already have a conflict with equal content, no need to create another one
                                     }
@@ -800,7 +800,7 @@ namespace Raven.Server.Documents
                     context.GetLazyString(mergedChangeVector),
                     latestConflict.LastModified.Ticks,
                     changeVector,
-                    latestConflict.Flags, 
+                    latestConflict.Flags,
                     NonPersistentDocumentFlags.None).Etag;
             }
 
@@ -873,7 +873,7 @@ namespace Raven.Server.Documents
             }
             else
                 return ConflictStatus.Update; //document with 'id' doesn't exist locally, so just do PUT
-           
+
             status = ChangeVectorUtils.GetConflictStatus(changeVector, local);
             if (status == ConflictStatus.Conflict)
             {

@@ -100,7 +100,7 @@ function getManageServerMenuItem() {
             moduleId: 'viewmodels/manage/captureStackTraces',
             title: 'Stack Traces',
             nav: true,
-            css: 'icon-parallel-stacks', 
+            css: 'icon-stack-traces', 
             dynamicHash: appUrl.forCaptureStackTraces,
             enabled: access.enableCaptureStackTraces,
         }),

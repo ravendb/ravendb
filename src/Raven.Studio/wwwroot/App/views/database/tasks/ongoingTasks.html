@@ -100,13 +100,8 @@
                                                 <span>Replication Delay Time:</span>
                                                 <span class="text-details" data-bind="text: delayHumane" title="Replication Delay Time"></span>
                                             </li>
-                                            <li>
-                                                <span>Connection String:</span>
-                                                <span title="Connection string name">
-                                                    <a target="_blank" data-bind="attr: { href: connectionStringsUrl }, text: connectionStringName"></a>
-                                                </span>
-                                            </li>
-                                            <li>
+                                            <li data-bind="template: { name: 'connection-string' }"></li>
+                                            <li  data-bind="visible: connectionStringDefined">
                                                 <span>Destination Database:</span>
                                                 <span class="text-details" data-bind="text: destinationDB" title="Destination database"></span>
                                             </li>
@@ -159,15 +154,10 @@
                                                 <span>Task Status:</span>
                                                 <span class="text-details" data-bind="text: badgeText"></span>
                                             </li>
-                                            <li>
-                                                <span>Connection String:</span>
-                                                <span title="Connection string name">
-                                                    <a target="_blank" data-bind="attr: { href: connectionStringsUrl }, text: connectionStringName"></a>
-                                                </span>
-                                            </li>
-                                            <li>
+                                            <li data-bind="template: { name: 'connection-string' }"></li>
+                                            <li data-bind="visible: connectionStringDefined">
                                                 <span>Destination Database:</span>
-                                                <span class="text-details" data-bind="text:  destinationDB" title="Destination database"></span>
+                                                <span class="text-details" data-bind="text: destinationDB" title="Destination database"></span>
                                             </li>
                                             <li>
                                                 <span>Actual Destination URL:</span>
@@ -219,18 +209,13 @@
                                                 <span>Task Status:</span>
                                                 <span class="text-details" data-bind="text: badgeText"></span>
                                             </li>
-                                            <li>
+                                            <li data-bind="visible: connectionStringDefined">
                                                 <span>Destination:</span>
                                                 <span title="Destination <database>@<server>">
-                                                    <span data-bind="text: destinationDatabase() + '@' + destinationServer()"></span>
+                                                    <span data-bind="text: destinationDescription"></span>
                                                 </span>
                                             </li>
-                                            <li>
-                                                <span>Connection String:</span>
-                                                <span title="Connection string name">
-                                                    <a target="_blank" data-bind="attr: { href: connectionStringsUrl }, text: connectionStringName"></a>
-                                                </span>
-                                            </li>
+                                            <li data-bind="template: { name: 'connection-string' }"></li>
                                         </ul>
                                         <div data-bind="template: { name: 'etl-progress-template' }"></div>
                                     </div>
@@ -457,13 +442,8 @@
                                                 <span>Task Status:</span>
                                                 <span class="text-details" data-bind="text: badgeText"></span>
                                             </li>
-                                            <li>
-                                                <span>Connection String:</span>
-                                                <span title="Connection string name">
-                                                    <a target="_blank" data-bind="attr: { href: connectionStringsUrl }, text: connectionStringName"></a>
-                                                </span>
-                                            </li>
-                                            <li>
+                                            <li data-bind="template: { name: 'connection-string' }"></li>
+                                            <li data-bind="visible: connectionStringDefined">
                                                 <span>Destination Database:</span>
                                                 <span class="text-details" data-bind="text:  destinationDB" title="Destination database"></span>
                                             </li>
@@ -572,7 +552,7 @@
         <small><i class="icon-info"></i> Navigate to <a target="_blank" href="#" data-bind="attr: { href: $root.createResponsibleNodeUrl($data) }">responsible node</a> to see task progress.</small>
     </div>
     <div data-bind="if: showProgress">
-        <div data-bind="visible: !scriptProgress().length">
+        <div data-bind="visible: loadingProgress">
             <i class="global-spinner spinner-xs"></i> Loading progress ...
         </div>
         <!-- ko foreach: scriptProgress -->
@@ -613,4 +593,20 @@
         </div>
         <!-- /ko -->
     </div>
+</script>
+
+<script type="text/html" id="connection-string">
+    <span>Connection String:</span>
+    <span data-bind="visible: connectionStringDefined">
+        <span title="Connection string name">
+            <a target="_blank" data-bind="attr: { href: connectionStringsUrl }, text: connectionStringName"></a>
+        </span>
+    </span>
+    <span data-bind="visible: !connectionStringDefined()">
+        <span data-bind="text: connectionStringName"></span>
+        <span class="text-danger margin-left margin-left-sm">
+            <i class="icon-danger text-danger"></i>
+            This connection string is not defined.
+        </span>
+    </span>
 </script>

@@ -188,6 +188,7 @@ class importDatabaseFromFile extends viewModelBase {
         super.compositionComplete();
 
         $('[data-toggle="tooltip"]').tooltip();
+        this.model.databaseModel.init();
     }
     
     fileSelected(fileName: string) {
