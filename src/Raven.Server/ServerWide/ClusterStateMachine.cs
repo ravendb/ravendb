@@ -927,7 +927,7 @@ namespace Raven.Server.ServerWide
             {
                 var command = (DeleteCertificateFromClusterCommand)CommandBase.CreateFrom(cmd);
 
-                DeleteCertificate(context, command.Name.ToLowerInvariant());
+                DeleteCertificate(context, command.Name);
             }
             finally
             {
