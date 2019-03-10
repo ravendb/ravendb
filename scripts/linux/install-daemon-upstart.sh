@@ -20,13 +20,6 @@ OUT_FILE='/tmp/install-daemon.ravendb.out.log'
 RAVEN_UBUNTU_PKG="../../artifacts/ubuntu.`lsb_release -r | awk '{print $2}'`-x64"
 RDB_WATCHDOG="ravendb.watchdog.sh"
 
-if [ "$1" == "" ]
-then
-	RAVEN_PARAMS="--Raven/ServerUrl=http://localhost:8080 --Raven/LogsDirectory=RDB_RAVENDB_PATH/../Logs --Raven/DataDir=RDB_RAVENDB_PATH/../Databases --Raven/StudioDirectory=RDB_RAVENDB_PATH/Server"
-else
-	RAVEN_PARAMS="$@"
-fi
-
 function printWelcome () {
 	printf "\n\n${CYAN}RavenDB - Install Daemon (Linux)\n${SCRIPT_TITLE} Script${BLUE} (v0.1) ${NC}\n"
 	printf "${PURPLE}========================${NC}\n"
@@ -145,10 +138,7 @@ function addToStartup () {
 		RAVENDB_DIR=$(echo -n "${ESCAPED_PWD}" && echo "/${RAVEN_UBUNTU_PKG}/package/Server" | sed 's/\//\\\//g' | sed 's/\&/\\\&/g')
 		cat ${RDB_DAEMON} | sed 's/RDB_DOTNET_PATH/'${DOTNET_DIR}'/g' | sed 's/RDB_RAVENDB_PATH/'${RAVENDB_DIR}'/g' | sed 's/RDB_USERNAME/'${USER}'/g' > ${RDB_DAEMON}.config
 
-		RAVEN_PARAMS="$(echo ${RAVEN_PARAMS} | sed 's/RDB_RAVENDB_PATH/'${RAVENDB_DIR}'/g')"
-		RAVEN_PARAMS_ESCAPED="$(echo ${RAVEN_PARAMS} | sed 's/\//\\\//g' | sed 's/\&/\\\&/g' | sed 's/-/\\-/g')"
-
-		cat ${RDB_WATCHDOG} | sed 's/RDB_DOTNET_PATH/'${DOTNET_DIR}'/g' | sed 's/RDB_RAVENDB_PATH/'${RAVENDB_DIR}'/g' | sed "s/RDB_PARAMS/${RAVEN_PARAMS_ESCAPED}/g" > ${RDB_WATCHDOG}.config
+		cat ${RDB_WATCHDOG} | sed 's/RDB_DOTNET_PATH/'${DOTNET_DIR}'/g' | sed 's/RDB_RAVENDB_PATH/'${RAVENDB_DIR}'/g' > ${RDB_WATCHDOG}.config
 		mv ${RDB_WATCHDOG}.config `pwd`/${RAVEN_UBUNTU_PKG}/package/Server/${RDB_WATCHDOG}
 		sudo chmod +x `pwd`/${RAVEN_UBUNTU_PKG}/package/Server/${RDB_WATCHDOG}
 		sudo mv ${RDB_DAEMON}.config /etc/init.d/${RDB_DAEMON} >& /dev/null
@@ -192,10 +182,6 @@ printWelcome
 checkPackages
 
 addToStartup
-
-printf "${NC}\n$You have chosen to use RavenDB with the following options:\n${YELLOW}"
-echo ${RAVEN_PARAMS} | tr " " "\n"
-printf "${NC}\n"
 
 printf "${NC}\n${GREEN}Done. RavenDB installed as autostart daemon${NC}\n"
 
