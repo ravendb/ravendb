@@ -2321,7 +2321,7 @@ namespace Raven.Server.ServerWide
                 return new[] {GetNodeTcpServerUrl(clientRequestedNodeUrl)};
             var length = urls.Length;
             var res = new string[length];
-            for (var i = 0; i <= length; i++)
+            for (var i = 0; i < length; i++)
             {
                 res[i] = urls[i].UriValue;
             }
@@ -2430,7 +2430,7 @@ namespace Raven.Server.ServerWide
                 array.Add(url);
             }
 
-            res[nameof(TcpConnectionInfo.TcpServerUrls)] = array;
+            res[nameof(TcpConnectionInfo.ServerUrls)] = array;
            
             return res;
         }
