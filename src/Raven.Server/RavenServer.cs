@@ -1008,10 +1008,10 @@ namespace Raven.Server
             if (CertHasKnownIssuer(certificate, goodKnownCert, out var issuerHash) == false)
             {
                 if (_authAuditLog.IsInfoEnabled)
-                    _authAuditLog.Info($"Connection from {remoteAddress} with certificate '{certificate.Subject} ({certificate.Thumbprint})'. " +
-                                       "The client certificate is not registered in the cluster explicitly but is trusted implicitly by its Public Key Pinning Hash. " +
-                                       "The client certificate was signed by an unknown issuer - closing the connection. " +
-                                       $"To fix this, the admin can register the pinning hash of the *issuer* certificate: '{issuerHash}' in the 'Security.WellKnownIssuerHashes.Admin' configuration entry.");
+                    _authAuditLog.Info($"Connection from {remoteAddress} with certificate '{certificate.Subject} ({certificate.Thumbprint})' which is not registered in the cluster. " +
+                                       "Tried to allow the connection implicitly based on the client certificate's Public Key Pinning Hash but the client certificate was signed by an unknown issuer - closing the connection. " +
+                                       $"To fix this, the admin can register the pinning hash of the *issuer* certificate: '{issuerHash}' in the '{RavenConfiguration.GetKey(x => x.Security.WellKnownIssuerHashes)}' configuration entry." +
+                                       $"Alternatively, the admin can register the actual certificate ({certificate.FriendlyName} '{certificate.Thumbprint}') explicitly in the cluster.");
 
                 authenticationStatus.Status = AuthenticationStatus.UnfamiliarIssuer;
                 authenticationStatus.IssuerHash = issuerHash;
@@ -1051,7 +1051,7 @@ namespace Raven.Server
                     if (Logger.IsInfoEnabled)
                         Logger.Info($"Failed to run command '{nameof(PutCertificateWithSamePinningHashCommand)}'.", e);
                 }
-            }));
+            }, ServerStore.ServerShutdown));
 
             if (_authAuditLog.IsInfoEnabled)
                 _authAuditLog.Info(
@@ -1723,10 +1723,10 @@ namespace Raven.Server
             switch (auth.Status)
             {
                 case AuthenticationStatus.Expired:
-                    msg = $"The provided client certificate ({certificate?.FriendlyName} '{certificate?.Thumbprint}') is expired on {certificate?.NotAfter}";
+                    msg = $"The provided client certificate ({certificate.FriendlyName} '{certificate.Thumbprint}') is expired on {certificate.NotAfter}";
                     return false;
                 case AuthenticationStatus.NotYetValid:
-                    msg = $"The provided client certificate ({certificate?.FriendlyName} '{certificate?.Thumbprint}') is not yet valid because it starts on {certificate?.NotBefore}";
+                    msg = $"The provided client certificate ({certificate.FriendlyName} '{certificate.Thumbprint}') is not yet valid because it starts on {certificate.NotBefore}";
                     return false;
                 case AuthenticationStatus.ClusterAdmin:
                 case AuthenticationStatus.Operator:
@@ -1737,7 +1737,7 @@ namespace Raven.Server
                     {
                         case TcpConnectionHeaderMessage.OperationTypes.Cluster:
                         case TcpConnectionHeaderMessage.OperationTypes.Heartbeats:
-                            msg = $"{header.Operation} is a server wide operation and the certificate ({certificate?.FriendlyName} '{certificate?.Thumbprint}') is not ClusterAdmin/Operator";
+                            msg = $"{header.Operation} is a server wide operation and the certificate ({certificate.FriendlyName} '{certificate.Thumbprint}') is not ClusterAdmin/Operator";
                             return false;
                         case TcpConnectionHeaderMessage.OperationTypes.Subscription:
                         case TcpConnectionHeaderMessage.OperationTypes.Replication:
@@ -1749,14 +1749,14 @@ namespace Raven.Server
                             }
                             if (auth.CanAccess(header.DatabaseName, requireAdmin: false))
                                 return true;
-                            msg = $"The certificate {certificate?.FriendlyName} does not allow access to {header.DatabaseName}";
+                            msg = $"The certificate {certificate.FriendlyName} does not allow access to {header.DatabaseName}";
                             return false;
                         default:
                             throw new InvalidOperationException("Unknown operation " + header.Operation);
                     }
                 case AuthenticationStatus.UnfamiliarIssuer:
-                    msg = $"The client certificate {certificate?.FriendlyName} is not registered in the cluster explicitly but it can be trusted implicitly by its Public Key Pinning Hash. " +
-                          $"The client certificate was signed by an unknown issuer - closing the connection. To fix this, the admin can register the pinning hash of the *issuer* certificate: '{auth.IssuerHash}' in the '{RavenConfiguration.GetKey(x => x.Security.WellKnownIssuerHashes)}' configuration entry. Alternatively, the admin can register the actual certificate ({certificate?.FriendlyName} '{certificate?.Thumbprint}') explicitly in the cluster.";
+                    msg = $"The client certificate {certificate.FriendlyName} is not registered in the cluster. Tried to allow the connection implicitly based on the client certificate's Public Key Pinning Hash but the client certificate was signed by an unknown issuer - closing the connection. " +
+                          $"To fix this, the admin can register the pinning hash of the *issuer* certificate: '{auth.IssuerHash}' in the '{RavenConfiguration.GetKey(x => x.Security.WellKnownIssuerHashes)}' configuration entry. Alternatively, the admin can register the actual certificate ({certificate.FriendlyName} '{certificate.Thumbprint}') explicitly in the cluster.";
                     return false;
                 case AuthenticationStatus.UnfamiliarCertificate:
                     var info = header.AuthorizeInfo;
@@ -1766,10 +1766,10 @@ namespace Raven.Server
                         using (ctx.OpenReadTransaction())
                         {
                             if (ServerStore.Cluster.TryReadPullReplicationDefinition(header.DatabaseName, info.AuthorizationFor, ctx, out var pullReplication)
-                                && pullReplication.CanAccess(certificate?.Thumbprint))
+                                && pullReplication.CanAccess(certificate.Thumbprint))
                                 return true;
 
-                            msg = $"The certificate {certificate?.FriendlyName} does not allow access to {header.DatabaseName} for {info.AuthorizationFor}";
+                            msg = $"The certificate {certificate.FriendlyName} does not allow access to {header.DatabaseName} for {info.AuthorizationFor}";
                             return false;
                         }
                     }
