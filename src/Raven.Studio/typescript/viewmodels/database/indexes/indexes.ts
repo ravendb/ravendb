@@ -391,7 +391,7 @@ class indexes extends viewModelBase {
     }
 
     openFaultyIndex(i: index) {
-        this.confirmationMessage("Open index?", `You're openning a faulty index <strong>'${generalUtils.escapeHtml(i.name)}'</strong>`, {
+        this.confirmationMessage("Open index?", `You're opening a faulty index <strong>'${generalUtils.escapeHtml(i.name)}'</strong>`, {
             html: true
         })
             .done(result => {

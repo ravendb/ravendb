@@ -33,6 +33,7 @@ namespace Voron
         public const string RecyclableJournalFileNamePrefix = "recyclable-journal";
 
         private ExceptionDispatchInfo _catastrophicFailure;
+        private string _catastrophicFailureStack;
 
         [ThreadStatic]
         private static bool _skipCatastrophicFailureAssertion;
@@ -221,10 +222,10 @@ namespace Voron
 
             _log = LoggingSource.Instance.GetLogger<StorageEnvironmentOptions>(tempPath.FullPath);
 
-            _catastrophicFailureNotification = catastrophicFailureNotification ?? new CatastrophicFailureNotification((id, path, e) =>
+            _catastrophicFailureNotification = catastrophicFailureNotification ?? new CatastrophicFailureNotification((id, path, e, stacktrace) =>
             {
                 if (_log.IsOperationsEnabled)
-                    _log.Operations($"Catastrophic failure in {this}", e);
+                    _log.Operations($"Catastrophic failure in {this}, StackTrace:'{stacktrace}'", e);
             });
 
             var shouldForceEnvVar = Environment.GetEnvironmentVariable("VORON_INTERNAL_ForceUsing32BitsPager");
@@ -242,8 +243,9 @@ namespace Voron
 
         public void SetCatastrophicFailure(ExceptionDispatchInfo exception)
         {
+            _catastrophicFailureStack = Environment.StackTrace;
             _catastrophicFailure = exception;
-            _catastrophicFailureNotification.RaiseNotificationOnce(_environmentId, ToString(), exception.SourceException);
+            _catastrophicFailureNotification.RaiseNotificationOnce(_environmentId, ToString(), exception.SourceException, _catastrophicFailureStack);
         }
 
         public bool IsCatastrophicFailureSet => _catastrophicFailure != null;
@@ -255,6 +257,9 @@ namespace Voron
 
             if (_skipCatastrophicFailureAssertion)
                 return;
+
+            if (_log.IsInfoEnabled)
+                _log.Info($"CatastrophicFailure state, about to throw. Originally was set in the following stack trace : {_catastrophicFailureStack}");
 
             _catastrophicFailure.Throw(); // force re-throw of error
         }

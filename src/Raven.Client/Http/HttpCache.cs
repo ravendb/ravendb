@@ -198,7 +198,11 @@ namespace Raven.Client.Http
 
             try
             {
-                Debug.Assert(_isFreeSpaceRunning);                
+                if (_items.Count == 0)
+                    return;
+
+                Debug.Assert(_isFreeSpaceRunning); 
+
                 if (Logger.IsInfoEnabled)
                     Logger.Info($"Started to clear the http cache. Items: {_items.Count}");
 

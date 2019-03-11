@@ -967,8 +967,15 @@ namespace Raven.Server.Web.System
         {
             if (ResourceNameValidator.IsValidResourceName(Database.Name, ServerStore.Configuration.Core.DataDirectory.FullPath, out string errorMessage) == false)
                 throw new BadRequestException(errorMessage);
+            long key = 0;
+            var taskId = GetLongQueryString("key", false);
+            if (taskId != null)
+                key = taskId.Value;
+            var name = GetStringQueryString("taskName", false);
 
-            var key = GetLongQueryString("key");
+            if ((taskId == null) && (name == null))
+                throw new ArgumentException($"You must specify a query string argument of either 'key' or 'name' , but none was specified.");
+
             var typeStr = GetQueryStringValueAndAssertIfSingleAndNotEmpty("type");
 
             using (ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
@@ -989,7 +996,10 @@ namespace Raven.Server.Web.System
                     {
                         case OngoingTaskType.Replication:
 
-                            var watcher = record.ExternalReplications.Find(x => x.TaskId == key);
+                            var watcher = name != null ?
+                                record.ExternalReplications.Find(x => x.Name.Equals(name, StringComparison.OrdinalIgnoreCase))
+                                : record.ExternalReplications.Find(x => x.TaskId == key);
+
                             if (watcher == null)
                             {
                                 HttpContext.Response.StatusCode = (int)HttpStatusCode.NotFound;
@@ -1018,7 +1028,10 @@ namespace Raven.Server.Web.System
 
                         case OngoingTaskType.Backup:
 
-                            var backupConfiguration = record.PeriodicBackups?.Find(x => x.TaskId == key);
+                            var backupConfiguration = name != null ?
+                                record.PeriodicBackups.Find(x => x.Name.Equals(name, StringComparison.OrdinalIgnoreCase))
+                                : record.PeriodicBackups?.Find(x => x.TaskId == key);
+
                             if (backupConfiguration == null)
                             {
                                 HttpContext.Response.StatusCode = (int)HttpStatusCode.NotFound;
@@ -1032,7 +1045,10 @@ namespace Raven.Server.Web.System
 
                         case OngoingTaskType.SqlEtl:
 
-                            var sqlEtl = record.SqlEtls?.Find(x => x.TaskId == key);
+                            var sqlEtl = name != null ?
+                                record.SqlEtls.Find(x => x.Name.Equals(name, StringComparison.OrdinalIgnoreCase))
+                                : record.SqlEtls?.Find(x => x.TaskId == key);
+
                             if (sqlEtl == null)
                             {
                                 HttpContext.Response.StatusCode = (int)HttpStatusCode.NotFound;
@@ -1058,7 +1074,10 @@ namespace Raven.Server.Web.System
 
                         case OngoingTaskType.RavenEtl:
 
-                            var ravenEtl = record.RavenEtls?.Find(x => x.TaskId == key);
+                            var ravenEtl = name != null ?
+                                record.RavenEtls.Find(x => x.Name.Equals(name, StringComparison.OrdinalIgnoreCase))
+                                : record.RavenEtls?.Find(x => x.TaskId == key);
+
                             if (ravenEtl == null)
                             {
                                 HttpContext.Response.StatusCode = (int)HttpStatusCode.NotFound;
