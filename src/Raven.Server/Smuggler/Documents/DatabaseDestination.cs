@@ -541,7 +541,7 @@ namespace Raven.Server.Smuggler.Documents
                     {
                         foreach (var collection in currentDatabaseRecord.ConflictSolverConfig.ResolveByCollection)
                         {
-                            if (!(databaseRecord.ConflictSolverConfig.ResolveByCollection.ContainsKey(collection.Key)))
+                            if ((databaseRecord.ConflictSolverConfig.ResolveByCollection.ContainsKey(collection.Key)) == false)
                             {
                                 databaseRecord.ConflictSolverConfig.ResolveByCollection.Add(collection.Key, collection.Value);
                             }
@@ -565,7 +565,7 @@ namespace Raven.Server.Smuggler.Documents
                     {
                         currentDatabaseRecord?.PeriodicBackups.ForEach(x =>
                         {
-                            if (x.Name.Equals(backupConfig.Name, StringComparison.InvariantCultureIgnoreCase))
+                            if (x.Name.Equals(backupConfig.Name, StringComparison.OrdinalIgnoreCase))
                             {
                                 tasks.Add(_database.ServerStore.SendToLeaderAsync(new DeleteOngoingTaskCommand(x.TaskId, OngoingTaskType.Backup, _database.Name)));
                             }
@@ -586,7 +586,7 @@ namespace Raven.Server.Smuggler.Documents
                     {
                         currentDatabaseRecord?.SinkPullReplications.ForEach(x =>
                         {
-                            if (x.Name.Equals(pullReplication.Name, StringComparison.InvariantCultureIgnoreCase))
+                            if (x.Name.Equals(pullReplication.Name, StringComparison.OrdinalIgnoreCase))
                             {
                                 tasks.Add(_database.ServerStore.SendToLeaderAsync(new DeleteOngoingTaskCommand(x.TaskId, OngoingTaskType.PullReplicationAsSink, _database.Name)));
                             }
@@ -707,7 +707,7 @@ namespace Raven.Server.Smuggler.Documents
                     {
                         foreach (var collection in currentDatabaseRecord.Revisions.Collections)
                         {
-                            if (!(databaseRecord.Revisions.Collections.ContainsKey(collection.Key)))
+                            if ((databaseRecord.Revisions.Collections.ContainsKey(collection.Key)) == false)
                             {
                                 databaseRecord.Revisions.Collections.Add(collection.Key, collection.Value);
                             }
