@@ -1584,7 +1584,7 @@ more responsive application.
                     IncludedDocumentsById.TryGetValue(id, out documentInfo) == false)
                     return false;
 
-                if (documentInfo.Entity == null)
+                if ((documentInfo.Entity == null) && (documentInfo.Document == null))
                     return false;
 
                 if (includes == null)

@@ -117,8 +117,8 @@ namespace Raven.Client.Documents.Session
             }
 
             var loadOperation = new LoadOperation(this)
-                .WithIncludes(includes)
-                .ByIds(ids);
+                .ByIds(ids)
+                .WithIncludes(includes);
 
             var lazyOp = new LazyLoadOperation<T>(this, loadOperation).ByIds(ids).WithIncludes(includes);
             return AddLazyOperation(lazyOp, onEval);

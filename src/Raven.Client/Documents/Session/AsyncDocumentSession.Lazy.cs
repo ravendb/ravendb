@@ -209,7 +209,7 @@ namespace Raven.Client.Documents.Session
                 return new Lazy<Task<Dictionary<string, T>>>(() => LoadAsync<T>(ids, token));
             }
 
-            var loadOperation = new LoadOperation(this).WithIncludes(includes).ByIds(ids);
+            var loadOperation = new LoadOperation(this).ByIds(ids).WithIncludes(includes);
             var lazyOp = new LazyLoadOperation<T>(this, loadOperation).ByIds(ids).WithIncludes(includes);
             return AddLazyOperation(lazyOp, onEval, token);
         }
