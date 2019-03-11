@@ -79,7 +79,7 @@ namespace Voron.Impl.Paging
                                 if (DoNotConsiderMemoryLockFailureAsCatastrophicError)
                                     continue; // okay, can skip this, then
 
-                                var sumOfAllocations = Bits.NextPowerOf2(newState.AllocationInfos.Sum(x => x.Size) * 2);
+                                var sumOfAllocations = Bits.PowerOf2(newState.AllocationInfos.Sum(x => x.Size) * 2);
 
                                 if (TryHandleFailureToLockMemory(info.BaseAddress, info.Size, sumOfAllocations))
                                     break;
@@ -116,7 +116,7 @@ namespace Voron.Impl.Paging
                 // From: https://msdn.microsoft.com/en-us/library/windows/desktop/ms686234(v=vs.85).aspx
                 // "The maximum number of pages that a process can lock is equal to the number of pages in its minimum working set minus a small overhead"
                 // let's increase the max size of memory we can lock by increasing the MinWorkingSet. On Windows, that is available for all users
-                var nextSize = Bits.NextPowerOf2(currentProcess.MinWorkingSet.ToInt64() + sumOfAllocationsInBytes + sizeToLock);
+                var nextSize = Bits.PowerOf2(currentProcess.MinWorkingSet.ToInt64() + sumOfAllocationsInBytes + sizeToLock);
                 if (nextSize > int.MaxValue && IntPtr.Size == sizeof(int))
                 {
                     nextSize = int.MaxValue;
@@ -429,7 +429,7 @@ namespace Voron.Impl.Paging
         private static long GetNearestFileSize(long neededSize)
         {
             if (neededSize < IncreaseByPowerOf2Threshold)
-                return Bits.NextPowerOf2(neededSize);
+                return Bits.PowerOf2(neededSize);
 
             // if it is over 0.5 GB, then we grow at 1 GB intervals
             var remainder = neededSize % Constants.Size.Gigabyte;

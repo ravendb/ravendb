@@ -1,4 +1,4 @@
-﻿// -----------------------------------------------------------------------
+// -----------------------------------------------------------------------
 //  <copyright file="WriteAheadJournal.cs" company="Hibernating Rhinos LTD">
 //      Copyright (c) Hibernating Rhinos LTD. All rights reserved.
 //  </copyright>
@@ -121,7 +121,7 @@ namespace Voron.Impl.Journal
             long minRequiredSize = numberOf4Kbs * 4 * Constants.Size.Kilobyte;
             if (_currentJournalFileSize < minRequiredSize)
             {
-                _currentJournalFileSize = Bits.NextPowerOf2(minRequiredSize);
+                _currentJournalFileSize = Bits.PowerOf2(minRequiredSize);
                 if (_currentJournalFileSize > _env.Options.MaxLogFileSize)
                     _currentJournalFileSize = Math.Max(_env.Options.MaxLogFileSize, minRequiredSize);
 
@@ -369,7 +369,7 @@ namespace Voron.Impl.Journal
 
         private void RecoverCurrentJournalSize(AbstractPager pager)
         {
-            var journalSize = Bits.NextPowerOf2(pager.NumberOfAllocatedPages * Constants.Storage.PageSize);
+            var journalSize = Bits.PowerOf2(pager.NumberOfAllocatedPages * Constants.Storage.PageSize);
             if (journalSize >= _env.Options.MaxLogFileSize) // can't set for more than the max log file size
                 return;
 
@@ -1681,7 +1681,7 @@ namespace Voron.Impl.Journal
             var bytes = pagesRequired * Constants.Storage.PageSize;
             if (bytes < Constants.Size.Megabyte / 2)
             {
-                pagesRequired = Bits.NextPowerOf2(bytes) / Constants.Storage.PageSize ;
+                pagesRequired = Bits.PowerOf2(bytes) / Constants.Storage.PageSize ;
             }
             else
             {
@@ -1879,5 +1879,6 @@ namespace Voron.Impl.Journal
         public int NumberOfUncompressedPages;
         public JournalFile.UpdatePageTranslationTableAndUnusedPagesAction? UpdatePageTranslationTableAndUnusedPages;
     }
+
 }
 

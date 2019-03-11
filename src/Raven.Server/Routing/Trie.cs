@@ -189,7 +189,7 @@ namespace Raven.Server.Routing
                 return;// already run
 
             var children = FilteredChildren;
-            var size = Bits.NextPowerOf2(children.Length);
+            var size = Bits.PowerOf2(children.Length);
             OptimizeInternal(size, children);
         }
 

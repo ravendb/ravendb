@@ -319,7 +319,7 @@ namespace Raven.Server.Rachis
             public void ReadExactly(int size)
             {
                 if (_buffer.Length < size)
-                    _buffer = new byte[Bits.NextPowerOf2(size)];
+                    _buffer = new byte[Bits.PowerOf2(size)];
                 var remaining = 0;
                 while (remaining < size)
                 {
