@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using Raven.Client.Documents.Commands;
+using Raven.Client.Extensions;
 using Sparrow.Json;
 using Sparrow.Logging;
 
@@ -12,11 +13,10 @@ namespace Raven.Client.Documents.Session.Operations
         private readonly InMemoryDocumentSessionOperations _session;
         private static readonly Logger Logger = LoggingSource.Instance.GetLogger<LoadOperation>("Client");
 
-        private string[] _ids;
+        private readonly List<string> _ids = new List<string>();
         private string[] _includes;
         private string[] _countersToInclude;
         private bool _includeAllCounters;
-        private readonly List<string> _idsToCheckOnServer = new List<string>();
         private GetDocumentsResult _currentLoadResults;
 
         public LoadOperation(InMemoryDocumentSessionOperations session)
@@ -26,22 +26,19 @@ namespace Raven.Client.Documents.Session.Operations
 
         public GetDocumentsCommand CreateRequest()
         {
-            if (_idsToCheckOnServer.Count == 0)
-                return null;
-
-            if (_session.CheckIfIdAlreadyIncluded(_ids, _includes))
+            if (_session.CheckIfIdAlreadyIncluded(_ids.ToArray(), _includes))
                 return null;
 
             _session.IncrementRequestCount();
             if (Logger.IsInfoEnabled)
-                Logger.Info($"Requesting the following ids '{string.Join(", ", _idsToCheckOnServer)}' from {_session.StoreIdentifier}");
+                Logger.Info($"Requesting the following ids '{string.Join(", ", _ids)}' from {_session.StoreIdentifier}");
 
             if (_includeAllCounters)
-                return new GetDocumentsCommand(_idsToCheckOnServer.ToArray(), _includes, includeAllCounters: true, metadataOnly: false);
+                return new GetDocumentsCommand(_ids.ToArray(), _includes, includeAllCounters: true, metadataOnly: false);
 
             return _countersToInclude != null
-                ? new GetDocumentsCommand(_idsToCheckOnServer.ToArray(), _includes, _countersToInclude, metadataOnly: false)
-                : new GetDocumentsCommand(_idsToCheckOnServer.ToArray(), _includes, metadataOnly: false);
+                ? new GetDocumentsCommand(_ids.ToArray(), _includes, _countersToInclude, metadataOnly: false)
+                : new GetDocumentsCommand(_ids.ToArray(), _includes, metadataOnly: false);
         }
 
         public LoadOperation ById(string id)
@@ -49,13 +46,9 @@ namespace Raven.Client.Documents.Session.Operations
             if (id == null)
                 return this;
 
-            if (_ids == null)
-                _ids = new[] { id };
+            if (_ids.Count == 0)
+                _ids.Add(id);
 
-            if (_session.IsLoadedOrDeleted(id) && (_includes == null))
-                return this;
-
-            _idsToCheckOnServer.Add(id);
             return this;
         }
 
@@ -80,7 +73,12 @@ namespace Raven.Client.Documents.Session.Operations
 
         public LoadOperation ByIds(IEnumerable<string> ids)
         {
-            _ids = ids.ToArray();
+            foreach (var id in ids)
+            {
+                if (id != null)
+                    _ids.Add(id);
+            }
+
             foreach (var id in _ids.Distinct(StringComparer.OrdinalIgnoreCase))
             {
                 ById(id);
@@ -171,7 +169,7 @@ namespace Raven.Client.Documents.Session.Operations
 
             if (_includeAllCounters || _countersToInclude != null)
             {
-                _session.RegisterCounters(result.CounterIncludes, _ids, _countersToInclude, _includeAllCounters);
+                _session.RegisterCounters(result.CounterIncludes, _ids.ToArray(), _countersToInclude, _includeAllCounters);
             }
 
             foreach (var document in GetDocumentsFromResult(result))
