@@ -833,10 +833,10 @@ namespace Raven.Server.Web.System
             var taskId = GetLongQueryString("key", false);
             if (taskId != null)
                 key = taskId.Value;
-            var name = GetStringQueryString("name", false);
+            var name = GetStringQueryString("taskName", false);
 
             if ((taskId == null) && (name == null))
-                throw new ArgumentException($"Query string key or name is mandatory, but wasn't specified.");
+                throw new ArgumentException($"You must specify a query string argument of either 'key' or 'name' , but none was specified.");
 
             var typeStr = GetQueryStringValueAndAssertIfSingleAndNotEmpty("type");
 
@@ -859,7 +859,7 @@ namespace Raven.Server.Web.System
                         case OngoingTaskType.Replication:
 
                             var watcher = name != null ?
-                                record.ExternalReplications.Find(x => x.Name.Equals(name, StringComparison.InvariantCultureIgnoreCase))
+                                record.ExternalReplications.Find(x => x.Name.Equals(name, StringComparison.OrdinalIgnoreCase))
                                 : record.ExternalReplications.Find(x => x.TaskId == key);
 
                             if (watcher == null)
@@ -876,7 +876,7 @@ namespace Raven.Server.Web.System
                         case OngoingTaskType.Backup:
 
                             var backupConfiguration = name != null ?
-                                record.PeriodicBackups.Find(x => x.Name.Equals(name, StringComparison.InvariantCultureIgnoreCase))
+                                record.PeriodicBackups.Find(x => x.Name.Equals(name, StringComparison.OrdinalIgnoreCase))
                                 : record.PeriodicBackups?.Find(x => x.TaskId == key);
 
                             if (backupConfiguration == null)
@@ -893,7 +893,7 @@ namespace Raven.Server.Web.System
                         case OngoingTaskType.SqlEtl:
 
                             var sqlEtl = name != null ?
-                                record.SqlEtls.Find(x => x.Name.Equals(name, StringComparison.InvariantCultureIgnoreCase))
+                                record.SqlEtls.Find(x => x.Name.Equals(name, StringComparison.OrdinalIgnoreCase))
                                 : record.SqlEtls?.Find(x => x.TaskId == key);
 
                             if (sqlEtl == null)
@@ -921,7 +921,7 @@ namespace Raven.Server.Web.System
                         case OngoingTaskType.RavenEtl:
 
                             var ravenEtl = name != null ?
-                                record.RavenEtls.Find(x => x.Name.Equals(name, StringComparison.InvariantCultureIgnoreCase))
+                                record.RavenEtls.Find(x => x.Name.Equals(name, StringComparison.OrdinalIgnoreCase))
                                 : record.RavenEtls?.Find(x => x.TaskId == key);
 
                             if (ravenEtl == null)
