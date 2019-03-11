@@ -19,8 +19,8 @@ import databasesManager = require("common/shell/databasesManager");
 import createDatabase = require("viewmodels/resources/createDatabase");
 import serverTime = require("common/helpers/database/serverTime");
 import accessManager = require("common/shell/accessManager");
-import utils = require("widgets/virtualGrid/virtualGridUtils");
 import driveUsageDetails = require("models/resources/serverDashboard/driveUsageDetails");
+import viewHelpers = require("common/helpers/view/viewHelpers");
 
 class machineResourcesSection {
 
@@ -70,8 +70,13 @@ class machineResourcesSection {
             this.resources(new machineResources(data));
             $('.dashboard-cpu-memory [data-toggle="tooltip"]').tooltip();
         }
+        
+        this.blink();
     }
     
+    private blink() {
+        viewHelpers.animate($(".dashboard-cpu-memory .js-animate"), "blink-round-style");
+    }
     
     private static cpuTooltip(data: dashboardChartTooltipProviderArgs) {
         if (data) {
@@ -219,6 +224,12 @@ class indexingSpeedSection {
         ]);
 
         this.gridController().reset(false);
+        
+        this.blink();
+    }
+    
+    private blink() {
+        viewHelpers.animate($(".dashboard-indexing .js-animate"), "blink-round-style");
     }
 
     private updateTotals() {
@@ -328,6 +339,11 @@ class databasesSection {
         this.updateTotals();
         
         this.gridController().reset(false);
+        this.blink();
+    }
+
+    private blink() {
+        viewHelpers.animate($(".dashboard-databases .js-animate"), "blink-round-style");
     }
     
     private updateTotals() {
@@ -509,6 +525,11 @@ class trafficSection {
         }]);
         
         this.gridController().reset(false);
+        this.blink();
+    }
+
+    private blink() {
+        viewHelpers.animate($(".dashboard-traffic .js-animate"), "blink-round-style");
     }
     
     private updateTotals() {
@@ -635,6 +656,12 @@ class driveUsageSection {
                 this.table.push(usage);
             }
         });
+        
+        this.blink();
+    }
+
+    private blink() {
+        viewHelpers.animate($(".dashboard-storage .js-animate"), "blink-round-style");
     }
     
     private updateChart(data: Raven.Server.Dashboard.DrivesUsage, withTween: boolean) {
