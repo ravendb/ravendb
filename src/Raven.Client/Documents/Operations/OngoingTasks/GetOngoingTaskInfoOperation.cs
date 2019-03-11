@@ -46,13 +46,17 @@ namespace Raven.Client.Documents.Operations.OngoingTasks
 
             public GetOngoingTaskInfoCommand(string taskName, OngoingTaskType type)
             {
+                if (string.IsNullOrWhiteSpace(taskName))
+                    throw new ArgumentException("Value cannot be null or whitespace.", nameof(taskName));
                 _taskName = taskName;
                 _type = type;
             }
 
             public override HttpRequestMessage CreateRequest(JsonOperationContext ctx, ServerNode node, out string url)
             {
-                url = _taskName != null ? $"{node.Url}/databases/{node.Database}/task?name={_taskName}&type={_type}" : $"{node.Url}/databases/{node.Database}/task?key={_taskId}&type={_type}";
+                url = _taskName != null ?
+                    $"{node.Url}/databases/{node.Database}/task?taskName={_taskName}&type={_type}" :
+                    $"{node.Url}/databases/{node.Database}/task?key={_taskId}&type={_type}";
 
                 var request = new HttpRequestMessage
                 {
