@@ -135,19 +135,19 @@ class indexingSpeedSection {
             items: this.table
         }), () => {
             return [
-                new hyperlinkColumn<indexingSpeed>(grid, x => x.database(), x => appUrl.forIndexPerformance(x.database()), "Database", "30%", {
+                new hyperlinkColumn<indexingSpeed>(grid, x => x.database(), x => appUrl.forIndexPerformance(x.database()), "Database", "25%", {
                     sortable: "string",
                     customComparator: generalUtils.sortAlphaNumeric
                 }),
-                new textColumn<indexingSpeed>(grid, x => x.indexedPerSecond() != null ? x.indexedPerSecond() : "n/a", "Indexed / sec", "15%", {
+                new textColumn<indexingSpeed>(grid, x => x.indexedPerSecond() != null ? x.indexedPerSecond() : "n/a", "Indexed/s", "15%", {
                     extraClass: item => item.indexedPerSecond() != null ? "" : "na",
                     sortable: x => x.indexedPerSecond() || 0
                 }),
-                new textColumn<indexingSpeed>(grid, x => x.mappedPerSecond() != null ? x.mappedPerSecond() : "n/a", "Mapped / sec", "15%", {
+                new textColumn<indexingSpeed>(grid, x => x.mappedPerSecond() != null ? x.mappedPerSecond() : "n/a", "Mapped/s", "15%", {
                     extraClass: item => item.mappedPerSecond() != null ? "" : "na",
                     sortable: x => x.mappedPerSecond() || 0
                 }),
-                new textColumn<indexingSpeed>(grid, x => x.reducedPerSecond() != null ? x.reducedPerSecond() : "n/a", "Entries reduced / sec", "15%", {
+                new textColumn<indexingSpeed>(grid, x => x.reducedPerSecond() != null ? x.reducedPerSecond() : "n/a", "Entries reduced/s", "15%", {
                     extraClass: item => item.reducedPerSecond() != null ? "" : "na",
                     sortable: x => x.reducedPerSecond() || 0
                 })
