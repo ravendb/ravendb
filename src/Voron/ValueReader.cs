@@ -170,7 +170,7 @@ namespace Voron
             if (tmpBuf != null && tmpBuf.Length >= size)
                 return tmpBuf;
 
-            return tmpBuf = new byte[Bits.NextPowerOf2(size)];
+            return tmpBuf = new byte[Bits.PowerOf2(size)];
         }
 
         public string ReadString(int length)

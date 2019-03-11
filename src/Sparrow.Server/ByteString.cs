@@ -857,7 +857,7 @@ namespace Sparrow.Server
                 goto AllocateWhole;
 
             int reusablePoolIndex = GetPoolIndexForReuse(allocationSize);
-            int allocationUnit = Bits.NextPowerOf2(allocationSize);
+            int allocationUnit = Bits.PowerOf2(allocationSize);
 
             // The allocation unit is bigger than MinBlockSize (therefore it wont be 2^n aligned).
             // Then we will 64bits align the allocation.
@@ -975,7 +975,7 @@ namespace Sparrow.Server
             var charCount = Encodings.Utf8.GetCharCount(str._pointer->Ptr, str.Length);
             if (ToLowerTempBuffer == null || ToLowerTempBuffer.Length < charCount)
             {
-                ToLowerTempBuffer = new char[Bits.NextPowerOf2(charCount)];
+                ToLowerTempBuffer = new char[Bits.PowerOf2(charCount)];
             }
 
             fixed (char* pChars = ToLowerTempBuffer)
@@ -1017,7 +1017,7 @@ namespace Sparrow.Server
 
         private ByteString AllocateWholeSegment(int length, ByteStringType type)
         {
-            var size = Bits.NextPowerOf2(length + sizeof(ByteStringStorage));
+            var size = Bits.PowerOf2(length + sizeof(ByteStringStorage));
             SegmentInformation segment = AllocateSegment(size);
 
             var byteString = Create(segment.Current, length, segment.Size, type);

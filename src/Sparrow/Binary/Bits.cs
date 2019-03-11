@@ -220,7 +220,7 @@ namespace Sparrow.Binary
             return MultiplyDeBruijnBitPosition[(uint)(v * 0x07C4ACDDU) >> 27];
         }
 
-        private static readonly int[] nextPowerOf2Table =
+        private static readonly int[] powerOf2Table =
         {
               0,   1,   2,   4,   4,   8,   8,   8,   8,  16,  16,  16,  16,  16,  16,  16, 
              16,  32,  32,  32,  32,  32,  32,  32,  32,  32,  32,  32,  32,  32,  32,  32,
@@ -240,35 +240,24 @@ namespace Sparrow.Binary
             256, 256, 256, 256, 256, 256, 256, 256, 256, 256, 256, 256, 256, 256, 256, 256
         };
 
-
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public static int NextPowerOf2(int v)
+        public static int PowerOf2(int v)
         {
-            if (v < nextPowerOf2Table.Length)
-            {
-                return nextPowerOf2Table[v];
-            }
-            else
-            {
-                return NextPowerOf2Internal(v);
-            }
+            if (v < powerOf2Table.Length)
+                return powerOf2Table[v];
+            return PowerOf2Internal(v);
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public static long NextPowerOf2(long v)
+        public static long PowerOf2(long v)
         {
-            if (v < nextPowerOf2Table.Length)
-            {
-                return nextPowerOf2Table[v];
-            }
-            else
-            {
-                return NextPowerOf2Internal(v);
-            }
+            if (v < powerOf2Table.Length)
+                return powerOf2Table[v];
+            return PowerOf2Internal(v);
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        private static int NextPowerOf2Internal(int v)
+        private static int PowerOf2Internal(int v)
         {
             v--;
             v |= v >> 1;
@@ -282,7 +271,7 @@ namespace Sparrow.Binary
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        private static long NextPowerOf2Internal(long v)
+        private static long PowerOf2Internal(long v)
         {
             v--;
             v |= v >> 1;

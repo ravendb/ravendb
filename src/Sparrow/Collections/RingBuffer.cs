@@ -35,7 +35,7 @@ namespace Sparrow.Collections
         {
             // PERF: 'We 'limit' size to be power of 2 in order to make all operations much more efficient without using idiv operations.
             if (!Bits.IsPowerOfTwo(size) || size < 2)
-                size = Bits.NextPowerOf2(size);
+                size = Bits.PowerOf2(size);
 
             _size = size;
             _mask = (uint)size - 1;

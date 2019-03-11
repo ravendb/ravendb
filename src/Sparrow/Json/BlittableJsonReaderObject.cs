@@ -873,7 +873,7 @@ namespace Sparrow.Json
 
             public InsertionOrderProperties(int size)
             {
-                var actual = Bits.NextPowerOf2(size);
+                var actual = Bits.PowerOf2(size);
                 PropertiesBuffer = ArrayPool<int>.Shared.Rent(actual);
                 Offsets = ArrayPool<int>.Shared.Rent(actual);
                 Used = size;
