@@ -99,6 +99,48 @@
 }
 
 
+@-webkit-keyframes blink-round {
+
+    0% {
+        box-shadow: 0 0 0 0 @brand-info;
+        background-color: @brand-info;
+        border-radius: 50%;
+    }
+
+    70% {
+        box-shadow: 0 0 0 5px fadeout(@brand-info,100%);
+        background-color: fadeout(@brand-info,100%);
+        border-radius: 50%;
+    }
+
+    100% {
+
+        box-shadow: 0 0 0 0 fadeout(@brand-info,100%);
+        border-radius: 50%;
+    }
+}
+
+@keyframes blink-round {
+
+    0% {
+        box-shadow: 0 0 0 0 @brand-info;
+        background-color: fade(@brand-info, 30%);
+        border-radius: 50%;
+    }
+
+    70% {
+        box-shadow: 0 0 0 5px fadeout(@brand-info, 100%);
+        background-color: fadeout(@brand-info, 100%);
+        border-radius: 50%;
+    }
+
+    100% {
+        box-shadow: 0 0 0 0 fadeout(@brand-info,100%);
+        border-radius: 50%;
+    }
+}
+
+
 @keyframes fadein {
     0% {
         opacity:0;
@@ -488,6 +530,7 @@
 
 @bounce-properties: bounce 0.4s 1 cubic-bezier(0, 0.40, 0.4, 1);
 @blink-properties: blink .75s 1;
+@blink-round-properties: blink-round .75s 1;
 @fadeindelay-properties: fadeindelay .6s 1 both;
 @fadein-properties: fadein .3s 1 both;
 @fadeoutzoom-properties: fadeoutzoom .5s 1 both;
@@ -520,6 +563,19 @@
     -moz-animation: @blink-properties;
     -ms-animation: @blink-properties;
     animation: @blink-properties;
+
+    button {
+        background-color: transparent !important;
+        .bouncein-style;
+    }
+}
+
+.blink-round-style {
+    overflow: hidden;
+    -webkit-animation: @blink-round-properties;
+    -moz-animation: @blink-round-properties;
+    -ms-animation: @blink-round-properties;
+    animation: @blink-round-properties;
 
     button {
         background-color: transparent !important;
