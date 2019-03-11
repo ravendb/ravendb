@@ -8,7 +8,7 @@ namespace Raven.Server.ServerWide.Commands
 {
     public class EditDatabaseClientConfigurationCommand : UpdateDatabaseCommand
     {
-        public ClientConfiguration Configuration { get; protected set; }
+        public ClientConfiguration Configuration { get; set; }
 
         public void UpdateDatabaseRecord(DatabaseRecord databaseRecord)
         {
