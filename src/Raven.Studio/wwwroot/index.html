@@ -109,5 +109,11 @@
         <script type="text/javascript" src="Content/ace/worker-json.js"></script>
     <!-- /build -->
 
+    <script type="text/javascript">
+        // Register our service worker.
+        if ('serviceWorker' in navigator) {
+            navigator.serviceWorker.register("service-worker.js");
+        }
+    </script>
 </body>
 </html>
