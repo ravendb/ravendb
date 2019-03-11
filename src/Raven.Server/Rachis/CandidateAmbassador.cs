@@ -109,12 +109,19 @@ namespace Raven.Server.Rachis
                         Action disconnect;
                         try
                         {
-                            var connection = _engine.ConnectToPeer(_url, _tag, _engine.ClusterCertificate).Result;
+                            var connectTask = _engine.ConnectToPeer(_url, _tag, _engine.ClusterCertificate);
+                            while (connectTask.Wait(1000) == false)
+                            {
+                                if (_candidate.Running == false)
+                                    return; // election is over
+                            }
+
+                            var connection = connectTask.Result;
                             stream = connection.Stream;
                             disconnect = connection.Disconnect;
 
                             if (_candidate.Running == false)
-                                break;
+                                return;
                         }
                         catch (Exception e)
                         {
@@ -165,7 +172,7 @@ namespace Raven.Server.Rachis
                             while (_candidate.Running)
                             {
                                 RequestVoteResponse rvr;
-                                
+
                                 currentElectionTerm = _candidate.ElectionTerm;
                                 if (_candidate.IsForcedElection == false &&
                                     _candidate.RunRealElectionAtTerm != currentElectionTerm)
@@ -298,6 +305,7 @@ namespace Raven.Server.Rachis
                                     {
                                         _engine.Log.Info($"The candidate ambassador connection for {_tag} will be reused.");
                                     }
+
                                     // we won the election so our connection is being reused.
                                     _connection = null; // we no longer own the connection
                                     return;
@@ -323,8 +331,6 @@ namespace Raven.Server.Rachis
                         _candidate.WaitForChangeInState();
                     }
                 }
-                // we reach this code if the elections are over but our candidate was not elected.
-                _connection?.Dispose();
             }
             catch (Exception e)
             {
@@ -334,6 +340,10 @@ namespace Raven.Server.Rachis
                 {
                     _engine.Log.Info("Failed to talk to remote peer: " + _url, e);
                 }
+            }
+            finally
+            {
+                _connection?.Dispose();
             }
         }
         
