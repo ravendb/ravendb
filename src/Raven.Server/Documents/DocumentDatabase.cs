@@ -146,9 +146,9 @@ namespace Raven.Server.Documents
                 Operations = new Operations.Operations(Name, ConfigurationStorage.OperationsStorage, NotificationCenter, Changes);
                 DatabaseInfoCache = serverStore.DatabaseInfoCache;
                 RachisLogIndexNotifications = new RachisLogIndexNotifications(DatabaseShutdown);
-                CatastrophicFailureNotification = new CatastrophicFailureNotification((environmentId, environmentPath, e) =>
+                CatastrophicFailureNotification = new CatastrophicFailureNotification((environmentId, environmentPath, e, stacktrace) =>
                 {
-                    serverStore.DatabasesLandlord.CatastrophicFailureHandler.Execute(name, e, environmentId, environmentPath);
+                    serverStore.DatabasesLandlord.CatastrophicFailureHandler.Execute(name, e, environmentId, environmentPath, stacktrace);
                 });
                 _hasClusterTransaction = new AsyncManualResetEvent(DatabaseShutdown);
             }
@@ -232,7 +232,13 @@ namespace Raven.Server.Documents
 
         public StudioConfiguration StudioConfiguration { get; private set; }
 
-        public long LastDatabaseRecordIndex { get; private set; }
+        private long _lastDatabaseRecordIndex;
+
+        public long LastDatabaseRecordIndex
+        {
+            get => Volatile.Read(ref _lastDatabaseRecordIndex);
+            private set => _lastDatabaseRecordIndex = value; // we write this always under lock
+        }
 
         public bool CanUnload => Interlocked.Read(ref _preventUnloadCounter) == 0;
 
@@ -1019,7 +1025,7 @@ namespace Raven.Server.Documents
                     record = _serverStore.Cluster.ReadDatabase(context, Name);
                 }
 
-                NotifyFeaturesAboutValueChange(record);
+                NotifyFeaturesAboutValueChange(record, index);
                 RachisLogIndexNotifications.NotifyListenersAbout(index, null);
 
             }
@@ -1080,55 +1086,98 @@ namespace Raven.Server.Documents
 
         private void NotifyFeaturesAboutStateChange(DatabaseRecord record, long index)
         {
-            lock (_clusterLocker)
+            if (CanSkip(record.DatabaseName, index))
+                return;
+
+            var taken = false;
+            while (taken == false)
             {
-                DatabaseShutdown.ThrowIfCancellationRequested();
-
-                Debug.Assert(string.Equals(Name, record.DatabaseName, StringComparison.OrdinalIgnoreCase),
-                    $"{Name} != {record.DatabaseName}");
-
-                // index and LastDatabaseRecordIndex could have equal values when we transit from/to passive and want to update the tasks. 
-                if (LastDatabaseRecordIndex > index)
-                {
-                    if (_logger.IsInfoEnabled)
-                        _logger.Info($"Skipping record {index} (current {LastDatabaseRecordIndex}) for {record.DatabaseName} because it was already precessed.");
-                    return;
-                }
-
-                if (_logger.IsInfoEnabled)
-                    _logger.Info($"Starting to process record {index} (current {LastDatabaseRecordIndex}) for {record.DatabaseName}.");
-
+                Monitor.TryEnter(_clusterLocker, TimeSpan.FromSeconds(5), ref taken);
                 try
                 {
-                    DatabaseGroupId = record.Topology.DatabaseTopologyIdBase64;
-                    InitializeFromDatabaseRecord(record);
-                    LastDatabaseRecordIndex = index;
-                    IndexStore.HandleDatabaseRecordChange(record, index);
-                    ReplicationLoader?.HandleDatabaseRecordChange(record);
-                    EtlLoader?.HandleDatabaseRecordChange(record);
-                    OnDatabaseRecordChanged(record);
-                    SubscriptionStorage?.HandleDatabaseRecordChange(record);
+                    if (CanSkip(record.DatabaseName, index))
+                        return;
+
+                    if (taken == false)
+                        continue;
+
+                    DatabaseShutdown.ThrowIfCancellationRequested();
+
+                    Debug.Assert(string.Equals(Name, record.DatabaseName, StringComparison.OrdinalIgnoreCase),
+                        $"{Name} != {record.DatabaseName}");
 
                     if (_logger.IsInfoEnabled)
-                        _logger.Info($"Finish to process record {index} for {record.DatabaseName}.");
+                        _logger.Info($"Starting to process record {index} (current {LastDatabaseRecordIndex}) for {record.DatabaseName}.");
+
+                    try
+                    {
+                        DatabaseGroupId = record.Topology.DatabaseTopologyIdBase64;
+                        InitializeFromDatabaseRecord(record);
+                        LastDatabaseRecordIndex = index;
+                        IndexStore.HandleDatabaseRecordChange(record, index);
+                        ReplicationLoader?.HandleDatabaseRecordChange(record);
+                        EtlLoader?.HandleDatabaseRecordChange(record);
+                        OnDatabaseRecordChanged(record);
+                        SubscriptionStorage?.HandleDatabaseRecordChange(record);
+
+                        if (_logger.IsInfoEnabled)
+                            _logger.Info($"Finish to process record {index} for {record.DatabaseName}.");
+                    }
+                    catch (Exception e)
+                    {
+                        if (_logger.IsInfoEnabled)
+                            _logger.Info($"Encounter an error while processing record {index} for {record.DatabaseName}.", e);
+                        throw;
+                    }
                 }
-                catch (Exception e)
+                finally
                 {
-                    if (_logger.IsInfoEnabled)
-                        _logger.Info($"Encounter an error while processing record {index} for {record.DatabaseName}.", e);
-                    throw;
+                    if (taken)
+                        Monitor.Exit(_clusterLocker);
                 }
             }
         }
 
-        private void NotifyFeaturesAboutValueChange(DatabaseRecord record)
+        private bool CanSkip(string database, long index)
         {
-            lock (_clusterLocker)
+            if (LastDatabaseRecordIndex > index)
             {
-                DatabaseShutdown.ThrowIfCancellationRequested();
+                // index and LastDatabaseRecordIndex could have equal values when we transit from/to passive and want to update the tasks. 
+                if (_logger.IsInfoEnabled)
+                    _logger.Info($"Skipping record {index} (current {LastDatabaseRecordIndex}) for {database} because it was already precessed.");
+                return true;
+            }
 
-                SubscriptionStorage?.HandleDatabaseRecordChange(record);
-                EtlLoader?.HandleDatabaseValueChanged(record);
+            return false;
+        }
+
+        private void NotifyFeaturesAboutValueChange(DatabaseRecord record, long index)
+        {
+            if (CanSkip(record.DatabaseName, index))
+                return;
+
+            var taken = false;
+            while (taken == false)
+            {
+                Monitor.TryEnter(_clusterLocker, TimeSpan.FromSeconds(5), ref taken);
+                try
+                {
+                    if (CanSkip(record.DatabaseName, index))
+                        return;
+
+                    if (taken == false)
+                        continue;
+                
+                    LastDatabaseRecordIndex = index;
+                    DatabaseShutdown.ThrowIfCancellationRequested();
+                    SubscriptionStorage?.HandleDatabaseRecordChange(record);
+                    EtlLoader?.HandleDatabaseValueChanged(record);
+                }
+                finally
+                {
+                    if (taken)
+                        Monitor.Exit(_clusterLocker);
+                }
             }
         }
 

@@ -35,7 +35,7 @@ namespace Raven.Server.Documents
             return false;
         }
 
-        public void Execute(string databaseName, Exception e, Guid environmentId, string path)
+        public void Execute(string databaseName, Exception e, Guid environmentId, string path, string stacktrace)
         {
             var stats = _errorsPerEnvironment.GetOrAdd(environmentId, x => FailureStats.Create(MaxDatabaseUnloads));
 
@@ -76,7 +76,7 @@ namespace Raven.Server.Documents
                 }
 
                 if (_logger.IsOperationsEnabled)
-                    _logger.Operations($"{title}. {message}", e);
+                    _logger.Operations($"{title}. {message} (StackTrace='{stacktrace}')", e);
 
                 // let it propagate the exception to the client first and do
                 // the internal failure handling e.g. Index.HandleIndexCorruption

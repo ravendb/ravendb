@@ -22,18 +22,16 @@ class clusterTopology {
         this.nodeTag(dto.NodeTag);
         this.currentTerm(dto.CurrentTerm);
         this.currentState(dto.CurrentState);
-
+        
         const topologyDto = dto.Topology;
-
-        const members = this.mapNodes("Member", topologyDto.Members, dto.Status);
-        const promotables = this.mapNodes("Promotable", topologyDto.Promotables, dto.Status);
-        const watchers = this.mapNodes("Watcher", topologyDto.Watchers, dto.Status);
+        
+        const members = this.mapNodes("Member", topologyDto.Members, dto.Status, dto.NodeLicenseDetails);
+        const promotables = this.mapNodes("Promotable", topologyDto.Promotables, dto.Status, dto.NodeLicenseDetails);
+        const watchers = this.mapNodes("Watcher", topologyDto.Watchers, dto.Status, dto.NodeLicenseDetails);
 
         this.nodes(_.concat<clusterNode>(members, promotables, watchers));
         this.nodes(_.sortBy(this.nodes(), x => x.tag().toUpperCase()));
 
-        this.updateNodeDetails(dto.NodeLicenseDetails);
-        
         this.membersCount = ko.pureComputed(() => {
             const nodes = this.nodes();
             return nodes.filter(x => x.type() === "Member").length;
@@ -55,7 +53,8 @@ class clusterTopology {
     }
 
     private mapNodes(type: clusterNodeType, dict: System.Collections.Generic.Dictionary<string, string>,
-        status: { [key: string]: Raven.Client.Http.NodeStatus; }): Array<clusterNode> {
+                     status: { [key: string]: Raven.Client.Http.NodeStatus; },
+                     licenseDetails: { [key: string]: Raven.Server.Commercial.DetailsPerNode; }): Array<clusterNode> {
         return _.map(dict, (v, k) => {
             // node statuses are available for all nodes except current
             const nodeStatus = status ? status[k] : null;
@@ -66,7 +65,22 @@ class clusterTopology {
                 this.anyErrorsEncountered(true);
             }
             
-            return clusterNode.for(k, v, type, connected, this.isPassive, errorDetails);
+            const node = clusterNode.for(k, v, type, connected, this.isPassive, errorDetails);
+            
+            if (licenseDetails && licenseDetails[k]) {
+                const nodeLicenseDetails = licenseDetails[k];
+
+                node.utilizedCores(nodeLicenseDetails.UtilizedCores);
+                node.numberOfCores(nodeLicenseDetails.NumberOfCores);
+                node.installedMemoryInGb(nodeLicenseDetails.InstalledMemoryInGb);
+                node.usableMemoryInGb(nodeLicenseDetails.UsableMemoryInGb);
+
+                const fullVersion = nodeLicenseDetails.BuildInfo ? nodeLicenseDetails.BuildInfo.FullVersion : null;
+                node.nodeServerVersion(fullVersion);
+                node.osInfo(nodeLicenseDetails.OsInfo);
+            }
+            
+            return node;
         });
     }
 
@@ -75,9 +89,9 @@ class clusterTopology {
 
         const existingNodes = this.nodes();
         const newNodes = _.concat<clusterNode>(
-            this.mapNodes("Member", newTopology.Members, incomingChanges.Status),
-            this.mapNodes("Promotable", newTopology.Promotables, incomingChanges.Status),
-            this.mapNodes("Watcher", newTopology.Watchers, incomingChanges.Status)
+            this.mapNodes("Member", newTopology.Members, incomingChanges.Status, incomingChanges.NodeLicenseDetails),
+            this.mapNodes("Promotable", newTopology.Promotables, incomingChanges.Status, incomingChanges.NodeLicenseDetails),
+            this.mapNodes("Watcher", newTopology.Watchers, incomingChanges.Status, incomingChanges.NodeLicenseDetails)
         );
         const newServerUrls = new Set<string>(newNodes.map(x => x.serverUrl()));
 
@@ -97,32 +111,10 @@ class clusterTopology {
             }
         });
 
-        this.updateNodeDetails(incomingChanges.NodeLicenseDetails);
         this.nodeTag(incomingChanges.NodeTag);
         this.leader(incomingChanges.Leader);
         this.currentTerm(incomingChanges.CurrentTerm);
         this.currentState(incomingChanges.CurrentState);
-    }
-
-    private updateNodeDetails(nodeLicenseDetails: { [key: string]: Raven.Server.Commercial.DetailsPerNode; }) {
-        if (!nodeLicenseDetails)
-            return;
-
-        _.forOwn(nodeLicenseDetails, (detailsPerNode, nodeTag) => {
-            const node = this.nodes().find(x => x.tag() === nodeTag);
-            if (!node) {
-                return;
-            }
-
-            node.utilizedCores(detailsPerNode.UtilizedCores);
-            node.numberOfCores(detailsPerNode.NumberOfCores);
-            node.installedMemoryInGb(detailsPerNode.InstalledMemoryInGb);
-            node.usableMemoryInGb(detailsPerNode.UsableMemoryInGb);
-            
-            const fullVersion = detailsPerNode.BuildInfo ? detailsPerNode.BuildInfo.FullVersion : null;
-            node.nodeServerVersion(fullVersion);
-            node.osInfo(detailsPerNode.OsInfo);
-        });
     }
 }
 

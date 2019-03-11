@@ -175,7 +175,21 @@ namespace Raven.Server.Rachis
                                 using (_engine.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
                                 {
                                     _engine.RemoveAndDispose(_leader, _connection);
-                                    var connection = _engine.ConnectToPeer(_url, _tag, _engine.ClusterCertificate).Result;
+                                    var connectTask = _engine.ConnectToPeer(_url, _tag, _engine.ClusterCertificate);
+
+                                    while (connectTask.Wait(1000) == false)
+                                    {
+                                        if(_leader.Running == false)
+                                            return;
+
+                                        if (_running == false)
+                                            return;
+
+                                        _engine.ValidateTerm(_term);
+                                    }
+
+                                    var connection = connectTask.Result;
+
                                     var stream = connection.Stream;
                                     var disconnect = connection.Disconnect;
                                     var con = new RemoteConnection(_tag, _engine.Tag, _term, stream, disconnect);

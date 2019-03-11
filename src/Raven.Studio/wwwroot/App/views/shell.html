@@ -71,7 +71,7 @@
                                 </li>
                                 <!-- /ko -->
                                 <!-- ko foreach: filteredDatabases-->
-                                <li data-bind="visible: disabled">
+                                <li data-bind="visible: disabled() && relevant()">
                                     <a class="database disabled"  data-bind="attr: {title: name}">
                                         <div class="name" data-bind="text: name"></div>
                                         <div data-bind="text: environment, visible: environment, attr: { class: 'label text-uppercase ' + environmentClass() }"></div>
