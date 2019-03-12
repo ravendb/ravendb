@@ -1,9 +1,11 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.IO;
 using System.IO.Compression;
 using System.Linq;
 using System.Text;
+using System.Threading;
 using System.Threading.Tasks;
 using FastTests;
 using FastTests.Server.Documents.Revisions;
@@ -77,6 +79,74 @@ namespace SlowTests.Server
             {
                 Assert.True(genericTypes.Contains(dt), $"{dt.Name} should has equivalent dto - {dt.Name}Dto : {iRecordableType.Name}");
             });
+        }
+
+        [Fact]
+        public void Replay_WhenCancelInTheMiddle_ShouldKeepAcceptWriteOperation()
+        {
+            var filePath = NewDataPath();
+
+            //Recording
+            using (var store = GetDocumentStore())
+            {
+                store.Maintenance.Send(new StartTransactionsRecordingOperation(filePath));
+                for (var i = 0; i < 500; i++)
+                {
+
+                    using (var session = store.OpenSession())
+                    {
+                        session.Store(new User { Name = $"User{i}" });
+
+                        session.SaveChanges();
+                    }
+                }
+                store.Maintenance.Send(new StopTransactionsRecordingOperation());
+            }
+
+            //Replay
+            using (var store = GetDocumentStore())
+            using (var replayStream = new FileStream(filePath, FileMode.Open))
+            {
+                var command = new GetNextOperationIdCommand();
+                store.Commands().Execute(command);
+
+                Task.Run(() =>
+                {
+                    try
+                    {
+                        store.Maintenance.Send(new ReplayTransactionsRecordingOperation(replayStream, command.Result));
+                    }
+                    catch (Exception)
+                    {
+                        // ignored
+                    }
+                });
+
+                var expected = new User { Name = "FinalUser" };
+                using (var session = store.OpenSession())
+                {
+                    var stop = Stopwatch.StartNew();
+                    while (session.Query<User>().Any() == false)
+                    {
+                        if (stop.Elapsed > TimeSpan.FromSeconds(5))
+                        {
+                            store.Commands().Execute(new KillOperationCommand(command.Result));
+                            throw new TimeoutException();
+                        }
+                        Thread.Sleep(50);
+                    }
+                    store.Commands().Execute(new KillOperationCommand(command.Result));
+
+                    session.Store(expected);
+                    session.SaveChanges();
+                }
+
+                using (var session = store.OpenSession())
+                {
+                    var actual = session.Load<User>(expected.Id);
+                    Assert.Equal(expected.Name, actual.Name);
+                }
+            }
         }
 
         [Fact]

@@ -28,10 +28,7 @@ namespace Raven.Server.Documents
     {
         internal static IEnumerable<ReplayProgress> Replay(DocumentDatabase database, Stream replayStream)
         {
-            DocumentsOperationContext txCtx = null;
-            IDisposable txDisposable = null;
-            DocumentsTransaction previousTx = null;
-
+            using (var txs = new ReplayTxs())
             using (database.DocumentsStorage.ContextPool.AllocateOperationContext(out DocumentsOperationContext context))
             using (context.GetManagedBuffer(out var buffer))
             using (var gZipStream = new GZipStream(replayStream, CompressionMode.Decompress, leaveOpen: true))
@@ -59,25 +56,26 @@ namespace Raven.Server.Documents
                                 switch (type)
                                 {
                                     case TxInstruction.BeginTx:
-                                        txDisposable = database.DocumentsStorage.ContextPool.AllocateOperationContext(out txCtx);
-                                        txCtx.OpenWriteTransaction();
+                                        database.DocumentsStorage.ContextPool.AllocateOperationContext(out txs.TxCtx);
+                                        txs.TxCtx.OpenWriteTransaction();
                                         break;
                                     case TxInstruction.Commit:
-                                        txCtx.Transaction.Commit();
+                                        txs.TxCtx.Transaction.Commit();
                                         break;
                                     case TxInstruction.DisposeTx:
-                                        txDisposable.Dispose();
+                                        txs.TxCtx.Dispose();
+                                        txs.TxCtx = null;
                                         break;
                                     case TxInstruction.BeginAsyncCommitAndStartNewTransaction:
-                                        previousTx = txCtx.Transaction;
-                                        txCtx.Transaction = txCtx.Transaction.BeginAsyncCommitAndStartNewTransaction(txCtx);
-                                        txDisposable = txCtx.Transaction;
+                                        txs.PrevTx = txs.TxCtx.Transaction;
+                                        txs.TxCtx.Transaction = txs.TxCtx.Transaction.BeginAsyncCommitAndStartNewTransaction(txs.TxCtx);
                                         break;
                                     case TxInstruction.EndAsyncCommit:
-                                        previousTx.EndAsyncCommit();
+                                        txs.PrevTx.EndAsyncCommit();
                                         break;
                                     case TxInstruction.DisposePrevTx:
-                                        previousTx.Dispose();
+                                        txs.PrevTx.Dispose();
+                                        txs.PrevTx = null;
                                         break;
                                 }
                                 continue;
@@ -85,14 +83,13 @@ namespace Raven.Server.Documents
 
                             try
                             {
-                                var cmd = DeserializeCommand(context, database, strType, readersItr.Current,  peepingTomStream);
-                                commandsProgress += cmd.ExecuteDirectly(txCtx);
-                                TransactionOperationsMerger.UpdateGlobalReplicationInfoBeforeCommit(txCtx);
+                                var cmd = DeserializeCommand(context, database, strType, readersItr.Current, peepingTomStream);
+                                commandsProgress += cmd.ExecuteDirectly(txs.TxCtx);
+                                TransactionOperationsMerger.UpdateGlobalReplicationInfoBeforeCommit(txs.TxCtx);
                             }
                             catch (Exception)
                             {
                                 //TODO To accept exceptions that was thrown while recording
-                                txDisposable.Dispose();
                                 throw;
                             }
 
@@ -103,6 +100,18 @@ namespace Raven.Server.Documents
                         }
                     }
                 }
+            }
+        }
+
+        private class ReplayTxs : IDisposable
+        {
+            public DocumentsOperationContext TxCtx;
+            public DocumentsTransaction PrevTx;
+
+            public void Dispose()
+            {
+                TxCtx?.Dispose();
+                PrevTx?.Dispose();
             }
         }
 
