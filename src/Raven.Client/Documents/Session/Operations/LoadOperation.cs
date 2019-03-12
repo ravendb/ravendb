@@ -13,7 +13,7 @@ namespace Raven.Client.Documents.Session.Operations
         private readonly InMemoryDocumentSessionOperations _session;
         private static readonly Logger Logger = LoggingSource.Instance.GetLogger<LoadOperation>("Client");
 
-        private readonly List<string> _ids = new List<string>();
+        private string[] _ids ;
         private string[] _includes;
         private string[] _countersToInclude;
         private bool _includeAllCounters;
@@ -26,7 +26,7 @@ namespace Raven.Client.Documents.Session.Operations
 
         public GetDocumentsCommand CreateRequest()
         {
-            if (_session.CheckIfIdAlreadyIncluded(_ids.ToArray(), _includes))
+            if (_session.CheckIfIdAlreadyIncluded(_ids, _includes))
                 return null;
 
             _session.IncrementRequestCount();
@@ -34,11 +34,11 @@ namespace Raven.Client.Documents.Session.Operations
                 Logger.Info($"Requesting the following ids '{string.Join(", ", _ids)}' from {_session.StoreIdentifier}");
 
             if (_includeAllCounters)
-                return new GetDocumentsCommand(_ids.ToArray(), _includes, includeAllCounters: true, metadataOnly: false);
+                return new GetDocumentsCommand(_ids, _includes, includeAllCounters: true, metadataOnly: false);
 
             return _countersToInclude != null
-                ? new GetDocumentsCommand(_ids.ToArray(), _includes, _countersToInclude, metadataOnly: false)
-                : new GetDocumentsCommand(_ids.ToArray(), _includes, metadataOnly: false);
+                ? new GetDocumentsCommand(_ids, _includes, _countersToInclude, metadataOnly: false)
+                : new GetDocumentsCommand(_ids, _includes, metadataOnly: false);
         }
 
         public LoadOperation ById(string id)
@@ -46,8 +46,8 @@ namespace Raven.Client.Documents.Session.Operations
             if (id == null)
                 return this;
 
-            if (_ids.Count == 0)
-                _ids.Add(id);
+            if (_ids == null)
+                _ids = new[] {id};
 
             return this;
         }
@@ -73,11 +73,7 @@ namespace Raven.Client.Documents.Session.Operations
 
         public LoadOperation ByIds(IEnumerable<string> ids)
         {
-            foreach (var id in ids)
-            {
-                if (id != null)
-                    _ids.Add(id);
-            }
+            _ids = ids.Where(x => x != null).ToArray();
 
             foreach (var id in _ids.Distinct(StringComparer.OrdinalIgnoreCase))
             {
