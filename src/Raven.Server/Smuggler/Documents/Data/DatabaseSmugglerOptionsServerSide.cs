@@ -21,6 +21,14 @@ namespace Raven.Server.Smuggler.Documents.Data
 
         public bool KeepOriginalChangeVector { get; set; }
 
+        public new bool SkipRevisionCreation
+        {
+#pragma warning disable 618
+            get => base.SkipRevisionCreation;
+            set => base.SkipRevisionCreation = value;
+#pragma warning restore 618
+        }
+
         public static DatabaseSmugglerOptionsServerSide Create(HttpContext httpContext)
         {
             var result = new DatabaseSmugglerOptionsServerSide();
