@@ -423,9 +423,10 @@ namespace Raven.Server.Storage.Schema.Updates.Documents
                 var maxNumberOfCountersPerGroup = Math.Max(32, 2048 / (dbIds.Count * 32 + 1));// rough estimate
                 var orderedKeys = allCountersBatch.OrderBy(x => x.Key).ToList();
                 var listOfDbIds = dbIds.ToList();
-                for (int i = 0; i < orderedKeys.Count; i+=maxNumberOfCountersPerGroup)
+
+                for (int i = 0; i < orderedKeys.Count / maxNumberOfCountersPerGroup + (orderedKeys.Count % maxNumberOfCountersPerGroup == 0 ? 0 : 1); i++)
                 {
-                    var currentBatch = allCountersBatch.Take(maxNumberOfCountersPerGroup).Skip(maxNumberOfCountersPerGroup * i);
+                    var currentBatch = allCountersBatch.Skip(maxNumberOfCountersPerGroup * i).Take(maxNumberOfCountersPerGroup);
                     using (var data = WriteNewCountersDocument(context, listOfDbIds, currentBatch))
                     {
                         var etag = step.DocumentsStorage.GenerateNextEtag();
