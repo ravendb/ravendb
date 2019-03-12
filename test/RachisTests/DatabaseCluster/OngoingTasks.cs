@@ -44,7 +44,7 @@ loadToOrders(orderData);
 
             using (var store = new DocumentStore
             {
-                Urls = new[] {leader.WebUrl},
+                Urls = new[] { leader.WebUrl },
                 Database = databaseName
             }.Initialize())
             {
@@ -60,12 +60,12 @@ loadToOrders(orderData);
                     await server.ServerStore.DatabasesLandlord.TryGetOrCreateResourceStore(databaseName);
                 }
 
-                watcher = new ExternalReplication("Watcher1","Connection")
+                watcher = new ExternalReplication("Watcher1", "Connection")
                 {
                     Name = "MyExternalReplication"
                 };
 
-                addWatcherRes = await AddWatcherToReplicationTopology((DocumentStore)store, watcher, new []{ leader.WebUrl });
+                addWatcherRes = await AddWatcherToReplicationTopology((DocumentStore)store, watcher, new[] { leader.WebUrl });
 
                 var backupConfig = new PeriodicBackupConfiguration
                 {
@@ -88,7 +88,7 @@ loadToOrders(orderData);
                 store.Maintenance.Send(new PutConnectionStringOperation<RavenConnectionString>(new RavenConnectionString
                 {
                     Name = "cs",
-                    TopologyDiscoveryUrls = new []{"http://127.0.0.1:8080" },
+                    TopologyDiscoveryUrls = new[] { "http://127.0.0.1:8080" },
                     Database = "Northwind",
                 }));
 
@@ -142,7 +142,7 @@ loadToOrders(orderData);
 
             using (var store = new DocumentStore
             {
-                Urls = new[] {leader.WebUrl},
+                Urls = new[] { leader.WebUrl },
                 Database = databaseName,
                 Conventions =
                 {
@@ -194,10 +194,6 @@ loadToOrders(orderData);
             var clusterSize = 3;
             var databaseName = "TestDB";
             var leader = await CreateRaftClusterAndGetLeader(clusterSize);
-            ModifyOngoingTaskResult addWatcherRes;
-            UpdatePeriodicBackupOperationResult updateBackupResult;
-            AddEtlOperationResult addRavenEtlResult;
-            AddEtlOperationResult addSqlEtlResult;
             RavenEtlConfiguration etlConfiguration;
             SqlEtlConfiguration sqlConfiguration;
             ExternalReplication watcher;
@@ -364,7 +360,7 @@ loadToOrders(orderData);
 
             using (var store = new DocumentStore
             {
-                Urls = new[] {leader.WebUrl},
+                Urls = new[] { leader.WebUrl },
                 Database = databaseName
             }.Initialize())
             {
@@ -400,7 +396,7 @@ loadToOrders(orderData);
 
             using (var store = new DocumentStore
             {
-                Urls = new[] {leader.WebUrl},
+                Urls = new[] { leader.WebUrl },
                 Database = databaseName,
                 Conventions =
                 {

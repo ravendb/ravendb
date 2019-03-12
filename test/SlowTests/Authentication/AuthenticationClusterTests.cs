@@ -41,13 +41,13 @@ namespace SlowTests.Authentication
             var leader = await CreateRaftClusterAndGetLeader(clusterSize, false, useSsl: true);
 
             X509Certificate2 adminCertificate = null;
-            
+
             adminCertificate = AskServerForClientCertificate(_selfSignedCertFileName, new Dictionary<string, DatabaseAccess>(), SecurityClearance.ClusterAdmin, server: leader);
 
             DatabasePutResult databaseResult;
             using (var store = new DocumentStore
             {
-                Urls = new[] {leader.WebUrl},
+                Urls = new[] { leader.WebUrl },
                 Database = databaseName,
                 Certificate = adminCertificate,
                 Conventions =
@@ -73,7 +73,7 @@ namespace SlowTests.Authentication
 
             using (var store = new DocumentStore()
             {
-                Urls = new[] {databaseResult.NodesAddedTo[0]},
+                Urls = new[] { databaseResult.NodesAddedTo[0] },
                 Database = databaseName,
                 Certificate = adminCertificate,
                 Conventions =
@@ -140,13 +140,13 @@ namespace SlowTests.Authentication
             var cluster1Cert = new X509Certificate2(cluster1CertFileName);
             var adminCertificate1 = AskServerForClientCertificate(cluster1CertFileName, new Dictionary<string, DatabaseAccess>(), SecurityClearance.ClusterAdmin, server: leader1);
             await CreateDatabaseInCluster(databaseName, clusterSize, leader1.WebUrl, adminCertificate1);
-            
+
             // Cluster 2 gets a normal test certificate
             var leader2 = await CreateRaftClusterAndGetLeader(clusterSize, false, useSsl: true);
             var cluster2Cert = new X509Certificate2(_selfSignedCertFileName);
             var adminCertificate2 = AskServerForClientCertificate(_selfSignedCertFileName, new Dictionary<string, DatabaseAccess>(), SecurityClearance.ClusterAdmin, server: leader2);
             await CreateDatabaseInCluster(databaseName, clusterSize, leader2.WebUrl, adminCertificate2);
-            
+
             // This will register cluster 1's cert as a user cert in cluster 2
             AskCluster2ToTrustCluster1(cluster1Cert, cluster2Cert, new Dictionary<string, DatabaseAccess>
             {
@@ -156,13 +156,13 @@ namespace SlowTests.Authentication
             // First we'll make sure external replication works between the two clusters
             using (var store1 = new DocumentStore
             {
-                Urls = new[] {leader1.WebUrl},
+                Urls = new[] { leader1.WebUrl },
                 Database = databaseName,
                 Certificate = adminCertificate1
             }.Initialize())
             using (var store2 = new DocumentStore
             {
-                Urls = new[] {leader2.WebUrl},
+                Urls = new[] { leader2.WebUrl },
                 Database = databaseName,
                 Certificate = adminCertificate2
             }.Initialize())
@@ -272,13 +272,13 @@ namespace SlowTests.Authentication
             // First we'll make sure external replication works between the two clusters
             using (var store1 = new DocumentStore
             {
-                Urls = new[] {leader1.WebUrl},
+                Urls = new[] { leader1.WebUrl },
                 Database = databaseName,
                 Certificate = adminCertificate1
             }.Initialize())
             using (var store2 = new DocumentStore
             {
-                Urls = new[] {leader2.WebUrl},
+                Urls = new[] { leader2.WebUrl },
                 Database = databaseName,
                 Certificate = adminCertificate2
             }.Initialize())
@@ -352,7 +352,7 @@ namespace SlowTests.Authentication
                     await session.StoreAsync(new User { Name = "Avivush" }, "users/2").ConfigureAwait(false);
                     await session.SaveChangesAsync();
                 }
-                
+
                 // WaitForUserToContinueTheTest(store1, clientCert: adminCertificate1);
                 // WaitForUserToContinueTheTest(store2, clientCert: adminCertificate2);
 
@@ -369,7 +369,7 @@ namespace SlowTests.Authentication
         }
 
         [Fact]
-        public async Task PublicKeyPinningHashShouldBeEqual()
+        public void PublicKeyPinningHashShouldBeEqual()
         {
             var (c1, c2) = CertificateUtils.CreateTwoTestCertificatesWithSameKey(Environment.MachineName, "sameKey");
             var c1Cert = new X509Certificate2(c1);
@@ -381,7 +381,7 @@ namespace SlowTests.Authentication
         }
 
         [Fact]
-        public async Task PublicKeyPinningHashShouldNotBeEqual()
+        public void PublicKeyPinningHashShouldNotBeEqual()
         {
             // Different private key
             var c1 = CertificateUtils.CreateSelfSignedTestCertificate(Environment.MachineName, "first");

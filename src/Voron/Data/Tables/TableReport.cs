@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using Sparrow;
 using Voron.Data.BTrees;
 using Voron.Data.Fixed;
 using Voron.Data.RawData;
@@ -99,8 +100,14 @@ namespace Voron.Data.Tables
         public PreAllocatedBuffersReport PreAllocatedBuffers { get; set; }
         public string Name { get; set; }
         public long NumberOfEntries { get; set; }
+
         public long DataSizeInBytes { get; private set; }
+        public string DataSizeHumane => new Size(DataSizeInBytes, SizeUnit.Bytes).ToString();
+
         public long AllocatedSpaceInBytes { get; private set; }
+        public string AllocatedSpaceHumane => new Size(AllocatedSpaceInBytes, SizeUnit.Bytes).ToString();
+
         public long UsedSizeInBytes { get; private set; }
+        public string UsedSizeHumane => UsedSizeInBytes == -1 ? "N/A" : new Size(UsedSizeInBytes, SizeUnit.Bytes).ToString();
     }
 }
