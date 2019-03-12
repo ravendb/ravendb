@@ -24,7 +24,7 @@
                             <span data-bind="visible: inReadOnlyMode() && !isDeleteRevision()" class="text-primary revision"> | REVISION</span>
                             <span data-bind="visible: inReadOnlyMode() && isDeleteRevision()" class="text-primary revision"> | DELETED REVISION</span>
                             
-                            <a target="_blank" href="#" title="Show raw output" data-bind="attr: { href: rawJsonUrl }, visible: !isDeleteRevision()"><i class="icon-link"></i></a>
+                            <a target="_blank" href="#" title="Show raw output" data-bind="attr: { href: rawJsonUrl }, visible: !isDeleteRevision()"><i class="icon-json"></i></a>
                         </div>
                     </div>
                 </div>
@@ -116,9 +116,9 @@
             </div>
             <div class="clearfix" data-bind="visible: !isDeleteRevision() && !inDiffMode()">
                 <div class="btn-group btn-group-sm pull-right" role="group" data-bind="visible: !inDiffMode()">
-                    <button type="button" class="btn btn-default" data-bind="enable: !isNewLineFriendlyMode(), click: formatDocument"><span class="icon-indent"></span> <span>Format</span></button>
-                    <button type="button" class="btn btn-default" data-toggle="button" data-bind="click: toggleAutoCollapse"><span class="icon-collapse"></span> <span>Toggle collapse</span></button>
-                    <button type="button" class="btn btn-default" data-toggle="button" data-bind="click: toggleNewlineMode"><span class="icon-newline"></span> <span>Toggle new lines</span></button>
+                    <button type="button" class="btn btn-default" title="Format document" data-bind="enable: !isNewLineFriendlyMode(), click: formatDocument"><span class="icon-indent"></span> <span>Format</span></button>
+                    <button type="button" class="btn btn-default" title="Toggle collapse" data-toggle="button" data-bind="click: toggleAutoCollapse"><span data-bind="attr: { class: autoCollapseMode() ? 'icon-expand' : 'icon-collapse' }"></span> <span>Toggle collapse</span></button>
+                    <button type="button" class="btn btn-default" title="Switch to 'new lines' mode" data-toggle="button" data-bind="click: toggleNewlineMode"><span class="icon-newline"></span> <span>Toggle new lines</span></button>
                 </div>
             </div>
         </div>
