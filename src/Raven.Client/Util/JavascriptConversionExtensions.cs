@@ -1191,6 +1191,14 @@ namespace Raven.Client.Util
         public class TransparentIdentifierSupport : JavascriptConversionExtension
         {
             public bool DoNotIgnore { get; set; }
+            private int MinSuffixToNotIgnore { get; set; }
+
+            private int ParseTransparentIdentifierSuffix(string name)
+            {
+                var substr = name.Substring(TransparentIdentifier.Length);
+                int.TryParse(substr, out var suffix);
+                return suffix;
+            }
 
             public override void ConvertToJavascript(JavascriptConversionContext context)
             {
@@ -1199,6 +1207,8 @@ namespace Raven.Client.Util
                     && lambdaExpression.Parameters[0].Name.StartsWith(TransparentIdentifier))
                 {
                     DoNotIgnore = true;
+
+                    MinSuffixToNotIgnore = ParseTransparentIdentifierSuffix(lambdaExpression.Parameters[0].Name);
 
                     context.PreventDefault();
 
@@ -1241,8 +1251,12 @@ namespace Raven.Client.Util
                     {
                         if (DoNotIgnore)
                         {
-                            context.Visitor.Visit(member.Expression);
-                            writer.Write(".");
+                            var suffix = ParseTransparentIdentifierSuffix(innerMember.Member.Name);
+                            if (suffix <= MinSuffixToNotIgnore)
+                            {
+                                context.Visitor.Visit(innerMember);
+                                writer.Write(".");
+                            }
                         }
 
                         var name = member.Member.Name;
@@ -1272,9 +1286,13 @@ namespace Raven.Client.Util
 
                         if (DoNotIgnore)
                         {
-                            writer.Write(parameter.Name.Replace(TransparentIdentifier, DefaultAliasPrefix));
-                            writer.Write(".");
-                            name = name.Replace(TransparentIdentifier, DefaultAliasPrefix);
+                            var suffix = ParseTransparentIdentifierSuffix(parameter.Name);
+                            if (suffix <= MinSuffixToNotIgnore)
+                            {
+                                writer.Write(parameter.Name.Replace(TransparentIdentifier, DefaultAliasPrefix));
+                                writer.Write(".");
+                                name = name.Replace(TransparentIdentifier, DefaultAliasPrefix);
+                            }
                         }
 
                         if (ReservedWordsSupport.JsReservedWords.Contains(name))
