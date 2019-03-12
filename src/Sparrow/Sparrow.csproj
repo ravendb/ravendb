@@ -2,7 +2,7 @@
   <PropertyGroup>
     <TargetFrameworks>netstandard2.0;netcoreapp2.1;netcoreapp2.2</TargetFrameworks>
     <TargetFrameworks>netstandard2.0;netcoreapp2.1</TargetFrameworks>
-    <RuntimeFrameworkVersion>2.1.9</RuntimeFrameworkVersion>
+    <RuntimeFrameworkVersion>2.2.3</RuntimeFrameworkVersion>
     <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
     <AssemblyName>Sparrow</AssemblyName>
     <PackageId>Sparrow</PackageId>
