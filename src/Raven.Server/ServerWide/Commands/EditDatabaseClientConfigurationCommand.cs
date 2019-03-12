@@ -10,11 +10,6 @@ namespace Raven.Server.ServerWide.Commands
     {
         public ClientConfiguration Configuration { get; set; }
 
-        public void UpdateDatabaseRecord(DatabaseRecord databaseRecord)
-        {
-            databaseRecord.Client = Configuration;
-        }
-
         public EditDatabaseClientConfigurationCommand() : base(null)
         {
         }
