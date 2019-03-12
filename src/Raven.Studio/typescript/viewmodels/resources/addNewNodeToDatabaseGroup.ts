@@ -1,10 +1,9 @@
-import dialog = require("plugins/dialog");
 import dialogViewModelBase = require("viewmodels/dialogViewModelBase");
 import setupEncryptionKey = require("viewmodels/resources/setupEncryptionKey");
 import distributeSecretCommand = require("commands/database/secrets/distributeSecretCommand");
-import databaseInfo = require("models/resources/info/databaseInfo");
 import clusterTopologyManager = require("common/shell/clusterTopologyManager");
 import addNodeToDatabaseGroupCommand = require("commands/database/dbGroup/addNodeToDatabaseGroupCommand");
+import databaseGroupNode = require("models/resources/info/databaseGroupNode");
 
 class addNewNodeToDatabaseGroup extends dialogViewModelBase {
 
@@ -16,7 +15,8 @@ class addNewNodeToDatabaseGroup extends dialogViewModelBase {
     
     key = ko.observable<string>();
     confirmation = ko.observable<boolean>(false);
-    databaseInfo: databaseInfo;
+    databaseName: string;
+    nodes: databaseGroupNode[];
     
     encryptionSection = ko.observable<setupEncryptionKey>();
     validationGroup: KnockoutValidationGroup;
@@ -28,13 +28,15 @@ class addNewNodeToDatabaseGroup extends dialogViewModelBase {
         addNode: ko.observable<boolean>(false)
     };
 
-    constructor(databaseInfo: databaseInfo, isEncrypted: boolean) {
+    constructor(databaseName: string, nodes: databaseGroupNode[], isEncrypted: boolean) {
         super();
         
-        this.databaseInfo = databaseInfo;
+        this.databaseName = databaseName;
         this.isEncrypted = isEncrypted;
+        this.nodes = nodes;
+        
         if (isEncrypted) {
-            this.encryptionSection(setupEncryptionKey.forDatabase(this.key, this.confirmation, ko.observable(databaseInfo.name)));
+            this.encryptionSection(setupEncryptionKey.forDatabase(this.key, this.confirmation, ko.observable(databaseName)));
         }
         
         this.bindToCurrentInstance("selectedClusterNode", "selectedMentor");
@@ -46,12 +48,12 @@ class addNewNodeToDatabaseGroup extends dialogViewModelBase {
     private initObservables() {
         this.nodesCanBeAdded = ko.pureComputed<string[]>(() => {
             const tags = clusterTopologyManager.default.topology().nodes().map(x => x.tag());
-            const existingTags = this.databaseInfo.nodes().map(x => x.tag());
+            const existingTags = this.nodes.map(x => x.tag());
             return _.without(tags, ...existingTags);
         });
         
         this.possibleMentors = ko.pureComputed<string[]>(() => {
-            return this.databaseInfo.nodes()
+            return this.nodes
                 .filter(x => x.type() === "Member")
                 .map(x => x.tag());
         });
@@ -111,7 +113,7 @@ class addNewNodeToDatabaseGroup extends dialogViewModelBase {
             
             this.distributeSecretIfNeeded()
                 .done(() => {
-                    new addNodeToDatabaseGroupCommand(this.databaseInfo.name, this.nodeTag(), this.manualChooseMentor() ? this.mentorNode() : undefined)
+                    new addNodeToDatabaseGroupCommand(this.databaseName, this.nodeTag(), this.manualChooseMentor() ? this.mentorNode() : undefined)
                         .execute()
                         .done(() => {
                             this.close();
@@ -124,7 +126,7 @@ class addNewNodeToDatabaseGroup extends dialogViewModelBase {
     
     private distributeSecretIfNeeded(): JQueryPromise<void> {
         if (this.isEncrypted) {
-            return new distributeSecretCommand(this.databaseInfo.name, this.key(), [this.nodeTag()])
+            return new distributeSecretCommand(this.databaseName, this.key(), [this.nodeTag()])
                 .execute();
         }
         

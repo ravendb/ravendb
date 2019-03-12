@@ -9,7 +9,6 @@ import databaseGroupNode = require("models/resources/info/databaseGroupNode");
 import deleteDatabaseFromNodeCommand = require("commands/resources/deleteDatabaseFromNodeCommand");
 import databaseGroupGraph = require("models/database/dbGroup/databaseGroupGraph");
 import ongoingTasksCommand = require("commands/database/tasks/getOngoingTasksCommand");
-import toggleDynamicNodeAssignmentCommand = require("commands/database/dbGroup/toggleDynamicNodeAssignmentCommand");
 import showDataDialog = require("viewmodels/common/showDataDialog");
 import addNewNodeToDatabaseGroup = require("viewmodels/resources/addNewNodeToDatabaseGroup");
 import reorderNodesInDatabaseGroupCommand = require("commands/database/dbGroup/reorderNodesInDatabaseGroupCommand");
@@ -17,10 +16,17 @@ import license = require("models/auth/licenseModel");
 import eventsCollector = require("common/eventsCollector");
 import messagePublisher = require("common/messagePublisher");
 import generalUtils = require("common/generalUtils");
+import toggleDynamicNodeAssignmentCommand = require("commands/database/dbGroup/toggleDynamicNodeAssignmentCommand");
 
 class manageDatabaseGroup extends viewModelBase {
 
-    currentDatabaseInfo = ko.observable<databaseInfo>();
+    dynamicDatabaseDistribution = ko.observable<boolean>(false);
+    nodes = ko.observableArray<databaseGroupNode>([]);
+    deletionInProgress = ko.observableArray<string>([]);
+    isEncrypted = ko.observable<boolean>(false);
+    
+    clearNodesList = ko.observable<boolean>(false);
+    
     selectedClusterNode = ko.observable<string>();
     
     inSortableMode = ko.observable<boolean>(false);
@@ -29,8 +35,6 @@ class manageDatabaseGroup extends viewModelBase {
     private graph = new databaseGroupGraph();
 
     nodeTag = clusterTopologyManager.default.localNodeTag;
-    nodes: KnockoutComputed<databaseGroupNode[]>;
-    deletionInProgress: KnockoutComputed<string[]>;
     addNodeEnabled: KnockoutComputed<boolean>;
     showDynamicDatabaseDistributionWarning: KnockoutComputed<boolean>;
     
@@ -70,20 +74,10 @@ class manageDatabaseGroup extends viewModelBase {
             return !allConnected;
         });
         
-        this.nodes = ko.pureComputed(() => {
-            const dbInfo = this.currentDatabaseInfo();
-            return dbInfo.nodes();
-        });
-
         this.addNodeEnabled = ko.pureComputed(() => {
             const tags = clusterTopologyManager.default.topology().nodes().map(x => x.tag());
             const existingTags = this.nodes().map(x => x.tag());
             return _.without(tags, ...existingTags).length > 0;
-        });
-
-        this.deletionInProgress = ko.pureComputed(() => {
-            const dbInfo = this.currentDatabaseInfo();
-            return dbInfo ? dbInfo.deletionInProgress() : [];
         });
 
         this.showDynamicDatabaseDistributionWarning = ko.pureComputed(() => {
@@ -118,6 +112,11 @@ class manageDatabaseGroup extends viewModelBase {
             this.graph.onResize();
         });
 
+        this.dynamicDatabaseDistribution.subscribe(dynamic => {
+            new toggleDynamicNodeAssignmentCommand(this.activeDatabase().name, dynamic)
+                .execute();
+        });
+
         this.graph.init($("#databaseGroupGraphContainer"));
     }
     
@@ -136,9 +135,9 @@ class manageDatabaseGroup extends viewModelBase {
         this.sortable = new Sortable(list,
             {
                 onEnd: (event: { oldIndex: number, newIndex: number }) => {
-                    const nodes = this.currentDatabaseInfo().nodes();
+                    const nodes = this.nodes();
                     nodes.splice(event.newIndex, 0, nodes.splice(event.oldIndex, 1)[0]);
-                    this.currentDatabaseInfo().nodes(nodes);
+                    this.nodes(nodes);
                 }
             });
     }
@@ -149,7 +148,7 @@ class manageDatabaseGroup extends viewModelBase {
 
     saveNewOrder() {
         eventsCollector.default.reportEvent("db-group", "save-order");
-        const newOrder = this.currentDatabaseInfo().nodes().map(x => x.tag());
+        const newOrder = this.nodes().map(x => x.tag());
         
         new reorderNodesInDatabaseGroupCommand(this.activeDatabase().name, newOrder)
             .execute()
@@ -166,6 +165,10 @@ class manageDatabaseGroup extends viewModelBase {
             this.sortable = null;
         }
 
+        // hack: force list to be empty - sortable (RubaXa version) doesn't play well with ko:foreach
+        // https://github.com/RubaXa/Sortable/issues/533
+        this.clearNodesList(true);
+        
         // fetch fresh copy
         this.refresh();
     }
@@ -195,22 +198,40 @@ class manageDatabaseGroup extends viewModelBase {
     }
 
     private onDatabaseInfoFetched(dbInfoDto: Raven.Client.ServerWide.Operations.DatabaseInfo) {
-        const dbInfo = new databaseInfo(dbInfoDto);
+        const incomingDbInfo = new databaseInfo(dbInfoDto);
         
-        // hack: force list to be empty - sortable (RubaXa version) doesn't play well with ko:foreach
-        // https://github.com/RubaXa/Sortable/issues/533
-        $(".nodes-list .not-deleted-nodes").empty();
+        if (this.clearNodesList()) {
+            $(".nodes-list .not-deleted-nodes").empty();
+            this.nodes([]);
+            this.clearNodesList(false);
+        }
         
-        this.currentDatabaseInfo(dbInfo);
+        this.updateNodes(incomingDbInfo.nodes());
+        this.deletionInProgress(incomingDbInfo.deletionInProgress());
+        this.isEncrypted(incomingDbInfo.isEncrypted());
+        this.dynamicDatabaseDistribution(incomingDbInfo.dynamicDatabaseDistribution());
+    }
+    
+    private updateNodes(incomingData: databaseGroupNode[]) {
+        const local = this.nodes();
         
-        dbInfo.dynamicDatabaseDistribution.subscribe((dynamic) => {
-            new toggleDynamicNodeAssignmentCommand(this.activeDatabase().name, dynamic)
-                .execute();
-        });
+        const localTags = local.map(x => x.tag()).sort();
+        const remoteTags = incomingData.map(x => x.tag()).sort();
+        
+        if (_.isEqual(localTags, remoteTags)) {
+            // we have same node tags: do in place update
+         
+            incomingData.forEach(d => {
+                local.find(x => x.tag() === d.tag()).update(d);
+            });
+        } else {
+            // node tags changed
+            this.nodes(incomingData);
+        }
     }
 
     addNode() {
-        const addKeyView = new addNewNodeToDatabaseGroup(this.currentDatabaseInfo(), this.currentDatabaseInfo().isEncrypted());
+        const addKeyView = new addNewNodeToDatabaseGroup(this.activeDatabase().name, this.nodes(), this.isEncrypted());
         app.showBootstrapDialog(addKeyView);
     }
     
