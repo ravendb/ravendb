@@ -149,27 +149,27 @@ namespace Raven.Client.Util
         {
             string selectedUrl = null;
             TcpClient tcpClient = null;
-            
-            foreach (var url in info.TcpServerUrls)
-            {
-                try
-                {
-                    tcpClient = await ConnectAsync(url, tcpConnectionTimeout).ConfigureAwait(false);
-                    selectedUrl = url;
-                    break;
-                }
-                catch
-                {
-                    // ignored
-                }
-            }
-            
 
-            if (selectedUrl == null)
+            if (info.TcpServerUrls != null)
             {
-                tcpClient = await ConnectAsync(info.Url, tcpConnectionTimeout).ConfigureAwait(false);
-                selectedUrl = info.Url;
+                foreach (var url in info.TcpServerUrls)
+                {
+                    try
+                    {
+                        tcpClient = await ConnectAsync(url, tcpConnectionTimeout).ConfigureAwait(false);
+                        selectedUrl = url;
+                        return (tcpClient, selectedUrl);
+                    }
+                    catch
+                    {
+                        // ignored
+                    }
+                }
             }
+
+            tcpClient = await ConnectAsync(info.Url, tcpConnectionTimeout).ConfigureAwait(false);
+            selectedUrl = info.Url;
+            
 
             return (tcpClient, selectedUrl);
         }
