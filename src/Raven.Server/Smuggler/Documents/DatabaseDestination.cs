@@ -608,7 +608,7 @@ namespace Raven.Server.Smuggler.Documents
                     {
                         currentDatabaseRecord?.HubPullReplications.ForEach(x =>
                         {
-                            if (x.Name.Equals(pullReplication.Name, StringComparison.InvariantCultureIgnoreCase))
+                            if (x.Name.Equals(pullReplication.Name, StringComparison.OrdinalIgnoreCase))
                             {
                                 tasks.Add(_database.ServerStore.SendToLeaderAsync(new DeleteOngoingTaskCommand(x.TaskId, OngoingTaskType.PullReplicationAsHub, _database.Name)));
                             }
@@ -645,7 +645,7 @@ namespace Raven.Server.Smuggler.Documents
                     {
                         currentDatabaseRecord?.ExternalReplications.ForEach(x =>
                         {
-                            if (x.Name.Equals(replication.Name))
+                            if (x.Name.Equals(replication.Name, StringComparison.OrdinalIgnoreCase))
                             {
                                 tasks.Add(_database.ServerStore.SendToLeaderAsync(new DeleteOngoingTaskCommand(x.TaskId, OngoingTaskType.Replication, _database.Name)));
                             }
@@ -668,7 +668,7 @@ namespace Raven.Server.Smuggler.Documents
                     {
                         currentDatabaseRecord?.RavenEtls.ForEach(x =>
                         {
-                            if (x.Name.Equals(etl.Name, StringComparison.InvariantCultureIgnoreCase))
+                            if (x.Name.Equals(etl.Name, StringComparison.OrdinalIgnoreCase))
                             {
                                 tasks.Add(_database.ServerStore.SendToLeaderAsync(new DeleteOngoingTaskCommand(x.TaskId, OngoingTaskType.RavenEtl, _database.Name)));
                             }
@@ -688,7 +688,7 @@ namespace Raven.Server.Smuggler.Documents
                     {
                         currentDatabaseRecord?.SqlEtls.ForEach(x =>
                         {
-                            if (x.Name.Equals(etl.Name, StringComparison.InvariantCultureIgnoreCase))
+                            if (x.Name.Equals(etl.Name, StringComparison.OrdinalIgnoreCase))
                             {
                                 tasks.Add(_database.ServerStore.SendToLeaderAsync(new DeleteOngoingTaskCommand(x.TaskId, OngoingTaskType.SqlEtl, _database.Name)));
                             }
