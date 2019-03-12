@@ -158,13 +158,11 @@
 
         &:checked + label::before {
             background-color: @brand-primary;
-            //box-shadow: 0 0 0 2px @gray-darker inset;
         }
 
         &:checked + label::after {
             left: -20px;
             background-color: @gray-lighter;
-            //box-shadow: 0 0 0 1px @gray-darker;
         }
 
         &:disabled + label, &.disabled + label {
@@ -172,7 +170,6 @@
             cursor: not-allowed;
 
             &::before {
-                background-color: @gray-dark;
                 cursor: not-allowed;
                 opacity: .5;
                 box-shadow: 0 0 0 2px @gray inset;
@@ -181,6 +178,7 @@
             &::after {
                 background-color: @gray-dark;
                 box-shadow: 0 0 0 2px @gray inset;
+                transform: scale(0.8);
             }
         }
     }

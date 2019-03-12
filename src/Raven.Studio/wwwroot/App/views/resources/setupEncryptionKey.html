@@ -6,7 +6,7 @@
         <input type="text" class="form-control" placeholder="Key" autocomplete="off"
                data-bind="textInput: key, enable: canProvideOwnKey">
         <span class="input-group-btn" data-bind="visible: canProvideOwnKey">
-            <button class="btn btn-default" type="button" data-bind="click: generateEncryptionKey">
+            <button class="btn" type="button" data-bind="click: generateEncryptionKey">
                 <i class="icon-reset"></i>
             </button>
         </span>
@@ -39,7 +39,7 @@
     </span>
 </div>   
 
-<div class="row">
+<div class="row margin-bottom margin-bottom-sm">
     <div class="col-sm-12">
         <div class="checkbox" data-bind="validationOptions: { insertMessages: false }">
             <input class="styled" type="checkbox" id="saved_key_confirm" data-bind="checked: keyConfirmation">
@@ -54,11 +54,15 @@
 <div class="row">
     <div class="col-sm-12">
         <div class="bg-info padding padding-sm small flex-horizontal">
-            <i class="icon-warning"></i> 
-            <span>
-                Save this key in a safe place. It will not be available again.<br/>
-                If you lose this key you could lose access to your data!
-            </span>
+            <div>
+                <i class="icon-warning"></i>
+            </div>
+            <div>
+                <span>
+                    Save this key in a safe place. It will not be available again.<br/>
+                    If you lose this key you could lose access to your data!
+                </span>
+            </div>
         </div>
     </div>
 </div>

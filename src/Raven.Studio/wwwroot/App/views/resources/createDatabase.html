@@ -86,9 +86,15 @@
         <h3>Data Source Configuration</h3>
 
         <div class="bg-info margin-bottom">
-            <div class="padding">
-                <i class="icon-info"></i>
-                This database creation option is designed for importing database from data files from RavenDB v3.x.
+            <div class="padding padding-sm flex-horizontal">
+                <div>
+                    <small><i class="icon-info"></i></small>    
+                </div>
+                <div>
+                    <small>
+                        This database creation option is designed for importing database from RavenDB v3.x.    
+                    </small>
+                </div>
             </div>
         </div>
 
@@ -130,7 +136,7 @@
             </div>
         </div>
 
-        <div data-bind="collapse: showAdvanced">
+        <div class="margin-left" data-bind="collapse: showAdvanced">
             <div class="form-group row">
                 <div class="col-md-4">
                     <label class="control-label">Journals directory</label>
@@ -151,72 +157,74 @@
 
             <h3>Source bundles</h3>
 
-            <div class="form-group row">
-                <div class="col-md-12">
-                    <div class="toggle">
-                        <input id="isCompressed" type="checkbox" data-bind="checked: isCompressed">
-                        <label for="isCompressed">Compression</label>
-                    </div>
+            <div class="margin-left">
+                <div class="form-group row">
+                    <div class="col-md-12">
+                        <div class="toggle">
+                            <input id="isCompressed" type="checkbox" data-bind="checked: isCompressed">
+                            <label for="isCompressed">Compression</label>
+                        </div>
 
-                </div>
-            </div>
-
-            <div class="form-group row">
-                <div class="col-md-12">
-                    <div class="toggle">
-                        <input id="isEncrypted" type="checkbox" data-bind="checked: isEncrypted">
-                        <label for="isEncrypted">Encryption</label>
-                    </div>
-
-                </div>
-            </div>
-
-            <div data-bind="collapse: isEncrypted">
-                <div class="form-group row" data-bind="validationElement: encryptionKey">
-                    <div class="col-md-4">
-                        <label class="control-label">Encryption key</label>
-                    </div>
-                    <div class="col-md-8">
-                        <input type="text" class="form-control" placeholder="Encryption key" data-bind="textInput: encryptionKey" />
                     </div>
                 </div>
 
-                <div class="form-group row" data-bind="validationElement: encryptionAlgorithm">
-                    <div class="col-md-4">
-                        <label class="control-label">Encryption algorithm</label>
+                <div class="form-group row">
+                    <div class="col-md-12">
+                        <div class="toggle">
+                            <input id="isEncrypted" type="checkbox" data-bind="checked: isEncrypted">
+                            <label for="isEncrypted">Encryption</label>
+                        </div>
+
                     </div>
-                    <div class="col-md-8">
-                        <div>
-                            <div class="dropdown btn-block">
-                                <button class="btn btn-block dropdown-toggle text-left" type="button" data-toggle="dropdown">
-                                    <span data-bind="text: encryptionAlgorithm() || 'Select encryption algorithm'"></span>
-                                    <span class="caret"></span>
-                                </button>
-                                <ul class="dropdown-menu" data-bind="foreach: $root.constructor.legacyEncryptionAlgorithms">
-                                    <li><a href="#" data-bind="text: $data, click: _.partial($parent.encryptionAlgorithm, $data)"></a></li>
-                                </ul>
-                            </div>
-                            <span class="help-block" data-bind="validationMessage: encryptionAlgorithm"></span>
+                </div>
+
+                <div class="margin-left" data-bind="collapse: isEncrypted">
+                    <div class="form-group row" data-bind="validationElement: encryptionKey">
+                        <div class="col-md-4">
+                            <label class="control-label">Encryption key</label>
+                        </div>
+                        <div class="col-md-8">
+                            <input type="text" class="form-control" placeholder="Encryption key" data-bind="textInput: encryptionKey" />
                         </div>
                     </div>
-                </div>
-
-                <div class="form-group row" data-bind="validationElement: encryptionKeyBitsSize">
-                    <div class="col-md-4">
-                        <label class="control-label">Encryption key size</label>
-                    </div>
-                    <div class="col-md-8">
-                        <div>
-                            <div class="dropdown btn-block">
-                                <button class="btn btn-block dropdown-toggle text-left" type="button" data-toggle="dropdown">
-                                    <span data-bind="text: encryptionKeyBitsSize() || 'Select encryption key size'"></span>
-                                    <span class="caret"></span>
-                                </button>
-                                <ul class="dropdown-menu" data-bind="foreach: $root.constructor.legacyKeySizes">
-                                    <li><a href="#" data-bind="text: $data, click: _.partial($parent.encryptionKeyBitsSize, $data)"></a></li>
-                                </ul>
+    
+                    <div class="form-group row" data-bind="validationElement: encryptionAlgorithm">
+                        <div class="col-md-4">
+                            <label class="control-label">Encryption algorithm</label>
+                        </div>
+                        <div class="col-md-8">
+                            <div>
+                                <div class="dropdown btn-block">
+                                    <button class="btn btn-block dropdown-toggle text-left" type="button" data-toggle="dropdown">
+                                        <span data-bind="text: encryptionAlgorithm() || 'Select encryption algorithm'"></span>
+                                        <span class="caret"></span>
+                                    </button>
+                                    <ul class="dropdown-menu" data-bind="foreach: $root.constructor.legacyEncryptionAlgorithms">
+                                        <li><a href="#" data-bind="text: $data, click: _.partial($parent.encryptionAlgorithm, $data)"></a></li>
+                                    </ul>
+                                </div>
+                                <span class="help-block" data-bind="validationMessage: encryptionAlgorithm"></span>
                             </div>
-                            <span class="help-block" data-bind="validationMessage: encryptionKeyBitsSize"></span>
+                        </div>
+                    </div>
+    
+                    <div class="form-group row" data-bind="validationElement: encryptionKeyBitsSize">
+                        <div class="col-md-4">
+                            <label class="control-label">Encryption key size</label>
+                        </div>
+                        <div class="col-md-8">
+                            <div>
+                                <div class="dropdown btn-block">
+                                    <button class="btn btn-block dropdown-toggle text-left" type="button" data-toggle="dropdown">
+                                        <span data-bind="text: encryptionKeyBitsSize() || 'Select encryption key size'"></span>
+                                        <span class="caret"></span>
+                                    </button>
+                                    <ul class="dropdown-menu" data-bind="foreach: $root.constructor.legacyKeySizes">
+                                        <li><a href="#" data-bind="text: $data, click: _.partial($parent.encryptionKeyBitsSize, $data)"></a></li>
+                                    </ul>
+                                </div>
+                                <span class="help-block" data-bind="validationMessage: encryptionKeyBitsSize"></span>
+                            </div>
                         </div>
                     </div>
                 </div>
@@ -380,7 +388,7 @@
         </div>
         <div class="form-group row">
             <div class="col-sm-12" data-bind="if: $root.databaseLocationInfoMessage">
-                <p class="text-info bg-info padding padding-sm">
+                <div class="text-info bg-info padding padding-sm">
                     <span data-bind="text: $root.databaseLocationInfoMessage"></span><br />
                     <div data-bind="if: $root.spinners.databaseLocationInfoLoading">
                         <span class="global-spinner"></span>
@@ -413,7 +421,7 @@
                             </li>
                         </ul>
                     </div>
-                </p>
+                </div>
             </div>
         </div>
     </div>
@@ -422,7 +430,7 @@
 <script type="text/html" id="create-db-replication">
     <h3>Replication Configuration</h3>
     <div data-bind="with: databaseModel.replication">
-        <div class="form-group" style="min-height: 62px">
+        <div class="form-group" data-bind="style: { 'min-height': $root.databaseModel.isFromBackupOrFromOfflineMigration ? '' : '62px' }">
             <div class="input-group" title="Set the number of nodes that will contain the database" 
                  data-bind="css: { 'has-warning': (!$root.databaseModel.isFromBackupOrFromOfflineMigration && $root.showReplicationFactorWarning()) }, validationElement: replicationFactor">
                 <span class="input-group-addon">Replication factor</span>
@@ -431,10 +439,18 @@
                 <div class="help-block" data-bind="visible: !$root.databaseModel.isFromBackupOrFromOfflineMigration && $root.showReplicationFactorWarning">
                     With the replication factor set to 1, the data won't be replicated!
                 </div>
-                <div class="help-block" data-bind="visible: $root.databaseModel.isFromBackupOrFromOfflineMigration">
+            </div>
+        </div>
+
+        <div class="flex-horizontal bg-info padding padding-sm" data-bind="visible: $root.databaseModel.isFromBackupOrFromOfflineMigration">
+            <div class="margin-right margin-right-sm">
+                <small><i class="icon-info"></i></small>
+            </div>
+            <div>
+                <small>
                     The backup will be restored only to the current node <br/>
                     After restore, this database can be added to other nodes using the 'Manage group' button.
-                </div>
+                </small>
             </div>
         </div>
         
@@ -449,14 +465,17 @@
             </div>
         </div>
 
-        <div class="toggle">
-            <input class="styled" type="checkbox" id="manual_mode" data-bind="checked: manualMode, disable: $root.enforceManualNodeSelection">
-            <label for="manual_mode">Set replication nodes manually</label>
+        <div data-bind="visible: !$root.databaseModel.isFromBackupOrFromOfflineMigration">
+            <div class="toggle">
+                <input class="styled" type="checkbox" id="manual_mode" data-bind="checked: manualMode, disable: $root.enforceManualNodeSelection()">
+                <label for="manual_mode">Set replication nodes manually</label>
+            </div>
+            <small class="toggle-caption" data-bind="visible: !$root.enforceManualNodeSelection() && !manualMode()">Replication nodes will be selected randomly among the cluster's nodes.</small>
+            <small class="toggle-caption" data-bind="visible: !$root.enforceManualNodeSelection() && manualMode()">Select replication nodes from the list below.</small>
+            <small class="toggle-caption" data-bind="visible: $root.enforceManualNodeSelection">Encryption was enabled. Please choose replication nodes manually.</small>
         </div>
-        <small class="toggle-caption" data-bind="visible: !manualMode()">Replication nodes will be selected randomly among the cluster's nodes.</small>
-        <small class="toggle-caption" data-bind="visible: manualMode()">Select replication nodes from the list below.</small>
-
-        <div class="panel panel-info padding" data-bind="visible: manualMode()">
+      
+        <div class="panel panel-info padding no-margin" data-bind="visible: manualMode()">
             <small>Available nodes</small>
             <div class="checkbox">
                 <input type="checkbox" id="toggle_all_in_cluster" class="styled" data-bind="checkboxTriple: $root.selectionState, event: { change: $root.toggleSelectAll }">
