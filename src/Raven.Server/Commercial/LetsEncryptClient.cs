@@ -404,6 +404,9 @@ namespace Raven.Server.Commercial
                 return false;
             }
 
+            if (cache.Private == null || cache.Cert == null)
+                return false;
+
             var cert = new X509Certificate2(Encoding.UTF8.GetBytes(cache.Cert), (string)null, X509KeyStorageFlags.MachineKeySet);
 
             // if it is about to expire, we need to refresh
