@@ -203,11 +203,11 @@ namespace Raven.Server.Documents.Handlers.Debugging
             {
                 writer.WriteStartObject();
                 writer.WritePropertyName("Environment");
-                writer.WriteString("ServerStore");
+                writer.WriteString("Server");
                 writer.WriteComma();
 
                 writer.WritePropertyName("Type");
-                writer.WriteString("System");
+                writer.WriteString(nameof(StorageEnvironmentWithType.StorageEnvironmentType.System));
                 writer.WriteComma();
 
                 using (var tx = env.ReadTransaction())
