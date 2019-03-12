@@ -192,7 +192,7 @@ namespace Raven.Server.Documents.Handlers.Debugging
             }
         }
 
-        [RavenAction("/admin/debug/storage/environment/report", "GET", AuthorizationStatus.ClusterAdmin)]
+        [RavenAction("/admin/debug/storage/environment/report", "GET", AuthorizationStatus.Operator)]
         public Task SystemEnvironmentReport()
         {
             var details = GetBoolValueQueryString("details", required: false) ?? false;
