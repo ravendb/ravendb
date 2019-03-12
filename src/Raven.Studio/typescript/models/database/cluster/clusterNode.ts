@@ -13,9 +13,9 @@ class clusterNode {
     utilizedCores = ko.observable<number>();
     numberOfCores = ko.observable<number>();
     installedMemoryInGb = ko.observable<number>();
-    installedMemory = ko.pureComputed(() => this.getNumber(this.installedMemoryInGb()));
+    installedMemory = ko.pureComputed(() => this.formatNumber(this.installedMemoryInGb()));
     usableMemoryInGb = ko.observable<number>();
-    usableMemory = ko.pureComputed(() => this.getNumber(this.usableMemoryInGb()));
+    usableMemory = ko.pureComputed(() => this.formatNumber(this.usableMemoryInGb()));
     errorDetails = ko.observable<string>();
     isLeader = ko.observable<boolean>();
     isPassive: KnockoutObservable<boolean>;
@@ -82,10 +82,9 @@ class clusterNode {
 
     utilizedMemoryInGb = ko.pureComputed(() => {
         const licenseStatus = license.licenseStatus();
-        let utilizedMemory = this.utilizedCores() * licenseStatus.Ratio;
+        const utilizedMemory = this.utilizedCores() * licenseStatus.Ratio;
         const installedMemoryInGb = this.installedMemoryInGb();
-        utilizedMemory = utilizedMemory > installedMemoryInGb ? installedMemoryInGb : utilizedMemory;
-        return this.getNumber(utilizedMemory);
+        return this.formatNumber(Math.min(installedMemoryInGb, utilizedMemory));
     });
 
     cssCores = ko.pureComputed(() => {
@@ -191,12 +190,8 @@ class clusterNode {
         });
     }
 
-    private getNumber(num: number): string {
-        if (Number.isInteger(num)) {
-            return num.toString();
-        }
-
-        return num.toFixed(2);
+    private formatNumber(num: number): string {
+        return num.toFixed(1);
     }
 }
 
