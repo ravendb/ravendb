@@ -57,6 +57,15 @@ class databaseGroupNode {
         node.type(type);
         return node;
     }
+    
+    update(incoming: databaseGroupNode) {
+        this.tag(incoming.tag());
+        this.serverUrl(incoming.serverUrl());
+        this.type(incoming.type());
+        this.responsibleNode(incoming.responsibleNode());
+        this.lastStatus(incoming.lastStatus());
+        this.lastError(incoming.lastError());
+    }
 }
 
 export = databaseGroupNode;
