@@ -23,12 +23,15 @@ namespace Raven.Client.Documents.Session.Operations
         private List<object> _entities;
         private int _sessionCommandsCount;
         private int _allCommandsCount;
+        private InMemoryDocumentSessionOperations.SaveChangesData.ActionsToRunOnSuccess _onSuccessfulRequest;
 
         private Dictionary<LazyStringValue, DocumentInfo> _modifications;
 
         public BatchCommand CreateRequest()
         {
             var result = _session.PrepareForSaveChanges();
+
+            _onSuccessfulRequest = result.OnSuccess;
             _sessionCommandsCount = result.SessionCommands.Count;
 
             result.SessionCommands.AddRange(result.DeferredCommands);
@@ -64,6 +67,8 @@ namespace Raven.Client.Documents.Session.Operations
                 ThrowOnNullResults();
                 return;
             }
+
+            _onSuccessfulRequest.ClearSessionStateAfterSuccessfulSaveChanges();
 
             if (_session.TransactionMode == TransactionMode.ClusterWide)
             {
