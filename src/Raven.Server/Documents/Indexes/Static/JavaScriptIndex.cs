@@ -184,7 +184,7 @@ namespace Raven.Server.Documents.Indexes.Static
 
         private static ParserOptions DefaultParserOptions = new ParserOptions();
         
-        private HashSet<CollectionName> ExecuteCodeAndCollectRefrencedCollections(string code)
+        private HashSet<CollectionName> ExecuteCodeAndCollectReferencedCollections(string code)
         {
             var javascriptParser = new JavaScriptParser(code, DefaultParserOptions);
             var program = javascriptParser.ParseProgram();
@@ -192,9 +192,8 @@ namespace Raven.Server.Documents.Indexes.Static
             var loadVisitor = new EsprimaReferencedCollectionVisitor();
             loadVisitor.Visit(program);
             return loadVisitor.ReferencedCollection;
-
-
         }
+
         private (List<string> Maps, List<HashSet<CollectionName>> MapReferencedCollections) InitializeEngine(IndexDefinition definition)
         {
             _engine.SetValue("load", new ClrFunctionInstance(_engine, LoadDocument));
@@ -214,7 +213,7 @@ namespace Raven.Server.Documents.Indexes.Static
 
             foreach (var t in maps)
             {
-                mapReferencedCollections.Add(ExecuteCodeAndCollectRefrencedCollections(t));
+                mapReferencedCollections.Add(ExecuteCodeAndCollectReferencedCollections(t));
             }
 
             if (definition.Reduce != null)
