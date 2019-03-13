@@ -2,12 +2,14 @@
 using System.Collections.Generic;
 using System.Text;
 using Esprima.Ast;
+using Raven.Server.Documents.Queries;
 
 namespace Raven.Server.Documents.Indexes.Static
 {
-    public class EsprimaReferencedCollectionVisitor:EsprimaVisitor
+    public class EsprimaReferencedCollectionVisitor : EsprimaVisitor
     {
         public readonly HashSet<CollectionName> ReferencedCollection = new HashSet<CollectionName>();
+
         public override void VisitCallExpression(CallExpression callExpression)
         {
             if (callExpression.Callee is Identifier id 
