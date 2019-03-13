@@ -785,24 +785,21 @@ more responsive application.
         internal SaveChangesData PrepareForSaveChanges()
         {
             var result = new SaveChangesData(this);
-            DeferredCommands.Clear();
-            DeferredCommandsDictionary.Clear();
+
+            var deferredCommandsCount = DeferredCommands.Count;
 
             PrepareForEntitiesDeletion(result, null);
             PrepareForEntitiesPuts(result);
 
             PrepareCompareExchangeEntities(result);
 
-            if (DeferredCommands.Count > 0)
+            if (DeferredCommands.Count > deferredCommandsCount)
             {
                 // this allow OnBeforeStore to call Defer during the call to include
                 // additional values during the same SaveChanges call
-                result.DeferredCommands.AddRange(DeferredCommands);
+                result.DeferredCommands.AddRange(DeferredCommands.Skip(deferredCommandsCount));
                 foreach (var item in DeferredCommandsDictionary)
                     result.DeferredCommandsDictionary[item.Key] = item.Value;
-
-                DeferredCommands.Clear();
-                DeferredCommandsDictionary.Clear();
             }
 
             foreach (var deferredCommand in result.DeferredCommands)
@@ -869,7 +866,8 @@ more responsive application.
                     result.SessionCommands.Add(new DeleteCompareExchangeCommandData(item.Key, item.Value));
                 }
             }
-            clusterTransactionOperations.Clear();
+
+            result.OnSuccess.ClearClusterTransactionOperations(clusterTransactionOperations);
         }
 
         protected abstract ClusterTransactionOperationsBase GetClusterSession();
@@ -927,11 +925,11 @@ more responsive application.
 
                         if (documentInfo.Entity != null)
                         {
-                            DocumentsByEntity.Remove(documentInfo.Entity);
+                            result.OnSuccess.RemoveDocumentByEntity(documentInfo.Entity);
                             result.Entities.Add(documentInfo.Entity);
                         }
 
-                        DocumentsById.Remove(documentInfo.Id);
+                        result.OnSuccess.RemoveDocumentById(documentInfo.Id);
                     }
 
                     changeVector = UseOptimisticConcurrency ? changeVector : null;
@@ -973,14 +971,16 @@ more responsive application.
                         EntityChanged(document, entity.Value, null))
                         document = EntityToBlittable.ConvertEntityToBlittable(entity.Key, entity.Value);
                 }
-
-                entity.Value.IsNewDocument = false;
+                
                 result.Entities.Add(entity.Key);
 
                 if (entity.Value.Id != null)
-                    DocumentsById.Remove(entity.Value.Id);
+                {
+                    result.OnSuccess.RemoveDocumentById(entity.Value.Id);
+                }
 
-                entity.Value.Document = document;
+                result.OnSuccess.UpdateEntityDocumentInfo(entity.Value, document);
+                
                 if (metadataUpdated)
                 {
                     // we need to preserve the metadata after the changes, otherwise we'll consume the changes
@@ -1659,12 +1659,73 @@ more responsive application.
             public readonly List<ICommandData> SessionCommands = new List<ICommandData>();
             public readonly List<object> Entities = new List<object>();
             public readonly BatchOptions Options;
+            internal readonly ActionsToRunOnSuccess OnSuccess;
 
             public SaveChangesData(InMemoryDocumentSessionOperations session)
             {
                 DeferredCommands = new List<ICommandData>(session.DeferredCommands);
                 DeferredCommandsDictionary = new Dictionary<(string, CommandType, string), ICommandData>(session.DeferredCommandsDictionary);
                 Options = session._saveChangesOptions;
+                OnSuccess = new ActionsToRunOnSuccess(session);
+            }
+
+            internal class ActionsToRunOnSuccess
+            {
+                private readonly InMemoryDocumentSessionOperations _session;
+                private readonly List<string> _documentsByIdToRemove = new List<string>();
+                private readonly List<object> _documentsByEntityToRemove = new List<object>();
+                private readonly List<(DocumentInfo Info, BlittableJsonReaderObject Document)> _documentInfosToUpdate = new List<(DocumentInfo Info, BlittableJsonReaderObject Document)>();
+
+                private ClusterTransactionOperationsBase _clusterTransactionOperations;
+
+                public ActionsToRunOnSuccess(InMemoryDocumentSessionOperations _session)
+                {
+                    this._session = _session;
+                }
+
+                public void RemoveDocumentById(string id)
+                {
+                    _documentsByIdToRemove.Add(id);
+                }
+
+                public void RemoveDocumentByEntity(object entity)
+                {
+                    _documentsByEntityToRemove.Add(entity);
+                }
+
+                public void ClearClusterTransactionOperations(ClusterTransactionOperationsBase clusterTransactionOperations)
+                {
+                    _clusterTransactionOperations = clusterTransactionOperations;
+                }
+
+                public void UpdateEntityDocumentInfo(DocumentInfo documentInfo, BlittableJsonReaderObject document)
+                {
+                    _documentInfosToUpdate.Add((documentInfo, document));
+                }
+
+                public void ClearSessionStateAfterSuccessfulSaveChanges()
+                {
+                    foreach (var id in _documentsByIdToRemove)
+                    {
+                        _session.DocumentsById.Remove(id);
+                    }
+
+                    foreach (var entity in _documentsByEntityToRemove)
+                    {
+                        _session.DocumentsByEntity.Remove(entity);
+                    }
+
+                    foreach (var (info, document) in _documentInfosToUpdate)
+                    {
+                        info.IsNewDocument = false;
+                        info.Document = document;
+                    }
+
+                    _clusterTransactionOperations?.Clear();
+
+                    _session.DeferredCommands.Clear();
+                    _session.DeferredCommandsDictionary.Clear();
+                }
             }
         }
 
