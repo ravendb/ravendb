@@ -22,6 +22,18 @@
         }
     }
 
+    &:before {
+        content: '';
+        display: block;
+        position: absolute;
+        top: 0;
+        bottom: 0;
+        right: 0;
+        width: 5px;
+        cursor: ew-resize;
+        z-index: @zindex-menu-resize;
+    }
+
     a {
         cursor: pointer;
     }
@@ -123,7 +135,7 @@
         overflow-y: auto;
         overflow-x: hidden;
         background-color: @main-menu-hover;
-        width: @menu-width - 40;
+        width: ~"calc(100% - 39px)";
 
         & > ul {
             display: flex;

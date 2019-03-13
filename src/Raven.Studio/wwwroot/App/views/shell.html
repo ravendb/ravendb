@@ -29,7 +29,7 @@
     Developer License - Not for Production Use
  </aside>
 <nav class="navbar">
-    <div class="navbar-header">
+    <div class="navbar-header" data-bind="style: { 'flex-basis': mainMenu.width() + 'px', width: mainMenu.width() + 'px' }">
         <a class="navbar-brand hidden-xs" data-bind="attr: { href: appUrls.serverDashboard }"><i class="icon-logo"></i></a>
     </div>
     <div id="navbar">
@@ -274,7 +274,7 @@
 
 <div class="prime-container">
     <nav id="main-menu" class="main-menu"
-         data-bind="with: mainMenu, attr: { 'data-level': mainMenu.level }">
+         data-bind="with: mainMenu, attr: { 'data-level': mainMenu.level }, style: { 'flex-basis': mainMenu.width() + 'px', width: mainMenu.width() + 'px' }">
         <div class="level-0"
              data-level="0"
              data-level-name="Menu"

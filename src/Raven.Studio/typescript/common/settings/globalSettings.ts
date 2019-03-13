@@ -16,6 +16,8 @@ class globalSettings extends abstractSettings {
     numberFormatting = new simpleStudioSetting<studio.settings.numberFormatting>("local", "formatted", x => this.saveSetting(x));
     dontShowAgain = new dontShowAgainSettings(x => this.saveSetting(x));
     sendUsageStats = new simpleStudioSetting<boolean | undefined>("local", undefined, x => this.saveSetting(x));
+    
+    menuWidth = new simpleStudioSetting<number | undefined>("local", 280, x => this.saveSetting(x));
 
     feedback = new simpleStudioSetting<feedbackSavedSettingsDto>("local", null, x => this.saveSetting(x));
 
