@@ -14,6 +14,8 @@ using Raven.Client.Http;
 using Raven.Client.ServerWide;
 using Raven.Client.ServerWide.Operations;
 using Raven.Server.Config;
+using Raven.Server.ServerWide.Commands;
+using Raven.Server.ServerWide.Context;
 using Raven.Server.Web.System;
 using Raven.Tests.Core.Utils.Entities;
 using Sparrow.Json;
@@ -336,5 +338,162 @@ namespace RachisTests
                 Assert.True(WaitForDocument<User>(watcherStore, "users/4", u => u.Name == "Karmel4", 30_000), $"The watcher doesn't have the document");
             }
         }
+
+        [Fact]
+        public async Task RemoveRedundantPromotable()
+        {
+            var clusterSize = 3;
+            var cluster = await CreateRaftCluster(clusterSize, watcherCluster: true);
+            var db = GetDatabaseName();
+
+            using (var store = new DocumentStore
+            {
+                Urls = new[] { cluster.Leader.WebUrl },
+                Database = db
+            }.Initialize())
+            {
+                await cluster.Leader.ServerStore.SendToLeaderAsync(new AddDatabaseCommand
+                {
+                    Record = new DatabaseRecord(db)
+                    {
+                        Topology = new DatabaseTopology
+                        {
+                            Members = new List<string> { "A" },
+                            Promotables = new List<string> { "B", "C" },
+                            ReplicationFactor = 2
+                        }
+                    },
+                    Name = db
+                });
+
+                await WaitForAssertion(() =>
+                {
+                    using (cluster.Leader.ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext ctx))
+                    using (ctx.OpenReadTransaction())
+                    {
+                        var record = cluster.Leader.ServerStore.Cluster.ReadDatabase(ctx, db);
+                        Assert.Equal(0, record.DeletionInProgress?.Count ?? 0);
+
+                        var topology = record.Topology;
+                        Assert.Equal(2, topology.ReplicationFactor);
+                        Assert.Equal(2, topology.Members.Count);
+                        Assert.Equal(0, topology.Promotables.Count);
+                        Assert.Equal(0, topology.Rehabs.Count);
+                    }
+                });
+            }
+        }
+
+        [Fact]
+        public async Task RemoveRedundantRehabs()
+        {
+            var clusterSize = 3;
+            var cluster = await CreateRaftCluster(clusterSize, watcherCluster: true);
+            var db = GetDatabaseName();
+
+            using (var store = new DocumentStore
+            {
+                Urls = new[] { cluster.Leader.WebUrl },
+                Database = db
+            }.Initialize())
+            {
+                await cluster.Leader.ServerStore.SendToLeaderAsync(new AddDatabaseCommand
+                {
+                    Record = new DatabaseRecord(db)
+                    {
+                        Topology = new DatabaseTopology
+                        {
+                            Members = new List<string> { "A" },
+                            Rehabs = new List<string> { "B", "C" },
+                            ReplicationFactor = 2
+                        }
+                    },
+                    Name = db
+                });
+
+                await WaitForAssertion(() =>
+                {
+                    using (cluster.Leader.ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext ctx))
+                    using (ctx.OpenReadTransaction())
+                    {
+                        var record = cluster.Leader.ServerStore.Cluster.ReadDatabase(ctx, db);
+                        Assert.Equal(0, record.DeletionInProgress?.Count ?? 0);
+
+                        var topology = record.Topology;
+                        Assert.Equal(2, topology.ReplicationFactor);
+                        Assert.Equal(2, topology.Members.Count);
+                        Assert.Equal(0, topology.Promotables.Count);
+                        Assert.Equal(0, topology.Rehabs.Count);
+                    }
+                });
+            }
+        }
+
+        [Fact]
+        public async Task RemoveRedundantNodes()
+        {
+            var clusterSize = 5;
+            var cluster = await CreateRaftCluster(clusterSize, watcherCluster: true);
+            var db = GetDatabaseName();
+
+            using (var store = new DocumentStore
+            {
+                Urls = new[] { cluster.Leader.WebUrl },
+                Database = db
+            }.Initialize())
+            {
+                await cluster.Leader.ServerStore.SendToLeaderAsync(new AddDatabaseCommand
+                {
+                    Record = new DatabaseRecord(db)
+                    {
+                        Topology = new DatabaseTopology
+                        {
+                            Members = new List<string> { "A" },
+                            Rehabs = new List<string> { "B", "C" },
+                            Promotables = new List<string> { "D", "E" },
+                            ReplicationFactor = 3
+                        }
+                    },
+                    Name = db
+                });
+
+                await WaitForAssertion(() =>
+                {
+                    using (cluster.Leader.ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext ctx))
+                    using (ctx.OpenReadTransaction())
+                    {
+                        var record = cluster.Leader.ServerStore.Cluster.ReadDatabase(ctx, db);
+                        Assert.Equal(0, record.DeletionInProgress?.Count ?? 0);
+
+                        var topology = record.Topology;
+                        Assert.Equal(3, topology.ReplicationFactor);
+                        Assert.Equal(3, topology.Members.Count);
+                        Assert.Equal(0, topology.Promotables.Count);
+                        Assert.Equal(0, topology.Rehabs.Count);
+                    }
+                });
+            }
+        }
+
+        private async Task WaitForAssertion(Action action)
+        {
+            var sp = Stopwatch.StartNew();
+            while (true)
+            {
+                try
+                {
+                    action();
+                    return;
+                }
+                catch
+                {
+                    if (sp.ElapsedMilliseconds > 10_000)
+                        throw;
+
+                    await Task.Delay(100);
+                }
+            }
+        }
+
     }
 }

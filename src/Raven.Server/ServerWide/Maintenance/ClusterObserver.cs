@@ -892,8 +892,6 @@ namespace Raven.Server.ServerWide.Maintenance
                 topology.Rehabs.Count == 0)
                 return;
 
-            LogMessage("We reached the replication factor, so we try to remove redundant nodes.", info: false);
-
             var nodesToDelete = new List<string>();
             var mentorChangeVector = new Dictionary<string, string>();
 
@@ -913,21 +911,24 @@ namespace Raven.Server.ServerWide.Maintenance
                 mentorChangeVector.Add(node, dbReport.DatabaseChangeVector);
             }
 
-            if (nodesToDelete.Count > 0)
-            {
-                var deletionCmd = new DeleteDatabaseCommand
-                {
-                    ErrorOnDatabaseDoesNotExists = false,
-                    DatabaseName = dbName,
-                    FromNodes = nodesToDelete.ToArray(),
-                    HardDelete = _hardDeleteOnReplacement,
-                    UpdateReplicationFactor = false,
-                };
+            if (nodesToDelete.Count == 0)
+                return;
 
-                if (deletions == null)
-                    deletions = new List<DeleteDatabaseCommand>();
-                deletions.Add(deletionCmd);
-            }
+            LogMessage($"We reached the replication factor on database '{dbName}', so we try to remove redundant nodes from {string.Join(", ", nodesToDelete)}.",
+                info: false);
+
+            var deletionCmd = new DeleteDatabaseCommand
+            {
+                ErrorOnDatabaseDoesNotExists = false,
+                DatabaseName = dbName,
+                FromNodes = nodesToDelete.ToArray(),
+                HardDelete = _hardDeleteOnReplacement,
+                UpdateReplicationFactor = false,
+            };
+
+            if (deletions == null)
+                deletions = new List<DeleteDatabaseCommand>();
+            deletions.Add(deletionCmd);
         }
 
         private static List<string> GetPendingDeleteNodes(Dictionary<string, DeletionInProgressStatus> deletionInProgress)
