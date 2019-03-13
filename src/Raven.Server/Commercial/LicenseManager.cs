@@ -1144,7 +1144,7 @@ namespace Raven.Server.Commercial
             {
                 const string message = "SNMP Monitoring is currently enabled. " + 
                                        "The provided license cannot be activated as it doesn't contain this feature. " + 
-                                       "In order to use this license please disable SNMP Monitoring in the server store configuration.";
+                                       "In order to use this license please disable SNMP Monitoring in the server configuration";
                 throw GenerateLicenseLimit(LimitType.Snmp, message);
             }
 
