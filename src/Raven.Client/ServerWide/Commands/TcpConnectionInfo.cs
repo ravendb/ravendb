@@ -7,7 +7,7 @@ namespace Raven.Client.ServerWide.Commands
         public int Port;
         public string Url;
         public string Certificate;
-        public string[] ServerUrls;
+        public string[] Urls;
         public DynamicJsonValue ToJson()
         {
             var res =  new DynamicJsonValue
@@ -16,16 +16,16 @@ namespace Raven.Client.ServerWide.Commands
                 [nameof(Url)] = Url,
                 [nameof(Certificate)] = Certificate
             };
-            if (ServerUrls == null)
+            if (Urls == null)
                 return res;
 
             var array = new DynamicJsonArray();
-            foreach (var url in ServerUrls)
+            foreach (var url in Urls)
             {
                 array.Add(url);
             }
 
-            res[nameof(ServerUrls)] = array;
+            res[nameof(Urls)] = array;
 
             return res;
         }

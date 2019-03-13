@@ -149,9 +149,9 @@ namespace Raven.Client.Util
         {
             TcpClient tcpClient;
 
-            if (info.ServerUrls != null)
+            if (info.Urls != null)
             {
-                foreach (var url in info.ServerUrls)
+                foreach (var url in info.Urls)
                 {
                     try
                     {
