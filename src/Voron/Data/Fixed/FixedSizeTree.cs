@@ -1698,5 +1698,34 @@ namespace Voron.Data.Fixed
 
             _newPageAllocator = newPageAllocator;
         }
+
+        public static bool IsFixedSizeTreeHeader(byte* ptr, long size)
+        {
+            var header = (FixedSizeTreeHeader.Embedded*)ptr;
+
+            switch (header->RootObjectType)
+            {
+                case RootObjectType.EmbeddedFixedSizeTree:
+                    if (size < sizeof(FixedSizeTreeHeader.Embedded))
+                        return false;
+                    break;
+                case RootObjectType.FixedSizeTree:
+                    if (size != sizeof(FixedSizeTreeHeader.Large))
+                        return false;
+                    break;
+                default:
+                    return false;
+            }
+
+            var valueSize = header->ValueSize;
+
+            var entrySize = sizeof(long) + valueSize;
+            var maxEmbeddedEntries = (Constants.Storage.PageSize / 8) / entrySize;
+
+            if (maxEmbeddedEntries == 0)
+                return false;
+
+            return true;
+        }
     }
 }
