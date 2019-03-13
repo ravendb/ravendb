@@ -5,9 +5,14 @@ import EVENTS = require("common/constants/events");
 import router = require("plugins/router");
 import intermediateMenuItem = require("common/shell/menu/intermediateMenuItem");
 import leafMenuItem = require("common/shell/menu/leafMenuItem");
+import studioSettings = require("common/settings/studioSettings");
+import globalSettings = require("common/settings/globalSettings");
 
 class menu {
 
+    static readonly minWidth = 220;
+    static readonly maxWidth = 500;
+    
     activeItem: KnockoutObservable<menuItem> = ko.observable(null);
     deepestOpenItem: KnockoutObservable<intermediateMenuItem> = ko.observable(null);
     level: KnockoutComputed<number> =
@@ -18,6 +23,7 @@ class menu {
 
     private $mainMenuLevels: JQuery;
     private menuElement: HTMLElement;
+    width = ko.observable<number>(280);
 
     private type: string = 'menu';
     private items: KnockoutObservable<Array<menuItem>> = ko.observable(null);
@@ -167,8 +173,54 @@ class menu {
 
         this.setActiveMenuItem();
         this.initializeOnClickOutsideOfMenuResetLevelToActiveItem();
-    }
 
+        $(this.menuElement).on("mousedown.menuResize", e => this.handleResize(e));
+
+        studioSettings.default.globalSettings()
+            .done(settings => {
+                this.width(settings.menuWidth.getValue());
+            });
+    }
+    
+    private handleResize(e: JQueryEventObject) {
+        if (e.offsetX < this.width() - 5) {
+            return;
+        }
+
+        const $document = $(document);
+
+        // Stop propagation of the event so the text selection doesn't fire up
+        if (e.stopPropagation) e.stopPropagation();
+        if (e.preventDefault) e.preventDefault();
+        e.cancelBubble = true;
+        e.returnValue = false;
+        
+        const startX = e.pageX;
+        const currentWidth = this.width();
+
+        $document.on("mousemove.menuResize", e => {
+            const dx = e.pageX - startX;
+            const requestedWidth = currentWidth + dx;
+            
+            this.width(_.clamp(requestedWidth, menu.minWidth, menu.maxWidth));
+        });
+
+        $document.on("mouseup.menuResize", e => {
+            const dx = e.pageX - startX;
+            const requestedWidth = _.clamp(currentWidth + dx, menu.minWidth, menu.maxWidth);
+            this.width(_.clamp(requestedWidth, menu.minWidth, menu.maxWidth));
+
+
+            studioSettings.default.globalSettings()
+                .done(settings => {
+                    settings.menuWidth.setValue(this.width());
+                });
+
+            $document.off("mousemove.menuResize");
+            $document.off("mouseup.menuResize");
+        });
+    }
+    
     private toggleResetLevelBehavior(item: intermediateMenuItem) {
         const activeItem = this.activeItem();
         if (!activeItem) {

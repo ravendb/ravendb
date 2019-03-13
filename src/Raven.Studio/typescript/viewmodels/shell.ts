@@ -64,7 +64,7 @@ class shell extends viewModelBase {
     accessManager = accessManager.default;
     continueTest = continueTest.default;
     static buildInfo = buildInfo;
-
+    
     clientBuildVersion = ko.observable<clientBuildVersionDto>();
 
     currentRawUrl = ko.observable<string>("");
