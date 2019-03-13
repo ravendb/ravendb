@@ -471,6 +471,7 @@ namespace Raven.Server.Documents.Queries
             try
             {
                 Query.SelectFunctionBody.Program = ValidateScript(parameters);
+                HasLoadOrIncludeInProjection(Query.SelectFunctionBody.Program);
             }
             catch (Exception e)
             {
