@@ -306,10 +306,13 @@ namespace Raven.Server.Documents.Queries.Graph
             var indexNamesGatherer = new GraphQueryIndexNamesGatherer();
             indexNamesGatherer.Visit(RootQueryStep);
             var indexes = new List<Index>();
+            var indexNames = new HashSet<string>();
             var indexWaiters = new Dictionary<Index, (IndexQueryServerSide, AsyncWaitForIndexing)>();
             var queryTimeout = _query.WaitForNonStaleResultsTimeout ?? Index.DefaultWaitForNonStaleResultsTimeout;
             foreach (var indexName in indexNamesGatherer.Indexes)
             {
+                if(indexNames.Add(indexName) == false)
+                    continue;
                 var index = _database.IndexStore.GetIndex(indexName);
                 indexes.Add(index);
                 indexWaiters.Add(index, (_query, new AsyncWaitForIndexing(queryDuration, queryTimeout, index)));
@@ -321,6 +324,8 @@ namespace Raven.Server.Documents.Queries.Graph
                 //if needed, this will create auto-index                
                 var query = new IndexQueryServerSide(qqs.Query.ToString(), qqs.QueryParameters);
                 var index = await _dynamicQueryRunner.MatchIndex(query, true, null, _context, _database.DatabaseShutdown);
+                if (indexNames.Add(index.Name) == false)
+                    continue;
                 indexes.Add(index);
                 indexWaiters.Add(index, (_query, new AsyncWaitForIndexing(queryDuration, queryTimeout, index)));
             }
