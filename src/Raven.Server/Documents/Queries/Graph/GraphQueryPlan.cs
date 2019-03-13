@@ -306,7 +306,7 @@ namespace Raven.Server.Documents.Queries.Graph
             var indexNamesGatherer = new GraphQueryIndexNamesGatherer();
             indexNamesGatherer.Visit(RootQueryStep);
             var indexes = new List<Index>();
-            var indexNames = new HashSet<string>();
+            var indexNames = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
             var indexWaiters = new Dictionary<Index, (IndexQueryServerSide, AsyncWaitForIndexing)>();
             var queryTimeout = _query.WaitForNonStaleResultsTimeout ?? Index.DefaultWaitForNonStaleResultsTimeout;
             foreach (var indexName in indexNamesGatherer.Indexes)
