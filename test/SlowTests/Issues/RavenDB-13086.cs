@@ -15,6 +15,7 @@ namespace SlowTests.Issues
             {
                 Document mainDocument;
                 Document2 referencedDocument;
+
                 using (var session = store.OpenSession())
                 {
                     referencedDocument = new Document2
@@ -55,7 +56,37 @@ namespace SlowTests.Issues
                     }
                 }
 
+                string[] ProjectValuesRql1()
+                {
+                    var query = $"from Documents as doc where id() = '{mainDocument.Id}'" +
+@"select {
+    Data: doc.References.map(function(x){return load(x.Document2Id);}).map(function(x){return x.DataToUpdate;})
+}";
+                    return ProjectValuesRql(query);
+                }
+
+                string[] ProjectValuesRql2()
+                {
+                    var query = $"from Documents as doc where id() = '{mainDocument.Id}'" +
+                                @"load doc.References[].Document2Id as r[]
+select {
+    Data: r.map(function(x){return x.DataToUpdate;})
+}";
+                    return ProjectValuesRql(query);
+                }
+
+                string[] ProjectValuesRql(string query)
+                {
+                    using (var session = store.OpenSession())
+                    {
+                        var single = session.Advanced.RawQuery<Result>(query).Single();
+                        return single.Data;
+                    }
+                }
+
                 Assert.Contains(ProjectValuesLinq(), x => x == "original");
+                Assert.Contains(ProjectValuesRql1(), x => x == "original");
+                Assert.Contains(ProjectValuesRql2(), x => x == "original");
 
                 using (var session = store.OpenSession())
                 {
@@ -71,6 +102,8 @@ namespace SlowTests.Issues
                 }
 
                 Assert.Contains(ProjectValuesLinq(), x => x == "modified");
+                Assert.Contains(ProjectValuesRql1(), x => x == "modified");
+                Assert.Contains(ProjectValuesRql2(), x => x == "modified");
             }
         }
 
@@ -89,6 +122,11 @@ namespace SlowTests.Issues
         {
             public string Id;
             public string DataToUpdate;
+        }
+
+        private class Result
+        {
+            public string[] Data { get; set; }
         }
     }
 }
