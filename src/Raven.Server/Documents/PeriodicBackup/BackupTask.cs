@@ -125,6 +125,10 @@ namespace Raven.Server.Documents.PeriodicBackup
 
                 if (_isFullBackup == false)
                 {
+                    // if we come from old version the _previousBackupStatus won't have LastRaftIndex
+                    if (_previousBackupStatus.LastRaftIndex == null)
+                        _previousBackupStatus.LastRaftIndex = new LastRaftIndex();
+
                     // no-op if nothing has changed
                     var currentLastEtag = _database.ReadLastEtag();
                     if ((currentLastEtag == _previousBackupStatus.LastEtag) && (currentLastRaftIndex == _previousBackupStatus.LastRaftIndex.LastEtag))
