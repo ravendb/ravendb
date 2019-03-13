@@ -55,11 +55,7 @@ namespace Voron.Schema
         {
             Commit();
 
-            using (Read)
-            {
-                Read?.Commit();
-            }
-
+            Read?.Dispose();
             Read = null;
         }
     }

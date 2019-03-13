@@ -512,8 +512,12 @@ namespace Voron.Impl
 
             table.DeleteByPrimaryKey(Slices.BeforeAllKeys, x =>
             {
-                bool isOwned = table.IsOwned(x.Reader.Id);
-                return isOwned;
+                if (schema.Key.IsGlobal)
+                {
+                    return table.IsOwned(x.Reader.Id);
+                }
+
+                return true;
             });
 
             // index trees should be already removed but just in case let's go over them and ensure they're really deleted
