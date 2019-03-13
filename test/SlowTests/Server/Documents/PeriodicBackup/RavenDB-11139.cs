@@ -1513,7 +1513,6 @@ namespace SlowTests.Server.Documents.PeriodicBackup
             }
         }
 
-
         private static List<string> ConcatStringInList(List<string> list)
         {
             for (var i = 0; i < list.Count; i++)

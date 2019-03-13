@@ -84,6 +84,13 @@ namespace Voron.Data.Tables
 
             public int Count = -1;
             public bool IsGlobal;
+
+            /// <summary>
+            /// This is relevant only for migration purposes and should never be set for non migration code.
+            /// It is meant to allow deleting an item when we create a new index that isn't in the storage
+            /// </summary>
+            public bool Dangerous_IgnoreForDeletes;
+
             public Slice Name;
 
             public ByteStringContext.ExternalScope GetSlice(ByteStringContext context, ref TableValueReader value,
@@ -244,6 +251,14 @@ namespace Voron.Data.Tables
             public int StartIndex = -1;
             public bool IsGlobal;
             public Slice Name;
+
+
+            /// <summary>
+            /// This is relevant only for migration purposes and should never be set for non migration code.
+            /// It is meant to allow deleting an item when we create a new index that isn't in the storage
+            /// </summary>
+            public bool Dangerous_IgnoreForDeletes;
+
 
             public long GetValue(ref TableValueReader value)
             {

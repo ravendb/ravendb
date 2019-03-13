@@ -157,11 +157,10 @@ namespace Raven.Client.Documents.Smuggler
             options.OperateOnTypes |= DatabaseItemType.Tombstones;
             options.OperateOnTypes |= DatabaseItemType.CompareExchangeTombstones;
 
-            // we import the indexes from the last file only, 
-            // as the previous files can hold indexes and identities which were deleted and shouldn't be imported
+            // we import the indexes and Subscriptions from the last file only,
             var oldOperateOnTypes = options.OperateOnTypes;
-            options.OperateOnTypes = options.OperateOnTypes &
-                                     ~(DatabaseItemType.Indexes);
+            options.OperateOnTypes &= ~DatabaseItemType.Indexes;
+            options.OperateOnTypes &= ~DatabaseItemType.Subscriptions;
             return oldOperateOnTypes;
         }
 

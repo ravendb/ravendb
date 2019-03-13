@@ -262,7 +262,6 @@ namespace Raven.Server.ServerWide
                             {
                                 Apply(context, command, index, leader, serverStore);
                             }
-                            SetIndexForBackup(context, cmd, index, type);
                         }
                         if (hasRemoveCommands)
                         {
@@ -270,8 +269,8 @@ namespace Raven.Server.ServerWide
                             {
                                 Apply(context, command, index, leader, serverStore);
                             }
-                            SetIndexForBackup(context, cmd, index, type);
                         }
+                        SetIndexForBackup(context, cmd, index, type);
                         break;
                     //The reason we have a separate case for removing node from database is because we must 
                     //actually delete the database before we notify about changes to the record otherwise we 
