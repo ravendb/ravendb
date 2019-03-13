@@ -196,12 +196,15 @@ namespace FastTests.Graph
                         .With("F1", session.Query<Friend>())
                         .With("F2", session.Query<Friend>())
                         .WithEdges("L1", "Friends", "where FriendsSince >= \'2018-03-29T11:54:49.0095205Z\' select FriendId")
+                        .WaitForNonStaleResults()
                         .OrderByDescending(x => x.F1.Age)
                         .Select(x => x.F1)
                         .ToList();
-                    Assert.Equal(res.Count, 2);
+                    Assert.Equal(res.Count, 4);
                     Assert.Equal(res[0].Name, "F4");
-                    Assert.Equal(res[1].Name, "F2");
+                    Assert.Equal(res[1].Name, "F4");
+                    Assert.Equal(res[2].Name, "F1");
+                    Assert.Equal(res[3].Name, "F2");
                 }
             }
         }
