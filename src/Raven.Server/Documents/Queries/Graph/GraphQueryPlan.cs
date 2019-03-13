@@ -17,11 +17,11 @@ namespace Raven.Server.Documents.Queries.Graph
     public class GraphQueryPlan
     {
         public IGraphQueryStep RootQueryStep;
-        private IndexQueryServerSide _query;
-        private DocumentsOperationContext _context;
-        private long? _resultEtag;
-        private OperationCancelToken _token;
-        private DocumentDatabase _database;
+        private readonly IndexQueryServerSide _query;
+        private readonly DocumentsOperationContext _context;
+        private readonly long? _resultEtag;
+        private readonly OperationCancelToken _token;
+        private readonly DocumentDatabase _database;
         public bool IsStale { get; set; }
         public long ResultEtag { get; set; }
         public GraphQuery GraphQuery => _query.Metadata.Query.GraphQuery;
@@ -43,7 +43,7 @@ namespace Raven.Server.Documents.Queries.Graph
         }
 
         public void BuildQueryPlan()
-        {            
+        {
             new GraphQuerySyntaxValidatorVisitor(GraphQuery).Visit(_query.Metadata.Query); //this will throw if the syntax will be bad
             RootQueryStep = BuildQueryPlanForExpression(_query.Metadata.Query.GraphQuery.MatchClause);
             ClearUniqueQueriesFromIdenticalQueries();
@@ -92,7 +92,7 @@ namespace Raven.Server.Documents.Queries.Graph
         {
             bool negated = false;
             var rightExpr = be.Right;
-            if(be.Right is NegatedExpression n)
+            if (be.Right is NegatedExpression n)
             {
                 negated = true;
                 rightExpr = n.Expression;
@@ -103,18 +103,18 @@ namespace Raven.Server.Documents.Queries.Graph
             switch (be.Operator)
             {
                 case OperatorType.And:
-                    if(negated)
+                    if (negated)
                         return new IntersectionQueryStep<Except>(left, right, _token)
                         {
                             CollectIntermediateResults = CollectIntermediateResults
                         };
-                    return new IntersectionQueryStep<Intersection>(left, right, _token, returnEmptyIfRightEmpty:true)
+                    return new IntersectionQueryStep<Intersection>(left, right, _token, returnEmptyIfRightEmpty: true)
                     {
                         CollectIntermediateResults = CollectIntermediateResults
                     };
 
-               case OperatorType.Or:
-                    return new IntersectionQueryStep<Union>(left, right, _token, returnEmptyIfLeftEmpty:false)
+                case OperatorType.Or:
+                    return new IntersectionQueryStep<Union>(left, right, _token, returnEmptyIfLeftEmpty: false)
                     {
                         CollectIntermediateResults = CollectIntermediateResults
                     };
@@ -127,8 +127,8 @@ namespace Raven.Server.Documents.Queries.Graph
         private IGraphQueryStep BuildQueryPlanForPattern(PatternMatchElementExpression patternExpression, int start)
         {
             var prev = BuildQueryPlanForMatchNode(patternExpression.Path[start]);
-            
-            for (int i = start + 1; i < patternExpression.Path.Length; i+=2)
+
+            for (int i = start + 1; i < patternExpression.Path.Length; i += 2)
             {
                 if (patternExpression.Path[i].Recursive == null)
                 {
@@ -187,13 +187,13 @@ namespace Raven.Server.Documents.Queries.Graph
             var recursiveStep = new RecursionQueryStep(left, steps, recursive, recursive.GetOptions(_query.Metadata, _query.QueryParameters), _token)
             {
                 CollectIntermediateResults = CollectIntermediateResults
-            };            
+            };
 
-            if(index + 1 < patternExpression.Path.Length)
+            if (index + 1 < patternExpression.Path.Length)
             {
                 if (patternExpression.Path[index + 1].Recursive.HasValue)
                 {
-                    throw new InvalidQueryException("Two adjacent 'recursive' queries are not allowed",GraphQuery.QueryText);
+                    throw new InvalidQueryException("Two adjacent 'recursive' queries are not allowed", GraphQuery.QueryText);
                 }
 
                 if (patternExpression.Path[index + 1].IsEdge)
@@ -214,7 +214,7 @@ namespace Raven.Server.Documents.Queries.Graph
         }
 
         private IGraphQueryStep BuildQueryPlanForMatchNode(MatchPath node)
-        {            
+        {
             var alias = node.Alias;
             if (GraphQuery.WithDocumentQueries.TryGetValue(alias, out var query) == false)
             {
@@ -235,7 +235,7 @@ namespace Raven.Server.Documents.Queries.Graph
             }
             else
             {
-                IdenticalQueriesCount.Add(key, new Reference<int>() { Value = 1});
+                IdenticalQueriesCount.Add(key, new Reference<int>() { Value = 1 });
             }
 
             return qqs;
@@ -261,7 +261,7 @@ namespace Raven.Server.Documents.Queries.Graph
         {
             var queryStepsGatherer = new QueryQueryStepGatherer();
             queryStepsGatherer.Visit(RootQueryStep);
-            
+
             if (_context.Transaction == null || _context.Transaction.Disposed)
                 _context.OpenReadTransaction();
             try
@@ -311,7 +311,7 @@ namespace Raven.Server.Documents.Queries.Graph
             var queryTimeout = _query.WaitForNonStaleResultsTimeout ?? Index.DefaultWaitForNonStaleResultsTimeout;
             foreach (var indexName in indexNamesGatherer.Indexes)
             {
-                if(indexNames.Add(indexName) == false)
+                if (indexNames.Add(indexName) == false)
                     continue;
                 var index = _database.IndexStore.GetIndex(indexName);
                 indexes.Add(index);
@@ -370,7 +370,7 @@ namespace Raven.Server.Documents.Queries.Graph
                     //if any index timedout we are stale
                     indexTimedout |= indexAwaiter.TimeoutExceeded;
 
-                    if (Index.WillResultBeAcceptable(true, query, indexWaiters[index].Waiter) == false)                        
+                    if (Index.WillResultBeAcceptable(true, query, indexWaiters[index].Waiter) == false)
                     {
                         _context.CloseTransaction();
                         await indexAwaiter.WaitForIndexingAsync(frozenAwaiters[index]).ConfigureAwait(false);
