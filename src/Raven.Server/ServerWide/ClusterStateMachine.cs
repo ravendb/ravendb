@@ -1386,7 +1386,8 @@ namespace Raven.Server.ServerWide
 
             if (ClusterCommandsVersionManager.CurrentClusterMinimalVersion >= ClusterCommandsVersionManager.Base42CommandsVersion)
                 return baseVersion
-                       || slice.Content.Match(CompareExchangeTombstone.Content) || slice.Content.Match(CertificatesSlice.Content);
+                       || slice.Content.Match(CompareExchangeTombstones.Content)
+                       || slice.Content.Match(CertificatesSlice.Content);
 
             return baseVersion;
         }
