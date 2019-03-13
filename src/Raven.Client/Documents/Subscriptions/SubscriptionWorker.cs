@@ -157,31 +157,6 @@ namespace Raven.Client.Documents.Subscriptions
 
         private async Task<Stream> ConnectToServer(CancellationToken token)
         {
-            async Task<TcpConnectionInfo> LegacyTryGetTcpInfo(RequestExecutor requestExecutor1, JsonOperationContext context, ServerNode node = null)
-            {
-                var tcpCommand = new GetTcpInfoCommand("Subscription/" + _dbName, _dbName);
-                try
-                {
-                    if(node != null)
-                    {
-                        await requestExecutor1.ExecuteAsync(node, null, context, tcpCommand, shouldRetry: false, sessionInfo: null, token: token)
-                        .ConfigureAwait(false);
-                    }
-                    else
-                    {
-                        await requestExecutor1.ExecuteAsync(tcpCommand, context, sessionInfo: null, token: token)
-                            .ConfigureAwait(false);
-                    }                    
-                }
-                catch (Exception _)
-                {
-                    _redirectNode = null;
-                    throw;
-                }
-
-                return tcpCommand.Result;
-            }
-
             var command = new GetTcpInfoForRemoteTaskCommand("Subscription/" + _dbName, _dbName, _options?.SubscriptionName, verifyDatabase:true);
 
             var requestExecutor = _store.GetRequestExecutor(_dbName);
@@ -199,7 +174,7 @@ namespace Raven.Client.Documents.Subscriptions
                     }
                     catch (ClientVersionMismatchException)
                     {
-                        tcpInfo = await LegacyTryGetTcpInfo(requestExecutor, context, _redirectNode).ConfigureAwait(false);
+                        tcpInfo = await LegacyTryGetTcpInfo(requestExecutor, context, _redirectNode, token).ConfigureAwait(false);
                     }
                     catch (Exception)
                     {
@@ -218,7 +193,7 @@ namespace Raven.Client.Documents.Subscriptions
                     }
                     catch (ClientVersionMismatchException)
                     {
-                        tcpInfo = await LegacyTryGetTcpInfo(requestExecutor, context).ConfigureAwait(false);
+                        tcpInfo = await LegacyTryGetTcpInfo(requestExecutor, context, token).ConfigureAwait(false);
                     }
                 }
 
@@ -260,6 +235,39 @@ namespace Raven.Client.Documents.Subscriptions
 
                 return _stream;
             }
+        }
+
+        async Task<TcpConnectionInfo> LegacyTryGetTcpInfo(RequestExecutor requestExecutor, JsonOperationContext context, CancellationToken token)
+        {
+            var tcpCommand = new GetTcpInfoCommand("Subscription/" + _dbName, _dbName);
+            try
+            {
+                await requestExecutor.ExecuteAsync(tcpCommand, context, sessionInfo: null, token: token)
+                    .ConfigureAwait(false);
+            }
+            catch (Exception _)
+            {
+                _redirectNode = null;
+                throw;
+            }
+
+            return tcpCommand.Result;
+        }
+        async Task<TcpConnectionInfo> LegacyTryGetTcpInfo(RequestExecutor requestExecutor, JsonOperationContext context, ServerNode node, CancellationToken token)
+        {
+            var tcpCommand = new GetTcpInfoCommand("Subscription/" + _dbName, _dbName);
+            try
+            {                
+                await requestExecutor.ExecuteAsync(node, null, context, tcpCommand, shouldRetry: false, sessionInfo: null, token: token)
+                    .ConfigureAwait(false);                
+            }
+            catch (Exception _)
+            {
+                _redirectNode = null;
+                throw;
+            }
+
+            return tcpCommand.Result;
         }
 
         private int ReadServerResponseAndGetVersion(JsonOperationContext context, BlittableJsonTextWriter writer, Stream stream, string url)

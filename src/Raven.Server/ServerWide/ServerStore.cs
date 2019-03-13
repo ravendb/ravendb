@@ -2430,7 +2430,7 @@ namespace Raven.Server.ServerWide
                 array.Add(url);
             }
 
-            res[nameof(TcpConnectionInfo.ServerUrls)] = array;
+            res[nameof(TcpConnectionInfo.Urls)] = array;
            
             return res;
         }
