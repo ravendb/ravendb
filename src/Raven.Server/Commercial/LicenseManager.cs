@@ -1139,6 +1139,15 @@ namespace Raven.Server.Commercial
                 throw GenerateLicenseLimit(LimitType.Cores, message);
             }
 
+            if (_serverStore.Configuration.Monitoring.Snmp.Enabled &&
+                newLicenseStatus.HasSnmpMonitoring == false)
+            {
+                const string message = "SNMP Monitoring is currently enabled. " + 
+                                       "The provided license cannot be activated as it doesn't contain this feature. " + 
+                                       "In order to use this license please disable SNMP Monitoring in the server store configuration.";
+                throw GenerateLicenseLimit(LimitType.Snmp, message);
+            }
+
             var encryptedDatabasesCount = 0;
             var externalReplicationCount = 0;
             var delayedExternalReplicationCount = 0;
