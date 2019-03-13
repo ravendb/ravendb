@@ -1205,33 +1205,28 @@ namespace Voron.Data.BTrees
                     {
                         if ((State.Flags & TreeFlags.FixedSizeTrees) == TreeFlags.FixedSizeTrees)
                         {
-                            try
-                            {
-                                var valueReader = GetValueReaderFromHeader(node);
-                                var valueSize = ((FixedSizeTreeHeader.Embedded*)valueReader.Base)->ValueSize;
+                            var valueReader = GetValueReaderFromHeader(node);
 
-                                Slice fixedSizeTreeName;
-                                using (p.GetNodeKey(_llt, i, out fixedSizeTreeName))
+                            if (FixedSizeTree.IsFixedSizeTreeHeader(valueReader.Base, valueReader.Length) == false)
+                                continue;
+
+                            var valueSize = ((FixedSizeTreeHeader.Embedded*)valueReader.Base)->ValueSize;
+
+                            using (p.GetNodeKey(_llt, i, out Slice fixedSizeTreeName))
+                            {
+                                var fixedSizeTree = new FixedSizeTree(_llt, this, fixedSizeTreeName, valueSize);
+
+                                var pages = fixedSizeTree.AllPages();
+                                results.AddRange(pages);
+
+                                if ((State.Flags & TreeFlags.Streams) == TreeFlags.Streams)
                                 {
-                                    var fixedSizeTree = new FixedSizeTree(_llt, this, fixedSizeTreeName, valueSize);
+                                    Debug.Assert(fixedSizeTree.ValueSize == ChunkDetails.SizeOf);
 
-                                    var pages = fixedSizeTree.AllPages();
-                                    results.AddRange(pages);
+                                    var streamPages = GetStreamPages(fixedSizeTree, GetStreamInfo(fixedSizeTree.Name, writable: false));
 
-                                    if ((State.Flags & TreeFlags.Streams) == TreeFlags.Streams)
-                                    {
-                                        Debug.Assert(fixedSizeTree.ValueSize == ChunkDetails.SizeOf);
-
-                                        var streamPages = GetStreamPages(fixedSizeTree, GetStreamInfo(fixedSizeTree.Name, writable: false));
-
-                                        results.AddRange(streamPages);
-                                    }
+                                    results.AddRange(streamPages);
                                 }
-                            }
-                            catch (InvalidFixedSizeTree)
-                            {
-                                if (_state.RootObjectType != RootObjectType.Table) // table might have mixed values
-                                    throw;
                             }
                         }
                     }
