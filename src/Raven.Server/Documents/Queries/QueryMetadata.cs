@@ -906,8 +906,10 @@ namespace Raven.Server.Documents.Queries
                 var methodName = me.Name.Value;
                 if (Enum.TryParse(methodName, ignoreCase: true, result: out AggregationOperation aggregation) == false)
                 {
-                    if (Query.DeclaredFunctions != null && Query.DeclaredFunctions.TryGetValue(methodName, out _))
+                    if (Query.DeclaredFunctions != null && Query.DeclaredFunctions.TryGetValue(methodName, out var tuple))
                     {
+                        HasLoadOrIncludeInProjection(tuple.Program);
+
                         if (HasFacet)
                             ThrowFacetQueryMustContainsOnlyFacetInSelect(me, parameters);
 
@@ -1041,8 +1043,18 @@ namespace Raven.Server.Documents.Queries
 
                 return SelectField.CreateGroupByAggregation(fieldName, alias, aggregation);
             }
+
             ThrowUnhandledExpressionTypeInSelect(expression.Type.ToString(), QueryText, parameters);
             return null; // never hit
+        }
+
+        private void HasLoadOrIncludeInProjection(Esprima.Ast.Program ast)
+        {
+            if (HasIncludeOrLoad)
+                return;
+
+            var loadVisitor = new EsprimaHasLoadOrIncludeVisitor(this);
+            loadVisitor.Visit(ast);
         }
 
         private SuggestionField CreateSuggest(MethodExpression expression, string alias, BlittableJsonReaderObject parameters)
