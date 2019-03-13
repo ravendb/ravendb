@@ -313,7 +313,7 @@ namespace Raven.Server.Documents.Queries
             {
                 if (callExpression.Callee is Identifier identifier)
                 {
-                    if (identifier.Name == "load" || identifier.Name == "include")
+                    if (identifier.Name == "load" || identifier.Name == "include" || identifier.Name == "loadPath")
                     {
                         HasIncludeOrLoad = true;
                     }
