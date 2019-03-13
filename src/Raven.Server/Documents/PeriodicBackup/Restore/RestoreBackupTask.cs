@@ -4,7 +4,6 @@ using System.Diagnostics;
 using System.IO;
 using System.IO.Compression;
 using System.Linq;
-using System.Threading;
 using System.Threading.Tasks;
 using Raven.Client;
 using Raven.Client.Documents.Indexes;
@@ -29,7 +28,6 @@ using Raven.Server.Web.System;
 using Sparrow.Json;
 using Sparrow.Logging;
 using Sparrow.Platform;
-using Voron;
 using Voron.Impl.Backup;
 using Voron.Util.Settings;
 using DatabaseSmuggler = Raven.Client.Documents.Smuggler.DatabaseSmuggler;
@@ -189,11 +187,11 @@ namespace Raven.Server.Documents.PeriodicBackup.Restore
 
                         using (database.DocumentsStorage.ContextPool.AllocateOperationContext(out DocumentsOperationContext context))
                         {
-                            SmugglerRestore(_restoreConfiguration.BackupLocation, database, context, databaseRecord, onProgress, result);
-                            RestoreFromSmugglerFile(onProgress, database, firstFile, context, snapshotRestore);
-
                             if (snapshotRestore)
                             {
+                                RestoreFromSmugglerFile(onProgress, database, firstFile, context);
+                                SmugglerRestore(_restoreConfiguration.BackupLocation, database, context, databaseRecord, onProgress, result);
+
                                 result.SnapshotRestore.Processed = true;
 
                                 var summary = database.GetDatabaseSummary();
@@ -209,6 +207,10 @@ namespace Raven.Server.Documents.PeriodicBackup.Restore
 
                                 result.AddInfo($"Successfully restored {result.SnapshotRestore.ReadCount} files during snapshot restore, took: {sw.ElapsedMilliseconds:#,#;;0}ms");
                                 onProgress.Invoke(result.Progress);
+                            }
+                            else
+                            {
+                                SmugglerRestore(_restoreConfiguration.BackupLocation, database, context, databaseRecord, onProgress, result);
                             }
 
                             result.DatabaseRecord.Processed = true;
@@ -426,7 +428,6 @@ namespace Raven.Server.Documents.PeriodicBackup.Restore
             var options = new DatabaseSmugglerOptionsServerSide
             {
                 AuthorizationStatus = AuthorizationStatus.DatabaseAdmin,
-                OperateOnTypes = ~DatabaseItemType.Subscriptions,
                 SkipRevisionCreation = true,
                 KeepOriginalChangeVector = true
             };
@@ -444,7 +445,7 @@ namespace Raven.Server.Documents.PeriodicBackup.Restore
                 onProgress.Invoke(result.Progress);
 
                 var filePath = Path.Combine(backupDirectory, _filesToRestore[i]);
-                ImportSingleBackupFile(database, onProgress, result, filePath, context, destination, options,
+                ImportSingleBackupFile(database, onProgress, result, filePath, context, destination, options, isLastFile: false,
                     onDatabaseRecordAction: smugglerDatabaseRecord =>
                     {
                         // need to enable revisions before import
@@ -459,7 +460,7 @@ namespace Raven.Server.Documents.PeriodicBackup.Restore
 
             onProgress.Invoke(result.Progress);
 
-            ImportSingleBackupFile(database, onProgress, result, lastFilePath, context, destination, options,
+            ImportSingleBackupFile(database, onProgress, result, lastFilePath, context, destination, options, isLastFile: true,
                 onIndexAction: indexAndType =>
                 {
                     if (_restoreConfiguration.SkipIndexes)
@@ -515,7 +516,7 @@ namespace Raven.Server.Documents.PeriodicBackup.Restore
         private void ImportSingleBackupFile(DocumentDatabase database,
             Action<IOperationProgress> onProgress, RestoreResult restoreResult,
             string filePath, DocumentsOperationContext context,
-            DatabaseDestination destination, DatabaseSmugglerOptionsServerSide options,
+            DatabaseDestination destination, DatabaseSmugglerOptionsServerSide options, bool isLastFile,
             Action<IndexDefinitionAndType> onIndexAction = null,
             Action<DatabaseRecord> onDatabaseRecordAction = null)
         {
@@ -530,49 +531,49 @@ namespace Raven.Server.Documents.PeriodicBackup.Restore
                     OnIndexAction = onIndexAction,
                     OnDatabaseRecordAction = onDatabaseRecordAction
                 };
-                smuggler.Execute(ensureStepsProcessed: false);
+                smuggler.Execute(ensureStepsProcessed: false, isLastFile);
             }
         }
 
-        private void RestoreFromSmugglerFile(Action<IOperationProgress> onProgress, DocumentDatabase database, string smugglerFile, DocumentsOperationContext context, bool snapshotRestore)
+        /// <summary>
+        /// Restore CompareExchange, Identities and Subscriptions from smuggler file when restoring snapshot.
+        /// </summary>
+        /// <param name="onProgress"></param>
+        /// <param name="database"></param>
+        /// <param name="smugglerFile"></param>
+        /// <param name="context"></param>
+        private void RestoreFromSmugglerFile(Action<IOperationProgress> onProgress, DocumentDatabase database, string smugglerFile, DocumentsOperationContext context)
         {
             var destination = new DatabaseDestination(database);
 
             var smugglerOptions = new DatabaseSmugglerOptionsServerSide
             {
                 AuthorizationStatus = AuthorizationStatus.DatabaseAdmin,
-                OperateOnTypes = snapshotRestore ? DatabaseItemType.CompareExchange | DatabaseItemType.Identities | DatabaseItemType.Subscriptions : DatabaseItemType.Subscriptions,
+                OperateOnTypes = DatabaseItemType.CompareExchange | DatabaseItemType.Identities | DatabaseItemType.Subscriptions,
                 SkipRevisionCreation = true,
                 KeepOriginalChangeVector = true
             };
             var lastPath = Path.Combine(_restoreConfiguration.BackupLocation, smugglerFile);
 
-            if (snapshotRestore)
+            using (var zip = ZipFile.Open(lastPath, ZipArchiveMode.Read, System.Text.Encoding.UTF8))
             {
-                using (var zip = ZipFile.Open(lastPath, ZipArchiveMode.Read, System.Text.Encoding.UTF8))
+                foreach (var entry in zip.Entries)
                 {
-                    foreach (var entry in zip.Entries)
+                    if (entry.Name == RestoreSettings.SmugglerValuesFileName)
                     {
-                        if (entry.Name == RestoreSettings.SmugglerValuesFileName)
+                        using (var input = entry.Open())
+                        using (var inputStream = GetSnapshotInputStream(input, database.Name))
+                        using (var uncompressed = new GZipStream(inputStream, CompressionMode.Decompress))
                         {
-                            using (var input = entry.Open())
-                            using (var inputStream = GetSnapshotInputStream(input, database.Name))
-                            using (var uncompressed = new GZipStream(inputStream, CompressionMode.Decompress))
-                            {
-                                var source = new StreamSource(uncompressed, context, database);
-                                var smuggler = new Smuggler.Documents.DatabaseSmuggler(database, source, destination,
-                                    database.Time, smugglerOptions, onProgress: onProgress, token: _operationCancelToken.Token);
+                            var source = new StreamSource(uncompressed, context, database);
+                            var smuggler = new Smuggler.Documents.DatabaseSmuggler(database, source, destination,
+                                database.Time, smugglerOptions, onProgress: onProgress, token: _operationCancelToken.Token);
 
-                                smuggler.Execute();
-                            }
-                            break;
+                            smuggler.Execute();
                         }
+                        break;
                     }
                 }
-            }
-            else
-            {
-                ImportSingleBackupFile(database, onProgress, null, lastPath, context, destination, smugglerOptions);
             }
         }
 

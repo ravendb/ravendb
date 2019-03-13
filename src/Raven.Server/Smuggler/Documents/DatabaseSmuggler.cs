@@ -66,7 +66,7 @@ namespace Raven.Server.Smuggler.Documents
             _onProgress = onProgress ?? (progress => { });
         }
 
-        public SmugglerResult Execute(bool ensureStepsProcessed = true)
+        public SmugglerResult Execute(bool ensureStepsProcessed = true, bool isLastFile = false)
         {
             var result = _result ?? new SmugglerResult();
 
@@ -74,6 +74,8 @@ namespace Raven.Server.Smuggler.Documents
             using (_source.Initialize(_options, result, out long buildVersion))
             using (_destination.Initialize(_options, result, buildVersion))
             {
+                ModifyV41OperateOnTypes(buildVersion, isLastFile);
+
                 var buildType = BuildVersion.Type(buildVersion);
                 var currentType = _source.GetNextType();
                 while (currentType != DatabaseItemType.None)
@@ -89,6 +91,27 @@ namespace Raven.Server.Smuggler.Documents
                 }
 
                 return result;
+            }
+        }
+
+        private void ModifyV41OperateOnTypes(long buildVersion, bool isLastFile)
+        {
+            if ((buildVersion < 42000 && buildVersion >= 40000) || buildVersion == 41 || buildVersion == 40)
+            {
+                if (isLastFile)
+                {
+                    // restore CompareExchange and Identities only from last file
+                    _options.OperateOnTypes |= DatabaseItemType.CompareExchange;
+                    _options.OperateOnTypes |= DatabaseItemType.Identities;
+
+                    // there is no CompareExchangeTombstones in versions prior to 4.2
+                    _options.OperateOnTypes &= ~DatabaseItemType.CompareExchangeTombstones;
+                }
+                else
+                {
+                    _options.OperateOnTypes &= ~DatabaseItemType.CompareExchange;
+                    _options.OperateOnTypes &= ~DatabaseItemType.CompareExchangeTombstones;
+                }
             }
         }
 
