@@ -37,6 +37,10 @@ namespace Raven.Client.Http
 {
     public class RequestExecutor : IDisposable
     {
+        // https://aspnetmonsters.com/2016/08/2016-08-27-httpclientwrong/
+
+        internal static readonly TimeSpan GlobalHttpClientTimeout = TimeSpan.FromHours(12);
+
         private static readonly ConcurrentDictionary<string, Lazy<HttpClient>> GlobalHttpClientWithCompression = new ConcurrentDictionary<string, Lazy<HttpClient>>();
         private static readonly ConcurrentDictionary<string, Lazy<HttpClient>> GlobalHttpClientWithoutCompression = new ConcurrentDictionary<string, Lazy<HttpClient>>();
 
@@ -108,7 +112,13 @@ namespace Raven.Client.Http
         public TimeSpan? DefaultTimeout
         {
             get => _defaultTimeout;
-            set => _defaultTimeout = value;
+            set
+            {
+                if (value.HasValue && value.Value > GlobalHttpClientTimeout)
+                    throw new InvalidOperationException($"Maximum request timeout is set to '{GlobalHttpClientTimeout}' but was '{value}'.");
+
+                _defaultTimeout = value;
+            }
         }
 
         public event EventHandler<(long RaftCommandIndex, ClientConfiguration Configuration)> ClientConfigurationChanged;
@@ -690,6 +700,9 @@ namespace Raven.Client.Http
                     var timeout = command.Timeout ?? _defaultTimeout;
                     if (timeout.HasValue)
                     {
+                        if (timeout > GlobalHttpClientTimeout)
+                            ThrowTimeoutTooLarge(timeout);
+
                         using (var cts = CancellationTokenSource.CreateLinkedTokenSource(token, CancellationToken.None))
                         {
                             cts.CancelAfter(timeout.Value);
@@ -988,6 +1001,11 @@ namespace Raven.Client.Http
             }
             // we can reach here if the number of failed task equal to the number
             // of the nodes, in which case we have nothing to do
+        }
+
+        private static void ThrowTimeoutTooLarge(TimeSpan? timeout)
+        {
+            throw new InvalidOperationException($"Maximum request timeout is set to '{GlobalHttpClientTimeout}' but was '{timeout}'.");
         }
 
         private HttpCache.ReleaseCacheItem GetFromCache<TResult>(JsonOperationContext context, RavenCommand<TResult> command, bool useCache, string url, out string cachedChangeVector, out BlittableJsonReaderObject cachedValue)
@@ -1349,7 +1367,10 @@ namespace Raven.Client.Http
                 useCompression: Conventions.UseCompression,
                 hasExplicitlySetCompressionUsage: Conventions.HasExplicitlySetCompressionUsage);
 
-            return new HttpClient(httpMessageHandler);
+            return new HttpClient(httpMessageHandler)
+            {
+                Timeout = GlobalHttpClientTimeout
+            };
         }
 
         private static void ValidateClientKeyUsages(X509Certificate2 certificate)
