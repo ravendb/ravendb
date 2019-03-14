@@ -28,9 +28,9 @@ namespace Tryouts
             for (int i = 0; i < 1000; i++)
             {
                 Console.WriteLine(i);
-                using (var test = new RavenDB_11440())
+                using (var test = new ClusterTransactionTests())
                 {
-                    await test.CanGetLogsConfigurationAndChangeMode();
+                    await test.CanCreateClusterTransactionRequest();
                 }
             }
         }

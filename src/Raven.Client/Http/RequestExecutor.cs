@@ -639,6 +639,11 @@ namespace Raven.Client.Http
             SessionInfo sessionInfo = null,
             CancellationToken token = default)
         {
+            command.NumberOfTries++;
+
+            if (command.NumberOfTries > 20)
+                throw new InvalidOperationException($"Command '{command.GetType()}' exceeded number of retries. Stack: {Environment.StackTrace}");
+
             var request = CreateRequest(context, chosenNode, command, out string url);
             var noCaching = sessionInfo?.NoCaching ?? false;
 

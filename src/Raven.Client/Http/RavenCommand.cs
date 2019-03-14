@@ -31,6 +31,8 @@ namespace Raven.Client.Http
 
     public abstract class RavenCommand<TResult>
     {
+        internal int NumberOfTries;
+
         public CancellationToken CancellationToken = CancellationToken.None;
         public Dictionary<ServerNode, Exception> FailedNodes;
 
