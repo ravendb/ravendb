@@ -15,6 +15,7 @@ using Raven.Client.Documents.Session;
 using Raven.Client.Documents.Smuggler;
 using Raven.Client.Exceptions;
 using Raven.Client.ServerWide;
+using Raven.Server;
 using Raven.Server.Config;
 using Raven.Server.Documents;
 using Raven.Server.Documents.Replication;
@@ -27,6 +28,19 @@ namespace SlowTests.Cluster
 {
     public class ClusterTransactionTests : ReplicationTestBase
     {
+        protected override RavenServer GetNewServer(IDictionary<string, string> customSettings = null, bool deletePrevious = true, bool runInMemory = true, string partialPath = null,
+            string customConfigPath = null)
+        {
+            if (customSettings == null)
+                customSettings = new Dictionary<string, string>();
+
+            customSettings[RavenConfiguration.GetKey(x => x.Cluster.OperationTimeout)] = "60";
+            customSettings[RavenConfiguration.GetKey(x => x.Cluster.StabilizationTime)] = "10";
+            customSettings[RavenConfiguration.GetKey(x => x.Cluster.TcpConnectionTimeout)] = "30000";
+
+            return base.GetNewServer(customSettings, deletePrevious, runInMemory, partialPath, customConfigPath);
+        }
+
         [Fact]
         public async Task CanCreateClusterTransactionRequest()
         {
