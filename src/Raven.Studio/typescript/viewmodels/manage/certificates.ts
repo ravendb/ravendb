@@ -385,7 +385,7 @@ class certificates extends viewModelBase {
                 this.serverCertificateThumbprint(certificatesInfo.LoadedServerCert);
                 
                 secondaryCertificates.forEach(cert => {
-                    const thumbprint = cert.CollectionPrimaryKey.split("/")[1];
+                    const thumbprint = cert.CollectionPrimaryKey;
                     const primaryCert = mergedCertificates.find(x => x.Thumbprint === thumbprint);
                     primaryCert.Thumbprints.push(cert.Thumbprint);
                 });
