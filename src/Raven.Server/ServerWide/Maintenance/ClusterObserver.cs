@@ -835,14 +835,16 @@ namespace Raven.Server.ServerWide.Maintenance
                 return (false, null);
             }
 
-            var timeDiff = mentorCurrClusterStats.LastSuccessfulUpdateDateTime - mentorPrevClusterStats.LastSuccessfulUpdateDateTime;
+            var timeDiff = mentorCurrClusterStats.LastSuccessfulUpdateDateTime - mentorPrevClusterStats.LastSuccessfulUpdateDateTime > 3 * _supervisorSamplePeriod;
 
-            if (lastSentEtag < mentorsEtag || timeDiff > 3 * _supervisorSamplePeriod)
+            if (lastSentEtag < mentorsEtag || timeDiff)
             {
                 var msg = $"The database '{dbName}' on {promotable} not ready to be promoted, because the mentor hasn't sent all of the documents yet." + Environment.NewLine +
                           $"Last sent Etag: {lastSentEtag:#,#;;0}" + Environment.NewLine +
                           $"Mentor's Etag: {mentorsEtag:#,#;;0}";
-                LogMessage(msg);
+
+                if (timeDiff)
+                    LogMessage(msg);
 
                 if (msg.Equals(topology.DemotionReasons[promotable]) == false)
                 {
