@@ -53,8 +53,8 @@ namespace Raven.Server.ServerWide.Commands
 
         public static unsafe void GetKeyAndPrefixIndexSlices(
             ByteStringContext allocator, string db, string key, long index,
-            out (ByteString Buffer, ByteStringContext<ByteStringMemoryCache>.InternalScope Scope) finalKey,
-            out (ByteString Buffer, ByteStringContext<ByteStringMemoryCache>.InternalScope Scope) finalIndex)
+            out (ByteString Buffer, ByteStringContext.InternalScope Scope) finalKey,
+            out (ByteString Buffer, ByteStringContext.InternalScope Scope) finalIndex)
         {
             var reservedSpace = Encoding.UTF8.GetMaxByteCount(db.Length + key.Length) + 1;  // length of ActualKey 'db/key'
             var keyScope = allocator.Allocate(reservedSpace, out ByteString keyBuffer);
@@ -81,7 +81,7 @@ namespace Raven.Server.ServerWide.Commands
             }
         }
 
-        public static unsafe ByteStringContext<ByteStringMemoryCache>.InternalScope GetPrefixIndexSlices(
+        public static unsafe ByteStringContext.InternalScope GetPrefixIndexSlices(
            ByteStringContext allocator, string db, long index,
             out ByteString finalIndex)
         {

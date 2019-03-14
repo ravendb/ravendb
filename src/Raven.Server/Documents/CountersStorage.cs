@@ -41,8 +41,7 @@ namespace Raven.Server.Documents
         public const string DbIds = "@dbIds";
         public const string Values = "@vals";
 
-        private readonly List<ByteStringContext<ByteStringMemoryCache>.InternalScope> _counterModificationMemoryScopes =
-            new List<ByteStringContext<ByteStringMemoryCache>.InternalScope>();
+        private readonly List<ByteStringContext.InternalScope> _counterModificationMemoryScopes = new List<ByteStringContext.InternalScope>();
 
         private ObjectPool<Dictionary<LazyStringValue, PutCountersData>> _dictionariesPool 
             = new ObjectPool<Dictionary<LazyStringValue, PutCountersData>>(() => new Dictionary<LazyStringValue, PutCountersData>());

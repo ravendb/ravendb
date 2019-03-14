@@ -452,7 +452,7 @@ namespace Voron.Impl.Scratch
             ByteStringContext byteStringContext;
             try
             {
-                byteStringContext = new ByteStringContext(SharedMultipleUseFlag.None);
+                byteStringContext = new ByteStringContext();
             }
             catch (Exception e) when (e is OutOfMemoryException || e is EarlyOutOfMemoryException)
             {

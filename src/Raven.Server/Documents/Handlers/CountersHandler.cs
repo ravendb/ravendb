@@ -431,7 +431,7 @@ namespace Raven.Server.Documents.Handlers
                 lastCv = null;
                 var dbIds = new Dictionary<string, int>();
                 var counters = new DynamicJsonValue(); 
-                var counterModificationScopes = new List<ByteStringContext<ByteStringMemoryCache>.InternalScope>();
+                var counterModificationScopes = new List<ByteStringContext.InternalScope>();
 
                 try
                 {

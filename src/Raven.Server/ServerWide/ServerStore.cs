@@ -1587,7 +1587,8 @@ namespace Raven.Server.ServerWide
         {
             if (_shutdownNotification.IsCancellationRequested || _disposed)
                 return;
-
+        
+            // TODO: Replace _dispose with the proper primitive
             lock (this)
             {
                 if (_disposed)
@@ -1612,7 +1613,6 @@ namespace Raven.Server.ServerWide
                         _env,
                         _clusterRequestExecutor,
                         ContextPool,
-                        ByteStringMemoryCache.Cleaner,
                     };
 
                     var exceptionAggregator = new ExceptionAggregator(Logger, $"Could not dispose {nameof(ServerStore)}.");

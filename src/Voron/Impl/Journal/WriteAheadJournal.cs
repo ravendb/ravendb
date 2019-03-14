@@ -636,7 +636,7 @@ namespace Voron.Impl.Journal
 
                     try
                     {
-                        byteStringContext = new ByteStringContext(SharedMultipleUseFlag.None);
+                        byteStringContext = new ByteStringContext();
                         ApplyPagesToDataFileFromScratch(pagesToWrite);
                     }
                     catch (Exception e) when (e is OutOfMemoryException || e is EarlyOutOfMemoryException)

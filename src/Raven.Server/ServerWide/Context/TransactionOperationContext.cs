@@ -41,7 +41,7 @@ namespace Raven.Server.ServerWide.Context
             base(initialSize, longLivedSize, lowMemoryFlag)
         {
             PersistentContext = new TransactionPersistentContext();
-            Allocator = new ByteStringContext(lowMemoryFlag);
+            Allocator = new ByteStringContext();
         }
 
         public TTransaction OpenReadTransaction()

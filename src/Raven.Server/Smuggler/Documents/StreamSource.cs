@@ -568,7 +568,7 @@ namespace Raven.Server.Smuggler.Documents
 
         private unsafe BlittableJsonReaderObject ConvertToBlob(BlittableJsonReaderObject values)
         {
-            var scopes = new List<ByteStringContext<ByteStringMemoryCache>.InternalScope>();
+            var scopes = new List<ByteStringContext.InternalScope>();
 
             try
             {

@@ -153,9 +153,10 @@ namespace Voron.Impl
             _freeSpaceHandling = previous._freeSpaceHandling;
             PersistentContext = previous.PersistentContext;
 
-            _allocator = new ByteStringContext(SharedMultipleUseFlag.None);
+            _allocator = new ByteStringContext();
             _disposeAllocator = true;
-            _allocator.AllocationFailed += MarkTransactionAsFailed;
+            // TODO: Implement allocation failed handler and general mechanism.
+            //_allocator.AllocationFailed += MarkTransactionAsFailed;
 
             Flags = TransactionFlags.ReadWrite;
 
@@ -230,9 +231,9 @@ namespace Voron.Impl
             _journal = env.Journal;
             _id = id;
             _freeSpaceHandling = freeSpaceHandling;
-            _allocator = context ?? new ByteStringContext(SharedMultipleUseFlag.None);
-
-            _allocator.AllocationFailed += MarkTransactionAsFailed;
+            _allocator = context ?? new ByteStringContext();
+            // TODO: Implement allocation failed handler and general mechanism.
+            //_allocator.AllocationFailed += MarkTransactionAsFailed;
 
             _disposeAllocator = context == null;
             _pagerStates = new HashSet<PagerState>(ReferenceEqualityComparer<PagerState>.Default);
@@ -747,7 +748,8 @@ namespace Voron.Impl
                 _root?.Dispose();
                 _freeSpaceTree?.Dispose();
 
-                _allocator.AllocationFailed -= MarkTransactionAsFailed;
+                // TODO: Implement allocation failed handler and general mechanism.
+                //_allocator.AllocationFailed -= MarkTransactionAsFailed;
                 if (_disposeAllocator)
                     _allocator.Dispose();
 

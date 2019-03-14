@@ -1487,7 +1487,7 @@ namespace Voron.Data.Fixed
             {
                 case null:
                     slice = new Slice();
-                    return new ByteStringContext<ByteStringMemoryCache>.ExternalScope();
+                    return new ByteStringContext.ExternalScope();
 
                 case RootObjectType.EmbeddedFixedSizeTree:
                     var ptr = _parent.DirectRead(_treeName);

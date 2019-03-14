@@ -106,7 +106,7 @@ namespace Micro.Benchmark.Benchmarks.LZ4
         public void Setup()
         {
             var generator = new Random(RandomSeed);
-            _allocator = new ByteStringContext(SharedMultipleUseFlag.None);
+            _allocator = new ByteStringContext();
             _buffers = new List<Tuple<ByteString, int>>();
 
             // Generate the precomputed sequences to be used when generating data.
