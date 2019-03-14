@@ -1568,7 +1568,8 @@ namespace Raven.Server.Documents
             foreach (var kvp in _collectionsCache)
             {
                 var collectionTable = context.Transaction.InnerTransaction.OpenTable(DocsSchema, kvp.Value.GetTableName(CollectionTableType.Documents));
-
+                //See RavenDB-13029
+                Debug.Assert(collectionTable != null);
                 yield return new CollectionStats
                 {
                     Name = kvp.Key,

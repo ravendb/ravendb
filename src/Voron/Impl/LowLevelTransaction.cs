@@ -838,9 +838,9 @@ namespace Voron.Impl
                 Environment.LastWorkTime = DateTime.UtcNow;
                 CommitStage2_WriteToJournal();
             }
-
-            BeforeCommitFinalization?.Invoke(this);
             CommitStage3_DisposeTransactionResources();
+            BeforeCommitFinalization?.Invoke(this);
+            
         }
 
         internal Task<bool> AsyncCommit;
