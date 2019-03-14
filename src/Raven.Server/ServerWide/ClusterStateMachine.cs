@@ -1073,20 +1073,20 @@ namespace Raven.Server.ServerWide
                         throw new RachisApplyException("Update database command must contain a DatabaseName property");
                     break;
                 default:
-                    throw new RachisApplyException("Update database command must contain a DatabaseName property");
+                    throw new RachisApplyException($"Not supported command type {type}");
             }
-                var dbKey = "db/" + databaseName;
-                var items = context.Transaction.InnerTransaction.OpenTable(ItemsSchema, Items);
-                using (Slice.From(context.Allocator, dbKey, out Slice valueName))
-                using (Slice.From(context.Allocator, dbKey.ToLowerInvariant(), out Slice valueNameLowered))
-                {
-                    var databaseRecordJson = ReadInternal(context, out long etag, valueNameLowered);
+            var dbKey = "db/" + databaseName;
+            var items = context.Transaction.InnerTransaction.OpenTable(ItemsSchema, Items);
+            using (Slice.From(context.Allocator, dbKey, out Slice valueName))
+            using (Slice.From(context.Allocator, dbKey.ToLowerInvariant(), out Slice valueNameLowered))
+            {
+                var databaseRecordJson = ReadInternal(context, out long etag, valueNameLowered);
 
-                    var databaseRecord = JsonDeserializationCluster.DatabaseRecord(databaseRecordJson);
+                var databaseRecord = JsonDeserializationCluster.DatabaseRecord(databaseRecordJson);
 
-                    UpdateEtagForBackup(databaseRecord, type, index);
-                    var updatedDatabaseBlittable = EntityToBlittable.ConvertCommandToBlittable(databaseRecord, context);
-                    UpdateValue(index, items, valueNameLowered, valueName, updatedDatabaseBlittable);
+                UpdateEtagForBackup(databaseRecord, type, index);
+                var updatedDatabaseBlittable = EntityToBlittable.ConvertCommandToBlittable(databaseRecord, context);
+                UpdateValue(index, items, valueNameLowered, valueName, updatedDatabaseBlittable);
             }
         }
 
