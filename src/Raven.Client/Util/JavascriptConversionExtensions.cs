@@ -1183,7 +1183,15 @@ namespace Raven.Client.Util
 
         public class TransparentIdentifierSupport : JavascriptConversionExtension
         {
-            public bool DoNotIgnore { get; set; }
+            private bool _doNotIgnore;
+            private int _minSuffixToNotIgnore;
+
+            private int ParseTransparentIdentifierSuffix(string name)
+            {
+                var substr = name.Substring(TransparentIdentifier.Length);
+                int.TryParse(substr, out var suffix);
+                return suffix;
+            }
 
             public override void ConvertToJavascript(JavascriptConversionContext context)
             {
@@ -1191,7 +1199,9 @@ namespace Raven.Client.Util
                     && lambdaExpression.Parameters.Count > 0
                     && lambdaExpression.Parameters[0].Name.StartsWith(TransparentIdentifier))
                 {
-                    DoNotIgnore = true;
+                    _doNotIgnore = true;
+
+                    _minSuffixToNotIgnore = ParseTransparentIdentifierSuffix(lambdaExpression.Parameters[0].Name);
 
                     context.PreventDefault();
 
@@ -1211,7 +1221,7 @@ namespace Raven.Client.Util
 
                 if (context.Node is ParameterExpression p &&
                     p.Name.StartsWith(TransparentIdentifier) &&
-                    DoNotIgnore)
+                    _doNotIgnore)
                 {
                     context.PreventDefault();
                     var writer = context.GetWriter();
@@ -1232,15 +1242,19 @@ namespace Raven.Client.Util
                     var writer = context.GetWriter();
                     using (writer.Operation(innerMember))
                     {
-                        if (DoNotIgnore)
+                        if (_doNotIgnore)
                         {
-                            context.Visitor.Visit(member.Expression);
-                            writer.Write(".");
+                            var suffix = ParseTransparentIdentifierSuffix(innerMember.Member.Name);
+                            if (suffix <= _minSuffixToNotIgnore)
+                            {
+                                context.Visitor.Visit(innerMember);
+                                writer.Write(".");
+                            }
                         }
 
                         var name = member.Member.Name;
 
-                        if (DoNotIgnore && name.StartsWith(TransparentIdentifier))
+                        if (_doNotIgnore && name.StartsWith(TransparentIdentifier))
                         {
                             name = name.Replace(TransparentIdentifier, DefaultAliasPrefix);
                         }
@@ -1263,11 +1277,15 @@ namespace Raven.Client.Util
                     {
                         var name = member.Member.Name;
 
-                        if (DoNotIgnore)
+                        if (_doNotIgnore)
                         {
-                            writer.Write(parameter.Name.Replace(TransparentIdentifier, DefaultAliasPrefix));
-                            writer.Write(".");
-                            name = name.Replace(TransparentIdentifier, DefaultAliasPrefix);
+                            var suffix = ParseTransparentIdentifierSuffix(parameter.Name);
+                            if (suffix <= _minSuffixToNotIgnore)
+                            {
+                                writer.Write(parameter.Name.Replace(TransparentIdentifier, DefaultAliasPrefix));
+                                writer.Write(".");
+                                name = name.Replace(TransparentIdentifier, DefaultAliasPrefix);
+                            }
                         }
 
                         if (ReservedWordsSupport.JsReservedWords.Contains(name))

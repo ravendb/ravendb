@@ -1300,28 +1300,11 @@ namespace Raven.Server
         {
             Task.Run(async () =>
             {
-                TcpClient tcpClient;
-                Logger tcpAuditLog = null;
-                try
-                {
-                    tcpClient = await listener.AcceptTcpClientAsync();
-                    tcpAuditLog = LoggingSource.AuditLog.IsInfoEnabled ? LoggingSource.AuditLog.GetLogger("TcpConnections", "Audit") : null;
-                }
-                catch (ObjectDisposedException)
-                {
-                    // shutting down
+                var tcpClient = await AcceptTcpClientAsync(listener);
+                if (tcpClient == null)
                     return;
-                }
-                catch (Exception e)
-                {
-                    if (_tcpLogger.IsInfoEnabled)
-                    {
-                        _tcpLogger.Info("Failed to accept new tcp connection", e);
-                    }
 
-                    return;
-                }
-
+                Logger tcpAuditLog = LoggingSource.AuditLog.IsInfoEnabled ? LoggingSource.AuditLog.GetLogger("TcpConnections", "Audit") : null;
                 ListenToNewTcpConnection(listener);
                 try
                 {
@@ -1506,6 +1489,83 @@ namespace Raven.Server
                 tcpAuditLog.Info(
                     $"Got connection from {tcpClient.Client.RemoteEndPoint} with certificate '{cert?.Subject} ({cert?.Thumbprint})'. Accepted for {header.Operation} on {header.DatabaseName}.");
             return header;
+        }
+
+
+        private async Task<TcpClient> AcceptTcpClientAsync(TcpListener listener)
+        {
+            var backoffSecondsDelay = 0;
+            while (true)
+            {
+                try
+                {
+                    return await listener.AcceptTcpClientAsync();
+                }
+                catch (ObjectDisposedException)
+                {
+                    // shutting down
+                    return null;
+                }
+                catch (Exception e)
+                {
+                    if (ServerStore.ServerShutdown.IsCancellationRequested)
+                        return null;
+
+                    if (backoffSecondsDelay == 0)
+                    {
+                        if (_tcpLogger.IsInfoEnabled)
+                        {
+                            _tcpLogger.Info($"Failed to accept new tcp connection, will retry now", e);
+                        }
+
+                        backoffSecondsDelay = 1;
+                        continue;
+                    }
+
+                    if (_tcpLogger.IsOperationsEnabled)
+                    {
+                        _tcpLogger.Operations($"Failed to accept new tcp connection again, will wait {backoffSecondsDelay} seconds before retrying", e);
+                    }
+
+                    try
+                    {
+                        await Task.Delay(TimeSpan.FromSeconds(backoffSecondsDelay), ServerStore.ServerShutdown);
+                    }
+                    catch (OperationCanceledException)
+                    {
+                        // shutting down
+                        return null;
+                    }
+
+                    if (listener.Server.Connected)
+                    {
+                        backoffSecondsDelay = Math.Min(backoffSecondsDelay * 2, 60);
+                        continue;
+                    }
+
+                    var msg = $"The socket on {listener.LocalEndpoint} is no longer connected.";
+
+                    if (_tcpLogger.IsOperationsEnabled)
+                    {
+                        _tcpLogger.Operations(msg, e);
+                    }
+
+                    var alert = AlertRaised.Create(
+                        null,
+                        msg,
+                        $"Unable to accept connections from TCP, because the listening socket on {listener.LocalEndpoint} was disconnected.{Environment.NewLine}" +
+                        $"Restarting the server might temporary fix the issue, but further investigation is required.",
+                        AlertType.TcpListenerError,
+                        NotificationSeverity.Error,
+                        key: msg,
+                        details: new ExceptionDetails(e)
+                    );
+
+                    ServerStore.NotificationCenter.Add(alert);
+
+                    return null;
+                }
+            }
         }
 
         private static void RespondToTcpConnection(Stream stream, JsonOperationContext context, string error, TcpConnectionStatus status, int version)
