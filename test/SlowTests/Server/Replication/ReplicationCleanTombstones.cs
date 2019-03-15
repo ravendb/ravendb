@@ -37,7 +37,7 @@ namespace SlowTests.Server.Replication
 
                 await storage1.TombstoneCleaner.ExecuteCleanup();
 
-                Assert.Equal(0, WaitUntilHasTombstones(store1, 0).Count);
+                Assert.Equal(0, WaitForValue(() => WaitUntilHasTombstones(store1, 0).Count, 0));
             }
         }
     }

@@ -115,7 +115,7 @@ namespace FastTests.Server.Replication
                 int count = 1)
         {
 
-            int timeout = 5000;
+            int timeout = 15000;
             if (Debugger.IsAttached)
                 timeout *= 100;
             List<string> tombstones;
