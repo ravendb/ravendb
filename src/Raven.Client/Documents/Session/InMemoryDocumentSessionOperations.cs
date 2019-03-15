@@ -939,10 +939,8 @@ more responsive application.
                 }
             }
 
-            if (changes == null)
-            {
-                DeletedEntities.Clear();
-            }
+            if (changes == null) 
+                result.OnSuccess.ClearDeletedEntities();
         }
 
         private void PrepareForEntitiesPuts(SaveChangesData result)
@@ -950,6 +948,9 @@ more responsive application.
             foreach (var entity in DocumentsByEntity)
             {
                 if (entity.Value.IgnoreChanges)
+                    continue;
+                
+                if (IsDeleted(entity.Value.Id))
                     continue;
 
                 var metadataUpdated = UpdateMetadataModifications(entity.Value);
@@ -1677,6 +1678,7 @@ more responsive application.
                 private readonly List<(DocumentInfo Info, BlittableJsonReaderObject Document)> _documentInfosToUpdate = new List<(DocumentInfo Info, BlittableJsonReaderObject Document)>();
 
                 private ClusterTransactionOperationsBase _clusterTransactionOperations;
+                private bool _clearDeletedEntities;
 
                 public ActionsToRunOnSuccess(InMemoryDocumentSessionOperations _session)
                 {
@@ -1721,10 +1723,18 @@ more responsive application.
                         info.Document = document;
                     }
 
+                    if (_clearDeletedEntities)
+                        _session.DeletedEntities.Clear();
+
                     _clusterTransactionOperations?.Clear();
 
                     _session.DeferredCommands.Clear();
                     _session.DeferredCommandsDictionary.Clear();
+                }
+
+                public void ClearDeletedEntities()
+                {
+                    _clearDeletedEntities = true;
                 }
             }
         }
