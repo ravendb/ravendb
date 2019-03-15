@@ -117,7 +117,7 @@ namespace Raven.Client.Documents.Subscriptions
             }
         }
 
-        public Task Run(Action<SubscriptionBatch<T>> processDocuments, CancellationToken ct = default(CancellationToken))
+        public Task Run(Action<SubscriptionBatch<T>> processDocuments, CancellationToken ct = default)
         {
             if (processDocuments == null)
                 throw new ArgumentNullException(nameof(processDocuments));
@@ -125,7 +125,7 @@ namespace Raven.Client.Documents.Subscriptions
             return Run(ct);
         }
 
-        public Task Run(Func<SubscriptionBatch<T>, Task> processDocuments, CancellationToken ct = default(CancellationToken))
+        public Task Run(Func<SubscriptionBatch<T>, Task> processDocuments, CancellationToken ct = default)
         {
             if (processDocuments == null)
                 throw new ArgumentNullException(nameof(processDocuments));
@@ -157,13 +157,13 @@ namespace Raven.Client.Documents.Subscriptions
 
         private async Task<Stream> ConnectToServer(CancellationToken token)
         {
-            var command = new GetTcpInfoForRemoteTaskCommand("Subscription/" + _dbName, _dbName, _options?.SubscriptionName, verifyDatabase:true);
+            var command = new GetTcpInfoForRemoteTaskCommand("Subscription/" + _dbName, _dbName, _options?.SubscriptionName, verifyDatabase: true);
 
             var requestExecutor = _store.GetRequestExecutor(_dbName);
 
-            TcpConnectionInfo tcpInfo;
             using (requestExecutor.ContextPool.AllocateOperationContext(out JsonOperationContext context))
             {
+                TcpConnectionInfo tcpInfo;
                 if (_redirectNode != null)
                 {
                     try
@@ -197,7 +197,7 @@ namespace Raven.Client.Documents.Subscriptions
                     }
                 }
 
-                string chosenUrl = null;
+                string chosenUrl;
                 (_tcpClient, chosenUrl) = await TcpUtils.ConnectAsyncWithPriority(tcpInfo, requestExecutor.DefaultTimeout).ConfigureAwait(false);
                 _tcpClient.NoDelay = true;
                 _tcpClient.SendBufferSize = 32 * 1024;
@@ -237,7 +237,7 @@ namespace Raven.Client.Documents.Subscriptions
             }
         }
 
-        async Task<TcpConnectionInfo> LegacyTryGetTcpInfo(RequestExecutor requestExecutor, JsonOperationContext context, CancellationToken token)
+        private async Task<TcpConnectionInfo> LegacyTryGetTcpInfo(RequestExecutor requestExecutor, JsonOperationContext context, CancellationToken token)
         {
             var tcpCommand = new GetTcpInfoCommand("Subscription/" + _dbName, _dbName);
             try
@@ -245,7 +245,7 @@ namespace Raven.Client.Documents.Subscriptions
                 await requestExecutor.ExecuteAsync(tcpCommand, context, sessionInfo: null, token: token)
                     .ConfigureAwait(false);
             }
-            catch (Exception _)
+            catch (Exception)
             {
                 _redirectNode = null;
                 throw;
@@ -253,15 +253,16 @@ namespace Raven.Client.Documents.Subscriptions
 
             return tcpCommand.Result;
         }
-        async Task<TcpConnectionInfo> LegacyTryGetTcpInfo(RequestExecutor requestExecutor, JsonOperationContext context, ServerNode node, CancellationToken token)
+
+        private async Task<TcpConnectionInfo> LegacyTryGetTcpInfo(RequestExecutor requestExecutor, JsonOperationContext context, ServerNode node, CancellationToken token)
         {
             var tcpCommand = new GetTcpInfoCommand("Subscription/" + _dbName, _dbName);
             try
-            {                
+            {
                 await requestExecutor.ExecuteAsync(node, null, context, tcpCommand, shouldRetry: false, sessionInfo: null, token: token)
-                    .ConfigureAwait(false);                
+                    .ConfigureAwait(false);
             }
-            catch (Exception _)
+            catch (Exception)
             {
                 _redirectNode = null;
                 throw;
@@ -373,7 +374,7 @@ namespace Raven.Client.Documents.Subscriptions
                                 connectionStatus.Status != SubscriptionConnectionServerMessage.ConnectionStatus.Accepted)
                                 AssertConnectionState(connectionStatus);
                         }
-                        LastConnectionFailure = null;
+                        _lastConnectionFailure = null;
                         if (_processingCts.IsCancellationRequested)
                             return;
 
@@ -623,18 +624,18 @@ namespace Raven.Client.Documents.Subscriptions
             }
         }
 
-        private DateTime? LastConnectionFailure;
+        private DateTime? _lastConnectionFailure;
         private TcpConnectionHeaderMessage.SupportedFeatures _supportedFeatures;
 
         private void AssertLastConnectionFailure()
         {
-            if (LastConnectionFailure == null)
+            if (_lastConnectionFailure == null)
             {
-                LastConnectionFailure = DateTime.Now;
+                _lastConnectionFailure = DateTime.Now;
                 return;
             }
 
-            if ((DateTime.Now - LastConnectionFailure) > _options.MaxErroneousPeriod)
+            if ((DateTime.Now - _lastConnectionFailure) > _options.MaxErroneousPeriod)
             {
                 throw new SubscriptionInvalidStateException(
                     $"Subscription connection was in invalid state for more than {_options.MaxErroneousPeriod} and therefore will be terminated");
@@ -662,7 +663,7 @@ namespace Raven.Client.Documents.Subscriptions
                                         new InvalidOperationException($"Could not redirect to {se.AppropriateNode}, because it was not found in local topology, even after retrying"));
 
                     return true;
-                case SubscriptionChangeVectorUpdateConcurrencyException ce:
+                case SubscriptionChangeVectorUpdateConcurrencyException _:
                     return true;
                 case SubscriptionInUseException _:
                 case SubscriptionDoesNotExistException _:
