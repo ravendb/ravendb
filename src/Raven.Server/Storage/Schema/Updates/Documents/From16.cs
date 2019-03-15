@@ -126,139 +126,140 @@ namespace Raven.Server.Storage.Schema.Updates.Documents
 
                 var countersTree = readTable.GetTree(LegacyCountersSchema.Key);
 
-                if (countersTree != null)
+                if (countersTree == null)
+                    return true;
+
+                var processedInCurrentTx = 0;
+
+                var toDeleteCounterEtagsByCollection = new Dictionary<CollectionName, List<long>>();
+                var toDeleteEtagsForCurrentDocumentId = new List<long>();
+
+                using (step.DocumentsStorage.ContextPool.AllocateOperationContext(out DocumentsOperationContext context))
                 {
-                    var processedInCurrentTx = 0;
-                    
-                    var toDeleteCounterEtagsByCollection = new Dictionary<CollectionName, List<long>>();
-                    var toDeleteEtagsForCurrentDocumentId = new List<long>();
+                    var commit = false;
 
-                    using (step.DocumentsStorage.ContextPool.AllocateOperationContext(out DocumentsOperationContext context))
+                    foreach (var item in GetCounters(readTable, context))
                     {
-                        var commit = false;
+                        var counterDetail = item.Counter;
 
-                        foreach (var item in GetCounters(readTable, context))
+                        if (currentDocId == counterDetail.DocumentId)
                         {
-                            var counterDetail = item.Counter;
-
-                            if (currentDocId == counterDetail.DocumentId)
+                            if (batch.Counters.TryGetValue(counterDetail.CounterName, out var list) == false)
                             {
-                                if (batch.Counters.TryGetValue(counterDetail.CounterName, out var list) == false)
-                                {
-                                    list = new List<CounterDetail>();
-                                    batch.Counters.Add(counterDetail.CounterName, list);
-                                }
-                                list.Add(counterDetail);
+                                list = new List<CounterDetail>();
+                                batch.Counters.Add(counterDetail.CounterName, list);
                             }
-                            else
+
+                            list.Add(counterDetail);
+                        }
+                        else
+                        {
+                            if (currentDocId != null)
                             {
-                                if (currentDocId != null)
+                                var docCollection = PutCounters(step, context, dbIds, batch.Counters, currentDocId);
+
+                                if (docCollection != null)
                                 {
-                                    var docCollection = PutCounters(step, context, dbIds, batch.Counters, currentDocId);
-
-                                    if (docCollection != null)
+                                    if (toDeleteCounterEtagsByCollection.TryGetValue(docCollection, out var toDeleteList) == false)
                                     {
-                                        if (toDeleteCounterEtagsByCollection.TryGetValue(docCollection, out var toDeleteList) == false)
-                                        {
-                                            toDeleteList = new List<long>();
-                                            toDeleteCounterEtagsByCollection.Add(docCollection, toDeleteList);
-                                        }
-
-                                        toDeleteList.AddRange(toDeleteEtagsForCurrentDocumentId);
-                                        toDeleteEtagsForCurrentDocumentId.Clear();
+                                        toDeleteList = new List<long>();
+                                        toDeleteCounterEtagsByCollection.Add(docCollection, toDeleteList);
                                     }
 
-                                    batch.Clear();
-
-                                    if (processedInCurrentTx >= NumberOfCountersToMigrateInSingleTransaction)
-                                    {
-                                        foreach (var toDeleteForCollection in toDeleteCounterEtagsByCollection)
-                                        {
-                                            var table = step.WriteTx.OpenTable(LegacyCountersSchema, toDeleteForCollection.Key.GetTableName(CollectionTableType.Counters));
-
-                                            DeleteMigratedLegacyCounters(table, toDeleteForCollection.Value);
-                                        }
-
-                                        toDeleteCounterEtagsByCollection.Clear();
-
-                                        commit = true;
-                                        break;
-                                    }
+                                    toDeleteList.AddRange(toDeleteEtagsForCurrentDocumentId);
+                                    toDeleteEtagsForCurrentDocumentId.Clear();
                                 }
 
                                 batch.Clear();
 
-                                currentDocId = counterDetail.DocumentId;
-
-                                batch.Counters.Add(counterDetail.CounterName, new List<CounterDetail>
+                                if (processedInCurrentTx >= NumberOfCountersToMigrateInSingleTransaction)
                                 {
-                                    counterDetail
-                                });
+                                    foreach (var toDeleteForCollection in toDeleteCounterEtagsByCollection)
+                                    {
+                                        var table = step.WriteTx.OpenTable(LegacyCountersSchema, toDeleteForCollection.Key.GetTableName(CollectionTableType.Counters));
+
+                                        DeleteMigratedLegacyCounters(table, toDeleteForCollection.Value);
+                                    }
+
+                                    toDeleteCounterEtagsByCollection.Clear();
+
+                                    commit = true;
+                                    break;
+                                }
                             }
 
-                            toDeleteEtagsForCurrentDocumentId.Add(item.Counter.Etag);
-
-                            using (var dbId = ExtractDbId(context, counterDetail.CounterKey))
-                            {
-                                dbIds.Add(dbId.ToString());
-                            }
-                            
-                            processedInCurrentTx++;
-                        }
-
-                        if (commit)
-                        {
-                            step.Commit();
-                            step.RenewTransactions();
-
-                            step.DocumentsStorage.CountersStorage = new CountersStorage(step.DocumentsStorage.DocumentDatabase, step.WriteTx);
-
-                            currentDocId = null;
-                            continue;
-                        }
-
-                        if (batch.Counters.Count > 0)
-                        {
-                            PutCounters(step, context, dbIds, batch.Counters, currentDocId);
                             batch.Clear();
-                        }
 
-                        if (toDeleteCounterEtagsByCollection.Count > 0)
-                        {
-                            foreach (var toDeleteForCollection in toDeleteCounterEtagsByCollection)
+                            currentDocId = counterDetail.DocumentId;
+
+                            batch.Counters.Add(counterDetail.CounterName, new List<CounterDetail>
                             {
-                                var table = step.WriteTx.OpenTable(LegacyCountersSchema, toDeleteForCollection.Key.GetTableName(CollectionTableType.Counters));
-
-                                DeleteMigratedLegacyCounters(table, toDeleteForCollection.Value);
-                            }
+                                counterDetail
+                            });
                         }
 
-                        done = true;
-                    }
+                        toDeleteEtagsForCurrentDocumentId.Add(item.Counter.Etag);
 
-                    // we must delete tables first before deleting any global index trees from the root that can be in use by tables
-                    foreach (var item in legacyCounterRootObjectTypes.Where(x => x.Value == RootObjectType.Table))
-                    {
-                        step.WriteTx.DeleteTable(item.Key);
-                    }
-                    
-                    // let's remove remaining counter trees from the root
-                    foreach (var item in legacyCounterRootObjectTypes.Where(x => x.Value != RootObjectType.Table))
-                    {
-                        if (step.WriteTx.LowLevelTransaction.RootObjects.Read(item.Key) == null)
-                            continue;
-
-                        switch (item.Value)
+                        using (var dbId = ExtractDbId(context, counterDetail.CounterKey))
                         {
-                            case RootObjectType.VariableSizeTree:
-                                step.WriteTx.DeleteTree(item.Key);
-                                break;
-                            case RootObjectType.FixedSizeTree:
-                                step.WriteTx.DeleteFixedTree(item.Key);
-                                break;
-                            default:
-                                throw new InvalidOperationException($"Encountered unexpected root object type '{item.Value}' for '{item.Key}'");
+                            dbIds.Add(dbId.ToString());
                         }
+
+                        processedInCurrentTx++;
+                    }
+
+                    if (commit)
+                    {
+                        step.Commit();
+                        step.RenewTransactions();
+
+                        step.DocumentsStorage.CountersStorage = new CountersStorage(step.DocumentsStorage.DocumentDatabase, step.WriteTx);
+
+                        currentDocId = null;
+                        continue;
+                    }
+
+                    if (batch.Counters.Count > 0)
+                    {
+                        PutCounters(step, context, dbIds, batch.Counters, currentDocId);
+                        batch.Clear();
+                    }
+
+                    if (toDeleteCounterEtagsByCollection.Count > 0)
+                    {
+                        foreach (var toDeleteForCollection in toDeleteCounterEtagsByCollection)
+                        {
+                            var table = step.WriteTx.OpenTable(LegacyCountersSchema, toDeleteForCollection.Key.GetTableName(CollectionTableType.Counters));
+
+                            DeleteMigratedLegacyCounters(table, toDeleteForCollection.Value);
+                        }
+                    }
+
+                    done = true;
+                }
+
+                // we must delete tables first before deleting any global index trees from the root that can be in use by tables
+                foreach (var item in legacyCounterRootObjectTypes.Where(x => x.Value == RootObjectType.Table))
+                {
+                    step.WriteTx.DeleteTable(item.Key);
+                }
+
+                // let's remove remaining counter trees from the root
+                foreach (var item in legacyCounterRootObjectTypes.Where(x => x.Value != RootObjectType.Table))
+                {
+                    if (step.WriteTx.LowLevelTransaction.RootObjects.Read(item.Key) == null)
+                        continue;
+
+                    switch (item.Value)
+                    {
+                        case RootObjectType.VariableSizeTree:
+                            step.WriteTx.DeleteTree(item.Key);
+                            break;
+                        case RootObjectType.FixedSizeTree:
+                            step.WriteTx.DeleteFixedTree(item.Key);
+                            break;
+                        default:
+                            throw new InvalidOperationException($"Encountered unexpected root object type '{item.Value}' for '{item.Key}'");
                     }
                 }
             }
