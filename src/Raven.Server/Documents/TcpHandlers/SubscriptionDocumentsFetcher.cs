@@ -156,8 +156,6 @@ namespace Raven.Server.Documents.TcpHandlers
                         if (exception != null)
                         {
                             yield return (item, exception);
-                            if (++size >= _maxBatchSize)
-                                yield break;
                         }
                         else
                         {
@@ -193,10 +191,10 @@ namespace Raven.Server.Documents.TcpHandlers
 
                                 yield return (projection, null);
                             }
-                            if (++size >= _maxBatchSize)
-                                yield break;
                         }
                     }
+                    if (++size >= _maxBatchSize)
+                        yield break;
                 }
             }
         }
