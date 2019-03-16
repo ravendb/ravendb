@@ -726,7 +726,7 @@ The recommended method is to use full text search (mark the field as Analyzed an
 
             _documentQuery.WhereStartsWith(
                 memberInfo.Path,
-                GetValueFromExpression(expression.Arguments[0], GetMemberType(memberInfo)));
+                GetValueFromExpression(expression.Arguments[0], GetMemberType(memberInfo)), _insideExact);
         }
 
         private void VisitEndsWith(MethodCallExpression expression)
@@ -735,7 +735,7 @@ The recommended method is to use full text search (mark the field as Analyzed an
 
             _documentQuery.WhereEndsWith(
                 memberInfo.Path,
-                GetValueFromExpression(expression.Arguments[0], GetMemberType(memberInfo)));
+                GetValueFromExpression(expression.Arguments[0], GetMemberType(memberInfo)), _insideExact);
         }
 
         private void VisitIsNullOrEmpty(MethodCallExpression expression, bool notEquals)
