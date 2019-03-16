@@ -168,7 +168,7 @@ namespace Raven.Client.Documents.Subscriptions
                 {
                     try
                     {
-                        await requestExecutor.ExecuteAsync(_redirectNode, null, context, command, shouldRetry: false, sessionInfo: null, token: token)
+                        await requestExecutor.ExecuteAsync(_redirectNode, null, context, command, shouldRetry: true, sessionInfo: null, token: token)
                             .ConfigureAwait(false);
                         tcpInfo = command.Result;
                     }
@@ -259,7 +259,7 @@ namespace Raven.Client.Documents.Subscriptions
             var tcpCommand = new GetTcpInfoCommand("Subscription/" + _dbName, _dbName);
             try
             {
-                await requestExecutor.ExecuteAsync(node, null, context, tcpCommand, shouldRetry: false, sessionInfo: null, token: token)
+                await requestExecutor.ExecuteAsync(node, null, context, tcpCommand, shouldRetry: true, sessionInfo: null, token: token)
                     .ConfigureAwait(false);
             }
             catch (Exception)
