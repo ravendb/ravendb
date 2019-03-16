@@ -111,6 +111,19 @@ namespace Raven.Client.Documents.BulkInsert
                 return message;
             }
 
+            internal override async Task<HttpResponseMessage> SendAsync(HttpClient client, HttpRequestMessage request, CancellationTokenSource cancellationTokenSource)
+            {
+                try
+                {
+                    return await base.SendAsync(client, request, cancellationTokenSource).ConfigureAwait(false);
+                }
+                catch (Exception e)
+                {
+                    _stream.ErrorOnRequestStart(e);
+                    throw;
+                }
+            }
+
             public override async Task<HttpResponseMessage> SendAsync(HttpClient client, HttpRequestMessage request, CancellationToken token)
             {
                 try

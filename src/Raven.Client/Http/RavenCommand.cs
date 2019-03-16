@@ -63,6 +63,14 @@ namespace Raven.Client.Http
             throw new InvalidOperationException($"'{GetType()}' command must override the SetResponse method which expects response with the following type: {ResponseType}.");
         }
 
+        internal virtual Task<HttpResponseMessage> SendAsync(HttpClient client, HttpRequestMessage request, CancellationTokenSource cancellationTokenSource)
+        {
+            if (request.Content != null)
+                request.Content = new IdleTimeoutHttpContent(request.Content, cancellationTokenSource);
+
+            return client.SendAsync(request, HttpCompletionOption.ResponseHeadersRead, cancellationTokenSource.Token);
+        }
+
         public virtual Task<HttpResponseMessage> SendAsync(HttpClient client, HttpRequestMessage request, CancellationToken token)
         {
             // We must use HttpCompletionOption.ResponseHeadersRead otherwise the client will buffer the response
@@ -163,7 +171,7 @@ namespace Raven.Client.Http
 
         public virtual void OnResponseFailure(HttpResponseMessage response)
         {
-            
+
         }
     }
 

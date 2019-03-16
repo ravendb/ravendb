@@ -39,6 +39,8 @@ namespace Raven.Client.Http
     {
         // https://aspnetmonsters.com/2016/08/2016-08-27-httpclientwrong/
 
+        internal static readonly TimeSpan DefaultHttpClientTimeout = TimeSpan.FromSeconds(100);
+
         internal static readonly TimeSpan GlobalHttpClientTimeout = TimeSpan.FromHours(12);
 
         private static readonly ConcurrentDictionary<string, Lazy<HttpClient>> GlobalHttpClientWithCompression = new ConcurrentDictionary<string, Lazy<HttpClient>>();
@@ -698,13 +700,13 @@ namespace Raven.Client.Http
                     }
                     Interlocked.Increment(ref NumberOfServerRequests);
                     var timeout = command.Timeout ?? _defaultTimeout;
-                    if (timeout.HasValue)
+                    using (var cts = CancellationTokenSource.CreateLinkedTokenSource(token, CancellationToken.None))
                     {
-                        if (timeout > GlobalHttpClientTimeout)
-                            ThrowTimeoutTooLarge(timeout);
-
-                        using (var cts = CancellationTokenSource.CreateLinkedTokenSource(token, CancellationToken.None))
+                        if (timeout.HasValue)
                         {
+                            if (timeout > GlobalHttpClientTimeout)
+                                ThrowTimeoutTooLarge(timeout);
+
                             cts.CancelAfter(timeout.Value);
                             try
                             {
@@ -743,7 +745,8 @@ namespace Raven.Client.Http
                                     if (sessionInfo != null)
                                         sessionInfo.AsyncCommandRunning = false;
 
-                                    if (await HandleServerDown(url, chosenNode, nodeIndex, context, command, request, response, timeoutException, sessionInfo, token).ConfigureAwait(false) == false)
+                                    if (await HandleServerDown(url, chosenNode, nodeIndex, context, command, request, response, timeoutException, sessionInfo, token)
+                                            .ConfigureAwait(false) == false)
                                         ThrowFailedToContactAllNodes(command, request);
 
                                     return;
@@ -752,21 +755,24 @@ namespace Raven.Client.Http
                                 throw;
                             }
                         }
-                    }
-                    else
-                    {
-                        var preferredTask = command.SendAsync(HttpClient, request, token);
-                        if (ShouldExecuteOnAll(chosenNode, command))
+                        else
                         {
-                            await ExecuteOnAllToFigureOutTheFastest(chosenNode, command, preferredTask, token).ConfigureAwait(false);
+                            cts.CancelAfter(DefaultHttpClientTimeout);
+
+                            var preferredTask = command.SendAsync(HttpClient, request, cts);
+                            if (ShouldExecuteOnAll(chosenNode, command))
+                            {
+                                await ExecuteOnAllToFigureOutTheFastest(chosenNode, command, preferredTask, token).ConfigureAwait(false);
+                            }
+
+                            response = await preferredTask.ConfigureAwait(false);
+
+                            if (TryGetServerVersion(response, out var serverVersion))
+                                LastServerVersion = serverVersion;
                         }
 
-                        response = await preferredTask.ConfigureAwait(false);
-
-                        if (TryGetServerVersion(response, out var serverVersion))
-                            LastServerVersion = serverVersion;
+                        sp.Stop();
                     }
-                    sp.Stop();
                 }
                 catch (HttpRequestException e) // server down, network down
                 {
