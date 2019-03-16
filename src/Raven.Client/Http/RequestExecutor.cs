@@ -641,7 +641,8 @@ namespace Raven.Client.Http
             SessionInfo sessionInfo = null,
             CancellationToken token = default)
         {
-            var request = CreateRequest(context, chosenNode, command, out string url);
+            using (var request = CreateRequest(context, chosenNode, command, out string url))
+            {
             var noCaching = sessionInfo?.NoCaching ?? false;
 
             using (var cachedItem = GetFromCache(context, command, !noCaching, url, out string cachedChangeVector, out BlittableJsonReaderObject cachedValue))
@@ -861,6 +862,7 @@ namespace Raven.Client.Http
                         await Task.WhenAll(tasks).ConfigureAwait(false);
                     }
                 }
+            }
             }
         }
 
