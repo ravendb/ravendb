@@ -643,226 +643,226 @@ namespace Raven.Client.Http
         {
             using (var request = CreateRequest(context, chosenNode, command, out string url))
             {
-            var noCaching = sessionInfo?.NoCaching ?? false;
+                var noCaching = sessionInfo?.NoCaching ?? false;
 
-            using (var cachedItem = GetFromCache(context, command, !noCaching, url, out string cachedChangeVector, out BlittableJsonReaderObject cachedValue))
-            {
-                if (cachedChangeVector != null)
+                using (var cachedItem = GetFromCache(context, command, !noCaching, url, out string cachedChangeVector, out BlittableJsonReaderObject cachedValue))
                 {
-                    var aggressiveCacheOptions = AggressiveCaching.Value;
-                    if (aggressiveCacheOptions != null &&
-                        cachedItem.Age < aggressiveCacheOptions.Duration &&
-                        cachedItem.MightHaveBeenModified == false &&
-                        command.CanCacheAggressively)
+                    if (cachedChangeVector != null)
                     {
-                        if ((cachedItem.Item.Flags & HttpCache.ItemFlags.NotFound) != HttpCache.ItemFlags.None)
+                        var aggressiveCacheOptions = AggressiveCaching.Value;
+                        if (aggressiveCacheOptions != null &&
+                            cachedItem.Age < aggressiveCacheOptions.Duration &&
+                            cachedItem.MightHaveBeenModified == false &&
+                            command.CanCacheAggressively)
                         {
-                            // if this is a cached delete, we only respect it if it _came_ from an aggressively cached
-                            // block, otherwise, we'll run the request again
-                            if ((cachedItem.Item.Flags & HttpCache.ItemFlags.AggressivelyCached) == HttpCache.ItemFlags.AggressivelyCached)
+                            if ((cachedItem.Item.Flags & HttpCache.ItemFlags.NotFound) != HttpCache.ItemFlags.None)
+                            {
+                                // if this is a cached delete, we only respect it if it _came_ from an aggressively cached
+                                // block, otherwise, we'll run the request again
+                                if ((cachedItem.Item.Flags & HttpCache.ItemFlags.AggressivelyCached) == HttpCache.ItemFlags.AggressivelyCached)
+                                {
+                                    command.SetResponse(context, cachedValue, fromCache: true);
+                                    return;
+                                }
+                            }
+                            else
                             {
                                 command.SetResponse(context, cachedValue, fromCache: true);
                                 return;
                             }
-                        }
-                        else
-                        {
-                            command.SetResponse(context, cachedValue, fromCache: true);
-                            return;
+
                         }
 
+                        request.Headers.TryAddWithoutValidation("If-None-Match", $"\"{cachedChangeVector}\"");
                     }
 
-                    request.Headers.TryAddWithoutValidation("If-None-Match", $"\"{cachedChangeVector}\"");
-                }
+                    if (sessionInfo?.AsyncCommandRunning ?? false)
+                        ThrowInvalidConcurrentSessionUsage(command.GetType().Name, sessionInfo);
 
-                if (sessionInfo?.AsyncCommandRunning ?? false)
-                    ThrowInvalidConcurrentSessionUsage(command.GetType().Name, sessionInfo);
+                    if (_disableClientConfigurationUpdates == false)
+                        request.Headers.TryAddWithoutValidation(Constants.Headers.ClientConfigurationEtag, $"\"{ClientConfigurationEtag.ToInvariantString()}\"");
 
-                if (_disableClientConfigurationUpdates == false)
-                    request.Headers.TryAddWithoutValidation(Constants.Headers.ClientConfigurationEtag, $"\"{ClientConfigurationEtag.ToInvariantString()}\"");
-
-                if (sessionInfo?.LastClusterTransactionIndex != null)
-                {
-                    request.Headers.TryAddWithoutValidation(Constants.Headers.LastKnownClusterTransactionIndex, sessionInfo.LastClusterTransactionIndex.ToString());
-                }
-
-                if (_disableTopologyUpdates == false)
-                    request.Headers.TryAddWithoutValidation(Constants.Headers.TopologyEtag, $"\"{TopologyEtag.ToInvariantString()}\"");
-
-                var sp = Stopwatch.StartNew();
-                HttpResponseMessage response = null;
-                var responseDispose = ResponseDisposeHandling.Automatic;
-                try
-                {
-                    if (sessionInfo != null)
+                    if (sessionInfo?.LastClusterTransactionIndex != null)
                     {
-                        sessionInfo.AsyncCommandRunning = true;
+                        request.Headers.TryAddWithoutValidation(Constants.Headers.LastKnownClusterTransactionIndex, sessionInfo.LastClusterTransactionIndex.ToString());
                     }
-                    Interlocked.Increment(ref NumberOfServerRequests);
-                    var timeout = command.Timeout ?? _defaultTimeout;
-                    using (var cts = CancellationTokenSource.CreateLinkedTokenSource(token, CancellationToken.None))
+
+                    if (_disableTopologyUpdates == false)
+                        request.Headers.TryAddWithoutValidation(Constants.Headers.TopologyEtag, $"\"{TopologyEtag.ToInvariantString()}\"");
+
+                    var sp = Stopwatch.StartNew();
+                    HttpResponseMessage response = null;
+                    var responseDispose = ResponseDisposeHandling.Automatic;
+                    try
                     {
-                        if (timeout.HasValue)
+                        if (sessionInfo != null)
                         {
-                            if (timeout > GlobalHttpClientTimeout)
-                                ThrowTimeoutTooLarge(timeout);
-
-                            cts.CancelAfter(timeout.Value);
-                            try
+                            sessionInfo.AsyncCommandRunning = true;
+                        }
+                        Interlocked.Increment(ref NumberOfServerRequests);
+                        var timeout = command.Timeout ?? _defaultTimeout;
+                        using (var cts = CancellationTokenSource.CreateLinkedTokenSource(token, CancellationToken.None))
+                        {
+                            if (timeout.HasValue)
                             {
-                                var preferredTask = command.SendAsync(HttpClient, request, cts.Token);
+                                if (timeout > GlobalHttpClientTimeout)
+                                    ThrowTimeoutTooLarge(timeout);
+
+                                cts.CancelAfter(timeout.Value);
+                                try
+                                {
+                                    var preferredTask = command.SendAsync(HttpClient, request, cts.Token);
+                                    if (ShouldExecuteOnAll(chosenNode, command))
+                                    {
+                                        await ExecuteOnAllToFigureOutTheFastest(chosenNode, command, preferredTask, cts.Token).ConfigureAwait(false);
+                                    }
+
+                                    response = await preferredTask.ConfigureAwait(false);
+
+                                    if (TryGetServerVersion(response, out var serverVersion))
+                                        LastServerVersion = serverVersion;
+
+                                    if (sessionInfo?.LastClusterTransactionIndex != null)
+                                    {
+                                        // if we reach here it means that sometime a cluster transaction has occurred against this database.
+                                        // Since the current executed command can be dependent on that, we have to wait for the cluster transaction.
+                                        // But we can't do that if the server is an old one.
+                                        if (serverVersion == null || string.Compare(serverVersion, "4.1", StringComparison.Ordinal) < 0)
+                                            throw new ClientVersionMismatchException(
+                                                $"The server on {chosenNode.Url} has an old version and can't perform the command '{command.GetType()}', " +
+                                                "since this command dependent on a cluster transaction which this node doesn't support");
+                                    }
+                                }
+                                catch (OperationCanceledException e)
+                                {
+                                    if (cts.IsCancellationRequested && token.IsCancellationRequested == false) // only when we timed out
+                                    {
+                                        var timeoutException = new TimeoutException($"The request for {request.RequestUri} failed with timeout after {timeout}", e);
+                                        if (shouldRetry == false)
+                                            throw timeoutException;
+
+                                        sp.Stop();
+
+                                        if (sessionInfo != null)
+                                            sessionInfo.AsyncCommandRunning = false;
+
+                                        if (await HandleServerDown(url, chosenNode, nodeIndex, context, command, request, response, timeoutException, sessionInfo, token)
+                                                .ConfigureAwait(false) == false)
+                                            ThrowFailedToContactAllNodes(command, request);
+
+                                        return;
+                                    }
+
+                                    throw;
+                                }
+                            }
+                            else
+                            {
+                                cts.CancelAfter(DefaultHttpClientTimeout);
+
+                                var preferredTask = command.SendAsync(HttpClient, request, cts);
                                 if (ShouldExecuteOnAll(chosenNode, command))
                                 {
-                                    await ExecuteOnAllToFigureOutTheFastest(chosenNode, command, preferredTask, cts.Token).ConfigureAwait(false);
+                                    await ExecuteOnAllToFigureOutTheFastest(chosenNode, command, preferredTask, token).ConfigureAwait(false);
                                 }
 
                                 response = await preferredTask.ConfigureAwait(false);
 
                                 if (TryGetServerVersion(response, out var serverVersion))
                                     LastServerVersion = serverVersion;
-
-                                if (sessionInfo?.LastClusterTransactionIndex != null)
-                                {
-                                    // if we reach here it means that sometime a cluster transaction has occurred against this database.
-                                    // Since the current executed command can be dependent on that, we have to wait for the cluster transaction.
-                                    // But we can't do that if the server is an old one.
-                                    if (serverVersion == null || string.Compare(serverVersion, "4.1", StringComparison.Ordinal) < 0)
-                                        throw new ClientVersionMismatchException(
-                                            $"The server on {chosenNode.Url} has an old version and can't perform the command '{command.GetType()}', " +
-                                            "since this command dependent on a cluster transaction which this node doesn't support");
-                                }
                             }
-                            catch (OperationCanceledException e)
-                            {
-                                if (cts.IsCancellationRequested && token.IsCancellationRequested == false) // only when we timed out
-                                {
-                                    var timeoutException = new TimeoutException($"The request for {request.RequestUri} failed with timeout after {timeout}", e);
-                                    if (shouldRetry == false)
-                                        throw timeoutException;
 
-                                    sp.Stop();
-
-                                    if (sessionInfo != null)
-                                        sessionInfo.AsyncCommandRunning = false;
-
-                                    if (await HandleServerDown(url, chosenNode, nodeIndex, context, command, request, response, timeoutException, sessionInfo, token)
-                                            .ConfigureAwait(false) == false)
-                                        ThrowFailedToContactAllNodes(command, request);
-
-                                    return;
-                                }
-
-                                throw;
-                            }
+                            sp.Stop();
                         }
-                        else
-                        {
-                            cts.CancelAfter(DefaultHttpClientTimeout);
-
-                            var preferredTask = command.SendAsync(HttpClient, request, cts);
-                            if (ShouldExecuteOnAll(chosenNode, command))
-                            {
-                                await ExecuteOnAllToFigureOutTheFastest(chosenNode, command, preferredTask, token).ConfigureAwait(false);
-                            }
-
-                            response = await preferredTask.ConfigureAwait(false);
-
-                            if (TryGetServerVersion(response, out var serverVersion))
-                                LastServerVersion = serverVersion;
-                        }
+                    }
+                    catch (HttpRequestException e) // server down, network down
+                    {
+                        if (shouldRetry == false)
+                            throw;
 
                         sp.Stop();
-                    }
-                }
-                catch (HttpRequestException e) // server down, network down
-                {
-                    if (shouldRetry == false)
-                        throw;
 
-                    sp.Stop();
-
-                    if (sessionInfo != null)
-                        sessionInfo.AsyncCommandRunning = false;
+                        if (sessionInfo != null)
+                            sessionInfo.AsyncCommandRunning = false;
 
 
-                    if (await HandleServerDown(url, chosenNode, nodeIndex, context, command, request, response, e, sessionInfo, token).ConfigureAwait(false) == false)
-                    {
-                        ThrowIfClientException(response, e);
-                        ThrowFailedToContactAllNodes(command, request);
-                    }
-
-                    return;
-                }
-                finally
-                {
-                    if (sessionInfo != null)
-                        sessionInfo.AsyncCommandRunning = false;
-                }
-
-                command.StatusCode = response.StatusCode;
-
-                var refreshTopology = response.GetBoolHeader(Constants.Headers.RefreshTopology) ?? false;
-                var refreshClientConfiguration = response.GetBoolHeader(Constants.Headers.RefreshClientConfiguration) ?? false;
-
-                try
-                {
-                    if (response.StatusCode == HttpStatusCode.NotModified)
-                    {
-                        cachedItem.NotModified();
-
-                        if (command.ResponseType == RavenCommandResponseType.Object)
-                            command.SetResponse(context, cachedValue, fromCache: true);
-
-                        return;
-                    }
-
-                    if (response.IsSuccessStatusCode == false)
-                    {
-                        if (await HandleUnsuccessfulResponse(chosenNode, nodeIndex, context, command, request, response, url, sessionInfo, shouldRetry, token).ConfigureAwait(false) == false)
+                        if (await HandleServerDown(url, chosenNode, nodeIndex, context, command, request, response, e, sessionInfo, token).ConfigureAwait(false) == false)
                         {
-                            if (response.Headers.TryGetValues("Database-Missing", out var databaseMissing))
-                            {
-                                var name = databaseMissing.FirstOrDefault();
-                                if (name != null)
-                                    DatabaseDoesNotExistException.Throw(name);
-                            }
-
+                            ThrowIfClientException(response, e);
                             ThrowFailedToContactAllNodes(command, request);
                         }
 
-                        return; // we either handled this already in the unsuccessful response or we are throwing
+                        return;
+                    }
+                    finally
+                    {
+                        if (sessionInfo != null)
+                            sessionInfo.AsyncCommandRunning = false;
                     }
 
-                    responseDispose = await command.ProcessResponse(context, Cache, response, url).ConfigureAwait(false);
-                    _lastReturnedResponse = DateTime.UtcNow;
-                }
-                finally
-                {
-                    if (responseDispose == ResponseDisposeHandling.Automatic)
-                    {
-                        response.Dispose();
-                    }
-                    if (refreshTopology || refreshClientConfiguration)
-                    {
-                        var tasks = new Task[2];
+                    command.StatusCode = response.StatusCode;
 
-                        tasks[0] = refreshTopology
-                            ? UpdateTopologyAsync(new ServerNode
+                    var refreshTopology = response.GetBoolHeader(Constants.Headers.RefreshTopology) ?? false;
+                    var refreshClientConfiguration = response.GetBoolHeader(Constants.Headers.RefreshClientConfiguration) ?? false;
+
+                    try
+                    {
+                        if (response.StatusCode == HttpStatusCode.NotModified)
+                        {
+                            cachedItem.NotModified();
+
+                            if (command.ResponseType == RavenCommandResponseType.Object)
+                                command.SetResponse(context, cachedValue, fromCache: true);
+
+                            return;
+                        }
+
+                        if (response.IsSuccessStatusCode == false)
+                        {
+                            if (await HandleUnsuccessfulResponse(chosenNode, nodeIndex, context, command, request, response, url, sessionInfo, shouldRetry, token).ConfigureAwait(false) == false)
                             {
-                                Url = chosenNode.Url,
-                                Database = _databaseName
-                            }, 0, debugTag: refreshTopology ? "refresh-topology-header" : refreshClientConfiguration ? "refresh-client-configuration-header" : null)
-                            : Task.CompletedTask;
+                                if (response.Headers.TryGetValues("Database-Missing", out var databaseMissing))
+                                {
+                                    var name = databaseMissing.FirstOrDefault();
+                                    if (name != null)
+                                        DatabaseDoesNotExistException.Throw(name);
+                                }
 
-                        tasks[1] = refreshClientConfiguration
-                            ? UpdateClientConfigurationAsync()
-                            : Task.CompletedTask;
+                                ThrowFailedToContactAllNodes(command, request);
+                            }
 
-                        await Task.WhenAll(tasks).ConfigureAwait(false);
+                            return; // we either handled this already in the unsuccessful response or we are throwing
+                        }
+
+                        responseDispose = await command.ProcessResponse(context, Cache, response, url).ConfigureAwait(false);
+                        _lastReturnedResponse = DateTime.UtcNow;
+                    }
+                    finally
+                    {
+                        if (responseDispose == ResponseDisposeHandling.Automatic)
+                        {
+                            response.Dispose();
+                        }
+                        if (refreshTopology || refreshClientConfiguration)
+                        {
+                            var tasks = new Task[2];
+
+                            tasks[0] = refreshTopology
+                                ? UpdateTopologyAsync(new ServerNode
+                                {
+                                    Url = chosenNode.Url,
+                                    Database = _databaseName
+                                }, 0, debugTag: refreshTopology ? "refresh-topology-header" : refreshClientConfiguration ? "refresh-client-configuration-header" : null)
+                                : Task.CompletedTask;
+
+                            tasks[1] = refreshClientConfiguration
+                                ? UpdateClientConfigurationAsync()
+                                : Task.CompletedTask;
+
+                            await Task.WhenAll(tasks).ConfigureAwait(false);
+                        }
                     }
                 }
-            }
             }
         }
 
