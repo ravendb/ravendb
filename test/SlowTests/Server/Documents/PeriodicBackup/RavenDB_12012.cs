@@ -110,7 +110,7 @@ namespace SlowTests.Server.Documents.PeriodicBackup
             Assert.Equal(OperationStatus.Completed, value);
         }
 
-        [Fact (Skip = "RavenDB-12349")]
+        [Fact]
         public async Task CreateFullAndIncrementalBackupWithCompareExchangeInTheMiddle()
         {
             var backupPath = NewDataPath(suffix: "BackupFolder");
@@ -144,6 +144,19 @@ namespace SlowTests.Server.Documents.PeriodicBackup
                 CompareExchangeResult<string> compareExchangeResult
                     = store.Operations.Send(
                         new PutCompareExchangeValueOperation<string>("users/1", "Mitzi", 0));
+
+                WaitForValue(() => compareExchangeResult.Successful, true);
+
+                config.IncrementalBackupFrequency = "* */2 * * *";
+                config.TaskId = result.TaskId;
+                result = await store.Maintenance.SendAsync(new UpdatePeriodicBackupOperation(config));
+                RunBackup(result.TaskId, documentDatabase, false, store);
+
+                compareExchangeResult
+                    = store.Operations.Send(
+                        new PutCompareExchangeValueOperation<string>("users/1", "Mitzi2", compareExchangeResult.Index));
+
+                WaitForValue(() => compareExchangeResult.Successful, true);
 
                 config.IncrementalBackupFrequency = "* */2 * * *";
                 config.TaskId = result.TaskId;
@@ -179,13 +192,13 @@ namespace SlowTests.Server.Documents.PeriodicBackup
                     CompareExchangeValue<string> readResult =
                         store2.Operations.Send(new GetCompareExchangeValueOperation<string>("users/1"));
 
-                    Assert.Equal("Mitzi", readResult.Value);
+                    Assert.Equal("Mitzi2", readResult.Value);
 
                 };
             }
         }
 
-        [Fact(Skip = "RavenDB-12350")]
+        [Fact]
         public async Task CreateFullAndIncrementalBackupWithIdentitiesInTheMiddle()
         {
             var backupPath = NewDataPath(suffix: "BackupFolder");
