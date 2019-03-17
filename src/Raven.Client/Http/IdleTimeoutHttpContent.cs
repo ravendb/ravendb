@@ -1,9 +1,9 @@
 ﻿using System;
-using System.Buffers;
 using System.Diagnostics;
 using System.IO;
 using System.Net;
 using System.Net.Http;
+using System.Runtime.CompilerServices;
 using System.Threading;
 using System.Threading.Tasks;
 
@@ -15,14 +15,11 @@ namespace Raven.Client.Http
 
         private readonly HttpContent _content;
         private readonly CancellationTokenSource _cts;
-        private readonly byte[] _buffer;
-        private const int BufferSize = 4096;
 
         public IdleTimeoutHttpContent(HttpContent content, CancellationTokenSource cts)
         {
             _content = content;
             _cts = cts;
-            _buffer = ArrayPool<byte>.Shared.Rent(BufferSize);
 
             if (_content?.Headers == null)
                 return;
@@ -31,28 +28,12 @@ namespace Raven.Client.Http
                 Headers.TryAddWithoutValidation(header.Key, header.Value);
         }
 
-        protected override async Task SerializeToStreamAsync(Stream stream, TransportContext context)
+        protected override Task SerializeToStreamAsync(Stream stream, TransportContext context)
         {
             if (_content == null)
-                return;
+                return Task.CompletedTask;
 
-            var sw = Stopwatch.StartNew();
-
-            var innerStream = await _content.ReadAsStreamAsync().ConfigureAwait(false);
-            while (true)
-            {
-                var read = innerStream.Read(_buffer, 0, BufferSize);
-                if (read == 0)
-                    break;
-
-                await stream.WriteAsync(_buffer, 0, read).ConfigureAwait(false);
-
-                if (sw.Elapsed > TimeoutThreshold)
-                {
-                    _cts.CancelAfter(RequestExecutor.DefaultHttpClientTimeout);
-                    sw.Restart();
-                }
-            }
+            return _content.CopyToAsync(new IdleTimeoutStream(stream, _cts), context);
         }
 
         protected override bool TryComputeLength(out long length)
@@ -63,11 +44,87 @@ namespace Raven.Client.Http
 
         protected override void Dispose(bool disposing)
         {
-            ArrayPool<byte>.Shared.Return(_buffer);
-
             _content.Dispose();
 
             base.Dispose(disposing);
+        }
+
+        internal class IdleTimeoutStream : Stream
+        {
+            private readonly Stream _stream;
+            private readonly CancellationTokenSource _cts;
+            private Stopwatch _sw;
+
+            public IdleTimeoutStream(Stream stream, CancellationTokenSource cts)
+            {
+                _stream = stream ?? throw new ArgumentNullException(nameof(stream));
+                _cts = cts ?? throw new ArgumentNullException(nameof(cts));
+            }
+
+            public override void Flush()
+            {
+                HandleTimeout();
+
+                _stream.Flush();
+            }
+
+            public override int Read(byte[] buffer, int offset, int count)
+            {
+                HandleTimeout();
+
+                return _stream.Read(buffer, offset, count);
+            }
+
+            public override long Seek(long offset, SeekOrigin origin)
+            {
+                return _stream.Seek(offset, origin);
+            }
+
+            public override void SetLength(long value)
+            {
+                _stream.SetLength(value);
+            }
+
+            public override void Write(byte[] buffer, int offset, int count)
+            {
+                HandleTimeout();
+
+                _stream.Write(buffer, offset, count);
+            }
+
+            protected override void Dispose(bool disposing)
+            {
+                _stream.Dispose();
+
+                base.Dispose(disposing);
+            }
+
+            public override bool CanRead => _stream.CanRead;
+            public override bool CanSeek => _stream.CanSeek;
+            public override bool CanWrite => _stream.CanWrite;
+            public override long Length => _stream.Length;
+
+            public override long Position
+            {
+                get => _stream.Position;
+                set => _stream.Position = value;
+            }
+
+            [MethodImpl(MethodImplOptions.AggressiveInlining)]
+            private void HandleTimeout()
+            {
+                if (_sw == null)
+                {
+                    _sw = Stopwatch.StartNew();
+                    return;
+                }
+
+                if (_sw.Elapsed <= TimeoutThreshold) 
+                    return;
+
+                _cts.CancelAfter(RequestExecutor.DefaultHttpClientTimeout);
+                _sw.Restart();
+            }
         }
     }
 }
