@@ -1337,6 +1337,40 @@ namespace Raven.Server.ServerWide
                 NotifyDatabaseAboutChanged(context, databaseName, index, type, DatabasesLandlord.ClusterDatabaseChangeType.RecordChanged);
             }
         }
+        private void UpdateDatabaseRecordEtagForBackup(TransactionOperationContext context, string type, BlittableJsonReaderObject cmd, long index, Leader leader, ServerStore serverStore)
+        {
+            string databaseName;
+            switch (type)
+            {
+                case nameof(AddOrUpdateCompareExchangeCommand):
+                case nameof(RemoveCompareExchangeCommand):
+                    if (cmd.TryGet(new StringSegment("Database"), out databaseName) == false || string.IsNullOrEmpty(databaseName))
+                        throw new RachisApplyException("Update database command must contain a DatabaseName property");
+                    break;
+                case nameof(IncrementClusterIdentityCommand):
+                case nameof(IncrementClusterIdentitiesBatchCommand):
+                case nameof(UpdateClusterIdentityCommand):
+                    if (cmd.TryGet(DatabaseName, out databaseName) == false || string.IsNullOrEmpty(databaseName))
+                        throw new RachisApplyException("Update database command must contain a DatabaseName property");
+                    break;
+                default:
+                    throw new RachisApplyException($"Not supported command type {type}");
+            }
+            var dbKey = "db/" + databaseName;
+            var items = context.Transaction.InnerTransaction.OpenTable(ItemsSchema, Items);
+            using (Slice.From(context.Allocator, dbKey, out Slice valueName))
+            using (Slice.From(context.Allocator, dbKey.ToLowerInvariant(), out Slice valueNameLowered))
+            {
+                var databaseRecordJson = ReadInternal(context, out long etag, valueNameLowered);
+
+                var databaseRecord = JsonDeserializationCluster.DatabaseRecord(databaseRecordJson);
+
+                UpdateEtagForBackup(databaseRecord, type, index);
+                var updatedDatabaseBlittable = EntityToBlittable.ConvertCommandToBlittable(databaseRecord, context);
+                UpdateValue(index, items, valueNameLowered, valueName, updatedDatabaseBlittable);
+            }
+        }
+
 
         private void UpdateEtagForBackup(DatabaseRecord databaseRecord, string type, long index)
         {
@@ -1368,6 +1402,11 @@ namespace Raven.Server.ServerWide
                 case nameof(EditRevisionsConfigurationCommand):
                 case nameof(EditExpirationCommand):
                 case nameof(EditDatabaseClientConfigurationCommand):
+                case nameof(AddOrUpdateCompareExchangeCommand):
+                case nameof(RemoveCompareExchangeCommand):
+                case nameof(IncrementClusterIdentityCommand):
+                case nameof(IncrementClusterIdentitiesBatchCommand):
+                case nameof(UpdateClusterIdentityCommand):
                     databaseRecord.EtagForBackup = index;
                     break;
             }
