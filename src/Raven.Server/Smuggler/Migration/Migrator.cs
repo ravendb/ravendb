@@ -274,7 +274,8 @@ namespace Raven.Server.Smuggler.Migration
                                 SkipServerCertificateValidation = _skipServerCertificateValidation,
                                 RemoveAnalyzers = databaseMigrationSettings.RemoveAnalyzers,
                                 ImportRavenFs = databaseMigrationSettings.ImportRavenFs,
-                                OperateOnTypes = databaseMigrationSettings.OperateOnTypes
+                                OperateOnTypes = databaseMigrationSettings.OperateOnTypes,
+                                OperateOnDatabaseRecordTypes = databaseMigrationSettings.OperateOnDatabaseRecordTypes
                             };
 
                             var parameters = new MigratorParameters

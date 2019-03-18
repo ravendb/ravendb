@@ -28,6 +28,8 @@ namespace Raven.Server.Smuggler.Migration
         public bool ImportRavenFs { get; set; }
 
         public DatabaseItemType OperateOnTypes { get; set; }
+
+        public DatabaseRecordItemType OperateOnDatabaseRecordTypes { get; set; }
     }
 
     public class MigratorParameters

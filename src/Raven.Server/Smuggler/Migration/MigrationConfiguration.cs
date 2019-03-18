@@ -36,6 +36,8 @@ namespace Raven.Server.Smuggler.Migration
 
         public DatabaseItemType OperateOnTypes { get; set; }
 
+        public DatabaseRecordItemType OperateOnDatabaseRecordTypes { get; set; }
+
         public bool RemoveAnalyzers { get; set; }
 
         public bool ImportRavenFs { get; set; }

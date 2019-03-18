@@ -16,6 +16,7 @@ using System.Net;
 using System.Net.Http;
 using System.Threading.Tasks;
 using System.Xml.Linq;
+using Microsoft.AspNetCore.Http.Features.Authentication;
 using Microsoft.AspNetCore.WebUtilities;
 using Microsoft.Net.Http.Headers;
 using Raven.Client.Documents.Conventions;
@@ -113,6 +114,13 @@ namespace Raven.Server.Smuggler.Documents.Handlers
 
                 if (string.IsNullOrWhiteSpace(options.EncryptionKey) == false)
                     ServerStore.LicenseManager.AssertCanCreateEncryptedDatabase();
+
+                var feature = HttpContext.Features.Get<IHttpAuthenticationFeature>() as RavenServer.AuthenticateConnection;
+
+                if (feature == null)
+                    options.AuthorizationStatus = AuthorizationStatus.DatabaseAdmin;
+                else
+                    options.AuthorizationStatus = feature.CanAccess(Database.Name, requireAdmin: true) ? AuthorizationStatus.DatabaseAdmin : AuthorizationStatus.ValidUser;
 
                 ApplyBackwardCompatibility(options);
 
