@@ -31,6 +31,9 @@ namespace Raven.Server.Web.Studio
 
                     foreach (var directory in Directory.GetDirectories(path))
                     {
+                        if (IsHiddenOrSystemDirectory(directory))
+                            continue;
+                        
                         folderPathOptions.List.Add(directory);
                     }
                 }
@@ -46,7 +49,8 @@ namespace Raven.Server.Web.Studio
                         foreach (var directory in Directory.GetDirectories(directoryPath))
                         {
                             var directoryName = Path.GetFileName(directory);
-                            if (directoryName.StartsWith(directoryPrefix, StringComparison.OrdinalIgnoreCase))
+                            if (directoryName.StartsWith(directoryPrefix, StringComparison.OrdinalIgnoreCase) &&
+                                IsHiddenOrSystemDirectory(directory) == false)
                                 folderPathOptions.List.Add(directory);
                         }
                     }
@@ -67,6 +71,12 @@ namespace Raven.Server.Web.Studio
             }
 
             return folderPathOptions;
+        }
+
+        private static bool IsHiddenOrSystemDirectory(string directory)
+        {
+            var dir = new DirectoryInfo(directory);
+            return dir.Attributes.HasFlag(FileAttributes.Hidden | FileAttributes.System);
         }
 
         private static List<string> GetAvailableDrives()
