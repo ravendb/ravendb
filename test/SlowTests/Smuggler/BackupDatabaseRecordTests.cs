@@ -924,13 +924,18 @@ namespace SlowTests.Smuggler
                     {
                         var periodicBackupRunner = (await GetDocumentDatabaseInstanceFor(store)).PeriodicBackupRunner;
                         var backups = periodicBackupRunner.PeriodicBackups;
-                        
+
                         Assert.Equal(2, backups.Count);
-                        Assert.Equal("Backup", backups.First().Configuration.Name);
-                        Assert.Equal(true, backups.First().Configuration.IncrementalBackupFrequency.Equals("0 */6 * * *"));
-                        Assert.Equal(true, backups.First().Configuration.FullBackupFrequency.Equals("0 */1 * * *"));
-                        Assert.Equal(BackupType.Backup, backups.First().Configuration.BackupType);
-                        Assert.Equal(false, backups.Any(x => x.Configuration.Disabled));
+                        Assert.Equal(true, backups.Any(x => x.Configuration.Name.Equals("Backup")));
+                        foreach (var backup in backups)
+                        {
+                            if (!backup.Configuration.Name.Equals("Backup"))
+                                continue;
+                            Assert.Equal(true, backup.Configuration.IncrementalBackupFrequency.Equals("0 */6 * * *"));
+                            Assert.Equal(true, backup.Configuration.FullBackupFrequency.Equals("0 */1 * * *"));
+                            Assert.Equal(BackupType.Backup, backup.Configuration.BackupType);
+                            Assert.Equal(false, backup.Configuration.Disabled);
+                        }
 
                         var record = await store.Maintenance.Server.SendAsync(new GetDatabaseRecordOperation(databaseName));
 
