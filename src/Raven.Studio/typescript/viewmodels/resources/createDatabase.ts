@@ -63,6 +63,7 @@ class createDatabase extends dialogViewModelBase {
     recentPathsAutocomplete: lastUsedAutocomplete;
     dataExporterAutocomplete: lastUsedAutocomplete;
     folderPathOptions = ko.observableArray<string>([]);
+    backupDirectoryPathOptions = ko.observableArray<string>([]);
     allAutoCompleteOptions: KnockoutComputed<{ path: string, isRecent: boolean }[]>;
     
     getDatabaseByName(name: string): database {
@@ -124,6 +125,7 @@ class createDatabase extends dialogViewModelBase {
         const dataPath = this.databaseModel.path.dataPath();
         this.updateDatabaseLocationInfo(this.databaseModel.name(), dataPath);
         this.updateFolderPathOptions(dataPath);
+        this.updateBackupDirectoryPathOptions(dataPath);
 
         return $.when<any>(getTopologyTask, getEncryptionKeyTask, getStudioSettingsTask)
             .done(() => {
@@ -259,17 +261,17 @@ class createDatabase extends dialogViewModelBase {
             return "unchecked";
         });
 
-        this.databaseModel.path.dataPath.throttle(300).subscribe((newPathValue) => {
+        this.databaseModel.path.dataPath.throttle(300).subscribe(newPath => {
             if (this.databaseModel.path.dataPath.isValid()) {
-                this.updateDatabaseLocationInfo(this.databaseModel.name(), newPathValue);
-                this.updateFolderPathOptions(newPathValue);
+                this.updateDatabaseLocationInfo(this.databaseModel.name(), newPath);
+                this.updateFolderPathOptions(newPath);
             } else {
                 this.databaseLocationInfo([]);
                 this.spinners.databaseLocationInfoLoading(false);
             }
         });
 
-        this.databaseModel.name.throttle(300).subscribe((newDatabaseName) => {
+        this.databaseModel.name.throttle(300).subscribe(newDatabaseName => {
             const dataPath = this.databaseModel.path.dataPath();
             if (dataPath) {
                 return;
@@ -281,6 +283,10 @@ class createDatabase extends dialogViewModelBase {
                 this.databaseLocationInfo([]);
                 this.spinners.databaseLocationInfoLoading(false);
             }
+        });
+
+        this.databaseModel.restore.backupDirectory.throttle(300).subscribe(newPath => {
+            this.updateBackupDirectoryPathOptions(newPath);
         });
 
         this.databaseLocationInfoToDisplay = ko.pureComputed(() => {
@@ -371,6 +377,19 @@ class createDatabase extends dialogViewModelBase {
                 }
 
                 this.folderPathOptions(result.List);
+            });
+    }
+
+    updateBackupDirectoryPathOptions(path: string) {
+        new getFolderPathOptionsCommand(path, true)
+            .execute()
+            .done((result: Raven.Server.Web.Studio.FolderPathOptions) => {
+                if (this.databaseModel.restore.backupDirectory() !== path) {
+                    // the path has changed
+                    return;
+                }
+
+                this.backupDirectoryPathOptions(result.List);
             });
     }
 
