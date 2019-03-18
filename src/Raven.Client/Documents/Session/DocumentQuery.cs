@@ -534,9 +534,9 @@ namespace Raven.Client.Documents.Session
         }
 
         /// <inheritdoc />
-        IDocumentQuery<T> IFilterDocumentQueryBase<T, IDocumentQuery<T>>.WhereStartsWith(string fieldName, object value, bool exact)
+        IDocumentQuery<T> IFilterDocumentQueryBase<T, IDocumentQuery<T>>.WhereStartsWith(string fieldName, object value)
         {
-            WhereStartsWith(fieldName, value, exact);
+            WhereStartsWith(fieldName, value, exact: false);
             return this;
         }
 
@@ -550,7 +550,7 @@ namespace Raven.Client.Documents.Session
         /// <inheritdoc />
         IDocumentQuery<T> IFilterDocumentQueryBase<T, IDocumentQuery<T>>.WhereStartsWith<TValue>(Expression<Func<T, TValue>> propertySelector, TValue value)
         {
-            WhereStartsWith(GetMemberQueryPath(propertySelector.Body), value, exact);
+            WhereStartsWith(GetMemberQueryPath(propertySelector.Body), value, exact: false);
             return this;
         }
 
@@ -564,7 +564,7 @@ namespace Raven.Client.Documents.Session
         /// <inheritdoc />
         IDocumentQuery<T> IFilterDocumentQueryBase<T, IDocumentQuery<T>>.WhereEndsWith(string fieldName, object value)
         {
-            WhereEndsWith(fieldName, value, exact);
+            WhereEndsWith(fieldName, value, exact: false);
             return this;
         }
 
@@ -578,7 +578,7 @@ namespace Raven.Client.Documents.Session
         /// <inheritdoc />
         IDocumentQuery<T> IFilterDocumentQueryBase<T, IDocumentQuery<T>>.WhereEndsWith<TValue>(Expression<Func<T, TValue>> propertySelector, TValue value)
         {
-            WhereEndsWith(GetMemberQueryPath(propertySelector.Body), value, exact);
+            WhereEndsWith(GetMemberQueryPath(propertySelector.Body), value, exact: false);
             return this;
         }
 
@@ -945,8 +945,8 @@ namespace Raven.Client.Documents.Session
                 {
                     Timeout = docQuery.Timeout;
                 }
-            }      
-            
+            }
+
             return this;
         }
         /// <inheritdoc />

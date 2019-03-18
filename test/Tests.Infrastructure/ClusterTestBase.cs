@@ -438,8 +438,15 @@ namespace Tests.Infrastructure
         }
 
 
-        protected async Task<(List<RavenServer> Nodes, RavenServer Leader)> CreateRaftCluster(int numberOfNodes, bool shouldRunInMemory = true, int? leaderIndex = null, bool useSsl = false, bool createNewCert = false,
-            IDictionary<string, string> customSettings = null, bool watcherCluster = false)
+        protected async Task<(List<RavenServer> Nodes, RavenServer Leader)> CreateRaftCluster(
+            int numberOfNodes,
+            bool shouldRunInMemory = true,
+            int? leaderIndex = null,
+            bool useSsl = false,
+            bool createNewCert = false,
+            string serverCertPath = null,
+            IDictionary<string, string> customSettings = null,
+            bool watcherCluster = false)
         {
             leaderIndex = leaderIndex ?? _random.Next(0, numberOfNodes);
             RavenServer leader = null;
@@ -498,8 +505,8 @@ namespace Tests.Infrastructure
                 }
                 else
                 {
-                await follower.ServerStore.WaitForTopology(Leader.TopologyModification.Voter);
-            }
+                    await follower.ServerStore.WaitForTopology(Leader.TopologyModification.Voter);
+                }
             }
             // ReSharper disable once PossibleNullReferenceException
             var condition = await leader.ServerStore.WaitForState(RachisState.Leader, CancellationToken.None).WaitAsync(numberOfNodes * _electionTimeoutInMs * 5);
@@ -609,7 +616,7 @@ namespace Tests.Infrastructure
         public async Task<(long Index, List<RavenServer> Servers)> CreateDatabaseInCluster(DatabaseRecord record, int replicationFactor, string leadersUrl, X509Certificate2 certificate = null)
         {
             var serverCount = Servers.Count(s => s.Disposed == false);
-            if(serverCount < replicationFactor)
+            if (serverCount < replicationFactor)
             {
                 throw new InvalidOperationException($"Cannot create database with replication factor = {replicationFactor} when there is only {serverCount} servers in the cluster.");
             }
@@ -627,8 +634,8 @@ namespace Tests.Infrastructure
                 urls = await GetClusterNodeUrlsAsync(leadersUrl, store);
             }
 
-            var currentServers = Servers.Where(s => s.Disposed == false && 
-                                                    urls.Contains(s.WebUrl,StringComparer.CurrentCultureIgnoreCase)).ToArray();
+            var currentServers = Servers.Where(s => s.Disposed == false &&
+                                                    urls.Contains(s.WebUrl, StringComparer.CurrentCultureIgnoreCase)).ToArray();
             int numberOfInstances = 0;
             foreach (var server in currentServers)
             {
@@ -645,7 +652,7 @@ namespace Tests.Infrastructure
             if (numberOfInstances != replicationFactor)
                 throw new InvalidOperationException($@"Couldn't create the db on all nodes, just on {numberOfInstances} 
                                                     out of {replicationFactor}{Environment.NewLine}
-                                                    Server urls are {string.Join(",",Servers.Select(x => $"[{x.WebUrl}|{x.Disposed}]"))}; Current cluster urls are : {string.Join(",",urls)}; The relevant servers are : {string.Join(",",relevantServers.Select(x => x.WebUrl))}; current servers are : {string.Join(",",currentServers.Select(x => x.WebUrl))}");
+                                                    Server urls are {string.Join(",", Servers.Select(x => $"[{x.WebUrl}|{x.Disposed}]"))}; Current cluster urls are : {string.Join(",", urls)}; The relevant servers are : {string.Join(",", relevantServers.Select(x => x.WebUrl))}; current servers are : {string.Join(",", currentServers.Select(x => x.WebUrl))}");
             return (databaseResult.RaftCommandIndex,
                 relevantServers.ToList());
         }
@@ -658,7 +665,9 @@ namespace Tests.Infrastructure
                 try
                 {
                     await requestExecutor.UpdateTopologyAsync(new ServerNode
-                        {Url = leadersUrl}, 15000, true);
+                    {
+                        Url = leadersUrl
+                    }, 15000, true);
                 }
                 catch (Exception e)
                 {
