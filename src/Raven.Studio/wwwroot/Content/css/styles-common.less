@@ -14,8 +14,8 @@
 @import "toastr.less";
 @import "usageStats.less";
 
-@tooltip-inner-min-width:     100px;
-@tooltip-inner-max-width:     200px;
+@tooltip-inner-min-width: 100px;
+@tooltip-inner-max-width: 200px;
 
 .text-revisions {
     color: @color-revisions !important;
@@ -105,7 +105,7 @@ h1 {
 }
 
 h5 {
-    margin-top:0;
+    margin-top: 0;
     margin-bottom: 3px;
 }
 
@@ -382,7 +382,7 @@ a {
         .form-control-static {
             padding: 6px 0px;
             height: 37px;
-            min-height:0;
+            min-height: 0;
         }
     }
 }
@@ -1403,6 +1403,70 @@ input[type=file] + .form-control {
     .panel-addon {
         border-top: 1px solid darken(@panel-bg,4%);
         background-color: darken(@panel-bg,3%);
+
+        .panel {
+            background-color: @panel-bg;
+
+            .panel-name {
+                font-size: 18px;
+            }
+
+            .panel-addon {
+                background-color: @panel-bg;
+            }
+        }
+
+        .list-properties {
+            .property-item {
+                display: flex;
+                align-items: center;
+                padding: @gutter/8 0;
+
+                .property-name, .property-value {
+                    display: inline-block;
+                    line-height: 1.1;
+                }
+
+                .property-name {
+                    min-width: 200px;
+                }
+            }
+        }
+
+        .inline-properties {
+            display: flex;
+            flex-wrap: wrap;
+            margin: -@gutter/4 -@gutter/2;
+
+            .property-item {
+                padding: @gutter/4 @gutter/2;
+
+                .property-name, .property-value {
+                    line-height: 1.1;
+                }
+
+                .property-name {
+                    margin-bottom: 3px;
+                }
+            }
+        }
+
+        .list-properties, .inline-properties {
+
+            .property-item {
+
+                .property-name {
+                    font-size: 11px;
+                    text-transform: uppercase;
+                    font-weight: 600;
+                    color: @text-muted;
+                }
+
+                .property-value {
+                    color: @text-color;
+                }
+            }
+        }
     }
 
     .properties-container {
@@ -1499,7 +1563,7 @@ input[type=file] + .form-control {
     left: 0;
     bottom: 0;
     width: 30px;
-    background-color: @gray;
+    background-color: @state-bg;
     color: @gray-lighter;
     display: flex;
     align-items: center;
@@ -1536,6 +1600,7 @@ input[type=file] + .form-control {
     &.state-danger {
         background-color: @brand-danger-dark;
     }
+
     &.nowrap {
         white-space: nowrap;
     }
@@ -1821,7 +1886,7 @@ ul.properties {
     list-style: none;
     padding: 0;
     margin: 0;
-    
+
     li {
         & > span {
             display: inline-block;
@@ -1844,7 +1909,7 @@ ul.properties {
     margin-right: auto;
 }
 
-.no-margin { 
+.no-margin {
     margin: 0;
 }
 
@@ -1862,7 +1927,7 @@ ul.properties {
 .on-base-background {
     color: @on-base-background-color;
 
-    strong { 
+    strong {
         color: @on-base-background-color-emphasis;
     }
 }
@@ -1872,6 +1937,7 @@ ul.properties {
         .trackColor {
             color: #63728a;
         }
+
         .scrollColor {
             color: #98a7b7;
         }

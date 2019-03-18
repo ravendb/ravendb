@@ -76,7 +76,7 @@
                     <div data-bind="foreach: replicationTasks">
                         <div class="panel destination-item external-replication" data-bind="if: responsibleNode().NodeTag === $parent.selectedNode() || $parent.selectedNode() === 'All nodes'">
                             <div data-bind="attr: { 'data-state-text': badgeText, class: 'state ' + badgeClass() }"></div>
-                            <div class="padding padding-sm destination-info flex-vertical">
+                            <div class="padding destination-info flex-vertical">
                                 <div class="flex-horizontal">
                                     <div class="checkbox panel-checkbox hide">
                                         <input type="checkbox" class="styled">
@@ -89,35 +89,35 @@
                                 </div>
                             </div>
                             <div class="collapse panel-addon" data-bind="collapse: showDetails">
-                                <div class="padding padding-sm flex-horizontal">
+                                <div class="padding flex-horizontal">
                                     <div class="flex-grow">
-                                        <ul class="properties">
-                                            <li>
-                                                <span>Task Status:</span>
-                                                <span class="text-details" data-bind="text: badgeText"></span>
-                                            </li>
-                                            <li data-bind="visible: showDelayReplication">
-                                                <span>Replication Delay Time:</span>
-                                                <span class="text-details" data-bind="text: delayHumane" title="Replication Delay Time"></span>
-                                            </li>
-                                            <li data-bind="template: { name: 'connection-string' }"></li>
-                                            <li  data-bind="visible: connectionStringDefined">
-                                                <span>Destination Database:</span>
-                                                <span class="text-details" data-bind="text: destinationDB" title="Destination database"></span>
-                                            </li>
-                                            <li>
-                                                <span>Actual Destination URL:</span>
-                                                <span title="Actual Destination Url">
+                                        <div class="list-properties">
+                                            <div class="property-item">
+                                                <div class="property-name">Task Status:</div>
+                                                <div class="property-value" data-bind="text: badgeText"></div>
+                                            </div>
+                                            <div class="property-item" data-bind="visible: showDelayReplication">
+                                                <div class="property-name">Replication Delay Time:</div>
+                                                <div class="property-value" data-bind="text: delayHumane" title="Replication Delay Time"></div>
+                                            </div>
+                                            <div class="property-item" data-bind="template: { name: 'connection-string' }"></div>
+                                            <div class="property-item" data-bind="visible: connectionStringDefined">
+                                                <div class="property-name">Destination Database:</div>
+                                                <div class="property-value" data-bind="text: destinationDB" title="Destination database"></div>
+                                            </div>
+                                            <div class="property-item">
+                                                <div class="property-name">Actual Destination URL:</div>
+                                                <div class="property-value" title="Actual Destination Url">
                                                     <a target="_blank" data-bind="attr: { href: destinationURL() === 'N/A' ? null : destinationURL }, text: destinationURL()"></a>
-                                                </span>
-                                            </li>
+                                                </div>
+                                            </div>
                                             <!-- ko foreach: topologyDiscoveryUrls -->
-                                            <li>
-                                                <span data-bind="text: $data === $parent.topologyDiscoveryUrls()[0] ? 'Topology Discovery URLs:' : ''"></span>
-                                                <span class="text-details" data-bind="text: $data" title="Discovery Url"></span>
-                                            </li>
+                                            <div class="property-item">
+                                                <div class="property-name" data-bind="text: $data === $parent.topologyDiscoveryUrls()[0] ? 'Topology Discovery URLs:' : ''"></div>
+                                                <div class="property-value" data-bind="text: $data" title="Discovery Url"></div>
+                                            </div>
                                             <!-- /ko -->
-                                        </ul>
+                                        </div>
                                     </div>
                                 </div>
                             </div>
@@ -134,7 +134,7 @@
                     <div data-bind="foreach: etlTasks">
                         <div class="panel destination-item ravendb-etl" data-bind="if: responsibleNode().NodeTag === $parent.selectedNode() || $parent.selectedNode() === 'All nodes'">
                             <div data-bind="attr: { 'data-state-text': badgeText, class: 'state ' + badgeClass() }"></div>
-                            <div class="padding padding-sm destination-info flex-vertical">
+                            <div class="padding destination-info flex-vertical">
                                 <div class="flex-horizontal">
                                     <div class="checkbox panel-checkbox hide">
                                         <input type="checkbox" class="styled">
@@ -147,31 +147,31 @@
                                 </div>
                             </div>
                             <div class="collapse panel-addon" data-bind="collapse: showDetails">
-                                <div class="padding padding-sm flex-horizontal">
+                                <div class="padding flex-horizontal">
                                     <div class="flex-grow">
-                                        <ul class="properties">
-                                            <li>
-                                                <span>Task Status:</span>
-                                                <span class="text-details" data-bind="text: badgeText"></span>
-                                            </li>
-                                            <li data-bind="template: { name: 'connection-string' }"></li>
-                                            <li data-bind="visible: connectionStringDefined">
-                                                <span>Destination Database:</span>
-                                                <span class="text-details" data-bind="text: destinationDB" title="Destination database"></span>
-                                            </li>
-                                            <li>
-                                                <span>Actual Destination URL:</span>
-                                                <span title="Actual Destination Url">
+                                        <div class="list-properties">
+                                            <div class="property-item">
+                                                <div class="property-name">Task Status:</div>
+                                                <div class="property-value" data-bind="text: badgeText"></div>
+                                            </div>
+                                            <div class="property-item" data-bind="template: { name: 'connection-string' }"></div>
+                                            <div class="property-item" data-bind="visible: connectionStringDefined">
+                                                <div class="property-name">Destination Database:</div>
+                                                <div class="property-value" data-bind="text: destinationDB" title="Destination database"></div>
+                                            </div>
+                                            <div class="property-item">
+                                                <div class="property-name">Actual Destination URL:</div>
+                                                <div class="property-value" title="Actual Destination Url">
                                                     <a target="_blank" data-bind="attr: { href: destinationURL() === 'N/A' ? null : destinationURL }, text: destinationURL()"></a>
-                                                </span>
-                                            </li>
+                                                </div>
+                                            </div>
                                             <!-- ko foreach: topologyDiscoveryUrls -->
-                                            <li>
-                                                <span data-bind="text: $data === $parent.topologyDiscoveryUrls()[0] ? 'Topology Discovery URLs:' : ''"></span>
-                                                <span class="text-details" data-bind="text: $data" title="Discovery Url"></span>
-                                            </li>
+                                            <div class="property-item">
+                                                <div class="property-name" data-bind="text: $data === $parent.topologyDiscoveryUrls()[0] ? 'Topology Discovery URLs:' : ''"></div>
+                                                <div class="property-value" data-bind="text: $data" title="Discovery Url"></div>
+                                            </div>
                                             <!-- /ko -->
-                                        </ul>
+                                        </div>
                                         <div data-bind="template: { name: 'etl-progress-template' }"></div>
                                     </div>
                                 </div>
@@ -189,7 +189,7 @@
                     <div data-bind="foreach: sqlTasks">
                         <div class="panel destination-item sql-etl" data-bind="if: responsibleNode().NodeTag === $parent.selectedNode() || $parent.selectedNode() === 'All nodes'">
                             <div data-bind="attr: { 'data-state-text': badgeText, class: 'state ' + badgeClass() }"></div>
-                            <div class="padding padding-sm destination-info flex-vertical">
+                            <div class="padding destination-info flex-vertical">
                                 <div class="flex-horizontal">
                                     <div class="checkbox panel-checkbox hide">
                                         <input type="checkbox" class="styled">
@@ -202,21 +202,21 @@
                                 </div>
                             </div>
                             <div class="collapse panel-addon" data-bind="collapse: showDetails">
-                                <div class="padding padding-sm flex-horizontal">
+                                <div class="padding flex-horizontal">
                                     <div class="flex-grow">
-                                        <ul class="properties">
-                                            <li>
-                                                <span>Task Status:</span>
-                                                <span class="text-details" data-bind="text: badgeText"></span>
-                                            </li>
-                                            <li data-bind="visible: connectionStringDefined">
-                                                <span>Destination:</span>
-                                                <span title="Destination <database>@<server>">
+                                        <div class="inline-properties">
+                                            <div class="property-item">
+                                                <div class="property-name">Task Status:</div>
+                                                <div class="property-value" class="text-details" data-bind="text: badgeText"></div>
+                                            </div>
+                                            <div class="property-item" data-bind="visible: connectionStringDefined">
+                                                <div class="property-name">Destination:</div>
+                                                <div class="property-value" title="Destination <database>@<server>">
                                                     <span data-bind="text: destinationDescription"></span>
-                                                </span>
-                                            </li>
-                                            <li data-bind="template: { name: 'connection-string' }"></li>
-                                        </ul>
+                                                </div>
+                                            </div>
+                                            <div class="property-item" data-bind="template: { name: 'connection-string' }"></div>
+                                        </div>
                                         <div data-bind="template: { name: 'etl-progress-template' }"></div>
                                     </div>
                                 </div>
@@ -234,7 +234,7 @@
                     <div data-bind="foreach: backupTasks">
                         <div class="panel destination-item periodic-backup" data-bind="if: responsibleNode().NodeTag === $parent.selectedNode() || $parent.selectedNode() === 'All nodes'">
                             <div data-bind="attr: { 'data-state-text': badgeText, class: 'state ' + badgeClass() }"></div>
-                            <div class="padding padding-sm destination-info flex-vertical">
+                            <div class="padding destination-info flex-vertical">
                                 <div class="flex-horizontal">
                                     <div class="checkbox panel-checkbox hide">
                                         <input type="checkbox" class="styled">
@@ -247,20 +247,36 @@
                                 </div>
                             </div>
                             <div class="collapse panel-addon" data-bind="collapse: showDetails">
-                                <div class="padding padding-sm flex-horizontal">
+                                <div class="padding flex-horizontal">
                                     <div class="flex-grow">
-                                        <ul class="properties">
-                                            <li><span>Task Status:</span><span class="text-details" data-bind="text: badgeText"></span></li>
-                                            <li><span>Destinations:</span><span data-bind="text: backupDestinations().join(', '), attr: { class: textClass() }"></span></li>
-                                            <li data-bind="visible: lastFullBackupHumanized">
-                                                <span data-bind="text: 'Last ' + fullBackupTypeName() + (fullBackupTypeName() === 'Snapshot' ? ':' : ' Backup:')"></span><span class="text-details" data-bind="text: lastFullBackupHumanized"></span>
-                                            </li>
-                                            <li data-bind="visible: lastIncrementalBackupHumanized"><span>Last Incremental Backup:</span><span class="text-details" data-bind="text: lastIncrementalBackupHumanized"></span></li>
-                                            <li data-bind="visible: nextBackup() && !onGoingBackup()"><span>Next Estimated Backup:</span><span data-bind="text: nextBackupHumanized, attr: { class: textClass() }"></span></li>
-                                            <li data-bind="visible: onGoingBackup"><span>Backup Started:</span><span data-bind="text: onGoingBackupHumanized, attr: { class: textClass() }"></span></li>
-                                        </ul>
+                                        <div class="list-properties">
+                                            <div class="property-item">
+                                                <div class="property-name">Task Status:</div>
+                                                <div class="property-value text-details" data-bind="text: badgeText"></div>
+                                            </div>
+                                            <div  class="property-item">
+                                                <div class="property-name">Destinations:</div>
+                                                <div class="property-value" data-bind="text: backupDestinations().join(', '), attr: { class: textClass() }"></div>
+                                            </div>
+                                            <div class="property-item" data-bind="visible: lastFullBackupHumanized">
+                                                <div class="property-name" data-bind="text: 'Last ' + fullBackupTypeName() + (fullBackupTypeName() === 'Snapshot' ? ':' : ' Backup:')"></div>
+                                                <div class="property-value text-details" data-bind="text: lastFullBackupHumanized"></div>
+                                            </div>
+                                            <div class="property-item" data-bind="visible: lastIncrementalBackupHumanized">
+                                                <div class="property-name">Last Incremental Backup:</div>
+                                                <div class="property-value text-details" data-bind="text: lastIncrementalBackupHumanized"></div>
+                                            </div>
+                                            <div class="property-item" data-bind="visible: nextBackup() && !onGoingBackup()">
+                                                <div class="property-name">Next Estimated Backup:</div>
+                                                <div class="property-value" data-bind="text: nextBackupHumanized, attr: { class: textClass() }"></div>
+                                            </div>
+                                            <div class="property-item" data-bind="visible: onGoingBackup">
+                                                <div class="property-name">Backup Started:</div>
+                                                <div class="property-value" data-bind="text: onGoingBackupHumanized, attr: { class: textClass() }"></div>
+                                            </div>
+                                        </div>
                                     </div>
-                                    <div>
+                                    <div class="flex-noshrink">
                                         <button class="btn backup-now" data-bind="click: backupNow, enable: isBackupNowEnabled(),
                                              css: { 'btn-default': !neverBackedUp(), 'btn-info': backupNowInProgress, 'btn-spinner': backupNowInProgress, 'btn-warning': !backupNowInProgress() && neverBackedUp() },
                                              attr: { 'title':  disabledBackupNowReason() || 'Click to backup the database now' }">
@@ -283,7 +299,7 @@
                     <div data-bind="foreach: subscriptionTasks">
                         <div class="panel destination-item subscription" data-bind="if: responsibleNode().NodeTag === $parent.selectedNode() || $parent.selectedNode() === 'All nodes'">
                             <div data-bind="attr: { 'data-state-text': badgeText, class: 'state ' + badgeClass() }"></div>
-                            <div class="padding padding-sm destination-info flex-vertical">
+                            <div class="padding destination-info flex-vertical">
                                 <div class="flex-horizontal">
                                     <div class="checkbox panel-checkbox hide">
                                         <input type="checkbox" class="styled">
@@ -296,31 +312,49 @@
                                 </div>
                             </div>
                             <div class="collapse panel-addon" data-bind="collapse: showDetails">
-                                <div class="padding padding-sm flex-horizontal">
+                                <div class="padding flex-horizontal">
                                     <div class="flex-grow">
-                                        <ul class="properties">
-                                            <li><span>Task Status:</span><span class="text-details" data-bind="text: badgeText"></span></li>
+                                        <div class="list-properties">
+                                            <div class="property-item">
+                                                <div class="property-name">Task Status:</div>
+                                                <span class="property-value text-details" data-bind="text: badgeText"></span>
+                                            </div>
                                             <!-- ko if: clientDetailsIssue -->
-                                            <li><span>Client Status:</span><span data-bind="text: clientDetailsIssue, attr: { class: textClass() }"></span></li>
+                                            <div class="property-item">
+                                                <div class="property-name">Client Status:</div>
+                                                <div class="property-value" data-bind="text: clientDetailsIssue, attr: { class: textClass() }"></div>
+                                            </div>
                                             <!-- /ko -->
                                             <!-- ko if: !clientDetailsIssue() -->
-                                            <li><span>Client IP:</span><span class="text-details" data-bind="text: clientIP"></span></li>
-                                            <li><span>Connection Strategy:</span><span class="text-details" data-bind="text: connectionStrategy"></span></li>
+                                            <div class="property-item">
+                                                <div class="property-name">Client IP:</div>
+                                                <div class="property-value text-details" data-bind="text: clientIP"></div>
+                                            </div>
+                                            <div class="property-item">
+                                                <div class="property-name">Connection Strategy:</div>
+                                                <div class="property-value text-details" data-bind="text: connectionStrategy"></div>
+                                            </div>
                                             <!-- /ko -->
-                                            <li><span>Change vector for next batch: </span><span class="text-details" data-bind="text: changeVectorForNextBatchStartingPoint() || 'N/A'"></span></li>
+                                            <div class="property-item">
+                                                <div class="property-name">Change vector for next batch: </div>
+                                                <div class="property-value text-details" data-bind="text: changeVectorForNextBatchStartingPoint() || 'N/A'"></div>
+                                            </div>
                                             
-                                            <li><span>Last Batch Acknowledgement Time:</span><span class="text-details" data-bind="text: lastTimeServerMadeProgressWithDocuments"></span></li>
-                                            <li>
-                                                <span>Last Client Connection Time:</span><span class="text-details" data-bind="text: lastClientConnectionTime"></span>
+                                            <div class="property-item">
+                                                <div class="property-name">Last Batch Acknowledgement Time:</div>
+                                                <div class="property-value text-details" data-bind="text: lastTimeServerMadeProgressWithDocuments"></div>
+                                            </div>
+                                            <div class="property-item">
+                                                <div class="property-name">Last Client Connection Time:</div><span class="text-details" data-bind="text: lastClientConnectionTime"></span>
                                                 <!-- ko if: clientIP() -->
-                                                <span>
+                                                <div class="property-value">
                                                     <button class="btn btn-xs" data-bind="click: disconnectClientFromSubscription" title="Disconnect client from this subscription (unsubscribe client)">
                                                         <i class="icon-disconnected"></i><span>Disconnect</span>
                                                     </button>
-                                                </span>
+                                                </div>
                                                 <!-- /ko -->
-                                            </li>
-                                        </ul>
+                                            </div>
+                                        </div>
                                     </div>
                                     <div>
                                         <button class="btn btn-default" data-bind="click: refreshSubscriptionInfo" title="Refresh info"><i class="icon-refresh"></i></button>
@@ -340,7 +374,7 @@
                     <div data-bind="foreach: pullReplicationHubTasks">
                         <div class="panel destination-item pull-replication-hub">
                             <div data-bind="attr: { 'data-state-text': $root.pluralize(ongoingHubs().length, 'sink', 'sinks'), class: 'state state-default' }"></div>
-                            <div class="padding padding-sm destination-info flex-vertical">
+                            <div class="padding destination-info flex-vertical">
                                 <div class="flex-horizontal">
                                     <div class="checkbox panel-checkbox hide">
                                         <input type="checkbox" class="styled">
@@ -352,53 +386,50 @@
                                 </div>
                             </div>
                             <div class="collapse panel-addon" data-bind="collapse: showDetails">
-                                <div class="padding padding-sm flex-horizontal" data-bind="visible: showDelayReplication">
+                                <div class="padding flex-horizontal" data-bind="visible: showDelayReplication">
                                     <div class="flex-grow">
-                                        <ul class="properties">
-                                            <li data-bind="visible: showDelayReplication">
-                                                <span>Replication Delay Time:</span>
-                                                <span class="text-details" data-bind="text: delayHumane" title="Replication Delay Time"></span>
-                                            </li>
-                                        </ul>
-                                    </div>
-                                </div>
-
-                                <div data-bind="foreach: ongoingHubs">
-                                    <div class="panel destination-item external-replication">
-                                        <div data-bind="attr: { 'data-state-text': badgeText, class: 'state ' + badgeClass() }"></div>
-                                        <div class="padding padding-sm destination-info flex-vertical">
-                                            <div class="flex-horizontal">
-                                                <div class="panel-name flex-grow">
-                                                    <h3 data-bind="text: taskName"></h3>
-                                                </div>
-                                                <div class="node" data-bind="template: { name: 'responsible-node-template' }"></div>
+                                        <div class="inline-properties">
+                                            <div class="property-item" data-bind="visible: showDelayReplication">
+                                                <div class="property-name">Replication Delay Time:</div>
+                                                <div class="property-value" data-bind="text: delayHumane" title="Replication Delay Time"></div>
                                             </div>
                                         </div>
-                                        <div class="panel-addon">
-                                            <div class="padding padding-sm flex-horizontal">
-                                                <div class="flex-grow">
-                                                    <ul class="properties">
-                                                        <li>
-                                                            <span>Task Status:</span>
-                                                            <span class="text-details" data-bind="text: badgeText"></span>
-                                                        </li>
-                                                        <li>
-                                                            <span>Destination Database:</span>
-                                                            <span class="text-details" data-bind="text: destinationDB" title="Destination database"></span>
-                                                        </li>
-                                                        <li>
-                                                            <span>Actual Destination URL:</span>
-                                                            <span title="Actual Destination Url">
-                                                            <a target="_blank" data-bind="attr: { href: destinationURL() === 'N/A' ? null : destinationURL }, text: destinationURL()"></a>
-                                                        </span>
-                                                        </li>
-                                                    </ul>
+                                    </div>
+                                </div>
+                                <div class="padding padding-sm"  data-bind="visible: ongoingHubs().length">
+                                    <div data-bind="foreach: ongoingHubs">
+                                        <div class="panel destination-item external-replication">
+                                            <div data-bind="attr: { 'data-state-text': badgeText, class: 'state ' + badgeClass() }"></div>
+                                            <div class="padding destination-info flex-vertical">
+                                                <div class="flex-horizontal">
+                                                    <div class="panel-name flex-grow">
+                                                        <h3 data-bind="text: taskName"></h3>
+                                                    </div>
+                                                    <div class="node" data-bind="template: { name: 'responsible-node-template' }"></div>
+                                                </div>
+                                            </div>
+                                            <div class="panel-addon">
+                                                <div class="padding">
+                                                    <div class="inline-properties">
+                                                        <div class="property-item">
+                                                            <div class="property-name">Task Status:</div>
+                                                            <div class="property-value" data-bind="text: badgeText"></div>
+                                                        </div>
+                                                        <div class="property-item">
+                                                            <div class="property-name">Destination Database:</div>
+                                                            <div class="property-value" data-bind="text: destinationDB" title="Destination database"></div>
+                                                        </div>
+                                                        <div class="property-item">
+                                                            <div class="property-name">Actual Destination URL:</div>
+                                                            <div class="property-value" title="Actual Destination Url"><a target="_blank" data-bind="attr: { href: destinationURL() === 'N/A' ? null : destinationURL }, text: destinationURL()"></a></div>
+                                                        </div>
+                                                    </div>
                                                 </div>
                                             </div>
                                         </div>
                                     </div>
                                 </div>
-                                <div class="panel-addon padding padding-sm" data-bind="visible: !ongoingHubs().length">
+                                <div class="panel-addon padding" data-bind="visible: !ongoingHubs().length">
                                     <h5 class="text-warning">
                                         <i class="icon-empty-set"></i> 
                                         <span>No sinks connected</span>
@@ -418,7 +449,7 @@
                     <div data-bind="foreach: pullReplicationSinkTasks">
                         <div class="panel destination-item pull-replication-sink" data-bind="if: responsibleNode().NodeTag === $parent.selectedNode() || $parent.selectedNode() === 'All nodes'">
                             <div data-bind="attr: { 'data-state-text': badgeText, class: 'state ' + badgeClass() }"></div>
-                            <div class="padding padding-sm destination-info flex-vertical">
+                            <div class="padding destination-info flex-vertical">
                                 <div class="flex-horizontal">
                                     <div class="checkbox panel-checkbox hide">
                                         <input type="checkbox" class="styled">
@@ -431,36 +462,36 @@
                                 </div>
                             </div>
                             <div class="collapse panel-addon" data-bind="collapse: showDetails">
-                                <div class="padding padding-sm flex-horizontal">
-                                    <div class="flex-grow">
-                                        <ul class="properties">
-                                            <li>
-                                                <span>Hub Definition Name:</span>
-                                                <span class="text-details" data-bind="text: hubDefinitionName"></span>
-                                            </li>
-                                            <li>
-                                                <span>Task Status:</span>
-                                                <span class="text-details" data-bind="text: badgeText"></span>
-                                            </li>
+                                <div class="padding">
+                                    
+                                        <div class="inline-properties">
+                                            <div class="property-item">
+                                                <div class="property-name">Hub Definition Name:</div>
+                                                <div class="text-details" data-bind="text: hubDefinitionName"></div>
+                                            </div>
+                                            <div class="property-item">
+                                                <div class="property-name">Task Status:</div>
+                                                <div class="property-value" data-bind="text: badgeText"></div>
+                                            </div>
                                             <li data-bind="template: { name: 'connection-string' }"></li>
-                                            <li data-bind="visible: connectionStringDefined">
+                                            <div class="property-item" data-bind="visible: connectionStringDefined">
                                                 <span>Destination Database:</span>
-                                                <span class="text-details" data-bind="text:  destinationDB" title="Destination database"></span>
-                                            </li>
-                                            <li>
-                                                <span>Actual Destination URL:</span>
-                                                <span title="Actual Destination Url">
+                                                <span class="property-value" data-bind="text:  destinationDB" title="Destination database"></span>
+                                            </div>
+                                            <div class="property-item">
+                                                <div class="property-name">Actual Destination URL</div>
+                                                <div class="property-value" title="Actual Destination Url">
                                                     <a target="_blank" data-bind="attr: { href: destinationURL() === 'N/A' ? null : destinationURL }, text: destinationURL()"></a>
-                                                </span>
-                                            </li>
+                                                </div>
+                                            </div>
                                             <!-- ko foreach: topologyDiscoveryUrls -->
-                                            <li>
-                                                <span data-bind="text: $data === $parent.topologyDiscoveryUrls()[0] ? 'Topology Discovery URLs:' : ''"></span>
-                                                <span class="text-details" data-bind="text: $data" title="Discovery Url"></span>
-                                            </li>
+                                            <div>
+                                                <div class="property-name" data-bind="text: $data === $parent.topologyDiscoveryUrls()[0] ? 'Topology Discovery URLs:' : ''"></div>
+                                                <div class="property-value" data-bind="text: $data" title="Discovery Url"></div>
+                                            </div>
                                             <!-- /ko -->
-                                        </ul>
-                                    </div>
+                                        </div>
+                                    
                                 </div>
                             </div>
                         </div>
@@ -596,17 +627,17 @@
 </script>
 
 <script type="text/html" id="connection-string">
-    <span>Connection String:</span>
-    <span data-bind="visible: connectionStringDefined">
+    <div class="property-name">Connection String:</div>
+    <div class="property-value" data-bind="visible: connectionStringDefined">
         <span title="Connection string name">
             <a target="_blank" data-bind="attr: { href: connectionStringsUrl }, text: connectionStringName"></a>
         </span>
-    </span>
-    <span data-bind="visible: !connectionStringDefined()">
-        <span data-bind="text: connectionStringName"></span>
-        <span class="text-danger margin-left margin-left-sm">
+    </div>
+    <div data-bind="visible: !connectionStringDefined()">
+        <div class="property-name" data-bind="text: connectionStringName"></div>
+        <div class="property-value text-danger margin-left margin-left-sm">
             <i class="icon-danger text-danger"></i>
             This connection string is not defined.
-        </span>
-    </span>
+        </div>
+    </div>
 </script>
