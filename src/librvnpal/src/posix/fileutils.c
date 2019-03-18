@@ -12,6 +12,7 @@
 #include <sys/mman.h>
 #include <assert.h>
 #include <time.h>
+#include <string.h>
 
 #include "rvn.h"
 #include "status_codes.h"
@@ -86,10 +87,67 @@ _allocate_file_space(int32_t fd, int64_t size, int32_t *detailed_error_code)
 }
 
 PRIVATE int32_t
-_ensure_path_exists(const char* path)
+_ensure_path_exists(const char *path, int32_t *detailed_error_code)
 {
-    /* TODO: implement */
-    return SUCCESS;   
+    assert(path != NULL);
+
+    int32_t rc;
+    char* dup_path = strdup(path);
+    if(dup_path == NULL)
+    {
+        *detailed_error_code = errno;
+        return FAIL_NOMEM;
+    }
+    char *current_end = dup_path;
+
+    struct stat sb;
+    while (current_end != NULL)
+    {
+        current_end = strchr(current_end + 1, '/');
+        
+        if (current_end != NULL)
+            *current_end = '\0';
+        
+        if (stat(dup_path, &sb) == -1)
+        {
+            if (errno != ENOENT)
+            {
+                rc = FAIL_STAT_FILE;
+                goto error_cleanup;
+            }
+
+            if (mkdir(dup_path, 0700) == -1)
+            {
+                rc = FAIL_CREATE_DIRECTORY;
+                goto error_cleanup;
+            }
+
+            rc = _sync_directory_for_internal(dup_path, detailed_error_code);
+            if (rc != SUCCESS)
+                goto error_cleanup_with_error;
+
+            rc = _sync_directory_for(dup_path, detailed_error_code);
+            if (rc != SUCCESS)
+                goto error_cleanup_with_error;
+        }
+        else if(S_ISDIR(sb.st_mode) == 0)
+        {
+            *detailed_error_code = ENOTDIR;
+            rc = FAIL_NOT_DIRECTORY;
+            goto error_cleanup_with_error;
+        }
+
+        if (current_end != NULL)
+            *current_end = '/';
+    }
+
+    return SUCCESS;
+
+error_cleanup:
+    *detailed_error_code = errno;
+error_cleanup_with_error:
+    free(dup_path);
+    return rc;
 }
 
 PRIVATE int32_t 

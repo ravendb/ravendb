@@ -35,7 +35,9 @@ namespace Sparrow.Server.Platform
             FailEndOfFile = 25,
             FailPrefetch = 26,
             FailGetFilePath = 27,
-            FailTestDurability = 28
+            FailTestDurability = 28,
+            FailCreateDirectory = 29,
+            FailNotDirectory = 30,
         };
 
         [Flags]

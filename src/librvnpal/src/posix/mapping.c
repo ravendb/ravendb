@@ -13,6 +13,7 @@
 #include <assert.h>
 #include <sys/stat.h>
 #include <unistd.h>
+#include <libgen.h>
 
 #include "rvn.h"
 #include "status_codes.h"
@@ -50,15 +51,20 @@ rvn_create_and_mmap64_file(
 
     assert(initial_file_size > 0);
 
-    _ensure_path_exists(path);
-      
-    struct map_file_handle* mfh = calloc(1, sizeof(struct map_file_handle));
+    struct map_file_handle *mfh = calloc(1, sizeof(struct map_file_handle));
     *handle = mfh;
     if(mfh == NULL)
     {
         rc = FAIL_CALLOC;
         goto error_cleanup;
     }
+
+    char* directory = strdup(path);
+    int ret = _ensure_path_exists(dirname(directory), detailed_error_code);
+    free(directory);
+    if (ret != SUCCESS) 
+        goto error_clean_with_error;
+
     mfh->path = strdup(path);
     if (mfh->path == NULL)
     {
@@ -103,12 +109,12 @@ rvn_create_and_mmap64_file(
     {
         rc = _allocate_file_space(mfh->fd, sz, detailed_error_code);
         if (rc != SUCCESS)
-            goto error_clean_With_error;
+            goto error_clean_with_error;
         if (_sync_directory_allowed(mfh->fd) == SYNC_DIR_ALLOWED)
         {
             rc = _sync_directory_for(path, detailed_error_code);
             if (rc != SUCCESS)
-                goto error_clean_With_error;
+                goto error_clean_with_error;
         }
     }
 
@@ -134,7 +140,7 @@ rvn_create_and_mmap64_file(
 
 error_cleanup:
     *detailed_error_code = errno;
-error_clean_With_error:
+error_clean_with_error:
     if (mfh != NULL)
     {
         if (mfh->fd != -1)
