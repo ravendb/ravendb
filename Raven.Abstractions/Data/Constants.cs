@@ -263,6 +263,7 @@ namespace Raven.Abstractions.Data
             public const string PreferredVerPages = "Raven/Esent/PreferredVerPages";
             public const string LogFileSize = "Raven/Esent/LogFileSize";
             public const string LogBuffers = "Raven/Esent/LogBuffers";
+            public const string MaxSessions = "Raven/Esent/MaxSessions";
             public const string MaxCursors = "Raven/Esent/MaxCursors";
             public const string DbExtensionSize = "Raven/Esent/DbExtensionSize";
         }
