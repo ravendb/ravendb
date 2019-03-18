@@ -35,6 +35,8 @@
 #define FAIL_PREFETCH                   26
 #define FAIL_CALLOC                     27
 #define FAIL_TEST_DURABILITY            28
+#define FAIL_CREATE_DIRECTORY           29
+#define FAIL_NOT_DIRECTORY              30
 
 #define ERRNO_SPECIAL_CODES_NONE        0
 #define ERRNO_SPECIAL_CODES_ENOMEM      (1 << 0)
