@@ -192,37 +192,6 @@ namespace Raven.Server.Documents.Handlers.Debugging
             }
         }
 
-        [RavenAction("/admin/debug/storage/environment/report", "GET", AuthorizationStatus.Operator)]
-        public Task SystemEnvironmentReport()
-        {
-            var details = GetBoolValueQueryString("details", required: false) ?? false;
-            var env = ServerStore._env;
-
-            using (ServerStore.ContextPool.AllocateOperationContext(out JsonOperationContext context))
-            using (var writer = new BlittableJsonTextWriter(context, ResponseBodyStream()))
-            {
-                writer.WriteStartObject();
-                writer.WritePropertyName("Environment");
-                writer.WriteString("Server");
-                writer.WriteComma();
-
-                writer.WritePropertyName("Type");
-                writer.WriteString(nameof(StorageEnvironmentWithType.StorageEnvironmentType.System));
-                writer.WriteComma();
-
-                using (var tx = env.ReadTransaction())
-                {
-                    var djv = (DynamicJsonValue)TypeConverter.ToBlittableSupportedType(env.GenerateDetailedReport(tx, details));
-                    writer.WritePropertyName("Report");
-                    writer.WriteObject(context.ReadObject(djv, "System"));
-                }
-
-                writer.WriteEndObject();
-            }
-
-            return Task.CompletedTask;
-        }
-
         [RavenAction("/databases/*/debug/storage/environment/report", "GET", AuthorizationStatus.ValidUser)]
         public Task EnvironmentReport()
         {

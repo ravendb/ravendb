@@ -44,8 +44,7 @@ namespace Raven.Client.Documents.Linq
         {
             expression = SimplifyExpression(expression);
 
-            var callExpression = expression as MethodCallExpression;
-            if (callExpression != null)
+            if (expression is MethodCallExpression callExpression)
             {
                 var customMethodResult = _conventions.TranslateCustomQueryExpression(this, callExpression);
                 if (customMethodResult != null)

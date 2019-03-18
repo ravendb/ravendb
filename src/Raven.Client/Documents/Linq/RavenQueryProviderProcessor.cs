@@ -2135,6 +2135,13 @@ The recommended method is to use full text search (mark the field as Analyzed an
                             continue;
                         }
 
+                        if (newExpression.Arguments[index].NodeType == ExpressionType.ArrayLength)
+                        {
+                            var info = GetMember(newExpression.Arguments[index]);
+                            AddToFieldsToFetch(info.Path, GetSelectPath(newExpression.Members[index]));
+                            continue;
+                        }
+
                         if (newExpression.Arguments[index] is MemberExpression member && HasComputation(member) == false)
                         {
                             AddToFieldsToFetch(GetSelectPathOrConstantValue(member), GetSelectPath(newExpression.Members[index]));
@@ -2186,6 +2193,13 @@ The recommended method is to use full text search (mark the field as Analyzed an
                         if (field.Expression is ConstantExpression constant)
                         {
                             AddToFieldsToFetch(GetConstantValueAsString(constant.Value), GetSelectPath(field.Member));
+                            continue;
+                        }
+
+                        if (field.Expression.NodeType == ExpressionType.ArrayLength)
+                        {
+                            var info = GetMember(field.Expression);
+                            AddToFieldsToFetch(info.Path, GetSelectPath(field.Member));
                             continue;
                         }
 

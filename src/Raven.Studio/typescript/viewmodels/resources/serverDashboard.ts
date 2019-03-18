@@ -733,7 +733,7 @@ class serverDashboard extends viewModelBase {
     machineResourcesSection = new machineResourcesSection();
     driveUsageSection = new driveUsageSection();
     
-    noDatabases = ko.pureComputed(() => databasesManager.default.databases().length === 0);
+    noDatabases = ko.observable<boolean>(false);
 
     constructor() {
         super();
@@ -815,7 +815,9 @@ class serverDashboard extends viewModelBase {
                 this.trafficSection.onData(data as Raven.Server.Dashboard.TrafficWatch);
                 break;
             case "DatabasesInfo":
-                this.databasesSection.onData(data as Raven.Server.Dashboard.DatabasesInfo);
+                const databasesInfo = data as Raven.Server.Dashboard.DatabasesInfo;
+                this.noDatabases(databasesInfo.Items.length === 0);
+                this.databasesSection.onData(databasesInfo);
                 break;
             case "IndexingSpeed":
                 this.indexingSpeedSection.onData(data as Raven.Server.Dashboard.IndexingSpeed);
