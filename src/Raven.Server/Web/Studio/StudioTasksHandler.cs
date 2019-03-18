@@ -1,6 +1,4 @@
 ﻿using System;
-using System.IO;
-using System.Net;
 using System.Threading.Tasks;
 using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.CSharp;
@@ -14,7 +12,6 @@ using Raven.Server.Web.System;
 using Sparrow.Json;
 using Sparrow.Json.Parsing;
 using Raven.Server.Config;
-using Raven.Server.Documents;
 using Voron.Util.Settings;
 using Raven.Server.Documents.Indexes;
 
@@ -192,37 +189,6 @@ namespace Raven.Server.Web.Studio
                         context.Write(writer, formattedExpression.ToJson());
                     }
                 }
-            }
-
-            return Task.CompletedTask;
-        }
-
-        [RavenAction("/admin/debug/storage/environment/report", "GET", AuthorizationStatus.Operator, IsDebugInformationEndpoint = false)]
-        public Task SystemEnvironmentReport()
-        {
-            var details = GetBoolValueQueryString("details", required: false) ?? false;
-            var env = ServerStore._env;
-
-            using (ServerStore.ContextPool.AllocateOperationContext(out JsonOperationContext context))
-            using (var writer = new BlittableJsonTextWriter(context, ResponseBodyStream()))
-            {
-                writer.WriteStartObject();
-                writer.WritePropertyName("Environment");
-                writer.WriteString("Server");
-                writer.WriteComma();
-
-                writer.WritePropertyName("Type");
-                writer.WriteString(nameof(StorageEnvironmentWithType.StorageEnvironmentType.System));
-                writer.WriteComma();
-
-                using (var tx = env.ReadTransaction())
-                {
-                    var djv = (DynamicJsonValue)TypeConverter.ToBlittableSupportedType(env.GenerateDetailedReport(tx, details));
-                    writer.WritePropertyName("Report");
-                    writer.WriteObject(context.ReadObject(djv, "System"));
-                }
-
-                writer.WriteEndObject();
             }
 
             return Task.CompletedTask;
