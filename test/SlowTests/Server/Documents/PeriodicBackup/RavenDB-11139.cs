@@ -10,6 +10,7 @@ using Raven.Client.Documents.Operations;
 using Raven.Client.Documents.Operations.Backups;
 using Raven.Client.Documents.Operations.CompareExchange;
 using Raven.Client.Documents.Session;
+using Raven.Client.Documents.Smuggler;
 using Raven.Client.ServerWide.Operations;
 using Raven.Server.Config.Settings;
 using Raven.Server.ServerWide.Context;
@@ -61,11 +62,16 @@ namespace SlowTests.Server.Documents.PeriodicBackup
                 var backupDirectory = Directory.GetDirectories(backupPath).First();
                 var databaseName = GetDatabaseName() + "restore";
 
+                var files = Directory.GetFiles(backupDirectory)
+                    .Where(BackupUtils.IsBackupFile)
+                    .OrderBackups()
+                    .ToArray();
+
                 var restoreConfig = new RestoreBackupConfiguration()
                 {
                     BackupLocation = backupDirectory,
                     DatabaseName = databaseName,
-                    LastFileNameToRestore = Directory.GetFiles(backupDirectory).Last()
+                    LastFileNameToRestore = files.Last()
                 };
 
                 var restoreOperation = new RestoreBackupOperation(restoreConfig);
@@ -133,12 +139,19 @@ namespace SlowTests.Server.Documents.PeriodicBackup
 
                 var backupDirectory = Directory.GetDirectories(backupPath).First();
                 var databaseName = GetDatabaseName() + "restore";
-                File.Delete(Directory.GetFiles(backupDirectory).First());
+
+                var files = Directory.GetFiles(backupDirectory)
+                    .Where(BackupUtils.IsBackupFile)
+                    .OrderBackups()
+                    .ToArray();
+
+                File.Delete(files.First());
+
                 var restoreConfig = new RestoreBackupConfiguration()
                 {
                     BackupLocation = backupDirectory,
                     DatabaseName = databaseName,
-                    LastFileNameToRestore = Directory.GetFiles(backupDirectory).Last()
+                    LastFileNameToRestore = files.Last()
                 };
 
                 var restoreOperation = new RestoreBackupOperation(restoreConfig);
@@ -243,13 +256,18 @@ namespace SlowTests.Server.Documents.PeriodicBackup
                 var backupDirectory = Directory.GetDirectories(backupPath).First();
                 var databaseName = GetDatabaseName() + "restore";
 
-                DeleteFilesByExtension(".ravendb-full-backup", backupDirectory);     // delete full backup file         
+                var files = Directory.GetFiles(backupDirectory)
+                    .Where(BackupUtils.IsBackupFile)
+                    .OrderBackups()
+                    .ToArray();
+
+                File.Delete(files.First());                            // delete full backup file     
 
                 var restoreConfig = new RestoreBackupConfiguration()
                 {
                     BackupLocation = backupDirectory,
                     DatabaseName = databaseName,
-                    LastFileNameToRestore = Directory.GetFiles(backupDirectory).Last()
+                    LastFileNameToRestore = files.Last()
                 };
 
                 var restoreOperation = new RestoreBackupOperation(restoreConfig);
@@ -331,11 +349,17 @@ namespace SlowTests.Server.Documents.PeriodicBackup
 
                 var backupDirectory = Directory.GetDirectories(backupPath).First();
                 var databaseName = GetDatabaseName() + "restore";
-                RestoreBackupConfiguration restoreConfig = new RestoreBackupConfiguration()
+
+                var files = Directory.GetFiles(backupDirectory)
+                    .Where(BackupUtils.IsBackupFile)
+                    .OrderBackups()
+                    .ToArray();
+
+                var restoreConfig = new RestoreBackupConfiguration()
                 {
                     BackupLocation = backupDirectory,
                     DatabaseName = databaseName,
-                    LastFileNameToRestore = Directory.GetFiles(backupDirectory).Last()
+                    LastFileNameToRestore = files.Last()
                 };
 
                 var restoreOperation = new RestoreBackupOperation(restoreConfig);
@@ -434,11 +458,16 @@ namespace SlowTests.Server.Documents.PeriodicBackup
                 var backupDirectory = Directory.GetDirectories(backupPath).First();
                 var databaseName = GetDatabaseName() + "restore";
 
+                var files = Directory.GetFiles(backupDirectory)
+                    .Where(BackupUtils.IsBackupFile)
+                    .OrderBackups()
+                    .ToArray();
+
                 var restoreConfig = new RestoreBackupConfiguration()
                 {
                     BackupLocation = backupDirectory,
                     DatabaseName = databaseName,
-                    LastFileNameToRestore = Directory.GetFiles(backupDirectory).Last()
+                    LastFileNameToRestore = files.Last()
                 };
 
                 var restoreOperation = new RestoreBackupOperation(restoreConfig);
@@ -542,7 +571,7 @@ namespace SlowTests.Server.Documents.PeriodicBackup
                     if (list[i].Length == 8)
                     {
                         var res = await store.Operations.SendAsync(new DeleteCompareExchangeValueOperation<User>($"emojis/{list[i]}", indexesList[i]));
-                        if(res.Value != null)
+                        if (res.Value != null)
                             count--;
                     }
                 }
@@ -557,11 +586,16 @@ namespace SlowTests.Server.Documents.PeriodicBackup
                 var backupDirectory = Directory.GetDirectories(backupPath).First();
                 var databaseName = GetDatabaseName() + "restore";
 
+                var files = Directory.GetFiles(backupDirectory)
+                    .Where(BackupUtils.IsBackupFile)
+                    .OrderBackups()
+                    .ToArray();
+
                 var restoreConfig = new RestoreBackupConfiguration()
                 {
                     BackupLocation = backupDirectory,
                     DatabaseName = databaseName,
-                    LastFileNameToRestore = Directory.GetFiles(backupDirectory).Last()
+                    LastFileNameToRestore = files.Last()
                 };
 
                 var restoreOperation = new RestoreBackupOperation(restoreConfig);
@@ -574,8 +608,8 @@ namespace SlowTests.Server.Documents.PeriodicBackup
                     ModifyDatabaseName = s => databaseName
                 }))
                 {
-                        stats = store2.Maintenance.ForDatabase(store.Database).Send(new GetDetailedStatisticsOperation());
-                        Assert.Equal(count, stats.CountOfCompareExchange);
+                    stats = store2.Maintenance.ForDatabase(store.Database).Send(new GetDetailedStatisticsOperation());
+                    Assert.Equal(count, stats.CountOfCompareExchange);
                 }
             }
         }
@@ -683,11 +717,16 @@ namespace SlowTests.Server.Documents.PeriodicBackup
                 var backupDirectory = Directory.GetDirectories(backupPath).First();
                 var databaseName = GetDatabaseName() + "restore";
 
+                var files = Directory.GetFiles(backupDirectory)
+                    .Where(BackupUtils.IsBackupFile)
+                    .OrderBackups()
+                    .ToArray();
+
                 var restoreConfig = new RestoreBackupConfiguration()
                 {
                     BackupLocation = backupDirectory,
                     DatabaseName = databaseName,
-                    LastFileNameToRestore = Directory.GetFiles(backupDirectory).Last()
+                    LastFileNameToRestore = files.Last()
                 };
 
                 var restoreOperation = new RestoreBackupOperation(restoreConfig);
@@ -700,8 +739,8 @@ namespace SlowTests.Server.Documents.PeriodicBackup
                     ModifyDatabaseName = s => databaseName
                 }))
                 {
-                        stats = store2.Maintenance.ForDatabase(store.Database).Send(new GetDetailedStatisticsOperation());
-                        Assert.Equal(count, stats.CountOfCompareExchange);
+                    stats = store2.Maintenance.ForDatabase(store.Database).Send(new GetDetailedStatisticsOperation());
+                    Assert.Equal(count, stats.CountOfCompareExchange);
                 }
             }
         }
@@ -753,11 +792,16 @@ namespace SlowTests.Server.Documents.PeriodicBackup
                 var backupDirectory = Directory.GetDirectories(backupPath).First();
                 var databaseName = GetDatabaseName() + "restore";
 
+                var files = Directory.GetFiles(backupDirectory)
+                    .Where(BackupUtils.IsBackupFile)
+                    .OrderBackups()
+                    .ToArray();
+
                 var restoreConfig = new RestoreBackupConfiguration()
                 {
                     BackupLocation = backupDirectory,
                     DatabaseName = databaseName,
-                    LastFileNameToRestore = Directory.GetFiles(backupDirectory).Last()
+                    LastFileNameToRestore = files.Last()
                 };
 
                 var restoreOperation = new RestoreBackupOperation(restoreConfig);
@@ -843,13 +887,19 @@ namespace SlowTests.Server.Documents.PeriodicBackup
 
                 var backupDirectory = Directory.GetDirectories(backupPath).First();
                 var databaseName = GetDatabaseName() + "restore";
-                File.Delete(Directory.GetFiles(backupDirectory).First());
+
+                var files = Directory.GetFiles(backupDirectory)
+                    .Where(BackupUtils.IsBackupFile)
+                    .OrderBackups()
+                    .ToArray();
+
+                File.Delete(files.First());
 
                 var restoreConfig = new RestoreBackupConfiguration()
                 {
                     BackupLocation = backupDirectory,
                     DatabaseName = databaseName,
-                    LastFileNameToRestore = Directory.GetFiles(backupDirectory).Last()
+                    LastFileNameToRestore = files.Last()
                 };
 
                 var restoreOperation = new RestoreBackupOperation(restoreConfig);
@@ -899,8 +949,7 @@ namespace SlowTests.Server.Documents.PeriodicBackup
             DoNotReuseServer();
 
             var zipPath = new PathSetting("SchemaUpgrade/Issues/SystemVersion/Identities_CompareExchange_RavenData.zip");
-            Assert.Equal(true, File.Exists(zipPath.FullPath));
-            Assert.Equal(FileAttributes.Archive, File.GetAttributes(zipPath.FullPath));
+            Assert.True(File.Exists(zipPath.FullPath));
 
             ZipFile.ExtractToDirectory(zipPath.FullPath, folder);
 
@@ -1523,23 +1572,6 @@ namespace SlowTests.Server.Documents.PeriodicBackup
             }
 
             return list;
-        }
-
-        private static void DeleteFilesByExtension(string extension, string backupFolderPath)
-        {
-            var di = new DirectoryInfo(backupFolderPath);
-            var files = di.GetFiles($"*{extension}")
-                .Where(p => p.Extension == $"{extension}").ToArray();
-            foreach (var file in files)
-                try
-                {
-                    file.Attributes = FileAttributes.Normal;
-                    File.Delete(file.FullName);
-                }
-                catch
-                {
-                    throw new IOException($"Could not remove files from {backupFolderPath} with extension {extension}");
-                }
         }
 
         private void RunBackup(long taskId, Raven.Server.Documents.DocumentDatabase documentDatabase, bool isFullBackup, DocumentStore store)

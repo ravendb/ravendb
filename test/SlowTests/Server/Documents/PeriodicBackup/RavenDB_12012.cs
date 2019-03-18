@@ -11,6 +11,7 @@ using Raven.Client.Documents.Operations.Backups;
 using Raven.Client.Documents.Operations.CompareExchange;
 using Raven.Client.Documents.Operations.Identities;
 using Raven.Client.Documents.Operations.Indexes;
+using Raven.Client.Documents.Smuggler;
 using Raven.Client.ServerWide.Operations;
 using Raven.Tests.Core.Utils.Entities;
 using Xunit;
@@ -50,7 +51,6 @@ namespace SlowTests.Server.Documents.PeriodicBackup
                 var documentDatabase = (await GetDocumentDatabaseInstanceFor(store));
                 RunBackup(result.TaskId, documentDatabase, true, store);
 
-              
                 var input = new IndexDefinition
                 {
                     Name = "Users_ByName",
@@ -68,22 +68,27 @@ namespace SlowTests.Server.Documents.PeriodicBackup
                 config.TaskId = result.TaskId;
                 result = await store.Maintenance.SendAsync(new UpdatePeriodicBackupOperation(config));
                 RunBackup(result.TaskId, documentDatabase, false, store);
-                
+
                 var backupDirectory = Directory.GetDirectories(backupPath).First();
 
-               var databaseName = GetDatabaseName() + "restore";
+                var databaseName = GetDatabaseName() + "restore";
+
+                var files = Directory.GetFiles(backupDirectory)
+                   .Where(BackupUtils.IsBackupFile)
+                   .OrderBackups()
+                   .ToArray();
 
                 RestoreBackupConfiguration config2 = new RestoreBackupConfiguration()
                 {
                     BackupLocation = backupDirectory,
                     DatabaseName = databaseName,
-                    LastFileNameToRestore = Directory.GetFiles(backupDirectory).Last()
+                    LastFileNameToRestore = files.Last()
                 };
 
                 RestoreBackupOperation restoreOperation = new RestoreBackupOperation(config2);
-                    store.Maintenance.Server.Send(restoreOperation)
-                        .WaitForCompletion(TimeSpan.FromSeconds(30));
-                
+                store.Maintenance.Server.Send(restoreOperation)
+                    .WaitForCompletion(TimeSpan.FromSeconds(30));
+
                 using (var store2 = GetDocumentStore(new Options()
                 {
                     CreateDatabase = false,
@@ -97,7 +102,7 @@ namespace SlowTests.Server.Documents.PeriodicBackup
             }
         }
 
-        private void RunBackup(long taskId, Raven.Server.Documents.DocumentDatabase documentDatabase, bool isFullBackup ,DocumentStore store )
+        private void RunBackup(long taskId, Raven.Server.Documents.DocumentDatabase documentDatabase, bool isFullBackup, DocumentStore store)
         {
             var periodicBackupRunner = documentDatabase.PeriodicBackupRunner;
             var op = periodicBackupRunner.StartBackupTask(taskId, isFullBackup);
@@ -167,11 +172,16 @@ namespace SlowTests.Server.Documents.PeriodicBackup
 
                 var databaseName = GetDatabaseName() + "restore";
 
+                var files = Directory.GetFiles(backupDirectory)
+                    .Where(BackupUtils.IsBackupFile)
+                    .OrderBackups()
+                    .ToArray();
+
                 RestoreBackupConfiguration config2 = new RestoreBackupConfiguration()
                 {
                     BackupLocation = backupDirectory,
                     DatabaseName = databaseName,
-                    LastFileNameToRestore = Directory.GetFiles(backupDirectory).Last()
+                    LastFileNameToRestore = files.Last()
                 };
 
                 RestoreBackupOperation restoreOperation = new RestoreBackupOperation(config2);
@@ -246,11 +256,16 @@ namespace SlowTests.Server.Documents.PeriodicBackup
 
                 var databaseName = GetDatabaseName() + "restore";
 
+                var files = Directory.GetFiles(backupDirectory)
+                    .Where(BackupUtils.IsBackupFile)
+                    .OrderBackups()
+                    .ToArray();
+
                 RestoreBackupConfiguration config2 = new RestoreBackupConfiguration()
                 {
                     BackupLocation = backupDirectory,
                     DatabaseName = databaseName,
-                    LastFileNameToRestore = Directory.GetFiles(backupDirectory).Last()
+                    LastFileNameToRestore = files.Last()
                 };
 
                 RestoreBackupOperation restoreOperation = new RestoreBackupOperation(config2);
