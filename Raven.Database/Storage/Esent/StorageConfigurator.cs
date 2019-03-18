@@ -62,7 +62,7 @@ namespace Raven.Database.Storage.Esent
                 EventSource = EventSource,
                 LogBuffers = TranslateToSizeInDatabasePages(GetValueFromConfiguration(Constants.Esent.LogBuffers, 8192), 1024),
                 LogFileSize = (logFileSizeInMb * 1024),
-                MaxSessions = MaxSessions,
+                MaxSessions = GetValueFromConfiguration(Constants.Esent.MaxSessions, MaxSessions),
                 MaxCursors = GetValueFromConfiguration(Constants.Esent.MaxCursors, 2048),
                 DbExtensionSize = TranslateToSizeInDatabasePages(GetValueFromConfiguration(Constants.Esent.DbExtensionSize, 8), 1024 * 1024),
                 AlternateDatabaseRecoveryDirectory = path
@@ -78,8 +78,9 @@ namespace Raven.Database.Storage.Esent
             Log.Info(@"Esent Settings:
   MaxVerPages      = {0}
   CacheSizeMax     = {1}
-  DatabasePageSize = {2}", instanceParameters.MaxVerPages, SystemParameters.CacheSizeMax,
-                     SystemParameters.DatabasePageSize);
+  DatabasePageSize = {2}
+  MaxSessions = {3}", instanceParameters.MaxVerPages, SystemParameters.CacheSizeMax,
+                     SystemParameters.DatabasePageSize, instanceParameters.MaxSessions);
 
             return instanceParameters;
         }
