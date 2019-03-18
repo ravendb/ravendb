@@ -230,12 +230,22 @@ namespace Raven.Client.Documents.Session
         /// <summary>
         ///     Matches fields which ends with the specified value.
         /// </summary>
-        TSelf WhereEndsWith(string fieldName, object value, bool exact = false);
+        TSelf WhereEndsWith(string fieldName, object value);
 
         /// <summary>
         ///     Matches fields which ends with the specified value.
         /// </summary>
-        TSelf WhereEndsWith<TValue>(Expression<Func<T, TValue>> propertySelector, TValue value, bool exact = false);
+        TSelf WhereEndsWith(string fieldName, object value, bool exact);
+
+        /// <summary>
+        ///     Matches fields which ends with the specified value.
+        /// </summary>
+        TSelf WhereEndsWith<TValue>(Expression<Func<T, TValue>> propertySelector, TValue value);
+
+        /// <summary>
+        ///     Matches fields which ends with the specified value.
+        /// </summary>
+        TSelf WhereEndsWith<TValue>(Expression<Func<T, TValue>> propertySelector, TValue value, bool exact);
 
         /// <summary>
         ///     Matches value
@@ -356,12 +366,22 @@ namespace Raven.Client.Documents.Session
         /// <summary>
         ///     Matches fields which starts with the specified value.
         /// </summary>
-        TSelf WhereStartsWith(string fieldName, object value, bool exact = false);
+        TSelf WhereStartsWith(string fieldName, object value);
 
         /// <summary>
         ///     Matches fields which starts with the specified value.
         /// </summary>
-        TSelf WhereStartsWith<TValue>(Expression<Func<T, TValue>> propertySelector, TValue value, bool exact = false);
+        TSelf WhereStartsWith(string fieldName, object value, bool exact);
+
+        /// <summary>
+        ///     Matches fields which starts with the specified value.
+        /// </summary>
+        TSelf WhereStartsWith<TValue>(Expression<Func<T, TValue>> propertySelector, TValue value);
+
+        /// <summary>
+        ///     Matches fields which starts with the specified value.
+        /// </summary>
+        TSelf WhereStartsWith<TValue>(Expression<Func<T, TValue>> propertySelector, TValue value, bool exact);
 
         /// <summary>
         ///     Check if the given field exists

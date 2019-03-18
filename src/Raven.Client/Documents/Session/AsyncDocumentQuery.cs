@@ -226,9 +226,23 @@ namespace Raven.Client.Documents.Session
         }
 
         /// <inheritdoc />
+        IAsyncDocumentQuery<T> IFilterDocumentQueryBase<T, IAsyncDocumentQuery<T>>.WhereStartsWith(string fieldName, object value)
+        {
+            WhereStartsWith(fieldName, value, exact: false);
+            return this;
+        }
+
+        /// <inheritdoc />
         IAsyncDocumentQuery<T> IFilterDocumentQueryBase<T, IAsyncDocumentQuery<T>>.WhereStartsWith(string fieldName, object value, bool exact)
         {
             WhereStartsWith(fieldName, value, exact);
+            return this;
+        }
+
+        /// <inheritdoc />
+        IAsyncDocumentQuery<T> IFilterDocumentQueryBase<T, IAsyncDocumentQuery<T>>.WhereStartsWith<TValue>(Expression<Func<T, TValue>> propertySelector, TValue value)
+        {
+            WhereStartsWith(GetMemberQueryPath(propertySelector.Body), value, exact: false);
             return this;
         }
 
@@ -240,9 +254,23 @@ namespace Raven.Client.Documents.Session
         }
 
         /// <inheritdoc />
+        IAsyncDocumentQuery<T> IFilterDocumentQueryBase<T, IAsyncDocumentQuery<T>>.WhereEndsWith(string fieldName, object value)
+        {
+            WhereEndsWith(fieldName, value, exact: false);
+            return this;
+        }
+
+        /// <inheritdoc />
         IAsyncDocumentQuery<T> IFilterDocumentQueryBase<T, IAsyncDocumentQuery<T>>.WhereEndsWith(string fieldName, object value, bool exact)
         {
             WhereEndsWith(fieldName, value, exact);
+            return this;
+        }
+
+        /// <inheritdoc />
+        IAsyncDocumentQuery<T> IFilterDocumentQueryBase<T, IAsyncDocumentQuery<T>>.WhereEndsWith<TValue>(Expression<Func<T, TValue>> propertySelector, TValue value)
+        {
+            WhereEndsWith(GetMemberQueryPath(propertySelector.Body), value, exact: false);
             return this;
         }
 
@@ -1122,7 +1150,7 @@ namespace Raven.Client.Documents.Session
         }
 
         public IAsyncGraphQuery<T> With<TOther>(string alias, Func<IAsyncDocumentQueryBuilder, IAsyncDocumentQuery<TOther>> queryFactory)
-        {            
+        {
             var docQuery = (AsyncDocumentQuery<TOther>)queryFactory(new AsyncDocumentQueryBuilder(AsyncSession, $"w{WithTokens.Count}p"));
             return WithInternal(alias, docQuery);
         }
@@ -1152,7 +1180,7 @@ namespace Raven.Client.Documents.Session
             }
         }
         private IAsyncGraphQuery<T> WithInternal<TOther>(string alias, AsyncDocumentQuery<TOther> docQuery)
-        {            
+        {
             if (docQuery.SelectTokens?.Count > 0)
             {
                 throw new NotSupportedException($"Select is not permitted in a 'With' clause in query:{docQuery}");

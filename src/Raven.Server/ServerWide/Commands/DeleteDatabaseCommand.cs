@@ -46,9 +46,13 @@ namespace Raven.Server.ServerWide.Commands
                     {
                         DatabaseDoesNotExistException.ThrowWithMessage(record.DatabaseName, $"Request to delete database from node '{node}' failed.");
                     }
+
+                    // rehabs will be removed only once the replication sent all the documents to the mentor
+                    if (record.Topology.Promotables.Contains(node)) 
+                        record.Topology.RemoveFromTopology(node);
+
                     if (UpdateReplicationFactor)
                     {
-                        record.Topology.RemoveFromTopology(node);
                         record.Topology.ReplicationFactor--;
                     }
                     if (ClusterNodes.Contains(node))
