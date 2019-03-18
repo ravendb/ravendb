@@ -94,12 +94,12 @@ namespace Raven.Server.Smuggler.Documents
 
         public ICompareExchangeActions CompareExchange(JsonOperationContext context)
         {
-            return new DatabaseCompareExchangeActions(_database, context);
+            return new DatabaseCompareExchangeActions(_database, context, fromBackup: true);
         }
 
         public ICompareExchangeActions CompareExchangeTombstones(JsonOperationContext context)
         {
-            return new DatabaseCompareExchangeActions(_database, context, true);
+            return new DatabaseCompareExchangeActions(_database, context, fromBackup: true);
         }
 
         public ICounterActions Counters()
@@ -450,7 +450,7 @@ namespace Raven.Server.Smuggler.Documents
         {
             private readonly DocumentDatabase _database;
             private readonly JsonOperationContext _context;
-            private bool _fromBackup;
+            private readonly bool _fromBackup;
             private readonly List<RemoveCompareExchangeCommand> _compareExchangeRemoveCommands = new List<RemoveCompareExchangeCommand>();
             private readonly List<AddOrUpdateCompareExchangeCommand> _compareExchangeAddOrUpdateCommands = new List<AddOrUpdateCompareExchangeCommand>();
 
@@ -464,7 +464,7 @@ namespace Raven.Server.Smuggler.Documents
             public void WriteKeyValue(string key, BlittableJsonReaderObject value)
             {
                 const int batchSize = 1024;
-                _compareExchangeAddOrUpdateCommands.Add(new AddOrUpdateCompareExchangeCommand(_database.Name, key, value, 0, _context));
+                _compareExchangeAddOrUpdateCommands.Add(new AddOrUpdateCompareExchangeCommand(_database.Name, key, value, 0, _context, _fromBackup));
 
                 if (_compareExchangeAddOrUpdateCommands.Count < batchSize)
                     return;
