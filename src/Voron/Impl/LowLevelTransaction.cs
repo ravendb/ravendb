@@ -940,8 +940,8 @@ namespace Voron.Impl
             if (AsyncCommit.Result)
                 Environment.LastWorkTime = DateTime.UtcNow;
 
-            CommitStage3_DisposeTransactionResources();
             BeforeCommitFinalization?.Invoke(this);
+            CommitStage3_DisposeTransactionResources();
         }
 
         private static void ThrowInvalidAsyncEndWithoutBegin()
