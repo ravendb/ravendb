@@ -5,6 +5,7 @@ using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
 using Sparrow.Json;
 using Sparrow.Server;
+using Sparrow.Server.Platform;
 using Sparrow.Threading;
 
 namespace Voron
@@ -214,8 +215,8 @@ namespace Voron
         public static readonly Slice BeforeAllKeys;
         public static readonly Slice Empty;
 
-        static Slices()
-        {
+        static unsafe Slices()
+        {            
             SharedSliceContent.From(string.Empty, out ByteString empty);
             Empty = new Slice(SliceOptions.Key, empty);
             SharedSliceContent.From(string.Empty, out ByteString before);

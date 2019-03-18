@@ -1,4 +1,9 @@
-﻿using Sparrow.Platform;
+﻿using System;
+using System.Threading;
+using Sparrow.Collections;
+using Sparrow.Platform;
+using Sparrow.Json;
+
 using Sparrow.Server.Platform.Posix;
 using Sparrow.Server.Platform.Win32;
 
@@ -6,6 +11,7 @@ namespace Sparrow.Server.Platform
 {
     public unsafe class ElectricFencedMemory
     {
+
 #if MEM_GUARD_STACK
         public static System.Collections.Concurrent.ConcurrentDictionary<IntPtr, Tuple<int,string>> Allocs =
             new System.Collections.Concurrent.ConcurrentDictionary<IntPtr, Tuple<int,string>>();
@@ -17,24 +23,12 @@ namespace Sparrow.Server.Platform
         public static System.Collections.Concurrent.ConcurrentDictionary<JsonOperationContext, string> ContextAllocations =
             new System.Collections.Concurrent.ConcurrentDictionary<JsonOperationContext, string>();
 
-
         public static int ContextCount;
-
-        public static void IncrementConext()
-        {
-            Interlocked.Increment(ref ContextCount);
-        }
-
-        public static void DecrementConext()
-        {
-            Interlocked.Decrement(ref ContextCount);
-        }
 
         public static void RegisterContextAllocation(JsonOperationContext context, string stackTrace)
         {
             ContextAllocations.TryAdd(context, stackTrace);
         }
-
 
         public static void UnRegisterContextAllocation(JsonOperationContext context)
         {

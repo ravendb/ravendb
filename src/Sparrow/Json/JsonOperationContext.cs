@@ -313,8 +313,7 @@ namespace Sparrow.Json
             _disposeOnceRunner = new DisposeOnce<SingleAttempt>(() =>
             {
 #if MEM_GUARD_STACK
-                ElectricFencedMemory.DecrementConext();
-                ElectricFencedMemory.UnRegisterContextAllocation(this);
+                // TODO: Include Electric Fenced Memory allocation
 #endif
 
                 List<Exception> exceptions = null;
@@ -373,8 +372,7 @@ namespace Sparrow.Json
             LowMemoryFlag = lowMemoryFlag;
 
 #if MEM_GUARD_STACK
-            ElectricFencedMemory.IncrementConext();
-            ElectricFencedMemory.RegisterContextAllocation(this,Environment.StackTrace);
+            // TODO: Include Electric Fenced Memory allocation
 #endif
         }
 
