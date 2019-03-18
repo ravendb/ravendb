@@ -220,12 +220,6 @@ namespace Raven.Server.ServerWide.Commands
                 tombstoneItems.Set(tvb);
             }
         }
-
-        public override DynamicJsonValue ToJson(JsonOperationContext context)
-        {
-            var json = base.ToJson(context);
-            return json;
-        }
     }
 
     public class AddOrUpdateCompareExchangeCommand : CompareExchangeCommandBase
