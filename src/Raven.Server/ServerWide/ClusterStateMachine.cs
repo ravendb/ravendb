@@ -1571,20 +1571,8 @@ namespace Raven.Server.ServerWide
         {
             var items = context.Transaction.InnerTransaction.OpenTable(CompareExchangeSchema, CompareExchange);
             var compareExchange = (CompareExchangeCommandBase)JsonDeserializationCluster.Commands[type](cmd);
-            if (type.Equals(nameof(AddOrUpdateCompareExchangeCommand)))
-            {
-                if (cmd.TryGet(nameof(AddOrUpdateCompareExchangeCommand.FromBackup), out bool fromBackup) == false)
-                    throw new ArgumentException($"{nameof(AddOrUpdateCompareExchangeCommand)} is missing {nameof(AddOrUpdateCompareExchangeCommand.FromBackup)} argument.");
 
-                result = compareExchange.Execute(context, items, index, fromBackup);
-            }
-            else
-            {
-                if (cmd.TryGet(nameof(RemoveCompareExchangeCommand.FromBackup), out bool fromBackup) == false)
-                    throw new ArgumentException($"{nameof(RemoveCompareExchangeCommand)} is missing {nameof(RemoveCompareExchangeCommand.FromBackup)} argument.");
-
-                result = compareExchange.Execute(context, items, index, fromBackup);
-            }
+            result = compareExchange.Execute(context, items, index);
 
             OnTransactionDispose(context, index);
         }

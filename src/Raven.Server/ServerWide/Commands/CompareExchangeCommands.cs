@@ -18,6 +18,7 @@ namespace Raven.Server.ServerWide.Commands
         public string Key;
         public string Database;
         private string _actualKey;
+        public bool FromBackup;
 
         protected string ActualKey => _actualKey ?? (_actualKey = GetActualKey(Database, Key));
 
@@ -32,7 +33,7 @@ namespace Raven.Server.ServerWide.Commands
 
         protected CompareExchangeCommandBase() { }
 
-        protected CompareExchangeCommandBase(string database, string key, long index, JsonOperationContext context)
+        protected CompareExchangeCommandBase(string database, string key, long index, JsonOperationContext context, bool fromBackup)
         {
             if (string.IsNullOrEmpty(key))
                 throw new ArgumentNullException(nameof(key), "The key argument must have value");
@@ -45,9 +46,10 @@ namespace Raven.Server.ServerWide.Commands
             Index = index;
             Database = database;
             ContextToWriteResult = context;
+            FromBackup = fromBackup;
         }
 
-        public abstract (long Index, object Value) Execute(TransactionOperationContext context, Table items, long index, bool fromBackup = false);
+        public abstract (long Index, object Value) Execute(TransactionOperationContext context, Table items, long index);
 
         public static unsafe void GetKeyAndPrefixIndexSlices(
             ByteStringContext allocator, string db, string key, long index,
@@ -119,6 +121,7 @@ namespace Raven.Server.ServerWide.Commands
             json[nameof(Key)] = Key;
             json[nameof(Index)] = Index;
             json[nameof(Database)] = Database;
+            json[nameof(FromBackup)] = FromBackup;
             return json;
         }
 
@@ -166,24 +169,20 @@ namespace Raven.Server.ServerWide.Commands
 
     public class RemoveCompareExchangeCommand : CompareExchangeCommandBase
     {
-        public bool FromBackup;
-
         public RemoveCompareExchangeCommand() { }
-        public RemoveCompareExchangeCommand(string database, string key, long index, JsonOperationContext contextToReturnResult) : base(database, key, index, contextToReturnResult) { }
 
-        public RemoveCompareExchangeCommand(string database, string key, long index, JsonOperationContext contextToReturnResult, bool fromBackup) : base(database, key,
-            index, contextToReturnResult)
+        public RemoveCompareExchangeCommand(string database, string key, long index, JsonOperationContext contextToReturnResult, bool fromBackup = false) : base(database, key,
+            index, contextToReturnResult, fromBackup)
         {
-            FromBackup = fromBackup;
         }
 
-        public override unsafe (long Index, object Value) Execute(TransactionOperationContext context, Table items, long index, bool fromBackup = false)
+        public override unsafe (long Index, object Value) Execute(TransactionOperationContext context, Table items, long index)
         {
             using (Slice.From(context.Allocator, ActualKey, out Slice keySlice))
             {
                 if (items.ReadByKey(keySlice, out var reader))
                 {
-                    if (fromBackup)
+                    if (FromBackup)
                     {
                         items.Delete(reader.Id);
                         return (index, null);
@@ -225,10 +224,6 @@ namespace Raven.Server.ServerWide.Commands
         public override DynamicJsonValue ToJson(JsonOperationContext context)
         {
             var json = base.ToJson(context);
-            json[nameof(Key)] = Key;
-            json[nameof(Index)] = Index;
-            json[nameof(Database)] = Database;
-            json[nameof(FromBackup)] = FromBackup;
             return json;
         }
     }
@@ -236,23 +231,16 @@ namespace Raven.Server.ServerWide.Commands
     public class AddOrUpdateCompareExchangeCommand : CompareExchangeCommandBase
     {
         public BlittableJsonReaderObject Value;
-        public bool FromBackup;
 
         public AddOrUpdateCompareExchangeCommand() { }
 
-        public AddOrUpdateCompareExchangeCommand(string database, string key, BlittableJsonReaderObject value, long index, JsonOperationContext contextToReturnResult) 
-            : base(database, key, index, contextToReturnResult)
+        public AddOrUpdateCompareExchangeCommand(string database, string key, BlittableJsonReaderObject value, long index, JsonOperationContext contextToReturnResult, bool fromBackup = false)
+            : base(database, key, index, contextToReturnResult, fromBackup)
         {
             Value = value;
         }
 
-        public AddOrUpdateCompareExchangeCommand(string database, string key, BlittableJsonReaderObject value, long index, JsonOperationContext contextToReturnResult, bool fromBackup)
-            : base(database, key, index, contextToReturnResult)
-        {
-            Value = value;
-            FromBackup = fromBackup;
-        }
-        public override unsafe (long Index, object Value) Execute(TransactionOperationContext context, Table items, long index, bool fromBackup)
+        public override unsafe (long Index, object Value) Execute(TransactionOperationContext context, Table items, long index)
         {
             // We have to clone the Value because we might have gotten this command from another node
             // and it was serialized. In that case, it is an _internal_ object, not a full document,
@@ -274,7 +262,7 @@ namespace Raven.Server.ServerWide.Commands
                 if (items.ReadByKey(keySlice, out var reader))
                 {
                     var itemIndex = *(long*)reader.Read((int)ClusterStateMachine.CompareExchangeTable.Index, out var _);
-                    if (Index == itemIndex || FromBackup && Index == 0)
+                    if (Index == itemIndex || (FromBackup && Index == 0))
                     {
                         items.Update(reader.Id, tvb);
                     }
@@ -296,7 +284,6 @@ namespace Raven.Server.ServerWide.Commands
         {
             var json = base.ToJson(context);
             json[nameof(Value)] = Value;
-            json[nameof(FromBackup)] = FromBackup;
             return json;
         }
     }
