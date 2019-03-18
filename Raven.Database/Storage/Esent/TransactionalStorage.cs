@@ -432,8 +432,9 @@ namespace Raven.Storage.Esent
                 log.Info(@"Esent Settings:
   MaxVerPages      = {0}
   CacheSizeMax     = {1}
-  DatabasePageSize = {2}", instanceParameters.MaxVerPages, SystemParameters.CacheSizeMax,
-                         SystemParameters.DatabasePageSize);
+  DatabasePageSize = {2}
+  MaxSessions = {3}", instanceParameters.MaxVerPages, SystemParameters.CacheSizeMax,
+                         SystemParameters.DatabasePageSize, instanceParameters.MaxSessions);
 
                 Api.JetInit(ref instance);
 
