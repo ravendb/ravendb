@@ -114,6 +114,7 @@ class migrateRavenDbDatabaseModel {
         const migrationSettings: Raven.Server.Smuggler.Migration.DatabaseMigrationSettings = {
             DatabaseName: this.resourceName(),
             OperateOnTypes: operateOnTypes.join(",") as Raven.Client.Documents.Smuggler.DatabaseItemType,
+            OperateOnDatabaseRecordTypes: "" as Raven.Client.Documents.Smuggler.DatabaseRecordItemType,
             RemoveAnalyzers: this.removeAnalyzers(),
             ImportRavenFs: this.importRavenFs(),
             TransformScript: this.transformScript()
