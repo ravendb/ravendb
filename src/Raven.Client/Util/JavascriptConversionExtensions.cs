@@ -2365,15 +2365,25 @@ namespace Raven.Client.Util
 
             public override void ConvertToJavascript(JavascriptConversionContext context)
             {
-                if (CanConvert(context.Node, _conventions, out var alias, out var member) == false)
+                if (CanConvert(context.Node, _conventions, out var alias, out var innerMemberExpression) == false)
                     return;
 
                 var writer = context.GetWriter();
                 context.PreventDefault();
 
-                using (writer.Operation(member))
+                using (writer.Operation(context.Node))
                 {
-                    writer.Write($"id({alias})");
+                    writer.Write("id(");
+                    if (innerMemberExpression != null)
+                    {
+                        context.Visitor.Visit(innerMemberExpression);
+                    }
+                    else
+                    {
+                        writer.Write(alias);
+                    }
+
+                    writer.Write(")");
                 }
             }
 
@@ -2382,18 +2392,16 @@ namespace Raven.Client.Util
                 return CanConvert(expression, conventions, out aliasName, out _);
             }
 
-            private static bool CanConvert(Expression expression, DocumentConventions conventions, out string aliasName, out MemberExpression memberExpression)
+            private static bool CanConvert(Expression expression, DocumentConventions conventions, out string aliasName, out MemberExpression innerMemberExpression)
             {
                 aliasName = null;
-                memberExpression = null;
+                innerMemberExpression = null;
 
-                if (!(expression is MemberExpression member))
+                if (!(expression is MemberExpression member) ||
+                    conventions.GetIdentityProperty(member.Member.DeclaringType) != member.Member)
                     return false;
 
-                memberExpression = member;
-
-                if (member.Expression is ParameterExpression parameter
-                    && conventions.GetIdentityProperty(member.Member.DeclaringType) == member.Member)
+                if (member.Expression is ParameterExpression parameter)
                 {
                     aliasName = parameter.Name;
                     return true;
@@ -2402,10 +2410,11 @@ namespace Raven.Client.Util
                 if (!(member.Expression is MemberExpression innerMember))
                     return false;
 
+                innerMemberExpression = innerMember;
+
                 var p = GetParameter(innerMember)?.Name;
 
-                if (p != null && p.StartsWith(TransparentIdentifier)
-                              && conventions.GetIdentityProperty(member.Member.DeclaringType) == member.Member)
+                if (p != null && p.StartsWith(TransparentIdentifier))
                 {
                     aliasName = innerMember.Member.Name;
                     return true;
