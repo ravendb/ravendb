@@ -738,12 +738,14 @@ Use session.Query<T>() instead of session.Advanced.DocumentQuery<T>. The session
             tokens.AddLast(whereToken);
         }
 
-        /// <summary>
-        ///   Matches fields which starts with the specified value.
-        /// </summary>
-        /// <param name = "fieldName">Name of the field.</param>
-        /// <param name = "value">The value.</param>
+        /// <inheritdoc />
         public void WhereStartsWith(string fieldName, object value, bool exact = false)
+        {
+            WhereStartsWith(fieldName, value, exact: false);
+        }
+
+        /// <inheritdoc />
+        public void WhereStartsWith(string fieldName, object value, bool exact)
         {
             var whereParams = new WhereParams
             {
@@ -763,12 +765,14 @@ Use session.Query<T>() instead of session.Advanced.DocumentQuery<T>. The session
             tokens.AddLast(whereToken);
         }
 
-        /// <summary>
-        ///   Matches fields which ends with the specified value.
-        /// </summary>
-        /// <param name = "fieldName">Name of the field.</param>
-        /// <param name = "value">The value.</param>
+        /// <inheritdoc />
         public void WhereEndsWith(string fieldName, object value, bool exact = false)
+        {
+            WhereEndsWith(fieldName, value, exact: false);
+        }
+
+        /// <inheritdoc />
+        public void WhereEndsWith(string fieldName, object value, bool exact)
         {
             var whereParams = new WhereParams
             {

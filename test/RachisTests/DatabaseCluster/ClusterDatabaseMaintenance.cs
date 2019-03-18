@@ -108,21 +108,21 @@ namespace RachisTests.DatabaseCluster
         public async Task MoveToRehabOnServerDown()
         {
             var clusterSize = 3;
-            var databaseName = "DemoteOnServerDown";
-            var leader = await CreateRaftClusterAndGetLeader(clusterSize, true, 0, customSettings: new Dictionary<string, string>
+            var databaseName = GetDatabaseName();
+            var cluster = await CreateRaftCluster(clusterSize, true, 0, customSettings: new Dictionary<string, string>
             {
                 [RavenConfiguration.GetKey(x => x.Cluster.MoveToRehabGraceTime)] = "4"
             });
             using (var store = new DocumentStore
             {
-                Urls = new[] { leader.WebUrl },
+                Urls = new[] { cluster.Leader.WebUrl },
                 Database = databaseName
             }.Initialize())
             {
                 var doc = new DatabaseRecord(databaseName);
                 var databaseResult = await store.Maintenance.Server.SendAsync(new CreateDatabaseOperation(doc, clusterSize));
                 Assert.Equal(clusterSize, databaseResult.Topology.Members.Count);
-                Servers[1].Dispose();
+                cluster.Nodes[1].Dispose();
 
                 var val = await WaitForValueAsync(async () => await GetMembersCount(store, databaseName), clusterSize - 1);
                 Assert.Equal(clusterSize - 1, val);
@@ -135,7 +135,7 @@ namespace RachisTests.DatabaseCluster
         public async Task PromoteOnCatchingUp()
         {
             var clusterSize = 3;
-            var databaseName = "PromoteOnCatchingUp";
+            var databaseName = GetDatabaseName();
             var leader = await CreateRaftClusterAndGetLeader(clusterSize, true, 0);
             using (var store = new DocumentStore
             {
@@ -183,7 +183,7 @@ namespace RachisTests.DatabaseCluster
         public async Task SuccessfulMaintenanceOnLeaderChange()
         {
             var clusterSize = 3;
-            var databaseName = "SuccessfulMaintenanceOnLeaderChange";
+            var databaseName = GetDatabaseName();
             var leader = await CreateRaftClusterAndGetLeader(clusterSize, true, 0);
             using (var store = new DocumentStore()
             {
@@ -216,7 +216,7 @@ namespace RachisTests.DatabaseCluster
         public async Task PromoteDatabaseNodeBackAfterReconnection()
         {
             var clusterSize = 3;
-            var databaseName = "PromoteDatabaseNodeBackAfterReconnection";
+            var databaseName = GetDatabaseName();
             var leader = await CreateRaftClusterAndGetLeader(clusterSize, false, 0, customSettings: new Dictionary<string, string>
             {
                 [RavenConfiguration.GetKey(x => x.Cluster.MoveToRehabGraceTime)] = "4"
@@ -258,7 +258,7 @@ namespace RachisTests.DatabaseCluster
         {
             //DebuggerAttachedTimeout.DisableLongTimespan = true;
             var clusterSize = 3;
-            var databaseName = "MoveToPassiveWhenRefusedConnectionFromAllNodes";
+            var databaseName = GetDatabaseName();
             var leader = await CreateRaftClusterAndGetLeader(clusterSize, false, 0, customSettings: new Dictionary<string, string>()
             {
                 [RavenConfiguration.GetKey(x => x.Cluster.ElectionTimeout)] = "600"
@@ -330,7 +330,7 @@ namespace RachisTests.DatabaseCluster
             DebuggerAttachedTimeout.DisableLongTimespan = true;
             var clusterSize = 3;
             var dbGroupSize = 2;
-            var databaseName = "RedistrebuteDatabaseIfNodeFailes";
+            var databaseName = GetDatabaseName();
             var leader = await CreateRaftClusterAndGetLeader(clusterSize, false, 0);
 
             using (var store = new DocumentStore
@@ -371,7 +371,7 @@ namespace RachisTests.DatabaseCluster
             DebuggerAttachedTimeout.DisableLongTimespan = true;
             var clusterSize = 5;
             var dbGroupSize = 3;
-            var databaseName = "RedistrebuteDatabaseOnCascadeFailure";
+            var databaseName = GetDatabaseName();
             var leader = await CreateRaftClusterAndGetLeader(clusterSize, false, 0);
 
             using (var store = new DocumentStore
@@ -411,7 +411,7 @@ namespace RachisTests.DatabaseCluster
         [Fact]
         public async Task RemoveNodeFromClusterWhileDeletion()
         {
-            var databaseName = "RemoveNodeFromClusterWhileDeletion" + Guid.NewGuid();
+            var databaseName = GetDatabaseName();
             var leader = await CreateRaftClusterAndGetLeader(3, leaderIndex: 0);
 
             using (var leaderStore = new DocumentStore
@@ -454,7 +454,7 @@ namespace RachisTests.DatabaseCluster
         [Fact]
         public async Task DontRemoveNodeWhileItHasNotReplicatedDocs()
         {
-            var databaseName = "DontRemoveNodeWhileItHasNotReplicatedDocs" + Guid.NewGuid();
+            var databaseName = GetDatabaseName();
             var leader = await CreateRaftClusterAndGetLeader(3, shouldRunInMemory: false);
 
             using (var leaderStore = new DocumentStore
@@ -552,7 +552,7 @@ namespace RachisTests.DatabaseCluster
         [Fact]
         public async Task Promote_immedtialty_should_work()
         {
-            var databaseName = "Promote_immedtialty_should_work" + Guid.NewGuid();
+            var databaseName = GetDatabaseName();
             var leader = await CreateRaftClusterAndGetLeader(3);
 
             using (var leaderStore = new DocumentStore
@@ -588,7 +588,7 @@ namespace RachisTests.DatabaseCluster
         [Fact]
         public async Task ChangeUrlOfSingleNodeCluster()
         {
-            var databaseName = "ChangeUrlOfSingleNodeCluster" + Guid.NewGuid();
+            var databaseName = GetDatabaseName();
             var leader = await CreateRaftClusterAndGetLeader(1, shouldRunInMemory: false);
 
             using (var leaderStore = new DocumentStore

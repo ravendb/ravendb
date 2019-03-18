@@ -198,20 +198,19 @@ namespace Raven.Server.Documents
         public bool ShouldDeleteDatabase(string dbName, DatabaseRecord record)
         {
             var deletionInProgress = DeletionInProgressStatus.No;
-            var directDelete = record.DeletionInProgress != null &&
-                               record.DeletionInProgress.TryGetValue(_serverStore.NodeTag, out deletionInProgress) &&
+            var directDelete = record.DeletionInProgress?.TryGetValue(_serverStore.NodeTag, out deletionInProgress) == true &&
                                deletionInProgress != DeletionInProgressStatus.No;
 
-            if (directDelete &&
-                record.Topology.Count == record.Topology.ReplicationFactor)
-            // If the deletion was issued form the cluster observer to maintain the replication factor we need to make sure
-            // the all the documents were replicated from this node, therefor the deletion will be called from the replication code.
-            {
-                DeleteDatabase(dbName, deletionInProgress, record);
-                return true;
-            }
+            if (directDelete == false)
+                return false;
 
-            return false;
+            if (record.Topology.Rehabs.Contains(_serverStore.NodeTag))
+                // If the deletion was issued form the cluster observer to maintain the replication factor we need to make sure
+                // that all the documents were replicated from this node, therefor the deletion will be called from the replication code.
+                return false;
+
+            DeleteDatabase(dbName, deletionInProgress, record);
+            return true;
         }
 
         public void DeleteDatabase(string dbName, DeletionInProgressStatus deletionInProgress, DatabaseRecord record)
@@ -228,6 +227,7 @@ namespace Raven.Server.Documents
                     // this is already in the process of being deleted, we can just exit and let another thread handle it
                     return;
                 }
+
                 if (deletionInProgress == DeletionInProgressStatus.HardDelete)
                 {
                     RavenConfiguration configuration;
@@ -284,16 +284,18 @@ namespace Raven.Server.Documents
                 NodeTag = _serverStore.NodeTag
             };
             _serverStore.SendToLeaderAsync(cmd)
-                .ContinueWith(t =>
+                .ContinueWith(async t =>
                 {
-                    if (t.Exception != null)
+                    var message = $"Failed to notify leader about removal of node {_serverStore.NodeTag} from database '{dbName}', will retry again in 15 seconds.";
+                    if (_logger.IsInfoEnabled)
                     {
-                        if (_logger.IsInfoEnabled)
-                        {
-                            _logger.Info($"Failed to notify leader about removal of node {_serverStore.NodeTag} from database {dbName}", t.Exception);
-                        }
+                        _logger.Info(message, t.Exception);
                     }
-                });
+
+                    await Task.Delay(TimeSpan.FromSeconds(15));
+
+                    NotifyLeaderAboutRemoval(dbName);
+                }, TaskContinuationOptions.OnlyOnFaulted);
         }
 
         private void NotifyDatabaseAboutStateChange(string changedDatabase, Task<DocumentDatabase> done, long index)

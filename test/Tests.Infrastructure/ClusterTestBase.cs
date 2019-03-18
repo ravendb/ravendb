@@ -355,13 +355,17 @@ namespace Tests.Infrastructure
             mre.Wait();
         }
 
-        protected static async Task DisposeServerAndWaitForFinishOfDisposalAsync(RavenServer serverToDispose, CancellationToken token = default)
+        protected static async Task<(string DataDir, string Url)> DisposeServerAndWaitForFinishOfDisposalAsync(RavenServer serverToDispose, CancellationToken token = default)
         {
             var mre = new AsyncManualResetEvent();
+            var dataDir = serverToDispose.Configuration.Core.DataDirectory.FullPath.Split('/').Last();
+            var url = serverToDispose.WebUrl;
+
             serverToDispose.AfterDisposal += () => mre.Set();
             serverToDispose.Dispose();
 
             await mre.WaitAsync(token).ConfigureAwait(false);
+            return (dataDir, url);
         }
 
         protected async Task DisposeAndRemoveServer(RavenServer serverToDispose)
@@ -433,8 +437,9 @@ namespace Tests.Infrastructure
             return leader;
         }
 
+
         protected async Task<(List<RavenServer> Nodes, RavenServer Leader)> CreateRaftCluster(int numberOfNodes, bool shouldRunInMemory = true, int? leaderIndex = null, bool useSsl = false, bool createNewCert = false,
-            string serverCertPath = null, IDictionary<string, string> customSettings = null)
+            IDictionary<string, string> customSettings = null, bool watcherCluster = false)
         {
             leaderIndex = leaderIndex ?? _random.Next(0, numberOfNodes);
             RavenServer leader = null;
@@ -446,6 +451,7 @@ namespace Tests.Infrastructure
                 customSettings = customSettings ?? new Dictionary<string, string>()
                 {
                     [RavenConfiguration.GetKey(x => x.Cluster.MoveToRehabGraceTime)] = "1",
+                    [RavenConfiguration.GetKey(x => x.Cluster.AddReplicaTimeout)] = "1",
                     [RavenConfiguration.GetKey(x => x.Cluster.ElectionTimeout)] = _electionTimeoutInMs.ToString(),
                     [RavenConfiguration.GetKey(x => x.Cluster.StabilizationTime)] = "1",
                 };
@@ -485,8 +491,15 @@ namespace Tests.Infrastructure
                 }
                 var follower = clustersServers[i];
                 // ReSharper disable once PossibleNullReferenceException
-                await leader.ServerStore.AddNodeToClusterAsync(serversToPorts[follower]);
+                await leader.ServerStore.AddNodeToClusterAsync(serversToPorts[follower], asWatcher: watcherCluster);
+                if (watcherCluster)
+                {
+                    await follower.ServerStore.WaitForTopology(Leader.TopologyModification.NonVoter);
+                }
+                else
+                {
                 await follower.ServerStore.WaitForTopology(Leader.TopologyModification.Voter);
+            }
             }
             // ReSharper disable once PossibleNullReferenceException
             var condition = await leader.ServerStore.WaitForState(RachisState.Leader, CancellationToken.None).WaitAsync(numberOfNodes * _electionTimeoutInMs * 5);
