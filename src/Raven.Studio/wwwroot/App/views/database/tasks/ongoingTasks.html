@@ -204,7 +204,7 @@
                             <div class="collapse panel-addon" data-bind="collapse: showDetails">
                                 <div class="padding flex-horizontal">
                                     <div class="flex-grow">
-                                        <div class="inline-properties">
+                                        <div class="list-properties">
                                             <div class="property-item">
                                                 <div class="property-name">Task Status:</div>
                                                 <div class="property-value" class="text-details" data-bind="text: badgeText"></div>
@@ -256,7 +256,7 @@
                                             </div>
                                             <div  class="property-item">
                                                 <div class="property-name">Destinations:</div>
-                                                <div class="property-value" data-bind="text: backupDestinations().join(', '), attr: { class: textClass() }"></div>
+                                                <div class="property-value"><span data-bind="text: backupDestinations().join(', '), attr: { class: textClass() }"></span></div>
                                             </div>
                                             <div class="property-item" data-bind="visible: lastFullBackupHumanized">
                                                 <div class="property-name" data-bind="text: 'Last ' + fullBackupTypeName() + (fullBackupTypeName() === 'Snapshot' ? ':' : ' Backup:')"></div>
@@ -268,11 +268,11 @@
                                             </div>
                                             <div class="property-item" data-bind="visible: nextBackup() && !onGoingBackup()">
                                                 <div class="property-name">Next Estimated Backup:</div>
-                                                <div class="property-value" data-bind="text: nextBackupHumanized, attr: { class: textClass() }"></div>
+                                                <div class="property-value"><span data-bind="text: nextBackupHumanized, attr: { class: textClass() }"></span></div>
                                             </div>
                                             <div class="property-item" data-bind="visible: onGoingBackup">
                                                 <div class="property-name">Backup Started:</div>
-                                                <div class="property-value" data-bind="text: onGoingBackupHumanized, attr: { class: textClass() }"></div>
+                                                <div class="property-value"><span data-bind="text: onGoingBackupHumanized, attr: { class: textClass() }"></span></div>
                                             </div>
                                         </div>
                                     </div>
@@ -322,7 +322,7 @@
                                             <!-- ko if: clientDetailsIssue -->
                                             <div class="property-item">
                                                 <div class="property-name">Client Status:</div>
-                                                <div class="property-value" data-bind="text: clientDetailsIssue, attr: { class: textClass() }"></div>
+                                                <div class="property-value"><span data-bind="text: clientDetailsIssue, attr: { class: textClass() }"></span></div>
                                             </div>
                                             <!-- /ko -->
                                             <!-- ko if: !clientDetailsIssue() -->
@@ -345,15 +345,14 @@
                                                 <div class="property-value text-details" data-bind="text: lastTimeServerMadeProgressWithDocuments"></div>
                                             </div>
                                             <div class="property-item">
-                                                <div class="property-name">Last Client Connection Time:</div><span class="text-details" data-bind="text: lastClientConnectionTime"></span>
-                                                <!-- ko if: clientIP() -->
-                                                <div class="property-value">
-                                                    <button class="btn btn-xs" data-bind="click: disconnectClientFromSubscription" title="Disconnect client from this subscription (unsubscribe client)">
-                                                        <i class="icon-disconnected"></i><span>Disconnect</span>
-                                                    </button>
+                                                <div class="property-name">Last Client Connection Time:</div>
+                                                <div class="property-value"><span class="text-details" data-bind="text: lastClientConnectionTime"></span></div>
+                                                    <!-- ko if: clientIP() -->
+                                                        <button class="btn btn-xs" data-bind="click: disconnectClientFromSubscription" title="Disconnect client from this subscription (unsubscribe client)">
+                                                            <i class="icon-disconnected"></i><span>Disconnect</span>
+                                                        </button>
+                                                    <!-- /ko -->
                                                 </div>
-                                                <!-- /ko -->
-                                            </div>
                                         </div>
                                     </div>
                                     <div>
@@ -388,7 +387,7 @@
                             <div class="collapse panel-addon" data-bind="collapse: showDetails">
                                 <div class="padding flex-horizontal" data-bind="visible: showDelayReplication">
                                     <div class="flex-grow">
-                                        <div class="inline-properties">
+                                        <div class="list-properties">
                                             <div class="property-item" data-bind="visible: showDelayReplication">
                                                 <div class="property-name">Replication Delay Time:</div>
                                                 <div class="property-value" data-bind="text: delayHumane" title="Replication Delay Time"></div>
@@ -464,19 +463,19 @@
                             <div class="collapse panel-addon" data-bind="collapse: showDetails">
                                 <div class="padding">
                                     
-                                        <div class="inline-properties">
+                                        <div class="list-properties">
                                             <div class="property-item">
                                                 <div class="property-name">Hub Definition Name:</div>
-                                                <div class="text-details" data-bind="text: hubDefinitionName"></div>
+                                                <div class="property-value"><span class="text-details" data-bind="text: hubDefinitionName"></span></div>
                                             </div>
                                             <div class="property-item">
                                                 <div class="property-name">Task Status:</div>
                                                 <div class="property-value" data-bind="text: badgeText"></div>
                                             </div>
-                                            <li data-bind="template: { name: 'connection-string' }"></li>
+                                            <div class="property-item" data-bind="template: { name: 'connection-string' }"></div>
                                             <div class="property-item" data-bind="visible: connectionStringDefined">
-                                                <span>Destination Database:</span>
-                                                <span class="property-value" data-bind="text:  destinationDB" title="Destination database"></span>
+                                                <div class="property-name">Destination Database:</div>
+                                                <div class="property-value" data-bind="text:  destinationDB" title="Destination database"></div>
                                             </div>
                                             <div class="property-item">
                                                 <div class="property-name">Actual Destination URL</div>
@@ -485,7 +484,7 @@
                                                 </div>
                                             </div>
                                             <!-- ko foreach: topologyDiscoveryUrls -->
-                                            <div>
+                                            <div class="property-item">
                                                 <div class="property-name" data-bind="text: $data === $parent.topologyDiscoveryUrls()[0] ? 'Topology Discovery URLs:' : ''"></div>
                                                 <div class="property-value" data-bind="text: $data" title="Discovery Url"></div>
                                             </div>
