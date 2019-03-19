@@ -520,6 +520,15 @@ namespace Voron.Impl
                 return true;
             });
 
+            if (schema.Key.IsGlobal == false)
+            {
+                var pkTree = table.GetTree(schema.Key);
+
+                DeleteTree(pkTree, isInRoot: false);
+
+                tableTree.Delete(pkTree.Name);
+            }
+
             // index trees should be already removed but just in case let's go over them and ensure they're really deleted
 
             foreach (var indexDef in schema.Indexes.Values)
@@ -533,6 +542,8 @@ namespace Voron.Impl
                 var indexTree = table.GetTree(indexDef);
 
                 DeleteTree(indexTree, isInRoot: false);
+
+                tableTree.Delete(indexTree.Name);
             }
 
             foreach (var indexDef in schema.FixedSizeIndexes.Values)
@@ -546,6 +557,8 @@ namespace Voron.Impl
                 var index = table.GetFixedSizeTree(indexDef);
 
                 DeleteFixedTree(index, isInRoot: false);
+
+                tableTree.Delete(index.Name);
             }
 
             // raw data sections
