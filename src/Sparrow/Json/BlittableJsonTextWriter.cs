@@ -755,6 +755,12 @@ namespace Sparrow.Json
             {
                 //we are disposing, so this exception doesn't matter
             }
+            // TODO: remove when we update to .net core 3
+            // https://github.com/dotnet/corefx/issues/36141
+            catch (NotSupportedException e)
+            {
+                throw new IOException("The stream was closed by the peer.", e);
+            }
             finally
             {
                 _returnBuffer.Dispose();
