@@ -475,6 +475,24 @@ namespace RachisTests
             }
         }
 
+        [Fact]
+        public async Task FailOnAddingNodeWhenLeaderHasPortZero()
+        {
+            var leader = await CreateRaftClusterAndGetLeader(1);
+            leader.ServerStore.ValidateNotRandomPort = true;
+
+            var server2 = GetNewServer();
+            var server2Url = server2.ServerStore.GetNodeHttpServerUrl();
+            Servers.Add(server2);
+
+            var ex = await Assert.ThrowsAsync<InvalidOperationException>(async () => 
+                await leader.ServerStore.AddNodeToClusterAsync(server2Url));
+
+            Assert.Contains("Adding nodes to cluster is forbidden when the leader " +
+                            "has port '0' in 'Configuration.Core.ServerUrls' setting", ex.Message);
+
+        }
+
         private async Task WaitForAssertion(Action action)
         {
             var sp = Stopwatch.StartNew();
