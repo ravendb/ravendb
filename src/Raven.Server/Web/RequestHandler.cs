@@ -559,7 +559,7 @@ namespace Raven.Server.Web
                 case RavenServer.AuthenticationStatus.Allowed:
                     if (dbName != null && feature.CanAccess(dbName, requireAdmin) == false)
                     {
-                        RequestRouter.UnlikelyFailAuthorization(HttpContext, dbName, null, requireAdmin ? AuthorizationStatus.DatabaseAdmin : AuthorizationStatus.ValidUser);
+                        RequestRouter.UnlikelyFailAuthorization(HttpContext, dbName, feature, requireAdmin ? AuthorizationStatus.DatabaseAdmin : AuthorizationStatus.ValidUser);
                         return false;
                     }
 
