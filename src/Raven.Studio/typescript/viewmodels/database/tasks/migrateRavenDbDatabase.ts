@@ -3,6 +3,7 @@ import migrateRavenDbDatabaseCommand = require("commands/database/studio/migrate
 import migrateRavenDbDatabaseModel = require("models/database/tasks/migrateRavenDbDatabaseModel");
 import notificationCenter = require("common/notifications/notificationCenter");
 import eventsCollector = require("common/eventsCollector");
+import viewHelpers = require("common/helpers/view/viewHelpers");
 import getMigratedServerUrlsCommand = require("commands/database/studio/getMigratedServerUrlsCommand");
 import getRemoteServerVersionWithDatabasesCommand = require("commands/database/studio/getRemoteServerVersionWithDatabasesCommand");
 import recentError = require("common/notifications/models/recentError");
@@ -16,6 +17,8 @@ class migrateRavenDbDatabase extends viewModelBase {
     model = new migrateRavenDbDatabaseModel();
     completer = defaultAceCompleter.completer();
 
+    showAdvancedOptions = ko.observable(false);
+
     spinners = {
         versionDetect: ko.observable<boolean>(false),
         getResourceNames: ko.observable<boolean>(false),
@@ -26,7 +29,7 @@ class migrateRavenDbDatabase extends viewModelBase {
         super();
 
         aceEditorBindingHandler.install();
-        this.bindToCurrentInstance("detectServerVersion");
+        this.bindToCurrentInstance("detectServerVersion", "customizeConfigurationClicked");
 
         const debouncedDetection = _.debounce((showVersionSpinner: boolean) => this.detectServerVersion(showVersionSpinner), 700);
 
@@ -43,17 +46,6 @@ class migrateRavenDbDatabase extends viewModelBase {
         this.model.skipServerCertificateValidation.subscribe(() => debouncedDetection(false));
     }
 
-    attached() {
-        super.attached();
-        
-        popoverUtils.longWithHover($("#configurationPopover"),
-            {
-                content:
-                    "<div>The following configuration settings will be exported:</div>" +
-                    "<strong>Revisions, Expiration & Client Configuration</strong>"
-            });
-    }
-    
     activate(args: any) {
         super.activate(args);
 
@@ -148,6 +140,7 @@ class migrateRavenDbDatabase extends viewModelBase {
             })
             .always(() => this.spinners.migration(false));
     }
+    
     compositionComplete() {
         super.compositionComplete();
 
@@ -161,6 +154,24 @@ class migrateRavenDbDatabase extends viewModelBase {
                         "<span class=\"token keyword\">this</span>.Freight = <span class=\"token number\">15.3</span>;<br />" +
                         "</pre>"
             });
+        
+        popoverUtils.longWithHover($("#js-ongoing-tasks-disabled"), {
+            content: "Imported ongoing tasks will be disabled by default."
+        });
+    }
+
+    customizeConfigurationClicked() {
+        this.showAdvancedOptions(true);
+        this.model.databaseModel.customizeDatabaseRecordTypes(true);
+
+        setTimeout(() => {
+            const $customizeRecord = $(".js-customize-record");
+            viewHelpers.animate($customizeRecord, "blink-style");
+
+            const topOffset = $customizeRecord.offset().top;
+            const container = $customizeRecord.closest(".content-container");
+            container.animate({scrollTop: topOffset}, 300);
+        }, 200);
     }
 }
 

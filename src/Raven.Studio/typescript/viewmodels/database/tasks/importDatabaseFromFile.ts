@@ -149,13 +149,6 @@ class importDatabaseFromFile extends viewModelBase {
                     "</pre>"
             });
 
-        popoverUtils.longWithHover($("#configurationPopover"),
-            {
-                content:
-                    "<div>The following configuration settings will be imported:</div>" +
-                    "<strong>Revisions, Expiration & Client Configuration</strong>"
-            });
-        
         popoverUtils.longWithHover($("#js-ongoing-tasks-disabled"), {
             content: "Imported ongoing tasks will be disabled by default."
         });
