@@ -1,5 +1,7 @@
 ﻿/// <reference path="../../../../typings/tsd.d.ts"/>
 
+import smugglerDatabaseRecord = require("models/database/tasks/smugglerDatabaseRecord");
+
 type authenticationMethod = "none" | "apiKey" | "windows";
 
 class migrateRavenDbDatabaseModel {
@@ -15,6 +17,10 @@ class migrateRavenDbDatabaseModel {
     includeAttachments = ko.observable(true);
     includeRevisionDocuments = ko.observable(true);
     includeLegacyAttachments = ko.observable(true);
+    includeSubscriptions = ko.observable(true);
+
+    databaseModel = new smugglerDatabaseRecord();
+    
     removeAnalyzers = ko.observable(false);
     importRavenFs = ko.observable(false);
     showTransformScript = ko.observable<boolean>(false);
@@ -69,10 +75,24 @@ class migrateRavenDbDatabaseModel {
                 this.transformScript("");
             }
         });
+
+        this.includeDatabaseRecord.subscribe(dbRecord => {
+            if (!dbRecord) {
+                this.databaseModel.customizeDatabaseRecordTypes(false);
+            }
+        });
+
+        this.databaseModel.customizeDatabaseRecordTypes.subscribe(customize => {
+            if (customize) {
+                this.includeDatabaseRecord(true);
+            }
+        })
     }
 
     toDto(): Raven.Server.Smuggler.Migration.SingleDatabaseMigrationConfiguration {
         const operateOnTypes: Array<Raven.Client.Documents.Smuggler.DatabaseItemType> = [];
+
+        const databaseRecordTypes = this.databaseModel.getDatabaseRecordTypes();
 
         if (!this.ravenFsImport()) {
             if (this.includeDatabaseRecord()) {
@@ -105,16 +125,21 @@ class migrateRavenDbDatabaseModel {
             if (this.includeAttachments() && !this.isLegacy()) {
                 operateOnTypes.push("Attachments");
             }
+            if (this.includeSubscriptions() && !this.isLegacy()) {
+                operateOnTypes.push("Subscriptions");
+            }
         }
 
         if (operateOnTypes.length === 0) {
             operateOnTypes.push("None");
         }
 
+        const recordTypes = (databaseRecordTypes.length ? databaseRecordTypes.join(",") : "None") as Raven.Client.Documents.Smuggler.DatabaseRecordItemType;
+
         const migrationSettings: Raven.Server.Smuggler.Migration.DatabaseMigrationSettings = {
             DatabaseName: this.resourceName(),
             OperateOnTypes: operateOnTypes.join(",") as Raven.Client.Documents.Smuggler.DatabaseItemType,
-            OperateOnDatabaseRecordTypes: "" as Raven.Client.Documents.Smuggler.DatabaseRecordItemType,
+            OperateOnDatabaseRecordTypes: recordTypes,
             RemoveAnalyzers: this.removeAnalyzers(),
             ImportRavenFs: this.importRavenFs(),
             TransformScript: this.transformScript()
@@ -309,6 +334,15 @@ class migrateRavenDbDatabaseModel {
             ]
         });
 
+        this.databaseModel.hasIncludes.extend({
+            validation: [
+                {
+                    validator: () => !this.databaseModel.customizeDatabaseRecordTypes() || this.databaseModel.hasIncludes(),
+                    message: "Note: At least one 'configuration' option must be checked..."
+                }
+            ]
+        });
+
         this.validationGroup = ko.validatedObservable({
             serverUrl: this.serverUrl,
             databaseName: this.resourceName,
@@ -316,7 +350,8 @@ class migrateRavenDbDatabaseModel {
             userName: this.userName,
             password: this.password, 
             domain: this.domain,
-            importDefinitionHasIncludes: this.importDefinitionHasIncludes
+            importDefinitionHasIncludes: this.importDefinitionHasIncludes,
+            databaseRecordHasIncludes: this.databaseModel.hasIncludes
         });
         
         this.versionCheckValidationGroup = ko.validatedObservable({
