@@ -8,12 +8,13 @@ namespace Sparrow.Server
 {
     public static class FixedSizePoolAllocator
     {
-        public struct Default : IPoolAllocatorOptions, INativeOptions
+        public struct Default : IPoolAllocatorOptions, IFixedSizeAllocatorOptions, INativeOptions
         {
             public bool UseSecureMemory => false;
             public bool ElectricFenceEnabled => false;
             public bool Zeroed => false;
 
+            public int BlockSize => 1 * Constants.Size.Megabyte;
             public int MaxBlockSize => 1 * Constants.Size.Megabyte;
             public int MaxPoolSizeInBytes => 32 * Constants.Size.Megabyte;
 
@@ -33,7 +34,7 @@ namespace Sparrow.Server
             public void ReleaseAllocator(IAllocatorComposer<Pointer> allocator, bool disposing)
             {
                 allocator?.Dispose(disposing);
-            }
+            }         
         }
     }
 

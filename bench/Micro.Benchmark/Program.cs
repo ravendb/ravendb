@@ -17,6 +17,11 @@ namespace Micro.Benchmark
             Console.WriteLine($"{nameof(Avx)} support: {Avx.IsSupported}");
             Console.WriteLine($"{nameof(Avx2)} support: {Avx2.IsSupported}");
 
+            ////var p = new Allocators();
+            ////p.Allocate_Native_SameSize();
+            ////for (int i = 0; i < 100000; i++)
+            ////    p.Allocate_Pool_SameSize();
+
             BenchmarkSwitcher.FromAssembly(typeof(Program).GetTypeInfo().Assembly).Run(args);
         }
     }
