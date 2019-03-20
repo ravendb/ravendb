@@ -232,7 +232,7 @@ namespace Raven.Server
                             {
                                 var ravenPath = typeof(RavenServer).Assembly.Location;
                                 if (ravenPath.EndsWith(".dll", StringComparison.OrdinalIgnoreCase))
-                                    ravenPath = ravenPath.Substring(ravenPath.Length - 4);
+                                    ravenPath = ravenPath.Substring(0, ravenPath.Length - 4);
 
                                 message =
                                     $"{Environment.NewLine}In Linux low-level port (below 1024) will need a special permission, " +
