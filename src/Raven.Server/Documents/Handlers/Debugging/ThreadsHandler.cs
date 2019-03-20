@@ -10,6 +10,7 @@ using Raven.Server.Utils;
 using Raven.Server.Web;
 using Sparrow.Json;
 using Sparrow.Json.Parsing;
+using Sparrow.Platform;
 
 namespace Raven.Server.Documents.Handlers.Debugging
 {
@@ -18,6 +19,9 @@ namespace Raven.Server.Documents.Handlers.Debugging
         [RavenAction("/admin/debug/threads/stack-trace", "GET", AuthorizationStatus.Operator)]
         public Task StackTrace()
         {
+            if (PlatformDetails.RunningOnPosix)
+                throw new NotSupportedException("Stack Traces Capture is not supported on linux.");
+
             if (Debugger.IsAttached)
                 throw new InvalidOperationException("Cannot get stack traces when debugger is attached");
 
