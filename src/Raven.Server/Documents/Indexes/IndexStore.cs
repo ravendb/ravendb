@@ -412,6 +412,16 @@ namespace Raven.Server.Documents.Indexes
                                                  $"In order to use, please enable experimental features by changing '{RavenConfiguration.GetKey(x => x.Core.FeaturesAvailability)}' configuration value to '{nameof(FeaturesAvailability.Experimental)}'.");
 
             ValidateIndexName(definition.Name, isStatic: true);
+
+            var safeFileSystemIndexName = IndexDefinitionBase.GetIndexNameSafeForFileSystem(definition.Name);
+
+            var indexWithFileSystemNameCollision = GetIndexes().FirstOrDefault(x =>
+                safeFileSystemIndexName.Equals(IndexDefinitionBase.GetIndexNameSafeForFileSystem(x.Name), StringComparison.OrdinalIgnoreCase));
+
+            if (indexWithFileSystemNameCollision != null)
+                throw new IndexCreationException(
+                    $"Could not create index '{definition.Name}' because it would result in directory name collision with '{indexWithFileSystemNameCollision.Name}' index");
+
             definition.RemoveDefaultValues();
             ValidateAnalyzers(definition);
 
