@@ -69,6 +69,11 @@ namespace Raven.Server.Web.System
                 errorMessage = $"The name '{name}' is forbidden for use!";
                 return false;
             }
+            if (name.Contains(".") && name.Any(char.IsLetterOrDigit) == false)
+            {
+                errorMessage = $"The name '{name}' is not permitted. A name containing '.' character must have at least one letter or digit character";
+                return false;
+            }
 
             dataDirectory = dataDirectory ?? string.Empty;
             if (Path.Combine(dataDirectory, name).Length > WindowsMaxPath)
