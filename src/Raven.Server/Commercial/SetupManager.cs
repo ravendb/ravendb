@@ -1902,7 +1902,7 @@ namespace Raven.Server.Commercial
                     {
                         var ravenPath = typeof(RavenServer).Assembly.Location;
                         if (ravenPath.EndsWith(".dll", StringComparison.OrdinalIgnoreCase))
-                            ravenPath = ravenPath.Substring(ravenPath.Length - 4);
+                            ravenPath = ravenPath.Substring(0, ravenPath.Length - 4);
 
                         linuxMsg = $"It can happen if port '{port}' is not allowed for the non-root RavenDB process." +
                                    $"Try using setcap to allow it: sudo setcap CAP_NET_BIND_SERVICE=+eip {ravenPath}";
