@@ -43,19 +43,19 @@ namespace SlowTests.Server.Documents.PeriodicBackup
             await PutBlob(100, false, UploadType.Regular);
         }
 
-        [AzureStorageEmulatorFact]
+        [NightlyBuildAzureStorageEmulatorFact]
         public async Task put_blob_256MB()
         {
             await PutBlob(256, false, UploadType.Regular);
         }
 
-        [AzureStorageEmulatorFact]
+        [NightlyBuildAzureStorageEmulatorFact]
         public async Task put_blob_500MB()
         {
             await PutBlob(500, false, UploadType.Chunked);
         }
 
-        [AzureStorageEmulatorFact]
+        [NightlyBuildAzureStorageEmulatorFact]
         public async Task put_blob_765MB()
         {
             await PutBlob(765, false, UploadType.Chunked);
@@ -79,19 +79,19 @@ namespace SlowTests.Server.Documents.PeriodicBackup
             await PutBlob(100, true, UploadType.Regular);
         }
 
-        [AzureStorageEmulatorFact]
+        [NightlyBuildAzureStorageEmulatorFact]
         public async Task put_blob_into_folder_256MB()
         {
             await PutBlob(256, true, UploadType.Regular);
         }
 
-        [AzureStorageEmulatorFact]
+        [NightlyBuildAzureStorageEmulatorFact]
         public async Task put_blob_into_folder_500MB()
         {
             await PutBlob(500, true, UploadType.Chunked);
         }
 
-        [AzureStorageEmulatorFact]
+        [NightlyBuildAzureStorageEmulatorFact]
         public async Task put_blob_into_folder_765MB()
         {
             await PutBlob(765, true, UploadType.Chunked);
