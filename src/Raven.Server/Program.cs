@@ -230,9 +230,10 @@ namespace Raven.Server
                             }
                             else if (e is SocketException && PlatformDetails.RunningOnPosix)
                             {
+                                const string extension = ".dll";
                                 var ravenPath = typeof(RavenServer).Assembly.Location;
-                                if (ravenPath.EndsWith(".dll", StringComparison.OrdinalIgnoreCase))
-                                    ravenPath = ravenPath.Substring(0, ravenPath.Length - 4);
+                                if (ravenPath.EndsWith(extension, StringComparison.OrdinalIgnoreCase))
+                                    ravenPath = ravenPath.Substring(0, ravenPath.Length - extension.Length);
 
                                 message =
                                     $"{Environment.NewLine}In Linux low-level port (below 1024) will need a special permission, " +
