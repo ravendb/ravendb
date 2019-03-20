@@ -1070,7 +1070,20 @@ namespace Raven.Database.Indexing
         {
             var dic = current as DynamicJsonObject;
             if (dic == null)
-                return null;
+            {                
+                var properties = current.GetType().GetProperties();
+                var idProperty = properties.FirstOrDefault(x => x.Name == Constants.DocumentIdFieldName || x.Name == Constants.ReduceKeyFieldName);
+                if (idProperty != null)
+                {
+                    var idValue = idProperty.GetValue(current);
+                    if (idValue.GetType() == typeof(string))
+                        return (string)idValue;
+                }
+                    
+
+                    return null;
+            }
+                
             object value = dic.GetValue(Constants.DocumentIdFieldName) ??
                            dic.GetValue(Constants.ReduceKeyFieldName);
             if (value != null)
