@@ -20,7 +20,7 @@ namespace Raven.Server.Documents.Handlers.Debugging
         public Task StackTrace()
         {
             if (PlatformDetails.RunningOnPosix)
-                throw new NotSupportedException("Stack Traces Capture is not supported on linux.");
+                throw new NotSupportedException("Stack Traces Capture is not supported on POSIX.");
 
             if (Debugger.IsAttached)
                 throw new InvalidOperationException("Cannot get stack traces when debugger is attached");
