@@ -43,7 +43,7 @@ namespace Raven.Client.Documents.Operations.CompareExchange
 
             public override HttpRequestMessage CreateRequest(JsonOperationContext ctx, ServerNode node, out string url)
             {
-                url = $"{node.Url}/databases/{node.Database}/cmpxchg?key={_key}&index={_index}";
+                url = $"{node.Url}/databases/{node.Database}/cmpxchg?key={Uri.EscapeDataString(_key)}&index={_index}";
                 var request = new HttpRequestMessage
                 {
                     Method = HttpMethods.Delete,

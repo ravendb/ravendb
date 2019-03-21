@@ -295,5 +295,55 @@ namespace SlowTests.Client
                 Assert.Equal(0, resultItems);
             }
         }
+
+        [Fact]
+        public async Task EnsureCanCompareExchangeWithCorrectCharsEscapeInKey()
+        {
+            DoNotReuseServer();
+            var store = GetDocumentStore();
+
+            const string cmpXchgKey1 = "emails/foo+test@email.com";
+            const string cmpXchgKey2 = "fĀthēr&s0n";
+            const string cmpXchgKey3 = @"Aa0 !""#$%'()*+,-./:;<=>?@[\]^_`{|}~";
+            const string cmpXchgKey4 = "ĀĒĪŌŪAa0 322";
+            const string cmpXchgKey5 = "āēīōūBb1 123";
+
+            await store.Operations.SendAsync(new PutCompareExchangeValueOperation<string>(cmpXchgKey1, "Karmel", 0));
+            await store.Operations.SendAsync(new PutCompareExchangeValueOperation<string>(cmpXchgKey2, "Karmel", 0));
+            await store.Operations.SendAsync(new PutCompareExchangeValueOperation<string>(cmpXchgKey3, "Karmel", 0));
+            await store.Operations.SendAsync(new PutCompareExchangeValueOperation<string>(cmpXchgKey4, "Karmel", 0));
+            await store.Operations.SendAsync(new PutCompareExchangeValueOperation<string>(cmpXchgKey5, "Karmel", 0));
+
+            var stats = await store.Maintenance.SendAsync(new GetDetailedStatisticsOperation());
+            var numOfCmpXchg = stats.CountOfCompareExchange;
+            Assert.Equal(5, numOfCmpXchg);
+
+            var res1 = await store.Operations.SendAsync(new GetCompareExchangeValueOperation<string>(cmpXchgKey1));
+            var res2 = await store.Operations.SendAsync(new GetCompareExchangeValueOperation<string>(cmpXchgKey2));
+            var res3 = await store.Operations.SendAsync(new GetCompareExchangeValueOperation<string>(cmpXchgKey3));
+            var res4 = await store.Operations.SendAsync(new GetCompareExchangeValueOperation<string>(cmpXchgKey4));
+            var res5 = await store.Operations.SendAsync(new GetCompareExchangeValueOperation<string>(cmpXchgKey5));
+
+            Assert.Equal(cmpXchgKey1, res1.Key);
+            Assert.Equal(cmpXchgKey2, res2.Key);
+            Assert.Equal(cmpXchgKey3, res3.Key);
+            Assert.Equal(cmpXchgKey4, res4.Key);
+            Assert.Equal(cmpXchgKey5, res5.Key);
+            Assert.Equal("Karmel", res1.Value);
+            Assert.Equal("Karmel", res2.Value);
+            Assert.Equal("Karmel", res3.Value);
+            Assert.Equal("Karmel", res4.Value);
+            Assert.Equal("Karmel", res5.Value);
+
+            await store.Operations.SendAsync(new DeleteCompareExchangeValueOperation<string>(cmpXchgKey1, res1.Index));
+            await store.Operations.SendAsync(new DeleteCompareExchangeValueOperation<string>(cmpXchgKey2, res2.Index));
+            await store.Operations.SendAsync(new DeleteCompareExchangeValueOperation<string>(cmpXchgKey3, res3.Index));
+            await store.Operations.SendAsync(new DeleteCompareExchangeValueOperation<string>(cmpXchgKey4, res4.Index));
+            await store.Operations.SendAsync(new DeleteCompareExchangeValueOperation<string>(cmpXchgKey5, res5.Index));
+
+            var finalStats = await store.Maintenance.SendAsync(new GetDetailedStatisticsOperation());
+            var realNumOfCmpXchg = finalStats.CountOfCompareExchange;
+            Assert.Equal(0, realNumOfCmpXchg);
+        }
     }
 }
