@@ -5,6 +5,7 @@ using System.Diagnostics;
 using System.IO;
 using System.Linq;
 using System.Text;
+using System.Text.RegularExpressions;
 using System.Threading;
 using System.Threading.Tasks;
 using Raven.Client;
@@ -703,7 +704,10 @@ namespace Raven.Server.Documents.Indexes
                 throw new ArgumentException($"Index name '{name}' not permitted. Static index name cannot start with 'Auto/'", nameof(name));
 
             if (isStatic && NameUtils.IsValidIndexName(name) == false)
-                throw new ArgumentException($"Index name '{name}' is not permitted. Only letters, digits and characters ('_', '-', '/', '.') are allowed.", nameof(name));
+            {
+                var allowedCharacters = $"('{string.Join("', '", NameUtils.AllowedIndexNameCharacters.Select(Regex.Unescape))}')";
+                throw new ArgumentException($"Index name '{name}' is not permitted. Only letters, digits and characters {allowedCharacters} are allowed.", nameof(name));
+            }
         }
 
         public Index ResetIndex(string name)

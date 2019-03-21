@@ -2,6 +2,7 @@ using System;
 using System.IO;
 using System.Linq;
 using System.Runtime.InteropServices;
+using System.Text.RegularExpressions;
 using Raven.Client;
 using Raven.Server.Utils;
 using Sparrow.Server.Utils;
@@ -51,7 +52,8 @@ namespace Raven.Server.Web.System
             }
             if (NameUtils.IsValidResourceName(name) == false)
             {
-                errorMessage = $"The name '{name}' is not permitted. Only letters, digits and characters ('_', '.', '-') are allowed.";
+                var allowedCharacters = $"('{string.Join("', '", NameUtils.AllowedResourceNameCharacters.Select(Regex.Unescape))}')";
+                errorMessage = $"The name '{name}' is not permitted. Only letters, digits and characters {allowedCharacters} are allowed.";
                 return false;
             }
             if (name.Length > Constants.Documents.MaxDatabaseNameLength)

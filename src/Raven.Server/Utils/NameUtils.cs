@@ -1,15 +1,26 @@
-﻿using System.Text.RegularExpressions;
+﻿using System.Collections.Generic;
+using System.Text.RegularExpressions;
 
 namespace Raven.Server.Utils
 {
     internal static class NameUtils
     {
-        public const string ValidResourceNameCharacters = @"([_\-\.]+)";
-        public const string ValidIndexNameCharacters = @"([_\/\-\.]+)";
+        public static List<string> AllowedResourceNameCharacters = new List<string>()
+        {
+            "_", @"\-", @"\."
+        };
+
+        public static List<string> AllowedIndexNameCharacters = new List<string>()
+        {
+            "_", @"\/", @"\-", @"\."
+        };
+
+        public static string ValidResourceNameCharacters = $"([{string.Join("", AllowedResourceNameCharacters)}]+)";
+        public static string ValidIndexNameCharacters = $"([{string.Join("", AllowedIndexNameCharacters)}]+)";
 
         private static readonly Regex ValidResourceNameCharactersRegex = new Regex(ValidResourceNameCharacters, RegexOptions.Compiled);
         private static readonly Regex ValidIndexNameCharactersRegex = new Regex(ValidIndexNameCharacters, RegexOptions.Compiled);
-        
+
         public static bool IsValidResourceName(string name)
         {
             return IsValidName(name, ValidResourceNameCharactersRegex);
