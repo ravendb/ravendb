@@ -9,7 +9,8 @@ namespace Raven.Server.Utils
 
         private static readonly Regex ValidResourceNameCharactersRegex = new Regex(ValidResourceNameCharacters, RegexOptions.Compiled);
         private static readonly Regex ValidIndexNameCharactersRegex = new Regex(ValidIndexNameCharacters, RegexOptions.Compiled);
-        
+        private static readonly Regex NameStartsOrEndsWithDotOrContainsConsecutiveDotsRegex = new Regex(@"^\.|\.\.|\.$", RegexOptions.Compiled);
+
         public static bool IsValidResourceName(string name)
         {
             return IsValidName(name, ValidResourceNameCharactersRegex);
@@ -18,6 +19,11 @@ namespace Raven.Server.Utils
         public static bool IsValidIndexName(string name)
         {
             return IsValidName(name, ValidIndexNameCharactersRegex);
+        }
+
+        public static bool IsDotCharSurroundedByOtherChars(string name)
+        {
+            return NameStartsOrEndsWithDotOrContainsConsecutiveDotsRegex.IsMatch(name) == false;
         }
         
         private static bool IsValidName(string name, Regex regex)

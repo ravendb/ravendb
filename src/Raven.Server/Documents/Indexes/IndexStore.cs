@@ -672,15 +672,9 @@ namespace Raven.Server.Documents.Indexes
             if (isStatic && NameUtils.IsValidIndexName(name) == false)
                 throw new ArgumentException($"Index name '{name}' is not permitted. Only letters, digits and characters that match regex '{NameUtils.ValidIndexNameCharacters}' are allowed.", nameof(name));
 
-            if (isStatic && name.Contains("."))
-            {
-                if (name.Any(char.IsLetterOrDigit) == false)
-                    throw new ArgumentException($"Index name '{name}' is not permitted. A name containing '.' character must have at least one letter or digit character", nameof(name));
-
-                if (name.StartsWith(".") && name.Contains("/"))
-                    throw new ArgumentException($"Index name '{name}' is not permitted. A name containing '/' character must not starts with '.' character", nameof(name));
-            }
-
+            if (isStatic && name.Contains(".") && NameUtils.IsDotCharSurroundedByOtherChars(name) == false)
+                throw new ArgumentException(
+                    $"Index name '{name}' is not permitted. If a name contains '.' character then it must be surrounded by other allowed characters.", nameof(name));
         }
 
         public Index ResetIndex(string name)
