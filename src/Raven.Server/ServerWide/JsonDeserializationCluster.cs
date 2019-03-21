@@ -160,7 +160,9 @@ namespace Raven.Server.ServerWide
             [nameof(UpdateSnmpDatabaseIndexesMappingCommand)] = GenerateJsonDeserializationRoutine<UpdateSnmpDatabaseIndexesMappingCommand>(),
             [nameof(RemoveEtlProcessStateCommand)] = GenerateJsonDeserializationRoutine<RemoveEtlProcessStateCommand>(),
             [nameof(PutSortersCommand)] = GenerateJsonDeserializationRoutine<PutSortersCommand>(),
-            [nameof(DeleteSorterCommand)] = GenerateJsonDeserializationRoutine<DeleteSorterCommand>()
+            [nameof(DeleteSorterCommand)] = GenerateJsonDeserializationRoutine<DeleteSorterCommand>(),
+            [nameof(RemoveChangeVectorCommand)] = GenerateJsonDeserializationRoutine<RemoveChangeVectorCommand>(),
+            [nameof(ConfirmRemoveChangeVectorCommand)] = GenerateJsonDeserializationRoutine<ConfirmRemoveChangeVectorCommand>()
         };
     }
 }

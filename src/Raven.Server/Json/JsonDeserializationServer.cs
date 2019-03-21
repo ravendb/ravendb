@@ -163,6 +163,8 @@ namespace Raven.Server.Json
 
         public static readonly Func<BlittableJsonReaderObject, SingleNodeDataDirectoryResult> SingleNodeDataDirectoryResult = GenerateJsonDeserializationRoutine<SingleNodeDataDirectoryResult>();
 
+        public static readonly Func<BlittableJsonReaderObject, RemoveChangeVectors> RemoveChangeVectors = GenerateJsonDeserializationRoutine<RemoveChangeVectors>();
+
         public class Parameters
         {
             private Parameters()

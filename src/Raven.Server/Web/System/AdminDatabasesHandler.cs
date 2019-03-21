@@ -448,6 +448,31 @@ namespace Raven.Server.Web.System
             }
         }
 
+        [RavenAction("/admin/databases/remove-change-vectors", "POST", AuthorizationStatus.Operator)]
+        public async Task RemoveChangeVectors()
+        {
+            var name = GetStringQueryString("name");
+            using (ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
+            {
+                var record = ServerStore.LoadDatabaseRecord(name, out var _);
+                if (record == null)
+                {
+                    DatabaseDoesNotExistException.Throw(name);
+                }
+                var json = await context.ReadForMemoryAsync(RequestBodyStream(), "remove-change-vectors");
+                var remove = JsonDeserializationServer.RemoveChangeVectors(json);
+
+                //TODO: validate legal dbids
+
+                var command = new RemoveChangeVectorCommand(name, remove.IgnoredList);
+
+                var res = await ServerStore.SendToLeaderAsync(command);
+                await ServerStore.WaitForCommitIndexChange(RachisConsensus.CommitIndexModification.GreaterOrEqual, res.Index);
+
+                NoContentStatus();
+            }
+        }
+
         private void ValidateClusterMembers(ClusterTopology clusterTopology, DatabaseRecord databaseRecord)
         {
             var topology = databaseRecord.Topology;

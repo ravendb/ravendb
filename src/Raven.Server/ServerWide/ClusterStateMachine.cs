@@ -345,6 +345,8 @@ namespace Raven.Server.ServerWide
                     case nameof(UpdatePullReplicationAsHubCommand):
                     case nameof(UpdatePullReplicationAsSinkCommand):
                     case nameof(EditDatabaseClientConfigurationCommand):
+                    case nameof(RemoveChangeVectorCommand):
+                    case nameof(ConfirmRemoveChangeVectorCommand):
                         UpdateDatabase(context, type, cmd, index, leader, serverStore);
                         break;
                     case nameof(UpdatePeriodicBackupStatusCommand):

@@ -278,12 +278,13 @@ namespace Raven.Server.Documents.Replication
                             else if (item.Type == ReplicationBatchItem.ReplicationItemType.Attachment)
                                 size += item.Stream.Length;
 
+                            DocumentDatabase.RemoveIgnoredChangeVectors(_parent._database.IgnoredChangeVectors, ref item.ChangeVector);
+
                             if (AddReplicationItemToBatch(item, _stats.Storage, skippedReplicationItemsInfo) == false)
                                 continue;
 
                             numberOfItemsSent++;
                         }
-
                     }
                     
                     if (_log.IsInfoEnabled)

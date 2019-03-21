@@ -6,6 +6,7 @@ using System.IO.Compression;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
+using Raven.Client.Documents.Linq;
 using Raven.Client.Documents.Operations.Configuration;
 using Raven.Client.Documents.Session;
 using Raven.Client.Documents.Smuggler;
@@ -29,6 +30,7 @@ using Raven.Server.Documents.TcpHandlers;
 using Raven.Server.Json;
 using Raven.Server.NotificationCenter.Notifications;
 using Raven.Server.NotificationCenter.Notifications.Details;
+using Raven.Server.Rachis;
 using Raven.Server.Routing;
 using Raven.Server.ServerWide;
 using Raven.Server.ServerWide.Commands;
@@ -245,6 +247,8 @@ namespace Raven.Server.Documents
         public readonly QueryMetadataCache QueryMetadataCache;
 
         public long LastTransactionId => DocumentsStorage.Environment.CurrentReadTransactionId;
+
+        public List<string> IgnoredChangeVectors;
 
         public void Initialize(InitializeOptions options = InitializeOptions.None)
         {
@@ -1124,6 +1128,7 @@ namespace Raven.Server.Documents
                         EtlLoader?.HandleDatabaseRecordChange(record);
                         OnDatabaseRecordChanged(record);
                         SubscriptionStorage?.HandleDatabaseRecordChange(record);
+                        HandleIgnoreChangeVectors(record);
 
                         if (_logger.IsInfoEnabled)
                             _logger.Info($"Finish to process record {index} for {record.DatabaseName}.");
@@ -1140,6 +1145,89 @@ namespace Raven.Server.Documents
                     if (taken)
                         Monitor.Exit(_clusterLocker);
                 }
+            }
+        }
+
+        private void HandleIgnoreChangeVectors(DatabaseRecord newRecord)
+        {
+            var newIgnoreList = newRecord.RemoveChangeVectors?.IgnoredList;
+
+            if (IgnoredChangeVectors == null && newIgnoreList == null)
+                return;
+
+            if (IgnoredChangeVectors != null && newIgnoreList != null)
+            {
+                if (IgnoredChangeVectors.SequenceEqual(newIgnoreList))
+                    return;
+            }
+
+            SetDatabaseChangeVectorIfNeeded(newRecord.RemoveChangeVectors?.ShouldUpdateGlobal);
+
+            IgnoredChangeVectors = newIgnoreList;
+            if (IgnoredChangeVectors == null)
+                return;
+
+            ConfirmChangeVectorRemoval(newRecord);
+        }
+
+        private void ConfirmChangeVectorRemoval(DatabaseRecord newRecord)
+        {
+            var index = newRecord.RemoveChangeVectors?.Index ?? 0;
+            if (index > 0)
+            {
+                Task.Run(async () =>
+                {
+                    while (DatabaseShutdown.IsCancellationRequested == false)
+                    {
+                        if (ReplicationLoader.OutgoingHandlers.Any() == false || ReplicationLoader.OutgoingHandlers.Min(h => h.RaftIndex) >= index)
+                        {
+                            try
+                            {
+                                var res = await ServerStore.SendToLeaderAsync(new ConfirmRemoveChangeVectorCommand(Name, ServerStore.NodeTag));
+                                await ServerStore.Engine.WaitForCommitIndexChange(RachisConsensus.CommitIndexModification.GreaterOrEqual, res.Index);
+                                break;
+                            }
+                            catch (Exception e)
+                            {
+                                if (_logger.IsInfoEnabled)
+                                {
+                                    _logger.Info("Failed to confirm change vector removal command, will retry in 30 seconds.", e);
+                                }
+                            }
+                        }
+
+                        await Task.Delay(TimeSpan.FromSeconds(30), DatabaseShutdown);
+                    }
+                }, DatabaseShutdown);
+            }
+        }
+
+        private void SetDatabaseChangeVectorIfNeeded(bool? shouldUpdate)
+        {
+            var ignoredList = IgnoredChangeVectors;
+            if (shouldUpdate == true && ignoredList != null)
+            {
+                Task.Run(async () =>
+                {
+                    while (DatabaseShutdown.IsCancellationRequested == false)
+                    {
+                        try
+                        {
+                            await TxMerger.Enqueue(new DocumentsStorage.SetDatabaseChangeVectorCommand(ignoredList));
+                            IgnoredChangeVectors = null;
+                            break;
+                        }
+                        catch (Exception e)
+                        {
+                            if (_logger.IsInfoEnabled)
+                            {
+                                _logger.Info("Failed to remove global vector from the database, will retry in 30 seconds.", e);
+                            }
+                        }
+
+                        await Task.Delay(TimeSpan.FromSeconds(30), DatabaseShutdown);
+                    }
+                }, DatabaseShutdown);
             }
         }
 
@@ -1232,6 +1320,23 @@ namespace Raven.Server.Documents
                 return taskStatus.NodeTag;
 
             return whoseTaskIsIt;
+        }
+
+        public static void RemoveIgnoredChangeVectors(List<string> list, ref string changeVector)
+        {
+            if (list == null || list.Count == 0)
+                return;
+
+            if (changeVector == null)
+                return;
+
+            //TODO: optimize this
+           // if (Array.IndexOf(list.ToArray(), changeVector) == -1)
+             //   return;
+
+            var changeVectorEntries = changeVector.ToChangeVector();
+            var newChangeVector = changeVectorEntries.Where(e => list.Contains(e.DbId) == false).ToArray();
+            changeVector = newChangeVector.SerializeVector();
         }
 
         public IEnumerable<DatabasePerformanceMetrics> GetAllPerformanceMetrics()

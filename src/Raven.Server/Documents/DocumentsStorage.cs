@@ -1833,6 +1833,39 @@ namespace Raven.Server.Documents
             var ptr = tvr.Read(index, out int size);
             return Slice.From(context.Allocator, ptr, size, ByteStringType.Immutable, out slice);
         }
+
+        public class SetDatabaseChangeVectorCommand : TransactionOperationsMerger.MergedTransactionCommand
+        {
+            private readonly List<string> _ignoredList;
+
+            public SetDatabaseChangeVectorCommand(List<string> ignoredList)
+            {
+                _ignoredList = ignoredList;
+            }
+
+            protected override int ExecuteCmd(DocumentsOperationContext context)
+            {
+                Debug.Assert(_ignoredList.Count > 0);
+                DocumentDatabase.RemoveIgnoredChangeVectors(_ignoredList, ref context.LastDatabaseChangeVector);
+                var global = GetDatabaseChangeVector(context);
+                if (global != null)
+                {
+                    DocumentDatabase.RemoveIgnoredChangeVectors(_ignoredList, ref global);
+                    var tree = context.Transaction.InnerTransaction.ReadTree(GlobalTreeSlice);
+                    using (Slice.From(context.Allocator, global, out var slice))
+                    {
+                        tree.Add(GlobalChangeVectorSlice, slice);
+                    }
+                }
+
+                return 1;
+            }
+
+            public override TransactionOperationsMerger.IReplayableCommandDto<TransactionOperationsMerger.MergedTransactionCommand> ToDto(JsonOperationContext context)
+            {
+                throw new NotImplementedException();
+            }
+        }
     }
 
     public enum TableType : byte

@@ -368,6 +368,8 @@ namespace Raven.Server.Documents.Replication
                         {
                             try
                             {
+                                RaftIndex = _parent._server.LastRaftCommitIndex;
+
                                 if (Destination is InternalReplication dest)
                                 {
                                     _parent.EnsureNotDeleted(dest.NodeTag);
@@ -427,6 +429,8 @@ namespace Raven.Server.Documents.Replication
                     if (_cts.IsCancellationRequested)
                         break;
 
+                    RaftIndex = _parent._server.LastRaftCommitIndex;
+
                     // open tx
                     // read current change vector compare to last sent
                     // if okay, send cv
@@ -474,6 +478,8 @@ namespace Raven.Server.Documents.Replication
                 _waitForChanges.Reset();
             }
         }
+
+        public long RaftIndex;
 
         private void InitialHandshake()
         {

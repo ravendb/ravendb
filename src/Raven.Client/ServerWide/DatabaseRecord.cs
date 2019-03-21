@@ -15,6 +15,17 @@ using Raven.Client.Exceptions.Documents.Indexes;
 
 namespace Raven.Client.ServerWide
 {
+    public class RemoveChangeVectors
+    {
+        public List<string> IgnoredList;
+
+        public long Index;
+
+        public List<string> Confirmations;
+
+        public bool ShouldUpdateGlobal;
+    }
+
     public class DatabaseRecordWithEtag : DatabaseRecord
     {
         public long Etag { get; set; }
@@ -64,6 +75,8 @@ namespace Raven.Client.ServerWide
         public ExpirationConfiguration Expiration;
 
         public List<PeriodicBackupConfiguration> PeriodicBackups = new List<PeriodicBackupConfiguration>();
+
+        public RemoveChangeVectors RemoveChangeVectors;
 
         public List<ExternalReplication> ExternalReplications = new List<ExternalReplication>();
 
