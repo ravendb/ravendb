@@ -21,6 +21,10 @@ namespace SlowTests.Issues
             Assert.False(ResourceNameValidator.IsValidResourceName(".", null, out _));
             Assert.False(ResourceNameValidator.IsValidResourceName("..", null, out _));
             Assert.False(ResourceNameValidator.IsValidResourceName("...", null, out _));
+            Assert.False(ResourceNameValidator.IsValidResourceName("../..", null, out _));
+            Assert.False(ResourceNameValidator.IsValidResourceName("../../aa", null, out _));
+            Assert.False(ResourceNameValidator.IsValidResourceName("..\\..", null, out _));
+            Assert.False(ResourceNameValidator.IsValidResourceName("..\\..\\aa", null, out _));
 
             Assert.True(ResourceNameValidator.IsValidResourceName(".a", null, out _));
             Assert.True(ResourceNameValidator.IsValidResourceName(".4..", null, out _));
@@ -32,6 +36,10 @@ namespace SlowTests.Issues
             Assert.False(IndexStore.IsValidIndexName(".", true, out _));
             Assert.False(IndexStore.IsValidIndexName("..", true, out _));
             Assert.False(IndexStore.IsValidIndexName("...", true, out _));
+            Assert.False(IndexStore.IsValidIndexName("../..", true, out _));
+            Assert.False(IndexStore.IsValidIndexName("../../aa", true, out _));
+            Assert.False(IndexStore.IsValidIndexName("..\\..", true, out _));
+            Assert.False(IndexStore.IsValidIndexName("..\\..\\aa", true, out _));
 
             Assert.True(IndexStore.IsValidIndexName(".a", true, out _));
             Assert.True(IndexStore.IsValidIndexName(".4..", true, out _));
