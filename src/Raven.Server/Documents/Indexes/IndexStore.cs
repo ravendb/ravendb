@@ -416,6 +416,7 @@ namespace Raven.Server.Documents.Indexes
             var safeFileSystemIndexName = IndexDefinitionBase.GetIndexNameSafeForFileSystem(definition.Name);
 
             var indexWithFileSystemNameCollision = GetIndexes().FirstOrDefault(x =>
+                x.Name.Equals(definition.Name, StringComparison.OrdinalIgnoreCase) == false &&
                 safeFileSystemIndexName.Equals(IndexDefinitionBase.GetIndexNameSafeForFileSystem(x.Name), StringComparison.OrdinalIgnoreCase));
 
             if (indexWithFileSystemNameCollision != null)
