@@ -35,8 +35,8 @@ namespace Raven.Server.Documents
         private readonly DocumentsStorage _documentsStorage;
 
         public static readonly Slice AllCountersEtagSlice;
-        private static readonly Slice CollectionCountersEtagsSlice;
-        private static readonly Slice CounterKeysSlice;
+        internal static readonly Slice CollectionCountersEtagsSlice;
+        internal static readonly Slice CounterKeysSlice;
 
         public const string DbIds = "@dbIds";
         public const string Values = "@vals";

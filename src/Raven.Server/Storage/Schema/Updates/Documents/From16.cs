@@ -98,15 +98,34 @@ namespace Raven.Server.Storage.Schema.Updates.Documents
                     var current = it.CurrentKey;
                     var currentAsString = current.ToString();
 
-                    if (currentAsString.Contains("counter", StringComparison.OrdinalIgnoreCase) && currentAsString != CountersTombstones)
+                    if (currentAsString.Contains("counter", StringComparison.OrdinalIgnoreCase))
                     {
+                        // tombstones have special handling
+                        if (currentAsString == CountersTombstones)
+                            continue;
+
+                        // just in case the process was stopped in the middle and we already created counter group tables
+                        if (SliceComparer.AreEqual(current, CountersStorage.AllCountersEtagSlice))
+                            continue;
+
+                        if (SliceComparer.AreEqual(current, CountersStorage.CollectionCountersEtagsSlice))
+                            continue;
+
+                        if (SliceComparer.AreEqual(current, CountersStorage.CounterKeysSlice))
+                            continue;
+
+                        if (currentAsString.Contains(CollectionTableType.CounterGroups.ToString()))
+                            continue;
+
                         var type = step.ReadTx.GetRootObjectType(current);
 
                         legacyCounterRootObjectTypes.Add(currentAsString, type);
                     }
-
                 } while (it.MoveNext());
             }
+
+            // this schema update uses DocumentsStorage.GenerateNextEtag() so we need to read and set LastEtag in storage
+            step.DocumentsStorage.InitializeLastEtag(step.ReadTx); 
 
             step.DocumentsStorage.CountersStorage = new CountersStorage(step.DocumentsStorage.DocumentDatabase, step.WriteTx);
 
