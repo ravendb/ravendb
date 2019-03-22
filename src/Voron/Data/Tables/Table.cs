@@ -315,7 +315,17 @@ namespace Voron.Data.Tables
 
         public bool IsOwned(long id)
         {
-            return ActiveDataSmallSection.IsOwned(id);
+            var posInPage = id % Constants.Storage.PageSize;
+
+            if (posInPage != 0)
+                return ActiveDataSmallSection.IsOwned(id);
+
+            // large value
+
+            var page = _tx.LowLevelTransaction.GetPage(id / Constants.Storage.PageSize);
+            var header = (RawDataOverflowPageHeader*)page.Pointer;
+
+            return header->SectionOwnerHash == ActiveDataSmallSection.SectionOwnerHash;
         }
 
         public void Delete(long id)
