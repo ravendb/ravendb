@@ -303,7 +303,7 @@ namespace Raven.Server.Documents
 
                     DocumentPut = new DocumentPutAction(this, DocumentDatabase);
 
-                    _lastEtag = ReadLastEtag(tx);
+                    InitializeLastEtag(tx);
                     _collectionsCache = ReadCollections(tx);
 
                     tx.Commit();
@@ -1364,6 +1364,11 @@ namespace Raven.Server.Documents
         public long GenerateNextEtag()
         {
             return Interlocked.Increment(ref _lastEtag); // use interlocked so the GetDatabaseChangeVector can read the latest version
+        }
+
+        internal void InitializeLastEtag(Transaction tx)
+        {
+            _lastEtag = ReadLastEtag(tx);
         }
 
         public void EnsureLastEtagIsPersisted(DocumentsOperationContext context, long docEtag)
