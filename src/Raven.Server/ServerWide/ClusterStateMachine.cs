@@ -1170,8 +1170,7 @@ namespace Raven.Server.ServerWide
                 using (Slice.From(context.Allocator, command.Name.ToLowerInvariant(), out var thumbprintSlice))
                 using (var cert = context.ReadObject(command.ValueToJson(), "inner-val"))
                 {
-                    var existing = serverStore.Cluster.GetCertificateByThumbprint(context, command.Name) ??
-                                  serverStore.Cluster.GetLocalStateByThumbprint(context, command.Name);
+                    var existing = serverStore.Cluster.GetCertificateByThumbprint(context, command.Name);
 
                     // Ignore repeated registration of certificates
                     if (existing != null)
