@@ -1,7 +1,4 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Text;
-using System.Threading.Tasks;
+﻿using System.Threading.Tasks;
 using FastTests;
 using Raven.Server.ServerWide.Context;
 using Sparrow;
@@ -16,7 +13,8 @@ namespace SlowTests.Issues
         [Fact]
         public async Task ReadTransactionShouldNotSeeCollectionsThatWereGeneratedAfterItsCreation()
         {
-            AsyncManualResetEvent amre = new AsyncManualResetEvent();
+            AsyncManualResetEvent readEvent = new AsyncManualResetEvent();
+            AsyncManualResetEvent writeEvent = new AsyncManualResetEvent();
             using (var database = CreateDocumentDatabase())
             {
                 var readTask = Task.Run(async () =>
@@ -24,15 +22,15 @@ namespace SlowTests.Issues
                     using (database.DocumentsStorage.ContextPool.AllocateOperationContext(out DocumentsOperationContext readCtx))
                     using (readCtx.OpenReadTransaction())
                     {
-                        amre.SetAndResetAtomically();
-                        await amre.WaitAsync();
+                        readEvent.Set();
+                        await writeEvent.WaitAsync();
                         var collection = database.DocumentsStorage.GetCollections(readCtx);
                         Assert.Empty(collection);
                     }
                 });
                 var writeTask = Task.Run(async () =>
                 {
-                    await amre.WaitAsync();
+                    await readEvent.WaitAsync();
                     using (database.DocumentsStorage.ContextPool.AllocateOperationContext(out DocumentsOperationContext writeCtx))
                     using (var tx = writeCtx.OpenWriteTransaction())
                     using (var doc = writeCtx.ReadObject(new DynamicJsonValue
@@ -48,7 +46,7 @@ namespace SlowTests.Issues
                         tx.Commit();
                     }
 
-                    amre.Set();
+                    writeEvent.Set();
                 });
                 await readTask;
             }
