@@ -109,6 +109,8 @@ namespace RachisTests
 
             foreach (var invalidCommand in invalidCommands)
             {
+                await Assert.ThrowsAsync<TimeoutException>(() => invalidCommand);
+
                 Assert.True(invalidCommand.IsCompleted);
                 Assert.NotEqual(TaskStatus.RanToCompletion, invalidCommand.Status);
             }

@@ -1573,7 +1573,13 @@ namespace Raven.Server.Documents
             foreach (var kvp in _collectionsCache)
             {
                 var collectionTable = context.Transaction.InnerTransaction.OpenTable(DocsSchema, kvp.Value.GetTableName(CollectionTableType.Documents));
-
+                //This is the case where a read transaction reading a collection cached by a later write transaction we can safly ignore it.
+                if (collectionTable == null)
+                {
+                    if(context.Transaction.InnerTransaction.IsWriteTransaction == false)
+                        continue;
+                    throw new InvalidOperationException($"Cached collection {kvp.Key} is missing its table, this is likley a bug.");
+                }
                 yield return new CollectionStats
                 {
                     Name = kvp.Key,

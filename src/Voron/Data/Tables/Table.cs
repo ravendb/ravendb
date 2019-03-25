@@ -327,7 +327,7 @@ DeleteThenInsert:
         {
             var posInPage = id % Constants.Storage.PageSize;
 
-            if (posInPage != 0) 
+            if (posInPage != 0)
                 return ActiveDataSmallSection.IsOwned(id);
 
             // large value

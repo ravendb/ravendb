@@ -325,5 +325,36 @@ namespace SlowTests.Client
                 Assert.Equal(0, resultItems);
             }
         }
+
+        [Fact]
+        public async Task EnsureCanCompareExchangeWithCorrectCharsEscapeInKey()
+        {
+            DoNotReuseServer();
+            var store = GetDocumentStore();
+            var strList = new List<string>()
+            {
+                "emails/foo+test@email.com", "fĀthēr&s0n", @"Aa0 !""#$%'()*+,-./:;<=>?@[\]^_`{|}~", "ĀĒĪŌŪAa0 322", "āēīōūBb1 123"
+            };
+
+            foreach (var str in strList)
+                await store.Operations.SendAsync(new PutCompareExchangeValueOperation<string>(str, "Karmel", 0));
+
+            var stats = await store.Maintenance.SendAsync(new GetDetailedStatisticsOperation());
+            var numOfCmpXchg = stats.CountOfCompareExchange;
+            Assert.Equal(5, numOfCmpXchg);
+
+            foreach (var str in strList)
+            {
+                var res = await store.Operations.SendAsync(new GetCompareExchangeValueOperation<string>(str));
+                Assert.Equal(str, res.Key);
+                Assert.Equal("Karmel", res.Value);
+
+                await store.Operations.SendAsync(new DeleteCompareExchangeValueOperation<string>(str, res.Index));
+            }
+
+            var finalStats = await store.Maintenance.SendAsync(new GetDetailedStatisticsOperation());
+            var realNumOfCmpXchg = finalStats.CountOfCompareExchange;
+            Assert.Equal(0, realNumOfCmpXchg);
+        }
     }
 }
