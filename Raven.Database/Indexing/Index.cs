@@ -73,7 +73,7 @@ namespace Raven.Database.Indexing
         protected readonly IndexDefinition indexDefinition;
         private volatile string waitReason;
         private readonly long flushSize;
-        
+
         // Users sometimes configure index outputs without realizing that we need to count on that for memory 
         // management. That can result in very small batch sizes, so we want to make sure that we don't trust
         // the user configuration, and use what is actually going on
@@ -123,7 +123,7 @@ namespace Raven.Database.Indexing
                 indexIsBeingWatched = true;
                 return indexindDone.Task;
             }
-        } 
+        }
 
         [CLSCompliant(false)]
         protected Index(Directory directory, int id, IndexDefinition indexDefinition, AbstractViewGenerator viewGenerator, WorkContext context)
@@ -392,8 +392,8 @@ namespace Raven.Database.Indexing
                     {
                         try
                         {
-                            indexWriter.Commit(highestETag, 
-                                forceCommit: forceFlush, 
+                            indexWriter.Commit(highestETag,
+                                forceCommit: forceFlush,
                                 considerLastCommitedTime: considerLastCommitedTime);
                         }
                         catch (Exception e)
@@ -1070,7 +1070,7 @@ namespace Raven.Database.Indexing
         {
             var dic = current as DynamicJsonObject;
             if (dic == null)
-            {                
+            {
                 var properties = current.GetType().GetProperties();
                 var idProperty = properties.FirstOrDefault(x => x.Name == Constants.DocumentIdFieldName || x.Name == Constants.ReduceKeyFieldName);
                 if (idProperty != null)
@@ -1079,11 +1079,11 @@ namespace Raven.Database.Indexing
                     if (idValue.GetType() == typeof(string))
                         return (string)idValue;
                 }
-                    
 
-                    return null;
+
+                return null;
             }
-                
+
             object value = dic.GetValue(Constants.DocumentIdFieldName) ??
                            dic.GetValue(Constants.ReduceKeyFieldName);
             if (value != null)
@@ -1894,7 +1894,7 @@ namespace Raven.Database.Indexing
                         {
                             // however, we copy the current segments.gen & index.version to make 
                             // sure that we get the _at the time_ of the write. 
-                            foreach (var fileName in new[] {"segments.gen", IndexStorage.IndexVersionFileName(indexDefinition)})
+                            foreach (var fileName in new[] { "segments.gen", IndexStorage.IndexVersionFileName(indexDefinition) })
                             {
                                 token.ThrowIfCancellationRequested();
                                 var fullPath = Path.Combine(path, indexId.ToString(), fileName);
@@ -2267,7 +2267,7 @@ namespace Raven.Database.Indexing
             AddIndexError(e, errorMessage, title);
         }
 
-        private void AddIndexError(Exception e, string msg, string title, 
+        private void AddIndexError(Exception e, string msg, string title,
             IndexingPriority priority = IndexingPriority.Error, IndexChangeTypes changeType = IndexChangeTypes.IndexMarkedAsErrored)
         {
             using (context.TransactionalStorage.DisableBatchNesting())
