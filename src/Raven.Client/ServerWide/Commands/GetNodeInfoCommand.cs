@@ -20,6 +20,7 @@ namespace Raven.Client.ServerWide.Commands
         public OsInfo OsInfo;
         public Guid ServerId;
         public RachisState CurrentState;
+        public bool HasFixedPort;
     }
 
     public class GetNodeInfoCommand : RavenCommand<NodeInfo>

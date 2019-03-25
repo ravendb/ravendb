@@ -9,6 +9,7 @@ using FastTests.Server.Replication;
 using Raven.Client.Documents;
 using Raven.Client.Documents.Conventions;
 using Raven.Client.Documents.Operations.Replication;
+using Raven.Client.Exceptions;
 using Raven.Client.Exceptions.Cluster;
 using Raven.Client.Http;
 using Raven.Client.ServerWide;
@@ -479,7 +480,7 @@ namespace RachisTests
         public async Task FailOnAddingNodeWhenLeaderHasPortZero()
         {
             var leader = await CreateRaftClusterAndGetLeader(1);
-            leader.ServerStore.ValidateNotRandomPort = true;
+            leader.ServerStore.ValidateFixedPort = true;
 
             var server2 = GetNewServer();
             var server2Url = server2.ServerStore.GetNodeHttpServerUrl();
@@ -491,6 +492,28 @@ namespace RachisTests
             Assert.Contains("Adding nodes to cluster is forbidden when the leader " +
                             "has port '0' in 'Configuration.Core.ServerUrls' setting", ex.Message);
 
+        }
+
+        [Fact]
+        public async Task FailOnAddingNodeThatHasPortZero()
+        {
+            var leader = await CreateRaftClusterAndGetLeader(1);
+            leader.ServerStore.Configuration.Core.ServerUrls = new[] { leader.WebUrl };
+            leader.ServerStore.ValidateFixedPort = true;
+
+            var server2 = GetNewServer();
+            var server2Url = server2.ServerStore.GetNodeHttpServerUrl();
+            Servers.Add(server2);
+
+            using (var requestExecutor = ClusterRequestExecutor.CreateForSingleNode(leader.WebUrl, null))
+            using (requestExecutor.ContextPool.AllocateOperationContext(out var ctx))
+            {
+                var ex = await Assert.ThrowsAsync<RavenException>(async () =>
+                    await requestExecutor.ExecuteAsync(new AddClusterNodeCommand(server2Url), ctx));
+
+                Assert.Contains($"Node '{server2Url}' has port '0' in 'Configuration.Core.ServerUrls' setting. " +
+                                "Adding a node with non fixed port is forbidden. Define a fixed port for the node to enable cluster creation.", ex.Message);
+            }
         }
 
         private async Task WaitForAssertion(Action action)
@@ -513,5 +536,27 @@ namespace RachisTests
             }
         }
 
+        private class AddClusterNodeCommand : RavenCommand
+        {
+            private readonly string _url;
+
+            public AddClusterNodeCommand(string url)
+            {
+                _url = url;
+            }
+
+            public override HttpRequestMessage CreateRequest(JsonOperationContext ctx, ServerNode node, out string url)
+            {
+                url = $"{node.Url}/admin/cluster/node?url={_url}";
+
+                var request = new HttpRequestMessage
+                {
+                    Method = HttpMethod.Put
+                };
+
+                return request;
+            }
+
+        }
     }
 }
