@@ -199,6 +199,9 @@ namespace Raven.Server.Documents.Handlers.Admin
                     json[nameof(NodeInfo.OsInfo)] = LicenseManager.OsInfo;
                     json[nameof(NodeInfo.ServerId)] = ServerStore.GetServerId().ToString();
                     json[nameof(NodeInfo.CurrentState)] = ServerStore.CurrentRachisState;
+
+                    json[nameof(NodeInfo.HasFixedPort)] = ServerStore.HasFixedPort;
+
                 }
                 context.Write(writer, json);
                 writer.Flush();
@@ -376,6 +379,13 @@ namespace Raven.Server.Documents.Handlers.Admin
             {
                 throw new ArgumentException("Cannot add node because the assigned cores is larger " +
                                             $"than the available cores on that machine: {nodeInfo.NumberOfCores}");
+            }
+
+            if (ServerStore.ValidateFixedPort && nodeInfo.HasFixedPort == false)
+            {
+                throw new InvalidOperationException($"Failed to add node '{nodeUrl}' to cluster. " +
+                                                    $"Node '{nodeUrl}' has port '0' in 'Configuration.Core.ServerUrls' setting. " +
+                                                    "Adding a node with non fixed port is forbidden. Define a fixed port for the node to enable cluster creation.");
             }
 
             ServerStore.EnsureNotPassive();
