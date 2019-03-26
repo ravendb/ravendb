@@ -17,6 +17,7 @@ param(
 $ErrorActionPreference = "Stop"
 [Net.ServicePointManager]::SecurityProtocol = [Net.SecurityProtocolType]::Tls12
 #do not merge, testing purposes only
+#another draft change
 
 . '.\scripts\checkLastExitCode.ps1'
 . '.\scripts\checkPrerequisites.ps1'
