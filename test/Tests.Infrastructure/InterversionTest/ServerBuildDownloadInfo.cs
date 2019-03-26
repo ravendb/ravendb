@@ -35,11 +35,11 @@ namespace Tests.Infrastructure.InterversionTest
             return new ServerBuildDownloadInfo()
             {
                 Version = version,
-                Platform = GetPlatformString()
+                Platform = GetPlatformString(version)
             };
         }
         
-        private static string GetPlatformString()
+        private static string GetPlatformString(string version)
         {
             if (PlatformDetails.RunningOnLinux
                 && PlatformDetails.Is32Bits == false)
@@ -55,7 +55,12 @@ namespace Tests.Infrastructure.InterversionTest
 
             if (PlatformDetails.RunningOnMacOsx)
             {
-                return "osx-x64";
+                if (version.StartsWith("4.1")
+                    || version.StartsWith("4.0")) {
+                    return "osx-x64";
+                }
+                
+                return "macos-x64";
             }
 
             if (PlatformDetails.Is32Bits)

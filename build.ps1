@@ -3,6 +3,7 @@ param(
     [switch]$WinX64,
     [switch]$WinX86,
     [switch]$LinuxX64,
+    [switch]$MacOs,
     [switch]$Osx,
     [switch]$Rpi,
     [switch]$DontRebuildStudio,
@@ -39,6 +40,10 @@ $ErrorActionPreference = "Stop"
 
 if ($Help) {
     Help
+}
+
+if ($Osx) {
+    $MacOs = $true
 }
 
 CheckPrerequisites
@@ -91,8 +96,8 @@ if ([string]::IsNullOrEmpty($Target) -eq $false) {
         $Target = @( "linux-x64" );
     } 
 
-    if ($Osx) {
-        $Target = @( "osx" );
+    if ($MacOs) {
+        $Target = @( "macos" );
     }
 
     if ($Rpi) {

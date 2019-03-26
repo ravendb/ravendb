@@ -22,11 +22,11 @@ $TARGET_SPECS = (
         "TargetId" = "linux-x64";
     },
     @{
-        "Name"      = "osx-x64";
+        "Name"      = "macos-x64";
         "Runtime"   = "osx-x64";
         "PkgType"   = "tar.bz2";
         "IsUnix"    = $True;
-        "TargetId" = "osx";
+        "TargetId" = "macos";
     },
     @{
         "Name"      = "raspberry-pi";
