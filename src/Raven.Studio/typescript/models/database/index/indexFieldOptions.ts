@@ -20,6 +20,7 @@ class indexFieldOptions {
     static readonly analyzersNamesDictionary: analyzerName[] = [
         { shortName: "KeywordAnalyzer", fullName: "KeywordAnalyzer" },
         { shortName: "LowerCaseKeywordAnalyzer", fullName: "Raven.Server.Documents.Indexes.Persistence.Lucene.Analyzers.LowerCaseKeywordAnalyzer" },
+        { shortName: "LowerCaseWhitespaceAnalyzer", fullName: "LowerCaseWhitespaceAnalyzer" },
         { shortName: "SimpleAnalyzer", fullName: "SimpleAnalyzer" },
         { shortName: "StandardAnalyzer", fullName: null }, // default option
         { shortName: "StopAnalyzer", fullName: "StopAnalyzer" },
