@@ -3512,18 +3512,8 @@ namespace Raven.Server.Documents.Indexes
 
         public Size CalculateIndexStorageSize()
         {
-            long sizeOnDiskInBytes = 0;
-
-            using (var tx = _environment.ReadTransaction())
-            {
-                var storageReport = _environment.GenerateReport(tx);
-                if (storageReport == null)
-                    return new Size(0, SizeUnit.Bytes);
-
-                var journalSize = storageReport.Journals.Sum(j => j.AllocatedSpaceInBytes);
-                sizeOnDiskInBytes += storageReport.DataFile.AllocatedSpaceInBytes + journalSize;
-            }
-
+            var storageReport = _environment.GenerateSizeReport();
+            var sizeOnDiskInBytes = storageReport.DataFileInBytes + storageReport.JournalsInBytes;
             return new Size(sizeOnDiskInBytes, SizeUnit.Bytes);
         }
 

@@ -155,7 +155,7 @@ namespace Voron.Debugging
             }).ToList();
         }
 
-        private List<TempBufferReport> GenerateTempBuffersReport(VoronPathSetting tempPath, VoronPathSetting journalPath)
+        public static List<TempBufferReport> GenerateTempBuffersReport(VoronPathSetting tempPath, VoronPathSetting journalPath)
         {
             var tempFiles = Directory.GetFiles(tempPath.FullPath, "*.buffers").Select(filePath =>
             {
@@ -488,7 +488,7 @@ namespace Voron.Debugging
             return nestedPage;
         }
 
-        private long PagesToBytes(long pageCount)
+        public static long PagesToBytes(long pageCount)
         {
             return pageCount * Constants.Storage.PageSize;
         }
