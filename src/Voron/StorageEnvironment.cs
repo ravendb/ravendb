@@ -878,7 +878,7 @@ namespace Voron
         public SizeReport GenerateSizeReport()
         {
             long journalsSize = 0;
-            foreach (var journal in Journal.Files.ToList())
+            foreach (var journal in Journal.Files)
             {
                 journalsSize += (long)journal.JournalWriter.NumberOfAllocated4Kb * 4 * Constants.Size.Kilobyte;
             }
