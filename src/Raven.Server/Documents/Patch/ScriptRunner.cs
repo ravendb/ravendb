@@ -721,10 +721,11 @@ namespace Raven.Server.Documents.Patch
                 Debug.Assert(id != null && docBlittable != null);
 
                 if (args[1].IsString() == false)
-                {
                     ThrowInvalidCounterName(signature);
-                }
+
                 var name = args[1].AsString();
+                if (string.IsNullOrWhiteSpace(name))
+                    ThrowInvalidCounterName(signature);
 
                 double value = 1;
                 if (args.Length == 3)
@@ -760,7 +761,7 @@ namespace Raven.Server.Documents.Patch
 
             private static void ThrowInvalidCounterName(string signature)
             {
-                throw new InvalidOperationException($"{signature}: 'name' must be a string argument");
+                throw new InvalidOperationException($"{signature}: 'name' must be a non-empty string argument");
             }
 
             private static void ThrowInvalidDocumentArgsType(string signature)
