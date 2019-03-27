@@ -12,8 +12,6 @@ namespace Voron.Debugging
 {
     public class SizeReport
     {
-        public static SizeReport Empty = new SizeReport();
-
         public long DataFileInBytes { get; set; }
         public long JournalsInBytes { get; set; }
         public long TempBuffersInBytes { get; set; }

@@ -226,8 +226,8 @@ namespace Voron.Debugging
                 OverflowPages = 0,
                 PageCount = fst.PageCount,
                 Density = density,
-                AllocatedSpaceInBytes = fst.PageCount * Constants.Storage.PageSize,
-                UsedSpaceInBytes = includeDetails ? (long)(fst.PageCount * Constants.Storage.PageSize * density) : -1,
+                AllocatedSpaceInBytes = PagesToBytes(fst.PageCount),
+                UsedSpaceInBytes = includeDetails ? (long)(PagesToBytes(fst.PageCount) * density) : -1,
                 MultiValues = null,
             };
             return treeReport;
@@ -268,8 +268,8 @@ namespace Voron.Debugging
                 OverflowPages = tree.State.OverflowPages,
                 PageCount = tree.State.PageCount,
                 Density = density,
-                AllocatedSpaceInBytes = tree.State.PageCount * Constants.Storage.PageSize + (streams?.AllocatedSpaceInBytes ?? 0),
-                UsedSpaceInBytes = includeDetails ? (long)(tree.State.PageCount * Constants.Storage.PageSize * density) : -1,
+                AllocatedSpaceInBytes = PagesToBytes(tree.State.PageCount) + (streams?.AllocatedSpaceInBytes ?? 0),
+                UsedSpaceInBytes = includeDetails ? (long)(PagesToBytes(tree.State.PageCount) * density) : -1,
                 MultiValues = multiValues,
                 Streams = streams,
                 BalanceHistogram = pageBalance,
@@ -307,7 +307,7 @@ namespace Voron.Debugging
                         Length = info.TotalSize,
                         Version = info.Version,
                         NumberOfAllocatedPages = numberOfAllocatedPages,
-                        AllocatedSpaceInBytes = numberOfAllocatedPages * Constants.Storage.PageSize,
+                        AllocatedSpaceInBytes = PagesToBytes(numberOfAllocatedPages),
                         ChunksTree = GetReport(chunksTree, false),
                     });
 
@@ -320,7 +320,7 @@ namespace Voron.Debugging
                     Streams = streams,
                     NumberOfStreams = tree.State.NumberOfEntries,
                     TotalNumberOfAllocatedPages = totalNumberOfAllocatedPages,
-                    AllocatedSpaceInBytes = totalNumberOfAllocatedPages * Constants.Storage.PageSize
+                    AllocatedSpaceInBytes = PagesToBytes(totalNumberOfAllocatedPages)
                 };
             }
         }
@@ -383,11 +383,11 @@ namespace Voron.Debugging
 
             return new PreAllocatedBuffersReport
             {
-                AllocatedSpaceInBytes = (buffersReport.NumberOfFreePages + allocationTreeReport.PageCount) * Constants.Storage.PageSize,
-                PreAllocatedBuffersSpaceInBytes = buffersReport.NumberOfFreePages * Constants.Storage.PageSize,
+                AllocatedSpaceInBytes = PagesToBytes(buffersReport.NumberOfFreePages + allocationTreeReport.PageCount),
+                PreAllocatedBuffersSpaceInBytes = PagesToBytes(buffersReport.NumberOfFreePages),
                 NumberOfPreAllocatedPages = buffersReport.NumberOfFreePages,
                 AllocationTree = allocationTreeReport,
-                OriginallyAllocatedSpaceInBytes = (buffersReport.NumberOfOriginallyAllocatedPages + allocationTreeReport.PageCount) * Constants.Storage.PageSize
+                OriginallyAllocatedSpaceInBytes = PagesToBytes(buffersReport.NumberOfOriginallyAllocatedPages + allocationTreeReport.PageCount)
             };
         }
 
@@ -439,7 +439,7 @@ namespace Voron.Debugging
                 {
                     var numberOfPages = VirtualPagerLegacyExtensions.GetNumberOfOverflowPages(page.OverflowSize);
 
-                    densities.Add(((double)(page.OverflowSize + Constants.Tree.PageHeaderSize)) / (numberOfPages * Constants.Storage.PageSize));
+                    densities.Add(((double)(page.OverflowSize + Constants.Tree.PageHeaderSize)) / PagesToBytes(numberOfPages));
 
                     i += numberOfPages - 1;
                 }
