@@ -1,10 +1,52 @@
-﻿using System.Linq;
+﻿using System;
+using System.Linq;
 using Esprima.Ast;
+using Jint;
+using Raven.Client.Util;
 
 namespace Raven.Server.Extensions
 {
     public static class JintExtensions
     {
+        public static IDisposable DisableMaxStatements(this Engine engine)
+        {
+            var oldMaxStatements = engine.MaxStatements;
+            engine.MaxStatements = int.MaxValue;
+
+            return new DisposableAction(() =>
+            {
+                engine.MaxStatements = oldMaxStatements;
+            });
+        }
+
+        public static void ExecuteWithReset(this Engine engine, string source)
+        {
+            try
+            {
+                engine.Execute(source);
+            }
+            finally
+            {
+                engine.ResetCallStack();
+                engine.ResetStatementsCount();
+                engine.ResetTimeoutTicks();
+            }
+        }
+
+        public static void ExecuteWithReset(this Engine engine, Esprima.Ast.Program program)
+        {
+            try
+            {
+                engine.Execute(program);
+            }
+            finally
+            {
+                engine.ResetCallStack();
+                engine.ResetStatementsCount();
+                engine.ResetTimeoutTicks();
+            }
+        }
+
         public static string TryGetFieldFromSimpleLambdaExpression(this IFunction function)
         {
             if (!(function.Params.FirstOrDefault() is Identifier identifier))
