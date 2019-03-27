@@ -123,7 +123,7 @@ namespace Raven.Server.Documents.Indexes
             var indexLock = GetIndexLock(name);
 
             indexLock.Wait(_documentDatabase.DatabaseShutdown);
-            
+
             try
             {
                 var creationOptions = IndexCreationOptions.Create;
@@ -425,26 +425,6 @@ namespace Raven.Server.Documents.Indexes
 
             ValidateStaticIndex(definition);
 
-            ValidateIndexName(definition.Name, isStatic: true);
-
-            var safeFileSystemIndexName = IndexDefinitionBase.GetIndexNameSafeForFileSystem(definition.Name);
-
-            var indexWithFileSystemNameCollision = GetIndexes().FirstOrDefault(x =>
-                x.Name.Equals(definition.Name, StringComparison.OrdinalIgnoreCase) == false &&
-                safeFileSystemIndexName.Equals(IndexDefinitionBase.GetIndexNameSafeForFileSystem(x.Name), StringComparison.OrdinalIgnoreCase));
-
-            if (indexWithFileSystemNameCollision != null)
-                throw new IndexCreationException(
-                    $"Could not create index '{definition.Name}' because it would result in directory name collision with '{indexWithFileSystemNameCollision.Name}' index");
-
-            definition.RemoveDefaultValues();
-            ValidateAnalyzers(definition);
-
-            var instance = IndexCompilationCache.GetIndexInstance(definition, _documentDatabase.Configuration); // pre-compile it and validate
-
-            if (definition.Type == IndexType.MapReduce)
-                MapReduceIndex.ValidateReduceResultsCollectionName(definition, instance, _documentDatabase, NeedToCheckIfCollectionEmpty(definition));
-
             var command = new PutIndexCommand(definition, _documentDatabase.Name);
 
             long index = 0;
@@ -560,6 +540,17 @@ namespace Raven.Server.Documents.Indexes
         private void ValidateStaticIndex(IndexDefinition definition)
         {
             ValidateIndexName(definition.Name, isStatic: true);
+
+            var safeFileSystemIndexName = IndexDefinitionBase.GetIndexNameSafeForFileSystem(definition.Name);
+
+            var indexWithFileSystemNameCollision = GetIndexes().FirstOrDefault(x =>
+                x.Name.Equals(definition.Name, StringComparison.OrdinalIgnoreCase) == false &&
+                safeFileSystemIndexName.Equals(IndexDefinitionBase.GetIndexNameSafeForFileSystem(x.Name), StringComparison.OrdinalIgnoreCase));
+
+            if (indexWithFileSystemNameCollision != null)
+                throw new IndexCreationException(
+                    $"Could not create index '{definition.Name}' because it would result in directory name collision with '{indexWithFileSystemNameCollision.Name}' index");
+
             definition.RemoveDefaultValues();
             ValidateAnalyzers(definition);
 
@@ -727,11 +718,11 @@ namespace Raven.Server.Documents.Indexes
             {
                 var allowedCharacters = $"('{string.Join("', '", NameUtils.AllowedIndexNameCharacters.Select(Regex.Unescape))}')";
                 throw new ArgumentException($"Index name '{name}' is not permitted. Only letters, digits and characters {allowedCharacters} are allowed.", nameof(name));
+            }
 
             if (isStatic && name.Contains(".") && NameUtils.IsDotCharSurroundedByOtherChars(name) == false)
                 throw new ArgumentException(
                     $"Index name '{name}' is not permitted. If a name contains '.' character then it must be surrounded by other allowed characters.", nameof(name));
-            }
         }
 
         public Index ResetIndex(string name)
