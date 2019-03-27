@@ -11,6 +11,7 @@ using Raven.Client.Documents.Indexes;
 using Raven.Client.Exceptions.Documents.Indexes;
 using Raven.Server.Config;
 using Raven.Server.Documents.Patch;
+using Raven.Server.Extensions;
 using Raven.Server.ServerWide;
 using Sparrow.Server;
 
@@ -48,15 +49,18 @@ namespace Raven.Server.Documents.Indexes.Static
                     .LocalTimeZone(TimeZoneInfo.Utc);
             });
 
-            var (mapList, mapReferencedCollections) = InitializeEngine(definition);
+            using (_engine.DisableMaxStatements())
+            {
+                var (mapList, mapReferencedCollections) = InitializeEngine(definition);
 
-            var definitions = GetDefinitions();
+                var definitions = GetDefinitions();
 
-            ProcessMaps(configuration, definitions, resolver, mapList, mapReferencedCollections, out var collectionFunctions);
+                ProcessMaps(configuration, definitions, resolver, mapList, mapReferencedCollections, out var collectionFunctions);
 
-            ProcessReduce(definition, definitions, resolver);
+                ProcessReduce(definition, definitions, resolver);
 
-            ProcessFields(definition, collectionFunctions);
+                ProcessFields(definition, collectionFunctions);
+            }
         }
 
         private void ProcessFields(IndexDefinition definition, Dictionary<string, List<JavaScriptMapOperation>> collectionFunctions)
@@ -105,7 +109,7 @@ namespace Raven.Server.Documents.Indexes.Static
         }
 
         private void ProcessMaps(RavenConfiguration configuration, ObjectInstance definitions, JintPreventResolvingTasksReferenceResolver resolver, List<string> mapList,
-            List<HashSet<CollectionName>> mapReferencedCollections,out Dictionary<string, List<JavaScriptMapOperation>> collectionFunctions)
+            List<HashSet<CollectionName>> mapReferencedCollections, out Dictionary<string, List<JavaScriptMapOperation>> collectionFunctions)
         {
             var mapsArray = definitions.GetProperty(MapsProperty).Value;
             if (mapsArray.IsNull() || mapsArray.IsUndefined() || mapsArray.IsArray() == false)
@@ -182,13 +186,13 @@ namespace Raven.Server.Documents.Indexes.Static
             return definitions;
         }
 
-        private static ParserOptions DefaultParserOptions = new ParserOptions();
-        
+        private static readonly ParserOptions DefaultParserOptions = new ParserOptions();
+
         private HashSet<CollectionName> ExecuteCodeAndCollectReferencedCollections(string code)
         {
             var javascriptParser = new JavaScriptParser(code, DefaultParserOptions);
             var program = javascriptParser.ParseProgram();
-            _engine.Execute(program);
+            _engine.ExecuteWithReset(program);
             var loadVisitor = new EsprimaReferencedCollectionVisitor();
             loadVisitor.Visit(program);
             return loadVisitor.ReferencedCollection;
@@ -198,13 +202,13 @@ namespace Raven.Server.Documents.Indexes.Static
         {
             _engine.SetValue("load", new ClrFunctionInstance(_engine, "load", LoadDocument));
 
-            _engine.Execute(Code);
+            _engine.ExecuteWithReset(Code);
 
             if (definition.AdditionalSources != null)
             {
                 foreach (var script in definition.AdditionalSources.Values)
                 {
-                    _engine.Execute(script);
+                    _engine.ExecuteWithReset(script);
                 }
             }
 
@@ -218,8 +222,8 @@ namespace Raven.Server.Documents.Indexes.Static
 
             if (definition.Reduce != null)
             {
-                _engine.Execute(definition.Reduce);
-        }
+                _engine.ExecuteWithReset(definition.Reduce);
+            }
 
             return (maps, mapReferencedCollections);
         }
