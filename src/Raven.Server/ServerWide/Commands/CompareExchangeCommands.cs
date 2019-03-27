@@ -224,6 +224,10 @@ namespace Raven.Server.ServerWide.Commands
 
     public class AddOrUpdateCompareExchangeCommand : CompareExchangeCommandBase
     {
+        private static readonly UTF8Encoding Encoding = new UTF8Encoding();
+
+        internal const int MaxNumberOfCompareExchangeKeyBytes = 512;
+
         public BlittableJsonReaderObject Value;
 
         public AddOrUpdateCompareExchangeCommand() { }
@@ -231,6 +235,9 @@ namespace Raven.Server.ServerWide.Commands
         public AddOrUpdateCompareExchangeCommand(string database, string key, BlittableJsonReaderObject value, long index, JsonOperationContext contextToReturnResult, bool fromBackup = false)
             : base(database, key, index, contextToReturnResult, fromBackup)
         {
+            if (key.Length > MaxNumberOfCompareExchangeKeyBytes || Encoding.GetByteCount(key) > MaxNumberOfCompareExchangeKeyBytes)
+                ThrowCompareExchangeKeyTooBig(key);
+
             Value = value;
         }
 
@@ -279,6 +286,13 @@ namespace Raven.Server.ServerWide.Commands
             var json = base.ToJson(context);
             json[nameof(Value)] = Value;
             return json;
+        }
+
+        private static void ThrowCompareExchangeKeyTooBig(string str)
+        {
+            throw new ArgumentException(
+                $"Compare Exchange key cannot exceed {MaxNumberOfCompareExchangeKeyBytes} bytes, but the key was {Encoding.GetByteCount(str)} bytes. The invalid key is '{str}'.",
+                nameof(str));
         }
     }
 }
