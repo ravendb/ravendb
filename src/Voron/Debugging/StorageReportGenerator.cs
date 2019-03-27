@@ -157,7 +157,7 @@ namespace Voron.Debugging
 
         public static List<TempBufferReport> GenerateTempBuffersReport(VoronPathSetting tempPath, VoronPathSetting journalPath)
         {
-            var tempFiles = Directory.GetFiles(tempPath.FullPath, "*.buffers").Select(filePath =>
+            var tempFiles = GetFiles(tempPath.FullPath, "*.buffers").Select(filePath =>
             {
                 try
                 {
@@ -179,7 +179,7 @@ namespace Voron.Debugging
 
             if (journalPath != null)
             {
-                var recyclableJournals = Directory.GetFiles(journalPath.FullPath, $"{StorageEnvironmentOptions.RecyclableJournalFileNamePrefix}.*").Select(filePath =>
+                var recyclableJournals = GetFiles(journalPath.FullPath, $"{StorageEnvironmentOptions.RecyclableJournalFileNamePrefix}.*").Select(filePath =>
                 {
                     try
                     {
@@ -203,6 +203,18 @@ namespace Voron.Debugging
             }
 
             return tempFiles;
+
+            IEnumerable<string> GetFiles(string path, string searchPattern)
+            {
+                try
+                {
+                    return Directory.GetFiles(path, searchPattern);
+                }
+                catch (DirectoryNotFoundException)
+                {
+                    return Enumerable.Empty<string>();
+                }
+            }
         }
 
         public static TreeReport GetReport(FixedSizeTree fst, bool includeDetails)
