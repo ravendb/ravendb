@@ -194,6 +194,8 @@ namespace Raven.Server.ServerWide
         private PoolOfThreads.LongRunningWork _clusterMaintenanceSetupTask;
         private PoolOfThreads.LongRunningWork _updateTopologyChangeNotification;
 
+        public bool ValidateFixedPort = true;
+
         public Dictionary<string, ClusterNodeStatusReport> ClusterStats()
         {
             if (_engine.LeaderTag != NodeTag)
@@ -423,8 +425,20 @@ namespace Raven.Server.ServerWide
             return _engine.GetTopology(context);
         }
 
+        public bool HasFixedPort =>
+            Configuration.Core.ServerUrls == null ||
+            Uri.TryCreate(Configuration.Core.ServerUrls[0], UriKind.Absolute, out var uri) == false ||
+            uri.Port != 0;
+
         public async Task AddNodeToClusterAsync(string nodeUrl, string nodeTag = null, bool validateNotInTopology = true, bool asWatcher = false)
         {
+            if (ValidateFixedPort && HasFixedPort == false)
+            {
+                throw new InvalidOperationException($"Failed to add node '{nodeUrl}' to cluster. " +
+                                                    "Adding nodes to cluster is forbidden when the leader has port '0' in 'Configuration.Core.ServerUrls' setting. " +
+                                                    "Define a fixed port for the node to enable cluster creation.");
+            }
+
             await _engine.AddToClusterAsync(nodeUrl, nodeTag, validateNotInTopology, asWatcher).WithCancellation(_shutdownNotification.Token);
         }
 

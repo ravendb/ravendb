@@ -386,6 +386,7 @@ namespace FastTests
 
                 var server = new RavenServer(configuration) { ThrowOnLicenseActivationFailure = true };
                 server.Initialize();
+                server.ServerStore.ValidateFixedPort = false;
 
                 return server;
             }

@@ -71,6 +71,11 @@ namespace Raven.Server.Web.System
                 errorMessage = $"The name '{name}' is forbidden for use!";
                 return false;
             }
+            if (name.Contains(".") && NameUtils.IsDotCharSurroundedByOtherChars(name) == false)
+            {
+                errorMessage = $"The name '{name}' is not permitted. If a name contains '.' character then it must be surrounded by other allowed characters.";
+                return false;
+            }
 
             dataDirectory = dataDirectory ?? string.Empty;
             if (Path.Combine(dataDirectory, name).Length > WindowsMaxPath)
