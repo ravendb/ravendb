@@ -2284,7 +2284,7 @@ The recommended method is to use full text search (mark the field as Analyzed an
             var args = mceArgs[0];
             if (mceArgs.Length == 2)
             {
-                args += $", {mceArgs[1]}";
+                args += $", {QueryFieldUtil.EscapeIfNecessary(mceArgs[1])}";
             }
 
             alias = mceArgs[mceArgs.Length - 1];
