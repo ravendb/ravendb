@@ -669,7 +669,7 @@ this.Value = another.Value;
                 using (var commands = store.Commands())
                 {
                     var docs = await commands.GetAsync(0, 10);
-                    Assert.Equal(4, docs.Length);
+                    Assert.Equal(4, docs.Count());
 
                     docs = await commands.GetAsync(new[] { "Comments/one", "Comments/two", "Comments/three" });
                     Assert.Equal("one", docs.ElementAt(0).Comment.ToString());
@@ -841,7 +841,7 @@ this.Value = another.Value;
                 using (var commands = store.Commands())
                 {
                     var documents = await commands.GetAsync(0, 10);
-                    Assert.Equal(3, documents.Length);
+                    Assert.Equal(3, documents.Count());
 
                     dynamic jsonDocument = await commands.GetAsync("NewItem/3");
                     Assert.Equal(1, (int)jsonDocument.CopiedValue);
