@@ -88,7 +88,7 @@ namespace SlowTests.Core.Commands
                     Assert.NotNull(await commands.GetAsync("users/2"));
 
                     var documents = await commands.GetAsync(0, 25);
-                    Assert.Equal(2, documents.Length);
+                    Assert.Equal(2, documents.Count());
 
                     var etag = await commands.HeadAsync("companies/1");
                     Assert.NotNull(etag);
@@ -141,7 +141,7 @@ namespace SlowTests.Core.Commands
                     operation.WaitForCompletion(TimeSpan.FromSeconds(15));
 
                     var documents = await commands.GetAsync(0, 25);
-                    Assert.Equal(0, documents.Count);
+                    Assert.Equal(0, documents.Count());
                 }
             }
         }
