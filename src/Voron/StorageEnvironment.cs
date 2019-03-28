@@ -808,9 +808,53 @@ namespace Voron
             }
         }
 
+        public SizeReport GenerateSizeReport()
+        {
+            long journalsSize = 0;
+            foreach (var journal in Journal.Files)
+            {
+                journalsSize += (long)journal.JournalWriter.NumberOfAllocated4Kb * 4 * Constants.Size.Kilobyte;
+            }
+
+            var journalPath = (Options as StorageEnvironmentOptions.DirectoryStorageEnvironmentOptions)?.JournalPath;
+            var tempFiles = StorageReportGenerator.GenerateTempBuffersReport(Options.TempPath, journalPath);
+            long tempBuffers = 0;
+            long tempRecyclableJournals = 0;
+
+            foreach (var file in tempFiles)
+            {
+                switch (file.Type)
+                {
+                    case TempBufferType.Scratch:
+                        tempBuffers += file.AllocatedSpaceInBytes;
+                        break;
+                    case TempBufferType.RecyclableJournal:
+                        tempRecyclableJournals += file.AllocatedSpaceInBytes;
+                        break;
+                    default:
+                        throw new InvalidOperationException($"Unknown temp file type: {file.Type}");
+                }
+            }
+
+            var numberOfAllocatedPages = GetNumberOfAllocatedPages();
+
+            return new SizeReport
+            {
+                DataFileInBytes = StorageReportGenerator.PagesToBytes(numberOfAllocatedPages),
+                JournalsInBytes = journalsSize,
+                TempBuffersInBytes = tempBuffers,
+                TempRecyclableJournalsInBytes = tempRecyclableJournals
+            };
+        }
+
+        private long GetNumberOfAllocatedPages()
+        {
+            return Math.Max(_dataPager.NumberOfAllocatedPages, NextPageNumber - 1); // async apply to data file task
+        }
+
         public StorageReport GenerateReport(Transaction tx)
         {
-            var numberOfAllocatedPages = Math.Max(_dataPager.NumberOfAllocatedPages, NextPageNumber - 1); // async apply to data file task
+            var numberOfAllocatedPages = GetNumberOfAllocatedPages();
             var numberOfFreePages = _freeSpaceHandling.AllPages(tx.LowLevelTransaction).Count;
 
             var countOfTrees = 0;

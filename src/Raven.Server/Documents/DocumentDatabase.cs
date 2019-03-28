@@ -1270,26 +1270,9 @@ namespace Raven.Server.Documents
                 if (environment == null)
                     continue;
 
-                Transaction tx = null;
-                try
-                {
-                    try
-                    {
-                        tx = environment.Environment.ReadTransaction();
-                    }
-                    catch (OperationCanceledException)
-                    {
-                        continue;
-                    }
-
-                    var sizeOnDisk = GetSizeOnDisk(environment, tx);
-                    dataInBytes += sizeOnDisk.DataInBytes + sizeOnDisk.JournalsInBytes;
-                    tempBuffersInBytes += sizeOnDisk.TempBuffersInBytes + sizeOnDisk.TempRecyclableJournalsInBytes;
-                }
-                finally
-                {
-                    tx?.Dispose();
-                }
+                var sizeOnDisk = environment.Environment.GenerateSizeReport();
+                dataInBytes += sizeOnDisk.DataFileInBytes + sizeOnDisk.JournalsInBytes;
+                tempBuffersInBytes += sizeOnDisk.TempBuffersInBytes + sizeOnDisk.TempRecyclableJournalsInBytes;
             }
 
             return (new Size(dataInBytes), new Size(tempBuffersInBytes));
@@ -1306,121 +1289,78 @@ namespace Raven.Server.Documents
                 if (environment == null)
                     continue;
 
-                Transaction tx = null;
-                try
+                var fullPath = environment.Environment.Options.BasePath.FullPath;
+                if (fullPath == null)
+                    continue;
+
+                var driveInfo = environment.Environment.Options.DriveInfoByPath?.Value;
+                var diskSpaceResult = DiskSpaceChecker.GetDiskSpaceInfo(fullPath, driveInfo?.BasePath);
+                if (diskSpaceResult == null)
+                    continue;
+
+                var sizeOnDisk = environment.Environment.GenerateSizeReport();
+                var usage = new MountPointUsage
                 {
-                    try
+                    UsedSpace = sizeOnDisk.DataFileInBytes,
+                    DiskSpaceResult = new DiskSpaceResult
                     {
-                        tx = environment.Environment.ReadTransaction();
+                        DriveName = diskSpaceResult.DriveName,
+                        VolumeLabel = diskSpaceResult.VolumeLabel,
+                        TotalFreeSpaceInBytes = diskSpaceResult.TotalFreeSpace.GetValue(SizeUnit.Bytes),
+                        TotalSizeInBytes = diskSpaceResult.TotalSize.GetValue(SizeUnit.Bytes)
+                    },
+                    UsedSpaceByTempBuffers = 0
+                };
+
+                var journalPathUsage = DiskSpaceChecker.GetDiskSpaceInfo(environment.Environment.Options.JournalPath?.FullPath, driveInfo?.JournalPath);
+                if (journalPathUsage != null)
+                {
+                    if (diskSpaceResult.DriveName == journalPathUsage.DriveName)
+                    {
+                        usage.UsedSpace += sizeOnDisk.JournalsInBytes;
+                        usage.UsedSpaceByTempBuffers += sizeOnDisk.TempRecyclableJournalsInBytes;
                     }
-                    catch (OperationCanceledException)
+                    else
                     {
-                        continue;
-                    }
-
-                    var fullPath = environment.Environment.Options.BasePath.FullPath;
-                    if (fullPath == null)
-                        continue;
-
-                    var driveInfo = environment.Environment.Options.DriveInfoByPath?.Value;
-                    var diskSpaceResult = DiskSpaceChecker.GetDiskSpaceInfo(fullPath, driveInfo?.BasePath);
-                    if (diskSpaceResult == null)
-                        continue;
-
-                    var sizeOnDisk = GetSizeOnDisk(environment, tx);
-                    var usage = new MountPointUsage
-                    {
-                        UsedSpace = sizeOnDisk.DataInBytes,
-                        DiskSpaceResult = new DiskSpaceResult
+                        yield return new MountPointUsage
                         {
-                            DriveName = diskSpaceResult.DriveName,
-                            VolumeLabel = diskSpaceResult.VolumeLabel,
-                            TotalFreeSpaceInBytes = diskSpaceResult.TotalFreeSpace.GetValue(SizeUnit.Bytes),
-                            TotalSizeInBytes = diskSpaceResult.TotalSize.GetValue(SizeUnit.Bytes)
-                        },
-                        UsedSpaceByTempBuffers = 0
-                    };
-
-                    var journalPathUsage = DiskSpaceChecker.GetDiskSpaceInfo(environment.Environment.Options.JournalPath?.FullPath, driveInfo?.JournalPath);
-                    if (journalPathUsage != null)
-                    {
-                        if (diskSpaceResult.DriveName == journalPathUsage.DriveName)
-                        {
-                            usage.UsedSpace += sizeOnDisk.JournalsInBytes;
-                            usage.UsedSpaceByTempBuffers += sizeOnDisk.TempRecyclableJournalsInBytes;
-                        }
-                        else
-                        {
-                            yield return new MountPointUsage
+                            DiskSpaceResult = new DiskSpaceResult
                             {
-                                DiskSpaceResult = new DiskSpaceResult
-                                {
-                                    DriveName = journalPathUsage.DriveName,
-                                    VolumeLabel = journalPathUsage.VolumeLabel,
-                                    TotalFreeSpaceInBytes = journalPathUsage.TotalFreeSpace.GetValue(SizeUnit.Bytes),
-                                    TotalSizeInBytes = journalPathUsage.TotalSize.GetValue(SizeUnit.Bytes)
-                                },
-                                UsedSpaceByTempBuffers = sizeOnDisk.TempRecyclableJournalsInBytes
-                            };
-                        }
+                                DriveName = journalPathUsage.DriveName,
+                                VolumeLabel = journalPathUsage.VolumeLabel,
+                                TotalFreeSpaceInBytes = journalPathUsage.TotalFreeSpace.GetValue(SizeUnit.Bytes),
+                                TotalSizeInBytes = journalPathUsage.TotalSize.GetValue(SizeUnit.Bytes)
+                            },
+                            UsedSpaceByTempBuffers = sizeOnDisk.TempRecyclableJournalsInBytes
+                        };
                     }
-                
-                    var tempBuffersDiskSpaceResult = DiskSpaceChecker.GetDiskSpaceInfo(environment.Environment.Options.TempPath.FullPath, driveInfo?.TempPath);
-                    if (tempBuffersDiskSpaceResult != null)
+                }
+
+                var tempBuffersDiskSpaceResult = DiskSpaceChecker.GetDiskSpaceInfo(environment.Environment.Options.TempPath.FullPath, driveInfo?.TempPath);
+                if (tempBuffersDiskSpaceResult != null)
+                {
+                    if (diskSpaceResult.DriveName == tempBuffersDiskSpaceResult.DriveName)
                     {
-                        if (diskSpaceResult.DriveName == tempBuffersDiskSpaceResult.DriveName)
-                        {
-                            usage.UsedSpaceByTempBuffers += sizeOnDisk.TempBuffersInBytes;
-                        }
-                        else
-                        {
-                            yield return new MountPointUsage
-                            {
-                                UsedSpaceByTempBuffers = sizeOnDisk.TempBuffersInBytes,
-                                DiskSpaceResult = new DiskSpaceResult
-                                {
-                                    DriveName = tempBuffersDiskSpaceResult.DriveName,
-                                    VolumeLabel = tempBuffersDiskSpaceResult.VolumeLabel,
-                                    TotalFreeSpaceInBytes = tempBuffersDiskSpaceResult.TotalFreeSpace.GetValue(SizeUnit.Bytes),
-                                    TotalSizeInBytes = tempBuffersDiskSpaceResult.TotalSize.GetValue(SizeUnit.Bytes)
-                                }
-                            };
-                        }
+                        usage.UsedSpaceByTempBuffers += sizeOnDisk.TempBuffersInBytes;
                     }
+                    else
+                    {
+                        yield return new MountPointUsage
+                        {
+                            UsedSpaceByTempBuffers = sizeOnDisk.TempBuffersInBytes,
+                            DiskSpaceResult = new DiskSpaceResult
+                            {
+                                DriveName = tempBuffersDiskSpaceResult.DriveName,
+                                VolumeLabel = tempBuffersDiskSpaceResult.VolumeLabel,
+                                TotalFreeSpaceInBytes = tempBuffersDiskSpaceResult.TotalFreeSpace.GetValue(SizeUnit.Bytes),
+                                TotalSizeInBytes = tempBuffersDiskSpaceResult.TotalSize.GetValue(SizeUnit.Bytes)
+                            }
+                        };
+                    }
+                }
 
-                    yield return usage;
-                }
-                finally
-                {
-                    tx?.Dispose();
-                }
+                yield return usage;
             }
-        }
-
-        private static (long DataInBytes, long JournalsInBytes, long TempBuffersInBytes, long TempRecyclableJournalsInBytes) GetSizeOnDisk(StorageEnvironmentWithType environment, Transaction tx)
-        {
-            var storageReport = environment.Environment.GenerateReport(tx);
-            var journalSize = storageReport.Journals.Sum(j => j.AllocatedSpaceInBytes);
-
-            long tempBuffers = 0;
-            long tempRecyclableJournals = 0;
-
-            foreach (var file in storageReport.TempFiles)
-            {
-                switch (file.Type)
-                {
-                    case TempBufferType.Scratch:
-                        tempBuffers += file.AllocatedSpaceInBytes;
-                        break;
-                    case TempBufferType.RecyclableJournal:
-                        tempRecyclableJournals += file.AllocatedSpaceInBytes;
-                        break;
-                    default:
-                        throw new InvalidOperationException($"Unknown temp file type: {file.Type}");
-                }
-            }
-
-            return (storageReport.DataFile.AllocatedSpaceInBytes, journalSize, tempBuffers, tempRecyclableJournals);
         }
 
         public DatabaseRecord ReadDatabaseRecord()
