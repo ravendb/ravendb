@@ -638,6 +638,7 @@ namespace Raven.Server.Web.System
         private static void InitializeZipFileServing(string reportedBasePath)
         {
             Debug.Assert(_zipFilePath != null);
+            UpdateZipFileLastChange();
 
             // We need to invalidate the cache if the zip file changes
             _zipFileWatcher = new FileSystemWatcher();
@@ -651,7 +652,7 @@ namespace Raven.Server.Web.System
         {
             // Do not change the order of these instructions. We want to avoid 
             // polluting the ETags in the new cache with old ones.
-            Interlocked.Increment(ref _zipFileLastChangeTicks);
+            UpdateZipFileLastChange();
             StaticContentCache.Clear();
             ReprocessZipFile();
         }
@@ -688,6 +689,11 @@ namespace Raven.Server.Web.System
 
             ZipFileInitialized.RaiseOrDie();
             ZipFileProcessingHappening.LowerOrDie();
+        }
+
+        private static void UpdateZipFileLastChange()
+        {
+            _zipFileLastChangeTicks = new FileInfo(_zipFilePath).LastWriteTimeUtc.Ticks;
         }
 
         [RavenAction("/", "GET", AuthorizationStatus.UnauthenticatedClients)]

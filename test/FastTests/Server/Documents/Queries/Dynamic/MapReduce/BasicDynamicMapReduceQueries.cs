@@ -320,7 +320,7 @@ namespace FastTests.Server.Documents.Queries.Dynamic.MapReduce
                     var results = new DynamicArray(result.Results);
 
                     var cities = new List<string> { "Torun", "Hadera" };
-                    Assert.Equal(2, results.Length);
+                    Assert.Equal(2, results.Count());
                     foreach (dynamic r in results)
                     {
                         var json = (DynamicBlittableJson)r;

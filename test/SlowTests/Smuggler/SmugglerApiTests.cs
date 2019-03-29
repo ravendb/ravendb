@@ -66,7 +66,7 @@ namespace SlowTests.Smuggler
                 using (var commands = store2.Commands())
                 {
                     var docs = await commands.GetAsync(0, 10);
-                    Assert.Equal(3, docs.Length);
+                    Assert.Equal(3, docs.Count());
                 }
             }
         }

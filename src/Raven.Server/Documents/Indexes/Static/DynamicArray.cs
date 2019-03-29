@@ -22,8 +22,6 @@ namespace Raven.Server.Documents.Indexes.Static
             _inner = inner;
         }
 
-        public int Length => _inner.Count();
-
         public dynamic Get(params int[] indexes)
         {
             if (indexes == null)
@@ -42,14 +40,14 @@ namespace Raven.Server.Documents.Indexes.Static
             const string lengthName = "Length";
             const string countName = "Count";
 
-            result = null;
             if (string.CompareOrdinal(binder.Name, lengthName) == 0 ||
                 string.CompareOrdinal(binder.Name, countName) == 0)
             {
-                result = Length;
+                result = _inner.Count();
                 return true;
             }
 
+            result = null;
             return false;
         }
 
@@ -86,7 +84,7 @@ namespace Raven.Server.Documents.Indexes.Static
             if (binder.ReturnType.IsArray)
             {
                 var elementType = binder.ReturnType.GetElementType();
-                var count = Length;
+                var count = _inner.Count();
                 var array = Array.CreateInstance(elementType, count);
 
                 for (var i = 0; i < count; i++)
@@ -123,7 +121,7 @@ namespace Raven.Server.Documents.Indexes.Static
 
         public int Count() => _inner.Count();
 
-        public int Count(Func<dynamic, bool> predicate) => _inner.Count(predicate);
+        public int Count(Func<dynamic, bool> predicate) => Enumerable.Count(this, predicate);
 
         public dynamic Any()
         {
