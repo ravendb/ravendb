@@ -121,7 +121,7 @@ namespace Raven.Server.Documents.Indexes.Static
 
         public int Count() => _inner.Count();
 
-        public int Count(Func<dynamic, bool> predicate) => _inner.Count(predicate);
+        public int Count(Func<dynamic, bool> predicate) => Enumerable.Count(this, predicate);
 
         public dynamic Any()
         {
@@ -136,16 +136,6 @@ namespace Raven.Server.Documents.Indexes.Static
         public dynamic All(Func<dynamic, bool> predicate)
         {
             return Enumerable.All(this, predicate);
-        }
-
-        public dynamic Count()
-        {
-            return _inner.Count();
-        }
-
-        public dynamic Count(Func<dynamic, bool> predicate)
-        {
-            return Enumerable.Count(this, predicate);
         }
 
         public dynamic First()
