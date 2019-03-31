@@ -168,8 +168,9 @@ namespace Raven.Client.Documents.Subscriptions
                     criteria.Query += Environment.NewLine + "include ";
 
                     var first = true;
-                    foreach (var include in builder.DocumentsToInclude)
+                    foreach (var inc in builder.DocumentsToInclude)
                     {
+                        var include = "doc." + inc;
                         if (first == false)
                             criteria.Query += ",";
                         first = false;
