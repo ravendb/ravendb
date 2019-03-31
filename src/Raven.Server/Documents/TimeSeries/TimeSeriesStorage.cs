@@ -67,10 +67,17 @@ namespace Raven.Server.Documents.TimeSeries
         }
 
 
-        public TimeSeriesStorage(DocumentDatabase documentDatabase)
+        public TimeSeriesStorage(DocumentDatabase documentDatabase, Transaction tx)
         {
             _documentDatabase = documentDatabase;
             _documentsStorage = documentDatabase.DocumentsStorage;
+
+            tx.CreateTree(TimeSeriesKeysSlice);
+        }
+
+        public string RemoveTimestampRange(DocumentsOperationContext context, string documentId, string collection, string name, DateTime from, DateTime to)
+        {
+            throw new NotImplementedException();
         }
 
         public string AppendTimestamp(DocumentsOperationContext context, string documentId, string collection, string name, DateTime timestamp, Span<double> values,
@@ -104,8 +111,6 @@ namespace Raven.Server.Documents.TimeSeries
             {
                 if (tagSlice.Size > byte.MaxValue)
                     throw new ArgumentOutOfRangeException(nameof(tag), $"Tag '{tag}' is too big (max 255 bytes) for document '{documentId}' in time series: {name}");
-
-
 
                 byte* buffer = stackalloc byte[MaxSegmentSize];
                 if (table.SeekOneBackwardByPrimaryKeyPrefix(timeSeriesPrefixSlice, timeSeriesKeySlice, out TableValueReader tvr) == false)
@@ -301,7 +306,7 @@ namespace Raven.Server.Documents.TimeSeries
             return scope;
         }
 
-        public Table GetTimeSeriesTable(Transaction tx, CollectionName collection)
+        private Table GetTimeSeriesTable(Transaction tx, CollectionName collection)
         {
             string tableName = collection.GetTableName(CollectionTableType.CounterGroups);
 
