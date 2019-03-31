@@ -1936,6 +1936,7 @@ namespace Raven.Server.Documents
         Revisions = 2,
         Conflicts = 3,
         LegacyCounter = 4,
-        Counters = 5
+        Counters = 5,
+        TimeSeries = 6
     }
 }
