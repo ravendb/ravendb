@@ -283,6 +283,7 @@ namespace Raven.Client.Documents.Changes
         Hilo,
         Subscriptions,
         Streams,
-        Documents
+        Documents,
+        TimeSeries
     }
 }
