@@ -1,4 +1,6 @@
-﻿using FastTests;
+﻿using System.IO;
+using FastTests;
+using Raven.Client.Documents.Operations.Attachments;
 using Raven.Client.Exceptions;
 using SlowTests.Core.Utils.Entities;
 using Voron.Impl.Paging;
@@ -56,6 +58,30 @@ namespace SlowTests.Issues
                     Assert.Contains($"Counter name cannot exceed {AbstractPager.MaxKeySize} bytes", ex.Message);
                 }
 
+            }
+
+        }
+
+        [Fact]
+        public void ShouldThrowOnAttachmentNameTooBig()
+        {
+            using (var store = GetDocumentStore())
+            {
+                var longName = new string('z', AbstractPager.MaxKeySize + 1);
+
+                using (var session = store.OpenSession())
+                {
+                    session.Store(new User(), "users/1");
+                    session.SaveChanges();
+
+
+                }
+
+                using (var stream = new MemoryStream(new byte[] { 1, 2, 3 }))
+                {
+                    Assert.Throws<RavenException>(() => 
+                        store.Operations.Send(new PutAttachmentOperation("users/1", longName, stream)));
+                }
             }
 
         }
