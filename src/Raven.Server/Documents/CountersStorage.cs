@@ -20,12 +20,15 @@ using Raven.Client.Documents.Operations.Counters;
 using Raven.Client.Exceptions.Documents.Counters;
 using Sparrow.Json;
 using Sparrow.Json.Parsing;
+using Voron.Impl.Paging;
 
 namespace Raven.Server.Documents
 {
     public unsafe class CountersStorage
     {
         private const int DbIdAsBase64Size = 22;
+
+        private const int MaxCounterNameSize = AbstractPager.MaxKeySize;
 
         private readonly DocumentDatabase _documentDatabase;
         private readonly DocumentsStorage _documentsStorage;
@@ -344,6 +347,11 @@ namespace Raven.Server.Documents
             {
                 DocumentPutAction.ThrowRequiresTransaction();
                 Debug.Assert(false);// never hit
+            }
+
+            if (name.Length > MaxCounterNameSize)
+            {
+                ThrowCounterNameTooBig(name);
             }
 
             var collectionName = _documentsStorage.ExtractCollectionName(context, collection);
@@ -766,5 +774,13 @@ namespace Raven.Server.Documents
 
             return countersToAdd;
         }
+
+        private static void ThrowCounterNameTooBig(string name)
+        {
+            throw new ArgumentException(
+                $"Counter name cannot exceed {MaxCounterNameSize} bytes, but counter name was {Encoding.UTF8.GetByteCount(name)} bytes. The invalid counter name is '{name}'.",
+                nameof(name));
+        }
+
     }
 }
