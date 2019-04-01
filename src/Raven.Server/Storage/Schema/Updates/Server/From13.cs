@@ -1,6 +1,4 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Diagnostics;
+﻿using System.Collections.Generic;
 using Raven.Server.ServerWide;
 using Sparrow.Json;
 using Voron;
@@ -17,6 +15,48 @@ namespace Raven.Server.Storage.Schema.Updates.Server
             var dbs = new List<string>();
             const string dbKey = "db/";
 
+            var oldCompareExchangeSchema = new TableSchema().
+                DefineKey(new TableSchema.SchemaIndexDef
+                {
+                    StartIndex = (int)ClusterStateMachine.CompareExchangeTable.Key,
+                    Count = 1
+                });
+
+            var newCompareExchangeSchema = new TableSchema()
+                .DefineKey(new TableSchema.SchemaIndexDef
+                {
+                    StartIndex = (int)ClusterStateMachine.CompareExchangeTable.Key,
+                    Count = 1
+                }).DefineIndex(new TableSchema.SchemaIndexDef
+                {
+                    StartIndex = (int)ClusterStateMachine.CompareExchangeTable.PrefixIndex,
+                    Count = 1,
+                    IsGlobal = true,
+                    Name = ClusterStateMachine.CompareExchangeIndex,
+                    Dangerous_IgnoreForDeletes = true
+                });
+
+            var oldIdentitiesSchema = new TableSchema().
+                DefineKey(new TableSchema.SchemaIndexDef
+                {
+                    StartIndex = (int)ClusterStateMachine.IdentitiesTable.Key,
+                    Count = 1
+                });
+
+            var newIdentitiesSchema = new TableSchema()
+                .DefineKey(new TableSchema.SchemaIndexDef
+                {
+                    StartIndex = (int)ClusterStateMachine.IdentitiesTable.Key,
+                    Count = 1
+                }).DefineIndex(new TableSchema.SchemaIndexDef
+                {
+                    StartIndex = (int)ClusterStateMachine.IdentitiesTable.KeyIndex,
+                    Count = 1,
+                    IsGlobal = true,
+                    Name = ClusterStateMachine.IdentitiesIndex,
+                    Dangerous_IgnoreForDeletes = true
+                });
+
             using (var items = step.ReadTx.OpenTable(ClusterStateMachine.ItemsSchema, ClusterStateMachine.Items))
             using (Slice.From(step.ReadTx.Allocator, dbKey, out Slice loweredPrefix))
             {
@@ -31,12 +71,15 @@ namespace Raven.Server.Storage.Schema.Updates.Server
                 var dbPrefixLowered = $"{db.ToLowerInvariant()}/";
 
                 // update CompareExchangeSchema
-                var writeCompareExchangeTable = step.WriteTx.OpenTable(ClusterStateMachine.CompareExchangeSchema, ClusterStateMachine.CompareExchange);
-                if (writeCompareExchangeTable != null)
+                var readCompareExchangeTable = step.ReadTx.OpenTable(oldCompareExchangeSchema, ClusterStateMachine.CompareExchange);
+
+                if (readCompareExchangeTable != null)
                 {
                     using (Slice.From(step.ReadTx.Allocator, dbPrefixLowered, out var keyPrefix))
                     {
-                        foreach (var item in writeCompareExchangeTable.SeekByPrimaryKeyPrefix(keyPrefix, Slices.Empty, 0))
+                        var writeCompareExchangeTable = step.WriteTx.OpenTable(newCompareExchangeSchema, ClusterStateMachine.CompareExchange);
+                        writeCompareExchangeTable.Danger_NoInPlaceUpdates = true;
+                        foreach (var item in readCompareExchangeTable.SeekByPrimaryKeyPrefix(keyPrefix, Slices.Empty, 0))
                         {
                             var index = TableValueToLong((int)ClusterStateMachine.CompareExchangeTable.Index, ref item.Value.Reader);
 
@@ -52,7 +95,6 @@ namespace Raven.Server.Storage.Schema.Updates.Server
                                     write.Add(bjro.BasePointer, bjro.Size);
                                     write.Add(prefixIndexSlice);
 
-                                    writeCompareExchangeTable.DeleteByKey(item.Key);
                                     writeCompareExchangeTable.Set(write);
                                 }
                             }
@@ -61,12 +103,14 @@ namespace Raven.Server.Storage.Schema.Updates.Server
                 }
 
                 // update IdentitiesSchema
-                var writeIdentitiesTable = step.WriteTx.OpenTable(ClusterStateMachine.IdentitiesSchema, ClusterStateMachine.Identities);
-                if (writeIdentitiesTable != null)
+                var readIdentitiesTable = step.ReadTx.OpenTable(oldIdentitiesSchema, ClusterStateMachine.Identities);
+                if (readIdentitiesTable != null)
                 {
                     using (Slice.From(step.ReadTx.Allocator, dbPrefixLowered, out var keyPrefix))
                     {
-                        foreach (var item in writeIdentitiesTable.SeekByPrimaryKeyPrefix(keyPrefix, Slices.Empty, 0))
+                        var writeIdentitiesTable = step.WriteTx.OpenTable(newIdentitiesSchema, ClusterStateMachine.Identities);
+                        writeIdentitiesTable.Danger_NoInPlaceUpdates = true;
+                        foreach (var item in readIdentitiesTable.SeekByPrimaryKeyPrefix(keyPrefix, Slices.Empty, 0))
                         {
                             var index = TableValueToLong((int)ClusterStateMachine.IdentitiesTable.Index, ref item.Value.Reader);
                             var value = TableValueToLong((int)ClusterStateMachine.IdentitiesTable.Value, ref item.Value.Reader);
@@ -75,13 +119,12 @@ namespace Raven.Server.Storage.Schema.Updates.Server
                             using (Slice.External(step.WriteTx.Allocator, buffer.Ptr, buffer.Length, out var prefixIndexSlice))
                             using (writeIdentitiesTable.Allocate(out TableValueBuilder write))
                             {
-                                    write.Add(item.Key);
-                                    write.Add(index);
-                                    write.Add(value);
-                                    write.Add(prefixIndexSlice);
+                                write.Add(item.Key);
+                                write.Add(value);
+                                write.Add(index);
+                                write.Add(prefixIndexSlice);
 
-                                    writeIdentitiesTable.DeleteByKey(item.Key);
-                                    writeIdentitiesTable.Set(write);
+                                writeIdentitiesTable.Set(write);
                             }
                         }
                     }

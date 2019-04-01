@@ -1,6 +1,6 @@
 ﻿using System;
-using System.Collections.Generic;
 using System.IO;
+using System.IO.Compression;
 using System.Linq;
 using System.Threading.Tasks;
 using FastTests;
@@ -11,6 +11,8 @@ using Raven.Client.Documents.Operations.CompareExchange;
 using Raven.Client.Documents.Session;
 using Raven.Client.Documents.Smuggler;
 using Raven.Client.ServerWide.Operations;
+using Raven.Server.Config.Settings;
+using Raven.Server.ServerWide.Context;
 using Raven.Tests.Core.Utils.Entities;
 using Xunit;
 
@@ -116,6 +118,44 @@ namespace SlowTests.Server.Documents.PeriodicBackup
                     Assert.Equal(cmpXchg1.Name, cmpXchg.Value.Name);
                     var cmpXchg2 = await session.Advanced.ClusterTransaction.GetCompareExchangeValueAsync<User>("emojis/clown");
                     Assert.Null(cmpXchg2);
+                }
+            }
+        }
+
+        [Fact]
+        public void AllCompareExchangeAndIdentitiesPreserveAfterSchemaUpgradeFrom12()
+        {
+            var folder = NewDataPath(forceCreateDir: true);
+            DoNotReuseServer();
+
+            var zipPath = new PathSetting("SchemaUpgrade/Issues/SystemVersion/Identities_CompareExchange_RavenData_from12.zip");
+            Assert.True(File.Exists(zipPath.FullPath));
+
+            ZipFile.ExtractToDirectory(zipPath.FullPath, folder);
+
+            using (var server = GetNewServer(deletePrevious: false, runInMemory: false, partialPath: folder))
+            {
+                using (server.ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
+                using (context.OpenReadTransaction())
+                {
+                    var dbs = server.ServerStore.Cluster.GetDatabaseNames(context);
+                    var dbsList = dbs.ToList();
+
+                    Assert.Equal(2, dbsList.Count);
+                    var dbName2 = dbsList[0];
+                    Assert.Equal("a", dbName2);
+                    var dbName1 = dbsList[1];
+                    Assert.Equal("aa", dbName1);
+
+                    var numOfIdentities = server.ServerStore.Cluster.GetNumberOfIdentities(context, dbName1);
+                    Assert.Equal(1, numOfIdentities);
+                    numOfIdentities = server.ServerStore.Cluster.GetNumberOfIdentities(context, dbName2);
+                    Assert.Equal(1, numOfIdentities);
+
+                    var numOfCompareExchanges = server.ServerStore.Cluster.GetNumberOfCompareExchange(context, dbName1);
+                    Assert.Equal(3, numOfCompareExchanges);
+                    numOfCompareExchanges = server.ServerStore.Cluster.GetNumberOfCompareExchange(context, dbName2);
+                    Assert.Equal(3, numOfCompareExchanges);
                 }
             }
         }
