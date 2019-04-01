@@ -609,17 +609,28 @@ namespace Raven.Client.Documents.Indexes
                     if (expr.NodeType == ExpressionType.MemberAccess && IsNumber())
                     {
                         Out("(");
-                        Out(ConvertTypeToCSharpKeyword(expr.Type, out _));
+                        var nonNullableType = Nullable.GetUnderlyingType(expr.Type);
+                        Out(ConvertTypeToCSharpKeyword(nonNullableType ?? expr.Type, out _));
+                        if (nonNullableType != null)
+                            Out("?");
+
                         Out(")");
                     }
 
                     bool IsNumber()
                     {
                         return expr.Type == typeof(int) ||
+                               expr.Type == typeof(int?) ||
                                expr.Type == typeof(long) ||
+                               expr.Type == typeof(long?) ||
                                expr.Type == typeof(double) ||
+                               expr.Type == typeof(double?) ||
                                expr.Type == typeof(decimal) ||
-                               expr.Type == typeof(short);
+                               expr.Type == typeof(decimal?) ||
+                               expr.Type == typeof(float) ||
+                               expr.Type == typeof(float?) ||
+                               expr.Type == typeof(short) ||
+                               expr.Type == typeof(short?);
                     }
                 }
             });

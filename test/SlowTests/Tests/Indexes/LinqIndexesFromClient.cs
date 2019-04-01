@@ -353,8 +353,48 @@ users => from user in users
     CountDecimal2 = 6M + (decimal) locationCount.CountDecimal,
     CountDouble1 = (double) locationCount.CountDouble + 7,
     CountDouble2 = 8 + (double) locationCount.CountDouble,
-    CountFloat1 = locationCount.CountFloat + 9,
-    CountFloat2 = 10 + locationCount.CountFloat
+    CountFloat1 = (float) locationCount.CountFloat + 9,
+    CountFloat2 = 10 + (float) locationCount.CountFloat
+})".Replace("\r\n", Environment.NewLine) }
+            };
+
+            Assert.True(original.Maps.SetEquals(generated.Maps));
+        }
+
+        [Fact]
+        public void Convert_numeric_nullable_query()
+        {
+            IndexDefinition generated = new IndexDefinitionBuilder<VotesCountNullable, VotesCountNullable>
+            {
+                Map = locationCountDocs => from locationCount in locationCountDocs
+                    select new
+                    {
+                        CountInt1 = locationCount.CountInt + 1,
+                        CountInt2 = 2 + locationCount.CountInt,
+                        CountLong1 = locationCount.CountLong + 3,
+                        CountLong2 = 4 + locationCount.CountLong,
+                        CountDecimal1 = locationCount.CountDecimal + 5,
+                        CountDecimal2 = 6 + locationCount.CountDecimal,
+                        CountDouble1 = locationCount.CountDouble + 7,
+                        CountDouble2 = 8 + locationCount.CountDouble,
+                        CountFloat1 = locationCount.CountFloat + 9,
+                        CountFloat2 = 10 + locationCount.CountFloat
+                    }
+            }.ToIndexDefinition(new DocumentConventions { PrettifyGeneratedLinqExpressions = false });
+
+            var original = new IndexDefinition
+            {
+                Maps = { @"docs.VotesCountNullables.Select(locationCount => new {
+    CountInt1 = (int ? ) locationCount.CountInt + ((int ? ) 1),
+    CountInt2 = ((int ? ) 2) + (int ? ) locationCount.CountInt,
+    CountLong1 = (long ? ) locationCount.CountLong + ((long ? )((long)(3))),
+    CountLong2 = ((long ? )((long)(4))) + (long ? ) locationCount.CountLong,
+    CountDecimal1 = (decimal ? ) locationCount.CountDecimal + ((decimal ? )((decimal)(5))),
+    CountDecimal2 = ((decimal ? )((decimal)(6))) + (decimal ? ) locationCount.CountDecimal,
+    CountDouble1 = (double ? ) locationCount.CountDouble + ((double ? )((double)(7))),
+    CountDouble2 = ((double ? )((double)(8))) + (double ? ) locationCount.CountDouble,
+    CountFloat1 = (float ? ) locationCount.CountFloat + ((float ? )((float)(9))),
+    CountFloat2 = ((float ? )((float)(10))) + (float ? ) locationCount.CountFloat
 })".Replace("\r\n", Environment.NewLine) }
             };
 
@@ -395,6 +435,15 @@ users => from user in users
             public decimal CountDecimal { get; set; }
             public double CountDouble { get; set; }
             public float CountFloat { get; set; }
+        }
+
+        private class VotesCountNullable
+        {
+            public int? CountInt { get; set; }
+            public long? CountLong { get; set; }
+            public decimal? CountDecimal { get; set; }
+            public double? CountDouble { get; set; }
+            public float? CountFloat { get; set; }
         }
 
         private class Order
