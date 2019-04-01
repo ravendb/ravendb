@@ -58,6 +58,8 @@ _resize_file(int32_t fd, int64_t size, int32_t *detailed_error_code);
 PRIVATE int32_t
 _read_file(int32_t fd, void* buffer, int64_t required_size, int64_t offset, int64_t* actual_size, int32_t* detailed_error_code);
 
+int32_t
+_ensure_path_exists(const char *path, int32_t *detailed_error_code);
 
 #endif
 #endif

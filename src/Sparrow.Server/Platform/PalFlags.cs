@@ -38,6 +38,7 @@ namespace Sparrow.Server.Platform
             FailTestDurability = 28,
             FailCreateDirectory = 29,
             FailNotDirectory = 30,
+            FailBrokenLink = 31,
         };
 
         [Flags]
