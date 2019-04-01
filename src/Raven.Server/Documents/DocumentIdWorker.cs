@@ -7,6 +7,7 @@ using Sparrow.Json;
 using Sparrow.Json.Parsing;
 using Sparrow.Utils;
 using Voron;
+using Voron.Impl.Paging;
 
 namespace Raven.Server.Documents
 {
@@ -14,6 +15,8 @@ namespace Raven.Server.Documents
     {
         [ThreadStatic]
         private static JsonParserState _jsonParserState;
+
+        public const int MaxIdSize = AbstractPager.MaxKeySize;
 
         static DocumentIdWorker()
         {
@@ -31,7 +34,7 @@ namespace Raven.Server.Documents
                 + sizeof(char) * id.Length);
 
 
-            if (id.Length > 512)
+            if (id.Length > MaxIdSize)
                 ThrowDocumentIdTooBig(id);
 
             for (var i = 0; i < id.Length; i++)
@@ -68,7 +71,7 @@ namespace Raven.Server.Documents
 
                 var size = Encoding.GetBytes(destChars, key.Length, keyBytes, byteCount);
 
-                if (size > 512)
+                if (size > MaxIdSize)
                     ThrowDocumentIdTooBig(key);
 
                 return Slice.External(context.Allocator, keyBytes, (ushort)size, out keySlice);
@@ -245,7 +248,7 @@ namespace Raven.Server.Documents
 
                 int lowerSize = Encoding.GetBytes(destChars, strLength, lowerId, maxStrSize);
 
-                if (lowerSize > 512)
+                if (lowerSize > MaxIdSize)
                     ThrowDocumentIdTooBig(str);
 
                 byte* id = buffer.Ptr + strLength * sizeof(char) + maxStrSize;
@@ -270,10 +273,10 @@ namespace Raven.Server.Documents
             }
         }
 
-        private static void ThrowDocumentIdTooBig(string str)
+        public static void ThrowDocumentIdTooBig(string str)
         {
             throw new ArgumentException(
-                $"Document ID cannot exceed 512 bytes, but the ID was {Encoding.GetByteCount(str)} bytes. The invalid ID is '{str}'.",
+                $"Document ID cannot exceed {MaxIdSize} bytes, but the ID was {Encoding.GetByteCount(str)} bytes. The invalid ID is '{str}'.",
                 nameof(str));
         }
 
