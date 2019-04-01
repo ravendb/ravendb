@@ -267,6 +267,9 @@ namespace Raven.Client.Http
 
         public virtual async Task<bool> UpdateTopologyAsync(ServerNode node, int timeout, bool forceUpdate = false, string debugTag = null)
         {
+            if (_disableTopologyUpdates)
+                return false;
+
             if (Disposed)
                 return false;
 
@@ -716,7 +719,7 @@ namespace Raven.Client.Http
                                     if (sessionInfo != null)
                                         sessionInfo.AsyncCommandRunning = false;
 
-                                    if (await HandleServerDown(url, chosenNode, nodeIndex, context, command, request, response, timeoutException, sessionInfo, token).ConfigureAwait(false) == false)
+                                    if (await HandleServerDown(url, chosenNode, nodeIndex, context, command, request, response, timeoutException, sessionInfo, shouldRetry, token).ConfigureAwait(false) == false)
                                         ThrowFailedToContactAllNodes(command, request);
 
                                     return;
@@ -749,7 +752,7 @@ namespace Raven.Client.Http
                         sessionInfo.AsyncCommandRunning = false;
 
 
-                    if (await HandleServerDown(url, chosenNode, nodeIndex, context, command, request, response, e, sessionInfo, token).ConfigureAwait(false) == false)
+                    if (await HandleServerDown(url, chosenNode, nodeIndex, context, command, request, response, e, sessionInfo, shouldRetry, token).ConfigureAwait(false) == false)
                     {
                         ThrowIfClientException(response, e);
                         ThrowFailedToContactAllNodes(command, request);
@@ -1049,7 +1052,7 @@ namespace Raven.Client.Http
                 case HttpStatusCode.RequestTimeout:
                 case HttpStatusCode.BadGateway:
                 case HttpStatusCode.ServiceUnavailable:
-                    return await HandleServerDown(url, chosenNode, nodeIndex, context, command, request, response, null, sessionInfo, token).ConfigureAwait(false);
+                    return await HandleServerDown(url, chosenNode, nodeIndex, context, command, request, response, null, sessionInfo, shouldRetry, token).ConfigureAwait(false);
                 case HttpStatusCode.Conflict:
                     await HandleConflict(context, response).ConfigureAwait(false);
                     break;
@@ -1092,7 +1095,7 @@ namespace Raven.Client.Http
         }
 
         private async Task<bool> HandleServerDown<TResult>(string url, ServerNode chosenNode, int? nodeIndex, JsonOperationContext context, RavenCommand<TResult> command,
-            HttpRequestMessage request, HttpResponseMessage response, Exception e, SessionInfo sessionInfo, CancellationToken token = default)
+            HttpRequestMessage request, HttpResponseMessage response, Exception e, SessionInfo sessionInfo, bool shouldRetry, CancellationToken token = default)
         {
             if (command.FailedNodes == null)
                 command.FailedNodes = new Dictionary<ServerNode, Exception>();
@@ -1120,7 +1123,7 @@ namespace Raven.Client.Http
 
             OnFailedRequest(url, e);
 
-            await ExecuteAsync(currentNode, currentIndex, context, command, shouldRetry: true, sessionInfo: sessionInfo, token: token).ConfigureAwait(false);
+            await ExecuteAsync(currentNode, currentIndex, context, command, shouldRetry, sessionInfo: sessionInfo, token: token).ConfigureAwait(false);
 
             return true;
         }
