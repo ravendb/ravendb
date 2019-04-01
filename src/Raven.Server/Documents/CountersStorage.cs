@@ -349,10 +349,7 @@ namespace Raven.Server.Documents
                 Debug.Assert(false);// never hit
             }
 
-            if (name.Length > MaxCounterNameSize)
-            {
-                ThrowCounterNameTooBig(name);
-            }
+            ValidateCounterName(documentId, name);
 
             var collectionName = _documentsStorage.ExtractCollectionName(context, collection);
             var table = GetCountersTable(context.Transaction.InnerTransaction, collectionName);
@@ -775,11 +772,31 @@ namespace Raven.Server.Documents
             return countersToAdd;
         }
 
+        private static void ValidateCounterName(string documentId, string counterName)
+        {
+            if (counterName.Length > DocumentIdWorker.MaxIdSize)
+            {
+                ThrowCounterNameTooBig(counterName);
+            }
+
+            if (documentId.Length + counterName.Length > DocumentIdWorker.MaxIdSize)
+            {
+                ThrowStorageKeyTooBig(documentId, counterName);
+            }
+        }
+
         private static void ThrowCounterNameTooBig(string name)
         {
             throw new ArgumentException(
-                $"Counter name cannot exceed {MaxCounterNameSize} bytes, but counter name was {Encoding.UTF8.GetByteCount(name)} bytes. The invalid counter name is '{name}'.",
+                $"Counter name cannot exceed {DocumentIdWorker.MaxIdSize} bytes, but counter name was {Encoding.UTF8.GetByteCount(name)} bytes. The invalid counter name is '{name}'.",
                 nameof(name));
+        }
+
+        private static void ThrowStorageKeyTooBig(string docId, string counterName)
+        {
+            throw new ArgumentException(
+                $"Cannot increment counter '{counterName}' of document '{docId}'. Size of counter name + size of document Id cannot exceed {DocumentIdWorker.MaxIdSize} bytes.",
+                nameof(counterName));
         }
 
     }

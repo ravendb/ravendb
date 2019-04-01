@@ -166,6 +166,11 @@ namespace Raven.Server.Documents
                 if (TableValueToFlags((int)DocumentsTable.Flags, ref tvr).HasFlag(DocumentFlags.Artificial))
                     throw new InvalidOperationException($"Cannot put attachment {name} on artificial document '{documentId}'.");
 
+                if (documentId.Length + name.Length > DocumentIdWorker.MaxIdSize)
+                {
+                    ThrowStorageKeyTooBig(documentId, name);
+                }
+
                 using (DocumentIdWorker.GetLowerIdSliceAndStorageKey(context, name, out Slice lowerName, out Slice namePtr))
                 using (DocumentIdWorker.GetLowerIdSliceAndStorageKey(context, contentType, out Slice lowerContentType, out Slice contentTypePtr))
                 using (Slice.From(context.Allocator, hash, out Slice base64Hash)) // Hash is a base64 string, so this is a special case that we do not need to escape
@@ -802,6 +807,13 @@ namespace Raven.Server.Documents
             {
                 ExpectedChangeVector = expectedChangeVector
             };
+        }
+
+        private static void ThrowStorageKeyTooBig(string docId, string attachmentName)
+        {
+            throw new ArgumentException(
+                $"Cannot put attachment '{attachmentName}' on document '{docId}'. Size of attachment name + size of document Id cannot exceed {DocumentIdWorker.MaxIdSize} bytes.",
+                nameof(attachmentName));
         }
 
         public AttachmentDetails CopyAttachment(DocumentsOperationContext context, string documentId, string name, string destinationId, string destinationName, LazyStringValue changeVector, AttachmentType attachmentType)

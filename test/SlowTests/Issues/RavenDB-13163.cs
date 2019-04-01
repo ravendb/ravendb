@@ -2,8 +2,8 @@
 using FastTests;
 using Raven.Client.Documents.Operations.Attachments;
 using Raven.Client.Exceptions;
+using Raven.Server.Documents;
 using SlowTests.Core.Utils.Entities;
-using Voron.Impl.Paging;
 using Xunit;
 
 namespace SlowTests.Issues
@@ -17,7 +17,7 @@ namespace SlowTests.Issues
             {
                 using (var session = store.OpenSession())
                 {
-                    var longId = new string('z', AbstractPager.MaxKeySize);
+                    var longId = new string('z', DocumentIdWorker.MaxIdSize);
 
                     session.Store(new User(), longId);
 
@@ -28,13 +28,13 @@ namespace SlowTests.Issues
 
                 using (var session = store.OpenSession())
                 {
-                    var longerId = new string('z', AbstractPager.MaxKeySize + 1);
+                    var longerId = new string('z', DocumentIdWorker.MaxIdSize + 1);
 
                     session.Store(new User(), longerId);
 
                     var ex = Assert.Throws<RavenException>(() => session.SaveChanges());
 
-                    Assert.Contains($"Document ID cannot exceed {AbstractPager.MaxKeySize} bytes", ex.Message);
+                    Assert.Contains($"Document ID cannot exceed {DocumentIdWorker.MaxIdSize} bytes", ex.Message);
                 }
 
             }
@@ -46,16 +46,55 @@ namespace SlowTests.Issues
         {
             using (var store = GetDocumentStore())
             {
-                var longName = new string('z', AbstractPager.MaxKeySize + 1);
+                var docId = "users/1";
+                var longName = new string('z', DocumentIdWorker.MaxIdSize - docId.Length);
 
                 using (var session = store.OpenSession())
                 {
-                    session.Store(new User(), "users/1");
-                    session.CountersFor("users/1").Increment(longName);
+                    session.Store(new User(), docId);
+                    session.CountersFor(docId).Increment(longName);
+
+                    // should not throw
+                    session.SaveChanges();
+                }
+
+                var longerName = new string('z', DocumentIdWorker.MaxIdSize + 1);
+
+                using (var session = store.OpenSession())
+                {
+                    session.CountersFor("users/1").Increment(longerName);
 
                     var ex = Assert.Throws<RavenException>(() => session.SaveChanges());
 
-                    Assert.Contains($"Counter name cannot exceed {AbstractPager.MaxKeySize} bytes", ex.Message);
+                    Assert.Contains($"Counter name cannot exceed {DocumentIdWorker.MaxIdSize} bytes", ex.Message);
+                }
+
+            }
+
+        }
+
+        [Fact]
+        public void ShouldThrowIfSizeOfCounterNamePlusSizeOfDocIdIsTooBig()
+        {
+            using (var store = GetDocumentStore())
+            {
+                var docId = new string('z', DocumentIdWorker.MaxIdSize - 1);
+                var counterName = "aa";
+
+                using (var session = store.OpenSession())
+                {
+                    session.Store(new User(), docId);
+                    // should not throw
+                    session.SaveChanges();
+                }
+
+                using (var session = store.OpenSession())
+                {
+                    session.CountersFor(docId).Increment(counterName);
+
+                    var ex = Assert.Throws<RavenException>(() => session.SaveChanges());
+
+                    Assert.Contains($"Size of counter name + size of document Id cannot exceed {DocumentIdWorker.MaxIdSize} bytes", ex.Message);
                 }
 
             }
@@ -67,7 +106,7 @@ namespace SlowTests.Issues
         {
             using (var store = GetDocumentStore())
             {
-                var longName = new string('z', AbstractPager.MaxKeySize + 1);
+                var longName = new string('z', DocumentIdWorker.MaxIdSize + 1);
 
                 using (var session = store.OpenSession())
                 {
@@ -79,8 +118,33 @@ namespace SlowTests.Issues
 
                 using (var stream = new MemoryStream(new byte[] { 1, 2, 3 }))
                 {
-                    Assert.Throws<RavenException>(() => 
+                    Assert.Throws<RavenException>(() =>
                         store.Operations.Send(new PutAttachmentOperation("users/1", longName, stream)));
+                }
+            }
+
+        }
+
+        [Fact]
+        public void ShouldThrowIfSizeOfAttachmentNamePlusSizeOfDocIdIsTooBig()
+        {
+            using (var store = GetDocumentStore())
+            {
+                var docId = new string('z', DocumentIdWorker.MaxIdSize - 1);
+                var attachmentName = "aa";
+
+                using (var session = store.OpenSession())
+                {
+                    session.Store(new User(), docId);
+                    session.SaveChanges();
+                }
+
+                using (var stream = new MemoryStream(new byte[] { 1, 2, 3 }))
+                {
+                    var ex = Assert.Throws<RavenException>(() =>
+                        store.Operations.Send(new PutAttachmentOperation(docId, attachmentName, stream)));
+
+                    Assert.Contains($"Size of attachment name + size of document Id cannot exceed {DocumentIdWorker.MaxIdSize} bytes", ex.Message);
                 }
             }
 

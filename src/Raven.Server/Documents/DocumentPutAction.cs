@@ -43,8 +43,6 @@ namespace Raven.Server.Documents
                 return default; // never hit
             }
 
-            ValidateIdSize(id);
-
             var documentDebugHash = 0UL;
             ValidateDocument(id, document, ref documentDebugHash);
 
@@ -218,14 +216,6 @@ namespace Raven.Server.Documents
                     Flags = flags,
                     LastModified = new DateTime(modifiedTicks)
                 };
-            }
-        }
-
-        private static void ValidateIdSize(string id)
-        {
-            if (id?.Length > DocumentIdWorker.MaxIdSize)
-            {
-                DocumentIdWorker.ThrowDocumentIdTooBig(id);
             }
         }
 
