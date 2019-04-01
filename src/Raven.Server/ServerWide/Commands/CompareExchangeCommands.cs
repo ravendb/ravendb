@@ -58,7 +58,7 @@ namespace Raven.Server.ServerWide.Commands
         {
             var reservedSpace = Encoding.UTF8.GetMaxByteCount(db.Length + key.Length) + 1;  // length of ActualKey 'db/key'
             var keyScope = allocator.Allocate(reservedSpace, out ByteString keyBuffer);
-            var indexScope = allocator.Allocate(Encoding.UTF8.GetMaxByteCount(db.Length) + sizeof(long), out ByteString indexBuffer);
+            var indexScope = allocator.Allocate(Encoding.UTF8.GetMaxByteCount(db.Length) + sizeof(long) + 1, out ByteString indexBuffer); // length of 'db/[index]'
             fixed (char* pDb = db, pKey = key)
             {
                 var len = Encoding.UTF8.GetBytes(pDb, db.Length, keyBuffer.Ptr, keyBuffer.Length);
@@ -70,6 +70,7 @@ namespace Raven.Server.ServerWide.Commands
                 allocator.ToLowerCase(ref keyBuffer);
 
                 len = Encoding.UTF8.GetBytes(pDb, db.Length, indexBuffer.Ptr, indexBuffer.Length);
+                indexBuffer.Ptr[len++] = (byte)'/';
                 indexBuffer.Truncate(len);
                 allocator.ToLowerCase(ref indexBuffer);
                 indexBuffer.Truncate(indexBuffer.Length + sizeof(long));
@@ -85,10 +86,11 @@ namespace Raven.Server.ServerWide.Commands
            ByteStringContext allocator, string db, long index,
             out ByteString finalIndex)
         {
-            var indexScope = allocator.Allocate(Encoding.UTF8.GetMaxByteCount(db.Length) + sizeof(long), out ByteString indexBuffer);
+            var indexScope = allocator.Allocate(Encoding.UTF8.GetMaxByteCount(db.Length) + sizeof(long) + 1, out ByteString indexBuffer);
             fixed (char* pDb = db)
             {
                 var len = Encoding.UTF8.GetBytes(pDb, db.Length, indexBuffer.Ptr, indexBuffer.Length);
+                indexBuffer.Ptr[len++] = (byte)'/';
                 indexBuffer.Truncate(len);
                 allocator.ToLowerCase(ref indexBuffer);
                 indexBuffer.Truncate(indexBuffer.Length + sizeof(long));
