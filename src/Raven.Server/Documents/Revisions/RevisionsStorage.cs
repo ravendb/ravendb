@@ -191,20 +191,6 @@ namespace Raven.Server.Documents.Revisions
 
                 Configuration = revisions;
 
-                using (var tx = _database.DocumentsStorage.Environment.WriteTransaction())
-                {
-                    foreach (var collection in Configuration.Collections)
-                    {
-                        if (collection.Value.Disabled)
-                            continue;
-                        EnsureRevisionTableCreated(tx, new CollectionName(collection.Key));
-                    }
-
-                    CreateTrees(tx);
-
-                    tx.Commit();
-                }
-
                 if (_logger.IsInfoEnabled)
                     _logger.Info("Revisions configuration changed");
             }
