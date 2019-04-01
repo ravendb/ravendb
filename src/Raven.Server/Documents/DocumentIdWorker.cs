@@ -7,7 +7,6 @@ using Sparrow.Json.Parsing;
 using Sparrow.Server;
 using Sparrow.Utils;
 using Voron;
-using Voron.Impl.Paging;
 
 namespace Raven.Server.Documents
 {
@@ -16,7 +15,7 @@ namespace Raven.Server.Documents
         [ThreadStatic]
         private static JsonParserState _jsonParserState;
 
-        public const int MaxIdSize = AbstractPager.MaxKeySize;
+        public const int MaxIdSize = 512;
 
         static DocumentIdWorker()
         {
@@ -186,6 +185,10 @@ namespace Raven.Server.Documents
 
             int originalStrLength = str.Length;
             int strLength = originalStrLength;
+
+            if (strLength > MaxIdSize)
+                ThrowDocumentIdTooBig(str);
+
             int maxStrSize = Encoding.GetMaxByteCount(strLength);
 
             int idSize = JsonParserState.VariableSizeIntSize(strLength);

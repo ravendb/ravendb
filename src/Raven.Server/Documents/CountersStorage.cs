@@ -21,7 +21,6 @@ using Sparrow.Json;
 using Sparrow.Json.Parsing;
 using Sparrow.Server;
 using Sparrow.Server.Utils;
-using Voron.Impl.Paging;
 using Constants = Raven.Client.Constants;
 
 namespace Raven.Server.Documents
@@ -41,8 +40,6 @@ namespace Raven.Server.Documents
 
         public const string DbIds = "@dbIds";
         public const string Values = "@vals";
-
-        private const int MaxCounterNameSize = AbstractPager.MaxKeySize;
 
         private readonly List<ByteStringContext<ByteStringMemoryCache>.InternalScope> _counterModificationMemoryScopes =
             new List<ByteStringContext<ByteStringMemoryCache>.InternalScope>();
@@ -268,10 +265,7 @@ namespace Raven.Server.Documents
 
             try
             {
-                if (name.Length > MaxCounterNameSize)
-                {
-                    ThrowCounterNameTooBig(name);
-                }
+                ValidateCounterName(documentId, name);
 
                 var collectionName = _documentsStorage.ExtractCollectionName(context, collection);
                 var table = GetCountersTable(context.Transaction.InnerTransaction, collectionName);
@@ -411,11 +405,31 @@ namespace Raven.Server.Documents
             }
         }
 
+        private static void ValidateCounterName(string documentId, string counterName)
+        {
+            if (counterName.Length > DocumentIdWorker.MaxIdSize)
+            {
+                ThrowCounterNameTooBig(counterName);
+            }
+
+            if (documentId.Length + counterName.Length > DocumentIdWorker.MaxIdSize)
+            {
+                ThrowStorageKeyTooBig(documentId, counterName);
+            }
+        }
+
         private static void ThrowCounterNameTooBig(string name)
         {
             throw new ArgumentException(
-                $"Counter name cannot exceed {MaxCounterNameSize} bytes, but counter name was {Encoding.UTF8.GetByteCount(name)} bytes. The invalid counter name is '{name}'.",
+                $"Counter name cannot exceed {DocumentIdWorker.MaxIdSize} bytes, but counter name was {Encoding.UTF8.GetByteCount(name)} bytes. The invalid counter name is '{name}'.",
                 nameof(name));
+        }
+
+        private static void ThrowStorageKeyTooBig(string docId, string counterName)
+        {
+            throw new ArgumentException(
+                $"Cannot increment counter '{counterName}' of document '{docId}'. Size of counter name + size of document Id cannot exceed {DocumentIdWorker.MaxIdSize} bytes.",
+                nameof(counterName));
         }
 
         private static void SplitCounterGroup(DocumentsOperationContext context, CollectionName collectionName, Table table, Slice documentKeyPrefix, Slice countersGroupKey, BlittableJsonReaderObject values, BlittableJsonReaderArray dbIds, string changeVector)
