@@ -1414,10 +1414,10 @@ namespace Raven.Server.ServerWide
         public Task<(long Index, object Result)> ModifyDatabaseExpiration(TransactionOperationContext context, string databaseName, BlittableJsonReaderObject configurationJson)
         {
             var expiration = JsonDeserializationCluster.ExpirationConfiguration(configurationJson);
-            if (expiration.DeleteFrequencyInSec == 0)
+            if (expiration.DeleteFrequencyInSec <= 0)
             {
                 throw new InvalidOperationException(
-                    $"Expiration delete frequency for database: {databaseName} was set to `0`, that is not allowed since it will harm performence please set it to a higher value.");
+                    $"Expiration delete frequency for database '{databaseName}' must be greater than 0.");
             }
             var editExpiration = new EditExpirationCommand(expiration, databaseName);
             return SendToLeaderAsync(editExpiration);
