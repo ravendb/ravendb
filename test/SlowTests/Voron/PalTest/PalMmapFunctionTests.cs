@@ -60,5 +60,134 @@ namespace SlowTests.Voron.PalTest
             
             handle.Dispose();
         }
+        
+        [FactForLinuxOnly]
+        public unsafe void MMap_WhenLinkEndOfPath_ShouldSucceed()
+        {
+            var basicPath = NewDataPath(forceCreateDir: true);
+            
+            var linkTarget = Path.Combine(basicPath, "linkTarget");
+            Directory.CreateDirectory(linkTarget);
+            
+            var link = Path.Combine(basicPath, "l");
+            symlink(linkTarget, link);
+
+            var filePath = Path.Combine(link, $"test_journal.{Guid.NewGuid()}");
+            var initFileSize = 4096L;
+            var mmapOptions = PalFlags.MmapOptions.CopyOnWrite;
+
+            var ret = Pal.rvn_create_and_mmap64_file(filePath, initFileSize, mmapOptions, out var handle, out var baseAddress, out var actualFileSize, out var errorCode);
+            if (ret != PalFlags.FailCodes.Success)
+                PalHelper.ThrowLastError(ret, errorCode, "");
+            
+            ret = Pal.rvn_unmap(mmapOptions, baseAddress, actualFileSize, out errorCode);
+            if (ret != PalFlags.FailCodes.Success)
+                PalHelper.ThrowLastError(ret, errorCode, "");
+            
+            handle.Dispose();
+        }
+        
+        [FactForLinuxOnly]
+        public unsafe void MMap_WhenLinkEndOfExistPath_ShouldSucceed()
+        {
+            var basicPath = NewDataPath(forceCreateDir: true);
+            
+            var linkTarget = Path.Combine(basicPath, "linkTarget");
+            Directory.CreateDirectory(linkTarget);
+            
+            var link = Path.Combine(basicPath, "l");
+            symlink(linkTarget, link);
+
+            var filePath = Path.Combine(link, "a", "b", $"test_journal.{Guid.NewGuid()}");
+            var initFileSize = 4096L;
+            var mmapOptions = PalFlags.MmapOptions.CopyOnWrite;
+
+            var ret = Pal.rvn_create_and_mmap64_file(filePath, initFileSize, mmapOptions, out var handle, out var baseAddress, out var actualFileSize, out var errorCode);
+            using (handle)
+            {
+                if (ret != PalFlags.FailCodes.Success)
+                    PalHelper.ThrowLastError(ret, errorCode, "");
+            
+                ret = Pal.rvn_unmap(mmapOptions, baseAddress, actualFileSize, out errorCode);
+                if (ret != PalFlags.FailCodes.Success)
+                    PalHelper.ThrowLastError(ret, errorCode, "");
+            }
+        }
+        
+        [FactForLinuxOnly]
+        public unsafe void MMap_WhenLinkTargetContainsPartOfThePath_ShouldSucceed()
+        {
+            var basicPath = NewDataPath(forceCreateDir: true);
+            
+            var linkTarget = Path.Combine(basicPath, "linkTarget");
+            Directory.CreateDirectory(linkTarget);
+            
+            var link = Path.Combine(basicPath, "l");
+            symlink(linkTarget, link);
+
+            Directory.CreateDirectory(linkTarget);
+            var linkPlus = Path.Combine(link, "a", "b", $"test_journal.{Guid.NewGuid()}");
+            var filePath = Path.Combine(linkPlus, "b", $"test_journal.{Guid.NewGuid()}");
+            var initFileSize = 4096L;
+            var mmapOptions = PalFlags.MmapOptions.CopyOnWrite;
+
+            var ret = Pal.rvn_create_and_mmap64_file(filePath, initFileSize, mmapOptions, out var handle, out var baseAddress, out var actualFileSize, out var errorCode);
+            using (handle)
+            {
+                if (ret != PalFlags.FailCodes.Success)
+                    PalHelper.ThrowLastError(ret, errorCode, "");
+            
+                ret = Pal.rvn_unmap(mmapOptions, baseAddress, actualFileSize, out errorCode);
+                if (ret != PalFlags.FailCodes.Success)
+                    PalHelper.ThrowLastError(ret, errorCode, "");
+            }
+        }
+        
+        [FactForLinuxOnly]
+        public unsafe void MMap_WhenLinkBroken_ShouldFailWithInfoError()
+        {
+            var basicPath = NewDataPath(forceCreateDir: true);
+            
+            var linkTarget = Path.Combine(basicPath, "linkTarget");
+            
+            var link = Path.Combine(basicPath, "l");
+            symlink(linkTarget, link);
+
+            var filePath = Path.Combine(link, $"test_journal.{Guid.NewGuid()}");
+            var initFileSize = 4096L;
+            var mmapOptions = PalFlags.MmapOptions.CopyOnWrite;
+
+            var ret = PalFlags.FailCodes.None;
+            Exception ex = Assert.Throws<InvalidOperationException>(() =>
+            {
+                ret = Pal.rvn_create_and_mmap64_file(filePath, initFileSize, mmapOptions, out var handle, out var baseAddress, out var actualFileSize, out var errorCode);
+                using (handle)
+                {
+                    if (ret != PalFlags.FailCodes.Success)
+                        PalHelper.ThrowLastError(ret, errorCode, "");
+            
+                    ret = Pal.rvn_unmap(mmapOptions, baseAddress, actualFileSize, out errorCode);
+                    if (ret != PalFlags.FailCodes.Success)
+                        PalHelper.ThrowLastError(ret, errorCode, "");
+                }
+            });
+                 
+            Assert.Equal(ret, PalFlags.FailCodes.FailBrokenLink);
+        }
+        
+        private const string LIBC_6 = "libc";
+
+        [DllImport(LIBC_6, SetLastError = true)]
+        static extern bool symlink(string linkContent, string link);
+    }
+}
+
+public class FactForLinuxOnlyAttribute : FactAttribute 
+{
+    public FactForLinuxOnlyAttribute() {
+        if(RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
+        {
+            Skip = "For Posix only";
+        }
     }
 }
