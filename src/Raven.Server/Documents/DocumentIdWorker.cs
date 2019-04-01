@@ -7,7 +7,6 @@ using Sparrow.Json;
 using Sparrow.Json.Parsing;
 using Sparrow.Utils;
 using Voron;
-using Voron.Impl.Paging;
 
 namespace Raven.Server.Documents
 {
@@ -16,7 +15,7 @@ namespace Raven.Server.Documents
         [ThreadStatic]
         private static JsonParserState _jsonParserState;
 
-        public const int MaxIdSize = AbstractPager.MaxKeySize;
+        public const int MaxIdSize = 512;
 
         static DocumentIdWorker()
         {
@@ -32,7 +31,6 @@ namespace Raven.Server.Documents
             var buffer = context.GetMemory(
                 byteCount // this buffer is allocated to also serve the GetSliceFromUnicodeKey
                 + sizeof(char) * id.Length);
-
 
             if (id.Length > MaxIdSize)
                 ThrowDocumentIdTooBig(id);
@@ -162,6 +160,10 @@ namespace Raven.Server.Documents
             _jsonParserState.Reset();
 
             int strLength = str.Length;
+
+            if (strLength > MaxIdSize)
+                ThrowDocumentIdTooBig(str);
+
             int maxStrSize = Encoding.GetMaxByteCount(strLength);
 
             int idSize = JsonParserState.VariableSizeIntSize(strLength);
