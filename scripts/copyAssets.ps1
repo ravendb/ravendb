@@ -30,7 +30,7 @@ function CopyServerStartScript ( $projectDir, $targetDir, $packOpts ) {
 
 function CopyServerStartAsServiceScript ( $projectDir, $targetDir, $packOpts ) {
     if ($packOpts.Target.IsUnix -eq $False) {
-        CopyStartAsServiceCmd $projectDir $targetDir $packOpts
+        CopyWindowsServiceScripts $projectDir $targetDir $packOpts
     }
 }
 
@@ -47,15 +47,24 @@ function CopyStartCmd ( $projectDir, $targetDir, $packOpts ) {
 
 }
 
-function CopyStartAsServiceCmd ( $projectDir, $targetDir, $packOpts ) {
+function CopyWindowsServiceScripts ( $projectDir, $targetDir, $packOpts ) {
     $startAsServicePs1Path = [io.path]::combine("scripts", "assets", "setup-as-service.ps1")
     $startAsServicePs1TargetPath = [io.path]::combine($targetDir, "setup-as-service.ps1");
     write-host "Copy $startAsServicePs1Path -> $startAsServicePs1TargetPath"
     Copy-Item $startAsServicePs1Path $startAsServicePs1TargetPath
 
+
+    $uninstallServicePs1Path = [io.path]::combine("scripts", "assets", "uninstall-service.ps1")
+    $uninstallServicePs1TargetPath = [io.path]::combine($targetDir, "uninstall-service.ps1");
+    write-host "Copy $uninstallServicePs1Path -> $uninstallServicePs1TargetPath"
+    Copy-Item $uninstallServicePs1Path $uninstallServicePs1TargetPath
+
     if ($packOpts.VersionInfo.BuildType.ToLower() -ne 'custom') {
-        write-host "Signing $startAsServicePs1TargetPath"
-        SignFile $projectDir $startAsServicePs1TargetPath $packOpts.DryRunSign
+        write-host "Signing $uninstallServicePs1TargetPath"
+        SignFile $projectDir $uninstallServicePs1TargetPath $packOpts.DryRunSign
+
+        write-host "Signing $uninstallServicePs1TargetPath"
+        SignFile $projectDir $uninstallServicePs1TargetPath $packOpts.DryRunSign
     }
 }
 
