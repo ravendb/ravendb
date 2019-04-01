@@ -49,6 +49,7 @@ rvn_create_and_mmap64_file(
 {
     int32_t rc = SUCCESS;
 
+    assert(path);
     assert(initial_file_size > 0);
 
     struct map_file_handle *mfh = calloc(1, sizeof(struct map_file_handle));
@@ -59,10 +60,19 @@ rvn_create_and_mmap64_file(
         goto error_cleanup;
     }
 
-    char* directory = strdup(path);
-    int ret = _ensure_path_exists(dirname(directory), detailed_error_code);
-    free(directory);
-    if (ret != SUCCESS) 
+    if(path[0] == '\0')
+        path = ".";
+
+    char* dup_path = strdup(path);
+    if (dup_path == NULL)
+    {
+        rc = FAIL_NOMEM;
+        goto error_cleanup;
+    }
+    char *directory = dirname(dup_path);
+    rc = _ensure_path_exists(directory, detailed_error_code);
+    free(dup_path);
+    if (rc != SUCCESS) 
         goto error_clean_with_error;
 
     mfh->path = strdup(path);
@@ -78,7 +88,6 @@ rvn_create_and_mmap64_file(
         rc = FAIL_OPEN_FILE;
         goto error_cleanup;
     }
-
 
     struct stat st;
     if (fstat(mfh->fd, &st) == -1)

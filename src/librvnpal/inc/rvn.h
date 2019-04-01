@@ -101,7 +101,4 @@ rvn_test_storage_durability(const char *temp_file_name, int32_t *detailed_error_
 PRIVATE int64_t
 _nearest_size_to_page_size(int64_t orig_size, int64_t sys_page_size);
 
-PRIVATE int32_t
-_ensure_path_exists(const char *path, int32_t *detailed_error_code);
-
 #endif

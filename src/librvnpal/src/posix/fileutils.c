@@ -95,8 +95,8 @@ _ensure_path_exists(const char *path, int32_t *detailed_error_code)
     char* dup_path = strdup(path);
     if(dup_path == NULL)
     {
-        *detailed_error_code = errno;
-        return FAIL_NOMEM;
+        rc = FAIL_NOMEM;
+        goto error_cleanup;
     }
     char *current_end = dup_path;
 
@@ -107,7 +107,7 @@ _ensure_path_exists(const char *path, int32_t *detailed_error_code)
         
         if (current_end != NULL)
             *current_end = '\0';
-        
+
         if (stat(dup_path, &sb) == -1)
         {
             if (errno != ENOENT)
@@ -116,37 +116,44 @@ _ensure_path_exists(const char *path, int32_t *detailed_error_code)
                 goto error_cleanup;
             }
 
-            if (mkdir(dup_path, 0700) == -1)
+            if (mkdir(dup_path, 0755) == -1)
             {
-                rc = FAIL_CREATE_DIRECTORY;
-                goto error_cleanup;
+                *detailed_error_code = errno;
+                char buf[1];
+                if (readlink(dup_path, buf, 1) != -1 && errno != EINVAL)
+                    rc = FAIL_BROKEN_LINK;
+                else
+                    rc = FAIL_CREATE_DIRECTORY;
+                goto cleanup;
             }
 
             rc = _sync_directory_for_internal(dup_path, detailed_error_code);
             if (rc != SUCCESS)
-                goto error_cleanup_with_error;
+                goto cleanup;
 
             rc = _sync_directory_for(dup_path, detailed_error_code);
             if (rc != SUCCESS)
-                goto error_cleanup_with_error;
+                goto cleanup;
         }
         else if(S_ISDIR(sb.st_mode) == 0)
         {
             *detailed_error_code = ENOTDIR;
             rc = FAIL_NOT_DIRECTORY;
-            goto error_cleanup_with_error;
+            goto cleanup;
         }
 
         if (current_end != NULL)
             *current_end = '/';
     }
 
-    return SUCCESS;
+    rc = SUCCESS;
+    goto cleanup;
 
 error_cleanup:
     *detailed_error_code = errno;
-error_cleanup_with_error:
-    free(dup_path);
+cleanup:
+    if (dup_path != NULL)
+        free(dup_path);
     return rc;
 }
 
