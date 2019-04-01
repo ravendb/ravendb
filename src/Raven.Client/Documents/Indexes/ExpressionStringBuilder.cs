@@ -14,6 +14,7 @@ using System.Runtime.CompilerServices;
 using System.Text;
 using Newtonsoft.Json;
 using Raven.Client.Documents.Conventions;
+using Raven.Client.Extensions;
 using Raven.Client.Util;
 
 namespace Raven.Client.Documents.Indexes
@@ -575,23 +576,51 @@ namespace Raven.Client.Documents.Indexes
                     throw new InvalidOperationException();
             }
 
-
             SometimesParenthesis(outerPrecedence, innerPrecedence, delegate
             {
-                if (innerPrecedence == ExpressionOperatorPrecedence.NullCoalescing && TypeExistsOnServer(rightOp.Type))
+                var outerCastNeeded = innerPrecedence == ExpressionOperatorPrecedence.NullCoalescing && 
+                                 TypeExistsOnServer(rightOp.Type);
+                if (outerCastNeeded)
                 {
                     Out("((");
                     Out(ConvertTypeToCSharpKeyword(rightOp.Type, out _));
                     Out(")(");
                 }
+
+                AddCastIfNeeded(leftOp);
+
                 Visit(leftOp, innerPrecedence);
+
                 Out(' ');
                 Out(str);
                 Out(' ');
+
+                AddCastIfNeeded(rightOp);
+
                 Visit(rightOp, innerPrecedence);
-                if (innerPrecedence == ExpressionOperatorPrecedence.NullCoalescing && TypeExistsOnServer(rightOp.Type))
+
+                if (outerCastNeeded)
                 {
                     Out("))");
+                }
+
+                void AddCastIfNeeded(Expression expr)
+                {
+                    if (expr.NodeType == ExpressionType.MemberAccess && IsNumber())
+                    {
+                        Out("(");
+                        Out(ConvertTypeToCSharpKeyword(expr.Type, out _));
+                        Out(")");
+                    }
+
+                    bool IsNumber()
+                    {
+                        return expr.Type == typeof(int) ||
+                               expr.Type == typeof(long) ||
+                               expr.Type == typeof(double) ||
+                               expr.Type == typeof(decimal) ||
+                               expr.Type == typeof(short);
+                    }
                 }
             });
 
@@ -840,7 +869,6 @@ namespace Raven.Client.Documents.Indexes
             type = nonNullableType ?? type;
             var isNullableType = nonNullableType != null;
 
-
             // we only cast enums and types is mscorlib. We don't support anything else
             // because the VB compiler like to put converts all over the place, and include
             // types that we can't really support (only exists on the client)
@@ -854,6 +882,7 @@ namespace Raven.Client.Documents.Indexes
             {
                 Out("?");
             }
+
             Out(")");
         }
 
@@ -1273,7 +1302,6 @@ namespace Raven.Client.Documents.Indexes
         /// </returns>
         protected override Expression VisitMember(MemberExpression node)
         {
-
             if (Nullable.GetUnderlyingType(node.Member.DeclaringType) != null)
             {
                 switch (node.Member.Name)

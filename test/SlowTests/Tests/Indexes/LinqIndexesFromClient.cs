@@ -107,7 +107,6 @@ namespace SlowTests.Tests.Indexes
             public string[] Roles { get; set; }
         }
 
-
         [Fact]
         public void Convert_simple_query()
         {
@@ -150,7 +149,7 @@ namespace SlowTests.Tests.Indexes
                     { "Name", new IndexFieldOptions {Storage = FieldStorage.Yes} }
                 },
                 Maps = { @"docs.Users.Where(user => user.Location == ""Tel Aviv"").Select(user => new {
-    Age = user.Age - (20 - user.Age)
+    Age = (int) user.Age - (20 - (int) user.Age)
 })".Replace("\r\n", Environment.NewLine) }
             };
 
@@ -283,7 +282,7 @@ users => from user in users
          select new { Location = user.Location, Count = (user.Age + 3) * (user.Age + 4) },
 @"docs.Users.Select(user => new {
     Location = user.Location,
-    Count = (user.Age + 3) * (user.Age + 4)
+    Count = ((int) user.Age + 3) * ((int) user.Age + 4)
 })".Replace("\r\n", Environment.NewLine));
         }
 
@@ -295,7 +294,7 @@ users => from user in users
          select new { Location = user.Location, Count = user.Age >= 1 ? 1 : 0 },
 @"docs.Users.Select(user => new {
     Location = user.Location,
-    Count = user.Age >= 1 ? 1 : 0
+    Count = (int) user.Age >= 1 ? 1 : 0
 })".Replace("\r\n", Environment.NewLine));
         }
 
@@ -323,6 +322,44 @@ users => from user in users
 })".Replace("\r\n", Environment.NewLine));
         }
 
+        [Fact]
+        public void Convert_numeric_query()
+        {
+            IndexDefinition generated = new IndexDefinitionBuilder<VotesCount, VotesCount>
+            {
+                Map = locationCountDocs => from locationCount in locationCountDocs
+                    select new {
+                        CountInt1 = locationCount.CountInt + 1,
+                        CountInt2 = 2 + locationCount.CountInt,
+                        CountLong1 = locationCount.CountLong + 3,
+                        CountLong2 = 4 + locationCount.CountLong,
+                        CountDecimal1 = locationCount.CountDecimal + 5,
+                        CountDecimal2 = 6 + locationCount.CountDecimal,
+                        CountDouble1 = locationCount.CountDouble + 7,
+                        CountDouble2 = 8 + locationCount.CountDouble,
+                        CountFloat1 = locationCount.CountFloat + 9,
+                        CountFloat2 = 10 + locationCount.CountFloat
+                    }
+            }.ToIndexDefinition(new DocumentConventions { PrettifyGeneratedLinqExpressions = false });
+
+            var original = new IndexDefinition
+            {
+                Maps = { @"docs.VotesCounts.Select(locationCount => new {
+    CountInt1 = (int) locationCount.CountInt + 1,
+    CountInt2 = 2 + (int) locationCount.CountInt,
+    CountLong1 = (long) locationCount.CountLong + 3,
+    CountLong2 = 4 + (long) locationCount.CountLong,
+    CountDecimal1 = (decimal) locationCount.CountDecimal + 5M,
+    CountDecimal2 = 6M + (decimal) locationCount.CountDecimal,
+    CountDouble1 = (double) locationCount.CountDouble + 7,
+    CountDouble2 = 8 + (double) locationCount.CountDouble,
+    CountFloat1 = locationCount.CountFloat + 9,
+    CountFloat2 = 10 + locationCount.CountFloat
+})".Replace("\r\n", Environment.NewLine) }
+            };
+
+            Assert.True(original.Maps.SetEquals(generated.Maps));
+        }
 
         private enum Gender
         {
@@ -344,19 +381,20 @@ users => from user in users
         {
             public string Name { get; set; }
         }
+
         private class LocationCount
         {
             public string Location { get; set; }
             public int Count { get; set; }
         }
 
-
-        private class LocationAge
+        private class VotesCount
         {
-            public string Location { get; set; }
-            public decimal AverageAge { get; set; }
-            public int Count { get; set; }
-            public decimal AgeSum { get; set; }
+            public int CountInt { get; set; }
+            public long CountLong { get; set; }
+            public decimal CountDecimal { get; set; }
+            public double CountDouble { get; set; }
+            public float CountFloat { get; set; }
         }
 
         private class Order
