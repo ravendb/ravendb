@@ -8,6 +8,7 @@ using Raven.Client.Documents.Operations.Revisions;
 using Raven.Client.ServerWide;
 using Raven.Server.Json;
 using Raven.Server.NotificationCenter.Notifications;
+using Raven.Server.NotificationCenter.Notifications.Details;
 using Raven.Server.ServerWide.Context;
 using Raven.Server.Utils;
 using Sparrow;
@@ -209,14 +210,19 @@ namespace Raven.Server.Documents.Revisions
             }
             catch (Exception e)
             {
-                var msg = "Cannot enable revisions for documents as the revisions configuration " +
-                          "in the database record is missing or not valid.";
+                const string message = "Failed to enable revisions for documents as the revisions configuration " +
+                                       "in the database record is missing or not valid.";
+
                 _database.NotificationCenter.Add(AlertRaised.Create(
                     _database.Name,
-                    $"Revisions error in {_database.Name}", msg,
-                    AlertType.RevisionsConfigurationNotValid, NotificationSeverity.Error, _database.Name));
+                    $"Revisions error in {_database.Name}", message,
+                    AlertType.RevisionsConfigurationNotValid,
+                    NotificationSeverity.Error,
+                    _database.Name,
+                    details: new ExceptionDetails(e)));
+
                 if (_logger.IsOperationsEnabled)
-                    _logger.Operations(msg, e);
+                    _logger.Operations(message, e);
             }
         }
 
