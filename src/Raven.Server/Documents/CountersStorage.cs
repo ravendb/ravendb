@@ -21,6 +21,7 @@ using Sparrow.Json;
 using Sparrow.Json.Parsing;
 using Sparrow.Server;
 using Sparrow.Server.Utils;
+using Voron.Impl.Paging;
 using Constants = Raven.Client.Constants;
 
 namespace Raven.Server.Documents
@@ -40,6 +41,8 @@ namespace Raven.Server.Documents
 
         public const string DbIds = "@dbIds";
         public const string Values = "@vals";
+
+        private const int MaxCounterNameSize = AbstractPager.MaxKeySize;
 
         private readonly List<ByteStringContext<ByteStringMemoryCache>.InternalScope> _counterModificationMemoryScopes =
             new List<ByteStringContext<ByteStringMemoryCache>.InternalScope>();
@@ -265,6 +268,11 @@ namespace Raven.Server.Documents
 
             try
             {
+                if (name.Length > MaxCounterNameSize)
+                {
+                    ThrowCounterNameTooBig(name);
+                }
+
                 var collectionName = _documentsStorage.ExtractCollectionName(context, collection);
                 var table = GetCountersTable(context.Transaction.InnerTransaction, collectionName);
 
@@ -400,6 +408,13 @@ namespace Raven.Server.Documents
 
                 _counterModificationMemoryScopes.Clear();
             }
+        }
+
+        private static void ThrowCounterNameTooBig(string name)
+        {
+            throw new ArgumentException(
+                $"Counter name cannot exceed {MaxCounterNameSize} bytes, but counter name was {Encoding.UTF8.GetByteCount(name)} bytes. The invalid counter name is '{name}'.",
+                nameof(name));
         }
 
         private static void SplitCounterGroup(DocumentsOperationContext context, CollectionName collectionName, Table table, Slice documentKeyPrefix, Slice countersGroupKey, BlittableJsonReaderObject values, BlittableJsonReaderArray dbIds, string changeVector)
@@ -796,12 +811,13 @@ namespace Raven.Server.Documents
 
                         using (Slice.External(context.Allocator, kvp.Key, out var countersGroupKey))
                         {
+                            currentData.TryGet(Values, out BlittableJsonReaderObject localCounters);
+
                             if (currentData.Size > MaxCounterDocumentSize)
                             {
                                 // after adding new counters to the counters blittable
                                 // we caused the blittable to grow beyond 2KB 
 
-                                currentData.TryGet(Values, out BlittableJsonReaderObject localCounters);
                                 currentData.TryGet(DbIds, out BlittableJsonReaderArray dbIds);
 
                                 using (currentData)
