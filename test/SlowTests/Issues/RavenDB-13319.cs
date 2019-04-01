@@ -47,7 +47,7 @@ namespace SlowTests.Issues
 
         }
 
-        public class LogStats : AbstractIndexCreationTask<CRUD.Statistic, LogStats.Result>
+        public class LogStats : AbstractIndexCreationTask<Statistic, LogStats.Result>
         {
             public class Result
             {
