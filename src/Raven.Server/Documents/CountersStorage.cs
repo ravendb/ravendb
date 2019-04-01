@@ -322,7 +322,8 @@ namespace Raven.Server.Documents
                         else
                         {
                             if (existingCounter == null &&
-                                data.Size + sizeof(long) * 3 > MaxCounterDocumentSize)
+                                data.Size + sizeof(long) * 3 > MaxCounterDocumentSize &&
+                                counters.Count > 1)
                             {
                                 // we now need to add a new counter to the counters blittable
                                 // and adding it will cause to grow beyond 2KB (the 24bytes is an 
@@ -813,7 +814,8 @@ namespace Raven.Server.Documents
                         {
                             currentData.TryGet(Values, out BlittableJsonReaderObject localCounters);
 
-                            if (currentData.Size > MaxCounterDocumentSize)
+                            if (currentData.Size > MaxCounterDocumentSize &&
+                                localCounters.Count > 1)
                             {
                                 // after adding new counters to the counters blittable
                                 // we caused the blittable to grow beyond 2KB 
