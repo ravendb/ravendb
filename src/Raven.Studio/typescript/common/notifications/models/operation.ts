@@ -115,7 +115,7 @@ class operation extends abstractNotification {
         // Adjust studio-server time difference if we are 'in progress' 
         const endTime = end || serverTime.default.getAdjustedTime(timeHelpers.utcNowWithSecondPrecision());
 
-        return endTime.diff(start);
+        return Math.max(endTime.diff(start), 0);
     }
 }
 
