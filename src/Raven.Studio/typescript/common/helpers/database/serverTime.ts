@@ -9,7 +9,7 @@ class serverTime {
 
     calcTimeDifference(serverDate: string) {
         const now = moment.utc();
-        this.serverTimeDifference(now.diff(moment.utc(serverDate)));   
+        this.serverTimeDifference(moment.utc(serverDate).diff(now));
     }
 
     setStartUpTime(startUpTime: string) {

@@ -108,14 +108,13 @@ class smugglerDatabaseDetails extends abstractOperationDetails {
                 result.push(this.mapToExportListItem("Subscriptions", status.Subscriptions));
             }
 
-            let shouldUpdateToPending = false;
+            const currentlyProcessingItem = smugglerDatabaseDetails.findCurrentlyProcessingItem(result);
+            
             result.forEach(item => {
                 if (item.stage === "processing") {
-                    if (shouldUpdateToPending) {
+                    if (item.name !== currentlyProcessingItem) {
                         item.stage = "pending";
                     }
-
-                    shouldUpdateToPending = true;
                 }
 
                 if (item.stage === "pending" || item.stage === "skipped" || item.name === smugglerDatabaseDetails.extractingDataStageName) {
@@ -207,6 +206,25 @@ class smugglerDatabaseDetails extends abstractOperationDetails {
         if (this.operationFailed()) {
             this.detailsVisible(true);
         }
+    }
+    
+    private static findCurrentlyProcessingItem(result: Array<smugglerListItem>): string {
+        // since we don't know the contents of smuggler import file we assume that currently processed
+        // item is first item with status: 'processing' and positive read count
+        // if such item doesn't exist when use first item with processing state
+        
+        const processing = result.filter(x => x.stage === "processing");
+        
+        const withPositiveReadCount = processing.find(x => x.hasReadCount && x.readCount !== '0');
+        if (withPositiveReadCount) {
+            return withPositiveReadCount.name;
+        }
+        
+        if (processing.length) {
+            return processing[0].name;
+        }
+        
+        return null;
     }
 
     private addToUploadItems(backupType: string, items: Array<uploadListItem>,
