@@ -344,7 +344,7 @@ namespace Raven.Server.Documents.Queries.Graph
                 if (_context.Transaction == null || _context.Transaction.Disposed)
                     _context.OpenReadTransaction();
 
-                //see http://issues.hibernatingrhinos.com/issue/RavenDB-5576
+                //see https://issues.hibernatingrhinos.com/issue/RavenDB-5576
                 frozenAwaiters.Clear();
                 foreach (var index in staleIndexes)
                 {

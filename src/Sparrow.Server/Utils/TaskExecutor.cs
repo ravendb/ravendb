@@ -45,7 +45,7 @@ namespace Sparrow.Server.Utils
 
                     // PERF: Entering a kernel lock even if the ManualResetEventSlim will try to avoid that doing some spin locking
                     //       is very costly. This is a hack that is allowing amortize a bit very high frequency events. The proper
-                    //       way to handle requires infrastructure changes. http://issues.hibernatingrhinos.com/issue/RavenDB-8126
+                    //       way to handle requires infrastructure changes. https://issues.hibernatingrhinos.com/issue/RavenDB-8126
                     if (tries < 5)
                     {
                         // Yield execution quantum. If we are in a high-frequency event we will be able to avoid the kernel lock. 

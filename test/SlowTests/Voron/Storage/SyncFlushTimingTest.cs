@@ -101,7 +101,7 @@ namespace SlowTests.Voron.Storage
         }
 
         [Fact(Timeout = 10 * 1000)]
-        // http://issues.hibernatingrhinos.com/issue/RavenDB-12525
+        // https://issues.hibernatingrhinos.com/issue/RavenDB-12525
         // The problem was when sync operates while there is no data to sync
         // the sync operation continued with default properties
         // and at the end, it updated the state with those properties

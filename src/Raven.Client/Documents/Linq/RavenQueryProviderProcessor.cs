@@ -1423,7 +1423,7 @@ The recommended method is to use full text search (mark the field as Analyzed an
                 case "Any":
                     {
                         if (negated)
-                            throw new InvalidOperationException("Cannot process negated Any(), see RavenDB-732 http://issues.hibernatingrhinos.com/issue/RavenDB-732");
+                            throw new InvalidOperationException("Cannot process negated Any(), see RavenDB-732 https://issues.hibernatingrhinos.com/issue/RavenDB-732");
 
                         if (expression.Arguments.Count == 1 && expression.Arguments[0].Type == typeof(string))
                         {

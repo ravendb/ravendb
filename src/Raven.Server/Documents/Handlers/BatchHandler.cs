@@ -298,7 +298,7 @@ namespace Raven.Server.Documents.Handlers
             // we take the awaiter _before_ the indexing transaction happens, 
             // so if there are any changes, it will already happen to it, and we'll 
             // query the index again. This is important because of: 
-            // http://issues.hibernatingrhinos.com/issue/RavenDB-5576
+            // https://issues.hibernatingrhinos.com/issue/RavenDB-5576
             foreach (var index in indexesToCheck)
             {
                 var indexToWait = new WaitForIndexItem

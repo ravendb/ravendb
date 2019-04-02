@@ -13,7 +13,7 @@ namespace SlowTests.Voron.Bugs
     public class PageAllocation : FastTests.Voron.StorageTest
     {
         /// <summary>
-        /// http://issues.hibernatingrhinos.com/issue/RavenDB-1707
+        /// https://issues.hibernatingrhinos.com/issue/RavenDB-1707
         /// </summary>
         [Fact]
         public void MultipleTxPagesCanPointToOnePageNumberWhichShouldNotBeCausingIssuesDuringFlushing()

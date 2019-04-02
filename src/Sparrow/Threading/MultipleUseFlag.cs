@@ -15,7 +15,7 @@ namespace Sparrow.Threading
     /// For convincing on why you should use this class instead of rolling
     /// your own, see
     /// http://blog.alexrp.com/2014/03/30/dot-net-atomics-and-memory-model-semantics/
-    /// and http://issues.hibernatingrhinos.com/issue/RavenDB-8260 .
+    /// and https://issues.hibernatingrhinos.com/issue/RavenDB-8260 .
     /// 
     /// PERF: This is a class instead of a struct simply because we can not
     /// verify that it won't be copied, and we don't trust our users not to

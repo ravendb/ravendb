@@ -97,7 +97,7 @@ namespace SlowTests.Graph
 
         [Fact]
         public void Graph_query_should_return_data_in_proper_form()
-        //note: for more information see http://issues.hibernatingrhinos.com/issue/RavenDB-12088
+        //note: for more information see https://issues.hibernatingrhinos.com/issue/RavenDB-12088
         {
             using (var store = GetDocumentStore())
             {

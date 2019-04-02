@@ -2250,7 +2250,7 @@ namespace Raven.Server.Documents.Indexes
                     // we take the awaiter _before_ the indexing transaction happens, 
                     // so if there are any changes, it will already happen to it, and we'll 
                     // query the index again. This is important because of: 
-                    // http://issues.hibernatingrhinos.com/issue/RavenDB-5576
+                    // https://issues.hibernatingrhinos.com/issue/RavenDB-5576
                     var frozenAwaiter = GetIndexingBatchAwaiter();
                     using (_contextPool.AllocateOperationContext(out TransactionOperationContext indexContext))
                     using (var indexTx = indexContext.OpenReadTransaction())
@@ -2555,7 +2555,7 @@ namespace Raven.Server.Documents.Indexes
                         // we take the awaiter _before_ the indexing transaction happens, 
                         // so if there are any changes, it will already happen to it, and we'll 
                         // query the index again. This is important because of: 
-                        // http://issues.hibernatingrhinos.com/issue/RavenDB-5576
+                        // https://issues.hibernatingrhinos.com/issue/RavenDB-5576
                         var frozenAwaiter = GetIndexingBatchAwaiter();
                         using (var indexTx = indexContext.OpenReadTransaction())
                         {
@@ -2656,7 +2656,7 @@ namespace Raven.Server.Documents.Indexes
                         // we take the awaiter _before_ the indexing transaction happens, 
                         // so if there are any changes, it will already happen to it, and we'll 
                         // query the index again. This is important because of: 
-                        // http://issues.hibernatingrhinos.com/issue/RavenDB-5576
+                        // https://issues.hibernatingrhinos.com/issue/RavenDB-5576
                         var frozenAwaiter = GetIndexingBatchAwaiter();
                         using (var indexTx = indexContext.OpenReadTransaction())
                         {
