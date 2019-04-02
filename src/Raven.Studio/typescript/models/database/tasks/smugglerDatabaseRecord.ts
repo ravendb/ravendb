@@ -3,6 +3,10 @@
 import popoverUtils = require("common/popoverUtils");
 
 class smugglerDatabaseRecord {
+    
+    static instanceCounter = 1;
+    
+    instanceCounter: number;
 
     customizeDatabaseRecordTypes = ko.observable<boolean>(false);
     
@@ -24,6 +28,7 @@ class smugglerDatabaseRecord {
     hasIncludes: KnockoutComputed<boolean>;
 
     constructor() {
+        this.instanceCounter = smugglerDatabaseRecord.instanceCounter++;
         this.initObservables();
     }
     
