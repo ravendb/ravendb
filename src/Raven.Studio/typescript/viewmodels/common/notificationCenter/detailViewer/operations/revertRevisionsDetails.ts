@@ -7,6 +7,7 @@ import abstractOperationDetails = require("viewmodels/common/notificationCenter/
 import virtualGridController = require("widgets/virtualGrid/virtualGridController");
 import columnPreviewPlugin = require("widgets/virtualGrid/columnPreviewPlugin");
 import textColumn = require("widgets/virtualGrid/columns/textColumn");
+import generalUtils = require("common/generalUtils");
 
 type gridItem = {
     Id: string;
@@ -81,7 +82,7 @@ class revertRevisionsDetails extends abstractOperationDetails {
              e: JQueryEventObject, onValue: (context: any, valueToCopy?: string) => void) => {
                 const value = column.getCellValue(details);
                 if (value) {
-                    onValue(value);
+                    onValue(generalUtils.escapeHtml(value));
                 }
             });
         
