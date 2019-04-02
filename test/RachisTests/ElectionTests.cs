@@ -1,11 +1,13 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 using Raven.Client.ServerWide;
 using Raven.Server.Rachis;
 using Raven.Server.ServerWide.Context;
+using Raven.Server.Utils;
 using Tests.Infrastructure;
 using Xunit;
 
@@ -104,7 +106,7 @@ namespace RachisTests
             } while (retries-- > 0);
 
             Assert.True(retries > 0,
-                $"Old leader is in {firstLeader.CurrentState} state and didn't rollback his log to the new leader log (last index: {GetLastIndex(firstLeader)}, expected: {newLeaderLastIndex})");
+                $"Old leader is in {firstLeader.CurrentState} state and didn't rollback his log to the new leader log (last index: {GetLastCommittedIndex(firstLeader)}, expected: {newLeaderLastIndex})");
             Assert.Equal(numberOfNodes, RachisConsensuses.Count);
 
             foreach (var invalidCommand in invalidCommands)
@@ -116,12 +118,76 @@ namespace RachisTests
             }
         }
 
-        private long GetLastIndex(RachisConsensus<CountingStateMachine> rachis)
+        [Fact]
+        public async Task RavenDB_13228()
+        {
+            DebuggerAttachedTimeout.DisableLongTimespan = true;
+            var numberOfNodes = 2;
+            var firstLeader = await CreateNetworkAndGetLeader(numberOfNodes);
+            var follower = GetFollowers().Single();
+
+            var timeToWait = TimeSpan.FromMilliseconds(1000 * numberOfNodes);
+            await IssueCommandsAndWaitForCommit(10, "test", 1);
+            var currentTerm = firstLeader.CurrentTerm;
+
+            var t = Task.Run(() => IssueCommandsWithoutWaitingForCommits(firstLeader, 100, "test"));
+            Disconnect(follower.Url, firstLeader.Url);
+            await t;
+
+            Assert.True(await firstLeader.WaitForState(RachisState.Candidate, CancellationToken.None).WaitAsync(timeToWait),$"{firstLeader.CurrentState}");
+            follower.FoundAboutHigherTerm(currentTerm + 1," why not, should work!");
+            Reconnect(follower.Url, firstLeader.Url);
+
+
+            Assert.True(await firstLeader.WaitForState(RachisState.Leader, CancellationToken.None).WaitAsync(timeToWait),
+                $"leader: {firstLeader.CurrentState} in term {firstLeader.CurrentTerm} with last index {GetLastCommittedIndex(firstLeader)}{Environment.NewLine}, " +
+                $"follower: state {follower.CurrentState} in term {follower.CurrentTerm} with last index {GetLastCommittedIndex(follower)}");
+            Assert.Equal(currentTerm + 2, firstLeader.CurrentTerm);
+
+
+            var count = 100;
+            while (true)
+            {
+                count--;
+                var last = GetLastAppendedIndex(firstLeader);
+                var index = GetLastCommittedIndex(follower);
+
+                if (last == index)
+                    break;
+
+                await Task.Delay(TimeSpan.FromMilliseconds(100));
+                if (count == 0)
+                    Assert.False(true, $"last appended index in the leader is {last}, last committed index in the follower is {index}");
+            }
+
+            Assert.Equal(GetLastAppendedIndex(firstLeader), GetLastAppendedIndex(follower));
+
+            using (firstLeader.ContextPool.AllocateOperationContext(out TransactionOperationContext leaderContext))
+            using (follower.ContextPool.AllocateOperationContext(out TransactionOperationContext followerContext))
+            using (leaderContext.OpenReadTransaction())
+            using (followerContext.OpenReadTransaction())
+            {
+                var leaderValue = firstLeader.StateMachine.Read(leaderContext, "test");
+                var followerValue = follower.StateMachine.Read(followerContext, "test");
+                Assert.Equal(leaderValue, followerValue);
+            }
+        }
+
+        private long GetLastCommittedIndex(RachisConsensus<CountingStateMachine> rachis)
         {
             using (rachis.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
             using (context.OpenReadTransaction())
             {
                 return rachis.GetLastCommitIndex(context);
+            }
+        }
+
+        private long GetLastAppendedIndex(RachisConsensus<CountingStateMachine> rachis)
+        {
+            using (rachis.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
+            using (context.OpenReadTransaction())
+            {
+                return rachis.GetLastEntryIndex(context);
             }
         }
     }
