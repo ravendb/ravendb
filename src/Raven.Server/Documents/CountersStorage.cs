@@ -18,6 +18,7 @@ using Raven.Server.Utils;
 using Raven.Client.Documents.Changes;
 using Raven.Client.Documents.Operations.Counters;
 using Raven.Client.Exceptions.Documents.Counters;
+using Raven.Server.Exceptions;
 using Sparrow.Json;
 using Sparrow.Json.Parsing;
 using Voron.Impl.Paging;
@@ -787,16 +788,14 @@ namespace Raven.Server.Documents
 
         private static void ThrowCounterNameTooBig(string name)
         {
-            throw new ArgumentException(
-                $"Counter name cannot exceed {DocumentIdWorker.MaxIdSize} bytes, but counter name was {Encoding.UTF8.GetByteCount(name)} bytes. The invalid counter name is '{name}'.",
-                nameof(name));
+            throw new KeyTooBigException(
+                $"Counter name cannot exceed {DocumentIdWorker.MaxIdSize} bytes, but counter name has {name.Length} characters. The invalid counter name is '{name}'.");
         }
 
         private static void ThrowStorageKeyTooBig(string docId, string counterName)
         {
-            throw new ArgumentException(
-                $"Cannot increment counter '{counterName}' of document '{docId}'. Size of counter name + size of document Id cannot exceed {DocumentIdWorker.MaxIdSize} bytes.",
-                nameof(counterName));
+            throw new KeyTooBigException(
+                $"Cannot increment counter '{counterName}' of document '{docId}'. Size of counter name + size of document Id cannot exceed {DocumentIdWorker.MaxIdSize} bytes.");
         }
 
     }
