@@ -47,7 +47,7 @@ class attachmentUpload extends abstractNotification {
             this.total(event.total);
             
             if (this.isCompleted()) {
-                this.message("File '" + this.fileName + "' (size: " + generalUtils.formatBytesToSize(event.total) + ") was uploaded to document '" + this.documentId + "'");
+                this.message("File '" + generalUtils.escapeHtml(this.fileName) + "' (size: " + generalUtils.formatBytesToSize(event.total) + ") was uploaded to document '" + generalUtils.escapeHtml(this.documentId) + "'");
                 this.severity("Success");
             }
         }
@@ -58,7 +58,7 @@ class attachmentUpload extends abstractNotification {
             Type: "AttachmentUpload",
             CreatedAt: null, // will be assigned later
             Database: db.name,
-            Message: "Uploading '" + fileName + "' for document '" + documentId + "'",
+            Message: "Uploading '" + generalUtils.escapeHtml(fileName) + "' for document '" + generalUtils.escapeHtml(documentId) + "'",
             Title: "Attachment upload",
             Severity: "None",
             IsPersistent: false,
