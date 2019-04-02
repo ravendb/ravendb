@@ -36,6 +36,14 @@ namespace SlowTests.Issues
                     using (var session = store.OpenSession())
                     {
                         session.Store(new Company { Name = "MS" });
+                    }
+                });
+
+                Assert.Throws<DatabaseDisabledException>(() =>
+                {
+                    using (var session = store.OpenSession())
+                    {
+                        session.Store(new Company { Name = "MS" }, "id");
                         session.SaveChanges();
                     }
                 });
