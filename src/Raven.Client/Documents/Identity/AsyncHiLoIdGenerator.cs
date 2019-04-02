@@ -9,6 +9,7 @@ using System.Diagnostics;
 using System.Threading;
 using System.Threading.Tasks;
 using Raven.Client.Documents.Commands;
+using Raven.Client.Extensions;
 using Sparrow.Json;
 
 namespace Raven.Client.Documents.Identity
@@ -76,7 +77,18 @@ namespace Raven.Client.Documents.Identity
         /// <returns></returns>
         public Task<string> GenerateDocumentIdAsync(object entity)
         {
-            return NextIdAsync().ContinueWith(task => GetDocumentIdFromId(task.Result));
+            return NextIdAsync().ContinueWith(task =>
+            {
+                try
+                {
+                    return GetDocumentIdFromId(task.Result);
+                }
+                catch (Exception e)
+                {
+                    var actualException = e.ExtractSingleInnerException();
+                    throw actualException;
+                }
+            });
         }
 
         public async Task<long> NextIdAsync()
