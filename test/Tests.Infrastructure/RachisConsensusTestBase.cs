@@ -262,15 +262,15 @@ namespace Tests.Infrastructure
             return index;
         }
 
-        protected List<Task> IssueCommandsWithoutWaitingForCommits(RachisConsensus<CountingStateMachine> leader, int numberOfCommands, string name, int value)
+        protected List<Task> IssueCommandsWithoutWaitingForCommits(RachisConsensus<CountingStateMachine> leader, int numberOfCommands, string name, int? value = null)
         {
             List<Task> waitingList = new List<Task>();
-            for (var i = 0; i < numberOfCommands; i++)
+            for (var i = 1; i <= numberOfCommands; i++)
             {
                 var task = leader.PutAsync(new TestCommand
                 {
                     Name = name,
-                    Value = value
+                    Value = value ?? i
                 });
 
                 waitingList.Add(task);

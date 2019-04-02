@@ -21,7 +21,7 @@ namespace Raven.Server.Rachis
 
         public void Run()
         {
-            _electorLongRunningWork = PoolOfThreads.GlobalRavenThreadPool.LongRunning(x => HandleVoteRequest(), null, $"Elector for candidate {_connection.Source}");            
+            _electorLongRunningWork = PoolOfThreads.GlobalRavenThreadPool.LongRunning(x => HandleVoteRequest(), null, $"Elector for candidate {_connection.Source}");
         }
 
         public void HandleVoteRequest()
@@ -48,7 +48,7 @@ namespace Raven.Server.Rachis
                             //If we are followers we want to drop the connection with the leader right away.
                             //We shouldn't be in any other state since if we are candidate our leaderTag should be null but its safer to verify.
                             if (_engine.CurrentState == RachisState.Follower)
-                                _engine.SetNewState(RachisState.Follower,null,_engine.CurrentTerm,$"We got a vote request from our leader {rv.Source} so we switch to leaderless state.");
+                                _engine.SetNewState(RachisState.Follower, null, _engine.CurrentTerm, $"We got a vote request from our leader {rv.Source} so we switch to leaderless state.");
                         }
 
                         ClusterTopology clusterTopology;
@@ -63,7 +63,7 @@ namespace Raven.Server.Rachis
                             lastTerm = _engine.GetTermForKnownExisting(context, lastIndex);
                             (whoGotMyVoteIn, lastVotedTerm) = _engine.GetWhoGotMyVoteIn(context, rv.Term);
 
-                            clusterTopology = _engine.GetTopology(context);                            
+                            clusterTopology = _engine.GetTopology(context);
                         }
 
                         // this should be only the case when we where once in a cluster, then we were brought down and our data was wiped.
@@ -77,7 +77,7 @@ namespace Raven.Server.Rachis
                             });
                             continue;
                         }
-                        
+
                         if (clusterTopology.Members.ContainsKey(rv.Source) == false &&
                             clusterTopology.Promotables.ContainsKey(rv.Source) == false &&
                             clusterTopology.Watchers.ContainsKey(rv.Source) == false)
@@ -99,7 +99,7 @@ namespace Raven.Server.Rachis
                         if (rv.Term == currentTerm && rv.ElectionResult == ElectionResult.Won)
                         {
                             _electionWon = true;
-                            if (Follower.CheckIfValidLeader(_engine, _connection,out var negotiation))
+                            if (Follower.CheckIfValidLeader(_engine, _connection, out var negotiation))
                             {
                                 var follower = new Follower(_engine, negotiation.Term, _connection);
                                 follower.AcceptConnection(negotiation);
@@ -152,7 +152,8 @@ namespace Raven.Server.Rachis
                             });
                             continue;
                         }
-                        if(lastVotedTerm > rv.Term)
+
+                        if (lastVotedTerm > rv.Term)
                         {
                             _connection.Send(context, new RequestVoteResponse
                             {
@@ -163,39 +164,34 @@ namespace Raven.Server.Rachis
                             continue;
                         }
 
-                        if (lastTerm > rv.LastLogTerm)
+                        if (rv.Term > _engine.CurrentTerm + 1)
                         {
-                            // we aren't going to vote for this guy, but we need to check if it is more up to date
-                            // in the state of the cluster than we are
-                            if(rv.Term > _engine.CurrentTerm + 1)
+                            // trail election is often done on the current term + 1, but if there is any
+                            // election on a term that is greater than the current term plus one, we should
+                            // consider this an indication that the cluster was able to move past our term
+                            // and update the term accordingly
+                            using (context.OpenWriteTransaction())
                             {
-                                // trail election is often done on the current term + 1, but if there is any
-                                // election on a term that is greater than the current term plus one, we should
-                                // consider this an indication that the cluster was able to move past our term
-                                // and update the term accordingly
-                                using (context.OpenWriteTransaction())
+                                // double checking things under the transaction lock
+                                if (rv.Term > _engine.CurrentTerm + 1)
                                 {
-                                    // double checking things under the transaction lock
-                                    if(rv.Term > _engine.CurrentTerm + 1)
-                                    {
-                                        _engine.CastVoteInTerm(context, rv.Term -1 , null, "Noticed that the term in the cluster grew beyond what I was familiar with, increasing it");
-                                    }
-                                    context.Transaction.Commit();
+                                    _engine.CastVoteInTerm(context, rv.Term - 1, null, "Noticed that the term in the cluster grew beyond what I was familiar with, increasing it");
                                 }
+                                context.Transaction.Commit();
                             }
 
                             _connection.Send(context, new RequestVoteResponse
                             {
                                 Term = _engine.CurrentTerm,
                                 VoteGranted = false,
-                                Message = $"My last log entry is of term {lastTerm} / {lastIndex} while yours is {rv.LastLogTerm}, so I'm more up to date"
+                                Message = $"Increasing my term to {_engine.CurrentTerm}"
                             });
                             continue;
                         }
 
                         if (rv.IsTrialElection)
                         {
-                            if (_engine.Timeout.ExpiredLastDeferral(_engine.ElectionTimeout.TotalMilliseconds / 2, out string currentLeader) == false 
+                            if (_engine.Timeout.ExpiredLastDeferral(_engine.ElectionTimeout.TotalMilliseconds / 2, out string currentLeader) == false
                                 && string.IsNullOrEmpty(currentLeader) == false) // if we are leaderless we can't refuse to cast our vote.
                             {
                                 _connection.Send(context, new RequestVoteResponse
@@ -231,7 +227,7 @@ namespace Raven.Server.Rachis
                         using (context.OpenWriteTransaction())
                         {
                             result = ShouldGrantVote(context, lastIndex, rv, lastTerm);
-                            if(result.DeclineVote == false)
+                            if (result.DeclineVote == false)
                             {
                                 _engine.CastVoteInTerm(context, rv.Term, rv.Source, "Casting vote as elector");
                                 context.Transaction.Commit();
