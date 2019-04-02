@@ -33,7 +33,7 @@ namespace Raven.Server.Utils.Cli
             AdminConsole = new AdminJsConsole(server, database);
             if (AdminConsole.Log.IsOperationsEnabled)
             {
-                var from = consoleColoring ? "the console cli" : "a named pipe connection";
+                var from = consoleColoring ? "the console CLI" : "a named pipe connection";
                 AdminConsole.Log.Operations($"This operation was initiated through {from}");
             }
             while (true)

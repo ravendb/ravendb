@@ -94,7 +94,7 @@ namespace Raven.Server.Utils
                     {
                         if (Logger.IsInfoEnabled)
                         {
-                            Logger.Info("Got an exception inside cli (internal error) while in pipe connection", e);
+                            Logger.Info("Got an exception inside CLI (internal error) while in pipe connection", e);
                         }
                     }
 

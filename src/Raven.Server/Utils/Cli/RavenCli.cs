@@ -258,7 +258,7 @@ namespace Raven.Server.Utils.Cli
         {
             if (!cli._usingNamedPipes)
             {
-                WriteText("'logout' command not supported on console cli", WarningColor, cli);
+                WriteText("'logout' command not supported on console CLI", WarningColor, cli);
                 return true;
             }
 
@@ -572,11 +572,11 @@ namespace Raven.Server.Utils.Cli
             var isOff = args.First().Equals("off");
             if (!isOff && !isOn)
             {
-                WriteError("Experimental cli commands can be set to only on or off. Setting to off.", cli);
+                WriteError("Experimental CLI commands can be set to only on or off. Setting to off.", cli);
                 return false;
             }
 
-            WriteText($"Experimental features are now {(isOn ? "enabled" : "disabled")}.", TextColor, cli);
+            WriteText($"Experimental CLI features are now {(isOn ? "enabled" : "disabled")}.", TextColor, cli);
 
             return isOn; // here rc is not an exit code, it is a setter to _experimental
         }
@@ -1118,7 +1118,7 @@ namespace Raven.Server.Utils.Cli
         private static bool CommandHelp(List<string> args, RavenCli cli)
         {
             string[][] commandDescription = {
-                new[] {"prompt <new prompt>", "Change the cli prompt. Can be used with variables. Type 'helpPrompt` for details"},
+                new[] {"prompt <new prompt>", "Change the CLI prompt. Can be used with variables. Type 'helpPrompt` for details"},
                 new[] {"helpPrompt", "Detailed prompt command usage"},
                 new[] {"clear", "Clear screen"},
                 new[] {"stats", "Online server's memory consumption stats, request ratio and documents count"},
@@ -1129,7 +1129,7 @@ namespace Raven.Server.Utils.Cli
                 new[] {"gc [gen]", "Collect garbage of specified gen : 0, 1 or default 2"},
                 new[] {"lowMem", "Simulate Low-Memory event"},
                 new[] {"timer <on|off|fire>", "enable or disable candidate selection timer (Rachis), or fire timeout immediately"},
-                new[] {"experimental <on|off>", "Set if to allow experimental cli commands. WARNING: Use with care!"},
+                new[] {"experimental <on|off>", "Set if to allow experimental CLI commands. WARNING: Use with care!"},
                 new[] {"script <server|database> [database]", "Execute script on server or specified database. WARNING: Use with care!"},
                 new[] {"logout", "Logout (applicable only on piped connection)"},
                 new[] {"openBrowser", "Open the RavenDB Studio using the default browser"},
@@ -1146,7 +1146,7 @@ namespace Raven.Server.Utils.Cli
             string[][] commandExperimentalDescription =
             {
                 new[] {"createDb <database> <dir>", "Create database named 'database' in DataDir 'dir'"},
-                new[] {"importDir <database> <path>", "Smuggler import entire directory (halts cli) from path"},
+                new[] {"importDir <database> <path>", "Smuggler import entire directory (halts CLI) from path"},
             };
 
             var msg = new StringBuilder("RavenDB CLI Help" + Environment.NewLine);
@@ -1248,7 +1248,7 @@ namespace Raven.Server.Utils.Cli
             {
                 // in case of cli failure - prevent server from going down, and switch to a (very) simple fallback cli
                 WriteText("\nERROR in CLI:" + ex, ErrorColor, this, newLine: false);
-                WriteText("\n\nSwitching to simple cli...", ErrorColor, this, newLine: false);
+                WriteText("\n\nSwitching to simple CLI...", ErrorColor, this, newLine: false);
 
                 while (true)
                 {
