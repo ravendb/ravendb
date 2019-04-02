@@ -12,6 +12,8 @@ using Raven.Client.Documents.Operations.ETL;
 using Raven.Client.Documents.Operations.OngoingTasks;
 using Raven.Client.Exceptions.Cluster;
 using Raven.Client.ServerWide;
+using Raven.Server.ServerWide.Commands;
+using Raven.Server.Config;
 using Raven.Tests.Core.Utils.Entities;
 using Xunit;
 
@@ -225,6 +227,143 @@ namespace RachisTests.DatabaseCluster
 
                 Assert.True(etlDone.Wait(TimeSpan.FromMinutes(1)));
                 Assert.True(WaitForDocument<User>(dest, "users/2", u => u.Name == "Joe Doe2", 30_000));
+            }
+        }
+
+        [Fact]
+        public async Task WillWorkAfterResponsibleNodeRestart_RavenDB_13237()
+        {
+            var srcDb = "ETL-src";
+            var dstDb = "ETL-dst";
+
+            var srcRaft = await CreateRaftClusterAndGetLeader(3, shouldRunInMemory: false);
+            var dstRaft = await CreateRaftClusterAndGetLeader(1);
+            var srcNodes = await CreateDatabaseInCluster(srcDb, 2, srcRaft.WebUrl);
+            var destNode = await CreateDatabaseInCluster(dstDb, 1, dstRaft.WebUrl);
+
+            using (var src = new DocumentStore
+            {
+                Urls = srcNodes.Servers.Select(s => s.WebUrl).ToArray(),
+                Database = srcDb,
+            }.Initialize())
+            using (var dest = new DocumentStore
+            {
+                Urls = new[] { destNode.Servers[0].WebUrl },
+                Database = dstDb,
+            }.Initialize())
+            {
+                var name = "FailoverAfterRestart";
+                var urls = new[] { destNode.Servers[0].WebUrl };
+                var config = new RavenEtlConfiguration()
+                {
+                    Name = name,
+                    ConnectionStringName = name,
+                    Transforms =
+                    {
+                        new Transformation
+                        {
+                            Name = $"ETL : {name}",
+                            Collections = new List<string>(new[] {"Users"}),
+                            Script = null,
+                            ApplyToAllDocuments = false,
+                            Disabled = false
+    }
+                    },
+                    LoadRequestTimeoutInSec = 30,
+                };
+                var connectionString = new RavenConnectionString
+                {
+                    Name = name,
+                    Database = dest.Database,
+                    TopologyDiscoveryUrls = urls,
+                };
+
+                src.Maintenance.Send(new PutConnectionStringOperation<RavenConnectionString>(connectionString));
+                src.Maintenance.Send(new AddEtlOperation<RavenConnectionString>(config));
+
+                var ongoingTask = src.Maintenance.Send(new GetOngoingTaskInfoOperation(name, OngoingTaskType.RavenEtl));
+
+                var responsibleNodeNodeTag = ongoingTask.ResponsibleNode.NodeTag;
+                var originalTaskNodeServer = srcNodes.Servers.Single(s => s.ServerStore.NodeTag == responsibleNodeNodeTag);
+
+                using (var session = src.OpenSession())
+                {
+                    session.Store(new User()
+                    {
+                        Name = "Joe Doe"
+                    }, "users/1");
+
+                    session.SaveChanges();
+}
+
+                Assert.True(WaitForDocument<User>(dest, "users/1", u => u.Name == "Joe Doe", 30_000));
+                
+
+                var originalServerDataDir = originalTaskNodeServer.Configuration.Core.DataDirectory.FullPath.Split('/').Last();
+                var originalServerUrl = originalTaskNodeServer.WebUrl;
+
+                DisposeServerAndWaitForFinishOfDisposal(originalTaskNodeServer);
+
+                using (var session = src.OpenSession())
+                {
+                    session.Store(new User()
+                    {
+                        Name = "Joe Doe2"
+                    }, "users/2");
+
+                    session.SaveChanges();
+                }
+
+                Assert.True(WaitForDocument<User>(dest, "users/2", u => u.Name == "Joe Doe2", 30_000));
+
+                ongoingTask = src.Maintenance.Send(new GetOngoingTaskInfoOperation(name, OngoingTaskType.RavenEtl));
+
+                var currentNodeNodeTag = ongoingTask.ResponsibleNode.NodeTag;
+                var currentTaskNodeServer = srcNodes.Servers.Single(s => s.ServerStore.NodeTag == currentNodeNodeTag);
+
+                // start server which originally was handling ETL task
+                GetNewServer(new Dictionary<string, string>()
+                {
+                    {RavenConfiguration.GetKey(x => x.Core.ServerUrls), originalServerUrl}
+                }, runInMemory: false, deletePrevious: false, partialPath: originalServerDataDir);
+
+                using (var store = new DocumentStore
+                {
+                    Urls = new[] {originalServerUrl},
+                    Database = srcDb,
+                    Conventions =
+                    {
+                        DisableTopologyUpdates = true
+                    }
+                }.Initialize())
+                {
+                    using (var session = store.OpenSession())
+                    {
+                        session.Store(new User()
+                        {
+                            Name = "Joe Doe3"
+                        }, "users/3");
+
+                        session.SaveChanges();
+                    }
+
+                    Assert.True(WaitForDocument<User>(dest, "users/3", u => u.Name == "Joe Doe3", 30_000));
+
+                    // force disposing second node to ensure the original node is reponsible for ETL task again
+                    DisposeServerAndWaitForFinishOfDisposal(currentTaskNodeServer);
+
+                    using (var session = store.OpenSession())
+                    {
+                        session.Store(new User()
+                        {
+                            Name = "Joe Doe4"
+                        }, "users/4");
+
+                        session.SaveChanges();
+                    }
+
+                    Assert.True(WaitForDocument<User>(dest, "users/4", u => u.Name == "Joe Doe4", 30_000));
+                }
             }
         }
     }

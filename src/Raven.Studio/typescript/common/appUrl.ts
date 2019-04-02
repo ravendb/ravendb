@@ -494,7 +494,7 @@ class appUrl {
     }
 
     static forDocumentRawData(db: database | databaseInfo, docId:string): string {
-        return window.location.protocol + "//" + window.location.host + "/databases/" + db.name + "/docs?id=" + docId;
+        return window.location.protocol + "//" + window.location.host + "/databases/" + db.name + "/docs?id=" + encodeURIComponent(docId);
     }
 
     static forDocumentRevisionRawData(db: database | databaseInfo, revisionChangeVector: string): string { 

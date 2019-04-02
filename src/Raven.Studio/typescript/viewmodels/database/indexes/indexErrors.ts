@@ -144,7 +144,7 @@ class indexErrors extends viewModelBase {
             } else {
                 const value = column.getCellValue(indexError);
                 if (!_.isUndefined(value)) {
-                    onValue(value);
+                    onValue(generalUtils.escapeHtml(value));
                 }
             }
         });
