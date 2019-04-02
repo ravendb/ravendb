@@ -1,7 +1,7 @@
 <div>
     <div class="toggle">
-        <input id="customizeDatabaseRecordTypes" type="checkbox" data-bind="checked: customizeDatabaseRecordTypes">
-        <label for="customizeDatabaseRecordTypes" class="margin-right margin-right-sm">Customize Configuration and Ongoing Tasks</label>
+        <input type="checkbox" data-bind="checked: customizeDatabaseRecordTypes, attr: { id: 'customizeDatabaseRecordTypes_' + instanceCounter }">
+        <label data-bind="attr: { for: 'customizeDatabaseRecordTypes_' + instanceCounter }" class="margin-right margin-right-sm">Customize Configuration and Ongoing Tasks</label>
     </div>
     <div class="margin-left margin-left-lg js-customize-record" data-bind="visible: customizeDatabaseRecordTypes">
 
@@ -10,32 +10,32 @@
                 <div>Ongoing tasks</div>
                 <div class="margin-left margin-left-lg">
                     <div class="toggle">
-                        <input id="includePeriodicBackups" type="checkbox" data-bind="checked: includePeriodicBackups">
-                        <label for="includePeriodicBackups" class="margin-right margin-right-sm">Periodic Backups</label>
+                        <input type="checkbox" data-bind="checked: includePeriodicBackups, attr: { id: 'includePeriodicBackups_' + instanceCounter }">
+                        <label data-bind="attr: { for: 'includePeriodicBackups_' + instanceCounter }" class="margin-right margin-right-sm">Periodic Backups</label>
                     </div>
                     <div class="toggle">
-                        <input id="includeExternalReplications" type="checkbox" data-bind="checked: includeExternalReplications">
-                        <label for="includeExternalReplications" class="margin-right margin-right-sm">External replications</label>
+                        <input type="checkbox" data-bind="checked: includeExternalReplications, attr: { id: 'includeExternalReplications_' + instanceCounter }">
+                        <label data-bind="attr: { for: 'includeExternalReplications_' + instanceCounter }" class="margin-right margin-right-sm">External replications</label>
                         <a class="js-warning-external-replication" tabindex="0" data-bind="visible: includeExternalReplications() && !includeRavenConnectionStrings()"><small><i class="icon-warning text-warning"></i></small></a>
                     </div>
                     <div class="toggle">
-                        <input id="includeRavenEtls" type="checkbox" data-bind="checked: includeRavenEtls">
-                        <label for="includeRavenEtls" class="margin-right margin-right-sm">RavenDB ETLs</label>
+                        <input type="checkbox" data-bind="checked: includeRavenEtls, attr: { id: 'includeRavenEtls_' + instanceCounter }">
+                        <label data-bind="attr: { for: 'includeRavenEtls_' + instanceCounter }" class="margin-right margin-right-sm">RavenDB ETLs</label>
                         <a class="js-warning-raven-etl" tabindex="0" data-bind="visible: includeRavenEtls() && !includeRavenConnectionStrings()"><small><i class="icon-warning text-warning"></i></small></a>
                     </div>
                     <div class="toggle">
-                        <input id="includeSqlEtls" type="checkbox" data-bind="checked: includeSqlEtls">
-                        <label for="includeSqlEtls" class="margin-right margin-right-sm">SQL ETLs</label>
+                        <input type="checkbox" data-bind="checked: includeSqlEtls, attr: { id: 'includeSqlEtls_' + instanceCounter }">
+                        <label data-bind="attr: { for: 'includeSqlEtls_' + instanceCounter }" class="margin-right margin-right-sm">SQL ETLs</label>
                         <a class="js-warning-sql-etl" tabindex="0" data-bind="visible: includeSqlEtls() && !includeSqlConnectionStrings()"><small><i class="icon-warning text-warning"></i></small></a>
                     </div>
                     <div class="toggle">
-                        <input id="includeSinkPullReplications" type="checkbox" data-bind="checked: includeSinkPullReplications">
-                        <label for="includeSinkPullReplications" class="margin-right margin-right-sm">Pull Replication Sinks</label>
+                        <input type="checkbox" data-bind="checked: includeSinkPullReplications, attr: { id: 'includeSinkPullReplications_' + instanceCounter }">
+                        <label data-bind="attr: { for: 'includeSinkPullReplications_' + instanceCounter }" class="margin-right margin-right-sm">Pull Replication Sinks</label>
                         <a class="js-warning-pull-replication-sink" tabindex="0" data-bind="visible: includeSinkPullReplications() && !includeRavenConnectionStrings()"><small><i class="icon-warning text-warning"></i></small></a>
                     </div>
                     <div class="toggle">
-                        <input id="includeHubPullReplications" type="checkbox" data-bind="checked: includeHubPullReplications">
-                        <label for="includeHubPullReplications" class="margin-right margin-right-sm">Pull Replication Hubs</label>
+                        <input type="checkbox" data-bind="checked: includeHubPullReplications, attr: { id: 'includeHubPullReplications_' + instanceCounter }">
+                        <label data-bind="attr: { for: 'includeHubPullReplications_' + instanceCounter }" class="margin-right margin-right-sm">Pull Replication Hubs</label>
                     </div>
                     <div class="bg-info padding padding-xs margin-bottom"><small><i class="icon-info"></i> Imported ongoing tasks will be disabled by default.</small></div>
                 </div>
@@ -43,12 +43,12 @@
                 <div>Connection Strings</div>
                 <div class="margin-left margin-left-lg">
                     <div class="toggle">
-                        <input id="includeRavenConnectionStrings" type="checkbox" data-bind="checked: includeRavenConnectionStrings">
-                        <label for="includeRavenConnectionStrings" class="margin-right margin-right-sm">RavenDB Connection Strings</label>
+                        <input type="checkbox" data-bind="checked: includeRavenConnectionStrings, attr: { id: 'includeRavenConnectionStrings_' + instanceCounter }">
+                        <label data-bind="attr: { for: 'includeRavenConnectionStrings_' + instanceCounter }" class="margin-right margin-right-sm">RavenDB Connection Strings</label>
                     </div>
                     <div class="toggle">
-                        <input id="includeSqlConnectionStrings" type="checkbox" data-bind="checked: includeSqlConnectionStrings">
-                        <label for="includeSqlConnectionStrings" class="margin-right margin-right-sm">SQL Connection Strings</label>
+                        <input type="checkbox" data-bind="checked: includeSqlConnectionStrings, attr: { id: 'includeSqlConnectionStrings_' + instanceCounter }">
+                        <label data-bind="attr: { for: 'includeSqlConnectionStrings_' + instanceCounter }" class="margin-right margin-right-sm">SQL Connection Strings</label>
                     </div>
                 </div>
             </div>
@@ -56,28 +56,28 @@
                 <div>Other</div>
                 <div class="margin-left margin-left-lg">
                     <div class="toggle">
-                        <input id="includeSettings" type="checkbox" data-bind="checked: includeSettings">
-                        <label for="includeSettings" class="margin-right margin-right-sm">Settings</label>
+                        <input type="checkbox" data-bind="checked: includeSettings, attr: { id: 'includeSettings_' + instanceCounter }">
+                        <label data-bind="attr: { for: 'includeSettings_' + instanceCounter }" class="margin-right margin-right-sm">Settings</label>
                     </div>
                     <div class="toggle">
-                        <input id="includeConflictSolverConfig" type="checkbox" data-bind="checked: includeConflictSolverConfig">
-                        <label for="includeConflictSolverConfig" class="margin-right margin-right-sm">Conflict Solver Configuration</label>
+                        <input type="checkbox" data-bind="checked: includeConflictSolverConfig, attr: { id: 'includeConflictSolverConfig_' + instanceCounter }">
+                        <label data-bind="attr: { for: 'includeConflictSolverConfig_' + instanceCounter }" class="margin-right margin-right-sm">Conflict Solver Configuration</label>
                     </div>
                     <div class="toggle">
-                        <input id="includeRevisions" type="checkbox" data-bind="checked: includeRevisions">
-                        <label for="includeRevisions" class="margin-right margin-right-sm">Revisions Configuration</label>
+                        <input type="checkbox" data-bind="checked: includeRevisions, attr: { id: 'includeRevisions_' + instanceCounter }">
+                        <label data-bind="attr: { for: 'includeRevisions_' + instanceCounter }" class="margin-right margin-right-sm">Revisions Configuration</label>
                     </div>
                     <div class="toggle">
-                        <input id="includeExpiration" type="checkbox" data-bind="checked: includeExpiration">
-                        <label for="includeExpiration" class="margin-right margin-right-sm">Document Expiration</label>
+                        <input type="checkbox" data-bind="checked: includeExpiration, attr: { id: 'includeExpiration_' + instanceCounter }">
+                        <label data-bind="attr: { for: 'includeExpiration_' + instanceCounter }" class="margin-right margin-right-sm">Document Expiration</label>
                     </div>
                     <div class="toggle">
-                        <input id="includeClient" type="checkbox" data-bind="checked: includeClient">
-                        <label for="includeClient" class="margin-right margin-right-sm">Client Configuration</label>
+                        <input type="checkbox" data-bind="checked: includeClient, attr: { id: 'includeClient_' + instanceCounter }">
+                        <label data-bind="attr: { for: 'includeClient_' + instanceCounter }" class="margin-right margin-right-sm">Client Configuration</label>
                     </div>
                     <div class="toggle">
-                        <input id="includeSorters" type="checkbox" data-bind="checked: includeSorters">
-                        <label for="includeSorters" class="margin-right margin-right-sm">Custom Sorters</label>
+                        <input type="checkbox" data-bind="checked: includeSorters, attr: { id: 'includeSorters_' + instanceCounter }">
+                        <label data-bind="attr: { for: 'includeSorters_' + instanceCounter }" class="margin-right margin-right-sm">Custom Sorters</label>
                     </div>
                 </div>
             </div>
