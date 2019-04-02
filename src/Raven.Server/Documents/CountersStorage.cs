@@ -17,6 +17,7 @@ using Raven.Server.Utils;
 using Raven.Client.Documents.Changes;
 using Raven.Client.Documents.Operations.Counters;
 using Raven.Client.Exceptions.Documents.Counters;
+using Raven.Server.Exceptions;
 using Sparrow.Json;
 using Sparrow.Json.Parsing;
 using Sparrow.Server;
@@ -316,8 +317,7 @@ namespace Raven.Server.Documents
                         else
                         {
                             if (existingCounter == null &&
-                                data.Size + sizeof(long) * 3 > MaxCounterDocumentSize &&
-                                counters.Count > 1)
+                                data.Size + sizeof(long) * 3 > MaxCounterDocumentSize)
                             {
                                 // we now need to add a new counter to the counters blittable
                                 // and adding it will cause to grow beyond 2KB (the 24bytes is an 
@@ -420,16 +420,14 @@ namespace Raven.Server.Documents
 
         private static void ThrowCounterNameTooBig(string name)
         {
-            throw new ArgumentException(
-                $"Counter name cannot exceed {DocumentIdWorker.MaxIdSize} bytes, but counter name was {Encoding.UTF8.GetByteCount(name)} bytes. The invalid counter name is '{name}'.",
-                nameof(name));
+            throw new KeyTooBigException(
+                $"Counter name cannot exceed {DocumentIdWorker.MaxIdSize} bytes, but counter name has {name.Length} characters. The invalid counter name is '{name}'.");
         }
 
         private static void ThrowStorageKeyTooBig(string docId, string counterName)
         {
-            throw new ArgumentException(
-                $"Cannot increment counter '{counterName}' of document '{docId}'. Size of counter name + size of document Id cannot exceed {DocumentIdWorker.MaxIdSize} bytes.",
-                nameof(counterName));
+            throw new KeyTooBigException(
+                $"Cannot increment counter '{counterName}' of document '{docId}'. Size of counter name + size of document Id cannot exceed {DocumentIdWorker.MaxIdSize} bytes.");
         }
 
         private static void SplitCounterGroup(DocumentsOperationContext context, CollectionName collectionName, Table table, Slice documentKeyPrefix, Slice countersGroupKey, BlittableJsonReaderObject values, BlittableJsonReaderArray dbIds, string changeVector)
@@ -826,14 +824,13 @@ namespace Raven.Server.Documents
 
                         using (Slice.External(context.Allocator, kvp.Key, out var countersGroupKey))
                         {
-                            currentData.TryGet(Values, out BlittableJsonReaderObject localCounters);
 
-                            if (currentData.Size > MaxCounterDocumentSize &&
-                                localCounters.Count > 1)
+                            if (currentData.Size > MaxCounterDocumentSize)
                             {
                                 // after adding new counters to the counters blittable
                                 // we caused the blittable to grow beyond 2KB 
 
+                                currentData.TryGet(Values, out BlittableJsonReaderObject localCounters);
                                 currentData.TryGet(DbIds, out BlittableJsonReaderArray dbIds);
 
                                 using (currentData)
