@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.IO;
 using System.Threading;
 using Raven.Client.Documents.Indexes;
@@ -553,7 +554,9 @@ namespace Raven.Server.Smuggler.Documents
                     continue;
                 }
 
-                values = ConvertToBlob(values);
+                values = ConvertToBlob(values, actions);
+
+                actions.RegisterForDisposal(reader);
 
                 yield return new CounterGroupDetail
                 {
@@ -562,16 +565,18 @@ namespace Raven.Server.Smuggler.Documents
                     Values = values
                 };
 
-                actions.RegisterForDisposal(reader);
+                
             }
         }
 
-        private unsafe BlittableJsonReaderObject ConvertToBlob(BlittableJsonReaderObject values)
+        private unsafe BlittableJsonReaderObject ConvertToBlob(BlittableJsonReaderObject values, ICounterActions actions)
         {
             var scopes = new List<ByteStringContext<ByteStringMemoryCache>.InternalScope>();
 
             try
             {
+                var context = actions.GetContextForNewDocument();
+                Debug.Assert(context == values._context);
                 values.TryGet(CountersStorage.Values, out BlittableJsonReaderObject counterValues);
 
                 counterValues.Modifications = new DynamicJsonValue(counterValues);
@@ -587,7 +592,7 @@ namespace Raven.Server.Smuggler.Documents
                     var arr = (BlittableJsonReaderArray)prop.Value;
                     var sizeToAllocate = CountersStorage.SizeOfCounterValues * arr.Length / 2;
 
-                    scopes.Add(_context.Allocator.Allocate(sizeToAllocate, out var newVal));
+                    scopes.Add(context.Allocator.Allocate(sizeToAllocate, out var newVal));
 
                     for (int j = 0; j < arr.Length; j += 2)
                     {
@@ -603,7 +608,7 @@ namespace Raven.Server.Smuggler.Documents
                     };
                 }
 
-                return _context.ReadObject(values, null);
+                return context.ReadObject(values, null);
             }
             finally
             {
