@@ -90,7 +90,7 @@ class clusterObserverLog extends viewModelBase {
             if (column.header === "Date") {
                 onValue(moment.utc(entry.Date), entry.Date);
             } else if (!_.isUndefined(value)) {
-                onValue(value);
+                onValue(generalUtils.escapeHtml(value));
             }
         });
     }

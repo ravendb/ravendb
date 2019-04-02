@@ -55,9 +55,9 @@ class requestLatencyDetails extends abstractPerformanceHintDetails {
             if (column.header === "Date") {
                 onValue(moment.utc(details.Date), details.Date);
             } else if (_.isUndefined(value)) {
-                onValue(value);
+                onValue(generalUtils.escapeHtml(value));
             } else if (column.header === "Query") {
-                onValue(details.Query);
+                onValue(generalUtils.escapeHtml(details.Query));
             }
         });
     }

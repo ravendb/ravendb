@@ -59,7 +59,7 @@ class virtualUpdateByQueryDetails extends dialogViewModelBase {
                     } else {
                         const value = column.getCellValue(details);
                         if (value) {
-                            onValue(value);
+                            onValue(generalUtils.escapeHtml(value));
                         }
                     }
                 }
