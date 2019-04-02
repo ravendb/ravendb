@@ -59,7 +59,7 @@ class virtualDeleteByQueryDetails extends dialogViewModelBase {
                     } else {
                         const value = column.getCellValue(details);
                         if (value) {
-                            onValue(value);
+                            onValue(generalUtils.escapeHtml(value));
                         }
                     }
                 }

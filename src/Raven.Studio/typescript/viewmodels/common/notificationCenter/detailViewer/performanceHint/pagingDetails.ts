@@ -69,7 +69,7 @@ class pagingDetails extends abstractPerformanceHintDetails {
             if (column.header === "Date") {
                 onValue(moment.utc(details.Occurrence), details.Occurrence);
             } else if (!_.isUndefined(value)) {
-                onValue(value);
+                onValue(generalUtils.escapeHtml(value));
             }
         });
     }
