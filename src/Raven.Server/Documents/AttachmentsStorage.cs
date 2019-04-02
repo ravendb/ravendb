@@ -10,6 +10,7 @@ using Raven.Client.Exceptions;
 using Raven.Server.Documents.Replication;
 using Raven.Client.Exceptions.Documents;
 using Raven.Client.Exceptions.Documents.Indexes;
+using Raven.Server.Exceptions;
 using Raven.Server.ServerWide.Context;
 using Raven.Server.Utils;
 using Voron;
@@ -154,6 +155,11 @@ namespace Raven.Server.Documents
                 Debug.Assert(false);// never hit
             }
 
+            if (documentId.Length + name.Length > DocumentIdWorker.MaxIdSize)
+            {
+                ThrowStorageKeyTooBig(documentId, name);
+            }
+
             // Attachment etag should be generated before updating the document
             var attachmentEtag = _documentsStorage.GenerateNextEtag();
 
@@ -165,11 +171,6 @@ namespace Raven.Server.Documents
                     throw new InvalidOperationException($"Cannot put attachment {name} on a non existent document '{documentId}'.");
                 if (TableValueToFlags((int)DocumentsTable.Flags, ref tvr).HasFlag(DocumentFlags.Artificial))
                     throw new InvalidOperationException($"Cannot put attachment {name} on artificial document '{documentId}'.");
-
-                if (documentId.Length + name.Length > DocumentIdWorker.MaxIdSize)
-                {
-                    ThrowStorageKeyTooBig(documentId, name);
-                }
 
                 using (DocumentIdWorker.GetLowerIdSliceAndStorageKey(context, name, out Slice lowerName, out Slice namePtr))
                 using (DocumentIdWorker.GetLowerIdSliceAndStorageKey(context, contentType, out Slice lowerContentType, out Slice contentTypePtr))
@@ -811,9 +812,8 @@ namespace Raven.Server.Documents
 
         private static void ThrowStorageKeyTooBig(string docId, string attachmentName)
         {
-            throw new ArgumentException(
-                $"Cannot put attachment '{attachmentName}' on document '{docId}'. Size of attachment name + size of document Id cannot exceed {DocumentIdWorker.MaxIdSize} bytes.",
-                nameof(attachmentName));
+            throw new KeyTooBigException(
+                $"Cannot put attachment '{attachmentName}' on document '{docId}'. Size of attachment name + size of document Id cannot exceed {DocumentIdWorker.MaxIdSize} bytes.");
         }
 
         public AttachmentDetails CopyAttachment(DocumentsOperationContext context, string documentId, string name, string destinationId, string destinationName, LazyStringValue changeVector, AttachmentType attachmentType)
