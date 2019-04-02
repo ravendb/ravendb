@@ -24,7 +24,7 @@ namespace Raven.Server.Documents.ETL
         private const string AlertTitle = "ETL loader";
 
         private EtlProcess[] _processes = new EtlProcess[0];
-        private readonly HashSet<string> _uniqueNames = new HashSet<string>(StringComparer.OrdinalIgnoreCase); // read and modified under a lock.
+        private readonly HashSet<string> _uniqueConfigurationNames = new HashSet<string>(StringComparer.OrdinalIgnoreCase); // read and modified under a lock.
 
         private DatabaseRecord _databaseRecord;
 
@@ -93,18 +93,20 @@ namespace Raven.Server.Documents.ETL
                     foreach (var process in toRemove)
                     {
                         processes.Remove(process);
-                        _uniqueNames.Remove(process.ConfigurationName);
+                        _uniqueConfigurationNames.Remove(process.ConfigurationName);
 
                         OnProcessRemoved(process);
                     }
                 }
 
+                var ensureUniqueConfigurationNames = _uniqueConfigurationNames.ToHashSet(StringComparer.OrdinalIgnoreCase);
+
                 var newProcesses = new List<EtlProcess>();
                 if (newRavenDestinations != null && newRavenDestinations.Count > 0)
-                    newProcesses.AddRange(GetRelevantProcesses<RavenEtlConfiguration, RavenConnectionString>(newRavenDestinations, _uniqueNames));
+                    newProcesses.AddRange(GetRelevantProcesses<RavenEtlConfiguration, RavenConnectionString>(newRavenDestinations, ensureUniqueConfigurationNames));
 
                 if (newSqlDestinations != null && newSqlDestinations.Count > 0)
-                    newProcesses.AddRange(GetRelevantProcesses<SqlEtlConfiguration, SqlConnectionString>(newSqlDestinations, _uniqueNames));
+                    newProcesses.AddRange(GetRelevantProcesses<SqlEtlConfiguration, SqlConnectionString>(newSqlDestinations, ensureUniqueConfigurationNames));
 
                 processes.AddRange(newProcesses);
                 _processes = processes.ToArray();
@@ -117,6 +119,8 @@ namespace Raven.Server.Documents.ETL
                     process.Start();
 
                     OnProcessAdded(process);
+
+                    _uniqueConfigurationNames.Add(process.ConfigurationName);
                 }
             }
         }
