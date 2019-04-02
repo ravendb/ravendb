@@ -633,15 +633,13 @@ namespace Raven.Server.Smuggler.Documents
                 foreach (var documentType in Documents)
                 {
                     var tombstone = documentType.Tombstone;
+                    long newEtag;
                     if (tombstone != null)
                     {
                         using (Slice.External(context.Allocator, tombstone.LowerId, out Slice key))
                         {
-                            if (_options.KeepOriginalChangeVector == false)
-                            {
-                                var newEtag = _database.DocumentsStorage.GenerateNextEtag();
-                                tombstone.ChangeVector = _database.DocumentsStorage.GetNewChangeVector(context, newEtag);
-                            }
+                            newEtag = _database.DocumentsStorage.GenerateNextEtag();
+                            tombstone.ChangeVector = _database.DocumentsStorage.GetNewChangeVector(context, newEtag);
 
                             databaseChangeVector = ChangeVectorUtils.MergeVectors(databaseChangeVector, tombstone.ChangeVector);
                             switch (tombstone.Type)
@@ -737,11 +735,8 @@ namespace Raven.Server.Smuggler.Documents
                         continue;
                     }
 
-                    if (_options.KeepOriginalChangeVector == false)
-                    {
-                        var newEtag = _database.DocumentsStorage.GenerateNextEtag();
-                        document.ChangeVector = _database.DocumentsStorage.GetNewChangeVector(context, newEtag);
-                    }
+                    newEtag = _database.DocumentsStorage.GenerateNextEtag();
+                    document.ChangeVector = _database.DocumentsStorage.GetNewChangeVector(context, newEtag);
 
                     databaseChangeVector = ChangeVectorUtils.MergeVectors(databaseChangeVector, document.ChangeVector);
 
@@ -1142,15 +1137,13 @@ namespace Raven.Server.Smuggler.Documents
             private CountersHandler.ExecuteCounterBatchCommand _cmd;
             private CountersHandler.ExecuteCounterBatchCommand _prevCommand;
             private Task _prevCommandTask = Task.CompletedTask;
-            private int _docCount;
-            private int _countersPerDoc;
-            private const int MaxDocumentCount = 1_024;
-            private const int MaxCountersPerDocument = 32 * 1_024;
+            private int _listSize;
+            private const int MaxListCount = 32 * 1_024;
 
             public CounterActions(DocumentDatabase database)
             {
                 _database = database;
-                _docCount = 0;
+                _listSize = 0;
                 _cmd = new CountersHandler.ExecuteCounterBatchCommand(_database)
                 {
                     HasWrites = true
@@ -1161,20 +1154,13 @@ namespace Raven.Server.Smuggler.Documents
             {
                 var counterOp = new CounterOperation
                 {
-                    Type = CounterOperationType.Put,
+                    Type = CounterOperationType.Increment,
                     CounterName = counter.CounterName,
                     Delta = counter.TotalValue,
                     ChangeVector = counter.ChangeVector
                 };
 
-                var countersCount = _cmd.Add(counter.DocumentId, counterOp, out var isNew);
-                if (isNew)
-                    _docCount++;
-
-                if (countersCount > _countersPerDoc)
-                {
-                    _countersPerDoc = countersCount;
-                }
+                _listSize = _cmd.Add(counter.DocumentId, counterOp);
             }
 
             public void WriteCounter(CounterDetail counterDetail)
@@ -1190,7 +1176,7 @@ namespace Raven.Server.Smuggler.Documents
 
             private void HandleBatchOfCountersIfNecessary()
             {
-                if (_docCount < MaxDocumentCount && _countersPerDoc < MaxCountersPerDocument)
+                if (_listSize < MaxListCount)
                     return;
 
                 var prevCommand = _prevCommand;
@@ -1210,8 +1196,7 @@ namespace Raven.Server.Smuggler.Documents
                     HasWrites = true
                 };
 
-                _docCount = 0;
-                _countersPerDoc = 0;
+                _listSize = 0;
             }
 
             private void FinishBatchOfCounters()
@@ -1222,7 +1207,7 @@ namespace Raven.Server.Smuggler.Documents
                     _prevCommand = null;
                 }
 
-                if (_docCount > 0)
+                if (_listSize > 0)
                 {
                     AsyncHelpers.RunSync(() => _database.TxMerger.Enqueue(_cmd));
                 }
