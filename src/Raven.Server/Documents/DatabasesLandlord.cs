@@ -70,7 +70,7 @@ namespace Raven.Server.Documents
                 if (record == null)
                 {
                     // was removed, need to make sure that it isn't loaded
-                    UnloadDatabase(databaseName);
+                    UnloadDatabase(databaseName, true);
                     return;
                 }
 
@@ -168,7 +168,32 @@ namespace Raven.Server.Documents
             }
         }
 
-        private void UnloadDatabase(string databaseName)
+        private void UnloadDatabase(string databaseName, bool dbRecordIsNull = false)
+        {
+            if (dbRecordIsNull)
+            {
+                UnloadDatabaseInternal(databaseName);
+                return;
+            }
+
+            if (DatabasesCache.TryGetValue(databaseName, out var databaseTask) == false)
+            {
+                // database was already unloaded or deleted
+                return;
+            }
+
+            if (databaseTask.IsCompleted == false)
+            {
+                // This case is when an unload was issued prior to the actual loading of a database.
+                databaseTask.ContinueWith(t => { UnloadDatabaseInternal(databaseName); });
+            }
+            else
+            {
+                UnloadDatabaseInternal(databaseName);
+            }
+        }
+
+        private void UnloadDatabaseInternal(string databaseName)
         {
             try
             {
@@ -177,6 +202,13 @@ namespace Raven.Server.Documents
             catch (AggregateException ae) when (nameof(DeleteDatabase).Equals(ae.InnerException.Data["Source"]))
             {
                 // this is already in the process of being deleted, we can just exit and let the other thread handle it
+            }
+            catch (Exception e)
+            {
+                if (_logger.IsInfoEnabled)
+                {
+                    _logger.Info($"Failed to unload the database '{databaseName}'.", e);
+                }
             }
         }
 
@@ -426,6 +458,12 @@ namespace Raven.Server.Documents
                 return task != null && task.IsCompletedSuccessfully;
 
             return false;
+        }
+
+        public bool DatabaseRecordExists(string databaseName)
+        {
+            var record = _serverStore.LoadDatabaseRecord(databaseName, out _);
+            return record != null;
         }
 
         public Task<DocumentDatabase> TryGetOrCreateResourceStore(StringSegment databaseName, bool ignoreDisabledDatabase = false)
