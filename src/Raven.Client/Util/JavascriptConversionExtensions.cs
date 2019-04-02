@@ -1191,9 +1191,9 @@ namespace Raven.Client.Util
         public class TransparentIdentifierSupport : JavascriptConversionExtension
         {
             private bool _doNotIgnore;
-            private int _minSuffixToNotIgnore;
+            private int _maxSuffixToNotIgnore = -1;
 
-            private int ParseTransparentIdentifierSuffix(string name)
+            private static int ParseTransparentIdentifierSuffix(string name)
             {
                 var substr = name.Substring(TransparentIdentifier.Length);
                 int.TryParse(substr, out var suffix);
@@ -1208,7 +1208,13 @@ namespace Raven.Client.Util
                 {
                     _doNotIgnore = true;
 
-                    _minSuffixToNotIgnore = ParseTransparentIdentifierSuffix(lambdaExpression.Parameters[0].Name);
+                    var oldMaxSuffix = _maxSuffixToNotIgnore;
+                    var suffix = ParseTransparentIdentifierSuffix(lambdaExpression.Parameters[0].Name);
+
+                    if (suffix > _maxSuffixToNotIgnore)
+                    {
+                        _maxSuffixToNotIgnore = suffix;
+                    }
 
                     context.PreventDefault();
 
@@ -1223,6 +1229,8 @@ namespace Raven.Client.Util
 
                     }
 
+                    _maxSuffixToNotIgnore = oldMaxSuffix;
+
                     return;
                 }
 
@@ -1236,6 +1244,8 @@ namespace Raven.Client.Util
                     {
                         writer.Write(p.Name.Replace(TransparentIdentifier, DefaultAliasPrefix));
                     }
+
+                    return;
                 }
 
                 if (!(context.Node is MemberExpression member))
@@ -1252,7 +1262,7 @@ namespace Raven.Client.Util
                         if (_doNotIgnore)
                         {
                             var suffix = ParseTransparentIdentifierSuffix(innerMember.Member.Name);
-                            if (suffix <= _minSuffixToNotIgnore)
+                            if (suffix <= _maxSuffixToNotIgnore)
                             {
                                 context.Visitor.Visit(innerMember);
                                 writer.Write(".");
@@ -1273,6 +1283,7 @@ namespace Raven.Client.Util
                         writer.Write(name);
                     }
 
+                    return;
                 }
 
                 if (member.Expression is ParameterExpression parameter && parameter.Name.StartsWith(TransparentIdentifier))
@@ -1287,7 +1298,7 @@ namespace Raven.Client.Util
                         if (_doNotIgnore)
                         {
                             var suffix = ParseTransparentIdentifierSuffix(parameter.Name);
-                            if (suffix <= _minSuffixToNotIgnore)
+                            if (suffix <= _maxSuffixToNotIgnore)
                             {
                                 writer.Write(parameter.Name.Replace(TransparentIdentifier, DefaultAliasPrefix));
                                 writer.Write(".");
