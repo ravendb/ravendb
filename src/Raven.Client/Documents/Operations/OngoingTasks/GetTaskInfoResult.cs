@@ -66,11 +66,25 @@ namespace Raven.Client.Documents.Operations.OngoingTasks
         }
 
         public string Query { get; set; }
+        public string SubscriptionName { get; set; }
+        public long SubscriptionId { get; set; }
+        public string MentorNode { get; set; }
+        public string ChangeVectorForNextBatchStartingPoint { get; set; }
+        public DateTime? LastBatchAckTime { get; set; }
+        public bool Disabled { get; set; }
+        public DateTime? LastClientConnectionTime { get; set; }
 
         public override DynamicJsonValue ToJson()
         {
             var json = base.ToJson();
             json[nameof(Query)] = Query;
+            json[nameof(SubscriptionName)] = SubscriptionName;
+            json[nameof(SubscriptionId)] = SubscriptionId;
+            json[nameof(MentorNode)] = MentorNode;
+            json[nameof(ChangeVectorForNextBatchStartingPoint)] = ChangeVectorForNextBatchStartingPoint;
+            json[nameof(LastBatchAckTime)] = LastBatchAckTime;
+            json[nameof(Disabled)] = Disabled;
+            json[nameof(LastClientConnectionTime)] = LastClientConnectionTime;
             return json;
         }
     }

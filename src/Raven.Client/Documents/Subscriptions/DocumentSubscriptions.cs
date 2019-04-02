@@ -39,7 +39,8 @@ namespace Raven.Client.Documents.Subscriptions
             return Create(EnsureCriteria(new SubscriptionCreationOptions
             {
                 Name = options.Name,
-                ChangeVector = options.ChangeVector
+                ChangeVector = options.ChangeVector,
+                MentorNode = options.MentorNode
             }, options.Filter, options.Projection), database);
 
         }
