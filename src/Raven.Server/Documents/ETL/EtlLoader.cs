@@ -79,7 +79,7 @@ namespace Raven.Server.Documents.ETL
                     }
                 }
 
-                var ensureUniqueConfigurationNames = _uniqueConfigurationNames.ToHashSet();
+                var ensureUniqueConfigurationNames = _uniqueConfigurationNames.ToHashSet(StringComparer.OrdinalIgnoreCase);
 
                 var newProcesses = new List<EtlProcess>();
                 if (newRavenDestinations != null && newRavenDestinations.Count > 0)
