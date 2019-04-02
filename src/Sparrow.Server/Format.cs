@@ -10,7 +10,7 @@ namespace Sparrow.Server
     {
         // PERF: Separated this code on purpose because I intend to optimize this further on vNext.
         //       Similar code with extended functionality should be moved here to have the same treatment.
-        //       http://issues.hibernatingrhinos.com/issue/RavenDB-9588
+        //       https://issues.hibernatingrhinos.com/issue/RavenDB-9588
 
         public static class Backwards
         {

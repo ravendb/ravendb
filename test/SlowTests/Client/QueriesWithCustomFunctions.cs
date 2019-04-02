@@ -2651,7 +2651,7 @@ from Orders as o select output(o)", complexLinqQuery.ToString());
         [Fact]
         public void Can_project_id_property_to_any_name()
         {
-            //http://issues.hibernatingrhinos.com/issue/RavenDB-9260
+            //https://issues.hibernatingrhinos.com/issue/RavenDB-9260
 
             using (var store = GetDocumentStore())
             {
@@ -3461,7 +3461,7 @@ from Orders as o load o.Company as company, company.EmployeesIds as _docs_1[] se
         [Fact]
         public void CanProjectWithEnumerableCount()
         {               
-            //http://issues.hibernatingrhinos.com/issue/RDBC-99
+            //https://issues.hibernatingrhinos.com/issue/RDBC-99
             
             using (var store = GetDocumentStore())
             {

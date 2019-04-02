@@ -20,7 +20,7 @@ namespace SlowTests.Issues
             /*
              * Purpose of this test is to detect unexpected links change on ravendb.net page.
              * 
-             * In http://issues.hibernatingrhinos.com/issue/RavenDB-3620 we introduce few links in studio:
+             * In https://issues.hibernatingrhinos.com/issue/RavenDB-3620 we introduce few links in studio:
              * 
              * - contact us
              * - support

@@ -680,7 +680,7 @@ namespace SlowTests.Server.Documents.PeriodicBackup
         [Fact, Trait("Category", "Smuggler")]
         public async Task periodic_backup_should_export_starting_from_last_etag()
         {
-            //http://issues.hibernatingrhinos.com/issue/RavenDB-11395
+            //https://issues.hibernatingrhinos.com/issue/RavenDB-11395
 
             var backupPath = NewDataPath(suffix: "BackupFolder");
             using (var store = GetDocumentStore())

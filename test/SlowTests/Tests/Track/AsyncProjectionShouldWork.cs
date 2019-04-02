@@ -10,7 +10,7 @@ namespace SlowTests.Tests.Track
 {
     /// <summary>
     /// Issue RavenDB-191
-    /// http://issues.hibernatingrhinos.com/issue/RavenDB-191
+    /// https://issues.hibernatingrhinos.com/issue/RavenDB-191
     /// </summary>
     public class AsyncProjectionShouldWork : RavenTestBase
     {

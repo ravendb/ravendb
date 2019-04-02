@@ -30,7 +30,7 @@ namespace SlowTests.Issues
             // a new version of JSON.Net, which can revert a modification that we made to the code
             // Look at the other changes that happened in this commit (see the git log for that)
             // And at any rate, the full explanation, including the full reasoning is here:
-            // http://issues.hibernatingrhinos.com/issue/RavenDB-3931
+            // https://issues.hibernatingrhinos.com/issue/RavenDB-3931
             //
             // Don't try to fix this issue without reading the details, it is a single line fix, but it
             // takes time to get to the right reason
