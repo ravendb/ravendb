@@ -89,7 +89,7 @@ namespace RachisTests.DatabaseCluster
             }
         }
 
-        [Fact]
+        [Fact(Skip = "RavenDB-13325")]
         public async Task ReconnectRemovedNodeWithOneDatabase()
         {
             // BAD IDEA - we lose the database!
@@ -116,7 +116,7 @@ namespace RachisTests.DatabaseCluster
             }
         }
 
-        [Fact]
+        [Fact(Skip = "RavenDB-13325")]
         public async Task BootstrapRemovedNodeWithOneDatabase()
         {
             var dbName = GetDatabaseName();
