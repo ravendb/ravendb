@@ -115,7 +115,7 @@ namespace SlowTests.Authentication
             }
         }
 
-        [Fact]
+        [Fact(Skip = "https://github.com/dotnet/corefx/issues/30691")]
         public async Task CanReplaceClusterCertWithExtensionPoint()
         {
             string script;
