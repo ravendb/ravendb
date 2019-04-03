@@ -148,9 +148,9 @@ namespace SlowTests.Voron.PalTest
         {
             var basicPath = NewDataPath(forceCreateDir: true);
             
-            var linkTarget = Path.Combine(basicPath, "linkTarget");
+            var linkTarget = Path.Combine(basicPath, "brokentarget");
             
-            var link = Path.Combine(basicPath, "l");
+            var link = Path.Combine(basicPath, "brokenlink");
             symlink(linkTarget, link);
 
             var filePath = Path.Combine(link, $"test_journal.{Guid.NewGuid()}");
@@ -172,7 +172,7 @@ namespace SlowTests.Voron.PalTest
                 }
             });
                  
-            Assert.Equal(ret, PalFlags.FailCodes.FailBrokenLink);
+            Assert.Equal(PalFlags.FailCodes.FailBrokenLink, ret);
         }
         
         private const string LIBC_6 = "libc";
