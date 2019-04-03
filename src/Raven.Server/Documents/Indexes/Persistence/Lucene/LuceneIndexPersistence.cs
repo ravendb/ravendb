@@ -116,16 +116,26 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene
                 {
                     var reader = _lastReader;
 
+                    if (reader != null)
+                    {
+                        try
+                        {
+                            var newReader = reader.Reopen(state);
+                            if (newReader != reader)
+                                reader.DecRef(state);
+
+                            reader = _lastReader = newReader;
+                        }
+                        catch (Exception)
+                        {
+                            // fallback strategy in case of a reader to be closed
+                            // before Reopen and DecRef
+                            reader = null;
+                        }
+                    }
+
                     if (reader == null)
                         reader = _lastReader = IndexReader.Open(_directory, readOnly: true, state);
-                    else
-                    {
-                        var newReader = reader.Reopen(state);
-                        if (newReader != reader)
-                            reader.DecRef(state);
-
-                        reader = _lastReader = newReader;
-                    }
 
                     reader.IncRef();
 
