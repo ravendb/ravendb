@@ -13,6 +13,7 @@ using Raven.Server.Documents.Indexes.Persistence.Lucene.Documents;
 using Raven.Server.Exceptions;
 using Raven.Server.Indexing;
 using Sparrow.Json;
+using Sparrow.Logging;
 using Sparrow.Threading;
 using Voron;
 using Voron.Impl;
@@ -47,10 +48,12 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene
         private bool _initialized;
         private readonly Dictionary<string, IndexField> _fields;
         private IndexReader _lastReader;
+        private readonly Logger _logger;
 
         public LuceneIndexPersistence(Index index)
         {
             _index = index;
+            _logger = LoggingSource.Instance.GetLogger<LuceneIndexPersistence>(index.DocumentDatabase.Name);
             _suggestionsDirectories = new Dictionary<string, LuceneVoronDirectory>();
             _suggestionsIndexSearcherHolders = new Dictionary<string, IndexSearcherHolder>();
             _disposeOnce = new DisposeOnce<SingleAttempt>(() =>
@@ -126,10 +129,13 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene
 
                             reader = _lastReader = newReader;
                         }
-                        catch (Exception)
+                        catch (Exception e)
                         {
+                            if (_logger.IsInfoEnabled)
+                                _logger.Info($"Could not reopen the index reader for index '{_index.Name}'.", e);
+
                             // fallback strategy in case of a reader to be closed
-                            // before Reopen and DecRef
+                            // before Reopen and DecRef are executed
                             reader = null;
                         }
                     }
