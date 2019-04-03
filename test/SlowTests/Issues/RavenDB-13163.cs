@@ -74,34 +74,6 @@ namespace SlowTests.Issues
         }
 
         [Fact]
-        public void ShouldThrowIfSizeOfCounterNamePlusSizeOfDocIdIsTooBig()
-        {
-            using (var store = GetDocumentStore())
-            {
-                var docId = new string('z', DocumentIdWorker.MaxIdSize - 1);
-                var counterName = "aa";
-
-                using (var session = store.OpenSession())
-                {
-                    session.Store(new User(), docId);
-                    // should not throw
-                    session.SaveChanges();
-                }
-
-                using (var session = store.OpenSession())
-                {
-                    session.CountersFor(docId).Increment(counterName);
-
-                    var ex = Assert.Throws<RavenException>(() => session.SaveChanges());
-
-                    Assert.Contains($"Size of counter name + size of document Id cannot exceed {DocumentIdWorker.MaxIdSize} bytes", ex.Message);
-                }
-
-            }
-
-        }
-
-        [Fact]
         public void ShouldThrowOnAttachmentNameTooBig()
         {
             using (var store = GetDocumentStore())
@@ -120,31 +92,6 @@ namespace SlowTests.Issues
                 {
                     Assert.Throws<RavenException>(() =>
                         store.Operations.Send(new PutAttachmentOperation("users/1", longName, stream)));
-                }
-            }
-
-        }
-
-        [Fact]
-        public void ShouldThrowIfSizeOfAttachmentNamePlusSizeOfDocIdIsTooBig()
-        {
-            using (var store = GetDocumentStore())
-            {
-                var docId = new string('z', DocumentIdWorker.MaxIdSize - 1);
-                var attachmentName = "aa";
-
-                using (var session = store.OpenSession())
-                {
-                    session.Store(new User(), docId);
-                    session.SaveChanges();
-                }
-
-                using (var stream = new MemoryStream(new byte[] { 1, 2, 3 }))
-                {
-                    var ex = Assert.Throws<RavenException>(() =>
-                        store.Operations.Send(new PutAttachmentOperation(docId, attachmentName, stream)));
-
-                    Assert.Contains($"Size of attachment name + size of document Id cannot exceed {DocumentIdWorker.MaxIdSize} bytes", ex.Message);
                 }
             }
 

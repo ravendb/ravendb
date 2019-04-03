@@ -10,7 +10,6 @@ using Raven.Client.Exceptions;
 using Raven.Server.Documents.Replication;
 using Raven.Client.Exceptions.Documents;
 using Raven.Client.Exceptions.Documents.Indexes;
-using Raven.Server.Exceptions;
 using Raven.Server.ServerWide.Context;
 using Raven.Server.Utils;
 using Voron;
@@ -153,11 +152,6 @@ namespace Raven.Server.Documents
             {
                 DocumentPutAction.ThrowRequiresTransaction();
                 Debug.Assert(false);// never hit
-            }
-
-            if (documentId.Length + name.Length > DocumentIdWorker.MaxIdSize)
-            {
-                ThrowStorageKeyTooBig(documentId, name);
             }
 
             // Attachment etag should be generated before updating the document
@@ -808,12 +802,6 @@ namespace Raven.Server.Documents
             {
                 ExpectedChangeVector = expectedChangeVector
             };
-        }
-
-        private static void ThrowStorageKeyTooBig(string docId, string attachmentName)
-        {
-            throw new KeyTooBigException(
-                $"Cannot put attachment '{attachmentName}' on document '{docId}'. Size of attachment name + size of document Id cannot exceed {DocumentIdWorker.MaxIdSize} bytes.");
         }
 
         public AttachmentDetails CopyAttachment(DocumentsOperationContext context, string documentId, string name, string destinationId, string destinationName, LazyStringValue changeVector, AttachmentType attachmentType)
