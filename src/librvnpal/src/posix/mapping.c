@@ -50,7 +50,7 @@ rvn_create_and_mmap64_file(
     int32_t rc = SUCCESS;
 
     assert(path);
-    assert(path[0] == '\0');
+    assert(path[0] != '\0');
     assert(initial_file_size > 0);
 
     struct map_file_handle *mfh = calloc(1, sizeof(struct map_file_handle));
