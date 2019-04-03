@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Text;
+using Raven.Server.Exceptions;
 using Raven.Server.ServerWide;
 using Raven.Server.ServerWide.Context;
 using Sparrow.Json;
@@ -23,7 +24,7 @@ namespace Raven.Server.Documents
         }
 
         public static ByteStringContext.ExternalScope GetSliceFromId<TTransaction>(
-            TransactionOperationContext<TTransaction> context, string id, out Slice idSlice, 
+            TransactionOperationContext<TTransaction> context, string id, out Slice idSlice,
             byte? separator = null)
             where TTransaction : RavenTransaction
         {
@@ -33,7 +34,7 @@ namespace Raven.Server.Documents
             _jsonParserState.Reset();
 
             var strLength = id.Length;
-          
+
             var maxStrSize = Encoding.GetMaxByteCount(strLength);
             var escapePositionsSize = JsonParserState.FindEscapePositionsMaxSize(id);
 
@@ -44,7 +45,7 @@ namespace Raven.Server.Documents
                 maxStrSize  // this buffer is allocated to also serve the GetSliceFromUnicodeKey
                 + sizeof(char) * id.Length
                 + escapePositionsSize
-                + (separator != null ? 1 : 0) );
+                + (separator != null ? 1 : 0));
 
             for (var i = 0; i < id.Length; i++)
             {
@@ -83,7 +84,7 @@ namespace Raven.Server.Documents
                 for (var i = 0; i < key.Length; i++)
                     destChars[i] = char.ToLowerInvariant(pChars[i]);
 
-                var keyBytes = buffer + key.Length * sizeof(char) ;
+                var keyBytes = buffer + key.Length * sizeof(char);
 
                 var size = Encoding.GetBytes(destChars, key.Length, keyBytes, byteCount);
 

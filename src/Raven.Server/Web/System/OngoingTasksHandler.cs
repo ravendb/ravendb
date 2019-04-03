@@ -6,6 +6,7 @@ using System.Net;
 using System.Security.Cryptography.X509Certificates;
 using System.Threading.Tasks;
 using NCrontab.Advanced;
+using Raven.Client.Documents.Commands;
 using Raven.Client.Documents.Operations.Backups;
 using Raven.Client.Documents.Operations.ConnectionStrings;
 using Raven.Client.Documents.Operations.ETL;
@@ -15,6 +16,7 @@ using Raven.Client.Documents.Operations.Replication;
 using Raven.Client.Documents.Subscriptions;
 using Raven.Client.Exceptions;
 using Raven.Client.Exceptions.Database;
+using Raven.Client.Exceptions.Documents.Subscriptions;
 using Raven.Client.Json.Converters;
 using Raven.Client.Http;
 using Raven.Client.ServerWide;
@@ -1095,9 +1097,14 @@ namespace Raven.Server.Web.System
                             break;
 
                         case OngoingTaskType.Subscription:
-
-                            var nameKey = GetQueryStringValueAndAssertIfSingleAndNotEmpty("taskName");
-                            var itemKey = SubscriptionState.GenerateSubscriptionItemKeyName(record.DatabaseName, nameKey);
+                            string itemKey;
+                            if (name == null)
+                            {
+                                name = Database.SubscriptionStorage.GetSubscriptionNameById(context, key);
+                                if (name == null)
+                                    throw new SubscriptionDoesNotExistException($"Subscription with id {key} was not found in server store");
+                            }
+                            itemKey = SubscriptionState.GenerateSubscriptionItemKeyName(record.DatabaseName, name);
                             var doc = ServerStore.Cluster.Read(context, itemKey);
                             if (doc == null)
                             {
@@ -1107,9 +1114,9 @@ namespace Raven.Server.Web.System
 
                             var subscriptionState = JsonDeserializationClient.SubscriptionState(doc);
                             var tag = Database.WhoseTaskIsIt(record.Topology, subscriptionState, subscriptionState);
-
-                            var subscriptionStateInfo = new SubscriptionStateWithNodeDetails
+                            var subscriptionStateInfo = new OngoingTaskSubscription
                             {
+                                TaskName = subscriptionState.SubscriptionName,
                                 Query = subscriptionState.Query,
                                 ChangeVectorForNextBatchStartingPoint = subscriptionState.ChangeVectorForNextBatchStartingPoint,
                                 SubscriptionId = subscriptionState.SubscriptionId,
@@ -1127,7 +1134,7 @@ namespace Raven.Server.Web.System
 
                             // Todo: here we'll need to talk with the running node? TaskConnectionStatus = subscriptionState.Disabled ? OngoingTaskConnectionStatus.NotActive : OngoingTaskConnectionStatus.Active,
 
-                            WriteResult(context, subscriptionStateInfo.ToJson());
+                            WriteResult(context, subscriptionStateInfo);
                             break;
                        
                         default:

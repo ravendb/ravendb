@@ -90,7 +90,7 @@ namespace SlowTests.Issues
 
                 using (var stream = new MemoryStream(new byte[] { 1, 2, 3 }))
                 {
-                    Assert.Throws<RavenException>(() => 
+                    Assert.Throws<RavenException>(() =>
                         store.Operations.Send(new PutAttachmentOperation("users/1", longName, stream)));
                 }
             }

@@ -19,6 +19,8 @@ class confirmViewModelBase<T extends confirmDialogResult> extends dialogViewMode
     }
 
     deactivate(args: any) {
+        super.deactivate(args);
+        
         if (!this.alreadyResolved) {
             this.result.resolve(this.prepareResponse(false));
         }

@@ -304,6 +304,13 @@ class patch extends viewModelBase {
             }
         }
     }
+    
+    detached() {
+        super.detached();
+        
+        // clean up virtual view - unbind subscriptions
+        this.test.detached();
+    }
 
     private savePatchToStorage() {
         this.patchDocument().name(this.patchSaveName());
