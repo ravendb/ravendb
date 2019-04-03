@@ -565,7 +565,6 @@ namespace Voron.Impl.Journal
                     if (_waj._env.Disposed)
                         return;
 
-
                     var jrnls = GetJournalSnapshots();
 
                     if (jrnls.Count == 0)
@@ -581,6 +580,8 @@ namespace Voron.Impl.Journal
 
                     long lastFlushedTransactionId = -1;
 
+                    // RavenDB-13302: we need to force a re-check this before we make decisions here
+                    _waj._env.ActiveTransactions.RecheckOldestTransaction();
                     long oldestActiveTransaction = _waj._env.ActiveTransactions.OldestTransaction;
 
                     foreach (var journalFile in jrnls)
