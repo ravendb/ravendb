@@ -5,6 +5,7 @@
 // -----------------------------------------------------------------------
 
 using System;
+using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
@@ -14,19 +15,16 @@ using System.Threading;
 using System.Threading.Tasks;
 using FastTests.Server.Replication;
 using Raven.Client.Documents;
-using Raven.Client.Documents.Operations;
-using Raven.Client.Documents.Operations.ConnectionStrings;
-using Raven.Client.Documents.Operations.ETL;
-using Raven.Client.Documents.Operations.OngoingTasks;
 using Raven.Client.Documents.Operations.Replication;
-using Raven.Client.Documents.Replication;
 using Raven.Client.ServerWide;
 using Raven.Client.ServerWide.Operations;
 using Raven.Client.ServerWide.Operations.Certificates;
+using Raven.Server.Config;
 using Raven.Server.Utils;
 using Raven.Tests.Core.Utils.Entities;
 using Sparrow.Json;
-using Tests.Infrastructure;
+using Sparrow.Platform;
+using Sparrow.Utils;
 using Xunit;
 
 namespace SlowTests.Authentication
@@ -107,6 +105,181 @@ namespace SlowTests.Authentication
                 Assert.True(mre.Wait(Debugger.IsAttached ? TimeSpan.FromMinutes(10) : TimeSpan.FromMinutes(2)), "Waited too long");
                 Assert.NotNull(leader.Certificate.Certificate.Thumbprint);
                 Assert.True(leader.Certificate.Certificate.Thumbprint.Equals(newServerCert.Thumbprint), "New cert is identical");
+
+                using (var session = store.OpenSession())
+                {
+                    var user1 = session.Load<User>("users/1");
+                    Assert.NotNull(user1);
+                    Assert.Equal("Karmelush", user1.Name);
+                }
+            }
+        }
+
+        [Fact]
+        public async Task CanReplaceClusterCertWithExtensionPoint()
+        {
+            string script;
+            IDictionary<string, string> customSettings1 = new ConcurrentDictionary<string, string>();
+            IDictionary<string, string> customSettings2 = new ConcurrentDictionary<string, string>();
+            IDictionary<string, string> customSettings3 = new ConcurrentDictionary<string, string>();
+            
+            var certPath = GenerateAndSaveSelfSignedCertificate();
+            var cert2Path = GenerateAndSaveSelfSignedCertificate(createNew: true);
+            var outputFile = Path.Combine(Path.GetTempPath(), Path.ChangeExtension(Guid.NewGuid().ToString(), ".txt"));
+
+            var firstServerCert = new X509Certificate2(certPath, (string)null, X509KeyStorageFlags.Exportable | X509KeyStorageFlags.MachineKeySet);
+            var newServerCert = new X509Certificate2(cert2Path, (string)null, X509KeyStorageFlags.Exportable | X509KeyStorageFlags.MachineKeySet);
+            
+            if (PlatformDetails.RunningOnPosix)
+            {
+                var script1Path = Path.Combine(Path.GetTempPath(), Path.ChangeExtension(Guid.NewGuid().ToString(), ".sh"));
+                var script2Path = Path.Combine(Path.GetTempPath(), Path.ChangeExtension(Guid.NewGuid().ToString(), ".sh"));
+                var script3Path = Path.Combine(Path.GetTempPath(), Path.ChangeExtension(Guid.NewGuid().ToString(), ".sh"));
+
+                var args1 = CommandLineArgumentEscaper.EscapeAndConcatenate(new List<string> { script1Path, certPath, cert2Path, outputFile });
+                var args2 = CommandLineArgumentEscaper.EscapeAndConcatenate(new List<string> { script2Path, certPath, cert2Path, outputFile });
+                var args3 = CommandLineArgumentEscaper.EscapeAndConcatenate(new List<string> { script3Path, certPath, cert2Path, outputFile });
+
+                customSettings1[RavenConfiguration.GetKey(x => x.Security.CertificateExec)] = "bash";
+                customSettings1[RavenConfiguration.GetKey(x => x.Security.CertificateExecArguments)] = $"{args1}";
+
+                customSettings2[RavenConfiguration.GetKey(x => x.Security.CertificateExec)] = "bash";
+                customSettings2[RavenConfiguration.GetKey(x => x.Security.CertificateExecArguments)] = $"{args2}";
+
+                customSettings3[RavenConfiguration.GetKey(x => x.Security.CertificateExec)] = "bash";
+                customSettings3[RavenConfiguration.GetKey(x => x.Security.CertificateExecArguments)] = $"{args3}";
+
+                script = "#!/bin/bash\r\nif [ $4 == \"Load\" ]; then\r\n\tcat -u $1\r\nelse if [ $4 == \"Renew\" ]; then\r\n\tcat -u $2\r\nelse if [ $4 == \"CertificateChanged\" ]; then\r\n\techo \"$5\" >> $3\r\nfi";
+
+                File.WriteAllText(script1Path, script);
+                File.WriteAllText(script2Path, script);
+                File.WriteAllText(script3Path, script);
+                Process.Start("chmod", $"700 {script1Path}");
+                Process.Start("chmod", $"700 {script2Path}");
+                Process.Start("chmod", $"700 {script3Path}");
+            }
+            else
+            {
+                var script1Path = Path.Combine(Path.GetTempPath(), Path.ChangeExtension(Guid.NewGuid().ToString(), ".ps1"));
+                var script2Path = Path.Combine(Path.GetTempPath(), Path.ChangeExtension(Guid.NewGuid().ToString(), ".ps1"));
+                var script3Path = Path.Combine(Path.GetTempPath(), Path.ChangeExtension(Guid.NewGuid().ToString(), ".ps1"));
+                var args1 = CommandLineArgumentEscaper.EscapeAndConcatenate(new List<string> { "-NoProfile", script1Path, certPath, cert2Path, outputFile });
+                var args2 = CommandLineArgumentEscaper.EscapeAndConcatenate(new List<string> { "-NoProfile", script2Path, certPath, cert2Path, outputFile });
+                var args3 = CommandLineArgumentEscaper.EscapeAndConcatenate(new List<string> { "-NoProfile", script3Path, certPath, cert2Path, outputFile });
+                
+                customSettings1[RavenConfiguration.GetKey(x => x.Security.CertificateExec)] = "powershell";
+                customSettings1[RavenConfiguration.GetKey(x => x.Security.CertificateExecArguments)] = $"{args1}";
+                customSettings1[RavenConfiguration.GetKey(x => x.Core.ServerUrls)] = "https://" + Environment.MachineName + ":0";
+
+                customSettings2[RavenConfiguration.GetKey(x => x.Security.CertificateExec)] = "powershell";
+                customSettings2[RavenConfiguration.GetKey(x => x.Security.CertificateExecArguments)] = $"{args2}";
+                customSettings2[RavenConfiguration.GetKey(x => x.Core.ServerUrls)] = "https://" + Environment.MachineName + ":0";
+
+                customSettings3[RavenConfiguration.GetKey(x => x.Security.CertificateExec)] = "powershell";
+                customSettings3[RavenConfiguration.GetKey(x => x.Security.CertificateExecArguments)] = $"{args3}";
+                customSettings3[RavenConfiguration.GetKey(x => x.Core.ServerUrls)] = "https://" + Environment.MachineName + ":0";
+
+                script = @"param([string]$userArg1, [string]$userArg2, [string]$userArg3, [string]$type, [string]$newCert)
+try {
+    if($type -eq ""CertificateChanged""){
+        Add-Content $userArg3 $newCert
+    }
+    elseif($type -eq ""Load""){
+        $bytes = Get-Content -path $userArg1 -encoding Byte
+        $stdout = [System.Console]::OpenStandardOutput()
+        $stdout.Write($bytes, 0, $bytes.Length)
+    }
+    elseif($type -eq ""Renew""){
+        $bytes = Get-Content -path $userArg2 -encoding Byte
+        $stdout = [System.Console]::OpenStandardOutput()
+        $stdout.Write($bytes, 0, $bytes.Length)
+    }    
+}
+catch {
+    Write-Error $_.Exception
+    exit 1
+}
+exit 0";
+                
+                File.WriteAllText(script1Path, script);
+                File.WriteAllText(script2Path, script); 
+                File.WriteAllText(script3Path, script);
+            }
+
+            var clusterSize = 3;
+            var databaseName = GetDatabaseName();
+            var leader = await CreateRaftClusterAndGetLeader(clusterSize, false, useSsl: true, customSettingsList: new List<IDictionary<string, string>>{customSettings1, customSettings2, customSettings3});
+
+            Assert.True(leader?.Certificate?.Certificate?.Thumbprint?.Equals(firstServerCert.Thumbprint), "Cert is identical");
+            
+            var adminCertificate = AskServerForClientCertificate(certPath, new Dictionary<string, DatabaseAccess>(), SecurityClearance.ClusterAdmin, server: leader);
+
+            DatabasePutResult databaseResult;
+            using (var store = new DocumentStore
+            {
+                Urls = new[] { leader.WebUrl },
+                Database = databaseName,
+                Certificate = adminCertificate,
+                Conventions =
+                {
+                    DisableTopologyUpdates = true
+                }
+            }.Initialize())
+            {
+                var doc = new DatabaseRecord(databaseName);
+                databaseResult = await store.Maintenance.Server.SendAsync(new CreateDatabaseOperation(doc, clusterSize));
+            }
+
+            Assert.Equal(clusterSize, databaseResult.Topology.AllNodes.Count());
+            foreach (var server in Servers)
+            {
+                await server.ServerStore.Cluster.WaitForIndexNotification(databaseResult.RaftCommandIndex);
+            }
+
+            foreach (var server in Servers.Where(s => databaseResult.NodesAddedTo.Any(n => n == s.WebUrl)))
+            {
+                await server.ServerStore.DatabasesLandlord.TryGetOrCreateResourceStore(databaseName);
+            }
+
+            using (var store = new DocumentStore()
+            {
+                Urls = new[] { databaseResult.NodesAddedTo[0] },
+                Database = databaseName,
+                Certificate = adminCertificate,
+                Conventions =
+                {
+                    DisableTopologyUpdates = true
+                }
+            }.Initialize())
+            {
+                using (var session = store.OpenAsyncSession())
+                {
+                    await session.StoreAsync(new User { Name = "Karmelush" }, "users/1");
+                    await session.SaveChangesAsync();
+                }
+
+                var mre = new ManualResetEventSlim();
+
+                leader.ServerCertificateChanged += (sender, args) => mre.Set();
+
+                // This will initiate the refresh cycle, and ask a new certificate from the executable 
+                leader.RefreshClusterCertificate(false);
+
+                Assert.True(mre.Wait(Debugger.IsAttached ? TimeSpan.FromMinutes(10) : TimeSpan.FromMinutes(2)), "Waited too long");
+                Assert.NotNull(leader.Certificate.Certificate.Thumbprint);
+                Assert.True(leader.Certificate.Certificate.Thumbprint.Equals(newServerCert.Thumbprint), "New cert is identical");
+
+                var base64NewCertWrittenByExecutable = File.ReadAllLines(outputFile)[0];
+
+                var loadedCertificate = new X509Certificate2(Convert.FromBase64String(base64NewCertWrittenByExecutable));
+                Console.WriteLine("base64NewCertWrittenByExecutable thumb:" + loadedCertificate.Thumbprint);
+                Console.WriteLine("base64NewCertWrittenByExecutable base64:" + base64NewCertWrittenByExecutable);
+                
+
+                Assert.Equal(newServerCert.Thumbprint, loadedCertificate.Thumbprint);
+
+                //var base64NewCert = Convert.ToBase64String(newServerCert.Export(X509ContentType.Pfx));
+                //Assert.Equal(base64NewCert, base64NewCertWrittenByExecutable);
 
                 using (var session = store.OpenSession())
                 {

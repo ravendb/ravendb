@@ -484,90 +484,21 @@ namespace Raven.Server
                     return;
                 }
 
-                if (Configuration.Core.SetupMode != SetupMode.LetsEncrypt)
-                    return;
-
                 if (ServerStore.IsLeader() == false)
                     return;
 
-                if (ClusterCommandsVersionManager.ClusterCommandsVersions.TryGetValue(nameof(ConfirmServerCertificateReplacedCommand), out var commandVersion) == false)
-                    throw new InvalidOperationException($"Failed to get the command version of '{nameof(ConfirmServerCertificateReplacedCommand)}'.");
+                byte[] newCertBytes = null;
 
-                if (ClusterCommandsVersionManager.CurrentClusterMinimalVersion < commandVersion)
-                    throw new ClusterNodesVersionMismatchException("It is not possible to refresh/replace the cluster certificate in the current cluster topology. Please make sure that all the cluster nodes have an equal or newer version than the command version." +
-                                                                   $"Cluster Version: {ClusterCommandsVersionManager.CurrentClusterMinimalVersion}, Command Version: {commandVersion}.");
-
-                // we need to see if there is already an ongoing process
-                using (ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
-                using (context.OpenReadTransaction())
+                if (Configuration.Core.SetupMode == SetupMode.LetsEncrypt)
                 {
-                    var certUpdate = ServerStore.Cluster.GetItem(context, CertificateReplacement.CertificateReplacementDoc);
-                    if (certUpdate != null)
-                    {
-                        if (certUpdate.TryGet(nameof(CertificateReplacement.Confirmations), out int confirmations) == false)
-                            throw new InvalidOperationException($"Expected to get '{nameof(CertificateReplacement.Confirmations)}' count");
-
-                        var nodesInCluster = ServerStore.GetClusterTopology(context).AllNodes.Count;
-                        if (nodesInCluster > confirmations)
-                        {
-                            // we are already in the process of updating the certificate, so we need
-                            // to nudge all the nodes in the cluster to check the replacement state.
-                            // If a node confirmed but failed with the actual replacement (e.g. file permissions)
-                            // this will make sure it will try again in the next round (1 hour).
-                            await ServerStore.SendToLeaderAsync(new RecheckStatusOfServerCertificateCommand());
-                            return;
-                        }
-
-                        if (certUpdate.TryGet(nameof(CertificateReplacement.Replaced), out int replaced) == false)
-                            replaced = 0;
-
-                        if (nodesInCluster > replaced)
-                        {
-                            // This is for the case where all nodes confirmed they received the replacement cert but
-                            // not all nodes have made the actual change yet.
-                            await ServerStore.SendToLeaderAsync(new RecheckStatusOfServerCertificateReplacementCommand());
-                        }
-
-                        return;
-                    }
+                    newCertBytes = await RefreshViaLetsEncrypt(currentCertificate, forceRenew);
+                }
+                else if (string.IsNullOrEmpty(Configuration.Security.CertificateExec) == false)
+                {
+                    newCertBytes = RefreshViaExecutable();
                 }
 
-                // same certificate, but now we need to see if we need to auto update it
-                var (shouldRenew, renewalDate) = CalculateRenewalDate(currentCertificate, forceRenew);
-                if (shouldRenew == false)
-                {
-                    // We don't want an alert here, this happens frequently.
-                    if (Logger.IsOperationsEnabled)
-                        Logger.Operations($"Renew check: still have time left to renew the server certificate with thumbprint `{currentCertificate.Certificate.Thumbprint}`, estimated renewal date: {renewalDate}");
-                    return;
-                }                    
-                
-                if (ServerStore.LicenseManager.GetLicenseStatus().Type == LicenseType.Developer && forceRenew == false)
-                {
-                    msg = "It's time to renew your Let's Encrypt server certificate but automatic renewal is turned off when using the developer license. Go to the certificate page in the studio and trigger the renewal manually.";
-                    ServerStore.NotificationCenter.Add(AlertRaised.Create(
-                        null,
-                        CertificateReplacement.CertReplaceAlertTitle,
-                        msg,
-                        AlertType.Certificates_DeveloperLetsEncryptRenewal,
-                        NotificationSeverity.Warning));
-
-                    if (Logger.IsOperationsEnabled)
-                        Logger.Operations(msg);
-                    return;
-                }
-
-                byte[] newCertBytes;
-                try
-                {
-                    newCertBytes = await RenewLetsEncryptCertificate(currentCertificate);
-                }
-                catch (Exception e)
-                {
-                    throw new InvalidOperationException("Failed to update certificate from Lets Encrypt", e);
-                }
-
-                await StartCertificateReplicationAsync(Convert.ToBase64String(newCertBytes), false);
+                await StartCertificateReplicationAsync(newCertBytes, false);
             }
             catch (Exception e)
             {
@@ -583,6 +514,105 @@ namespace Raven.Server
                     NotificationSeverity.Error,
                     details: new ExceptionDetails(e)));
             }
+        }
+
+        private byte[] RefreshViaExecutable()
+        {
+            try
+            {
+                var certHolder = ServerStore.Secrets.LoadCertificateWithExecutable(SecretProtection.CertificateRequestType.Renew, Configuration.Security.CertificateExec, Configuration.Security.CertificateExecArguments, ServerStore);
+
+                return certHolder.Certificate.Export(X509ContentType.Pfx); // With the private key
+            }
+            catch (Exception e)
+            {
+                throw new InvalidOperationException("Unable to refresh certificate with executable.", e);
+            }
+        }
+
+        protected async Task<byte[]> RefreshViaLetsEncrypt(CertificateHolder currentCertificate, bool forceRenew)
+        {
+            byte[] newCertBytes;
+            if (ClusterCommandsVersionManager.ClusterCommandsVersions.TryGetValue(nameof(ConfirmServerCertificateReplacedCommand), out var commandVersion) == false)
+                throw new InvalidOperationException($"Failed to get the command version of '{nameof(ConfirmServerCertificateReplacedCommand)}'.");
+
+            if (ClusterCommandsVersionManager.CurrentClusterMinimalVersion < commandVersion)
+                throw new ClusterNodesVersionMismatchException(
+                    "It is not possible to refresh/replace the cluster certificate in the current cluster topology. Please make sure that all the cluster nodes have an equal or newer version than the command version." +
+                    $"Cluster Version: {ClusterCommandsVersionManager.CurrentClusterMinimalVersion}, Command Version: {commandVersion}.");
+
+            // we need to see if there is already an ongoing process
+            using (ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
+            using (context.OpenReadTransaction())
+            {
+                var certUpdate = ServerStore.Cluster.GetItem(context, CertificateReplacement.CertificateReplacementDoc);
+                if (certUpdate != null)
+                {
+                    if (certUpdate.TryGet(nameof(CertificateReplacement.Confirmations), out int confirmations) == false)
+                        throw new InvalidOperationException($"Expected to get '{nameof(CertificateReplacement.Confirmations)}' count");
+
+                    var nodesInCluster = ServerStore.GetClusterTopology(context).AllNodes.Count;
+                    if (nodesInCluster > confirmations)
+                    {
+                        // we are already in the process of updating the certificate, so we need
+                        // to nudge all the nodes in the cluster to check the replacement state.
+                        // If a node confirmed but failed with the actual replacement (e.g. file permissions)
+                        // this will make sure it will try again in the next round (1 hour).
+                        await ServerStore.SendToLeaderAsync(new RecheckStatusOfServerCertificateCommand());
+                        return null;
+                    }
+
+                    if (certUpdate.TryGet(nameof(CertificateReplacement.Replaced), out int replaced) == false)
+                        replaced = 0;
+
+                    if (nodesInCluster > replaced)
+                    {
+                        // This is for the case where all nodes confirmed they received the replacement cert but
+                        // not all nodes have made the actual change yet.
+                        await ServerStore.SendToLeaderAsync(new RecheckStatusOfServerCertificateReplacementCommand());
+                    }
+
+                    return null;
+                }
+            }
+
+            // same certificate, but now we need to see if we need to auto update it
+            var (shouldRenew, renewalDate) = CalculateRenewalDate(currentCertificate, forceRenew);
+            if (shouldRenew == false)
+            {
+                // We don't want an alert here, this happens frequently.
+                if (Logger.IsOperationsEnabled)
+                    Logger.Operations(
+                        $"Renew check: still have time left to renew the server certificate with thumbprint `{currentCertificate.Certificate.Thumbprint}`, estimated renewal date: {renewalDate}");
+                return null;
+            }
+
+            if (ServerStore.LicenseManager.GetLicenseStatus().Type == LicenseType.Developer && forceRenew == false)
+            {
+                var msg =
+                    "It's time to renew your Let's Encrypt server certificate but automatic renewal is turned off when using the developer license. Go to the certificate page in the studio and trigger the renewal manually.";
+                ServerStore.NotificationCenter.Add(AlertRaised.Create(
+                    null,
+                    CertificateReplacement.CertReplaceAlertTitle,
+                    msg,
+                    AlertType.Certificates_DeveloperLetsEncryptRenewal,
+                    NotificationSeverity.Warning));
+
+                if (Logger.IsOperationsEnabled)
+                    Logger.Operations(msg);
+                return null;
+            }
+
+            try
+            {
+                newCertBytes = await RenewLetsEncryptCertificate(currentCertificate);
+            }
+            catch (Exception e)
+            {
+                throw new InvalidOperationException("Failed to update certificate from Lets Encrypt", e);
+            }
+
+            return newCertBytes;
         }
 
         public (bool ShouldRenew, DateTime RenewalDate) CalculateRenewalDate(CertificateHolder currentCertificate, bool forceRenew)
@@ -611,7 +641,7 @@ namespace Raven.Server
             return (false, firstPossibleSaturday);
         }
 
-        public async Task StartCertificateReplicationAsync(string base64CertWithoutPassword, bool replaceImmediately)
+        public async Task StartCertificateReplicationAsync(byte[] certBytes, bool replaceImmediately)
         {
             // We assume that at this point, the password was already stripped out of the certificate.
 
@@ -623,16 +653,6 @@ namespace Raven.Server
 
             try
             {
-                byte[] certBytes;
-                try
-                {
-                    certBytes = Convert.FromBase64String(base64CertWithoutPassword);
-                }
-                catch (Exception e)
-                {
-                    throw new ArgumentException($"Unable to parse the {nameof(base64CertWithoutPassword)} property, expected a Base64 value", e);
-                }
-
                 X509Certificate2 newCertificate;
                 try
                 {
@@ -644,7 +664,10 @@ namespace Raven.Server
                 }
 
                 if (Logger.IsOperationsEnabled)
-                    Logger.Operations("Got new certificate from Lets Encrypt! Starting certificate replication.");
+                {
+                    var source = string.IsNullOrEmpty(Configuration.Security.CertificateExec) ? "Let's Encrypt" : $"executable ({Configuration.Security.CertificateExec})";
+                    Logger.Operations($"Got new certificate from {source}. Starting certificate replication.");
+                }
 
                 // During replacement of a cluster certificate, we must have both the new and the old server certificates registered in the server store.
                 // This is needed for trust in the case where a node replaced its own certificate while another node still runs with the old certificate.
@@ -674,7 +697,7 @@ namespace Raven.Server
 
                 await ServerStore.SendToLeaderAsync(new InstallUpdatedServerCertificateCommand
                 {
-                    Certificate = base64CertWithoutPassword, // includes the private key
+                    Certificate = Convert.ToBase64String(certBytes), // includes the private key
                     ReplaceImmediately = replaceImmediately
                 });
             }
@@ -820,7 +843,7 @@ namespace Raven.Server
                 if (string.IsNullOrEmpty(Configuration.Security.CertificatePath) == false)
                     return ServerStore.Secrets.LoadCertificateFromPath(Configuration.Security.CertificatePath, Configuration.Security.CertificatePassword, ServerStore);
                 if (string.IsNullOrEmpty(Configuration.Security.CertificateExec) == false)
-                    return ServerStore.Secrets.LoadCertificateWithExecutable(Configuration.Security.CertificateExec, Configuration.Security.CertificateExecArguments, ServerStore);
+                    return ServerStore.Secrets.LoadCertificateWithExecutable(SecretProtection.CertificateRequestType.Load, Configuration.Security.CertificateExec, Configuration.Security.CertificateExecArguments, ServerStore);
 
                 return null;
             }

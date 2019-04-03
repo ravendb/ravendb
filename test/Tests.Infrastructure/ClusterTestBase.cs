@@ -446,6 +446,7 @@ namespace Tests.Infrastructure
             bool createNewCert = false,
             string serverCertPath = null,
             IDictionary<string, string> customSettings = null,
+            List<IDictionary<string, string>> customSettingsList = null,
             bool watcherCluster = false)
         {
             leaderIndex = leaderIndex ?? _random.Next(0, numberOfNodes);
@@ -453,15 +454,29 @@ namespace Tests.Infrastructure
             var serversToPorts = new Dictionary<RavenServer, string>();
             var clustersServers = new List<RavenServer>();
             _electionTimeoutInMs = Math.Max(300, numberOfNodes * 80);
+
+            if (customSettingsList != null && customSettingsList.Count != numberOfNodes)
+            {
+                throw new InvalidOperationException("The number of custom settings must equal the number of nodes.");
+            }
+
             for (var i = 0; i < numberOfNodes; i++)
             {
-                customSettings = customSettings ?? new Dictionary<string, string>()
+                if (customSettingsList == null)
                 {
-                    [RavenConfiguration.GetKey(x => x.Cluster.MoveToRehabGraceTime)] = "1",
-                    [RavenConfiguration.GetKey(x => x.Cluster.AddReplicaTimeout)] = "1",
-                    [RavenConfiguration.GetKey(x => x.Cluster.ElectionTimeout)] = _electionTimeoutInMs.ToString(),
-                    [RavenConfiguration.GetKey(x => x.Cluster.StabilizationTime)] = "1",
-                };
+                    customSettings = customSettings ?? new Dictionary<string, string>()
+                    {
+                        [RavenConfiguration.GetKey(x => x.Cluster.MoveToRehabGraceTime)] = "1",
+                        [RavenConfiguration.GetKey(x => x.Cluster.AddReplicaTimeout)] = "1",
+                        [RavenConfiguration.GetKey(x => x.Cluster.ElectionTimeout)] = _electionTimeoutInMs.ToString(),
+                        [RavenConfiguration.GetKey(x => x.Cluster.StabilizationTime)] = "1",
+                    };
+                }
+                else
+                {
+                    customSettings = customSettingsList[i];
+                }
+                
                 string serverUrl;
 
                 if (useSsl)
@@ -519,9 +534,9 @@ namespace Tests.Infrastructure
             return (clustersServers, leader);
         }
 
-        protected async Task<RavenServer> CreateRaftClusterAndGetLeader(int numberOfNodes, bool shouldRunInMemory = true, int? leaderIndex = null, bool useSsl = false, string serverCertPath = null, IDictionary<string, string> customSettings = null)
+        protected async Task<RavenServer> CreateRaftClusterAndGetLeader(int numberOfNodes, bool shouldRunInMemory = true, int? leaderIndex = null, bool useSsl = false, string serverCertPath = null, IDictionary<string, string> customSettings = null, List<IDictionary<string, string>> customSettingsList = null)
         {
-            return (await CreateRaftCluster(numberOfNodes, shouldRunInMemory, leaderIndex, useSsl, serverCertPath: serverCertPath, customSettings: customSettings)).Leader;
+            return (await CreateRaftCluster(numberOfNodes, shouldRunInMemory, leaderIndex, useSsl, serverCertPath: serverCertPath, customSettings: customSettings, customSettingsList: customSettingsList)).Leader;
         }
 
         protected async Task<(RavenServer, Dictionary<RavenServer, ProxyServer>)> CreateRaftClusterWithProxiesAndGetLeader(int numberOfNodes, bool shouldRunInMemory = true, int? leaderIndex = null, bool useSsl = false, int delay = 0)

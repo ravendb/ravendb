@@ -943,7 +943,7 @@ namespace Raven.Server.Web.Authentication
                 // What we do here is trigger the refresh cycle which normally happens once an hour.
 
                 // The difference between this and /admin/certificates/letsencrypt/force-renew is that here we also allow it for non-LetsEncrypt setups
-                // in which case we'll check if the certificate changed on disk and if so we'll update it immediately on the local node (only)
+                // in which case we'll check if the certificate changed on disk (or via executable) and if so we'll update it immediately on the local node (only)
 
                 var replaceImmediately = GetBoolValueQueryString("replaceImmediately", required: false) ?? false;
 
@@ -983,13 +983,14 @@ namespace Raven.Server.Web.Authentication
                         if (string.IsNullOrWhiteSpace(certificate.Certificate))
                             throw new ArgumentException($"{nameof(certificate.Certificate)} is a required field in the certificate definition.");
 
+                        var certBytes = Convert.FromBase64String(certificate.Certificate);
+
                         // Load the password protected certificate and export it without a password, to send it through the cluster.
                         if (string.IsNullOrWhiteSpace(certificate.Password) == false)
                         {
                             try
                             {
                                 var cert = new X509Certificate2Collection();
-                                var certBytes = Convert.FromBase64String(certificate.Certificate);
                                 cert.Import(certBytes, certificate.Password, X509KeyStorageFlags.Exportable | X509KeyStorageFlags.MachineKeySet);
                                 // Exporting with the private key, but without the password
                                 certificate.Certificate = Convert.ToBase64String(cert.Export(X509ContentType.Pkcs12));
@@ -1003,7 +1004,6 @@ namespace Raven.Server.Web.Authentication
                         // Ensure we'll be able to load the certificate
                         try
                         {
-                            var certBytes = Convert.FromBase64String(certificate.Certificate);
                             var _ = new X509Certificate2(certBytes, (string)null, X509KeyStorageFlags.Exportable | X509KeyStorageFlags.MachineKeySet);
                         }
                         catch (Exception e)
@@ -1016,7 +1016,7 @@ namespace Raven.Server.Web.Authentication
 
                         var timeoutTask = TimeoutManager.WaitFor(TimeSpan.FromSeconds(60), ServerStore.ServerShutdown);
 
-                        var replicationTask = Server.StartCertificateReplicationAsync(certificate.Certificate, replaceImmediately);
+                        var replicationTask = Server.StartCertificateReplicationAsync(certBytes, replaceImmediately);
 
                         await Task.WhenAny(replicationTask, timeoutTask);
                         if (replicationTask.IsCompleted == false)
