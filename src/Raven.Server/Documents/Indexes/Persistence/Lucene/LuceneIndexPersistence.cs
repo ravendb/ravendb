@@ -121,23 +121,28 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene
 
                     if (reader != null)
                     {
-                        try
+                        if (reader.RefCount > 0)
                         {
-                            var newReader = reader.Reopen(state);
-                            if (newReader != reader)
-                                reader.DecRef(state);
+                            try
+                            {
+                                var newReader = reader.Reopen(state);
+                                if (newReader != reader)
+                                    reader.DecRef(state);
 
-                            reader = _lastReader = newReader;
+                                reader = _lastReader = newReader;
+                            }
+                            catch (Exception e)
+                            {
+                                if (_logger.IsInfoEnabled)
+                                    _logger.Info($"Could not reopen the index reader for index '{_index.Name}'.", e);
+
+                                // fallback strategy in case of a reader to be closed
+                                // before Reopen and DecRef are executed
+                                reader = null;
+                            }
                         }
-                        catch (Exception e)
-                        {
-                            if (_logger.IsInfoEnabled)
-                                _logger.Info($"Could not reopen the index reader for index '{_index.Name}'.", e);
-
-                            // fallback strategy in case of a reader to be closed
-                            // before Reopen and DecRef are executed
+                        else
                             reader = null;
-                        }
                     }
 
                     if (reader == null)
