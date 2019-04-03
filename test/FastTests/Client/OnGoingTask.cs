@@ -6,6 +6,7 @@ using Raven.Client.Documents.Operations.ETL.SQL;
 using Raven.Client.Documents.Operations.OngoingTasks;
 using Raven.Client.Documents.Operations.Replication;
 using Raven.Client.Documents.Subscriptions;
+using Raven.Client.Exceptions.Documents.Subscriptions;
 using Xunit;
 
 namespace FastTests.Client
@@ -245,6 +246,9 @@ loadToOrders(orderData);
                 Assert.Equal(subscriptionOption.MentorNode, subscriptionResult.MentorNode);
                 Assert.Equal(subscriptionOption.Name, subscriptionResult.SubscriptionName);
                 Assert.NotNull(subscriptionResult.Query);
+
+                op = new GetOngoingTaskInfoOperation(state.SubscriptionId - 1, OngoingTaskType.Subscription);
+                Assert.Throws<SubscriptionDoesNotExistException>(() => store.Maintenance.Send(op));
 
             }
         }

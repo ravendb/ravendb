@@ -15,6 +15,7 @@ using Raven.Client.Documents.Operations.Replication;
 using Raven.Client.Documents.Subscriptions;
 using Raven.Client.Exceptions;
 using Raven.Client.Exceptions.Database;
+using Raven.Client.Exceptions.Documents.Subscriptions;
 using Raven.Client.Json.Converters;
 using Raven.Client.Http;
 using Raven.Client.ServerWide;
@@ -954,13 +955,9 @@ namespace Raven.Server.Web.System
                             string itemKey;
                             if (name == null)
                             {
-                                var subscriptions = Database.SubscriptionStorage.GetAllSubscriptions(context, false, 0, int.MaxValue);
-                                foreach (var subscription in subscriptions)
-                                {
-                                    if (subscription.SubscriptionId != key) continue;
-                                    name = subscription.SubscriptionName;
-                                    break;
-                                }
+                                name = Database.SubscriptionStorage.GetSubscriptionById(context, key);
+                                if (name == null)
+                                    throw new SubscriptionDoesNotExistException($"Subscription with id {key} was not found in server store");
                             }
                             itemKey = SubscriptionState.GenerateSubscriptionItemKeyName(record.DatabaseName, name);
                             var doc = ServerStore.Cluster.Read(context, itemKey);
