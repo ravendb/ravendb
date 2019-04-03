@@ -67,8 +67,9 @@ namespace Raven.Server.Documents.Handlers
                 "read-revisions-config",
                 beforeSetupConfiguration: (string name, ref BlittableJsonReaderObject configuration, JsonOperationContext context) =>
                 {
-                    if (configuration.TryGet(nameof(RevisionsConfiguration.Collections), out BlittableJsonReaderObject collections) == false ||
-                        collections.Count == 0)
+                    if (configuration == null || 
+                        configuration.TryGet(nameof(RevisionsConfiguration.Collections), out BlittableJsonReaderObject collections) == false ||
+                        collections?.Count > 0 == false)
                         return;
 
                     var uniqueKeys = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
