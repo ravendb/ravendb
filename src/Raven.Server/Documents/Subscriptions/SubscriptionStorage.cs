@@ -206,16 +206,17 @@ namespace Raven.Server.Documents.Subscriptions
             }
         }
 
-        public string GetSubscriptionById(TransactionOperationContext serverStoreContext, long id)
+        public string GetSubscriptionNameById(TransactionOperationContext serverStoreContext, long id)
         {
             foreach (var keyValue in ClusterStateMachine.ReadValuesStartingWith(serverStoreContext,
                 SubscriptionState.SubscriptionPrefix(_db.Name)))
             {
-                keyValue.Value.TryGetMember(nameof(SubscriptionState.SubscriptionId), out object _id);
-                if ((long)_id == id)
+                if (keyValue.Value.TryGet(nameof(SubscriptionState.SubscriptionId), out long _id) == false)
+                    continue;
+                if (_id == id)
                 {
-                    if (keyValue.Value.TryGetMember(nameof(SubscriptionState.SubscriptionName), out object name))
-                        return name.ToString();
+                    if (keyValue.Value.TryGet(nameof(SubscriptionState.SubscriptionName), out string name))
+                        return name;
                 }
             }
 
