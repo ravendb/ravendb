@@ -226,6 +226,7 @@ namespace Raven.Server.Documents
             jsonSerializer.Converters.Add(LazyStringValueJsonConverter.Instance);
             jsonSerializer.Converters.Add(StreamConverter.Instance);
             jsonSerializer.Converters.Add(BlittableJsonReaderArrayConverter.Instance);
+            jsonSerializer.Converters.Add(CounterOperationConverter.Instance);
             return jsonSerializer;
         }
     }
