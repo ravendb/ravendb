@@ -1,7 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Diagnostics;
-using System.Linq;
 using System.Text;
 using Raven.Client;
 using Raven.Server.Documents.Replication;
@@ -18,18 +17,14 @@ using Raven.Server.Utils;
 using Raven.Client.Documents.Changes;
 using Raven.Client.Documents.Operations.Counters;
 using Raven.Client.Exceptions.Documents.Counters;
-using Raven.Server.Exceptions;
 using Sparrow.Json;
 using Sparrow.Json.Parsing;
-using Voron.Impl.Paging;
 
 namespace Raven.Server.Documents
 {
     public unsafe class CountersStorage
     {
         private const int DbIdAsBase64Size = 22;
-
-        private const int MaxCounterNameSize = AbstractPager.MaxKeySize;
 
         private readonly DocumentDatabase _documentDatabase;
         private readonly DocumentsStorage _documentsStorage;
@@ -350,7 +345,10 @@ namespace Raven.Server.Documents
                 Debug.Assert(false);// never hit
             }
 
-            ValidateCounterName(documentId, name);
+            if (name.Length > DocumentIdWorker.MaxIdSize)
+            {
+                ThrowCounterNameTooBig(name);
+            }
 
             var collectionName = _documentsStorage.ExtractCollectionName(context, collection);
             var table = GetCountersTable(context.Transaction.InnerTransaction, collectionName);
@@ -773,29 +771,11 @@ namespace Raven.Server.Documents
             return countersToAdd;
         }
 
-        private static void ValidateCounterName(string documentId, string counterName)
-        {
-            if (counterName.Length > DocumentIdWorker.MaxIdSize)
-            {
-                ThrowCounterNameTooBig(counterName);
-            }
-
-            if (documentId.Length + counterName.Length > DocumentIdWorker.MaxIdSize)
-            {
-                ThrowStorageKeyTooBig(documentId, counterName);
-            }
-        }
-
         private static void ThrowCounterNameTooBig(string name)
         {
-            throw new KeyTooBigException(
-                $"Counter name cannot exceed {DocumentIdWorker.MaxIdSize} bytes, but counter name has {name.Length} characters. The invalid counter name is '{name}'.");
-        }
-
-        private static void ThrowStorageKeyTooBig(string docId, string counterName)
-        {
-            throw new KeyTooBigException(
-                $"Cannot increment counter '{counterName}' of document '{docId}'. Size of counter name + size of document Id cannot exceed {DocumentIdWorker.MaxIdSize} bytes.");
+            throw new ArgumentException(
+                $"Counter name cannot exceed {DocumentIdWorker.MaxIdSize} bytes, but counter name has {name.Length} characters. " +
+                $"The invalid counter name is '{name}'.", nameof(name));
         }
 
     }
