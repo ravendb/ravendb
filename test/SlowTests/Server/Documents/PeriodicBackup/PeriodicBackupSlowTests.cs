@@ -501,7 +501,7 @@ namespace SlowTests.Server.Documents.PeriodicBackup
                     using (ctx.OpenReadTransaction())
                     {
                         var databaseChangeVector = DocumentsStorage.GetDatabaseChangeVector(ctx);
-                        Assert.Equal($"A:6-{originalDatabase.DbBase64Id}, A:6-{restoredDatabase.DbBase64Id}", databaseChangeVector);
+                        Assert.Equal($"A:8-{restoredDatabase.DbBase64Id}", databaseChangeVector);
                     }
                 }
             }
@@ -602,7 +602,7 @@ namespace SlowTests.Server.Documents.PeriodicBackup
                     using (ctx.OpenReadTransaction())
                     {
                         var databaseChangeVector = DocumentsStorage.GetDatabaseChangeVector(ctx);
-                        Assert.Equal($"A:7-{originalDatabase.DbBase64Id}, A:7-{restoredDatabase.DbBase64Id}", databaseChangeVector);
+                        Assert.Equal($"A:3-{originalDatabase.DbBase64Id}, A:9-{restoredDatabase.DbBase64Id}", databaseChangeVector);
                     }
                 }
             }

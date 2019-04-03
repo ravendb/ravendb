@@ -40,7 +40,6 @@ namespace Raven.Server.Documents.Handlers
             private readonly bool _fromEtl;
             private readonly bool _fromSmuggler;
             private readonly List<CounterOperation> _list;
-            //private readonly Dictionary<string, List<CounterOperation>> _dictionary;
             public long ErrorCount;
             public ExecuteCounterBatchCommand(DocumentDatabase database, CounterBatch counterBatch)
             {

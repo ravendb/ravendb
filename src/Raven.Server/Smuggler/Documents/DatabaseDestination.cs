@@ -1154,7 +1154,7 @@ namespace Raven.Server.Smuggler.Documents
             {
                 var counterOp = new CounterOperation
                 {
-                    Type = CounterOperationType.Increment,
+                    Type = CounterOperationType.Put,
                     CounterName = counter.CounterName,
                     Delta = counter.TotalValue,
                     ChangeVector = counter.ChangeVector

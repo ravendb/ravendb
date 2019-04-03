@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
+using Newtonsoft.Json;
 using Sparrow.Json;
 using Sparrow.Json.Parsing;
 
@@ -88,7 +89,8 @@ namespace Raven.Client.Documents.Operations.Counters
         public long Delta;
 
         internal string ChangeVector;
-        public string DocumentId;
+        [JsonProperty]
+        internal string DocumentId;
 
         public static CounterOperation Parse(BlittableJsonReaderObject input)
         {
