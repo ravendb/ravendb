@@ -75,20 +75,10 @@ namespace Raven.Client.Documents.Identity
         /// </summary>
         /// <param name="entity">The entity.</param>
         /// <returns></returns>
-        public Task<string> GenerateDocumentIdAsync(object entity)
+        public async Task<string> GenerateDocumentIdAsync(object entity)
         {
-            return NextIdAsync().ContinueWith(task =>
-            {
-                try
-                {
-                    return GetDocumentIdFromId(task.Result);
-                }
-                catch (Exception e)
-                {
-                    var actualException = e.ExtractSingleInnerException();
-                    throw actualException;
-                }
-            });
+            var nextId = await NextIdAsync().ConfigureAwait(false);
+            return GetDocumentIdFromId(nextId);
         }
 
         public async Task<long> NextIdAsync()

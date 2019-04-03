@@ -5,6 +5,7 @@
 //-----------------------------------------------------------------------
 
 using System.Collections.Concurrent;
+using System.Threading;
 using System.Threading.Tasks;
 using Raven.Client.Documents.Conventions;
 
@@ -15,13 +16,11 @@ namespace Raven.Client.Documents.Identity
     /// </summary>
     public class AsyncMultiTypeHiLoIdGenerator
     {
-        //private readonly int capacity;
-        private readonly object _generatorLock = new object();
+        private readonly SemaphoreSlim _generatorLock = new SemaphoreSlim(1, 1);
         private readonly ConcurrentDictionary<string, AsyncHiLoIdGenerator> _idGeneratorsByTag = new ConcurrentDictionary<string, AsyncHiLoIdGenerator>();
         protected readonly DocumentStore Store;
         protected readonly string DbName;
         protected readonly DocumentConventions Conventions;
-        private static readonly Task<string> NullStringCompletedTask = Task.FromResult<string>(null);
 
         public AsyncMultiTypeHiLoIdGenerator(DocumentStore store, string dbName, DocumentConventions conventions)
         {
@@ -30,27 +29,35 @@ namespace Raven.Client.Documents.Identity
             Conventions = conventions;
         }
 
-        public Task<string> GenerateDocumentIdAsync(object entity)
+        public async Task<string> GenerateDocumentIdAsync(object entity)
         {
             var typeTagName = Conventions.GetCollectionName(entity);
             if (string.IsNullOrEmpty(typeTagName)) //ignore empty tags
             {
-                return NullStringCompletedTask;
+                return null;
             }
             var tag = Conventions.TransformTypeCollectionNameToDocumentIdPrefix(typeTagName);
             if (_idGeneratorsByTag.TryGetValue(tag, out var value))
-                return value.GenerateDocumentIdAsync(entity);
+            {
+                return await value.GenerateDocumentIdAsync(entity).ConfigureAwait(false);
+            }
 
-            lock (_generatorLock)
+            await _generatorLock.WaitAsync().ConfigureAwait(false);
+
+            try
             {
                 if (_idGeneratorsByTag.TryGetValue(tag, out value))
-                    return value.GenerateDocumentIdAsync(entity);
+                    return await value.GenerateDocumentIdAsync(entity).ConfigureAwait(false);
 
                 value = CreateGeneratorFor(tag);
                 _idGeneratorsByTag.TryAdd(tag, value);
-            }
 
-            return value.GenerateDocumentIdAsync(entity);
+                return await value.GenerateDocumentIdAsync(entity).ConfigureAwait(false);
+            }
+            finally
+            {
+                _generatorLock.Release();
+            }
         }
 
         protected virtual AsyncHiLoIdGenerator CreateGeneratorFor(string tag)
