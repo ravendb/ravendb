@@ -955,7 +955,7 @@ namespace Raven.Server.Web.System
                             string itemKey;
                             if (name == null)
                             {
-                                name = Database.SubscriptionStorage.GetSubscriptionById(context, key);
+                                name = Database.SubscriptionStorage.GetSubscriptionNameById(context, key);
                                 if (name == null)
                                     throw new SubscriptionDoesNotExistException($"Subscription with id {key} was not found in server store");
                             }
