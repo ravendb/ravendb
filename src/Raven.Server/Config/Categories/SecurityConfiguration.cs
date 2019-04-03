@@ -47,6 +47,11 @@ namespace Raven.Server.Config.Categories
         [ConfigurationEntry("Security.Certificate.Exec", ConfigurationEntryScope.ServerWideOnly)]
         public string CertificateExec { get; set; }
 
+        [Description("A command or executable providing a .pfx certificate file. If specified, RavenDB will use HTTPS/SSL for all network activities. The certificate path setting takes precedence over executable configuration option.")]
+        [DefaultValue(null)]
+        [ConfigurationEntry("Security.Certificate.Exec.V2", ConfigurationEntryScope.ServerWideOnly)]
+        public string CertificateExecV2 { get; set; }
+
         [Description("The command line arguments for the 'Security.Certificate.Exec' command or executable.")]
         [DefaultValue(null)]
         [ConfigurationEntry("Security.Certificate.Exec.Arguments", ConfigurationEntryScope.ServerWideOnly)]
@@ -105,7 +110,7 @@ namespace Raven.Server.Config.Categories
 
         public bool IsCertificateConfigured =>
             string.IsNullOrWhiteSpace(CertificatePath) == false ||
-            string.IsNullOrWhiteSpace(CertificateExec) == false;
+            string.IsNullOrWhiteSpace(CertificateExecV2) == false;
 
         public bool AuthenticationEnabled => IsCertificateConfigured;
 
@@ -128,7 +133,7 @@ namespace Raven.Server.Config.Categories
                 {
                     if (isServerUrlHttps == false)
                         throw new InvalidOperationException(
-                            $"When the server certificate in either `{RavenConfiguration.GetKey(x => x.Security.CertificatePath)}` or `{RavenConfiguration.GetKey(x => x.Security.CertificateExec)}`  is specified, the `{RavenConfiguration.GetKey(x => x.Core.ServerUrls)}` must be using https, but was " +
+                            $"When the server certificate in either `{RavenConfiguration.GetKey(x => x.Security.CertificatePath)}` or `{RavenConfiguration.GetKey(x => x.Security.CertificateExecV2)}`  is specified, the `{RavenConfiguration.GetKey(x => x.Core.ServerUrls)}` must be using https, but was " +
                             serverUrl);
                 }
                 else

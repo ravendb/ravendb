@@ -493,7 +493,7 @@ namespace Raven.Server
                 {
                     newCertBytes = await RefreshViaLetsEncrypt(currentCertificate, forceRenew);
                 }
-                else if (string.IsNullOrEmpty(Configuration.Security.CertificateExec) == false)
+                else if (string.IsNullOrEmpty(Configuration.Security.CertificateExecV2) == false)
                 {
                     newCertBytes = RefreshViaExecutable();
                 }
@@ -520,7 +520,7 @@ namespace Raven.Server
         {
             try
             {
-                var certHolder = ServerStore.Secrets.LoadCertificateWithExecutable(SecretProtection.CertificateRequestType.Renew, Configuration.Security.CertificateExec, Configuration.Security.CertificateExecArguments, ServerStore);
+                var certHolder = ServerStore.Secrets.LoadCertificateWithExecutable(SecretProtection.CertificateRequestType.Renew, Configuration.Security.CertificateExecV2, Configuration.Security.CertificateExecArguments, ServerStore);
 
                 return certHolder.Certificate.Export(X509ContentType.Pfx); // With the private key
             }
@@ -665,7 +665,7 @@ namespace Raven.Server
 
                 if (Logger.IsOperationsEnabled)
                 {
-                    var source = string.IsNullOrEmpty(Configuration.Security.CertificateExec) ? "Let's Encrypt" : $"executable ({Configuration.Security.CertificateExec})";
+                    var source = string.IsNullOrEmpty(Configuration.Security.CertificateExecV2) ? "Let's Encrypt" : $"executable ({Configuration.Security.CertificateExecV2})";
                     Logger.Operations($"Got new certificate from {source}. Starting certificate replication.");
                 }
 
@@ -840,10 +840,15 @@ namespace Raven.Server
         {
             try
             {
+                if (string.IsNullOrEmpty(Configuration.Security.CertificateExec) == false)
+                {
+                    throw new InvalidOperationException($"Invalid certificate configuration. The configuration property {RavenConfiguration.GetKey(x => x.Security.CertificateExec)} has been deprecated since RavenDB 4.2, please use {RavenConfiguration.GetKey(x => x.Security.CertificateExecV2)} instead. For more information, refer to the online documentation at https://ravendb.net/l/4554RZ/4.2.");
+                }
+
                 if (string.IsNullOrEmpty(Configuration.Security.CertificatePath) == false)
                     return ServerStore.Secrets.LoadCertificateFromPath(Configuration.Security.CertificatePath, Configuration.Security.CertificatePassword, ServerStore);
-                if (string.IsNullOrEmpty(Configuration.Security.CertificateExec) == false)
-                    return ServerStore.Secrets.LoadCertificateWithExecutable(SecretProtection.CertificateRequestType.Load, Configuration.Security.CertificateExec, Configuration.Security.CertificateExecArguments, ServerStore);
+                if (string.IsNullOrEmpty(Configuration.Security.CertificateExecV2) == false)
+                    return ServerStore.Secrets.LoadCertificateWithExecutable(SecretProtection.CertificateRequestType.Load, Configuration.Security.CertificateExecV2, Configuration.Security.CertificateExecArguments, ServerStore);
 
                 return null;
             }

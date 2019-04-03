@@ -140,13 +140,13 @@ namespace SlowTests.Authentication
                 var args2 = CommandLineArgumentEscaper.EscapeAndConcatenate(new List<string> { script2Path, certPath, cert2Path, outputFile });
                 var args3 = CommandLineArgumentEscaper.EscapeAndConcatenate(new List<string> { script3Path, certPath, cert2Path, outputFile });
 
-                customSettings1[RavenConfiguration.GetKey(x => x.Security.CertificateExec)] = "bash";
+                customSettings1[RavenConfiguration.GetKey(x => x.Security.CertificateExecV2)] = "bash";
                 customSettings1[RavenConfiguration.GetKey(x => x.Security.CertificateExecArguments)] = $"{args1}";
 
-                customSettings2[RavenConfiguration.GetKey(x => x.Security.CertificateExec)] = "bash";
+                customSettings2[RavenConfiguration.GetKey(x => x.Security.CertificateExecV2)] = "bash";
                 customSettings2[RavenConfiguration.GetKey(x => x.Security.CertificateExecArguments)] = $"{args2}";
 
-                customSettings3[RavenConfiguration.GetKey(x => x.Security.CertificateExec)] = "bash";
+                customSettings3[RavenConfiguration.GetKey(x => x.Security.CertificateExecV2)] = "bash";
                 customSettings3[RavenConfiguration.GetKey(x => x.Security.CertificateExecArguments)] = $"{args3}";
 
                 script = "#!/bin/bash\nif [ \"$4\" == \"Load\" ]; then\n\tcat -u \"$1\"\nelif [ \"$4\" == \"Renew\" ]; then\n\tcat -u \"$2\"\nelif [ \"$4\" == \"CertificateChanged\" ]; then\n\techo \"$5\" >> \"$3\"\nfi";
@@ -167,15 +167,15 @@ namespace SlowTests.Authentication
                 var args2 = CommandLineArgumentEscaper.EscapeAndConcatenate(new List<string> { "-NoProfile", script2Path, certPath, cert2Path, outputFile });
                 var args3 = CommandLineArgumentEscaper.EscapeAndConcatenate(new List<string> { "-NoProfile", script3Path, certPath, cert2Path, outputFile });
                 
-                customSettings1[RavenConfiguration.GetKey(x => x.Security.CertificateExec)] = "powershell";
+                customSettings1[RavenConfiguration.GetKey(x => x.Security.CertificateExecV2)] = "powershell";
                 customSettings1[RavenConfiguration.GetKey(x => x.Security.CertificateExecArguments)] = $"{args1}";
                 customSettings1[RavenConfiguration.GetKey(x => x.Core.ServerUrls)] = "https://" + Environment.MachineName + ":0";
 
-                customSettings2[RavenConfiguration.GetKey(x => x.Security.CertificateExec)] = "powershell";
+                customSettings2[RavenConfiguration.GetKey(x => x.Security.CertificateExecV2)] = "powershell";
                 customSettings2[RavenConfiguration.GetKey(x => x.Security.CertificateExecArguments)] = $"{args2}";
                 customSettings2[RavenConfiguration.GetKey(x => x.Core.ServerUrls)] = "https://" + Environment.MachineName + ":0";
 
-                customSettings3[RavenConfiguration.GetKey(x => x.Security.CertificateExec)] = "powershell";
+                customSettings3[RavenConfiguration.GetKey(x => x.Security.CertificateExecV2)] = "powershell";
                 customSettings3[RavenConfiguration.GetKey(x => x.Security.CertificateExecArguments)] = $"{args3}";
                 customSettings3[RavenConfiguration.GetKey(x => x.Core.ServerUrls)] = "https://" + Environment.MachineName + ":0";
 
