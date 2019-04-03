@@ -92,7 +92,8 @@ _ensure_path_exists(const char *path, int32_t *detailed_error_code)
     assert(path != NULL);
 
     int32_t rc;
-    char* dup_path = strdup(path);
+    /* An empty string should be dealt with as a 'current directory' like "." do (`stat()` fail in case of an empty string as parameter) */
+    char *dup_path = path[0] == '\0' ? strdup(".") : strdup(path);
     if(dup_path == NULL)
     {
         rc = FAIL_NOMEM;
