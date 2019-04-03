@@ -182,14 +182,18 @@ namespace Raven.Server.Documents
                 return;
             }
 
-            if (databaseTask.IsCompleted == false)
-            {
-                // This case is when an unload was issued prior to the actual loading of a database.
-                databaseTask.ContinueWith(t => { UnloadDatabaseInternal(databaseName); });
-            }
-            else
+            if (databaseTask.IsCompletedSuccessfully)
             {
                 UnloadDatabaseInternal(databaseName);
+            }
+            else if (databaseTask.IsCompleted == false)
+            {
+                // This case is when an unload was issued prior to the actual loading of a database.
+                databaseTask.ContinueWith(t =>
+                {
+                    if (databaseTask.IsCompletedSuccessfully)
+                        UnloadDatabaseInternal(databaseName);
+                });
             }
         }
 
@@ -199,15 +203,15 @@ namespace Raven.Server.Documents
             {
                 DatabasesCache.RemoveLockAndReturn(databaseName, CompleteDatabaseUnloading, out _).Dispose();
             }
-            catch (AggregateException ae) when (nameof(DeleteDatabase).Equals(ae.InnerException.Data["Source"]))
+            catch (AggregateException ae)
             {
-                // this is already in the process of being deleted, we can just exit and let the other thread handle it
-            }
-            catch (Exception e)
-            {
-                if (_logger.IsInfoEnabled)
+                if (nameof(DeleteDatabase).Equals(ae.InnerException.Data["Source"]))
                 {
-                    _logger.Info($"Failed to unload the database '{databaseName}'.", e);
+                    // this is already in the process of being deleted, we can just exit and let the other thread handle it
+                }
+                else if (ae.InnerException is DatabaseDisabledException)
+                {
+                    // the db is already disabled when we try to disable it
                 }
             }
         }
@@ -458,12 +462,6 @@ namespace Raven.Server.Documents
                 return task != null && task.IsCompletedSuccessfully;
 
             return false;
-        }
-
-        public bool DatabaseRecordExists(string databaseName)
-        {
-            var record = _serverStore.LoadDatabaseRecord(databaseName, out _);
-            return record != null;
         }
 
         public Task<DocumentDatabase> TryGetOrCreateResourceStore(StringSegment databaseName, bool ignoreDisabledDatabase = false)

@@ -260,8 +260,7 @@ namespace Raven.Server.Web.System
                     throw licenseLimit;
                 }
 
-                if (ServerStore.DatabasesLandlord.IsDatabaseLoaded(name) == false && 
-                    ServerStore.DatabasesLandlord.DatabaseRecordExists(name) == false)
+                if (ServerStore.DatabasesLandlord.IsDatabaseLoaded(name) == false)
                 {
                     using (await ServerStore.DatabasesLandlord.UnloadAndLockDatabase(name, "Checking if we need to recreate indexes"))
                         RecreateIndexes(databaseRecord);

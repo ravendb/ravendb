@@ -153,8 +153,9 @@ namespace Raven.Server.Documents
                     }
                 }
                 
-                if(current.IsCompleted == false)
+                if (current.IsCompleted == false)
                     throw new DatabaseConcurrentLoadTimeoutException($"Attempting to unload database {databaseName} that is loading is not allowed (by {caller})");
+
                 if (current.IsCompletedSuccessfully)
                 {
                     _caseInsensitive.TryUpdate(databaseName, task, current);
