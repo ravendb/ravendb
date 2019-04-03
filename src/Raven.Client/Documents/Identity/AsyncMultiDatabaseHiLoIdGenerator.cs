@@ -25,11 +25,11 @@ namespace Raven.Client.Documents.Identity
         }
 
 
-        public Task<string> GenerateDocumentIdAsync(string dbName, object entity)
+        public async Task<string> GenerateDocumentIdAsync(string dbName, object entity)
         {
             var db = dbName ?? Store.Database;
             var generator = _generators.GetOrAdd(db, GenerateAsyncMultiTypeHiLoFunc);
-            return generator.GenerateDocumentIdAsync(entity);
+            return await generator.GenerateDocumentIdAsync(entity).ConfigureAwait(false);
         }
 
         public virtual AsyncMultiTypeHiLoIdGenerator GenerateAsyncMultiTypeHiLoFunc(string dbName)
