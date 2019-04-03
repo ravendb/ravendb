@@ -30,6 +30,22 @@ namespace Voron.Util
             }
         }
 
+        public void RecheckOldestTransaction()
+        {
+            // RavenDB-13302
+            // this is being run from the flusher, since we can afford to 
+            // do an actual here, without stopping transaction speed
+
+            var oldTx = Thread.VolatileRead(ref _oldestTransaction);
+            Interlocked.MemoryBarrier();
+            var currentOldest = _activeTxs.ScanOldest();
+            if (oldTx != currentOldest)
+            {
+                // this is optimistic, but doesn't matter, we'll be called again anyway
+                Interlocked.CompareExchange(ref _oldestTransaction, currentOldest, oldTx);
+            }
+        }
+
         public bool TryRemove(LowLevelTransaction tx)
         {
             if (_activeTxs.Remove(tx) == false)
@@ -39,7 +55,7 @@ namespace Voron.Util
 
             while (tx.Id <= oldTx)
             {
-                var currentOldest = _activeTxs.ScanOldest();
+                var currentOldest = _activeTxs.ScanOldest(); // This is non-thread safe call (therefor from time to time we RecheckOldestTransaction)
                 if (currentOldest == tx.Id)// another tx with same id, they can cleanup after us
                     break;
                 var result = Interlocked.CompareExchange(ref _oldestTransaction, currentOldest, oldTx);
