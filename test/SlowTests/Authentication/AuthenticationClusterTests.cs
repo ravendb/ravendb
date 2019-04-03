@@ -149,7 +149,7 @@ namespace SlowTests.Authentication
                 customSettings3[RavenConfiguration.GetKey(x => x.Security.CertificateExec)] = "bash";
                 customSettings3[RavenConfiguration.GetKey(x => x.Security.CertificateExecArguments)] = $"{args3}";
 
-                script = "#!/bin/bash\r\nif [ $4 == \"Load\" ]; then\r\n\tcat -u $1\r\nelse if [ $4 == \"Renew\" ]; then\r\n\tcat -u $2\r\nelse if [ $4 == \"CertificateChanged\" ]; then\r\n\techo \"$5\" >> $3\r\nfi";
+                script = "#!/bin/bash\nif [ \"$4\" == \"Load\" ]; then\n\tcat -u \"$1\"\nelif [ \"$4\" == \"Renew\" ]; then\n\tcat -u \"$2\"\nelif [ \"$4\" == \"CertificateChanged\" ]; then\n\techo \"$5\" >> \"$3\"\nfi";
 
                 File.WriteAllText(script1Path, script);
                 File.WriteAllText(script2Path, script);
@@ -270,16 +270,9 @@ exit 0";
                 Assert.True(leader.Certificate.Certificate.Thumbprint.Equals(newServerCert.Thumbprint), "New cert is identical");
 
                 var base64NewCertWrittenByExecutable = File.ReadAllLines(outputFile)[0];
-
                 var loadedCertificate = new X509Certificate2(Convert.FromBase64String(base64NewCertWrittenByExecutable));
-                Console.WriteLine("base64NewCertWrittenByExecutable thumb:" + loadedCertificate.Thumbprint);
-                Console.WriteLine("base64NewCertWrittenByExecutable base64:" + base64NewCertWrittenByExecutable);
-                
 
                 Assert.Equal(newServerCert.Thumbprint, loadedCertificate.Thumbprint);
-
-                //var base64NewCert = Convert.ToBase64String(newServerCert.Export(X509ContentType.Pfx));
-                //Assert.Equal(base64NewCert, base64NewCertWrittenByExecutable);
 
                 using (var session = store.OpenSession())
                 {
