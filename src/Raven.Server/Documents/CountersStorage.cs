@@ -17,7 +17,6 @@ using Raven.Server.Utils;
 using Raven.Client.Documents.Changes;
 using Raven.Client.Documents.Operations.Counters;
 using Raven.Client.Exceptions.Documents.Counters;
-using Raven.Server.Exceptions;
 using Sparrow.Json;
 using Sparrow.Json.Parsing;
 using Sparrow.Server;
@@ -264,10 +263,13 @@ namespace Raven.Server.Documents
                 Debug.Assert(false); // never hit
             }
 
+            if (name.Length > DocumentIdWorker.MaxIdSize)
+            {
+                ThrowCounterNameTooBig(name);
+            }
+
             try
             {
-                ValidateCounterName(documentId, name);
-
                 var collectionName = _documentsStorage.ExtractCollectionName(context, collection);
                 var table = GetCountersTable(context.Transaction.InnerTransaction, collectionName);
 
@@ -405,29 +407,11 @@ namespace Raven.Server.Documents
             }
         }
 
-        private static void ValidateCounterName(string documentId, string counterName)
-        {
-            if (counterName.Length > DocumentIdWorker.MaxIdSize)
-            {
-                ThrowCounterNameTooBig(counterName);
-            }
-
-            if (documentId.Length + counterName.Length > DocumentIdWorker.MaxIdSize)
-            {
-                ThrowStorageKeyTooBig(documentId, counterName);
-            }
-        }
-
         private static void ThrowCounterNameTooBig(string name)
         {
-            throw new KeyTooBigException(
-                $"Counter name cannot exceed {DocumentIdWorker.MaxIdSize} bytes, but counter name has {name.Length} characters. The invalid counter name is '{name}'.");
-        }
-
-        private static void ThrowStorageKeyTooBig(string docId, string counterName)
-        {
-            throw new KeyTooBigException(
-                $"Cannot increment counter '{counterName}' of document '{docId}'. Size of counter name + size of document Id cannot exceed {DocumentIdWorker.MaxIdSize} bytes.");
+            throw new ArgumentException(
+                $"Counter name cannot exceed {DocumentIdWorker.MaxIdSize} bytes, but counter name has {name.Length} characters. " +
+                $"The invalid counter name is '{name}'.", nameof(name));
         }
 
         private static void SplitCounterGroup(DocumentsOperationContext context, CollectionName collectionName, Table table, Slice documentKeyPrefix, Slice countersGroupKey, BlittableJsonReaderObject values, BlittableJsonReaderArray dbIds, string changeVector)
@@ -824,7 +808,6 @@ namespace Raven.Server.Documents
 
                         using (Slice.External(context.Allocator, kvp.Key, out var countersGroupKey))
                         {
-
                             if (currentData.Size > MaxCounterDocumentSize)
                             {
                                 // after adding new counters to the counters blittable

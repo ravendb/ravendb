@@ -1,6 +1,5 @@
 ﻿using System;
 using System.Text;
-using Raven.Server.Exceptions;
 using Raven.Server.ServerWide;
 using Raven.Server.ServerWide.Context;
 using Sparrow.Json;
@@ -313,8 +312,9 @@ namespace Raven.Server.Documents
 
         public static void ThrowDocumentIdTooBig(string str)
         {
-            throw new KeyTooBigException(
-                $"Document ID cannot exceed {MaxIdSize} bytes, but the ID was {Encoding.GetByteCount(str)} bytes. The invalid ID is '{str}'.");
+            throw new ArgumentException(
+                $"Document ID cannot exceed {MaxIdSize} bytes, but the ID was {Encoding.GetByteCount(str)} bytes. The invalid ID is '{str}'.",
+                nameof(str));
         }
 
         public static ByteStringContext.InternalScope GetStringPreserveCase(DocumentsOperationContext context, string str, out Slice strSlice)
