@@ -3,6 +3,7 @@ using System.Collections;
 using System.Diagnostics;
 using System.Globalization;
 using System.IO;
+using System.Reflection.Emit;
 using System.Runtime.InteropServices;
 using System.Security.Cryptography;
 using System.Security.Cryptography.X509Certificates;
@@ -21,6 +22,7 @@ using Raven.Server.Commercial;
 using Raven.Server.Config.Categories;
 using Sparrow.Logging;
 using Sparrow.Platform;
+using Sparrow.Utils;
 using Sparrow.Server;
 using Sparrow.Server.Platform.Posix;
 
@@ -319,9 +321,19 @@ namespace Raven.Server.ServerWide
             return unprotectedData;
         }
 
-        public RavenServer.CertificateHolder LoadCertificateWithExecutable(string executable, string args, ServerStore serverStore)
+        public enum CertificateRequestType
+        {
+            Load,
+            Renew,
+            CertificateChanged
+        }
+
+        public RavenServer.CertificateHolder LoadCertificateWithExecutable(CertificateRequestType type, string executable, string userArgs, ServerStore serverStore)
         {
             Process process;
+
+            
+            var args = $"{userArgs} {type}";
 
             var startInfo = new ProcessStartInfo
             {
@@ -415,6 +427,76 @@ namespace Raven.Server.ServerWide
                 CertificateForClients = Convert.ToBase64String(loadedCertificate.Export(X509ContentType.Cert)),
                 PrivateKey = privateKey
             };
+        }
+
+        public void NotifyExecutableOfCertificateChange(string executable, string userArgs, string newCertificateBase64, ServerStore serverStore)
+        {
+            Process process;
+
+            var args = $"{userArgs} {CertificateRequestType.CertificateChanged} {newCertificateBase64}";
+
+            var startInfo = new ProcessStartInfo
+            {
+                FileName = executable,
+                Arguments = args,
+                UseShellExecute = false,
+                RedirectStandardError = true,
+                CreateNoWindow = true
+            };
+
+            var sw = Stopwatch.StartNew();
+
+            try
+            {
+                process = Process.Start(startInfo);
+            }
+            catch (Exception e)
+            {
+                throw new InvalidOperationException($"Unable to execute {executable} {args}. Failed to start process.", e);
+            }
+
+            var readErrors = process.StandardError.ReadToEndAsync();
+
+            string GetStdError()
+            {
+                try
+                {
+                    return readErrors.Result;
+                }
+                catch
+                {
+                    return "Unable to get stderr";
+                }
+            }
+
+            if (process.WaitForExit((int)_config.CertificateExecTimeout.AsTimeSpan.TotalMilliseconds) == false)
+            {
+                process.Kill();
+                throw new InvalidOperationException($"Unable to execute {executable} {args}, waited for {_config.CertificateExecTimeout} ms but the process didn't exit. Stderr: {GetStdError()}");
+            }
+
+            try
+            {
+                readErrors.Wait(_config.CertificateExecTimeout.AsTimeSpan);
+            }
+            catch (Exception e)
+            {
+                throw new InvalidOperationException($"Unable to execute {executable} {args}, waited for {_config.CertificateExecTimeout} ms but the process didn't exit. Stderr: {GetStdError()}", e);
+            }
+
+            if (Logger.IsOperationsEnabled)
+            {
+                var errors = GetStdError();
+                Logger.Operations(string.Format($"Executing {executable} {args} took {sw.ElapsedMilliseconds:#,#;;0} ms"));
+                if (!string.IsNullOrWhiteSpace(errors))
+                    Logger.Operations(string.Format($"Executing {executable} {args} finished with exit code: {process.ExitCode}. Errors: {errors}"));
+            }
+
+            if (process.ExitCode != 0)
+            {
+                throw new InvalidOperationException(
+                    $"Unable to execute {executable} {args}, the exit code was {process.ExitCode}. Stderr: {GetStdError()}");
+            }
         }
 
         private byte[] LoadMasterKeyWithExecutable()

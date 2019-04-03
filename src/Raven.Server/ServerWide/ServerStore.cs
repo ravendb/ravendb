@@ -1085,10 +1085,53 @@ namespace Raven.Server.ServerWide
                             oldThumbprint = string.Empty;
                     }
 
-                    // and now we have to replace the cert...
-                    if (string.IsNullOrEmpty(Configuration.Security.CertificatePath))
+                    // Save the received certificate
+
+                    var bytesToSave = Convert.FromBase64String(certBase64);
+                    var newClusterCertificate = new X509Certificate2(bytesToSave, (string)null, X509KeyStorageFlags.Exportable | X509KeyStorageFlags.MachineKeySet);
+
+                    if (string.IsNullOrEmpty(Configuration.Security.CertificatePath) == false)
                     {
-                        var msg = "Cluster wanted to install updated server certificate, but no path has been configured in settings.json";
+                        if (string.IsNullOrEmpty(Configuration.Security.CertificatePassword) == false)
+                        {
+                            bytesToSave = newClusterCertificate.Export(X509ContentType.Pkcs12, Configuration.Security.CertificatePassword);
+                        }
+
+                        var certPath = Path.Combine(AppContext.BaseDirectory, Configuration.Security.CertificatePath);
+                        if (Logger.IsOperationsEnabled)
+                            Logger.Operations($"Writing the new certificate to {certPath}");
+
+                        try
+                        {
+                            using (var certStream = File.Create(certPath))
+                            {
+                                certStream.Write(bytesToSave, 0, bytesToSave.Length);
+                                certStream.Flush(true);
+                            }
+                        }
+                        catch (Exception e)
+                        {
+                            throw new IOException($"Cannot write certificate to {certPath} , RavenDB needs write permissions for this file.", e);
+                        }
+                    }
+                    else if (string.IsNullOrEmpty(Configuration.Security.CertificateExec) == false)
+                    {
+                        try
+                        {
+                            Secrets.NotifyExecutableOfCertificateChange(Configuration.Security.CertificateExec,
+                                Configuration.Security.CertificateExecArguments,
+                                certBase64,
+                                this);
+                        }
+                        catch (Exception e)
+                        {
+                            if (Logger.IsOperationsEnabled)
+                                Logger.Operations($"Unable to notify executable about the cluster certificate change '{Server.Certificate.Certificate.Thumbprint}'.", e);
+                        }
+                    }
+                    else
+                    {
+                        var msg = "Cluster wanted to install updated server certificate, but no path or executable has been configured in settings.json";
                         if (Logger.IsOperationsEnabled)
                             Logger.Operations(msg);
 
@@ -1101,30 +1144,7 @@ namespace Raven.Server.ServerWide
                         return;
                     }
 
-                    var bytesToSave = Convert.FromBase64String(certBase64);
-                    var newClusterCertificate = new X509Certificate2(bytesToSave, (string)null, X509KeyStorageFlags.Exportable | X509KeyStorageFlags.MachineKeySet);
-
-                    if (string.IsNullOrEmpty(Configuration.Security.CertificatePassword) == false)
-                    {
-                        bytesToSave = newClusterCertificate.Export(X509ContentType.Pkcs12, Configuration.Security.CertificatePassword);
-                    }
-
-                    var certPath = Path.Combine(AppContext.BaseDirectory, Configuration.Security.CertificatePath);
-                    if (Logger.IsOperationsEnabled)
-                        Logger.Operations($"Writing the new certificate to {certPath}");
-
-                    try
-                    {
-                        using (var certStream = File.Create(certPath))
-                        {
-                            certStream.Write(bytesToSave, 0, bytesToSave.Length);
-                            certStream.Flush(true);
-                        }
-                    }
-                    catch (Exception e)
-                    {
-                        throw new IOException($"Cannot write certificate to {certPath} , RavenDB needs write permissions for this file.", e);
-                    }
+                    // and now we have to replace the cert in the running server...
 
                     if (Logger.IsOperationsEnabled)
                         Logger.Operations($"Replacing the certificate used by the server to: {newClusterCertificate.Thumbprint} ({newClusterCertificate.SubjectName.Name})");

@@ -8,6 +8,7 @@ using System.Threading;
 using System.Threading.Tasks;
 using FastTests.Server.Basic;
 using Newtonsoft.Json.Linq;
+using Raven.Client.Documents;
 using Raven.Server.Documents;
 using Raven.Server.Documents.Queries.AST;
 using Raven.Server.Documents.Queries.Parser;
@@ -23,16 +24,14 @@ namespace Tryouts
     {
         public static async Task Main(string[] args)
         {
-            //Console.WriteLine($"Press any key to start... (Process ID: {Process.GetCurrentProcess().Id})");
-            //Console.ReadKey();
-            for (int i = 0; i < 1000; i++)
-            {
-                Console.WriteLine(i);
-                using (var test = new RavenDB_11440())
+            
+                using (var test = new SlowTests.Authentication.AuthenticationClusterTests())
                 {
-                    await test.CanGetLogsConfigurationAndChangeMode();
+                    await test.CanReplaceClusterCertWithExtensionPoint();
                 }
-            }
+
+                
+            
         }
     }
 }

@@ -700,13 +700,17 @@ namespace FastTests
             IDictionary<string, string> customSettings = null,
             string serverUrl = null, bool createNew = false, string serverCertPath = null)
         {
-            if (serverCertPath == null)
-                serverCertPath = GenerateAndSaveSelfSignedCertificate(createNew);
-
             if (customSettings == null)
                 customSettings = new ConcurrentDictionary<string, string>();
 
-            customSettings[RavenConfiguration.GetKey(x => x.Security.CertificatePath)] = serverCertPath;
+            if (customSettings.TryGetValue(RavenConfiguration.GetKey(x => x.Security.CertificateExec), out var _) == false)
+            {
+                if (serverCertPath == null)
+                    serverCertPath = GenerateAndSaveSelfSignedCertificate(createNew);
+
+                customSettings[RavenConfiguration.GetKey(x => x.Security.CertificatePath)] = serverCertPath;
+            }
+
             customSettings[RavenConfiguration.GetKey(x => x.Core.ServerUrls)] = serverUrl ?? "https://" + Environment.MachineName + ":0";
 
             DoNotReuseServer(customSettings);
