@@ -38,14 +38,6 @@ namespace Raven.Server.Web.System
 {
     public class OngoingTasksHandler : DatabaseRequestHandler
     {
-        [RavenAction("/databases/*/admin/backup/database", "OPTIONS", AuthorizationStatus.DatabaseAdmin)]
-        public Task AllowPreflightRequest()
-        {
-            SetupCORSHeaders();
-            HttpContext.Response.Headers.Remove("Content-Type");
-            return Task.CompletedTask;
-        }
-
         [RavenAction("/databases/*/tasks", "GET", AuthorizationStatus.ValidUser)]
         public Task GetOngoingTasks()
         {
@@ -553,11 +545,9 @@ namespace Raven.Server.Web.System
             return CrontabSchedule.Parse(backupFrequency);
         }
 
-        [RavenAction("/databases/*/admin/backup/database", "POST", AuthorizationStatus.DatabaseAdmin)]
+        [RavenAction("/databases/*/admin/backup/database", "POST", AuthorizationStatus.DatabaseAdmin, CorsMode = CorsMode.Cluster)]
         public Task BackupDatabase()
         {
-            SetupCORSHeaders();
-
             var taskId = GetLongQueryString("taskId");
             var isFullBackup = GetBoolValueQueryString("isFullBackup", required: false);
 

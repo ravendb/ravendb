@@ -294,7 +294,6 @@ namespace Raven.Server
 
             if (exception is InsufficientTransportLayerProtectionException)
             {
-                Web.RequestHandler.SetupCORSHeaders(httpContext, serverStore);
                 response.StatusCode = (int)HttpStatusCode.BadRequest;
                 return;
             }

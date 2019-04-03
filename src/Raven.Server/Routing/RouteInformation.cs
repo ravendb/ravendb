@@ -8,6 +8,7 @@ using Raven.Client.Exceptions.Cluster;
 using Raven.Client.Exceptions.Database;
 using Raven.Server.Documents;
 using Raven.Server.Web;
+using Raven.Server.Web.System;
 
 namespace Raven.Server.Routing
 {
@@ -20,6 +21,7 @@ namespace Raven.Server.Routing
         public readonly string Path;
 
         public readonly bool SkipUsagesCount;
+        public readonly CorsMode CorsMode;
 
         private HandleRequest _request;
         private RouteType _typeOfRoute;
@@ -32,13 +34,15 @@ namespace Raven.Server.Routing
             Databases
         }
 
-        public RouteInformation(string method, string path, AuthorizationStatus authorizationStatus, bool skipUsagesCount, bool isDebugInformationEndpoint = false)
+        public RouteInformation(string method, string path, AuthorizationStatus authorizationStatus, bool skipUsagesCount, CorsMode corsMode,
+            bool isDebugInformationEndpoint = false)
         {
             AuthorizationStatus = authorizationStatus;
             IsDebugInformationEndpoint = isDebugInformationEndpoint;
             Method = method;
             Path = path;
             SkipUsagesCount = skipUsagesCount;
+            CorsMode = corsMode;
         }
 
         public RouteType TypeOfRoute => _typeOfRoute;
@@ -63,12 +67,12 @@ namespace Raven.Server.Routing
 
             var block = Expression.Block(typeof(Task), new[] { handler },
                 Expression.Assign(handler, newExpression),
-                Expression.Call(handler, "Init", new Type[0], currentRequestContext),
+                Expression.Call(handler, nameof(RequestHandler.Init), new Type[0], currentRequestContext),
                 Expression.Call(handler, action.Name, new Type[0]));
             // .Handle();
             _request = Expression.Lambda<HandleRequest>(block, currentRequestContext).Compile();
         }
-
+        
         public Task CreateDatabase(RequestHandlerContext context)
         {
             var databaseName = context.RouteMatch.GetCapture();

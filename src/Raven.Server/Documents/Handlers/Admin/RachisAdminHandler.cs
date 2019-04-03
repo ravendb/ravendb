@@ -114,11 +114,9 @@ namespace Raven.Server.Documents.Handlers.Admin
             }
         }
 
-        [RavenAction("/admin/cluster/observer/suspend", "POST", AuthorizationStatus.Operator)]
+        [RavenAction("/admin/cluster/observer/suspend", "POST", AuthorizationStatus.Operator, CorsMode = CorsMode.Cluster)]
         public Task SuspendObserver()
         {
-            SetupCORSHeaders();
-
             if (ServerStore.IsLeader())
             {
                 var suspend = GetBoolValueQueryString("value");
@@ -136,11 +134,9 @@ namespace Raven.Server.Documents.Handlers.Admin
             return Task.CompletedTask;
         }
 
-        [RavenAction("/admin/cluster/observer/decisions", "GET", AuthorizationStatus.Operator)]
+        [RavenAction("/admin/cluster/observer/decisions", "GET", AuthorizationStatus.Operator, CorsMode = CorsMode.Cluster)]
         public Task GetObserverDecisions()
         {
-            SetupCORSHeaders();
-
             if (ServerStore.IsLeader())
             {
                 using (ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
@@ -298,21 +294,6 @@ namespace Raven.Server.Documents.Handlers.Admin
             return Task.CompletedTask;
         }
 
-        [RavenAction("/admin/cluster/node", "OPTIONS", AuthorizationStatus.Operator)]
-        [RavenAction("/admin/cluster/reelect", "OPTIONS", AuthorizationStatus.Operator)]
-        [RavenAction("/admin/cluster/timeout", "OPTIONS", AuthorizationStatus.Operator)]
-        [RavenAction("/admin/cluster/promote", "OPTIONS", AuthorizationStatus.Operator)]
-        [RavenAction("/admin/cluster/demote", "OPTIONS", AuthorizationStatus.Operator)]
-        [RavenAction("/admin/cluster/observer/suspend", "OPTIONS", AuthorizationStatus.Operator)]
-        [RavenAction("/admin/cluster/observer/decisions", "OPTIONS", AuthorizationStatus.Operator)]
-        [RavenAction("/admin/license/set-limit", "OPTIONS", AuthorizationStatus.Operator)]
-        public Task AllowPreflightRequest()
-        {
-            SetupCORSHeaders();
-            HttpContext.Response.Headers.Remove("Content-Type");
-            return Task.CompletedTask;
-        }
-
         [RavenAction("/admin/cluster/bootstrap", "POST", AuthorizationStatus.ClusterAdmin)]
         public Task Bootstrap()
         {
@@ -320,11 +301,9 @@ namespace Raven.Server.Documents.Handlers.Admin
             return NoContent();
         }
 
-        [RavenAction("/admin/cluster/node", "PUT", AuthorizationStatus.ClusterAdmin)]
+        [RavenAction("/admin/cluster/node", "PUT", AuthorizationStatus.ClusterAdmin, CorsMode = CorsMode.Cluster)]
         public async Task AddNode()
         {
-            SetupCORSHeaders();
-
             var nodeUrl = GetQueryStringValueAndAssertIfSingleAndNotEmpty("url");
             var tag = GetStringQueryString("tag", false);
             var watcher = GetBoolValueQueryString("watcher", false);
@@ -543,11 +522,9 @@ namespace Raven.Server.Documents.Handlers.Admin
             RedirectToLeader();
         }
 
-        [RavenAction("/admin/cluster/node", "DELETE", AuthorizationStatus.ClusterAdmin)]
+        [RavenAction("/admin/cluster/node", "DELETE", AuthorizationStatus.ClusterAdmin, CorsMode = CorsMode.Cluster)]
         public async Task DeleteNode()
         {
-            SetupCORSHeaders();
-
             var nodeTag = GetStringQueryString("nodeTag");
             ServerStore.EnsureNotPassive();
             if (ServerStore.IsLeader())
@@ -569,11 +546,9 @@ namespace Raven.Server.Documents.Handlers.Admin
             RedirectToLeader();
         }
 
-        [RavenAction("/admin/license/set-limit", "POST", AuthorizationStatus.ClusterAdmin)]
+        [RavenAction("/admin/license/set-limit", "POST", AuthorizationStatus.ClusterAdmin, CorsMode = CorsMode.Cluster)]
         public async Task SetLicenseLimit()
         {
-            SetupCORSHeaders();
-
             var nodeTag = GetStringQueryString("nodeTag");
             var newAssignedCores = GetIntValueQueryString("newAssignedCores");
 
@@ -593,22 +568,18 @@ namespace Raven.Server.Documents.Handlers.Admin
             RedirectToLeader();
         }
 
-        [RavenAction("/admin/cluster/timeout", "POST", AuthorizationStatus.Operator)]
+        [RavenAction("/admin/cluster/timeout", "POST", AuthorizationStatus.Operator, CorsMode = CorsMode.Cluster)]
         public Task TimeoutNow()
         {
-            SetupCORSHeaders();
-
             Server.ServerStore.Engine.Timeout.ExecuteTimeoutBehavior();
             NoContentStatus();
             return Task.CompletedTask;
         }
 
 
-        [RavenAction("/admin/cluster/reelect", "POST", AuthorizationStatus.Operator)]
+        [RavenAction("/admin/cluster/reelect", "POST", AuthorizationStatus.Operator, CorsMode = CorsMode.Cluster)]
         public Task EnforceReelection()
         {
-            SetupCORSHeaders();
-
             if (ServerStore.IsLeader())
             {
                 ServerStore.Engine.CurrentLeader.StepDown();
@@ -620,7 +591,7 @@ namespace Raven.Server.Documents.Handlers.Admin
         }
 
         /* Promote a non-voter to a promotable */
-        [RavenAction("/admin/cluster/promote", "POST", AuthorizationStatus.Operator)]
+        [RavenAction("/admin/cluster/promote", "POST", AuthorizationStatus.Operator, CorsMode = CorsMode.Cluster)]
         public async Task PromoteNode()
         {
             if (ServerStore.LeaderTag == null)
@@ -628,8 +599,6 @@ namespace Raven.Server.Documents.Handlers.Admin
                 NoContentStatus();
                 return;
             }
-
-            SetupCORSHeaders();
 
             if (ServerStore.IsLeader() == false)
             {
@@ -655,7 +624,7 @@ namespace Raven.Server.Documents.Handlers.Admin
         }
 
         /* Demote a voter (member/promotable) node to a non-voter  */
-        [RavenAction("/admin/cluster/demote", "POST", AuthorizationStatus.Operator)]
+        [RavenAction("/admin/cluster/demote", "POST", AuthorizationStatus.Operator, CorsMode = CorsMode.Cluster)]
         public async Task DemoteNode()
         {
             if (ServerStore.LeaderTag == null)
@@ -663,8 +632,6 @@ namespace Raven.Server.Documents.Handlers.Admin
                 NoContentStatus();
                 return;
             }
-
-            SetupCORSHeaders();
 
             if (ServerStore.IsLeader() == false)
             {
