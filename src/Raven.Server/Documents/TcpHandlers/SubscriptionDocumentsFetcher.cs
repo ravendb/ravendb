@@ -12,10 +12,13 @@ using Raven.Server.Documents.Includes;
 using Raven.Server.Documents.Patch;
 using Raven.Server.Documents.Subscriptions;
 using Raven.Server.ServerWide.Context;
+using Raven.Server.ServerWide.Memory;
 using Raven.Server.Utils;
+using Sparrow;
 using Sparrow.Json;
 using Sparrow.Json.Parsing;
 using Sparrow.Logging;
+using Sparrow.Utils;
 
 namespace Raven.Server.Documents.TcpHandlers
 {
@@ -30,6 +33,8 @@ namespace Raven.Server.Documents.TcpHandlers
         private readonly bool _revisions;
         private readonly SubscriptionState _subscription;
         private readonly SubscriptionPatchDocument _patch;
+        private NativeMemory.ThreadStats _threadAllocations;
+        private Size _currentMaximumAllowedMemory = new Size(32, SizeUnit.Megabytes);
 
         public SubscriptionDocumentsFetcher(DocumentDatabase db, int maxBatchSize, long subscriptionId, EndPoint remoteEndpoint, string collection,
             bool revisions,
@@ -82,6 +87,7 @@ namespace Raven.Server.Documents.TcpHandlers
                     0,
                     int.MaxValue))
                 {
+                    _threadAllocations = NativeMemory.CurrentThreadStats;
                     using (doc.Data)
                     {
                         if (ShouldSendDocument(_subscription, run, _patch, docsContext, doc, out BlittableJsonReaderObject transformResult, out var exception) == false)
@@ -129,8 +135,41 @@ namespace Raven.Server.Documents.TcpHandlers
 
                     if (++size >= _maxBatchSize)
                         yield break;
+
+                    if (CanContinueBatch(docsContext) == false)
+                        yield break;
+
                 }
             }
+        }
+
+        public bool CanContinueBatch(DocumentsOperationContext ctx)
+        {
+            var totalAllocated = _threadAllocations.TotalAllocated;
+            _threadAllocations.CurrentlyAllocatedForProcessing = totalAllocated;
+            var currentlyInUse = new Size(totalAllocated, SizeUnit.Bytes);
+            if (currentlyInUse > _currentMaximumAllowedMemory)
+            {
+                if (MemoryUsageGuard.TryIncreasingMemoryUsageForThread(_threadAllocations, ref _currentMaximumAllowedMemory,
+                        currentlyInUse,
+                        _db.DocumentsStorage.Environment.Options.RunningOn32Bits, _logger, out var memoryUsage) ) return true;
+                var reason = $"Stopping the batch because cannot budget additional memory. Current budget: {currentlyInUse}.";
+                if (memoryUsage != null)
+                {
+                    reason += " Current memory usage: " +
+                              $"{nameof(memoryUsage.WorkingSet)} = {memoryUsage.WorkingSet}," +
+                              $"{nameof(memoryUsage.PrivateMemory)} = {memoryUsage.PrivateMemory}";
+                }
+
+                if(_logger.IsInfoEnabled)
+                    _logger.Info(reason);
+
+                ctx.DoNotReuse = true;
+
+                return false;
+
+            }
+            return true;
         }
 
         private IEnumerable<(Document Doc, Exception Exception)> GetRevisionsToSend(
@@ -194,6 +233,9 @@ namespace Raven.Server.Documents.TcpHandlers
                         }
                     }
                     if (++size >= _maxBatchSize)
+                        yield break;
+
+                    if (CanContinueBatch(docsContext) == false)
                         yield break;
                 }
             }
