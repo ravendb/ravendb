@@ -581,7 +581,7 @@ namespace Voron.Impl.Journal
                     long lastFlushedTransactionId = -1;
 
                     // RavenDB-13302: we need to force a re-check this before we make decisions here
-                    _waj._env.ActiveTransactions.RecheckOldestTransaction();
+                    _waj._env.ActiveTransactions.ForceRecheckingOldestTransactionByFlusherThread();
                     long oldestActiveTransaction = _waj._env.ActiveTransactions.OldestTransaction;
 
                     foreach (var journalFile in jrnls)
