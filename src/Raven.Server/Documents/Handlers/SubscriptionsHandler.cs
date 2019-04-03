@@ -220,11 +220,9 @@ namespace Raven.Server.Documents.Handlers
             }
         }
 
-        [RavenAction("/databases/*/subscriptions/connection-details", "GET", AuthorizationStatus.ValidUser)]
+        [RavenAction("/databases/*/subscriptions/connection-details", "GET", AuthorizationStatus.ValidUser, CorsMode = CorsMode.Cluster)]
         public Task GetSubscriptionConnectionDetails()
         {
-            SetupCORSHeaders();
-
             var subscriptionName = GetStringQueryString("name", false);
 
             using (ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext context))

@@ -9,6 +9,8 @@ namespace Raven.Server.Routing
     {
         public bool IsDebugInformationEndpoint { get; set; }
 
+        public CorsMode CorsMode { get; set; }
+
         public string Path { get; }
 
         public string Method { get; }
@@ -20,13 +22,14 @@ namespace Raven.Server.Routing
         public bool IsPosixSpecificEndpoint { get; set; }
 
         public RavenActionAttribute(string path, string method, AuthorizationStatus requireAuth, bool isDebugInformationEndpoint = false,
-            bool isPosixSpecificEndpoint = false)
+            bool isPosixSpecificEndpoint = false, CorsMode corsMode = CorsMode.None)
         {
             Path = path;
             Method = method;
             IsDebugInformationEndpoint = isDebugInformationEndpoint;
             RequiredAuthorization = requireAuth;
             IsPosixSpecificEndpoint = isPosixSpecificEndpoint;
+            CorsMode = corsMode;
         }
     }
 

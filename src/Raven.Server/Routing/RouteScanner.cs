@@ -8,6 +8,9 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Reflection;
+using Microsoft.AspNetCore.Http;
+using Raven.Server.ServerWide;
+using Raven.Server.Web.System;
 using Sparrow.Platform;
 
 namespace Raven.Server.Routing
@@ -36,6 +39,8 @@ namespace Raven.Server.Routing
         {
             var routes = new Dictionary<string, RouteInformation>(StringComparer.OrdinalIgnoreCase);
 
+            var corsHandler = typeof(CorsPreflightHandler).GetMethod(nameof(CorsPreflightHandler.HandlePreflightRequest));
+            
             var actions = typeof(RouteScanner).GetTypeInfo().Assembly.GetTypes()
                 .SelectMany(type => type.GetMethods(BindingFlags.Instance | BindingFlags.Public | BindingFlags.DeclaredOnly))
                 .Where(type => type.IsDefined(typeof(RavenActionAttribute)))
@@ -45,9 +50,31 @@ namespace Raven.Server.Routing
             {
                 foreach (var route in memberInfo.GetCustomAttributes<RavenActionAttribute>())
                 {
-                    if(predicate != null && predicate(route) == false)
+                    if (predicate != null && predicate(route) == false)
                         continue;
 
+                    if (route.CorsMode != CorsMode.None)
+                    {
+                        // register endpoint for preflight request 
+                        var optionsRouteKey = "OPTIONS" + route.Path;
+                        
+                        // we don't check for duplicates here, as single endpoint like: /admin/cluster/node might have 2 verbs (PUT, DELETE),
+                        // but we need single OPTIONS handler
+                        
+                        if (routes.TryGetValue(optionsRouteKey, out RouteInformation optionsRouteInfo) == false)
+                        {
+                            routes[optionsRouteKey] = optionsRouteInfo = new RouteInformation(
+                                "OPTIONS", 
+                                route.Path, 
+                                route.RequiredAuthorization, 
+                                route.SkipUsagesCount,
+                                route.CorsMode,
+                                route.IsDebugInformationEndpoint);
+                            
+                            optionsRouteInfo.Build(corsHandler);
+                        }
+                    }
+                    
                     var routeKey = route.Method + route.Path;
                     if (routes.TryGetValue(routeKey, out RouteInformation routeInfo) == false)
                     {
@@ -56,6 +83,7 @@ namespace Raven.Server.Routing
                             route.Path, 
                             route.RequiredAuthorization, 
                             route.SkipUsagesCount,
+                            route.CorsMode,
                             route.IsDebugInformationEndpoint);
                     }
                     else
@@ -68,5 +96,7 @@ namespace Raven.Server.Routing
 
             return routes;
         }
+        
     }
+    
 }

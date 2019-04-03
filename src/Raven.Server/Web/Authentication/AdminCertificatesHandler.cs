@@ -901,21 +901,9 @@ namespace Raven.Server.Web.Authentication
             return Task.CompletedTask;
         }
 
-        [RavenAction("/admin/certificates/letsencrypt/force-renew", "OPTIONS", AuthorizationStatus.ClusterAdmin)]
-        [RavenAction("/admin/certificates/refresh", "OPTIONS", AuthorizationStatus.ClusterAdmin)]
-        [RavenAction("/admin/certificates/replace-cluster-cert", "OPTIONS", AuthorizationStatus.ClusterAdmin)]
-        public Task AllowPreflightRequest()
-        {
-            SetupCORSHeaders();
-            HttpContext.Response.Headers.Remove("Content-Type");
-            return Task.CompletedTask;
-        }
-
-        [RavenAction("/admin/certificates/letsencrypt/force-renew", "POST", AuthorizationStatus.ClusterAdmin)]
+        [RavenAction("/admin/certificates/letsencrypt/force-renew", "POST", AuthorizationStatus.ClusterAdmin, CorsMode = CorsMode.Cluster)]
         public Task ForceRenew()
         {
-            SetupCORSHeaders();
-
             if (ServerStore.IsLeader())
             {
                 if (ServerStore.Configuration.Core.SetupMode != SetupMode.LetsEncrypt)
@@ -947,11 +935,9 @@ namespace Raven.Server.Web.Authentication
             return Task.CompletedTask;
         }
 
-        [RavenAction("/admin/certificates/refresh", "POST", AuthorizationStatus.ClusterAdmin)]
+        [RavenAction("/admin/certificates/refresh", "POST", AuthorizationStatus.ClusterAdmin, CorsMode = CorsMode.Cluster)]
         public Task TriggerCertificateRefresh()
         {
-            SetupCORSHeaders();
-
             if (ServerStore.IsLeader() || ServerStore.Configuration.Core.SetupMode != SetupMode.LetsEncrypt)
             {
                 // What we do here is trigger the refresh cycle which normally happens once an hour.
@@ -979,11 +965,9 @@ namespace Raven.Server.Web.Authentication
             return Task.CompletedTask;
         }
 
-        [RavenAction("/admin/certificates/replace-cluster-cert", "POST", AuthorizationStatus.ClusterAdmin)]
+        [RavenAction("/admin/certificates/replace-cluster-cert", "POST", AuthorizationStatus.ClusterAdmin, CorsMode = CorsMode.Cluster)]
         public async Task ReplaceClusterCert()
         {
-            SetupCORSHeaders();
-
             if (ServerStore.IsLeader())
             {
                 var replaceImmediately = GetBoolValueQueryString("replaceImmediately", required: false) ?? false;

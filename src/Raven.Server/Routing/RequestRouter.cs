@@ -104,7 +104,17 @@ namespace Raven.Server.Routing
                     return;
                 }
 
-                if (_ravenServer.Configuration.Security.AuthenticationEnabled)
+                var skipAuthorization = false;
+
+                if (tryMatch.Value.CorsMode != CorsMode.None)
+                {
+                    RequestHandler.SetupCORSHeaders(context, reqCtx.RavenServer.ServerStore, tryMatch.Value.CorsMode);
+                    
+                    // don't authorize preflight requests: https://www.w3.org/Protocols/rfc2616/rfc2616-sec9.html
+                    skipAuthorization = context.Request.Method == "OPTIONS";
+                }
+
+                if (_ravenServer.Configuration.Security.AuthenticationEnabled && skipAuthorization == false)
                 {
                     var authResult = TryAuthorize(tryMatch.Value, context, reqCtx.Database);
                     if (authResult == false)

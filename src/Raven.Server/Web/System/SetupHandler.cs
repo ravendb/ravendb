@@ -32,18 +32,9 @@ namespace Raven.Server.Web.System
 {
     public class SetupHandler : RequestHandler
     {
-        [RavenAction("/setup/alive", "OPTIONS", AuthorizationStatus.UnauthenticatedClients)]
-        public Task AllowPreflightRequest()
-        {
-            SetupCORSHeaders();
-            HttpContext.Response.Headers.Remove("Content-Type");
-            return Task.CompletedTask;
-        }
-
-        [RavenAction("/setup/alive", "GET", AuthorizationStatus.UnauthenticatedClients)]
+        [RavenAction("/setup/alive", "GET", AuthorizationStatus.UnauthenticatedClients, CorsMode = CorsMode.Public)]
         public Task ServerAlive()
         {
-            SetupCORSHeaders();
             return NoContent();
         }
 

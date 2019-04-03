@@ -576,7 +576,7 @@ namespace Raven.Server.Web
             throw new ArgumentOutOfRangeException("Unknown authentication status: " + status);
         }
 
-        public static void SetupCORSHeaders(HttpContext httpContext, ServerStore serverStore)
+        public static void SetupCORSHeaders(HttpContext httpContext, ServerStore serverStore, CorsMode corsMode)
         {
             httpContext.Response.Headers.Add("Vary", "Origin");
             
@@ -589,10 +589,16 @@ namespace Raven.Server.Web
             }
 
             string allowedOrigin = null; // prevent access by default
-            
-            if (IsOriginAllowed(requestedOrigin, serverStore))
+
+            switch (corsMode)
             {
-                allowedOrigin = requestedOrigin;
+                case CorsMode.Public:
+                    allowedOrigin = requestedOrigin;
+                    break;
+                case CorsMode.Cluster:
+                    if (IsOriginAllowed(requestedOrigin, serverStore))
+                        allowedOrigin = requestedOrigin;
+                    break;
             }
             
             httpContext.Response.Headers.Add("Access-Control-Allow-Origin", allowedOrigin);
@@ -639,9 +645,9 @@ namespace Raven.Server.Web
             return false;
         }
 
-        protected void SetupCORSHeaders()
+        protected void SetupCORSHeaders(CorsMode mode)
         {
-            SetupCORSHeaders(HttpContext, ServerStore);
+            SetupCORSHeaders(HttpContext, ServerStore, mode);
         }
 
         protected void RedirectToLeader()
