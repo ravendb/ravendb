@@ -324,7 +324,7 @@ namespace RachisTests.DatabaseCluster
             }
         }
 
-        [Fact]
+        [Fact(Skip = "RavenDB-13325")]
         public async Task RedistrebuteDatabaseIfNodeFailes()
         {
             DebuggerAttachedTimeout.DisableLongTimespan = true;
@@ -365,7 +365,7 @@ namespace RachisTests.DatabaseCluster
             }
         }
 
-        [Fact]
+        [Fact(Skip = "RavenDB-13325")]
         public async Task RedistrebuteDatabaseOnMultiFailure()
         {
             DebuggerAttachedTimeout.DisableLongTimespan = true;
@@ -451,7 +451,7 @@ namespace RachisTests.DatabaseCluster
             }
         }
 
-        [Fact]
+        [Fact(Skip = "RavenDB-13325")]
         public async Task DontRemoveNodeWhileItHasNotReplicatedDocs()
         {
             var databaseName = GetDatabaseName();
