@@ -60,7 +60,8 @@ rvn_create_and_mmap64_file(
         goto error_cleanup;
     }
 
-    if(path[0] == '\0')
+    /* An empty string should be dealt with as a 'current directory' like "." do (`stat()` fail in case of an empty string as parameter) */
+    if (path[0] == '\0')
         path = ".";
 
     char* dup_path = strdup(path);
