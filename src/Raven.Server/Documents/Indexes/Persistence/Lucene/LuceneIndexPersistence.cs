@@ -121,7 +121,11 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene
 
                     if (reader != null)
                     {
-                        if (reader.RefCount > 0)
+                        if (reader.RefCount <= 0)
+                        {
+                            reader = null;
+                        }
+                        else
                         {
                             try
                             {
@@ -141,8 +145,6 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene
                                 reader = null;
                             }
                         }
-                        else
-                            reader = null;
                     }
 
                     if (reader == null)
