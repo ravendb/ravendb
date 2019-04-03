@@ -12,7 +12,7 @@ namespace Raven.Server.ServerWide.Context
 {
     public class DocumentsContextPool : JsonContextPoolBase<DocumentsOperationContext>, IDocumentsContextPool
     {
-        private readonly DocumentDatabase _database;
+        private DocumentDatabase _database;
 
         public DocumentsContextPool(DocumentDatabase database)
         {
@@ -24,6 +24,12 @@ namespace Raven.Server.ServerWide.Context
             if (sizeof(int) == IntPtr.Size || _database.Configuration.Storage.ForceUsing32BitsPager)
                 return new DocumentsOperationContext(_database, 32 * 1024, 4 * 1024, LowMemoryFlag);
             return new DocumentsOperationContext(_database, 64 * 1024, 16 * 1024, LowMemoryFlag);
+        }
+
+        public override void Dispose()
+        {
+            _database = null;
+            base.Dispose();
         }
     }
 }

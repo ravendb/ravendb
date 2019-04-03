@@ -380,7 +380,7 @@ namespace Sparrow.Json
                     return;
             }
         }
-        public void Dispose()
+        public virtual void Dispose()
         {
             if (_disposed)
                 return;
