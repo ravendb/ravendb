@@ -4,8 +4,10 @@ using System.IO;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
+using FastTests.Server.Basic;
 using FastTests.Server.Replication;
 using Raven.Client;
+using Raven.Client.Documents;
 using Raven.Client.Documents.Operations;
 using Raven.Client.Documents.Operations.Backups;
 using Raven.Client.Documents.Operations.Counters;
@@ -470,6 +472,58 @@ namespace SlowTests.Client.Counters
         }
 
         [Fact]
+        public async Task RestoreAndConnectTwoNodesShouldHaveSameCounterValue()
+        {
+            var backupPath = NewDataPath(suffix: "BackupFolder");
+
+            using (var store1 = GetDocumentStore())
+            using (var store2 = GetDocumentStore(new Options
+            {
+                CreateDatabase = false
+            }))
+            using (var store3 = GetDocumentStore(new Options
+            {
+                CreateDatabase = false
+            }))
+            {
+                using (var session = store1.OpenAsyncSession())
+                {
+                    await session.StoreAsync(new User {Name = "Name1"}, "users/1");
+                    await session.StoreAsync(new User {Name = "Name2"}, "users/2");
+                    session.CountersFor("users/1").Increment("likes", 100);
+                    session.CountersFor("users/2").Increment("downloads", 500);
+                    session.CountersFor("users/1").Increment("dislikes", 200);
+
+                    await session.SaveChangesAsync();
+                }
+
+                await Backup(backupPath, store1);
+                await Restore(backupPath, store2);
+                await Restore(backupPath, store3);
+
+                using (var session = store2.OpenAsyncSession())
+                {
+                    await AssertCounters(session);
+                }
+
+                await SetupReplicationAsync(store2, store3);
+
+                using (var session = store2.OpenAsyncSession())
+                {
+                    await session.StoreAsync(new User(), "marker");
+                    await session.SaveChangesAsync();
+                }
+
+                Assert.NotNull(WaitForDocumentToReplicate<User>(store3, "marker", 10_000));
+
+                using (var session = store3.OpenAsyncSession())
+                {
+                    await AssertCounters(session);
+                }
+            }
+        }
+
+        [Fact]
         public async Task RestoreAndReplicateCounters()
         {
             var backupPath = NewDataPath(suffix: "BackupFolder");
@@ -509,34 +563,8 @@ namespace SlowTests.Client.Counters
                         await session.SaveChangesAsync();
                     }
 
-                    var config = new PeriodicBackupConfiguration
-                    {
-                        BackupType = BackupType.Backup,
-                        LocalSettings = new LocalSettings
-                        {
-                            FolderPath = backupPath
-                        },
-                        IncrementalBackupFrequency = "* * * * *" //every minute
-                    };
-
-                    var backupTaskId = (await store1.Maintenance.SendAsync(new UpdatePeriodicBackupOperation(config))).TaskId;
-                    await store1.Maintenance.SendAsync(new StartBackupOperation(true, backupTaskId));
-
-                    var getPeriodicBackupStatus = new GetPeriodicBackupStatusOperation(backupTaskId);
-                    SpinWait.SpinUntil(() =>
-                    {
-                        var getPeriodicBackupResult = store1.Maintenance.Send(getPeriodicBackupStatus);
-                        return getPeriodicBackupResult.Status?.LastEtag > 0;
-                    }, TimeSpan.FromSeconds(15));
-
-                    var restore = new RestoreBackupOperation(new RestoreBackupConfiguration
-                    {
-                        BackupLocation = Directory.GetDirectories(backupPath).First(),
-                        DatabaseName = store2.Database,
-                    });
-
-                    var result = await store2.Maintenance.Server.SendAsync(restore);
-                    result.WaitForCompletion();
+                    await Backup(backupPath, store1);
+                    await Restore(backupPath, store2);
 
                     var stats = await store2.Maintenance.SendAsync(new GetStatisticsOperation());
                     Assert.Equal(2, stats.CountOfDocuments);
@@ -563,6 +591,35 @@ namespace SlowTests.Client.Counters
                     }
                 }
             }
+        }
+
+        private static async Task Backup(string backupPath, DocumentStore backupStore)
+        {
+            var config = new PeriodicBackupConfiguration
+            {
+                BackupType = BackupType.Backup, LocalSettings = new LocalSettings {FolderPath = backupPath}, IncrementalBackupFrequency = "* * * 1 *" // sometime in January..
+            };
+
+            var backupTaskId = (await backupStore.Maintenance.SendAsync(new UpdatePeriodicBackupOperation(config))).TaskId;
+            await backupStore.Maintenance.SendAsync(new StartBackupOperation(true, backupTaskId));
+
+            var getPeriodicBackupStatus = new GetPeriodicBackupStatusOperation(backupTaskId);
+            SpinWait.SpinUntil(() =>
+            {
+                var getPeriodicBackupResult = backupStore.Maintenance.Send(getPeriodicBackupStatus);
+                return getPeriodicBackupResult.Status?.LastEtag > 0;
+            }, TimeSpan.FromSeconds(15));
+        }
+
+        private static async Task Restore(string backupPath, DocumentStore restoreStore)
+        {
+            var restore = new RestoreBackupOperation(new RestoreBackupConfiguration
+            {
+                BackupLocation = Directory.GetDirectories(backupPath).First(), DatabaseName = restoreStore.Database,
+            });
+
+            var result = await restoreStore.Maintenance.Server.SendAsync(restore);
+            result.WaitForCompletion();
         }
 
         private static async Task AssertCounters(IAsyncDocumentSession session)
