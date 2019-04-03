@@ -42,10 +42,11 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene
 
         private readonly IndexSearcherHolder _indexSearcherHolder;
 
-        private DisposeOnce<SingleAttempt>_disposeOnce;
+        private readonly DisposeOnce<SingleAttempt> _disposeOnce;
 
         private bool _initialized;
         private readonly Dictionary<string, IndexField> _fields;
+        private IndexReader _lastReader;
 
         public LuceneIndexPersistence(Index index)
         {
@@ -56,6 +57,7 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene
             {
                 DisposeWriters();
 
+                _lastReader?.Dispose();
                 _indexSearcherHolder?.Dispose();
                 _converter?.Dispose();
                 _directory?.Dispose();
@@ -96,7 +98,8 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene
             }
 
             _fields = fields.ToDictionary(x => x.Name, x => x);
-            _indexSearcherHolder = new IndexSearcherHolder(state => new IndexSearcher(_directory, true, state), _index._indexStorage.DocumentDatabase);
+
+            _indexSearcherHolder = new IndexSearcherHolder(CreateIndexSearcher, _index._indexStorage.DocumentDatabase);
 
             foreach (var field in _fields)
             {
@@ -105,6 +108,29 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene
 
                 string fieldName = field.Key;
                 _suggestionsIndexSearcherHolders[fieldName] = new IndexSearcherHolder(state => new IndexSearcher(_suggestionsDirectories[fieldName], true, state), _index._indexStorage.DocumentDatabase);
+            }
+
+            IndexSearcher CreateIndexSearcher(IState state)
+            {
+                lock (this)
+                {
+                    var reader = _lastReader;
+
+                    if (reader == null)
+                        reader = _lastReader = IndexReader.Open(_directory, readOnly: true, state);
+                    else
+                    {
+                        var newReader = reader.Reopen(state);
+                        if (newReader != reader)
+                            reader.DecRef(state);
+
+                        reader = _lastReader = newReader;
+                    }
+
+                    reader.IncRef();
+
+                    return new IndexSearcher(reader);
+                }
             }
         }
 
