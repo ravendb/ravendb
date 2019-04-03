@@ -64,7 +64,9 @@ namespace Raven.Server.Documents
             _documents = GetName(CollectionTableType.Documents);
             _tombstones = GetName(CollectionTableType.Tombstones);
             _revisions = GetName(CollectionTableType.Revisions);
+#pragma warning disable 618
             _counters = GetName(CollectionTableType.Counters);
+#pragma warning restore 618
             _counterGroups = GetName(CollectionTableType.CounterGroups);
 
         }
@@ -81,7 +83,9 @@ namespace Raven.Server.Documents
                     return _tombstones;
                 case CollectionTableType.Revisions:
                     return _revisions;
+#pragma warning disable 618
                 case CollectionTableType.Counters:
+#pragma warning restore 618
                     return _counters;
                 case CollectionTableType.CounterGroups:
                     return _counterGroups;
@@ -205,6 +209,7 @@ namespace Raven.Server.Documents
         Documents,
         Tombstones,
         Revisions,
+        [Obsolete("For migration purposes only from versions where Counters were experimental feature (prior to 4.2)")]
         Counters,
         CounterGroups
     }

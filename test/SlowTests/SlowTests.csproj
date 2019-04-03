@@ -18,6 +18,7 @@
   <ItemGroup>
     <None Remove="Data\legacy-counters.4.1.5.ravendbdump" />
     <None Remove="Data\RavenDB-12785.ravendbdump" />
+    <None Remove="Data\RavenDB_13291\collection-with-counter-word-4.1.5-nightly.ravendb-snapshot" />
   </ItemGroup>
   <ItemGroup>
     <Compile Include="..\..\src\CommonAssemblyInfo.cs" Link="Properties\CommonAssemblyInfo.cs" />
@@ -54,6 +55,7 @@
     <EmbeddedResource Include="Data\RavenDB_10404\northwind.4.0.0.ravendb-snapshot" />
     <EmbeddedResource Include="Data\RavenDB_11664\1.ravendbdump" />
     <EmbeddedResource Include="Data\RavenDB_12022\counters.4.1.4.ravendb-snapshot" />
+    <EmbeddedResource Include="Data\RavenDB_13291\collection-with-counter-word-4.1.5-nightly.ravendb-snapshot" />
     <EmbeddedResource Include="Data\RavenDB_8355\MySorter.cs" />
     <EmbeddedResource Include="Data\RavenDB_8355\MySorterWithDiagnostics.cs" />
     <EmbeddedResource Include="Data\RavenDB_9912\1.ravendbdump" />
