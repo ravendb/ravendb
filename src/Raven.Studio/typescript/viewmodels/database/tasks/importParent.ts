@@ -3,12 +3,10 @@ import appUrl = require("common/appUrl");
 
 import durandalRouter = require("plugins/router");
 
-class importParent extends viewModelBase {
+class importParent {
     router: DurandalRootRouter;
 
     constructor() {
-        super();
-        
         this.router = durandalRouter.createChildRouter()
             .map([
                 {

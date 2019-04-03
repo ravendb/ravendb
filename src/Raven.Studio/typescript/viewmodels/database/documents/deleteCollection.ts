@@ -35,6 +35,8 @@ class deleteCollection extends dialogViewModelBase {
     }
 
     deactivate() {
+        super.deactivate(null);
+        
         // If we were closed via X button or other dialog dismissal, reject the deletion task since
         // we never started it.
         if (!this.deletionStarted) {

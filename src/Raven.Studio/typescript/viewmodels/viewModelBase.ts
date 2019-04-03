@@ -307,17 +307,16 @@ class viewModelBase {
             if (version) {
                 const href = "http://ravendb.net/l/" + hash + "/" + version + "/";
                 ko.postbox.publish('globalHelpLink', href);
-                return;
+            } else {
+                const subscription = viewModelBase.clientVersion.subscribe(v => {
+                    const href = "http://ravendb.net/l/" + hash + "/" + v + "/";
+                    ko.postbox.publish('globalHelpLink', href);
+
+                    if (subscription) {
+                        subscription.dispose();
+                    }
+                });
             }
-
-            const subscribtion = viewModelBase.clientVersion.subscribe(v => {
-                const href = "http://ravendb.net/l/" + hash + "/" + v + "/";
-                ko.postbox.publish('globalHelpLink', href);
-
-                if (subscribtion) {
-                    subscribtion.dispose();
-                }
-            });
         } else {
             ko.postbox.publish('globalHelpLink', null);
         }

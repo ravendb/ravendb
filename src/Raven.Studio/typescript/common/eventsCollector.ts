@@ -52,9 +52,8 @@
     }
 
     reportViewModel(view: any) {
+        const viewName = view.__moduleId__;
         this.internalLog((ga) => {
-            var viewName = view.__moduleId__;
-
             ga('set', 'location', `http://raven.studio/${viewName}${document.location.search}`);
             ga('send', 'pageview');
         });

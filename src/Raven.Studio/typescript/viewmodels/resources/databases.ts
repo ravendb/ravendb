@@ -146,6 +146,8 @@ class databases extends viewModelBase {
     }
     
     deactivate() {
+        super.deactivate();
+        
         if (this.statsSubscription) {
             this.statsSubscription.off();
             this.statsSubscription = null;
