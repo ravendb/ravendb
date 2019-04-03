@@ -12,6 +12,7 @@ using System.Threading.Tasks;
 using Microsoft.Extensions.Primitives;
 using Raven.Client;
 using Raven.Client.Documents.Commands;
+using Raven.Client.Documents.Operations.Revisions;
 using Raven.Client.Exceptions.Documents.Revisions;
 using Raven.Server.Documents.Revisions;
 using Raven.Server.Json;
@@ -61,7 +62,29 @@ namespace Raven.Server.Documents.Handlers
         [RavenAction("/databases/*/admin/revisions/config", "POST", AuthorizationStatus.DatabaseAdmin)]
         public async Task ConfigRevisions()
         {
-            await DatabaseConfigurations(ServerStore.ModifyDatabaseRevisions, "read-revisions-config");
+            await DatabaseConfigurations(
+                ServerStore.ModifyDatabaseRevisions,
+                "read-revisions-config",
+                beforeSetupConfiguration: (string name, ref BlittableJsonReaderObject configuration, JsonOperationContext context) =>
+                {
+                    if (configuration.TryGet(nameof(RevisionsConfiguration.Collections), out BlittableJsonReaderObject collections) == false ||
+                        collections.Count == 0)
+                        return;
+
+                    var uniqueKeys = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+                    var prop = new BlittableJsonReaderObject.PropertyDetails();
+
+                    for (var i = 0; i < collections.Count; i++)
+                    {
+                        collections.GetPropertyByIndex(i, ref prop);
+
+                        if (uniqueKeys.Add(prop.Name) == false)
+                        {
+                            throw new InvalidOperationException("Cannot have two different revision configurations on the same collection. " +
+                                                                $"Collection name : '{prop.Name}'");
+                        }
+                    }
+                });
         }
 
         [RavenAction("/databases/*/revisions", "GET", AuthorizationStatus.ValidUser)]
