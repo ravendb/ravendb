@@ -18,6 +18,7 @@ using Sparrow;
 using Sparrow.Json;
 using Sparrow.Json.Parsing;
 using Sparrow.Logging;
+using Sparrow.Platform;
 using Sparrow.Utils;
 
 namespace Raven.Server.Documents.TcpHandlers
@@ -34,7 +35,7 @@ namespace Raven.Server.Documents.TcpHandlers
         private readonly SubscriptionState _subscription;
         private readonly SubscriptionPatchDocument _patch;
         private NativeMemory.ThreadStats _threadAllocations;
-        private Size _currentMaximumAllowedMemory = new Size(32, SizeUnit.Megabytes);
+        private Size _MaximumAllowedMemory;
 
         public SubscriptionDocumentsFetcher(DocumentDatabase db, int maxBatchSize, long subscriptionId, EndPoint remoteEndpoint, string collection,
             bool revisions,
@@ -77,7 +78,11 @@ namespace Raven.Server.Documents.TcpHandlers
              IncludeDocumentsCommand includesCmd,
             long startEtag)
         {
-            int size = 0;
+            int numberOfDocs = 0;
+            Size size = new Size(0 , SizeUnit.Megabytes);
+            _MaximumAllowedMemory = new Size((PlatformDetails.Is32Bits ||
+                 _db.Configuration.Storage.ForceUsing32BitsPager) ? 4 : 32, SizeUnit.Megabytes);
+
             using (_db.Scripts.GetScriptRunner(_patch, true, out var run))
             {
                 foreach (var doc in _db.DocumentsStorage.GetDocumentsFrom(
@@ -90,6 +95,7 @@ namespace Raven.Server.Documents.TcpHandlers
                     _threadAllocations = NativeMemory.CurrentThreadStats;
                     using (doc.Data)
                     {
+                        size += new Size(doc.Data.Size, SizeUnit.Megabytes);
                         if (ShouldSendDocument(_subscription, run, _patch, docsContext, doc, out BlittableJsonReaderObject transformResult, out var exception) == false)
                         {
                             if (exception != null)
@@ -133,43 +139,13 @@ namespace Raven.Server.Documents.TcpHandlers
                         }
                     }
 
-                    if (++size >= _maxBatchSize)
+                    if (++numberOfDocs >= _maxBatchSize)
                         yield break;
 
-                    if (CanContinueBatch(docsContext) == false)
+                    if (size >= _MaximumAllowedMemory)
                         yield break;
-
                 }
             }
-        }
-
-        public bool CanContinueBatch(DocumentsOperationContext ctx)
-        {
-            var totalAllocated = _threadAllocations.TotalAllocated;
-            _threadAllocations.CurrentlyAllocatedForProcessing = totalAllocated;
-            var currentlyInUse = new Size(totalAllocated, SizeUnit.Bytes);
-            if (currentlyInUse > _currentMaximumAllowedMemory)
-            {
-                if (MemoryUsageGuard.TryIncreasingMemoryUsageForThread(_threadAllocations, ref _currentMaximumAllowedMemory,
-                        currentlyInUse,
-                        _db.DocumentsStorage.Environment.Options.RunningOn32Bits, _logger, out var memoryUsage) ) return true;
-                var reason = $"Stopping the batch because cannot budget additional memory. Current budget: {currentlyInUse}.";
-                if (memoryUsage != null)
-                {
-                    reason += " Current memory usage: " +
-                              $"{nameof(memoryUsage.WorkingSet)} = {memoryUsage.WorkingSet}," +
-                              $"{nameof(memoryUsage.PrivateMemory)} = {memoryUsage.PrivateMemory}";
-                }
-
-                if(_logger.IsInfoEnabled)
-                    _logger.Info(reason);
-
-                ctx.DoNotReuse = true;
-
-                return false;
-
-            }
-            return true;
         }
 
         private IEnumerable<(Document Doc, Exception Exception)> GetRevisionsToSend(
@@ -177,7 +153,10 @@ namespace Raven.Server.Documents.TcpHandlers
             IncludeDocumentsCommand includesCmd,
             long startEtag)
         {
-            int size = 0;
+            int numberOfDocs = 0;
+            Size size = new Size(0, SizeUnit.Megabytes);
+            _MaximumAllowedMemory = new Size((PlatformDetails.Is32Bits ||
+                                              _db.Configuration.Storage.ForceUsing32BitsPager) ? 4 : 32, SizeUnit.Megabytes);
 
             var collectionName = new CollectionName(_collection);
             using (_db.Scripts.GetScriptRunner(_patch, true, out var run))
@@ -186,7 +165,7 @@ namespace Raven.Server.Documents.TcpHandlers
                 {
                     var item = (revisionTuple.current ?? revisionTuple.previous);
                     Debug.Assert(item != null);
-
+                    size += new Size(item.Data.Size, SizeUnit.Megabytes);
                     if (ShouldSendDocumentWithRevisions(_subscription, run, _patch, docsContext, item, revisionTuple, out var transformResult, out var exception) == false)
                     {
                         if (includesCmd != null && run != null)
@@ -232,10 +211,10 @@ namespace Raven.Server.Documents.TcpHandlers
                             }
                         }
                     }
-                    if (++size >= _maxBatchSize)
+                    if (++numberOfDocs >= _maxBatchSize)
                         yield break;
 
-                    if (CanContinueBatch(docsContext) == false)
+                    if (size >= _MaximumAllowedMemory)
                         yield break;
                 }
             }
