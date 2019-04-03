@@ -6,7 +6,6 @@ using Raven.Client.Documents.Operations.Counters;
 using Raven.Server.Documents;
 using Raven.Server.ServerWide.Context;
 using Raven.Server.Utils;
-using Sparrow;
 using Sparrow.Binary;
 using Sparrow.Json;
 using Sparrow.Json.Parsing;
@@ -18,6 +17,7 @@ using Voron.Data.Tables;
 using Voron.Exceptions;
 using static Raven.Server.Documents.DocumentsStorage;
 using Constants = Voron.Global.Constants;
+#pragma warning disable 618
 
 namespace Raven.Server.Storage.Schema.Updates.Documents
 {
@@ -86,40 +86,28 @@ namespace Raven.Server.Storage.Schema.Updates.Documents
 
         public bool Update(UpdateStep step)
         {
-            var legacyCounterRootObjectTypes = new Dictionary<string, RootObjectType>();
+            var legacyCounterCollectionTables = new List<string>();
 
             using (var it = step.ReadTx.LowLevelTransaction.RootObjects.Iterate(prefetch: false))
             {
                 if (it.Seek(Slices.BeforeAllKeys) == false)
                     return true;
 
+                var legacyCounterCollectionTablePrefix = CollectionName.GetTablePrefix(CollectionTableType.Counters);
+
                 do
                 {
                     var current = it.CurrentKey;
                     var currentAsString = current.ToString();
-
-                    if (currentAsString.Contains("counter", StringComparison.OrdinalIgnoreCase))
+                    
+                    if (currentAsString.StartsWith(legacyCounterCollectionTablePrefix, StringComparison.OrdinalIgnoreCase))
                     {
-                        // tombstones have special handling
-                        if (currentAsString == CountersTombstones)
-                            continue;
-
-                        // just in case the process was stopped in the middle and we already created counter group tables
-                        if (SliceComparer.AreEqual(current, CountersStorage.AllCountersEtagSlice))
-                            continue;
-
-                        if (SliceComparer.AreEqual(current, CountersStorage.CollectionCountersEtagsSlice))
-                            continue;
-
-                        if (SliceComparer.AreEqual(current, CountersStorage.CounterKeysSlice))
-                            continue;
-
-                        if (currentAsString.Contains(CollectionTableType.CounterGroups.ToString()))
-                            continue;
-
                         var type = step.ReadTx.GetRootObjectType(current);
 
-                        legacyCounterRootObjectTypes.Add(currentAsString, type);
+                        if (type != RootObjectType.Table)
+                            continue; // precaution
+
+                        legacyCounterCollectionTables.Add(currentAsString);
                     }
                 } while (it.MoveNext());
             }
@@ -258,29 +246,18 @@ namespace Raven.Server.Storage.Schema.Updates.Documents
                 }
 
                 // we must delete tables first before deleting any global index trees from the root that can be in use by tables
-                foreach (var item in legacyCounterRootObjectTypes.Where(x => x.Value == RootObjectType.Table))
+                foreach (var tableName in legacyCounterCollectionTables)
                 {
-                    step.WriteTx.DeleteTable(item.Key);
+                    step.WriteTx.DeleteTable(tableName);
                 }
 
                 // let's remove remaining counter trees from the root
-                foreach (var item in legacyCounterRootObjectTypes.Where(x => x.Value != RootObjectType.Table))
-                {
-                    if (step.WriteTx.LowLevelTransaction.RootObjects.Read(item.Key) == null)
-                        continue;
 
-                    switch (item.Value)
-                    {
-                        case RootObjectType.VariableSizeTree:
-                            step.WriteTx.DeleteTree(item.Key);
-                            break;
-                        case RootObjectType.FixedSizeTree:
-                            step.WriteTx.DeleteFixedTree(item.Key);
-                            break;
-                        default:
-                            throw new InvalidOperationException($"Encountered unexpected root object type '{item.Value}' for '{item.Key}'");
-                    }
-                }
+                if (step.WriteTx.LowLevelTransaction.RootObjects.Read(CounterKeysSlice) != null)
+                    step.WriteTx.DeleteTree(CounterKeysSlice);
+                
+                if (step.WriteTx.LowLevelTransaction.RootObjects.Read(AllCountersEtagSlice) != null)
+                    step.WriteTx.DeleteFixedTree(AllCountersEtagSlice.ToString());
             }
 
             // legacy counter tombstones processing
@@ -316,6 +293,8 @@ namespace Raven.Server.Storage.Schema.Updates.Documents
                         return type != Tombstone.TombstoneType.Counter;
                     });
                 }
+
+                step.WriteTx.DeleteTable(CountersTombstonesSlice.ToString());
             }
 
             return true;
