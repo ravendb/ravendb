@@ -12,7 +12,7 @@ namespace Raven.Server.ServerWide.Context
 {
     public class TransactionContextPool : JsonContextPoolBase<TransactionOperationContext> ,ITransactionContextPool
     {
-        private readonly StorageEnvironment _storageEnvironment;
+        private StorageEnvironment _storageEnvironment;
 
         private ThreadLocal<bool> _mostlyThreadDedicatedWork;
 
@@ -50,6 +50,12 @@ namespace Raven.Server.ServerWide.Context
             }
 
             return new TransactionOperationContext(_storageEnvironment, initialSize, 16*1024, LowMemoryFlag);
+        }
+
+        public override void Dispose()
+        {
+            _storageEnvironment = null;
+            base.Dispose();
         }
     }
 }
