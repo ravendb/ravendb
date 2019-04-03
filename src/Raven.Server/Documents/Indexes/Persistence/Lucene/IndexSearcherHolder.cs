@@ -13,7 +13,7 @@ using Voron.Impl;
 
 namespace Raven.Server.Documents.Indexes.Persistence.Lucene
 {
-    public class IndexSearcherHolder: IDisposable
+    public class IndexSearcherHolder : IDisposable
     {
         private readonly Func<IState, IndexSearcher> _recreateSearcher;
         private readonly DocumentDatabase _documentDatabase;
