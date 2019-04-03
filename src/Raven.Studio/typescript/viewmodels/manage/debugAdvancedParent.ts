@@ -3,14 +3,12 @@ import appUrl = require("common/appUrl");
 import durandalRouter = require("plugins/router");
 import accessManager = require("common/shell/accessManager");
 
-class debugAdvanced extends viewModelBase {
+class debugAdvanced {
     router: DurandalRootRouter;
     
     growContainer = ko.observable<boolean>(true);
 
     constructor() {
-        super();
-
         this.router = durandalRouter.createChildRouter()
             .map([
                 {

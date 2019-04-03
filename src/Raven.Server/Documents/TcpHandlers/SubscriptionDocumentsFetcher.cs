@@ -12,10 +12,14 @@ using Raven.Server.Documents.Includes;
 using Raven.Server.Documents.Patch;
 using Raven.Server.Documents.Subscriptions;
 using Raven.Server.ServerWide.Context;
+using Raven.Server.ServerWide.Memory;
 using Raven.Server.Utils;
+using Sparrow;
 using Sparrow.Json;
 using Sparrow.Json.Parsing;
 using Sparrow.Logging;
+using Sparrow.Platform;
+using Sparrow.Utils;
 
 namespace Raven.Server.Documents.TcpHandlers
 {
@@ -30,6 +34,8 @@ namespace Raven.Server.Documents.TcpHandlers
         private readonly bool _revisions;
         private readonly SubscriptionState _subscription;
         private readonly SubscriptionPatchDocument _patch;
+        // make sure that we don't use too much memory for subscription batch
+        private readonly Size _maximumAllowedMemory;
 
         public SubscriptionDocumentsFetcher(DocumentDatabase db, int maxBatchSize, long subscriptionId, EndPoint remoteEndpoint, string collection,
             bool revisions,
@@ -45,6 +51,8 @@ namespace Raven.Server.Documents.TcpHandlers
             _revisions = revisions;
             _subscription = subscription;
             _patch = patch;
+            _maximumAllowedMemory = new Size((PlatformDetails.Is32Bits ||
+                                              _db.Configuration.Storage.ForceUsing32BitsPager) ? 4 : 32, SizeUnit.Megabytes);
         }
 
         public IEnumerable<(Document Doc, Exception Exception)> GetDataToSend(
@@ -72,7 +80,9 @@ namespace Raven.Server.Documents.TcpHandlers
              IncludeDocumentsCommand includesCmd,
             long startEtag)
         {
-            int size = 0;
+            int numberOfDocs = 0;
+            Size size = new Size(0 , SizeUnit.Megabytes);
+
             using (_db.Scripts.GetScriptRunner(_patch, true, out var run))
             {
                 foreach (var doc in _db.DocumentsStorage.GetDocumentsFrom(
@@ -84,6 +94,7 @@ namespace Raven.Server.Documents.TcpHandlers
                 {
                     using (doc.Data)
                     {
+                        size.Add(doc.Data.Size, SizeUnit.Bytes);
                         if (ShouldSendDocument(_subscription, run, _patch, docsContext, doc, out BlittableJsonReaderObject transformResult, out var exception) == false)
                         {
                             if (exception != null)
@@ -127,7 +138,10 @@ namespace Raven.Server.Documents.TcpHandlers
                         }
                     }
 
-                    if (++size >= _maxBatchSize)
+                    if (++numberOfDocs >= _maxBatchSize)
+                        yield break;
+
+                    if (size >= _maximumAllowedMemory)
                         yield break;
                 }
             }
@@ -138,7 +152,8 @@ namespace Raven.Server.Documents.TcpHandlers
             IncludeDocumentsCommand includesCmd,
             long startEtag)
         {
-            int size = 0;
+            int numberOfDocs = 0;
+            Size size = new Size(0, SizeUnit.Megabytes);
 
             var collectionName = new CollectionName(_collection);
             using (_db.Scripts.GetScriptRunner(_patch, true, out var run))
@@ -147,7 +162,7 @@ namespace Raven.Server.Documents.TcpHandlers
                 {
                     var item = (revisionTuple.current ?? revisionTuple.previous);
                     Debug.Assert(item != null);
-
+                    size.Add(item.Data.Size, SizeUnit.Bytes);
                     if (ShouldSendDocumentWithRevisions(_subscription, run, _patch, docsContext, item, revisionTuple, out var transformResult, out var exception) == false)
                     {
                         if (includesCmd != null && run != null)
@@ -193,7 +208,10 @@ namespace Raven.Server.Documents.TcpHandlers
                             }
                         }
                     }
-                    if (++size >= _maxBatchSize)
+                    if (++numberOfDocs >= _maxBatchSize)
+                        yield break;
+
+                    if (size >= _maximumAllowedMemory)
                         yield break;
                 }
             }

@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Text;
+using Raven.Server.Exceptions;
 using Raven.Server.ServerWide;
 using Raven.Server.ServerWide.Context;
 using Sparrow.Json;
@@ -185,6 +186,10 @@ namespace Raven.Server.Documents
 
             int originalStrLength = str.Length;
             int strLength = originalStrLength;
+
+            if (strLength > MaxIdSize)
+                ThrowDocumentIdTooBig(str);
+
 
             if (strLength > MaxIdSize)
                 ThrowDocumentIdTooBig(str);

@@ -84,12 +84,13 @@ class manageDatabaseGroup extends viewModelBase {
             return !license.licenseStatus().HasDynamicNodesDistribution;
         });
         
-        this.anyNodeHasError.subscribe((error) => {
-            if (error && this.inSortableMode()) {
-                messagePublisher.reportWarning("Can't reorder nodes, when at least one node is down or voting is in progress.");
-                this.cancelReorder();
-            }
-        });
+        this.registerDisposable(
+            this.anyNodeHasError.subscribe((error) => {
+                if (error && this.inSortableMode()) {
+                    messagePublisher.reportWarning("Can't reorder nodes, when at least one node is down or voting is in progress.");
+                    this.cancelReorder();
+                }
+            }));
     }
 
     activate(args: any) {

@@ -13,7 +13,6 @@ abstract class dialogViewModelBase {
     protected activeDatabase = activeDatabaseTracker.default.database;
     static readonly dialogSelector = ".modal-dialog";
 
-    private onEnterBinding: JwertySubscription;
     private readonly elementToFocusOnDismissal: string;
     private readonly dialogSelector: string;
     private disposableActions: Array<disposable> = [];
@@ -34,14 +33,12 @@ abstract class dialogViewModelBase {
     }
 
     attached() {
-        this.onEnterBinding = jwerty.key("enter", () => this.enterKeyPressed());
+        jwerty.key("enter", () => this.enterKeyPressed());
     }
 
     deactivate(args: any) {
-        if (this.onEnterBinding) {
-            this.onEnterBinding.unbind();
-        }
-
+        $(document).unbind('keydown.jwerty');
+        
         this.disposableActions.forEach(f => f.dispose());
         this.disposableActions = [];
     }

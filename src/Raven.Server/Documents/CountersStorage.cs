@@ -657,6 +657,11 @@ namespace Raven.Server.Documents
                 return;
             }
 
+            if (name.Length > DocumentIdWorker.MaxIdSize)
+            {
+                ThrowCounterNameTooBig(name);
+            }
+
             var entriesToUpdate = _dictionariesPool.Allocate();
 
             try
@@ -1538,6 +1543,13 @@ namespace Raven.Server.Documents
             }
 
             return countersToAdd;
+        }
+
+        private static void ThrowCounterNameTooBig(string name)
+        {
+            throw new ArgumentException(
+                $"Counter name cannot exceed {DocumentIdWorker.MaxIdSize} bytes, but counter name has {name.Length} characters. " +
+                $"The invalid counter name is '{name}'.", nameof(name));
         }
 
         public static void ConvertFromBlobToNumbers(JsonOperationContext context, CounterGroupDetail counterGroupDetail)

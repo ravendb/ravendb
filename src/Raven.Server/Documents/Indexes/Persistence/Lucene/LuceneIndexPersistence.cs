@@ -13,6 +13,7 @@ using Raven.Server.Documents.Indexes.Persistence.Lucene.Documents;
 using Raven.Server.Exceptions;
 using Raven.Server.Indexing;
 using Sparrow.Json;
+using Sparrow.Logging;
 using Sparrow.Threading;
 using Voron;
 using Voron.Impl;
@@ -42,20 +43,24 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene
 
         private readonly IndexSearcherHolder _indexSearcherHolder;
 
-        private DisposeOnce<SingleAttempt>_disposeOnce;
+        private readonly DisposeOnce<SingleAttempt> _disposeOnce;
 
         private bool _initialized;
         private readonly Dictionary<string, IndexField> _fields;
+        private IndexReader _lastReader;
+        private readonly Logger _logger;
 
         public LuceneIndexPersistence(Index index)
         {
             _index = index;
+            _logger = LoggingSource.Instance.GetLogger<LuceneIndexPersistence>(index.DocumentDatabase.Name);
             _suggestionsDirectories = new Dictionary<string, LuceneVoronDirectory>();
             _suggestionsIndexSearcherHolders = new Dictionary<string, IndexSearcherHolder>();
             _disposeOnce = new DisposeOnce<SingleAttempt>(() =>
             {
                 DisposeWriters();
 
+                _lastReader?.Dispose();
                 _indexSearcherHolder?.Dispose();
                 _converter?.Dispose();
                 _directory?.Dispose();
@@ -96,7 +101,8 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene
             }
 
             _fields = fields.ToDictionary(x => x.Name, x => x);
-            _indexSearcherHolder = new IndexSearcherHolder(state => new IndexSearcher(_directory, true, state), _index._indexStorage.DocumentDatabase);
+
+            _indexSearcherHolder = new IndexSearcherHolder(CreateIndexSearcher, _index._indexStorage.DocumentDatabase);
 
             foreach (var field in _fields)
             {
@@ -105,6 +111,49 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene
 
                 string fieldName = field.Key;
                 _suggestionsIndexSearcherHolders[fieldName] = new IndexSearcherHolder(state => new IndexSearcher(_suggestionsDirectories[fieldName], true, state), _index._indexStorage.DocumentDatabase);
+            }
+
+            IndexSearcher CreateIndexSearcher(IState state)
+            {
+                lock (this)
+                {
+                    var reader = _lastReader;
+
+                    if (reader != null)
+                    {
+                        if (reader.RefCount <= 0)
+                        {
+                            reader = null;
+                        }
+                        else
+                        {
+                            try
+                            {
+                                var newReader = reader.Reopen(state);
+                                if (newReader != reader)
+                                    reader.DecRef(state);
+
+                                reader = _lastReader = newReader;
+                            }
+                            catch (Exception e)
+                            {
+                                if (_logger.IsInfoEnabled)
+                                    _logger.Info($"Could not reopen the index reader for index '{_index.Name}'.", e);
+
+                                // fallback strategy in case of a reader to be closed
+                                // before Reopen and DecRef are executed
+                                reader = null;
+                            }
+                        }
+                    }
+
+                    if (reader == null)
+                        reader = _lastReader = IndexReader.Open(_directory, readOnly: true, state);
+
+                    reader.IncRef();
+
+                    return new IndexSearcher(reader);
+                }
             }
         }
 
