@@ -903,8 +903,6 @@ namespace Raven.Server.Documents.Indexes
         public void Dispose()
         {
             IsDisposed.Raise();
-            //FlushMapIndexes();
-            //FlushReduceIndexes();
 
             var exceptionAggregator = new ExceptionAggregator(_logger, $"Could not dispose {nameof(IndexStore)}");
 
