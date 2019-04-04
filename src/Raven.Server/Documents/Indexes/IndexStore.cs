@@ -388,6 +388,9 @@ namespace Raven.Server.Documents.Indexes
 
             _initialized = true;
 
+            if (_documentDatabase.Configuration.Indexing.RunInMemory)
+                return Task.CompletedTask;
+
             return Task.Run(() =>
             {
                 OpenIndexesFromRecord(record, addToInitLog);
@@ -971,9 +974,6 @@ namespace Raven.Server.Documents.Indexes
 
         private void OpenIndexesFromRecord(DatabaseRecord record, Action<string> addToInitLog)
         {
-            if (_documentDatabase.Configuration.Indexing.RunInMemory)
-                return;
-
             var path = _documentDatabase.Configuration.Indexing.StoragePath;
 
             if (_logger.IsInfoEnabled)
