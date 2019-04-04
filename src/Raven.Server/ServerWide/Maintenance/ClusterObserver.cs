@@ -1104,6 +1104,9 @@ namespace Raven.Server.ServerWide.Maintenance
                 if (mentorIndexStats.State == IndexState.Error && currentIndexStats.State == IndexState.Error)
                     continue;
 
+                if (mentorIndexStats.State == IndexState.Idle || currentIndexStats.State == IndexState.Idle)
+                    continue; // if the index is in idle there is no point to check the progress
+
                 var lastIndexEtag = currentIndexStats.LastIndexedEtag;
                 if (lastPrevEtag > lastIndexEtag)
                     return false;
