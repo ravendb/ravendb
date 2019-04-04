@@ -49,14 +49,39 @@ namespace Raven.Server.Config.Categories
 
         [Description("A command or executable providing a .pfx certificate file. If specified, RavenDB will use HTTPS/SSL for all network activities. The certificate path setting takes precedence over executable configuration option.")]
         [DefaultValue(null)]
-        [ConfigurationEntry("Security.Certificate.Exec.V2", ConfigurationEntryScope.ServerWideOnly)]
-        public string CertificateExecV2 { get; set; }
+        [ConfigurationEntry("Security.Certificate.Exec.Load", ConfigurationEntryScope.ServerWideOnly)]
+        public string CertificateExecLoad { get; set; }
+
+        [Description("A command or executable providing a .pfx certificate file. If specified, RavenDB will use HTTPS/SSL for all network activities. The certificate path setting takes precedence over executable configuration option.")]
+        [DefaultValue(null)]
+        [ConfigurationEntry("Security.Certificate.Exec.Renew", ConfigurationEntryScope.ServerWideOnly)]
+        public string CertificateExecRenew { get; set; }
+
+        [Description("A command or executable providing a .pfx certificate file. If specified, RavenDB will use HTTPS/SSL for all network activities. The certificate path setting takes precedence over executable configuration option.")]
+        [DefaultValue(null)]
+        [ConfigurationEntry("Security.Certificate.Exec.OnCertificateChange", ConfigurationEntryScope.ServerWideOnly)]
+        public string CertificateExecOnCertificateChange { get; set; }
 
         [Description("The command line arguments for the 'Security.Certificate.Exec' command or executable.")]
         [DefaultValue(null)]
         [ConfigurationEntry("Security.Certificate.Exec.Arguments", ConfigurationEntryScope.ServerWideOnly)]
         public string CertificateExecArguments { get; set; }
 
+        [Description("The command line arguments for the 'Security.Certificate.Exec.Load' command or executable.")]
+        [DefaultValue(null)]
+        [ConfigurationEntry("Security.Certificate.Exec.Load.Arguments", ConfigurationEntryScope.ServerWideOnly)]
+        public string CertificateExecLoadArguments { get; set; }
+
+        [Description("The command line arguments for the 'Security.Certificate.Exec.Renew' command or executable.")]
+        [DefaultValue(null)]
+        [ConfigurationEntry("Security.Certificate.Exec.Renew.Arguments", ConfigurationEntryScope.ServerWideOnly)]
+        public string CertificateExecRenewArguments { get; set; }
+
+        [Description("The command line arguments for the 'Security.Certificate.Exec.OnCertificateChange' command or executable.")]
+        [DefaultValue(null)]
+        [ConfigurationEntry("Security.Certificate.Exec.OnCertificateChange.Arguments", ConfigurationEntryScope.ServerWideOnly)]
+        public string CertificateExecOnCertificateChangeArguments { get; set; }
+        
         [Description("The number of seconds to wait for the certificate executable to exit. Default: 30 seconds")]
         [DefaultValue(30)]
         [TimeUnit(TimeUnit.Seconds)]
@@ -110,7 +135,7 @@ namespace Raven.Server.Config.Categories
 
         public bool IsCertificateConfigured =>
             string.IsNullOrWhiteSpace(CertificatePath) == false ||
-            string.IsNullOrWhiteSpace(CertificateExecV2) == false;
+            string.IsNullOrWhiteSpace(CertificateExecLoad) == false;
 
         public bool AuthenticationEnabled => IsCertificateConfigured;
 
@@ -133,7 +158,7 @@ namespace Raven.Server.Config.Categories
                 {
                     if (isServerUrlHttps == false)
                         throw new InvalidOperationException(
-                            $"When the server certificate in either `{RavenConfiguration.GetKey(x => x.Security.CertificatePath)}` or `{RavenConfiguration.GetKey(x => x.Security.CertificateExecV2)}`  is specified, the `{RavenConfiguration.GetKey(x => x.Core.ServerUrls)}` must be using https, but was " +
+                            $"When the server certificate in either `{RavenConfiguration.GetKey(x => x.Security.CertificatePath)}` or `{RavenConfiguration.GetKey(x => x.Security.CertificateExecLoad)}` is specified, the `{RavenConfiguration.GetKey(x => x.Core.ServerUrls)}` must be using https, but was " +
                             serverUrl);
                 }
                 else

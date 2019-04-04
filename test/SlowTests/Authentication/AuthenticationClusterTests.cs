@@ -118,7 +118,9 @@ namespace SlowTests.Authentication
         [Fact(Skip = "https://github.com/dotnet/corefx/issues/30691")]
         public async Task CanReplaceClusterCertWithExtensionPoint()
         {
-            string script;
+            string loadAndRenewScript;
+            string certChangedScript;
+
             IDictionary<string, string> customSettings1 = new ConcurrentDictionary<string, string>();
             IDictionary<string, string> customSettings2 = new ConcurrentDictionary<string, string>();
             IDictionary<string, string> customSettings3 = new ConcurrentDictionary<string, string>();
@@ -132,68 +134,124 @@ namespace SlowTests.Authentication
             
             if (PlatformDetails.RunningOnPosix)
             {
-                var script1Path = Path.Combine(Path.GetTempPath(), Path.ChangeExtension(Guid.NewGuid().ToString(), ".sh"));
-                var script2Path = Path.Combine(Path.GetTempPath(), Path.ChangeExtension(Guid.NewGuid().ToString(), ".sh"));
-                var script3Path = Path.Combine(Path.GetTempPath(), Path.ChangeExtension(Guid.NewGuid().ToString(), ".sh"));
+                var loadAndRenewScriptNode1Path = Path.Combine(Path.GetTempPath(), Path.ChangeExtension(Guid.NewGuid().ToString(), ".sh"));
+                var loadAndRenewScriptNode2Path = Path.Combine(Path.GetTempPath(), Path.ChangeExtension(Guid.NewGuid().ToString(), ".sh"));
+                var loadAndRenewScriptNode3Path = Path.Combine(Path.GetTempPath(), Path.ChangeExtension(Guid.NewGuid().ToString(), ".sh"));
+                var certChangedScriptNode1Path = Path.Combine(Path.GetTempPath(), Path.ChangeExtension(Guid.NewGuid().ToString(), ".sh"));
+                var certChangedScriptNode2Path = Path.Combine(Path.GetTempPath(), Path.ChangeExtension(Guid.NewGuid().ToString(), ".sh"));
+                var certChangedScriptNode3Path = Path.Combine(Path.GetTempPath(), Path.ChangeExtension(Guid.NewGuid().ToString(), ".sh"));
 
-                var args1 = CommandLineArgumentEscaper.EscapeAndConcatenate(new List<string> { script1Path, certPath, cert2Path, outputFile });
-                var args2 = CommandLineArgumentEscaper.EscapeAndConcatenate(new List<string> { script2Path, certPath, cert2Path, outputFile });
-                var args3 = CommandLineArgumentEscaper.EscapeAndConcatenate(new List<string> { script3Path, certPath, cert2Path, outputFile });
+                var loadArgsNode1 = CommandLineArgumentEscaper.EscapeAndConcatenate(new List<string> { loadAndRenewScriptNode1Path, certPath });
+                var renewArgsNode1 = CommandLineArgumentEscaper.EscapeAndConcatenate(new List<string> { loadAndRenewScriptNode1Path, cert2Path });
+                var certChangedArgsNode1 = CommandLineArgumentEscaper.EscapeAndConcatenate(new List<string> { certChangedScriptNode1Path, outputFile });
+                var loadArgsNode2 = CommandLineArgumentEscaper.EscapeAndConcatenate(new List<string> { loadAndRenewScriptNode2Path, certPath });
+                var renewArgsNode2 = CommandLineArgumentEscaper.EscapeAndConcatenate(new List<string> { loadAndRenewScriptNode2Path, cert2Path });
+                var certChangedArgsNode2 = CommandLineArgumentEscaper.EscapeAndConcatenate(new List<string> { certChangedScriptNode2Path, outputFile });
+                var loadArgsNode3 = CommandLineArgumentEscaper.EscapeAndConcatenate(new List<string> { loadAndRenewScriptNode3Path, certPath });
+                var renewArgsNode3 = CommandLineArgumentEscaper.EscapeAndConcatenate(new List<string> { loadAndRenewScriptNode3Path, cert2Path });
+                var certChangedArgsNode3 = CommandLineArgumentEscaper.EscapeAndConcatenate(new List<string> { certChangedScriptNode3Path, outputFile });
 
-                customSettings1[RavenConfiguration.GetKey(x => x.Security.CertificateExecV2)] = "bash";
-                customSettings1[RavenConfiguration.GetKey(x => x.Security.CertificateExecArguments)] = $"{args1}";
+                customSettings1[RavenConfiguration.GetKey(x => x.Security.CertificateExecLoad)] = "bash";
+                customSettings1[RavenConfiguration.GetKey(x => x.Security.CertificateExecLoadArguments)] = $"{loadArgsNode1}";
+                customSettings1[RavenConfiguration.GetKey(x => x.Security.CertificateExecRenew)] = "bash";
+                customSettings1[RavenConfiguration.GetKey(x => x.Security.CertificateExecRenewArguments)] = $"{renewArgsNode1}";
+                customSettings1[RavenConfiguration.GetKey(x => x.Security.CertificateExecOnCertificateChange)] = "bash";
+                customSettings1[RavenConfiguration.GetKey(x => x.Security.CertificateExecOnCertificateChangeArguments)] = $"{certChangedArgsNode1}";
+                customSettings1[RavenConfiguration.GetKey(x => x.Core.ServerUrls)] = "https://" + Environment.MachineName + ":0";
 
-                customSettings2[RavenConfiguration.GetKey(x => x.Security.CertificateExecV2)] = "bash";
-                customSettings2[RavenConfiguration.GetKey(x => x.Security.CertificateExecArguments)] = $"{args2}";
+                customSettings2[RavenConfiguration.GetKey(x => x.Security.CertificateExecLoad)] = "bash";
+                customSettings2[RavenConfiguration.GetKey(x => x.Security.CertificateExecLoadArguments)] = $"{loadArgsNode2}";
+                customSettings2[RavenConfiguration.GetKey(x => x.Security.CertificateExecRenew)] = "bash";
+                customSettings2[RavenConfiguration.GetKey(x => x.Security.CertificateExecRenewArguments)] = $"{renewArgsNode2}";
+                customSettings2[RavenConfiguration.GetKey(x => x.Security.CertificateExecOnCertificateChange)] = "bash";
+                customSettings2[RavenConfiguration.GetKey(x => x.Security.CertificateExecOnCertificateChangeArguments)] = $"{certChangedArgsNode2}";
+                customSettings2[RavenConfiguration.GetKey(x => x.Core.ServerUrls)] = "https://" + Environment.MachineName + ":0";
 
-                customSettings3[RavenConfiguration.GetKey(x => x.Security.CertificateExecV2)] = "bash";
-                customSettings3[RavenConfiguration.GetKey(x => x.Security.CertificateExecArguments)] = $"{args3}";
+                customSettings3[RavenConfiguration.GetKey(x => x.Security.CertificateExecLoad)] = "bash";
+                customSettings3[RavenConfiguration.GetKey(x => x.Security.CertificateExecLoadArguments)] = $"{loadArgsNode3}";
+                customSettings3[RavenConfiguration.GetKey(x => x.Security.CertificateExecRenew)] = "bash";
+                customSettings3[RavenConfiguration.GetKey(x => x.Security.CertificateExecRenewArguments)] = $"{renewArgsNode3}";
+                customSettings3[RavenConfiguration.GetKey(x => x.Security.CertificateExecOnCertificateChange)] = "bash";
+                customSettings3[RavenConfiguration.GetKey(x => x.Security.CertificateExecOnCertificateChangeArguments)] = $"{certChangedArgsNode3}";
+                customSettings3[RavenConfiguration.GetKey(x => x.Core.ServerUrls)] = "https://" + Environment.MachineName + ":0";
 
-                script = "#!/bin/bash\nif [ \"$4\" == \"Load\" ]; then\n\tcat -u \"$1\"\nelif [ \"$4\" == \"Renew\" ]; then\n\tcat -u \"$2\"\nelif [ \"$4\" == \"CertificateChanged\" ]; then\n\techo \"$5\" >> \"$3\"\nfi";
+                loadAndRenewScript = "#!/bin/bash\ncat -u \"$1\"";
+                certChangedScript = "#!/bin/bash\nwhile read line; do\n\techo \"$line\" >> \"$1\"\ndone < /dev/stdin";
 
-                File.WriteAllText(script1Path, script);
-                File.WriteAllText(script2Path, script);
-                File.WriteAllText(script3Path, script);
-                Process.Start("chmod", $"700 {script1Path}");
-                Process.Start("chmod", $"700 {script2Path}");
-                Process.Start("chmod", $"700 {script3Path}");
+                File.WriteAllText(loadAndRenewScriptNode1Path, loadAndRenewScript);
+                File.WriteAllText(loadAndRenewScriptNode2Path, loadAndRenewScript);
+                File.WriteAllText(loadAndRenewScriptNode3Path, loadAndRenewScript);
+                File.WriteAllText(certChangedScriptNode1Path, certChangedScript);
+                File.WriteAllText(certChangedScriptNode2Path, certChangedScript);
+                File.WriteAllText(certChangedScriptNode3Path, certChangedScript);
+
+                Process.Start("chmod", $"700 {loadAndRenewScriptNode1Path}");
+                Process.Start("chmod", $"700 {loadAndRenewScriptNode2Path}");
+                Process.Start("chmod", $"700 {loadAndRenewScriptNode3Path}");
+                Process.Start("chmod", $"700 {certChangedScriptNode1Path}");
+                Process.Start("chmod", $"700 {certChangedScriptNode2Path}");
+                Process.Start("chmod", $"700 {certChangedScriptNode3Path}");
             }
             else
             {
-                var script1Path = Path.Combine(Path.GetTempPath(), Path.ChangeExtension(Guid.NewGuid().ToString(), ".ps1"));
-                var script2Path = Path.Combine(Path.GetTempPath(), Path.ChangeExtension(Guid.NewGuid().ToString(), ".ps1"));
-                var script3Path = Path.Combine(Path.GetTempPath(), Path.ChangeExtension(Guid.NewGuid().ToString(), ".ps1"));
-                var args1 = CommandLineArgumentEscaper.EscapeAndConcatenate(new List<string> { "-NoProfile", script1Path, certPath, cert2Path, outputFile });
-                var args2 = CommandLineArgumentEscaper.EscapeAndConcatenate(new List<string> { "-NoProfile", script2Path, certPath, cert2Path, outputFile });
-                var args3 = CommandLineArgumentEscaper.EscapeAndConcatenate(new List<string> { "-NoProfile", script3Path, certPath, cert2Path, outputFile });
-                
-                customSettings1[RavenConfiguration.GetKey(x => x.Security.CertificateExecV2)] = "powershell";
-                customSettings1[RavenConfiguration.GetKey(x => x.Security.CertificateExecArguments)] = $"{args1}";
+                var loadAndRenewScriptNode1Path = Path.Combine(Path.GetTempPath(), Path.ChangeExtension(Guid.NewGuid().ToString(), ".ps1"));
+                var loadAndRenewScriptNode2Path = Path.Combine(Path.GetTempPath(), Path.ChangeExtension(Guid.NewGuid().ToString(), ".ps1"));
+                var loadAndRenewScriptNode3Path = Path.Combine(Path.GetTempPath(), Path.ChangeExtension(Guid.NewGuid().ToString(), ".ps1"));
+                var certChangedScriptNode1Path = Path.Combine(Path.GetTempPath(), Path.ChangeExtension(Guid.NewGuid().ToString(), ".ps1"));
+                var certChangedScriptNode2Path = Path.Combine(Path.GetTempPath(), Path.ChangeExtension(Guid.NewGuid().ToString(), ".ps1"));
+                var certChangedScriptNode3Path = Path.Combine(Path.GetTempPath(), Path.ChangeExtension(Guid.NewGuid().ToString(), ".ps1"));
+
+                var loadArgsNode1 = CommandLineArgumentEscaper.EscapeAndConcatenate(new List<string> { "-NoProfile", loadAndRenewScriptNode1Path, certPath });
+                var renewArgsNode1 = CommandLineArgumentEscaper.EscapeAndConcatenate(new List<string> { "-NoProfile", loadAndRenewScriptNode1Path, cert2Path });
+                var certChangedArgsNode1 = CommandLineArgumentEscaper.EscapeAndConcatenate(new List<string> { "-NoProfile", certChangedScriptNode1Path, outputFile });
+                var loadArgsNode2 = CommandLineArgumentEscaper.EscapeAndConcatenate(new List<string> { "-NoProfile", loadAndRenewScriptNode2Path, certPath });
+                var renewArgsNode2 = CommandLineArgumentEscaper.EscapeAndConcatenate(new List<string> { "-NoProfile", loadAndRenewScriptNode2Path, cert2Path });
+                var certChangedArgsNode2 = CommandLineArgumentEscaper.EscapeAndConcatenate(new List<string> { "-NoProfile", certChangedScriptNode2Path, outputFile });
+                var loadArgsNode3 = CommandLineArgumentEscaper.EscapeAndConcatenate(new List<string> { "-NoProfile", loadAndRenewScriptNode3Path, certPath });
+                var renewArgsNode3 = CommandLineArgumentEscaper.EscapeAndConcatenate(new List<string> { "-NoProfile", loadAndRenewScriptNode3Path, cert2Path });
+                var certChangedArgsNode3 = CommandLineArgumentEscaper.EscapeAndConcatenate(new List<string> { "-NoProfile", certChangedScriptNode3Path, outputFile });
+
+                customSettings1[RavenConfiguration.GetKey(x => x.Security.CertificateExecLoad)] = "powershell";
+                customSettings1[RavenConfiguration.GetKey(x => x.Security.CertificateExecLoadArguments)] = $"{loadArgsNode1}";
+                customSettings1[RavenConfiguration.GetKey(x => x.Security.CertificateExecRenew)] = "powershell";
+                customSettings1[RavenConfiguration.GetKey(x => x.Security.CertificateExecRenewArguments)] = $"{renewArgsNode1}";
+                customSettings1[RavenConfiguration.GetKey(x => x.Security.CertificateExecOnCertificateChange)] = "powershell";
+                customSettings1[RavenConfiguration.GetKey(x => x.Security.CertificateExecOnCertificateChangeArguments)] = $"{certChangedArgsNode1}";
                 customSettings1[RavenConfiguration.GetKey(x => x.Core.ServerUrls)] = "https://" + Environment.MachineName + ":0";
 
-                customSettings2[RavenConfiguration.GetKey(x => x.Security.CertificateExecV2)] = "powershell";
-                customSettings2[RavenConfiguration.GetKey(x => x.Security.CertificateExecArguments)] = $"{args2}";
+                customSettings2[RavenConfiguration.GetKey(x => x.Security.CertificateExecLoad)] = "powershell";
+                customSettings2[RavenConfiguration.GetKey(x => x.Security.CertificateExecLoadArguments)] = $"{loadArgsNode2}";
+                customSettings2[RavenConfiguration.GetKey(x => x.Security.CertificateExecRenew)] = "powershell";
+                customSettings2[RavenConfiguration.GetKey(x => x.Security.CertificateExecRenewArguments)] = $"{renewArgsNode2}";
+                customSettings2[RavenConfiguration.GetKey(x => x.Security.CertificateExecOnCertificateChange)] = "powershell";
+                customSettings2[RavenConfiguration.GetKey(x => x.Security.CertificateExecOnCertificateChangeArguments)] = $"{certChangedArgsNode2}";
                 customSettings2[RavenConfiguration.GetKey(x => x.Core.ServerUrls)] = "https://" + Environment.MachineName + ":0";
 
-                customSettings3[RavenConfiguration.GetKey(x => x.Security.CertificateExecV2)] = "powershell";
-                customSettings3[RavenConfiguration.GetKey(x => x.Security.CertificateExecArguments)] = $"{args3}";
+                customSettings3[RavenConfiguration.GetKey(x => x.Security.CertificateExecLoad)] = "powershell";
+                customSettings3[RavenConfiguration.GetKey(x => x.Security.CertificateExecLoadArguments)] = $"{loadArgsNode3}";
+                customSettings3[RavenConfiguration.GetKey(x => x.Security.CertificateExecRenew)] = "powershell";
+                customSettings3[RavenConfiguration.GetKey(x => x.Security.CertificateExecRenewArguments)] = $"{renewArgsNode3}";
+                customSettings3[RavenConfiguration.GetKey(x => x.Security.CertificateExecOnCertificateChange)] = "powershell";
+                customSettings3[RavenConfiguration.GetKey(x => x.Security.CertificateExecOnCertificateChangeArguments)] = $"{certChangedArgsNode3}";
                 customSettings3[RavenConfiguration.GetKey(x => x.Core.ServerUrls)] = "https://" + Environment.MachineName + ":0";
 
-                script = @"param([string]$userArg1, [string]$userArg2, [string]$userArg3, [string]$type, [string]$newCert)
+
+                loadAndRenewScript = @"param([string]$userArg1)
 try {
-    if($type -eq ""CertificateChanged""){
-        Add-Content $userArg3 $newCert
-    }
-    elseif($type -eq ""Load""){
-        $bytes = Get-Content -path $userArg1 -encoding Byte
-        $stdout = [System.Console]::OpenStandardOutput()
-        $stdout.Write($bytes, 0, $bytes.Length)
-    }
-    elseif($type -eq ""Renew""){
-        $bytes = Get-Content -path $userArg2 -encoding Byte
-        $stdout = [System.Console]::OpenStandardOutput()
-        $stdout.Write($bytes, 0, $bytes.Length)
-    }    
+    $bytes = Get-Content -path $userArg1 -encoding Byte
+    $stdout = [System.Console]::OpenStandardOutput()
+    $stdout.Write($bytes, 0, $bytes.Length)  
+}
+catch {
+    Write-Error $_.Exception
+    exit 1
+}
+exit 0";
+
+                certChangedScript = @"param([string]$userArg1)
+try {
+    $certBase64 = [System.Console]::ReadLine()
+    Add-Content $userArg1 $certBase64
 }
 catch {
     Write-Error $_.Exception
@@ -201,9 +259,12 @@ catch {
 }
 exit 0";
                 
-                File.WriteAllText(script1Path, script);
-                File.WriteAllText(script2Path, script); 
-                File.WriteAllText(script3Path, script);
+                File.WriteAllText(loadAndRenewScriptNode1Path, loadAndRenewScript);
+                File.WriteAllText(loadAndRenewScriptNode2Path, loadAndRenewScript); 
+                File.WriteAllText(loadAndRenewScriptNode3Path, loadAndRenewScript);
+                File.WriteAllText(certChangedScriptNode1Path, certChangedScript);
+                File.WriteAllText(certChangedScriptNode2Path, certChangedScript);
+                File.WriteAllText(certChangedScriptNode3Path, certChangedScript);
             }
 
             var clusterSize = 3;
