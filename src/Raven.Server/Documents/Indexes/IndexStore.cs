@@ -1057,7 +1057,7 @@ namespace Raven.Server.Documents.Indexes
                 }
             }
 
-            addToInitLog($"IndexStore Initialization is completed, took: {totalSp.ElapsedMilliseconds:#,#;;0}ms");
+            addToInitLog($"IndexStore initialization is completed, took: {totalSp.ElapsedMilliseconds:#,#;;0}ms");
 
             if (exceptions != null && exceptions.Count > 0)
                 throw new AggregateException("Could not load some of the indexes", exceptions);
