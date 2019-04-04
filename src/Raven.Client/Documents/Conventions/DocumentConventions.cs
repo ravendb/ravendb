@@ -130,7 +130,7 @@ namespace Raven.Client.Documents.Conventions
 
             OperationStatusFetchMode = OperationStatusFetchMode.ChangesApi;
 
-            SkipAddingIdFieldToDynamicObject = false;
+            AddIdFieldToDynamicObjects = true;
         }
 
         private bool _frozen;
@@ -156,7 +156,7 @@ namespace Raven.Client.Documents.Conventions
         private Func<string, BlittableJsonReaderObject, string> _findClrType;
         private bool _useOptimisticConcurrency;
         private bool _throwIfQueryPageSizeIsNotSet;
-        private bool _skipAddingIdFieldToDynamicObject;
+        private bool _addIdFieldToDynamicObjects;
         private int _maxNumberOfRequestsPerSession;
         private Action<JsonSerializer> _customizeJsonSerializer;
         private TimeSpan? _requestTimeout;
@@ -250,17 +250,16 @@ namespace Raven.Client.Documents.Conventions
         }
 
         /// <summary>
-        ///     If 'true' Id field will not be added to dynamic objects.
-        ///     If 'false' Id field will be added to dynamic objects.
-        ///     Default value is 'false'
+        ///     By default, the field 'Id' field will be added to dynamic objects, this allows to disable this behavior.
+        ///     Default value is 'true'
         /// </summary>
-        public bool SkipAddingIdFieldToDynamicObject
+        public bool AddIdFieldToDynamicObjects
         {
-            get => _skipAddingIdFieldToDynamicObject;
+            get => _addIdFieldToDynamicObjects;
             set
             {
                 AssertNotFrozen();
-                _skipAddingIdFieldToDynamicObject = value;
+                _addIdFieldToDynamicObjects = value;
             }
         }
 

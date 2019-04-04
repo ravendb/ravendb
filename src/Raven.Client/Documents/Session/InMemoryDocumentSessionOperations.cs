@@ -715,7 +715,7 @@ more responsive application.
 
         protected internal async Task<string> GenerateDocumentIdForStorageAsync(object entity)
         {
-            if (Conventions.SkipAddingIdFieldToDynamicObject == false && entity is IDynamicMetaObjectProvider)
+            if (Conventions.AddIdFieldToDynamicObjects && entity is IDynamicMetaObjectProvider)
             {
                 if (GenerateEntityIdOnTheClient.TryGetIdFromDynamic(entity, out string id))
                     return id;

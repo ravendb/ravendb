@@ -15,7 +15,7 @@ namespace FastTests.Issues
         {
             using (var store = GetDocumentStore(new Options()
             {
-                ModifyDocumentStore = a => a.Conventions.SkipAddingIdFieldToDynamicObject = true
+                ModifyDocumentStore = a => a.Conventions.AddIdFieldToDynamicObjects = false
             }))
             {
                 using (var session = store.OpenSession())
