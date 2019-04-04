@@ -129,6 +129,8 @@ namespace Raven.Client.Documents.Conventions
             MaxHttpCacheSize = new Size(httpCacheSizeInMb, SizeUnit.Megabytes);
 
             OperationStatusFetchMode = OperationStatusFetchMode.ChangesApi;
+
+            SkipAddingIdFieldToDynamicObject = false;
         }
 
         private bool _frozen;
@@ -154,6 +156,7 @@ namespace Raven.Client.Documents.Conventions
         private Func<string, BlittableJsonReaderObject, string> _findClrType;
         private bool _useOptimisticConcurrency;
         private bool _throwIfQueryPageSizeIsNotSet;
+        private bool _skipAddingIdFieldToDynamicObject;
         private int _maxNumberOfRequestsPerSession;
         private Action<JsonSerializer> _customizeJsonSerializer;
         private TimeSpan? _requestTimeout;
@@ -243,6 +246,21 @@ namespace Raven.Client.Documents.Conventions
             {
                 AssertNotFrozen();
                 _customizeJsonSerializer = value;
+            }
+        }
+
+        /// <summary>
+        ///     If 'true' Id field will not be added to dynamic objects.
+        ///     If 'false' Id field will be added to dynamic objects.
+        ///     Default value is 'false'
+        /// </summary>
+        public bool SkipAddingIdFieldToDynamicObject
+        {
+            get => _skipAddingIdFieldToDynamicObject;
+            set
+            {
+                AssertNotFrozen();
+                _skipAddingIdFieldToDynamicObject = value;
             }
         }
 

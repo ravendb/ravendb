@@ -66,7 +66,7 @@ namespace Raven.Client.Documents.Identity
         public string GenerateDocumentIdForStorage(object entity)
         {
             string id;
-            if (entity is IDynamicMetaObjectProvider)
+            if (_conventions.SkipAddingIdFieldToDynamicObject == false && entity is IDynamicMetaObjectProvider)
             {
                 if (TryGetIdFromDynamic(entity, out id) == false || id == null)
                 {
@@ -109,7 +109,7 @@ namespace Raven.Client.Documents.Identity
             var identityProperty = _conventions.GetIdentityProperty(entityType);
             if (identityProperty == null)
             {
-                if (entity is IDynamicMetaObjectProvider)
+                if (_conventions.SkipAddingIdFieldToDynamicObject == false && entity is IDynamicMetaObjectProvider)
                 {
 
                     TrySetIdOnDynamic(entity, id);
