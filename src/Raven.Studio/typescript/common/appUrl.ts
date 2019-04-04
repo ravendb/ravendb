@@ -129,6 +129,10 @@ class appUrl {
     static forDebugInfo(): string {
         return "#admin/settings/debugInfo";
     }
+    
+    static forSystemStorageReport(): string {
+        return "#admin/settings/storageReport"
+    }
 
     static forAdminJsConsole(): string {
         return "#admin/settings/adminJsConsole";
