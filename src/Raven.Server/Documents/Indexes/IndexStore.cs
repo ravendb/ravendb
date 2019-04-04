@@ -906,6 +906,12 @@ namespace Raven.Server.Documents.Indexes
 
             var exceptionAggregator = new ExceptionAggregator(_logger, $"Could not dispose {nameof(IndexStore)}");
 
+            // waiting for all the indexes that are currently being initialized to finish
+            foreach (var indexLock in _indexLocks)
+            {
+                indexLock.Value.Wait();
+            }
+
             Parallel.ForEach(_indexes, index =>
             {
                 if (index is FaultyInMemoryIndex)
