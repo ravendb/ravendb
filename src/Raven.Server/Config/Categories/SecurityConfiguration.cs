@@ -52,12 +52,12 @@ namespace Raven.Server.Config.Categories
         [ConfigurationEntry("Security.Certificate.Exec.Load", ConfigurationEntryScope.ServerWideOnly)]
         public string CertificateExecLoad { get; set; }
 
-        [Description("A command or executable providing a renewed .pfx cluster certificate when invoked by RavenDB. This configuration must be set if using Security.Certificate.Exec.Load")]
+        [Description("A command or executable to handle automatic renewals, providing a renewed .pfx cluster certificate. The leader node will invoke the executable once every hour and if a new certificate is received, it will be sent to the other nodes. The executable specified in Security.Certificate.Exec.OnCertificateChange will then be used to persist the certificate across the cluster.")]
         [DefaultValue(null)]
         [ConfigurationEntry("Security.Certificate.Exec.Renew", ConfigurationEntryScope.ServerWideOnly)]
         public string CertificateExecRenew { get; set; }
 
-        [Description("A command or executable handling a change in the cluster certificate. When invoked, RavenDB will send the new cluster certificate to this executable. This configuration must be set if using Security.Certificate.Exec.Load")]
+        [Description("A command or executable handling a change in the cluster certificate. When invoked, RavenDB will send the new cluster certificate to this executable, giving the follower nodes a way to persist the new certificate.")]
         [DefaultValue(null)]
         [ConfigurationEntry("Security.Certificate.Exec.OnCertificateChange", ConfigurationEntryScope.ServerWideOnly)]
         public string CertificateExecOnCertificateChange { get; set; }
