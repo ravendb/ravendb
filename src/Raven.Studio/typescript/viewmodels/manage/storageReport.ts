@@ -1,7 +1,5 @@
 import viewModelBase = require("viewmodels/viewModelBase");
-import getStorageReportCommand = require("commands/database/debug/getStorageReportCommand");
-import getEnvironmentStorageReportCommand = require("commands/database/debug/getEnvironmentStorageReportCommand");
-import protractedCommandsDetector = require("common/notifications/protractedCommandsDetector");
+import getSystemStorageReportCommand = require("commands/resources/getSystemStorageReportCommand");
 import generalUtils = require("common/generalUtils");
 import storageReportItem = require("models/database/status/storageReportItem");
 import d3 = require("d3");
@@ -17,8 +15,7 @@ class storageReport extends viewModelBase {
 
     static readonly animationLength = 200;
 
-    basePath: string;
-    private rawData = [] as storageReportItemDto[];
+    private rawData: detailedSystemStorageReportItemDto;
 
     private currentPath: KnockoutComputed<Array<storageReportItem>>;
 
@@ -28,7 +25,6 @@ class storageReport extends viewModelBase {
     private node = ko.observable<storageReportItem>();
     private treemap: d3.layout.Treemap<any>;
     private svg: d3.Selection<any>;
-    private g: d3.Selection<any>;
     private tooltip: d3.Selection<any>;
 
     private w: number;
@@ -36,7 +32,6 @@ class storageReport extends viewModelBase {
 
     private transitioning = false;
 
-    showLoader = ko.observable<boolean>(false);
     showPagesColumn: KnockoutObservable<boolean>;
     showEntriesColumn: KnockoutObservable<boolean>;
     showTempFiles: KnockoutObservable<boolean>;
@@ -51,11 +46,10 @@ class storageReport extends viewModelBase {
 
         this.initObservables();
 
-        return new getStorageReportCommand(this.activeDatabase())
+        return new getSystemStorageReportCommand()
             .execute()
             .done(result => {
-                this.basePath = result.BasePath;
-                this.rawData = result.Results;
+                this.rawData = result;
             });
     }
 
@@ -63,7 +57,7 @@ class storageReport extends viewModelBase {
         super.compositionComplete();
         this.processData();
         this.initGraph();
-        this.draw(undefined, undefined);
+        this.draw(undefined);
     }
 
     private initObservables() {
@@ -98,13 +92,7 @@ class storageReport extends viewModelBase {
 
     private processData() {
         const data = this.rawData;
-
-        const mappedData = data.map(x => this.mapReport(x));
-        const totalSize = mappedData.reduce((p, c) => p + c.size, 0);
-        const item = new storageReportItem("/", "Database", false, totalSize, mappedData);
-
-        this.root = item;
-
+        this.root = this.mapReport(data);
         this.sortBySize(this.root);
 
         this.node(this.root);
@@ -118,40 +106,30 @@ class storageReport extends viewModelBase {
         }
     }
 
-    private mapReport(reportItem: storageReportItemDto): storageReportItem {
+    private mapReport(reportItem: detailedSystemStorageReportItemDto): storageReportItem {
         const dataFile = this.mapDataFile(reportItem.Report);
         const journals = this.mapJournals(reportItem.Report);
         const tempFiles = this.mapTempFiles(reportItem.Report);
 
-        return new storageReportItem(reportItem.Name,
+        return new storageReportItem(reportItem.Environment,
             reportItem.Type.toLowerCase(),
-            storageReport.showDisplayReportType(reportItem.Type),
+            true,
             dataFile.size + journals.size + tempFiles.size,
             [dataFile, journals, tempFiles]);
     }
 
-    private static showDisplayReportType(reportType: string): boolean {
-        return reportType !== "Configuration" && reportType !== "Subscriptions";
-    }
-
-    private mapDataFile(report: Voron.Debugging.StorageReport): storageReportItem {
+    private mapDataFile(report: Voron.Debugging.DetailedStorageReport): storageReportItem {
         const dataFile = report.DataFile;
 
-        const storageItem = new storageReportItem("Datafile", "data", false, dataFile.AllocatedSpaceInBytes);
-        storageItem.lazyLoadChildren = true;
-
-        return storageItem;
-    }
-
-    private mapDetailedReport(report: Voron.Debugging.DetailedStorageReport, d: storageReportItem) {
-        d.lazyLoadChildren = false;
-
+        const d = new storageReportItem("Datafile", "data", false, dataFile.AllocatedSpaceInBytes);
         const tables = this.mapTables(report.Tables);
         const trees = this.mapTrees(report.Trees, "Trees");
         const freeSpace = new storageReportItem("Free", "free", false, report.DataFile.FreeSpaceInBytes, []);
         const preallocatedBuffers = this.mapPreAllocatedBuffers(report.PreAllocatedBuffers);
 
         d.internalChildren = [tables, trees, freeSpace, preallocatedBuffers];
+        
+        return d;
     }
 
     private mapPreAllocatedBuffers(buffersReport: Voron.Debugging.PreAllocatedBuffersReport): storageReportItem {
@@ -226,8 +204,8 @@ class storageReport extends viewModelBase {
         return item;
     }
 
-    private mapJournals(report: Voron.Debugging.StorageReport): storageReportItem {
-        const journals = report.Journals;
+    private mapJournals(report: Voron.Debugging.DetailedStorageReport): storageReportItem {
+        const journals = report.Journals.Journals;
 
         const mappedJournals = journals.map(journal => 
             new storageReportItem(
@@ -241,8 +219,8 @@ class storageReport extends viewModelBase {
         return new storageReportItem("Journals", "journals", false, mappedJournals.reduce((p, c) => p + c.size, 0), mappedJournals);
     }
     
-    private mapTempFiles(report: Voron.Debugging.StorageReport): storageReportItem {
-        const tempFiles = report.TempFiles;
+    private mapTempFiles(report: Voron.Debugging.DetailedStorageReport): storageReportItem {
+        const tempFiles = report.TempBuffers;
 
         const mappedTemps = tempFiles.map(temp => {
             const item = new storageReportItem(
@@ -301,7 +279,7 @@ class storageReport extends viewModelBase {
         return depth === 0 ? node.internalChildren : [];
     }
 
-    private draw(goingIn: boolean, previousNode: storageReportItem) {
+    private draw(goingIn: boolean) {
         const levelDown = goingIn === true;
         const levelUp = goingIn === false;
 
@@ -413,10 +391,10 @@ class storageReport extends viewModelBase {
 
         const rectangles = cell.append("svg:rect")
             .attr("width", d => Math.max(0, d.dx - 1))
-            .attr("height", d => Math.max(0, d.dy - 1))          
+            .attr("height", d => Math.max(0, d.dy - 1));
 
         rectangles
-            .filter(x => x.hasChildren() || x.lazyLoadChildren)
+            .filter(x => x.hasChildren())
             .style('cursor', 'pointer');
 
         cell.append("svg:text")
@@ -455,51 +433,8 @@ class storageReport extends viewModelBase {
         }
     } 
 
-    private loadDetailedReport(d: storageReportItem): JQueryPromise<detailedStorageReportItemDto> {
-        if (!d.lazyLoadChildren) {
-            return;
-        }
-
-        const env = d.parent;
-
-        const showLoaderTimer = setTimeout(() => {
-            this.showLoader(true);
-        }, 100);
-
-        return new getEnvironmentStorageReportCommand(this.activeDatabase(), env.name, _.capitalize(env.type))
-            .execute()
-            .done((envReport) => {
-                this.mapDetailedReport(envReport.Report, d);
-            })
-            .always(() => {
-                if (this.showLoader()) {
-                    this.showLoader(false);
-                } else {
-                    clearTimeout(showLoaderTimer);
-                }
-            });
-    }
-
     onClick(d: storageReportItem, goingIn: boolean) {
         if (this.transitioning || this.node() === d) {
-            return;
-        }
-
-        if (d.lazyLoadChildren) {
-            const requestExecution = protractedCommandsDetector.instance.requestStarted(500);
-
-            this.loadDetailedReport(d)
-                .done(() => {
-                    const prev = this.node();
-                    this.sortBySize(d);
-                    this.node(d);
-                    this.draw(true, prev);
-                })
-                .always(() => requestExecution.markCompleted());
-
-            if (d3.event) {
-                (d3.event as any).stopPropagation();
-            }
             return;
         }
 
@@ -507,9 +442,8 @@ class storageReport extends viewModelBase {
             return;
         }
 
-        const prev = this.node();
         this.node(d);
-        this.draw(goingIn, prev);
+        this.draw(goingIn);
 
         this.updateTooltips();
         
@@ -559,26 +493,6 @@ class storageReport extends viewModelBase {
         this.tooltip.transition()
             .duration(500)
             .style("opacity", 0);	
-    }
-
-
-    dataSizeFormatted(item: storageReportItem) {
-        if (!item.isStorageEnvironment()) {
-            return "n/a";
-        }
-        
-        const data = item.internalChildren.find(x => x.type === "data");
-        const journals = item.internalChildren.find(x => x.type === "journals");
-        return generalUtils.formatBytesToSize(data.size + journals.size);
-    }
-    
-    tempSizeFormatted(item: storageReportItem) {
-        if (!item.isStorageEnvironment()) {
-            return "n/a";
-        }
-
-        const tempFiles = item.internalChildren.find(x => x.type === "tempFiles");
-        return generalUtils.formatBytesToSize(tempFiles.size);
     }
    
 }

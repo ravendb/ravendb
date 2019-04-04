@@ -1202,6 +1202,9 @@ namespace Voron.Data.BTrees
                     }
                     else
                     {
+                        if (State.RootObjectType == RootObjectType.Table) // tables might have mixed values, fixed size trees inside have dedicated handling
+                            continue;
+                        
                         if ((State.Flags & TreeFlags.FixedSizeTrees) == TreeFlags.FixedSizeTrees)
                         {
                             var valueReader = GetValueReaderFromHeader(node);
