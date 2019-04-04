@@ -200,16 +200,16 @@ class manageDatabaseGroup extends viewModelBase {
 
     private onDatabaseInfoFetched(dbInfoDto: Raven.Client.ServerWide.Operations.DatabaseInfo) {
         const incomingDbInfo = new databaseInfo(dbInfoDto);
-        
         if (this.clearNodesList()) {
             $(".nodes-list .not-deleted-nodes").empty();
             this.nodes([]);
             this.clearNodesList(false);
         }
 
-        if (incomingDbInfo.deletionInProgress().length > 0) {
-            let nodeToDisplay = incomingDbInfo.nodes().filter(x => incomingDbInfo.deletionInProgress().indexOf(x.tag()) < 0);
-            this.updateNodes(nodeToDisplay);
+        const deletionInProgress = incomingDbInfo.deletionInProgress();
+        if (deletionInProgress.length > 0) {
+            const nodesToDisplay = incomingDbInfo.nodes().filter(x => deletionInProgress.indexOf(x.tag()) < 0);
+            this.updateNodes(nodesToDisplay);
         } else {
             this.updateNodes(incomingDbInfo.nodes());
         }
