@@ -192,7 +192,18 @@ namespace Raven.Server.Documents
                 databaseTask.ContinueWith(t =>
                 {
                     if (databaseTask.IsCompletedSuccessfully)
-                        UnloadDatabaseInternal(databaseName);
+                    {
+                        using (_serverStore.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
+                        using (context.OpenReadTransaction())
+                        {
+                            var databaseRecord = _serverStore.Cluster.ReadRawDatabase(context, databaseName, out _);
+                            databaseRecord.TryGet(nameof(DatabaseRecord.Disabled), out bool dbDisabled);
+
+                            // unload only if DB is still disabled
+                            if (dbDisabled)
+                                UnloadDatabaseInternal(databaseName);
+                        }
+                    }
                 });
             }
         }
