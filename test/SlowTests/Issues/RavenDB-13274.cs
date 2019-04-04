@@ -1,7 +1,7 @@
-using System;
 using FastTests;
 using Raven.Client.Documents.Indexes;
 using Raven.Client.Documents.Operations.Indexes;
+using Raven.Client.Exceptions;
 using Raven.Server.Documents.Indexes;
 using Xunit;
 
@@ -37,7 +37,7 @@ namespace SlowTests.Issues
                     }
                 };
 
-                var ex = Assert.Throws<ArgumentException>(() => 
+                var ex = Assert.Throws<RavenException>(() => 
                     store.Maintenance.Send(new PutIndexesOperation(indexDef2)));
 
                 Assert.Contains($"Index name cannot exceed {IndexStore.MaxIndexNameLength} characters.", ex.Message);
@@ -68,7 +68,7 @@ namespace SlowTests.Issues
                     Maps = indexDef.Maps
                 };
 
-                var ex = Assert.Throws<ArgumentException>(() =>
+                var ex = Assert.Throws<RavenException>(() =>
                     store.Maintenance.Send(new PutIndexesOperation(indexDef2)));
 
                 Assert.Contains($"Index name cannot exceed {IndexStore.MaxIndexNameLength} characters.", ex.Message);
