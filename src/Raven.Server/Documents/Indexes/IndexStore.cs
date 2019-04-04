@@ -61,6 +61,15 @@ namespace Raven.Server.Documents.Indexes
 
         internal Action<(string IndexName, bool DidWork)> IndexBatchCompleted;
 
+        private const int PathLengthLimit = 259; // Roslyn's MetadataWriter.PathLengthLimit = 259 
+
+        internal static int MaxIndexNameLength = PathLengthLimit -
+                                                 IndexCompiler.IndexNamePrefix.Length -
+                                                 1 - // "."
+                                                 36 - // new Guid()
+                                                 IndexCompiler.IndexExtension.Length -
+                                                 4; // ".dll" 
+            
         public IndexStore(DocumentDatabase documentDatabase, ServerStore serverStore)
         {
             _documentDatabase = documentDatabase;
@@ -723,6 +732,13 @@ namespace Raven.Server.Documents.Indexes
             if (isStatic && name.Contains(".") && NameUtils.IsDotCharSurroundedByOtherChars(name) == false)
                 throw new ArgumentException(
                     $"Index name '{name}' is not permitted. If a name contains '.' character then it must be surrounded by other allowed characters.", nameof(name));
+
+            if (name.Length > MaxIndexNameLength)
+            {
+                throw new ArgumentException(
+                    $"Index name '{name}' is not permitted. Index name cannot exceed {MaxIndexNameLength} characters.", nameof(name));
+            }
+
         }
 
         public Index ResetIndex(string name)
