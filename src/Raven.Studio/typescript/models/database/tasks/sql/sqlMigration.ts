@@ -23,20 +23,21 @@ class sqlMigration {
         detectManyToMany: ko.observable<boolean>(true),
         includeUnsupported: ko.observable<boolean>(false)
     };
-    
-    static sqlServerConnectionString = ko.observable<string>();
-    static mysqlConnectionString = ko.observable<string>();
-    static npgsqlConnectionString = ko.observable<string>();
-    static oracleConnectionString = ko.observable<string>();
 
+    // cache connection strings between page views
+    static savedSqlServerConnectionString: string;
+    static savedMysqlConnectionString: string;
+    static savedNpgsqlConnectionString: string;
+    static savedOracleConnectionString: string;
+    
     sqlServer = {
-        connectionString: sqlMigration.sqlServerConnectionString
+        connectionString: ko.observable<string>(sqlMigration.savedSqlServerConnectionString)
     };
     
     sqlServerValidationGroup: KnockoutValidationGroup;
     
     mySql = {
-        connectionString: sqlMigration.mysqlConnectionString
+        connectionString: ko.observable<string>(sqlMigration.savedMysqlConnectionString)
     };
     
     connectionStringOverride = ko.observable<string>();
@@ -44,13 +45,13 @@ class sqlMigration {
     mySqlValidationGroup: KnockoutValidationGroup;
 
     npgSql = {
-        connectionString: sqlMigration.npgsqlConnectionString
+        connectionString: ko.observable<string>(sqlMigration.savedNpgsqlConnectionString)
     };
 
     npgSqlValidationGroup: KnockoutValidationGroup;
 
     oracle = {
-        connectionString: sqlMigration.oracleConnectionString
+        connectionString: ko.observable<string>(sqlMigration.savedOracleConnectionString)
     };
 
     oracleValidationGroup: KnockoutValidationGroup;
@@ -66,6 +67,13 @@ class sqlMigration {
         this.initObservables();
         this.initTransformationFunctions();
         this.initValidation();
+    }
+    
+    saveConnectionStringsToCache() {
+        sqlMigration.savedSqlServerConnectionString = this.sqlServer.connectionString();
+        sqlMigration.savedMysqlConnectionString = this.mySql.connectionString();
+        sqlMigration.savedNpgsqlConnectionString = this.npgSql.connectionString();
+        sqlMigration.savedOracleConnectionString = this.oracle.connectionString();
     }
     
     private initObservables() {

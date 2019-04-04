@@ -107,7 +107,7 @@
                                     </span>
                                 </div>
                             </div>
-                            <div data-bind="visible: showWindowsCredentialInputs">
+                            <div data-bind="visible: showWindowsCredentialInputs, if: showWindowsCredentialInputs">
                                 <div class="form-group" data-bind="validationElement: userName">
                                     <label class="control-label">User name</label>
                                     <div class="flex-grow">
@@ -127,7 +127,7 @@
                                     </div>
                                 </div>
                             </div>
-                            <div data-bind="visible: showApiKeyCredentialInputs">
+                            <div data-bind="visible: showApiKeyCredentialInputs, if: showApiKeyCredentialInputs">
                                 <div class="form-group" data-bind="validationElement: apiKey">
                                     <label class="control-label">API Key</label>
                                     <div class="flex-grow">

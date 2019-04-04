@@ -636,6 +636,12 @@ class importDatabaseFromSql extends viewModelBase {
         );
     }
     
+    detached() {
+        super.detached();
+
+        this.model.saveConnectionStringsToCache();
+    }
+
     private provideTableCheckboxHint(incomingLinksCount: number) {
         return "This table has <strong>" + incomingLinksCount + "</strong> incoming " + this.pluralize(incomingLinksCount, "link", "links", true) + ". <em><strong>Skip</strong></em> or <em><strong>embed</strong></em> all of them before proceeding.<br/> "
             + "<small class='text-info'><i class='icon-info'></i>  You can view incoming links by clicking on <i class='icon-sql-many-to-one'></i> button</small>";
