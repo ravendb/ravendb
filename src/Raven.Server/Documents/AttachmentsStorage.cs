@@ -299,8 +299,24 @@ namespace Raven.Server.Documents
 
             if (string.IsNullOrEmpty(changeVector))
             {
-                changeVector = ChangeVectorUtils.TryUpdateChangeVector(_documentDatabase.ServerStore.NodeTag, _documentDatabase.DbBase64Id, newEtag,
-                    context.LastDatabaseChangeVector ?? GetDatabaseChangeVector(context)).ChangeVector;
+                //We got an NRE here, see RavenDB-13320 it is likley due to TryUpdateChangeVector failing to update which 
+                //means that we either read a higher CV from the context or from the persistent state, most likley from the context.
+                //The code here is meant to give us better error in the case this happens again and should be simplified once RavenDB-13320 is fixed. 
+                var databaseChangeVector = context.LastDatabaseChangeVector;
+                string persistentDatabaseChangeVector = null;
+                if (databaseChangeVector == null)
+                {
+                    databaseChangeVector = persistentDatabaseChangeVector = GetDatabaseChangeVector(context);
+                }
+                var updatedChangeVector = ChangeVectorUtils.TryUpdateChangeVector(_documentDatabase.ServerStore.NodeTag, _documentDatabase.DbBase64Id, newEtag,
+                    databaseChangeVector);
+                if (updatedChangeVector.IsValid == false)
+                {
+                    throw new InvalidOperationException($"Was requested to insert attachment name:{name} with hash:{base64Hash} with null change vector. " +
+                                                        $"context.LastDatabaseChangeVector is {context.LastDatabaseChangeVector??"null"}, " +
+                                                        $"persistentDatabaseChangeVector is {persistentDatabaseChangeVector?? "not read"}" );
+                }
+                changeVector = updatedChangeVector.ChangeVector;
                 context.LastDatabaseChangeVector = changeVector;
             }
             Debug.Assert(changeVector != null);
