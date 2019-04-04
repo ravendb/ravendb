@@ -703,7 +703,7 @@ namespace FastTests
             if (customSettings == null)
                 customSettings = new ConcurrentDictionary<string, string>();
 
-            if (customSettings.TryGetValue(RavenConfiguration.GetKey(x => x.Security.CertificateExecV2), out var _) == false)
+            if (customSettings.TryGetValue(RavenConfiguration.GetKey(x => x.Security.CertificateExecLoad), out var _) == false)
             {
                 if (serverCertPath == null)
                     serverCertPath = GenerateAndSaveSelfSignedCertificate(createNew);

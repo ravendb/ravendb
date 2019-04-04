@@ -221,7 +221,7 @@ exit 129";
 
                 customSettings[RavenConfiguration.GetKey(x => x.Security.MasterKeyExec)] = "bash";
                 customSettings[RavenConfiguration.GetKey(x => x.Security.MasterKeyExecArguments)] = $"{keyArgs}";
-                customSettings[RavenConfiguration.GetKey(x => x.Security.CertificateExecV2)] = "bash";
+                customSettings[RavenConfiguration.GetKey(x => x.Security.CertificateExec)] = "bash";
                 customSettings[RavenConfiguration.GetKey(x => x.Security.CertificateExecArguments)] = $"{certArgs}";
                 customSettings[RavenConfiguration.GetKey(x => x.Core.ServerUrls)] = "https://" + Environment.MachineName + ":0";
 
@@ -237,7 +237,7 @@ exit 129";
 
                 customSettings[RavenConfiguration.GetKey(x => x.Security.MasterKeyExec)] = "powershell";
                 customSettings[RavenConfiguration.GetKey(x => x.Security.MasterKeyExecArguments)] = $"{keyArgs}";
-                customSettings[RavenConfiguration.GetKey(x => x.Security.CertificateExecV2)] = "powershell";
+                customSettings[RavenConfiguration.GetKey(x => x.Security.CertificateExec)] = "powershell";
                 customSettings[RavenConfiguration.GetKey(x => x.Security.CertificateExecArguments)] = $"{certArgs}";
                 customSettings[RavenConfiguration.GetKey(x => x.Core.ServerUrls)] = "https://" + Environment.MachineName + ":0";
                 script = @"param([string]$userArg)

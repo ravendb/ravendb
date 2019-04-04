@@ -321,19 +321,9 @@ namespace Raven.Server.ServerWide
             return unprotectedData;
         }
 
-        public enum CertificateRequestType
-        {
-            Load,
-            Renew,
-            CertificateChanged
-        }
-
-        public RavenServer.CertificateHolder LoadCertificateWithExecutable(CertificateRequestType type, string executable, string userArgs, ServerStore serverStore)
+        public RavenServer.CertificateHolder LoadCertificateWithExecutable(string executable, string args, ServerStore serverStore)
         {
             Process process;
-
-            
-            var args = $"{userArgs} {type}";
 
             var startInfo = new ProcessStartInfo
             {
@@ -429,11 +419,9 @@ namespace Raven.Server.ServerWide
             };
         }
 
-        public void NotifyExecutableOfCertificateChange(string executable, string userArgs, string newCertificateBase64, ServerStore serverStore)
+        public void NotifyExecutableOfCertificateChange(string executable, string args, string newCertificateBase64, ServerStore serverStore)
         {
             Process process;
-
-            var args = $"{userArgs} {CertificateRequestType.CertificateChanged} {newCertificateBase64}";
 
             var startInfo = new ProcessStartInfo
             {
@@ -441,6 +429,7 @@ namespace Raven.Server.ServerWide
                 Arguments = args,
                 UseShellExecute = false,
                 RedirectStandardError = true,
+                RedirectStandardInput = true,
                 CreateNoWindow = true
             };
 
@@ -454,6 +443,9 @@ namespace Raven.Server.ServerWide
             {
                 throw new InvalidOperationException($"Unable to execute {executable} {args}. Failed to start process.", e);
             }
+
+            process.StandardInput.WriteLine(newCertificateBase64);
+            process.StandardInput.Flush();
 
             var readErrors = process.StandardError.ReadToEndAsync();
 
