@@ -1,8 +1,10 @@
 using System;
 using System.Collections;
 using System.Collections.Generic;
+using System.Dynamic;
 using System.Linq;
 using System.Runtime.CompilerServices;
+using Microsoft.CSharp.RuntimeBinder;
 using Newtonsoft.Json;
 using Raven.Client.Documents.Conventions;
 using Raven.Client.Json;
@@ -283,7 +285,26 @@ namespace Raven.Client.Documents.Session
         {
             var identityProperty = conventions.GetIdentityProperty(entityType);
             if (identityProperty == null)
+            {
+                if (conventions.AddIdFieldToDynamicObjects && entityType.GetInterfaces().Contains(typeof(IDynamicMetaObjectProvider)))
+                {
+                    try
+                    {
+                        if (document.Modifications == null)
+                            document.Modifications = new DynamicJsonValue(document);
+
+                        document.Modifications.Remove("Id");
+                        return true;
+                    }
+                    catch (RuntimeBinderException)
+                    {
+                        // it is fine if the document doesn't
+                        // contain this property or if we can't remove it
+                    }
+                }
+
                 return false;
+            }
 
             if (document.Modifications == null)
                 document.Modifications = new DynamicJsonValue(document);
