@@ -1,8 +1,10 @@
 ﻿using System;
 using Raven.Client;
 using Raven.Client.Documents.Subscriptions;
+using Raven.Client.Exceptions.Documents.Subscriptions;
 using Raven.Client.Json.Converters;
 using Raven.Client.ServerWide;
+using Raven.Server.Documents;
 using Raven.Server.Documents.TcpHandlers;
 using Raven.Server.ServerWide.Context;
 using Sparrow.Json;
@@ -11,6 +13,7 @@ using Voron;
 using Voron.Data.Tables;
 using Raven.Server.Documents.Replication;
 using Raven.Server.Rachis;
+using Voron.Impl.Paging;
 
 namespace Raven.Server.ServerWide.Commands.Subscriptions
 {
@@ -48,6 +51,8 @@ namespace Raven.Server.ServerWide.Commands.Subscriptions
             var subscriptionId = SubscriptionId ?? index;
             SubscriptionName = string.IsNullOrEmpty(SubscriptionName) ? subscriptionId.ToString() : SubscriptionName;
             var baseName = SubscriptionName;
+            if (SubscriptionName.Length > DocumentIdWorker.MaxIdSize)
+                throw new SubscriptionNameException($"Subscription Name is too long, must be at most {DocumentIdWorker.MaxIdSize} bytes");
 
             while (tryToSetName)
             {
