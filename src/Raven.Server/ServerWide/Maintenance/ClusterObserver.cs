@@ -855,9 +855,9 @@ namespace Raven.Server.ServerWide.Maintenance
                 return (false, null);
             }
 
-            var indexesCatchedUp = CheckIndexProgress(promotablePrevDbStats.LastEtag, promotablePrevDbStats.LastIndexStats, promotableDbStats.LastIndexStats,
+            var reason = CheckIndexProgress(promotablePrevDbStats.LastEtag, promotablePrevDbStats.LastIndexStats, promotableDbStats.LastIndexStats,
                 mentorCurrDbStats.LastIndexStats);
-            if (indexesCatchedUp)
+            if (reason == null)
             {
                 LogMessage($"We try to promoted the database '{dbName}' on {promotable} to be a full member", info: false);
 
@@ -866,7 +866,7 @@ namespace Raven.Server.ServerWide.Maintenance
 
                 return (true, $"Node {promotable} is up-to-date so promoting it to be member");
             }
-            LogMessage($"The database '{dbName}' on {promotable} is not ready to be promoted, because the indexes are not up-to-date.{Environment.NewLine}");
+            LogMessage($"The database '{dbName}' on {promotable} is not ready to be promoted, because {reason}{Environment.NewLine}");
 
             if (topology.PromotablesStatus.TryGetValue(promotable, out var currentStatus) == false
                 || currentStatus != DatabasePromotionStatus.IndexNotUpToDate)
@@ -1050,7 +1050,7 @@ namespace Raven.Server.ServerWide.Maintenance
             return updated;
         }
 
-        private static bool CheckIndexProgress(
+        private static string CheckIndexProgress(
             long lastPrevEtag,
             Dictionary<string, DatabaseStatusReport.ObservedIndexStatus> previous,
             Dictionary<string, DatabaseStatusReport.ObservedIndexStatus> current,
@@ -1088,10 +1088,10 @@ namespace Raven.Server.ServerWide.Maintenance
                 }
 
                 if (previous.TryGetValue(mentorIndex.Key, out var _) == false)
-                    return false;
+                    return $"Index '{mentorIndex.Key}' is missing";
 
                 if (current.TryGetValue(mentorIndex.Key, out var currentIndexStats) == false)
-                    return false;
+                    return $"Index '{mentorIndex.Key}' is missing";
 
                 if (currentIndexStats.IsStale == false)
                     continue;
@@ -1106,10 +1106,10 @@ namespace Raven.Server.ServerWide.Maintenance
 
                 var lastIndexEtag = currentIndexStats.LastIndexedEtag;
                 if (lastPrevEtag > lastIndexEtag)
-                    return false;
+                    return $"Index '{mentorIndex.Key}' is in state '{currentIndexStats.State}' and not up-to-date (prev: {lastPrevEtag}, current: {lastIndexEtag}).";
 
             }
-            return true;
+            return null;
         }
 
         private Task<(long Index, object Result)> UpdateTopology(UpdateTopologyCommand cmd)
