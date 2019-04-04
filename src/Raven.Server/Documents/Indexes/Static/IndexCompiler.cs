@@ -159,7 +159,7 @@ namespace Raven.Server.Documents.Indexes.Static
             var syntaxTrees = res.SyntaxTrees;
 
             var compilation = CSharpCompilation.Create(
-                assemblyName: name + ".dll",
+                assemblyName: name,
                 syntaxTrees: syntaxTrees,
                 references: res.References,
                 options: new CSharpCompilationOptions(OutputKind.DynamicallyLinkedLibrary)
