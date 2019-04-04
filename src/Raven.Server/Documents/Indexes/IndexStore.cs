@@ -1031,7 +1031,7 @@ namespace Raven.Server.Documents.Indexes
                     OpenIndex(path, indexPath, exceptions, name, staticIndexDefinition: definition, autoIndexDefinition: null);
 
                     if (_logger.IsInfoEnabled)
-                        _logger.Info($"Initialized static index: `{name}`, took: {sp.ElapsedMilliseconds}ms");
+                        _logger.Info($"Initialized static index: `{name}`, took: {sp.ElapsedMilliseconds:#,#;;0}ms");
                 }
             }
 
@@ -1053,11 +1053,11 @@ namespace Raven.Server.Documents.Indexes
                     OpenIndex(path, indexPath, exceptions, name, staticIndexDefinition: null, autoIndexDefinition: definition);
 
                     if (_logger.IsInfoEnabled)
-                        _logger.Info($"Initialized static index: `{name}`, took: {sp.ElapsedMilliseconds}ms");
+                        _logger.Info($"Initialized auto index: `{name}`, took: {sp.ElapsedMilliseconds:#,#;;0}ms");
                 }
             }
 
-            addToInitLog($"IndexStore Initialization is completed, took: {totalSp.ElapsedMilliseconds}ms");
+            addToInitLog($"IndexStore Initialization is completed, took: {totalSp.ElapsedMilliseconds:#,#;;0}ms");
 
             if (exceptions != null && exceptions.Count > 0)
                 throw new AggregateException("Could not load some of the indexes", exceptions);
