@@ -68,6 +68,7 @@ namespace Raven.Server.Documents
         private readonly object _idleLocker = new object();
 
         private readonly object _clusterLocker = new object();
+
         /// <summary>
         /// The current lock, used to make sure indexes have a unique names
         /// </summary>
@@ -285,12 +286,15 @@ namespace Raven.Server.Documents
 
                 try
                 {
-                    _indexStoreTask.Wait(DatabaseShutdown);
+                    // we need to wait here for the task to complete
+                    _indexStoreTask.Wait();
                 }
                 finally
                 {
                     _indexStoreTask = null;
                 }
+
+                DatabaseShutdown.ThrowIfCancellationRequested();
 
                 SubscriptionStorage.Initialize();
                 _addToInitLog("Initializing SubscriptionStorage completed");
@@ -631,7 +635,8 @@ namespace Raven.Server.Documents
                 {
                     exceptionAggregator.Execute(() =>
                     {
-                        _indexStoreTask.Wait(DatabaseShutdown);
+                        // need to wait here for the task the task to complete
+                        _indexStoreTask.Wait();
                     });
                 }
 
