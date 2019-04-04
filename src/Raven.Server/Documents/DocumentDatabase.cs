@@ -275,7 +275,7 @@ namespace Raven.Server.Documents
                 PeriodicBackupRunner = new PeriodicBackupRunner(this, _serverStore);
 
                 _addToInitLog("Initializing IndexStore (async)");
-                _indexStoreTask = IndexStore.InitializeAsync(record);
+                _indexStoreTask = IndexStore.InitializeAsync(record, _addToInitLog);
                 _addToInitLog("Initializing Replication");
                 ReplicationLoader?.Initialize(record);
                 _addToInitLog("Initializing ETL");
@@ -289,7 +289,6 @@ namespace Raven.Server.Documents
                 }
                 finally
                 {
-                    _addToInitLog("Initializing IndexStore completed");
                     _indexStoreTask = null;
                 }
 
