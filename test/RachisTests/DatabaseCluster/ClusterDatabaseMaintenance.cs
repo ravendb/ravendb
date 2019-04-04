@@ -324,8 +324,8 @@ namespace RachisTests.DatabaseCluster
             }
         }
 
-        [Fact(Skip = "RavenDB-13325")]
-        public async Task RedistrebuteDatabaseIfNodeFailes()
+        [Fact]
+        public async Task RedistributeDatabaseIfNodeFails()
         {
             DebuggerAttachedTimeout.DisableLongTimespan = true;
             var clusterSize = 3;
@@ -339,8 +339,13 @@ namespace RachisTests.DatabaseCluster
                 Database = databaseName
             }.Initialize())
             {
-                var doc = new DatabaseRecord(databaseName);
-                doc.Topology = new DatabaseTopology();
+                var doc = new DatabaseRecord(databaseName)
+                {
+                    Topology = new DatabaseTopology
+                    {
+                        DynamicNodesDistribution = true
+                    }
+                };
                 doc.Topology.Members.Add("A");
                 doc.Topology.Members.Add("B");
                 var databaseResult = await store.Maintenance.Server.SendAsync(new CreateDatabaseOperation(doc, dbGroupSize));
@@ -365,8 +370,8 @@ namespace RachisTests.DatabaseCluster
             }
         }
 
-        [Fact(Skip = "RavenDB-13325")]
-        public async Task RedistrebuteDatabaseOnMultiFailure()
+        [Fact]
+        public async Task RedistributeDatabaseOnMultiFailure()
         {
             DebuggerAttachedTimeout.DisableLongTimespan = true;
             var clusterSize = 5;
@@ -380,8 +385,13 @@ namespace RachisTests.DatabaseCluster
                 Database = databaseName
             }.Initialize())
             {
-                var doc = new DatabaseRecord(databaseName);
-                doc.Topology = new DatabaseTopology();
+                var doc = new DatabaseRecord(databaseName)
+                {
+                    Topology = new DatabaseTopology
+                    {
+                        DynamicNodesDistribution = true
+                    }
+                };
                 doc.Topology.Members.Add("A");
                 doc.Topology.Members.Add("B");
                 doc.Topology.Members.Add("C");
@@ -451,7 +461,7 @@ namespace RachisTests.DatabaseCluster
             }
         }
 
-        [Fact(Skip = "RavenDB-13325")]
+        [Fact]
         public async Task DontRemoveNodeWhileItHasNotReplicatedDocs()
         {
             var databaseName = GetDatabaseName();
@@ -531,6 +541,8 @@ namespace RachisTests.DatabaseCluster
                 Servers[2] = GetNewServer(new Dictionary<string, string> { { RavenConfiguration.GetKey(x => x.Core.ServerUrls), urlsC[0] } }, runInMemory: false, deletePrevious: false, partialPath: dataDirC);
                 Assert.Equal(2, await WaitForValueAsync(async () => await GetMembersCount(leaderStore, databaseName), 2));
                 Assert.Equal(0, await WaitForValueAsync(async () => await GetRehabCount(leaderStore, databaseName), 0, 30_000));
+
+                dbToplogy = (await leaderStore.Maintenance.Server.SendAsync(new GetDatabaseRecordOperation(databaseName))).Topology;
                 Assert.True(await WaitForDocumentInClusterAsync<User>(dbToplogy, databaseName, "users/3", null, TimeSpan.FromSeconds(10)));
 
                 dbToplogy = (await leaderStore.Maintenance.Server.SendAsync(new GetDatabaseRecordOperation(databaseName))).Topology;
