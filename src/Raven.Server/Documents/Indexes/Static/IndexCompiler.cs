@@ -30,7 +30,9 @@ namespace Raven.Server.Documents.Indexes.Static
 
         private const string IndexNamespace = "Raven.Server.Documents.Indexes.Static.Generated";
 
-        private const string IndexExtension = ".index";
+        internal const string IndexExtension = ".index";
+
+        internal const string IndexNamePrefix = "Index_";
 
         private static readonly Lazy<(string Path, AssemblyName AssemblyName, MetadataReference Reference)[]> KnownManagedDlls = new Lazy<(string, AssemblyName, MetadataReference)[]>(DiscoverManagedDlls);
 
@@ -537,7 +539,7 @@ namespace Raven.Server.Documents.Indexes.Static
 
         private static string GetCSharpSafeName(string name)
         {
-            return $"Index_{Regex.Replace(name, @"[^\w\d]", "_")}";
+            return $"{IndexNamePrefix}{Regex.Replace(name, @"[^\w\d]", "_")}";
         }
 
         private static string NormalizeFunction(string function)
