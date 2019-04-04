@@ -42,22 +42,22 @@ namespace Raven.Server.Config.Categories
         [ConfigurationEntry("Security.Certificate.Password", ConfigurationEntryScope.ServerWideOnly)]
         public string CertificatePassword { get; set; }
 
-        [Description("A command or executable providing a .pfx certificate file. If specified, RavenDB will use HTTPS/SSL for all network activities. The certificate path setting takes precedence over executable configuration option.")]
+        [Description("Deprecated. Use Security.Certificate.Exec.Load along with Security.Certificate.Exec.Renew and Security.Certificate.Exec.OnCertificateChange")]
         [DefaultValue(null)]
         [ConfigurationEntry("Security.Certificate.Exec", ConfigurationEntryScope.ServerWideOnly)]
         public string CertificateExec { get; set; }
 
-        [Description("A command or executable providing a .pfx certificate file. If specified, RavenDB will use HTTPS/SSL for all network activities. The certificate path setting takes precedence over executable configuration option.")]
+        [Description("A command or executable providing a .pfx cluster certificate when invoked by RavenDB. If specified, RavenDB will use HTTPS/SSL for all network activities. The certificate path setting takes precedence over executable configuration option.")]
         [DefaultValue(null)]
         [ConfigurationEntry("Security.Certificate.Exec.Load", ConfigurationEntryScope.ServerWideOnly)]
         public string CertificateExecLoad { get; set; }
 
-        [Description("A command or executable providing a .pfx certificate file. If specified, RavenDB will use HTTPS/SSL for all network activities. The certificate path setting takes precedence over executable configuration option.")]
+        [Description("A command or executable providing a renewed .pfx cluster certificate when invoked by RavenDB. This configuration must be set if using Security.Certificate.Exec.Load")]
         [DefaultValue(null)]
         [ConfigurationEntry("Security.Certificate.Exec.Renew", ConfigurationEntryScope.ServerWideOnly)]
         public string CertificateExecRenew { get; set; }
 
-        [Description("A command or executable providing a .pfx certificate file. If specified, RavenDB will use HTTPS/SSL for all network activities. The certificate path setting takes precedence over executable configuration option.")]
+        [Description("A command or executable handling a change in the cluster certificate. When invoked, RavenDB will send the new cluster certificate to this executable. This configuration must be set if using Security.Certificate.Exec.Load")]
         [DefaultValue(null)]
         [ConfigurationEntry("Security.Certificate.Exec.OnCertificateChange", ConfigurationEntryScope.ServerWideOnly)]
         public string CertificateExecOnCertificateChange { get; set; }
