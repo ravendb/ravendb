@@ -631,12 +631,13 @@ namespace Raven.Server.Documents
                     TxMerger?.Dispose();
                 });
 
-                if (_indexStoreTask != null)
+                var indexStoreTask = _indexStoreTask;
+                if (indexStoreTask != null)
                 {
                     exceptionAggregator.Execute(() =>
                     {
                         // need to wait here for the task the task to complete
-                        _indexStoreTask.Wait();
+                        indexStoreTask.Wait();
                     });
                 }
 
