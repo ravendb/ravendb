@@ -77,15 +77,14 @@ namespace Raven.Server.Documents
             }
         }
 
-
         private static readonly UTF8Encoding Encoding = new UTF8Encoding();
-
 
         public static ByteStringContext.InternalScope GetLower(ByteStringContext byteStringContext, LazyStringValue str, out Slice loweredKey)
         {
             return GetLower(byteStringContext, str.Buffer, str.Size, out loweredKey);
         }
-        public static ByteStringContext.InternalScope GetLower(ByteStringContext byteStringContext,  byte* str, int size, out Slice loweredKey)
+
+        public static ByteStringContext.InternalScope GetLower(ByteStringContext byteStringContext, byte* str, int size, out Slice loweredKey)
         {
             var release = byteStringContext.Allocate(size, out var ptr);
 

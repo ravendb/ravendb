@@ -499,10 +499,10 @@ namespace Raven.Server.Documents
             }
         }
 
-        public IEnumerable<Attachment> GetAttachmentsForDocument(DocumentsOperationContext context, AttachmentType type, LazyStringValue lowerDocumentId)
+        public IEnumerable<Attachment> GetAttachmentsForDocument(DocumentsOperationContext context, AttachmentType type, LazyStringValue documentId)
         {
             var table = context.Transaction.InnerTransaction.OpenTable(AttachmentsSchema, AttachmentsMetadataSlice);
-            using (Slice.From(context.Allocator, lowerDocumentId, out Slice lowerDocumentIdSlice))
+            using (DocumentIdWorker.GetLower(context.Allocator, documentId, out var lowerDocumentIdSlice))
             using (GetAttachmentPrefix(context, lowerDocumentIdSlice, type, Slices.Empty, out Slice prefixSlice))
             {
                 foreach (var sr in table.SeekByPrimaryKeyPrefix(prefixSlice, Slices.Empty, 0))
@@ -615,6 +615,7 @@ namespace Raven.Server.Documents
             var tree = context.Transaction.InnerTransaction.ReadTree(AttachmentsSlice);
             return tree.ReadStream(hashSlice);
         }
+
         public Stream GetAttachmentStream(DocumentsOperationContext context, Slice hashSlice, out string tag)
         {
             var tree = context.Transaction.InnerTransaction.ReadTree(AttachmentsSlice);
