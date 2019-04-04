@@ -733,7 +733,7 @@ namespace Raven.Server.Documents.Indexes
                 throw new ArgumentException(
                     $"Index name '{name}' is not permitted. If a name contains '.' character then it must be surrounded by other allowed characters.", nameof(name));
 
-            if (name.Length > MaxIndexNameLength)
+            if (isStatic && name.Length > MaxIndexNameLength)
             {
                 throw new ArgumentException(
                     $"Index name '{name}' is not permitted. Index name cannot exceed {MaxIndexNameLength} characters.", nameof(name));
