@@ -206,8 +206,14 @@ class manageDatabaseGroup extends viewModelBase {
             this.nodes([]);
             this.clearNodesList(false);
         }
-        
-        this.updateNodes(incomingDbInfo.nodes());
+
+        if (incomingDbInfo.deletionInProgress().length > 0) {
+            let nodeToDisplay = incomingDbInfo.nodes().filter(x => incomingDbInfo.deletionInProgress().indexOf(x.tag()) < 0);
+            this.updateNodes(nodeToDisplay);
+        } else {
+            this.updateNodes(incomingDbInfo.nodes());
+        }
+
         this.deletionInProgress(incomingDbInfo.deletionInProgress());
         this.isEncrypted(incomingDbInfo.isEncrypted());
         this.dynamicDatabaseDistribution(incomingDbInfo.dynamicDatabaseDistribution());
