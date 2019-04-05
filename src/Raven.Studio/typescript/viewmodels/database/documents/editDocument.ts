@@ -829,7 +829,7 @@ class editDocument extends viewModelBase {
                         .fail(() => loadTask.reject());
                 } else {
                     this.dirtyFlag().reset();
-                    messagePublisher.reportError("Could not find document: " + id);
+                    messagePublisher.reportWarning("Could not find document: " + id);
                     loadTask.reject();
                 }
             })

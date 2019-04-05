@@ -276,7 +276,7 @@ class editCmpXchg extends viewModelBase {
                 loadTask.resolve(value.Value.Object);
             }).fail((xhr: JQueryXHR) => {
                 this.dirtyFlag().reset();
-                messagePublisher.reportError("Could not find Compare Exchange Value with key: " + key);
+                messagePublisher.reportWarning("Could not find Compare Exchange Value with key: " + key);
                 loadTask.reject();
             })
             .always(() => this.isBusy(false));
