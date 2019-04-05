@@ -404,7 +404,7 @@ namespace Raven.Server.Documents.Indexes
             }
         }
 
-        public Task InitializeAsync(DatabaseRecord record)
+        public Task InitializeAsync(DatabaseRecord record, Action<string> addToInitLog)
         {
             if (_initialized)
                 throw new InvalidOperationException($"{nameof(IndexStore)} was already initialized.");
@@ -413,9 +413,12 @@ namespace Raven.Server.Documents.Indexes
 
             _initialized = true;
 
+            if (_documentDatabase.Configuration.Indexing.RunInMemory)
+                return Task.CompletedTask;
+
             return Task.Run(() =>
             {
-                OpenIndexes(record);
+                OpenIndexesFromRecord(record, addToInitLog);
             });
         }
 
@@ -964,10 +967,14 @@ namespace Raven.Server.Documents.Indexes
         public void Dispose()
         {
             IsDisposed.Raise();
-            //FlushMapIndexes();
-            //FlushReduceIndexes();
 
             var exceptionAggregator = new ExceptionAggregator(_logger, $"Could not dispose {nameof(IndexStore)}");
+
+            // waiting for all the indexes that are currently being initialized to finish
+            foreach (var indexLock in _indexLocks)
+            {
+                indexLock.Value.Wait();
+            }
 
             Parallel.ForEach(_indexes, index =>
             {
@@ -1033,17 +1040,10 @@ namespace Raven.Server.Documents.Indexes
             }
         }
 
-        private void OpenIndexes(DatabaseRecord record)
+        private void OpenIndexesFromRecord(DatabaseRecord record, Action<string> addToInitLog)
         {
-            if (_documentDatabase.Configuration.Indexing.RunInMemory)
-                return;
+            var path = _documentDatabase.Configuration.Indexing.StoragePath;
 
-            // apply renames
-            OpenIndexesFromRecord(_documentDatabase.Configuration.Indexing.StoragePath, record);
-        }
-
-        private void OpenIndexesFromRecord(PathSetting path, DatabaseRecord record)
-        {
             if (_logger.IsInfoEnabled)
                 _logger.Info("Starting to load indexes from record");
 
@@ -1075,6 +1075,8 @@ namespace Raven.Server.Documents.Indexes
             //    }
             //}
 
+            var totalSp = Stopwatch.StartNew();
+
             foreach (var kvp in record.Indexes)
             {
                 if (_documentDatabase.DatabaseShutdown.IsCancellationRequested)
@@ -1086,7 +1088,15 @@ namespace Raven.Server.Documents.Indexes
                 var safeName = IndexDefinitionBase.GetIndexNameSafeForFileSystem(definition.Name);
                 var indexPath = path.Combine(safeName).FullPath;
                 if (Directory.Exists(indexPath))
+                {
+                    var sp = Stopwatch.StartNew();
+
+                    addToInitLog($"Initializing static index: `{name}`");
                     OpenIndex(path, indexPath, exceptions, name, staticIndexDefinition: definition, autoIndexDefinition: null);
+
+                    if (_logger.IsInfoEnabled)
+                        _logger.Info($"Initialized static index: `{name}`, took: {sp.ElapsedMilliseconds:#,#;;0}ms");
+                }
             }
 
             foreach (var kvp in record.AutoIndexes)
@@ -1100,8 +1110,18 @@ namespace Raven.Server.Documents.Indexes
                 var safeName = IndexDefinitionBase.GetIndexNameSafeForFileSystem(definition.Name);
                 var indexPath = path.Combine(safeName).FullPath;
                 if (Directory.Exists(indexPath))
+                {
+                    var sp = Stopwatch.StartNew();
+
+                    addToInitLog($"Initializing auto index: `{name}`");
                     OpenIndex(path, indexPath, exceptions, name, staticIndexDefinition: null, autoIndexDefinition: definition);
+
+                    if (_logger.IsInfoEnabled)
+                        _logger.Info($"Initialized auto index: `{name}`, took: {sp.ElapsedMilliseconds:#,#;;0}ms");
+                }
             }
+
+            addToInitLog($"IndexStore initialization is completed, took: {totalSp.ElapsedMilliseconds:#,#;;0}ms");
 
             if (exceptions != null && exceptions.Count > 0)
                 throw new AggregateException("Could not load some of the indexes", exceptions);

@@ -89,7 +89,7 @@ namespace RachisTests.DatabaseCluster
             }
         }
 
-        [Fact(Skip = "RavenDB-13325")]
+        [Fact]
         public async Task ReconnectRemovedNodeWithOneDatabase()
         {
             // BAD IDEA - we lose the database!
@@ -116,7 +116,7 @@ namespace RachisTests.DatabaseCluster
             }
         }
 
-        [Fact(Skip = "RavenDB-13325")]
+        [Fact]
         public async Task BootstrapRemovedNodeWithOneDatabase()
         {
             var dbName = GetDatabaseName();
@@ -171,11 +171,7 @@ namespace RachisTests.DatabaseCluster
             using (var store = new DocumentStore
             {
                 Urls = new[] { firstLeader.WebUrl },
-                Database = dbName,
-                Conventions = new DocumentConventions
-                {
-                    DisableTopologyUpdates = true
-                }
+                Database = dbName
             }.Initialize())
             {
 

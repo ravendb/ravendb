@@ -864,15 +864,13 @@ namespace Raven.Server.Smuggler.Documents
                 foreach (var documentType in Documents)
                 {
                     var tombstone = documentType.Tombstone;
+                    long newEtag;
                     if (tombstone != null)
                     {
                         using (Slice.External(context.Allocator, tombstone.LowerId, out Slice key))
                         {
-                            if (_options.KeepOriginalChangeVector == false)
-                            {
-                                var newEtag = _database.DocumentsStorage.GenerateNextEtag();
+                            newEtag = _database.DocumentsStorage.GenerateNextEtag();
                                 tombstone.ChangeVector = _database.DocumentsStorage.GetNewChangeVector(context, newEtag);
-                            }
 
                             databaseChangeVector = ChangeVectorUtils.MergeVectors(databaseChangeVector, tombstone.ChangeVector);
                             switch (tombstone.Type)
@@ -968,11 +966,8 @@ namespace Raven.Server.Smuggler.Documents
                         continue;
                     }
 
-                    if (_options.KeepOriginalChangeVector == false)
-                    {
-                        var newEtag = _database.DocumentsStorage.GenerateNextEtag();
+                    newEtag = _database.DocumentsStorage.GenerateNextEtag();
                         document.ChangeVector = _database.DocumentsStorage.GetNewChangeVector(context, newEtag);
-                    }
 
                     databaseChangeVector = ChangeVectorUtils.MergeVectors(databaseChangeVector, document.ChangeVector);
 

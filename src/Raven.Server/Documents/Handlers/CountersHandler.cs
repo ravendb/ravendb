@@ -40,11 +40,11 @@ namespace Raven.Server.Documents.Handlers
             private readonly DocumentDatabase _database;
             private readonly bool _replyWithAllNodesValues;
             private readonly bool _fromEtl;
-            private readonly Dictionary<string, List<CounterOperation>> _dictionary;
+            private readonly List<CounterOperation> _list;
             public ExecuteCounterBatchCommand(DocumentDatabase database, CounterBatch counterBatch)
             {
                 _database = database;
-                _dictionary = new Dictionary<string, List<CounterOperation>>();
+                _list = new List<CounterOperation>();
                 _replyWithAllNodesValues = counterBatch?.ReplyWithAllNodesValues ?? false;
                 _fromEtl = counterBatch?.FromEtl ?? false;
 
@@ -57,7 +57,9 @@ namespace Raven.Server.Documents.Handlers
                     {
                         HasWrites |= operation.Type != CounterOperationType.Get &&
                                      operation.Type != CounterOperationType.None;
-                        Add(docOps.DocumentId, operation);
+
+                        operation.DocumentId = docOps.DocumentId;
+                        _list.Add(operation);
                     }
                 }
             }
@@ -67,56 +69,72 @@ namespace Raven.Server.Documents.Handlers
             /// </summary>
             public ExecuteCounterBatchCommand(
                 DocumentDatabase database,
-                Dictionary<string, List<CounterOperation>> operationsPreDocument,
+                List<CounterOperation> list,
                 bool replyWithAllNodesValues,
                 bool fromEtl)
             {
                 _database = database;
                 _replyWithAllNodesValues = replyWithAllNodesValues;
                 _fromEtl = fromEtl;
-                _dictionary = operationsPreDocument;
+                _list = list;
             }
 
             private void Add(string id, CounterOperation op)
             {
-                if (_dictionary.TryGetValue(id, out var existing) == false)
-                {
-                    _dictionary[id] = new List<CounterOperation> { op };
-                    return;
-                }
-
-                existing.Add(op);
+                _fromSmuggler = true;
+                _database = database;
+                _list = new List<CounterOperation>();
+                ErrorCount = 0;
             }
+ 
+            public int Add(string id, CounterOperation op)
+            {
+                op.DocumentId = id;
+                _list.Add(op);
+
+                return _list.Count;
+                }
 
             protected override int ExecuteCmd(DocumentsOperationContext context)
             {
                 var countersToAdd = new SortedSet<string>(StringComparer.OrdinalIgnoreCase);
                 var countersToRemove = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
 
-                var ops = 0;
-                foreach (var kvp in _dictionary)
-                {
+                string docId = null;
                     Document doc = null;
-                    var docId = kvp.Key;
                     string docCollection = null;
-                    ops += kvp.Value.Count;
 
-                    foreach (var operation in kvp.Value)
+                foreach (var operation in _list)
                     {
                         switch (operation.Type)
                         {
                             case CounterOperationType.Increment:
                             case CounterOperationType.Delete:
                             case CounterOperationType.Put:
-                                LoadDocument();
+                                LoadDocument(operation);
+                            }
+                            catch (DocumentDoesNotExistException)
+                            {
+                                if (_fromSmuggler)
+                                {
+                                    ErrorCount++;
+                                    continue;
+                                }
+
+                                throw;
+                            }
+
                                 break;
                         }
+
+                    docId = operation.DocumentId;
 
                         switch (operation.Type)
                         {
                             case CounterOperationType.Increment:
                                 LastChangeVector =
-                                    _database.DocumentsStorage.CountersStorage.IncrementCounter(context, docId, docCollection, operation.CounterName, operation.Delta, out var exists);
+                                _database.DocumentsStorage.CountersStorage.IncrementCounter(context, docId, docCollection, operation.CounterName, operation.Delta,
+                                    out var exists);
                                 GetCounterValue(context, _database, docId, operation.CounterName, _replyWithAllNodesValues, CountersDetail);
 
                                 if (exists == false)
@@ -153,28 +171,19 @@ namespace Raven.Server.Documents.Handlers
                                 ThrowInvalidBatchOperationType(operation);
                                 break;
                         }
-                    }
 
-                    if (doc?.Data != null)
+                    void LoadDocument(CounterOperation counterOperation)
                     {
-                        var changeVector = _database
-                            .DocumentsStorage
-                            .CountersStorage
-                            .UpdateDocumentCounters(context, doc, docId, countersToAdd, countersToRemove, NonPersistentDocumentFlags.ByCountersUpdate);
+                        if (string.IsNullOrEmpty(counterOperation.DocumentId))
+                            throw new ArgumentException("Document ID can't be null");
 
-                        if (changeVector != null)
-                            LastDocumentChangeVector = LastChangeVector = changeVector;
-
-                        doc.Data.Dispose(); // we cloned the data, so we can dispose it.
-                    }
-
-                    countersToAdd.Clear();
-                    countersToRemove.Clear();
-
-                    void LoadDocument()
-                    {
-                        if (doc != null)
+                        if (docId == counterOperation.DocumentId && doc != null)
                             return;
+
+                        ApplyChangesForPreviousDocument(context, doc, docId, countersToAdd, countersToRemove);
+
+                        docId = counterOperation.DocumentId;
+
                         try
                         {
                             doc = _database.DocumentsStorage.Get(context, docId,
@@ -207,15 +216,32 @@ namespace Raven.Server.Documents.Handlers
                         }
                     }
                 }
+                ApplyChangesForPreviousDocument(context, doc, docId, countersToAdd, countersToRemove);
 
-                return ops;
+                return _list.Count;
+            }
+
+            private void ApplyChangesForPreviousDocument(DocumentsOperationContext context, Document doc, string docId, SortedSet<string> countersToAdd, HashSet<string> countersToRemove)
+            {
+                if (doc?.Data != null)
+                {
+                    var nonPersistentFlags = NonPersistentDocumentFlags.ByCountersUpdate;
+                    if (_fromSmuggler)
+                        nonPersistentFlags |= NonPersistentDocumentFlags.FromSmuggler;
+
+                    _database.DocumentsStorage.CountersStorage.UpdateDocumentCounters(context, doc, docId, countersToAdd, countersToRemove, nonPersistentFlags);
+                    doc.Data.Dispose(); // we cloned the data, so we can dispose it.
+                }
+
+                countersToAdd.Clear();
+                countersToRemove.Clear();
             }
 
             public override TransactionOperationsMerger.IReplayableCommandDto<TransactionOperationsMerger.MergedTransactionCommand> ToDto(JsonOperationContext context)
             {
                 return new ExecuteCounterBatchCommandDto
                 {
-                    Dictionary = _dictionary,
+                    List = _list,
                     ReplyWithAllNodesValues = _replyWithAllNodesValues,
                     FromEtl = _fromEtl
                 };
@@ -654,12 +680,12 @@ namespace Raven.Server.Documents.Handlers
     {
         public bool ReplyWithAllNodesValues;
         public bool FromEtl;
-        public Dictionary<string, List<CounterOperation>> Dictionary;
+        public List<CounterOperation> List;
 
         public CountersHandler.ExecuteCounterBatchCommand ToCommand(DocumentsOperationContext context, DocumentDatabase database)
         {
             var command = new CountersHandler.
-                ExecuteCounterBatchCommand(database, Dictionary, ReplyWithAllNodesValues, FromEtl);
+                ExecuteCounterBatchCommand(database, List, ReplyWithAllNodesValues, FromEtl);
             return command;
         }
     }

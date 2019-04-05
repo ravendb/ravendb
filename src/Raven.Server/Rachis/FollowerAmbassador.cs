@@ -730,7 +730,7 @@ namespace Raven.Server.Rachis
 
         private long InitialNegotiationWithFollower()
         {
-            UpdateLastMatchFromFollower(0);
+            Interlocked.Exchange(ref _followerMatchIndex, 0);
             using (_engine.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
             {
                 LogLengthNegotiation lln;

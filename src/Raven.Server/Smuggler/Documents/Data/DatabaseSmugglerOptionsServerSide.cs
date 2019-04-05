@@ -19,8 +19,6 @@ namespace Raven.Server.Smuggler.Documents.Data
 
         public AuthorizationStatus AuthorizationStatus { get; set; } = AuthorizationStatus.ValidUser;
 
-        public bool KeepOriginalChangeVector { get; set; }
-
         public new bool SkipRevisionCreation
         {
 #pragma warning disable 618
