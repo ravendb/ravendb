@@ -565,6 +565,7 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene
         public HashSet<string> Terms(string field, string fromValue, int pageSize, CancellationToken token)
         {
             var results = new HashSet<string>();
+            using (var termDocs = _searcher.IndexReader.HasDeletions ? _searcher.IndexReader.TermDocs(_state) : null)
             using (var termEnum = _searcher.IndexReader.Terms(new Term(field, fromValue ?? string.Empty), _state))
             {
                 if (string.IsNullOrEmpty(fromValue) == false) // need to skip this value
@@ -583,7 +584,19 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene
                     token.ThrowIfCancellationRequested();
 
                     if (termEnum.Term != null)
-                        results.Add(termEnum.Term.Text);
+                    {
+                        var canAdd = true;
+                        if (termDocs != null)
+                        {
+                            // if we have deletions we need to check
+                            // if there are any documents with that term left
+                            termDocs.Seek(termEnum.Term, _state);
+                            canAdd = termDocs.Next(_state);
+                        }
+
+                        if (canAdd)
+                            results.Add(termEnum.Term.Text);
+                    }
 
                     if (results.Count >= pageSize)
                         break;
