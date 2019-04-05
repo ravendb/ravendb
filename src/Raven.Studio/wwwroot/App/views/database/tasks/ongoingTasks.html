@@ -588,9 +588,16 @@
         <!-- ko foreach: scriptProgress -->
         <div class="etl-progress">
             <div class="overall-container">
-                <div class="text-info">
+                <div class="text-info flex-horizontal">
                     <span data-bind="text: name"></span>
                     <a title="Show script preview" href="#" data-bind="click: _.partial($root.showItemPreview, $parent, name())"><i class="icon-preview"></i></a>
+                    <div class="flex-separator"></div>
+                    <div class="text-warning" data-bind="visible: !globalProgress.total()">
+                        <small>
+                            <i class="icon-warning"></i>
+                            This script doesn't match any documents. 
+                        </small>
+                    </div>
                 </div>
                 <div class="flex-grow"></div>
                 <div class="progress-overall">
