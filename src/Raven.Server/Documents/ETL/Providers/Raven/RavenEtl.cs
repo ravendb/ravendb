@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Diagnostics;
+using System.Security.Cryptography.X509Certificates;
 using System.Threading;
 using Raven.Client.Documents.Commands.Batches;
 using Raven.Client.Documents.Conventions;
@@ -62,7 +63,17 @@ namespace Raven.Server.Documents.ETL.Providers.Raven
 
         private static RequestExecutor CreateNewRequestExecutor(RavenEtlConfiguration configuration, ServerStore serverStore)
         {
-            return RequestExecutor.Create(configuration.Connection.TopologyDiscoveryUrls, configuration.Connection.Database, serverStore.Server.Certificate.Certificate, DocumentConventions.Default);
+            var certificate = serverStore.Server.Certificate.Certificate;
+
+            if (certificate != null && configuration.UsingEncryptedCommunicationChannel() == false && configuration.AllowEtlOnNonEncryptedChannel)
+            {
+                // we're running on HTTPS but sending data to non encrypted server
+                // let's not provide the server certificate so we won't fail on request executor's URL validation
+
+                certificate = null;
+            }
+
+            return RequestExecutor.Create(configuration.Connection.TopologyDiscoveryUrls, configuration.Connection.Database, certificate, DocumentConventions.Default);
         }
 
         protected override IEnumerator<RavenEtlItem> ConvertDocsEnumerator(IEnumerator<Document> docs, string collection)
