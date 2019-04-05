@@ -1,0 +1,3 @@
+**/*.tar.bz2
+**/*.sh
+.vagrant

@@ -55,7 +55,7 @@ function LayoutServerPackage ( $packageDir, $projectDir, $packOpts ) {
     CopyLicenseFile $packageDir
     CopyAckFile $packageDir
     CopyServerStartScript $projectDir $packageDir $packOpts
-    CopyServerStartAsServiceScript $projectDir $packageDir $packOpts
+    CopyServerServiceScripts $projectDir $packageDir $packOpts
     CopyServerToolsToServerOutputDirectory $packOpts.OutDirs
     CopyServerReadmeFile $target $packageDir
     AddRuntimeTxt $projectDir $packageDir

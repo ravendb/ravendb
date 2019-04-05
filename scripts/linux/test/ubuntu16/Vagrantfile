@@ -1,0 +1,48 @@
+# -*- mode: ruby -*-
+# vi: set ft=ruby :
+
+Vagrant.configure("2") do |config|
+  config.vm.box = "generic/ubuntu1604"
+
+
+  config.vm.provision "shell", inline: <<-SHELL
+    echo "vagrant ALL=(ALL) NOPASSWD: ALL" >> /etc/sudoers
+    cat /etc/sudoers
+  SHELL
+
+  artifacts = Dir.entries("../../../../artifacts")
+  package = artifacts.select { |a| a.end_with?("-linux-x64.tar.bz2") }.first
+  if package.nil?
+    raise RuntimeError, "RavenDB server package does not exist in the artifacts directory."
+  end
+
+  packagePath = "../../../../artifacts/#{package}"
+
+  config.vm.provision "file", run: "always", source: packagePath, destination: "RavenDB.tar.bz2"
+
+  config.vm.provision "shell", inline: <<-SHELL
+    rm -rf RavenDB
+    
+    su -c "tar xvjf RavenDB.tar.bz2" vagrant
+
+  SHELL
+
+  # override daemon script for dev (build once, just update the script later)
+  config.vm.provision "file", run: "always", source: "../../../../scripts/linux/install-daemon.sh", destination: "RavenDB/"
+
+  config.vm.provision "shell", run: "always", inline: <<-SHELL
+    systemctl stop ravendb # if anything's there already
+    
+    su -c "cd RavenDB && ./install-daemon.sh" vagrant
+
+    echo "### TEST STATUS"
+    systemctl status ravendb
+
+    sleep 5
+    echo "### TEST STOP"
+    systemctl stop ravendb
+
+    journalctl -u ravendb.service
+  SHELL
+
+end

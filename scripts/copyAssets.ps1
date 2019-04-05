@@ -28,8 +28,10 @@ function CopyServerStartScript ( $projectDir, $targetDir, $packOpts ) {
     }
 }
 
-function CopyServerStartAsServiceScript ( $projectDir, $targetDir, $packOpts ) {
-    if ($packOpts.Target.IsUnix -eq $False) {
+function CopyServerServiceScripts ( $projectDir, $targetDir, $packOpts ) {
+    if ($packOpts.Target.IsUnix) {
+        CopyLinuxServiceScripts $projectDir $targetDir $packOpts
+    } else {
         CopyWindowsServiceScripts $projectDir $targetDir $packOpts
     }
 }
@@ -66,6 +68,19 @@ function CopyWindowsServiceScripts ( $projectDir, $targetDir, $packOpts ) {
         write-host "Signing $uninstallServicePs1TargetPath"
         SignFile $projectDir $uninstallServicePs1TargetPath $packOpts.DryRunSign
     }
+}
+
+function CopyLinuxServiceScripts ( $projectDir, $targetDir, $packOpts ) {
+    $linuxServiceAssets = @(
+        [io.path]::combine("scripts", "linux", "install-daemon.sh")
+    );
+
+    foreach ($asset in $linuxServiceAssets) {
+        $dst = [io.path]::combine($targetDir, $(Get-Item $asset).Name)
+        write-host "Copy $asset -> $dst"
+        Copy-Item -Recurse $asset $dst
+    }
+
 }
 
 function CopyStartSh ( $targetDir ) {
