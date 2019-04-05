@@ -1,3 +1,12 @@
+
+.fullScreen {
+    .editDocument {
+        .right-editor {
+            transform: none !important; // get rid of transform in fullscreen mode, as position fixed, does't work with transform    
+        }
+    }
+}
+
 .editDocument {
     display: flex;
     .absolute-fill;
