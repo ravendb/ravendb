@@ -96,6 +96,16 @@ function getManageServerMenuItem() {
             enabled: access.enableGatherDebugInfoMenuItem
         }),
         new leafMenuItem({
+            route: 'admin/settings/storageReport',
+            moduleId: 'viewmodels/manage/storageReport',
+            title: 'Storage Report',
+            tooltip: "Storage Report",
+            nav: true,
+            css: 'icon-system-storage',
+            dynamicHash: appUrl.forSystemStorageReport,
+            enabled: access.enableSystemStorageReport
+        }),
+        new leafMenuItem({
             route: 'admin/settings/captureStackTraces',
             moduleId: 'viewmodels/manage/captureStackTraces',
             title: 'Stack Traces',
