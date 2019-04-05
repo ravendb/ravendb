@@ -67,7 +67,7 @@ class accessManager {
         enableTrafficWatchMenuItem: this.clusterAdminOrClusterNode,
         enableGatherDebugInfoMenuItem: this.clusterAdminOrClusterNode,
         enableSystemStorageReport: this.clusterAdminOrClusterNode,
-        enableAdvancedMenuItem: this.clusterAdminOrClusterNode
+        enableAdvancedMenuItem: this.clusterAdminOrClusterNode,
         enableCaptureStackTraces: this.clusterAdminOrClusterNode,
         enableRecordTransactionCommands: this.clusterAdminOrClusterNode
     };
