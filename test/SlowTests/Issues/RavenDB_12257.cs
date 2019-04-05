@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
 using FastTests;
@@ -72,7 +73,52 @@ namespace SlowTests.Issues
         {
             using (var store = GetDocumentStore())
             {
-                store.Maintenance.Send(new CreateSampleDataOperation());
+                using (var session = store.OpenSession())
+                {
+                    var product1 = new Product
+                    {
+                        Name = "P1"
+                    };
+
+                    var product2 = new Product
+                    {
+                        Name = "P2"
+                    };
+
+                    session.Store(product1);
+                    session.Store(product2);
+
+                    var order1 = new Order
+                    {
+                        Lines = new List<OrderLine>
+                        {
+                            new OrderLine
+                            {
+                                Product = product1.Id
+                            },
+                            new OrderLine
+                            {
+                                Product = product2.Id
+                            },
+                        }
+                    };
+
+                    var order2 = new Order
+                    {
+                        Lines = new List<OrderLine>
+                        {
+                            new OrderLine
+                            {
+                                Product = product2.Id
+                            }
+                        }
+                    };
+
+                    session.Store(order1);
+                    session.Store(order2);
+
+                    session.SaveChanges();
+                }
 
                 var name = store.Subscriptions.Create(new SubscriptionCreationOptions<Order>
                 {
