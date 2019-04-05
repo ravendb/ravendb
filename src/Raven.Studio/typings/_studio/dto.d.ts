@@ -205,6 +205,12 @@ interface storageReportItemDto {
     Report: Voron.Debugging.StorageReport;
 }
 
+interface detailedSystemStorageReportItemDto {
+    Environment: string;
+    Type: string;
+    Report: Voron.Debugging.DetailedStorageReport;
+}
+
 interface detailedStorageReportItemDto {
     Name: string;
     Type: string;

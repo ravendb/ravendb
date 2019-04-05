@@ -138,6 +138,10 @@ class appUrl {
         return "#admin/settings/debugInfo";
     }
     
+    static forSystemStorageReport(): string {
+        return "#admin/settings/storageReport"
+    }
+
     static forRunningQueries(db: database | databaseInfo = null): string {
         let databasePart = appUrl.getEncodedDbPart(db);
         return "#admin/settings/runningQueries?" + databasePart;
