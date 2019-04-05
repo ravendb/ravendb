@@ -283,7 +283,7 @@
                                     <strong data-bind="text: $root.sizeFormatter(usedSpace(), 0)"></strong>
                                     <small>USED</small>
                                 </div>
-                                <div class="usage free-space" data-bind="css: { 'free-space-warning': isLowSpace }">
+                                <div class="usage free-space" data-bind="css: { 'free-space-warning': isLowSpace }, attr: { title: isLowSpace() ? 'Free space is below configured threshold' : '' }">
                                     <i class="usage-rect"></i>
                                     <i class="icon-warning"></i>
                                     <strong data-bind="text: $root.sizeFormatter(freeSpace(), 0)"></strong>
