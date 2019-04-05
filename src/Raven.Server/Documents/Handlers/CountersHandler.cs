@@ -40,11 +40,11 @@ namespace Raven.Server.Documents.Handlers
             private readonly DocumentDatabase _database;
             private readonly bool _replyWithAllNodesValues;
             private readonly bool _fromEtl;
-            private readonly Dictionary<string, List<CounterOperation>> _dictionary;
+            private readonly List<CounterOperation> _list;
             public ExecuteCounterBatchCommand(DocumentDatabase database, CounterBatch counterBatch)
             {
                 _database = database;
-                _dictionary = new Dictionary<string, List<CounterOperation>>();
+                _list = new List<CounterOperation>();
                 _replyWithAllNodesValues = counterBatch?.ReplyWithAllNodesValues ?? false;
                 _fromEtl = counterBatch?.FromEtl ?? false;
 
@@ -57,7 +57,9 @@ namespace Raven.Server.Documents.Handlers
                     {
                         HasWrites |= operation.Type != CounterOperationType.Get &&
                                      operation.Type != CounterOperationType.None;
-                        Add(docOps.DocumentId, operation);
+
+                        operation.DocumentId = docOps.DocumentId;
+                        _list.Add(operation);
                     }
                 }
             }
@@ -67,25 +69,14 @@ namespace Raven.Server.Documents.Handlers
             /// </summary>
             public ExecuteCounterBatchCommand(
                 DocumentDatabase database,
-                Dictionary<string, List<CounterOperation>> operationsPreDocument,
+                List<CounterOperation> list,
                 bool replyWithAllNodesValues,
                 bool fromEtl)
             {
                 _database = database;
                 _replyWithAllNodesValues = replyWithAllNodesValues;
                 _fromEtl = fromEtl;
-                _dictionary = operationsPreDocument;
-            }
-
-            private void Add(string id, CounterOperation op)
-            {
-                if (_dictionary.TryGetValue(id, out var existing) == false)
-                {
-                    _dictionary[id] = new List<CounterOperation> { op };
-                    return;
-                }
-
-                existing.Add(op);
+                _list = list;
             }
 
             protected override int ExecuteCmd(DocumentsOperationContext context)
@@ -93,129 +84,149 @@ namespace Raven.Server.Documents.Handlers
                 var countersToAdd = new SortedSet<string>(StringComparer.OrdinalIgnoreCase);
                 var countersToRemove = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
 
-                var ops = 0;
-                foreach (var kvp in _dictionary)
+                Document doc = null;
+                string docId = null;
+                string docCollection = null;
+
+                foreach (var operation in _list)
                 {
-                    Document doc = null;
-                    var docId = kvp.Key;
-                    string docCollection = null;
-                    ops += kvp.Value.Count;
-
-                    foreach (var operation in kvp.Value)
+                    switch (operation.Type)
                     {
-                        switch (operation.Type)
-                        {
-                            case CounterOperationType.Increment:
-                            case CounterOperationType.Delete:
-                            case CounterOperationType.Put:
-                                LoadDocument();
-                                break;
-                        }
+                        case CounterOperationType.Increment:
+                        case CounterOperationType.Delete:
+                        case CounterOperationType.Put:
+                            LoadDocument(operation);
+                            break;
+                    }
 
-                        switch (operation.Type)
-                        {
-                            case CounterOperationType.Increment:
-                                LastChangeVector =
-                                    _database.DocumentsStorage.CountersStorage.IncrementCounter(context, docId, docCollection, operation.CounterName, operation.Delta, out var exists);
-                                GetCounterValue(context, _database, docId, operation.CounterName, _replyWithAllNodesValues, CountersDetail);
+                    docId = operation.DocumentId;
 
-                                if (exists == false)
-                                {
-                                    // if exists it is already on the document's metadata
-                                    countersToAdd.Add(operation.CounterName);
-                                    countersToRemove.Remove(operation.CounterName);
-                                }
-                                break;
-                            case CounterOperationType.Delete:
-                                if (_fromEtl && doc == null)
-                                    break;
+                    switch (operation.Type)
+                    {
+                        case CounterOperationType.Increment:
+                            LastChangeVector =
+                                _database.DocumentsStorage.CountersStorage.IncrementCounter(context, docId, docCollection, operation.CounterName, operation.Delta, out var exists);
+                            GetCounterValue(context, _database, docId, operation.CounterName, _replyWithAllNodesValues, CountersDetail);
 
-                                LastChangeVector = _database.DocumentsStorage.CountersStorage.DeleteCounter(context, docId, docCollection, operation.CounterName);
-
-                                countersToAdd.Remove(operation.CounterName);
-                                countersToRemove.Add(operation.CounterName);
-                                break;
-                            case CounterOperationType.Put:
-                                if (_fromEtl == false || doc == null)
-                                    break;
-
-                                _database.DocumentsStorage.CountersStorage.PutCounter(context, docId, docCollection, operation.CounterName, operation.Delta);
-
+                            if (exists == false)
+                            {
+                                // if exists it is already on the document's metadata
                                 countersToAdd.Add(operation.CounterName);
                                 countersToRemove.Remove(operation.CounterName);
-                                break;
-                            case CounterOperationType.None:
-                                break;
-                            case CounterOperationType.Get:
-                                GetCounterValue(context, _database, docId, operation.CounterName, _replyWithAllNodesValues, CountersDetail);
-                                break;
-                            default:
-                                ThrowInvalidBatchOperationType(operation);
-                                break;
-                        }
-                    }
-
-                    if (doc?.Data != null)
-                    {
-                        var changeVector = _database
-                            .DocumentsStorage
-                            .CountersStorage
-                            .UpdateDocumentCounters(context, doc, docId, countersToAdd, countersToRemove, NonPersistentDocumentFlags.ByCountersUpdate);
-
-                        if (changeVector != null)
-                            LastDocumentChangeVector = LastChangeVector = changeVector;
-
-                        doc.Data.Dispose(); // we cloned the data, so we can dispose it.
-                    }
-
-                    countersToAdd.Clear();
-                    countersToRemove.Clear();
-
-                    void LoadDocument()
-                    {
-                        if (doc != null)
-                            return;
-                        try
-                        {
-                            doc = _database.DocumentsStorage.Get(context, docId,
-                                throwOnConflict: true);
-                            if (doc == null)
-                            {
-                                if (_fromEtl)
-                                    return;
-                                ThrowMissingDocument(docId);
-                                return; // never hit
                             }
+                            break;
+                        case CounterOperationType.Delete:
+                            if (_fromEtl && doc == null)
+                                break;
 
-                            if (doc.Flags.HasFlag(DocumentFlags.Artificial))
-                                ThrowArtificialDocument(doc);
+                            LastChangeVector = _database.DocumentsStorage.CountersStorage.DeleteCounter(context, docId, docCollection, operation.CounterName);
 
-                            docCollection = CollectionName.GetCollectionName(doc.Data);
-                        }
-                        catch (DocumentConflictException)
-                        {
-                            if (_fromEtl)
-                                return;
+                            countersToAdd.Remove(operation.CounterName);
+                            countersToRemove.Add(operation.CounterName);
+                            break;
+                        case CounterOperationType.Put:
+                            if (_fromEtl == false || doc == null)
+                                break;
 
-                            // this is fine, we explicitly support
-                            // setting the flag if we are in conflicted state is 
-                            // done by the conflict resolver
+                            _database.DocumentsStorage.CountersStorage.PutCounter(context, docId, docCollection, operation.CounterName, operation.Delta);
 
-                            // avoid loading same document again, we validate write using the metadata instance
-                            doc = new Document();
-                            docCollection = _database.DocumentsStorage.ConflictsStorage.GetCollection(context, docId);
-                        }
+                            countersToAdd.Add(operation.CounterName);
+                            countersToRemove.Remove(operation.CounterName);
+                            break;
+                        case CounterOperationType.None:
+                            break;
+                        case CounterOperationType.Get:
+                            GetCounterValue(context, _database, docId, operation.CounterName, _replyWithAllNodesValues, CountersDetail);
+                            break;
+                        default:
+                            ThrowInvalidBatchOperationType(operation);
+                            break;
                     }
                 }
 
-                return ops;
+                if (doc?.Data != null)
+                {
+                    var changeVector = _database
+                        .DocumentsStorage
+                        .CountersStorage
+                        .UpdateDocumentCounters(context, doc, docId, countersToAdd, countersToRemove, NonPersistentDocumentFlags.ByCountersUpdate);
+
+                    if (changeVector != null)
+                        LastDocumentChangeVector = LastChangeVector = changeVector;
+
+                    doc.Data.Dispose(); // we cloned the data, so we can dispose it.
+                }
+
+                countersToAdd.Clear();
+                countersToRemove.Clear();
+
+                void LoadDocument(CounterOperation counterOperation)
+                {
+                    if (string.IsNullOrEmpty(counterOperation.DocumentId))
+                        throw new ArgumentException("Document ID can't be null");
+
+                    if (docId == counterOperation.DocumentId && doc != null)
+                        return;
+
+                    ApplyChangesForPreviousDocument(context, doc, docId, countersToAdd, countersToRemove);
+
+                    docId = counterOperation.DocumentId;
+
+                    try
+                    {
+                        doc = _database.DocumentsStorage.Get(context, docId, throwOnConflict: true);
+                        if (doc == null)
+                        {
+                            if (_fromEtl)
+                                return;
+                            ThrowMissingDocument(docId);
+                            return; // never hit
+                        }
+
+                        if (doc.Flags.HasFlag(DocumentFlags.Artificial))
+                            ThrowArtificialDocument(doc);
+
+                        docCollection = CollectionName.GetCollectionName(doc.Data);
+                    }
+                    catch (DocumentConflictException)
+                    {
+                        if (_fromEtl)
+                            return;
+
+                        // this is fine, we explicitly support
+                        // setting the flag if we are in conflicted state is 
+                        // done by the conflict resolver
+
+                        // avoid loading same document again, we validate write using the metadata instance
+                        doc = new Document();
+                        docCollection = _database.DocumentsStorage.ConflictsStorage.GetCollection(context, docId);
+                    }
+                }
+
+                ApplyChangesForPreviousDocument(context, doc, docId, countersToAdd, countersToRemove);
+
+                return _list.Count;
+            }
+
+            private void ApplyChangesForPreviousDocument(DocumentsOperationContext context, Document doc, string docId, SortedSet<string> countersToAdd, HashSet<string> countersToRemove)
+            {
+                if (doc?.Data != null)
+                {
+                    var nonPersistentFlags = NonPersistentDocumentFlags.ByCountersUpdate;
+
+                    _database.DocumentsStorage.CountersStorage.UpdateDocumentCounters(context, doc, docId, countersToAdd, countersToRemove, nonPersistentFlags);
+                    doc.Data.Dispose(); // we cloned the data, so we can dispose it.
+                }
+
+                countersToAdd.Clear();
+                countersToRemove.Clear();
             }
 
             public override TransactionOperationsMerger.IReplayableCommandDto<TransactionOperationsMerger.MergedTransactionCommand> ToDto(JsonOperationContext context)
             {
                 return new ExecuteCounterBatchCommandDto
                 {
-                    Dictionary = _dictionary,
+                    List = _list,
                     ReplyWithAllNodesValues = _replyWithAllNodesValues,
                     FromEtl = _fromEtl
                 };
@@ -297,7 +308,7 @@ namespace Raven.Server.Documents.Handlers
                         {
                             valueToAdd
                         });
-                    }                   
+                    }
                 }
                 else
                 {
@@ -346,7 +357,7 @@ namespace Raven.Server.Documents.Handlers
                 foreach (var cgd in _counterGroups)
                 {
                     PutCounters(context, cgd, countersToAdd);
-                    
+
                 }
 
                 return _counterGroups.Count;
@@ -365,7 +376,7 @@ namespace Raven.Server.Documents.Handlers
                 catch (DocumentDoesNotExistException)
                 {
                     counterGroupDetail.Values.TryGet(CountersStorage.Values, out values);
-                    ErrorCount+= values?.Count ?? 0;
+                    ErrorCount += values?.Count ?? 0;
                     return;
                 }
 
@@ -430,7 +441,7 @@ namespace Raven.Server.Documents.Handlers
             {
                 lastCv = null;
                 var dbIds = new Dictionary<string, int>();
-                var counters = new DynamicJsonValue(); 
+                var counters = new DynamicJsonValue();
                 var counterModificationScopes = new List<ByteStringContext<ByteStringMemoryCache>.InternalScope>();
 
                 try
@@ -472,7 +483,7 @@ namespace Raven.Server.Documents.Handlers
                     return values;
 
                 }
-                finally 
+                finally
                 {
                     foreach (var scope in counterModificationScopes)
                     {
@@ -654,12 +665,12 @@ namespace Raven.Server.Documents.Handlers
     {
         public bool ReplyWithAllNodesValues;
         public bool FromEtl;
-        public Dictionary<string, List<CounterOperation>> Dictionary;
+        public List<CounterOperation> List;
 
         public CountersHandler.ExecuteCounterBatchCommand ToCommand(DocumentsOperationContext context, DocumentDatabase database)
         {
             var command = new CountersHandler.
-                ExecuteCounterBatchCommand(database, Dictionary, ReplyWithAllNodesValues, FromEtl);
+                ExecuteCounterBatchCommand(database, List, ReplyWithAllNodesValues, FromEtl);
             return command;
         }
     }

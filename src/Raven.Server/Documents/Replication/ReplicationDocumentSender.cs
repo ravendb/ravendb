@@ -252,7 +252,7 @@ namespace Raven.Server.Documents.Replication
 
                             _stats.Storage.RecordInputAttempt();
 
-                            //Here we add missing attachments in the same batch as the document that contains them without modifying the last etag or transaction boundary
+                            // here we add missing attachments in the same batch as the document that contains them without modifying the last etag or transaction boundary
                             if (MissingAttachmentsInLastBatch && 
                                 item.Type == ReplicationBatchItem.ReplicationItemType.Document &&
                                 (item.Flags & DocumentFlags.HasAttachments) == DocumentFlags.HasAttachments)
@@ -260,15 +260,15 @@ namespace Raven.Server.Documents.Replication
                                 var type = (item.Flags & DocumentFlags.Revision) == DocumentFlags.Revision ? AttachmentType.Revision: AttachmentType.Document;
                                 foreach (var attachment in _parent._database.DocumentsStorage.AttachmentsStorage.GetAttachmentsForDocument(documentsContext, type, item.Id))
                                 {
-                                    //We need to filter attachments that are been sent in the same batch as the document
+                                    // we need to filter attachments that are been sent in the same batch as the document
                                     if (attachment.Etag >= prevLastEtag)
                                         continue;
+
                                     var stream = _parent._database.DocumentsStorage.AttachmentsStorage.GetAttachmentStream(documentsContext, attachment.Base64Hash);
                                     attachment.Stream = stream;
                                     AddReplicationItemToBatch(ReplicationBatchItem.From(attachment), _stats.Storage, skippedReplicationItemsInfo);
                                     size += attachment.Stream.Length;
                                 }
-                                
                             }
 
                             _lastEtag = item.Etag;
@@ -457,6 +457,7 @@ namespace Raven.Server.Documents.Replication
                 _endChangeVector = null;
             }
         }
+
         private bool AddReplicationItemToBatch(ReplicationBatchItem item, OutgoingReplicationStatsScope stats, SkippedReplicationItemsInfo skippedReplicationItemsInfo)
         {
             if (item.Type == ReplicationBatchItem.ReplicationItemType.Document ||

@@ -71,6 +71,7 @@ namespace Raven.Server.Documents
         private readonly object _idleLocker = new object();
 
         private readonly object _clusterLocker = new object();
+
         /// <summary>
         /// The current lock, used to make sure indexes have a unique names
         /// </summary>
@@ -278,7 +279,7 @@ namespace Raven.Server.Documents
                 PeriodicBackupRunner = new PeriodicBackupRunner(this, _serverStore);
 
                 _addToInitLog("Initializing IndexStore (async)");
-                _indexStoreTask = IndexStore.InitializeAsync(record);
+                _indexStoreTask = IndexStore.InitializeAsync(record, _addToInitLog);
                 _addToInitLog("Initializing Replication");
                 ReplicationLoader?.Initialize(record);
                 _addToInitLog("Initializing ETL");
@@ -288,13 +289,20 @@ namespace Raven.Server.Documents
 
                 try
                 {
-                    _indexStoreTask.Wait(DatabaseShutdown);
+                    // we need to wait here for the task to complete
+                    // if we will not do that the process will continue
+                    // and we will be left with opened files
+                    // we are checking cancellation token before each index initialization
+                    // so in worst case we will have to wait for 1 index to be opened
+                    // if the cancellation is requested during index store initialization
+                    _indexStoreTask.Wait();
                 }
                 finally
                 {
-                    _addToInitLog("Initializing IndexStore completed");
                     _indexStoreTask = null;
                 }
+
+                DatabaseShutdown.ThrowIfCancellationRequested();
 
                 SubscriptionStorage.Initialize();
                 _addToInitLog("Initializing SubscriptionStorage completed");
@@ -639,11 +647,18 @@ namespace Raven.Server.Documents
                     TxMerger?.Dispose();
                 });
 
-                if (_indexStoreTask != null)
+                var indexStoreTask = _indexStoreTask;
+                if (indexStoreTask != null)
                 {
                     exceptionAggregator.Execute(() =>
                     {
-                        _indexStoreTask.Wait(DatabaseShutdown);
+                        // we need to wait here for the task to complete
+                        // if we will not do that the process will continue
+                        // and we will be left with opened files
+                        // we are checking cancellation token before each index initialization
+                        // so in worst case we will have to wait for 1 index to be opened
+                        // if the cancellation is requested during index store initialization
+                        indexStoreTask.Wait();
                     });
                 }
 
