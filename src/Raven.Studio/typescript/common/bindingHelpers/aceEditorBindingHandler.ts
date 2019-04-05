@@ -21,7 +21,7 @@ class aceEditorBindingHandler {
     static dom = ace.require("ace/lib/dom");
     static commands = ace.require("ace/commands/default_commands").commands;
     static isInFullScreeenMode = ko.observable<boolean>(false);
-    static goToFullScreenText = "Press Shift + F11  to enter full screen mode";
+    static goToFullScreenText = "Press Shift + F11 to enter full screen mode";
     static leaveFullScreenText = "Press Shift + F11 or Esc to leave full screen mode";
     static completitionCache = new Map<AceAjax.Editor, autoCompleteCompleter>();
 
@@ -92,41 +92,6 @@ class aceEditorBindingHandler {
                 },
                 identifierRegexps: [/[a-zA-Z_0-9'"\$\-\u00A2-\uFFFF]/]
             }]);
-
-            /// taken from https://github.com/ajaxorg/ace-demos/blob/master/scrolling-editor.html
-            aceEditorBindingHandler.commands.push({
-                name: "Toggle Fullscreen",
-                bindKey: "Shift+F11",
-                exec: function (editor: any) {
-                    aceEditorBindingHandler.dom.toggleCssClass(document.body, "fullScreen");
-                    aceEditorBindingHandler.dom.toggleCssClass(editor.container, "fullScreen-editor");
-                    
-                    if (aceEditorBindingHandler.dom.hasCssClass(document.body, "fullScreen")) {
-                        $(".fullScreenModeLabel").text(aceEditorBindingHandler.leaveFullScreenText);
-                        $(".fullScreenModeLabel").hide();
-                        $(editor.container).find(".fullScreenModeLabel").show();
-                    } else {
-                        $(".fullScreenModeLabel").text(aceEditorBindingHandler.goToFullScreenText);
-                        $(".fullScreenModeLabel").show();
-                    }
-                    
-                    editor.resize();
-                }
-            });
-
-            aceEditorBindingHandler.commands.push({
-                name: "Exit FullScreen",
-                bindKey: "Esc",
-                exec: function (editor: any) {
-                    if (aceEditorBindingHandler.dom.hasCssClass(document.body, "fullScreen")) {
-                        aceEditorBindingHandler.dom.toggleCssClass(document.body, "fullScreen");
-                        aceEditorBindingHandler.dom.toggleCssClass(editor.container, "fullScreen-editor");
-                        $(".fullScreenModeLabel").text(aceEditorBindingHandler.goToFullScreenText);
-                        $(".fullScreenModeLabel").show();
-                    }
-                    editor.resize();
-                }
-            });
         }
     }
 
@@ -218,6 +183,8 @@ class aceEditorBindingHandler {
                 exec: () => false // Returning false causes the event to bubble up.
             });
         }
+        
+        aceEditorBindingHandler.initFullScreenModeCommands(aceEditor);
         
         if (completer) {
             aceEditorBindingHandler.completitionCache.set(aceEditor, completer);
@@ -317,6 +284,43 @@ class aceEditorBindingHandler {
             aceEditor.resize();
             this.previousLinesCount = currentLinesCount;
         }
+    }
+
+    private static initFullScreenModeCommands(aceEditor: AceAjax.Editor) {
+        /// taken from https://github.com/ajaxorg/ace-demos/blob/master/scrolling-editor.html
+        aceEditor.commands.addCommand({
+            name: "Toggle Fullscreen",
+            bindKey: "Shift+F11",
+            readOnly: true,
+            exec: function (editor: any) {
+                aceEditorBindingHandler.dom.toggleCssClass(document.body, "fullScreen");
+                aceEditorBindingHandler.dom.toggleCssClass(editor.container, "fullScreen-editor");
+
+                if (aceEditorBindingHandler.dom.hasCssClass(document.body, "fullScreen")) {
+                    $(".fullScreenModeLabel", editor.container).text(aceEditorBindingHandler.leaveFullScreenText);
+                } else {
+                    $(".fullScreenModeLabel", editor.container).text(aceEditorBindingHandler.goToFullScreenText);
+                    $(".fullScreenModeLabel", editor.container).show();
+                }
+
+                editor.resize();
+            }
+        });
+
+        aceEditor.commands.addCommand({
+            name: "Exit FullScreen",
+            bindKey: "Esc",
+            readOnly: true,
+            exec: function (editor: any) {
+                if (aceEditorBindingHandler.dom.hasCssClass(document.body, "fullScreen")) {
+                    aceEditorBindingHandler.dom.toggleCssClass(document.body, "fullScreen");
+                    aceEditorBindingHandler.dom.toggleCssClass(editor.container, "fullScreen-editor");
+                    $(".fullScreenModeLabel", editor.container).text(aceEditorBindingHandler.goToFullScreenText);
+                    $(".fullScreenModeLabel", editor.container).show();
+                }
+                editor.resize();
+            }
+        });
     }
 }
 
