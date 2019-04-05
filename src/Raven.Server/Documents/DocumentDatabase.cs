@@ -287,6 +287,11 @@ namespace Raven.Server.Documents
                 try
                 {
                     // we need to wait here for the task to complete
+                    // if we will not do that the process will continue
+                    // and we will be left with opened files
+                    // we are checking cancellation token before each index initialization
+                    // so in worst case we will have to wait for 1 index to be opened
+                    // if the cancellation is requested during index store initialization
                     _indexStoreTask.Wait();
                 }
                 finally
@@ -636,7 +641,12 @@ namespace Raven.Server.Documents
                 {
                     exceptionAggregator.Execute(() =>
                     {
-                        // need to wait here for the task the task to complete
+                        // we need to wait here for the task to complete
+                        // if we will not do that the process will continue
+                        // and we will be left with opened files
+                        // we are checking cancellation token before each index initialization
+                        // so in worst case we will have to wait for 1 index to be opened
+                        // if the cancellation is requested during index store initialization
                         indexStoreTask.Wait();
                     });
                 }
