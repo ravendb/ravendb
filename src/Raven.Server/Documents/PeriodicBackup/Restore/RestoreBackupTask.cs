@@ -549,8 +549,7 @@ namespace Raven.Server.Documents.PeriodicBackup.Restore
             {
                 AuthorizationStatus = AuthorizationStatus.DatabaseAdmin,
                 OperateOnTypes = DatabaseItemType.CompareExchange | DatabaseItemType.Identities | DatabaseItemType.Subscriptions,
-                SkipRevisionCreation = true,
-                KeepOriginalChangeVector = true
+                SkipRevisionCreation = true
             };
             var lastPath = Path.Combine(_restoreConfiguration.BackupLocation, smugglerFile);
 

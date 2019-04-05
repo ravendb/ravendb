@@ -1,4 +1,5 @@
-﻿using System.Collections.Generic;
+﻿using System;
+using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Threading;
@@ -503,7 +504,7 @@ namespace SlowTests.Client.Counters
 
                     var stats = await store2.Maintenance.SendAsync(new GetStatisticsOperation());
                     Assert.Equal(2, stats.CountOfDocuments);
-                    Assert.Equal(3, stats.CountOfCounters);
+                    Assert.Equal(3, stats.CountOfCounterEntries);
 
                     using (var session = store2.OpenAsyncSession())
                     {
