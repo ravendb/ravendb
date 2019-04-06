@@ -69,77 +69,31 @@ cleanup:
     return rc;
 }
 
-PRIVATE int32_t
-_sync_directory_maybe_symblink(char *dir_path, int32_t depth,
-                              int32_t *detailed_error_code)
+
+
+int32_t
+_sync_directory_maybe_symblink(char *dir_path, int32_t *detailed_error_code)
 {
-    struct stat sb;
-    char *link_name = NULL;
     int32_t rc;
-
-    int32_t steps = 10;
-
-    while (1)
+    char* real_path = realpath(dir_path, NULL);
+    if (real_path == NULL)
     {
-        if (lstat(dir_path, &sb) == -1)
-        {
-            rc = FAIL_STAT_FILE;
-            goto error_cleanup;
-        }
-
-        link_name = malloc(sb.st_size + 1);
-        if (link_name == NULL)
-        {
-            rc = FAIL_NOMEM;
-            goto error_cleanup;
-        }
-
-        int32_t len = readlink(dir_path, link_name, sb.st_size + 1);
-
-        if (len == 0 || (len == -1 && errno == EINVAL))
-        { 
-            /* EINVAL on non-symlink dir_path */
-            rc = _sync_directory_for_internal(dir_path, detailed_error_code);
-            goto success;
-        }
-        
-        if (len < 0)
-        {
-            rc = FAIL_STAT_FILE;
-            goto error_cleanup;
-        }
-
-        if (len > sb.st_size)
-        {
-            /* race: the link has changed, re-read */
-            free(link_name);
-            link_name = NULL;
-            if (steps-- > 0)
-                continue;
-            rc = FAIL_RACE_RETRIES;
-            goto error_cleanup;
-        }
-
-        link_name[len] = '\0';
-        break;
-    }
-
-    if (depth == 0)
-    {
-        rc = FAIL_PATH_RECURSION;
+        rc = FAIL_GET_REAL_PATH;
         goto error_cleanup;
     }
 
-    rc = _sync_directory_maybe_symblink(link_name,
-                                        depth - 1,
-                                        detailed_error_code);
-    goto success;
+    rc = _sync_directory_for_internal(real_path, detailed_error_code);
+    if (rc != SUCCESS)
+        goto error_cleanup;
+
+    rc = SUCCESS;
+    goto cleanup;
 
 error_cleanup:
     *detailed_error_code = errno;
-success:
-    if (link_name != NULL)
-        free(link_name);
+cleanup:
+    if (real_path != NULL)
+        free(real_path);
 
     return rc;
 }
@@ -158,9 +112,7 @@ _sync_directory_for(const char *file_path, int32_t *detailed_error_code)
     }
     char *dir_path = dirname(file_path_copy);
 
-    int32_t rc = _sync_directory_maybe_symblink(dir_path,
-                                                256, /* even that is probably just abuse */
-                                                detailed_error_code);
+    int32_t rc = _sync_directory_maybe_symblink(dir_path, detailed_error_code);
 
     free(file_path_copy);
 

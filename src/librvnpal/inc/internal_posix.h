@@ -44,7 +44,7 @@ PRIVATE int32_t
 _sync_directory_for_internal(char *dir_path, int32_t *detailed_error_code);
 
 PRIVATE int32_t
-_sync_directory_maybe_symblink(char *dir_path, int32_t depth, int32_t *detailed_error_code);
+_sync_directory_maybe_symblink(char *dir_path, int32_t *detailed_error_code);
 
 PRIVATE int32_t
 _allocate_file_space(int32_t fd, int64_t size, int32_t *detailed_error_code);

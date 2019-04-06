@@ -39,6 +39,7 @@ namespace Sparrow.Server.Platform
             FailCreateDirectory = 29,
             FailNotDirectory = 30,
             FailBrokenLink = 31,
+            FailGetRealPath = 32,
         };
 
         [Flags]
