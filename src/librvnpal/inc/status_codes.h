@@ -38,6 +38,7 @@
 #define FAIL_CREATE_DIRECTORY           29
 #define FAIL_NOT_DIRECTORY              30
 #define FAIL_BROKEN_LINK                31
+#define FAIL_GET_REAL_PATH              32
 
 #define ERRNO_SPECIAL_CODES_NONE        0
 #define ERRNO_SPECIAL_CODES_ENOMEM      (1 << 0)
