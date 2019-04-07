@@ -19,6 +19,7 @@ using Raven.Server.ServerWide.Commands;
 using Raven.Server.ServerWide.Context;
 using Raven.Server.Utils;
 using Raven.Server.Web.System;
+using Sparrow.Json;
 using Sparrow.Logging;
 using Sparrow.Utils;
 using Voron.Exceptions;
@@ -197,15 +198,32 @@ namespace Raven.Server.Documents
                         using (context.OpenReadTransaction())
                         {
                             var databaseRecord = _serverStore.Cluster.ReadRawDatabase(context, databaseName, out _);
-                            databaseRecord.TryGet(nameof(DatabaseRecord.Disabled), out bool dbDisabled);
 
                             // unload only if DB is still disabled
-                            if (dbDisabled)
+                            if (IsDatabaseDisabled(databaseRecord))
                                 UnloadDatabaseInternal(databaseName);
                         }
                     }
                 });
             }
+        }
+
+        public static bool IsDatabaseDisabled(BlittableJsonReaderObject databaseRecordBlittable)
+        {
+            var noDisabled = databaseRecordBlittable.TryGet(nameof(DatabaseRecord.Disabled), out bool disabled) == false;
+            var noDatabaseState = databaseRecordBlittable.TryGet(nameof(DatabaseRecord.DatabaseState), out DatabaseStateStatus dbState) == false;
+
+            if (noDisabled && noDatabaseState)
+                return false;
+
+            if (noDatabaseState)
+                return disabled;
+
+            var isRestoring = dbState == DatabaseStateStatus.RestoreInProgress;
+            if (noDisabled)
+                return isRestoring;
+
+            return disabled || isRestoring;
         }
 
         private void UnloadDatabaseInternal(string databaseName)
