@@ -1107,7 +1107,14 @@ namespace Raven.Server.Documents.Patch
                 }
                 catch (JavaScriptException e)
                 {
+                    //ScriptRunnerResult is in charge of disposing of the disposible but it is not created (the clones did)
+                    DisposeClonedDocuments();
                     throw CreateFullError(e);
+                }
+                catch (Exception)
+                {
+                    DisposeClonedDocuments();
+                    throw;
                 }
                 finally
                 {
