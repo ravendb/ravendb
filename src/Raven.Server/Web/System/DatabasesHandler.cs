@@ -302,7 +302,7 @@ namespace Raven.Server.Web.System
                 {
                     foreach (var member in topology.Members)
                     {
-                        if (dbRecord.DeletionInProgress.ContainsKey(member))
+                        if (dbRecord.DeletionInProgress != null && dbRecord.DeletionInProgress.ContainsKey(member))
                             continue;
 
                         var url = clusterTopology.GetUrlFromTag(member);
@@ -318,7 +318,7 @@ namespace Raven.Server.Web.System
 
                     foreach (var promotable in topology.Promotables)
                     {
-                        if (dbRecord.DeletionInProgress.ContainsKey(promotable))
+                        if (dbRecord.DeletionInProgress != null && dbRecord.DeletionInProgress.ContainsKey(promotable))
                             continue;
 
                         topology.PredefinedMentors.TryGetValue(promotable, out var mentorCandidate);
@@ -330,7 +330,7 @@ namespace Raven.Server.Web.System
 
                     foreach (var rehab in topology.Rehabs)
                     {
-                        if (dbRecord.DeletionInProgress.ContainsKey(rehab))
+                        if (dbRecord.DeletionInProgress != null && dbRecord.DeletionInProgress.ContainsKey(rehab))
                             continue;
 
                         var node = GetNode(databaseName, clusterTopology, rehab, null, out var promotableTask);
