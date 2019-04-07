@@ -482,9 +482,18 @@ namespace Raven.Server.Documents.Revisions
                 configuration.MinimumRevisionAgeToKeep.HasValue == false)
                 return;
 
-            var numberOfRevisionsToDelete = revisionsCount - configuration.MinimumRevisionsToKeep ?? 0;
-            if (numberOfRevisionsToDelete <= 0)
-                return;
+            long numberOfRevisionsToDelete;
+            if (configuration.MinimumRevisionsToKeep.HasValue)
+            {
+                numberOfRevisionsToDelete = revisionsCount - configuration.MinimumRevisionsToKeep.Value;
+                if (numberOfRevisionsToDelete <= 0)
+                    return;
+            }
+            else
+            {
+                // delete all revisions which age has passed
+                numberOfRevisionsToDelete = long.MaxValue;
+            }
 
             var deletedRevisionsCount = DeleteRevisions(context, table, prefixSlice, collectionName, numberOfRevisionsToDelete, configuration.MinimumRevisionAgeToKeep, changeVector, lastModifiedTicks);
             Debug.Assert(numberOfRevisionsToDelete >= deletedRevisionsCount);
