@@ -16,10 +16,12 @@ using Raven.Client;
 using Raven.Client.Documents;
 using Raven.Client.Documents.Conventions;
 using Raven.Client.Documents.Operations;
+using Raven.Client.Documents.Operations.Revisions;
 using Raven.Client.ServerWide;
 using Raven.Client.ServerWide.Operations;
 using Raven.Server.Documents;
 using Raven.Server.Documents.Handlers.Admin;
+using Raven.Server.ServerWide.Context;
 using Raven.Tests.Core.Utils.Entities;
 using Xunit;
 using Xunit.Sdk;
@@ -515,9 +517,272 @@ namespace SlowTests.Server.Documents.Revisions
             return new string(str);
         }
 
-        public Task ReplicateExpiredAndDeletedRevisions(/*bool useSession*/)
+        [Fact]
+        public async Task ReplicateExpiredRevisions()
         {
-            return Task.CompletedTask;
+            var revisionsAgeLimit = TimeSpan.FromSeconds(10);
+
+            Action<RevisionsConfiguration> modifyConfiguration = configuration =>
+                configuration.Collections["Users"] = new RevisionsCollectionConfiguration
+                {
+                    Disabled = false,
+                    MinimumRevisionAgeToKeep = revisionsAgeLimit
+                };
+
+            using (var store1 = GetDocumentStore())
+            using (var store2 = GetDocumentStore())
+            {
+                await RevisionsHelper.SetupRevisions(Server.ServerStore, store1.Database, modifyConfiguration);
+                await RevisionsHelper.SetupRevisions(Server.ServerStore, store2.Database, modifyConfiguration);
+
+                using (var session = store1.OpenAsyncSession())
+                {
+                    await session.StoreAsync(new User
+                    {
+                        Name = "Aviv"
+                    }, "users/1-A");
+
+                    await session.SaveChangesAsync();
+                }
+
+                for (int i = 2; i <= 10; i++)
+                {
+                    using (var session = store1.OpenAsyncSession())
+                    {
+                        var user = await session.LoadAsync<User>("users/1-A");
+                        user.Name = "Aviv" + i;
+                        await session.SaveChangesAsync();
+                    }
+                }
+
+                using (var session = store1.OpenAsyncSession())
+                {
+                    var revisions = await session.Advanced.Revisions.GetForAsync<User>("users/1-A");
+                    Assert.Equal(10, revisions.Count);
+                }
+
+
+                // wait until revisions are expired
+                await Task.Delay(revisionsAgeLimit);
+
+                // setup replication 
+                await SetupReplicationAsync(store1, store2);
+                WaitForMarker(store1, store2);
+
+                // store1 should still have 10 revisions
+                // store2 should have no revisions 
+                using (var session = store1.OpenAsyncSession())
+                {
+                    var revisions = await session.Advanced.Revisions.GetForAsync<User>("users/1-A");
+                    Assert.Equal(10, revisions.Count);
+                }
+                using (var session = store2.OpenAsyncSession())
+                {
+                    var revisions = await session.Advanced.Revisions.GetForAsync<User>("users/1-A");
+                    Assert.Equal(0, revisions.Count);
+                }
+
+/*
+                // TODO : RavenDB-13359
+                using (var session = store2.OpenAsyncSession())
+                {
+                    var doc = await session.LoadAsync<User>("users/1-A");
+                    var md = session.Advanced.GetMetadataFor(doc);
+                    md.TryGetValue(Constants.Documents.Metadata.Flags, out var flags);
+
+                    Assert.DoesNotContain(nameof(DocumentFlags.HasRevisions), flags);
+                }
+*/
+
+                // modify doc on store1 to create another revision
+                using (var session = store1.OpenAsyncSession())
+                {
+                    var user = await session.LoadAsync<User>("users/1-A");
+                    user.Name = "Grisha";
+                    await session.SaveChangesAsync();
+                }
+
+                WaitForMarker(store1, store2);
+
+                // assert that both stores have just one revision
+                using (var session = store1.OpenAsyncSession())
+                {
+                    var revisions = await session.Advanced.Revisions.GetForAsync<User>("users/1-A");
+                    Assert.Equal(1, revisions.Count);
+                    Assert.Equal("Grisha", revisions[0].Name);
+                }
+                using (var session = store2.OpenAsyncSession())
+                {
+                    var revisions = await session.Advanced.Revisions.GetForAsync<User>("users/1-A");
+                    Assert.Equal(1, revisions.Count);
+                    Assert.Equal("Grisha", revisions[0].Name);
+                }
+
+            }
+
+        }
+
+        [Fact]
+        public async Task ReplicateExpiredAndDeletedRevisions()
+        {
+            var revisionsAgeLimit = TimeSpan.FromSeconds(10);
+
+            Action<RevisionsConfiguration> modifyConfiguration = configuration =>
+                configuration.Collections["Users"] = new RevisionsCollectionConfiguration
+                {
+                    Disabled = false,
+                    MinimumRevisionAgeToKeep = revisionsAgeLimit
+                };
+
+            using (var store1 = GetDocumentStore())
+            using (var store2 = GetDocumentStore())
+            {
+                //setup revisions on both stores and setup replication 
+                await RevisionsHelper.SetupRevisions(Server.ServerStore, store1.Database, modifyConfiguration);
+                await RevisionsHelper.SetupRevisions(Server.ServerStore, store2.Database, modifyConfiguration);
+                await SetupReplicationAsync(store1, store2);
+
+                // create some revisions on store1
+                using (var session = store1.OpenAsyncSession())
+                {
+                    await session.StoreAsync(new User
+                    {
+                        Name = "Aviv"
+                    }, "users/1-A");
+
+                    await session.SaveChangesAsync();
+                }
+
+                for (int i = 2; i <= 10; i++)
+                {
+                    using (var session = store1.OpenAsyncSession())
+                    {
+                        var user = await session.LoadAsync<User>("users/1-A");
+                        user.Name = "Aviv" + i;
+                        await session.SaveChangesAsync();
+                    }
+                }
+
+                // wait for replication
+                WaitForMarker(store1, store2);
+
+                using (var session = store2.OpenAsyncSession())
+                {
+                    var doc = await session.LoadAsync<User>("users/1-A");
+                    Assert.Equal("Aviv10", doc.Name);
+                }
+
+                // wait until revisions are expired
+                await Task.Delay(revisionsAgeLimit);
+
+                // modify document
+                using (var session = store1.OpenAsyncSession())
+                {
+                    var user = await session.LoadAsync<User>("users/1-A");
+                    user.Name = "Grisha";
+                    await session.SaveChangesAsync();
+                }
+
+                WaitForMarker(store1, store2);
+
+                // expired revisions should be deleted
+                // assert that both stores have just one revision now
+                using (var session = store1.OpenAsyncSession())
+                {
+                    var revisions = await session.Advanced.Revisions.GetForAsync<User>("users/1-A");
+                    Assert.Equal(1, revisions.Count);
+                    Assert.Equal("Grisha", revisions[0].Name);
+                }
+                using (var session = store2.OpenAsyncSession())
+                {
+                    var revisions = await session.Advanced.Revisions.GetForAsync<User>("users/1-A");
+                    Assert.Equal(1, revisions.Count);
+                    Assert.Equal("Grisha", revisions[0].Name);
+                }
+            }
+
+        }
+
+        [Fact]
+        public async Task ReplicateRevisionTombstones()
+        {
+            var revisionsAgeLimit = TimeSpan.FromSeconds(10);
+
+            Action<RevisionsConfiguration> modifyConfiguration = configuration =>
+                configuration.Collections["Users"] = new RevisionsCollectionConfiguration
+                {
+                    Disabled = false,
+                    MinimumRevisionAgeToKeep = revisionsAgeLimit
+                };
+
+            using (var store1 = GetDocumentStore())
+            using (var store2 = GetDocumentStore())
+            {
+                //setup revisions on both stores and setup replication 
+                await RevisionsHelper.SetupRevisions(Server.ServerStore, store1.Database, modifyConfiguration);
+                await RevisionsHelper.SetupRevisions(Server.ServerStore, store2.Database, modifyConfiguration);
+
+                await SetupReplicationAsync(store1, store2);
+
+                // create some revisions on store1
+                using (var session = store1.OpenAsyncSession())
+                {
+                    await session.StoreAsync(new User
+                    {
+                        Name = "Aviv"
+                    }, "users/1-A");
+
+                    await session.SaveChangesAsync();
+                }
+
+                for (int i = 2; i <= 10; i++)
+                {
+                    using (var session = store1.OpenAsyncSession())
+                    {
+                        var user = await session.LoadAsync<User>("users/1-A");
+                        user.Name = "Aviv" + i;
+                        await session.SaveChangesAsync();
+                    }
+                }
+
+                // wait for replication
+                WaitForMarker(store1, store2);
+
+                // wait until revisions are expired
+                await Task.Delay(revisionsAgeLimit);
+
+                // modify document
+                using (var session = store1.OpenAsyncSession())
+                {
+                    var user = await session.LoadAsync<User>("users/1-A");
+                    user.Name = "Grisha";
+                    await session.SaveChangesAsync();
+                }
+
+                WaitForMarker(store1, store2);
+
+                // expired revisions should be deleted
+                // assert that both stores have 10 revision tombstones
+
+                foreach (var store in new [] {store1, store2})
+                {
+                    var documentDatabase = await GetDocumentDatabaseInstanceFor(store);
+                    using (documentDatabase.DocumentsStorage.ContextPool.AllocateOperationContext(out DocumentsOperationContext ctx))
+                    using (ctx.OpenReadTransaction())
+                    {
+                        var tombstones = documentDatabase.DocumentsStorage.GetTombstonesFrom(ctx, 0, 0, int.MaxValue).ToList();
+                        Assert.Equal(10, tombstones.Count);
+
+                        foreach (var tombstone in tombstones)
+                        {
+                            Assert.Equal(Tombstone.TombstoneType.Revision, tombstone.Type);
+                        }
+
+                    }
+                }
+
+            }
+
         }
 
         private class User
