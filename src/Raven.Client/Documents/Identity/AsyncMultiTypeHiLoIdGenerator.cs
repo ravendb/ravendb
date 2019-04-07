@@ -21,6 +21,7 @@ namespace Raven.Client.Documents.Identity
         protected readonly DocumentStore Store;
         protected readonly string DbName;
         protected readonly DocumentConventions Conventions;
+        private static readonly Task<string> NullStringCompletedTask = Task.FromResult<string>(null);
 
         public AsyncMultiTypeHiLoIdGenerator(DocumentStore store, string dbName, DocumentConventions conventions)
         {
@@ -34,7 +35,7 @@ namespace Raven.Client.Documents.Identity
             var typeTagName = Conventions.GetCollectionName(entity);
             if (string.IsNullOrEmpty(typeTagName)) //ignore empty tags
             {
-                return null;
+                return NullStringCompletedTask;
             }
             var tag = Conventions.TransformTypeCollectionNameToDocumentIdPrefix(typeTagName);
             if (_idGeneratorsByTag.TryGetValue(tag, out var value))

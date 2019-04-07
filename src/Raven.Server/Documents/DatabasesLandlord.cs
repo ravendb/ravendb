@@ -71,7 +71,7 @@ namespace Raven.Server.Documents
                 if (record == null)
                 {
                     // was removed, need to make sure that it isn't loaded
-                    UnloadDatabase(databaseName, true);
+                    UnloadDatabase(databaseName, dbRecordIsNull: true);
                     return;
                 }
 
