@@ -302,6 +302,9 @@ namespace Raven.Server.Web.System
                 {
                     foreach (var member in topology.Members)
                     {
+                        if (dbRecord.DeletionInProgress.ContainsKey(member))
+                            continue;
+
                         var url = clusterTopology.GetUrlFromTag(member);
                         var node = new InternalReplication
                         {
@@ -315,6 +318,9 @@ namespace Raven.Server.Web.System
 
                     foreach (var promotable in topology.Promotables)
                     {
+                        if (dbRecord.DeletionInProgress.ContainsKey(promotable))
+                            continue;
+
                         topology.PredefinedMentors.TryGetValue(promotable, out var mentorCandidate);
                         var node = GetNode(databaseName, clusterTopology, promotable, mentorCandidate, out var promotableTask);
                         var mentor = topology.WhoseTaskIsIt(ServerStore.Engine.CurrentState, promotableTask, null);
@@ -324,6 +330,9 @@ namespace Raven.Server.Web.System
 
                     foreach (var rehab in topology.Rehabs)
                     {
+                        if (dbRecord.DeletionInProgress.ContainsKey(rehab))
+                            continue;
+
                         var node = GetNode(databaseName, clusterTopology, rehab, null, out var promotableTask);
                         var mentor = topology.WhoseTaskIsIt(ServerStore.Engine.CurrentState, promotableTask, null);
                         nodesTopology.Rehabs.Add(GetNodeId(node, mentor));
