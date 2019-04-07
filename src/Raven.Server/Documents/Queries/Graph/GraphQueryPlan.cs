@@ -320,6 +320,10 @@ namespace Raven.Server.Documents.Queries.Graph
 
             foreach (var qqs in indexNamesGatherer.QueryStepsWithoutExplicitIndex)
             {
+                // we need to close the transaction since the DynamicQueryRunner.MatchIndex
+                // expects that the transaction will be closed
+                _context.CloseTransaction();
+
                 //this will ensure that query step has relevant index
                 //if needed, this will create auto-index                
                 var query = new IndexQueryServerSide(qqs.Query.ToString(), qqs.QueryParameters);

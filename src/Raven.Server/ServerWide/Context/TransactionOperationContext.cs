@@ -54,6 +54,7 @@ namespace Raven.Server.ServerWide.Context
             return Transaction;
         }
 
+        public bool HasTransaction => Transaction != null && Transaction.Disposed == false;
 
         public short TransactionMarkerOffset;
 
