@@ -16,7 +16,7 @@ namespace Raven.Client.Documents.Identity
     /// </summary>
     public class AsyncMultiTypeHiLoIdGenerator
     {
-        private readonly SemaphoreSlim _generatorLock = new SemaphoreSlim(1, 1);
+        private readonly object _generatorLock = new object();
         private readonly ConcurrentDictionary<string, AsyncHiLoIdGenerator> _idGeneratorsByTag = new ConcurrentDictionary<string, AsyncHiLoIdGenerator>();
         protected readonly DocumentStore Store;
         protected readonly string DbName;
@@ -29,7 +29,7 @@ namespace Raven.Client.Documents.Identity
             Conventions = conventions;
         }
 
-        public async Task<string> GenerateDocumentIdAsync(object entity)
+        public Task<string> GenerateDocumentIdAsync(object entity)
         {
             var typeTagName = Conventions.GetCollectionName(entity);
             if (string.IsNullOrEmpty(typeTagName)) //ignore empty tags
@@ -39,25 +39,19 @@ namespace Raven.Client.Documents.Identity
             var tag = Conventions.TransformTypeCollectionNameToDocumentIdPrefix(typeTagName);
             if (_idGeneratorsByTag.TryGetValue(tag, out var value))
             {
-                return await value.GenerateDocumentIdAsync(entity).ConfigureAwait(false);
+                return value.GenerateDocumentIdAsync(entity);
             }
 
-            await _generatorLock.WaitAsync().ConfigureAwait(false);
-
-            try
+            lock (_generatorLock)
             {
                 if (_idGeneratorsByTag.TryGetValue(tag, out value))
-                    return await value.GenerateDocumentIdAsync(entity).ConfigureAwait(false);
+                    return value.GenerateDocumentIdAsync(entity);
 
                 value = CreateGeneratorFor(tag);
                 _idGeneratorsByTag.TryAdd(tag, value);
+            }
 
-                return await value.GenerateDocumentIdAsync(entity).ConfigureAwait(false);
-            }
-            finally
-            {
-                _generatorLock.Release();
-            }
+            return value.GenerateDocumentIdAsync(entity);
         }
 
         protected virtual AsyncHiLoIdGenerator CreateGeneratorFor(string tag)

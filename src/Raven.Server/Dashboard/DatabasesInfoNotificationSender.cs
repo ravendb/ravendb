@@ -119,7 +119,7 @@ namespace Raven.Server.Dashboard
                     if (serverStore.DatabasesLandlord.DatabasesCache.TryGetValue(databaseName, out var databaseTask) == false)
                     {
                         // database does not exist on this server, is offline or disabled
-                        SetOfflineDatabaseInfo(serverStore, transactionContext, databaseName, databasesInfo, drivesUsage, disabled: IsDatabaseDisabled(databaseTuple.Value));
+                        SetOfflineDatabaseInfo(serverStore, transactionContext, databaseName, databasesInfo, drivesUsage, disabled: DatabasesLandlord.IsDatabaseDisabled(databaseTuple.Value));
                         continue;
                     }
 
@@ -366,24 +366,6 @@ namespace Raven.Server.Dashboard
 
             database = databaseTask.Result;
             return database.DatabaseShutdown.IsCancellationRequested == false;
-        }
-
-        private static bool IsDatabaseDisabled(BlittableJsonReaderObject databaseRecordBlittable)
-        {
-            var noDisabled = databaseRecordBlittable.TryGet(nameof(DatabaseRecord.Disabled), out bool disabled) == false;
-            var noDatabaseState = databaseRecordBlittable.TryGet(nameof(DatabaseRecord.DatabaseState), out DatabaseStateStatus dbState) == false;
-
-            if (noDisabled && noDatabaseState)
-                return false;
-
-            if (noDatabaseState)
-                return disabled;
-
-            var isRestoring = dbState == DatabaseStateStatus.RestoreInProgress;
-            if (noDisabled)
-                return isRestoring;
-
-            return disabled || isRestoring;
         }
     }
 }
