@@ -33,7 +33,7 @@ namespace Raven.Server.Web.Studio
                         }
                     }
                 }
-                
+
                 var editRevisions = new EditRevisionsConfigurationCommand(new RevisionsConfiguration
                 {
                     Collections = new Dictionary<string, RevisionsCollectionConfiguration>
@@ -44,7 +44,9 @@ namespace Raven.Server.Web.Studio
                         }
                     }
                 }, Database.Name);
-                await ServerStore.SendToLeaderAsync(editRevisions);
+
+                var (index, _) = await ServerStore.SendToLeaderAsync(editRevisions);
+                await Database.RachisLogIndexNotifications.WaitForIndexNotification(index, Database.ServerStore.Engine.OperationTimeout);
 
                 using (var sampleData = typeof(SampleDataHandler).GetTypeInfo().Assembly
                     .GetManifestResourceStream("Raven.Server.Web.Studio.EmbeddedData.Northwind.ravendbdump"))
@@ -68,7 +70,7 @@ namespace Raven.Server.Web.Studio
                 await NoContent();
             }
         }
-        
+
         [RavenAction("/databases/*/studio/sample-data/classes", "GET", AuthorizationStatus.ValidUser)]
         public async Task GetSampleDataClasses()
         {
