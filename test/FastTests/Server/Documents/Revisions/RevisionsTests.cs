@@ -5,6 +5,7 @@
 //-----------------------------------------------------------------------
 
 using System;
+using System.Collections.Generic;
 using System.Linq;
 using System.Net.Http;
 using System.Threading.Tasks;
@@ -12,6 +13,7 @@ using FastTests.Utils;
 using Raven.Client;
 using Raven.Client.Documents.Conventions;
 using Raven.Client.Documents.Operations;
+using Raven.Client.Documents.Operations.Revisions;
 using Raven.Client.Documents.Session;
 using Raven.Client.Http;
 using Raven.Client.Json;
@@ -573,6 +575,83 @@ namespace FastTests.Server.Documents.Revisions
                     Assert.Null(companiesRevisions[4].Name);
                     Assert.False(metadatas[4].TryGetValue(Constants.Documents.Metadata.RevisionCounters, out _));
 
+                }
+            }
+        }
+
+
+        [Fact]
+        public async Task CanLimitNumberOfRevisionsByAge()
+        {
+            var revisionsAgeLimit = TimeSpan.FromSeconds(10);
+
+            using (var store = GetDocumentStore())
+            {
+                var configuration = new RevisionsConfiguration
+                {
+                    Collections = new Dictionary<string, RevisionsCollectionConfiguration>
+                    {
+                        ["Users"] = new RevisionsCollectionConfiguration
+                        {
+                            Disabled = false,
+                            MinimumRevisionAgeToKeep = revisionsAgeLimit
+                        }
+                    }
+                };
+                var index = await RevisionsHelper.SetupRevisions(Server.ServerStore, store.Database, configuration);
+
+                var documentDatabase = await Server.ServerStore.DatabasesLandlord.TryGetOrCreateResourceStore(store.Database);
+                await documentDatabase.RachisLogIndexNotifications.WaitForIndexNotification(index, Server.ServerStore.Engine.OperationTimeout);
+
+                using (var session = store.OpenAsyncSession())
+                {
+                    // revision 1
+                    await session.StoreAsync(new User
+                    {
+                        Name = "Aviv"
+                    }, "users/1-A");
+                    await session.SaveChangesAsync();
+                }
+
+                using (var session = store.OpenAsyncSession())
+                {
+                    var user = await session.LoadAsync<User>("users/1-A");
+
+                    // revision 2
+                    user.Name = "Aviv2";
+
+                    await session.SaveChangesAsync();
+                }
+
+                using (var session = store.OpenAsyncSession())
+                {
+                    var userRevisions = await session.Advanced.Revisions.GetForAsync<User>("users/1-A");
+                    Assert.Equal(2, userRevisions.Count);
+                    Assert.Equal("Aviv2", userRevisions[0].Name);
+                    Assert.Equal("Aviv", userRevisions[1].Name);
+                }
+
+                await Task.Delay(revisionsAgeLimit);
+
+                using (var session = store.OpenAsyncSession())
+                {
+                    var user = await session.LoadAsync<User>("users/1-A");
+
+                    // revision 3
+                    user.Name = "Aviv3";
+
+                    // revisions age limit has passed
+                    // should delete the old revisions now
+                    // and keep just this one 
+
+                    await session.SaveChangesAsync();
+                }
+
+                using (var session = store.OpenAsyncSession())
+                {
+                    var userRevisions = await session.Advanced.Revisions.GetForAsync<User>("users/1-A");
+                    Assert.Equal(1, userRevisions.Count);
+                    Assert.Equal("Aviv3", userRevisions[0].Name);
                 }
             }
         }
