@@ -1246,7 +1246,7 @@ namespace Raven.Server.Documents.Replication
                                 database.DocumentsStorage.AttachmentsStorage.PutDirect(context, item.Key, item.Name,
                                     item.ContentType, item.Base64Hash, item.ChangeVector);
 
-                                if (_replicationInfo.ReplicatedAttachmentStreams.TryGetValue(item.Base64Hash, out ReplicationAttachmentStream attachmentStream))
+                                if (_replicationInfo.ReplicatedAttachmentStreams.TryGetValue(item.Base64Hash, out var attachmentStream))
                                 {
                                     database.DocumentsStorage.AttachmentsStorage.PutAttachmentStream(context, item.Key, attachmentStream.Base64Hash,
                                         attachmentStream.Stream);
@@ -1450,10 +1450,19 @@ namespace Raven.Server.Documents.Replication
                 {
                     if (_replicationInfo.DocumentDatabase.DocumentsStorage.AttachmentsStorage.AttachmentExists(context, hash) == false)
                     {
-                        var msg = $"Document '{id}' has attachment '{hash?.ToString() ?? "unknown"}' " +
-                                  $"listed as one of his attachments but it doesn't exist in the attachment storage";
+                        using (Slice.From(context.Allocator, hash, out var hashSlice))
+                        {
+                            if (_replicationInfo.ReplicatedAttachmentStreams.TryGetValue(hashSlice, out _))
+                            {
+                                // attachment exists but not in the correct order of items (RavenDB-13341)
+                                continue;
+                            }
 
-                        throw new MissingAttachmentException(msg);
+                            var msg = $"Document '{id}' has attachment '{hash?.ToString() ?? "unknown"}' " +
+                                      $"listed as one of its attachments but it doesn't exist in the attachment storage";
+
+                            throw new MissingAttachmentException(msg);
+                        }
                     }
                 }
             }
