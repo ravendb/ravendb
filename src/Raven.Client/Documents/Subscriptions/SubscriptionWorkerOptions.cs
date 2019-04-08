@@ -78,7 +78,7 @@ namespace Raven.Client.Documents.Subscriptions
     {
         internal const int DefaultSendBufferSizeInBytes = 32 * 1024;
 
-        internal const int DefaultReceiveBufferSizeInBytes = 4096;
+        internal const int DefaultReceiveBufferSizeInBytes = 32 * 1024;
 
         private SubscriptionWorkerOptions()
         {
