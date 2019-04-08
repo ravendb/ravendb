@@ -31,7 +31,7 @@ class liveIndexPerformanceWebSocketClient extends abstractWebSocketClient<result
     }
 
     protected webSocketUrlFactory() {
-        return endpoints.databases.index.indexesPerformanceLive;
+        return endpoints.databases.index.indexesPerformanceLive + "?includeSideBySide=true"
     }
 
     get autoReconnect() {

@@ -1,4 +1,5 @@
-﻿using System.Collections.Concurrent;
+﻿using System;
+using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq;
@@ -16,12 +17,12 @@ namespace Raven.Server.Documents.Indexes
         private readonly ConcurrentDictionary<string, IndexAndPerformanceStatsList> _perIndexStats = 
             new ConcurrentDictionary<string, IndexAndPerformanceStatsList>();
 
-        public LiveIndexingPerformanceCollector(DocumentDatabase documentDatabase, IEnumerable<Index> indexes)
+        public LiveIndexingPerformanceCollector(DocumentDatabase documentDatabase, IEnumerable<string> indexNames)
             : base(documentDatabase)
         {
-            foreach (var index in indexes)
+            foreach (var indexName in indexNames)
             {
-                _perIndexStats.TryAdd(index.Name, new IndexAndPerformanceStatsList(index));
+                _perIndexStats.TryAdd(indexName, new IndexAndPerformanceStatsList(indexName));
             }
 
             Start();
@@ -35,14 +36,20 @@ namespace Raven.Server.Documents.Indexes
             {
                 // This is done this way in order to avoid locking _perIndexStats
                 // for fetching .Values
-                var stats = Client.Extensions.EnumerableExtension.ForceEnumerateInThreadSafeManner(_perIndexStats)
-                    .Select(x => new IndexPerformanceStats
+                List<IndexPerformanceStats> stats = new List<IndexPerformanceStats>();
+                foreach (var x in Client.Extensions.EnumerableExtension.ForceEnumerateInThreadSafeManner(_perIndexStats))
+                {
+                    var index = Database.IndexStore.GetIndex(x.Value.Handler);
+                    if (index != null)
                     {
-                        Name = x.Value.Handler.Name,
-                        Performance = x.Value.Handler.GetIndexingPerformance()
-                    })
-                    .ToList();
-
+                        stats.Add(new IndexPerformanceStats
+                        {
+                            Name = index.Name,
+                            Performance = index.GetIndexingPerformance()
+                        });
+                    }
+                }
+                
                 Stats.Enqueue(stats);
 
                 await RunInLoop();
@@ -63,15 +70,18 @@ namespace Raven.Server.Documents.Indexes
                 // _perIndexStats.Values because .Values locks the entire
                 // dictionary.
                 var indexAndPerformanceStatsList = keyValue.Value;
-                var index = indexAndPerformanceStatsList.Handler;
+                var indexName = indexAndPerformanceStatsList.Handler;
                 var performance = indexAndPerformanceStatsList.Performance;
-
+                
                 var itemsToSend = new List<IndexingStatsAggregator>(performance.Count);
 
                 while (performance.TryTake(out IndexingStatsAggregator stat))
                     itemsToSend.Add(stat);
+                
+                // if index still exists let's fetch latest stats from live instance 
+                var index = Database.IndexStore.GetIndex(indexName);
 
-                var latestStats = index.GetLatestIndexingStat();
+                var latestStats = index?.GetLatestIndexingStat();
                 if (latestStats != null &&
                     latestStats.Completed == false && 
                     itemsToSend.Contains(latestStats) == false)
@@ -81,7 +91,7 @@ namespace Raven.Server.Documents.Indexes
                 {
                     preparedStats.Add(new IndexPerformanceStats
                     {
-                        Name = index.Name,
+                        Name = indexName,
                         Performance = itemsToSend.Select(item => item.ToIndexingPerformanceLiveStatsWithDetails()).ToArray()
                     });
                 }
@@ -111,25 +121,26 @@ namespace Raven.Server.Documents.Indexes
 
             if (change.Type != IndexChangeTypes.BatchCompleted && change.Type != IndexChangeTypes.IndexPaused)
                 return;
-
+            
             if (_perIndexStats.TryGetValue(change.Name, out indexAndPerformanceStats) == false)
             {
                 var index = Database.IndexStore.GetIndex(change.Name);
                 if (index == null)
                     return;
 
-                indexAndPerformanceStats = new IndexAndPerformanceStatsList(index);
+                indexAndPerformanceStats = new IndexAndPerformanceStatsList(change.Name);
                 _perIndexStats.TryAdd(change.Name, indexAndPerformanceStats);
             }
 
-            var latestStat = indexAndPerformanceStats.Handler.GetLatestIndexingStat();
+            var indexInstance = Database.IndexStore.GetIndex(indexAndPerformanceStats.Handler);
+            var latestStat = indexInstance?.GetLatestIndexingStat();
             if (latestStat != null)
                 indexAndPerformanceStats.Performance.Add(latestStat, CancellationToken);
         }
 
-        private class IndexAndPerformanceStatsList : HandlerAndPerformanceStatsList<Index, IndexingStatsAggregator>
+        private class IndexAndPerformanceStatsList : HandlerAndPerformanceStatsList<string, IndexingStatsAggregator>
         {
-            public IndexAndPerformanceStatsList(Index index) : base(index)
+            public IndexAndPerformanceStatsList(string indexName) : base(indexName)
             {
             }
         }
