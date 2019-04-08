@@ -115,7 +115,8 @@ namespace Raven.Server.Documents
 
                 var stream = GetAttachmentStream(context, attachment.Base64Hash);
                 if (stream == null)
-                    throw new FileNotFoundException($"Attachment's stream {attachment.Name} was not found. This should never happen.");
+                    ThrowMissingAttachment(attachment.Name);
+
                 attachment.Stream = stream;
 
                 yield return ReplicationBatchItem.From(attachment);
@@ -802,6 +803,11 @@ namespace Raven.Server.Documents
             result.TransactionMarker = *(short*)tvr.Read((int)AttachmentsTable.TransactionMarker, out int _);
 
             return result;
+        }
+
+        private static void ThrowMissingAttachment(string attachmentName)
+        {
+            throw new FileNotFoundException($"Attachment's stream '{attachmentName}' was not found. This should never happen.");
         }
 
         private static void ThrowConcurrentException(string documentId, string name, string expectedChangeVector, string oldChangeVector)

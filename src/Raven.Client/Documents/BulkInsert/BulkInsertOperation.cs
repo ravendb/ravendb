@@ -397,11 +397,10 @@ namespace Raven.Client.Documents.BulkInsert
             var stateRequest = new GetOperationStateOperation.GetOperationStateCommand(_requestExecutor.Conventions, _operationId);
             await _requestExecutor.ExecuteAsync(stateRequest, _context, sessionInfo: null, token: _token).ConfigureAwait(false);
 
-            if (!(stateRequest.Result.Result is OperationExceptionResult error))
+            if (!(stateRequest.Result?.Result is OperationExceptionResult error))
                 return null;
             return new BulkInsertAbortedException(error.Error);
         }
-
 
         private GZipStream _compressedStream;
         private Stream _requestBodyStream;
