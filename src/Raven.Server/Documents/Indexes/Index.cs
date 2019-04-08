@@ -1110,14 +1110,7 @@ namespace Raven.Server.Documents.Indexes
                                         {
                                             // this side-by-side index will be replaced in a second, notify about indexing success
                                             // so we know that indexing batch is no longer in progress
-                                            DocumentDatabase.Changes.RaiseNotifications(new IndexChange
-                                            {
-                                                Name = Name,
-                                                Type = IndexChangeTypes.BatchCompleted
-                                            });
-                                            
-                                            var batchCompletedAction = DocumentDatabase.IndexStore.IndexBatchCompleted;
-                                            batchCompletedAction?.Invoke((Name, didWork));
+                                            NotifyAboutCompletedBatch(didWork);
                                         }
 
                                         try
@@ -1155,22 +1148,7 @@ namespace Raven.Server.Documents.Indexes
                         }
 
                         if (batchCompleted)
-                        {
-                            DocumentDatabase.Changes.RaiseNotifications(new IndexChange
-                            {
-                                Name = Name,
-                                Type = IndexChangeTypes.BatchCompleted
-                            });
-
-                            if (didWork)
-                            {
-                                _didWork = true;
-                                _firstBatchTimeout = null;
-                            }
-
-                            var batchCompletedAction = DocumentDatabase.IndexStore.IndexBatchCompleted;
-                            batchCompletedAction?.Invoke((Name, didWork));
-                        }
+                            NotifyAboutCompletedBatch(didWork);
 
                         try
                         {
@@ -1250,6 +1228,20 @@ namespace Raven.Server.Documents.Indexes
                         DocumentDatabase.Changes.OnDocumentChange -= HandleDocumentChange;
                 }
             }
+        }
+
+        private void NotifyAboutCompletedBatch(bool didWork)
+        {
+            DocumentDatabase.Changes.RaiseNotifications(new IndexChange {Name = Name, Type = IndexChangeTypes.BatchCompleted});
+
+            if (didWork)
+            {
+                _didWork = true;
+                _firstBatchTimeout = null;
+            }
+            
+            var batchCompletedAction = DocumentDatabase.IndexStore.IndexBatchCompleted;
+            batchCompletedAction?.Invoke((Name, didWork));
         }
 
         public void Cleanup()
