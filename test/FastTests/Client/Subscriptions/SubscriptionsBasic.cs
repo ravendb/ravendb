@@ -17,6 +17,7 @@ using Raven.Server.Config;
 using Raven.Tests.Core.Utils.Entities;
 using Sparrow.Server;
 using Sparrow.Json;
+using Sparrow.Platform;
 using Tests.Infrastructure;
 using Xunit;
 
@@ -154,8 +155,17 @@ namespace FastTests.Client.Subscriptions
                     Assert.True(ages.TryTake(out age, _reasonableWaitTime));
                     Assert.Equal(25, age);
 
-                    Assert.Equal(4 * 1024, subscription._tcpClient.SendBufferSize);
-                    Assert.Equal(3 * 1024, subscription._tcpClient.ReceiveBufferSize);
+                    var expectedSendBufferSize = 4 * 1024;
+                    var expectedReceiveBufferSize = 3 * 1024;
+                    if (PlatformDetails.RunningOnLinux)
+                    {
+                        // linux is doubling that value by design
+                        expectedSendBufferSize *= 2;
+                        expectedReceiveBufferSize *= 2;
+                    }
+
+                    Assert.Equal(expectedSendBufferSize, subscription._tcpClient.SendBufferSize);
+                    Assert.Equal(expectedReceiveBufferSize, subscription._tcpClient.ReceiveBufferSize);
                 }
             }
         }
@@ -207,8 +217,17 @@ namespace FastTests.Client.Subscriptions
                     Assert.True(ages.TryTake(out age, _reasonableWaitTime));
                     Assert.Equal(25, age);
 
-                    Assert.Equal(SubscriptionWorkerOptions.DefaultSendBufferSizeInBytes, subscription._tcpClient.SendBufferSize);
-                    Assert.Equal(SubscriptionWorkerOptions.DefaultReceiveBufferSizeInBytes, subscription._tcpClient.ReceiveBufferSize);
+                    var expectedSendBufferSize = SubscriptionWorkerOptions.DefaultSendBufferSizeInBytes;
+                    var expectedReceiveBufferSize = SubscriptionWorkerOptions.DefaultReceiveBufferSizeInBytes;
+                    if (PlatformDetails.RunningOnLinux)
+                    {
+                        // linux is doubling that value by design
+                        expectedSendBufferSize *= 2;
+                        expectedReceiveBufferSize *= 2;
+                    }
+
+                    Assert.Equal(expectedSendBufferSize, subscription._tcpClient.SendBufferSize);
+                    Assert.Equal(expectedReceiveBufferSize, subscription._tcpClient.ReceiveBufferSize);
                 }
             }
         }
