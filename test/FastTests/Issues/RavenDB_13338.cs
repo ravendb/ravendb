@@ -81,10 +81,10 @@ namespace FastTests.Issues
                     const string idField = "Id";
 
                     var bJsonExpandoObject = commands.Get(expandoObjectId);
-                    Assert.Equal(false, bJsonExpandoObject.Contains(idField));
+                    Assert.False(bJsonExpandoObject.ContainsKey(idField));
 
                     var bJsonJObject = commands.Get(jObjectId);
-                    Assert.Equal(false, bJsonJObject.Contains(idField));
+                    Assert.False(bJsonJObject.ContainsKey(idField));
                 }
             }
         }
