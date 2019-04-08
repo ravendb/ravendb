@@ -40,5 +40,53 @@ namespace FastTests.Issues
                 }
             }
         }
+
+        [Fact]
+        public void DynamicObjectIdShouldBeStrippedFromDocument()
+        {
+            const string expandoObjectId = "ExpandoObjects/1-A";
+            const string jObjectId = "JObjects/1-A";
+
+            using (var store = GetDocumentStore())
+            {
+                using (var session = store.OpenSession())
+                {
+                    dynamic o = new ExpandoObject();
+                    o.Name = "Egor";
+                    session.Store(o);
+
+                    var entity = JObject.Parse(@"{ User: 1 }");
+                    session.Store(entity);
+
+                    // we add Id property by default
+                    Assert.Equal(2, entity.Properties().Count());
+                    session.SaveChanges();
+                }
+
+                using (var session = store.OpenSession())
+                {
+                    var loadObject = session.Load<dynamic>(expandoObjectId);
+                    Assert.NotNull(loadObject);
+                    Assert.Equal("Egor", loadObject.Name.ToString());
+                    Assert.Equal(expandoObjectId, loadObject.Id.ToString());
+
+                    var loadJObject = session.Load<dynamic>(jObjectId);
+                    Assert.NotNull(loadJObject);
+                    Assert.Equal("1", loadJObject.User.ToString());
+                    Assert.Equal(jObjectId, loadJObject.Id.ToString());
+                }
+
+                using (var commands = store.Commands())
+                {
+                    const string idField = "Id";
+
+                    var bJsonExpandoObject = commands.Get(expandoObjectId);
+                    Assert.Equal(false, bJsonExpandoObject.Contains(idField));
+
+                    var bJsonJObject = commands.Get(jObjectId);
+                    Assert.Equal(false, bJsonJObject.Contains(idField));
+                }
+            }
+        }
     }
 }
