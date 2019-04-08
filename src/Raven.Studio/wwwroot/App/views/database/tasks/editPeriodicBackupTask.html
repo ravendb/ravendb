@@ -166,10 +166,10 @@
                             <div class="dropdown btn-block">
                                 <input type="text" class="form-control dropdown-toggle" data-toggle="dropdown"
                                        id="localFolderPath"
-                                       data-bind="textInput: folderPath, attr: { 'placeholder': $root.serverConfiguration().LocalRootPath ? 'Relative backup path' : 'Full directory backup path' }">
+                                       data-bind="textInput: folderPath, attr: { 'placeholder': $root.serverConfiguration().LocalRootPath ? 'Relative backup path' : 'Full directory backup path' }, hasFocus: folderPathHasFocus">
                                 <span class="caret dropdown-toggle" data-toggle="dropdown"></span>
                                 <ul class="dropdown-menu max-height" data-bind="foreach: $parent.folderPathOptions, autoComplete: '#localFolderPath'">
-                                    <li data-bind="click: $parent.folderPath.bind($parent, $data)">
+                                    <li data-bind="click: $parent.localBackupPathChanged">
                                         <a href="#" data-bind="text: $data"></a>
                                     </li>
                                 </ul>

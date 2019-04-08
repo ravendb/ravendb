@@ -119,8 +119,14 @@
                 </label>
             </div>
             <div class="col-md-8">
-                <div class="has-feedback">
-                    <input type="text" class="form-control" placeholder="Resource data directory (absolute path)" data-bind="textInput: dataDirectory" />
+                <div class="has-feedback dropdown" style="display: block;">
+                    <input id="legacyMigrationDataDirectory" type="text" class="form-control" placeholder="Resource data directory (absolute path)"
+                           data-bind="textInput: dataDirectory, hasFocus: dataDirectoryHasFocus" />
+                    <ul class="dropdown-menu max-height" data-bind="foreach: $parent.legacyMigrationDataDirectoryPathOptions, autoComplete: '#legacyMigrationDataDirectory'">
+                        <li data-bind="click: _.partial($root.databaseModel.legacyMigrationDataDirectoryHasChanged, $data)">
+                            <a href="#" data-bind="text: $data"></a>
+                        </li>
+                    </ul>
                     <span class="glyphicon glyphicon-ok text-success form-control-feedback"
                           data-bind="visible: dataDirectory() && dataDirectory.isValid() && !dataDirectory.isValidating()"></span>
                 </div>
@@ -141,8 +147,14 @@
                 <div class="col-md-4">
                     <label class="control-label">Journals directory</label>
                 </div>
-                <div class="col-md-8">
-                    <input type="text" class="form-control" placeholder="Resource journals location (optional)" data-bind="textInput: journalsPath" />
+                <div class="col-md-8 dropdown" style="display: block">
+                    <input type="text" id="legacySourceJournalsPath" class="form-control" placeholder="Resource journals location (optional)" 
+                           data-bind="textInput: journalsPath, hasFocus: journalsPathHasFocus" />
+                    <ul class="dropdown-menu max-height" data-bind="foreach: $parent.sourceJournalsPathOptions, autoComplete: '#legacySourceJournalsPath'">
+                        <li data-bind="click: _.partial($root.databaseModel.journalsPathHasChanged, $data)">
+                            <a href="#" data-bind="text: $data"></a>
+                        </li>
+                    </ul>
                 </div>
             </div>
 
@@ -240,15 +252,20 @@
                 </label>
             </div>
             <div class="col-md-8">
-                <div class="has-feedback">
-                    <input type="text" class="form-control" id="dataExporterFullPath" data-bind="textInput: dataExporterFullPath" placeholder="Raven.StorageExporter.exe location (absolute path)" />
+                <div class="has-feedback dropdown" style="display: block">
+                    <input type="text" class="form-control" id="dataExporterFullPath" data-bind="textInput: dataExporterFullPath, hasFocus: dataExporterFullPathHasFocus" placeholder="Raven.StorageExporter.exe location (absolute path)" />
                     <span class="glyphicon glyphicon-ok text-success form-control-feedback"
                           data-bind="visible: dataExporterFullPath() && dataExporterFullPath.isValid() && !dataExporterFullPath.isValidating()"></span>
-                    <ul class="dropdown-menu" role="menu"
-                        data-bind="autoComplete: '#dataExporterFullPath', foreach: $root.dataExporterAutocomplete.createCompleter()">
-                        <li role="presentation" data-bind="click: _.partial($root.dataExporterAutocomplete.complete, $data)">
+                    <ul class="dropdown-menu max-height" role="menu"
+                        data-bind="autoComplete: '#dataExporterFullPath', foreach: $root.allDataExporterAutoCompleteOptions">
+                        <li role="presentation" data-bind="click: $data.isRecent ? _.partial($root.dataExporterAutocomplete.complete, $data.path) : _.partial($root.databaseModel.dataExporterPathHasChanged, $data.path)">
                             <a role="menuitem" tabindex="-1" href="#">
-                                <span data-bind="text: $data"></span>
+                                <!-- ko if: isRecent -->
+                                <strong data-bind="text: path"></strong>
+                                <!-- /ko -->
+                                <!-- ko ifnot: isRecent -->
+                                <span data-bind="text: path"></span>
+                                <!-- /ko -->
                             </a>
                         </li>
                     </ul>
@@ -271,7 +288,7 @@
                        placeholder="Enter backup directory path" />
                 
                 <ul class="dropdown-menu max-height" data-bind="foreach: $parent.backupDirectoryPathOptions, autoComplete: '#backupFolderPath'">
-                    <li data-bind="click: $parent.backupDirectory.bind($parent, $data)">
+                    <li data-bind="click: _.partial($root.databaseModel.backupPathHasChanged, $data)">
                         <a href="#" data-bind="text: $data"></a>
                     </li>
                 </ul>
@@ -372,14 +389,14 @@
             <div class="col-md-4">
                 <label class="control-label">Path</label>
             </div>
-            <div class="col-md-8">
+            <div class="col-md-8 dropdown" style="display: block">
                 <input type="text" class="form-control" id="dataPath"
-                       data-bind="textInput: dataPath, attr: { placeholder: $root.databaseModel.name() || 'Enter database path (optional)' }"
+                       data-bind="textInput: dataPath, attr: { placeholder: $root.databaseModel.name() || 'Enter database path (optional)' }, hasFocus: dataPathHasFocus"
                        title="Enter location for the database files."/>
                 
                 <ul class="dropdown-menu max-height" role="menu"
                     data-bind="autoComplete: '#dataPath', foreach: $root.allAutoCompleteOptions">
-                    <li role="presentation" data-bind="click: $data.isRecent ? _.partial($root.recentPathsAutocomplete.complete, $data.path) : $parent.dataPath.bind($parent, $data.path)">
+                    <li role="presentation" data-bind="click: $data.isRecent ? _.partial($root.recentPathsAutocomplete.complete, $data.path) : _.partial($root.databaseModel.dataPathHasChanged, $data.path)">
                         <a role="menuitem" tabindex="-1" href="#">
                             <!-- ko if: isRecent -->
                             <strong data-bind="text: path"></strong>

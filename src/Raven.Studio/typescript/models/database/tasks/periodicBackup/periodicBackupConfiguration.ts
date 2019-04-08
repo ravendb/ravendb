@@ -10,6 +10,7 @@ import jsonUtil = require("common/jsonUtil");
 import backupSettings = require("backupSettings");
 import activeDatabaseTracker = require("common/shell/activeDatabaseTracker");
 import encryptionSettings = require("models/database/tasks/periodicBackup/encryptionSettings");
+import generalUtils = require("common/generalUtils");
 
 class periodicBackupConfiguration {
     
@@ -120,23 +121,18 @@ class periodicBackupConfiguration {
     }
 
     private updateBackupLocationInfo(path: string) {
-        this.spinners.backupLocationInfoLoading(true);
-
-        new getBackupLocationCommand(path, activeDatabaseTracker.default.database())
+        const task = new getBackupLocationCommand(path, activeDatabaseTracker.default.database())
             .execute()
             .done((result: Raven.Server.Web.Studio.DataDirectoryResult) => {
-                if (!this.spinners.backupLocationInfoLoading()) {
-                    return;
-                }
-
                 if (this.localSettings().folderPath() !== path) {
                     // the path has changed
                     return;
                 }
 
                 this.backupLocationInfo(result.List);
-            })
-            .always(() => this.spinners.backupLocationInfoLoading(false));
+            });
+        
+        generalUtils.delayedSpinner(this.spinners.backupLocationInfoLoading, task);
     }
 
     private updateFolderPathOptions(path: string) {

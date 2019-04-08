@@ -408,6 +408,21 @@ class genUtils {
 
     /***  Other Methods ***/
 
+    static delayedSpinner(spinner: KnockoutObservable<boolean>, promise: JQueryPromise<any>, delay = 100) {
+        const spinnerTimeout = setTimeout(() => {
+            spinner(true);
+        }, delay);
+        
+        promise.always(() => {
+            clearTimeout(spinnerTimeout);
+            
+            if (spinner()) {
+                spinner(false);
+            }
+        })
+        
+    }
+    
     static debounceAndFunnel<T>(func: (val: T, 
                                        params: any, 
                                        callback: (currentValue: T, errorMessageOrValidationResult: string | boolean) => void) => void) {
