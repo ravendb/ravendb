@@ -1301,9 +1301,9 @@ namespace Raven.Server.Documents.Replication
 
                                         database.NotificationCenter.Add(AlertRaised.Create(
                                             database.Name,
-                                            IncomingReplicationStr,
-                                            $"Detected missing attachments for document {item.Id} with the following hashes:" +
-                                            $" ({string.Join(',', GetAttachmentsHashesFromDocumentMetadata(document))}).",
+                                            "Incoming Replication",
+                                            $"Detected missing attachments for document '{item.Id}'. Existing attachments in metadata:" +
+                                            $" ({string.Join(',', GetAttachmentsNameAndHash(document).Select(x => $"name: {x.Name}, hash: {x.Hash}"))}).",
                                             AlertType.ReplicationMissingAttachments,
                                             NotificationSeverity.Warning));
                                     }
@@ -1442,42 +1442,54 @@ namespace Raven.Server.Documents.Replication
                 }
             }
 
-            public readonly string IncomingReplicationStr = "Incoming Replication";
-
             public void AssertAttachmentsFromReplication(DocumentsOperationContext context, string id, BlittableJsonReaderObject document)
             {
-                foreach (LazyStringValue hash in GetAttachmentsHashesFromDocumentMetadata(document))
+                foreach (var attachment in GetAttachmentsFromDocumentMetadata(document))
                 {
-                    if (_replicationInfo.DocumentDatabase.DocumentsStorage.AttachmentsStorage.AttachmentExists(context, hash) == false)
+                    if (attachment.TryGet(nameof(AttachmentName.Hash), out LazyStringValue hash) == false)
+                        continue;
+
+                    if (_replicationInfo.DocumentDatabase.DocumentsStorage.AttachmentsStorage.AttachmentExists(context, hash))
+                        continue;
+
+                    using (Slice.From(context.Allocator, hash, out var hashSlice))
                     {
-                        using (Slice.From(context.Allocator, hash, out var hashSlice))
+                        if (_replicationInfo.ReplicatedAttachmentStreams.TryGetValue(hashSlice, out _))
                         {
-                            if (_replicationInfo.ReplicatedAttachmentStreams.TryGetValue(hashSlice, out _))
-                            {
-                                // attachment exists but not in the correct order of items (RavenDB-13341)
-                                continue;
-                            }
-
-                            var msg = $"Document '{id}' has attachment '{hash?.ToString() ?? "unknown"}' " +
-                                      $"listed as one of its attachments but it doesn't exist in the attachment storage";
-
-                            throw new MissingAttachmentException(msg);
+                            // attachment exists but not in the correct order of items (RavenDB-13341)
+                            continue;
                         }
+
+                        attachment.TryGet(nameof(AttachmentName.Name), out LazyStringValue attachmentName);
+
+                        var msg = $"Document '{id}' has attachment " +
+                                  $"named: '{attachmentName?.ToString() ?? "unknown"}', hash: '{hash?.ToString() ?? "unknown"}' " +
+                                  $"listed as one of its attachments but it doesn't exist in the attachment storage";
+
+                        throw new MissingAttachmentException(msg);
                     }
                 }
             }
 
-            public IEnumerable<LazyStringValue> GetAttachmentsHashesFromDocumentMetadata(BlittableJsonReaderObject document)
+            private IEnumerable<(string Name, string Hash)> GetAttachmentsNameAndHash(BlittableJsonReaderObject document)
+            {
+                foreach (var attachment in GetAttachmentsFromDocumentMetadata(document))
+                {
+                    attachment.TryGet(nameof(AttachmentName.Name), out LazyStringValue name);
+                    attachment.TryGet(nameof(AttachmentName.Hash), out LazyStringValue hash);
+
+                    yield return (Name: name, Hash: hash);
+                }
+            }
+
+            private static IEnumerable<BlittableJsonReaderObject> GetAttachmentsFromDocumentMetadata(BlittableJsonReaderObject document)
             {
                 if (document.TryGet(Raven.Client.Constants.Documents.Metadata.Key, out BlittableJsonReaderObject metadata) &&
                     metadata.TryGet(Raven.Client.Constants.Documents.Metadata.Attachments, out BlittableJsonReaderArray attachments))
                 {
                     foreach (BlittableJsonReaderObject attachment in attachments)
                     {
-                        if (attachment.TryGet(nameof(AttachmentName.Hash), out LazyStringValue hash))
-                        {
-                            yield return hash;
-                        }
+                        yield return attachment;
                     }
                 }
             }
