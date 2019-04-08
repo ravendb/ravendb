@@ -3,6 +3,7 @@ import jsonUtil = require("common/jsonUtil");
 
 class localSettings extends backupSettings {
     folderPath = ko.observable<string>();
+    folderPathHasFocus = ko.observable<boolean>(false);
 
     constructor(dto: Raven.Client.Documents.Operations.Backups.LocalSettings) {
         super(dto, "Local");
@@ -10,6 +11,8 @@ class localSettings extends backupSettings {
         this.folderPath(dto.FolderPath);
 
         this.initValidation();
+        
+        _.bindAll(this, "localBackupPathChanged");
         
         this.dirtyFlag = new ko.DirtyFlag([
             this.enabled,
@@ -27,6 +30,13 @@ class localSettings extends backupSettings {
         this.validationGroup = ko.validatedObservable({
             folderPath: this.folderPath
         });
+    }
+
+    localBackupPathChanged(value: string) {
+        this.folderPath(value);
+
+        // try to continue autocomplete flow
+        this.folderPathHasFocus(true);
     }
 
     toDto(): Raven.Client.Documents.Operations.Backups.LocalSettings {

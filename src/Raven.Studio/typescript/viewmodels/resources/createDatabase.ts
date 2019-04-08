@@ -24,6 +24,7 @@ import lastUsedAutocomplete = require("common/storage/lastUsedAutocomplete");
 import viewModelBase = require("viewmodels/viewModelBase");
 import studioSettings = require("common/settings/studioSettings");
 import licenseModel = require("models/auth/licenseModel");
+import generalUtils = require("common/generalUtils");
 
 class createDatabase extends dialogViewModelBase {
     
@@ -62,9 +63,16 @@ class createDatabase extends dialogViewModelBase {
 
     recentPathsAutocomplete: lastUsedAutocomplete;
     dataExporterAutocomplete: lastUsedAutocomplete;
+    
     folderPathOptions = ko.observableArray<string>([]);
+    dataExporterDirectoryPathOptions = ko.observableArray<string>([]);
     backupDirectoryPathOptions = ko.observableArray<string>([]);
+    sourceJournalsPathOptions = ko.observableArray<string>([]);
+    
     allAutoCompleteOptions: KnockoutComputed<{ path: string, isRecent: boolean }[]>;
+    allDataExporterAutoCompleteOptions: KnockoutComputed<{ path: string, isRecent: boolean }[]>;
+
+    legacyMigrationDataDirectoryPathOptions = ko.observableArray<string>([]);
     
     getDatabaseByName(name: string): database {
         return databasesManager.default.getDatabaseByName(name);
@@ -126,6 +134,12 @@ class createDatabase extends dialogViewModelBase {
         this.updateDatabaseLocationInfo(this.databaseModel.name(), dataPath);
         this.updateFolderPathOptions(dataPath);
         this.updateBackupDirectoryPathOptions(dataPath);
+        
+        if (this.databaseModel.creationMode === "legacyMigration") {
+            this.updateLegacyMigrationDataDirectoryPathOptions(this.databaseModel.legacyMigration.dataDirectory());
+            this.updateLegacyDataExporterPath(this.databaseModel.legacyMigration.dataExporterFullPath());
+            this.updateSourceJournalsPathOptions(this.databaseModel.legacyMigration.journalsPath());
+        }
 
         return $.when<any>(getTopologyTask, getEncryptionKeyTask, getStudioSettingsTask)
             .done(() => {
@@ -288,6 +302,18 @@ class createDatabase extends dialogViewModelBase {
         this.databaseModel.restore.backupDirectory.throttle(300).subscribe(newPath => {
             this.updateBackupDirectoryPathOptions(newPath);
         });
+        
+        this.databaseModel.legacyMigration.dataDirectory.throttle(300).subscribe(newPath => {
+            this.updateLegacyMigrationDataDirectoryPathOptions(newPath);
+        });
+        
+        this.databaseModel.legacyMigration.dataExporterFullPath.throttle(300).subscribe(newPath => {
+           this.updateLegacyDataExporterPath(newPath); 
+        });
+        
+        this.databaseModel.legacyMigration.journalsPath.throttle(300).subscribe(newPath => {
+            this.updateSourceJournalsPathOptions(newPath);
+        });
 
         this.databaseLocationInfoToDisplay = ko.pureComputed(() => {
             const databaseLocationInfo = this.databaseLocationInfo();
@@ -344,18 +370,28 @@ class createDatabase extends dialogViewModelBase {
 
             return result;
         });
+
+        this.allDataExporterAutoCompleteOptions = ko.pureComputed(() => {
+            const result: { path: string, isRecent: boolean }[] = [];
+
+            const autoComplete = this.dataExporterAutocomplete.createCompleter();
+            autoComplete().forEach(p => {
+                result.push({ path: p, isRecent: true });
+            });
+
+            const pathOptions = this.dataExporterDirectoryPathOptions();
+            pathOptions.forEach(p => {
+                result.push({ path: p, isRecent: false });
+            });
+
+            return result;
+        });
     }
 
     updateDatabaseLocationInfo(name: string, path: string) {
-        this.spinners.databaseLocationInfoLoading(true);
-
-        new getDatabaseLocationCommand(name, path)
+        const task = new getDatabaseLocationCommand(name, path)
             .execute()
             .done((result: Raven.Server.Web.Studio.DataDirectoryResult) => {
-                if (!this.spinners.databaseLocationInfoLoading()) {
-                    return;
-                }
-
                 if (this.databaseModel.name() !== name ||
                     this.databaseModel.path.dataPath() !== path) {
                     // the path and name were changed
@@ -363,34 +399,45 @@ class createDatabase extends dialogViewModelBase {
                 }
 
                 this.databaseLocationInfo(result.List);
-            })
-            .always(() => this.spinners.databaseLocationInfoLoading(false));
+            });
+        
+        generalUtils.delayedSpinner(this.spinners.databaseLocationInfoLoading, task);
     }
-
-    updateFolderPathOptions(path: string) {
-        new getFolderPathOptionsCommand(path)
+    
+    private updateFolderPath(path: string, currentValueProvider: () => string, backupFolder = false): JQueryPromise<Raven.Server.Web.Studio.FolderPathOptions> {
+        return new getFolderPathOptionsCommand(path)
             .execute()
             .done((result: Raven.Server.Web.Studio.FolderPathOptions) => {
-                if (this.databaseModel.path.dataPath() !== path) {
+                if (currentValueProvider() !== path) {
                     // the path has changed
                     return;
                 }
-
-                this.folderPathOptions(result.List);
             });
+    }
+    
+    updateFolderPathOptions(path: string) {
+        this.updateFolderPath(path, this.databaseModel.path.dataPath)
+            .done(result => this.folderPathOptions(result.List));
     }
 
     updateBackupDirectoryPathOptions(path: string) {
-        new getFolderPathOptionsCommand(path, true)
-            .execute()
-            .done((result: Raven.Server.Web.Studio.FolderPathOptions) => {
-                if (this.databaseModel.restore.backupDirectory() !== path) {
-                    // the path has changed
-                    return;
-                }
+        this.updateFolderPath(path, this.databaseModel.restore.backupDirectory, true)
+            .done(result => this.backupDirectoryPathOptions(result.List));
+    }
 
-                this.backupDirectoryPathOptions(result.List);
-            });
+    updateLegacyMigrationDataDirectoryPathOptions(path: string) {
+        this.updateFolderPath(path, this.databaseModel.legacyMigration.dataDirectory)
+            .done(result => this.legacyMigrationDataDirectoryPathOptions(result.List));
+    }
+    
+    updateLegacyDataExporterPath(path: string) {
+        this.updateFolderPath(path, this.databaseModel.legacyMigration.dataExporterFullPath)
+            .done(result => this.dataExporterDirectoryPathOptions(result.List));
+    }
+
+    updateSourceJournalsPathOptions(path: string) {
+        this.updateFolderPath(path, this.databaseModel.legacyMigration.journalsPath)
+            .done(result => this.sourceJournalsPathOptions(result.List));
     }
 
     getAvailableSections() {

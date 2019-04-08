@@ -102,11 +102,14 @@ class databaseCreationModel {
         isCompressed: ko.observable<boolean>(false),
 
         dataDirectory: ko.observable<string>(),
+        dataDirectoryHasFocus: ko.observable<boolean>(false),
         dataExporterFullPath: ko.observable<string>(),
+        dataExporterFullPathHasFocus: ko.observable<boolean>(false),
         
         batchSize: ko.observable<number>(),
         sourceType: ko.observable<legacySourceType>(),
         journalsPath: ko.observable<string>(),
+        journalsPathHasFocus: ko.observable<boolean>(false),
         encryptionKey: ko.observable<string>(),
         encryptionAlgorithm: ko.observable<string>(),
         encryptionKeyBitsSize: ko.observable<number>()
@@ -136,6 +139,7 @@ class databaseCreationModel {
 
     path = {
         dataPath: ko.observable<string>(),
+        dataPathHasFocus: ko.observable<boolean>(false)
     };
 
     pathValidationGroup = ko.validatedObservable({
@@ -262,7 +266,43 @@ class databaseCreationModel {
             }
         });
         
-        _.bindAll(this, "useRestorePoint");
+        _.bindAll(this, "useRestorePoint", "dataPathHasChanged", "backupPathHasChanged", 
+            "legacyMigrationDataDirectoryHasChanged", "dataExporterPathHasChanged", "journalsPathHasChanged");
+    }
+    
+    dataPathHasChanged(value: string) {
+        this.path.dataPath(value);
+        
+        // try to continue autocomplete flow
+        this.path.dataPathHasFocus(true);
+    }
+
+    dataExporterPathHasChanged(value: string) {
+        this.legacyMigration.dataExporterFullPath(value);
+        
+        //try to continue autocomplete flow
+        this.legacyMigration.dataExporterFullPathHasFocus(true);
+    }
+    
+    backupPathHasChanged(value: string) {
+        this.restore.backupDirectory(value);
+        
+        // try to continue autocomplete flow
+        this.restore.isFocusOnBackupDirectory(true);
+    }
+
+    legacyMigrationDataDirectoryHasChanged(value: string) {
+        this.legacyMigration.dataDirectory(value);
+        
+        //try to continue autocomplete flow
+        this.legacyMigration.dataDirectoryHasFocus(true);
+    }
+    
+    journalsPathHasChanged(value: string) {
+        this.legacyMigration.journalsPath(value);
+        
+        //try to continue autocomplete flow
+        this.legacyMigration.journalsPathHasFocus(true);
     }
 
     private fetchRestorePoints(backupDirectory: string, skipReportingError: boolean) {
