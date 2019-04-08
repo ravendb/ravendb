@@ -37,7 +37,11 @@ namespace InterversionTests
                     store40.Maintenance.Send(new CreateSampleDataOperation());
 
                     var options = new DatabaseSmugglerExportOptions();
+                    options.OperateOnTypes &= ~DatabaseItemType.Counters;
                     options.OperateOnTypes &= ~DatabaseItemType.CounterGroups;
+                    options.OperateOnTypes &= ~DatabaseItemType.Attachments;
+                    options.OperateOnTypes &= ~DatabaseItemType.Subscriptions;
+                    options.OperateOnTypes &= ~DatabaseItemType.CompareExchangeTombstones;
 
                     var operation = await store40.Smuggler.ExportAsync(options, file);
                     await operation.WaitForCompletionAsync(TimeSpan.FromMinutes(1));
@@ -116,7 +120,11 @@ namespace InterversionTests
                 {
 
                     var options = new DatabaseSmugglerImportOptions();
+                    options.OperateOnTypes &= ~DatabaseItemType.Counters;
                     options.OperateOnTypes &= ~DatabaseItemType.CounterGroups;
+                    options.OperateOnTypes &= ~DatabaseItemType.Attachments;
+                    options.OperateOnTypes &= ~DatabaseItemType.Subscriptions;
+                    options.OperateOnTypes &= ~DatabaseItemType.CompareExchangeTombstones;
                     options.SkipRevisionCreation = true;
 
                     var operation = await store40.Smuggler.ImportAsync(options, file);
@@ -245,7 +253,9 @@ namespace InterversionTests
 
                     var options = new DatabaseSmugglerExportOptions();
 #pragma warning disable 618
-                    options.OperateOnTypes &= ~DatabaseItemType.Counters;
+                    options.OperateOnTypes &= ~DatabaseItemType.CounterGroups;
+                    options.OperateOnTypes &= ~DatabaseItemType.Subscriptions;
+                    options.OperateOnTypes &= ~DatabaseItemType.CompareExchangeTombstones;
 #pragma warning restore 618
 
                     var operation = await store41.Smuggler.ExportAsync(options, file);
@@ -416,6 +426,9 @@ namespace InterversionTests
                 {
 
                     var options = new DatabaseSmugglerImportOptions();
+                    options.OperateOnTypes &= ~DatabaseItemType.CounterGroups;
+                    options.OperateOnTypes &= ~DatabaseItemType.Subscriptions;
+                    options.OperateOnTypes &= ~DatabaseItemType.CompareExchangeTombstones;
                     options.SkipRevisionCreation = true;
 
                     var operation = await store41.Smuggler.ImportAsync(options, file);
