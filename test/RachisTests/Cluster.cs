@@ -14,7 +14,6 @@ using Xunit;
 
 namespace RachisTests
 {
-
     public class Cluster : ClusterTestBase
     {
         private static async Task<int> GetMembersCount(IDocumentStore store, string databaseName)
