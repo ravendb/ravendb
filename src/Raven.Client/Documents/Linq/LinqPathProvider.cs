@@ -124,7 +124,7 @@ namespace Raven.Client.Documents.Linq
                 MaybeProperty = memberExpression.Member as PropertyInfo
             };
 
-            result.Path = HandlePropertyRenames(memberExpression.Member, result.Path);
+            result.Path = HandleMemberExpressionPropertyRenames(memberExpression, result.Path);
 
             return result;
         }
@@ -157,6 +157,20 @@ namespace Raven.Client.Documents.Linq
                 Path = "counter",
                 Args = args
             };
+        }
+
+        private static string HandleMemberExpressionPropertyRenames(MemberExpression memberExpression, string name)
+        {
+            var member = memberExpression.Member;
+
+            if (memberExpression.Expression is MemberExpression innerMemberExpression)
+            {
+                var innerName = name.Substring(0, name.Length - member.Name.Length - 1);
+                innerName = HandleMemberExpressionPropertyRenames(innerMemberExpression, innerName);
+                name = $"{innerName}.{member.Name}";
+            }
+
+            return HandlePropertyRenames(member, name);
         }
 
         public static string HandlePropertyRenames(MemberInfo member, string name)
@@ -244,17 +258,13 @@ namespace Raven.Client.Documents.Linq
         /// </summary>
         public static MemberExpression GetMemberExpression(Expression expression)
         {
-            var unaryExpression = expression as UnaryExpression;
-            if (unaryExpression != null)
+            if (expression is UnaryExpression unaryExpression)
                 return GetMemberExpression(unaryExpression.Operand);
 
-            var lambdaExpression = expression as LambdaExpression;
-            if (lambdaExpression != null)
+            if (expression is LambdaExpression lambdaExpression)
                 return GetMemberExpression(lambdaExpression.Body);
 
-            var memberExpression = expression as MemberExpression;
-
-            if (memberExpression == null)
+            if (!(expression is MemberExpression memberExpression))
             {
                 throw new InvalidOperationException("Could not understand how to translate '" + expression + "' to a RavenDB query." +
                                                     Environment.NewLine +
