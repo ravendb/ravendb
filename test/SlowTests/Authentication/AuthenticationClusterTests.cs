@@ -151,28 +151,28 @@ namespace SlowTests.Authentication
                 var renewArgsNode3 = CommandLineArgumentEscaper.EscapeAndConcatenate(new List<string> { loadAndRenewScriptNode3Path, cert2Path });
                 var certChangedArgsNode3 = CommandLineArgumentEscaper.EscapeAndConcatenate(new List<string> { certChangedScriptNode3Path, outputFile });
 
-                customSettings1[RavenConfiguration.GetKey(x => x.Security.CertificateExecLoad)] = "bash";
-                customSettings1[RavenConfiguration.GetKey(x => x.Security.CertificateExecLoadArguments)] = $"{loadArgsNode1}";
-                customSettings1[RavenConfiguration.GetKey(x => x.Security.CertificateExecRenew)] = "bash";
-                customSettings1[RavenConfiguration.GetKey(x => x.Security.CertificateExecRenewArguments)] = $"{renewArgsNode1}";
-                customSettings1[RavenConfiguration.GetKey(x => x.Security.CertificateExecOnCertificateChange)] = "bash";
-                customSettings1[RavenConfiguration.GetKey(x => x.Security.CertificateExecOnCertificateChangeArguments)] = $"{certChangedArgsNode1}";
+                customSettings1[RavenConfiguration.GetKey(x => x.Security.CertificateLoadExec)] = "bash";
+                customSettings1[RavenConfiguration.GetKey(x => x.Security.CertificateLoadExecArguments)] = $"{loadArgsNode1}";
+                customSettings1[RavenConfiguration.GetKey(x => x.Security.CertificateRenewExec)] = "bash";
+                customSettings1[RavenConfiguration.GetKey(x => x.Security.CertificateRenewExecArguments)] = $"{renewArgsNode1}";
+                customSettings1[RavenConfiguration.GetKey(x => x.Security.CertificateChangeExec)] = "bash";
+                customSettings1[RavenConfiguration.GetKey(x => x.Security.CertificateChangeExecArguments)] = $"{certChangedArgsNode1}";
                 customSettings1[RavenConfiguration.GetKey(x => x.Core.ServerUrls)] = "https://" + Environment.MachineName + ":0";
 
-                customSettings2[RavenConfiguration.GetKey(x => x.Security.CertificateExecLoad)] = "bash";
-                customSettings2[RavenConfiguration.GetKey(x => x.Security.CertificateExecLoadArguments)] = $"{loadArgsNode2}";
-                customSettings2[RavenConfiguration.GetKey(x => x.Security.CertificateExecRenew)] = "bash";
-                customSettings2[RavenConfiguration.GetKey(x => x.Security.CertificateExecRenewArguments)] = $"{renewArgsNode2}";
-                customSettings2[RavenConfiguration.GetKey(x => x.Security.CertificateExecOnCertificateChange)] = "bash";
-                customSettings2[RavenConfiguration.GetKey(x => x.Security.CertificateExecOnCertificateChangeArguments)] = $"{certChangedArgsNode2}";
+                customSettings2[RavenConfiguration.GetKey(x => x.Security.CertificateLoadExec)] = "bash";
+                customSettings2[RavenConfiguration.GetKey(x => x.Security.CertificateLoadExecArguments)] = $"{loadArgsNode2}";
+                customSettings2[RavenConfiguration.GetKey(x => x.Security.CertificateRenewExec)] = "bash";
+                customSettings2[RavenConfiguration.GetKey(x => x.Security.CertificateRenewExecArguments)] = $"{renewArgsNode2}";
+                customSettings2[RavenConfiguration.GetKey(x => x.Security.CertificateChangeExec)] = "bash";
+                customSettings2[RavenConfiguration.GetKey(x => x.Security.CertificateChangeExecArguments)] = $"{certChangedArgsNode2}";
                 customSettings2[RavenConfiguration.GetKey(x => x.Core.ServerUrls)] = "https://" + Environment.MachineName + ":0";
 
-                customSettings3[RavenConfiguration.GetKey(x => x.Security.CertificateExecLoad)] = "bash";
-                customSettings3[RavenConfiguration.GetKey(x => x.Security.CertificateExecLoadArguments)] = $"{loadArgsNode3}";
-                customSettings3[RavenConfiguration.GetKey(x => x.Security.CertificateExecRenew)] = "bash";
-                customSettings3[RavenConfiguration.GetKey(x => x.Security.CertificateExecRenewArguments)] = $"{renewArgsNode3}";
-                customSettings3[RavenConfiguration.GetKey(x => x.Security.CertificateExecOnCertificateChange)] = "bash";
-                customSettings3[RavenConfiguration.GetKey(x => x.Security.CertificateExecOnCertificateChangeArguments)] = $"{certChangedArgsNode3}";
+                customSettings3[RavenConfiguration.GetKey(x => x.Security.CertificateLoadExec)] = "bash";
+                customSettings3[RavenConfiguration.GetKey(x => x.Security.CertificateLoadExecArguments)] = $"{loadArgsNode3}";
+                customSettings3[RavenConfiguration.GetKey(x => x.Security.CertificateRenewExec)] = "bash";
+                customSettings3[RavenConfiguration.GetKey(x => x.Security.CertificateRenewExecArguments)] = $"{renewArgsNode3}";
+                customSettings3[RavenConfiguration.GetKey(x => x.Security.CertificateChangeExec)] = "bash";
+                customSettings3[RavenConfiguration.GetKey(x => x.Security.CertificateChangeExecArguments)] = $"{certChangedArgsNode3}";
                 customSettings3[RavenConfiguration.GetKey(x => x.Core.ServerUrls)] = "https://" + Environment.MachineName + ":0";
 
                 loadAndRenewScript = "#!/bin/bash\ncat -u \"$1\"";
@@ -211,28 +211,28 @@ namespace SlowTests.Authentication
                 var renewArgsNode3 = CommandLineArgumentEscaper.EscapeAndConcatenate(new List<string> { "-NoProfile", loadAndRenewScriptNode3Path, cert2Path });
                 var certChangedArgsNode3 = CommandLineArgumentEscaper.EscapeAndConcatenate(new List<string> { "-NoProfile", certChangedScriptNode3Path, outputFile });
 
-                customSettings1[RavenConfiguration.GetKey(x => x.Security.CertificateExecLoad)] = "powershell";
-                customSettings1[RavenConfiguration.GetKey(x => x.Security.CertificateExecLoadArguments)] = $"{loadArgsNode1}";
-                customSettings1[RavenConfiguration.GetKey(x => x.Security.CertificateExecRenew)] = "powershell";
-                customSettings1[RavenConfiguration.GetKey(x => x.Security.CertificateExecRenewArguments)] = $"{renewArgsNode1}";
-                customSettings1[RavenConfiguration.GetKey(x => x.Security.CertificateExecOnCertificateChange)] = "powershell";
-                customSettings1[RavenConfiguration.GetKey(x => x.Security.CertificateExecOnCertificateChangeArguments)] = $"{certChangedArgsNode1}";
+                customSettings1[RavenConfiguration.GetKey(x => x.Security.CertificateLoadExec)] = "powershell";
+                customSettings1[RavenConfiguration.GetKey(x => x.Security.CertificateLoadExecArguments)] = $"{loadArgsNode1}";
+                customSettings1[RavenConfiguration.GetKey(x => x.Security.CertificateRenewExec)] = "powershell";
+                customSettings1[RavenConfiguration.GetKey(x => x.Security.CertificateRenewExecArguments)] = $"{renewArgsNode1}";
+                customSettings1[RavenConfiguration.GetKey(x => x.Security.CertificateChangeExec)] = "powershell";
+                customSettings1[RavenConfiguration.GetKey(x => x.Security.CertificateChangeExecArguments)] = $"{certChangedArgsNode1}";
                 customSettings1[RavenConfiguration.GetKey(x => x.Core.ServerUrls)] = "https://" + Environment.MachineName + ":0";
 
-                customSettings2[RavenConfiguration.GetKey(x => x.Security.CertificateExecLoad)] = "powershell";
-                customSettings2[RavenConfiguration.GetKey(x => x.Security.CertificateExecLoadArguments)] = $"{loadArgsNode2}";
-                customSettings2[RavenConfiguration.GetKey(x => x.Security.CertificateExecRenew)] = "powershell";
-                customSettings2[RavenConfiguration.GetKey(x => x.Security.CertificateExecRenewArguments)] = $"{renewArgsNode2}";
-                customSettings2[RavenConfiguration.GetKey(x => x.Security.CertificateExecOnCertificateChange)] = "powershell";
-                customSettings2[RavenConfiguration.GetKey(x => x.Security.CertificateExecOnCertificateChangeArguments)] = $"{certChangedArgsNode2}";
+                customSettings2[RavenConfiguration.GetKey(x => x.Security.CertificateLoadExec)] = "powershell";
+                customSettings2[RavenConfiguration.GetKey(x => x.Security.CertificateLoadExecArguments)] = $"{loadArgsNode2}";
+                customSettings2[RavenConfiguration.GetKey(x => x.Security.CertificateRenewExec)] = "powershell";
+                customSettings2[RavenConfiguration.GetKey(x => x.Security.CertificateRenewExecArguments)] = $"{renewArgsNode2}";
+                customSettings2[RavenConfiguration.GetKey(x => x.Security.CertificateChangeExec)] = "powershell";
+                customSettings2[RavenConfiguration.GetKey(x => x.Security.CertificateChangeExecArguments)] = $"{certChangedArgsNode2}";
                 customSettings2[RavenConfiguration.GetKey(x => x.Core.ServerUrls)] = "https://" + Environment.MachineName + ":0";
 
-                customSettings3[RavenConfiguration.GetKey(x => x.Security.CertificateExecLoad)] = "powershell";
-                customSettings3[RavenConfiguration.GetKey(x => x.Security.CertificateExecLoadArguments)] = $"{loadArgsNode3}";
-                customSettings3[RavenConfiguration.GetKey(x => x.Security.CertificateExecRenew)] = "powershell";
-                customSettings3[RavenConfiguration.GetKey(x => x.Security.CertificateExecRenewArguments)] = $"{renewArgsNode3}";
-                customSettings3[RavenConfiguration.GetKey(x => x.Security.CertificateExecOnCertificateChange)] = "powershell";
-                customSettings3[RavenConfiguration.GetKey(x => x.Security.CertificateExecOnCertificateChangeArguments)] = $"{certChangedArgsNode3}";
+                customSettings3[RavenConfiguration.GetKey(x => x.Security.CertificateLoadExec)] = "powershell";
+                customSettings3[RavenConfiguration.GetKey(x => x.Security.CertificateLoadExecArguments)] = $"{loadArgsNode3}";
+                customSettings3[RavenConfiguration.GetKey(x => x.Security.CertificateRenewExec)] = "powershell";
+                customSettings3[RavenConfiguration.GetKey(x => x.Security.CertificateRenewExecArguments)] = $"{renewArgsNode3}";
+                customSettings3[RavenConfiguration.GetKey(x => x.Security.CertificateChangeExec)] = "powershell";
+                customSettings3[RavenConfiguration.GetKey(x => x.Security.CertificateChangeExecArguments)] = $"{certChangedArgsNode3}";
                 customSettings3[RavenConfiguration.GetKey(x => x.Core.ServerUrls)] = "https://" + Environment.MachineName + ":0";
 
 

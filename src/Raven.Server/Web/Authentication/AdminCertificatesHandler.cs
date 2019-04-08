@@ -89,7 +89,7 @@ namespace Raven.Server.Web.Authentication
                 var keys = new[]
                 {
                     RavenConfiguration.GetKey(x => x.Security.CertificatePath),
-                    RavenConfiguration.GetKey(x => x.Security.CertificateExecLoad)
+                    RavenConfiguration.GetKey(x => x.Security.CertificateLoadExec)
                 };
 
                 throw new InvalidOperationException($"Cannot generate the client certificate '{certificate.Name}' because the server certificate is not loaded. " +

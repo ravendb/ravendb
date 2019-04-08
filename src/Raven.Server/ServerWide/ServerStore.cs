@@ -1114,12 +1114,12 @@ namespace Raven.Server.ServerWide
                             throw new IOException($"Cannot write certificate to {certPath} , RavenDB needs write permissions for this file.", e);
                         }
                     }
-                    else if (string.IsNullOrEmpty(Configuration.Security.CertificateExecOnCertificateChange) == false)
+                    else if (string.IsNullOrEmpty(Configuration.Security.CertificateChangeExec) == false)
                     {
                         try
                         {
-                            Secrets.NotifyExecutableOfCertificateChange(Configuration.Security.CertificateExecOnCertificateChange,
-                                Configuration.Security.CertificateExecOnCertificateChangeArguments,
+                            Secrets.NotifyExecutableOfCertificateChange(Configuration.Security.CertificateChangeExec,
+                                Configuration.Security.CertificateChangeExecArguments,
                                 certBase64,
                                 this);
                         }
