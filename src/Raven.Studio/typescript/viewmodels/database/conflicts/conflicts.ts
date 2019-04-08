@@ -20,6 +20,7 @@ import messagePublisher = require("common/messagePublisher");
 import document = require("models/database/documents/document");
 import saveDocumentCommand = require("commands/database/documents/saveDocumentCommand");
 import changeVectorUtils = require("common/changeVectorUtils");
+import generalUtils = require("common/generalUtils");
 
 class conflictItem {
     
@@ -30,6 +31,7 @@ class conflictItem {
     formattedValue = ko.observable<string>();
     deletedMarker = ko.observable<boolean>();
     changeVector = ko.observable<changeVectorItem[]>();
+    computedDocumentSize: KnockoutComputed<string>;
 
     constructor(dto: Raven.Client.Documents.Commands.GetConflictsResult.Conflict, useLongChangeVectorFormat: boolean) {
         if (dto.Doc) {
@@ -43,13 +45,22 @@ class conflictItem {
         }
 
         this.lastModified(moment.utc(dto.LastModified).local().format(conflictItem.dateFormat));
+
+        this.computedDocumentSize = ko.pureComputed(() => {
+            try {
+                const textSize: number = generalUtils.getSizeInBytesAsUTF8(this.originalValue());
+                return generalUtils.formatBytesToSize(textSize);
+            } catch (e) {
+                return "cannot compute";
+            }
+        });
     }
 }
 
 class conflicts extends viewModelBase {
 
     hasDetailsLoaded = ko.observable<boolean>(false);
-    changeVectorsVisible = ko.observable<boolean>(false);
+    detailsVisible = ko.observable<boolean>(false);
 
     private isSaving = ko.observable<boolean>(false);
 
