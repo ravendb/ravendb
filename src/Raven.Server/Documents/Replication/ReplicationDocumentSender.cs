@@ -197,7 +197,7 @@ namespace Raven.Server.Documents.Replication
                     long prevLastEtag = _lastEtag;
 
                     using (_stats.Storage.Start())
-                    {                        
+                    {
                         foreach (var item in GetReplicationItems(documentsContext, _lastEtag, _stats))
                         {
                             if (lastTransactionMarker != item.TransactionMarker)
@@ -269,17 +269,16 @@ namespace Raven.Server.Documents.Replication
 
                             _lastEtag = item.Etag;
 
+                            if (AddReplicationItemToBatch(item, _stats.Storage, skippedReplicationItemsInfo) == false)
+                                continue;
+
                             if (item.Data != null)
                                 size += item.Data.Size;
                             else if (item.Type == ReplicationBatchItem.ReplicationItemType.Attachment)
                                 size += item.Stream.Length;
 
-                            if (AddReplicationItemToBatch(item, _stats.Storage, skippedReplicationItemsInfo) == false)
-                                continue;
-
                             numberOfItemsSent++;
                         }
-
                     }
                     
                     if (_log.IsInfoEnabled)
@@ -491,7 +490,7 @@ namespace Raven.Server.Documents.Replication
             }
 
             // destination already has it
-            if ( (MissingAttachmentsInLastBatch == false || item.Type != ReplicationBatchItem.ReplicationItemType.Attachment) && 
+            if ((MissingAttachmentsInLastBatch == false || item.Type != ReplicationBatchItem.ReplicationItemType.Attachment) && 
                 ChangeVectorUtils.GetConflictStatus(item.ChangeVector, _parent.LastAcceptedChangeVector) == ConflictStatus.AlreadyMerged)
             {
                 stats.RecordChangeVectorSkip();
