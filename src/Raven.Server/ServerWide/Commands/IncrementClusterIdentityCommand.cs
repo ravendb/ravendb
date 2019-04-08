@@ -52,15 +52,17 @@ namespace Raven.Server.ServerWide.Commands
             using (Slice.External(context.Allocator, keyTuple.Buffer.Ptr, keyTuple.Buffer.Length, out var keySlice))
             using (Slice.External(context.Allocator, indexTuple.Buffer.Ptr, indexTuple.Buffer.Length, out var prefixIndexSlice))
             {
-                if(identitiesItems.SeekOnePrimaryKeyPrefix(keySlice, out var entry))
+                long value;
+                if (identitiesItems.SeekOnePrimaryKeyPrefix(keySlice, out var entry))
                 {
-                    var value = GetValue(entry);
+                    value = GetValue(entry);
                     value++;
-                    UpdateTableRow(index, identitiesItems, value, keySlice, prefixIndexSlice);
-                    result = value;
                 }
                 else
-                    result = null;
+                    value = 1;
+
+                UpdateTableRow(index, identitiesItems, value, keySlice, prefixIndexSlice);
+                result = value;
             }
         }
 
