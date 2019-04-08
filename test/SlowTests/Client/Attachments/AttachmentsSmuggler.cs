@@ -4,7 +4,6 @@ using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 using FastTests;
-using FastTests.Server.Documents.Revisions;
 using FastTests.Utils;
 using Raven.Client;
 using Raven.Client.Documents.Operations;
@@ -12,6 +11,7 @@ using Raven.Client.Documents.Operations.Attachments;
 using Raven.Client.Documents.Operations.Backups;
 using Raven.Client.Documents.Smuggler;
 using Raven.Server.Documents;
+using Raven.Server.Utils;
 using Raven.Tests.Core.Utils.Entities;
 using Xunit;
 
@@ -330,6 +330,8 @@ namespace SlowTests.Client.Attachments
             {
                 var dbId2 = new Guid("99999999-48c4-421e-9466-999999999999");
                 var dbId = new Guid("00000000-48c4-421e-9466-000000000000");
+                const string documentId = "users/1";
+                const string attachmentName = "empty-file";
 
                 using (var store1 = GetDocumentStore(new Options
                 {
@@ -346,15 +348,16 @@ namespace SlowTests.Client.Attachments
 
                     using (var session = store1.OpenSession())
                     {
-                        session.Store(new User { Name = "Fitzchak" }, "users/1");
+                        session.Store(new User { Name = "Fitzchak" }, documentId);
                         session.SaveChanges();
                     }
+
                     using (var emptyStream = new MemoryStream(new byte[0]))
                     {
-                        var result = store1.Operations.Send(new PutAttachmentOperation("users/1", "empty-file", emptyStream, "image/png"));
+                        var result = store1.Operations.Send(new PutAttachmentOperation(documentId, attachmentName, emptyStream, "image/png"));
                         Assert.Equal("A:3", result.ChangeVector.Substring(0, 3));
-                        Assert.Equal("empty-file", result.Name);
-                        Assert.Equal("users/1", result.DocumentId);
+                        Assert.Equal(attachmentName, result.Name);
+                        Assert.Equal(documentId, result.DocumentId);
                         Assert.Equal("image/png", result.ContentType);
                         Assert.Equal("DldRwCblQ7Loqy6wYJnaodHl30d3j3eH+qtFzfEv46g=", result.Hash);
                         Assert.Equal(0, result.Size);
@@ -400,15 +403,23 @@ namespace SlowTests.Client.Attachments
                     {
                         var readBuffer = new byte[1024 * 1024];
                         using (var attachmentStream = new MemoryStream(readBuffer))
-                        using (var attachment = session.Advanced.Attachments.Get("users/1", "empty-file"))
+                        using (var attachment = session.Advanced.Attachments.Get(documentId, attachmentName))
                         {
                             attachment.Stream.CopyTo(attachmentStream);
-                            Assert.Contains("A:2", attachment.Details.ChangeVector);
-                            Assert.Equal("empty-file", attachment.Details.Name);
+                            Assert.Equal(new byte[0], readBuffer.Take((int)attachmentStream.Position));
+
+                            var attachmentCv = attachment.Details.ChangeVector;
+                            Assert.Contains("A:1", attachmentCv);
+                            Assert.Equal(attachmentName, attachment.Details.Name);
                             Assert.Equal(0, attachment.Details.Size);
                             Assert.Equal("DldRwCblQ7Loqy6wYJnaodHl30d3j3eH+qtFzfEv46g=", attachment.Details.Hash);
                             Assert.Equal(0, attachmentStream.Position);
-                            Assert.Equal(new byte[0], readBuffer.Take((int)attachmentStream.Position));
+
+                            var user = session.Load<User>(documentId);
+                            var documentCv = session.Advanced.GetChangeVectorFor(user);
+                            var conflictStatus = ChangeVectorUtils.GetConflictStatus(documentCv, attachmentCv);
+                            // document CV is larger than attachment CV
+                            Assert.Equal(ConflictStatus.Update, conflictStatus);
                         }
                     }
                 }
