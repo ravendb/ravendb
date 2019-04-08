@@ -107,7 +107,11 @@
         <div class="dashboard-item dashboard-traffic" data-bind="with: trafficSection">
             <div class="panel panel-default">
                 <div class="panel-heading">
-                    <h3 class="panel-title"><i class="icon-traffic js-animate"></i> <span>TRAFFIC</span></h3>
+                    <h3 class="panel-title">
+                        <a data-bind="attr: { href: trafficViewUrl }">
+                            <i class="icon-traffic js-animate"></i> <span>TRAFFIC</span>
+                        </a>
+                    </h3>
                 </div>
                 <div class="panel-body flex-vertical">
                     <div class="infogrid">
@@ -150,7 +154,11 @@
         <div class="dashboard-item dashboard-databases" data-bind="with: databasesSection">
             <div class="panel panel-default ">
                 <div class="panel-heading">
-                    <h3 class="panel-title"><i class="icon-database js-animate"></i> <span>DATABASES</span></h3>
+                    <h3 class="panel-title">
+                        <a data-bind="attr: { href: databasesViewUrl }">
+                            <i class="icon-database js-animate"></i> <span>DATABASES</span>
+                        </a>
+                    </h3>
                 </div>
                 <div class="panel-body flex-vertical">
 

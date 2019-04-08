@@ -253,6 +253,8 @@ class databasesSection {
     private table = [] as databaseItem[];
     private gridController = ko.observable<virtualGridController<databaseItem>>();
     
+    databasesViewUrl = appUrl.forDatabases();
+    
     totalOfflineDatabases = ko.observable<number>(0);
     totalOnlineDatabases = ko.observable<number>(0);
     totalDisabledDatabases = ko.observable<number>(0);
@@ -372,6 +374,8 @@ class trafficSection {
     
     private table = [] as trafficItem[];
     private trafficChart: dashboardChart;
+    
+    trafficViewUrl = appUrl.forTrafficWatch();
 
     private gridController = ko.observable<virtualGridController<trafficItem>>();
     
