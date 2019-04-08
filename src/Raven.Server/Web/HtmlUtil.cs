@@ -45,7 +45,7 @@ namespace Raven.Server.Web
                         {"UNSECURED_ACCESS_ALLOWED_KEY", RavenConfiguration.GetKey(x => x.Security.UnsecuredAccessAllowed)},
                         {"SERVER_URL_KEY", RavenConfiguration.GetKey(x => x.Core.ServerUrls)},
                         {"UNSECURED_ACCESS_ALLOWED_FLAGS", unsecuredAccessFlagsHtml},
-                        {"CERTIFICATE_EXEC_KEY", RavenConfiguration.GetKey(x => x.Security.CertificateExecLoad)},
+                        {"CERTIFICATE_EXEC_KEY", RavenConfiguration.GetKey(x => x.Security.CertificateLoadExec)},
                         {"CERTIFICATE_PATH_KEY", RavenConfiguration.GetKey(x => x.Security.CertificatePath)},
                         {"CERTIFICATE_EXEC_DESCRIPTION", certExecOptDescription},
                         {"CERTIFICATE_PATH_DESCRIPTION", certPathOptDescription}
