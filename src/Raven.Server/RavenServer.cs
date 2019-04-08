@@ -1343,8 +1343,8 @@ namespace Raven.Server
                 try
                 {
                     tcpClient.NoDelay = true;
-                    tcpClient.ReceiveBufferSize = 32 * 1024;
-                    tcpClient.SendBufferSize = 4096;
+                    tcpClient.ReceiveBufferSize = (int)Configuration.Cluster.TcpReceiveBufferSize.GetValue(SizeUnit.Bytes);
+                    tcpClient.SendBufferSize = (int)Configuration.Cluster.TcpSendBufferSize.GetValue(SizeUnit.Bytes);
                     var sendTimeout = (int)Configuration.Cluster.TcpConnectionTimeout.AsTimeSpan.TotalMilliseconds;
 
                     DebuggerAttachedTimeout.SendTimeout(ref sendTimeout);

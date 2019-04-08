@@ -1,6 +1,7 @@
 ﻿using System.ComponentModel;
 using Raven.Server.Config.Attributes;
 using Raven.Server.Config.Settings;
+using Sparrow;
 
 namespace Raven.Server.Config.Categories
 {
@@ -65,6 +66,18 @@ namespace Raven.Server.Config.Categories
         [TimeUnit(TimeUnit.Milliseconds)]
         [ConfigurationEntry("Cluster.TcpTimeoutInMs", ConfigurationEntryScope.ServerWideOnly)]
         public TimeSetting TcpConnectionTimeout { get; set; }
+
+        [Description("Tcp connection send buffer size in bytes")]
+        [DefaultValue(32 * 1024)]
+        [SizeUnit(SizeUnit.Bytes)]
+        [ConfigurationEntry("Cluster.TcpSendBufferSizeInBytes", ConfigurationEntryScope.ServerWideOnly)]
+        public Size TcpSendBufferSize { get; set; }
+
+        [Description("Tcp connection receive buffer size in bytes")]
+        [DefaultValue(32 * 1024)]
+        [SizeUnit(SizeUnit.Bytes)]
+        [ConfigurationEntry("Cluster.TcpReceiveBufferSizeInBytes", ConfigurationEntryScope.ServerWideOnly)]
+        public Size TcpReceiveBufferSize { get; set; }
 
         [Description("Set hard/soft delete for a database that was removed by the observer form the cluster topology in order to maintain the replication factor.")]
         [DefaultValue(true)]
