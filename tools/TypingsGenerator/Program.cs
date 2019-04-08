@@ -29,6 +29,7 @@ using Raven.Client.Documents.Subscriptions;
 using Raven.Client.Documents.Operations.Counters;
 using Raven.Client.Documents.Queries.Sorting;
 using Raven.Client.Documents.Queries.Timings;
+using Raven.Client.Documents.Session;
 using Raven.Client.Exceptions.Commercial;
 using Raven.Client.Http;
 using Raven.Client.ServerWide;
@@ -144,6 +145,7 @@ namespace TypingsGenerator
             
             scripter.AddType(typeof(CollectionStatistics));
             scripter.AddType(typeof(BatchRequestParser.CommandData));
+            scripter.AddType(typeof(TransactionMode));
             
             // name validation
             scripter.AddType(typeof(StudioTasksHandler.ItemType));

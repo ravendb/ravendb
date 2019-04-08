@@ -297,19 +297,14 @@ class editCmpXchg extends viewModelBase {
                     const deleteProgress = new deleteCompareExchangeProgress([{ Key: this.key(), Index: this.loadedIndex() }], this.activeDatabase());
                  
                     deleteProgress.start()
-                        .done((success) => this.onDeleteCompleted(success))
+                        .done(() => {
+                            this.dirtyFlag().reset();
+                            router.navigate(appUrl.forCmpXchg(this.activeDatabase()));
+                        })
+                        .fail(() => this.displayExternalChange(true))
                         .always(() => this.spinners.delete(false));
                 }
             });
-    }
-    
-    private onDeleteCompleted(success: boolean) {
-        if (success) {
-            this.dirtyFlag().reset();
-            router.navigate(appUrl.forCmpXchg(this.activeDatabase()));
-        } else {
-            this.displayExternalChange(true);
-        }
     }
     
     refresh() {

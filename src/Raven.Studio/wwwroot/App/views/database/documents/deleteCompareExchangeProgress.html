@@ -5,7 +5,7 @@
                     aria-hidden="true">
                 <i class="icon-cancel"></i>
             </button>
-            <h4 class="modal-title">Delete Compare Exchage Values</h4>
+            <h4 class="modal-title">Delete Compare Exchange Values</h4>
         </div>
         <div class="modal-body">
             <div class="modal-details">
@@ -27,19 +27,7 @@
 
                 <div class="progress">
                     <div class="progress-bar" role="progressbar"
-                         data-bind="style: {'width': processed()/total()*100 + '%'}">
-                    </div>
-                </div>
-                
-                <div class="details-item" data-bind="visible: concurrencyFailures">
-                    <div class="row">
-                        <div class="col-sm-6 text-right text-danger">
-                            Items skiped due to index mismatch:
-                            <small>(those items were modified externally)</small>
-                        </div>
-                        <div class="col-sm-6 details-value text-danger">
-                            <span data-bind="text: concurrencyFailures().toLocaleString()"></span>
-                        </div>
+                         data-bind="style: {'width': percentage() + '%'}">
                     </div>
                 </div>
             </div>

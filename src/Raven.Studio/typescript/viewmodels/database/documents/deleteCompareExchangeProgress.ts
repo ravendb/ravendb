@@ -1,10 +1,9 @@
 
 import app = require("durandal/app");
-import dialog = require("plugins/dialog");
 import dialogViewModelBase = require("viewmodels/dialogViewModelBase");
 import database = require("models/resources/database");
 import messagePublisher = require("common/messagePublisher");
-import deleteCompareExchangeValueCommand = require("commands/database/cmpXchg/deleteCompareExchangeValueCommand");
+import executeBulkDocsCommand = require("commands/database/documents/executeBulkDocsCommand");
 
 type itemTypeDto = { 
     Key: string, Index: number
@@ -19,9 +18,9 @@ class deleteCompareExchangeProgress extends dialogViewModelBase {
     
     private processed = ko.observable<number>(0);
     private total = ko.observable<number>();
-    private concurrencyFailures = ko.observable<number>(0);
     private operationFailed = ko.observable<boolean>(false);
     private actionDescription: string;
+    percentage: KnockoutComputed<string>;
     
     spinners = {
         deleting: ko.observable<boolean>(false)
@@ -35,34 +34,40 @@ class deleteCompareExchangeProgress extends dialogViewModelBase {
         this.total(items.length);
         
         this.actionDescription = "Deleted " + (this.items.length === 1 ? this.items[0].Key : this.items.length + " values");
+        
+        this.percentage = ko.pureComputed(() => {
+            const total = this.total();
+            if (total) {
+                return (this.processed() * 100.0 / this.total()).toFixed(2);
+            } else {
+                return "0";
+            }
+        })
     }
     
-    start(): JQueryPromise<boolean> {
-        const task = $.Deferred<boolean>();
+    start(): JQueryPromise<void> {
+        const task = $.Deferred<void>();
         
         this.spinners.deleting(true);
         
         const continueFunc = () => {
             const nextTask = this.nextTask();
             if (nextTask) {
-                this.processed(this.processed() + 1);
                 nextTask
                     .done((result) => {
-                        if (!result.Successful) {
-                            this.concurrencyFailures(this.concurrencyFailures() + 1);
-                        }
+                        this.processed(this.processed() + result.Results.length);
                         continueFunc();
                     })
                     .fail(() => {
                         // we have hard failure, so stop operation!
                         this.operationFailed(true);
-                        task.resolve(false);
+                        task.resolve();
                         this.spinners.deleting(false);
                     });
                     
             } else {
                 // all tasks completed
-                task.resolve(this.concurrencyFailures() === 0);
+                task.resolve();
                 this.spinners.deleting(false);
             }
         };
@@ -74,7 +79,7 @@ class deleteCompareExchangeProgress extends dialogViewModelBase {
         return task;
     }
     
-    private maybeOpenDialog(task: JQueryPromise<boolean>) {
+    private maybeOpenDialog(task: JQueryPromise<void>) {
         const showDialog = () => {
             this.dialogOpened = true;
             app.showBootstrapDialog(this);
@@ -104,19 +109,22 @@ class deleteCompareExchangeProgress extends dialogViewModelBase {
             }
         };
         
-        this.concurrencyFailures.subscribe(v => failureHandler(v));
         this.operationFailed.subscribe(v => failureHandler(v));
     }
     
-    private nextTask(): JQueryPromise<Raven.Client.Documents.Operations.CompareExchange.CompareExchangeResult<any>> {
+    private nextTask(): JQueryPromise<resultsDto<Raven.Server.Documents.Handlers.BatchRequestParser.CommandData>> {
         if (this.items.length === 0) {
             return null;
         }
         
-        const itemToDelete = this.items.pop();
-        
-        return new deleteCompareExchangeValueCommand(this.db, itemToDelete.Key, itemToDelete.Index)
-            .execute();
+        const itemsToDelete = this.items.splice(0, 1024);
+        return new executeBulkDocsCommand(itemsToDelete.map(item => {
+            return {
+                Type: "CompareExchangeDELETE",
+                Id: item.Key,
+                Index: item.Index
+            } as Raven.Server.Documents.Handlers.BatchRequestParser.CommandData;
+        }), this.db, "ClusterWide").execute();
     }
 }
 

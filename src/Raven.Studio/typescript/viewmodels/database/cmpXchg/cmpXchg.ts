@@ -94,7 +94,7 @@ class cmpXchg extends viewModelBase {
         grid.headerVisible(true);
 
         grid.init((s, _) => this.fetchValues(s), () => [
-            new checkedColumn(false),
+            new checkedColumn(true),
             new hyperlinkColumn<Raven.Server.Web.System.CompareExchangeHandler.CompareExchangeListItem>(grid, x => x.Key, x => appUrl.forEditCmpXchg(x.Key, this.activeDatabase()), "Key", "300px"),
             new textColumn<Raven.Server.Web.System.CompareExchangeHandler.CompareExchangeListItem>(grid, x => x.Value.Object, "Value", "510px"), 
         ]);
@@ -127,22 +127,44 @@ class cmpXchg extends viewModelBase {
         if (selection.length === 0) {
             throw new Error("No elements to delete");
         }
-
-        eventsCollector.default.reportEvent("cmpXchg", "delete");
         
-        const deleteDialog = new deleteCompareExchangeConfirm(selection.map(x => x.Key));
+        const rawSelection = this.gridController().selection();
+        if (rawSelection.mode === "exclusive" && !rawSelection.excluded.length && !rawSelection.included.length) {
+            // this is special case - user select all values, with out any exclusions, suggest deleting all cmpXchg values
+            // (including items which wasn't downloaded yet)
+            this.confirmationMessage("Are you sure?", "Deleting <strong>ALL</strong> compare exchange values.", { html: true, buttons: ["Cancel", "Delete All"] })
+                .done(result => {
+                    if (result.can) {
+                        this.spinners.delete(true);
+                        
+                        new getCompareExchangeValuesCommand(this.activeDatabase(), this.filter(), 0, 2147483647)
+                            .execute()
+                            .done(allValues => {
+                                const deleteProgress = new deleteCompareExchangeProgress(allValues.items, this.activeDatabase());
 
-        app.showBootstrapDialog(deleteDialog)
-            .done((deleting: boolean) => {
-                if (deleting) {
-                    this.spinners.delete(true);
-                    
-                    const deleteProgress = new deleteCompareExchangeProgress(selection, this.activeDatabase());
-                 
-                    deleteProgress.start()
-                        .always(() => this.onDeleteCompleted());
-                }
-            });
+                                deleteProgress.start()
+                                    .always(() => this.onDeleteCompleted());
+                            })
+                    }
+                })
+            
+        } else {
+            eventsCollector.default.reportEvent("cmpXchg", "delete");
+
+            const deleteDialog = new deleteCompareExchangeConfirm(selection.map(x => x.Key));
+
+            app.showBootstrapDialog(deleteDialog)
+                .done((deleting: boolean) => {
+                    if (deleting) {
+                        this.spinners.delete(true);
+
+                        const deleteProgress = new deleteCompareExchangeProgress(selection, this.activeDatabase());
+
+                        deleteProgress.start()
+                            .always(() => this.onDeleteCompleted());
+                    }
+                });
+        }
     }
 
     private onDeleteCompleted() {
