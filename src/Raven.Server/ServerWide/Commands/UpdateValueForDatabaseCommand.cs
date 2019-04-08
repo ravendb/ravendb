@@ -72,7 +72,6 @@ namespace Raven.Server.ServerWide.Commands
                 tvb.Add(index);
                 tvb.Add(prefixIndexSlice);
 
-                identitiesItems.DeleteByKey(keySlice);  // delete old row by key
                 identitiesItems.Set(tvb);
             }
         }
