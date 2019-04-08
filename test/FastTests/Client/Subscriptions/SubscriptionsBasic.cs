@@ -63,7 +63,8 @@ namespace FastTests.Client.Subscriptions
         {
             using (var store = GetDocumentStore())
             {
-                var subscription = store.Subscriptions.GetSubscriptionWorker(new SubscriptionWorkerOptions("1") {
+                var subscription = store.Subscriptions.GetSubscriptionWorker(new SubscriptionWorkerOptions("1")
+                {
                     TimeToWaitBeforeConnectionRetry = TimeSpan.FromSeconds(5)
                 });
                 var ex = await Assert.ThrowsAsync<SubscriptionDoesNotExistException>(() => subscription.Run(x => { }));
@@ -78,7 +79,7 @@ namespace FastTests.Client.Subscriptions
                 var id = store.Subscriptions.Create<User>();
                 using (var subscription = store.Subscriptions.GetSubscriptionWorker(new SubscriptionWorkerOptions(id)
                 {
-                    TimeToWaitBeforeConnectionRetry = TimeSpan.FromSeconds(5)                    
+                    TimeToWaitBeforeConnectionRetry = TimeSpan.FromSeconds(5)
                 }))
                 {
                     using (var session = store.OpenSession())
@@ -105,6 +106,61 @@ namespace FastTests.Client.Subscriptions
         }
 
         [Fact]
+        public void ShouldBeAbleToChangeBufferSizes()
+        {
+            using (var store = GetDocumentStore())
+            {
+                using (var session = store.OpenSession())
+                {
+                    session.Store(new User { Age = 31 }, "users/1");
+                    session.Store(new User { Age = 27 }, "users/12");
+                    session.Store(new User { Age = 25 }, "users/3");
+
+                    session.SaveChanges();
+                }
+
+                var id = store.Subscriptions.Create<User>();
+                using (var subscription = store.Subscriptions.GetSubscriptionWorker<User>(new SubscriptionWorkerOptions(id)
+                {
+                    TimeToWaitBeforeConnectionRetry = TimeSpan.FromSeconds(5),
+                    SendBufferSizeInBytes = 4 * 1024,
+                    ReceiveBufferSizeInBytes = 3 * 1024
+                }))
+                {
+                    var keys = new BlockingCollection<string>();
+                    var ages = new BlockingCollection<int>();
+
+                    subscription.Run(batch =>
+                    {
+                        batch.Items.ForEach(x => keys.Add(x.Id));
+                        batch.Items.ForEach(x => ages.Add(x.Result.Age));
+                    });
+
+                    Assert.True(keys.TryTake(out string key, _reasonableWaitTime));
+                    Assert.Equal("users/1", key);
+
+                    Assert.True(keys.TryTake(out key, _reasonableWaitTime));
+                    Assert.Equal("users/12", key);
+
+                    Assert.True(keys.TryTake(out key, _reasonableWaitTime));
+                    Assert.Equal("users/3", key);
+
+                    Assert.True(ages.TryTake(out int age, _reasonableWaitTime));
+                    Assert.Equal(31, age);
+
+                    Assert.True(ages.TryTake(out age, _reasonableWaitTime));
+                    Assert.Equal(27, age);
+
+                    Assert.True(ages.TryTake(out age, _reasonableWaitTime));
+                    Assert.Equal(25, age);
+
+                    Assert.Equal(4 * 1024, subscription._tcpClient.SendBufferSize);
+                    Assert.Equal(3 * 1024, subscription._tcpClient.ReceiveBufferSize);
+                }
+            }
+        }
+
+        [Fact]
         public void ShouldStreamAllDocumentsAfterSubscriptionCreation()
         {
             using (var store = GetDocumentStore())
@@ -124,7 +180,6 @@ namespace FastTests.Client.Subscriptions
                     TimeToWaitBeforeConnectionRetry = TimeSpan.FromSeconds(5)
                 }))
                 {
-
                     var keys = new BlockingCollection<string>();
                     var ages = new BlockingCollection<int>();
 
@@ -134,8 +189,7 @@ namespace FastTests.Client.Subscriptions
                         batch.Items.ForEach(x => ages.Add(x.Result.Age));
                     });
 
-                    string key;
-                    Assert.True(keys.TryTake(out key, _reasonableWaitTime));
+                    Assert.True(keys.TryTake(out string key, _reasonableWaitTime));
                     Assert.Equal("users/1", key);
 
                     Assert.True(keys.TryTake(out key, _reasonableWaitTime));
@@ -144,8 +198,7 @@ namespace FastTests.Client.Subscriptions
                     Assert.True(keys.TryTake(out key, _reasonableWaitTime));
                     Assert.Equal("users/3", key);
 
-                    int age;
-                    Assert.True(ages.TryTake(out age, _reasonableWaitTime));
+                    Assert.True(ages.TryTake(out int age, _reasonableWaitTime));
                     Assert.Equal(31, age);
 
                     Assert.True(ages.TryTake(out age, _reasonableWaitTime));
@@ -153,6 +206,9 @@ namespace FastTests.Client.Subscriptions
 
                     Assert.True(ages.TryTake(out age, _reasonableWaitTime));
                     Assert.Equal(25, age);
+
+                    Assert.Equal(SubscriptionWorkerOptions.DefaultSendBufferSizeInBytes, subscription._tcpClient.SendBufferSize);
+                    Assert.Equal(SubscriptionWorkerOptions.DefaultReceiveBufferSizeInBytes, subscription._tcpClient.ReceiveBufferSize);
                 }
             }
         }
@@ -169,7 +225,7 @@ namespace FastTests.Client.Subscriptions
                 }))
                 {
                     var names = new BlockingCollection<string>();
-                    
+
                     using (var session = store.OpenSession())
                     {
                         session.Store(new User
@@ -353,7 +409,7 @@ namespace FastTests.Client.Subscriptions
                 using (var allSubscription = store.Subscriptions.GetSubscriptionWorker(allId))
                 {
                     var allDocs = new CountdownEvent(500);
-                    
+
 
                     var filteredUsersId = store.Subscriptions.Create(new SubscriptionCreationOptions
                     {
@@ -365,7 +421,7 @@ namespace FastTests.Client.Subscriptions
                     }))
                     {
                         var usersDocs = new CountdownEvent(1);
-                        
+
                         using (var session = store.OpenSession())
                         {
                             for (int i = 0; i < 500; i++)
@@ -561,7 +617,7 @@ namespace FastTests.Client.Subscriptions
                 {
 
                     var docs = new BlockingCollection<User>();
-                    
+
                     using (var bulk = store.BulkInsert())
                     {
                         bulk.Store(new User());
@@ -613,7 +669,7 @@ namespace FastTests.Client.Subscriptions
                 }))
                 {
                     var docs = new BlockingCollection<User>();
-                    
+
                     PutUserDoc(store);
                     PutUserDoc(store);
 
@@ -693,7 +749,7 @@ namespace FastTests.Client.Subscriptions
                 using (var subscription = store.Subscriptions.GetSubscriptionWorker<User>(id))
                 {
                     var users = new BlockingCollection<User>();
-                    
+
                     using (var session = store.OpenSession())
                     {
                         session.Store(new User
@@ -756,7 +812,7 @@ namespace FastTests.Client.Subscriptions
                 var items2 = new BlockingCollection<User>();
                 subscription2.Run(x => x.Items.ForEach(i => items2.Add(i.Result)));
 
-                
+
                 Assert.True(items1.TryTake(out var user, _reasonableWaitTime));
                 Assert.Equal("users/1", user.Id);
                 Assert.True(items1.TryTake(out user, _reasonableWaitTime));

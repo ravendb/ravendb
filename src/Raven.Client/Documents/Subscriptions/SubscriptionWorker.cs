@@ -39,7 +39,7 @@ namespace Raven.Client.Documents.Subscriptions
         private CancellationTokenSource _processingCts = new CancellationTokenSource();
         private readonly SubscriptionWorkerOptions _options;
         private (Func<SubscriptionBatch<T>, Task> Async, Action<SubscriptionBatch<T>> Sync) _subscriber;
-        private TcpClient _tcpClient;
+        internal TcpClient _tcpClient;
         private bool _disposed;
         private Task _subscriptionTask;
         private Stream _stream;
@@ -200,8 +200,8 @@ namespace Raven.Client.Documents.Subscriptions
                 string chosenUrl;
                 (_tcpClient, chosenUrl) = await TcpUtils.ConnectAsyncWithPriority(tcpInfo, requestExecutor.DefaultTimeout).ConfigureAwait(false);
                 _tcpClient.NoDelay = true;
-                _tcpClient.SendBufferSize = 32 * 1024;
-                _tcpClient.ReceiveBufferSize = 4096;
+                _tcpClient.SendBufferSize = _options?.SendBufferSizeInBytes ?? SubscriptionWorkerOptions.DefaultSendBufferSizeInBytes;
+                _tcpClient.ReceiveBufferSize = _options?.ReceiveBufferSizeInBytes ?? SubscriptionWorkerOptions.DefaultReceiveBufferSizeInBytes;
                 _stream = _tcpClient.GetStream();
                 _stream = await TcpUtils.WrapStreamWithSslAsync(_tcpClient, tcpInfo, _store.Certificate, requestExecutor.DefaultTimeout).ConfigureAwait(false);
 

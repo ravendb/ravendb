@@ -76,6 +76,10 @@ namespace Raven.Client.Documents.Subscriptions
     /// </summary>
     public class SubscriptionWorkerOptions
     {
+        internal const int DefaultSendBufferSizeInBytes = 32 * 1024;
+
+        internal const int DefaultReceiveBufferSizeInBytes = 4096;
+
         private SubscriptionWorkerOptions()
         {
             // for deserialization
@@ -83,6 +87,8 @@ namespace Raven.Client.Documents.Subscriptions
             MaxDocsPerBatch = 4096;
             TimeToWaitBeforeConnectionRetry = TimeSpan.FromSeconds(5);
             MaxErroneousPeriod = TimeSpan.FromMinutes(5);
+            SendBufferSizeInBytes = DefaultSendBufferSizeInBytes;
+            ReceiveBufferSizeInBytes = DefaultReceiveBufferSizeInBytes;
         }
 
         /// <summary>
@@ -91,9 +97,9 @@ namespace Raven.Client.Documents.Subscriptions
         /// <param name="subscriptionName">Subscription name as received from CreateSubscription</param>
         public SubscriptionWorkerOptions(string subscriptionName) : this()
         {
-            if (string.IsNullOrEmpty(subscriptionName)) 
+            if (string.IsNullOrEmpty(subscriptionName))
                 throw new ArgumentException("Value cannot be null or empty.", nameof(subscriptionName));
-            
+
             SubscriptionName = subscriptionName;
         }
 
@@ -140,5 +146,15 @@ namespace Raven.Client.Documents.Subscriptions
         /// That's a useful practice for ad-hoc, one-time, persistent data processing. 
         /// </summary>
         public bool CloseWhenNoDocsLeft { get; set; }
+
+        /// <summary>
+        /// Send buffer size for the underlying connection. Default: 32768 bytes (32 kB)
+        /// </summary>
+        public int SendBufferSizeInBytes { get; set; }
+
+        /// <summary>
+        /// Receive buffer for the underlying connection. Default: 4096 bytes (4 kB)
+        /// </summary>
+        public int ReceiveBufferSizeInBytes { get; set; }
     }
 }
