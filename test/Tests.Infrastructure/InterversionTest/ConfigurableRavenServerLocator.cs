@@ -7,12 +7,20 @@ namespace Tests.Infrastructure.InterversionTest
     {
         private readonly string _serverDirPath;
 
-        public ConfigurableRavenServerLocator(string serverDirPath)
+        public ConfigurableRavenServerLocator(string serverDirPath, bool includeLibuvArg = true)
         {
             _serverDirPath = serverDirPath;
+            if (includeLibuvArg == false)
+                SetCommandArguments();
         }
 
-        public override string CommandArguments => "--Http.UseLibuv=true";
+        private void SetCommandArguments()
+        {
+            CommandArguments = base.CommandArguments;
+        }
+
+        public override string CommandArguments { get; set; } = "--Http.UseLibuv = true";
+
 
         public override string ServerPath => Path.Combine(
             _serverDirPath,
