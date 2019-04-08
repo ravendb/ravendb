@@ -73,7 +73,6 @@ namespace Raven.Client.Documents.Operations.OngoingTasks
         public string Query { get; set; }
         public string SubscriptionName { get; set; }
         public long SubscriptionId { get; set; }
-        public string MentorNode { get; set; }
         public string ChangeVectorForNextBatchStartingPoint { get; set; }
         public DateTime? LastBatchAckTime { get; set; }
         public bool Disabled { get; set; }
