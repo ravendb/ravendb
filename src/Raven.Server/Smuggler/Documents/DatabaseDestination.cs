@@ -695,7 +695,12 @@ namespace Raven.Server.Smuggler.Documents
                         if (_database.DocumentsStorage.RevisionsStorage.Configuration == null)
                             ThrowRevisionsDisabled();
 
-                        PutAttachments(context, document, isRevision: true);
+                        PutAttachments(context, document, isRevision: true, out var hasAttachments);
+                        if (hasAttachments)
+                        {
+                            databaseChangeVector = ChangeVectorUtils.MergeVectors(databaseChangeVector, context.LastDatabaseChangeVector);
+                        }
+
                         if ((document.NonPersistentFlags.Contain(NonPersistentDocumentFlags.FromSmuggler)) &&
                             (_missingDocumentsForRevisions != null))
                         {
@@ -718,6 +723,8 @@ namespace Raven.Server.Smuggler.Documents
                                 document.NonPersistentFlags, document.ChangeVector, document.LastModified.Ticks);
                         }
 
+                        databaseChangeVector = ChangeVectorUtils.MergeVectors(databaseChangeVector, document.ChangeVector);
+
                         continue;
                     }
 
@@ -735,7 +742,7 @@ namespace Raven.Server.Smuggler.Documents
                         continue;
                     }
 
-                    PutAttachments(context, document, isRevision: false);
+                    PutAttachments(context, document, isRevision: false, out _);
 
                     newEtag = _database.DocumentsStorage.GenerateNextEtag();
                     document.ChangeVector = _database.DocumentsStorage.GetNewChangeVector(context, newEtag);
@@ -755,8 +762,10 @@ namespace Raven.Server.Smuggler.Documents
             }
 
             [MethodImpl(MethodImplOptions.AggressiveInlining)]
-            private unsafe void PutAttachments(DocumentsOperationContext context, Document document, bool isRevision)
+            private unsafe void PutAttachments(DocumentsOperationContext context, Document document, bool isRevision, out bool hasAttachments)
             {
+                hasAttachments = false;
+
                 if (document.Data.TryGet(Client.Constants.Documents.Metadata.Key, out BlittableJsonReaderObject metadata) == false ||
                     metadata.TryGet(Client.Constants.Documents.Metadata.Attachments, out BlittableJsonReaderArray attachments) == false)
                     return;
@@ -764,6 +773,8 @@ namespace Raven.Server.Smuggler.Documents
                 var attachmentsStorage = _database.DocumentsStorage.AttachmentsStorage;
                 foreach (BlittableJsonReaderObject attachment in attachments)
                 {
+                    hasAttachments = true;
+
                     if (attachment.TryGet(nameof(AttachmentName.Name), out LazyStringValue name) == false ||
                         attachment.TryGet(nameof(AttachmentName.ContentType), out LazyStringValue contentType) == false ||
                         attachment.TryGet(nameof(AttachmentName.Hash), out LazyStringValue hash) == false)
