@@ -7,7 +7,7 @@ namespace Raven.Server.Commercial
     {
         public Status Status { get; set; }
 
-        public DateTimeOffset? EndsAt { get; set; }
+        public DateTime? EndsAt { get; set; }
 
         public DynamicJsonValue ToJson()
         {
