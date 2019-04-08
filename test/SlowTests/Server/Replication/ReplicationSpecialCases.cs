@@ -338,7 +338,8 @@ namespace SlowTests.Server.Replication
                     await session.SaveChangesAsync();
                 }
 
-                WaitForDocumentToReplicate<User>(destination, documentId, 15 * 1000);
+                Assert.NotNull(WaitForDocumentToReplicate<User>(destination, documentId, 15 * 1000));
+
                 using (var session = destination.OpenAsyncSession())
                 {
                     session.Delete(documentId);
@@ -399,7 +400,8 @@ namespace SlowTests.Server.Replication
                     await session.SaveChangesAsync();
                 }
 
-                WaitForDocumentToReplicate<User>(destination, documentId1, 15 * 1000);
+                Assert.NotNull(WaitForDocumentToReplicate<User>(destination, documentId1, 15 * 1000));
+
                 using (var session = destination.OpenAsyncSession())
                 {
                     session.Delete(documentId1);
