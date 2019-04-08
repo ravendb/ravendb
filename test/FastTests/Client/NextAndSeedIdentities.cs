@@ -137,5 +137,20 @@ namespace FastTests.Client
                 }
             }
         }
+
+        [Fact]
+        public void NextIdentityForCommandShouldCreateANewIdentityIfThereIsNone()
+        {
+            using (var store = GetDocumentStore())
+            {
+                using (var session = store.OpenSession())
+                {
+                    var nextIdentityForCommand = new NextIdentityForCommand("person|");
+                    session.Advanced.RequestExecutor.Execute(nextIdentityForCommand, session.Advanced.Context);
+
+                    Assert.Equal(1, nextIdentityForCommand.Result);
+                }
+            }
+        }
     }
 }
