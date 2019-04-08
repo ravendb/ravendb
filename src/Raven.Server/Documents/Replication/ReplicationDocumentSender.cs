@@ -150,7 +150,6 @@ namespace Raven.Server.Documents.Replication
             var attachments = _parent._database.DocumentsStorage.AttachmentsStorage.GetAttachmentsFrom(ctx, etag + 1);
             var counters = _parent._database.DocumentsStorage.CountersStorage.GetCountersFrom(ctx, etag + 1);
 
-
             using (var docsIt = docs.GetEnumerator())
             using (var tombsIt = tombs.GetEnumerator())
             using (var conflictsIt = conflicts.GetEnumerator())
@@ -273,17 +272,20 @@ namespace Raven.Server.Documents.Replication
 
                             _lastEtag = item.Etag;
 
+                            if (AddReplicationItemToBatch(item, _stats.Storage, skippedReplicationItemsInfo) == false)
+                            {
+                                // this item won't be needed anymore
+                                DisposeReplicationItem(item);
+                                continue;
+                            }
+
                             if (item.Data != null)
                                 size += item.Data.Size;
                             else if (item.Type == ReplicationBatchItem.ReplicationItemType.Attachment)
                                 size += item.Stream.Length;
 
-                            if (AddReplicationItemToBatch(item, _stats.Storage, skippedReplicationItemsInfo) == false)
-                                continue;
-
                             numberOfItemsSent++;
                         }
-
                     }
                     
                     if (_log.IsInfoEnabled)
@@ -345,10 +347,26 @@ namespace Raven.Server.Documents.Replication
                 }
                 finally
                 {
+                    foreach (var item in _orderedReplicaItems)
+                    {
+                        DisposeReplicationItem(item.Value);
+                    }
                     _orderedReplicaItems.Clear();
                     _replicaAttachmentStreams.Clear();
                     _countersToReplicate.Clear();
                 }
+            }
+        }
+
+        private void DisposeReplicationItem(ReplicationBatchItem item)
+        {
+            if (item.Type == ReplicationBatchItem.ReplicationItemType.Attachment)
+            {
+                item.Stream.Dispose();
+            }
+            else
+            {
+                item.Data?.Dispose(); //item.Value.Data is null if tombstone
             }
         }
 
