@@ -735,12 +735,11 @@ namespace Raven.Server.Smuggler.Documents
                         continue;
                     }
 
+                    PutAttachments(context, document, isRevision: false);
+
                     newEtag = _database.DocumentsStorage.GenerateNextEtag();
                     document.ChangeVector = _database.DocumentsStorage.GetNewChangeVector(context, newEtag);
-
                     databaseChangeVector = ChangeVectorUtils.MergeVectors(databaseChangeVector, document.ChangeVector);
-
-                    PutAttachments(context, document, isRevision: false);
 
                     _database.DocumentsStorage.Put(context, id, null, document.Data, document.LastModified.Ticks, document.ChangeVector, document.Flags, document.NonPersistentFlags);
                 }
