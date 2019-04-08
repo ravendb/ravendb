@@ -17,7 +17,7 @@
             <div>
                 <button class="btn btn-sm btn-info">
                     <i class="icon-info"></i>
-                    <span data-bind="click: changeVectorsVisible.toggle.bind(changeVectorsVisible), text: changeVectorsVisible() ? 'Hide change vectors' : 'Show change vectors'"></span>
+                    <span data-bind="click: detailsVisible.toggle.bind(detailsVisible), text: detailsVisible() ? 'Hide details' : 'Show details'"></span>
                 </button>
             </div>
         </div>
@@ -37,10 +37,20 @@
                                 <button class="btn btn-sm btn-warning usethis" data-bind="click: _.partial($root.useThis, $data), style: { visibility: deletedMarker() ? 'hidden' : 'visible' }"><i class="icon-tick"></i><span>Use this</span></button>
                             </div>
                         </div>
-                        <div class="vectors" data-bind="collapse: $root.changeVectorsVisible, visible: !deletedMarker()">
-                            <div class="title"><small>Change vector:</small></div>
-                            <div data-bind="foreach: changeVector">
-                                <span class="badge badge-default" data-bind="text: shortFormat, attr: { title: fullFormat }"></span>
+                        <div class="details " data-bind="collapse: $root.detailsVisible, visible: !deletedMarker()">
+                            <div class="flex-horizontal">
+                                <div>
+                                    <div class="title"><small>Document size</small></div>
+                                    <div class="badge badge-default" data-bind="text: computedDocumentSize">
+                                    </div>
+                                </div>
+                                <div class="flex-separator"></div>
+                                <div>
+                                    <div class="title"><small>Change vector:</small></div>
+                                    <div data-bind="foreach: changeVector">
+                                        <span class="badge badge-default" data-bind="text: shortFormat, attr: { title: fullFormat }"></span>
+                                    </div>
+                                </div>
                             </div>
                         </div>
                     </div>
