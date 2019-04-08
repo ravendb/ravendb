@@ -1106,6 +1106,20 @@ namespace Raven.Server.Documents.Indexes
                                         var originalName = Name.Replace(Constants.Documents.Indexing.SideBySideIndexNamePrefix, string.Empty, StringComparison.InvariantCultureIgnoreCase);
                                         _isReplacing = true;
 
+                                        if (batchCompleted)
+                                        {
+                                            // this side-by-side index will be replaced in a second, notify about indexing success
+                                            // so we know that indexing batch is no longer in progress
+                                            DocumentDatabase.Changes.RaiseNotifications(new IndexChange
+                                            {
+                                                Name = Name,
+                                                Type = IndexChangeTypes.BatchCompleted
+                                            });
+                                            
+                                            var batchCompletedAction = DocumentDatabase.IndexStore.IndexBatchCompleted;
+                                            batchCompletedAction?.Invoke((Name, didWork));
+                                        }
+
                                         try
                                         {
                                             // this can fail if the indexes lock is currently held, so we'll retry

@@ -60,7 +60,7 @@ namespace SlowTests.Server.Documents.Indexing
                 var database = await GetDocumentDatabaseInstanceFor(store);
                 var index = database.IndexStore.GetIndex("Users/ByName");
 
-                var collector = new LiveIndexingPerformanceCollector(database, new[] {index});
+                var collector = new LiveIndexingPerformanceCollector(database, new[] { index.Name });
 
                 var tuple = await collector.Stats.TryDequeueAsync(TimeSpan.FromSeconds(1));
                 Assert.True(tuple.Item1);
@@ -86,7 +86,7 @@ namespace SlowTests.Server.Documents.Indexing
                 
                 var index = database.IndexStore.GetIndex("Users/ByName");
 
-                var collector = new LiveIndexingPerformanceCollector(database, new[] { index });
+                var collector = new LiveIndexingPerformanceCollector(database, new[] { index.Name });
 
                 using (var session = store.OpenSession())
                 {
