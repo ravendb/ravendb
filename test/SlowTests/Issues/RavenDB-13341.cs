@@ -119,7 +119,7 @@ namespace SlowTests.Issues
                 val = await WaitForValueAsync(async () => await GetMembersCount(), 1);
                 Assert.Equal(1, val);
 
-                await store.Maintenance.Server.SendAsync(new AddDatabaseNodeOperation(databaseName));
+                await store.Maintenance.Server.SendAsync(new AddDatabaseNodeOperation(databaseName, addedNodeTag));
                 val = await WaitForValueAsync(async () => await GetMembersCount(), 2);
                 Assert.Equal(2, val);
 
