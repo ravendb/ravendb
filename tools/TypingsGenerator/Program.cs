@@ -111,6 +111,8 @@ namespace TypingsGenerator
                 .WithTypeMapping(new TsInterface(new TsName("Array")), typeof(IReadOnlyCollection<>))
                 .WithTypeMapping(new TsInterface(new TsName("dictionary<Raven.Client.Documents.Queries.Timings.QueryTimings>")),
                     typeof(IDictionary<string, QueryTimings>))
+                .WithTypeMapping(new TsInterface(new TsName("dictionary<Raven.Server.NotificationCenter.Notifications.Details.HugeDocumentInfo>")),
+                    typeof(ConcurrentDictionary<string, HugeDocumentInfo>))
                 .WithTypeMapping(TsPrimitive.Any, typeof(TreePage))
                 .WithTypeMapping(TsPrimitive.String, typeof(DateTime))
                 .WithTypeMapping(TsPrimitive.String, typeof(LazyStringValue))
@@ -179,6 +181,8 @@ namespace TypingsGenerator
             scripter.AddType(typeof(DatabaseStatsChanged));
             scripter.AddType(typeof(PerformanceHint));
             scripter.AddType(typeof(PagingPerformanceDetails));
+            scripter.AddType(typeof(HugeDocumentsDetails));
+            scripter.AddType(typeof(HugeDocumentInfo));
             scripter.AddType(typeof(RequestLatencyDetail));
 
             // subscriptions

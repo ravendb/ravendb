@@ -9,6 +9,7 @@
         RequestLatency,
         UnusedCapacity,
         SlowIO,
-        SqlEtl_SlowSql
+        SqlEtl_SlowSql,
+        HugeDocuments
     }
 }
