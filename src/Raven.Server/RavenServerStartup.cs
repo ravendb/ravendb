@@ -232,6 +232,13 @@ namespace Raven.Server
                     LogTrafficWatch(context, sp?.ElapsedMilliseconds ?? 0, database);
                 }
 
+                if (sp != null && requestHandlerContext.HttpContext.Response.StatusCode != (int)HttpStatusCode.SwitchingProtocols) // exclude web sockets
+                {
+                    var requestDuration = sp.ElapsedMilliseconds;
+                    requestHandlerContext.RavenServer.Metrics.Requests.UpdateDuration(requestDuration);
+                    requestHandlerContext.Database?.Metrics.Requests.UpdateDuration(requestDuration);
+                }
+
                 if (_logger.IsInfoEnabled && SkipHttpLogging == false)
                 {
                     _logger.Info($"{context.Request.Method} {context.Request.Path.Value}{context.Request.QueryString.Value} - {context.Response.StatusCode} - {(sp?.ElapsedMilliseconds ?? 0):#,#;;0} ms", exception);

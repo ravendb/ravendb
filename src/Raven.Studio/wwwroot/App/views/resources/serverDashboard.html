@@ -119,19 +119,38 @@
                             <div class="absolute-center loading" data-bind="visible: $root.spinners.loading"><div class="global-spinner"></div></div>
                             <div data-bind="style: { visibility: $root.spinners.loading()? 'hidden' : 'visible' }">
                                 <!-- using visibility here to reserve space -->
-                                <div class="margin-bottom">
-                                    Requests/s<br />
-                                    <i class="total-requests-legend legend-rect"></i>
-                                    <strong data-bind="text: totalRequestsPerSecond().toLocaleString()"></strong>
-                                </div>
-                                <div class="margin-bottom" data-toggle="tooltip" data-placement="right" data-html="true" data-bind="tooltipText: writesPerSecondTooltip" data-animation="true">
-                                    Writes/s<br /> <i class="total-writes-legend legend-rect">
-                                    </i> <strong data-bind="text: totalWritesPerSecond().toLocaleString()"></strong>
-                                </div>
-                                <div data-toggle="tooltip" data-placement="right" data-html="true" data-bind="tooltipText: writeBytesPerSecondTooltip" data-animation="true">
-                                    Data Written/s<br /> <i class="total-written-legend legend-rect"></i>
-                                    <strong data-bind="text: $root.sizeFormatter(totalDataWritesPerSecond())"></strong>
-                                </div>
+                                <table class="traffic-summary">
+                                    <tr>
+                                        <td>
+                                            <div class="margin-bottom" data-toggle="tooltip" data-placement="right" data-html="true" data-bind="tooltipText: writesPerSecondTooltip" data-animation="true">
+                                                Writes/s<br /> <i class="total-writes-legend legend-rect">
+                                            </i> <strong data-bind="text: totalWritesPerSecond().toLocaleString()"></strong>
+                                            </div>
+                                        </td>
+                                        <td>
+                                            <div class="margin-bottom" data-toggle="tooltip" data-placement="right" data-html="true" data-bind="tooltipText: writeBytesPerSecondTooltip" data-animation="true">
+                                                Data Written/s<br /> <i class="total-written-legend legend-rect"></i>
+                                                <strong data-bind="text: $root.sizeFormatter(totalDataWritesPerSecond())"></strong>
+                                            </div>
+                                        </td>
+                                    </tr>
+                                    <tr>
+                                        <td>
+                                            <div>
+                                                Requests/s<br />
+                                                <i class="total-requests-legend legend-rect"></i>
+                                                <strong data-bind="text: totalRequestsPerSecond().toLocaleString()"></strong>
+                                            </div>
+                                        </td>
+                                        <td>
+                                            <div>
+                                                Avg Request Time<br />
+                                                <i class="total-average-request-duration-legend legend-rect"></i>
+                                                <strong data-bind="text: Math.round(totalAverageRequestTime()).toLocaleString() + ' ms'"></strong>
+                                            </div>
+                                        </td>
+                                    </tr>
+                                </table>
                             </div>
                         </div>
                         <div class="infogrid-graph">
