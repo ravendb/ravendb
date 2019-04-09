@@ -235,7 +235,7 @@ namespace Raven.Server
                 if (sp != null && requestHandlerContext.HttpContext.Response.StatusCode != (int)HttpStatusCode.SwitchingProtocols) // exclude web sockets
                 {
                     var requestDuration = sp.ElapsedMilliseconds;
-                    requestHandlerContext.RavenServer.Metrics.Requests.UpdateDuration(requestDuration);
+                    requestHandlerContext.RavenServer?.Metrics.Requests.UpdateDuration(requestDuration);
                     requestHandlerContext.Database?.Metrics.Requests.UpdateDuration(requestDuration);
                 }
 
