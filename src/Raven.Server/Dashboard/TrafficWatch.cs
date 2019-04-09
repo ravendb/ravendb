@@ -10,6 +10,8 @@ namespace Raven.Server.Dashboard
         public override DashboardNotificationType Type => DashboardNotificationType.TrafficWatch;
         
         public List<TrafficWatchItem> Items { get; set; }
+        
+        public double AverageRequestDuration { get; set; }
 
         public TrafficWatch()
         {
@@ -20,6 +22,7 @@ namespace Raven.Server.Dashboard
         {
             var json = base.ToJson();
             json[nameof(Items)] = new DynamicJsonArray(Items.Select(x => x.ToJson()));
+            json[nameof(AverageRequestDuration)] = AverageRequestDuration;
             return json;
         }
         
@@ -40,6 +43,7 @@ namespace Raven.Server.Dashboard
             
             var json = base.ToJson();
             json[nameof(Items)] = items;
+            json[nameof(AverageRequestDuration)] = AverageRequestDuration;
             return json;
         }
     }
@@ -49,6 +53,8 @@ namespace Raven.Server.Dashboard
         public string Database { get; set; }
         
         public int RequestsPerSecond { get; set; }
+        
+        public double AverageRequestDuration { get; set; }
 
         public int DocumentWritesPerSecond { get; set; }
 
@@ -73,7 +79,8 @@ namespace Raven.Server.Dashboard
                 [nameof(CounterWritesPerSecond)] = CounterWritesPerSecond,
                 [nameof(DocumentsWriteBytesPerSecond)] = DocumentsWriteBytesPerSecond,
                 [nameof(AttachmentsWriteBytesPerSecond)] = AttachmentsWriteBytesPerSecond,
-                [nameof(CountersWriteBytesPerSecond)] = CountersWriteBytesPerSecond
+                [nameof(CountersWriteBytesPerSecond)] = CountersWriteBytesPerSecond,
+                [nameof(AverageRequestDuration)] = AverageRequestDuration
             };
         }
     }

@@ -74,6 +74,7 @@ namespace Raven.Server.Monitoring.Snmp
             _objectStore.Add(new DatabaseMapReduceIndexReducedPerSecond(_databaseName, _databaseLandlord, _databaseIndex));
             _objectStore.Add(new DatabaseRequestsPerSecond(_databaseName, _databaseLandlord, _databaseIndex));
             _objectStore.Add(new DatabaseRequestsCount(_databaseName, _databaseLandlord, _databaseIndex));
+            _objectStore.Add(new DatabaseAverageRequestTime(_databaseName, _databaseLandlord, _databaseIndex));
 
             _objectStore.Add(new DatabaseNumberOfAutoIndexes(_databaseName, _databaseLandlord, _databaseIndex));
             _objectStore.Add(new DatabaseNumberOfDisabledIndexes(_databaseName, _databaseLandlord, _databaseIndex));

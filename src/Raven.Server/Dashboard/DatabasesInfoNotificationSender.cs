@@ -104,6 +104,8 @@ namespace Raven.Server.Dashboard
             var trafficWatch = new TrafficWatch();
             var drivesUsage = new DrivesUsage();
 
+            trafficWatch.AverageRequestDuration = serverStore.Server.Metrics.Requests.AverageDuration.GetRate();
+
             using (serverStore.ContextPool.AllocateOperationContext(out TransactionOperationContext transactionContext))
             using (transactionContext.OpenReadTransaction())
             {
@@ -150,6 +152,7 @@ namespace Raven.Server.Dashboard
                         {
                             Database = database.Name,
                             RequestsPerSecond = (int)database.Metrics.Requests.RequestsPerSec.OneSecondRate,
+                            AverageRequestDuration = database.Metrics.Requests.AverageDuration.GetRate(),
                             DocumentWritesPerSecond = (int)database.Metrics.Docs.PutsPerSec.OneSecondRate,
                             AttachmentWritesPerSecond = (int)database.Metrics.Attachments.PutsPerSec.OneSecondRate,
                             CounterWritesPerSecond = (int)database.Metrics.Counters.PutsPerSec.OneSecondRate,

@@ -380,6 +380,7 @@ class trafficSection {
     private gridController = ko.observable<virtualGridController<trafficItem>>();
     
     totalRequestsPerSecond = ko.observable<number>(0);
+    totalAverageRequestTime = ko.observable<number>(0);
     totalWritesPerSecond = ko.observable<number>(0);
     totalDataWritesPerSecond = ko.observable<number>(0);
 
@@ -433,23 +434,31 @@ class trafficSection {
                 new textColumn<trafficItem>(grid, 
                     x => x.requestsPerSecond(), 
                     "Requests / s", 
-                    "20%", {
+                    "17%", {
                         sortable: "number",
                         defaultSortOrder: "desc"
                     }),
                 new textColumn<trafficItem>(grid, 
                     x => x.writesPerSecond(), 
                     "Writes / s", 
-                    "25%", {
+                    "17%", {
                         sortable: "number",
                         defaultSortOrder: "desc"
                     }),
                 new textColumn<trafficItem>(grid, 
                     x => this.sizeFormatter(x.dataWritesPerSecond()), 
                     "Data written / s", 
-                    "25%", {
+                    "17%", {
                         sortable: x => x.dataWritesPerSecond(),
                         defaultSortOrder: "desc"
+                    }),
+                new textColumn<trafficItem>(grid, 
+                    x => Math.round(x.averageDuration()).toLocaleString() + " ms",
+                    "Avg Req Time",
+                    "19%", {
+                        sortable: x => "number",
+                        defaultSortOrder: "desc",
+                        title: () => "Average request time"
                     })
             ];
         });
@@ -462,6 +471,8 @@ class trafficSection {
                         return 30;
                     case "writes":
                         return 20;
+                    case "average":
+                        return 10;
                     default:
                         return 5;
                 }
@@ -483,10 +494,12 @@ class trafficSection {
             const requests = data.values['requests'];
             const writes = data.values['writes'];
             const written = data.values['written'];
+            const average = data.values['average'];
 
             return `<div class="tooltip-inner">
                 Time: <strong>${date}</strong><br />
                 Requests/s: <strong>${requests.toLocaleString()}</strong><br />
+                Average request time : <strong>${Math.round(average).toLocaleString()} ms</strong><br />
                 Writes/s: <strong>${writes.toLocaleString()}</strong><br />
                 Data Written/s: <strong>${this.sizeFormatter(written)}</strong>
                 </div>`;
@@ -517,13 +530,18 @@ class trafficSection {
         
         this.updateTotals();
         
+        this.totalAverageRequestTime(data.AverageRequestDuration);
+        
         this.trafficChart.onData(moment.utc(data.Date).toDate(), [{
             key: "writes",
             value: this.totalWritesPerSecond()
         }, {
             key: "written",
             value: this.totalDataWritesPerSecond()
-        },{
+        }, {
+            key: "average",
+            value: this.totalAverageRequestTime()
+        }, {
             key: "requests",
             value: this.totalRequestsPerSecond()
         }]);

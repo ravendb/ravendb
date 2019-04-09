@@ -13,6 +13,7 @@ class trafficItem {
     attachmentsWriteBytesPerSecond = ko.observable<number>();
     countersWriteBytesPerSecond = ko.observable<number>();
     writesPerSecond = ko.observable<number>();
+    averageDuration = ko.observable<number>();
     dataWritesPerSecond = ko.observable<number>();
     
     showOnGraph = ko.observable<boolean>();
@@ -32,6 +33,7 @@ class trafficItem {
         this.countersWriteBytesPerSecond(dto.CountersWriteBytesPerSecond);
         this.writesPerSecond(dto.DocumentWritesPerSecond + dto.AttachmentWritesPerSecond + dto.CounterWritesPerSecond);
         this.dataWritesPerSecond(dto.DocumentsWriteBytesPerSecond + dto.AttachmentsWriteBytesPerSecond + dto.CountersWriteBytesPerSecond);
+        this.averageDuration(dto.AverageRequestDuration);
     }
 }
 
