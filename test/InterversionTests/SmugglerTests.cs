@@ -32,7 +32,7 @@ namespace InterversionTests
 
             try
             {
-                using (var store40 = await GetDocumentStoreAsync("4.0.6-patch-40047"))
+                using (var store40 = await GetDocumentStoreAsync("4.0.7"))
                 {
                     store40.Maintenance.Send(new CreateSampleDataOperation());
 
@@ -116,7 +116,7 @@ namespace InterversionTests
                     Assert.Equal(1, stats.CountOfCounterEntries);
                 }
 
-                using (var store40 = await GetDocumentStoreAsync("4.0.6-patch-40047"))
+                using (var store40 = await GetDocumentStoreAsync("4.0.7"))
                 {
 
                     var options = new DatabaseSmugglerImportOptions();
