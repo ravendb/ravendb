@@ -40,7 +40,7 @@ namespace Raven.Server.Documents.ETL
                     switch (_tombstoneType)
                     {
                         case Tombstone.TombstoneType.Counter:
-                            if (PreventCountersIteratingTooFarEnumerator<ExtractedItem>.CanMoveNext(current.Etag, _maxEtag.Value) == false)
+                            if (FilterCountersEnumerator.CanMoveNextAndNotExceedLastDocumentInBatch(current.Etag, _maxEtag.Value) == false)
                                 return false;
                             break;
                         default:

@@ -206,7 +206,7 @@ namespace Raven.Server.Documents.ETL
                             var counters = Database.DocumentsStorage.CountersStorage.GetCountersFrom(context, fromEtag, 0, int.MaxValue).GetEnumerator();
                             scope.EnsureDispose(counters);
 
-                            counters = new FilterCountersEnumerator(counters, stats, Database.DocumentsStorage, context);
+                            counters = new FilterCountersEnumerator(counters, stats, Database.DocumentsStorage, context, lastDocEtag);
 
                             var counterTombstones = Database.DocumentsStorage.GetTombstonesFrom(context, CountersStorage.CountersTombstones, fromEtag, 0, int.MaxValue)
                                 .GetEnumerator();
@@ -214,8 +214,7 @@ namespace Raven.Server.Documents.ETL
 
                             counterTombstones = new FilterTombstonesEnumerator(counterTombstones, stats, Tombstone.TombstoneType.Counter, context, maxEtag: lastDocEtag);
 
-                            merged.AddEnumerator(
-                                new PreventCountersIteratingTooFarEnumerator<TExtracted>(ConvertCountersEnumerator(counters, null), lastDocEtag));
+                            merged.AddEnumerator(ConvertCountersEnumerator(counters, null));
 
                             merged.AddEnumerator(ConvertTombstonesEnumerator(counterTombstones, null, EtlItemType.Counter));
                         }
@@ -226,10 +225,9 @@ namespace Raven.Server.Documents.ETL
                                 var counters = Database.DocumentsStorage.CountersStorage.GetCountersFrom(context, collection, fromEtag, 0, int.MaxValue).GetEnumerator();
                                 scope.EnsureDispose(counters);
 
-                                counters = new FilterCountersEnumerator(counters, stats, Database.DocumentsStorage, context);
+                                counters = new FilterCountersEnumerator(counters, stats, Database.DocumentsStorage, context, lastDocEtag);
 
-                                merged.AddEnumerator(new PreventCountersIteratingTooFarEnumerator<TExtracted>(ConvertCountersEnumerator(counters, collection),
-                                    lastDocEtag));
+                                merged.AddEnumerator(ConvertCountersEnumerator(counters, collection));
                             }
 
                             var counterTombstones = Database.DocumentsStorage.GetTombstonesFrom(context, CountersStorage.CountersTombstones, fromEtag, 0, int.MaxValue)
