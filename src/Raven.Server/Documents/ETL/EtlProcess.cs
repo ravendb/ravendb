@@ -227,10 +227,9 @@ namespace Raven.Server.Documents.ETL
                             var counters = Database.DocumentsStorage.CountersStorage.GetCountersFrom(context, fromEtag, 0, int.MaxValue).GetEnumerator();
                             scope.EnsureDispose(counters);
 
-                            counters = new FilterCountersEnumerator(counters, stats, Database.DocumentsStorage, context);
+                            counters = new FilterCountersEnumerator(counters, stats, Database.DocumentsStorage, context, lastDocEtag);
 
-                            merged.AddEnumerator(
-                                new PreventCountersIteratingTooFarEnumerator<TExtracted>(ConvertCountersEnumerator(counters, null), lastDocEtag));
+                            merged.AddEnumerator(ConvertCountersEnumerator(counters, null));
 
                         }
                         else
@@ -240,10 +239,9 @@ namespace Raven.Server.Documents.ETL
                                 var counters = Database.DocumentsStorage.CountersStorage.GetCountersFrom(context, collection, fromEtag, 0, int.MaxValue).GetEnumerator();
                                 scope.EnsureDispose(counters);
 
-                                counters = new FilterCountersEnumerator(counters, stats, Database.DocumentsStorage, context);
+                                counters = new FilterCountersEnumerator(counters, stats, Database.DocumentsStorage, context, lastDocEtag);
 
-                                merged.AddEnumerator(new PreventCountersIteratingTooFarEnumerator<TExtracted>(ConvertCountersEnumerator(counters, collection),
-                                    lastDocEtag));
+                                merged.AddEnumerator(ConvertCountersEnumerator(counters, collection));
                             }
                         }
 
