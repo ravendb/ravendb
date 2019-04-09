@@ -63,7 +63,7 @@ function loadCountersOfOrdersBehavior(doc, counter)
                 var destStats = dest.Maintenance.Send(new GetStatisticsOperation());
 
                 Assert.Equal(numberOfDocs, destStats.CountOfDocuments);
-                Assert.Equal(numberOfDocs, destStats.CountOfCounters);
+                Assert.Equal(numberOfDocs, destStats.CountOfCounterEntries);
 
                 using (var session = dest.OpenSession())
                 {
