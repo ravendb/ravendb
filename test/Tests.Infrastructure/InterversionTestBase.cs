@@ -97,17 +97,7 @@ namespace Tests.Infrastructure
             var testServerPath = NewDataPath(prefix: serverVersion);
             CopyFilesRecursively(new DirectoryInfo(serverPath), new DirectoryInfo(testServerPath));
 
-            bool includeLibuvArg = true;
-            var version = serverVersion.Split(".");
-            var highestVersionWithoutLibuv = new int[] { 4, 1, 4 };
-            if ((version[0]?.Equals(highestVersionWithoutLibuv[0].ToString()) ?? false) &&
-                (Convert.ToInt32(version[1] ?? int.MaxValue.ToString()) < highestVersionWithoutLibuv[1] ||
-                 Convert.ToInt32(version[1] ?? int.MaxValue.ToString()) == highestVersionWithoutLibuv[1] &&
-                 Convert.ToInt32(version[2] ?? int.MaxValue.ToString()) <= highestVersionWithoutLibuv[2]))
-            {
-                includeLibuvArg = false;
-            }
-            var locator = new ConfigurableRavenServerLocator(testServerPath, includeLibuvArg);
+            var locator = new ConfigurableRavenServerLocator(testServerPath);
             return await RunServer(locator);
         }
 

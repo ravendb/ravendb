@@ -33,7 +33,7 @@ namespace InterversionTests
         {
             var (leader, peers, local) = await CreateMixedCluster(new[]
             {
-                "4.0.7-nightly-20180820-0400"
+                "4.0.7"
             }, 1);
 
             var peer = local[0];
@@ -95,8 +95,8 @@ namespace InterversionTests
         {
             var (leader, peers, local) = await CreateMixedCluster(new[]
             {
-                "4.0.7-nightly-20180820-0400",
-                "4.0.7-nightly-20180820-0400"
+                "4.0.7",
+                "4.0.7"
             });
             leader.ServerStore.Engine.CurrentLeader.StepDown();
             await leader.ServerStore.Engine.WaitForState(RachisState.Follower, CancellationToken.None);
@@ -133,8 +133,8 @@ namespace InterversionTests
         {
             var (leader, peers, local) = await CreateMixedCluster(new[]
             {
-                "4.0.7-nightly-20180820-0400",
-                "4.0.7-nightly-20180820-0400"
+                "4.0.7",
+                "4.0.7"
             });
 
             var stores = await GetStores(leader, peers);
@@ -169,8 +169,8 @@ namespace InterversionTests
         {
             var (leader, peers, local) = await CreateMixedCluster(new[]
             {
-                "4.0.7-nightly-20180820-0400",
-                "4.0.7-nightly-20180820-0400"
+                "4.0.7",
+                "4.0.7"
             }, 1);
 
             var stores = await GetStores(leader, peers, local);
@@ -265,8 +265,8 @@ namespace InterversionTests
         {
             var (leader, peers, local) = await CreateMixedCluster(new[]
             {
-                "4.0.7-nightly-20180820-0400",
-                "4.0.7-nightly-20180820-0400"
+                "4.0.7",
+                "4.0.7"
             });
 
             var stores = await GetStores(leader, peers,
@@ -324,7 +324,7 @@ namespace InterversionTests
         {
             var (leader, peers, local) = await CreateMixedCluster(new[]
             {
-                "4.0.7-nightly-20180820-0400"
+                "4.0.7"
             }, 1);
 
             var stores = await GetStores(leader, peers, local,
@@ -385,8 +385,8 @@ namespace InterversionTests
             var batchSize = 5;
             var (leader, peers, local) = await CreateMixedCluster(new[]
             {
-                "4.0.7-nightly-20180820-0400",
-                "4.0.7-nightly-20180820-0400"
+                "4.0.7",
+                "4.0.7"
             }, customSettings: new Dictionary<string, string>
             {
                 [RavenConfiguration.GetKey(x => x.Cluster.MoveToRehabGraceTime)] = "1"
@@ -433,7 +433,7 @@ namespace InterversionTests
             var batchSize = 5;
             var (leader, peers, local) = await CreateMixedCluster(new[]
             {
-                "4.0.7-nightly-20180820-0400"
+                "4.0.7"
             }, localPeers: 1, customSettings: new Dictionary<string, string>
             {
                 [RavenConfiguration.GetKey(x => x.Cluster.MoveToRehabGraceTime)] = "1"
@@ -466,7 +466,7 @@ namespace InterversionTests
                 Assert.Equal(tag, mentor);
                 var nodeC = peers[0];
                 Assert.Equal(storeC.Urls[0], nodeC.Url);
-                Assert.Equal("4.0.7-nightly-20180820-0400", nodeC.Version);
+                Assert.Equal("4.0.7", nodeC.Version);
 
                 KillSlavedServerProcess(nodeC.Process);
 
@@ -482,9 +482,9 @@ namespace InterversionTests
         [Fact]
         public async Task V40Cluster_V41Client_BasicReplication()
         {
-            (var urlA, var serverA) = await GetServerAsync("4.0.7-nightly-20180820-0400");
-            (var urlB, var serverB) = await GetServerAsync("4.0.7-nightly-20180820-0400");
-            (var urlc, var serverC) = await GetServerAsync("4.0.7-nightly-20180820-0400");
+            (var urlA, var serverA) = await GetServerAsync("4.0.7");
+            (var urlB, var serverB) = await GetServerAsync("4.0.7");
+            (var urlc, var serverC) = await GetServerAsync("4.0.7");
 
             using (var storeA = await GetStore(urlA, serverA, null, new InterversionTestOptions
             {
@@ -537,9 +537,9 @@ namespace InterversionTests
         [Fact]
         public async Task V40Cluster_V41Client_Counters()
         {
-            (var urlA, var serverA) = await GetServerAsync("4.0.7-nightly-20180820-0400");
-            (var urlB, var serverB) = await GetServerAsync("4.0.7-nightly-20180820-0400");
-            (var urlc, var serverC) = await GetServerAsync("4.0.7-nightly-20180820-0400");
+            (var urlA, var serverA) = await GetServerAsync("4.0.7");
+            (var urlB, var serverB) = await GetServerAsync("4.0.7");
+            (var urlc, var serverC) = await GetServerAsync("4.0.7");
 
             using (var storeA = await GetStore(urlA, serverA, null, new InterversionTestOptions
             {
@@ -608,9 +608,9 @@ namespace InterversionTests
         [Fact]
         public async Task V40Cluster_V41Client_ClusterTransactions()
         {
-            (var urlA, var serverA) = await GetServerAsync("4.0.7-nightly-20180820-0400");
-            (var urlB, var serverB) = await GetServerAsync("4.0.7-nightly-20180820-0400");
-            (var urlc, var serverC) = await GetServerAsync("4.0.7-nightly-20180820-0400");
+            (var urlA, var serverA) = await GetServerAsync("4.0.7");
+            (var urlB, var serverB) = await GetServerAsync("4.0.7");
+            (var urlc, var serverC) = await GetServerAsync("4.0.7");
 
             using (var storeA = await GetStore(urlA, serverA, null, new InterversionTestOptions
             {
@@ -670,8 +670,8 @@ namespace InterversionTests
 
             var (leader, peers, local) = await CreateMixedCluster(new[]
             {
-                "4.0.7-nightly-20180820-0400",
-                "4.0.7-nightly-20180820-0400"
+                "4.0.7",
+                "4.0.7"
             });
 
             var stores = await GetStores(leader, peers);
@@ -725,8 +725,8 @@ namespace InterversionTests
 
             var (leader, peers, local) = await CreateMixedCluster(new[]
             {
-                "4.0.7-nightly-20180820-0400",
-                "4.0.7-nightly-20180820-0400"
+                "4.0.7",
+                "4.0.7"
             });
 
             var stores = await GetStores(leader, peers);
@@ -765,8 +765,8 @@ namespace InterversionTests
         {
             var (leader, peers, local) = await CreateMixedCluster(new[]
             {
-                "4.0.7-nightly-20180820-0400",
-                "4.0.7-nightly-20180820-0400"
+                "4.0.7",
+                "4.0.7"
             });
 
             var stores = await GetStores(leader, peers);
@@ -792,8 +792,8 @@ namespace InterversionTests
             var nodesAmount = 5;
             var (leader, peers, local) = await CreateMixedCluster(new[]
             {
-                "4.0.7-nightly-20180820-0400",
-                "4.0.7-nightly-20180820-0400"
+                "4.0.7",
+                "4.0.7"
             }, 2, new Dictionary<string, string>
             {
                 [RavenConfiguration.GetKey(x => x.Cluster.MoveToRehabGraceTime)] = "1"

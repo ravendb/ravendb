@@ -6,6 +6,6 @@ namespace Tests.Infrastructure.InterversionTest
 
         public virtual string Command => ServerPath;
 
-        public virtual string CommandArguments { get; set; } = string.Empty;
+        public virtual string CommandArguments => string.Empty;
     }
 }
