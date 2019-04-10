@@ -2,7 +2,6 @@
 @resource-usage-primary-color: @brand-primary-light;
 @resource-usage-secondary-color: @brand-primary-dark;
 @dashboard-requests-color: @color-3-3;
-@dashboard-request-duration-color: @color-3-1;
 @dashboard-writes-color: @color-4-3;
 @dashboard-written-color: @color-1-3;
 
@@ -277,10 +276,6 @@
         display: inline-block;
     }
 
-    .total-average-request-duration-legend {
-        background-color: @dashboard-request-duration-color;
-    }
-    
     .total-requests-legend {
         background-color: @dashboard-requests-color;
     }
@@ -320,20 +315,6 @@
             }
         }
         
-        .average {
-            .line {
-                fill: none;
-                stroke: @dashboard-request-duration-color;
-                stroke-width: 2;
-            }
-
-            .fill {
-                fill-opacity: 0.3;
-                fill: @dashboard-request-duration-color;
-                stroke: none;
-            }
-        }
-
         .writes {
             .line {
                 fill: none;
