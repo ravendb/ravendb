@@ -86,5 +86,17 @@ namespace Raven.Server.ServerWide.Commands.Subscriptions
             json[nameof(LastTimeServerMadeProgressWithDocuments)] = LastTimeServerMadeProgressWithDocuments;
             json[nameof(LastKnownSubscriptionChangeVector)] = LastKnownSubscriptionChangeVector;
         }
+
+        public override string AdditionalDebugInformation(Exception exception)
+        {
+            var msg = $"Got 'Ack' for id={SubscriptionId}, name={SubscriptionName}, CV={ChangeVector}, Tag={NodeTag}, lastProgressTime={LastTimeServerMadeProgressWithDocuments}" +
+                $"lastKnownCV={LastKnownSubscriptionChangeVector}, HasHighlyAvailableTasks={HasHighlyAvailableTasks}.";
+            if (exception != null)
+            {
+                msg += $" Exception = {exception}.";
+            }
+
+            return msg;
+        }
     }
 }
