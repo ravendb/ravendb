@@ -30,7 +30,7 @@ namespace SlowTests.Voron.Issues
                     tree.Add("items/" + i, buffer);
                 }
 
-                tx.LowLevelTransaction.SimulateThrowingOnCommitStage2 = true;
+                tx.LowLevelTransaction.ForTestingPurposesOnly().SimulateThrowingOnCommitStage2 = true;
 
                 Assert.Throws<InvalidOperationException>(() => tx.Commit());
             }
