@@ -1,10 +1,12 @@
 ﻿using System;
 using Raven.Client.Documents.Conventions;
 using Raven.Client.Documents.Session;
+using Raven.Server.Config;
 using Raven.Server.NotificationCenter;
 using Raven.Server.NotificationCenter.Notifications;
 using Raven.Server.NotificationCenter.Notifications.Details;
 using Raven.Server.Utils;
+using Sparrow;
 using Sparrow.Json;
 
 namespace Raven.Server.Documents
@@ -80,10 +82,13 @@ namespace Raven.Server.Documents
                         DocumentConventions.Default);
                 }
 
+                string message = $"We have detected that some documents has surpassed the configured size threshold ({new Size(_maxWarnSize, SizeUnit.Bytes)}). It might have performance impact. You can alter warning limits by changing '{RavenConfiguration.GetKey(x => x.PerformanceHints.HugeDocumentSize)}' configuration value.";
+                
+
                 return PerformanceHint.Create(
                     _database,
                     "Huge documents",
-                    "We have detected that some documents has surpassed the configured size threshold",
+                    message,
                     PerformanceHintType.HugeDocuments,
                     NotificationSeverity.Warning,
                     PerformanceHintSource,
