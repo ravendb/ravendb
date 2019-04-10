@@ -886,12 +886,16 @@ namespace Raven.Server.Commercial
             {
                 if (hostnameOrIp.Equals("0.0.0.0"))
                 {
-                    localIps.Add(new IPEndPoint(IPAddress.Parse(hostnameOrIp), localNode.Port)); 
+                    localIps.Add(new IPEndPoint(IPAddress.Parse(hostnameOrIp), localNode.Port));
+                    localIps.Add(new IPEndPoint(IPAddress.Parse(hostnameOrIp), localNode.TcpPort));
                     continue;
                 }
 
                 foreach (var ip in await Dns.GetHostAddressesAsync(hostnameOrIp))
+                {
                     localIps.Add(new IPEndPoint(IPAddress.Parse(ip.ToString()), localNode.Port));
+                    localIps.Add(new IPEndPoint(IPAddress.Parse(ip.ToString()), localNode.TcpPort));
+                }
             }
 
             var requestedEndpoints = localIps.ToArray();
@@ -934,11 +938,15 @@ namespace Raven.Server.Commercial
                 if (hostnameOrIp.Equals("0.0.0.0"))
                 {
                     localIps.Add(new IPEndPoint(IPAddress.Parse(hostnameOrIp), localNode.Port));
+                    localIps.Add(new IPEndPoint(IPAddress.Parse(hostnameOrIp), localNode.TcpPort));
                     continue;
                 }
 
                 foreach (var ip in await Dns.GetHostAddressesAsync(hostnameOrIp))
+                {
                     localIps.Add(new IPEndPoint(IPAddress.Parse(ip.ToString()), localNode.Port));
+                    localIps.Add(new IPEndPoint(IPAddress.Parse(ip.ToString()), localNode.TcpPort));
+                }
             }
 
             var serverCert = setupInfo.GetX509Certificate();
@@ -947,10 +955,19 @@ namespace Raven.Server.Commercial
 
             try
             {
-                if (serverStore.Server.ListenEndpoints.Port == localNode.Port)
+                var tcpStatus = serverStore.Server.GetTcpServerStatus();
+                
+                if (serverStore.Server.ListenEndpoints.Port == localNode.Port && tcpStatus.Port == localNode.TcpPort)
                 {
-                    var currentIps = serverStore.Server.ListenEndpoints.Addresses;
-                    if (localIps.Count == 0 && currentIps.Length == 1 &&
+                    var currentIps = serverStore.Server.ListenEndpoints.Addresses.ToList();
+
+                    foreach (var listener in tcpStatus.Listeners)
+                    {
+                        if (IPAddress.TryParse(listener.LocalEndpoint.ToString(), out IPAddress ipAddress))
+                            currentIps.Add(ipAddress);
+                    }
+                    
+                    if (localIps.Count == 0 && currentIps.Count == 1 &&
                         (Equals(currentIps[0], IPAddress.Any) || Equals(currentIps[0], IPAddress.IPv6Any)))
                         return; // listen to any ip in this 
 
@@ -967,7 +984,7 @@ namespace Raven.Server.Commercial
 
                     await AssertDnsUpdatedSuccessfully(localServerUrl, ips, token);
                 }
-
+                
                 // Here we send the actual ips we will bind to in the local machine.
                 await SimulateRunningServer(serverCert, localServerUrl, setupInfo.LocalNodeTag, localIps.ToArray(), localNode.Port, serverStore.Configuration.ConfigPath, setupMode, token);
             }
@@ -981,11 +998,14 @@ namespace Raven.Server.Commercial
         {
             settingsJsonObject.TryGet(RavenConfiguration.GetKey(x => x.Core.PublicServerUrl), out string publicServerUrl);
             settingsJsonObject.TryGet(RavenConfiguration.GetKey(x => x.Core.ServerUrls), out string serverUrl);
+            settingsJsonObject.TryGet(RavenConfiguration.GetKey(x => x.Core.TcpServerUrls), out string tcpServerUrl);
             settingsJsonObject.TryGet(RavenConfiguration.GetKey(x => x.Core.SetupMode), out SetupMode setupMode);
             settingsJsonObject.TryGet(RavenConfiguration.GetKey(x => x.Core.ExternalIp), out string externalIp);
             
             var serverUrls = serverUrl.Split(";");
             var port = new Uri(serverUrls[0]).Port;
+            var tcpServerUrls = tcpServerUrl.Split(";");
+            var tcpPort = new Uri(tcpServerUrls[0]).Port;
             var hostnamesOrIps = serverUrls.Select(url => new Uri(url).DnsSafeHost).ToArray();
 
             var localIps = new List<IPEndPoint>();
@@ -995,19 +1015,32 @@ namespace Raven.Server.Commercial
                 if (hostnameOrIp.Equals("0.0.0.0"))
                 {
                     localIps.Add(new IPEndPoint(IPAddress.Parse(hostnameOrIp), port));
+                    localIps.Add(new IPEndPoint(IPAddress.Parse(hostnameOrIp), tcpPort));
                     continue;
                 }
 
                 foreach (var ip in await Dns.GetHostAddressesAsync(hostnameOrIp))
+                {
                     localIps.Add(new IPEndPoint(IPAddress.Parse(ip.ToString()), port));
+                    localIps.Add(new IPEndPoint(IPAddress.Parse(ip.ToString()), tcpPort));
+                }
             }
 
             try
             {
-                if (serverStore.Server.ListenEndpoints.Port == port)
+                var tcpStatus = serverStore.Server.GetTcpServerStatus();
+                
+                if (serverStore.Server.ListenEndpoints.Port == port && tcpStatus.Port == tcpPort)
                 {
-                    var currentIps = serverStore.Server.ListenEndpoints.Addresses;
-                    if (localIps.Count == 0 && currentIps.Length == 1 &&
+                    var currentIps = serverStore.Server.ListenEndpoints.Addresses.ToList();
+
+                    foreach (var listener in tcpStatus.Listeners)
+                    {
+                        if (IPAddress.TryParse(listener.LocalEndpoint.ToString(), out IPAddress ipAddress))
+                            currentIps.Add(ipAddress);
+                    }
+
+                    if (localIps.Count == 0 && currentIps.Count == 1 &&
                         (Equals(currentIps[0], IPAddress.Any) || Equals(currentIps[0], IPAddress.IPv6Any)))
                         return; // listen to any ip in this 
 
