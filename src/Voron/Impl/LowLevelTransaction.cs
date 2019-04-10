@@ -31,6 +31,7 @@ namespace Voron.Impl
         private readonly ByteStringContext _allocator;
         private readonly PageLocator _pageLocator;
         private bool _disposeAllocator;
+        private TestingStuff _forTestingPurposes;
 
         private Tree _root;
         public Tree RootObjects => _root;
@@ -975,8 +976,8 @@ namespace Voron.Impl
                 numberOfWrittenPages = _journal.WriteToJournal(this, out journalFilePath);
                 FlushedToJournal = true;
                 _updatePageTranslationTableAndUnusedPages = numberOfWrittenPages.UpdatePageTranslationTableAndUnusedPages;
-                if (SimulateThrowingOnCommitStage2)
-                    ThrowSimulateErrorOnCommitStage2();
+                if (_forTestingPurposes?.SimulateThrowingOnCommitStage2 == true)
+                    _forTestingPurposes.ThrowSimulateErrorOnCommitStage2();
             }
             catch
             {
@@ -1132,14 +1133,19 @@ namespace Voron.Impl
             if (state == _lastState || state == null)
                 return;
 
-            if (_pagerStates.Add(state) == false)
+            _forTestingPurposes?.ActionToCallDuringEnsurePagerStateReference?.Invoke();
+
+            if(_pagerStates.Contains(state))
             {
                 _lastState = state;
                 return;
             }
 
             state = state.CurrentPager.GetPagerStateAndAddRefAtomically(); // state might hold released pagerState, and we want to add ref to the current (i.e. data file was re-allocated and a new state is now available). RavenDB-6950
+
             _lastState = state;
+
+            _pagerStates.Add(state);
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
@@ -1266,11 +1272,42 @@ namespace Voron.Impl
             return _txHeader;
         }
 
-        internal bool SimulateThrowingOnCommitStage2 = false;
-
-        private static void ThrowSimulateErrorOnCommitStage2()
+        internal TestingStuff ForTestingPurposesOnly()
         {
-            throw new InvalidOperationException("Simulation error");
+            if (_forTestingPurposes != null)
+                return _forTestingPurposes;
+
+            return _forTestingPurposes = new TestingStuff(this);
+        }
+
+        internal class TestingStuff
+        {
+            private readonly LowLevelTransaction _tx;
+            internal bool SimulateThrowingOnCommitStage2 = false;
+
+            internal Action ActionToCallDuringEnsurePagerStateReference;
+
+            public TestingStuff(LowLevelTransaction tx)
+            {
+                _tx = tx;
+            }
+
+            internal void ThrowSimulateErrorOnCommitStage2()
+            {
+                throw new InvalidOperationException("Simulation error");
+            }
+
+            internal IDisposable CallDuringEnsurePagerStateReference(Action action)
+            {
+                ActionToCallDuringEnsurePagerStateReference = action;
+
+                return new DisposableAction(() => ActionToCallDuringEnsurePagerStateReference = null);
+            }
+
+            internal HashSet<PagerState> GetPagerStates()
+            {
+                return _tx._pagerStates;
+            }
         }
     }
 }
