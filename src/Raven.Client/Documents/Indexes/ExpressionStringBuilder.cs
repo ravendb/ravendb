@@ -155,7 +155,7 @@ namespace Raven.Client.Documents.Indexes
                     Out(")");
 
                 if (isId == false)
-                    Out("." + name);
+                    OutMemberCall(name);
             }
             else
             {
@@ -171,11 +171,44 @@ namespace Raven.Client.Documents.Indexes
                 Out(member.DeclaringType.Name);
 
                 if (isId == false)
-                    Out("." + name);
+                    OutMemberCall(name);
             }
 
             if (isId)
                 Out(")");
+        }
+
+        private void OutMemberCall(string name)
+        {
+            if (ValidCSharpName(name))
+            {
+                Out("." + name);
+            }
+            else
+            {
+                Out("[\"");
+                OutLiteral(name);
+                Out("\"]");
+            }
+        }
+
+        private static bool ValidCSharpName(string name)
+        {
+            if (name == null)
+                return false;
+
+            if (name.Length > 512 || name.Length <= 0)
+                return false;
+
+            if (char.IsLetter(name[0]) == false)
+                return false;
+
+            for (int i = 1; i < name.Length; i++)
+            {
+                if (!char.IsLetterOrDigit(name[i]) && name[i] != '_')
+                    return false;
+            }
+            return true;
         }
 
         private static bool ShouldParenthesisMemberExpression(Expression instance)
