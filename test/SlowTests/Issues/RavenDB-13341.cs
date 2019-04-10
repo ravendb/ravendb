@@ -105,8 +105,9 @@ namespace SlowTests.Issues
             {
                 store.Maintenance.Send(new CreateSampleDataOperation());
 
+                const int timeout = 60_000;
                 await store.Maintenance.Server.SendAsync(new AddDatabaseNodeOperation(databaseName));
-                var val = await WaitForValueAsync(async () => await GetMembersCount(), 2);
+                var val = await WaitForValueAsync(async () => await GetMembersCount(), 2, timeout);
                 Assert.Equal(2, val);
 
                 var databaseRecord = await store.Maintenance.Server.SendAsync(new GetDatabaseRecordOperation(databaseName));
@@ -116,11 +117,11 @@ namespace SlowTests.Issues
                 await VerifyDocumentsCount();
 
                 await store.Maintenance.Server.SendAsync(new DeleteDatabasesOperation(databaseName, hardDelete: true, fromNode: addedNodeTag));
-                val = await WaitForValueAsync(async () => await GetMembersCount(), 1);
+                val = await WaitForValueAsync(async () => await GetMembersCount(), 1, timeout);
                 Assert.Equal(1, val);
 
                 await store.Maintenance.Server.SendAsync(new AddDatabaseNodeOperation(databaseName, addedNodeTag));
-                val = await WaitForValueAsync(async () => await GetMembersCount(), 2);
+                val = await WaitForValueAsync(async () => await GetMembersCount(), 2, timeout);
                 Assert.Equal(2, val);
 
                 await VerifyDocumentsCount();
