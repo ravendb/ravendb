@@ -393,6 +393,7 @@ class trafficSection {
 
     writesPerSecondTooltip: KnockoutComputed<string>;
     writeBytesPerSecondTooltip: KnockoutComputed<string>;
+    averageRequestTimeTooltip: KnockoutComputed<string>;
 
     constructor() {
         this.writesPerSecondTooltip = ko.pureComputed(() => {
@@ -410,6 +411,10 @@ class trafficSection {
                     Counters: <strong>${this.sizeFormatter(this.totalCountersWriteBytesPerSecond())}/s</strong>
                     </div>`;
         });
+        
+        this.averageRequestTimeTooltip = ko.pureComputed(() => {
+            return `This value represents moving average<br /> of every request execution time<Br /> which reaches the server.`;
+        })
     }
 
     init() {
@@ -471,8 +476,6 @@ class trafficSection {
                         return 30;
                     case "writes":
                         return 20;
-                    case "average":
-                        return 10;
                     default:
                         return 5;
                 }
@@ -494,12 +497,10 @@ class trafficSection {
             const requests = data.values['requests'];
             const writes = data.values['writes'];
             const written = data.values['written'];
-            const average = data.values['average'];
 
             return `<div class="tooltip-inner">
                 Time: <strong>${date}</strong><br />
                 Requests/s: <strong>${requests.toLocaleString()}</strong><br />
-                Average request time : <strong>${Math.round(average).toLocaleString()} ms</strong><br />
                 Writes/s: <strong>${writes.toLocaleString()}</strong><br />
                 Data Written/s: <strong>${this.sizeFormatter(written)}</strong>
                 </div>`;
@@ -538,9 +539,6 @@ class trafficSection {
         }, {
             key: "written",
             value: this.totalDataWritesPerSecond()
-        }, {
-            key: "average",
-            value: this.totalAverageRequestTime()
         }, {
             key: "requests",
             value: this.totalRequestsPerSecond()
