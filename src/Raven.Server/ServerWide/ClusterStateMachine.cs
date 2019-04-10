@@ -394,8 +394,7 @@ namespace Raven.Server.ServerWide
                         PutValue<LicenseLimits>(context, type, cmd, index, leader);
                         break;
                     case nameof(PutCertificateWithSamePinningHashCommand):
-                        // To prevent abuse we ignore repeated (implicit) registration of certificates so we set overwrite to false.
-                        PutCertificate(context, type, cmd, index, serverStore, overwrite:false);
+                        PutCertificate(context, type, cmd, index, serverStore);
                         if (cmd.TryGet(nameof(PutCertificateWithSamePinningHashCommand.Name), out string thumbprint))
                             DeleteLocalState(context, thumbprint);
                         if (cmd.TryGet(nameof(PutCertificateWithSamePinningHashCommand.PublicKeyPinningHash), out string hash))
@@ -1160,7 +1159,7 @@ namespace Raven.Server.ServerWide
             }
         }
 
-        private void PutCertificate(TransactionOperationContext context, string type, BlittableJsonReaderObject cmd, long index, ServerStore serverStore, bool overwrite = true)
+        private void PutCertificate(TransactionOperationContext context, string type, BlittableJsonReaderObject cmd, long index, ServerStore serverStore)
         {
             try
             {
@@ -1171,12 +1170,6 @@ namespace Raven.Server.ServerWide
                 using (Slice.From(context.Allocator, command.Name.ToLowerInvariant(), out var thumbprintSlice))
                 using (var cert = context.ReadObject(command.ValueToJson(), "inner-val"))
                 {
-                    var existing = serverStore.Cluster.GetCertificateByThumbprint(context, command.Name);
-
-                    // Ignore repeated registration of certificates
-                    if (existing != null && overwrite == false)
-                        return;
-
                     if (_clusterAuditLog.IsInfoEnabled)
                         _clusterAuditLog.Info($"Registering new certificate '{command.Value.Thumbprint}' in the cluster. Security Clearance: {command.Value.SecurityClearance}. " +
                                               $"Permissions:{Environment.NewLine}{string.Join(Environment.NewLine, command.Value.Permissions.Select(kvp => kvp.Key + ": " + kvp.Value.ToString()))}");
