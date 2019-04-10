@@ -394,7 +394,8 @@ namespace Raven.Server.ServerWide
                         PutValue<LicenseLimits>(context, type, cmd, index, leader);
                         break;
                     case nameof(PutCertificateWithSamePinningHashCommand):
-                        PutCertificate(context, type, cmd, index, serverStore);
+                        // To prevent abuse we ignore repeated (implicit) registration of certificates so we set overwrite to false.
+                        PutCertificate(context, type, cmd, index, serverStore, overwrite:false);
                         if (cmd.TryGet(nameof(PutCertificateWithSamePinningHashCommand.Name), out string thumbprint))
                             DeleteLocalState(context, thumbprint);
                         if (cmd.TryGet(nameof(PutCertificateWithSamePinningHashCommand.PublicKeyPinningHash), out string hash))
@@ -1159,7 +1160,7 @@ namespace Raven.Server.ServerWide
             }
         }
 
-        private void PutCertificate(TransactionOperationContext context, string type, BlittableJsonReaderObject cmd, long index, ServerStore serverStore)
+        private void PutCertificate(TransactionOperationContext context, string type, BlittableJsonReaderObject cmd, long index, ServerStore serverStore, bool overwrite = true)
         {
             try
             {
@@ -1173,7 +1174,7 @@ namespace Raven.Server.ServerWide
                     var existing = serverStore.Cluster.GetCertificateByThumbprint(context, command.Name);
 
                     // Ignore repeated registration of certificates
-                    if (existing != null)
+                    if (existing != null && overwrite == false)
                         return;
 
                     if (_clusterAuditLog.IsInfoEnabled)
