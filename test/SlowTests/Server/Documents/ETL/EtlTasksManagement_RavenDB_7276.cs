@@ -107,11 +107,10 @@ namespace SlowTests.Server.Documents.ETL
                     Database = "Northwind",
                 });
 
-
-                store.Maintenance.Send(new ToggleOngoingTaskStateOperation(result.TaskId, OngoingTaskType.RavenEtl, true));
+                var toggleResult = store.Maintenance.Send(new ToggleOngoingTaskStateOperation(result.TaskId, OngoingTaskType.RavenEtl, true));
+                Assert.NotNull(toggleResult);
 
                 var ongoingTask = store.Maintenance.Send(new GetOngoingTaskInfoOperation(result.TaskId, OngoingTaskType.RavenEtl));
-
                 Assert.Equal(OngoingTaskState.Disabled, ongoingTask.TaskState);
             }
         }
