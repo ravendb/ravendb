@@ -406,14 +406,16 @@ loadToOrders(orderData);
             {
                 var taskId = addWatcherRes.TaskId;
                 var op = new ToggleOngoingTaskStateOperation(taskId, OngoingTaskType.Replication, true);
-                await store.Maintenance.SendAsync(op);
+                var res = await store.Maintenance.SendAsync(op);
+                Assert.NotNull(res);
 
                 var result = await GetTaskInfo((DocumentStore)store, taskId, OngoingTaskType.Replication);
                 Assert.Equal(OngoingTaskState.Disabled, result.TaskState);
 
                 taskId = updateBackupResult.TaskId;
                 op = new ToggleOngoingTaskStateOperation(taskId, OngoingTaskType.Backup, false);
-                await store.Maintenance.SendAsync(op);
+                res = await store.Maintenance.SendAsync(op);
+                Assert.NotNull(res);
 
                 result = await GetTaskInfo((DocumentStore)store, taskId, OngoingTaskType.Backup);
                 Assert.Equal(OngoingTaskState.Enabled, result.TaskState);
