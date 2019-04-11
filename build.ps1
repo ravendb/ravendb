@@ -27,6 +27,7 @@ $ErrorActionPreference = "Stop"
 . '.\scripts\getScriptDirectory.ps1'
 . '.\scripts\copyAssets.ps1'
 . '.\scripts\validateAssembly.ps1'
+. '.\scripts\validateRuntimeConfig.ps1'
 . '.\scripts\version.ps1'
 . '.\scripts\updateSourceWithBuildInfo.ps1'
 . '.\scripts\nuget.ps1'
@@ -194,6 +195,8 @@ Foreach ($target in $targets) {
         "Drtools" = $([io.path]::combine($specOutDir, "drtools"));
         "Migrator" = $([io.path]::combine($specOutDir, "migrator"));
     }
+
+    ValidateRuntimeConfig $target $specOutDirs.Server
 
     if ($target.Name -eq "windows-x64") {
         Validate-AssemblyVersion $(Join-Path -Path $specOutDirs.Server -ChildPath "Raven.Server.dll" ) $versionObj
