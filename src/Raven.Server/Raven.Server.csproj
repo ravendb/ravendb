@@ -133,11 +133,16 @@
   <PropertyGroup Condition="'$(Configuration)'=='Validate'">
     <Optimize>true</Optimize>
   </PropertyGroup>
-  <PropertyGroup Condition="'$(Platform)' == 'x64' OR '$(Platform)' == ''">
+
+  <Target Name="PlatformMessage" AfterTargets="Build" >
+    <Message Text="Building for platform: $(Platform)" Importance="high"/>
+  </Target>
+  
+  <PropertyGroup Condition="'$(Platform)' != 'x86'" >
     <ServerGarbageCollection>true</ServerGarbageCollection>
     <ConcurrentGarbageCollection>true</ConcurrentGarbageCollection>
     <RetainVMGarbageCollection>true</RetainVMGarbageCollection>
-  </PropertyGroup>
+  </PropertyGroup>  
   <PropertyGroup Condition="'$(Platform)' == 'x86'">
     <ServerGarbageCollection>false</ServerGarbageCollection>
     <ConcurrentGarbageCollection>false</ConcurrentGarbageCollection>
