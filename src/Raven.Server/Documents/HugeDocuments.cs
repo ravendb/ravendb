@@ -14,7 +14,7 @@ namespace Raven.Server.Documents
     public class HugeDocuments
     {
         private static readonly string PerformanceHintSource = "Documents";
-        private static readonly string HugeDocumentsId = $"{NotificationType.PerformanceHint}/{PerformanceHintType.HugeDocuments}/{PerformanceHintSource}";
+        internal static readonly string HugeDocumentsId = $"{NotificationType.PerformanceHint}/{PerformanceHintType.HugeDocuments}/{PerformanceHintSource}";
         private readonly object _addHintSyncObj = new object();
         private readonly SizeLimitedConcurrentDictionary<Tuple<string, DateTime>, long> _hugeDocs;
         private readonly long _maxWarnSize;
