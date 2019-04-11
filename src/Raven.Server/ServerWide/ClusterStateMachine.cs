@@ -504,32 +504,32 @@ namespace Raven.Server.ServerWide
             CleanUpClusterStateCommand cleanCommand = null;
             try
             {
-            var items = context.Transaction.InnerTransaction.OpenTable(ItemsSchema, Items);
+                var items = context.Transaction.InnerTransaction.OpenTable(ItemsSchema, Items);
                 cleanCommand = (CleanUpClusterStateCommand)JsonDeserializationCluster.Commands[nameof(CleanUpClusterStateCommand)](cmd);
-            var affectedDatabases = cleanCommand.Clean(context, index);
-            foreach (var tuple in affectedDatabases)
-            {
-                var database = tuple.Key;
-                var commandsCount = tuple.Value;
-                var record = ReadDatabase(context, database);
-                if (record == null)
-                    continue;
-
-                record.TruncatedClusterTransactionCommandsCount = commandsCount;
-
-                var dbKey = "db/" + tuple.Key;
-                using (Slice.From(context.Allocator, dbKey, out Slice valueName))
-                using (Slice.From(context.Allocator, dbKey.ToLowerInvariant(), out Slice valueNameLowered))
+                var affectedDatabases = cleanCommand.Clean(context, index);
+                foreach (var tuple in affectedDatabases)
                 {
-                    var updatedDatabaseBlittable = EntityToBlittable.ConvertCommandToBlittable(record, context);
-                    UpdateValue(index, items, valueNameLowered, valueName, updatedDatabaseBlittable);
+                    var database = tuple.Key;
+                    var commandsCount = tuple.Value;
+                    var record = ReadDatabase(context, database);
+                    if (record == null)
+                        continue;
+
+                    record.TruncatedClusterTransactionCommandsCount = commandsCount;
+
+                    var dbKey = "db/" + tuple.Key;
+                    using (Slice.From(context.Allocator, dbKey, out Slice valueName))
+                    using (Slice.From(context.Allocator, dbKey.ToLowerInvariant(), out Slice valueNameLowered))
+                    {
+                        var updatedDatabaseBlittable = EntityToBlittable.ConvertCommandToBlittable(record, context);
+                        UpdateValue(index, items, valueNameLowered, valueName, updatedDatabaseBlittable);
+                    }
+
+                    // we simply update the value without invoking the OnChange function
                 }
 
-                // we simply update the value without invoking the OnChange function
+                OnTransactionDispose(context, index);
             }
-
-            OnTransactionDispose(context, index);
-        }
             catch (Exception e)
             {
                 exception = e;
@@ -548,25 +548,25 @@ namespace Raven.Server.ServerWide
             try
             {
                 clusterTransaction = (ClusterTransactionCommand)JsonDeserializationCluster.Commands[nameof(ClusterTransactionCommand)](cmd);
-            UpdateDatabaseRecordId(context, index, clusterTransaction);
+                UpdateDatabaseRecordId(context, index, clusterTransaction);
 
-            var compareExchangeItems = context.Transaction.InnerTransaction.OpenTable(CompareExchangeSchema, CompareExchange);
-            var error = clusterTransaction.ExecuteCompareExchangeCommands(context, index, compareExchangeItems);
-            if (error == null)
-            {
-                clusterTransaction.SaveCommandsBatch(context, index);
-                var notify = clusterTransaction.HasDocumentsInTransaction
-                    ? DatabasesLandlord.ClusterDatabaseChangeType.PendingClusterTransactions
-                    : DatabasesLandlord.ClusterDatabaseChangeType.ClusterTransactionCompleted;
+                var compareExchangeItems = context.Transaction.InnerTransaction.OpenTable(CompareExchangeSchema, CompareExchange);
+                var error = clusterTransaction.ExecuteCompareExchangeCommands(context, index, compareExchangeItems);
+                if (error == null)
+                {
+                    clusterTransaction.SaveCommandsBatch(context, index);
+                    var notify = clusterTransaction.HasDocumentsInTransaction
+                        ? DatabasesLandlord.ClusterDatabaseChangeType.PendingClusterTransactions
+                        : DatabasesLandlord.ClusterDatabaseChangeType.ClusterTransactionCompleted;
 
-                NotifyDatabaseAboutChanged(context, clusterTransaction.DatabaseName, index, nameof(ClusterTransactionCommand), notify);
+                    NotifyDatabaseAboutChanged(context, clusterTransaction.DatabaseName, index, nameof(ClusterTransactionCommand), notify);
 
-                return null;
+                    return null;
+                }
+
+                OnTransactionDispose(context, index);
+                return error;
             }
-
-            OnTransactionDispose(context, index);
-            return error;
-        }
             catch (Exception e)
             {
                 exception = e;
@@ -574,7 +574,7 @@ namespace Raven.Server.ServerWide
             }
             finally
             {
-                LogCommand(nameof(ClusterTransactionCommand), index,exception, clusterTransaction?.AdditionalDebugInformation(exception));
+                LogCommand(nameof(ClusterTransactionCommand), index, exception, clusterTransaction?.AdditionalDebugInformation(exception));
             }
         }
 
@@ -709,7 +709,7 @@ namespace Raven.Server.ServerWide
             finally
             {
                 LogCommand(nameof(InstallUpdatedServerCertificateCommand), index, exception);
-        }
+            }
         }
 
         private void ConfirmServerCertificateReplaced(TransactionOperationContext context, BlittableJsonReaderObject cmd, long index, ServerStore serverStore)
@@ -796,49 +796,49 @@ namespace Raven.Server.ServerWide
             {
                 removedCmd = JsonDeserializationCluster.RemoveNodeFromClusterCommand(cmd);
                 var removed = removedCmd.RemovedNode;
-            var items = context.Transaction.InnerTransaction.OpenTable(ItemsSchema, Items);
+                var items = context.Transaction.InnerTransaction.OpenTable(ItemsSchema, Items);
 
-            foreach (var record in ReadAllDatabases(context))
-            {
-                using (Slice.From(context.Allocator, "db/" + record.DatabaseName.ToLowerInvariant(), out Slice lowerKey))
-                using (Slice.From(context.Allocator, "db/" + record.DatabaseName, out Slice key))
+                foreach (var record in ReadAllDatabases(context))
                 {
-                    if (record.DeletionInProgress != null)
+                    using (Slice.From(context.Allocator, "db/" + record.DatabaseName.ToLowerInvariant(), out Slice lowerKey))
+                    using (Slice.From(context.Allocator, "db/" + record.DatabaseName, out Slice key))
                     {
-                        // delete immediately if this node was removed.
-                        var deleteNow = record.DeletionInProgress.Remove(removed) && _parent.Tag == removed;
-                        if (record.DeletionInProgress.Count == 0 && record.Topology.Count == 0 || deleteNow)
+                        if (record.DeletionInProgress != null)
                         {
-                            DeleteDatabaseRecord(context, index, items, lowerKey, record.DatabaseName);
+                            // delete immediately if this node was removed.
+                            var deleteNow = record.DeletionInProgress.Remove(removed) && _parent.Tag == removed;
+                            if (record.DeletionInProgress.Count == 0 && record.Topology.Count == 0 || deleteNow)
+                            {
+                                DeleteDatabaseRecord(context, index, items, lowerKey, record.DatabaseName);
                                 NotifyDatabaseAboutChanged(context, record.DatabaseName, index, nameof(RemoveNodeFromCluster),
                                     DatabasesLandlord.ClusterDatabaseChangeType.RecordChanged);
-                            continue;
+                                continue;
+                            }
                         }
-                    }
 
-                    if (record.Topology.RelevantFor(removed))
-                    {
-                        record.Topology.RemoveFromTopology(removed);
-                        // Explicit removing of the node means that we modify the replication factor
-                        record.Topology.ReplicationFactor = record.Topology.Count;
-                        if (record.Topology.Count == 0)
+                        if (record.Topology.RelevantFor(removed))
                         {
-                            DeleteDatabaseRecord(context, index, items, lowerKey, record.DatabaseName);
-                            OnTransactionDispose(context, index);
-                            continue;
+                            record.Topology.RemoveFromTopology(removed);
+                            // Explicit removing of the node means that we modify the replication factor
+                            record.Topology.ReplicationFactor = record.Topology.Count;
+                            if (record.Topology.Count == 0)
+                            {
+                                DeleteDatabaseRecord(context, index, items, lowerKey, record.DatabaseName);
+                                OnTransactionDispose(context, index);
+                                continue;
+                            }
                         }
+
+                        var updated = EntityToBlittable.ConvertCommandToBlittable(record, context);
+
+                        UpdateValue(index, items, lowerKey, key, updated);
                     }
-
-                    var updated = EntityToBlittable.ConvertCommandToBlittable(record, context);
-
-                    UpdateValue(index, items, lowerKey, key, updated);
-                }
 
                     NotifyDatabaseAboutChanged(context, record.DatabaseName, index, nameof(RemoveNodeFromCluster),
                         DatabasesLandlord.ClusterDatabaseChangeType.RecordChanged);
-            }
+                }
 
-        }
+            }
             catch (Exception e)
             {
                 exception = e;
@@ -846,7 +846,7 @@ namespace Raven.Server.ServerWide
             }
             finally
             {
-                LogCommand(nameof(RemoveNodeFromClusterCommand),index,exception, removedCmd?.AdditionalDebugInformation(exception));
+                LogCommand(nameof(RemoveNodeFromClusterCommand), index, exception, removedCmd?.AdditionalDebugInformation(exception));
             }
         }
 
@@ -899,7 +899,7 @@ namespace Raven.Server.ServerWide
 
                 updateCommand.Execute(context, items, index, record, _parent.CurrentState, out result);
             }
-            catch(Exception e)
+            catch (Exception e)
             {
                 exception = e;
                 throw;
@@ -922,45 +922,45 @@ namespace Raven.Server.ServerWide
             RemoveNodeFromDatabaseCommand remove = null;
             try
             {
-            var items = context.Transaction.InnerTransaction.OpenTable(ItemsSchema, Items);
+                var items = context.Transaction.InnerTransaction.OpenTable(ItemsSchema, Items);
                 remove = JsonDeserializationCluster.RemoveNodeFromDatabaseCommand(cmd);
-            var databaseName = remove.DatabaseName;
-            var databaseNameLowered = databaseName.ToLowerInvariant();
-            using (Slice.From(context.Allocator, "db/" + databaseNameLowered, out Slice lowerKey))
-            using (Slice.From(context.Allocator, "db/" + databaseName, out Slice key))
-            {
-                if (items.ReadByKey(lowerKey, out TableValueReader reader) == false)
-                    throw new RachisApplyException($"The database {databaseName} does not exists");
-
-                var doc = new BlittableJsonReaderObject(reader.Read(2, out int size), size, context);
-                var databaseRecord = JsonDeserializationCluster.DatabaseRecord(doc);
-
-                if (doc.TryGet(nameof(DatabaseRecord.Topology), out BlittableJsonReaderObject _) == false)
+                var databaseName = remove.DatabaseName;
+                var databaseNameLowered = databaseName.ToLowerInvariant();
+                using (Slice.From(context.Allocator, "db/" + databaseNameLowered, out Slice lowerKey))
+                using (Slice.From(context.Allocator, "db/" + databaseName, out Slice key))
                 {
-                    items.DeleteByKey(lowerKey);
+                    if (items.ReadByKey(lowerKey, out TableValueReader reader) == false)
+                        throw new RachisApplyException($"The database {databaseName} does not exists");
+
+                    var doc = new BlittableJsonReaderObject(reader.Read(2, out int size), size, context);
+                    var databaseRecord = JsonDeserializationCluster.DatabaseRecord(doc);
+
+                    if (doc.TryGet(nameof(DatabaseRecord.Topology), out BlittableJsonReaderObject _) == false)
+                    {
+                        items.DeleteByKey(lowerKey);
                         NotifyDatabaseAboutChanged(context, databaseName, index, nameof(RemoveNodeFromDatabaseCommand),
                             DatabasesLandlord.ClusterDatabaseChangeType.RecordChanged);
-                    return;
-                }
+                        return;
+                    }
 
-                remove.UpdateDatabaseRecord(databaseRecord, index);
+                    remove.UpdateDatabaseRecord(databaseRecord, index);
 
-                if (databaseRecord.DeletionInProgress.Count == 0 && databaseRecord.Topology.Count == 0)
-                {
-                    DeleteDatabaseRecord(context, index, items, lowerKey, databaseName);
+                    if (databaseRecord.DeletionInProgress.Count == 0 && databaseRecord.Topology.Count == 0)
+                    {
+                        DeleteDatabaseRecord(context, index, items, lowerKey, databaseName);
                         NotifyDatabaseAboutChanged(context, databaseName, index, nameof(RemoveNodeFromDatabaseCommand),
                             DatabasesLandlord.ClusterDatabaseChangeType.RecordChanged);
-                    return;
+                        return;
+                    }
+
+                    var updated = EntityToBlittable.ConvertCommandToBlittable(databaseRecord, context);
+
+                    UpdateValue(index, items, lowerKey, key, updated);
                 }
-
-                var updated = EntityToBlittable.ConvertCommandToBlittable(databaseRecord, context);
-
-                UpdateValue(index, items, lowerKey, key, updated);
-            }
 
                 NotifyDatabaseAboutChanged(context, databaseName, index, nameof(RemoveNodeFromDatabaseCommand),
                     DatabasesLandlord.ClusterDatabaseChangeType.RecordChanged);
-        }
+            }
             catch (Exception e)
             {
                 exception = e;
@@ -1276,7 +1276,7 @@ namespace Raven.Server.ServerWide
             }
             finally
             {
-                LogCommand(type, index,exception, command.AdditionalDebugInformation(exception));
+                LogCommand(type, index, exception, command.AdditionalDebugInformation(exception));
                 NotifyValueChanged(context, type, index);
             }
         }
@@ -1718,13 +1718,13 @@ namespace Raven.Server.ServerWide
             CompareExchangeCommandBase compareExchange = null;
             try
             {
-            var items = context.Transaction.InnerTransaction.OpenTable(CompareExchangeSchema, CompareExchange);
+                var items = context.Transaction.InnerTransaction.OpenTable(CompareExchangeSchema, CompareExchange);
                 compareExchange = (CompareExchangeCommandBase)JsonDeserializationCluster.Commands[type](cmd);
 
-            result = compareExchange.Execute(context, items, index);
+                result = compareExchange.Execute(context, items, index);
 
-            OnTransactionDispose(context, index);
-        }
+                OnTransactionDispose(context, index);
+            }
             catch (Exception e)
             {
                 exception = e;
