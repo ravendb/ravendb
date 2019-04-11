@@ -66,7 +66,7 @@ namespace Raven.Server.ServerWide.Commands.ETL
             return null;
         }
 
-        protected override BlittableJsonReaderObject GetUpdatedValue(long index, DatabaseRecord record, JsonOperationContext context, BlittableJsonReaderObject existingValue, RachisState state)
+        protected override BlittableJsonReaderObject GetUpdatedValue(long index, DatabaseRecord record, JsonOperationContext context, BlittableJsonReaderObject existingValue)
         {
             EtlProcessState etlState;
 
@@ -81,7 +81,7 @@ namespace Raven.Server.ServerWide.Commands.ETL
 
 
                 var lastResponsibleNode = GetLastResponsibleNode(HasHighlyAvailableTasks, record.Topology, NodeTag);
-                if (record.Topology.WhoseTaskIsIt(state, databaseTask, lastResponsibleNode) != NodeTag)
+                if (record.Topology.WhoseTaskIsIt(RachisState.Follower, databaseTask, lastResponsibleNode) != NodeTag)
                     throw new RachisApplyException($"Can't update progress of ETL {ConfigurationName} by node {NodeTag}, because it's not its task to update this ETL");
             }
                 
