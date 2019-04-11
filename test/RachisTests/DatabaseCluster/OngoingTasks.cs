@@ -408,6 +408,8 @@ loadToOrders(orderData);
                 var op = new ToggleOngoingTaskStateOperation(taskId, OngoingTaskType.Replication, true);
                 var res = await store.Maintenance.SendAsync(op);
                 Assert.NotNull(res);
+                Assert.True(res.RaftCommandIndex > 0);
+                Assert.True(res.TaskId > 0);
 
                 var result = await GetTaskInfo((DocumentStore)store, taskId, OngoingTaskType.Replication);
                 Assert.Equal(OngoingTaskState.Disabled, result.TaskState);
@@ -416,6 +418,8 @@ loadToOrders(orderData);
                 op = new ToggleOngoingTaskStateOperation(taskId, OngoingTaskType.Backup, false);
                 res = await store.Maintenance.SendAsync(op);
                 Assert.NotNull(res);
+                Assert.True(res.RaftCommandIndex > 0);
+                Assert.True(res.TaskId > 0);
 
                 result = await GetTaskInfo((DocumentStore)store, taskId, OngoingTaskType.Backup);
                 Assert.Equal(OngoingTaskState.Enabled, result.TaskState);
