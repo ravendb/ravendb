@@ -1192,15 +1192,21 @@ namespace Raven.Server.ServerWide
         {
             if (_parent.Log.IsInfoEnabled)
             {
-                var successStatues = exception != null ? "has failed" : "was successful";
-                var msg = $"Apply of {type} with index {index} {successStatues}.";
-                var additionalDebugInfo = additionalDebugInformation;
-                if (additionalDebugInfo != null)
-                {
-                    msg += $" AdditionalDebugInformation: {additionalDebugInfo}.";
-                }
-                _parent.Log.Info(msg);
+                LogCommandInternal(type, index, exception, additionalDebugInformation);
             }
+        }
+
+        private void LogCommandInternal(string type, long index, Exception exception, string additionalDebugInformation)
+        {
+            var successStatues = exception != null ? "has failed" : "was successful";
+            var msg = $"Apply of {type} with index {index} {successStatues}.";
+            var additionalDebugInfo = additionalDebugInformation;
+            if (additionalDebugInfo != null)
+            {
+                msg += $" AdditionalDebugInformation: {additionalDebugInfo}.";
+            }
+
+            _parent.Log.Info(msg);
         }
 
         private void UpdateDatabaseRecordEtagForBackup(TransactionOperationContext context, string type, BlittableJsonReaderObject cmd, long index, Leader leader, ServerStore serverStore)
