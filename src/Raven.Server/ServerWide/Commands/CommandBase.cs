@@ -51,5 +51,10 @@ namespace Raven.Server.ServerWide.Commands
         {
             return remoteResult;
         }
+
+        public virtual string AdditionalDebugInformation(Exception exception)
+        {
+            return null;
+        }
     }
 }

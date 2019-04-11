@@ -21,7 +21,7 @@ namespace Raven.Server.ServerWide.Commands.Subscriptions
 
         public override string GetItemId() => SubscriptionState.GenerateSubscriptionItemKeyName(DatabaseName, SubscriptionName);
 
-        protected override BlittableJsonReaderObject GetUpdatedValue(long index, DatabaseRecord record, JsonOperationContext context, BlittableJsonReaderObject existingValue, RachisState state)
+        protected override BlittableJsonReaderObject GetUpdatedValue(long index, DatabaseRecord record, JsonOperationContext context, BlittableJsonReaderObject existingValue)
         {
             var itemId = GetItemId();
             if (existingValue == null)
@@ -30,7 +30,7 @@ namespace Raven.Server.ServerWide.Commands.Subscriptions
             var subscription = JsonDeserializationCluster.SubscriptionState(existingValue);
 
             var lastResponsibleNode = AcknowledgeSubscriptionBatchCommand.GetLastResponsibleNode(HasHighlyAvailableTasks, record.Topology, NodeTag);
-            if (record.Topology.WhoseTaskIsIt(state, subscription, lastResponsibleNode) != NodeTag)
+            if (record.Topology.WhoseTaskIsIt(RachisState.Follower, subscription, lastResponsibleNode) != NodeTag)
                 throw new RachisApplyException($"Can't update subscription with name {itemId} by node {NodeTag}, because it's not it's task to update this subscription");
 
             subscription.LastClientConnectionTime = LastClientConnectionTime;

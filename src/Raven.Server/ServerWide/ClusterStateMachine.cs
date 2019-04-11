@@ -5,6 +5,7 @@ using System.Diagnostics;
 using System.IO;
 using System.Linq;
 using System.Net.Sockets;
+using System.Runtime.CompilerServices;
 using System.Runtime.ExceptionServices;
 using System.Security.Cryptography.X509Certificates;
 using System.Text;
@@ -370,7 +371,7 @@ namespace Raven.Server.ServerWide
                         break;
                     case nameof(RecheckStatusOfServerCertificateCommand):
                         if (_parent.Log.IsOperationsEnabled)
-                            _parent.Log.Operations($"Received {nameof(RecheckStatusOfServerCertificateCommand)}.");
+                            _parent.Log.Operations($"Received {nameof(RecheckStatusOfServerCertificateCommand)}, index = {index}.");
                         NotifyValueChanged(context, type, index); // just need to notify listeners
                         break;
                     case nameof(ConfirmReceiptServerCertificateCommand):
@@ -378,7 +379,7 @@ namespace Raven.Server.ServerWide
                         break;
                     case nameof(RecheckStatusOfServerCertificateReplacementCommand):
                         if (_parent.Log.IsOperationsEnabled)
-                            _parent.Log.Operations($"Received {nameof(RecheckStatusOfServerCertificateReplacementCommand)}.");
+                            _parent.Log.Operations($"Received {nameof(RecheckStatusOfServerCertificateReplacementCommand)}, index = {index}.");
                         NotifyValueChanged(context, type, index); // just need to notify listeners
                         break;
                     case nameof(ConfirmServerCertificateReplacedCommand):
@@ -499,8 +500,12 @@ namespace Raven.Server.ServerWide
 
         private void ClusterStateCleanUp(TransactionOperationContext context, BlittableJsonReaderObject cmd, long index)
         {
+            Exception exception = null;
+            CleanUpClusterStateCommand cleanCommand = null;
+            try
+            {
             var items = context.Transaction.InnerTransaction.OpenTable(ItemsSchema, Items);
-            var cleanCommand = (CleanUpClusterStateCommand)JsonDeserializationCluster.Commands[nameof(CleanUpClusterStateCommand)](cmd);
+                cleanCommand = (CleanUpClusterStateCommand)JsonDeserializationCluster.Commands[nameof(CleanUpClusterStateCommand)](cmd);
             var affectedDatabases = cleanCommand.Clean(context, index);
             foreach (var tuple in affectedDatabases)
             {
@@ -519,14 +524,30 @@ namespace Raven.Server.ServerWide
                     var updatedDatabaseBlittable = EntityToBlittable.ConvertCommandToBlittable(record, context);
                     UpdateValue(index, items, valueNameLowered, valueName, updatedDatabaseBlittable);
                 }
+
                 // we simply update the value without invoking the OnChange function
             }
+
             OnTransactionDispose(context, index);
+        }
+            catch (Exception e)
+            {
+                exception = e;
+                throw;
+            }
+            finally
+            {
+                LogCommand(nameof(CleanUpClusterStateCommand), index, exception, cleanCommand?.AdditionalDebugInformation(exception));
+            }
         }
 
         private List<string> ExecuteClusterTransaction(TransactionOperationContext context, BlittableJsonReaderObject cmd, long index)
         {
-            var clusterTransaction = (ClusterTransactionCommand)JsonDeserializationCluster.Commands[nameof(ClusterTransactionCommand)](cmd);
+            ClusterTransactionCommand clusterTransaction = null;
+            Exception exception = null;
+            try
+            {
+                clusterTransaction = (ClusterTransactionCommand)JsonDeserializationCluster.Commands[nameof(ClusterTransactionCommand)](cmd);
             UpdateDatabaseRecordId(context, index, clusterTransaction);
 
             var compareExchangeItems = context.Transaction.InnerTransaction.OpenTable(CompareExchangeSchema, CompareExchange);
@@ -545,6 +566,16 @@ namespace Raven.Server.ServerWide
 
             OnTransactionDispose(context, index);
             return error;
+        }
+            catch (Exception e)
+            {
+                exception = e;
+                throw;
+            }
+            finally
+            {
+                LogCommand(nameof(ClusterTransactionCommand), index,exception, clusterTransaction?.AdditionalDebugInformation(exception));
+            }
         }
 
         private void UpdateDatabaseRecordId(TransactionOperationContext context, long index, ClusterTransactionCommand clusterTransaction)
@@ -567,7 +598,7 @@ namespace Raven.Server.ServerWide
         private void ConfirmReceiptServerCertificate(TransactionOperationContext context, BlittableJsonReaderObject cmd, long index, ServerStore serverStore)
         {
             if (_parent.Log.IsOperationsEnabled)
-                _parent.Log.Operations($"Received {nameof(ConfirmReceiptServerCertificateCommand)}.");
+                _parent.Log.Operations($"Received {nameof(ConfirmReceiptServerCertificateCommand)}, index = {index}.");
             try
             {
                 var items = context.Transaction.InnerTransaction.OpenTable(ItemsSchema, Items);
@@ -608,7 +639,7 @@ namespace Raven.Server.ServerWide
             catch (Exception e)
             {
                 if (_parent.Log.IsOperationsEnabled)
-                    _parent.Log.Operations($"{nameof(ConfirmReceiptServerCertificate)} failed.", e);
+                    _parent.Log.Operations($"{nameof(ConfirmReceiptServerCertificate)} failed (index = {index}).", e);
 
                 serverStore.NotificationCenter.Add(AlertRaised.Create(
                     null,
@@ -626,6 +657,7 @@ namespace Raven.Server.ServerWide
         {
             if (_parent.Log.IsOperationsEnabled)
                 _parent.Log.Operations($"Received {nameof(InstallUpdatedServerCertificateCommand)}.");
+            Exception exception = null;
             try
             {
                 if (cmd.TryGet(nameof(InstallUpdatedServerCertificateCommand.Certificate), out string cert) == false || string.IsNullOrEmpty(cert))
@@ -654,13 +686,15 @@ namespace Raven.Server.ServerWide
                     var items = context.Transaction.InnerTransaction.OpenTable(ItemsSchema, Items);
                     UpdateValue(index, items, key, key, json);
                 }
+
                 // this will trigger the notification to the leader
                 NotifyValueChanged(context, nameof(InstallUpdatedServerCertificateCommand), index);
             }
             catch (Exception e)
             {
+                exception = e;
                 if (_parent.Log.IsOperationsEnabled)
-                    _parent.Log.Operations($"{nameof(InstallUpdatedServerCertificateCommand)} failed.", e);
+                    _parent.Log.Operations($"{nameof(InstallUpdatedServerCertificateCommand)} failed (index = {index}).", e);
 
                 serverStore.NotificationCenter.Add(AlertRaised.Create(
                     null,
@@ -672,12 +706,16 @@ namespace Raven.Server.ServerWide
 
                 throw;
             }
+            finally
+            {
+                LogCommand(nameof(InstallUpdatedServerCertificateCommand), index, exception);
+        }
         }
 
         private void ConfirmServerCertificateReplaced(TransactionOperationContext context, BlittableJsonReaderObject cmd, long index, ServerStore serverStore)
         {
             if (_parent.Log.IsOperationsEnabled)
-                _parent.Log.Operations($"Received {nameof(ConfirmServerCertificateReplacedCommand)}.");
+                _parent.Log.Operations($"Received {nameof(ConfirmServerCertificateReplacedCommand)}, index = {index}.");
             try
             {
                 var items = context.Transaction.InnerTransaction.OpenTable(ItemsSchema, Items);
@@ -736,7 +774,7 @@ namespace Raven.Server.ServerWide
             catch (Exception e)
             {
                 if (_parent.Log.IsOperationsEnabled)
-                    _parent.Log.Operations($"{nameof(ConfirmServerCertificateReplaced)} failed.", e);
+                    _parent.Log.Operations($"{nameof(ConfirmServerCertificateReplaced)} failed (index = {index}).", e);
 
                 serverStore.NotificationCenter.Add(AlertRaised.Create(
                     null,
@@ -752,7 +790,12 @@ namespace Raven.Server.ServerWide
 
         private void RemoveNodeFromCluster(TransactionOperationContext context, BlittableJsonReaderObject cmd, long index, Leader leader)
         {
-            var removed = JsonDeserializationCluster.RemoveNodeFromClusterCommand(cmd).RemovedNode;
+            RemoveNodeFromClusterCommand removedCmd = null;
+            Exception exception = null;
+            try
+            {
+                removedCmd = JsonDeserializationCluster.RemoveNodeFromClusterCommand(cmd);
+                var removed = removedCmd.RemovedNode;
             var items = context.Transaction.InnerTransaction.OpenTable(ItemsSchema, Items);
 
             foreach (var record in ReadAllDatabases(context))
@@ -767,7 +810,8 @@ namespace Raven.Server.ServerWide
                         if (record.DeletionInProgress.Count == 0 && record.Topology.Count == 0 || deleteNow)
                         {
                             DeleteDatabaseRecord(context, index, items, lowerKey, record.DatabaseName);
-                            NotifyDatabaseAboutChanged(context, record.DatabaseName, index, nameof(RemoveNodeFromCluster), DatabasesLandlord.ClusterDatabaseChangeType.RecordChanged);
+                                NotifyDatabaseAboutChanged(context, record.DatabaseName, index, nameof(RemoveNodeFromCluster),
+                                    DatabasesLandlord.ClusterDatabaseChangeType.RecordChanged);
                             continue;
                         }
                     }
@@ -784,12 +828,25 @@ namespace Raven.Server.ServerWide
                             continue;
                         }
                     }
+
                     var updated = EntityToBlittable.ConvertCommandToBlittable(record, context);
 
                     UpdateValue(index, items, lowerKey, key, updated);
                 }
 
-                NotifyDatabaseAboutChanged(context, record.DatabaseName, index, nameof(RemoveNodeFromCluster), DatabasesLandlord.ClusterDatabaseChangeType.RecordChanged);
+                    NotifyDatabaseAboutChanged(context, record.DatabaseName, index, nameof(RemoveNodeFromCluster),
+                        DatabasesLandlord.ClusterDatabaseChangeType.RecordChanged);
+            }
+
+        }
+            catch (Exception e)
+            {
+                exception = e;
+                throw;
+            }
+            finally
+            {
+                LogCommand(nameof(RemoveNodeFromClusterCommand),index,exception, removedCmd?.AdditionalDebugInformation(exception));
             }
         }
 
@@ -828,6 +885,7 @@ namespace Raven.Server.ServerWide
         {
             result = null;
             UpdateValueForDatabaseCommand updateCommand = null;
+            Exception exception = null;
             try
             {
                 var items = context.Transaction.InnerTransaction.OpenTable(ItemsSchema, Items);
@@ -836,12 +894,19 @@ namespace Raven.Server.ServerWide
 
                 var record = ReadDatabase(context, updateCommand.DatabaseName);
                 if (record == null)
-                    throw new DatabaseDoesNotExistException($"Cannot set typed value of type {type} for database {updateCommand.DatabaseName}, because it does not exist");
+                    throw new DatabaseDoesNotExistException(
+                        $"Cannot set typed value of type {type} for database {updateCommand.DatabaseName}, because it does not exist");
 
                 updateCommand.Execute(context, items, index, record, _parent.CurrentState, out result);
             }
+            catch(Exception e)
+            {
+                exception = e;
+                throw;
+            }
             finally
             {
+                LogCommand(type, index, exception, updateCommand?.AdditionalDebugInformation(exception));
                 NotifyDatabaseAboutChanged(context, updateCommand?.DatabaseName, index, type, DatabasesLandlord.ClusterDatabaseChangeType.ValueChanged);
             }
         }
@@ -853,8 +918,12 @@ namespace Raven.Server.ServerWide
 
         private unsafe void RemoveNodeFromDatabase(TransactionOperationContext context, BlittableJsonReaderObject cmd, long index, Leader leader)
         {
+            Exception exception = null;
+            RemoveNodeFromDatabaseCommand remove = null;
+            try
+            {
             var items = context.Transaction.InnerTransaction.OpenTable(ItemsSchema, Items);
-            var remove = JsonDeserializationCluster.RemoveNodeFromDatabaseCommand(cmd);
+                remove = JsonDeserializationCluster.RemoveNodeFromDatabaseCommand(cmd);
             var databaseName = remove.DatabaseName;
             var databaseNameLowered = databaseName.ToLowerInvariant();
             using (Slice.From(context.Allocator, "db/" + databaseNameLowered, out Slice lowerKey))
@@ -869,7 +938,8 @@ namespace Raven.Server.ServerWide
                 if (doc.TryGet(nameof(DatabaseRecord.Topology), out BlittableJsonReaderObject _) == false)
                 {
                     items.DeleteByKey(lowerKey);
-                    NotifyDatabaseAboutChanged(context, databaseName, index, nameof(RemoveNodeFromDatabaseCommand), DatabasesLandlord.ClusterDatabaseChangeType.RecordChanged);
+                        NotifyDatabaseAboutChanged(context, databaseName, index, nameof(RemoveNodeFromDatabaseCommand),
+                            DatabasesLandlord.ClusterDatabaseChangeType.RecordChanged);
                     return;
                 }
 
@@ -878,7 +948,8 @@ namespace Raven.Server.ServerWide
                 if (databaseRecord.DeletionInProgress.Count == 0 && databaseRecord.Topology.Count == 0)
                 {
                     DeleteDatabaseRecord(context, index, items, lowerKey, databaseName);
-                    NotifyDatabaseAboutChanged(context, databaseName, index, nameof(RemoveNodeFromDatabaseCommand), DatabasesLandlord.ClusterDatabaseChangeType.RecordChanged);
+                        NotifyDatabaseAboutChanged(context, databaseName, index, nameof(RemoveNodeFromDatabaseCommand),
+                            DatabasesLandlord.ClusterDatabaseChangeType.RecordChanged);
                     return;
                 }
 
@@ -887,7 +958,19 @@ namespace Raven.Server.ServerWide
                 UpdateValue(index, items, lowerKey, key, updated);
             }
 
-            NotifyDatabaseAboutChanged(context, databaseName, index, nameof(RemoveNodeFromDatabaseCommand), DatabasesLandlord.ClusterDatabaseChangeType.RecordChanged);
+                NotifyDatabaseAboutChanged(context, databaseName, index, nameof(RemoveNodeFromDatabaseCommand),
+                    DatabasesLandlord.ClusterDatabaseChangeType.RecordChanged);
+        }
+            catch (Exception e)
+            {
+                exception = e;
+                throw;
+            }
+            finally
+            {
+                LogCommand(nameof(RemoveNodeFromDatabaseCommand), index, exception, remove?.AdditionalDebugInformation(exception));
+            }
+
         }
 
         private void DeleteDatabaseRecord(TransactionOperationContext context, long index, Table items, Slice lowerKey, string databaseName)
@@ -953,6 +1036,7 @@ namespace Raven.Server.ServerWide
         private unsafe List<string> AddDatabase(TransactionOperationContext context, BlittableJsonReaderObject cmd, long index, Leader leader)
         {
             var addDatabaseCommand = JsonDeserializationCluster.AddDatabaseCommand(cmd);
+            Exception exception = null;
             try
             {
                 Debug.Assert(addDatabaseCommand.Record.Topology.Count != 0, "Attempt to add database with no nodes");
@@ -980,8 +1064,14 @@ namespace Raven.Server.ServerWide
                     return addDatabaseCommand.Record.Topology.Members;
                 }
             }
+            catch (Exception e)
+            {
+                exception = e;
+                throw;
+            }
             finally
             {
+                LogCommand(nameof(AddDatabaseCommand), index, exception, addDatabaseCommand.AdditionalDebugInformation(exception));
                 NotifyDatabaseAboutChanged(context, addDatabaseCommand.Name, index, nameof(AddDatabaseCommand),
                     DatabasesLandlord.ClusterDatabaseChangeType.RecordChanged);
             }
@@ -1017,16 +1107,24 @@ namespace Raven.Server.ServerWide
 
         private void DeleteValue(TransactionOperationContext context, string type, BlittableJsonReaderObject cmd, long index, Leader leader)
         {
+            Exception exception = null;
+            DeleteValueCommand delCmd = null;
             try
             {
-                var delCmd = JsonDeserializationCluster.DeleteValueCommand(cmd);
+                delCmd = JsonDeserializationCluster.DeleteValueCommand(cmd);
                 if (delCmd.Name.StartsWith("db/"))
                     throw new RachisApplyException("Cannot delete " + delCmd.Name + " using DeleteValueCommand, only via dedicated database calls");
 
                 DeleteItem(context, delCmd.Name);
             }
+            catch (Exception e)
+            {
+                exception = e;
+                throw;
+            }
             finally
             {
+                LogCommand(type, index, exception, delCmd?.AdditionalDebugInformation(exception));
                 NotifyValueChanged(context, type, index);
             }
         }
@@ -1082,10 +1180,12 @@ namespace Raven.Server.ServerWide
 
         private void DeleteMultipleValues(TransactionOperationContext context, string type, BlittableJsonReaderObject cmd, long index, Leader leader)
         {
+            Exception exception = null;
+            DeleteMultipleValuesCommand delCmd = null;
             try
             {
                 var items = context.Transaction.InnerTransaction.OpenTable(ItemsSchema, Items);
-                var delCmd = JsonDeserializationCluster.DeleteMultipleValuesCommand(cmd);
+                delCmd = JsonDeserializationCluster.DeleteMultipleValuesCommand(cmd);
                 if (delCmd.Names.Any(name => name.StartsWith("db/")))
                     throw new RachisApplyException("Cannot delete " + delCmd.Names + " using DeleteMultipleValuesCommand, only via dedicated database calls");
 
@@ -1098,18 +1198,26 @@ namespace Raven.Server.ServerWide
                     }
                 }
             }
+            catch (Exception e)
+            {
+                exception = e;
+                throw;
+            }
             finally
             {
+                LogCommand(type, index, exception, delCmd?.AdditionalDebugInformation(exception));
                 NotifyValueChanged(context, type, index);
             }
         }
 
         private unsafe void UpdateValue<T>(TransactionOperationContext context, string type, BlittableJsonReaderObject cmd, long index, Leader leader)
         {
+            UpdateValueCommand<T> command = null;
+            Exception exception = null;
             try
             {
                 var items = context.Transaction.InnerTransaction.OpenTable(ItemsSchema, Items);
-                var command = (UpdateValueCommand<T>)CommandBase.CreateFrom(cmd);
+                command = (UpdateValueCommand<T>)CommandBase.CreateFrom(cmd);
                 if (command.Name.StartsWith(Constants.Documents.Prefix))
                     throw new RachisApplyException("Cannot set " + command.Name + " using PutValueCommand, only via dedicated database calls");
 
@@ -1130,18 +1238,26 @@ namespace Raven.Server.ServerWide
                     UpdateValue(index, items, valueNameLowered, valueName, newValue);
                 }
             }
+            catch (Exception e)
+            {
+                exception = e;
+                throw;
+            }
             finally
             {
+                LogCommand(type, index, exception, command?.AdditionalDebugInformation(exception));
                 NotifyValueChanged(context, type, index);
             }
         }
 
         private T PutValue<T>(TransactionOperationContext context, string type, BlittableJsonReaderObject cmd, long index, Leader leader)
         {
+            Exception exception = null;
+            PutValueCommand<T> command = null;
             try
             {
                 var items = context.Transaction.InnerTransaction.OpenTable(ItemsSchema, Items);
-                var command = (PutValueCommand<T>)CommandBase.CreateFrom(cmd);
+                command = (PutValueCommand<T>)CommandBase.CreateFrom(cmd);
                 if (command.Name.StartsWith(Constants.Documents.Prefix))
                     throw new RachisApplyException("Cannot set " + command.Name + " using PutValueCommand, only via dedicated database calls");
 
@@ -1153,8 +1269,14 @@ namespace Raven.Server.ServerWide
                     return command.Value;
                 }
             }
+            catch (Exception e)
+            {
+                exception = e;
+                throw;
+            }
             finally
             {
+                LogCommand(type, index,exception, command.AdditionalDebugInformation(exception));
                 NotifyValueChanged(context, type, index);
             }
         }
@@ -1263,6 +1385,8 @@ namespace Raven.Server.ServerWide
             if (cmd.TryGet(DatabaseName, out string databaseName) == false || string.IsNullOrEmpty(databaseName))
                 throw new RachisApplyException("Update database command must contain a DatabaseName property");
 
+            UpdateDatabaseCommand updateCommand = null;
+            Exception exception = null;
             try
             {
                 var items = context.Transaction.InnerTransaction.OpenTable(ItemsSchema, Items);
@@ -1272,7 +1396,7 @@ namespace Raven.Server.ServerWide
                 using (Slice.From(context.Allocator, dbKey.ToLowerInvariant(), out Slice valueNameLowered))
                 {
                     var databaseRecordJson = ReadInternal(context, out long etag, valueNameLowered);
-                    var updateCommand = (UpdateDatabaseCommand)JsonDeserializationCluster.Commands[type](cmd);
+                    updateCommand = (UpdateDatabaseCommand)JsonDeserializationCluster.Commands[type](cmd);
 
                     if (databaseRecordJson == null)
                     {
@@ -1322,10 +1446,38 @@ namespace Raven.Server.ServerWide
                     UpdateValue(index, items, valueNameLowered, valueName, updatedDatabaseBlittable);
                 }
             }
+            catch (Exception e)
+            {
+                exception = e;
+                throw;
+            }
             finally
             {
+                LogCommand(type, index, exception, updateCommand?.AdditionalDebugInformation(exception));
                 NotifyDatabaseAboutChanged(context, databaseName, index, type, DatabasesLandlord.ClusterDatabaseChangeType.RecordChanged);
             }
+        }
+
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        private void LogCommand(string type, long index, Exception exception, string additionalDebugInformation = null)
+        {
+            if (_parent.Log.IsInfoEnabled)
+            {
+                LogCommandInternal(type, index, exception, additionalDebugInformation);
+            }
+        }
+
+        private void LogCommandInternal(string type, long index, Exception exception, string additionalDebugInformation)
+        {
+            var successStatues = exception != null ? "has failed" : "was successful";
+            var msg = $"Apply of {type} with index {index} {successStatues}.";
+            var additionalDebugInfo = additionalDebugInformation;
+            if (additionalDebugInfo != null)
+            {
+                msg += $" AdditionalDebugInformation: {additionalDebugInfo}.";
+            }
+
+            _parent.Log.Info(msg);
         }
 
         private void UpdateEtagForBackup(DatabaseRecord databaseRecord, string type, long index)
@@ -1562,12 +1714,26 @@ namespace Raven.Server.ServerWide
 
         public void ExecuteCompareExchange(TransactionOperationContext context, string type, BlittableJsonReaderObject cmd, long index, out object result)
         {
+            Exception exception = null;
+            CompareExchangeCommandBase compareExchange = null;
+            try
+            {
             var items = context.Transaction.InnerTransaction.OpenTable(CompareExchangeSchema, CompareExchange);
-            var compareExchange = (CompareExchangeCommandBase)JsonDeserializationCluster.Commands[type](cmd);
+                compareExchange = (CompareExchangeCommandBase)JsonDeserializationCluster.Commands[type](cmd);
 
             result = compareExchange.Execute(context, items, index);
 
             OnTransactionDispose(context, index);
+        }
+            catch (Exception e)
+            {
+                exception = e;
+                throw;
+            }
+            finally
+            {
+                LogCommand(type, index, exception, compareExchange?.AdditionalDebugInformation(exception));
+            }
         }
 
         private void OnTransactionDispose(TransactionOperationContext context, long index)

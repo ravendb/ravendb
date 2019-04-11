@@ -16,7 +16,7 @@ namespace Raven.Server.ServerWide.Commands
         public abstract void FillJson(DynamicJsonValue json);
 
         protected abstract BlittableJsonReaderObject GetUpdatedValue(long index, DatabaseRecord record, JsonOperationContext context,
-            BlittableJsonReaderObject existingValue, RachisState state);
+            BlittableJsonReaderObject existingValue);
 
         public virtual unsafe void Execute(TransactionOperationContext context, Table items, long index, DatabaseRecord record, RachisState state, out object result)
         {
@@ -31,7 +31,7 @@ namespace Raven.Server.ServerWide.Commands
                     itemBlittable = new BlittableJsonReaderObject(ptr, size, context);
                 }
 
-                itemBlittable = GetUpdatedValue(index, record, context, itemBlittable, state);
+                itemBlittable = GetUpdatedValue(index, record, context, itemBlittable);
 
                 // if returned null, means, there is nothing to update and we just wanted to delete the value
                 if (itemBlittable == null)
