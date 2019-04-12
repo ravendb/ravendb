@@ -7,7 +7,7 @@ using Sparrow.Json;
 
 namespace Raven.Client.Documents.Operations.OngoingTasks
 {
-    public class ToggleOngoingTaskStateOperation : IMaintenanceOperation
+    public class ToggleOngoingTaskStateOperation : IMaintenanceOperation<ModifyOngoingTaskResult>
     {
         private readonly long _taskId;
         private readonly string _taskName;
@@ -31,12 +31,12 @@ namespace Raven.Client.Documents.Operations.OngoingTasks
             _disable = disable;
         }
 
-        public RavenCommand GetCommand(DocumentConventions conventions, JsonOperationContext ctx)
+        public RavenCommand<ModifyOngoingTaskResult> GetCommand(DocumentConventions conventions, JsonOperationContext ctx)
         {
             return new ToggleTaskStateCommand(_taskId, _taskName, _type, _disable);
         }
 
-        private class ToggleTaskStateCommand : RavenCommand
+        private class ToggleTaskStateCommand : RavenCommand<ModifyOngoingTaskResult>
         {
             private readonly long _taskId;
             private readonly string _taskName;
@@ -75,5 +75,4 @@ namespace Raven.Client.Documents.Operations.OngoingTasks
             public override bool IsReadRequest => false;
         }
     }
-
 }

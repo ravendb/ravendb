@@ -37,7 +37,9 @@ namespace InterversionTests
                     store40.Maintenance.Send(new CreateSampleDataOperation());
 
                     var options = new DatabaseSmugglerExportOptions();
+#pragma warning disable CS0618 // Type or member is obsolete
                     options.OperateOnTypes &= ~DatabaseItemType.Counters;
+#pragma warning restore CS0618 // Type or member is obsolete
                     options.OperateOnTypes &= ~DatabaseItemType.CounterGroups;
                     options.OperateOnTypes &= ~DatabaseItemType.Attachments;
                     options.OperateOnTypes &= ~DatabaseItemType.Subscriptions;
@@ -120,7 +122,9 @@ namespace InterversionTests
                 {
 
                     var options = new DatabaseSmugglerImportOptions();
+#pragma warning disable CS0618 // Type or member is obsolete
                     options.OperateOnTypes &= ~DatabaseItemType.Counters;
+#pragma warning restore CS0618 // Type or member is obsolete
                     options.OperateOnTypes &= ~DatabaseItemType.CounterGroups;
                     options.OperateOnTypes &= ~DatabaseItemType.Attachments;
                     options.OperateOnTypes &= ~DatabaseItemType.Subscriptions;

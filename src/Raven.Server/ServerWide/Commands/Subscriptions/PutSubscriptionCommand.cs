@@ -37,7 +37,7 @@ namespace Raven.Server.ServerWide.Commands.Subscriptions
             SubscriptionConnection.ParseSubscriptionQuery(query);
         }
 
-        protected override BlittableJsonReaderObject GetUpdatedValue(long index, DatabaseRecord record, JsonOperationContext context, BlittableJsonReaderObject existingValue, RachisState state)
+        protected override BlittableJsonReaderObject GetUpdatedValue(long index, DatabaseRecord record, JsonOperationContext context, BlittableJsonReaderObject existingValue)
         {
             throw new NotImplementedException();
         }
