@@ -97,6 +97,8 @@ namespace Raven.Server.Documents.Indexes
 
         private const int DiskFullErrorLimit = 10;
 
+        internal const int LowMemoryPressure = 10;
+
         protected Logger _logger;
 
         internal LuceneIndexPersistence IndexPersistence;
@@ -196,6 +198,8 @@ namespace Raven.Server.Documents.Indexes
         private static readonly Size DefaultMaximumMemoryAllocation = new Size(32, SizeUnit.Megabytes);
 
         public long? LastTransactionId => _environment?.CurrentReadTransactionId;
+
+        internal bool IsLowMemory => _lowMemoryFlag.IsRaised();
 
         protected Index(IndexType type, IndexDefinitionBase definition)
         {
@@ -1458,7 +1462,7 @@ namespace Raven.Server.Documents.Indexes
             try
             {
                 scope.AddMemoryError(oome);
-                Interlocked.Add(ref _lowMemoryPressure, 10);
+                Interlocked.Add(ref _lowMemoryPressure, LowMemoryPressure);
                 _lowMemoryFlag.Raise();
 
                 var title = $"Out of memory occurred for '{Name}'";
@@ -3579,7 +3583,8 @@ namespace Raven.Server.Documents.Indexes
         {
             var oldValue = _lowMemoryPressure;
             var newValue = Math.Max(0, oldValue - 1);
-            if (Interlocked.CompareExchange(ref _lowMemoryPressure, newValue, oldValue) == 0)
+
+            if (Interlocked.CompareExchange(ref _lowMemoryPressure, newValue, oldValue) == oldValue && newValue == 0)
             {
                 _lowMemoryFlag.Lower();
             }
@@ -3587,7 +3592,7 @@ namespace Raven.Server.Documents.Indexes
 
         internal void SimulateLowMemory()
         {
-            _lowMemoryPressure = 10;
+            _lowMemoryPressure = LowMemoryPressure;
             LowMemory();
         }
 
