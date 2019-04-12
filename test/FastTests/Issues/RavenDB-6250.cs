@@ -71,7 +71,8 @@ namespace FastTests.Issues
                PerformanceHintType.Indexing,
                PerformanceHintType.RequestLatency,
                PerformanceHintType.UnusedCapacity,
-               PerformanceHintType.SqlEtl_SlowSql
+               PerformanceHintType.SqlEtl_SlowSql,
+               PerformanceHintType.HugeDocuments
             };
 
             var operationWithoutDetails = new HashSet<PerformanceHintType>
