@@ -5,6 +5,7 @@
 // -----------------------------------------------------------------------
 
 using System;
+using System.ComponentModel;
 using Lucene.Net.Analysis;
 using Lucene.Net.Index;
 using Lucene.Net.Store;
@@ -15,6 +16,8 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene
 {
     public class LuceneIndexWriter : IDisposable
     {
+        private const int ERROR_COMMITMENT_LIMIT = 1455;
+
         private readonly Logger _logger;
 
         private IndexWriter _indexWriter;
@@ -63,16 +66,26 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene
             }
             catch (SystemException e)
             {
-                if (e.Message.StartsWith("this writer hit an OutOfMemoryError"))
+                if (e.Message.StartsWith("this writer hit an OutOfMemoryError")) 
+                    RecreateIndexWriteAndThrowOutOfMemory(state, e);
+
+                if (e is Win32Exception win32Exception)
                 {
-                    RecreateIndexWriter(state);
-                    throw new OutOfMemoryException("Index writer hit OOM during commit", e);
+                    if (win32Exception.ErrorCode == ERROR_COMMITMENT_LIMIT)
+                        RecreateIndexWriteAndThrowOutOfMemory(state, e);
+
                 }
 
                 throw;
             }
 
             RecreateIndexWriter(state);
+        }
+
+        public void RecreateIndexWriteAndThrowOutOfMemory(IState state, Exception e)
+        {
+            RecreateIndexWriter(state);
+            throw new OutOfMemoryException("Index writer hit OOM during commit", e);
         }
 
         public long RamSizeInBytes()
