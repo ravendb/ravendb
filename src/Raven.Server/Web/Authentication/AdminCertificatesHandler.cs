@@ -392,12 +392,6 @@ namespace Raven.Server.Web.Authentication
                     throw new InvalidOperationException($"Cannot delete {clientCertDef?.Name} because it's the current client certificate being used");
                 }
 
-                if (clientCert != null && Server.Certificate.Certificate?.Thumbprint != null && Server.Certificate.Certificate.Thumbprint.Equals(thumbprint))
-                {
-                    var serverCertDef = ReadCertificateFromCluster(ctx, thumbprint);
-                    throw new InvalidOperationException($"Cannot delete {serverCertDef?.Name} because it's the current server certificate being used");
-                }
-
                 var definition = ReadCertificateFromCluster(ctx, thumbprint);
                 if (definition != null && (definition.SecurityClearance == SecurityClearance.ClusterAdmin || definition.SecurityClearance == SecurityClearance.ClusterNode)
                     && IsClusterAdmin() == false)
