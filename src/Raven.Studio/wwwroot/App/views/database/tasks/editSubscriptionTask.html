@@ -113,8 +113,14 @@
                         </div>
                         <div data-bind="if: changeVectorForNextBatchStartingPoint() && changeVectorForNextBatchStartingPoint() !== 'DoNotChange' && !setStartingPoint()">
                             <div class="panel padding" title="This change vector is the starting point for next batch"> 
-                                <label for="latest-change-vector">Next batch starting point is :</label>
-                                <textarea id="latest-change-vector" rows="2" class="form-control" disabled="disabled" data-bind="textInput: changeVectorForNextBatchStartingPoint"></textarea>
+                                <label for="next-batch-starting-point">Next batch starting point is :</label>
+                                <textarea id="next-batch-starting-point" rows="2" class="form-control" disabled="disabled" data-bind="textInput: changeVectorForNextBatchStartingPoint"></textarea>
+                            </div>
+                        </div>
+                        <div data-bind="if: lastChangeVectorAcknowledged()">
+                            <div class="panel padding" title="The last change vector that was acknowledged by the subscription consumer client.">
+                                <label for="last-change-vector-acknowleged">Last change vector acknowleged :</label>
+                                <textarea id="last-change-vector-acknowleged" rows="2" class="form-control" disabled="disabled" data-bind="textInput: lastChangeVectorAcknowledged"></textarea>
                             </div>
                         </div>
                     </div>

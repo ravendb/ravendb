@@ -21,6 +21,7 @@ namespace Raven.Client.Documents.Subscriptions
         public string NodeTag { get; set; }
         public DateTime? LastBatchAckTime { get; set; }  // Last time server made some progress with the subscriptions docs  
         public DateTime? LastClientConnectionTime { get; set; } // Last time any client has connected to server (connection dead or alive)
+        public string LastChangeVectorAcknowledged { get; set; } // Last change vector the client has acknowledged receiving
         public bool Disabled { get; set; }
 
         public ulong GetTaskKey()
@@ -55,6 +56,7 @@ namespace Raven.Client.Documents.Subscriptions
                 [nameof(NodeTag)] = NodeTag,
                 [nameof(LastBatchAckTime)] = LastBatchAckTime,
                 [nameof(LastClientConnectionTime)] = LastClientConnectionTime,
+                [nameof(LastChangeVectorAcknowledged)] = LastChangeVectorAcknowledged,
                 [nameof(Disabled)] = Disabled
             };
         }

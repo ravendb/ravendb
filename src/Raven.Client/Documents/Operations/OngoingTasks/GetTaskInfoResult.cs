@@ -77,6 +77,7 @@ namespace Raven.Client.Documents.Operations.OngoingTasks
         public DateTime? LastBatchAckTime { get; set; }
         public bool Disabled { get; set; }
         public DateTime? LastClientConnectionTime { get; set; }
+        public string LastChangeVectorAcknowledged { get; set; }
 
         public override DynamicJsonValue ToJson()
         {
@@ -89,6 +90,7 @@ namespace Raven.Client.Documents.Operations.OngoingTasks
             json[nameof(LastBatchAckTime)] = LastBatchAckTime;
             json[nameof(Disabled)] = Disabled;
             json[nameof(LastClientConnectionTime)] = LastClientConnectionTime;
+            json[nameof(LastChangeVectorAcknowledged)] = LastChangeVectorAcknowledged;
             return json;
         }
     }

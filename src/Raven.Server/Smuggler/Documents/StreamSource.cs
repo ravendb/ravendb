@@ -475,6 +475,7 @@ namespace Raven.Server.Smuggler.Documents
                         NodeTag = nodeTag,
                         LastBatchAckTime = lastBatchAckTime,
                         LastClientConnectionTime = lastClientConnectionTime,
+                        LastChangeVectorAcknowledged = "A:6214-xwmnvG1KBkSNXfl7/0yJ1A", // Todo: this is only a temp hard-coded-value 
                         Disabled = disabled
                     };
                 }

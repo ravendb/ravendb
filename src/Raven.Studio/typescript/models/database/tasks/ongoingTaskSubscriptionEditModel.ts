@@ -15,6 +15,7 @@ class ongoingTaskSubscriptionEditModel extends ongoingTaskEditModel {
     setStartingPoint = ko.observable<boolean>(true);
     
     changeVectorForNextBatchStartingPoint = ko.observable<string>(null); 
+    lastChangeVectorAcknowledged = ko.observable<string>(null); 
 
     validationGroup: KnockoutValidationGroup; 
     
@@ -36,7 +37,8 @@ class ongoingTaskSubscriptionEditModel extends ongoingTaskEditModel {
             this.startingPointType,
             this.startingChangeVector, 
             this.setStartingPoint,
-            this.changeVectorForNextBatchStartingPoint
+            this.changeVectorForNextBatchStartingPoint,
+            this.lastChangeVectorAcknowledged,
         ], false, jsonUtil.newLineNormalizingHashFunction);
     }
 
@@ -77,6 +79,7 @@ class ongoingTaskSubscriptionEditModel extends ongoingTaskEditModel {
 
         this.query(dto.Query);
         this.changeVectorForNextBatchStartingPoint(dto.ChangeVectorForNextBatchStartingPoint);
+        this.lastChangeVectorAcknowledged(dto.LastChangeVectorAcknowledged);
         this.setStartingPoint(false);
     }
 
@@ -155,6 +158,7 @@ class ongoingTaskSubscriptionEditModel extends ongoingTaskEditModel {
                 SubscriptionId: 0,
                 SubscriptionName: null,
                 ResponsibleNode: null,
+                LastChangeVectorAcknowledged: null,
                 LastClientConnectionTime: null,
                 LastBatchAckTime: null,
                 MentorNode: null,

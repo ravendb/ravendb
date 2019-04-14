@@ -1119,6 +1119,7 @@ namespace Raven.Server.Web.System
                                 TaskName = subscriptionState.SubscriptionName,
                                 Query = subscriptionState.Query,
                                 ChangeVectorForNextBatchStartingPoint = subscriptionState.ChangeVectorForNextBatchStartingPoint,
+                                LastChangeVectorAcknowledged = "A:6214-xwmnvG1KBkSNXfl7/0yJ1A", // Todo: this is only a temp hard-coded-value 
                                 SubscriptionId = subscriptionState.SubscriptionId,
                                 SubscriptionName = subscriptionState.SubscriptionName,
                                 LastBatchAckTime = subscriptionState.LastBatchAckTime,

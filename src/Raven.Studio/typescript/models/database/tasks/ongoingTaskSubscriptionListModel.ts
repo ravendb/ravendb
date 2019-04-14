@@ -17,6 +17,7 @@ class ongoingTaskSubscriptionListModel extends ongoingTaskListModel {
     lastTimeServerMadeProgressWithDocuments = ko.observable<string>();
     lastClientConnectionTime = ko.observable<string>();
     changeVectorForNextBatchStartingPoint = ko.observable<string>(null);
+    lastchangeVectorAcknowledged = ko.observable<string>(null);
 
     // Live connection stats
     clientIP = ko.observable<string>();
@@ -63,6 +64,7 @@ class ongoingTaskSubscriptionListModel extends ongoingTaskListModel {
                 this.taskState(result.Disabled ? 'Disabled' : 'Enabled');
                 
                 this.changeVectorForNextBatchStartingPoint(result.ChangeVectorForNextBatchStartingPoint);
+                this.lastchangeVectorAcknowledged(result.LastChangeVectorAcknowledged);
                 
                 const dateFormat = generalUtils.dateFormat;
 
