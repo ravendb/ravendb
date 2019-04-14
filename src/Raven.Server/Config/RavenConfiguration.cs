@@ -15,6 +15,7 @@ using Microsoft.Extensions.Configuration.CommandLine;
 using Microsoft.Extensions.Configuration.Memory;
 using Raven.Client.Documents.Conventions;
 using Raven.Client.ServerWide;
+using Raven.Server.Commercial;
 using Raven.Server.Config.Attributes;
 using Raven.Server.Config.Categories;
 using Raven.Server.Config.Settings;
@@ -451,6 +452,8 @@ namespace Raven.Server.Config
             throw new InvalidOperationException(sb.ToString());
         }
 
+        public static string EnvironmentVariableLicenseString { private set; get; }
+
         private class EnvironmentVariablesConfigurationSource : ConfigurationProvider, IConfigurationSource
         {
             private const string Prefix1 = "RAVEN.";
@@ -473,12 +476,20 @@ namespace Raven.Server.Config
                     if (key == null)
                         continue;
 
-                    if (key.StartsWith(Prefix1, StringComparison.OrdinalIgnoreCase) == false && key.StartsWith(Prefix2, StringComparison.OrdinalIgnoreCase) == false)
+                    if (key.StartsWith(Prefix1, StringComparison.OrdinalIgnoreCase) == false && 
+                        key.StartsWith(Prefix2, StringComparison.OrdinalIgnoreCase) == false)
                         continue;
+
+                    var originalKey = key;
 
                     key = key
                         .Substring(Prefix1.Length)
                         .Replace("_", ".");
+
+                    if (key.Equals(LicenseHelper.LicenseStringConfigurationName, StringComparison.OrdinalIgnoreCase))
+                    {
+                        EnvironmentVariableLicenseString = originalKey;
+                    }
 
                     Data[key] = env.Value as string;
                 }
