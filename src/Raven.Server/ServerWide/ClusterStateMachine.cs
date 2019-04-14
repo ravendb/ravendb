@@ -760,7 +760,7 @@ namespace Raven.Server.ServerWide
                 using (Slice.From(context.Allocator, "db/" + databaseName, out Slice key))
                 {
                     if (items.ReadByKey(lowerKey, out TableValueReader reader) == false)
-                        throw new RachisApplyException($"The database {databaseName} does not exists");
+                        throw new DatabaseDoesNotExistException($"The database {databaseName} does not exists");
 
                     var doc = new BlittableJsonReaderObject(reader.Read(2, out int size), size, context);
                     var databaseRecord = JsonDeserializationCluster.DatabaseRecord(doc);

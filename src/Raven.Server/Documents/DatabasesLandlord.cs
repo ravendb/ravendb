@@ -285,12 +285,16 @@ namespace Raven.Server.Documents
             _serverStore.SendToLeaderAsync(cmd)
                 .ContinueWith(async t =>
                 {
+                    var ex = t.Exception.ExtractSingleInnerException();
+                    if (ex is DatabaseDoesNotExistException)
+                        return;
+
                     var message = $"Failed to notify leader about removal of node {_serverStore.NodeTag} from database '{dbName}', will retry again in 15 seconds.";
                     if (_logger.IsInfoEnabled)
                     {
                         _logger.Info(message, t.Exception);
                     }
-
+                    
                     await Task.Delay(TimeSpan.FromSeconds(15));
 
                     NotifyLeaderAboutRemoval(dbName);
