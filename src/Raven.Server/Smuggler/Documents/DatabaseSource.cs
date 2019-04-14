@@ -134,7 +134,10 @@ namespace Raven.Server.Smuggler.Documents
             if (revisionsStorage.Configuration == null)
                 yield break;
 
-            var documents = revisionsStorage.GetRevisionsFrom(_context, _startDocumentEtag, int.MaxValue);
+            var documents = collectionsToExport.Count != 0
+                ? revisionsStorage.GetRevisionsFrom(_context, collectionsToExport, _startDocumentEtag, int.MaxValue)
+                : revisionsStorage.GetRevisionsFrom(_context, _startDocumentEtag, int.MaxValue);
+
             foreach (var document in documents)
             {
                 yield return new DocumentItem
