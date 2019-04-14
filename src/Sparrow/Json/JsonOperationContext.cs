@@ -35,7 +35,7 @@ namespace Sparrow.Json
         private ArenaMemoryAllocator _arenaAllocatorForLongLivedValues;
         private AllocatedMemoryData _tempBuffer;
 
-        private readonly Dictionary<string, LazyStringValue> _fieldNames = new Dictionary<string, LazyStringValue>(OrdinalStringStructComparer.Instance);
+        private readonly Dictionary<StringSegment, LazyStringValue> _fieldNames = new Dictionary<StringSegment, LazyStringValue>(StringSegmentEqualityStructComparer.BoxedInstance);
 
         private struct PathCacheHolder
         {
@@ -78,7 +78,7 @@ namespace Sparrow.Json
                 return;
             }
 
-            pathCache = new Dictionary<StringSegment, object>(StringSegmentComparer.Ordinal);
+            pathCache = new Dictionary<StringSegment, object>(StringSegmentEqualityStructComparer.BoxedInstance); 
             pathCacheByIndex = new Dictionary<int, object>(NumericEqualityComparer.BoxedInstanceInt32);
         }
 
@@ -493,16 +493,15 @@ namespace Sparrow.Json
         public LazyStringValue GetLazyStringForFieldWithCaching(StringSegment key)
         {
             EnsureNotDisposed();
-
-            var field = key.Value; // This will allocate if we are using a substring. 
-            if (_fieldNames.TryGetValue(field, out LazyStringValue value))
+                                  
+            if (_fieldNames.TryGetValue(key, out LazyStringValue value))
             {
                 //sanity check, in case the 'value' is manually disposed outside of this function
                 Debug.Assert(value.IsDisposed == false);
                 return value;
             }
 
-            return GetLazyStringForFieldWithCachingUnlikely(field);
+            return GetLazyStringForFieldWithCachingUnlikely(key);
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
