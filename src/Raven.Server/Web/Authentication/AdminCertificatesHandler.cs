@@ -11,11 +11,13 @@ using Org.BouncyCastle.OpenSsl;
 using Org.BouncyCastle.Pkcs;
 using Raven.Client;
 using Raven.Client.Documents.Commands;
+using Raven.Client.Exceptions.Security;
 using Raven.Client.Http;
 using Raven.Client.ServerWide;
 using Raven.Client.ServerWide.Operations.Certificates;
 using Raven.Server.Commercial;
 using Raven.Server.Config;
+using Raven.Server.Documents.Handlers.Debugging;
 using Raven.Server.Json;
 using Raven.Server.Routing;
 using Raven.Server.ServerWide;
@@ -444,9 +446,10 @@ namespace Raven.Server.Web.Authentication
             // Delete from local state
             using (ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext ctx))
             {
-                using (ctx.OpenWriteTransaction())
+                using (var tx = ctx.OpenWriteTransaction())
                 {
                     ServerStore.Cluster.DeleteLocalState(ctx, keys);
+                    tx.Commit();
                 }
             }
         }
@@ -1034,6 +1037,116 @@ namespace Raven.Server.Web.Authentication
             }
             
             RedirectToLeader();
+        }
+
+        [RavenAction("/admin/certificates/localstate", "GET", AuthorizationStatus.Operator)]
+        public Task GetLocalState()
+        {
+            var includeSecondary = GetBoolValueQueryString("secondary", required: false) ?? false;
+
+            using (ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
+            using (context.OpenReadTransaction())
+            {
+                var certificateList = new Dictionary<string, BlittableJsonReaderObject>();
+
+                try
+                {
+                    var localCertKeys = ServerStore.Cluster.GetCertificateThumbprintsFromLocalState(context).ToList();
+
+                    foreach (var localCertKey in localCertKeys)
+                    {
+                        var localCertificate = ServerStore.Cluster.GetLocalStateByThumbprint(context, localCertKey);
+                        if (localCertificate == null)
+                            continue;
+
+                        var def = JsonDeserializationServer.CertificateDefinition(localCertificate);
+
+                        if (includeSecondary || string.IsNullOrEmpty(def.CollectionPrimaryKey))
+                            certificateList.TryAdd(localCertKey, localCertificate);
+                        else
+                            localCertificate.Dispose();
+                    }
+
+                    using (var writer = new BlittableJsonTextWriter(context, ResponseBodyStream()))
+                    {
+                        writer.WriteStartObject();
+                        writer.WriteArray(context, "Results", certificateList.ToArray(), (w, c, cert) =>
+                        {
+                            c.Write(w, cert.Value);
+                        });
+                        writer.WriteEndObject();
+                    }
+                }
+                finally
+                {
+                    foreach (var cert in certificateList)
+                        cert.Value?.Dispose();
+                }
+            }
+
+            return Task.CompletedTask;
+        }
+
+        [RavenAction("/admin/certificates/localstate/delete", "POST", AuthorizationStatus.ClusterAdmin)]
+        public Task LocalStateDelete()
+        {
+            using (ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext ctx))
+            {
+                List<string> localStateKeys;
+                using (ctx.OpenReadTransaction())
+                {
+                    localStateKeys = ServerStore.Cluster.GetCertificateThumbprintsFromLocalState(ctx).ToList();
+                }
+
+                // Delete from local state
+                using (var tx = ctx.OpenWriteTransaction())
+                {
+                    ServerStore.Cluster.DeleteLocalState(ctx, localStateKeys);
+                    tx.Commit();
+                }
+            }
+
+            return NoContent();
+        }
+
+        [RavenAction("/admin/certificates/localstate/apply", "POST", AuthorizationStatus.ClusterAdmin)]
+        public Task LocalStateApply()
+        {
+            if (ServerStore.CurrentRachisState == RachisState.Passive)
+                throw new AuthorizationException("RavenDB is in passive state. Cannot apply certificates to the cluster.");
+
+            using (ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext ctx))
+            {
+                List<string> localStateKeys;
+                using (ctx.OpenReadTransaction())
+                {
+                    localStateKeys = ServerStore.Cluster.GetCertificateThumbprintsFromLocalState(ctx).ToList();
+                    foreach (var localStateKey in localStateKeys)
+                    {
+                        // if there are trusted certificates in the local state, we will register them in the cluster now
+                        using (var localCertificate = ServerStore.Cluster.GetLocalStateByThumbprint(ctx, localStateKey))
+                        {
+                            var certificateDefinition = JsonDeserializationServer.CertificateDefinition(localCertificate);
+
+                            // In the beginning of 4.0 we had the server certificate stored together with all the other certs (in the local state and in the cluster).
+                            // If it's the case now, we make sure not to transfer it to the cluster.
+                            if (certificateDefinition.Thumbprint == ServerStore.Server.Certificate.Certificate.Thumbprint)
+                                continue;
+
+                            ServerStore.PutValueInClusterAsync(new PutCertificateCommand(localStateKey, certificateDefinition)).Wait(ServerStore.ServerShutdown);
+                        }
+                    }
+                }
+
+                // Delete from local state
+                using (var tx = ctx.OpenWriteTransaction())
+                {
+                    ServerStore.Cluster.DeleteLocalState(ctx, localStateKeys);
+                    tx.Commit();
+                }
+            }
+
+            return NoContent();
         }
 
         public static void ValidateCertificateDefinition(CertificateDefinition certificate, ServerStore serverStore)
