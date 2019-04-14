@@ -492,6 +492,10 @@ namespace Raven.Server
                 if (Configuration.Core.SetupMode == SetupMode.LetsEncrypt)
                 {
                     newCertBytes = await RefreshViaLetsEncrypt(currentCertificate, forceRenew);
+
+                    // One of the prerequisites for the refresh has failed and it has been logged. Nothing to do anymore.
+                    if (newCertBytes == null)
+                        return;
                 }
                 else if (string.IsNullOrEmpty(Configuration.Security.CertificateRenewExec) == false)
                 {
@@ -660,7 +664,7 @@ namespace Raven.Server
                 }
                 catch (Exception e)
                 {
-                    throw new InvalidOperationException("Failed to load the new certificate.", e);
+                    throw new InvalidOperationException("Failed to load (and validate) the new certificate which was received during the refresh process.", e);
                 }
 
                 if (Logger.IsOperationsEnabled)
