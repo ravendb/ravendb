@@ -1345,6 +1345,23 @@ namespace Raven.Server.Documents.Revisions
             }
         }
 
+        public IEnumerable<Document> GetRevisionsFrom(DocumentsOperationContext context, List<string> collections, long etag, int take)
+        {
+            foreach (var collection in collections)
+            {
+                if (take <= 0)
+                    yield break;
+                var collectionName = new CollectionName(collection);
+                foreach (var document in GetRevisionsFrom(context, collectionName, etag, int.MaxValue))
+                {
+                    if (take-- <= 0)
+                        yield break;
+
+                    yield return document.current;
+                }
+            }
+        }
+
         public IEnumerable<(Document previous, Document current)> GetRevisionsFrom(DocumentsOperationContext context, CollectionName collectionName, long etag, int take)
         {
             var table = EnsureRevisionTableCreated(context.Transaction.InnerTransaction, collectionName);
