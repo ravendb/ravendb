@@ -23,7 +23,7 @@ namespace Raven.Server.ServerWide.Commands
             if (Watcher == null)
                 return null;
 
-            if (Watcher.Disabled || Watcher.TaskId == 0)
+            if (Watcher.TaskId == 0)
             {
                 Watcher.TaskId = etag;                
             }
