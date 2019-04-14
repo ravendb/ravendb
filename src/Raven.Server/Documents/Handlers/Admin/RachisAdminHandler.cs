@@ -448,28 +448,33 @@ namespace Raven.Server.Documents.Handlers.Admin
                                 throw new InvalidOperationException($"Cannot add node {nodeTag} with url {nodeUrl} to cluster because its certificate thumbprint '{certificate.Thumbprint}' doesn't match the expected thumbprint '{expected}'.");
                         }
 
-                        using (ctx.OpenReadTransaction())
+                        // if it's the same server certificate as our own, we don't want to add it to the cluster
+                        if (certificate.Thumbprint != Server.Certificate.Certificate.Thumbprint)
                         {
-                            var readCert = ServerStore.Cluster.GetCertificateByThumbprint(ctx, certificate.Thumbprint);
-                            if (readCert != null)
-                                oldServerCert = JsonDeserializationServer.CertificateDefinition(readCert);
-                        }
-
-                        if (oldServerCert == null)
-                        {
-                            var certificateDefinition = new CertificateDefinition
+                            using (ctx.OpenReadTransaction())
                             {
-                                Certificate = nodeInfo.Certificate,
-                                Thumbprint = certificate.Thumbprint,
-                                PublicKeyPinningHash = certificate.GetPublicKeyPinningHash(),
-                                NotAfter = certificate.NotAfter,
-                                Name = "Server Certificate for " + nodeUrl,
-                                SecurityClearance = SecurityClearance.ClusterNode
-                            };
+                                var readCert = ServerStore.Cluster.GetCertificateByThumbprint(ctx, certificate.Thumbprint);
+                                if (readCert != null)
+                                    oldServerCert = JsonDeserializationServer.CertificateDefinition(readCert);
+                            }
 
-                            var res = await ServerStore.PutValueInClusterAsync(new PutCertificateCommand(certificate.Thumbprint, certificateDefinition));
-                            await ServerStore.Cluster.WaitForIndexNotification(res.Index);
+                            if (oldServerCert == null)
+                            {
+                                var certificateDefinition = new CertificateDefinition
+                                {
+                                    Certificate = nodeInfo.Certificate,
+                                    Thumbprint = certificate.Thumbprint,
+                                    PublicKeyPinningHash = certificate.GetPublicKeyPinningHash(),
+                                    NotAfter = certificate.NotAfter,
+                                    Name = "Server Certificate for " + nodeUrl,
+                                    SecurityClearance = SecurityClearance.ClusterNode
+                                };
+
+                                var res = await ServerStore.PutValueInClusterAsync(new PutCertificateCommand(certificate.Thumbprint, certificateDefinition));
+                                await ServerStore.Cluster.WaitForIndexNotification(res.Index);
+                            }
                         }
+                        
                     }
 
                     await ServerStore.AddNodeToClusterAsync(nodeUrl, nodeTag, validateNotInTopology: true, asWatcher: watcher ?? false);
@@ -480,7 +485,7 @@ namespace Raven.Server.Documents.Handlers.Admin
                         possibleNode = clusterTopology.TryGetNodeTagByUrl(nodeUrl);
                         nodeTag = possibleNode.HasUrl ? possibleNode.NodeTag : null;
 
-                        if (certificate != null)
+                        if (certificate != null && certificate.Thumbprint != Server.Certificate.Certificate.Thumbprint)
                         {
                             var modifiedServerCert = JsonDeserializationServer.CertificateDefinition(ServerStore.Cluster.GetCertificateByThumbprint(ctx, certificate.Thumbprint));
 
