@@ -618,7 +618,7 @@ namespace Raven.Server.Smuggler.Documents
                                 tasks.Add(_database.ServerStore.SendToLeaderAsync(new DeleteOngoingTaskCommand(x.TaskId, OngoingTaskType.PullReplicationAsSink, _database.Name)));
                             }
                         });
-                        pullReplication.TaskId = 0;
+
                         pullReplication.Disabled = true;
                         tasks.Add(_database.ServerStore.SendToLeaderAsync(new UpdatePullReplicationAsSinkCommand(_database.Name)
                         {
@@ -641,7 +641,7 @@ namespace Raven.Server.Smuggler.Documents
                                 tasks.Add(_database.ServerStore.SendToLeaderAsync(new DeleteOngoingTaskCommand(x.TaskId, OngoingTaskType.PullReplicationAsHub, _database.Name)));
                             }
                         });
-                        pullReplication.TaskId = 0;
+
                         pullReplication.Disabled = true;
                         tasks.Add(_database.ServerStore.SendToLeaderAsync(new UpdatePullReplicationAsHubCommand(_database.Name)
                             {

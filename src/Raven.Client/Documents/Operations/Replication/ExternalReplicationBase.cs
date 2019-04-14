@@ -10,13 +10,28 @@ namespace Raven.Client.Documents.Operations.Replication
 {
     public abstract class ExternalReplicationBase : ReplicationNode, IDatabaseTask, IDynamicJsonValueConvertible
     {
-        public long TaskId;
+        public long TaskId
+        {
+            get => _taskId;
+            set
+            {
+                if (HashCodeSealed)
+                {
+                    throw new InvalidOperationException(
+                        $"TaskId of 'ExternalReplicationBase' can't be modified after 'GetHashCode' was invoked, if you see this error it is likley a bug (taskId={_taskId} value={value} Url={Url}).");
+                }
+
+                _taskId = value;
+            }
+        }
         public string Name;
         public string ConnectionStringName;
         public string MentorNode;
 
         [JsonDeserializationIgnore]
         public RavenConnectionString ConnectionString; // this is in memory only
+
+        private long _taskId;
 
         protected ExternalReplicationBase() { }
 
@@ -67,12 +82,9 @@ namespace Raven.Client.Documents.Operations.Replication
 
         public override int GetHashCode()
         {
-            unchecked
-            {
-                var hashCode = (ulong)base.GetHashCode();
-                hashCode = (hashCode * 397) ^ CalculateStringHash(ConnectionStringName);
-                return (int)hashCode;
-            }
+            var hashCode = TaskId.GetHashCode();
+            HashCodeSealed = true;
+            return hashCode;
         }
 
         public override bool IsEqualTo(ReplicationNode other)

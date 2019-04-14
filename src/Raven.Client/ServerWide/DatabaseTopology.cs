@@ -94,7 +94,18 @@ namespace Raven.Client.ServerWide
 
     public class InternalReplication : ReplicationNode
     {
-        public string NodeTag;
+        private string _nodeTag;
+        public string NodeTag
+        {
+            get => _nodeTag;
+            set
+            {
+                if (HashCodeSealed)
+                    throw new InvalidOperationException(
+$"NodeTag of 'InternalReplication' can't be modified after 'GetHashCode' was invoked, if you see this error it is likley a bug (NodeTag={_nodeTag} value={value} Url={Url}).");
+                _nodeTag = value;
+            }
+        }
         public override string FromString()
         {
             return $"[{NodeTag}/{Url}]";
@@ -114,8 +125,8 @@ namespace Raven.Client.ServerWide
         {
             unchecked
             {
-                var hashCode = base.GetHashCode();
-                hashCode = (hashCode * 397) ^ (int)CalculateStringHash(Url);
+                var hashCode = (int)CalculateStringHash(NodeTag);
+                HashCodeSealed = true;
                 return hashCode;
             }
         }
