@@ -1351,7 +1351,11 @@ namespace Raven.Server.Documents.Revisions
             {
                 if (take <= 0)
                     yield break;
-                var collectionName = new CollectionName(collection);
+
+                var collectionName = _documentsStorage.GetCollection(collection, throwIfDoesNotExist: false);
+                if (collectionName == null)
+                    continue;
+
                 foreach (var document in GetRevisionsFrom(context, collectionName, etag, int.MaxValue))
                 {
                     if (take-- <= 0)
