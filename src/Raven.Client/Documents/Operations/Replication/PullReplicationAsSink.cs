@@ -38,18 +38,6 @@ namespace Raven.Client.Documents.Operations.Replication
             return (hashCode * 397) ^ CalculateStringHash(HubDefinitionName);
         }
 
-        public override int GetHashCode()
-        {
-            unchecked
-            {
-                var hashCode = (ulong)base.GetHashCode();
-                hashCode = (hashCode * 397) ^ CalculateStringHash(CertificateWithPrivateKey);
-                hashCode = (hashCode * 397) ^ CalculateStringHash(CertificatePassword);
-                hashCode = (hashCode * 397) ^ CalculateStringHash(HubDefinitionName);
-                return (int)hashCode;
-            }
-        }
-
         public override DynamicJsonValue ToJson()
         {
             if (string.IsNullOrEmpty(HubDefinitionName))

@@ -23,7 +23,7 @@ namespace Raven.Server.ServerWide.Commands
             if (PullReplicationAsSink == null)
                 return null;
 
-            if (PullReplicationAsSink.TaskId == 0)
+            if (PullReplicationAsSink.Disabled || PullReplicationAsSink.TaskId == 0)
             {
                 PullReplicationAsSink.TaskId = etag;
             }

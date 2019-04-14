@@ -24,6 +24,12 @@ namespace Raven.Client.Documents.Replication
         private string _url;
 
         /// <summary>
+        /// This is a protection field that indicates if an hashset was requested already so we won't modify fields that are been used to calculate it afterwards.
+        /// If you ovverride GetHashCode you should make sure to set this field to true at the end of the method.
+        /// </summary>
+        protected bool HashCodeSealed;
+
+        /// <summary>
         /// Gets or sets the URL of the replication destination
         /// </summary>
         /// <value>The URL.</value>
@@ -60,11 +66,8 @@ namespace Raven.Client.Documents.Replication
 
         public override int GetHashCode()
         {
-            unchecked
-            {
-                var hashCode = (int)CalculateStringHash(Database);
-                return hashCode;
-            }
+            throw new InvalidOperationException(
+                "Derived classes of 'ReplicationNode' must override 'GetHashCode' and set 'HashCodeSealed' at the end, if you see this error it is likley a bug.");
         }
 
         protected static ulong CalculateStringHash(string s)
