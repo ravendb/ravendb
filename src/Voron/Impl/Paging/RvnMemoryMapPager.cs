@@ -85,11 +85,19 @@ namespace Voron.Impl.Paging
             SetPagerState(pager);
         }
 
+        protected override bool CanPrefetchQuery()
+        {
+            if (SysInfo.CanPrefetch == false || CanPrefetchAhead == false)
+                return false; // not supported
+
+            return true;
+        }
+        
         public override byte* AcquirePagePointer(IPagerLevelTransactionState tx, long pageNumber, PagerState pagerState = null)
         {
             var state = pagerState ?? _pagerState;
 
-            if (Options.EnablePrefetching && SysInfo.CanPrefetch)
+            if (CanPrefetch.Value)
             {
                 if (_pagerState.ShouldPrefetchSegment(pageNumber, out var virtualAddress, out var bytes))
                     rvn_prefetch_virtual_memory(virtualAddress, bytes, out _); // ignore if unsuccessful

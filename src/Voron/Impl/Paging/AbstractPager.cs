@@ -38,7 +38,7 @@ namespace Voron.Impl.Paging
         private readonly object _pagerStateModificationLocker = new object();
         public readonly bool UsePageProtection;
         private readonly MultipleUseFlag _lowMemoryFlag = new MultipleUseFlag();
-        private readonly bool _canPrefetchAhead;
+        protected readonly bool CanPrefetchAhead;
 
         public Action<PagerState> PagerStateChanged;
 
@@ -225,7 +225,7 @@ namespace Voron.Impl.Paging
             });
 
             _options = options;
-            _canPrefetchAhead = canPrefetchAhead && _options.EnablePrefetching;
+            CanPrefetchAhead = canPrefetchAhead && _options.EnablePrefetching;
             UsePageProtection = usePageProtection;
             Debug.Assert((Constants.Storage.PageSize - Constants.Tree.PageHeaderSize) / Constants.Tree.MinKeysInPage >= 1024);
 
@@ -492,7 +492,7 @@ namespace Voron.Impl.Paging
 
         protected virtual bool CanPrefetchQuery()
         {
-            if (PlatformDetails.CanPrefetch == false || _canPrefetchAhead == false)
+            if (PlatformDetails.CanPrefetch == false || CanPrefetchAhead == false)
                 return false; // not supported
 
             return true;
@@ -609,7 +609,7 @@ namespace Voron.Impl.Paging
 
         public void TryPrefetchingWholeFile()
         {
-            if (PlatformDetails.CanPrefetch == false || _canPrefetchAhead == false)
+            if (PlatformDetails.CanPrefetch == false || CanPrefetchAhead == false)
                 return; // not supported
 
             var pagerState = PagerState;
