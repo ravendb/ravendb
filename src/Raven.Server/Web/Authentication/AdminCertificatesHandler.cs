@@ -1039,7 +1039,7 @@ namespace Raven.Server.Web.Authentication
             RedirectToLeader();
         }
 
-        [RavenAction("/admin/certificates/localstate", "GET", AuthorizationStatus.Operator)]
+        [RavenAction("/admin/certificates/local-state", "GET", AuthorizationStatus.Operator)]
         public Task GetLocalState()
         {
             var includeSecondary = GetBoolValueQueryString("secondary", required: false) ?? false;
@@ -1087,7 +1087,7 @@ namespace Raven.Server.Web.Authentication
             return Task.CompletedTask;
         }
 
-        [RavenAction("/admin/certificates/localstate/delete", "POST", AuthorizationStatus.ClusterAdmin)]
+        [RavenAction("/admin/certificates/local-state", "DELETE", AuthorizationStatus.ClusterAdmin)]
         public Task LocalStateDelete()
         {
             using (ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext ctx))
@@ -1109,7 +1109,7 @@ namespace Raven.Server.Web.Authentication
             return NoContent();
         }
 
-        [RavenAction("/admin/certificates/localstate/apply", "POST", AuthorizationStatus.ClusterAdmin)]
+        [RavenAction("/admin/certificates/local-state/apply", "POST", AuthorizationStatus.ClusterAdmin)]
         public Task LocalStateApply()
         {
             if (ServerStore.CurrentRachisState == RachisState.Passive)
