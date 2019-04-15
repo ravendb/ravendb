@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.Linq;
 using System.Net;
 using System.Threading.Tasks;
@@ -76,8 +77,10 @@ namespace Raven.Server.Documents.Handlers
                     state.ChangeVectorForNextBatchStartingPoint = tryout.ChangeVector;
                 }
                 var changeVector = state.ChangeVectorForNextBatchStartingPoint.ToChangeVector();
-
                 var cv = changeVector.FirstOrDefault(x => x.DbId == Database.DbBase64Id);
+
+                var sp = new Stopwatch();
+                var timeLimit = GetIntValueQueryString("timeLimit", false) ?? 15;
 
                 using (var writer = new BlittableJsonTextWriter(context, ResponseBodyStream()))
                 {
@@ -88,8 +91,8 @@ namespace Raven.Server.Documents.Handlers
                     using (context.OpenReadTransaction())
                     {
                         var first = true;
-
-                        foreach (var itemDetails in fetcher.GetDataToSend(context, includeCmd, cv.Etag))
+                        sp.Start();
+                        foreach (var itemDetails in fetcher.GetDataToSend(context, includeCmd, cv.Etag, true))
                         {
                             if (itemDetails.Doc.Data == null)
                                 continue;
@@ -116,6 +119,8 @@ namespace Raven.Server.Documents.Handlers
                             }
 
                             first = false;
+                            if (sp.Elapsed >= TimeSpan.FromSeconds(timeLimit))
+                                break;
                         }
 
                         writer.WriteEndArray();
@@ -151,6 +156,7 @@ namespace Raven.Server.Documents.Handlers
                     switch (changeVectorSpecialValue)
                     {
                         case Constants.Documents.SubscriptionChangeVectorSpecialStates.BeginningOfTime:
+
                             options.ChangeVector = null;
                             break;
                         case Constants.Documents.SubscriptionChangeVectorSpecialStates.LastDocument:
@@ -158,7 +164,6 @@ namespace Raven.Server.Documents.Handlers
                             break;
                     }
                 }
-
                 var id = GetLongQueryString("id", required: false);
                 var disabled = GetBoolValueQueryString("disabled", required: false);
                 var mentor = options.MentorNode;
