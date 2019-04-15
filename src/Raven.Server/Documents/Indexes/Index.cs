@@ -99,6 +99,8 @@ namespace Raven.Server.Documents.Indexes
 
         internal const int LowMemoryPressure = 10;
 
+        private const int AllocationCleanupRequestsLimit = 10;
+
         protected Logger _logger;
 
         internal LuceneIndexPersistence IndexPersistence;
@@ -163,7 +165,7 @@ namespace Raven.Server.Documents.Indexes
 
         protected PerformanceHintsConfiguration PerformanceHints;
 
-        private bool _allocationCleanupNeeded;
+        private int _allocationCleanupNeeded;
 
         private readonly MultipleUseFlag _lowMemoryFlag = new MultipleUseFlag();
         private long _lowMemoryPressure;
@@ -1180,12 +1182,13 @@ namespace Raven.Server.Documents.Indexes
                             // This is because faster indexes will tend to allocate the memory faster, and we want to give them
                             // all the available resources so they can complete faster.
                             var timeToWaitForMemoryCleanup = 5000;
+                            var forceMemoryCleanup = false;
 
                             if (_lowMemoryFlag.IsRaised())
                             {
                                 ReduceMemoryUsage(storageEnvironment);
                             }
-                            else if (_allocationCleanupNeeded)
+                            else if (_allocationCleanupNeeded > 0)
                             {
                                 timeToWaitForMemoryCleanup = 0; // if there is nothing to do, immediately cleanup everything
 
@@ -1201,6 +1204,9 @@ namespace Raven.Server.Documents.Indexes
                                     // let's clean it so our allocation budget won't be occupied by them
                                     storageEnvironment.CleanupNativeMemory();
                                 }
+
+                                if (_allocationCleanupNeeded > AllocationCleanupRequestsLimit) 
+                                    forceMemoryCleanup = true;
                             }
 
                             if (_scratchSpaceLimitExceeded)
@@ -1218,14 +1224,18 @@ namespace Raven.Server.Documents.Indexes
                                 }
                             }
 
-                            if (_mre.Wait(timeToWaitForMemoryCleanup, _indexingProcessCancellationTokenSource.Token) == false)
+                            if (forceMemoryCleanup || _mre.Wait(timeToWaitForMemoryCleanup, _indexingProcessCancellationTokenSource.Token) == false)
                             {
-                                _allocationCleanupNeeded = false;
-
+                                Interlocked.Exchange(ref _allocationCleanupNeeded, 0);
+                                
+                                // allocation cleanup has been requested multiple times or
                                 // there is no work to be done, and hasn't been for a while,
                                 // so this is a good time to release resources we won't need 
                                 // anytime soon
                                 ReduceMemoryUsage(storageEnvironment);
+
+                                if (forceMemoryCleanup)
+                                    continue;
 
                                 WaitHandle.WaitAny(new[] { _mre.WaitHandle, _logsAppliedEvent.WaitHandle, _indexingProcessCancellationTokenSource.Token.WaitHandle });
 
@@ -3262,7 +3272,7 @@ namespace Raven.Server.Documents.Indexes
                     _logger,
                     out var memoryUsage) == false)
                 {
-                    _allocationCleanupNeeded = true;
+                    Interlocked.Increment(ref _allocationCleanupNeeded);
 
                     documentsOperationContext.DoNotReuse = true;
                     indexingContext.DoNotReuse = true;
@@ -3583,7 +3593,7 @@ namespace Raven.Server.Documents.Indexes
         public void LowMemory()
         {
             _currentMaximumAllowedMemory = DefaultMaximumMemoryAllocation;
-            _allocationCleanupNeeded = true;
+            Interlocked.Increment(ref _allocationCleanupNeeded);
             _lowMemoryFlag.Raise();
         }
 
