@@ -80,7 +80,7 @@ namespace Raven.Server.Documents.Handlers
                 var cv = changeVector.FirstOrDefault(x => x.DbId == Database.DbBase64Id);
 
                 var sp = new Stopwatch();
-                var timeLimit = GetIntValueQueryString("timeLimit", false) ?? 15;
+                var timeLimit = TimeSpan.FromSeconds(GetIntValueQueryString("timeLimit", false) ?? 15);
 
                 using (var writer = new BlittableJsonTextWriter(context, ResponseBodyStream()))
                 {
@@ -119,7 +119,7 @@ namespace Raven.Server.Documents.Handlers
                             }
 
                             first = false;
-                            if (sp.Elapsed >= TimeSpan.FromSeconds(timeLimit))
+                            if (sp.Elapsed >= timeLimit)
                                 break;
                         }
 
