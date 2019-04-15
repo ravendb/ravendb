@@ -110,8 +110,10 @@ namespace Raven.Server.Documents
                             {
                                 NotifyPendingClusterTransaction(databaseName, task, index, changeType);
                             }
+
                             return;
                         }
+
                         task.ContinueWith(done =>
                         {
                             NotifyDatabaseAboutStateChange(databaseName, done, index);
@@ -128,10 +130,7 @@ namespace Raven.Server.Documents
                             return;
                         }
 
-                        task.ContinueWith(done =>
-                        {
-                            NotifyDatabaseAboutValueChange(databaseName, done, index);
-                        });
+                        task.ContinueWith(done => { NotifyDatabaseAboutValueChange(databaseName, done, index); });
                         break;
                     case ClusterDatabaseChangeType.PendingClusterTransactions:
                     case ClusterDatabaseChangeType.ClusterTransactionCompleted:
@@ -141,6 +140,7 @@ namespace Raven.Server.Documents
                             NotifyPendingClusterTransaction(databaseName, task, index, changeType);
                             return;
                         }
+
                         task.ContinueWith(done =>
                         {
                             done.Result.DatabaseGroupId = record.Topology.DatabaseTopologyIdBase64;
@@ -154,6 +154,18 @@ namespace Raven.Server.Documents
                 }
 
                 // if deleted, unload / deleted and then notify leader that we removed it
+            }
+            catch (AggregateException ae) when (nameof(DeleteDatabase).Equals(ae.InnerException.Data["Source"]))
+            {
+                // in the process of being deleted
+            }
+            catch (AggregateException ae) when (ae.InnerException is DatabaseDisabledException)
+            {
+                // the db is already disabled when we try to disable it
+            }
+            catch (DatabaseDisabledException)
+            {
+                // the database was disabled while we were trying to execute an action (e.g. PendingClusterTransactions)
             }
             catch (Exception e)
             {
@@ -228,21 +240,7 @@ namespace Raven.Server.Documents
 
         private void UnloadDatabaseInternal(string databaseName)
         {
-            try
-            {
-                DatabasesCache.RemoveLockAndReturn(databaseName, CompleteDatabaseUnloading, out _).Dispose();
-            }
-            catch (AggregateException ae)
-            {
-                if (nameof(DeleteDatabase).Equals(ae.InnerException.Data["Source"]))
-                {
-                    // this is already in the process of being deleted, we can just exit and let the other thread handle it
-                }
-                else if (ae.InnerException is DatabaseDisabledException)
-                {
-                    // the db is already disabled when we try to disable it
-                }
-            }
+            DatabasesCache.RemoveLockAndReturn(databaseName, CompleteDatabaseUnloading, out _).Dispose();
         }
 
         public void NotifyPendingClusterTransaction(string name, Task<DocumentDatabase> task, long index, ClusterDatabaseChangeType changeType)
@@ -351,6 +349,10 @@ namespace Raven.Server.Documents
             _serverStore.SendToLeaderAsync(cmd)
                 .ContinueWith(async t =>
                 {
+                    var ex = t.Exception.ExtractSingleInnerException();
+                    if (ex is DatabaseDoesNotExistException)
+                        return;
+
                     var message = $"Failed to notify leader about removal of node {_serverStore.NodeTag} from database '{dbName}', will retry again in 15 seconds.";
                     if (_logger.IsInfoEnabled)
                     {
