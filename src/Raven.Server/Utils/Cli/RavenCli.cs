@@ -114,6 +114,7 @@ namespace Raven.Server.Utils.Cli
             Timer,
             Clear,
             RestartServer,
+            ResetServer,
             Stats,
             TopThreads,
             Info,
@@ -1133,7 +1134,7 @@ namespace Raven.Server.Utils.Cli
                 new[] {"script <server|database> [database]", "Execute script on server or specified database. WARNING: Use with care!"},
                 new[] {"logout", "Logout (applicable only on piped connection)"},
                 new[] {"openBrowser", "Open the RavenDB Studio using the default browser"},
-                new[] {"restartServer", "Restarts the server (shutdown and re-run)"},
+                new[] {"restartServer, resetServer", "Restarts the server (shutdown and re-run)"},
                 new[] {"shutdown", "Shutdown the server"},
                 new[] {"help", "This help screen"},
                 new[] {"generateClientCert <name> <path-to-output-folder> [password]", "Generate a new trusted client certificate with 'ClusterAdmin' security clearance."},
@@ -1517,6 +1518,10 @@ namespace Raven.Server.Utils.Cli
                     parsedLine.ErrorMsg = $"Unknown command: `{words[0]}`";
                     return false;
                 }
+
+                //For back compatibility - RavenDB-11249
+                if (cmd == Command.ResetServer)
+                    cmd = Command.RestartServer;
 
                 ParsedCommand parsedCommand = new ParsedCommand { Command = cmd };
                 parsedLine.ParsedCommands.Add(parsedCommand);
