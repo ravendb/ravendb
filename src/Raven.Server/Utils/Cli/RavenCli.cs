@@ -113,7 +113,7 @@ namespace Raven.Server.Utils.Cli
             Log,
             Timer,
             Clear,
-            ResetServer,
+            RestartServer,
             Stats,
             TopThreads,
             Info,
@@ -296,10 +296,10 @@ namespace Raven.Server.Utils.Cli
             return true;
         }
 
-        private static bool CommandResetServer(List<string> args, RavenCli cli)
+        private static bool CommandRestartServer(List<string> args, RavenCli cli)
         {
             WriteText("", TextColor, cli);
-            WriteText("Are you sure you want to reset the server ? [y/N] : ", TextColor, cli, newLine: false);
+            WriteText("Are you sure you want to restart the server ? [y/N] : ", TextColor, cli, newLine: false);
 
             var k = ReadKey(cli);
             WriteText("", TextColor, cli);
@@ -1133,7 +1133,7 @@ namespace Raven.Server.Utils.Cli
                 new[] {"script <server|database> [database]", "Execute script on server or specified database. WARNING: Use with care!"},
                 new[] {"logout", "Logout (applicable only on piped connection)"},
                 new[] {"openBrowser", "Open the RavenDB Studio using the default browser"},
-                new[] {"resetServer", "Restarts the server (shutdown and re-run)"},
+                new[] {"restartServer", "Restarts the server (shutdown and re-run)"},
                 new[] {"shutdown", "Shutdown the server"},
                 new[] {"help", "This help screen"},
                 new[] {"generateClientCert <name> <path-to-output-folder> [password]", "Generate a new trusted client certificate with 'ClusterAdmin' security clearance."},
@@ -1198,7 +1198,7 @@ namespace Raven.Server.Utils.Cli
             [Command.LowMem] = new SingleAction { NumOfArgs = 0, DelegateFunc = CommandLowMem },
             [Command.Timer] = new SingleAction { NumOfArgs = 1, DelegateFunc = CommandTimer },
             [Command.OpenBrowser] = new SingleAction { NumOfArgs = 0, DelegateFunc = CommandOpenBrowser },
-            [Command.ResetServer] = new SingleAction { NumOfArgs = 0, DelegateFunc = CommandResetServer },
+            [Command.RestartServer] = new SingleAction { NumOfArgs = 0, DelegateFunc = CommandRestartServer },
             [Command.Logout] = new SingleAction { NumOfArgs = 0, DelegateFunc = CommandLogout },
             [Command.Shutdown] = new SingleAction { NumOfArgs = 0, DelegateFunc = CommandShutdown },
             [Command.Help] = new SingleAction { NumOfArgs = 0, DelegateFunc = CommandHelp },
@@ -1395,7 +1395,7 @@ namespace Raven.Server.Utils.Cli
                     }
                     if (lastRc)
                     {
-                        if (parsedCommand.Command == Command.ResetServer)
+                        if (parsedCommand.Command == Command.RestartServer)
                         {
                             if (Program.IsRunningNonInteractive || _writer == Console.Out)
                             {
@@ -1433,7 +1433,7 @@ namespace Raven.Server.Utils.Cli
                     else
                     {
                         if (parsedCommand.Command == Command.Shutdown ||
-                            parsedCommand.Command == Command.ResetServer)
+                            parsedCommand.Command == Command.RestartServer)
                             lastRc = true; // if answered "No" for the above command - don't print ERROR
                     }
                 }
