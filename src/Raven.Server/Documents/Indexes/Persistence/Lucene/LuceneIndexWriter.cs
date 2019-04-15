@@ -10,14 +10,13 @@ using Lucene.Net.Analysis;
 using Lucene.Net.Index;
 using Lucene.Net.Store;
 using Raven.Server.Exceptions;
+using Raven.Server.Utils;
 using Sparrow.Logging;
 
 namespace Raven.Server.Documents.Indexes.Persistence.Lucene
 {
     public class LuceneIndexWriter : IDisposable
     {
-        private const int ERROR_COMMITMENT_LIMIT = 1455;
-
         private readonly Logger _logger;
 
         private IndexWriter _indexWriter;
@@ -66,15 +65,11 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene
             }
             catch (SystemException e)
             {
-                if (e.Message.StartsWith("this writer hit an OutOfMemoryError")) 
+                if (e.Message.StartsWith("this writer hit an OutOfMemoryError"))
                     RecreateIndexWriteAndThrowOutOfMemory(state, e);
 
-                if (e is Win32Exception win32Exception)
-                {
-                    if (win32Exception.ErrorCode == ERROR_COMMITMENT_LIMIT)
-                        RecreateIndexWriteAndThrowOutOfMemory(state, e);
-
-                }
+                if (e is Win32Exception win32Exception && win32Exception.IsOutOfMemory()) 
+                    RecreateIndexWriteAndThrowOutOfMemory(state, e);
 
                 throw;
             }
