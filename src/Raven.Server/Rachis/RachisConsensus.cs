@@ -590,7 +590,7 @@ namespace Raven.Server.Rachis
 
             public override string ToString()
             {
-                return $"{When:u} {Reason} {From}->{To} at term {CurrentTerm}";
+                return $"{When:u} {Reason} {From}->{To} at term {CurrentTerm:#,#;;0}";
             }
         }
 
@@ -602,7 +602,7 @@ namespace Raven.Server.Rachis
             Action beforeStateChangedEvent = null)
         {
             if (expectedTerm != CurrentTerm && expectedTerm != -1)
-                RachisConcurrencyException.Throw($"Attempted to switch state to {rachisState} on expected term {expectedTerm} but the real term is {CurrentTerm}");
+                RachisConcurrencyException.Throw($"Attempted to switch state to {rachisState} on expected term {expectedTerm:#,#;;0} but the real term is {CurrentTerm:#,#;;0}");
 
             var sp = Stopwatch.StartNew();
             
@@ -672,7 +672,7 @@ namespace Raven.Server.Rachis
                     {
                         if (Log.IsInfoEnabled)
                         {
-                            Log.Info($"Initiate disposing the term _prior_ to {expectedTerm} with {toDispose.Count} things to dispose.");
+                            Log.Info($"Initiate disposing the term _prior_ to {expectedTerm:#,#;;0} with {toDispose.Count} things to dispose.");
                         }
 
                         ParallelDispose(toDispose);
@@ -683,7 +683,7 @@ namespace Raven.Server.Rachis
                     {
                         if (Log.IsOperationsEnabled)
                         {
-                            Log.Operations($"Took way too much time ({elapsed}) to change the state to {rachisState} in term {expectedTerm}. (Election timeout:{ElectionTimeout})");
+                            Log.Operations($"Took way too much time ({elapsed}) to change the state to {rachisState} in term {expectedTerm:#,#;;0}. (Election timeout:{ElectionTimeout})");
                         }
                     }
                 }
@@ -845,7 +845,7 @@ namespace Raven.Server.Rachis
             {
                 if (Log.IsInfoEnabled)
                 {
-                    Log.Info($"An error occurred during switching to candidate state in term {currentTerm}.", e);
+                    Log.Info($"An error occurred during switching to candidate state in term {currentTerm:#,#;;0}.", e);
                 }
                 Timeout.Start(SwitchToCandidateStateOnTimeout);
             }
@@ -1213,8 +1213,8 @@ namespace Raven.Server.Rachis
                         lastEntryIndex = Math.Min(entry.Index - 1, lastEntryIndex);
                         if (Log.IsInfoEnabled)
                         {
-                            Log.Info($"Got an entry with index={entry.Index} and term={entry.Term} while our term for that index is {entryTerm}," +
-                                     $"will rewind last entry index to {lastEntryIndex}");
+                            Log.Info($"Got an entry with index={entry.Index:#,#;;0} and term={entry.Term:#,#;;0} while our term for that index is {entryTerm:#,#;;0}," +
+                                     $"will rewind last entry index to {lastEntryIndex:#,#;;0}");
                         }
                         break;
                     }
@@ -1240,7 +1240,7 @@ namespace Raven.Server.Rachis
                     var entry = entries[index];
                     if (entry.Index != prevIndex + 1)
                     {
-                        RachisInvalidOperationException.Throw($"Gap in the entries, prev was {prevIndex} but now trying {entry.Index}");
+                        RachisInvalidOperationException.Throw($"Gap in the entries, prev was {prevIndex:#,#;;0} but now trying {entry.Index:#,#;;0}");
                     }
 
                     prevIndex = entry.Index;
@@ -1295,8 +1295,8 @@ namespace Raven.Server.Rachis
         private void ThrowFatalError(RachisEntry firstEntry, long lastCommitIndex, long lastCommitTerm)
         {
             var message =
-                $"FATAL ERROR: got an append entries request with index={firstEntry.Index} term={firstEntry.Term} " +
-                $"while my commit index={lastCommitIndex} with term={lastCommitTerm}, this means something went wrong badly.";
+                $"FATAL ERROR: got an append entries request with index={firstEntry.Index:#,#;;0} term={firstEntry.Term:#,#;;0} " +
+                $"while my commit index={lastCommitIndex:#,#;;0} with term={lastCommitTerm:#,#;;0}, this means something went wrong badly.";
             if (Log.IsInfoEnabled)
             {
                 Log.Info(message);
@@ -1385,13 +1385,13 @@ namespace Raven.Server.Rachis
                 var oldIndex = reader.ReadLittleEndianInt64();
                 if (oldIndex > index)
                     throw new InvalidOperationException(
-                        $"Cannot reduce the last commit index (is {oldIndex} but was requested to reduce to {index})");
+                        $"Cannot reduce the last commit index (is {oldIndex:#,#;;0} but was requested to reduce to {index:#,#;;0})");
                 if (oldIndex == index)
                 {
                     var oldTerm = reader.ReadLittleEndianInt64();
                     if (oldTerm != term)
                         throw new InvalidOperationException(
-                            $"Cannot change just the last commit index (is {oldIndex} term, was {oldTerm} but was requested to change it to {term})");
+                            $"Cannot change just the last commit index (is {oldIndex:#,#;;0} term, was {oldTerm:#,#;;0} but was requested to change it to {term:#,#;;0})");
                 }
             }
 
@@ -1545,7 +1545,7 @@ namespace Raven.Server.Rachis
         {
             if (term != CurrentTerm)
             {
-                throw new ConcurrencyException($"The term was changed from {term} to {CurrentTerm}");
+                throw new ConcurrencyException($"The term was changed from {term:#,#;;0} to {CurrentTerm:#,#;;0}");
             }
         }
         
@@ -1553,7 +1553,7 @@ namespace Raven.Server.Rachis
         {
             Debug.Assert(context.Transaction != null);
             if (term <= CurrentTerm)
-                throw new ConcurrencyException($"The current term {CurrentTerm} is larger than {term}, aborting change");
+                throw new ConcurrencyException($"The current term {CurrentTerm:#,#;;0} is larger or equal to {term:#,#;;0}, aborting change");
 
             var state = context.Transaction.InnerTransaction.CreateTree(GlobalStateSlice);
             using (state.DirectAdd(CurrentTermSlice, sizeof(long), out byte* ptr))
@@ -1563,7 +1563,7 @@ namespace Raven.Server.Rachis
 
 
             if (Log.IsInfoEnabled)
-                Log.Info($"Casting vote for {votedFor ?? "<???>"} in {term} because: {reason}");
+                Log.Info($"Casting vote for {votedFor ?? "<???>"} in {term:#,#;;0} because: {reason}");
 
             votedFor = votedFor ?? string.Empty;
 
@@ -1592,7 +1592,7 @@ namespace Raven.Server.Rachis
                 {
                     if (Log.IsInfoEnabled)
                     {
-                        Log.Info($"Disposing the leader because we casted a vote for {votedFor} in {term}");
+                        Log.Info($"Disposing the leader because we casted a vote for {votedFor} in {term:#,#;;0}");
                     }
                     currentlyTheLeader.Dispose();
                 }
@@ -1600,7 +1600,7 @@ namespace Raven.Server.Rachis
                 {
                     if (Log.IsInfoEnabled)
                     {
-                        Log.Info($"Failed to shut down leader after voting in term {term} for {votedFor}", e);
+                        Log.Info($"Failed to shut down leader after voting in term {term:#,#;;0} for {votedFor}", e);
                     }
                 }
             }, null);
