@@ -79,7 +79,7 @@ namespace Raven.Server.Utils
                         if (restart)
                         {
                             writer.WriteLine("Restarting Server...<DELIMETER_RESTART>");
-                            Program.ResetServerMre.Set();
+                            Program.RestartServerMre.Set();
                             Program.ShutdownServerMre.Set();
                             // server restarting
                             return;

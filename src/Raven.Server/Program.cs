@@ -111,7 +111,7 @@ namespace Raven.Server
 
             RestartServer = () =>
             {
-                ResetServerMre.Set();
+                RestartServerMre.Set();
                 ShutdownServerMre.Set();
             };
 
@@ -297,7 +297,7 @@ namespace Raven.Server
         }
 
         public static ManualResetEvent ShutdownServerMre = new ManualResetEvent(false);
-        public static ManualResetEvent ResetServerMre = new ManualResetEvent(false);
+        public static ManualResetEvent RestartServerMre = new ManualResetEvent(false);
         public static Action RestartServer;
 
         public static bool IsRunningNonInteractive;
@@ -324,9 +324,9 @@ namespace Raven.Server
             };
 
             ShutdownServerMre.WaitOne();
-            if (ResetServerMre.WaitOne(0))
+            if (RestartServerMre.WaitOne(0))
             {
-                ResetServerMre.Reset();
+                RestartServerMre.Reset();
                 ShutdownServerMre.Reset();
                 return true;
             }
