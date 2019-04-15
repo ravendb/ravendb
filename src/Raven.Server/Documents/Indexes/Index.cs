@@ -1174,19 +1174,18 @@ namespace Raven.Server.Documents.Indexes
 
                         try
                         {
-                            if (_lowMemoryFlag.IsRaised())
-                            {
-                                // we can reduce the sizes of the mapped temp files
-                                storageEnvironment.Cleanup();
-                            }
-
                             // the logic here is that unless we hit the memory limit on the system, we want to retain our
                             // allocated memory as long as we still have work to do (since we will reuse it on the next batch)
                             // and it is probably better to avoid alloc/free jitter.
                             // This is because faster indexes will tend to allocate the memory faster, and we want to give them
                             // all the available resources so they can complete faster.
                             var timeToWaitForMemoryCleanup = 5000;
-                            if (_allocationCleanupNeeded)
+
+                            if (_lowMemoryFlag.IsRaised())
+                            {
+                                ReduceMemoryUsage(storageEnvironment);
+                            }
+                            else if (_allocationCleanupNeeded)
                             {
                                 timeToWaitForMemoryCleanup = 0; // if there is nothing to do, immediately cleanup everything
 
@@ -1195,6 +1194,13 @@ namespace Raven.Server.Documents.Indexes
                                 // so it will think that it can allocate more than it actually should
                                 _currentMaximumAllowedMemory = Size.Min(_currentMaximumAllowedMemory,
                                     new Size(NativeMemory.CurrentThreadStats.TotalAllocated, SizeUnit.Bytes));
+
+                                if (storageEnvironment.Options.EncryptionEnabled)
+                                {
+                                    // if encryption is turned on then a lot of memory might be consumed by encryption buffers caches
+                                    // let's clean it so our allocation budget won't be occupied by them
+                                    storageEnvironment.CleanupNativeMemory();
+                                }
                             }
 
                             if (_scratchSpaceLimitExceeded)
@@ -1208,7 +1214,7 @@ namespace Raven.Server.Documents.Indexes
                                 if (_logsAppliedEvent.Wait(Configuration.MaxTimeToWaitAfterFlushAndSyncWhenExceedingScratchSpaceLimit.AsTimeSpan))
                                 {
                                     // we've just flushed let's cleanup scratch space immediately
-                                    storageEnvironment.Cleanup();
+                                    storageEnvironment.CleanupMappedMemory();
                                 }
                             }
 
@@ -1219,14 +1225,14 @@ namespace Raven.Server.Documents.Indexes
                                 // there is no work to be done, and hasn't been for a while,
                                 // so this is a good time to release resources we won't need 
                                 // anytime soon
-                                ReduceMemoryUsage();
+                                ReduceMemoryUsage(storageEnvironment);
 
                                 WaitHandle.WaitAny(new[] { _mre.WaitHandle, _logsAppliedEvent.WaitHandle, _indexingProcessCancellationTokenSource.Token.WaitHandle });
 
                                 if (_logsAppliedEvent.IsSet && _mre.IsSet == false && _indexingProcessCancellationTokenSource.IsCancellationRequested == false)
                                 {
                                     _hadRealIndexingWorkToDo.Lower();
-                                    storageEnvironment.Cleanup();
+                                    storageEnvironment.CleanupMemory();
                                     _logsAppliedEvent.Reset();
                                 }
                             }
@@ -1254,7 +1260,7 @@ namespace Raven.Server.Documents.Indexes
 
         public void Cleanup()
         {
-            _environment?.Cleanup();
+            ReduceMemoryUsage(_environment);
         }
 
         protected virtual bool ShouldReplace()
@@ -1311,7 +1317,7 @@ namespace Raven.Server.Documents.Indexes
                 _logsAppliedEvent.Set();
         }
 
-        private void ReduceMemoryUsage()
+        private void ReduceMemoryUsage(StorageEnvironment environment)
         {
             var beforeFree = NativeMemory.CurrentThreadStats.TotalAllocated;
             if (_logger.IsInfoEnabled)
@@ -1322,6 +1328,8 @@ namespace Raven.Server.Documents.Indexes
             _contextPool.Clean();
             ByteStringMemoryCache.CleanForCurrentThread();
             IndexPersistence.Clean();
+            environment?.CleanupMemory();
+
             _currentMaximumAllowedMemory = DefaultMaximumMemoryAllocation;
 
             var afterFree = NativeMemory.CurrentThreadStats.TotalAllocated;
@@ -1436,7 +1444,7 @@ namespace Raven.Server.Documents.Indexes
                 if (timeLeft > 0)
                     Task.Delay((int)timeLeft, _indexingProcessCancellationTokenSource.Token).Wait();
 
-                storageEnvironment.Cleanup();
+                storageEnvironment.CleanupMemory();
                 storageEnvironment.Options.TryCleanupRecycledJournals();
                 return;
             }
