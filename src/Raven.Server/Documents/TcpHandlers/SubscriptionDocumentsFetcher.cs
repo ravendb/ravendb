@@ -58,7 +58,8 @@ namespace Raven.Server.Documents.TcpHandlers
         public IEnumerable<(Document Doc, Exception Exception)> GetDataToSend(
             DocumentsOperationContext docsContext,
             IncludeDocumentsCommand includesCmd,
-            long startEtag)
+            long startEtag,
+            bool test = false)
         {
             if (string.IsNullOrEmpty(_collection))
                 throw new ArgumentException("The collection name must be specified");
@@ -78,7 +79,8 @@ namespace Raven.Server.Documents.TcpHandlers
 
         private IEnumerable<(Document Doc, Exception Exception)> GetDocumentsToSend(DocumentsOperationContext docsContext,
              IncludeDocumentsCommand includesCmd,
-            long startEtag)
+            long startEtag,
+            bool test = false)
         {
             int numberOfDocs = 0;
             Size size = new Size(0 , SizeUnit.Megabytes);
@@ -99,7 +101,9 @@ namespace Raven.Server.Documents.TcpHandlers
                         {
                             if (exception != null)
                             {
-                                yield return (doc, exception);                           
+                                yield return (doc, exception);
+                                if ((test) && (++numberOfDocs >= _maxBatchSize))
+                                    yield break;
                             }
                             else
                             {                                
@@ -134,11 +138,13 @@ namespace Raven.Server.Documents.TcpHandlers
 
                                     yield return (projection, null);
                                 }
-                            }                            
+                            }
+                            if ((test) && (++numberOfDocs >= _maxBatchSize))
+                                yield break;
                         }
                     }
 
-                    if (++numberOfDocs >= _maxBatchSize)
+                    if ((test == false) && (++numberOfDocs >= _maxBatchSize))
                         yield break;
 
                     if (size >= _maximumAllowedMemory)
@@ -150,7 +156,8 @@ namespace Raven.Server.Documents.TcpHandlers
         private IEnumerable<(Document Doc, Exception Exception)> GetRevisionsToSend(
             DocumentsOperationContext docsContext,
             IncludeDocumentsCommand includesCmd,
-            long startEtag)
+            long startEtag,
+            bool test = false)
         {
             int numberOfDocs = 0;
             Size size = new Size(0, SizeUnit.Megabytes);
@@ -171,6 +178,8 @@ namespace Raven.Server.Documents.TcpHandlers
                         if (exception != null)
                         {
                             yield return (item, exception);
+                            if ((test) && (++numberOfDocs >= _maxBatchSize))
+                                yield break;
                         }
                         else
                         {
@@ -207,8 +216,10 @@ namespace Raven.Server.Documents.TcpHandlers
                                 yield return (projection, null);
                             }
                         }
+                        if ((test) && (++numberOfDocs >= _maxBatchSize))
+                            yield break;
                     }
-                    if (++numberOfDocs >= _maxBatchSize)
+                    if ((test == false) && (++numberOfDocs >= _maxBatchSize))
                         yield break;
 
                     if (size >= _maximumAllowedMemory)
