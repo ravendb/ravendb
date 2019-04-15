@@ -122,7 +122,6 @@ namespace Raven.Server
                 if (rerun)
                 {
                     Console.WriteLine("\nRestarting Server...");
-                    rerun = false;
 
                     configuration = RavenConfiguration.CreateForServer(null, CommandLineSwitches.CustomConfigPath);
 
@@ -162,7 +161,7 @@ namespace Raven.Server
 
                             new RuntimeSettings(Console.Out).Print();
 
-                            if (CommandLineSwitches.LaunchBrowser)
+                            if (rerun == false && CommandLineSwitches.LaunchBrowser)
                                 BrowserHelper.OpenStudioInBrowser(server.ServerStore.GetNodeHttpServerUrl());
 
                             new ClusterMessage(Console.Out, server.ServerStore).Print();
