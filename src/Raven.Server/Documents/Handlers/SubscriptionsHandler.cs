@@ -41,7 +41,10 @@ namespace Raven.Server.Documents.Handlers
                 if (sub.Collection == null)
                     throw new ArgumentException("Collection must be specified");
 
+                const int maxPageSize = 1024;
                 var pageSize = GetIntValueQueryString("pageSize") ?? 1;
+                if (pageSize > maxPageSize)
+                    throw new ArgumentException($"Cannot gather more than {maxPageSize} results during tryouts, but requested number was {pageSize}.");
 
                 var state = new SubscriptionState
                 {
@@ -49,7 +52,7 @@ namespace Raven.Server.Documents.Handlers
                     Query = tryout.Query
                 };
 
-                var fetcher = new SubscriptionDocumentsFetcher(Database, pageSize, -0x42,
+                var fetcher = new SubscriptionDocumentsFetcher(Database, int.MaxValue, -0x42,
                     new IPEndPoint(HttpContext.Connection.RemoteIpAddress, HttpContext.Connection.RemotePort), sub.Collection, sub.Revisions, state, patch);
 
                 var includeCmd = new IncludeDocumentsCommand(Database.DocumentsStorage, context, sub.Includes, isProjection: patch != null);
@@ -76,6 +79,7 @@ namespace Raven.Server.Documents.Handlers
                 {
                     state.ChangeVectorForNextBatchStartingPoint = tryout.ChangeVector;
                 }
+
                 var changeVector = state.ChangeVectorForNextBatchStartingPoint.ToChangeVector();
                 var cv = changeVector.FirstOrDefault(x => x.DbId == Database.DbBase64Id);
 
@@ -91,36 +95,44 @@ namespace Raven.Server.Documents.Handlers
                     using (context.OpenReadTransaction())
                     {
                         var first = true;
+                        var numberOfDocs = 0;
                         sp.Start();
-                        foreach (var itemDetails in fetcher.GetDataToSend(context, includeCmd, cv.Etag, true))
+                        foreach (var itemDetails in fetcher.GetDataToSend(context, includeCmd, cv.Etag))
                         {
                             if (itemDetails.Doc.Data == null)
                                 continue;
 
-                            includeCmd.Gather(itemDetails.Doc);
-
-                            if (first == false)
-                                writer.WriteComma();
-
-                            if (itemDetails.Exception == null)
+                            using (itemDetails.Doc.Data)
                             {
-                                writer.WriteDocument(context, itemDetails.Doc, metadataOnly: false);
-                            }
-                            else
-                            {
-                                var documentWithException = new DocumentWithException
+                                includeCmd.Gather(itemDetails.Doc);
+
+                                if (first == false)
+                                    writer.WriteComma();
+
+                                if (itemDetails.Exception == null)
                                 {
-                                    Exception = itemDetails.Exception.ToString(),
-                                    ChangeVector = itemDetails.Doc.ChangeVector,
-                                    Id = itemDetails.Doc.Id,
-                                    DocumentData = itemDetails.Doc.Data
-                                };
-                                writer.WriteObject(context.ReadObject(documentWithException.ToJson(), ""));
-                            }
+                                    writer.WriteDocument(context, itemDetails.Doc, metadataOnly: false);
+                                }
+                                else
+                                {
+                                    var documentWithException = new DocumentWithException
+                                    {
+                                        Exception = itemDetails.Exception.ToString(),
+                                        ChangeVector = itemDetails.Doc.ChangeVector,
+                                        Id = itemDetails.Doc.Id,
+                                        DocumentData = itemDetails.Doc.Data
+                                    };
+                                    writer.WriteObject(context.ReadObject(documentWithException.ToJson(), ""));
+                                }
 
-                            first = false;
-                            if (sp.Elapsed >= timeLimit)
-                                break;
+                                first = false;
+
+                                if (++numberOfDocs >= pageSize)
+                                    break;
+
+                                if (sp.Elapsed >= timeLimit)
+                                    break;
+                            }
                         }
 
                         writer.WriteEndArray();
