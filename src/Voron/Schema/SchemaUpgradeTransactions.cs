@@ -53,10 +53,11 @@ namespace Voron.Schema
 
         public void Dispose()
         {
-            Commit();
-
             Read?.Dispose();
             Read = null;
+
+            Write?.Dispose();
+            Write = null;
         }
     }
 }
