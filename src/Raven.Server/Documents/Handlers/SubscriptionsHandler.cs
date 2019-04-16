@@ -85,64 +85,72 @@ namespace Raven.Server.Documents.Handlers
 
                 var sp = new Stopwatch();
                 var timeLimit = TimeSpan.FromSeconds(GetIntValueQueryString("timeLimit", false) ?? 15);
+                var startEtag = cv.Etag;
 
                 using (var writer = new BlittableJsonTextWriter(context, ResponseBodyStream()))
                 {
                     writer.WriteStartObject();
                     writer.WritePropertyName("Results");
                     writer.WriteStartArray();
-
-                    using (context.OpenReadTransaction())
+                    var numberOfDocs = 0;
+                    while (numberOfDocs == 0)
                     {
-                        var first = true;
-                        var numberOfDocs = 0;
-                        sp.Start();
-                        foreach (var itemDetails in fetcher.GetDataToSend(context, includeCmd, cv.Etag))
+                        using (context.OpenReadTransaction())
                         {
-                            if (itemDetails.Doc.Data == null)
-                                continue;
+                            var first = true;
 
-                            using (itemDetails.Doc.Data)
+                            sp.Start();
+                            foreach (var itemDetails in fetcher.GetDataToSend(context, includeCmd, startEtag))
                             {
-                                includeCmd.Gather(itemDetails.Doc);
-
-                                if (first == false)
-                                    writer.WriteComma();
-
-                                if (itemDetails.Exception == null)
+                                if (itemDetails.Doc.Data != null)
                                 {
-                                    writer.WriteDocument(context, itemDetails.Doc, metadataOnly: false);
-                                }
-                                else
-                                {
-                                    var documentWithException = new DocumentWithException
+                                    using (itemDetails.Doc.Data)
                                     {
-                                        Exception = itemDetails.Exception.ToString(),
-                                        ChangeVector = itemDetails.Doc.ChangeVector,
-                                        Id = itemDetails.Doc.Id,
-                                        DocumentData = itemDetails.Doc.Data
-                                    };
-                                    writer.WriteObject(context.ReadObject(documentWithException.ToJson(), ""));
+                                        includeCmd.Gather(itemDetails.Doc);
+
+                                        if (first == false)
+                                            writer.WriteComma();
+
+                                        if (itemDetails.Exception == null)
+                                        {
+                                            writer.WriteDocument(context, itemDetails.Doc, metadataOnly: false);
+                                        }
+                                        else
+                                        {
+                                            var documentWithException = new DocumentWithException
+                                            {
+                                                Exception = itemDetails.Exception.ToString(),
+                                                ChangeVector = itemDetails.Doc.ChangeVector,
+                                                Id = itemDetails.Doc.Id,
+                                                DocumentData = itemDetails.Doc.Data
+                                            };
+                                            writer.WriteObject(context.ReadObject(documentWithException.ToJson(), ""));
+                                        }
+
+                                        first = false;
+
+                                        if (++numberOfDocs >= pageSize)
+                                            break;
+                                    }
                                 }
-
-                                first = false;
-
-                                if (++numberOfDocs >= pageSize)
-                                    break;
 
                                 if (sp.Elapsed >= timeLimit)
+                                {
+                                    if (numberOfDocs == 0)
+                                        startEtag = itemDetails.Doc.Etag;
                                     break;
+                                }
                             }
                         }
-
-                        writer.WriteEndArray();
-                        writer.WriteComma();
-                        writer.WritePropertyName("Includes");
-                        var includes = new List<Document>();
-                        includeCmd.Fill(includes);
-                        writer.WriteIncludes(context, includes);
-                        writer.WriteEndObject();
                     }
+
+                    writer.WriteEndArray();
+                    writer.WriteComma();
+                    writer.WritePropertyName("Includes");
+                    var includes = new List<Document>();
+                    includeCmd.Fill(includes);
+                    writer.WriteIncludes(context, includes);
+                    writer.WriteEndObject();
                 }
             }
         }
