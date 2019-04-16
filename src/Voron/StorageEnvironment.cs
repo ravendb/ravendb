@@ -334,6 +334,8 @@ namespace Voron
                     //schemaVersionVal++;
 
                     metadataTree.Add("schema-version", EndianBitConverter.Little.GetBytes(schemaVersionVal));
+
+                    transactions.Commit();
                 }
             }
 
