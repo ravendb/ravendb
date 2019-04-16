@@ -12,34 +12,31 @@ using static Raven.Server.ServerWide.Commands.CompareExchangeCommandBase;
 
 namespace Raven.Server.Storage.Schema.Updates.Server
 {
-    public unsafe class From12 : ISchemaUpdate
+    public unsafe class From14 : ISchemaUpdate
     {
         public bool Update(UpdateStep step)
         {
             var dbs = new List<string>();
             const string dbKey = "db/";
 
-            var identities = step.ReadTx.ReadTree(ClusterStateMachine.Identities);
-            step.WriteTx.DeleteTree(ClusterStateMachine.Identities);
-
-            var oldCompareExchangeSchema = new TableSchema().
+            var oldIdentitiesSchema = new TableSchema().
                 DefineKey(new TableSchema.SchemaIndexDef
                 {
-                    StartIndex = (int)ClusterStateMachine.CompareExchangeTable.Key,
+                    StartIndex = (int)ClusterStateMachine.IdentitiesTable.Key,
                     Count = 1
                 });
 
-            var newCompareExchangeSchema = new TableSchema()
+            var newIdentitiesSchema = new TableSchema()
                 .DefineKey(new TableSchema.SchemaIndexDef
                 {
-                    StartIndex = (int)ClusterStateMachine.CompareExchangeTable.Key,
+                    StartIndex = (int)ClusterStateMachine.IdentitiesTable.Key,
                     Count = 1
                 }).DefineIndex(new TableSchema.SchemaIndexDef
                 {
-                    StartIndex = (int)ClusterStateMachine.CompareExchangeTable.PrefixIndex,
+                    StartIndex = (int)ClusterStateMachine.IdentitiesTable.KeyIndex,
                     Count = 1,
                     IsGlobal = true,
-                    Name = ClusterStateMachine.CompareExchangeIndex,
+                    Name = ClusterStateMachine.IdentitiesIndex,
                     Dangerous_IgnoreForDeletesAndMissingValues = true
                 });
 
@@ -52,85 +49,37 @@ namespace Raven.Server.Storage.Schema.Updates.Server
                 }
             }
 
-            step.WriteTx.CreateTree(ClusterStateMachine.CompareExchangeIndex);
-
             foreach (var db in dbs)
             {
-                // update CompareExchange
-                var readTable = step.ReadTx.OpenTable(oldCompareExchangeSchema, ClusterStateMachine.CompareExchange);
-                if (readTable != null)
+                var dbPrefixLowered = $"{db.ToLowerInvariant()}/";
+
+                // update IdentitiesSchema
+                var readIdentitiesTable = step.ReadTx.OpenTable(oldIdentitiesSchema, ClusterStateMachine.Identities);
+                if (readIdentitiesTable != null)
                 {
-                    var writeTable = step.WriteTx.OpenTable(newCompareExchangeSchema, ClusterStateMachine.CompareExchange);
-                    writeTable.Danger_NoInPlaceUpdates = true;
-                    var compareExchangeOldKey = $"{db.ToLowerInvariant()}/";
-
-                    using (Slice.From(step.ReadTx.Allocator, compareExchangeOldKey, out var keyPrefix))
+                    using (Slice.From(step.ReadTx.Allocator, dbPrefixLowered, out var keyPrefix))
                     {
-                        foreach (var item in readTable.SeekByPrimaryKeyPrefix(keyPrefix, Slices.Empty, 0))
+                        var writeIdentitiesTable = step.WriteTx.OpenTable(newIdentitiesSchema, ClusterStateMachine.Identities);
+                        writeIdentitiesTable.Danger_NoInPlaceUpdates = true;
+                        foreach (var item in readIdentitiesTable.SeekByPrimaryKeyPrefix(keyPrefix, Slices.Empty, 0))
                         {
-                            var index = TableValueToLong((int)ClusterStateMachine.CompareExchangeTable.Index, ref item.Value.Reader);
+                            var value = TableValueToLong((int)ClusterStateMachine.IdentitiesTable.Value, ref item.Value.Reader);
+                            var index = TableValueToLong((int)ClusterStateMachine.IdentitiesTable.Index, ref item.Value.Reader);
 
-                            using (GetPrefixIndexSlices(step.ReadTx.Allocator, db, index, out var buffer))
-                            using (Slice.External(step.WriteTx.Allocator, buffer.Ptr, buffer.Length, out var prefixIndexSlice))
-                            using (writeTable.Allocate(out TableValueBuilder write))
-                            using (var ctx = JsonOperationContext.ShortTermSingleUse())
+                            // if value is not 0 than we come from v4.2 and could have wrong index value
+                            if (index != 0)
                             {
-                                using (var bjro = new BlittableJsonReaderObject(
-                                    item.Value.Reader.Read((int)ClusterStateMachine.CompareExchangeTable.Value, out var size1),
-                                    size1, ctx).Clone(ctx)
-                                )
+                                using (GetPrefixIndexSlices(step.ReadTx.Allocator, db, 0L, out var buffer))
+                                using (Slice.External(step.WriteTx.Allocator, buffer.Ptr, buffer.Length, out var prefixIndexSlice))
+                                using (writeIdentitiesTable.Allocate(out TableValueBuilder write))
                                 {
                                     write.Add(item.Key);
-                                    write.Add(index);
-                                    write.Add(bjro.BasePointer, bjro.Size);
+                                    write.Add(value);
+                                    write.Add(0L);
                                     write.Add(prefixIndexSlice);
 
-                                    writeTable.Set(write);
+                                    writeIdentitiesTable.Set(write);
                                 }
-                            }
-                        }
-                    }
-                }
-
-                if (identities != null)
-                {
-                    Slice.From(step.WriteTx.Allocator, "Identities", out var identitySlice);
-                    ClusterStateMachine.IdentitiesSchema.Create(step.WriteTx, identitySlice, 32);
-                    var writeTable = step.WriteTx.OpenTable(ClusterStateMachine.IdentitiesSchema, identitySlice);
-                    using (Slice.From(step.ReadTx.Allocator, $"{dbKey}{db.ToLowerInvariant()}/identities/", out var identityPrefix))
-                    {
-                        using (var it = identities.Iterate(prefetch: false))
-                        {
-                            it.SetRequiredPrefix(identityPrefix);
-
-                            if (it.Seek(identityPrefix))
-                            {
-                                do
-                                {
-                                    var key = it.CurrentKey;
-                                    var keyAsString = key.ToString();   // old identity key
-                                    var value = it.CreateReaderForCurrent().ReadLittleEndianInt64();
-
-                                    var newKey = keyAsString.Substring(identityPrefix.ToString().Length);
-
-                                    // write to new identities schema
-                                    GetKeyAndPrefixIndexSlices(step.ReadTx.Allocator, db, $"{newKey}", 0L, out var keyTuple, out var indexTuple);
-                                    using (keyTuple.Scope)
-                                    using (indexTuple.Scope)
-                                    using (Slice.External(step.ReadTx.Allocator, keyTuple.Buffer.Ptr, keyTuple.Buffer.Length, out var keySlice))
-                                    using (Slice.External(step.ReadTx.Allocator, indexTuple.Buffer.Ptr, indexTuple.Buffer.Length, out var prefixIndexSlice))
-                                    {
-                                        using (writeTable.Allocate(out var write))
-                                        {
-                                            write.Add(keySlice);
-                                            write.Add(value);
-                                            write.Add(0L);
-                                            write.Add(prefixIndexSlice);
-
-                                            writeTable.Set(write);
-                                        }
-                                    }
-                                } while (it.MoveNext());
                             }
                         }
                     }
@@ -166,6 +115,10 @@ namespace Raven.Server.Storage.Schema.Updates.Server
                                 continue;
 
                             if (lastIncrementalBackupDate == null || lastRaftIndex == null)
+                                continue;
+
+                            // already set in from12 before
+                            if (lastRaftIndex == 0)
                                 continue;
 
                             var myLastRaftIndex = new LastRaftIndex
