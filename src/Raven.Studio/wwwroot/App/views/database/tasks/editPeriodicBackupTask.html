@@ -346,6 +346,67 @@
         </div>
     </div>
     
+    <div class="panel" data-bind="with: googleCloudStorageSettings">
+        <div class="padding">
+            <div class="flex-horizontal">
+                <div class="toggle">
+                    <input id="toggle-GoogleCloudStorage" type="checkbox" data-bind="checked: enabled, enable: $root.isBackupOptionAvailable('GoogleCloudStorage')">
+                    <label for="toggle-GoogleCloudStorage">Google Cloud Storage</label>
+                </div>
+                <div class="text-warning js-option-disabled" data-bind="visible: !$root.isBackupOptionAvailable('GoogleCloudStorage')">
+                    <small><i class="icon-info"></i></small>
+                </div>
+            </div>
+
+            <div class="row" data-bind="collapse: enabled">
+                <div class="col-sm-8 col-lg-6 margin-top">
+                    <div class="row flex-row margin-bottom" data-bind="validationElement: bucket">
+                        <label class="control-label col-xs-12 col-sm-6 col-lg-4">
+                            Bucket <i class="required"></i> <small><i id="bucket-gcs-info" class="icon-info text-info"></i></small>
+                        </label>
+                        <div class="col-xs-12 col-sm-6 col-lg-8">
+                            <input data-bind="textInput: bucket" type="text" class="form-control" />
+                        </div>
+                    </div>
+                    <div class="row flex-row margin-bottom" data-bind="validationElement: remoteFolderName">
+                        <label class="control-label col-xs-12 col-sm-6 col-lg-4">Remote folder name</label>
+                        <div class="col-xs-12 col-sm-6 col-lg-8">
+                            <input data-bind="textInput: remoteFolderName" type="text" class="form-control" />
+                        </div>
+                    </div>
+                    <div class="row flex-row margin-bottom" data-bind="validationElement: GoogleCredentialsJson">
+                        <label class="control-label col-xs-12 col-sm-6 col-lg-4">Google Credentials Json <i class="required"></i></label>
+                        <div class="col-xs-12 col-sm-6 col-lg-8">
+                            <textarea rows="9" data-bind="textInput: GoogleCredentialsJson" class="form-control" placeholder=
+                            'e.g.
+                            {
+                                "type": "service_account",
+                                "project_id": "test-raven-237012",
+                                "private_key_id": "12345678123412341234123456789101",
+                                "private_key": "-----BEGIN PRIVATE KEY-----\abCse=\n-----END PRIVATE KEY-----\n",
+                                "client_email": "raven@test-raven-237012-237012.iam.gserviceaccount.com",
+                                "client_id": "111390682349634407434",
+                                "auth_uri": "https://accounts.google.com/o/oauth2/auth",
+                                "token_uri": "https://oauth2.googleapis.com/token",
+                                "auth_provider_x509_cert_url": "https://www.googleapis.com/oauth2/v1/certs",
+                                "client_x509_cert_url": "https://www.googleapis.com/robot/v1/metadata/x509/viewonly%40test-raven-237012.iam.gserviceaccount.com"
+                              }
+                              ' />
+                        </div>
+                    </div>
+                    <div class="text-right">
+                        <button data-bind="click: _.partial($root.testCredentials, $data), disable: isTestingCredentials, css: { 'btn-spinner': isTestingCredentials }" class="btn btn-info">
+                            <i class="icon-rocket"></i>
+                            &nbsp;&nbsp;<span>Test credentials</span>
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="panel-addon" data-bind="template: { name: 'test-connection-results-template' }">
+        </div>
+    </div>
+    
     <div class="panel" data-bind="with: glacierSettings">
         <div class="padding">
             <div class="flex-horizontal">

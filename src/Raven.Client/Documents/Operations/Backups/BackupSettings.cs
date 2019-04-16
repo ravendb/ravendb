@@ -244,4 +244,48 @@ namespace Raven.Client.Documents.Operations.Backups
             return djv;
         }
     }
+    public class GoogleCloudStorageSettings : BackupSettings
+    {
+        /// <summary>
+        /// Google cloud storage bucket name must be globally unique
+        /// </summary>
+        public string BucketName { get; set; }
+
+        /// <summary>
+        /// Path to remote bucket folder.
+        /// </summary>
+        public string RemoteFolderName { get; set; }
+
+        /// <summary>
+        /// Authentication credentials to your Google Cloud Storage.
+        /// </summary>
+        public string GoogleCredentialsJson { get; set; }
+
+        public override bool HasSettings()
+        {
+            return string.IsNullOrWhiteSpace(BucketName) == false;
+        }
+
+        public bool Equals(GoogleCloudStorageSettings other)
+        {
+            if (other == null)
+                return false;
+
+            if (WasEnabled(other))
+                return true;
+
+            return other.RemoteFolderName == RemoteFolderName;
+        }
+
+        public override DynamicJsonValue ToJson()
+        {
+            var djv = base.ToJson();
+
+            djv[nameof(BucketName)] = BucketName;
+            djv[nameof(RemoteFolderName)] = RemoteFolderName;
+            djv[nameof(GoogleCredentialsJson)] = GoogleCredentialsJson;
+
+            return djv;
+        }
+    }
 }

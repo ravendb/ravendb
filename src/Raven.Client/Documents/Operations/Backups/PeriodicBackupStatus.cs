@@ -30,6 +30,8 @@ namespace Raven.Client.Documents.Operations.Backups
 
         public UploadToAzure UploadToAzure;
 
+        public UploadToGoogleCloudStorage UploadToGoogleCloudStorage;
+
         public UploadToFtp UploadToFtp;
 
         public long? LastEtag { get; set; }
@@ -67,6 +69,7 @@ namespace Raven.Client.Documents.Operations.Backups
             json[nameof(UploadToS3)] = UploadToS3?.ToJson();
             json[nameof(UploadToGlacier)] = UploadToGlacier?.ToJson();
             json[nameof(UploadToAzure)] = UploadToAzure?.ToJson();
+            json[nameof(UploadToGoogleCloudStorage)] = UploadToGoogleCloudStorage?.ToJson();
             json[nameof(LastEtag)] = LastEtag;
             json[nameof(LastRaftIndex)] = LastRaftIndex?.ToJson();
             json[nameof(FolderName)] = FolderName;

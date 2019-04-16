@@ -10,6 +10,7 @@ import jsonUtil = require("common/jsonUtil");
 import backupSettings = require("backupSettings");
 import activeDatabaseTracker = require("common/shell/activeDatabaseTracker");
 import encryptionSettings = require("models/database/tasks/periodicBackup/encryptionSettings");
+import googleCloudStorageSettings = require("models/database/tasks/periodicBackup/googleCloudStorageSettings");
 import generalUtils = require("common/generalUtils");
 
 class periodicBackupConfiguration {
@@ -32,6 +33,7 @@ class periodicBackupConfiguration {
     s3Settings = ko.observable<s3Settings>();
     glacierSettings = ko.observable<glacierSettings>();
     azureSettings = ko.observable<azureSettings>();
+    googleCloudStorageSettings = ko.observable<googleCloudStorageSettings>();
     ftpSettings = ko.observable<ftpSettings>();
     encryptionSettings = ko.observable<encryptionSettings>();
     
@@ -63,6 +65,7 @@ class periodicBackupConfiguration {
         this.s3Settings(!dto.S3Settings ? s3Settings.empty(serverLimits.AllowedAwsRegions) : new s3Settings(dto.S3Settings, serverLimits.AllowedAwsRegions));
         this.glacierSettings(!dto.GlacierSettings ? glacierSettings.empty(serverLimits.AllowedAwsRegions) : new glacierSettings(dto.GlacierSettings, serverLimits.AllowedAwsRegions));
         this.azureSettings(!dto.AzureSettings ? azureSettings.empty() : new azureSettings(dto.AzureSettings));
+        this.googleCloudStorageSettings(!dto.GoogleCloudStorageSettings ? googleCloudStorageSettings.empty() : new googleCloudStorageSettings(dto.GoogleCloudStorageSettings));
         this.ftpSettings(!dto.FtpSettings ? ftpSettings.empty() : new ftpSettings(dto.FtpSettings));
         
         this.manualChooseMentor(!!dto.MentorNode);
@@ -81,7 +84,7 @@ class periodicBackupConfiguration {
 
         const anyBackupTypeIsDirty = ko.pureComputed(() => {
             let anyDirty = false;
-            const backupTypes = [this.localSettings(), this.s3Settings(), this.glacierSettings(), this.azureSettings(), this.ftpSettings()] as backupSettings[];
+            const backupTypes = [this.localSettings(), this.s3Settings(), this.glacierSettings(), this.azureSettings(), this.googleCloudStorageSettings(), this.ftpSettings()] as backupSettings[];
 
             backupTypes.forEach(type => {
                 if (type.dirtyFlag().isDirty()) {
@@ -214,6 +217,7 @@ class periodicBackupConfiguration {
             S3Settings: this.s3Settings().toDto(),
             GlacierSettings: this.glacierSettings().toDto(),
             AzureSettings: this.azureSettings().toDto(),
+            GoogleCloudStorageSettings: this.googleCloudStorageSettings().toDto(),
             FtpSettings: this.ftpSettings().toDto(),
             MentorNode: this.manualChooseMentor() ? this.mentorNode() : undefined,
             BackupEncryptionSettings: this.encryptionSettings().toDto()
@@ -232,6 +236,7 @@ class periodicBackupConfiguration {
             S3Settings: null,
             GlacierSettings: null,
             AzureSettings: null,
+            GoogleCloudStorageSettings: null,
             FtpSettings: null,
             MentorNode: null,
             BackupEncryptionSettings: {

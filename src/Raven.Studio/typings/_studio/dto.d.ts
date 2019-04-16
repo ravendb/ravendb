@@ -512,7 +512,7 @@ declare module Raven.Server.Documents.ETL.Providers.Raven.Test {
     }
 }
 
-type backupOptions = "None" | "Local" | "Azure" | "AmazonGlacier" | "AmazonS3" | "FTP";
+type backupOptions = "None" | "Local" | "Azure" | "AmazonGlacier" | "AmazonS3" | "FTP" | "GoogleCloudStorage";
 
 interface periodicBackupServerLimitsResponse {
     LocalRootPath: string;
