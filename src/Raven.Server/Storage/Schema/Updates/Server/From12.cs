@@ -40,7 +40,7 @@ namespace Raven.Server.Storage.Schema.Updates.Server
                     Count = 1,
                     IsGlobal = true,
                     Name = ClusterStateMachine.CompareExchangeIndex,
-                    Dangerous_IgnoreForDeletes = true
+                    Dangerous_IgnoreForDeletesAndMissingValues = true
                 });
 
             using (var items = step.ReadTx.OpenTable(ClusterStateMachine.ItemsSchema, ClusterStateMachine.Items))

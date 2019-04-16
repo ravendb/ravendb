@@ -1,4 +1,5 @@
-﻿using System.Collections.Generic;
+﻿using System;
+using System.Collections.Generic;
 using Raven.Server.ServerWide;
 using Sparrow.Json;
 using Voron;
@@ -33,7 +34,7 @@ namespace Raven.Server.Storage.Schema.Updates.Server
                     Count = 1,
                     IsGlobal = true,
                     Name = ClusterStateMachine.CompareExchangeIndex,
-                    Dangerous_IgnoreForDeletes = true
+                    Dangerous_IgnoreForDeletesAndMissingValues = true
                 });
 
             var oldIdentitiesSchema = new TableSchema().
@@ -54,7 +55,7 @@ namespace Raven.Server.Storage.Schema.Updates.Server
                     Count = 1,
                     IsGlobal = true,
                     Name = ClusterStateMachine.IdentitiesIndex,
-                    Dangerous_IgnoreForDeletes = true
+                    Dangerous_IgnoreForDeletesAndMissingValues = true
                 });
 
             using (var items = step.ReadTx.OpenTable(ClusterStateMachine.ItemsSchema, ClusterStateMachine.Items))
