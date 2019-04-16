@@ -1256,6 +1256,7 @@ namespace Raven.Server
                                 RespondToTcpConnection(stream, context, null,
                                     authSuccessful ? TcpConnectionStatus.Ok : TcpConnectionStatus.AuthorizationFailed,
                                     supported);
+
                                 tcp.ProtocolVersion = supported;
 
                                 if (authSuccessful == false)
@@ -1282,6 +1283,13 @@ namespace Raven.Server
 
                             if (tcpAuditLog != null)
                                 tcpAuditLog.Info($"Got connection from {tcpClient.Client.RemoteEndPoint} with certificate '{cert?.Subject} ({cert?.Thumbprint})'. Accepted for {header.Operation} on {header.DatabaseName}.");
+
+                            if (header.Operation == TcpConnectionHeaderMessage.OperationTypes.TestConnection ||
+                                header.Operation == TcpConnectionHeaderMessage.OperationTypes.Ping)
+                            {
+                                tcp = null;
+                                return;
+                            }
 
                             if (await DispatchServerWideTcpConnection(tcp, header, buffer))
                             {
@@ -1467,11 +1475,6 @@ namespace Raven.Server
             {
                 var tcpClient = tcp.TcpClient.Client;
                 ServerStore.ClusterAcceptNewConnection(tcp, header,() => tcpClient.Disconnect(false), tcpClient.RemoteEndPoint);
-                return true;
-            }
-
-            if (tcp.Operation == TcpConnectionHeaderMessage.OperationTypes.Ping)
-            {
                 return true;
             }
 
