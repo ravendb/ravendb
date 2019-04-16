@@ -113,19 +113,26 @@ namespace Raven.Server.Storage.Schema.Updates.Server
                         writeIdentitiesTable.Danger_NoInPlaceUpdates = true;
                         foreach (var item in readIdentitiesTable.SeekByPrimaryKeyPrefix(keyPrefix, Slices.Empty, 0))
                         {
-                            var index = TableValueToLong((int)ClusterStateMachine.IdentitiesTable.Index, ref item.Value.Reader);
-                            var value = TableValueToLong((int)ClusterStateMachine.IdentitiesTable.Value, ref item.Value.Reader);
+                            var indexPtr = item.Value.Reader.Read((int)ClusterStateMachine.IdentitiesTable.Index, out var size);
 
-                            using (GetPrefixIndexSlices(step.ReadTx.Allocator, db, index, out var buffer))
-                            using (Slice.External(step.WriteTx.Allocator, buffer.Ptr, buffer.Length, out var prefixIndexSlice))
-                            using (writeIdentitiesTable.Allocate(out TableValueBuilder write))
+                            // we come from RC1
+                            if (size == sizeof(int))
                             {
-                                write.Add(item.Key);
-                                write.Add(value);
-                                write.Add(index);
-                                write.Add(prefixIndexSlice);
+                                var indexIntValue = *(int*)indexPtr;
+                                long index = (long)indexIntValue;
+                                var value = TableValueToLong((int)ClusterStateMachine.IdentitiesTable.Value, ref item.Value.Reader);
 
-                                writeIdentitiesTable.Set(write);
+                                using (GetPrefixIndexSlices(step.ReadTx.Allocator, db, index, out var buffer))
+                                using (Slice.External(step.WriteTx.Allocator, buffer.Ptr, buffer.Length, out var prefixIndexSlice))
+                                using (writeIdentitiesTable.Allocate(out TableValueBuilder write))
+                                {
+                                    write.Add(item.Key);
+                                    write.Add(value);
+                                    write.Add(index);
+                                    write.Add(prefixIndexSlice);
+
+                                    writeIdentitiesTable.Set(write);
+                                }
                             }
                         }
                     }
