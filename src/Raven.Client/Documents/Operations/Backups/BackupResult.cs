@@ -10,6 +10,8 @@ namespace Raven.Client.Documents.Operations.Backups
         public UploadToS3 S3Backup { get; set; }
 
         public UploadToAzure AzureBackup { get; set; }
+        
+        public UploadToGoogleCloudStorage GoogleCloudStorageBackup { get; set; }
 
         public UploadToGlacier GlacierBackup { get; set; }
 
@@ -21,6 +23,7 @@ namespace Raven.Client.Documents.Operations.Backups
             SnapshotBackup = new Counts();
             S3Backup = new UploadToS3();
             AzureBackup = new UploadToAzure();
+            GoogleCloudStorageBackup = new UploadToGoogleCloudStorage();
             GlacierBackup = new UploadToGlacier();
             FtpBackup = new UploadToFtp();
         }
@@ -31,6 +34,7 @@ namespace Raven.Client.Documents.Operations.Backups
             json[nameof(SnapshotBackup)] = SnapshotBackup.ToJson();
             json[nameof(S3Backup)] = S3Backup.ToJson();
             json[nameof(AzureBackup)] = AzureBackup.ToJson();
+            json[nameof(GoogleCloudStorageBackup)] = GoogleCloudStorageBackup.ToJson();
             json[nameof(GlacierBackup)] = GlacierBackup.ToJson();
             json[nameof(FtpBackup)] = FtpBackup.ToJson();
             return json;

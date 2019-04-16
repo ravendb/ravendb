@@ -169,6 +169,11 @@ class editPeriodicBackupTask extends viewModelBase {
                 content: this.textForPopover("Bucket")
             });
 
+        popoverUtils.longWithHover($("#bucket-gcs-info"),
+            {
+                content: this.textForPopovergcs("Bucket")
+            });
+
         popoverUtils.longWithHover($("#storage-container-info"),
             {
                 content: this.textForPopover("Storage container")
@@ -191,6 +196,12 @@ class editPeriodicBackupTask extends viewModelBase {
     private textForPopover(storageName: string): string {
         return `${storageName} should be created manually in order for this backup to work.<br /> ` +
             "You can use the 'Test credentials' button to verify its existance.";
+    }
+
+    private textForPopovergcs(storageName: string): string {
+        return `${storageName} should be created manually in order for this backup to work.<br /> ` +
+            "You can use the 'Test credentials' button to verify its existance.<br />" +
+            "<a href='https://cloud.google.com/storage/docs/bucket-naming' target='_blank'>Bucket naming guidelines</a>";
     }
 
     savePeriodicBackup() {
@@ -254,6 +265,9 @@ class editPeriodicBackupTask extends viewModelBase {
             valid = false;
 
         if (!this.isValid(this.configuration().azureSettings().validationGroup))
+            valid = false;
+            
+        if (!this.isValid(this.configuration().googleCloudStorageSettings().validationGroup))
             valid = false;
 
         if (!this.isValid(this.configuration().glacierSettings().validationGroup))
