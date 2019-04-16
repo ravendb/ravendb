@@ -98,6 +98,10 @@ namespace Raven.Server.Smuggler.Documents
         {
             if ((buildVersion < 42000 && buildVersion >= 40000) || buildVersion == 41 || buildVersion == 40)
             {
+                if (_options.OperateOnTypes.HasFlag(DatabaseItemType.CounterGroups))
+                {
+                    _options.OperateOnTypes |= DatabaseItemType.Counters;
+                }
                 if (isLastFile)
                 {
                     // restore CompareExchange and Identities only from last file
