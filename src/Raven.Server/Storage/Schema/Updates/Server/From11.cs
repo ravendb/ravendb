@@ -88,12 +88,14 @@ namespace Raven.Server.Storage.Schema.Updates.Server
                         if (localCertificate == null)
                             continue;
 
-                        var def = JsonDeserializationServer.CertificateDefinition(localCertificate);
-                        def.PublicKeyPinningHash = new X509Certificate2(Convert.FromBase64String(def.Certificate)).GetPublicKeyPinningHash();
+                        using (localCertificate)
+                        {
+                            var def = JsonDeserializationServer.CertificateDefinition(localCertificate);
+                            def.PublicKeyPinningHash = new X509Certificate2(Convert.FromBase64String(def.Certificate)).GetPublicKeyPinningHash();
 
-                        var cert = context.ReadObject(def.ToJson(), "updated/certificate");
-
-                        PutLocalState(step.WriteTx, localCertKey, cert);
+                            using (var cert = context.ReadObject(def.ToJson(), "updated/certificate"))
+                                PutLocalState(step.WriteTx, localCertKey, cert);
+                        }
                     }
                 }
 
@@ -102,16 +104,19 @@ namespace Raven.Server.Storage.Schema.Updates.Server
 
                 foreach (var cert in allClusterCerts)
                 {
-                    var def = JsonDeserializationServer.CertificateDefinition(cert.Value);
-                    def.PublicKeyPinningHash = new X509Certificate2(Convert.FromBase64String(def.Certificate)).GetPublicKeyPinningHash();
-
-                    using (Slice.From(step.WriteTx.Allocator, def.PublicKeyPinningHash, out Slice hashSlice))
-                    using (Slice.From(step.WriteTx.Allocator, cert.ItemName, out Slice oldKeySlice)) // includes the 'certificates/' prefix
-                    using (Slice.From(step.WriteTx.Allocator, def.Thumbprint, out Slice newKeySlice))
-                    using (var newCert = context.ReadObject(def.ToJson(), "certificate/new/schema"))
+                    using (cert.Value)
                     {
-                        ClusterStateMachine.UpdateCertificate(certsTable, newKeySlice, hashSlice, newCert);
-                        itemsTable.DeleteByKey(oldKeySlice);
+                        var def = JsonDeserializationServer.CertificateDefinition(cert.Value);
+                        def.PublicKeyPinningHash = new X509Certificate2(Convert.FromBase64String(def.Certificate)).GetPublicKeyPinningHash();
+
+                        using (Slice.From(step.WriteTx.Allocator, def.PublicKeyPinningHash, out Slice hashSlice))
+                        using (Slice.From(step.WriteTx.Allocator, cert.ItemName, out Slice oldKeySlice)) // includes the 'certificates/' prefix
+                        using (Slice.From(step.WriteTx.Allocator, def.Thumbprint, out Slice newKeySlice))
+                        using (var newCert = context.ReadObject(def.ToJson(), "certificate/new/schema"))
+                        {
+                            ClusterStateMachine.UpdateCertificate(certsTable, newKeySlice, hashSlice, newCert);
+                            itemsTable.DeleteByKey(oldKeySlice);
+                        }
                     }
                 }
             }

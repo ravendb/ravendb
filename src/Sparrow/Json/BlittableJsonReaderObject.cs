@@ -956,10 +956,11 @@ namespace Sparrow.Json
 
         public void Dispose()
         {
-            AssertContextNotDisposed();
-
             if (_mem == null) //double dispose will do nothing
                 return;
+
+            AssertContextNotDisposed();
+
             if (_allocatedMemory != null && _buffer.IsDisposed == false)
             {
                 _context.ReturnMemory(_allocatedMemory);
