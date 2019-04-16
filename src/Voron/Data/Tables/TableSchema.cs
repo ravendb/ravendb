@@ -89,7 +89,7 @@ namespace Voron.Data.Tables
             /// This is relevant only for migration purposes and should never be set for non migration code.
             /// It is meant to allow deleting an item when we create a new index that isn't in the storage
             /// </summary>
-            public bool Dangerous_IgnoreForDeletes;
+            public bool Dangerous_IgnoreForDeletesAndMissingValues;
 
             public Slice Name;
 
@@ -257,7 +257,7 @@ namespace Voron.Data.Tables
             /// This is relevant only for migration purposes and should never be set for non migration code.
             /// It is meant to allow deleting an item when we create a new index that isn't in the storage
             /// </summary>
-            public bool Dangerous_IgnoreForDeletes;
+            public bool Dangerous_IgnoreForDeletesAndMissingValues;
 
 
             public long GetValue(ref TableValueReader value)
