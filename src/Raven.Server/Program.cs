@@ -268,6 +268,7 @@ namespace Raven.Server
                 {
                     if (Logger.IsOperationsEnabled)
                         Logger.OperationsAsync("Server has shut down").Wait(TimeSpan.FromSeconds(15));
+                    ShutdownCompleteMre.Set();
                 }
             } while (rerun);
 
@@ -298,6 +299,7 @@ namespace Raven.Server
 
         public static ManualResetEvent ShutdownServerMre = new ManualResetEvent(false);
         public static ManualResetEvent RestartServerMre = new ManualResetEvent(false);
+        public static ManualResetEvent ShutdownCompleteMre = new ManualResetEvent(false);
         public static Action RestartServer;
 
         public static bool IsRunningNonInteractive;
@@ -321,6 +323,7 @@ namespace Raven.Server
                     return; // already done
                 Console.WriteLine("Received graceful exit request...");
                 ShutdownServerMre.Set();
+                ShutdownCompleteMre.WaitOne(TimeSpan.FromSeconds(30)); // on linux we have to keep Unloading event exit last
             };
 
             ShutdownServerMre.WaitOne();
@@ -337,6 +340,33 @@ namespace Raven.Server
         {
             //stop dumping logs
             LoggingSource.Instance.DisableConsoleLogging();
+
+            AssemblyLoadContext.Default.Unloading += s =>
+            {
+                if (IsRunningNonInteractive)
+                    return;
+
+                LoggingSource.Instance.DisableConsoleLogging();
+                if (ShutdownServerMre.WaitOne(0))
+                    return; // already done
+                Console.WriteLine();
+                Console.WriteLine("Received graceful exit request (interactive mode)...");
+                // On interactive mode, Console.ReadLine holds the application from closing and disposing.
+                // We are about to force dispose here RavenServer, although running inside 'using' statement
+                try
+                {
+                    if (Logger.IsOperationsEnabled)
+                        Logger.OperationsAsync("Server is about to shut down (interactive mode)").Wait(TimeSpan.FromSeconds(15));
+                    server.Dispose();
+                    Console.WriteLine("Shutdown completed (interactive mode)");
+                }
+                catch (Exception e)
+                {
+                    Console.WriteLine("Error during shutdown (interactive mode)");
+                    Console.WriteLine(e);
+                }
+                // Environment.Exit will cause halt here
+            };
 
             bool consoleColoring = true;
             if (server.Configuration.Embedded.ParentProcessId.HasValue)
