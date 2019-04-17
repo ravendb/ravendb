@@ -36,16 +36,11 @@ namespace Raven.Server.Commercial
 
             try
             {
-                if (RavenConfiguration.EnvironmentVariableLicenseString != null)
+                if (TryGetLicenseFromString(throwOnFailure: false) != null)
                 {
-                    // update the environment variable string value
-                    UpdateEnvironmentVariableLicenseString(newLicense, rsaParameters);
+                    UpdateLicenseString(newLicense, rsaParameters);
                     return;
                 }
-
-                // update the license string in settings.json
-                if (TryUpdatingSettingsJson(newLicense, rsaParameters))
-                    return;
 
                 var licenseFromPath = TryGetLicenseFromPath(throwOnFailure: false);
                 if (licenseFromPath != null)
@@ -130,6 +125,33 @@ namespace Raven.Server.Commercial
             }
         }
 
+        private static bool TryDeserializeLicense(string licenseString, out License license)
+        {
+            try
+            {
+                license = DeserializeLicense(licenseString);
+                return true;
+            }
+            catch
+            {
+                license = null;
+                return false;
+            }
+        }
+
+        private void UpdateLicenseString(License newLicense, RSAParameters rsaParameters)
+        {
+            // try updating the license string in settings.json (if it exists)
+            if (TryUpdatingSettingsJson(newLicense, rsaParameters))
+                return;
+
+            if (RavenConfiguration.EnvironmentVariableLicenseString != null)
+            {
+                // update the environment variable string value
+                UpdateEnvironmentVariableLicenseString(newLicense, rsaParameters);
+            }
+        }
+
         private static void UpdateEnvironmentVariableLicenseString(License newLicense, RSAParameters rsaParameters)
         {
             var preferredTarget = EnvironmentVariableTarget.Machine;
@@ -147,7 +169,9 @@ namespace Raven.Server.Commercial
                 return;
             }
 
-            var oldLicense = DeserializeLicense(licenseString);
+            if (TryDeserializeLicense(licenseString, out var oldLicense) == false)
+                return;
+
             if (ValidateLicense(newLicense, rsaParameters, oldLicense) == false)
                 return;
 
@@ -193,6 +217,7 @@ namespace Raven.Server.Commercial
             return true;
         }
 
+        // returns true when this setting exists in settings.json
         private bool TryUpdatingSettingsJson(License newLicense, RSAParameters rsaParameters)
         {
             using (_serverStore.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
@@ -203,15 +228,15 @@ namespace Raven.Server.Commercial
                     settingsJson = context.ReadForMemory(fs, "settings-json");
                 }
 
+                // validate that we have the license property
                 if (settingsJson.TryGet(LicenseStringConfigurationName, out string licenseString) == false)
-                {
-                    // validate the we have the license property
                     return false;
-                }
 
-                var oldLicense = DeserializeLicense(licenseString);
+                if (TryDeserializeLicense(licenseString, out var oldLicense) == false)
+                    return true;
+
                 if (ValidateLicense(oldLicense, rsaParameters, newLicense) == false)
-                    return false;
+                    return true;
 
                 settingsJson.Modifications = new DynamicJsonValue(settingsJson)
                 {
