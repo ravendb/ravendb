@@ -133,6 +133,9 @@
     <None Update="SchemaUpgrade\Issues\SystemVersion\Identities_CompareExchange_RavenData_from12.zip">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </None>
+    <None Update="SchemaUpgrade\Issues\SystemVersion\Identities_CompareExchange_RavenData_from13.zip">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </None>
     <None Update="SchemaUpgrade\Issues\VoronCurrentVersion\schema_999\headers.one">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </None>

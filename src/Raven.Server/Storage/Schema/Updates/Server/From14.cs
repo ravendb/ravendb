@@ -19,13 +19,6 @@ namespace Raven.Server.Storage.Schema.Updates.Server
             var dbs = new List<string>();
             const string dbKey = "db/";
 
-            var oldIdentitiesSchema = new TableSchema().
-                DefineKey(new TableSchema.SchemaIndexDef
-                {
-                    StartIndex = (int)ClusterStateMachine.IdentitiesTable.Key,
-                    Count = 1
-                });
-
             var newIdentitiesSchema = new TableSchema()
                 .DefineKey(new TableSchema.SchemaIndexDef
                 {
@@ -54,7 +47,7 @@ namespace Raven.Server.Storage.Schema.Updates.Server
                 var dbPrefixLowered = $"{db.ToLowerInvariant()}/";
 
                 // update IdentitiesSchema
-                var readIdentitiesTable = step.ReadTx.OpenTable(oldIdentitiesSchema, ClusterStateMachine.Identities);
+                var readIdentitiesTable = step.ReadTx.OpenTable(ClusterStateMachine.IdentitiesSchema, ClusterStateMachine.Identities);
                 if (readIdentitiesTable != null)
                 {
                     using (Slice.From(step.ReadTx.Allocator, dbPrefixLowered, out var keyPrefix))
@@ -159,10 +152,15 @@ namespace Raven.Server.Storage.Schema.Updates.Server
             if (items.ReadByKey(lowerKeySlice, out TableValueReader reader) == false)
                 return (null, 0L);
 
-            var ptr = reader.Read(2, out int size);
+            // We use the follow format for the items data
+            // { lowered key, key, data, etag }
+            const int data = 2;
+            const int etag = 3;
+
+            var ptr = reader.Read(data, out int size);
             var bjro = new BlittableJsonReaderObject(ptr, size, context);
 
-            var index = *(long*)reader.Read(3, out var sizeOfLong);
+            var index = *(long*)reader.Read(etag, out var sizeOfLong);
             Debug.Assert(sizeOfLong == sizeof(long));
 
             return (bjro, index);
