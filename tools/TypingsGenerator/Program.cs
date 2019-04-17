@@ -434,8 +434,9 @@ namespace TypingsGenerator
             scripter.AddType(typeof(MigrationProgress));
             scripter.AddType(typeof(MigrationTestRequest));
             
-            // document size details
+            // document details
             scripter.AddType(typeof(DocumentSizeDetails));
+            scripter.AddType(typeof(DocumentIDDetails));
             
             // version info
             scripter.AddType(typeof(LatestVersionCheck.VersionInfo));

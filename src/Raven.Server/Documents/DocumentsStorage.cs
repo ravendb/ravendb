@@ -1844,6 +1844,15 @@ namespace Raven.Server.Documents
             var ptr = tvr.Read(index, out int size);
             return Slice.From(context.Allocator, ptr, size, ByteStringType.Immutable, out slice);
         }
+
+        public string GetDocumentIDFrom(string changeVector)
+        {
+            //todo
+            //throw new NotImplementedException();
+            return "users/157398752038750/55465/34634fgsfgs/dfgsdfgs/sdfgsdfgsdfgsd/454545/4fgsfdgsdfgs/fgfg";
+            //return null;
+
+        }
     }
 
     public enum TableType : byte

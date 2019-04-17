@@ -97,7 +97,41 @@ namespace Raven.Server.Documents.Handlers
                 return Task.CompletedTask;
             }
         }
+        
+        [RavenAction("/databases/*/docs/id", "GET", AuthorizationStatus.ValidUser)]
+        public Task GetDocIDFromChangeVector()
+        {
+            var changeVector = GetQueryStringValueAndAssertIfSingleAndNotEmpty("changeVector");
 
+            using (ContextPool.AllocateOperationContext(out DocumentsOperationContext context))
+            using (context.OpenReadTransaction())
+            {
+                var documentID = Database.DocumentsStorage.GetDocumentIDFrom(changeVector);
+                
+                if (documentID == null)
+                {
+                    HttpContext.Response.StatusCode = (int)HttpStatusCode.NotFound;
+                    return Task.CompletedTask;
+                }
+
+                HttpContext.Response.StatusCode = (int)HttpStatusCode.OK;
+
+                var documentSizeDetails = new DocumentIDDetails
+                {
+                    ChangeVector = changeVector,
+                    DocId = documentID
+                };
+
+                using (var writer = new BlittableJsonTextWriter(context, ResponseBodyStream()))
+                {
+                    context.Write(writer, documentSizeDetails.ToJson());
+                    writer.Flush();
+                }
+
+                return Task.CompletedTask;
+            }
+        }
+        
         [RavenAction("/databases/*/docs", "GET", AuthorizationStatus.ValidUser)]
         public async Task Get()
         {
@@ -542,6 +576,21 @@ namespace Raven.Server.Documents.Handlers
         }
     }
 
+    public class DocumentIDDetails : IDynamicJson
+    {
+        public string DocId { get; set; }
+        public string ChangeVector { get; set; }
+        
+        public virtual DynamicJsonValue ToJson()
+        {
+            return new DynamicJsonValue
+            {
+                [nameof(DocId)] = DocId,
+                [nameof(ChangeVector)] = ChangeVector
+            };
+        }
+    }
+    
     public class MergedPutCommand : TransactionOperationsMerger.MergedTransactionCommand, IDisposable
     {
         private string _id;

@@ -15,6 +15,7 @@ import columnPreviewPlugin = require("widgets/virtualGrid/columnPreviewPlugin");
 import textColumn = require("widgets/virtualGrid/columns/textColumn");
 import virtualColumn = require("widgets/virtualGrid/columns/virtualColumn");
 import subscriptionConnectionDetailsCommand = require("commands/database/tasks/getSubscriptionConnectionDetailsCommand");
+import getDocumentIDFromChangeVectorCommand = require("commands/database/documents/getDocumentIDFromChangeVectorCommand");
 import queryCompleter = require("common/queryCompleter");
 import subscriptionRqlSyntax = require("viewmodels/database/tasks/subscriptionRqlSyntax");
 import getPossibleMentorsCommand = require("commands/database/tasks/getPossibleMentorsCommand");
@@ -46,6 +47,15 @@ class editSubscriptionTask extends viewModelBase {
     enableTestArea = ko.observable<boolean>(false);
     testResultsLimit = ko.observable<number>(10);
 
+    // these are not on the model since class SubsriptionState in the client does not include these - we have a dedicated ep to get this info. - get this info lazy..upon request..
+    documentIDForNextBatchStartingPoint = ko.observable<string>(null);
+    nextBatchStartingPointDocumentFound = ko.observable<boolean>(false);
+    triedToFindDocumentNextBatchButFailed = ko.observable<boolean>(false);
+    
+    documentIDForLastChangeVectorAcknowledged = ko.observable<string>(null);   
+    lastAcknowledgedDocumentFound  = ko.observable<boolean>(false);
+    triedToFindDocumentLastAcknowledgedButFailed = ko.observable<boolean>(false);
+    
     private gridController = ko.observable<virtualGridController<any>>();
     columnsSelector = new columnsSelector<documentObject>();
     resultsFetcher = ko.observable<fetcherType>();
@@ -315,6 +325,37 @@ class editSubscriptionTask extends viewModelBase {
         const viewModel = new subscriptionRqlSyntax();
             app.showBootstrapDialog(viewModel);
         }
+        
+    tryGetDocumentIDFromChangeVector(changeVectorType: string) {
+        switch (changeVectorType) {
+            case "NextBatchStartingPoint":
+                new getDocumentIDFromChangeVectorCommand(this.activeDatabase(), this.editedSubscription().changeVectorForNextBatchStartingPoint())
+                    .execute()
+                    .done((result: Raven.Server.Documents.Handlers.DocumentIDDetails) => {
+                        this.documentIDForNextBatchStartingPoint(result.DocId);
+                        this.nextBatchStartingPointDocumentFound(true);
+                    })
+                    .fail(() => {
+                        this.nextBatchStartingPointDocumentFound(false);
+                        this.triedToFindDocumentNextBatchButFailed(true);
+                    });
+                break;
+            case "LastAcknowledgedByClient":
+                new getDocumentIDFromChangeVectorCommand(this.activeDatabase(), this.editedSubscription().lastChangeVectorAcknowledged())
+                    .execute()
+                    .done((result: Raven.Server.Documents.Handlers.DocumentIDDetails) => {
+                        this.documentIDForLastChangeVectorAcknowledged(result.DocId);
+                        this.lastAcknowledgedDocumentFound(true);
+                    })
+                    .fail(() => { 
+                        this.lastAcknowledgedDocumentFound(false);
+                        this.triedToFindDocumentLastAcknowledgedButFailed(true); 
+                    });
+                break;
+            default:
+                break;
+        }
+    }
 }
 
 export = editSubscriptionTask;
