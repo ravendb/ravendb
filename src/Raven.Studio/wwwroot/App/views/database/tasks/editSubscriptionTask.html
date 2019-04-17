@@ -113,52 +113,56 @@
                         </div>
                         <div data-bind="if: changeVectorForNextBatchStartingPoint() && changeVectorForNextBatchStartingPoint() !== 'DoNotChange' && !setStartingPoint()">
                             <div class="panel padding">
-                                <label for="next-batch-starting-point">Next batch starting point is :</label>                               
-                                <textarea id="next-batch-starting-point" rows="2" class="form-control" disabled="disabled" 
+                                <label for="next-batch-starting-point">Next batch starting point is :</label>
+                                <textarea id="next-batch-starting-point" rows="2" class="form-control" style="border: none" readonly="readonly"
                                           data-bind="textInput: changeVectorForNextBatchStartingPoint" title="This change vector is the starting point for next batch">
                                 </textarea>
                                 <div>
-                                    <span data-bind="visible: !$root.nextBatchStartingPointDocumentFound()" title="Search for the document that matches this change-vector">
-                                        <a href="#" data-bind="click: $root.tryGetDocumentIDFromChangeVector.bind($root, 'NextBatchStartingPoint')"><i class="icon-search"></i><small>&nbsp;Get matching document</small></a>
-                                        <small class="pull-right" data-bind="visible: $root.triedToFindDocumentNextBatchButFailed">No matching document found <i class="icon-help"></i></small>
+                                    <span data-bind="visible: !$root.nextBatchStartingPointDocumentFound()">
+                                        <a href="#" data-bind="click: _.partial($root.tryGetDocumentIDFromChangeVector, 'NextBatchStartingPoint')" title="Search for the document that matches this change-vector">
+                                            <i class="icon-search"></i><small>&nbsp;Get matching document</small>
+                                        </a>
+                                        <small data-bind="visible: $root.triedToFindDocumentNextBatchButFailed">No matching document found 
+                                             <span data-placement="top" data-toggle="tooltip" data-html="true" data-animation="true"
+                                                   data-bind="attr: { 'data-original-title': $root.noDocumentFoundHtml }">
+                                                   <i class="icon-help"></i>
+                                             </span> 
+                                        </small>
                                     </span>
                                     <span data-bind="visible: $root.nextBatchStartingPointDocumentFound">
                                         <small>Matching document: </small>
-                                        <a class="pull-right" href="#" data-bind="click: $root.syntaxHelp" title="Click to view document"><small data-bind="text: $root.documentIDForNextBatchStartingPoint"></small></a>
+                                          <a data-bind="attr: { href: $root.urlForNextBatchStartingPointDocument() }"
+                                             title="Click to view document"><small data-bind="text: $root.documentIDForNextBatchStartingPoint"></small></a>
                                     </span>
                                 </div>
                             </div>
                         </div>
-                        <!--<div data-bind="if: changeVectorForNextBatchStartingPoint() && changeVectorForNextBatchStartingPoint() !== 'DoNotChange' && !setStartingPoint()">-->
-                            <!--<div class="panel padding" title="This change vector is the starting point for next batch"> -->
-                                <!--<label for="next-batch-starting-point">Next batch starting point is :</label>-->
-                                <!--<textarea id="next-batch-starting-point" rows="2" class="form-control" disabled="disabled" data-bind="textInput: changeVectorForNextBatchStartingPoint"></textarea>-->
-                            <!--</div>-->
-                        <!--</div>-->
                         <div data-bind="if: lastChangeVectorAcknowledged()">
                             <div class="panel padding">
                                 <label for="last-change-vector-acknowleged">Last change vector acknowleged by the client :</label>
-                                <textarea id="last-change-vector-acknowleged" rows="2" class="form-control" disabled="disabled" style="border: none"
+                                <textarea id="last-change-vector-acknowleged" rows="2" class="form-control" style="border: none" readonly="readonly"
                                           data-bind="textInput: lastChangeVectorAcknowledged" title="The last change vector that was acknowledged by the subscription consumer client">
                                 </textarea>
                                 <div>
-                                    <span data-bind="visible: !$root.lastAcknowledgedDocumentFound()" title="Search for the document that matches this change-vector">
-                                        <a href="#" data-bind="click: $root.tryGetDocumentIDFromChangeVector.bind($root, 'LastAcknowledgedByClient')"><i class="icon-search"></i><small>&nbsp;Get matching document</small></a>
-                                        <small class="pull-right" data-bind="visible: $root.triedToFindDocumentLastAcknowledgedButFailed">No matching document found <i class="icon-help"></i></small>
+                                    <span data-bind="visible: !$root.lastAcknowledgedDocumentFound()">
+                                        <a href="#" data-bind="click: _.partial($root.tryGetDocumentIDFromChangeVector, 'LastAcknowledgedByClient')" title="Search for the document that matches this change-vector">
+                                            <i class="icon-search"></i><small>&nbsp;Get matching document</small>
+                                        </a>
+                                        <small data-bind="visible: $root.triedToFindDocumentLastAcknowledgedButFailed">No matching document found 
+                                             <span data-placement="top" data-toggle="tooltip" data-html="true" data-animation="true"
+                                                   data-bind="attr: { 'data-original-title': $root.noDocumentFoundHtml }">
+                                                   <i class="icon-help"></i>
+                                             </span>
+                                        </small>
                                     </span>
                                     <span data-bind="visible: $root.lastAcknowledgedDocumentFound">
                                         <small>Matching document: </small>
-                                        <a class="pull-right" href="#" data-bind="click: $root.syntaxHelp" title="Click to view document"><small data-bind="text: $root.documentIDForLastChangeVectorAcknowledged"></small></a>
+                                        <a data-bind="attr: { href: $root.urlForLastAcknowledgedDocument() }"
+                                           title="Click to view document"><small data-bind="text: $root.documentIDForLastChangeVectorAcknowledged"></small></a>
                                     </span>
                                 </div>
                             </div>
                         </div>
-                        <!--<div data-bind="if: lastChangeVectorAcknowledged()">-->
-                            <!--<div class="panel padding" title="The last change vector that was acknowledged by the subscription consumer client.">-->
-                                <!--<label for="last-change-vector-acknowleged">Last change vector acknowleged :</label>                               -->
-                                <!--<textarea id="last-change-vector-acknowleged" rows="2" class="form-control" disabled="disabled" data-bind="textInput: lastChangeVectorAcknowledged"></textarea>-->
-                            <!--</div>-->
-                        <!--</div>-->
                     </div>
                 </form>
             </div>

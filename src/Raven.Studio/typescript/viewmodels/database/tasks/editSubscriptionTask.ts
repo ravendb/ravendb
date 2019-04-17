@@ -21,6 +21,7 @@ import subscriptionRqlSyntax = require("viewmodels/database/tasks/subscriptionRq
 import getPossibleMentorsCommand = require("commands/database/tasks/getPossibleMentorsCommand");
 import eventsCollector = require("common/eventsCollector");
 import generalUtils = require("common/generalUtils");
+import activeDatabaseTracker = require("common/shell/activeDatabaseTracker");
 
 type testTabName = "results" | perCollectionIncludes;
 type fetcherType = (skip: number, take: number) => JQueryPromise<pagedResult<documentObject>>;
@@ -51,10 +52,17 @@ class editSubscriptionTask extends viewModelBase {
     documentIDForNextBatchStartingPoint = ko.observable<string>(null);
     nextBatchStartingPointDocumentFound = ko.observable<boolean>(false);
     triedToFindDocumentNextBatchButFailed = ko.observable<boolean>(false);
+    urlForNextBatchStartingPointDocument: KnockoutComputed<string>;
     
     documentIDForLastChangeVectorAcknowledged = ko.observable<string>(null);   
     lastAcknowledgedDocumentFound  = ko.observable<boolean>(false);
     triedToFindDocumentLastAcknowledgedButFailed = ko.observable<boolean>(false);
+    urlForLastAcknowledgedDocument: KnockoutComputed<string>;
+    
+    noDocumentFoundHtml = "<h4>Possible reasons:</h4>" +
+        "<p style='text-align:left'>" +
+        "If the associated document was modified or deleted then the change-vector is not valid any more.<br><br>" +
+        "Also, if the document was replicated or imported then the change-vector doesn't contain the ..relevant ?.. node information</p>";
     
     private gridController = ko.observable<virtualGridController<any>>();
     columnsSelector = new columnsSelector<documentObject>();
@@ -76,10 +84,21 @@ class editSubscriptionTask extends viewModelBase {
 
     constructor() {
         super();
-        this.bindToCurrentInstance("setStartingPointType", "goToTab");
+        this.initializeObservables();
+        this.bindToCurrentInstance("setStartingPointType", "goToTab", "tryGetDocumentIDFromChangeVector"); 
         aceEditorBindingHandler.install();
     }
 
+    private initializeObservables() {
+        this.urlForNextBatchStartingPointDocument = ko.pureComputed(() => {
+            return appUrl.forEditDoc(this.documentIDForNextBatchStartingPoint(), activeDatabaseTracker.default.database());
+        });
+        
+        this.urlForLastAcknowledgedDocument = ko.pureComputed(() => {
+            return appUrl.forEditDoc(this.documentIDForLastChangeVectorAcknowledged(), activeDatabaseTracker.default.database());
+        });       
+    }
+    
     activate(args: any) { 
         super.activate(args);
         const deferred = $.Deferred<void>();

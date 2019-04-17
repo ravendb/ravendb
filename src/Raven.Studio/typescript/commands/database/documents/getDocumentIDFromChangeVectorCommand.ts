@@ -16,7 +16,6 @@ class getDocumentIDFromChangeVectorCommand extends commandBase {
         const url = endpoints.databases.document.docsId + this.urlEncodeArgs(args);
 
         return this.query<Raven.Server.Documents.Handlers.DocumentIDDetails>(url, null, this.db);
-            // .fail((response: JQueryXHR) => this.reportError("Failed to get the document ID", response.responseText, response.statusText));
     }
 }
 
