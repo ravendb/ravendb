@@ -66,6 +66,12 @@ namespace Sparrow.Platform.Posix
 
         public static (string DeviceName, bool IsDeviceSwapFile)[] ReadSwapInformationFromSwapsFile()
         {
+            var filename = "/proc/swaps";
+            return ReadSwapInformationFromSwapsFile(filename);
+        }
+
+        public static (string DeviceName, bool IsDeviceSwapFile)[] ReadSwapInformationFromSwapsFile(string filename)
+        {
             // /proc/swaps output format :
             //              Filename        Type            Size            Used    Priority
             //              /dev/sda5       partition       16691196        109376  -1
@@ -74,17 +80,18 @@ namespace Sparrow.Platform.Posix
 
 
             // on error or if not applicable - return null path array
-            var filename = "/proc/swaps";
+            
+            const int numberOfRow = 5;
             try
             {
                 var txt = File.ReadAllText(filename);
                 var items = System.Text.RegularExpressions.Regex.Split(txt, @"\s+").Where(s => s != string.Empty).ToArray();
 
-                if (items.Length < 6)
+                if (items.Length < numberOfRow + 1)
                 {
                     if (IsOldFileAlert.TryAdd(filename) && Logger.IsOperationsEnabled)
                         Logger.Operations($"no swap defined on this system according to {filename}");
-                    return Array.Empty<(string,bool)>();
+                    return Array.Empty<(string, bool)>();
                 }
 
                 if (items[0].Equals("Filename") == false ||
@@ -99,23 +106,24 @@ namespace Sparrow.Platform.Posix
                 }
 
 
-                if (items.Length % 5 != 0)
+                if (items.Length % numberOfRow != 0)
                 {
                     if (IsOldFileAlert.TryAdd(filename) && Logger.IsOperationsEnabled)
                         Logger.Operations($"Invalid number of fields at {filename}, cannot read swap information");
                     return Array.Empty<(string, bool)>();
                 }
 
-                var numberOfSwaps = items.Length / 5 - 1; // "-1" ignore header;
+                var numberOfSwaps = items.Length / numberOfRow - 1; // "-1" ignore header;
                 if (numberOfSwaps < 1)
                     return Array.Empty<(string, bool)>(); // no swaps defined
 
-                var swapDevices = new (string, bool)[numberOfSwaps];                
+                var swapDevices = new (string, bool)[numberOfSwaps];
 
-                int j = 0;
-                for (var i = 5; i < items.Length; i += 5) // start from "5" - skip header
+                var firstCellInRow = 0;
+                for (var i = 0; i < numberOfSwaps; i++)
                 {
-                    swapDevices[j] = (items[i], items[i + 1].Contains("file"));
+                    firstCellInRow += numberOfRow; // start from "5" - skip header
+                    swapDevices[i] = (items[firstCellInRow], items[firstCellInRow + 1].Contains("file"));
                 }
 
                 return swapDevices;

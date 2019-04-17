@@ -96,6 +96,8 @@ namespace Raven.Server.Documents.Indexes
 
         internal const int LowMemoryPressure = 10;
 
+        private const int AllocationCleanupRequestsLimit = 10;
+
         protected Logger _logger;
 
         internal LuceneIndexPersistence IndexPersistence;
@@ -156,7 +158,7 @@ namespace Raven.Server.Documents.Indexes
 
         protected PerformanceHintsConfiguration PerformanceHints;
 
-        private bool _allocationCleanupNeeded;
+        private int _allocationCleanupNeeded;
 
         private readonly MultipleUseFlag _lowMemoryFlag = new MultipleUseFlag();
         private long _lowMemoryPressure;
@@ -1161,19 +1163,19 @@ namespace Raven.Server.Documents.Indexes
 
                         try
                         {
-                            if (_lowMemoryFlag.IsRaised())
-                            {
-                                // we can reduce the sizes of the mapped temp files
-                                storageEnvironment.Cleanup();
-                            }
-
                             // the logic here is that unless we hit the memory limit on the system, we want to retain our
                             // allocated memory as long as we still have work to do (since we will reuse it on the next batch)
                             // and it is probably better to avoid alloc/free jitter.
                             // This is because faster indexes will tend to allocate the memory faster, and we want to give them
                             // all the available resources so they can complete faster.
                             var timeToWaitForMemoryCleanup = 5000;
-                            if (_allocationCleanupNeeded)
+                            var forceMemoryCleanup = false;
+
+                            if (_lowMemoryFlag.IsRaised())
+                            {
+                                ReduceMemoryUsage(storageEnvironment);
+                            }
+                            else if (_allocationCleanupNeeded > 0)
                             {
                                 timeToWaitForMemoryCleanup = 0; // if there is nothing to do, immediately cleanup everything
 
@@ -1182,6 +1184,16 @@ namespace Raven.Server.Documents.Indexes
                                 // so it will think that it can allocate more than it actually should
                                 _currentMaximumAllowedMemory = Size.Min(_currentMaximumAllowedMemory,
                                     new Size(NativeMemory.CurrentThreadStats.TotalAllocated, SizeUnit.Bytes));
+
+                                if (storageEnvironment.Options.EncryptionEnabled)
+                                {
+                                    // if encryption is turned on then a lot of memory might be consumed by encryption buffers caches
+                                    // let's clean it so our allocation budget won't be occupied by them
+                                    storageEnvironment.CleanupNativeMemory();
+                                }
+
+                                if (_allocationCleanupNeeded > AllocationCleanupRequestsLimit)
+                                    forceMemoryCleanup = true;
                             }
 
                             if (_scratchSpaceLimitExceeded)
@@ -1195,18 +1207,22 @@ namespace Raven.Server.Documents.Indexes
                                 if (_logsAppliedEvent.Wait(Configuration.MaxTimeToWaitAfterFlushAndSyncWhenExceedingScratchSpaceLimit.AsTimeSpan))
                                 {
                                     // we've just flushed let's cleanup scratch space immediately
-                                    storageEnvironment.Cleanup();
+                                    storageEnvironment.CleanupMappedMemory();
                                 }
                             }
 
-                            if (_mre.Wait(timeToWaitForMemoryCleanup, _indexingProcessCancellationTokenSource.Token) == false)
+                            if (forceMemoryCleanup || _mre.Wait(timeToWaitForMemoryCleanup, _indexingProcessCancellationTokenSource.Token) == false)
                             {
-                                _allocationCleanupNeeded = false;
+                                Interlocked.Exchange(ref _allocationCleanupNeeded, 0);
 
+                                // allocation cleanup has been requested multiple times or
                                 // there is no work to be done, and hasn't been for a while,
                                 // so this is a good time to release resources we won't need 
                                 // anytime soon
-                                ReduceMemoryUsage();
+                                ReduceMemoryUsage(storageEnvironment);
+
+                                if (forceMemoryCleanup)
+                                    continue;
 
                                 WaitHandle.WaitAny(new[] { _mre.WaitHandle, _logsAppliedEvent.WaitHandle, _indexingProcessCancellationTokenSource.Token.WaitHandle });
 
@@ -1241,21 +1257,21 @@ namespace Raven.Server.Documents.Indexes
 
         private void NotifyAboutCompletedBatch(bool didWork)
         {
-            DocumentDatabase.Changes.RaiseNotifications(new IndexChange {Name = Name, Type = IndexChangeTypes.BatchCompleted});
+            DocumentDatabase.Changes.RaiseNotifications(new IndexChange { Name = Name, Type = IndexChangeTypes.BatchCompleted });
 
             if (didWork)
             {
                 _didWork = true;
                 _firstBatchTimeout = null;
             }
-            
+
             var batchCompletedAction = DocumentDatabase.IndexStore.IndexBatchCompleted;
             batchCompletedAction?.Invoke((Name, didWork));
         }
 
         public void Cleanup()
         {
-            _environment?.Cleanup();
+            ReduceMemoryUsage(_environment);
         }
 
         protected virtual bool ShouldReplace()
@@ -1312,7 +1328,7 @@ namespace Raven.Server.Documents.Indexes
                 _logsAppliedEvent.Set();
         }
 
-        private void ReduceMemoryUsage()
+        private void ReduceMemoryUsage(StorageEnvironment environment)
         {
             var beforeFree = NativeMemory.CurrentThreadStats.TotalAllocated;
             if (_logger.IsInfoEnabled)
@@ -1323,6 +1339,8 @@ namespace Raven.Server.Documents.Indexes
             _contextPool.Clean();
             ByteStringMemoryCache.CleanForCurrentThread();
             IndexPersistence.Clean();
+            environment?.Cleanup();
+
             _currentMaximumAllowedMemory = DefaultMaximumMemoryAllocation;
 
             var afterFree = NativeMemory.CurrentThreadStats.TotalAllocated;
@@ -3295,7 +3313,7 @@ namespace Raven.Server.Documents.Indexes
                     _logger,
                     out var memoryUsage) == false)
                 {
-                    _allocationCleanupNeeded = true;
+                    Interlocked.Increment(ref _allocationCleanupNeeded);
 
                     documentsOperationContext.DoNotReuse = true;
                     indexingContext.DoNotReuse = true;
@@ -3616,7 +3634,7 @@ namespace Raven.Server.Documents.Indexes
         public void LowMemory()
         {
             _currentMaximumAllowedMemory = DefaultMaximumMemoryAllocation;
-            _allocationCleanupNeeded = true;
+            Interlocked.Increment(ref _allocationCleanupNeeded);
             _lowMemoryFlag.Raise();
         }
 

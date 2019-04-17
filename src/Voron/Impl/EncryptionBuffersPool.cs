@@ -84,7 +84,7 @@ namespace Voron.Impl
             });
         }
 
-        private void ReleaseUnmanagedResources()
+        public void ReleaseUnmanagedResources()
         {
             foreach (var stack in _items)
             {
