@@ -1259,6 +1259,8 @@ namespace Raven.Server.Utils.Cli
                         continue;
                     switch (line)
                     {
+                        case "quit":
+                        case "exit":
                         case "shutdown":
                         case "q":
                             return false;
@@ -1477,6 +1479,8 @@ namespace Raven.Server.Utils.Cli
             switch (txt)
             {
                 case "q":
+                case "quit":
+                case "exit":
                     cmd = Command.Shutdown;
                     break;
                 case "h":
