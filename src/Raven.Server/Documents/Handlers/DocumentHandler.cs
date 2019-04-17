@@ -9,6 +9,7 @@ using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
 using System.Net;
+using System.Runtime.CompilerServices;
 using System.Runtime.ExceptionServices;
 using System.Threading.Tasks;
 using Microsoft.Extensions.Primitives;
@@ -17,6 +18,7 @@ using Raven.Client.Documents.Changes;
 using Raven.Client.Documents.Commands;
 using Raven.Client.Documents.Commands.Batches;
 using Raven.Client.Documents.Operations;
+using Raven.Client.Documents.Operations.Attachments;
 using Raven.Client.Documents.Operations.Counters;
 using Raven.Client.Exceptions;
 using Raven.Server.Documents.Includes;
@@ -31,6 +33,7 @@ using Sparrow.Extensions;
 using Sparrow.Json;
 using Sparrow.Json.Parsing;
 using Sparrow.Utils;
+using Voron;
 using DeleteDocumentCommand = Raven.Server.Documents.TransactionCommands.DeleteDocumentCommand;
 using PatchRequest = Raven.Server.Documents.Patch.PatchRequest;
 
@@ -332,7 +335,7 @@ namespace Raven.Server.Documents.Handlers
 
                 var changeVector = context.GetLazyString(GetStringFromHeaders("If-Match"));
 
-                using (var cmd = new MergedPutCommand(doc, id, changeVector, Database))
+                using (var cmd = new MergedPutCommand(doc, id, changeVector, Database, validateAttachments:true))
                 {
                     await Database.TxMerger.Enqueue(cmd);
 
@@ -551,24 +554,57 @@ namespace Raven.Server.Documents.Handlers
 
         public ExceptionDispatchInfo ExceptionDispatchInfo;
         public DocumentsStorage.PutOperationResults PutResult;
+        private bool _validateAttachments;
 
         public static string GenerateNonConflictingId(DocumentDatabase database, string prefix)
         {
             return prefix + database.DocumentsStorage.GenerateNextEtag().ToString("D19") + "-" + Guid.NewGuid().ToBase64Unpadded();
         }
 
-        public MergedPutCommand(BlittableJsonReaderObject doc, string id, LazyStringValue changeVector, DocumentDatabase database)
+        public MergedPutCommand(BlittableJsonReaderObject doc, string id, LazyStringValue changeVector, DocumentDatabase database, bool validateAttachments = false)
         {
             _document = doc;
             _id = id;
             _expectedChangeVector = changeVector;
             _database = database;
+            _validateAttachments = validateAttachments;
+        }
+
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        private void ValidateAttachmentHash(DocumentsOperationContext context, string id, BlittableJsonReaderObject document)
+        {
+            if (document.TryGet(Constants.Documents.Metadata.Key, out BlittableJsonReaderObject metadata)
+                && metadata.TryGet(Constants.Documents.Metadata.Attachments, out BlittableJsonReaderArray attachments))
+            {
+                ValidateAttachmentHashInternal(context, id, attachments);
+            }
+        }
+
+        private void ValidateAttachmentHashInternal(DocumentsOperationContext context, string id, BlittableJsonReaderArray attachments)
+        {
+            foreach (BlittableJsonReaderObject attachment in attachments)
+            {
+                if (attachment.TryGet(nameof(AttachmentDetails.Hash), out string hash))
+                {
+                    using (Slice.From(context.Allocator, hash, out Slice hashSlice))
+                    {
+                        if (AttachmentsStorage.GetCountOfAttachmentsForHash(context, hashSlice) < 1)
+                        {
+                            throw new InvalidOperationException($"Document {id} Metadata seems to contain an attachment with hash {hash} that isn't present in the storage, this is not allowed.");
+                        }
+                    }
+                }
+            }
         }
 
         protected override int ExecuteCmd(DocumentsOperationContext context)
         {
             try
             {
+                if (_validateAttachments)
+                {
+                    ValidateAttachmentHash(context, _id, _document);
+                }
                 PutResult = _database.DocumentsStorage.Put(context, _id, _expectedChangeVector, _document);
             }
             catch (Voron.Exceptions.VoronConcurrencyErrorException)
