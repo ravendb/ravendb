@@ -87,7 +87,7 @@ namespace Voron.Data.Tables
 
             /// <summary>
             /// This is relevant only for migration purposes and should never be set for non migration code.
-            /// It is meant to allow deleting an item when we create a new index that isn't in the storage
+            /// It is meant to allow deleting or inserting an item when we create a new index that isn't in the storage
             /// </summary>
             public bool Dangerous_IgnoreForDeletesAndMissingValues;
 

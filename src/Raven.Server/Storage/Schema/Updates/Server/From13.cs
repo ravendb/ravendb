@@ -16,13 +16,6 @@ namespace Raven.Server.Storage.Schema.Updates.Server
             var dbs = new List<string>();
             const string dbKey = "db/";
 
-            var oldCompareExchangeSchema = new TableSchema().
-                DefineKey(new TableSchema.SchemaIndexDef
-                {
-                    StartIndex = (int)ClusterStateMachine.CompareExchangeTable.Key,
-                    Count = 1
-                });
-
             var newCompareExchangeSchema = new TableSchema()
                 .DefineKey(new TableSchema.SchemaIndexDef
                 {
@@ -35,13 +28,6 @@ namespace Raven.Server.Storage.Schema.Updates.Server
                     IsGlobal = true,
                     Name = ClusterStateMachine.CompareExchangeIndex,
                     Dangerous_IgnoreForDeletesAndMissingValues = true
-                });
-
-            var oldIdentitiesSchema = new TableSchema().
-                DefineKey(new TableSchema.SchemaIndexDef
-                {
-                    StartIndex = (int)ClusterStateMachine.IdentitiesTable.Key,
-                    Count = 1
                 });
 
             var newIdentitiesSchema = new TableSchema()
@@ -72,7 +58,7 @@ namespace Raven.Server.Storage.Schema.Updates.Server
                 var dbPrefixLowered = $"{db.ToLowerInvariant()}/";
 
                 // update CompareExchangeSchema
-                var readCompareExchangeTable = step.ReadTx.OpenTable(oldCompareExchangeSchema, ClusterStateMachine.CompareExchange);
+                var readCompareExchangeTable = step.ReadTx.OpenTable(ClusterStateMachine.CompareExchangeSchema, ClusterStateMachine.CompareExchange);
 
                 if (readCompareExchangeTable != null)
                 {
@@ -104,7 +90,7 @@ namespace Raven.Server.Storage.Schema.Updates.Server
                 }
 
                 // update IdentitiesSchema
-                var readIdentitiesTable = step.ReadTx.OpenTable(oldIdentitiesSchema, ClusterStateMachine.Identities);
+                var readIdentitiesTable = step.ReadTx.OpenTable(ClusterStateMachine.IdentitiesSchema, ClusterStateMachine.Identities);
                 if (readIdentitiesTable != null)
                 {
                     using (Slice.From(step.ReadTx.Allocator, dbPrefixLowered, out var keyPrefix))
@@ -115,7 +101,7 @@ namespace Raven.Server.Storage.Schema.Updates.Server
                         {
                             var indexPtr = item.Value.Reader.Read((int)ClusterStateMachine.IdentitiesTable.Index, out var size);
 
-                            // we come from RC1
+                            // we come from v4.2 RC1
                             if (size == sizeof(int))
                             {
                                 var indexIntValue = *(int*)indexPtr;

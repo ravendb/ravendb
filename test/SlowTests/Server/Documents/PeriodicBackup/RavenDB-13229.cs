@@ -160,6 +160,44 @@ namespace SlowTests.Server.Documents.PeriodicBackup
             }
         }
 
+        [Fact]
+        public void AllCompareExchangeAndIdentitiesPreserveAfterSchemaUpgradeFrom13()
+        {
+            var folder = NewDataPath(forceCreateDir: true);
+            DoNotReuseServer();
+
+            var zipPath = new PathSetting("SchemaUpgrade/Issues/SystemVersion/Identities_CompareExchange_RavenData_from13.zip");
+            Assert.True(File.Exists(zipPath.FullPath));
+
+            ZipFile.ExtractToDirectory(zipPath.FullPath, folder);
+
+            using (var server = GetNewServer(deletePrevious: false, runInMemory: false, partialPath: folder))
+            {
+                using (server.ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
+                using (context.OpenReadTransaction())
+                {
+                    var dbs = server.ServerStore.Cluster.GetDatabaseNames(context);
+                    var dbsList = dbs.ToList();
+
+                    Assert.Equal(2, dbsList.Count);
+                    var dbName1 = dbsList[0];
+                    Assert.Equal("db1", dbName1);
+                    var dbName2 = dbsList[1];
+                    Assert.Equal("db2", dbName2);
+
+                    var numOfIdentities = server.ServerStore.Cluster.GetNumberOfIdentities(context, dbName1);
+                    Assert.Equal(928, numOfIdentities);
+                    numOfIdentities = server.ServerStore.Cluster.GetNumberOfIdentities(context, dbName2);
+                    Assert.Equal(948, numOfIdentities);
+
+                    var numOfCompareExchanges = server.ServerStore.Cluster.GetNumberOfCompareExchange(context, dbName1);
+                    Assert.Equal(1024, numOfCompareExchanges);
+                    numOfCompareExchanges = server.ServerStore.Cluster.GetNumberOfCompareExchange(context, dbName2);
+                    Assert.Equal(1024, numOfCompareExchanges);
+                }
+            }
+        }
+
         private void RunBackup(long taskId, Raven.Server.Documents.DocumentDatabase documentDatabase, bool isFullBackup, DocumentStore store)
         {
             var periodicBackupRunner = documentDatabase.PeriodicBackupRunner;
