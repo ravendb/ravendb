@@ -104,7 +104,11 @@ namespace Raven.Database.Indexing
             {
                 var resultsCount = Results.Count;
                 var info = Results.Values;
-                var termsCnt = info.Sum(fieldCacheInfo => fieldCacheInfo.Results.Count);
+                var termsCnt = info.Sum(fieldCacheInfo => {
+                        lock (fieldCacheInfo) {
+                            return fieldCacheInfo?.Results?.Count??0;
+                        }                    
+                    });
                 Results.Clear();
 
                 return new LowMemoryHandlerStatistics
