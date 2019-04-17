@@ -131,7 +131,7 @@ namespace Raven.Server.Documents.Handlers
             }
         }
 
-        private static void ValidateCommand(MergedBatchCommand command)
+        private static void ValidateCommandForClusterWideTransaction(MergedBatchCommand command)
         {
             foreach (var document in command.ParsedCommands)
             {
