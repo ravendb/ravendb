@@ -7,6 +7,7 @@ using System.Runtime.ExceptionServices;
 using System.Runtime.InteropServices;
 using System.Threading;
 using Sparrow;
+using Sparrow.Collections;
 using Sparrow.Logging;
 using Sparrow.Platform;
 using Sparrow.Server;
@@ -38,6 +39,7 @@ namespace Voron
         [ThreadStatic]
         private static bool _skipCatastrophicFailureAssertion;
         private readonly CatastrophicFailureNotification _catastrophicFailureNotification;
+        private readonly ConcurrentSet<CryptoPager> _activeCryptoPagers = new ConcurrentSet<CryptoPager>();
 
         public VoronPathSetting TempPath { get; }
 

@@ -1498,6 +1498,7 @@ namespace Raven.Server
                 RespondToTcpConnection(stream, context, null,
                     authSuccessful ? TcpConnectionStatus.Ok : TcpConnectionStatus.AuthorizationFailed,
                     supported);
+
                 tcp.ProtocolVersion = supported;
 
                 if (authSuccessful == false)
@@ -1681,11 +1682,6 @@ namespace Raven.Server
             {
                 var tcpClient = tcp.TcpClient.Client;
                 ServerStore.ClusterAcceptNewConnection(tcp, header,() => tcpClient.Disconnect(false), tcpClient.RemoteEndPoint);
-                return true;
-            }
-
-            if (tcp.Operation == TcpConnectionHeaderMessage.OperationTypes.Ping)
-            {
                 return true;
             }
 

@@ -1230,12 +1230,29 @@ namespace Voron
 
         public void Cleanup(bool tryCleanupRecycledJournals = false)
         {
+            CleanupMappedMemory();
+            CleanupNativeMemory();
+        }
+
+        public void CleanupMappedMemory()
+        {
             Journal.TryReduceSizeOfCompressionBufferIfNeeded();
             ScratchBufferPool.Cleanup();
             DecompressionBuffers.Cleanup();
 
             if (tryCleanupRecycledJournals)
                 Options.TryCleanupRecycledJournals();
+        }
+
+        public void CleanupNativeMemory()
+        {
+            if (Options.EncryptionEnabled)
+            {
+                foreach (var cryptoPager in Options.GetActiveCryptoPagers())
+                {
+                    cryptoPager.CleanupEncryptionBuffersCache();
+                }
+            }
         }
 
         public override string ToString()

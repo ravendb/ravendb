@@ -56,6 +56,8 @@ namespace Voron.Impl.Paging
             FileName = inner.FileName;
             _pagerState = inner.PagerState;
             inner.PagerStateChanged += state => _pagerState = state;
+
+            inner.Options.TrackCryptoPager(this);
         }
 
         protected override string GetSourceName()
@@ -411,6 +413,7 @@ namespace Voron.Impl.Paging
 
         protected override void DisposeInternal()
         {
+            Inner.Options.UntrackCryptoPager(this);
             Inner.Dispose();
             _encryptionBuffersPool.Dispose();
         }
@@ -423,6 +426,11 @@ namespace Voron.Impl.Paging
         public override byte* AcquireRawPagePointer(IPagerLevelTransactionState tx, long pageNumber, PagerState pagerState = null)
         {
             return Inner.AcquireRawPagePointer(tx, pageNumber, pagerState);
+        }
+
+        public void CleanupEncryptionBuffersCache()
+        {
+            _encryptionBuffersPool.ReleaseUnmanagedResources();
         }
     }
 }
