@@ -233,7 +233,8 @@ namespace Raven.Server.Web.System
                     MentorNode = subscriptionState.MentorNode,
                     TaskId = subscriptionState.SubscriptionId,
                     Query = subscriptionState.Query,
-                    TaskConnectionStatus = connectionStatus
+                    TaskConnectionStatus = connectionStatus,
+                    LastChangeVectorAcknowledged = subscriptionState.LastChangeVectorAcknowledged
                 };
             }
         }
@@ -1119,7 +1120,7 @@ namespace Raven.Server.Web.System
                                 TaskName = subscriptionState.SubscriptionName,
                                 Query = subscriptionState.Query,
                                 ChangeVectorForNextBatchStartingPoint = subscriptionState.ChangeVectorForNextBatchStartingPoint,
-                                LastChangeVectorAcknowledged = "A:6214-xwmnvG1KBkSNXfl7/0yJ1A", // Todo: this is only a temp hard-coded-value 
+                                LastChangeVectorAcknowledged = subscriptionState.LastChangeVectorAcknowledged,
                                 SubscriptionId = subscriptionState.SubscriptionId,
                                 SubscriptionName = subscriptionState.SubscriptionName,
                                 LastBatchAckTime = subscriptionState.LastBatchAckTime,

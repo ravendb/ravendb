@@ -457,7 +457,8 @@ namespace Raven.Server.Smuggler.Documents
                         reader.TryGet(nameof(SubscriptionState.LastBatchAckTime), out DateTime lastBatchAckTime) == false ||
                         reader.TryGet(nameof(SubscriptionState.LastClientConnectionTime), out DateTime lastClientConnectionTime) == false ||
                         reader.TryGet(nameof(SubscriptionState.Disabled), out bool disabled) == false ||
-                        reader.TryGet(nameof(SubscriptionState.SubscriptionId), out long subscriptionId) == false)
+                        reader.TryGet(nameof(SubscriptionState.SubscriptionId), out long subscriptionId) == false ||
+                        reader.TryGet(nameof(SubscriptionState.LastChangeVectorAcknowledged), out string lastChangeVectorAcknowledged) == false)
                     {
                         _result.Subscriptions.ErroredCount++;
                         _result.AddWarning("Could not read subscriptions entry.");
@@ -475,7 +476,7 @@ namespace Raven.Server.Smuggler.Documents
                         NodeTag = nodeTag,
                         LastBatchAckTime = lastBatchAckTime,
                         LastClientConnectionTime = lastClientConnectionTime,
-                        LastChangeVectorAcknowledged = "A:6214-xwmnvG1KBkSNXfl7/0yJ1A", // Todo: this is only a temp hard-coded-value 
+                        LastChangeVectorAcknowledged = lastChangeVectorAcknowledged,
                         Disabled = disabled
                     };
                 }

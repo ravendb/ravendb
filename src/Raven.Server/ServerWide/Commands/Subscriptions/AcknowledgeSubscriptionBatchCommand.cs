@@ -17,6 +17,7 @@ namespace Raven.Server.ServerWide.Commands.Subscriptions
         public string NodeTag;
         public bool HasHighlyAvailableTasks;
         public DateTime LastTimeServerMadeProgressWithDocuments;
+        public string LastChangeVectorAcknowledged;
 
         // for serialization
         private AcknowledgeSubscriptionBatchCommand() : base(null) { }
@@ -50,8 +51,9 @@ namespace Raven.Server.ServerWide.Commands.Subscriptions
             }
 
             if (LastKnownSubscriptionChangeVector != subscription.ChangeVectorForNextBatchStartingPoint)            
-                throw new SubscriptionChangeVectorUpdateConcurrencyException($"Can't acknowledge subscription with name {subscriptionName} due to inconsistency in change vector progress. Probably there was an admin intervention that changed the change vector value. Stored value: {subscription.ChangeVectorForNextBatchStartingPoint}, received value: {LastKnownSubscriptionChangeVector}");                
-            
+                throw new SubscriptionChangeVectorUpdateConcurrencyException($"Can't acknowledge subscription with name {subscriptionName} due to inconsistency in change vector progress. Probably there was an admin intervention that changed the change vector value. Stored value: {subscription.ChangeVectorForNextBatchStartingPoint}, received value: {LastKnownSubscriptionChangeVector}");
+
+            subscription.LastChangeVectorAcknowledged = LastChangeVectorAcknowledged;
             subscription.ChangeVectorForNextBatchStartingPoint = ChangeVector;
             subscription.NodeTag = NodeTag;
             subscription.LastBatchAckTime = LastTimeServerMadeProgressWithDocuments;
@@ -85,6 +87,7 @@ namespace Raven.Server.ServerWide.Commands.Subscriptions
             json[nameof(HasHighlyAvailableTasks)] = HasHighlyAvailableTasks;
             json[nameof(LastTimeServerMadeProgressWithDocuments)] = LastTimeServerMadeProgressWithDocuments;
             json[nameof(LastKnownSubscriptionChangeVector)] = LastKnownSubscriptionChangeVector;
+            json[nameof(LastChangeVectorAcknowledged)] = LastChangeVectorAcknowledged;
         }
 
         public override string AdditionalDebugInformation(Exception exception)

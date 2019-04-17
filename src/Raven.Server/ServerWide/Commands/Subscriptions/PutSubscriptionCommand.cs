@@ -97,6 +97,7 @@ namespace Raven.Server.ServerWide.Commands.Subscriptions
                     {
                         Query = Query,
                         ChangeVectorForNextBatchStartingPoint = InitialChangeVector,
+                        LastChangeVectorAcknowledged = null,
                         SubscriptionId = subscriptionId,
                         SubscriptionName = SubscriptionName,
                         LastBatchAckTime = null,

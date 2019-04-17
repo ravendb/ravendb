@@ -312,6 +312,7 @@ namespace Raven.Server.Documents.Handlers
                         [nameof(SubscriptionState.Disabled)] = x.Disabled,
                         [nameof(SubscriptionState.LastClientConnectionTime)] = x.LastClientConnectionTime,
                         [nameof(SubscriptionState.LastBatchAckTime)] = x.LastBatchAckTime,
+                        [nameof(SubscriptionState.LastChangeVectorAcknowledged)] = x.LastChangeVectorAcknowledged,
                         ["Connection"] = GetSubscriptionConnectionDJV(x.Connection),
                         ["RecentConnections"] = x.RecentConnections?.Select(r => new DynamicJsonValue()
                         {

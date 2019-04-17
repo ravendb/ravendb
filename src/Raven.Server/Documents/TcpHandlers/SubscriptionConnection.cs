@@ -508,7 +508,7 @@ namespace Raven.Server.Documents.TcpHandlers
                                     // _lastChangeVector is null, so let's not change it
                                     _lastChangeVector ??
                                         nameof(Client.Constants.Documents.SubscriptionChangeVectorSpecialStates.DoNotChange),
-                                    subscriptionChangeVectorBeforeCurrentBatch);
+                                    subscriptionChangeVectorBeforeCurrentBatch, SubscriptionState.LastChangeVectorAcknowledged);
 
 
                                 subscriptionChangeVectorBeforeCurrentBatch = _lastChangeVector ?? SubscriptionState.ChangeVectorForNextBatchStartingPoint;
@@ -584,11 +584,13 @@ namespace Raven.Server.Documents.TcpHandlers
             switch (clientReply.Type)
             {
                 case SubscriptionConnectionClientMessage.MessageType.Acknowledge:
+                    SubscriptionState.LastChangeVectorAcknowledged = clientReply.ChangeVector;
                     await TcpConnection.DocumentDatabase.SubscriptionStorage.AcknowledgeBatchProcessed(
                         SubscriptionId,
                         Options.SubscriptionName,
                         _lastChangeVector,
-                        subscriptionChangeVectorBeforeCurrentBatch);
+                        subscriptionChangeVectorBeforeCurrentBatch,
+                        SubscriptionState.LastChangeVectorAcknowledged);
                     subscriptionChangeVectorBeforeCurrentBatch = _lastChangeVector;
                     Stats.LastAckReceivedAt = DateTime.UtcNow;
                     Stats.AckRate.Mark();
@@ -821,7 +823,8 @@ namespace Raven.Server.Documents.TcpHandlers
                 SubscriptionId,
                 Options.SubscriptionName,
                 nameof(Client.Constants.Documents.SubscriptionChangeVectorSpecialStates.DoNotChange),
-                nameof(Client.Constants.Documents.SubscriptionChangeVectorSpecialStates.DoNotChange));
+                nameof(Client.Constants.Documents.SubscriptionChangeVectorSpecialStates.DoNotChange),
+                SubscriptionState.LastChangeVectorAcknowledged);
         }
 
         private SubscriptionPatchDocument SetupFilterAndProjectionScript()
