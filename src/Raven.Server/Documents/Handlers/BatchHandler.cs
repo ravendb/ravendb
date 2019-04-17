@@ -73,7 +73,7 @@ namespace Raven.Server.Documents.Handlers
                     if (Server.Configuration.Core.FeaturesAvailability == FeaturesAvailability.Stable)
                         FeaturesAvailabilityException.Throw("Cluster Transactions");
 
-                    ValidateCommand(command);
+                    ValidateCommandForClusterWideTransaction(command);
 
                     using (Database.ClusterTransactionWaiter.CreateTask(out var taskId))
                     {
