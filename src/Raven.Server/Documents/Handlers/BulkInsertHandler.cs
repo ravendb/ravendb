@@ -56,7 +56,7 @@ namespace Raven.Server.Documents.Handlers
                             long totalSize = 0;
                             while (true)
                             {
-                                var task = parser.MoveNext(docsCtx);
+                                var task = parser.MoveNext(docsCtx, new BlittableMetadataModifier(docsCtx));
                                 if (task == null)
                                     break;
 

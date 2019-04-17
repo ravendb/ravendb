@@ -73,6 +73,8 @@ namespace Raven.Server.Documents.Handlers
                     if (Server.Configuration.Core.FeaturesAvailability == FeaturesAvailability.Stable)
                         FeaturesAvailabilityException.Throw("Cluster Transactions");
 
+                    ValidateCommand(command);
+
                     using (Database.ClusterTransactionWaiter.CreateTask(out var taskId))
                     {
                         // Since this is a cluster transaction we are not going to wait for the write assurance of the replication.
@@ -126,6 +128,31 @@ namespace Raven.Server.Documents.Handlers
                     });
                 }
 
+            }
+        }
+
+        private static void ValidateCommand(MergedBatchCommand command)
+        {
+            foreach (var document in command.ParsedCommands)
+            {
+                switch (document.Type)
+                {
+                    case CommandType.PUT:
+                    case CommandType.DELETE:
+                    case CommandType.CompareExchangePUT:
+                    case CommandType.CompareExchangeDELETE:
+                        if (document.Type == CommandType.PUT)
+                        {
+                            if (document.SeenAttachments)
+                                throw new NotSupportedException($"The document {document.Id} has attachments, this is not supported in cluster wide transaction.");
+
+                            if (document.SeenCounters)
+                                throw new NotSupportedException($"The document {document.Id} has counters, this is not supported in cluster wide transaction.");
+                        }
+                        break;
+                    default:
+                        throw new ArgumentOutOfRangeException($"The command type {document.Type} is not supported in cluster transaction.");
+                }
             }
         }
 

@@ -30,9 +30,8 @@ namespace Raven.Server.Documents
             ReadFirstEtagOfLegacyRevision = legacyImport;
             ReadLegacyEtag = readLegacyEtag;
             OperateOnTypes = operateOnTypes;
-
-
         }
+
         public LazyStringValue Id;
         public string ChangeVector;
         public DocumentFlags Flags;
@@ -47,6 +46,9 @@ namespace Raven.Server.Documents
         public string LegacyEtag { get; private set; }
         public string FirstEtagOfLegacyRevision;
         public long LegacyRevisionsCount;
+
+        public bool SeenCounters;
+        public bool SeenAttachments;
 
         private JsonOperationContext _ctx;
         private LazyStringValue _metadataCollections;
@@ -370,6 +372,7 @@ namespace Raven.Server.Documents
                     break;
 
                 case 9: // @counters
+                    SeenCounters = true;
                     // always remove the @counters metadata
                     // not doing so might cause us to have counter on the document but not in the storage.
                     // the counters will be updated when we import the counters themselves
@@ -390,6 +393,7 @@ namespace Raven.Server.Documents
                     goto case -2;
 
                 case 12: // @index-score OR @attachments
+
                     if (state.StringBuffer[0] == (byte)'@')
                     {   // @index-score
                         if (*(long*)(state.StringBuffer + 1) == 7166121427196997225 &&
@@ -398,7 +402,9 @@ namespace Raven.Server.Documents
                         {
                             goto case -1;
                         }
+
                         // @attachments
+                        SeenAttachments = true;
                         if (OperateOnTypes.HasFlag(DatabaseItemType.Attachments) == false &&
                             *(long*)(state.StringBuffer + 1) == 7308612546338255969 &&
                             *(short*)(state.StringBuffer + 1 + sizeof(long)) == 29806 &&
@@ -824,6 +830,8 @@ namespace Raven.Server.Documents
             ChangeVector = null;
             Flags = DocumentFlags.None;
             NonPersistentFlags = NonPersistentDocumentFlags.None;
+            SeenAttachments = false;
+            SeenCounters = false;
             _depth = 0;
             _state = State.None;
             _readingMetadataObject = false;
