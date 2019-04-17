@@ -106,7 +106,7 @@ namespace Raven.Server.Documents.Handlers
             using (ContextPool.AllocateOperationContext(out DocumentsOperationContext context))
             using (context.OpenReadTransaction())
             {
-                var documentID = Database.DocumentsStorage.GetDocumentIDFrom(changeVector);
+                var documentID = Database.DocumentsStorage.GetDocumentIDFrom(context, changeVector);
                 
                 if (documentID == null)
                 {

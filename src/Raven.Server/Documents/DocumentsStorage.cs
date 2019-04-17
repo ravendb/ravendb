@@ -1845,13 +1845,20 @@ namespace Raven.Server.Documents
             return Slice.From(context.Allocator, ptr, size, ByteStringType.Immutable, out slice);
         }
 
-        public string GetDocumentIDFrom(string changeVector)
+        public string GetDocumentIDFrom(DocumentsOperationContext context, string changeVector)
         {
-            //todo
-            //throw new NotImplementedException();
-            return "users/157398752038750/55465/34634fgsfgs/dfgsdfgs/sdfgsdfgsdfgsd/454545/4fgsfdgsdfgs/fgfg";
-            //return null;
+            var etag = changeVector.ToChangeVector().FirstOrDefault(x => x.DbId == DocumentDatabase.DbBase64Id).Etag;
+            var table = new Table(DocsSchema, context.Transaction.InnerTransaction);
+            var index = DocsSchema.FixedSizeIndexes[AllDocsEtagsSlice];
 
+            foreach (var result in table.SeekForwardFrom(index, etag, 0))
+            {
+                var doc = ParseDocument(context, ref result.Reader);
+                if (doc.ChangeVector.Equals(changeVector))
+                    return doc.Id;
+                return null;
+            }
+            return null;
         }
     }
 
