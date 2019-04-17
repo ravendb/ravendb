@@ -3,6 +3,7 @@ using System.IO;
 using System.Security;
 using System.Security.Cryptography;
 using System.Text;
+using System.Threading;
 using Newtonsoft.Json;
 using Raven.Client.Exceptions.Commercial;
 using Raven.Server.Config;
@@ -21,6 +22,7 @@ namespace Raven.Server.Commercial
         public static readonly string LicenseStringConfigurationName = RavenConfiguration.GetKey(x => x.Licensing.License);
 
         private readonly ServerStore _serverStore;
+        private readonly SemaphoreSlim _sm = new SemaphoreSlim(1, 1);
 
         public LicenseHelper(ServerStore serverStore)
         {
@@ -29,6 +31,9 @@ namespace Raven.Server.Commercial
 
         public void UpdateLocalLicense(License newLicense, RSAParameters rsaParameters)
         {
+            if (_sm.Wait(0) == false)
+                return;
+
             try
             {
                 if (RavenConfiguration.EnvironmentVariableLicenseString != null)
@@ -52,6 +57,10 @@ namespace Raven.Server.Commercial
             {
                 if (Logger.IsInfoEnabled)
                     Logger.Info("Failed to update the license locally", e);
+            }
+            finally
+            {
+                _sm.Release();
             }
         }
 
