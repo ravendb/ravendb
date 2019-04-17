@@ -54,7 +54,7 @@ namespace SlowTests.Voron.Issues
 
             Env.FlushLogToDataFile();
             Env.ForceSyncDataFile();
-            Env.CleanupMemory();
+            Env.Cleanup();
 
             Assert.True(_scratchSpaceMonitor.Size < totalSize);
             Assert.True(Env.Options.ScratchSpaceUsage.ScratchSpaceInBytes < totalSize);
@@ -130,7 +130,7 @@ namespace SlowTests.Voron.Issues
 
             Env.FlushLogToDataFile();
             Env.ForceSyncDataFile();
-            Env.CleanupMemory();
+            Env.Cleanup();
 
             Assert.True(_scratchSpaceMonitor.Size < totalSize);
             Assert.True(Env.Options.ScratchSpaceUsage.ScratchSpaceInBytes < totalSize);

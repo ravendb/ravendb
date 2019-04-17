@@ -89,7 +89,7 @@ namespace Voron.Impl.Compaction
                 if (synced)
                     compactedEnv.Journal.Applicator.DeleteCurrentAlreadyFlushedJournal();
 
-                compactedEnv.CleanupMemory();
+                compactedEnv.Cleanup();
 
                 minimalCompactedDataFileSize = compactedEnv.NextPageNumber * Constants.Storage.PageSize;
             }

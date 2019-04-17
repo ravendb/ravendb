@@ -128,9 +128,9 @@ namespace Raven.Server
             var sp = Stopwatch.StartNew();
             Certificate = LoadCertificate() ?? new CertificateHolder();
 
-            CpuUsageCalculator = string.IsNullOrEmpty(Configuration.Monitoring.CpuUsageMonitorExec) 
+            CpuUsageCalculator = string.IsNullOrEmpty(Configuration.Monitoring.CpuUsageMonitorExec)
                 ? CpuHelper.GetOSCpuUsageCalculator()
-                : CpuHelper.GetExtensionPointCpuUsageCalculator(_tcpContextPool, Configuration.Monitoring, ServerStore.NotificationCenter) ;
+                : CpuHelper.GetExtensionPointCpuUsageCalculator(_tcpContextPool, Configuration.Monitoring, ServerStore.NotificationCenter);
 
             CpuUsageCalculator.Init();
 
@@ -634,9 +634,9 @@ namespace Raven.Server
             }
 
             var firstPossibleDate = currentCertificate.Certificate.NotAfter.ToUniversalTime().AddDays(-30);
-            
+
             // We can do this because saturday is last in the DayOfWeek enum
-            var daysUntilSaturday = DayOfWeek.Saturday - firstPossibleDate.DayOfWeek; 
+            var daysUntilSaturday = DayOfWeek.Saturday - firstPossibleDate.DayOfWeek;
             var firstPossibleSaturday = firstPossibleDate.AddDays(daysUntilSaturday);
 
             if (firstPossibleSaturday.Date == DateTime.Today)
@@ -849,7 +849,7 @@ namespace Raven.Server
                     throw new InvalidOperationException($"Invalid certificate configuration. The configuration property '{RavenConfiguration.GetKey(x => x.Security.CertificateExec)}' has been deprecated since RavenDB 4.2, please use '{RavenConfiguration.GetKey(x => x.Security.CertificateLoadExec)}' along with '{RavenConfiguration.GetKey(x => x.Security.CertificateRenewExec)}' and '{RavenConfiguration.GetKey(x => x.Security.CertificateChangeExec)}'. For more information, refer to the online documentation at https://ravendb.net/l/4554RZ/4.2.");
                 }
 
-                if (string.IsNullOrEmpty(Configuration.Security.CertificateLoadExec) == false && 
+                if (string.IsNullOrEmpty(Configuration.Security.CertificateLoadExec) == false &&
                     (string.IsNullOrEmpty(Configuration.Security.CertificateRenewExec) || string.IsNullOrEmpty(Configuration.Security.CertificateChangeExec)))
                 {
                     throw new InvalidOperationException($"Invalid certificate configuration. When using the configuration property '{RavenConfiguration.GetKey(x => x.Security.CertificateLoadExec)}', it must be accompanied by '{RavenConfiguration.GetKey(x => x.Security.CertificateRenewExec)}' and '{RavenConfiguration.GetKey(x => x.Security.CertificateChangeExec)}'. For more information, refer to the online documentation at https://ravendb.net/l/4554RZ/4.2.");
@@ -1158,7 +1158,7 @@ namespace Raven.Server
                     issuerPinningHash = currentElementPinningHash;
                     return false;
                 }
-                    
+
             }
 
             return true;
@@ -1249,8 +1249,8 @@ namespace Raven.Server
                     }
                     catch (Exception ex)
                     {
-                        var msg = $"Unable to start tcp listener on {ipAddress} on port {port}.{ Environment.NewLine}"+
-                        $"Port might be already in use.{ Environment.NewLine}"+ 
+                        var msg = $"Unable to start tcp listener on {ipAddress} on port {port}.{ Environment.NewLine}" +
+                        $"Port might be already in use.{ Environment.NewLine}" +
                         $"Try running with an unused TCP port.{Environment.NewLine}" +
                         $"You can change the TCP port using one of the following options:{Environment.NewLine}" +
                         $"1) Change the ServerUrl.Tcp property in setting.json file.{Environment.NewLine}" +
@@ -1373,6 +1373,13 @@ namespace Raven.Server
                         {
                             var header = await NegotiateOperationVersion(stream, buffer, tcpClient, tcpAuditLog, cert, tcp);
 
+                            if (header.Operation == TcpConnectionHeaderMessage.OperationTypes.TestConnection ||
+                                header.Operation == TcpConnectionHeaderMessage.OperationTypes.Ping)
+                            {
+                                tcp = null;
+                                return;
+                            }
+
                             if (await DispatchServerWideTcpConnection(tcp, header, buffer))
                             {
                                 tcp = null; //do not keep reference -> tcp will be disposed by server-wide connection handlers
@@ -1407,10 +1414,10 @@ namespace Raven.Server
         }
 
         private async Task<TcpConnectionHeaderMessage> NegotiateOperationVersion(
-            Stream stream, 
-            JsonOperationContext.ManagedPinnedBuffer buffer, 
-            TcpClient tcpClient, 
-            Logger tcpAuditLog, 
+            Stream stream,
+            JsonOperationContext.ManagedPinnedBuffer buffer,
+            TcpClient tcpClient,
+            Logger tcpAuditLog,
             X509Certificate2 cert,
             TcpConnectionOptions tcp)
         {
@@ -1681,7 +1688,7 @@ namespace Raven.Server
             if (tcp.Operation == TcpConnectionHeaderMessage.OperationTypes.Cluster)
             {
                 var tcpClient = tcp.TcpClient.Client;
-                ServerStore.ClusterAcceptNewConnection(tcp, header,() => tcpClient.Disconnect(false), tcpClient.RemoteEndPoint);
+                ServerStore.ClusterAcceptNewConnection(tcp, header, () => tcpClient.Disconnect(false), tcpClient.RemoteEndPoint);
                 return true;
             }
 

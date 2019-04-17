@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Collections;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Diagnostics;
@@ -1283,6 +1284,21 @@ namespace Voron
                         break;
                 }
             }
+        }
+
+        public void TrackCryptoPager(CryptoPager cryptoPager)
+        {
+            _activeCryptoPagers.Add(cryptoPager);
+        }
+
+        public void UntrackCryptoPager(CryptoPager cryptoPager)
+        {
+            _activeCryptoPagers.TryRemove(cryptoPager);
+        }
+
+        public ConcurrentSet<CryptoPager> GetActiveCryptoPagers()
+        {
+            return _activeCryptoPagers;
         }
     }
 }

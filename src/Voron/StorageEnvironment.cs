@@ -1232,6 +1232,9 @@ namespace Voron
         {
             CleanupMappedMemory();
             CleanupNativeMemory();
+
+            if (tryCleanupRecycledJournals)
+                Options.TryCleanupRecycledJournals();
         }
 
         public void CleanupMappedMemory()
@@ -1239,9 +1242,6 @@ namespace Voron
             Journal.TryReduceSizeOfCompressionBufferIfNeeded();
             ScratchBufferPool.Cleanup();
             DecompressionBuffers.Cleanup();
-
-            if (tryCleanupRecycledJournals)
-                Options.TryCleanupRecycledJournals();
         }
 
         public void CleanupNativeMemory()

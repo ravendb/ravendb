@@ -1190,9 +1190,9 @@ namespace Raven.Server.Documents.Indexes
                                     // if encryption is turned on then a lot of memory might be consumed by encryption buffers caches
                                     // let's clean it so our allocation budget won't be occupied by them
                                     storageEnvironment.CleanupNativeMemory();
-                            }
+                                }
 
-                                if (_allocationCleanupNeeded > AllocationCleanupRequestsLimit) 
+                                if (_allocationCleanupNeeded > AllocationCleanupRequestsLimit)
                                     forceMemoryCleanup = true;
                             }
 
@@ -1229,7 +1229,7 @@ namespace Raven.Server.Documents.Indexes
                                 if (_logsAppliedEvent.IsSet && _mre.IsSet == false && _indexingProcessCancellationTokenSource.IsCancellationRequested == false)
                                 {
                                     _hadRealIndexingWorkToDo.Lower();
-                                    storageEnvironment.CleanupMemory();
+                                    storageEnvironment.Cleanup();
                                     _logsAppliedEvent.Reset();
                                 }
                             }
@@ -1257,14 +1257,14 @@ namespace Raven.Server.Documents.Indexes
 
         private void NotifyAboutCompletedBatch(bool didWork)
         {
-            DocumentDatabase.Changes.RaiseNotifications(new IndexChange {Name = Name, Type = IndexChangeTypes.BatchCompleted});
+            DocumentDatabase.Changes.RaiseNotifications(new IndexChange { Name = Name, Type = IndexChangeTypes.BatchCompleted });
 
             if (didWork)
             {
                 _didWork = true;
                 _firstBatchTimeout = null;
             }
-            
+
             var batchCompletedAction = DocumentDatabase.IndexStore.IndexBatchCompleted;
             batchCompletedAction?.Invoke((Name, didWork));
         }
@@ -1339,7 +1339,7 @@ namespace Raven.Server.Documents.Indexes
             _contextPool.Clean();
             ByteStringMemoryCache.CleanForCurrentThread();
             IndexPersistence.Clean();
-            environment?.CleanupMemory();
+            environment?.Cleanup();
 
             _currentMaximumAllowedMemory = DefaultMaximumMemoryAllocation;
 
@@ -1456,8 +1456,6 @@ namespace Raven.Server.Documents.Indexes
                     Task.Delay((int)timeLeft, _indexingProcessCancellationTokenSource.Token).Wait();
 
                 storageEnvironment.Cleanup(tryCleanupRecycledJournals: true);
-                storageEnvironment.CleanupMemory();
-                storageEnvironment.Options.TryCleanupRecycledJournals();
                 return;
             }
 
