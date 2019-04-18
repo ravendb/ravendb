@@ -20,6 +20,7 @@ using Raven.Client.Exceptions;
 using Raven.Client.Exceptions.Cluster;
 using Raven.Client.Extensions;
 using Raven.Client.Http;
+using Raven.Client.ServerWide;
 using Raven.Client.ServerWide.Commands;
 using Raven.Client.ServerWide.Operations.Certificates;
 using Raven.Server.Routing;
@@ -646,6 +647,9 @@ namespace Raven.Server.Web
         {
             if (ServerStore.LeaderTag == null)
                 throw new NoLeaderException();
+
+            if (ServerStore.Engine.CurrentState == RachisState.LeaderElect)
+                throw new NoLeaderException("This node is elected to be the leader, but didn't took office yet.");
 
             ClusterTopology topology;
             using (ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
