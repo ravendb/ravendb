@@ -1367,11 +1367,26 @@ namespace Raven.Server.ServerWide
 
         public Task<(long Index, object Result)> ToggleTaskState(long taskId, string taskName, OngoingTaskType type, bool disable, string dbName)
         {
-            var disableEnableCommand =
-                type == OngoingTaskType.Subscription ?
-                    (CommandBase)new ToggleSubscriptionStateCommand(taskName, disable, dbName) :
-                    new ToggleTaskStateCommand(taskId, type, disable, dbName);
-
+            CommandBase disableEnableCommand;
+            switch (type)
+            {
+                case OngoingTaskType.Subscription:
+                    if (taskName == null)
+                    {
+                        if (_server.ServerStore.DatabasesLandlord.DatabasesCache.TryGetValue(dbName, out var databaseTask) == false)
+                            throw new RachisApplyException($"Value cannot be null or empty. Param: {nameof(dbName)}");
+                        using (ContextPool.AllocateOperationContext(out TransactionOperationContext ctx))
+                        using (ctx.OpenReadTransaction())
+                        {
+                            taskName = databaseTask.Result.SubscriptionStorage.GetSubscriptionNameById(ctx, taskId);
+                        }
+                    }
+                    disableEnableCommand = new ToggleSubscriptionStateCommand(taskName, disable, dbName);
+                    break;
+                default:
+                    disableEnableCommand = new ToggleTaskStateCommand(taskId, type, disable, dbName);
+                    break;
+            }
             return SendToLeaderAsync(disableEnableCommand);
         }
 
