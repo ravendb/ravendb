@@ -147,6 +147,9 @@ namespace Raven.Client.Documents.Indexes
                 }
             }
 
+            if (DictionaryExtensions.ContentEquals(AdditionalSources, other.AdditionalSources) == false)
+                result |= IndexDefinitionCompareDifferences.AdditionalSources;
+
             return result;
         }
 
@@ -449,7 +452,8 @@ namespace Raven.Client.Documents.Indexes
         LockMode = 1 << 7,
         Priority = 1 << 8,
         State = 1 << 9,
+        AdditionalSources = 1 << 10,
 
-        All = Maps | MapsFormatting | Reduce | ReduceFormatting | Fields | Configuration | LockMode | Priority | State
+        All = Maps | MapsFormatting | Reduce | ReduceFormatting | Fields | Configuration | LockMode | Priority | State | AdditionalSources
     }
 }
