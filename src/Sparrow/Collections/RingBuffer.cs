@@ -50,25 +50,23 @@ namespace Sparrow.Collections
         public bool TryPush(ref T item)
         {
             // We will check if we potentially have the ability to push 1 more item. 
-            int cidx = Volatile.Read(ref _currentIdx);
             int sidx = Volatile.Read(ref _startIdx);
 
+            //_currentIdx modified only by producer and there for no need of Volatile.Read
             // Check if we have empty spaces in the buffer.
-            if (cidx - sidx >= _size)
+            if (_currentIdx - sidx >= _size)
                 return false; // No space to do anything
 
-            int ticker = Interlocked.Increment(ref _currentIdx) - 1;
-
             // Assign the value
-            ref var cl = ref _buffer[ticker & _mask];
-
+            ref var cl = ref _buffer[_currentIdx & _mask];
             // We assign the item
             cl.Item = item;
-
             // We then write the volatile value.
             Volatile.Write(ref cl.IsReady, true);
-            return true;
 
+            Interlocked.Increment(ref _currentIdx);
+
+            return true;
             // Very rarely we will go through and try again, the only condition is when we have a huge contention and traffic.
         }
 
@@ -84,7 +82,7 @@ namespace Sparrow.Collections
             int length = cidx - sidx;
             if (length < 1)
             {
-                item = default(RingItem<T>);
+                item = default;
                 return false;
             }
 
