@@ -607,6 +607,9 @@ namespace Raven.Server.Documents.Indexes
             if ((differences & IndexDefinitionCompareDifferences.Fields) == IndexDefinitionCompareDifferences.Fields)
                 return IndexCreationOptions.Update;
 
+            if ((differences & IndexDefinitionCompareDifferences.AdditionalSources) == IndexDefinitionCompareDifferences.AdditionalSources)
+                return IndexCreationOptions.Update;
+
             if ((differences & IndexDefinitionCompareDifferences.Configuration) == IndexDefinitionCompareDifferences.Configuration)
             {
                 var currentConfiguration = existingIndex.Configuration as SingleIndexConfiguration;
