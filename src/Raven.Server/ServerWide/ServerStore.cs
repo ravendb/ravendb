@@ -21,6 +21,7 @@ using Raven.Client.Documents.Operations.ETL;
 using Raven.Client.Documents.Operations.OngoingTasks;
 using Raven.Client.Documents.Operations.Replication;
 using Raven.Client.Documents.Session;
+using Raven.Client.Exceptions.Cluster;
 using Raven.Client.Exceptions.Database;
 using Raven.Client.Util;
 using Raven.Client.Exceptions.Server;
@@ -30,6 +31,7 @@ using Raven.Client.Json;
 using Raven.Client.Json.Converters;
 using Raven.Client.ServerWide;
 using Raven.Client.ServerWide.Commands;
+using Raven.Client.ServerWide.Commands.Cluster;
 using Raven.Client.ServerWide.Tcp;
 using Raven.Server.Commercial;
 using Raven.Server.Config;
@@ -437,6 +439,52 @@ namespace Raven.Server.ServerWide
         public async Task RemoveFromClusterAsync(string nodeTag)
         {
             await _engine.RemoveFromClusterAsync(nodeTag).WithCancellation(_shutdownNotification.Token);
+        }
+
+        public async Task RequestSnapshot()
+        {
+            var topology = GetClusterTopology();
+
+            if (topology.AllNodes.Count == 1)
+                throw new InvalidOperationException("Can't force snapshot, since I'm the only node in the cluster.");
+
+            var leaderTag = _engine.LeaderTag;
+            var leaderUrl = topology.GetUrlFromTag(leaderTag);
+
+            if (leaderTag == null || leaderUrl == null)
+                throw new NoLeaderException("Can't force snapshot, no leader found.");
+
+            var isMember = topology.Members.ContainsKey(NodeTag);
+            using (var requestExecutor = CreateNewClusterRequestExecutor(leaderUrl))
+            using (ContextPool.AllocateOperationContext(out TransactionOperationContext ctx))
+            {
+                if (isMember)
+                {
+                    if (IsLeader())
+                    {
+                        Engine.CurrentLeader.StepDown();
+                    }
+
+                    await WaitForState(RachisState.Follower, ServerShutdown);
+
+                    // demote to non-voter, so we will not participate in the quorum.
+                    var demote = new DemoteClusterNodeCommand(NodeTag);
+                    await requestExecutor.ExecuteAsync(demote, ctx, token: ServerShutdown);
+                }
+
+                using (var tx = ctx.OpenWriteTransaction())
+                {
+                    _engine.SetSnapshotRequest(ctx, true);
+                    tx.Commit();
+                }
+
+                if (isMember)
+                {
+                    // promote back to voter
+                    var promote = new PromoteClusterNodeCommand(NodeTag);
+                    await requestExecutor.ExecuteAsync(promote, ctx, token: ServerShutdown);
+                }
+            }
         }
 
         public void Initialize()
