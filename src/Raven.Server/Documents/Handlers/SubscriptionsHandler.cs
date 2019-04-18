@@ -83,7 +83,7 @@ namespace Raven.Server.Documents.Handlers
                 var changeVector = state.ChangeVectorForNextBatchStartingPoint.ToChangeVector();
                 var cv = changeVector.FirstOrDefault(x => x.DbId == Database.DbBase64Id);
 
-                var sp = new Stopwatch();
+                var sp = Stopwatch.StartNew();
                 var timeLimit = TimeSpan.FromSeconds(GetIntValueQueryString("timeLimit", false) ?? 15);
                 var startEtag = cv.Etag;
 
@@ -93,13 +93,15 @@ namespace Raven.Server.Documents.Handlers
                     writer.WritePropertyName("Results");
                     writer.WriteStartArray();
                     var numberOfDocs = 0;
-                    while (numberOfDocs == 0)
+                    while (numberOfDocs == 0 && sp.Elapsed < timeLimit)
                     {
                         using (context.OpenReadTransaction())
                         {
                             var first = true;
 
                             sp.Start();
+
+                            var lastEtag = startEtag;
                             foreach (var itemDetails in fetcher.GetDataToSend(context, includeCmd, startEtag))
                             {
                                 if (itemDetails.Doc.Data != null)
@@ -135,12 +137,14 @@ namespace Raven.Server.Documents.Handlers
                                 }
 
                                 if (sp.Elapsed >= timeLimit)
-                                {
-                                    if (numberOfDocs == 0)
-                                        startEtag = itemDetails.Doc.Etag;
+                                {                                    
                                     break;
                                 }
+
+                                lastEtag = itemDetails.Doc.Etag;
                             }
+                            
+                            startEtag = lastEtag;
                         }
                     }
 
