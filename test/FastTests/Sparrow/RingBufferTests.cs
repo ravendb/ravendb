@@ -1,4 +1,10 @@
-﻿using Sparrow.Collections;
+﻿using System;
+using System.Collections.Generic;
+using System.Linq;
+using System.Threading;
+using System.Threading.Tasks;
+using Sparrow.Collections;
+using Sparrow.Threading;
 using Xunit;
 
 namespace FastTests.Sparrow
@@ -139,6 +145,88 @@ namespace FastTests.Sparrow
 
             item = 912;
             Assert.True(rb.TryPush(ref item));
+        }
+
+        [Fact]
+        public void RingBuffer_WhenEmptyAndSimultaneouslyTryPushAndTryAcquired_ShouldAcquiredLegal()
+        {
+            var rb = new SingleConsumerRingBuffer<TestItem>(4);
+
+            var acquiredEnd = new SingleUseFlag();
+            var finished = new Barrier(2);
+            var cancellation = new CancellationTokenSource();
+            var timeout = TimeSpan.FromSeconds(1);
+
+            var exceptions = new List<Exception>();
+            var pushTask = Task.Run(() =>
+            {
+                try
+                {
+                    while (acquiredEnd.IsRaised() == false)
+                    {
+                        if (finished.SignalAndWait(timeout, cancellation.Token) == false)
+                            break;
+
+                        var testItem = new TestItem
+                        {
+                            TestProperty = finished.CurrentPhaseNumber
+                        };
+                        rb.TryPush(ref testItem);
+                    }
+                }
+                catch (OperationCanceledException)
+                {
+
+                }
+                catch (Exception e)
+                {
+                    exceptions.Add(e);
+                }
+            }, cancellation.Token);
+
+            try
+            {
+                for (var i = 0; i < 1000; i++)
+                {
+                    if (finished.SignalAndWait(timeout) == false)
+                        break;
+
+                    for (int j = 0; j < 100; j++)
+                    {
+                        if (rb.TryAcquireSingle(out var ringItem))
+                        {
+                            Assert.NotNull(ringItem.Item);
+                            Assert.True(ringItem.IsReady, $"Acquired {ringItem.GetType()} should be set to ready");
+                            break;
+                        }
+                    }
+                }
+            }
+            catch (Exception e)
+            {
+                exceptions.Add(e);
+            }
+            finally
+            {
+                cancellation.Cancel();
+                acquiredEnd.Raise();
+                try
+                {
+                    pushTask.Wait(timeout);
+                }
+                catch (Exception e)
+                {
+                    exceptions.Add(e);
+                }
+                cancellation.Dispose();
+
+                if(exceptions.Any())
+                    throw new AggregateException(exceptions);
+            }
+        }
+        private class TestItem
+        {
+            public long TestProperty { get; set; }
         }
     }
 }
