@@ -1,9 +1,13 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Globalization;
 using System.IO;
 using System.Linq;
+using System.Threading.Tasks;
+using FastTests.Server.Basic.Entities;
 using NodaTime;
 using Raven.Client.Documents.Indexes;
+using Raven.Client.ServerWide.Operations;
 using Xunit;
 using static FastTests.Client.Indexing.PeopleUtil;
 
@@ -27,6 +31,74 @@ namespace FastTests.Client.Indexing
                     WaitForIndexing(store);
                     var query = session.Query<PeopleByEmail.PeopleByEmailResult, PeopleByEmail>()
                         .Where(x => x.Email == PeopleUtil.CalculatePersonEmail(p.Name, p.Age)).OfType<Person>().Single();
+                }
+            }
+        }
+
+        [Fact]
+        public async Task CanUpdateIndexExtensions()
+        {
+            using (var store = GetDocumentStore())
+            {
+                var getRealCountry = @"
+using System.Globalization;
+namespace My.Crazy.Namespace
+{
+    public static class Helper
+    {
+        public static string GetRealCountry(string name)
+        {
+            return new RegionInfo(name).EnglishName;
+        }
+    }
+}
+";
+
+                await store.ExecuteIndexAsync(new RealCountry(getRealCountry));
+
+                var additionalSources = await GetAdditionalSources();
+                Assert.Equal(1, additionalSources.Count);
+                Assert.Equal(getRealCountry, additionalSources["Helper"]);
+
+                getRealCountry = getRealCountry.Replace(".EnglishName", ".Name");
+                store.ExecuteIndex(new RealCountry(getRealCountry));
+
+                additionalSources = await GetAdditionalSources();
+                Assert.Equal(1, additionalSources.Count);
+                Assert.Equal(getRealCountry, additionalSources["Helper"]);
+
+                async Task<Dictionary<string, string>> GetAdditionalSources()
+                {
+                    var record = await store.Maintenance.Server.SendAsync(new GetDatabaseRecordOperation(store.Database));
+                    return record.Indexes.First().Value.AdditionalSources;
+                }
+            }
+        }
+
+        private class RealCountry : AbstractIndexCreationTask<Order>
+        {
+            public RealCountry(string getRealCountry)
+            {
+                Map = orders => from order in orders
+                    select new
+                    {
+                        Country = Helper.GetRealCountry(order.ShipTo.Country)
+                    };
+
+                AdditionalSources = new Dictionary<string, string>
+                {
+                    {
+                        "Helper",
+                        getRealCountry
+                    }
+                };
+            }
+
+            private static class Helper
+            {
+                public static string GetRealCountry(string name)
+                {
+                    return new RegionInfo(name).EnglishName;
                 }
             }
         }
