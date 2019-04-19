@@ -300,7 +300,7 @@ namespace Raven.Client.Documents
         /// </remarks>
         public override IDisposable AggressivelyCacheFor(TimeSpan cacheDuration, string database = null)
         {
-            return AggressivelyCacheFor(cacheDuration, Conventions.AggressiveCacheOptions.Mode, database);
+            return AggressivelyCacheFor(cacheDuration, Conventions.AggressiveCache.Mode, database);
         }
 
         /// <summary>

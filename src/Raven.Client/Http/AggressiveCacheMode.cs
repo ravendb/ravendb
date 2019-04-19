@@ -2,9 +2,8 @@
 {
     public enum AggressiveCacheMode
     {
-        Unknown = 0,
-        TrackChanges = 1,
-        TrackChangesAndDoBackgroundRefresh = 2, // TODO arek - NotImplementedException
-        DoNotTrackChanges = 3
+        TrackChanges = 0,
+        TrackChangesAndDoBackgroundRefresh = 1, // TODO arek - NotImplementedException
+        DoNotTrackChanges = 2
     }
 }

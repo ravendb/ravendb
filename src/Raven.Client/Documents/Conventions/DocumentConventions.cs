@@ -54,6 +54,40 @@ namespace Raven.Client.Documents.Conventions
 
         public readonly BulkInsertConventions BulkInsert;
 
+        public readonly AggressiveCacheConventions AggressiveCache;
+
+        public class AggressiveCacheConventions
+        {
+            private readonly DocumentConventions _conventions;
+            private readonly AggressiveCacheOptions _aggressiveCacheOptions;
+            
+            public AggressiveCacheConventions(DocumentConventions conventions)
+            {
+                _conventions = conventions;
+                _aggressiveCacheOptions = new AggressiveCacheOptions(TimeSpan.FromDays(1), AggressiveCacheMode.TrackChanges);
+            }
+
+            public TimeSpan Duration
+            {
+                get => _aggressiveCacheOptions.Duration;
+                set
+                {
+                    _conventions.AssertNotFrozen();
+                    _aggressiveCacheOptions.Duration = value;
+                }
+            }
+
+            public AggressiveCacheMode Mode
+            {
+                get => _aggressiveCacheOptions.Mode;
+                set
+                {
+                    _conventions.AssertNotFrozen();
+                    _aggressiveCacheOptions.Mode = value;
+                }
+            }
+        }
+
         public class BulkInsertConventions
         {
             private readonly DocumentConventions _conventions;
@@ -141,7 +175,7 @@ namespace Raven.Client.Documents.Conventions
             MaxHttpCacheSize = new Size(httpCacheSizeInMb, SizeUnit.Megabytes);
 
             OperationStatusFetchMode = OperationStatusFetchMode.ChangesApi;
-            AggressiveCacheOptions = new AggressiveCacheOptions(TimeSpan.FromDays(1), AggressiveCacheMode.TrackChanges);
+            AggressiveCache = new AggressiveCacheConventions(this);
         }
 
         private bool _frozen;
@@ -180,7 +214,6 @@ namespace Raven.Client.Documents.Conventions
         private Func<Type, bool> _typeIsKnownServerSide = _ => false;
         private OperationStatusFetchMode _operationStatusFetchMode;
         private string _topologyCacheLocation;
-        private AggressiveCacheOptions _aggressiveCacheOptions;
 
         public Func<MemberInfo, string> PropertyNameConverter
         {
@@ -586,17 +619,6 @@ namespace Raven.Client.Documents.Conventions
                 }
 
                 _topologyCacheLocation = path;
-            }
-        }
-
-        public AggressiveCacheOptions AggressiveCacheOptions
-        {
-            get => _aggressiveCacheOptions;
-            set
-            {
-                AssertNotFrozen();
-
-                _aggressiveCacheOptions = value;
             }
         }
 

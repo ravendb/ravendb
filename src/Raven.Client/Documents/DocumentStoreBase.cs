@@ -233,7 +233,7 @@ namespace Raven.Client.Documents
         /// </summary>
         public IDisposable AggressivelyCache(string database = null)
         {
-            return AggressivelyCacheFor(Conventions.AggressiveCacheOptions.Duration, Conventions.AggressiveCacheOptions.Mode, database);
+            return AggressivelyCacheFor(Conventions.AggressiveCache.Duration, Conventions.AggressiveCache.Mode, database);
         }
 
         protected void RegisterEvents(InMemoryDocumentSessionOperations session)
