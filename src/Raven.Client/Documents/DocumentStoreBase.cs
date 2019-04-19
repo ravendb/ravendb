@@ -43,6 +43,8 @@ namespace Raven.Client.Documents
         /// </summary>
 
         public abstract IDisposable AggressivelyCacheFor(TimeSpan cacheDuration, string database = null);
+        
+        public abstract IDisposable AggressivelyCacheFor(TimeSpan cacheDuration, AggressiveCacheMode mode, string database = null);
 
         public abstract IDatabaseChanges Changes(string database = null);
 
@@ -231,7 +233,7 @@ namespace Raven.Client.Documents
         /// </summary>
         public IDisposable AggressivelyCache(string database = null)
         {
-            return AggressivelyCacheFor(TimeSpan.FromDays(1), database);
+            return AggressivelyCacheFor(Conventions.AggressiveCacheOptions.Duration, Conventions.AggressiveCacheOptions.Mode, database);
         }
 
         protected void RegisterEvents(InMemoryDocumentSessionOperations session)

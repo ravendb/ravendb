@@ -41,7 +41,6 @@ namespace Raven.Client.Documents
         private DatabaseSmuggler _smuggler;
 
         private string _identifier;
-        private bool _aggressiveCachingUsed;
 
         /// <summary>
         /// Gets or sets the identifier for this store.
@@ -301,28 +300,38 @@ namespace Raven.Client.Documents
         /// </remarks>
         public override IDisposable AggressivelyCacheFor(TimeSpan cacheDuration, string database = null)
         {
+            return AggressivelyCacheFor(cacheDuration, Conventions.AggressiveCacheOptions.Mode, database);
+        }
+
+        /// <summary>
+        /// Setup the context for aggressive caching.
+        /// </summary>
+        /// <remarks>
+        /// Aggressive caching means that we will not check the server to see whether the response
+        /// we provide is current or not, but will serve the information directly from the local cache
+        /// without touching the server.
+        /// </remarks>
+        public override IDisposable AggressivelyCacheFor(TimeSpan cacheDuration, AggressiveCacheMode mode, string database = null)
+        {
             AssertInitialized();
             database = (database ?? Database) ?? throw new InvalidOperationException("Cannot use AggressivelyCache and AggressivelyCacheFor without a default database defined " +
                                                                                      "unless 'database' parameter is provided. Did you forget to pass 'database' parameter?");
-            if (_aggressiveCachingUsed == false)
-            {
+            if (mode != AggressiveCacheMode.DoNotTrackChanges) 
                 ListenToChangesAndUpdateTheCache(database);
-            }
+
             var re = GetRequestExecutor(database);
             var old = re.AggressiveCaching.Value;
-            re.AggressiveCaching.Value = new AggressiveCacheOptions
-            {
-                Duration = cacheDuration
-            };
+            var @new = new AggressiveCacheOptions(cacheDuration, mode);
+
+            re.AggressiveCaching.Value = @new;
+
             return new DisposableAction(() => re.AggressiveCaching.Value = old);
         }
 
         private void ListenToChangesAndUpdateTheCache(string database)
         {
             Debug.Assert(database != null);
-            // this is intentionally racy, most cases, we'll already 
-            // have this set once, so we won't need to do it again
-            _aggressiveCachingUsed = true;
+            
             if (_aggressiveCacheChanges.TryGetValue(database, out var lazy) == false)
             {
                 lazy = _aggressiveCacheChanges.GetOrAdd(database, new Lazy<EvictItemsFromCacheBasedOnChanges>(

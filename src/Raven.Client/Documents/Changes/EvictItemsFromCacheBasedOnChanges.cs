@@ -16,7 +16,7 @@ namespace Raven.Client.Documents.Changes
         private readonly IDatabaseChanges _changes;
         private readonly IDisposable _documentsSubscription;
         private readonly IDisposable _indexesSubscription;
-        private RequestExecutor _requestExecutor;
+        private readonly RequestExecutor _requestExecutor;
 
         public EvictItemsFromCacheBasedOnChanges(DocumentStore store, string databaseName)
         {
