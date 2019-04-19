@@ -628,9 +628,12 @@ namespace Raven.Client.Http
                     var aggressiveCacheOptions = AggressiveCaching.Value;
                     if (aggressiveCacheOptions != null &&
                         cachedItem.Age < aggressiveCacheOptions.Duration &&
-                        cachedItem.MightHaveBeenModified == false &&
+                        (cachedItem.MightHaveBeenModified == false || aggressiveCacheOptions.Mode != AggressiveCacheMode.TrackChanges) &&
                         command.CanCacheAggressively)
                     {
+                        if (aggressiveCacheOptions.Mode == AggressiveCacheMode.TrackChangesAndDoBackgroundRefresh)
+                            ThrowRefreshingInTheBackgroundNotImplemented();
+
                         if ((cachedItem.Item.Flags & HttpCache.ItemFlags.NotFound) != HttpCache.ItemFlags.None)
                         {
                             // if this is a cached delete, we only respect it if it _came_ from an aggressively cached
@@ -646,7 +649,6 @@ namespace Raven.Client.Http
                             command.SetResponse(context, cachedValue, fromCache: true);
                             return;
                         }
-
                     }
 
                     request.Headers.TryAddWithoutValidation("If-None-Match", $"\"{cachedChangeVector}\"");
@@ -829,6 +831,11 @@ namespace Raven.Client.Http
                     }
                 }
             }
+        }
+
+        private static void ThrowRefreshingInTheBackgroundNotImplemented()
+        {
+            throw new NotImplementedException("TODO arek - refreshing in the background is not implemented");
         }
 
         private void ThrowFailedToContactAllNodes<TResult>(RavenCommand<TResult> command, HttpRequestMessage request)

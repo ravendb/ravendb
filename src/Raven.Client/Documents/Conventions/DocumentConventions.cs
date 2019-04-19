@@ -141,6 +141,7 @@ namespace Raven.Client.Documents.Conventions
             MaxHttpCacheSize = new Size(httpCacheSizeInMb, SizeUnit.Megabytes);
 
             OperationStatusFetchMode = OperationStatusFetchMode.ChangesApi;
+            AggressiveCacheOptions = new AggressiveCacheOptions(TimeSpan.FromDays(1), AggressiveCacheMode.TrackChanges);
         }
 
         private bool _frozen;
@@ -179,6 +180,7 @@ namespace Raven.Client.Documents.Conventions
         private Func<Type, bool> _typeIsKnownServerSide = _ => false;
         private OperationStatusFetchMode _operationStatusFetchMode;
         private string _topologyCacheLocation;
+        private AggressiveCacheOptions _aggressiveCacheOptions;
 
         public Func<MemberInfo, string> PropertyNameConverter
         {
@@ -584,6 +586,17 @@ namespace Raven.Client.Documents.Conventions
                 }
 
                 _topologyCacheLocation = path;
+            }
+        }
+
+        public AggressiveCacheOptions AggressiveCacheOptions
+        {
+            get => _aggressiveCacheOptions;
+            set
+            {
+                AssertNotFrozen();
+
+                _aggressiveCacheOptions = value;
             }
         }
 
