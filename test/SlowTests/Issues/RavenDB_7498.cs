@@ -17,8 +17,7 @@ namespace SlowTests.Issues
             var store = GetDocumentStore(new Options()
             {
                 ModifyDocumentStore = s =>
-                    s.Conventions.AggressiveCacheOptions =
-                        new AggressiveCacheOptions(s.Conventions.AggressiveCacheOptions.Duration, AggressiveCacheMode.DoNotTrackChanges)
+                    s.Conventions.AggressiveCache.Mode = AggressiveCacheMode.DoNotTrackChanges
             });
             store.DisableAggressiveCaching();
 
