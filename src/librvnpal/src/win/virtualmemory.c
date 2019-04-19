@@ -57,7 +57,7 @@ rvn_prefetch_ranges(struct RVN_RANGE_LIST *range_list, int32_t count, int32_t *d
             goto cleanup;
         }
 
-        range_list += internal_count * sizeof(struct RVN_RANGE_LIST);
+        range_list += internal_count;
     } while (count > 0);
 
     rc = SUCCESS;
