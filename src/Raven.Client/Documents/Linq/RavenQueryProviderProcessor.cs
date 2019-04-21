@@ -1336,19 +1336,27 @@ The recommended method is to use full text search (mark the field as Analyzed an
                 var expressionInfo = GetMember(expression.Arguments[1]);
                 if (LinqPathProvider.GetValueFromExpressionWithoutConversion(expression.Arguments[2], out value) == false)
                 {
-                    throw new InvalidOperationException("Could not extract value from " + expression);
+                    throw new InvalidOperationException("Could not extract searchTemrs value from " + expression);
                 }
                 var searchTerms = (string)value;
                 if (LinqPathProvider.GetValueFromExpressionWithoutConversion(expression.Arguments[3], out value) == false)
                 {
-                    throw new InvalidOperationException("Could not extract value from " + expression);
+                    throw new InvalidOperationException("Could not extract boost value from " + expression);
                 }
                 var boost = (decimal)value;
                 if (LinqPathProvider.GetValueFromExpressionWithoutConversion(expression.Arguments[4], out value) == false)
                 {
-                    throw new InvalidOperationException("Could not extract value from " + expression);
+                    throw new InvalidOperationException("Could not extract options value from " + expression);
                 }
                 var options = (SearchOptions)value;
+
+                if (LinqPathProvider.GetValueFromExpressionWithoutConversion(expression.Arguments[5], out value) == false)
+                {
+                    throw new InvalidOperationException("Could not extract termsSearchOperator from " + expression);
+                }
+
+                var termsSearchOperator = (SearchOperator)value;
+
                 if (_chainedWhere && options.HasFlag(SearchOptions.And))
                 {
                     _documentQuery.AndAlso();
@@ -1361,7 +1369,7 @@ The recommended method is to use full text search (mark the field as Analyzed an
                     _documentQuery.NegateNext();
                 }
 
-                _documentQuery.Search(expressionInfo.Path, searchTerms);
+                _documentQuery.Search(expressionInfo.Path, searchTerms, termsSearchOperator);
                 if (options.HasFlag(SearchOptions.Not))
                 {
                     _documentQuery.CloseSubclause();
@@ -1372,7 +1380,7 @@ The recommended method is to use full text search (mark the field as Analyzed an
                 if (options.HasFlag(SearchOptions.And))
                 {
                     _chainedWhere = true;
-                }
+                }                
             }
 
             if (expressions.Count > 1)
