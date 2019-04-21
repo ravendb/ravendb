@@ -33,8 +33,8 @@ namespace Raven.Server.Documents.TimeSeries
         {
             get
             {
-                var bitsHeader = (BitsBufferHeader*)(_buffer + sizeof(SegmentHeader));
-                var bytes = bitsHeader->BitsPosition / 8 + (bitsHeader->BitsPosition % 8 == 0 ? 0 : 1);
+                var bitsHeader = GetBitsBuffer();
+                var bytes = bitsHeader.NumberOfBits / 8 + (bitsHeader.NumberOfBits % 8 == 0 ? 0 : 1);
 
                 return bytes + sizeof(SegmentHeader) + sizeof(BitsBufferHeader);
             }
@@ -322,7 +322,18 @@ namespace Raven.Server.Documents.TimeSeries
 
         public Enumerator GetEnumerator() => new Enumerator(this);
 
-        public unsafe ref struct Enumerator
+        public struct TagPointer
+        {
+            public byte* Pointer;
+            public int Length;
+
+            public Span<byte> AsSpan()
+            {
+                return new Span<byte>(Pointer, Length);
+            }
+        }
+
+        public struct Enumerator
         {
             private readonly TimeSeriesValuesSegment _parent;
             private int _bitsPosisition;
@@ -335,7 +346,7 @@ namespace Raven.Server.Documents.TimeSeries
                 _previousTimeStamp = _previousTimeStampDelta = -1;
             }
 
-            public bool MoveNext(out int timestamp, Span<double> values, Span<TimeStampState> state, ref Span<byte> tag)
+            public bool MoveNext(out int timestamp, Span<double> values, Span<TimeStampState> state, ref TagPointer tag)
             {
                 if (values.Length != _parent.Header->NumberOfValues)
                     ThrowInvalidNumberOfValues();
@@ -364,7 +375,11 @@ namespace Raven.Server.Documents.TimeSeries
                     var tagPos = (int)bitsBuffer.ReadValue(ref _bitsPosisition, BitsForTagLen);
                     var nextTag = tagPos * 8 == _bitsPosisition + ToByteAlignment(_bitsPosisition);
                     var tagLen = (int)bitsBuffer.Buffer[tagPos++];
-                    tag = new Span<byte>(bitsBuffer.Buffer + tagPos, tagLen);
+                    tag = new TagPointer
+                    {
+                        Pointer = bitsBuffer.Buffer + tagPos,
+                        Length = tagLen
+                    };
                     if (nextTag)
                     {
                         tagPos *= 8;
