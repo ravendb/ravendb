@@ -67,7 +67,7 @@ namespace Raven.Server.Rachis
                 {
                     using (context.OpenReadTransaction())
                     {
-                        if (_engine.GetSnapshotRequest(context))
+                        if (_engine.RequestSnapshot)
                         {
                             if (_engine.Log.IsInfoEnabled)
                             {

@@ -388,6 +388,8 @@ namespace Raven.Server.Rachis
                     var readResult = state.Read(TagSlice);
                     _tag = readResult == null ? InitialTag : readResult.Reader.ToStringValue();
 
+                    RequestSnapshot = GetSnapshotRequest(context);
+
                     Log = LoggingSource.Instance.GetLogger<RachisConsensus>(_tag);
                     LogsTable.Create(tx.InnerTransaction, EntriesSlice, 16);
 
@@ -790,20 +792,15 @@ namespace Raven.Server.Rachis
 
         public void SwitchToCandidateStateOnTimeout()
         {
-            using (ContextPool.AllocateOperationContext(out TransactionOperationContext context))
-            using (context.OpenReadTransaction())
+            if (RequestSnapshot)
             {
-                if (GetSnapshotRequest(context))
+                // we aren't allowed to be elected for leadership if we requested a snapshot 
+                if (Log.IsInfoEnabled)
                 {
-                    // we aren't allowed to be elected for leadership if we requested a snapshot 
-                    if (Log.IsInfoEnabled)
-                    {
-                        Log.Info("we aren't allowed to be elected for leadership if we requested a snapshot");
-                    }
-                    return;
+                    Log.Info("we aren't allowed to be elected for leadership if we requested a snapshot");
                 }
+                return;
             }
-
             SwitchToCandidateState("Election timeout");
         }
 
@@ -1161,9 +1158,6 @@ namespace Raven.Server.Rachis
         }
         public unsafe void TruncateLogBefore(TransactionOperationContext context, long upto)
         {
-            return;
-
-
             GetLastCommitIndex(context, out long lastIndex, out long lastTerm);
 
             long entryTerm;
@@ -1913,23 +1907,34 @@ namespace Raven.Server.Rachis
             }
         }
 
+        public bool RequestSnapshot { get; private set; }
+
         public void SetSnapshotRequest(TransactionOperationContext context, bool request)
         {
-            using (Slice.From(context.Transaction.InnerTransaction.Allocator, request.ToString(), out Slice str))
+            var oldValue = GetSnapshotRequest(context);
+
+            var state = context.Transaction.InnerTransaction.CreateTree(GlobalStateSlice);
+            state.Add(SnapshotRequestSlice, Convert.ToByte(request));
+            RequestSnapshot = request;
+
+            context.Transaction.InnerTransaction.LowLevelTransaction.OnDispose += tx =>
             {
-                var state = context.Transaction.InnerTransaction.CreateTree(GlobalStateSlice);
-                state.Add(SnapshotRequestSlice, str);
-            }
+                if (tx is LowLevelTransaction llt && llt.Committed == false)
+                {
+                    RequestSnapshot = oldValue;
+                }
+            };
         }
 
         public bool GetSnapshotRequest(TransactionOperationContext context)
         {
             var state = context.Transaction.InnerTransaction.CreateTree(GlobalStateSlice);
             var reader = state.Read(SnapshotRequestSlice);
+
             if (reader == null)
                 return false;
 
-            return bool.Parse(reader.Reader.ToStringValue());
+            return Convert.ToBoolean(reader.Reader.ReadByte());
         }
 
         public void LeaderElectToLeaderChanged()
