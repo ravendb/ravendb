@@ -2658,10 +2658,16 @@ The recommended method is to use full text search (mark the field as Analyzed an
                 JavascriptConversionExtensions.NewSupport.Instance,
                 JavascriptConversionExtensions.ListInitSupport.Instance,
                 loadSupport ?? new JavascriptConversionExtensions.LoadSupport(),
-                MemberInitAsJson.ForAllTypes,
-                new JavascriptConversionExtensions.IdentityPropertySupport(_documentQuery.Conventions)
+                MemberInitAsJson.ForAllTypes
             };
 
+            if (loadArg == false)
+            {
+                Array.Resize(ref extensions, extensions.Length + 1);
+
+                extensions[extensions.Length - 1] = new JavascriptConversionExtensions.IdentityPropertySupport(_documentQuery.Conventions);
+            }
+            
             return expression.CompileToJavascript(new JavascriptCompilationOptions(extensions)
             {
                 CustomMetadataProvider = new PropertyNameConventionJSMetadataProvider(_conventions)
