@@ -31,7 +31,6 @@ using Raven.Client.Json;
 using Raven.Client.Json.Converters;
 using Raven.Client.ServerWide;
 using Raven.Client.ServerWide.Commands;
-using Raven.Client.ServerWide.Commands.Cluster;
 using Raven.Client.ServerWide.Tcp;
 using Raven.Server.Commercial;
 using Raven.Server.Config;
@@ -441,49 +440,23 @@ namespace Raven.Server.ServerWide
             await _engine.RemoveFromClusterAsync(nodeTag).WithCancellation(_shutdownNotification.Token);
         }
 
-        public async Task RequestSnapshot()
+        public void RequestSnapshot()
         {
             var topology = GetClusterTopology();
 
             if (topology.AllNodes.Count == 1)
                 throw new InvalidOperationException("Can't force snapshot, since I'm the only node in the cluster.");
 
-            var leaderTag = _engine.LeaderTag;
-            var leaderUrl = topology.GetUrlFromTag(leaderTag);
+            if (topology.Members.ContainsKey(NodeTag))
+                throw new InvalidOperationException($"Snapshot can be requested only by a non-member node.{Environment.NewLine}" +
+                                                    $"In order to proceed, demote this node to watcher, then request the snapshot again.{Environment.NewLine}" +
+                                                    $"Afterwards you can promote it back to member.");
 
-            if (leaderTag == null || leaderUrl == null)
-                throw new NoLeaderException("Can't force snapshot, no leader found.");
-
-            var isMember = topology.Members.ContainsKey(NodeTag);
-            using (var requestExecutor = CreateNewClusterRequestExecutor(leaderUrl))
             using (ContextPool.AllocateOperationContext(out TransactionOperationContext ctx))
+            using (var tx = ctx.OpenWriteTransaction())
             {
-                if (isMember)
-                {
-                    if (IsLeader())
-                    {
-                        Engine.CurrentLeader.StepDown();
-                    }
-
-                    await WaitForState(RachisState.Follower, ServerShutdown);
-
-                    // demote to non-voter, so we will not participate in the quorum.
-                    var demote = new DemoteClusterNodeCommand(NodeTag);
-                    await requestExecutor.ExecuteAsync(demote, ctx, token: ServerShutdown);
-                }
-
-                using (var tx = ctx.OpenWriteTransaction())
-                {
-                    _engine.SetSnapshotRequest(ctx, true);
-                    tx.Commit();
-                }
-
-                if (isMember)
-                {
-                    // promote back to voter
-                    var promote = new PromoteClusterNodeCommand(NodeTag);
-                    await requestExecutor.ExecuteAsync(promote, ctx, token: ServerShutdown);
-                }
+                _engine.SetSnapshotRequest(ctx, true);
+                tx.Commit();
             }
         }
 
