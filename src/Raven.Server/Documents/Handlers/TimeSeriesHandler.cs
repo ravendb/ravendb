@@ -17,6 +17,78 @@ namespace Raven.Server.Documents.Handlers
 {
     public class TimeSeriesHandler : DatabaseRequestHandler
     {
+
+        [RavenAction("/databases/*/timeseries", "GET", AuthorizationStatus.ValidUser)]
+        public Task Read()
+        {
+            var documentId = GetStringQueryString("id");
+            var name = GetStringQueryString("name");
+            var from = GetDateTimeQueryString("from", required: false) ?? DateTime.MinValue;
+            var to = GetDateTimeQueryString("to", required: false) ?? DateTime.MaxValue;
+
+
+            using (ContextPool.AllocateOperationContext(out DocumentsOperationContext context))
+            using(context.OpenReadTransaction())
+            {
+                var reader = Database.DocumentsStorage.TimeSeriesStorage.GetReader(context, documentId, name, from, to);
+
+                if(reader.Init() == false)
+                {
+                    HttpContext.Response.StatusCode = (int)HttpStatusCode.NotFound;
+                    return Task.CompletedTask;
+                }
+
+                using (var writer = new BlittableJsonTextWriter(context, ResponseBodyStream()))
+                {
+                    writer.WriteStartObject();
+
+                    writer.WritePropertyName("DocumentId");
+                    writer.WriteString(documentId);
+                    writer.WriteComma();
+
+                    writer.WritePropertyName("Name");
+                    writer.WriteString(name);
+                    writer.WriteComma();
+
+                    writer.WritePropertyName("Values");
+                    writer.WriteStartArray();
+
+                    var first = true;
+                    foreach (var item in reader.Values())
+                    {
+                        if (first)
+                        {
+                            first = false;
+                        }
+                        else
+                        {
+                            writer.WriteComma();
+                        }
+                        writer.WriteStartObject();
+
+                        writer.WritePropertyName("TimeStamp");
+                        writer.WriteDateTime(item.TimeStamp, true);
+                        writer.WriteComma();
+                        writer.WritePropertyName("Tag");
+                        writer.WriteString(item.Tag.ToString());//TODO: Avoid this string allocation!
+                        writer.WriteComma();
+                        writer.WriteArray("Values", item.Values);
+
+                        writer.WriteEndObject();
+                    }
+
+                    writer.WriteEndArray();
+
+
+
+                    writer.WriteEndObject();
+                    
+                    writer.Flush();
+                }
+            }
+            return Task.CompletedTask;
+        }
+
         [RavenAction("/databases/*/timeseries", "POST", AuthorizationStatus.ValidUser)]
         public async Task Batch()
         {

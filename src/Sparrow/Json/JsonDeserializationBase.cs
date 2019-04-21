@@ -599,8 +599,15 @@ namespace Sparrow.Json
             if (json.TryGet(name, out array) == false || array == null)
                 return list.ToArray();
 
-            foreach (BlittableJsonReaderObject item in array.Items)
-                list.Add(converter(item));
+            foreach (object item in array.Items)
+            {
+                if (item is BlittableJsonReaderObject bjro)
+                    list.Add(converter(bjro));
+                else if (item is T t)
+                    list.Add(t);
+                else
+                    list.Add((T)Convert.ChangeType(item, typeof(T)));
+            }
 
             return list.ToArray();
         }

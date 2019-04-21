@@ -1275,6 +1275,26 @@ namespace Voron.Data.Tables
             }
         }
 
+        public bool SeekOnePrimaryKeyWithPrefix(Slice prefix, Slice value, out TableValueReader reader)
+        {
+            var pk = _schema.Key;
+            var tree = GetTree(pk);
+            using (var it = tree.Iterate(false))
+            {
+                it.SetRequiredPrefix(prefix);
+
+                if (it.Seek(value) == false)
+                {
+                    reader = default(TableValueReader);
+                    return false;
+                }
+
+                GetTableValueReader(it, out reader);
+                return true;
+            }
+        }
+
+
         public IEnumerable<TableValueHolder> SeekForwardFrom(TableSchema.FixedSizeSchemaIndexDef index, long key, int skip)
         {
             var fst = GetFixedSizeTree(index);
