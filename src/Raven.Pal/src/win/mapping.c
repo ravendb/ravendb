@@ -16,20 +16,37 @@ _init_discard_virtual_memory_flag = false;
 EXPORT int32_t
 rvn_discard_virtual_memory(void* address, int64_t size, int32_t* detailed_error_code)
 {    
+    int32_t rc;
     if (_init_discard_virtual_memory_flag == false)
     {        
+        HMODULE handle = GetModuleHandle(TEXT("kernel32.dll"));
+        if(handle == NULL)
+        {
+            rc = FAIL_GET_MODULE_HANDLE;
+            goto error_cleanup;
+        }
+        
         _discard_virtual_memory_func = (pDiscardVirtualMemory) GetProcAddress(
-                GetModuleHandle(TEXT("kernel32.dll")),
+                handle,
                 "DiscardVirtualMemory");
         _init_discard_virtual_memory_flag = true;
     }
 
     if (_discard_virtual_memory_func != NULL)
     {
-        int32_t rc = _discard_virtual_memory_func(address, (size_t)size);
-        if (rc != 0)
-            *detailed_error_code = errno;
-        return rc;
+        /*Return Value of DiscardVirtualMemory - ERROR_SUCCESS(0) if successful; a System Error Code otherwise.*/
+        *detailed_error_code = _discard_virtual_memory_func(address, (size_t)size);
+        if (*detailed_error_code != 0)
+        {
+            rc = FAIL_DISCARD_VIRTUAL_MEMORY;
+            goto cleanup;
+        }
     }
-    return 0;
+
+    rc = SUCCESS;
+    goto cleanup;
+error_cleanup:
+    *detailed_error_code = GetLastError();
+cleanup:
+    return rc;
 }

@@ -39,6 +39,8 @@
 #define FAIL_NOT_DIRECTORY              30
 #define FAIL_BROKEN_LINK                31
 #define FAIL_GET_REAL_PATH              32
+#define FAIL_GET_MODULE_HANDLE          33
+#define FAIL_DISCARD_VIRTUAL_MEMORY     34
 
 #define ERRNO_SPECIAL_CODES_NONE        0
 #define ERRNO_SPECIAL_CODES_ENOMEM      (1 << 0)
