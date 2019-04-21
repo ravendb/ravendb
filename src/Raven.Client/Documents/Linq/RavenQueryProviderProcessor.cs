@@ -2658,27 +2658,14 @@ The recommended method is to use full text search (mark the field as Analyzed an
                 JavascriptConversionExtensions.NewSupport.Instance,
                 JavascriptConversionExtensions.ListInitSupport.Instance,
                 loadSupport ?? new JavascriptConversionExtensions.LoadSupport(),
-                MemberInitAsJson.ForAllTypes
+                MemberInitAsJson.ForAllTypes,
+                new JavascriptConversionExtensions.IdentityPropertySupport(_documentQuery.Conventions)
             };
 
-            if (loadArg == false && (_isMapReduce == false || ShouldConvertDueToLoad()))
-            {
-                Array.Resize(ref extensions, extensions.Length + 1);
-
-                extensions[extensions.Length - 1] = new JavascriptConversionExtensions.IdentityPropertySupport(_documentQuery.Conventions);
-            }
-            
             return expression.CompileToJavascript(new JavascriptCompilationOptions(extensions)
             {
                 CustomMetadataProvider = new PropertyNameConventionJSMetadataProvider(_conventions)
             });
-
-            bool ShouldConvertDueToLoad()
-            {
-                return _loadAliases != null &&
-                       JavascriptConversionExtensions.IdentityPropertySupport.CanConvert(expression, _documentQuery.Conventions, out var alias) &&
-                       _loadAliases.Contains(alias);
-            }
         }
 
         private static bool HasComputation(MemberExpression memberExpression)
@@ -2961,7 +2948,7 @@ The recommended method is to use full text search (mark the field as Analyzed an
             HandleKeywordsIfNeeded(ref field, ref alias);
 
             var identityProperty = _documentQuery.Conventions.GetIdentityProperty(_ofType ?? _originalQueryType);
-            if (identityProperty != null && identityProperty.Name == field && _isMapReduce == false)
+            if (identityProperty != null && identityProperty.Name == field)
             {
                 FieldsToFetch.Add(new FieldToFetch(Constants.Documents.Indexing.Fields.DocumentIdFieldName, alias));
                 return;

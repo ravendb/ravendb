@@ -54,7 +54,7 @@ namespace SlowTests.Issues
                     s.Store(new Document
                     {
                         Name = "name"
-                    });
+                    }, "documents/1-A");
 
                     s.Advanced.WaitForIndexesAfterSaveChanges(indexes: new[] { nameof(DocumentIndex) });
                     s.SaveChanges();
@@ -69,12 +69,12 @@ namespace SlowTests.Issues
                             doc.Name
                         };
 
-                    Assert.Equal("from index 'DocumentIndex' as doc select { Id : doc.Id+\" test\", Name : doc.Name }"
+                    Assert.Equal("from index 'DocumentIndex' as doc select { Id : id(doc)+\" test\", Name : doc.Name }"
                         , query.ToString());
 
                     var item = query.Single();
                     Assert.NotNull(item);
-                    Assert.NotNull(item.Id);
+                    Assert.Equal("documents/1-A" + " test", item.Id);
                     Assert.Equal("name", item.Name);
                 }
             }
