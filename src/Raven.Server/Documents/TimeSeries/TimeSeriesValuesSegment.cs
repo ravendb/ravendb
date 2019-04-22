@@ -3,7 +3,9 @@ using System.Collections;
 using System.Diagnostics;
 using System.Diagnostics.Contracts;
 using System.Runtime.InteropServices;
+using Sparrow;
 using Sparrow.Binary;
+using Sparrow.Server;
 
 namespace Raven.Server.Documents.TimeSeries
 {
@@ -36,7 +38,7 @@ namespace Raven.Server.Documents.TimeSeries
                 var bitsHeader = GetBitsBuffer();
                 var bytes = bitsHeader.NumberOfBits / 8 + (bitsHeader.NumberOfBits % 8 == 0 ? 0 : 1);
 
-                return bytes + sizeof(SegmentHeader) + sizeof(BitsBufferHeader);
+                return bytes + DataStart;
             }
         }
         
@@ -71,12 +73,12 @@ namespace Raven.Server.Documents.TimeSeries
             Header->NumberOfValues = (byte)numberOfValues;
         }
 
-        public bool Append(int deltaFromStart, double val, Span<byte> tag)
+        public bool Append(ByteStringContext allocator, int deltaFromStart, double val, Span<byte> tag)
         {
-            return Append(deltaFromStart, new Span<double>(&val, 1), tag);
+            return Append(allocator, deltaFromStart, new Span<double>(&val, 1), tag);
         }
 
-        public bool Append(int deltaFromStart, Span<double> vals, Span<byte> tag)
+        public bool Append(ByteStringContext allocator, int deltaFromStart, Span<double> vals, Span<byte> tag)
         {
             if (vals.Length != Header->NumberOfValues)
                 ThrowInvalidNumberOfValues(vals);
@@ -90,42 +92,56 @@ namespace Raven.Server.Documents.TimeSeries
                 sizeof(int) + // max timestamp
                 sizeof(double) * vals.Length +
                 tag.Length + 1 + 
-                1 + // alignment to current buffer
-                8; // extra buffer that should never be used
-            var tempBuffer = stackalloc byte[maximumSize];
-            var tempHeader = stackalloc SegmentHeader[1];
-            *tempHeader = *Header;
+                2 + // previous tag position
+                1  // alignment to current buffer
+#if DEBUG
+                + 8 // extra buffer that should never be used
+#endif
+                ;
 
-            var tempBitsBuffer = new BitsBuffer(tempBuffer, maximumSize);
-
-            var prevs = new Span<StatefulTimeStampValue>(_buffer + sizeof(SegmentHeader), Header->NumberOfValues);
-            AddTimeStamp(deltaFromStart, ref tempBitsBuffer, tempHeader);
-
-            for (int i = 0; i < vals.Length; i++)
+            using (allocator.Allocate(maximumSize + sizeof(SegmentHeader), out var tempBuffer))
             {
-                AddValue(ref prevs[i], ref tempBitsBuffer, vals[i]);
+                Memory.Set(tempBuffer.Ptr, 0, maximumSize);
+#if DEBUG
+                *(ulong*)(tempBuffer.Ptr + maximumSize - sizeof(ulong)) = 0xdeadbeafdeadbeaf;
+#endif
+
+                var tempHeader = (SegmentHeader*)(tempBuffer.Ptr + maximumSize);
+
+                *tempHeader = *Header;
+
+                var tempBitsBuffer = new BitsBuffer(tempBuffer.Ptr, maximumSize);
+
+                var prevs = new Span<StatefulTimeStampValue>(_buffer + sizeof(SegmentHeader), Header->NumberOfValues);
+                AddTimeStamp(deltaFromStart, ref tempBitsBuffer, tempHeader);
+
+                for (int i = 0; i < vals.Length; i++)
+                {
+                    AddValue(ref prevs[i], ref tempBitsBuffer, vals[i]);
+                }
+
+                WriteTag(tag, ref tempBitsBuffer, tempHeader, actualBitsBuffer.NumberOfBits);
+
+#if DEBUG
+                Debug.Assert(tempBitsBuffer.NumberOfBits / 8 < maximumSize, "Wrote PAST END OF BUFFER!");
+                Debug.Assert(*(ulong*)(tempBuffer.Ptr + maximumSize - sizeof(ulong)) == 0xdeadbeafdeadbeaf, "Wrote TO END OF BUFFER");
+#endif
+
+                tempHeader->PreviousTimeStamp = deltaFromStart;
+                tempHeader->NumberOfEntries++;
+
+                if (actualBitsBuffer.AddBits(tempBitsBuffer) == false)
+                    return false;
+
+                *Header = *tempHeader;
+
+                return true;
             }
-
-            WriteTag(tag, ref tempBitsBuffer, tempHeader, actualBitsBuffer.NumberOfBits);
-
-            Debug.Assert(tempBitsBuffer.NumberOfBits / 8 < maximumSize - 8, "Wrote PAST END OF BUFFER!");
-
-            tempHeader->PreviousTimeStamp = deltaFromStart;
-            tempHeader->NumberOfEntries++;
-
-            if (actualBitsBuffer.AddBits(tempBitsBuffer) == false)
-                return false;
-
-            *Header = *tempHeader;
-
-            return true;
         }
 
         private void WriteTag(Span<byte> tag, ref BitsBuffer tempBitsBuffer, SegmentHeader* tempHeader, int baseNumberOfBits)
         {
             var actualBitsBuffer = GetBitsBuffer();
-            int a = 136;
-            var r = actualBitsBuffer.ReadValue(ref a, 11);
             var tagEnum = new TagEnumerator(actualBitsBuffer /* need to read the previous values */, 
                 tempHeader->PreviousTagPosition);
             if (tagEnum.TryGetPrevious(out var prevTag, out var previousIndex))

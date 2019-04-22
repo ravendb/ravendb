@@ -70,7 +70,7 @@ namespace Raven.Server.Documents.Handlers
                         writer.WriteDateTime(item.TimeStamp, true);
                         writer.WriteComma();
                         writer.WritePropertyName("Tag");
-                        writer.WriteString(item.Tag.ToString());//TODO: Avoid this string allocation!
+                        writer.WriteString(item.Tag);
                         writer.WriteComma();
                         writer.WriteArray("Values", item.Values);
 
