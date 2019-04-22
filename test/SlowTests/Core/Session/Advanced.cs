@@ -1,15 +1,15 @@
 using System;
 using System.Collections.Generic;
+using System.Threading;
+using System.Threading.Tasks;
 using FastTests;
+using Raven.Server.Documents.Replication;
 using Raven.Client.Documents.Commands.Batches;
 using Raven.Client.Exceptions;
-using Raven.Client.Util;
 using Sparrow.Json.Parsing;
 using Xunit;
-
 using Company = SlowTests.Core.Utils.Entities.Company;
 using User = SlowTests.Core.Utils.Entities.User;
-using Raven.Server.Documents.Replication;
 
 namespace SlowTests.Core.Session
 {
@@ -455,6 +455,72 @@ namespace SlowTests.Core.Session
                     }
 
                     Assert.Equal(1, session.Advanced.NumberOfRequests);
+                }
+            }
+        }
+
+        [Fact]
+        public async Task CanAggressivelyCacheAfterModification()
+        {
+            using (var store = GetDocumentStore())
+            {
+                using (var session = store.OpenAsyncSession())
+                {
+                    await session.StoreAsync(new User
+                    {
+                        Id = "users/1",
+                        Name = "Name"
+                    });
+                    await session.SaveChangesAsync();
+                }
+
+                using (var session = store.OpenAsyncSession())
+                {
+                    Assert.Equal(0, session.Advanced.NumberOfRequests);
+                    await session.LoadAsync<User>("users/1");
+
+                    Assert.Equal(1, session.Advanced.RequestExecutor.Cache.NumberOfItems);
+                    Assert.Equal(0, session.Advanced.RequestExecutor.Cache.Generation);
+                    Assert.Equal(1, session.Advanced.NumberOfRequests);
+                }
+
+                using (store.AggressivelyCacheFor(TimeSpan.FromHours(1)))
+                using (var changes = await store.Changes().EnsureConnectedNow())
+                {
+                    var mre = new ManualResetEventSlim();
+
+                    var observable = changes.ForAllDocuments();
+                    var documentSubscription = observable.Subscribe(x => mre.Set());
+                    await observable.EnsureSubscribedNow();
+
+                    using (var session = store.OpenAsyncSession())
+                    {
+                        await session.StoreAsync(new User
+                        {
+                            Id = "users/2",
+                            Name = "Grisha"
+                        });
+                        await session.SaveChangesAsync();
+                    }
+
+                    Assert.True(mre.Wait(TimeSpan.FromSeconds(30)));
+                    documentSubscription.Dispose();
+
+                    var requestExecutor = store.GetRequestExecutor();
+                    var cacheGeneration = WaitForValue(() => requestExecutor.Cache.Generation, 1);
+                    Assert.Equal(1, cacheGeneration);
+
+                    var numberOfRequestsBefore = requestExecutor.NumberOfServerRequests;
+                    for (var i = 0; i < 20; i++)
+                    {
+                        using (var session = store.OpenAsyncSession())
+                        {
+                            await session.LoadAsync<User>("users/1");
+                        }
+                    }
+
+                    var numberOfRequestsAfter = requestExecutor.NumberOfServerRequests;
+                    Assert.Equal(1, numberOfRequestsAfter - numberOfRequestsBefore);
                 }
             }
         }

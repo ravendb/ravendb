@@ -252,10 +252,12 @@ namespace Raven.Client.Http
         public struct ReleaseCacheItem : IDisposable
         {
             public readonly HttpCacheItem Item;
+            private readonly int _cacheGeneration;
 
             public ReleaseCacheItem(HttpCacheItem item)
             {
                 Item = item;
+                _cacheGeneration = item.Cache.Generation;
             }
 
             public TimeSpan Age
@@ -269,12 +271,13 @@ namespace Raven.Client.Http
                 }
             }
 
-            public bool MightHaveBeenModified => Item.Generation != Item.Cache.Generation;
+            public bool MightHaveBeenModified => Item.Generation != _cacheGeneration;
 
             public void NotModified()
             {
                 if (Item != null)
                 {
+                    Item.Generation = _cacheGeneration;
                     Item.LastServerUpdate = SystemTime.UtcNow;
                 }
             }
