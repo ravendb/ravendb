@@ -43,16 +43,10 @@ namespace SlowTests.Cluster
                     Thread.Sleep(12345);
                 }))
                 {
-                    var stats = store2.Maintenance.Send(new GetStatisticsOperation());
-
                     var cts = new CancellationTokenSource();
-                    Parallel.Invoke(() => BackgroundWork(store2, cts));
+                    var task = BackgroundWork(store2, cts);
 
-                    while (stats.CountOfIndexes == 0)
-                    {
-                        Thread.Sleep(2000);
-                        stats = store2.Maintenance.Send(new GetStatisticsOperation());
-                    }
+                    await WaitForIndexCreation(store2);
 
                     await store.Maintenance.Server.SendAsync(new ToggleDatabasesStateOperation(store.Database, true));
                     await store.Maintenance.Server.SendAsync(new ToggleDatabasesStateOperation(store.Database, false));
@@ -64,6 +58,7 @@ namespace SlowTests.Cluster
                     }
 
                     cts.Cancel();
+                    task.Wait();
                 }
             }
         }
@@ -84,36 +79,35 @@ namespace SlowTests.Cluster
                     Thread.Sleep(18 * 1000);
                 }))
                 {
-                    var stats = store2.Maintenance.Send(new GetStatisticsOperation());
-
                     var cts = new CancellationTokenSource();
-                    Parallel.Invoke(() => BackgroundWork(store2, cts));
+                    var task = BackgroundWork(store2, cts);
 
-                    while (stats.CountOfIndexes == 0)
-                    {
-                        Thread.Sleep(2000);
-                        stats = store2.Maintenance.Send(new GetStatisticsOperation());
-                    }
+                    await WaitForIndexCreation(store2);
 
                     var e = await Assert.ThrowsAsync<RavenException>(async () => await store.Maintenance.Server.SendAsync(new ToggleDatabasesStateOperation(store.Database, true)));
                     Assert.True(e.InnerException is TimeoutException);
+
                     cts.Cancel();
+                    task.Wait();
                 }
             }
         }
 
-        private async void BackgroundWork(DocumentStore store2, CancellationTokenSource cts)
+        private static async Task WaitForIndexCreation(DocumentStore store)
         {
-            var task = Task.Run(async () =>
+            while (store.Maintenance.Send(new GetStatisticsOperation()).CountOfIndexes == 0)
             {
-                while (cts.IsCancellationRequested == false)
-                {
-                    await new UsersIndex().ExecuteAsync(store2);
-                    await Task.Delay(4000);
-                }
-            });
+                await Task.Delay(1000);
+            }
+        }
 
-            await task;
+        private static async Task BackgroundWork(DocumentStore store2, CancellationTokenSource cts)
+        {
+            while (cts.IsCancellationRequested == false)
+            {
+                await new UsersIndex().ExecuteAsync(store2);
+                await Task.Delay(1000);
+            }
         }
 
         private class UsersIndex : AbstractIndexCreationTask<User>
