@@ -1498,19 +1498,8 @@ namespace Raven.Server.ServerWide
                 {
                     _rachisLogIndexNotifications.AddTask(index);
 
-                    TaskExecutor.Execute(_ =>
-                    {
-                        try
-                        {
-                            _rachisLogIndexNotifications.NotifyListenersAbout(index, null);
-                            _rachisLogIndexNotifications.SetTaskCompleted(index, null);
-                        }
-                        catch (Exception e)
-                        {
-                            _rachisLogIndexNotifications.NotifyListenersAbout(index, e);
-                            _rachisLogIndexNotifications.SetTaskCompleted(index, e);
-                        }
-                    }, null);
+                    _rachisLogIndexNotifications.NotifyListenersAbout(index, null);
+                    _rachisLogIndexNotifications.SetTaskCompleted(index, null);
                 }
             };
         }
