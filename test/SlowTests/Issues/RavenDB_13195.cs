@@ -67,10 +67,10 @@ namespace SlowTests.Issues
                     {
                         tvb1.Add(ptr, bytes.Length);
                         tvb2.Add(ptr, bytes.Length);
-                    }
 
-                    fst.Insert(tvb1);
-                    snd.Insert(tvb2);
+                        fst.Insert(tvb1);
+                        snd.Insert(tvb2);
+                    }
                 }
 
                 tx.Commit();
