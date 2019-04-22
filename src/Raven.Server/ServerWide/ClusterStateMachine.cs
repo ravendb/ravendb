@@ -2175,18 +2175,22 @@ namespace Raven.Server.ServerWide
         {
             if (_tasksDictionary.TryGetValue(index, out var tcs))
             {
-                try
+                // set the task as finished
+                if (e == null)
                 {
-                    // set the task as finished
-                    if (e == null)
-                        tcs.SetResult(null);
-                    else
-                        tcs.SetException(e);
+                    if (tcs.TrySetResult(null) == false)
+                        LogFailureToSetTaskResult();
                 }
-                catch (Exception ex)
+                else
+                {
+                    if (tcs.TrySetException(e) == false)
+                        LogFailureToSetTaskResult();
+                }
+
+                void LogFailureToSetTaskResult()
                 {
                     if (Log.IsInfoEnabled)
-                        Log.Info($"Failed to set result of task with index {index}", ex);
+                        Log.Info($"Failed to set result of task with index {index}");
                 }
             }
 
