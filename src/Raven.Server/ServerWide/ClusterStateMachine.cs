@@ -1092,6 +1092,7 @@ namespace Raven.Server.ServerWide
 
         private void ExecuteAsyncTask(long index, Action action)
         {
+            // we do this under the write tx lock before we update the last applied index
             _rachisLogIndexNotifications.AddTask(index);
 
             TaskExecutor.Execute(_ =>
@@ -1493,9 +1494,10 @@ namespace Raven.Server.ServerWide
         {
             context.Transaction.InnerTransaction.LowLevelTransaction.OnDispose += transaction =>
             {
-                _rachisLogIndexNotifications.AddTask(index);
-
                 if (transaction is LowLevelTransaction llt && llt.Committed)
+                {
+                    _rachisLogIndexNotifications.AddTask(index);
+
                     TaskExecutor.Execute(_ =>
                     {
                         try
@@ -1509,6 +1511,7 @@ namespace Raven.Server.ServerWide
                             _rachisLogIndexNotifications.SetTaskCompleted(index, e);
                         }
                     }, null);
+                }
             };
         }
 
