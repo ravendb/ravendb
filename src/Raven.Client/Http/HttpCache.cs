@@ -129,7 +129,8 @@ namespace Raven.Client.Http
             result.CopyTo(mem.Address);
             if (Interlocked.Add(ref _totalSize, result.Size) > _maxSize)
             {
-                Task.Run(() => FreeSpace());
+                if (_isFreeSpaceRunning == false)
+                    Task.Run(FreeSpace);
             }
 
             var httpCacheItem = new HttpCacheItem
@@ -142,7 +143,7 @@ namespace Raven.Client.Http
                 Generation = Generation
             };
 
-            HttpCacheItem old=null;
+            HttpCacheItem old = null;
             _items.AddOrUpdate(url, httpCacheItem, (s, oldItem) =>
             {
                 old = oldItem;
@@ -192,7 +193,7 @@ namespace Raven.Client.Http
 
         private void FreeSpace()
         {
-            if (!_isFreeSpaceRunning.Raise())
+            if (_isFreeSpaceRunning.Raise() == false)
                 return;
 
             try
