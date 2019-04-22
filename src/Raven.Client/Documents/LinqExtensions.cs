@@ -850,18 +850,17 @@ namespace Raven.Client.Documents
         /// <typeparam name="T">The type of element of self</typeparam>
         /// <param name="self">The <see cref="IQueryable{T}"/> to search on</param>
         /// <param name="fieldSelector">Function returning the field to search on</param>
-        /// <param name="searchTerms">Field terms to search for, seperated with whitespaces</param>
+        /// <param name="searchTerms">Field terms to search for, separated with whitespaces</param>
         /// <param name="boost">Boost factor for sorting purposes</param>
         /// <param name="options">Logical operator to use in relation to the previous filtering statement.</param>
-        /// <param name="termsSearchOperator">Determines the logical operator between all of the terms received in searchTemrs parameter</param>
-        /// <returns></returns>
+        /// <param name="operator">Determines the logical operator between all of the terms received in searchTerms parameter</param>
         public static IRavenQueryable<T> Search<T>(this IQueryable<T> self, Expression<Func<T, object>> fieldSelector, string searchTerms,
                                                    decimal boost = 1,
-                                                   SearchOptions options = SearchOptions.Guess, 
-                                                   SearchOperator termsSearchOperator = SearchOperator.Or)
+                                                   SearchOptions options = SearchOptions.Guess,
+                                                   SearchOperator @operator = SearchOperator.Or)
         {
             var currentMethod = typeof(LinqExtensions).GetMethod(nameof(Search));
-            
+
             currentMethod = ConvertMethodIfNecessary(currentMethod, typeof(T));
             var expression = ConvertExpressionIfNecessary(self);
 
@@ -870,11 +869,9 @@ namespace Raven.Client.Documents
                                                                       Expression.Constant(searchTerms),
                                                                       Expression.Constant(boost),
                                                                       Expression.Constant(options),
-                                                                      Expression.Constant(termsSearchOperator)));
+                                                                      Expression.Constant(@operator)));
             return (IRavenQueryable<T>)queryable;
         }
-
-
 
         /// <summary>
         /// Perform an initial sort by lucene score.
