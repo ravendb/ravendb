@@ -12,6 +12,7 @@ using System.Linq.Expressions;
 using System.Reflection;
 using System.Runtime.CompilerServices;
 using System.Text;
+using System.Text.RegularExpressions;
 using Newtonsoft.Json;
 using Raven.Client.Documents.Conventions;
 using Raven.Client.Util;
@@ -199,6 +200,9 @@ namespace Raven.Client.Documents.Indexes
 
             if (name.Length > 512 || name.Length <= 0)
                 return false;
+
+            if (Regex.IsMatch(name, @"<>([a-z])__TransparentIdentifier(\w+)"))
+                return true; // we are transforming those to 'thisX' where X is extracted from the name
 
             if (char.IsLetter(name[0]) == false)
                 return false;
