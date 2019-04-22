@@ -665,7 +665,7 @@ namespace Raven.Server.Documents.Queries.Results
         {
             if (field.IsDocumentId)
             {
-                value = document.Id;
+                value = GetIdFromDocument(document);
             }
             else if (field.IsCompositeField == false)
             {
@@ -690,6 +690,33 @@ namespace Raven.Server.Documents.Queries.Results
                 value = component;
             }
             return true;
+        }
+
+        private static string GetIdFromDocument(Document document)
+        {
+            if (document.Id != null)
+            {
+                return document.Id;
+            }
+
+            if (document.Data == null)
+            {
+                return null;
+            }
+
+            if (document.Data.TryGet(Constants.Documents.Metadata.IdProperty, out string docId))
+            {
+                return docId;
+            }
+
+            if (document.TryGetMetadata(out var md) &&
+                (md.TryGet(Constants.Documents.Metadata.Id, out docId) ||
+                 md.TryGet(Constants.Documents.Metadata.IdProperty, out docId)))
+            {
+                return docId;
+            }
+
+            return null;
         }
 
         private static void ThrowOnlyArrayFieldCanHaveMultipleValues(FieldsToFetch.FieldToFetch fieldToFetch)

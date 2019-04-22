@@ -21,5 +21,10 @@ namespace Raven.Server.Commercial
                 [nameof(Keys)] = new DynamicJsonArray(Keys)
             };
         }
+
+        public override string ToString()
+        {
+            return $"Id: {Id}, Name: {Name}, Keys: {string.Join(",", Keys)}";
+        }
     }
 }

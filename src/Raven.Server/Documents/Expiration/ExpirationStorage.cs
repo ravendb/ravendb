@@ -44,7 +44,7 @@ namespace Raven.Server.Documents.Expiration
         private void PutInternal(DocumentsOperationContext context, Slice lowerId, string expirationDate)
         {
             if (DateTime.TryParseExact(expirationDate, DefaultFormat.DateTimeFormatsToRead, CultureInfo.InvariantCulture, DateTimeStyles.RoundtripKind, out DateTime date) == false)
-                throw new InvalidOperationException($"The expiration date format is not valid: '{expirationDate}'. Use the following format: {_database.Time.GetUtcNow():O}");
+                ThrowWrongExpirationDateFormat(lowerId, expirationDate);
 
             // We explicitly enable adding documents that have already been expired, we have to, because if the time lag is short, it is possible
             // that we add a document that expire in 1 second, but by the time we process it, it already expired. The user did nothing wrong here
@@ -56,6 +56,12 @@ namespace Raven.Server.Documents.Expiration
             var tree = context.Transaction.InnerTransaction.ReadTree(DocumentsByExpiration);
             using (Slice.External(context.Allocator, (byte*)&ticksBigEndian, sizeof(long), out Slice ticksSlice))
                 tree.MultiAdd(ticksSlice, lowerId);
+        }
+
+        private void ThrowWrongExpirationDateFormat(Slice lowerId, string expirationDate)
+        {
+            throw new InvalidOperationException(
+                $"The expiration date format for document '{lowerId}' is not valid: '{expirationDate}'. Use the following format: {_database.Time.GetUtcNow():O}");
         }
 
         public Dictionary<Slice, List<(Slice LowerId, LazyStringValue Id)>> GetExpiredDocuments(DocumentsOperationContext context,

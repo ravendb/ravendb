@@ -609,7 +609,6 @@ namespace Raven.Server.Rachis
 
                 TryModifyTopology(ambassador.Key, ambassador.Value.Url, TopologyModification.Voter, out Task _);
 
-                _promotableUpdated.Set();
                 break;
             }
         }
@@ -898,91 +897,100 @@ namespace Raven.Server.Rachis
                 }
                 task = topologyModification.Task;
 
-                using (_engine.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
-                using (context.OpenWriteTransaction())
+                try
                 {
-                    var clusterTopology = _engine.GetTopology(context);
-
-                    //We need to validate that the node doesn't exists before we generate the nodeTag
-                    if (validateNotInTopology && (nodeTag != null && clusterTopology.Contains(nodeTag) || clusterTopology.TryGetNodeTagByUrl(nodeUrl).HasUrl))
+                    using (_engine.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
+                    using (context.OpenWriteTransaction())
                     {
-                        throw new InvalidOperationException($"Was requested to modify the topology for node={nodeTag} " +
-                                                            "with validation that it is not contained by the topology but current topology contains it.");
+                        var clusterTopology = _engine.GetTopology(context);
+
+                        //We need to validate that the node doesn't exists before we generate the nodeTag
+                        if (validateNotInTopology && (nodeTag != null && clusterTopology.Contains(nodeTag) || clusterTopology.TryGetNodeTagByUrl(nodeUrl).HasUrl))
+                        {
+                            throw new InvalidOperationException($"Was requested to modify the topology for node={nodeTag} " +
+                                                                "with validation that it is not contained by the topology but current topology contains it.");
+                        }
+
+                        if (nodeTag == null)
+                        {
+                            nodeTag = GenerateNodeTag(clusterTopology);
+                        }
+
+                        var newVotes = new Dictionary<string, string>(clusterTopology.Members);
+                        newVotes.Remove(nodeTag);
+                        var newPromotables = new Dictionary<string, string>(clusterTopology.Promotables);
+                        newPromotables.Remove(nodeTag);
+                        var newNonVotes = new Dictionary<string, string>(clusterTopology.Watchers);
+                        newNonVotes.Remove(nodeTag);
+
+                        var highestNodeId = newVotes.Keys.Concat(newPromotables.Keys).Concat(newNonVotes.Keys).Concat(new[] { nodeTag }).Max();
+
+                        if (nodeTag == _engine.Tag)
+                            RachisTopologyChangeException.Throw("Cannot modify the topology of the leader node.");
+
+                        switch (modification)
+                        {
+                            case TopologyModification.Voter:
+                                Debug.Assert(nodeUrl != null);
+                                newVotes[nodeTag] = nodeUrl;
+                                break;
+                            case TopologyModification.Promotable:
+                                Debug.Assert(nodeUrl != null);
+                                newPromotables[nodeTag] = nodeUrl;
+                                break;
+                            case TopologyModification.NonVoter:
+                                Debug.Assert(nodeUrl != null);
+                                newNonVotes[nodeTag] = nodeUrl;
+                                break;
+                            case TopologyModification.Remove:
+                                PeersVersion.TryRemove(nodeTag, out _);
+                                if (clusterTopology.Contains(nodeTag) == false)
+                                {
+                                    throw new InvalidOperationException($"Was requested to remove node={nodeTag} from the topology " +
+                                                                        "but it is not contained by the topology.");
+                                }
+                                break;
+                            default:
+                                throw new ArgumentOutOfRangeException(nameof(modification), modification, null);
+                        }
+
+                        clusterTopology = new ClusterTopology(
+                            clusterTopology.TopologyId,
+                            newVotes,
+                            newPromotables,
+                            newNonVotes,
+                            highestNodeId
+                        );
+
+                        var topologyJson = _engine.SetTopology(context, clusterTopology);
+                        var index = _engine.InsertToLeaderLog(context, Term, topologyJson, RachisEntryFlags.Topology);
+
+                        if (modification == TopologyModification.Remove)
+                        {
+                            _engine.GetStateMachine().EnsureNodeRemovalOnDeletion(context, Term, nodeTag);
+                        }
+
+                        context.Transaction.Commit();
+
+                        var tcs = new TaskCompletionSource<(long Index, object Result)>(TaskCreationOptions.RunContinuationsAsynchronously);
+                        _entries[index] = new CommandState
+                        {
+                            TaskCompletionSource = tcs,
+                            CommandIndex = index
+                        };
+
+                        tcs.Task.ContinueWith(_ =>
+                        {
+                            Interlocked.Exchange(ref _topologyModification, null)?.TrySetResult(null);
+                        });
                     }
-
-                    if (nodeTag == null)
-                    {
-                        nodeTag = GenerateNodeTag(clusterTopology);
-                    }
-
-                    var newVotes = new Dictionary<string, string>(clusterTopology.Members);
-                    newVotes.Remove(nodeTag);
-                    var newPromotables = new Dictionary<string, string>(clusterTopology.Promotables);
-                    newPromotables.Remove(nodeTag);
-                    var newNonVotes = new Dictionary<string, string>(clusterTopology.Watchers);
-                    newNonVotes.Remove(nodeTag);
-
-                    var highestNodeId = newVotes.Keys.Concat(newPromotables.Keys).Concat(newNonVotes.Keys).Concat(new[] {nodeTag}).Max();
-
-                    if (nodeTag == _engine.Tag)
-                        RachisTopologyChangeException.Throw("Cannot modify the topology of the leader node.");
-
-                    switch (modification)
-                    {
-                        case TopologyModification.Voter:
-                            Debug.Assert(nodeUrl != null);
-                            newVotes[nodeTag] = nodeUrl;
-                            break;
-                        case TopologyModification.Promotable:
-                            Debug.Assert(nodeUrl != null);
-                            newPromotables[nodeTag] = nodeUrl;
-                            break;
-                        case TopologyModification.NonVoter:
-                            Debug.Assert(nodeUrl != null);
-                            newNonVotes[nodeTag] = nodeUrl;
-                            break;
-                        case TopologyModification.Remove:
-                            PeersVersion.TryRemove(nodeTag, out _);
-                            if (clusterTopology.Contains(nodeTag) == false)
-                            {
-                                throw new InvalidOperationException($"Was requested to remove node={nodeTag} from the topology " +
-                                                                    "but it is not contained by the topology.");
-                            }
-                            break;
-                        default:
-                            throw new ArgumentOutOfRangeException(nameof(modification), modification, null);
-                    }
-
-                    clusterTopology = new ClusterTopology(
-                        clusterTopology.TopologyId,
-                        newVotes,
-                        newPromotables,
-                        newNonVotes,
-                        highestNodeId
-                    );
-
-                    var topologyJson = _engine.SetTopology(context, clusterTopology);
-                    var index = _engine.InsertToLeaderLog(context, Term, topologyJson, RachisEntryFlags.Topology);
-
-                    if (modification == TopologyModification.Remove)
-                    {
-                        _engine.GetStateMachine().EnsureNodeRemovalOnDeletion(context, Term, nodeTag);
-                    }
-
-                    context.Transaction.Commit();
-
-                    var tcs = new TaskCompletionSource<(long Index, object Result)>(TaskCreationOptions.RunContinuationsAsynchronously);
-                    _entries[index] = new CommandState
-                    {
-                        TaskCompletionSource = tcs,
-                        CommandIndex = index
-                    };
-
-                    tcs.Task.ContinueWith(_ =>
-                    {
-                        Interlocked.Exchange(ref _topologyModification, null).TrySetResult(null);
-                    });
                 }
+                catch (Exception e)
+                {
+                    Interlocked.Exchange(ref _topologyModification, null)?.TrySetException(e);
+                    throw;
+                }
+               
                 _hasNewTopology.Raise();
                 _voterResponded.Set();
                 _newEntry.Set();

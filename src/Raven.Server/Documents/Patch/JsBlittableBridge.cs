@@ -277,39 +277,56 @@ namespace Raven.Server.Documents.Patch
 
             bool WriteNumberBasedOnType(BlittableJsonToken type)
             {
-                if (type == BlittableJsonToken.Integer)
-                {
-                    writer.WriteValue((long)d);
-                    return true;
-                }
                 if (type == BlittableJsonToken.LazyNumber)
                 {
                     writer.WriteValue(d);
                     return true;
                 }
+
+                if (type == BlittableJsonToken.Integer)
+                {
+                    if (IsDoubleType())
+                    {
+                        // the previous value was a long and now changed to double
+                        writer.WriteValue(d);
+                    }
+                    else
+                    {
+                        writer.WriteValue((long)d);
+                    }
+
+                    return true;
+                }
+
                 return false;
             }
 
             void GuessNumberType()
             {
-                double roundedNumber = Math.Round(d, 0);
-
-                double digitsAfterDecimalPoint = Math.Abs(roundedNumber - d);
-                if (digitsAfterDecimalPoint < double.Epsilon )
-                {
-                    if (digitsAfterDecimalPoint == 0 && Math.Abs(roundedNumber) <= long.MaxValue)
-                    {
-                        writer.WriteValue((long)d);                        
-                    }
-                    else
-                    {
-                        writer.WriteValue(d);
-                    }                        
-                }
-                else
+                if (IsDoubleType())
                 {
                     writer.WriteValue(d);
                 }
+                else
+                {
+                    writer.WriteValue((long)d);
+                }
+            }
+
+            bool IsDoubleType()
+            {
+                var roundedNumber = Math.Round(d, 0);
+
+                var digitsAfterDecimalPoint = Math.Abs(roundedNumber - d);
+                if (digitsAfterDecimalPoint < double.Epsilon)
+                {
+                    if (digitsAfterDecimalPoint == 0 && Math.Abs(roundedNumber) <= long.MaxValue)
+                        return false;
+
+                    return true;
+                }
+
+                return true;
             }
         }
 

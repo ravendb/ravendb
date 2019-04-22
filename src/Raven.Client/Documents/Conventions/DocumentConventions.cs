@@ -56,6 +56,40 @@ namespace Raven.Client.Documents.Conventions
 
         public readonly BulkInsertConventions BulkInsert;
 
+        public readonly AggressiveCacheConventions AggressiveCache;
+
+        public class AggressiveCacheConventions
+        {
+            private readonly DocumentConventions _conventions;
+            private readonly AggressiveCacheOptions _aggressiveCacheOptions;
+            
+            public AggressiveCacheConventions(DocumentConventions conventions)
+            {
+                _conventions = conventions;
+                _aggressiveCacheOptions = new AggressiveCacheOptions(TimeSpan.FromDays(1), AggressiveCacheMode.TrackChanges);
+            }
+
+            public TimeSpan Duration
+            {
+                get => _aggressiveCacheOptions.Duration;
+                set
+                {
+                    _conventions.AssertNotFrozen();
+                    _aggressiveCacheOptions.Duration = value;
+                }
+            }
+
+            public AggressiveCacheMode Mode
+            {
+                get => _aggressiveCacheOptions.Mode;
+                set
+                {
+                    _conventions.AssertNotFrozen();
+                    _aggressiveCacheOptions.Mode = value;
+                }
+            }
+        }
+
         public class BulkInsertConventions
         {
             private readonly DocumentConventions _conventions;
@@ -131,6 +165,7 @@ namespace Raven.Client.Documents.Conventions
             OperationStatusFetchMode = OperationStatusFetchMode.ChangesApi;
 
             AddIdFieldToDynamicObjects = true;
+            AggressiveCache = new AggressiveCacheConventions(this);
         }
 
         private bool _frozen;

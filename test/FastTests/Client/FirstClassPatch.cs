@@ -1,8 +1,11 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Linq;
 using System.Threading.Tasks;
+using FastTests.Server.Basic.Entities;
 using Raven.Client.Documents.Operations.Attachments;
 using Raven.Client.Documents.Session;
+using Raven.Tests.Core.Utils.Entities;
 using Xunit;
 
 namespace FastTests.Client
@@ -892,7 +895,46 @@ namespace FastTests.Client
 
                     Assert.Equal("picture", loaded.Attachments[0].Name);
                     Assert.Equal(34, loaded.Attachments[0].Size);
+                }
+            }
+        }
 
+        [Fact]
+        public void PatchNullField_ExpectFieldSetToNull()
+        {
+            using (var store = GetDocumentStore())
+            {
+                string entityId;
+                using (var session = store.OpenSession())
+                {
+                    var user = new Order
+                    {
+                        ShipTo = new Address
+                        {
+                            Street = Guid.NewGuid().ToString()
+                        }
+                    };
+                    session.Store(user);
+                    session.SaveChanges();
+                    entityId = user.Id;
+                }
+
+                using (var session = store.OpenSession())
+                {
+                    var order = session.Query<Order>().First();
+                    Assert.NotNull(order.ShipTo);
+                }
+
+                using (var session = store.OpenSession())
+                {
+                    session.Advanced.Patch<Order, Address>(entityId, x => x.ShipTo, null);
+                    session.SaveChanges();
+                }
+
+                using (var session = store.OpenSession())
+                {
+                    var order = session.Query<Order>().First();
+                    Assert.Null(order.ShipTo);
                 }
             }
         }
