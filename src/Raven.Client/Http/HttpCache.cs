@@ -4,6 +4,7 @@ using System.Diagnostics;
 using System.Threading;
 using System.Threading.Tasks;
 using Raven.Client.Util;
+using Sparrow;
 using Sparrow.Json;
 using Sparrow.Logging;
 using Sparrow.LowMemory;
@@ -204,13 +205,14 @@ namespace Raven.Client.Http
                 Debug.Assert(_isFreeSpaceRunning); 
 
                 if (Logger.IsInfoEnabled)
-                    Logger.Info($"Started to clear the http cache. Items: {_items.Count}");
+                    Logger.Info($"Started to clear the http cache. Items: {_items.Count:#,#;;0}");
 
                 // Using the current total size will always ensure that under low memory conditions
                 // we are making our best effort to actually get some memory back to the system in
                 // the worst of conditions.
                 var sizeToClear = _totalSize / 2;
 
+                var numberOfClearedItems = 0;
                 var sizeCleared = 0L;
                 var start = SystemTime.UtcNow;
                 foreach (var item in _items)
@@ -240,9 +242,15 @@ namespace Raven.Client.Http
                     // a value from the cache. Not enough for us to worry
                     // about.
 
+                    numberOfClearedItems++;
                     value.ReleaseRef();
                     sizeCleared += value.Size;
                 }
+
+                if (Logger.IsInfoEnabled)
+                    Logger.Info($"Cleared {numberOfClearedItems:#,#;;0} items from the http cache, " +
+                                $"size: {new Sparrow.Size(sizeCleared, SizeUnit.Bytes)} " +
+                                $"Total items: {_items.Count:#,#;;0}");
             }
             finally
             {
