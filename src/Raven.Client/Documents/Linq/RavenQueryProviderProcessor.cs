@@ -195,7 +195,7 @@ namespace Raven.Client.Documents.Linq
                             VisitMethodCall((MethodCallExpression)expression);
                         }
                         else if (expression is LambdaExpression lambdaExpression)
-                        {                           
+                        {
                             var body = lambdaExpression.Body;
                             if (body.NodeType == ExpressionType.Constant && ((ConstantExpression)body).Value is bool)
                             {
@@ -205,7 +205,7 @@ namespace Raven.Client.Documents.Linq
                             {
                                 throw new NotSupportedException("Invocation expressions such as Where(x => SomeFunction(x)) are not supported in RavenDB queries");
                             }
-                            VisitExpression(body);                           
+                            VisitExpression(body);
                         }
                         break;
                 }
@@ -582,12 +582,12 @@ namespace Raven.Client.Documents.Linq
             string propertyName = null;
             if (IndexName == null && _collectionName != null)
             {
-                propertyName = QueryGenerator.Conventions.FindPropertyNameForDynamicIndex(typeof(T), IndexName, CurrentPath, 
+                propertyName = QueryGenerator.Conventions.FindPropertyNameForDynamicIndex(typeof(T), IndexName, CurrentPath,
                     selectPath);
             }
-            else 
+            else
             {
-                if (_insideSelect > 0 && QueryGenerator.Conventions.FindProjectedPropertyNameForIndex != null)                    
+                if (_insideSelect > 0 && QueryGenerator.Conventions.FindProjectedPropertyNameForIndex != null)
                 {
                     propertyName = QueryGenerator.Conventions.FindProjectedPropertyNameForIndex(typeof(T), IndexName, CurrentPath,
                         selectPath);
@@ -674,7 +674,7 @@ namespace Raven.Client.Documents.Linq
                     case ExpressionType.Parameter:
                         fieldInfo = new ExpressionInfo(_currentPath.EndsWith("[].")
                             ? _currentPath.Substring(0, _currentPath.Length - 3)
-                            : _currentPath.Substring(0, _currentPath.Length - 1), 
+                            : _currentPath.Substring(0, _currentPath.Length - 1),
                             expression.Object.Type, false);
                         constant = expression.Arguments[0];
                         break;
@@ -1322,7 +1322,7 @@ The recommended method is to use full text search (mark the field as Analyzed an
                 var expressionInfo = GetMember(expression.Arguments[1]);
                 if (LinqPathProvider.GetValueFromExpressionWithoutConversion(expression.Arguments[2], out value) == false)
                 {
-                    throw new InvalidOperationException("Could not extract searchTemrs value from " + expression);
+                    throw new InvalidOperationException("Could not extract searchTerms value from " + expression);
                 }
                 var searchTerms = (string)value;
                 if (LinqPathProvider.GetValueFromExpressionWithoutConversion(expression.Arguments[3], out value) == false)
@@ -1338,10 +1338,10 @@ The recommended method is to use full text search (mark the field as Analyzed an
 
                 if (LinqPathProvider.GetValueFromExpressionWithoutConversion(expression.Arguments[5], out value) == false)
                 {
-                    throw new InvalidOperationException("Could not extract termsSearchOperator from " + expression);
+                    throw new InvalidOperationException("Could not extract operator from " + expression);
                 }
 
-                var termsSearchOperator = (SearchOperator)value;
+                var @operator = (SearchOperator)value;
 
                 if (_chainedWhere && options.HasFlag(SearchOptions.And))
                 {
@@ -1355,7 +1355,7 @@ The recommended method is to use full text search (mark the field as Analyzed an
                     _documentQuery.NegateNext();
                 }
 
-                _documentQuery.Search(expressionInfo.Path, searchTerms, termsSearchOperator);
+                _documentQuery.Search(expressionInfo.Path, searchTerms, @operator);
                 if (options.HasFlag(SearchOptions.Not))
                 {
                     _documentQuery.CloseSubclause();
@@ -1366,7 +1366,7 @@ The recommended method is to use full text search (mark the field as Analyzed an
                 if (options.HasFlag(SearchOptions.And))
                 {
                     _chainedWhere = true;
-                }                
+                }
             }
 
             if (expressions.Count > 1)
@@ -1496,7 +1496,7 @@ The recommended method is to use full text search (mark the field as Analyzed an
                     }
 
                     //set the _ofType variable only if OfType call precedes the projection
-                    if (_isSelectArg && expression.Type.GetTypeInfo().IsGenericType) 
+                    if (_isSelectArg && expression.Type.GetTypeInfo().IsGenericType)
                     {
                         _ofType = expression.Type.GetGenericArguments()[0];
                     }
@@ -1766,7 +1766,7 @@ The recommended method is to use full text search (mark the field as Analyzed an
         {
             if (lambdaExpression.Body is MemberExpression memberExpression)
             {
-                if (JavascriptConversionExtensions.GetInnermostExpression(memberExpression, out string path) 
+                if (JavascriptConversionExtensions.GetInnermostExpression(memberExpression, out string path)
                         is MethodCallExpression methodCallExpression &&
                     CheckForLoad(methodCallExpression))
                 {
@@ -1790,8 +1790,8 @@ The recommended method is to use full text search (mark the field as Analyzed an
             {
                 if (!(lambdaExpression.Body is MethodCallExpression methodCall) ||
                     CheckForLoad(methodCall) == false)
-                        return;
-                
+                    return;
+
                 mce = methodCall;
             }
 
@@ -1804,7 +1804,7 @@ The recommended method is to use full text search (mark the field as Analyzed an
             }
 
             string arg;
-            if (mce.Arguments[0] is ConstantExpression constantExpression && 
+            if (mce.Arguments[0] is ConstantExpression constantExpression &&
                 constantExpression.Type == typeof(string))
             {
                 arg = _documentQuery.ProjectionParameter(constantExpression.Value);
@@ -2144,7 +2144,7 @@ The recommended method is to use full text search (mark the field as Analyzed an
 
                         if (newExpression.Arguments[index] is MethodCallExpression mce && LinqPathProvider.IsCounterCall(mce))
                         {
-                            HandleSelectCounter(mce, lambdaExpression, newExpression.Members[index]);                            
+                            HandleSelectCounter(mce, lambdaExpression, newExpression.Members[index]);
                             continue;
                         }
 
@@ -2229,7 +2229,7 @@ The recommended method is to use full text search (mark the field as Analyzed an
                     var expressionInfo = GetMember(body);
                     var path = expressionInfo.Path;
                     string alias = null;
-                                      
+
                     if (expressionInfo.Args != null)
                     {
                         if (expressionInfo.Args[0] == lambdaExpression?.Parameters[0].Name)
@@ -2478,8 +2478,8 @@ The recommended method is to use full text search (mark the field as Analyzed an
             string alias;
             if (js == string.Empty)
             {
-                alias = loadSupport.IsEnumerable 
-                    ? $"{name}[]" 
+                alias = loadSupport.IsEnumerable
+                    ? $"{name}[]"
                     : name;
 
                 AddLoadToken(arg, alias);
@@ -2675,7 +2675,7 @@ The recommended method is to use full text search (mark the field as Analyzed an
 
                 extensions[extensions.Length - 1] = new JavascriptConversionExtensions.IdentityPropertySupport(_documentQuery.Conventions);
             }
-            
+
             return expression.CompileToJavascript(new JavascriptCompilationOptions(extensions)
             {
                 CustomMetadataProvider = new PropertyNameConventionJSMetadataProvider(_conventions)
