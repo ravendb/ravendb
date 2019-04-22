@@ -22,16 +22,16 @@ namespace Tryouts
 {
     public static class Program
     {
-        public static async Task Main(string[] args)
+        public static void Main(string[] args)
         {
-            
-                using (var test = new SlowTests.Authentication.AuthenticationClusterTests())
+            for (int i = 0; i < 1000; i++)
+            {
+                Console.Write(".");
+                using (var test = new RavenDB_13195())
                 {
-                    await test.CanReplaceClusterCertWithExtensionPoint();
+                    test.CanDeleteTableWithLargeValues();
                 }
-
-                
-            
+            }
         }
     }
 }
