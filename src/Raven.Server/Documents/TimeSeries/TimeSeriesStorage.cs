@@ -155,9 +155,9 @@ namespace Raven.Server.Documents.TimeSeries
                         if (cur < _from)
                             continue;
 
-                        SetTimestampTag();
+                        var tag = SetTimestampTag();
 
-                        yield return (cur, _values, _tag);
+                        yield return (cur, _values, tag);
                     }
 
                     if (NextSegment(out baselineMilliseconds, out readOnlySegment) == false)
@@ -166,11 +166,15 @@ namespace Raven.Server.Documents.TimeSeries
                 }
             }
 
-            private void SetTimestampTag()
+            private LazyStringValue SetTimestampTag()
             {
+                if(_tagPointer.Pointer == null)
+                {
+                    return null;
+                }
                 var lazyStringLen = BlittableJsonReaderBase.ReadVariableSizeInt(_tagPointer.Pointer, 0, out var offset);
-
                 _tag.Renew(null, _tagPointer.Pointer + offset, lazyStringLen);
+                return _tag;
             }
 
             private bool NextSegment(out long baselineMilliseconds, out TimeSeriesValuesSegment readOnlySegment)
@@ -272,6 +276,7 @@ namespace Raven.Server.Documents.TimeSeries
                     // this is the simplest scenario, we can just add it.
                     Memory.Copy(buffer.Ptr, segmentReadOnlyBuffer, size);
                     var newSegment = new TimeSeriesValuesSegment(buffer.Ptr, MaxSegmentSize);
+
                     // checking if we run out of space here, in which can we'll create new segment
                     if (newSegment.Append(context.Allocator, (int)deltaInMs, values, tagSlice.AsSpan()))
                     {
@@ -362,6 +367,8 @@ namespace Raven.Server.Documents.TimeSeries
                 var tagSpan = tagSlice.AsSpan();
                 newSegment.Append(context.Allocator, deltaFromStart, valuesCopy, tagSpan);
 
+                EnsureSegmentSize(newSegment.NumberOfBytes);
+
                 using (table.Allocate(out TableValueBuilder tvb))
                 {
                     tvb.Add(timeSeriesKeySlice);
@@ -379,6 +386,8 @@ namespace Raven.Server.Documents.TimeSeries
 
             void AppendExistingSegment(byte* key, int keySize, Slice cv, byte* segmentBuffer, int segmentSize, Slice collectionSlice)
             {
+                EnsureSegmentSize(segmentSize);
+
                 // the key came from the existing value, have to clone it
                 using (Slice.From(context.Allocator, key, keySize, out var keySlice))
                 using (table.Allocate(out TableValueBuilder tvb))
@@ -415,6 +424,12 @@ namespace Raven.Server.Documents.TimeSeries
                     throw new InvalidOperationException($"After renewal of segment, was unable to append a new value. Shouldn't happen. Doc: {documentId}, name: {name}");
                 return changeVector;
             }
+        }
+
+        private static void EnsureSegmentSize(int size)
+        {
+            if (size > MaxSegmentSize)
+                throw new ArgumentOutOfRangeException("Attempted to write a time series segment that is larger (" + size + ") than the maximum size allowed.");
         }
 
         private static ByteStringContext<ByteStringMemoryCache>.ExternalScope CreateTimeSeriesKeySlice(DocumentsOperationContext context, ByteString buffer,

@@ -55,7 +55,7 @@ namespace Raven.Server.Documents.TimeSeries
 
         private void InvalidCapacity()
         {
-            throw new ArgumentOutOfRangeException("Maximum capacity for segment is 2KB, but as: " + _capacity);
+            throw new ArgumentOutOfRangeException("Maximum capacity for segment is 2KB, but was: " + _capacity);
         }
 
         private int DataStart => sizeof(SegmentHeader) + sizeof(StatefulTimeStampValue) * Header->NumberOfValues;
@@ -247,7 +247,7 @@ namespace Raven.Server.Documents.TimeSeries
         }
 
         [Pure]
-        public BitsBuffer GetBitsBuffer() => new BitsBuffer(_buffer + DataStart, _capacity - DataStart);
+        public BitsBuffer GetBitsBuffer() => new BitsBuffer(_buffer + DataStart, _capacity - DataStart - sizeof(BitsBufferHeader));
 
         private static void AddTimeStamp(int deltaFromStart, ref BitsBuffer bitsBuffer, SegmentHeader* tempHeader)
         {
