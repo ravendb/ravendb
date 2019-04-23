@@ -4,6 +4,7 @@ using System.Linq;
 using System.Security.Cryptography.X509Certificates;
 using System.Text;
 using Raven.Client;
+using Raven.Client.ServerWide.Operations.Certificates;
 using Raven.Server.Json;
 using Raven.Server.ServerWide;
 using Raven.Server.ServerWide.Context;
@@ -112,10 +113,15 @@ namespace Raven.Server.Storage.Schema.Updates.Server
                         using (Slice.From(step.WriteTx.Allocator, def.PublicKeyPinningHash, out Slice hashSlice))
                         using (Slice.From(step.WriteTx.Allocator, cert.ItemName, out Slice oldKeySlice)) // includes the 'certificates/' prefix
                         using (Slice.From(step.WriteTx.Allocator, def.Thumbprint, out Slice newKeySlice))
-                        using (var newCert = context.ReadObject(def.ToJson(), "certificate/new/schema"))
                         {
-                            ClusterStateMachine.UpdateCertificate(certsTable, newKeySlice, hashSlice, newCert);
-                            itemsTable.DeleteByKey(oldKeySlice);
+                            // in this update we trim 'certificates/' prefix from key name, CollectionPrimaryKey and CollectionSecondaryKeys
+                            DropCertificatePrefixFromDefinition(def, out _);
+                            
+                            using (var newCert = context.ReadObject(def.ToJson(), "certificate/new/schema"))
+                            {
+                                ClusterStateMachine.UpdateCertificate(certsTable, newKeySlice, hashSlice, newCert);
+                                itemsTable.DeleteByKey(oldKeySlice);
+                            }
                         }
                     }
                 }
@@ -162,7 +168,7 @@ namespace Raven.Server.Storage.Schema.Updates.Server
             }
         }
 
-        public IEnumerable<(string ItemName, BlittableJsonReaderObject Value)> ItemsStartingWith(Transaction tx, JsonOperationContext context, ByteStringContext allocator, string prefix, int start, int take)
+        private IEnumerable<(string ItemName, BlittableJsonReaderObject Value)> ItemsStartingWith(Transaction tx, JsonOperationContext context, ByteStringContext allocator, string prefix, int start, int take)
         {
             var items = tx.OpenTable(ItemsSchema, Items);
 
@@ -187,6 +193,39 @@ namespace Raven.Server.Storage.Schema.Updates.Server
 
             Transaction.DebugDisposeReaderAfterTransaction(tx, doc);
             return (key, doc);
+        }
+        
+        public static void DropCertificatePrefixFromDefinition(CertificateDefinition definition, out bool touched)
+        {
+            touched = false;
+            
+            if (definition.CollectionSecondaryKeys != null)
+            {
+                var secondaryKeys = new List<string>();
+                foreach (var secondaryKey in definition.CollectionSecondaryKeys)
+                {
+                    if (secondaryKey.StartsWith(Constants.Certificates.Prefix))
+                    {
+                        touched = true;
+                        secondaryKeys.Add(secondaryKey.Substring(Constants.Certificates.Prefix.Length));
+                    }
+                    else
+                    {
+                        secondaryKeys.Add(secondaryKey);
+                    }
+
+                    if (touched)
+                    {
+                        definition.CollectionSecondaryKeys = secondaryKeys;
+                    }
+                }
+            }
+            
+            if (definition.CollectionPrimaryKey != null && definition.CollectionPrimaryKey.StartsWith(Constants.Certificates.Prefix))
+            {
+                touched = true;
+                definition.CollectionPrimaryKey = definition.CollectionPrimaryKey.Substring(Constants.Certificates.Prefix.Length);
+            }
         }
     }
 }
