@@ -61,7 +61,7 @@ namespace Raven.Client.Documents.Conventions
             private readonly DocumentConventions _conventions;
             private readonly AggressiveCacheOptions _aggressiveCacheOptions;
             
-            public AggressiveCacheConventions(DocumentConventions conventions)
+            internal AggressiveCacheConventions(DocumentConventions conventions)
             {
                 _conventions = conventions;
                 _aggressiveCacheOptions = new AggressiveCacheOptions(TimeSpan.FromDays(1), AggressiveCacheMode.TrackChanges);
