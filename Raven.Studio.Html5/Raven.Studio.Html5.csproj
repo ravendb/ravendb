@@ -1,5 +1,6 @@
 ﻿<?xml version="1.0" encoding="utf-8"?>
 <Project ToolsVersion="12.0" DefaultTargets="Build" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <Import Project="..\packages\MSBuild.Microsoft.VisualStudio.Web.targets.14.0.0.3\build\MSBuild.Microsoft.VisualStudio.Web.targets.props" Condition="Exists('..\packages\MSBuild.Microsoft.VisualStudio.Web.targets.14.0.0.3\build\MSBuild.Microsoft.VisualStudio.Web.targets.props')" />
   <Import Project="..\packages\MSBuild.Npm.0.5.1\build\MSBuild.Npm.props" Condition="Exists('..\packages\MSBuild.Npm.0.5.1\build\MSBuild.Npm.props')" />
   <Import Project="..\packages\MSBuild.Gulp.0.5.1\build\MSBuild.Gulp.props" Condition="Exists('..\packages\MSBuild.Gulp.0.5.1\build\MSBuild.Gulp.props')" />
   <Import Project="..\packages\MSBuild.Node.0.5.1\build\MSBuild.Node.props" Condition="Exists('..\packages\MSBuild.Node.0.5.1\build\MSBuild.Node.props')" />
@@ -24,6 +25,7 @@
     <UseGlobalApplicationHostFile />
     <NuGetPackageImportStamp>
     </NuGetPackageImportStamp>
+    <Use64BitIISExpress />
   </PropertyGroup>
   <PropertyGroup>
     <GulpCleanTask>clean</GulpCleanTask>
@@ -1215,6 +1217,7 @@
     <Error Condition="!Exists('..\packages\MSBuild.Gulp.0.5.1\build\MSBuild.Gulp.targets')" Text="$([System.String]::Format('$(ErrorText)', '..\packages\MSBuild.Gulp.0.5.1\build\MSBuild.Gulp.targets'))" />
     <Error Condition="!Exists('..\packages\MSBuild.Npm.0.5.1\build\MSBuild.Npm.props')" Text="$([System.String]::Format('$(ErrorText)', '..\packages\MSBuild.Npm.0.5.1\build\MSBuild.Npm.props'))" />
     <Error Condition="!Exists('..\packages\MSBuild.Npm.0.5.1\build\MSBuild.Npm.targets')" Text="$([System.String]::Format('$(ErrorText)', '..\packages\MSBuild.Npm.0.5.1\build\MSBuild.Npm.targets'))" />
+    <Error Condition="!Exists('..\packages\MSBuild.Microsoft.VisualStudio.Web.targets.14.0.0.3\build\MSBuild.Microsoft.VisualStudio.Web.targets.props')" Text="$([System.String]::Format('$(ErrorText)', '..\packages\MSBuild.Microsoft.VisualStudio.Web.targets.14.0.0.3\build\MSBuild.Microsoft.VisualStudio.Web.targets.props'))" />
   </Target>
   <Import Project="..\packages\MSBuild.Node.0.5.1\build\MSBuild.Node.targets" Condition="Exists('..\packages\MSBuild.Node.0.5.1\build\MSBuild.Node.targets')" />
   <Import Project="..\packages\MSBuild.Gulp.0.5.1\build\MSBuild.Gulp.targets" Condition="Exists('..\packages\MSBuild.Gulp.0.5.1\build\MSBuild.Gulp.targets')" />
