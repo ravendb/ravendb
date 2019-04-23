@@ -204,7 +204,7 @@ namespace Raven.Client.Documents.Indexes
             if (Regex.IsMatch(name, @"<>([a-z])__TransparentIdentifier(\w+)"))
                 return true; // we are transforming those to 'thisX' where X is extracted from the name
 
-            if (char.IsLetter(name[0]) == false)
+            if (char.IsLetter(name[0]) == false && name[0] != '_')
                 return false;
 
             for (int i = 1; i < name.Length; i++)
