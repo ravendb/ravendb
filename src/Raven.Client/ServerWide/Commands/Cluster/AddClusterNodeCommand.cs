@@ -1,10 +1,11 @@
-﻿using System.Net.Http;
+﻿using System;
+using System.Net.Http;
 using Raven.Client.Http;
 using Sparrow.Json;
 
 namespace Raven.Client.ServerWide.Commands.Cluster
 {
-    public class AddClusterNodeCommand : RavenCommand
+    internal class AddClusterNodeCommand : RavenCommand
     {
         private readonly string _url;
         private readonly string _tag;
@@ -21,7 +22,7 @@ namespace Raven.Client.ServerWide.Commands.Cluster
 
         public override HttpRequestMessage CreateRequest(JsonOperationContext ctx, ServerNode node, out string url)
         {
-            url = $"{node.Url}/admin/cluster/node?url={_url}&watcher={_watcher}";
+            url = $"{node.Url}/admin/cluster/node?url={Uri.EscapeDataString(_url)}&watcher={_watcher}";
             if (string.IsNullOrEmpty(_tag) == false)
             {
                 url += $"&tag={_tag}";
