@@ -859,7 +859,28 @@ namespace Raven.Client.Documents
                                                    SearchOptions options = SearchOptions.Guess,
                                                    SearchOperator @operator = SearchOperator.Or)
         {
-            var currentMethod = typeof(LinqExtensions).GetMethod(nameof(Search));
+            return Search(self, fieldSelector, searchTerms, boost: boost, options: options, @operator: SearchOperator.Or);
+        }
+
+        /// <summary>        
+        /// Perform a search for documents which fields that match the searchTerms.
+        /// If there is more than a single term, each of them will be checked independently.        
+        /// </summary>
+        /// <typeparam name="T">The type of element of self</typeparam>
+        /// <param name="self">The <see cref="IQueryable{T}"/> to search on</param>
+        /// <param name="fieldSelector">Function returning the field to search on</param>
+        /// <param name="searchTerms">Field terms to search for, separated with whitespaces</param>
+        /// <param name="boost">Boost factor for sorting purposes</param>
+        /// <param name="options">Logical operator to use in relation to the previous filtering statement.</param>
+        /// <param name="operator">Determines the logical operator between all of the terms received in searchTerms parameter</param>
+        public static IRavenQueryable<T> Search<T>(this IQueryable<T> self,
+            Expression<Func<T, object>> fieldSelector,
+            string searchTerms,
+            decimal boost,
+            SearchOptions options,
+            SearchOperator @operator)
+        {
+            var currentMethod = (MethodInfo)MethodBase.GetCurrentMethod();
 
             currentMethod = ConvertMethodIfNecessary(currentMethod, typeof(T));
             var expression = ConvertExpressionIfNecessary(self);

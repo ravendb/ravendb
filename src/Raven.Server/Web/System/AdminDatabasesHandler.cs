@@ -796,6 +796,52 @@ namespace Raven.Server.Web.System
                 var json = await context.ReadForMemoryAsync(RequestBodyStream(), "databases/toggle");
                 var parameters = JsonDeserializationServer.Parameters.DisableDatabaseToggleParameters(json);
 
+                var resultList = new List<DynamicJsonValue>();
+
+                foreach (var name in parameters.DatabaseNames)
+                {
+                    DatabaseRecord databaseRecord;
+                    using (context.OpenReadTransaction())
+                        databaseRecord = ServerStore.Cluster.ReadDatabase(context, name);
+
+                    if (databaseRecord == null)
+                    {
+                        resultList.Add(new DynamicJsonValue
+                        {
+                            ["Name"] = name,
+                            ["Success"] = false,
+                            ["Reason"] = "database not found"
+                        });
+                        continue;
+                    }
+
+                    if (databaseRecord.Disabled == disable)
+                    {
+                        var state = disable ? "disabled" : "enabled";
+                        resultList.Add(new DynamicJsonValue
+                        {
+                            ["Name"] = name,
+                            ["Success"] = true, //even if we have nothing to do, no reason to return failure status
+                            ["Disabled"] = disable,
+                            ["Reason"] = $"Database already {state}"
+                        });
+                        continue;
+                    }
+
+                    databaseRecord.Disabled = disable;
+
+                    var (index, _) = await ServerStore.WriteDatabaseRecordAsync(name, databaseRecord, null);
+                    await ServerStore.Cluster.WaitForIndexNotification(index);
+
+                    resultList.Add(new DynamicJsonValue
+                    {
+                        ["Name"] = name,
+                        ["Success"] = true,
+                        ["Disabled"] = disable,
+                        ["Reason"] = $"Database state={databaseRecord.Disabled} was propagated on the cluster"
+                    });
+                }
+
                 using (var writer = new BlittableJsonTextWriter(context, ResponseBodyStream()))
                 {
                     writer.WriteStartObject();
@@ -803,52 +849,13 @@ namespace Raven.Server.Web.System
 
                     writer.WriteStartArray();
                     var first = true;
-                    foreach (var name in parameters.DatabaseNames)
+                    foreach (var result in resultList)
                     {
                         if (first == false)
                             writer.WriteComma();
                         first = false;
 
-                        DatabaseRecord databaseRecord;
-                        using (context.OpenReadTransaction())
-                            databaseRecord = ServerStore.Cluster.ReadDatabase(context, name);
-
-                        if (databaseRecord == null)
-                        {
-                            context.Write(writer, new DynamicJsonValue
-                            {
-                                ["Name"] = name,
-                                ["Success"] = false,
-                                ["Reason"] = "database not found"
-                            });
-                            continue;
-                        }
-
-                        if (databaseRecord.Disabled == disable)
-                        {
-                            var state = disable ? "disabled" : "enabled";
-                            context.Write(writer, new DynamicJsonValue
-                            {
-                                ["Name"] = name,
-                                ["Success"] = true, //even if we have nothing to do, no reason to return failure status
-                                ["Disabled"] = disable,
-                                ["Reason"] = $"Database already {state}"
-                            });
-                            continue;
-                        }
-
-                        databaseRecord.Disabled = disable;
-
-                        var (index, _) = await ServerStore.WriteDatabaseRecordAsync(name, databaseRecord, null);
-                        await ServerStore.Cluster.WaitForIndexNotification(index);
-
-                        context.Write(writer, new DynamicJsonValue
-                        {
-                            ["Name"] = name,
-                            ["Success"] = true,
-                            ["Disabled"] = disable,
-                            ["Reason"] = $"Database state={databaseRecord.Disabled} was propagated on the cluster"
-                        });
+                        context.Write(writer, result);
                     }
 
                     writer.WriteEndArray();

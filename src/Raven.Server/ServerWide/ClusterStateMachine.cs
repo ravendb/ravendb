@@ -1345,18 +1345,9 @@ namespace Raven.Server.ServerWide
             context.Transaction.InnerTransaction.LowLevelTransaction.OnDispose += transaction =>
             {
                 if (transaction is LowLevelTransaction llt && llt.Committed)
-                    TaskExecutor.Execute(_ =>
                     {
-                        try
-                        {
-                            ValueChanged?.Invoke(this, (index, type));
-                            _rachisLogIndexNotifications.NotifyListenersAbout(index, null);
+                    ExecuteAsyncTask(index, () => ValueChanged?.Invoke(this, (index, type)));
                         }
-                        catch (Exception e)
-                        {
-                            _rachisLogIndexNotifications.NotifyListenersAbout(index, e);
-                        }
-                    }, null);
             };
         }
 
@@ -1365,19 +1356,35 @@ namespace Raven.Server.ServerWide
             context.Transaction.InnerTransaction.LowLevelTransaction.OnDispose += transaction =>
             {
                 if (transaction is LowLevelTransaction llt && llt.Committed)
+                {
+                    ExecuteAsyncTask(index, () => DatabaseChanged?.Invoke(this, (databaseName, index, type, change)));
+                }
+            };
+        }
+
+        private void ExecuteAsyncTask(long index, Action action)
+        {
+            // we do this under the write tx lock before we update the last applied index
+            _rachisLogIndexNotifications.AddTask(index);
+
                     TaskExecutor.Execute(_ =>
                     {
+                Exception error = null;
+
                         try
                         {
-                            DatabaseChanged?.Invoke(this, (databaseName, index, type, change));
-                            _rachisLogIndexNotifications.NotifyListenersAbout(index, null);
+                    action();
                         }
                         catch (Exception e)
                         {
-                            _rachisLogIndexNotifications.NotifyListenersAbout(index, e);
+                    error = e;
                         }
+                finally
+                {
+                    _rachisLogIndexNotifications.NotifyListenersAbout(index, error);
+                    _rachisLogIndexNotifications.SetTaskCompleted(index, error);
+                }
                     }, null);
-            };
         }
 
         private void UpdateDatabase(TransactionOperationContext context, string type, BlittableJsonReaderObject cmd, long index, Leader leader, ServerStore serverStore)
@@ -1537,6 +1544,8 @@ namespace Raven.Server.ServerWide
         public override void Initialize(RachisConsensus parent, TransactionOperationContext context)
         {
             base.Initialize(parent, context);
+            _rachisLogIndexNotifications.Log = _parent.Log;
+
             ItemsSchema.Create(context.Transaction.InnerTransaction, Items, 32);
             CompareExchangeSchema.Create(context.Transaction.InnerTransaction, CompareExchange, 32);
             CompareExchangeTombstoneSchema.Create(context.Transaction.InnerTransaction, CompareExchangeTombstones, 32);
@@ -1741,17 +1750,19 @@ namespace Raven.Server.ServerWide
             context.Transaction.InnerTransaction.LowLevelTransaction.OnDispose += transaction =>
             {
                 if (transaction is LowLevelTransaction llt && llt.Committed)
-                    TaskExecutor.Execute(_ =>
                     {
+                    _rachisLogIndexNotifications.AddTask(index);
+
                         try
                         {
                             _rachisLogIndexNotifications.NotifyListenersAbout(index, null);
+                        _rachisLogIndexNotifications.SetTaskCompleted(index, null);
                         }
-                        catch (Exception e)
+                    catch (OperationCanceledException e)
                         {
-                            _rachisLogIndexNotifications.NotifyListenersAbout(index, e);
+                        _rachisLogIndexNotifications.SetTaskCompleted(index, e);
                         }
-                    }, null);
+                }
             };
         }
 
@@ -2428,20 +2439,7 @@ namespace Raven.Server.ServerWide
         {
             return new ClusterValidator();
         }
-
-        public static bool InterlockedExchangeMax(ref long location, long newValue)
-        {
-            long initialValue;
-            do
-            {
-                initialValue = location;
-                if (initialValue >= newValue)
-                    return false;
             }
-            while (Interlocked.CompareExchange(ref location, newValue, initialValue) != initialValue);
-            return true;
-        }
-    }
 
     public class RachisLogIndexNotifications
     {
@@ -2449,8 +2447,10 @@ namespace Raven.Server.ServerWide
         private readonly AsyncManualResetEvent _notifiedListeners;
         private readonly ConcurrentQueue<ErrorHolder> _errors = new ConcurrentQueue<ErrorHolder>();
         private int _numberOfErrors;
+        private readonly ConcurrentDictionary<long, TaskCompletionSource<object>> _tasksDictionary = new ConcurrentDictionary<long, TaskCompletionSource<object>>();
 
         public readonly Queue<RecentLogIndexNotification> RecentNotifications = new Queue<RecentLogIndexNotification>();
+        internal Logger Log;
 
         private class ErrorHolder
         {
@@ -2499,26 +2499,53 @@ namespace Raven.Server.ServerWide
                     var copy = Interlocked.Read(ref LastModifiedIndex);
                     if (index <= copy)
                         break;
+
                     ThrowTimeoutException(timeout, index, copy);
                 }
             }
 
-            if (_errors.IsEmpty)
-                return;
-
+            if (_tasksDictionary.TryGetValue(index, out var tcs) == false)
+            {
+                // the task has already completed
+                // let's check if we had errors in it
             foreach (var error in _errors)
             {
                 if (error.Index == index)
                     error.Exception.Throw();// rethrow
             }
+                return;
         }
 
-        private void ThrowTimeoutException(TimeSpan value, long index, long lastModifiedIndex)
+            var task = tcs.Task;
+
+            if (task.IsCompleted)
+                return;
+
+            var result = await Task.WhenAny(task, TimeoutManager.WaitFor(timeout));
+
+            if (result.IsFaulted)
+                throw result.Exception;
+
+            if (result == task)
+                return;
+
+            ThrowTimeoutException(timeout, index, LastModifiedIndex, isExecution: true);
+        }
+
+        private void ThrowTimeoutException(TimeSpan value, long index, long lastModifiedIndex, bool isExecution = false)
         {
-            throw new TimeoutException($"Waited for {value} but didn't get index notification for {index}. " +
+            var openingString = isExecution
+                ? $"Waited for {value} for task with index {index} to complete. "
+                : $"Waited for {value} but didn't get an index notification for {index}. ";
+
+            var closingString = isExecution
+                ? string.Empty
+                : Environment.NewLine +
+                  PrintLastNotifications();
+
+            throw new TimeoutException(openingString +
                                        $"Last commit index is: {lastModifiedIndex}. " +
-                                       $"Number of errors is: {_numberOfErrors}." + Environment.NewLine +
-                                       PrintLastNotifications());
+                                       $"Number of errors is: {_numberOfErrors}." + closingString);
         }
 
         private string PrintLastNotifications()
@@ -2563,14 +2590,61 @@ namespace Raven.Server.ServerWide
                     Index = index,
                     Exception = ExceptionDispatchInfo.Capture(e)
                 });
+
                 if (Interlocked.Increment(ref _numberOfErrors) > 25)
                 {
                     _errors.TryDequeue(out _);
                     Interlocked.Decrement(ref _numberOfErrors);
                 }
             }
-            ClusterStateMachine.InterlockedExchangeMax(ref LastModifiedIndex, index);
+
+            InterlockedExchangeMax(ref LastModifiedIndex, index);
             _notifiedListeners.SetAndResetAtomically();
+        }
+
+        public void SetTaskCompleted(long index, Exception e)
+        {
+            if (_tasksDictionary.TryGetValue(index, out var tcs))
+            {
+                // set the task as finished
+                if (e == null)
+                {
+                    if (tcs.TrySetResult(null) == false)
+                        LogFailureToSetTaskResult();
+    }
+                else
+                {
+                    if (tcs.TrySetException(e) == false)
+                        LogFailureToSetTaskResult();
+                }
+
+                void LogFailureToSetTaskResult()
+                {
+                    if (Log.IsInfoEnabled)
+                        Log.Info($"Failed to set result of task with index {index}");
+                }
+            }
+
+            _tasksDictionary.TryRemove(index, out _);
+        }
+
+        private static void InterlockedExchangeMax(ref long location, long newValue)
+        {
+            long initialValue;
+
+            do
+            {
+                initialValue = location;
+                if (initialValue >= newValue)
+                    return;
+            } while (Interlocked.CompareExchange(ref location, newValue, initialValue) != initialValue);
+        }
+
+        public void AddTask(long index)
+        {
+            Debug.Assert(_tasksDictionary.TryGetValue(index, out _) == false, $"{nameof(_tasksDictionary)} should not contain task with key {index}");
+
+            _tasksDictionary.TryAdd(index, new TaskCompletionSource<object>(TaskCreationOptions.RunContinuationsAsynchronously));
         }
     }
 
