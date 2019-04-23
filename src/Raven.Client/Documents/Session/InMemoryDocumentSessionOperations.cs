@@ -567,20 +567,22 @@ more responsive application.
             DocumentInfo documentInfo;
             if (DocumentsById.TryGetValue(id, out documentInfo))
             {
-                var newObj = EntityToBlittable.ConvertEntityToBlittable(documentInfo.Entity, documentInfo);
-                if (documentInfo.Entity != null && EntityChanged(newObj, documentInfo, null))
+                using (var newObj = EntityToBlittable.ConvertEntityToBlittable(documentInfo.Entity, documentInfo))
                 {
-                    throw new InvalidOperationException(
-                        "Can't delete changed entity using identifier. Use Delete<T>(T entity) instead.");
-                }
+                    if (documentInfo.Entity != null && EntityChanged(newObj, documentInfo, null))
+                    {                        
+                        throw new InvalidOperationException(
+                            "Can't delete changed entity using identifier. Use Delete<T>(T entity) instead.");
+                    }
 
-                if (documentInfo.Entity != null)
-                {
-                    DocumentsByEntity.Remove(documentInfo.Entity);
-                }
+                    if (documentInfo.Entity != null)
+                    {
+                        DocumentsByEntity.Remove(documentInfo.Entity);
+                    }
 
-                DocumentsById.Remove(id);
-                changeVector = documentInfo.ChangeVector;
+                    DocumentsById.Remove(id);
+                    changeVector = documentInfo.ChangeVector;
+                }
             }
 
             _knownMissingIds.Add(id);
@@ -956,7 +958,11 @@ more responsive application.
                 var metadataUpdated = UpdateMetadataModifications(entity.Value);
                 var document = EntityToBlittable.ConvertEntityToBlittable(entity.Key, entity.Value);
                 if (EntityChanged(document, entity.Value, null) == false)
+                {
+                    document.Dispose();
                     continue;
+                }
+                    
 
                 if (result.DeferredCommandsDictionary.TryGetValue((entity.Value.Id, CommandType.ClientModifyDocumentCommand, null), out ICommandData command))
                     ThrowInvalidModifiedDocumentWithDeferredCommand(command);
@@ -970,7 +976,10 @@ more responsive application.
                         metadataUpdated |= UpdateMetadataModifications(entity.Value);
                     if (beforeStoreEventArgs.MetadataAccessed ||
                         EntityChanged(document, entity.Value, null))
+                    {
+                        document.Dispose();
                         document = EntityToBlittable.ConvertEntityToBlittable(entity.Key, entity.Value);
+                    }
                 }
                 
                 result.Entities.Add(entity.Key);
@@ -1058,10 +1067,12 @@ more responsive application.
             {
                 foreach (var entity in DocumentsByEntity)
                 {
-                    var document = EntityToBlittable.ConvertEntityToBlittable(entity.Key, entity.Value);
-                    if (EntityChanged(document, entity.Value, null))
+                    using (var document = EntityToBlittable.ConvertEntityToBlittable(entity.Key, entity.Value))
                     {
-                        return true;
+                        if (EntityChanged(document, entity.Value, null))
+                        {
+                            return true;
+                        }
                     }
                 }
 
@@ -1081,8 +1092,8 @@ more responsive application.
             DocumentInfo documentInfo;
             if (DocumentsByEntity.TryGetValue(entity, out documentInfo) == false)
                 return false;
-            var document = EntityToBlittable.ConvertEntityToBlittable(entity, documentInfo);
-            return EntityChanged(document, documentInfo, null);
+            using (var document = EntityToBlittable.ConvertEntityToBlittable(entity, documentInfo))
+                return EntityChanged(document, documentInfo, null);
         }
 
         public void WaitForReplicationAfterSaveChanges(TimeSpan? timeout = null, bool throwOnTimeout = true,
