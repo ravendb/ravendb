@@ -906,7 +906,7 @@ namespace Voron.Data.Tables
         public TableValueHolder SeekOneForwardFromPrefix(TableSchema.SchemaIndexDef index, Slice value)
         {
             var tree = GetTree(index);
-            if (tree == null)
+            if (tree == null || tree.State.NumberOfEntries == 0)
                 return null;
 
             using (var it = tree.Iterate(true))
