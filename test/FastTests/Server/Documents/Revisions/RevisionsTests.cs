@@ -18,6 +18,7 @@ using Raven.Client.Json;
 using Raven.Server.Documents;
 using Raven.Server.Documents.Handlers.Admin;
 using Raven.Server.Documents.Patch;
+using Raven.Server.ServerWide.Context;
 using Raven.Tests.Core.Utils.Entities;
 using Sparrow.Json;
 using Xunit;
@@ -700,6 +701,30 @@ namespace FastTests.Server.Documents.Revisions
                 statistics = store.Maintenance.Send(new GetStatisticsOperation());
                 Assert.Equal(21, statistics.CountOfDocuments);
                 Assert.Equal(10, statistics.CountOfRevisionDocuments);
+            }
+        }
+
+        [Fact]
+        public async Task DeleteRevisionsWhenNoneExistShouldNotThrow()
+        {
+            using (var store = GetDocumentStore())
+            {
+                using (var session = store.OpenAsyncSession())
+                {
+                    await session.StoreAsync(new User(),"foo/bar");
+                    await session.SaveChangesAsync();
+
+                }
+
+                await RevisionsHelper.SetupRevisions(Server.ServerStore, store.Database);
+
+                var database = await GetDocumentDatabaseInstanceFor(store);
+                using (database.DocumentsStorage.ContextPool.AllocateOperationContext(out DocumentsOperationContext ctx))
+                using(ctx.OpenReadTransaction())
+                {
+                    database.DocumentsStorage.RevisionsStorage.DeleteRevisionsFor(ctx, "foo/bar");
+                }
+                    
             }
         }
 

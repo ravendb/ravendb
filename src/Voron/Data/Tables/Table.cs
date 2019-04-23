@@ -872,6 +872,9 @@ namespace Voron.Data.Tables
         public IEnumerable<SeekResult> SeekForwardFrom(TableSchema.SchemaIndexDef index, Slice value, int skip, bool startsWith = false)
         {
             var tree = GetTree(index);
+            if (tree == null || tree.State.NumberOfEntries == 0)
+                yield break;
+
             using (var it = tree.Iterate(true))
             {
                 if (startsWith)
@@ -903,6 +906,9 @@ namespace Voron.Data.Tables
         public TableValueHolder SeekOneForwardFromPrefix(TableSchema.SchemaIndexDef index, Slice value)
         {
             var tree = GetTree(index);
+            if (tree == null)
+                return null;
+
             using (var it = tree.Iterate(true))
             {
                 it.SetRequiredPrefix(value);
