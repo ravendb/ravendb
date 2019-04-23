@@ -859,7 +859,7 @@ namespace Raven.Client.Documents
                                                    SearchOptions options = SearchOptions.Guess,
                                                    SearchOperator @operator = SearchOperator.Or)
         {
-            var currentMethod = typeof(LinqExtensions).GetMethod(nameof(Search));
+            var currentMethod = (MethodInfo)MethodBase.GetCurrentMethod();
 
             currentMethod = ConvertMethodIfNecessary(currentMethod, typeof(T));
             var expression = ConvertExpressionIfNecessary(self);

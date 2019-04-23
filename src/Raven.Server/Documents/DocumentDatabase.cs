@@ -47,9 +47,7 @@ using Sparrow.Server.Utils;
 using Sparrow.Threading;
 using Sparrow.Utils;
 using Voron;
-using Voron.Debugging;
 using Voron.Exceptions;
-using Voron.Impl;
 using Voron.Impl.Backup;
 using Constants = Raven.Client.Constants;
 using DatabaseInfo = Raven.Client.ServerWide.Operations.DatabaseInfo;
@@ -65,6 +63,7 @@ namespace Raven.Server.Documents
         private readonly Action<string> _addToInitLog;
         private readonly Logger _logger;
         private readonly DisposeOnce<SingleAttempt> _disposeOnce;
+        private TestingStuff _forTestingPurposes;
 
         private readonly CancellationTokenSource _databaseShutdown = new CancellationTokenSource();
 
@@ -590,6 +589,8 @@ namespace Raven.Server.Documents
         private unsafe void DisposeInternal()
         {
             _databaseShutdown.Cancel();
+
+            _forTestingPurposes?.ActionToCallDuringDocumentDatabaseInternalDispose?.Invoke();
 
             //before we dispose of the database we take its latest info to be displayed in the studio
             try
@@ -1462,6 +1463,26 @@ namespace Raven.Server.Documents
             }
 
             return hash;
+        }
+
+        internal TestingStuff ForTestingPurposesOnly()
+        {
+            if (_forTestingPurposes != null)
+                return _forTestingPurposes;
+
+            return _forTestingPurposes = new TestingStuff();
+        }
+
+        internal class TestingStuff
+        {
+            internal Action ActionToCallDuringDocumentDatabaseInternalDispose;
+
+            internal IDisposable CallDuringDocumentDatabaseInternalDispose(Action action)
+            {
+                ActionToCallDuringDocumentDatabaseInternalDispose = action;
+
+                return new DisposableAction(() => ActionToCallDuringDocumentDatabaseInternalDispose = null);
+            }
         }
     }
 

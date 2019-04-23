@@ -112,9 +112,14 @@ class trafficWatch extends viewModelBase {
     private matchesFilters(item: Raven.Client.Documents.Changes.TrafficWatchChange) {
         const textFilter = this.filter();
         const uri = item.RequestUri.toLocaleLowerCase();
-        
-        
-        const textFilterMatch = !textFilter || uri.includes(textFilter.toLocaleLowerCase()); 
+        const customInfo = item.CustomInfo;
+
+        let textFilterMatch = false;
+        if (textFilter) {
+            const textFilterLower = textFilter.toLocaleLowerCase();
+            textFilterMatch = uri.includes(textFilterLower) || (customInfo && customInfo.toLocaleLowerCase().includes(textFilterLower));
+        }
+
         const typeMatch = _.includes(this.selectedTypeNames(), item.Type);
         const statusMatch = !this.onlyErrors() || item.ResponseStatusCode >= 400;
         

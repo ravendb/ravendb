@@ -741,6 +741,63 @@ namespace SlowTests.Cluster
             }
         }
 
+        [Fact]
+        public void ThrowOnClusterTransactionWithCounters()
+        {
+            using (var store = GetDocumentStore())
+            {
+                using (var session = store.OpenSession())
+                {
+                    session.Store(new User { Name = "Aviv1" }, "users/1-A");
+                    session.CountersFor("users/1-A").Increment("likes", 100);
+                    session.SaveChanges();
+                }
+
+                using (var session = store.OpenSession(new SessionOptions
+                {
+                    TransactionMode = TransactionMode.ClusterWide
+                }))
+                {
+                    var user = session.Load<User>("users/1-A");
+                    user.Name = "karmel";
+                    var e = Assert.Throws<RavenException>(() => session.SaveChanges());
+                    Assert.Equal(typeof(NotSupportedException), e.InnerException.GetType());
+                }
+            }
+        }
+
+        [Fact]
+        public void ThrowOnClusterTransactionWithAttachments()
+        {
+            using (var store = GetDocumentStore())
+            {
+                using (var session = store.OpenSession())
+                {
+                    var user = new User
+                    {
+                        Name = "Aviv1"
+                    };
+                    session.Store(user, "users/1-A");
+                    using (var ms = new MemoryStream(new byte[] {1, 2, 3, 4, 5}))
+                    {
+                        session.Advanced.Attachments.Store(user, "dummy", ms);
+                        session.SaveChanges();
+                    }
+                }
+
+                using (var session = store.OpenSession(new SessionOptions
+                {
+                    TransactionMode = TransactionMode.ClusterWide
+                }))
+                {
+                    var user = session.Load<User>("users/1-A");
+                    user.Name = "karmel";
+                    var e = Assert.Throws<RavenException>(() => session.SaveChanges());
+                    Assert.Equal(typeof(NotSupportedException), e.InnerException.GetType());
+                }
+            }
+        }
+
         /// <summary>
         /// This is a comprehensive test. The general flow of the test is as following:
         /// - Create cluster with 5 nodes with a database on _all_ of them and enable revisions.
