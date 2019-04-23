@@ -201,6 +201,13 @@ namespace Voron.Data.BTrees
 
             return true;
         }
+
+        public void Add(Slice key, byte value)
+        {
+            using (DirectAdd(key, sizeof(byte), out byte* ptr))
+                *ptr = value;
+        }
+
         public void Add(Slice key, long value)
         {
             using (DirectAdd(key, sizeof(long), out byte* ptr))

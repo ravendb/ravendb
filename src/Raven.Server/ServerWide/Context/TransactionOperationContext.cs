@@ -116,9 +116,11 @@ namespace Raven.Server.ServerWide.Context
 
         protected internal override void Reset(bool forceResetLongLivedAllocator = false)
         {
+            CloseTransaction();
+
+
             base.Reset(forceResetLongLivedAllocator);
 
-            CloseTransaction();
 
             Allocator.Reset();
         }
