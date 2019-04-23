@@ -281,6 +281,7 @@ namespace Raven.Server.Rachis
         private static readonly Slice LastTruncatedSlice;
         private static readonly Slice TopologySlice;
         private static readonly Slice TagSlice;
+        private static readonly Slice SnapshotRequestSlice;
 
         internal static readonly Slice EntriesSlice;
         internal static readonly TableSchema LogsTable;
@@ -297,6 +298,7 @@ namespace Raven.Server.Rachis
                 Slice.From(ctx, "Topology", out TopologySlice);
                 Slice.From(ctx, "LastTruncated", out LastTruncatedSlice);
                 Slice.From(ctx, "Entries", out EntriesSlice);
+                Slice.From(ctx, "SnapshotRequest", out SnapshotRequestSlice);
             }
             /*
              
@@ -387,6 +389,8 @@ namespace Raven.Server.Rachis
                     var readResult = state.Read(TagSlice);
                     _tag = readResult == null ? InitialTag : readResult.Reader.ToStringValue();
 
+                    RequestSnapshot = GetSnapshotRequest(context);
+
                     Log = LoggingSource.Instance.GetLogger<RachisConsensus>(_tag);
                     LogsTable.Create(tx.InnerTransaction, EntriesSlice, 16);
 
@@ -409,6 +413,7 @@ namespace Raven.Server.Rachis
                             SetTopology(this, context, topology);
                         }
                     }
+
                     _clusterId = topology.TopologyId;
                     SetClusterBase(_clusterId);
 
@@ -604,6 +609,12 @@ namespace Raven.Server.Rachis
             if (expectedTerm != CurrentTerm && expectedTerm != -1)
                 RachisConcurrencyException.Throw($"Attempted to switch state to {rachisState} on expected term {expectedTerm:#,#;;0} but the real term is {CurrentTerm:#,#;;0}");
 
+            if (rachisState == RachisState.LeaderElect || rachisState == RachisState.Leader)
+            {
+                if (GetSnapshotRequest(context))
+                    throw new RachisInvalidOperationException("We cannot be elected for leadership if snapshot is requested.");
+            }
+
             var sp = Stopwatch.StartNew();
             
             _currentLeader = null;
@@ -782,6 +793,15 @@ namespace Raven.Server.Rachis
 
         public void SwitchToCandidateStateOnTimeout()
         {
+            if (RequestSnapshot)
+            {
+                // we aren't allowed to be elected for leadership if we requested a snapshot 
+                if (Log.IsInfoEnabled)
+                {
+                    Log.Info("we aren't allowed to be elected for leadership if we requested a snapshot");
+                }
+                return;
+            }
             SwitchToCandidateState("Election timeout");
         }
 
@@ -1391,7 +1411,7 @@ namespace Raven.Server.Rachis
                     var oldTerm = reader.ReadLittleEndianInt64();
                     if (oldTerm != term)
                         throw new InvalidOperationException(
-                            $"Cannot change just the last commit index (is {oldIndex:#,#;;0} term, was {oldTerm:#,#;;0} but was requested to change it to {term:#,#;;0})");
+                            $"Cannot change just the last commit index (at {oldIndex:#,#;;0} index, was {oldTerm:#,#;;0} but was requested to change it to {term:#,#;;0})");
                 }
             }
 
@@ -1679,6 +1699,8 @@ namespace Raven.Server.Rachis
                 _clusterId = topologyId;
                 SetClusterBase(topologyId);
 
+                SetSnapshotRequest(ctx, false);
+
                 SwitchToSingleLeader(ctx);
 
                 tx.Commit();
@@ -1715,15 +1737,16 @@ namespace Raven.Server.Rachis
             }
         }
 
-        public void HardResetToPassive(string topologyId)
+        public void HardResetToPassive(string topologyId = null)
         {
             using (ContextPool.AllocateOperationContext(out TransactionOperationContext ctx))
             using (var tx = ctx.OpenWriteTransaction())
             {
                 UpdateNodeTag(ctx, InitialTag);
+                var oldTopology = GetTopology(ctx);
 
                 var topology = new ClusterTopology(
-                    topologyId,
+                    topologyId ?? oldTopology.TopologyId,
                     new Dictionary<string, string>
                     {
                         [_tag] = Url
@@ -1733,10 +1756,13 @@ namespace Raven.Server.Rachis
                     string.Empty
                 );
 
+                if (topologyId != oldTopology.TopologyId)
+                    // if we are going to add this to a different cluster we must get a snapshot
+                    SetSnapshotRequest(ctx, true); 
+
                 SetTopology(this, ctx, topology);
 
-                SetNewStateInTx(ctx, RachisState.Passive, null, CurrentTerm,
-                    "Hard reset to passive by admin");
+                SetNewStateInTx(ctx, RachisState.Passive, null, CurrentTerm, "Hard reset to passive by admin");
 
                 tx.Commit();
             }
@@ -1880,7 +1906,36 @@ namespace Raven.Server.Rachis
                 var state = context.Transaction.InnerTransaction.CreateTree(GlobalStateSlice);
                 state.Add(TagSlice, str);
             }
+        }
 
+        public bool RequestSnapshot { get; private set; }
+
+        public void SetSnapshotRequest(TransactionOperationContext context, bool request)
+        {
+            var oldValue = GetSnapshotRequest(context);
+
+            var state = context.Transaction.InnerTransaction.CreateTree(GlobalStateSlice);
+            state.Add(SnapshotRequestSlice, Convert.ToByte(request));
+            RequestSnapshot = request;
+
+            context.Transaction.InnerTransaction.LowLevelTransaction.OnDispose += tx =>
+            {
+                if (tx is LowLevelTransaction llt && llt.Committed == false)
+                {
+                    RequestSnapshot = oldValue;
+                }
+            };
+        }
+
+        public bool GetSnapshotRequest(TransactionOperationContext context)
+        {
+            var state = context.Transaction.InnerTransaction.CreateTree(GlobalStateSlice);
+            var reader = state.Read(SnapshotRequestSlice);
+
+            if (reader == null)
+                return false;
+
+            return Convert.ToBoolean(reader.Reader.ReadByte());
         }
 
         public void LeaderElectToLeaderChanged()

@@ -115,6 +115,18 @@ namespace Voron
             return val;
         }
 
+        public byte ReadByte()
+        {
+            if (_len - _pos < sizeof(byte))
+                throw new EndOfStreamException();
+
+            byte val = *(_val + _pos);
+
+            _pos += sizeof(byte);
+
+            return val;
+        }
+
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         private static long SwapBitShift(long value)
         {

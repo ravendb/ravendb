@@ -1,0 +1,32 @@
+﻿using System;
+using System.Collections.Generic;
+using System.Net.Http;
+using System.Text;
+using Raven.Client.Documents.Conventions;
+using Raven.Client.Http;
+using Sparrow.Json;
+
+namespace Raven.Client.ServerWide.Commands.Cluster
+{
+    internal class DemoteClusterNodeCommand : RavenCommand
+    {
+        private readonly string _node;
+
+        public override bool IsReadRequest => false;
+
+        public DemoteClusterNodeCommand(string node)
+        {
+            _node = node;
+        }
+
+        public override HttpRequestMessage CreateRequest(JsonOperationContext ctx, ServerNode node, out string url)
+        {
+            url = $"{node.Url}/admin/cluster/demote?nodeTag={_node}";
+            var request = new HttpRequestMessage
+            {
+                Method = HttpMethod.Post
+            };
+            return request;
+        }
+    }
+}

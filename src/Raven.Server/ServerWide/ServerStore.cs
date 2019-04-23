@@ -19,6 +19,7 @@ using Raven.Client.Documents.Operations.ETL;
 using Raven.Client.Documents.Operations.OngoingTasks;
 using Raven.Client.Documents.Operations.Replication;
 using Raven.Client.Documents.Session;
+using Raven.Client.Exceptions.Cluster;
 using Raven.Client.Exceptions.Database;
 using Raven.Client.Util;
 using Raven.Client.Exceptions.Server;
@@ -445,6 +446,26 @@ namespace Raven.Server.ServerWide
         public async Task RemoveFromClusterAsync(string nodeTag)
         {
             await _engine.RemoveFromClusterAsync(nodeTag).WithCancellation(_shutdownNotification.Token);
+        }
+
+        public void RequestSnapshot()
+        {
+            var topology = GetClusterTopology();
+
+            if (topology.AllNodes.Count == 1)
+                throw new InvalidOperationException("Can't force snapshot, since I'm the only node in the cluster.");
+
+            if (topology.Members.ContainsKey(NodeTag))
+                throw new InvalidOperationException($"Snapshot can be requested only by a non-member node.{Environment.NewLine}" +
+                                                    $"In order to proceed, demote this node to watcher, then request the snapshot again.{Environment.NewLine}" +
+                                                    $"Afterwards you can promote it back to member.");
+
+            using (ContextPool.AllocateOperationContext(out TransactionOperationContext ctx))
+            using (var tx = ctx.OpenWriteTransaction())
+            {
+                _engine.SetSnapshotRequest(ctx, true);
+                tx.Commit();
+            }
         }
 
         public void Initialize()

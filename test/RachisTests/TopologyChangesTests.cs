@@ -1,6 +1,8 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Threading;
 using System.Threading.Tasks;
+using Raven.Client.ServerWide;
 using Raven.Server.Rachis;
 using Raven.Server.ServerWide.Context;
 using Tests.Infrastructure;
@@ -133,6 +135,45 @@ namespace RachisTests
                 var topology = leader.GetTopology(ctx);
                 Assert.Equal(clusterSize, topology.AllNodes.Count);
                 Assert.True(topology.Contains(oldTag));
+            }
+        }
+
+
+        [Fact]
+        public async Task AddNodeFromDifferentCluster()
+        {
+            var node1 = await CreateNetworkAndGetLeader(1);
+            var node2 = await CreateNetworkAndGetLeader(1);
+            var url = node2.Url;
+
+            await node1.PutAsync(new TestCommand { Name = "test", Value = 10 });
+            await node2.PutAsync(new TestCommand { Name = "test", Value = 20 });
+
+            string id;
+            using (node1.ContextPool.AllocateOperationContext(out TransactionOperationContext ctx))
+            using (ctx.OpenReadTransaction())
+            {
+                id = node1.GetTopology(ctx).TopologyId;
+    }
+
+            node2.HardResetToPassive(id);
+            using (var cts = new CancellationTokenSource(TimeSpan.FromSeconds(3)))
+            {
+                await node2.WaitForState(RachisState.Passive, cts.Token);
+}
+
+            await node1.AddToClusterAsync(url);
+            await node2.WaitForTopology(Leader.TopologyModification.Voter);
+
+            using (node1.ContextPool.AllocateOperationContext(out TransactionOperationContext ctx1))
+            using (node2.ContextPool.AllocateOperationContext(out TransactionOperationContext ctx2))
+            using (ctx1.OpenReadTransaction())
+            using (ctx2.OpenReadTransaction())
+            {
+                var val1 = node1.StateMachine.Read(ctx1, "test");
+                var val2 = node1.StateMachine.Read(ctx2, "test");
+                Assert.Equal(10.ToString(), val1);
+                Assert.Equal(10.ToString(), val2);
             }
         }
     }

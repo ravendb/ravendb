@@ -17,6 +17,7 @@ using Sparrow.Utils;
 using Voron;
 using Voron.Data;
 using Voron.Data.Tables;
+using Voron.Impl;
 
 namespace Raven.Server.Rachis
 {
@@ -61,11 +62,22 @@ namespace Raven.Server.Rachis
             
             while (true)
             {
-               
                 entries.Clear();
 
                 using (_engine.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
                 {
+                    using (context.OpenReadTransaction())
+                    {
+                        if (_engine.RequestSnapshot)
+                        {
+                            if (_engine.Log.IsInfoEnabled)
+                            {
+                                _engine.Log.Info($"{ToString()}: Snapshot was requested, so we close this follower.");
+                            }
+                            return;
+                        }
+                    }
+
                     _debugRecorder.Record("Wait for entries");
                     var appendEntries = _connection.Read<AppendEntries>(context);
                     var sp = Stopwatch.StartNew();
@@ -358,8 +370,9 @@ namespace Raven.Server.Rachis
             // only the leader can send append entries, so if we accepted it, it's the leader
             if (_engine.Log.IsInfoEnabled)
             {
-                _engine.Log.Info($"{ToString()}: Got a negotiation request for term {negotiation.Term} where our term is {_term}");
+                _engine.Log.Info($"{ToString()}: Got a negotiation request for term {negotiation.Term} where our term is {_term}.");
             }
+
             if (negotiation.Term != _term)
             {
                 //  Our leader is no longer a valid one
@@ -373,12 +386,30 @@ namespace Raven.Server.Rachis
                 });
                 throw new InvalidOperationException($"We close this follower because: {msg}");
             }
+
             long prevTerm;
+            bool requestSnapshot;
             using (context.OpenReadTransaction())
             {
                 prevTerm = _engine.GetTermFor(context, negotiation.PrevLogIndex) ?? 0;
+                requestSnapshot = _engine.GetSnapshotRequest(context);
             }
-            if (prevTerm != negotiation.PrevLogTerm)
+
+            if (requestSnapshot)
+            {
+                if (_engine.Log.IsInfoEnabled)
+                {
+                    _engine.Log.Info($"{ToString()}: Request snapshot by the admin");
+                }
+                _connection.Send(context, new LogLengthNegotiationResponse
+                {
+                    Status = LogLengthNegotiationResponse.ResponseStatus.Acceptable,
+                    Message = "Request snapshot by the admin",
+                    CurrentTerm = _term,
+                    LastLogIndex = 0
+                });
+            }
+            else if (prevTerm != negotiation.PrevLogTerm)
             {
                 if (_engine.Log.IsInfoEnabled)
                 {
@@ -431,11 +462,8 @@ namespace Raven.Server.Rachis
             }
 
             _debugRecorder.Record("Done with StateMachine.SnapshotInstalled");
-
-            // we might have moved from passive node, so we need to start the timeout clock
-            _engine.Timeout.Start(_engine.SwitchToCandidateStateOnTimeout);
-
             _debugRecorder.Record("Snapshot installed");
+
             //Here we send the LastIncludedIndex as our matched index even for the case where our lastCommitIndex is greater
             //So we could validate that the entries sent by the leader are indeed the same as the ones we have.
             _connection.Send(context, new InstallSnapshotResponse
@@ -493,7 +521,9 @@ namespace Raven.Server.Rachis
             {
                 var lastTerm = _engine.GetTermFor(context, snapshot.LastIncludedIndex);
                 var lastCommitIndex = _engine.GetLastEntryIndex(context);
-                if (snapshot.LastIncludedTerm == lastTerm && snapshot.LastIncludedIndex < lastCommitIndex)
+
+                if (_engine.GetSnapshotRequest(context) == false && 
+                    snapshot.LastIncludedTerm == lastTerm && snapshot.LastIncludedIndex < lastCommitIndex)
                 {
                     if (_engine.Log.IsInfoEnabled)
                     {
@@ -554,6 +584,17 @@ namespace Raven.Server.Rachis
 
                     RachisConsensus.SetTopology(_engine, context, topology);
                 }
+
+                _engine.SetSnapshotRequest(context, false);
+
+                context.Transaction.InnerTransaction.LowLevelTransaction.OnDispose += t =>
+                {
+                    if (t is LowLevelTransaction llt && llt.Committed)
+                    {
+                        // we might have moved from passive node, so we need to start the timeout clock
+                        _engine.Timeout.Start(_engine.SwitchToCandidateStateOnTimeout);
+                    }
+                };
 
                 context.Transaction.Commit();
             }
