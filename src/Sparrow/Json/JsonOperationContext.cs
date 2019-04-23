@@ -567,14 +567,14 @@ namespace Sparrow.Json
             return ParseToMemory(stream, documentId, BlittableJsonDocumentBuilder.UsageMode.ToDisk);
         }
 
-        public ValueTask<BlittableJsonReaderObject> ReadForDiskAsync(Stream stream, string documentId, CancellationToken? token = null)
+        public ValueTask<BlittableJsonReaderObject> ReadForDiskAsync(Stream stream, string documentId, IBlittableDocumentModifier modifier = null, CancellationToken? token = null)
         {
-            return ParseToMemoryAsync(stream, documentId, BlittableJsonDocumentBuilder.UsageMode.ToDisk, token);
+            return ParseToMemoryAsync(stream, documentId, BlittableJsonDocumentBuilder.UsageMode.ToDisk, modifier, token);
         }
 
-        public ValueTask<BlittableJsonReaderObject> ReadForMemoryAsync(Stream stream, string documentId, CancellationToken? token = null)
+        public ValueTask<BlittableJsonReaderObject> ReadForMemoryAsync(Stream stream, string documentId, IBlittableDocumentModifier modifier = null, CancellationToken? token = null)
         {
-            return ParseToMemoryAsync(stream, documentId, BlittableJsonDocumentBuilder.UsageMode.None, token);
+            return ParseToMemoryAsync(stream, documentId, BlittableJsonDocumentBuilder.UsageMode.None, modifier, token);
         }
 
         public BlittableJsonReaderObject ReadForMemory(Stream stream, string documentId)
@@ -821,6 +821,7 @@ namespace Sparrow.Json
         public async ValueTask<BlittableJsonReaderObject> ParseToMemoryAsync(WebSocket webSocket, string debugTag,
            BlittableJsonDocumentBuilder.UsageMode mode,
            ManagedPinnedBuffer bytes,
+           IBlittableDocumentModifier modifier = null,
            CancellationToken token = default(CancellationToken)
            )
         {
@@ -833,7 +834,7 @@ namespace Sparrow.Json
             try
             {
                 parser = new UnmanagedJsonParser(this, _jsonParserState, debugTag);
-                builder = new BlittableJsonDocumentBuilder(this, mode, debugTag, parser, _jsonParserState);
+                builder = new BlittableJsonDocumentBuilder(this, mode, debugTag, parser, _jsonParserState, modifier:modifier);
                 CachedProperties.NewDocument();
                 builder.ReadObjectDocument();
                 while (true)
@@ -872,13 +873,14 @@ namespace Sparrow.Json
                 ThrowObjectDisposed();
         }
 
-        private ValueTask<BlittableJsonReaderObject> ParseToMemoryAsync(Stream stream, string documentId, BlittableJsonDocumentBuilder.UsageMode mode, CancellationToken? token = null)
+        private ValueTask<BlittableJsonReaderObject> ParseToMemoryAsync(Stream stream, string documentId, BlittableJsonDocumentBuilder.UsageMode mode, IBlittableDocumentModifier modifier = null, CancellationToken? token = null)
         {
             using (GetManagedBuffer(out ManagedPinnedBuffer bytes))
-                return ParseToMemoryAsync(stream, documentId, mode, bytes, token);
+                return ParseToMemoryAsync(stream, documentId, mode, bytes, modifier, token);
         }
 
         public async ValueTask<BlittableJsonReaderObject> ParseToMemoryAsync(Stream stream, string documentId, BlittableJsonDocumentBuilder.UsageMode mode, ManagedPinnedBuffer bytes,
+            IBlittableDocumentModifier modifier = null,
             CancellationToken? token = null,
             int maxSize = int.MaxValue)
         {
@@ -892,7 +894,7 @@ namespace Sparrow.Json
             try
             {
                 parser = new UnmanagedJsonParser(this, _jsonParserState, documentId);
-                builder = new BlittableJsonDocumentBuilder(this, mode, documentId, parser, _jsonParserState);
+                builder = new BlittableJsonDocumentBuilder(this, mode, documentId, parser, _jsonParserState, modifier:modifier);
 
                 CachedProperties.NewDocument();
                 builder.ReadObjectDocument();

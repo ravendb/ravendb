@@ -1188,7 +1188,7 @@ namespace Raven.Server
                                         "tcp-header",
                                         BlittableJsonDocumentBuilder.UsageMode.None,
                                         buffer,
-                                        ServerStore.ServerShutdown,
+                                        token: ServerStore.ServerShutdown,
                                         // we don't want to allow external (and anonymous) users to send us unlimited data
                                         // a maximum of 2 KB for the header is big enough to include any valid header that
                                         // we can currently think of

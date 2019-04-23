@@ -322,7 +322,7 @@ namespace Raven.Server.Documents.Handlers
                 // and the identity generation needs to take into account that the identity 
                 // generation can fail and will leave the reading task hanging if we abort
                 // easier to just do in synchronously
-                var doc = await context.ReadForDiskAsync(RequestBodyStream(), id).ConfigureAwait(false);
+                var doc = await context.ReadForDiskAsync(RequestBodyStream(), id,new BlittableMetadataModifier(context)).ConfigureAwait(false);
 
                 if (id[id.Length - 1] == '|')
                 {

@@ -100,7 +100,7 @@ namespace Raven.Server.Documents.Replication
             var retCtx = _contextPool.AllocateOperationContext(out DocumentsOperationContext context);
             try
             {
-                var jsonReaderObject = await context.ParseToMemoryAsync(_stream, debugTag, BlittableJsonDocumentBuilder.UsageMode.None, buffer, token);
+                var jsonReaderObject = await context.ParseToMemoryAsync(_stream, debugTag, BlittableJsonDocumentBuilder.UsageMode.None, buffer, token: token);
                 return new Result
                 {
                     Document = jsonReaderObject,
