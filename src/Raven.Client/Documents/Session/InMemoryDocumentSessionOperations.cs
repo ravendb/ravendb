@@ -20,6 +20,7 @@ using Raven.Client.Documents.Conventions;
 using Raven.Client.Documents.Identity;
 using Raven.Client.Documents.Operations;
 using Raven.Client.Documents.Operations.Counters;
+using Raven.Client.Documents.Operations.TimeSeries;
 using Raven.Client.Documents.Session.Operations;
 using Raven.Client.Documents.Session.Operations.Lazy;
 using Raven.Client.Exceptions.Documents.Session;
@@ -133,6 +134,12 @@ namespace Raven.Client.Documents.Session
             _countersByDocId ?? (_countersByDocId = new Dictionary<string, (bool GotAll, Dictionary<string, long?> Values)>(StringComparer.OrdinalIgnoreCase));
 
         private Dictionary<string, (bool GotAll, Dictionary<string, long?> Values)> _countersByDocId;
+
+        protected internal Dictionary<string, TimeSeriesDetails> TimeSeriesByDocId =>
+            _timeSeriesByDocId ?? (_timeSeriesByDocId = new Dictionary<string, TimeSeriesDetails>(StringComparer.OrdinalIgnoreCase));
+
+        private Dictionary<string, TimeSeriesDetails> _timeSeriesByDocId;
+
         protected readonly DocumentStoreBase _documentStore;
 
         public string DatabaseName { get; }
@@ -1273,7 +1280,8 @@ more responsive application.
                     commandType != CommandType.AttachmentDELETE &&
                     commandType != CommandType.AttachmentCOPY &&
                     commandType != CommandType.AttachmentMOVE &&
-                    commandType != CommandType.Counters)
+                    commandType != CommandType.Counters && 
+                    commandType != CommandType.TimeSeries)
                     DeferredCommandsDictionary[(id, CommandType.ClientModifyDocumentCommand, null)] = command;
             }
         }

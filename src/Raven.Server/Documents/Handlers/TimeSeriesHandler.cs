@@ -96,7 +96,7 @@ namespace Raven.Server.Documents.Handlers
             {
                 var blittable = await context.ReadForMemoryAsync(RequestBodyStream(), "timeseries");
 
-                var timeSeriesBatch = JsonDeserializationClient.TimeSeriesBatch(blittable);
+                var timeSeriesBatch = JsonDeserializationClient.DocumentTimeSeriesOperation(blittable);
 
                 if (TrafficWatchManager.HasRegisteredClients)
                     AddStringToHttpContext(blittable.ToString(), TrafficWatchChangeType.TimeSeries);
@@ -119,10 +119,12 @@ namespace Raven.Server.Documents.Handlers
         public class ExecuteTimeSeriesBatchCommand : TransactionOperationsMerger.MergedTransactionCommand
         {
             private readonly DocumentDatabase _database;
-            private readonly TimeSeriesBatch _batch;
+            private readonly DocumentTimeSeriesOperation _batch;
             private readonly bool _fromEtl;
 
-            public ExecuteTimeSeriesBatchCommand(DocumentDatabase database, TimeSeriesBatch batch, bool fromEtl)
+            public string LastChangeVector;
+
+            public ExecuteTimeSeriesBatchCommand(DocumentDatabase database, DocumentTimeSeriesOperation batch, bool fromEtl)
             {
                 _database = database;
                 _batch = batch;
@@ -132,46 +134,42 @@ namespace Raven.Server.Documents.Handlers
             protected override int ExecuteCmd(DocumentsOperationContext context)
             {
                 int changes = 0;
-                foreach (var docBatch in _batch.Documents)
-                {
-                    string docCollection = GetDocumentCollection(context, docBatch);
+                string docCollection = GetDocumentCollection(context, _batch);
 
-                    if(docCollection == null)
-                        continue;
-                    
-                    if (docBatch.Appends != null)
+                if (docCollection == null)
+                    return 0;
+
+                if (_batch.Appends != null)
+                {
+                    foreach (var append in _batch.Appends)
                     {
-                        foreach (var append in docBatch.Appends)
-                        {
-                            _database.DocumentsStorage.TimeSeriesStorage.AppendTimestamp(context,
-                                docBatch.DocumentId,
-                                docCollection,
-                                append.Name,
-                                append.Timestamp,
-                                new Span<double>(append.Values),
-                                append.Tag,
-                                fromReplication: false
-                            );
-                            changes++;
-                        }
-                    }
-                    
-                    if (docBatch.Removals != null)
-                    {
-                        foreach (var removal in docBatch.Removals)
-                        {
-                            _database.DocumentsStorage.TimeSeriesStorage.RemoveTimestampRange(context,
-                                docBatch.DocumentId,
-                                docCollection,
-                                removal.Name,
-                                removal.From,
-                                removal.To
-                            );
-                            changes++;
-                        }
+                        LastChangeVector = _database.DocumentsStorage.TimeSeriesStorage.AppendTimestamp(context,
+                            _batch.Id,
+                            docCollection,
+                            append.Name,
+                            append.Timestamp,
+                            new Span<double>(append.Values),
+                            append.Tag,
+                            fromReplication: false
+                        );
+                        changes++;
                     }
                 }
 
+                if (_batch.Removals != null)
+                {
+                    foreach (var removal in _batch.Removals)
+                    {
+                        LastChangeVector = _database.DocumentsStorage.TimeSeriesStorage.RemoveTimestampRange(context,
+                            _batch.Id,
+                            docCollection,
+                            removal.Name,
+                            removal.From,
+                            removal.To
+                        );
+                        changes++;
+                    }
+                }
                 return changes;
             }
 
@@ -179,14 +177,14 @@ namespace Raven.Server.Documents.Handlers
             {
                 try
                 {
-                   var doc = _database.DocumentsStorage.Get(context, docBatch.DocumentId,
+                   var doc = _database.DocumentsStorage.Get(context, docBatch.Id,
                         throwOnConflict: true);
                     if (doc == null)
                     {
                         if (_fromEtl)
                             return null;
 
-                        ThrowMissingDocument(docBatch.DocumentId);
+                        ThrowMissingDocument(docBatch.Id);
                         return null;// never hit
                     }
 
@@ -205,7 +203,7 @@ namespace Raven.Server.Documents.Handlers
                     // done by the conflict resolver
 
                     // avoid loading same document again, we validate write using the metadata instance
-                    return _database.DocumentsStorage.ConflictsStorage.GetCollection(context, docBatch.DocumentId);
+                    return _database.DocumentsStorage.ConflictsStorage.GetCollection(context, docBatch.Id);
                 }
             }
 

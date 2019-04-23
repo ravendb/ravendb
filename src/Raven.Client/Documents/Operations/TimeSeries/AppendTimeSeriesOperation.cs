@@ -13,8 +13,6 @@ namespace Raven.Client.Documents.Operations.TimeSeries
         public double[] Values;
         public string Tag;
 
-        internal string ChangeVector;
-
         public static AppendTimeSeriesOperation Parse(BlittableJsonReaderObject input)
         {
             if (input.TryGet(nameof(Name), out string name) == false || name == null)
@@ -52,6 +50,7 @@ namespace Raven.Client.Documents.Operations.TimeSeries
             {
                 [nameof(Name)] = Name,
                 [nameof(Timestamp)] = Timestamp,
+                [nameof(Tag)] = Tag,
                 [nameof(Values)] = new DynamicJsonArray(Values.Select(x=>(object)x)),
             };
         }

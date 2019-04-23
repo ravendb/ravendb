@@ -18,6 +18,7 @@ using Raven.Client.Documents.Operations.TimeSeries;
 using Raven.Client.Documents.Operations.TransactionsRecording;
 using Raven.Client.Documents.Queries;
 using Raven.Client.Documents.Queries.MoreLikeThis;
+using Raven.Client.Documents.Session;
 using Raven.Client.Documents.Smuggler;
 using Raven.Client.Documents.Subscriptions;
 using Raven.Client.Exceptions;
@@ -137,6 +138,12 @@ namespace Raven.Client.Json.Converters
 
         public static readonly Func<BlittableJsonReaderObject, CountersDetail> CountersDetail = GenerateJsonDeserializationRoutine<CountersDetail>();
 
+        public static readonly Func<BlittableJsonReaderObject, TimeSeriesValue> TimeSeriesValue = GenerateJsonDeserializationRoutine<TimeSeriesValue>();
+
+        public static readonly Func<BlittableJsonReaderObject, TimeSeriesRange> TimeSeriesRange = GenerateJsonDeserializationRoutine<TimeSeriesRange>();
+
+        public static readonly Func<BlittableJsonReaderObject, TimeSeriesDetails> TimeSeriesDetails = GenerateJsonDeserializationRoutine<TimeSeriesDetails>();
+
         internal static readonly Func<BlittableJsonReaderObject, ExceptionDispatcher.ExceptionSchema> ExceptionSchema = GenerateJsonDeserializationRoutine<ExceptionDispatcher.ExceptionSchema>();
 
         internal static readonly Func<BlittableJsonReaderObject, DeleteDatabaseResult> DeleteDatabaseResult = GenerateJsonDeserializationRoutine<DeleteDatabaseResult>();
@@ -201,6 +208,6 @@ namespace Raven.Client.Json.Converters
 
         internal static readonly Func<BlittableJsonReaderObject, CounterBatch> CounterBatch = GenerateJsonDeserializationRoutine<CounterBatch>();
         
-        internal static readonly Func<BlittableJsonReaderObject, TimeSeriesBatch> TimeSeriesBatch = GenerateJsonDeserializationRoutine<TimeSeriesBatch>();
+        internal static readonly Func<BlittableJsonReaderObject, DocumentTimeSeriesOperation> DocumentTimeSeriesOperation = GenerateJsonDeserializationRoutine<DocumentTimeSeriesOperation>();
     }
 }
