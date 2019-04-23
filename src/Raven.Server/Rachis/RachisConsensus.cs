@@ -297,7 +297,7 @@ namespace Raven.Server.Rachis
                 Slice.From(ctx, "Topology", out TopologySlice);
                 Slice.From(ctx, "LastTruncated", out LastTruncatedSlice);
                 Slice.From(ctx, "Entries", out EntriesSlice);
-                Slice.From(ctx, "SnapshotRequestSlice", out SnapshotRequestSlice);
+                Slice.From(ctx, "SnapshotRequest", out SnapshotRequestSlice);
             }
             /*
              

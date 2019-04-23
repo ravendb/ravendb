@@ -8,7 +8,7 @@ using Sparrow.Json;
 
 namespace Raven.Client.ServerWide.Commands.Cluster
 {
-    public class RemoveClusterNodeCommand : RavenCommand
+    internal class RemoveClusterNodeCommand : RavenCommand
     {
         private readonly string _node;
 

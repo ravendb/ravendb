@@ -8,7 +8,7 @@ using Sparrow.Json;
 
 namespace Raven.Client.ServerWide.Commands.Cluster
 {
-    public class DemoteClusterNodeCommand : RavenCommand
+    internal class DemoteClusterNodeCommand : RavenCommand
     {
         private readonly string _node;
 
