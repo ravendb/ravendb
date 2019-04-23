@@ -38,7 +38,7 @@ namespace Raven.Server.Documents.TimeSeries
                 var bitsHeader = GetBitsBuffer();
                 var bytes = bitsHeader.NumberOfBits / 8 + (bitsHeader.NumberOfBits % 8 == 0 ? 0 : 1);
 
-                return bytes + DataStart;
+                return bytes + sizeof(BitsBufferHeader) + DataStart;
             }
         }
         

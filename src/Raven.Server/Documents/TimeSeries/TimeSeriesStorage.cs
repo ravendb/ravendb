@@ -168,7 +168,9 @@ namespace Raven.Server.Documents.TimeSeries
 
             private void SetTimestampTag()
             {
-                _tag.Renew(null, _tagPointer.Pointer, _tagPointer.Length);
+                var lazyStringLen = BlittableJsonReaderBase.ReadVariableSizeInt(_tagPointer.Pointer, 0, out var offset);
+
+                _tag.Renew(null, _tagPointer.Pointer + offset, lazyStringLen);
             }
 
             private bool NextSegment(out long baselineMilliseconds, out TimeSeriesValuesSegment readOnlySegment)
@@ -357,7 +359,8 @@ namespace Raven.Server.Documents.TimeSeries
 
                 var newSegment = new TimeSeriesValuesSegment(buffer, MaxSegmentSize);
                 newSegment.Initialize(valuesCopy.Length);
-                newSegment.Append(context.Allocator, deltaFromStart, valuesCopy, tagSlice.AsSpan());
+                var tagSpan = tagSlice.AsSpan();
+                newSegment.Append(context.Allocator, deltaFromStart, valuesCopy, tagSpan);
 
                 using (table.Allocate(out TableValueBuilder tvb))
                 {
