@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Collections;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
@@ -7,6 +8,7 @@ using System.Net.Http;
 using System.Reflection;
 using System.Runtime.InteropServices;
 using System.Security.Cryptography;
+using System.Security.Permissions;
 using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
@@ -51,6 +53,8 @@ namespace Raven.Server.Commercial
         private bool _disableCalculatingLicenseLimits;
         private RSAParameters? _rsaParameters;
         private readonly ServerStore _serverStore;
+        private readonly LicenseHelper _licenseHelper;
+
         private readonly SemaphoreSlim _leaseLicenseSemaphore = new SemaphoreSlim(1);
         private readonly SemaphoreSlim _licenseLimitsSemaphore = new SemaphoreSlim(1);
         private readonly bool _skipLeasingErrorsLogging;
@@ -74,6 +78,7 @@ namespace Raven.Server.Commercial
         public LicenseManager(ServerStore serverStore)
         {
             _serverStore = serverStore;
+            _licenseHelper = new LicenseHelper(serverStore);
             _skipLeasingErrorsLogging = serverStore.Configuration.Licensing.SkipLeasingErrorsLogging;
         }
 
@@ -101,6 +106,7 @@ namespace Raven.Server.Commercial
                     Modulus = rsaPublicParameters.RsaKeyValue.Modulus,
                     Exponent = rsaPublicParameters.RsaKeyValue.Exponent
                 };
+
                 return _rsaParameters.Value;
             }
         }
@@ -120,7 +126,7 @@ namespace Raven.Server.Commercial
 
                 _licenseStatus.FirstServerStartDate = firstServerStartDate.Value;
 
-                ReloadLicense(addPerformanceHint: true);
+                ReloadLicense(firstRun: true);
                 AsyncHelpers.RunSync(() => CalculateLicenseLimits());
             }
             catch (Exception e)
@@ -142,7 +148,7 @@ namespace Raven.Server.Commercial
             return _licenseStatus;
         }
 
-        public void ReloadLicense(bool addPerformanceHint = false)
+        public void ReloadLicense(bool firstRun = false)
         {
             var license = _serverStore.LoadLicense();
             if (license == null)
@@ -181,7 +187,10 @@ namespace Raven.Server.Commercial
 
             LicenseChanged?.Invoke();
 
-            ReloadLicenseLimits(addPerformanceHint);
+            if (firstRun == false)
+                _licenseHelper.UpdateLocalLicense(license, RSAParameters);
+
+            ReloadLicenseLimits(addPerformanceHint: firstRun);
         }
 
         private void CreateAgplAlert()
@@ -553,7 +562,8 @@ namespace Raven.Server.Commercial
             if (_licenseStatus.Type != LicenseType.None)
                 return;
 
-            var license = TryGetLicenseFromString(throwOnActivationFailure) ?? TryGetLicenseFromPath(throwOnActivationFailure);
+            var license = _licenseHelper.TryGetLicenseFromString(throwOnActivationFailure) ??
+                          _licenseHelper.TryGetLicenseFromPath(throwOnActivationFailure);
             if (license == null)
                 return;
 
@@ -568,67 +578,6 @@ namespace Raven.Server.Commercial
 
                 if (throwOnActivationFailure)
                     throw new LicenseActivationException("Failed to activate license", e);
-            }
-        }
-
-        private License TryGetLicenseFromPath(bool throwOnActivationFailure)
-        {
-            var path = _serverStore.Configuration.Licensing.LicensePath;
-
-            try
-            {
-                using (var stream = File.Open(path.FullPath, FileMode.Open, FileAccess.Read, FileShare.Read))
-                {
-                    return DeserializeLicense(stream);
-                }
-            }
-            catch (Exception e)
-            {
-                var msg = $"Failed to read license from '{path.FullPath}' path.";
-
-                if (Logger.IsInfoEnabled)
-                    Logger.Info(msg, e);
-
-                if (throwOnActivationFailure)
-                    throw new LicenseActivationException(msg, e);
-            }
-
-            return null;
-        }
-
-        private License TryGetLicenseFromString(bool throwOnActivationFailure)
-        {
-            var licenseString = _serverStore.Configuration.Licensing.License;
-            if (string.IsNullOrWhiteSpace(licenseString))
-                return null;
-
-            try
-            {
-                using (var stream = new MemoryStream(Encoding.UTF8.GetBytes(licenseString)))
-                {
-                    return DeserializeLicense(stream);
-                }
-            }
-            catch (Exception e)
-            {
-                var msg = $"Failed to read license from '{RavenConfiguration.GetKey(x => x.Licensing.License)}' configuration.";
-
-                if (Logger.IsInfoEnabled)
-                    Logger.Info(msg, e);
-
-                if (throwOnActivationFailure)
-                    throw new LicenseActivationException(msg, e);
-            }
-
-            return null;
-        }
-
-        private static License DeserializeLicense(Stream stream)
-        {
-            using (var context = JsonOperationContext.ShortTermSingleUse())
-            {
-                var json = context.Read(stream, "license/json");
-                return JsonDeserializationServer.License(json);
             }
         }
 

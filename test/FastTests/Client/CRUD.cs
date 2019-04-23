@@ -7,7 +7,6 @@ namespace FastTests.Client
 {
     public class CRUD : RavenTestBase
     {
-
         [Fact]
         public void CRUD_Operations()
         {

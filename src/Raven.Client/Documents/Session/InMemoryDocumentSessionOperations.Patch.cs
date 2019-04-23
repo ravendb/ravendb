@@ -80,9 +80,11 @@ namespace Raven.Client.Documents.Session
             }
         }
 
-
         private object AddTypeNameToValueIfNeeded(Type propertyType, object value)
         {
+            if (value == null)
+                return null;
+            
             var typeOfValue = value.GetType();
             if (propertyType == typeOfValue || typeOfValue.IsClass == false)
                 return value;
