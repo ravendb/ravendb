@@ -117,6 +117,11 @@ namespace Sparrow.Json
 
         public object this[int index] => GetValueTokenTupleByIndex(index).Item1;
 
+        public int BinarySearch(string key)
+        {
+            return BinarySearch(key, StringComparison.Ordinal);
+        }
+
         public int BinarySearch(string key, StringComparison comparison)
         {
             AssertContextNotDisposed();

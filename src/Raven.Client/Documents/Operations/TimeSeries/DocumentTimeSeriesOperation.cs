@@ -1,19 +1,29 @@
 ﻿using System.Collections.Generic;
 using System.IO;
+using System.Linq;
+using Raven.Client.Documents.Commands.Batches;
+using Raven.Client.Documents.Conventions;
+using Raven.Client.Documents.Session;
 using Sparrow.Json;
 using Sparrow.Json.Parsing;
 
 namespace Raven.Client.Documents.Operations.TimeSeries
 {
-    public class DocumentTimeSeriesOperation
+    public class DocumentTimeSeriesOperation : ICommandData
     {
         public List<AppendTimeSeriesOperation> Appends;
         public List<RemoveTimeSeriesOperation> Removals;
-        public string DocumentId;
-        
+        public string Id { get; set; }
+
+        public string Name => null;
+
+        public string ChangeVector => null;
+
+        public CommandType Type => CommandType.TimeSeries;
+
         public static DocumentTimeSeriesOperation Parse(BlittableJsonReaderObject input)
         {
-            if (input.TryGet("DocumentId", out string docId) == false || docId == null)
+            if (input.TryGet("Id", out string docId) == false || docId == null)
                 ThrowMissingDocumentId();
 
             if (input.TryGet("Appends", out BlittableJsonReaderArray appends) == false )
@@ -24,7 +34,7 @@ namespace Raven.Client.Documents.Operations.TimeSeries
 
             var result = new DocumentTimeSeriesOperation
             {
-                DocumentId = docId,
+                Id = docId,
                 Appends = new List<AppendTimeSeriesOperation>(),
                 Removals = new List<RemoveTimeSeriesOperation>()
             };
@@ -78,12 +88,30 @@ namespace Raven.Client.Documents.Operations.TimeSeries
 
         public DynamicJsonValue ToJson()
         {
-            return new DynamicJsonValue
+            var result = new DynamicJsonValue
             {
-                [nameof(DocumentId)] = DocumentId,
-                [nameof(Appends)] = Appends,
-                [nameof(Removals)] = Removals
+                [nameof(Id)] = Id,
+                [nameof(Type)] = Type
             };
+            if(Appends != null)
+            {
+                result[nameof(Appends)] = new DynamicJsonArray(Appends.Select(x => x.ToJson()));
+            }
+            if (Removals != null)
+            {
+                result[nameof(Removals)] = new DynamicJsonArray(Removals.Select(x => x.ToJson()));
+            }
+            return result;
+        }
+
+        public DynamicJsonValue ToJson(DocumentConventions conventions, JsonOperationContext context)
+        {
+            return ToJson();
+        }
+
+        public void OnBeforeSaveChanges(InMemoryDocumentSessionOperations session)
+        {
+            
         }
     }
 }

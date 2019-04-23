@@ -9,9 +9,6 @@ namespace Raven.Client.Documents.Operations.TimeSeries
     {
         public string Name;
         public DateTime From, To;
-
-        internal string ChangeVector;
-
         public static RemoveTimeSeriesOperation Parse(BlittableJsonReaderObject input)
         {
             if (input.TryGet(nameof(Name), out string name) == false || name == null)

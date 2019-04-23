@@ -142,6 +142,9 @@ namespace Raven.Client.Documents.Session.Operations
                     case CommandType.Counters:
                         HandleCounters(batchResult);
                         break;
+                    case CommandType.TimeSeries:
+                        //TODO: What needs to go here?
+                        break;
                     case CommandType.BatchPATCH:
                         break;
                     default:

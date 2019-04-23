@@ -15,9 +15,9 @@ namespace Raven.Client.Documents.Operations.TimeSeries
         {
             
         }
-        private readonly TimeSeriesBatch _timeSeriesBatch;
+        private readonly DocumentTimeSeriesOperation _timeSeriesBatch;
 
-        public TimeSeriesBatchOperation(TimeSeriesBatch timeSeriesBatch)
+        public TimeSeriesBatchOperation(DocumentTimeSeriesOperation timeSeriesBatch)
         {
             _timeSeriesBatch = timeSeriesBatch;
         }
@@ -30,11 +30,11 @@ namespace Raven.Client.Documents.Operations.TimeSeries
         public class CounterBatchCommand : RavenCommand<Result>
         {
             private readonly DocumentConventions _conventions;
-            private readonly TimeSeriesBatch _timeSeriesBatch;
+            private readonly DocumentTimeSeriesOperation _timeSeriesBatch;
 
-            public CounterBatchCommand(TimeSeriesBatch counterBatch, DocumentConventions conventions)
+            public CounterBatchCommand(DocumentTimeSeriesOperation tsBatch, DocumentConventions conventions)
             {
-                _timeSeriesBatch = counterBatch ?? throw new ArgumentNullException(nameof(counterBatch));
+                _timeSeriesBatch = tsBatch ?? throw new ArgumentNullException(nameof(tsBatch));
                 _conventions = conventions;
             }
 
