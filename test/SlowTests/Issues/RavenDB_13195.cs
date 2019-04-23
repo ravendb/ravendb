@@ -1,5 +1,7 @@
 ﻿using System;
+using System.Collections.Generic;
 using FastTests.Voron;
+using Sparrow;
 using Sparrow.Server;
 using Voron;
 using Voron.Data.RawData;
@@ -23,7 +25,7 @@ namespace SlowTests.Issues
         private static readonly Slice Local;
         private static Slice Etag;
 
-        [Fact]
+         [Fact]
         public unsafe void CanDeleteTableWithLargeValues()
         {
             TableSchema schema = new TableSchema();
@@ -43,37 +45,46 @@ namespace SlowTests.Issues
                 IsGlobal = false
             });
 
-            using (Transaction tx = Env.WriteTransaction())
+            using (var tx = Env.WriteTransaction())
             {
                 schema.Create(tx, "first", 256);
                 schema.Create(tx, "second", 256);
 
-                Table fst = tx.OpenTable(schema, "first");
-                Table snd = tx.OpenTable(schema, "second");
+                var fst = tx.OpenTable(schema, "first");
+                var snd = tx.OpenTable(schema, "second");
 
-                for (var i = 0; i < 1000;)
+                var disposables = new List<IDisposable>();
+                try
                 {
-                    var bytes = new byte[2 * RawDataSection.MaxItemSize + 100];
-
-                    new Random(i).NextBytes(bytes);
-
-                    TableValueBuilder tvb1 = new TableValueBuilder();
-                    TableValueBuilder tvb2 = new TableValueBuilder();
-
-                    tvb1.Add(i++);
-                    tvb2.Add(i++);
-
-                    fixed (byte* ptr = bytes)
+                    for (var i = 0; i < 1000;)
                     {
-                        tvb1.Add(ptr, bytes.Length);
-                        tvb2.Add(ptr, bytes.Length);
+                        var bytes = new byte[2 * RawDataSection.MaxItemSize + 100];
+
+                        new Random(i).NextBytes(bytes);
+
+                        disposables.Add(tx.Allocator.Allocate(bytes.Length, out var byteString));
+
+                        var tvb1 = new TableValueBuilder();
+                        var tvb2 = new TableValueBuilder();
+
+                        tvb1.Add(i++);
+                        tvb2.Add(i++);
+
+                        fixed (byte* ptr = bytes)
+                            Memory.Copy(byteString.Ptr, ptr, bytes.Length);
+
+                        tvb1.Add(byteString.Ptr, bytes.Length);
+                        tvb2.Add(byteString.Ptr, bytes.Length);
 
                         fst.Insert(tvb1);
                         snd.Insert(tvb2);
                     }
+                    tx.Commit();
                 }
-
-                tx.Commit();
+                finally
+                {
+                    disposables.ForEach(x => x.Dispose());
+                }
             }
 
             using (var tx = Env.WriteTransaction())
