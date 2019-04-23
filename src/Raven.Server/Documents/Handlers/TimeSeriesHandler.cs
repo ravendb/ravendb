@@ -28,11 +28,11 @@ namespace Raven.Server.Documents.Handlers
 
 
             using (ContextPool.AllocateOperationContext(out DocumentsOperationContext context))
-            using(context.OpenReadTransaction())
+            using (context.OpenReadTransaction())
             {
                 var reader = Database.DocumentsStorage.TimeSeriesStorage.GetReader(context, documentId, name, from, to);
 
-                if(reader.Init() == false)
+                if (reader.Init() == false)
                 {
                     HttpContext.Response.StatusCode = (int)HttpStatusCode.NotFound;
                     return Task.CompletedTask;
@@ -41,48 +41,77 @@ namespace Raven.Server.Documents.Handlers
                 using (var writer = new BlittableJsonTextWriter(context, ResponseBodyStream()))
                 {
                     writer.WriteStartObject();
-
-                    writer.WritePropertyName("DocumentId");
-                    writer.WriteString(documentId);
-                    writer.WriteComma();
-
-                    writer.WritePropertyName("Name");
-                    writer.WriteString(name);
-                    writer.WriteComma();
-
-                    writer.WritePropertyName("Values");
-                    writer.WriteStartArray();
-
-                    var first = true;
-                    foreach (var item in reader.Values())
                     {
-                        if (first)
-                        {
-                            first = false;
-                        }
-                        else
-                        {
-                            writer.WriteComma();
-                        }
+
+                        writer.WritePropertyName("Id");
+                        writer.WriteString(documentId);
+                        writer.WriteComma();
+
+                        writer.WritePropertyName("Values");
                         writer.WriteStartObject();
+                        {
 
-                        writer.WritePropertyName("TimeStamp");
-                        writer.WriteDateTime(item.TimeStamp, true);
-                        writer.WriteComma();
-                        writer.WritePropertyName("Tag");
-                        writer.WriteString(item.Tag);
-                        writer.WriteComma();
-                        writer.WriteArray("Values", item.Values);
+                            writer.WritePropertyName(name);
 
+                            writer.WriteStartObject();
+                            {
+
+                                writer.WritePropertyName("Name");
+                                writer.WriteString(name);
+                                writer.WriteComma();
+
+                                writer.WritePropertyName("From");
+                                writer.WriteDateTime(from, true);
+                                writer.WriteComma();
+
+
+                                writer.WritePropertyName("To");
+                                writer.WriteDateTime(to, true);
+                                writer.WriteComma();
+
+                                writer.WritePropertyName("FullRange");
+                                writer.WriteBool(false); // TODO: Need to figure this out
+                                writer.WriteComma();
+
+                                writer.WritePropertyName("Values");
+                                writer.WriteStartArray();
+                                {
+                                    var first = true;
+                                    foreach (var item in reader.Values())
+                                    {
+                                        if (first)
+                                        {
+                                            first = false;
+                                        }
+                                        else
+                                        {
+                                            writer.WriteComma();
+                                        }
+                                        writer.WriteStartObject();
+
+                                        writer.WritePropertyName("Timestamp");
+                                        writer.WriteDateTime(item.TimeStamp, true);
+                                        writer.WriteComma();
+                                        writer.WritePropertyName("Tag");
+                                        writer.WriteString(item.Tag);
+                                        writer.WriteComma();
+                                        writer.WriteArray("Values", item.Values);
+
+                                        writer.WriteEndObject();
+                                    }
+                                }
+                                writer.WriteEndArray();
+
+
+                            }
+                            writer.WriteEndObject();
+
+                        }
                         writer.WriteEndObject();
+
                     }
-
-                    writer.WriteEndArray();
-
-
-
                     writer.WriteEndObject();
-                    
+
                     writer.Flush();
                 }
             }
@@ -100,7 +129,7 @@ namespace Raven.Server.Documents.Handlers
 
                 if (TrafficWatchManager.HasRegisteredClients)
                     AddStringToHttpContext(blittable.ToString(), TrafficWatchChangeType.TimeSeries);
-                
+
                 var cmd = new ExecuteTimeSeriesBatchCommand(Database, timeSeriesBatch, false);
 
                 try
@@ -115,7 +144,7 @@ namespace Raven.Server.Documents.Handlers
             }
         }
 
-        
+
         public class ExecuteTimeSeriesBatchCommand : TransactionOperationsMerger.MergedTransactionCommand
         {
             private readonly DocumentDatabase _database;
@@ -177,8 +206,8 @@ namespace Raven.Server.Documents.Handlers
             {
                 try
                 {
-                   var doc = _database.DocumentsStorage.Get(context, docBatch.Id,
-                        throwOnConflict: true);
+                    var doc = _database.DocumentsStorage.Get(context, docBatch.Id,
+                         throwOnConflict: true);
                     if (doc == null)
                     {
                         if (_fromEtl)
@@ -211,8 +240,8 @@ namespace Raven.Server.Documents.Handlers
             {
                 throw new DocumentDoesNotExistException(docId, "Cannot operate on time series of a missing document");
             }
-            
-            
+
+
             public static void ThrowArtificialDocument(Document doc)
             {
                 throw new InvalidOperationException($"Document '{doc.Id}' has '{nameof(DocumentFlags.Artificial)}' flag set. " +
@@ -225,6 +254,6 @@ namespace Raven.Server.Documents.Handlers
                 throw new System.NotImplementedException();
             }
         }
-        
+
     }
 }
