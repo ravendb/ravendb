@@ -378,6 +378,7 @@ namespace Raven.Server.Documents.TimeSeries
                 {
                     // we use the values as the statement location for the previous values as well
                     values.Clear();
+                    state.Clear();
                     tag = default;
                 }
 

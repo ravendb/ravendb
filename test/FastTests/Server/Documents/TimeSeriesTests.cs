@@ -99,7 +99,7 @@ namespace FastTests.Server.Documents
                     session.SaveChanges();
                 }
 
-                var offset = 1;
+                var offset = 0;
 
                 for (int i = 0; i < 10; i++)
                 {
@@ -126,7 +126,7 @@ namespace FastTests.Server.Documents
 
                     for (int i = 0; i < 10_000; i++)
                     {
-                        Assert.Equal(baseline.AddMinutes(1 + i), vals[i].Timestamp);
+                        Assert.Equal(baseline.AddMinutes(i), vals[i].Timestamp);
                         Assert.Equal(1 + i, vals[i].Values[0]);
                     }
                 }
