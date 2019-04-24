@@ -1,8 +1,5 @@
 ﻿using System;
-using System.Collections.Generic;
 using System.Linq;
-using System.Text;
-using Raven.Client.Documents.Operations.TimeSeries;
 using Xunit;
 
 namespace FastTests.Server.Documents
@@ -33,9 +30,6 @@ namespace FastTests.Server.Documents
                     Assert.Equal("watches/fitbit", val.Tag);
                     Assert.Equal(baseline.AddMinutes(1), val.Timestamp);
                 }
-
-
-
             }
         }
 
@@ -116,7 +110,6 @@ namespace FastTests.Server.Documents
                     }
                 }
 
-
                 using (var session = store.OpenSession())
                 {
                     var vals = session.TimeSeriesFor("users/ayende")
@@ -128,6 +121,77 @@ namespace FastTests.Server.Documents
                     {
                         Assert.Equal(baseline.AddMinutes(i), vals[i].Timestamp);
                         Assert.Equal(1 + i, vals[i].Values[0]);
+                    }
+                }
+            }
+        }
+
+
+        [Fact]
+        public void CanStoreValuesOutOfOrder()
+        {
+            using (var store = GetDocumentStore())
+            {
+                var baseline = DateTime.Today;
+
+                using (var session = store.OpenSession())
+                {
+                    session.Store(new { Name = "Oren" }, "users/ayende");
+                    session.SaveChanges();
+                }
+
+                var offset = 0;
+
+                using (var session = store.OpenSession())
+                {
+
+                    for (int j = 0; j < 1000; j++)
+                    {
+                        session.TimeSeriesFor("users/ayende")
+                            .Append("Heartrate", baseline.AddMinutes(offset), "watches/fitbit", new double[] { offset });
+
+                        offset += 5;
+                    }
+
+                    session.SaveChanges();
+                }
+
+                offset = 1;
+
+                using (var session = store.OpenSession())
+                {
+
+                    for (int j = 0; j < 1000; j++)
+                    {
+                        session.TimeSeriesFor("users/ayende")
+                            .Append("Heartrate", baseline.AddMinutes(offset), "watches/fitbit", new double[] { offset });
+                        offset += 5;
+                    }
+
+                    session.SaveChanges();
+                }
+
+                using (var session = store.OpenSession())
+                {
+                    var vals = session.TimeSeriesFor("users/ayende")
+                        .Get("Heartrate", DateTime.MinValue, DateTime.MaxValue)
+                        .ToList();
+                    Assert.Equal(2_000, vals.Count);
+
+                    offset = 0;
+                    for (int i = 0; i < 1000; i++)
+                    {
+                        Assert.Equal(baseline.AddMinutes(offset), vals[i].Timestamp);
+                        Assert.Equal(offset, vals[i].Values[0]);
+
+                        offset++;
+                        i++;
+
+                        Assert.Equal(baseline.AddMinutes(offset), vals[i].Timestamp);
+                        Assert.Equal(offset, vals[i].Values[0]);
+
+
+                        offset += 5;
                     }
                 }
             }

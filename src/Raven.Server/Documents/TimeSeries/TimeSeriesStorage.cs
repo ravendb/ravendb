@@ -295,67 +295,77 @@ namespace Raven.Server.Documents.TimeSeries
                 }
 
                 // here we have a complex scenario, we need to add it in the middle of the current segment
-                // to do that, we have to re-create it from scratch
+                // to do that, we have to re-create it from scratch.
 
-                var splitSegment = new TimeSeriesValuesSegment(buffer.Ptr, MaxSegmentSize);
-                splitSegment.Initialize(values.Length);
+                // the first thing to do here it to copy the segment out, because we may be writing it in multiple
+                // steps, and move the actual values as we do so
 
-                var enumerator = readOnlySegment.GetEnumerator();
-
-                var valuesBuffer = stackalloc double[readOnlySegment.NumberOfValues];
-                var currentValues = new Span<double>(valuesBuffer, readOnlySegment.NumberOfValues);
-                var stateBuffer = stackalloc TimeStampState[readOnlySegment.NumberOfValues];
-                var state = new Span<TimeStampState>(stateBuffer, readOnlySegment.NumberOfValues);
-                var currentTag = new TimeSeriesValuesSegment.TagPointer();
-
-                var addedCurrent = false;
-                // TODO: Need to handle different number of values
-
-                while (enumerator.MoveNext(out var currentTimestamp, currentValues, state, ref currentTag))
+                using (context.Allocator.Allocate(size, out var currentSegmentBuffer))
                 {
-                    var current = baseline.AddMilliseconds(currentTimestamp);
-                    if (current < timestamp)
+                    Memory.Copy(currentSegmentBuffer.Ptr, segmentReadOnlyBuffer, size);
+                    readOnlySegment = new TimeSeriesValuesSegment(currentSegmentBuffer.Ptr, size);
+
+                    var splitSegment = new TimeSeriesValuesSegment(buffer.Ptr, MaxSegmentSize);
+                    splitSegment.Initialize(values.Length);
+
+                    var enumerator = readOnlySegment.GetEnumerator();
+
+                    var valuesBuffer = stackalloc double[readOnlySegment.NumberOfValues];
+                    var currentValues = new Span<double>(valuesBuffer, readOnlySegment.NumberOfValues);
+                    var stateBuffer = stackalloc TimeStampState[readOnlySegment.NumberOfValues];
+                    var state = new Span<TimeStampState>(stateBuffer, readOnlySegment.NumberOfValues);
+                    var currentTag = new TimeSeriesValuesSegment.TagPointer();
+
+                    var addedCurrent = false;
+                    // TODO: Need to handle different number of values
+
+                    while (enumerator.MoveNext(out var currentTimestamp, currentValues, state, ref currentTag))
                     {
-                        // no need to check if we added it, since we know it fits
-                        splitSegment.Append(context.Allocator, currentTimestamp, currentValues, currentTag.AsSpan());
-                        continue;
-                    }
-
-
-                    if (addedCurrent == false)
-                    {
-                        addedCurrent = true;
-
-                        var shouldAdd = true;
-
-                        // if the time stamps are equal, we need to decide who to take
-                        if (current == timestamp)
+                        var current = baseline.AddMilliseconds(currentTimestamp);
+                        if (current < timestamp)
                         {
-                            shouldAdd = fromReplication == false || // if not from replication, this value overrides
-                                        values.SequenceCompareTo(currentValues) > 0; // if from replication, the largest value wins
+                            // no need to check if we added it, since we know it fits
+                            splitSegment.Append(context.Allocator, currentTimestamp, currentValues, currentTag.AsSpan());
+                            continue;
                         }
 
-                        if (shouldAdd)
+
+                        if (addedCurrent == false)
                         {
-                            if (splitSegment.Append(context.Allocator, currentTimestamp, values, tagSlice.AsSpan()) == false)
-                            {
-                                changeVector = FlushCurrentSegment(cv, buffer.Ptr, ref splitSegment, collectionSlice, currentTimestamp, timeSeriesKeyBuffer, currentValues, currentTag.AsSpan(), ref key, ref keySize, ref baseline);
-                            }
+                            addedCurrent = true;
+
+                            var shouldAdd = true;
+
+                            // if the time stamps are equal, we need to decide who to take
                             if (current == timestamp)
-                                continue; // we overwrote the one from the current segment, skip this
+                            {
+                                shouldAdd = fromReplication == false || // if not from replication, this value overrides
+                                            values.SequenceCompareTo(currentValues) > 0; // if from replication, the largest value wins
+                            }
+
+                            if (shouldAdd)
+                            {
+                                if (splitSegment.Append(context.Allocator, currentTimestamp, values, tagSlice.AsSpan()) == false)
+                                {
+                                    changeVector = FlushCurrentSegment(cv, buffer.Ptr, ref splitSegment, collectionSlice, currentTimestamp, timeSeriesKeyBuffer, currentValues, currentTag.AsSpan(), ref key, ref keySize, ref baseline);
+                                }
+                                if (current == timestamp)
+                                    continue; // we overwrote the one from the current segment, skip this
+                            }
+                        }
+
+
+                        if (splitSegment.Append(context.Allocator, currentTimestamp, currentValues, currentTag.AsSpan()) == false)
+                        {
+                            changeVector = FlushCurrentSegment(cv, buffer.Ptr, ref splitSegment, collectionSlice, currentTimestamp, timeSeriesKeyBuffer, currentValues, currentTag.AsSpan(), ref key, ref keySize, ref baseline);
                         }
                     }
 
+                    AppendExistingSegment(key, keySize, cv, buffer.Ptr, splitSegment.NumberOfBytes, collectionSlice);
 
-                    if (splitSegment.Append(context.Allocator, currentTimestamp, currentValues, currentTag.AsSpan()) == false)
-                    {
-                        changeVector = FlushCurrentSegment(cv, buffer.Ptr, ref splitSegment, collectionSlice, currentTimestamp, timeSeriesKeyBuffer, currentValues, currentTag.AsSpan(), ref key, ref keySize, ref baseline);
-                    }
+                    return changeVector;
+
                 }
-
-                AppendExistingSegment(key, keySize, cv, buffer.Ptr, splitSegment.NumberOfBytes, collectionSlice);
-
-                return changeVector;
             }
 
             string AppendNewSegment(byte* buffer, Slice tagSlice, Slice timeSeriesKeySlice, Slice cv, Slice collectionSlice, Span<double> valuesCopy)
@@ -409,7 +419,7 @@ namespace Raven.Server.Documents.TimeSeries
                 AppendExistingSegment(key, keySize, cv, buffer, splitSegment.NumberOfBytes, collectionSlice);
                 baseline = baseline.AddMilliseconds(currentTimestamp);
 
-                *(long*)(timeSeriesKeyBuffer.Ptr + timeSeriesKeyBuffer.Length - sizeof(int)) = Bits.SwapBytes(baseline.Ticks * 10_000);
+                *(long*)(timeSeriesKeyBuffer.Ptr + timeSeriesKeyBuffer.Length - sizeof(int)) = Bits.SwapBytes(baseline.Ticks / 10_000);
                 key = timeSeriesKeyBuffer.Ptr;
                 keySize = timeSeriesKeyBuffer.Length;
 
