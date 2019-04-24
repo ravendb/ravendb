@@ -294,19 +294,25 @@ namespace Raven.Server.Documents.TimeSeries
                     return AppendNewSegment(buffer.Ptr, tagSlice, timeSeriesKeySlice, cv, collectionSlice, values);
                 }
 
+                return SplitSegment(segmentReadOnlyBuffer, size, values, buffer, baseline, collectionSlice, tagSlice, timeSeriesKeyBuffer, key, keySize, cv);
+            }
+
+            string SplitSegment(byte* segmentReadOnlyBuffer, int size, Span<double> valuesCopy, ByteString buffer, DateTime baseline, Slice collectionSlice, Slice tagSlice, ByteString timeSeriesKeyBuffer, byte* key, int keySize, Slice cv)
+            {
                 // here we have a complex scenario, we need to add it in the middle of the current segment
                 // to do that, we have to re-create it from scratch.
 
                 // the first thing to do here it to copy the segment out, because we may be writing it in multiple
                 // steps, and move the actual values as we do so
 
+                num = 0;
                 using (context.Allocator.Allocate(size, out var currentSegmentBuffer))
                 {
                     Memory.Copy(currentSegmentBuffer.Ptr, segmentReadOnlyBuffer, size);
-                    readOnlySegment = new TimeSeriesValuesSegment(currentSegmentBuffer.Ptr, size);
+                    var readOnlySegment = new TimeSeriesValuesSegment(currentSegmentBuffer.Ptr, size);
 
                     var splitSegment = new TimeSeriesValuesSegment(buffer.Ptr, MaxSegmentSize);
-                    splitSegment.Initialize(values.Length);
+                    splitSegment.Initialize(valuesCopy.Length);
 
                     var enumerator = readOnlySegment.GetEnumerator();
 
@@ -340,12 +346,12 @@ namespace Raven.Server.Documents.TimeSeries
                             if (current == timestamp)
                             {
                                 shouldAdd = fromReplication == false || // if not from replication, this value overrides
-                                            values.SequenceCompareTo(currentValues) > 0; // if from replication, the largest value wins
+                                            valuesCopy.SequenceCompareTo(currentValues) > 0; // if from replication, the largest value wins
                             }
 
                             if (shouldAdd)
                             {
-                                if (splitSegment.Append(context.Allocator, currentTimestamp, values, tagSlice.AsSpan()) == false)
+                                if (splitSegment.Append(context.Allocator, currentTimestamp, valuesCopy, tagSlice.AsSpan()) == false)
                                 {
                                     changeVector = FlushCurrentSegment(cv, buffer.Ptr, ref splitSegment, collectionSlice, currentTimestamp, timeSeriesKeyBuffer, currentValues, currentTag.AsSpan(), ref key, ref keySize, ref baseline);
                                 }

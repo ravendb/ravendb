@@ -62,6 +62,8 @@ namespace Raven.Server.Documents.TimeSeries
         
         public int NumberOfValues => Header->NumberOfValues;
 
+        public int NumberOfEntries => Header->NumberOfEntries;
+
         public void Initialize(int numberOfValues)
         {
             new Span<byte>(_buffer, _capacity).Clear();
