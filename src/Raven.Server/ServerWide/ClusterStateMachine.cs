@@ -1024,6 +1024,8 @@ namespace Raven.Server.ServerWide
 
         internal static unsafe void UpdateCertificate(Table certificates, Slice key, Slice hash, BlittableJsonReaderObject updated)
         {
+            Debug.Assert(key.ToString() == key.ToString().ToLowerInvariant(), $"Key of certificate table (thumbprint) must be lower cased while we got '{key}'");
+
             using (certificates.Allocate(out TableValueBuilder builder))
             {
                 builder.Add(key);

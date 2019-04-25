@@ -1,5 +1,4 @@
-﻿using System.Linq;
-using System.Text;
+﻿using System.Text;
 using Raven.Server.Json;
 using Raven.Server.ServerWide;
 using Sparrow.Json;
@@ -13,28 +12,47 @@ namespace Raven.Server.Storage.Schema.Updates.Server
     {
         public bool Update(UpdateStep step)
         {
+            return UpdateCertificatesTableInternal(step);
+        }
+
+        internal static bool UpdateCertificatesTableInternal(UpdateStep step)
+        {
             var schema = ClusterStateMachine.CertificatesSchema;
-            var certsTable = step.WriteTx.OpenTable(schema, ClusterStateMachine.CertificatesSlice);
+
+            var readCertsTable = step.ReadTx.OpenTable(schema, ClusterStateMachine.CertificatesSlice);
+            var writeCertsTable = step.WriteTx.OpenTable(schema, ClusterStateMachine.CertificatesSlice);
 
             using (var context = JsonOperationContext.ShortTermSingleUse())
             {
-                var certificates = certsTable.SeekByPrimaryKey(Slices.Empty, 0).ToList();
-            
-                foreach (var cert in certificates)
+                foreach (var cert in readCertsTable.SeekByPrimaryKey(Slices.Empty, 0))
                 {
                     (string key, BlittableJsonReaderObject doc) = GetCurrentItem(step.WriteTx, context, cert);
+
                     using (doc)
                     {
                         var def = JsonDeserializationServer.CertificateDefinition(doc);
                         From11.DropCertificatePrefixFromDefinition(def, out var touched);
 
+                        var loweredKey = key.ToLowerInvariant();
+
+                        if (loweredKey != key)
+                        {
+                            // we have upper cased key (thumbprint)
+                            // let's remove current record from table and force writing it again with lower cased key value
+
+                            using (Slice.From(step.WriteTx.Allocator, key, out Slice keySlice))
+                                writeCertsTable.DeleteByKey(keySlice);
+
+                            touched = true;
+                        }
+
                         if (touched)
                         {
                             using (Slice.From(step.WriteTx.Allocator, def.PublicKeyPinningHash, out Slice hashSlice))
-                            using (Slice.From(step.WriteTx.Allocator, key, out Slice keySlice))
+                            using (Slice.From(step.WriteTx.Allocator, loweredKey, out Slice keySlice))
                             using (var newCert = context.ReadObject(def.ToJson(), "certificate/updated"))
                             {
-                                ClusterStateMachine.UpdateCertificate(certsTable, keySlice, hashSlice, newCert);
+                                ClusterStateMachine.UpdateCertificate(writeCertsTable, keySlice, hashSlice, newCert);
                             }
                         }
                     }
@@ -43,7 +61,7 @@ namespace Raven.Server.Storage.Schema.Updates.Server
 
             return true;
         }
-        
+
         private static (string, BlittableJsonReaderObject) GetCurrentItem(Transaction tx, JsonOperationContext context, Table.TableValueHolder result)
         {
             var ptr = result.Reader.Read((int)ClusterStateMachine.CertificatesTable.Data, out int size);

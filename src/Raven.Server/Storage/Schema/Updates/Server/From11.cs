@@ -112,7 +112,7 @@ namespace Raven.Server.Storage.Schema.Updates.Server
 
                         using (Slice.From(step.WriteTx.Allocator, def.PublicKeyPinningHash, out Slice hashSlice))
                         using (Slice.From(step.WriteTx.Allocator, cert.ItemName, out Slice oldKeySlice)) // includes the 'certificates/' prefix
-                        using (Slice.From(step.WriteTx.Allocator, def.Thumbprint, out Slice newKeySlice))
+                        using (Slice.From(step.WriteTx.Allocator, def.Thumbprint.ToLowerInvariant(), out Slice newKeySlice))
                         {
                             // in this update we trim 'certificates/' prefix from key name, CollectionPrimaryKey and CollectionSecondaryKeys
                             DropCertificatePrefixFromDefinition(def, out _);
