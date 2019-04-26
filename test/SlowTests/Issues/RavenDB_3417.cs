@@ -24,7 +24,7 @@ namespace SlowTests.Issues
 
                 var indexingPerformanceStatistics = store.Maintenance.Send(new GetIndexPerformanceStatisticsOperation());
 
-                Assert.Equal(3, indexingPerformanceStatistics.Length);
+                Assert.Equal(4, indexingPerformanceStatistics.Length);
 
                 foreach (var stats in indexingPerformanceStatistics)
                 {
