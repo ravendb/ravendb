@@ -28,7 +28,7 @@ namespace SlowTests.Issues
         public void CanCalculateNumberOfEntriesInFst_Random(int seed)
         {
             var random = new Random(seed);
-            var total = random.Next(0, 10000);
+            var total = random.Next(10, 10_000);
             var mod = random.Next(2, 100);
 
             DoWork(total, mod, modZero: true);

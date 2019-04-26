@@ -92,6 +92,8 @@ namespace Sparrow.Logging
                     throw new InvalidOperationException("Socket was already added?");
             }
 
+            AssertLogging();
+
             var arraySegment = new ArraySegment<byte>(new byte[512]);
             var buffer = new StringBuilder();
             var charBuffer = new char[Encodings.Utf8.GetMaxCharCount(arraySegment.Count)];
@@ -126,6 +128,16 @@ namespace Sparrow.Logging
                     WebSocketMessageType.Text, true,
                     token).ConfigureAwait(false);
             }
+        }
+
+        private void AssertLogging()
+        {
+            var thread = _loggingThread;
+            if (thread == null)
+                throw new InvalidOperationException("There is no logging thread.");
+
+            if (_keepLogging == false)
+                throw new InvalidOperationException("Logging is turned off.");
         }
 
         public LoggingSource(LogMode logMode, string path, TimeSpan retentionTime, string name)
