@@ -713,7 +713,7 @@ DeleteThenInsert:
         {
             if (indexDef.IsGlobal)
                 return _tx.GetGlobalFixedSizeTree(indexDef.Name, sizeof(long), isIndexTree: true, newPageAllocator: _globalPageAllocator);
-            
+
             var tableTree = _tx.ReadTree(Name);
             return GetFixedSizeTree(tableTree, indexDef.Name, sizeof(long), isGlobal: false, isIndexTree: true);
         }
@@ -904,7 +904,7 @@ DeleteThenInsert:
         public IEnumerable<SeekResult> SeekForwardFrom(TableSchema.SchemaIndexDef index, Slice value, int skip, bool startsWith = false)
         {
             var tree = GetTree(index);
-            if (tree == null || tree.State.NumberOfEntries == 0)
+            if (tree == null)
                 yield break;
 
             using (var it = tree.Iterate(true))
@@ -969,7 +969,7 @@ DeleteThenInsert:
         public TableValueHolder SeekOneForwardFromPrefix(TableSchema.SchemaIndexDef index, Slice value)
         {
             var tree = GetTree(index);
-            if (tree == null || tree.State.NumberOfEntries == 0)
+            if (tree == null)
                 return null;
 
             using (var it = tree.Iterate(true))
@@ -994,7 +994,7 @@ DeleteThenInsert:
         public IEnumerable<SeekResult> SeekBackwardFrom(TableSchema.SchemaIndexDef index, Slice prefix, Slice last, int skip)
         {
             var tree = GetTree(index);
-            if (tree == null || tree.State.NumberOfEntries == 0)
+            if (tree == null)
                 yield break;
 
             using (var it = tree.Iterate(true))
@@ -1032,8 +1032,7 @@ DeleteThenInsert:
         public IEnumerable<SeekResult> SeekBackwardFrom(TableSchema.SchemaIndexDef index, Slice prefix, Slice last)
         {
             var tree = GetTree(index);
-            if (tree == null ||
-                tree.State.NumberOfEntries == 0)
+            if (tree == null)
                 yield break;
 
             using (var it = tree.Iterate(true))
@@ -1065,8 +1064,7 @@ DeleteThenInsert:
         public IEnumerable<SeekResult> SeekBackwardFrom(TableSchema.SchemaIndexDef index, Slice last)
         {
             var tree = GetTree(index);
-            if (tree == null ||
-                tree.State.NumberOfEntries == 0)
+            if (tree == null)
                 yield break;
 
             using (var it = tree.Iterate(true))
@@ -1091,7 +1089,7 @@ DeleteThenInsert:
         public TableValueHolder SeekOneBackwardFrom(TableSchema.SchemaIndexDef index, Slice prefix, Slice last)
         {
             var tree = GetTree(index);
-            if (tree.State.NumberOfEntries == 0)
+            if (tree == null)
                 return null;
 
             using (var it = tree.Iterate(true))
@@ -1510,7 +1508,7 @@ DeleteThenInsert:
         }
 
         public long DeleteForwardFrom(TableSchema.SchemaIndexDef index, Slice value, bool startsWith, long numberOfEntriesToDelete,
-            Action<TableValueHolder> beforeDelete = null, Func<TableValueHolder,bool> shouldAbort = null)
+            Action<TableValueHolder> beforeDelete = null, Func<TableValueHolder, bool> shouldAbort = null)
         {
             AssertWritableTable();
 
