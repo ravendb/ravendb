@@ -11,6 +11,7 @@ using Raven.Client.Documents.Operations;
 using Raven.Client.Documents.Operations.Sorters;
 using Raven.Client.Documents.Queries.Sorting;
 using Raven.Client.Exceptions;
+using Raven.Client.Exceptions.Documents.Compilation;
 using Raven.Client.Exceptions.Documents.Sorters;
 using Raven.Client.Http;
 using Raven.Server.Documents.Queries;
@@ -88,6 +89,18 @@ namespace SlowTests.Issues
                     Name = "MySorter",
                     Code = sorterCode
                 }));
+
+                var e = Assert.Throws<SorterCompilationException>(() =>
+                {
+                    // We should not be able to add sorter with non-matching name
+                    store.Maintenance.Send(new PutSortersOperation(new SorterDefinition
+                    {
+                        Name = "MySorter_OtherName",
+                        Code = sorterCode
+                    }));
+                });
+
+                Assert.Contains("Could not find type 'MySorter_OtherName' in given assembly.", e.Message);
 
                 CanUseSorterInternal<RavenException>(store, "Catch me 2: Name:2:0:False", "Catch me 2: Name:2:0:True");
 

@@ -88,7 +88,7 @@ namespace Raven.Server.Documents.Indexes.Sorting
 
         private static CreateSorter CompileSorter(string name, string sorterCode)
         {
-            var key = new CacheKey(null, null, sorterCode);
+            var key = new CacheKey(null, name, sorterCode);
             var result = SortersCache.GetOrAdd(key, _ => new Lazy<CreateSorter>(() => SorterCompiler.Compile(name, sorterCode)));
 
             try
