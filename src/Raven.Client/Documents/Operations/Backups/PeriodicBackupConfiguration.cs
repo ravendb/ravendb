@@ -125,7 +125,7 @@ namespace Raven.Client.Documents.Operations.Backups
                 backupDestinations.Add("S3");
             if (GlacierSettings != null && GlacierSettings.Disabled == false)
                 backupDestinations.Add("Glacier");
-            if (FtpSettings != null && GoogleCloudStorageSettings.Disabled == false)
+            if (GoogleCloudStorageSettings != null && GoogleCloudStorageSettings.Disabled == false)
                 backupDestinations.Add("Google Cloud Storage");
             if (FtpSettings != null && FtpSettings.Disabled == false)
                 backupDestinations.Add("FTP");
