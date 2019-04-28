@@ -13,7 +13,7 @@ namespace Sparrow.Collections
     {
         private readonly long _p1, _p2, _p3, _p4;
 
-        internal bool IsReady;
+        internal int IsReady;
         public T Item;
 
         private readonly long _p5, _p6, _p7, _p8;
@@ -49,25 +49,29 @@ namespace Sparrow.Collections
 
         public bool TryPush(ref T item)
         {
-            // We will check if we potentially have the ability to push 1 more item. 
+            // We will check if we potentially have the ability to push 1 more item.
+            int cidx = Volatile.Read(ref _currentIdx);
             int sidx = Volatile.Read(ref _startIdx);
 
-            //_currentIdx modified only by producer and there for no need of Volatile.Read
             // Check if we have empty spaces in the buffer.
-            if (_currentIdx - sidx >= _size)
+            if (cidx - sidx >= _size)
                 return false; // No space to do anything
 
             // Assign the value
             ref var cl = ref _buffer[_currentIdx & _mask];
+
+            // We then check if another producer is trying to push.
+            if (Interlocked.CompareExchange(ref cl.IsReady, 1, 0) != 0)
+                return false;
+
             // We assign the item
             cl.Item = item;
-            // We then write the volatile value.
-            Volatile.Write(ref cl.IsReady, true);
 
+            // Making the new item available for consumer
             Interlocked.Increment(ref _currentIdx);
 
             return true;
-            // Very rarely we will go through and try again, the only condition is when we have a huge contention and traffic.
+            // We will go through and try again, the conditions are when we have a huge contention and traffic and when two producer trying to push at the same time.
         }
 
         public bool TryAcquireSingle(out RingItem<T> item)
@@ -122,7 +126,7 @@ namespace Sparrow.Collections
             while (i < items.Length)
             {
                 ref var item = ref items[i];
-                if (Volatile.Read(ref item.IsReady))
+                if (Volatile.Read(ref item.IsReady) == 1)
                 {
                     i++;
                 }
@@ -151,7 +155,7 @@ namespace Sparrow.Collections
             {
                 ref var item = ref _buffer[i & _mask];
                 item.Item = default(T);
-                Volatile.Write(ref item.IsReady, false);
+                Volatile.Write(ref item.IsReady, 0);
             }
 
             if (_acquiredIdx != -1)
