@@ -1374,7 +1374,7 @@ namespace Raven.Server.ServerWide
                     if (taskName == null)
                     {
                         if (_server.ServerStore.DatabasesLandlord.DatabasesCache.TryGetValue(dbName, out var databaseTask) == false)
-                            throw new RachisApplyException($"Value cannot be null or empty. Param: {nameof(dbName)}");
+                            throw new DatabaseDoesNotExistException($"Can't get subscription name because The database {dbName} does not exists");
                         using (ContextPool.AllocateOperationContext(out TransactionOperationContext ctx))
                         using (ctx.OpenReadTransaction())
                         {
