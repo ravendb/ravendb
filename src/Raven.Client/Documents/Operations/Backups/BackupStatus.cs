@@ -123,10 +123,9 @@ namespace Raven.Client.Documents.Operations.Backups
         public UploadProgress()
         {
             UploadType = UploadType.Regular;
-            _sw = Stopwatch.StartNew();
         }
 
-        private readonly Stopwatch _sw;
+        private  Stopwatch _sw;
 
         public UploadType UploadType { get; set; }
 
@@ -138,13 +137,21 @@ namespace Raven.Client.Documents.Operations.Backups
 
         public double BytesPutsPerSec { get; set; }
 
-        public long UploadTimeInMs => _sw.ElapsedMilliseconds;
+        public long UploadTimeInMs => _sw?.ElapsedMilliseconds ?? 0;
 
         public void ChangeState(UploadState newState)
         {
             UploadState = newState;
             if (newState == UploadState.Done)
-                _sw.Stop();
+                switch (newState)
+                {
+                    case UploadState.PendingUpload:
+                        _sw = Stopwatch.StartNew();
+                        break;
+                    case UploadState.Done:
+                        _sw.Stop();
+                        break;
+                }
         }
 
         public void SetTotal(long totalLength)
