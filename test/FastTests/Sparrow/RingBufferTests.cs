@@ -196,7 +196,7 @@ namespace FastTests.Sparrow
                         if (rb.TryAcquireSingle(out var ringItem))
                         {
                             Assert.NotNull(ringItem.Item);
-                            Assert.True(ringItem.IsReady, $"Acquired {ringItem.GetType()} should be set to ready");
+                            Assert.True(ringItem.IsReady == 1, $"Acquired {ringItem.GetType()} should be set to ready");
                             break;
                         }
                     }
