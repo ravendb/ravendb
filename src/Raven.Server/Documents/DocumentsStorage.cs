@@ -306,6 +306,10 @@ namespace Raven.Server.Documents
                     InitializeLastEtag(tx);
                     _collectionsCache = ReadCollections(tx);
 
+                    var cv = GetDatabaseChangeVector(tx);
+                    var lastEtagInChangeVector = ChangeVectorUtils.GetEtagById(cv, DocumentDatabase.DbBase64Id);
+                    _lastEtag = Math.Max(_lastEtag, lastEtagInChangeVector);
+
                     tx.Commit();
                 }
             }
@@ -336,8 +340,15 @@ namespace Raven.Server.Documents
 
         public static string GetDatabaseChangeVector(DocumentsOperationContext context)
         {
-            AssertTransaction(context);
-            var tree = context.Transaction.InnerTransaction.ReadTree(GlobalTreeSlice);
+            return GetDatabaseChangeVector(context.Transaction.InnerTransaction);
+        }
+
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public static string GetDatabaseChangeVector(Transaction tx)
+        {
+            if (tx == null)
+                throw new InvalidOperationException("No active transaction found in the context, and at least read transaction is needed");
+            var tree = tx.ReadTree(GlobalTreeSlice);
             var val = tree.Read(GlobalChangeVectorSlice);
             if (val == null)
             {
@@ -345,7 +356,6 @@ namespace Raven.Server.Documents
             }
             return Encodings.Utf8.GetString(val.Reader.Base, val.Reader.Length);
         }
-
         public string CreateNextDatabaseChangeVector(DocumentsOperationContext context, string changeVector)
         {
             var databaseChangeVector = context.LastDatabaseChangeVector ?? GetDatabaseChangeVector(context);

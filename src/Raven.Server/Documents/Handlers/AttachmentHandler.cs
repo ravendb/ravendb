@@ -7,12 +7,10 @@
 using System;
 using System.IO;
 using System.Net;
-using System.Runtime.ExceptionServices;
 using System.Threading.Tasks;
 using Raven.Client;
 using Raven.Client.Documents.Attachments;
 using Raven.Client.Documents.Operations.Attachments;
-using Raven.Client.Exceptions;
 using Raven.Server.Routing;
 using Raven.Server.ServerWide.Context;
 using Sparrow.Json;
@@ -237,7 +235,6 @@ namespace Raven.Server.Documents.Handlers
                     };
                     stream.Flush();
                     await Database.TxMerger.Enqueue(cmd);
-                    cmd.ExceptionDispatchInfo?.Throw();
                     result = cmd.Result;
                 }
 
@@ -293,7 +290,6 @@ namespace Raven.Server.Documents.Handlers
                     Name = name
                 };
                 await Database.TxMerger.Enqueue(cmd);
-                cmd.ExceptionDispatchInfo?.Throw();
 
                 NoContentStatus();
             }
@@ -305,7 +301,6 @@ namespace Raven.Server.Documents.Handlers
             public string Name;
             public LazyStringValue ExpectedChangeVector;
             public DocumentDatabase Database;
-            public ExceptionDispatchInfo ExceptionDispatchInfo;
             public AttachmentDetails Result;
             public string ContentType;
             public Stream Stream;
@@ -313,15 +308,9 @@ namespace Raven.Server.Documents.Handlers
 
             protected override int ExecuteCmd(DocumentsOperationContext context)
             {
-                try
-                {
-                    Result = Database.DocumentsStorage.AttachmentsStorage.PutAttachment(context, DocumentId, Name,
-                        ContentType, Hash, ExpectedChangeVector, Stream);
-                }
-                catch (ConcurrencyException e)
-                {
-                    ExceptionDispatchInfo = ExceptionDispatchInfo.Capture(e);
-                }
+
+                Result = Database.DocumentsStorage.AttachmentsStorage.PutAttachment(context, DocumentId, Name,
+                    ContentType, Hash, ExpectedChangeVector, Stream);
                 return 1;
             }
 
@@ -345,18 +334,10 @@ namespace Raven.Server.Documents.Handlers
             public string Name;
             public LazyStringValue ExpectedChangeVector;
             public DocumentDatabase Database;
-            public ExceptionDispatchInfo ExceptionDispatchInfo;
 
             protected override int ExecuteCmd(DocumentsOperationContext context)
             {
-                try
-                {
-                    Database.DocumentsStorage.AttachmentsStorage.DeleteAttachment(context, DocumentId, Name, ExpectedChangeVector);
-                }
-                catch (ConcurrencyException e)
-                {
-                    ExceptionDispatchInfo = ExceptionDispatchInfo.Capture(e);
-                }
+                Database.DocumentsStorage.AttachmentsStorage.DeleteAttachment(context, DocumentId, Name, ExpectedChangeVector);
                 return 1;
             }
 
