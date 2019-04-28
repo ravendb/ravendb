@@ -79,8 +79,6 @@ namespace Raven.Server.Documents.PeriodicBackup.GoogleCloudStorage
 
                     _progress.UploadProgress.UploadedInBytes = p.BytesSent;
                     _progress.OnUploadProgress();
-
-                    Console.WriteLine($"total bytes {stream.Length}, uploaded {p.BytesSent}, status: {p.Status}");
                 }));
         }
 
