@@ -83,7 +83,26 @@
                                 <div class="flex-grow" data-bind="validationOptions: { insertMessages: false }">
                                     <textarea rows="3" class="form-control" placeholder="Enter change vector to start sending documents from" 
                                               data-bind="textInput: startingChangeVector, enable: setStartingPoint"></textarea>
-                                    <!--<button class="btn btn-default btn-block btn-upcoming"><i class="icon-preview"></i><span>&nbsp;Show related document</span></button>--> <!-- todo: we need end point for this.. -->
+                                    <div data-bind="visible: startingChangeVector()">
+                                        <span data-bind="visible: !$root.documentForUserDefinedChangeVectorFound()">
+                                            <a href="#" data-bind="click: _.partial($root.tryGetDocumentIDFromChangeVector, 'UserDefinedStartingPoint'), visible: !$root.spinners.documentIDForUserDefinedChangeVectorLoading()" 
+                                               title="Search for the document that matches this change-vector">
+                                                <small>Show matching document&nbsp;</small><i class="icon-search"></i>
+                                            </a>
+                                            <span data-bind="visible: $root.spinners.documentIDForUserDefinedChangeVectorLoading">
+                                                <small>Searching for document&nbsp;&nbsp;&nbsp;</small><i class="btn-spinner"></i>
+                                            </span>
+                                            <small data-bind="visible: $root.triedToFindDocumentForUserDefinedChangeVectorButFailed" title="">
+                                                <span>No matching document found&nbsp;</span>
+                                                <i class="icon-help no-matching-document-found"></i>
+                                            </small>
+                                        </span>
+                                        <span data-bind="visible: $root.documentForUserDefinedChangeVectorFound">
+                                            <small>Matching document: </small>
+                                            <a data-bind="attr: { href: $root.urlForUserDefinedChangeVectorDocument() }" target="_blank"
+                                               title="Click to open document"><small data-bind="text: $root.documentIDForUserDefinedChangeVector"></small></a>
+                                        </span>
+                                    </div>
                                     <span class="help-block" data-bind="validationMessage: startingChangeVector"></span>
                                 </div>
                             </div>
@@ -111,54 +130,65 @@
                                 </div>
                             </div>
                         </div>
-                        <div data-bind="if: changeVectorForNextBatchStartingPoint() && changeVectorForNextBatchStartingPoint() !== 'DoNotChange' && !setStartingPoint()">
-                            <div class="panel padding">
-                                <label for="next-batch-starting-point">Next batch starting point is :</label>
-                                <textarea id="next-batch-starting-point" rows="2" class="form-control" style="border: none" readonly="readonly"
-                                          data-bind="textInput: changeVectorForNextBatchStartingPoint" title="This change vector is the starting point for next batch">
-                                </textarea>
-                                <div>
-                                    <span data-bind="visible: !$root.nextBatchStartingPointDocumentFound()">
-                                        <a href="#" data-bind="click: _.partial($root.tryGetDocumentIDFromChangeVector, 'NextBatchStartingPoint')" title="Search for the document that matches this change-vector">
-                                            <i class="icon-search"></i><small>&nbsp;Get matching document</small>
-                                        </a>
-                                        <small data-bind="visible: $root.triedToFindDocumentNextBatchButFailed">No matching document found 
-                                             <span data-placement="top" data-toggle="tooltip" data-html="true" data-animation="true"
-                                                   data-bind="attr: { 'data-original-title': $root.noDocumentFoundHtml }">
-                                                   <i class="icon-help"></i>
-                                             </span> 
-                                        </small>
-                                    </span>
-                                    <span data-bind="visible: $root.nextBatchStartingPointDocumentFound">
-                                        <small>Matching document: </small>
-                                          <a data-bind="attr: { href: $root.urlForNextBatchStartingPointDocument() }"
-                                             title="Click to view document"><small data-bind="text: $root.documentIDForNextBatchStartingPoint"></small></a>
+                        <div data-bind="if: lastChangeVectorAcknowledged()">
+                            <div class="panel padding" >
+                                <label>Last change-vector acknowledged by the client :</label>
+                                <div id="last-change-vector-acknowledged">
+                                    <span data-bind="foreach: lastChangeVectorAcknowledgedFormatted">
+                                        <span class="badge badge-default" data-bind="text: shortFormat"></span>
                                     </span>
                                 </div>
-                            </div>
-                        </div>
-                        <div data-bind="if: lastChangeVectorAcknowledged()">
-                            <div class="panel padding">
-                                <label for="last-change-vector-acknowleged">Last change vector acknowleged by the client :</label>
-                                <textarea id="last-change-vector-acknowleged" rows="2" class="form-control" style="border: none" readonly="readonly"
-                                          data-bind="textInput: lastChangeVectorAcknowledged" title="The last change vector that was acknowledged by the subscription consumer client">
-                                </textarea>
                                 <div>
                                     <span data-bind="visible: !$root.lastAcknowledgedDocumentFound()">
-                                        <a href="#" data-bind="click: _.partial($root.tryGetDocumentIDFromChangeVector, 'LastAcknowledgedByClient')" title="Search for the document that matches this change-vector">
-                                            <i class="icon-search"></i><small>&nbsp;Get matching document</small>
+                                        <a href="#" data-bind="click: _.partial($root.tryGetDocumentIDFromChangeVector, 'LastAcknowledgedByClient'), visible: !$root.spinners.documentIDForLastChangeVectorAcknowledgedLoading()"
+                                           title="Search for the document that matches this change-vector">
+                                             <small>Show matching document&nbsp;</small><i class="icon-search"></i>
                                         </a>
-                                        <small data-bind="visible: $root.triedToFindDocumentLastAcknowledgedButFailed">No matching document found 
-                                             <span data-placement="top" data-toggle="tooltip" data-html="true" data-animation="true"
-                                                   data-bind="attr: { 'data-original-title': $root.noDocumentFoundHtml }">
-                                                   <i class="icon-help"></i>
-                                             </span>
+                                        <span data-bind="visible: $root.spinners.documentIDForLastChangeVectorAcknowledgedLoading">
+                                             <small>Searching for document&nbsp;&nbsp;&nbsp;</small><i class="btn-spinner"></i>
+                                        </span>
+                                        <small data-bind="visible: $root.triedToFindDocumentLastAcknowledgedButFailed">
+                                             <span>No matching document found&nbsp;</span>
+                                             <i class="icon-help no-matching-document-found"></i>
                                         </small>
                                     </span>
                                     <span data-bind="visible: $root.lastAcknowledgedDocumentFound">
                                         <small>Matching document: </small>
-                                        <a data-bind="attr: { href: $root.urlForLastAcknowledgedDocument() }"
-                                           title="Click to view document"><small data-bind="text: $root.documentIDForLastChangeVectorAcknowledged"></small></a>
+                                        <a data-bind="attr: { href: $root.urlForLastAcknowledgedDocument() }" target="_blank"
+                                           title="Click to open document"><small data-bind="text: $root.documentIDForLastChangeVectorAcknowledged"></small></a>
+                                    </span>
+                                </div>
+                            </div>
+                        </div>
+                        <div data-bind="if: changeVectorForNextBatchStartingPoint() && changeVectorForNextBatchStartingPoint() !== 'DoNotChange' && !setStartingPoint()">
+                            <div class="panel padding">
+                                <label>Next batch starting point is :&nbsp</label>
+                                <small id="next-batch-change-vector-info">
+                                    <i class="text-info icon-info"></i>
+                                </small>
+                                <div id="next-batch-starting-point">
+                                    <span data-bind="foreach: changeVectorForNextBatchStartingPointFormatted">
+                                        <span class="badge badge-default" data-bind="text: shortFormat"></span>
+                                    </span>
+                                </div>
+                                <div>
+                                    <span data-bind="visible: !$root.nextBatchStartingPointDocumentFound()">
+                                        <a href="#" data-bind="click: _.partial($root.tryGetDocumentIDFromChangeVector, 'NextBatchStartingPoint'), visible: !$root.spinners.documentIDForNextBatchStartingPointLoading()" 
+                                           title="Search for the document that matches this change-vector">
+                                            <small>Show matching document&nbsp;</small><i class="icon-search"></i>
+                                        </a>
+                                        <span data-bind="visible: $root.spinners.documentIDForNextBatchStartingPointLoading">
+                                            <small>Searching for document&nbsp;&nbsp;&nbsp;</small><i class="btn-spinner"></i>
+                                        </span>
+                                        <small data-bind="visible: $root.triedToFindDocumentNextBatchButFailed">
+                                            <span>No matching document found&nbsp;</span>
+                                            <i class="icon-help no-matching-document-found"></i>
+                                        </small>
+                                    </span>
+                                    <span data-bind="visible: $root.nextBatchStartingPointDocumentFound">
+                                        <small>Matching document: </small>
+                                          <a data-bind="attr: { href: $root.urlForNextBatchStartingPointDocument() }" target="_blank"
+                                             title="Click to open document"><small data-bind="text: $root.documentIDForNextBatchStartingPoint"></small></a>
                                     </span>
                                 </div>
                             </div>
@@ -181,7 +211,7 @@
                                 </div>
                             </div>
                             <div>
-                                <button class="btn btn-info" data-bind="click: runTest, css: { 'btn-spinner': spinners.globalToggleDisable }, disbale: spinners.globalToggleDisable" title="Run test with current settings">
+                                <button class="btn btn-info" data-bind="click: runTest, css: { 'btn-spinner': spinners.globalToggleDisable }, disable: spinners.globalToggleDisable" title="Run test with current settings">
                                     <i class="icon-rocket"></i><span>Run Test</span>
                                 </button> 
                             </div>

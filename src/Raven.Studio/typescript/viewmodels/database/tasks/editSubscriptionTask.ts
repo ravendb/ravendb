@@ -22,10 +22,11 @@ import getPossibleMentorsCommand = require("commands/database/tasks/getPossibleM
 import eventsCollector = require("common/eventsCollector");
 import generalUtils = require("common/generalUtils");
 import activeDatabaseTracker = require("common/shell/activeDatabaseTracker");
+import changeVectorUtils = require("common/changeVectorUtils");
+import popoverUtils = require("common/popoverUtils");
 
 type testTabName = "results" | perCollectionIncludes;
 type fetcherType = (skip: number, take: number) => JQueryPromise<pagedResult<documentObject>>;
-
 
 class perCollectionIncludes {
     name: string;
@@ -48,22 +49,22 @@ class editSubscriptionTask extends viewModelBase {
     enableTestArea = ko.observable<boolean>(false);
     testResultsLimit = ko.observable<number>(10);
 
-    // these are not on the model since class SubsriptionState in the client does not include these - we have a dedicated ep to get this info. - get this info lazy..upon request..
+    // these are not on the model since class SubsriptionState in the client does not include these - we have a dedicated ep to get this info upon request.
     documentIDForNextBatchStartingPoint = ko.observable<string>(null);
     nextBatchStartingPointDocumentFound = ko.observable<boolean>(false);
     triedToFindDocumentNextBatchButFailed = ko.observable<boolean>(false);
     urlForNextBatchStartingPointDocument: KnockoutComputed<string>;
     
-    documentIDForLastChangeVectorAcknowledged = ko.observable<string>(null);   
+    documentIDForLastChangeVectorAcknowledged = ko.observable<string>(null);
     lastAcknowledgedDocumentFound  = ko.observable<boolean>(false);
     triedToFindDocumentLastAcknowledgedButFailed = ko.observable<boolean>(false);
     urlForLastAcknowledgedDocument: KnockoutComputed<string>;
-    
-    noDocumentFoundHtml = "<h4>Possible reasons:</h4>" +
-        "<p style='text-align:left'>" +
-        "If the associated document was modified or deleted then the change-vector is not valid any more.<br><br>" +
-        "Also, if the document was replicated or imported then the change-vector doesn't contain the ..relevant ?.. node information</p>";
-    
+
+    documentIDForUserDefinedChangeVector = ko.observable<string>(null);
+    documentForUserDefinedChangeVectorFound: KnockoutComputed<boolean>;  
+    triedToFindDocumentForUserDefinedChangeVectorButFailed = ko.observable<boolean>(false);
+    urlForUserDefinedChangeVectorDocument: KnockoutComputed<string>;
+
     private gridController = ko.observable<virtualGridController<any>>();
     columnsSelector = new columnsSelector<documentObject>();
     resultsFetcher = ko.observable<fetcherType>();
@@ -79,7 +80,10 @@ class editSubscriptionTask extends viewModelBase {
     currentTab = ko.observable<testTabName>("results");
 
     spinners = {
-        globalToggleDisable: ko.observable<boolean>(false)
+        globalToggleDisable: ko.observable<boolean>(false),
+        documentIDForNextBatchStartingPointLoading: ko.observable<boolean>(false),
+        documentIDForLastChangeVectorAcknowledgedLoading: ko.observable<boolean>(false),
+        documentIDForUserDefinedChangeVectorLoading: ko.observable<boolean>(false) 
     };
 
     constructor() {
@@ -90,13 +94,26 @@ class editSubscriptionTask extends viewModelBase {
     }
 
     private initializeObservables() {
+
+        this.spinners.documentIDForNextBatchStartingPointLoading.extend({ rateLimit: 200});
+        this.spinners.documentIDForLastChangeVectorAcknowledgedLoading.extend({ rateLimit: 200});
+        this.spinners.documentIDForUserDefinedChangeVectorLoading.extend({ rateLimit: 200});
+        
         this.urlForNextBatchStartingPointDocument = ko.pureComputed(() => {
             return appUrl.forEditDoc(this.documentIDForNextBatchStartingPoint(), activeDatabaseTracker.default.database());
         });
         
         this.urlForLastAcknowledgedDocument = ko.pureComputed(() => {
             return appUrl.forEditDoc(this.documentIDForLastChangeVectorAcknowledged(), activeDatabaseTracker.default.database());
-        });       
+        });
+
+        this.urlForUserDefinedChangeVectorDocument = ko.pureComputed(() => {
+            return appUrl.forEditDoc(this.documentIDForUserDefinedChangeVector(), activeDatabaseTracker.default.database());
+        });
+        
+        this.documentForUserDefinedChangeVectorFound = ko.pureComputed(() => {
+            return !!this.documentIDForUserDefinedChangeVector() && !!this.editedSubscription().startingChangeVector();
+        });
     }
     
     activate(args: any) { 
@@ -149,10 +166,39 @@ class editSubscriptionTask extends viewModelBase {
 
     compositionComplete() {
         super.compositionComplete();
-
-        $('.edit-subscription-task [data-toggle="tooltip"]').tooltip();
         
-        document.getElementById('taskName').focus(); 
+        document.getElementById('taskName').focus();
+    }
+
+    attached() {
+        super.attached();
+
+        this.editedSubscription().startingChangeVector.subscribe(() => {
+            this.documentIDForUserDefinedChangeVector(null);
+            this.triedToFindDocumentForUserDefinedChangeVectorButFailed(false);
+        });
+        
+        popoverUtils.longWithHover($("#last-change-vector-acknowledged"),
+            {
+                content: this.editedSubscription().lastChangeVectorAcknowledgedHtml(), 
+                placement: "top"
+            });
+
+        popoverUtils.longWithHover($("#next-batch-starting-point"),
+            {
+                content: this.editedSubscription().changeVectorForNextBatchStartingPointHtml(),
+                placement: "top"
+            });
+
+        popoverUtils.longWithHover($(".no-matching-document-found"),
+            {
+                content: changeVectorUtils.noDocumentFoundPossibleReasonsHtml
+            });
+        
+        popoverUtils.longWithHover($("#next-batch-change-vector-info"),
+            {
+                content: " The next document sent will have a change-vector that is greater than this one"
+            });
     }
 
     saveSubscription() {
@@ -348,6 +394,7 @@ class editSubscriptionTask extends viewModelBase {
     tryGetDocumentIDFromChangeVector(changeVectorType: string) {
         switch (changeVectorType) {
             case "NextBatchStartingPoint":
+                this.spinners.documentIDForNextBatchStartingPointLoading(true);
                 new getDocumentIDFromChangeVectorCommand(this.activeDatabase(), this.editedSubscription().changeVectorForNextBatchStartingPoint())
                     .execute()
                     .done((result: Raven.Server.Documents.Handlers.DocumentIDDetails) => {
@@ -357,9 +404,11 @@ class editSubscriptionTask extends viewModelBase {
                     .fail(() => {
                         this.nextBatchStartingPointDocumentFound(false);
                         this.triedToFindDocumentNextBatchButFailed(true);
-                    });
+                    })
+                   .always(() => this.spinners.documentIDForNextBatchStartingPointLoading(false));
                 break;
             case "LastAcknowledgedByClient":
+                this.spinners.documentIDForLastChangeVectorAcknowledgedLoading(true);
                 new getDocumentIDFromChangeVectorCommand(this.activeDatabase(), this.editedSubscription().lastChangeVectorAcknowledged())
                     .execute()
                     .done((result: Raven.Server.Documents.Handlers.DocumentIDDetails) => {
@@ -369,7 +418,20 @@ class editSubscriptionTask extends viewModelBase {
                     .fail(() => { 
                         this.lastAcknowledgedDocumentFound(false);
                         this.triedToFindDocumentLastAcknowledgedButFailed(true); 
-                    });
+                    })
+                    .always(() => this.spinners.documentIDForLastChangeVectorAcknowledgedLoading(false));
+                break;
+            case "UserDefinedStartingPoint":
+                this.spinners.documentIDForUserDefinedChangeVectorLoading(true);
+                new getDocumentIDFromChangeVectorCommand(this.activeDatabase(), this.editedSubscription().startingChangeVector())
+                    .execute()
+                    .done((result: Raven.Server.Documents.Handlers.DocumentIDDetails) => {
+                        this.documentIDForUserDefinedChangeVector(result.DocId);
+                    })
+                    .fail(() => {
+                        this.triedToFindDocumentForUserDefinedChangeVectorButFailed(true);
+                    })
+                    .always(() => this.spinners.documentIDForUserDefinedChangeVectorLoading(false));
                 break;
             default:
                 break;

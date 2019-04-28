@@ -1,5 +1,6 @@
 ﻿/// <reference path="../../../../typings/tsd.d.ts"/>
 import ongoingTaskEditModel = require("models/database/tasks/ongoingTaskEditModel");
+import changeVectorUtils = require("common/changeVectorUtils");
 import jsonUtil = require("common/jsonUtil");
 
 class ongoingTaskSubscriptionEditModel extends ongoingTaskEditModel {
@@ -15,8 +16,13 @@ class ongoingTaskSubscriptionEditModel extends ongoingTaskEditModel {
     setStartingPoint = ko.observable<boolean>(true);
     
     changeVectorForNextBatchStartingPoint = ko.observable<string>(null); 
-    lastChangeVectorAcknowledged = ko.observable<string>(null); 
-
+    changeVectorForNextBatchStartingPointFormatted: KnockoutComputed<changeVectorItem[]>;
+    changeVectorForNextBatchStartingPointHtml: KnockoutComputed<string>;
+    
+    lastChangeVectorAcknowledged = ko.observable<string>(null);
+    lastChangeVectorAcknowledgedFormatted: KnockoutComputed<changeVectorItem[]>;
+    lastChangeVectorAcknowledgedHtml: KnockoutComputed<string>;
+    
     validationGroup: KnockoutValidationGroup; 
     
     dirtyFlag: () => DirtyFlag;
@@ -38,7 +44,6 @@ class ongoingTaskSubscriptionEditModel extends ongoingTaskEditModel {
             this.startingChangeVector, 
             this.setStartingPoint,
             this.changeVectorForNextBatchStartingPoint,
-            this.lastChangeVectorAcknowledged,
         ], false, jsonUtil.newLineNormalizingHashFunction);
     }
 
@@ -54,7 +59,35 @@ class ongoingTaskSubscriptionEditModel extends ongoingTaskEditModel {
         this.startingPointLatestDocument = ko.pureComputed(() => {
             return this.startingPointType() === "Latest Document";
         });
-    }   
+
+       this.changeVectorForNextBatchStartingPointFormatted = ko.pureComputed(() => {          
+           const vector = this.changeVectorForNextBatchStartingPoint();
+           return changeVectorUtils.formatChangeVector(vector, changeVectorUtils.shouldUseLongFormat([vector]));
+       });
+
+       this.changeVectorForNextBatchStartingPointHtml = ko.pureComputed(() => {
+           let vectorText = "";
+           if (this.changeVectorForNextBatchStartingPointFormatted().length) {
+               vectorText += this.changeVectorForNextBatchStartingPointFormatted().map(vectorItem => vectorItem.fullFormat).join('<br/>');
+           }
+
+           return vectorText;
+       });
+
+        this.lastChangeVectorAcknowledgedFormatted = ko.pureComputed(() => {
+            const vector = this.lastChangeVectorAcknowledged();
+            return changeVectorUtils.formatChangeVector(vector, changeVectorUtils.shouldUseLongFormat([vector]));
+        });
+
+        this.lastChangeVectorAcknowledgedHtml = ko.pureComputed(() => {
+            let vectorText = "";
+            if (this.lastChangeVectorAcknowledgedFormatted().length) {
+                vectorText += this.lastChangeVectorAcknowledgedFormatted().map(vectorItem => vectorItem.fullFormat).join('<br/>');
+            }
+
+            return vectorText;
+        });
+    }
 
     updateDetails(dto: Raven.Client.Documents.Subscriptions.SubscriptionStateWithNodeDetails) {
         const dtoEditModel = dto as Raven.Client.Documents.Subscriptions.SubscriptionStateWithNodeDetails;
@@ -137,7 +170,7 @@ class ongoingTaskSubscriptionEditModel extends ongoingTaskEditModel {
                         const goodState3 = !this.setStartingPoint();
                         return goodState1 || goodState2 || goodState3;
                     },
-                    message: "Please enter change vector"
+                    message: "Please enter a change-vector"
                 }]
         });
 

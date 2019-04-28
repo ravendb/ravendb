@@ -336,12 +336,70 @@
                                             </div>
                                             <!-- /ko -->
                                             <div class="property-item">
-                                                <div class="property-name">Change vector for next batch: </div>
-                                                <div class="property-value text-details" data-bind="text: changeVectorForNextBatchStartingPoint() || 'N/A'"></div>
+                                                <div class="property-name">Next batch starting point: </div>
+                                                <div class="property-value text-details">
+                                                    <span>
+                                                        <span data-bind="foreach: changeVectorForNextBatchStartingPointFormatted, visible: changeVectorForNextBatchStartingPoint()">
+                                                                <span class="badge badge-default" data-bind="text: shortFormat"></span>
+                                                        </span>
+                                                        <span>
+                                                            <small data-bind="visible: !nextBatchStartingPointDocumentFound()">
+                                                                <a href="#" data-bind="click: _.partial(tryGetDocumentIDFromChangeVector, 'NextBatchStartingPoint'), 'NextBatchStartingPoint'), visible: !spinners.documentIDForNextBatchStartingPointLoading()" 
+                                                                   title="Search for the document that matches this change-vector">
+                                                                    <i class="icon-search"></i>
+                                                                </a>
+                                                                <span data-bind="visible: spinners.documentIDForNextBatchStartingPointLoading">
+                                                                    &nbsp;&nbsp;&nbsp;<i class="btn-spinner"></i>
+                                                                </span>
+                                                                <span data-bind="visible: triedToFindDocumentNextBatchButFailed">
+                                                                     <span>No matching document found&nbsp;</span>
+                                                                     <i class="icon-help no-matching-document-found" ></i>
+                                                                </span>
+                                                            </small>
+                                                            <span data-bind="visible: nextBatchStartingPointDocumentFound">
+                                                                <small>Matching document: </small>
+                                                                  <a data-bind="attr: { href: urlForNextBatchStartingPointDocument() }" target="_blank"
+                                                                     title="Click to open document"><small data-bind="text: documentIDForNextBatchStartingPoint"></small></a>
+                                                            </span>
+                                                        </span>
+                                                    </span>
+                                                    <span data-bind="visible: !changeVectorForNextBatchStartingPoint()">
+                                                       N/A
+                                                    </span>
+                                                </div>
                                             </div>
                                             <div class="property-item">
                                                 <div class="property-name">Last Change Vector Acknowledged: </div>
-                                                <div class="property-value text-details" data-bind="text: lastchangeVectorAcknowledged() || 'N/A'"></div>
+                                                <div class="property-value text-details">
+                                                    <span data-bind="visible: lastChangeVectorAcknowledged()">
+                                                        <span data-bind="foreach: lastChangeVectorAcknowledgedFormatted">
+                                                                <span class="badge badge-default" data-bind="text: shortFormat"></span>
+                                                        </span>
+                                                        <span>
+                                                            <small data-bind="visible: !lastAcknowledgedDocumentFound()">
+                                                                <a href="#" data-bind="click: _.partial(tryGetDocumentIDFromChangeVector, 'LastAcknowledgedByClient'), visible: !spinners.documentIDForLastChangeVectorAcknowledgedLoading()" 
+                                                                   title="Search for the document that matches this change-vector">
+                                                                     <i class="icon-search"></i>
+                                                                </a>
+                                                                <span data-bind="visible: spinners.documentIDForLastChangeVectorAcknowledgedLoading">
+                                                                    &nbsp;&nbsp;&nbsp;<i class="btn-spinner"></i>
+                                                                </span>
+                                                                <span data-bind="visible: triedToFindDocumentLastAcknowledgedButFailed">
+                                                                     <span>No matching document found&nbsp;</span>
+                                                                     <i class="icon-help no-matching-document-found" ></i>
+                                                                </span>
+                                                            </small>
+                                                            <span data-bind="visible: lastAcknowledgedDocumentFound">
+                                                                <small>Matching document: </small>
+                                                                  <a data-bind="attr: { href: urlForLastAcknowledgedDocument() }" target="_blank"
+                                                                     title="Click to open document"><small data-bind="text: documentIDForLastChangeVectorAcknowledged"></small></a>
+                                                            </span>
+                                                        </span>
+                                                    </span>
+                                                    <span data-bind="visible: !lastChangeVectorAcknowledged()">
+                                                       N/A
+                                                    </span>
+                                                </div>
                                             </div>
                                             <div class="property-item">
                                                 <div class="property-name">Last Batch Acknowledgement Time:</div>
@@ -357,9 +415,9 @@
                                                     <!-- /ko -->
                                                 </div>
                                         </div>
-                                    </div>
-                                    <div>
-                                        <button class="btn btn-default" data-bind="click: refreshSubscriptionInfo" title="Refresh info"><i class="icon-refresh"></i></button>
+                                        <div class="pull-right">
+                                            <button class="btn btn-default" data-bind="click: refreshSubscriptionInfo" title="Refresh info"><i class="icon-refresh"></i></button>
+                                        </div>
                                     </div>
                                 </div>
                             </div>

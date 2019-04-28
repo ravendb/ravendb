@@ -21,6 +21,8 @@ import getDatabaseCommand = require("commands/resources/getDatabaseCommand");
 import ongoingTaskListModel = require("models/database/tasks/ongoingTaskListModel");
 import etlScriptDefinitionCache = require("models/database/stats/etlScriptDefinitionCache");
 import ongoingTaskPullReplicationSinkListModel = require("models/database/tasks/ongoingTaskPullReplicationSinkListModel");
+import popoverUtils = require("common/popoverUtils");
+import changeVectorUtils = require("common/changeVectorUtils");
 
 type TasksNamesInUI = "External Replication" | "RavenDB ETL" | "SQL ETL" | "Backup" | "Subscription" | "Pull Replication Hub" | "Pull Replication Sink";
 
@@ -90,6 +92,11 @@ class ongoingTasks extends viewModelBase {
 
         this.selectedTaskType("All tasks"); 
         this.selectedNode("All nodes"); 
+        
+        popoverUtils.longWithHover($(".no-matching-document-found"),
+            {
+                content:  changeVectorUtils.noDocumentFoundPossibleReasonsHtml
+            });
     }
 
     compositionComplete(): void {

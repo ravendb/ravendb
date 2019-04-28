@@ -6,7 +6,9 @@ import ongoingTaskListModel = require("models/database/tasks/ongoingTaskListMode
 import ongoingTaskInfoCommand = require("commands/database/tasks/getOngoingTaskInfoCommand");
 import subscriptionConnectionDetailsCommand = require("commands/database/tasks/getSubscriptionConnectionDetailsCommand");
 import dropSubscriptionConnectionCommand = require("commands/database/tasks/dropSubscriptionConnectionCommand");
+import getDocumentIDFromChangeVectorCommand = require("commands/database/documents/getDocumentIDFromChangeVectorCommand");
 import activeDatabaseTracker = require("common/shell/activeDatabaseTracker");
+import changeVectorUtils = require("common/changeVectorUtils");
 
 class ongoingTaskSubscriptionListModel extends ongoingTaskListModel {
 
@@ -16,8 +18,12 @@ class ongoingTaskSubscriptionListModel extends ongoingTaskListModel {
     // General stats
     lastTimeServerMadeProgressWithDocuments = ko.observable<string>();
     lastClientConnectionTime = ko.observable<string>();
+    
     changeVectorForNextBatchStartingPoint = ko.observable<string>(null);
-    lastchangeVectorAcknowledged = ko.observable<string>(null);
+    changeVectorForNextBatchStartingPointFormatted: KnockoutComputed<changeVectorItem[]>;
+    
+    lastChangeVectorAcknowledged = ko.observable<string>(null);
+    lastChangeVectorAcknowledgedFormatted: KnockoutComputed<changeVectorItem[]>;
 
     // Live connection stats
     clientIP = ko.observable<string>();
@@ -27,19 +33,60 @@ class ongoingTaskSubscriptionListModel extends ongoingTaskListModel {
 
     validationGroup: KnockoutValidationGroup; 
     showDetails = ko.observable(false);
+   
+    documentIDForNextBatchStartingPoint = ko.observable<string>(null);
+    nextBatchStartingPointDocumentFound = ko.observable<boolean>(false);
+    triedToFindDocumentNextBatchButFailed = ko.observable<boolean>(false);
+    urlForNextBatchStartingPointDocument: KnockoutComputed<string>;
+
+    documentIDForLastChangeVectorAcknowledged = ko.observable<string>(null);
+    lastAcknowledgedDocumentFound  = ko.observable<boolean>(false);
+    triedToFindDocumentLastAcknowledgedButFailed = ko.observable<boolean>(false);
+    urlForLastAcknowledgedDocument: KnockoutComputed<string>;
+
+    spinners = {
+        documentIDForNextBatchStartingPointLoading: ko.observable<boolean>(false),
+        documentIDForLastChangeVectorAcknowledgedLoading: ko.observable<boolean>(false)
+    };
     
     constructor(dto: Raven.Client.Documents.Operations.OngoingTasks.OngoingTaskSubscription) {
         super();
 
         this.update(dto);
-        this.initializeObservables(); 
+        this.initializeObservables();
+        this.bindToCurrentInstance("tryGetDocumentIDFromChangeVector");
+    }
+
+    protected bindToCurrentInstance(...methods: Array<keyof this>) {
+        _.bindAll(this, ...methods);
     }
 
     initializeObservables() {
         super.initializeObservables();
 
+        this.spinners.documentIDForNextBatchStartingPointLoading.extend({ rateLimit: 200});
+        this.spinners.documentIDForLastChangeVectorAcknowledgedLoading.extend({ rateLimit: 200});
+
         const urls = appUrl.forCurrentDatabase();
         this.editUrl = urls.editSubscription(this.taskId, this.taskName());
+
+        this.changeVectorForNextBatchStartingPointFormatted = ko.pureComputed(() => {
+            const vector = this.changeVectorForNextBatchStartingPoint();
+            return changeVectorUtils.formatChangeVector(vector, changeVectorUtils.shouldUseLongFormat([vector]));
+        });
+        
+        this.lastChangeVectorAcknowledgedFormatted = ko.pureComputed(() => {
+            const vector = this.lastChangeVectorAcknowledged();
+            return changeVectorUtils.formatChangeVector(vector, changeVectorUtils.shouldUseLongFormat([vector]));
+        });
+
+        this.urlForNextBatchStartingPointDocument = ko.pureComputed(() => {
+            return appUrl.forEditDoc(this.documentIDForNextBatchStartingPoint(), activeDatabaseTracker.default.database());
+        });
+
+        this.urlForLastAcknowledgedDocument = ko.pureComputed(() => {
+            return appUrl.forEditDoc(this.documentIDForLastChangeVectorAcknowledged(), activeDatabaseTracker.default.database());
+        });
     }
 
     editTask() {
@@ -64,7 +111,7 @@ class ongoingTaskSubscriptionListModel extends ongoingTaskListModel {
                 this.taskState(result.Disabled ? 'Disabled' : 'Enabled');
                 
                 this.changeVectorForNextBatchStartingPoint(result.ChangeVectorForNextBatchStartingPoint);
-                this.lastchangeVectorAcknowledged(result.LastChangeVectorAcknowledged);
+                this.lastChangeVectorAcknowledged(result.LastChangeVectorAcknowledged);
                 
                 const dateFormat = generalUtils.dateFormat;
 
@@ -97,6 +144,15 @@ class ongoingTaskSubscriptionListModel extends ongoingTaskListModel {
                         
                         this.textClass("text-danger");
                     });
+            })
+            .always(() => {
+                this.documentIDForNextBatchStartingPoint(null); 
+                this.nextBatchStartingPointDocumentFound(false);
+                this.triedToFindDocumentNextBatchButFailed(false);
+
+                this.documentIDForLastChangeVectorAcknowledged(null);
+                this.lastAcknowledgedDocumentFound(false);
+                this.triedToFindDocumentLastAcknowledgedButFailed(false);
             });
     }
 
@@ -104,6 +160,41 @@ class ongoingTaskSubscriptionListModel extends ongoingTaskListModel {
         new dropSubscriptionConnectionCommand(this.activeDatabase(), this.taskId, this.taskName())
             .execute()
             .done(() => { this.refreshSubscriptionInfo(); });
+    }
+
+    tryGetDocumentIDFromChangeVector(changeVectorType: string) {
+        switch (changeVectorType) {
+            case "NextBatchStartingPoint":
+                this.spinners.documentIDForNextBatchStartingPointLoading(true);
+                new getDocumentIDFromChangeVectorCommand(this.activeDatabase(), this.changeVectorForNextBatchStartingPoint())
+                    .execute()
+                    .done((result: Raven.Server.Documents.Handlers.DocumentIDDetails) => {
+                        this.documentIDForNextBatchStartingPoint(result.DocId);
+                        this.nextBatchStartingPointDocumentFound(true);
+                    })
+                    .fail(() => {
+                        this.nextBatchStartingPointDocumentFound(false);
+                        this.triedToFindDocumentNextBatchButFailed(true);
+                    })
+                    .always(() => this.spinners.documentIDForNextBatchStartingPointLoading(false));
+                break;
+            case "LastAcknowledgedByClient":
+                this.spinners.documentIDForLastChangeVectorAcknowledgedLoading(true);
+                new getDocumentIDFromChangeVectorCommand(this.activeDatabase(), this.lastChangeVectorAcknowledged())
+                    .execute()
+                    .done((result: Raven.Server.Documents.Handlers.DocumentIDDetails) => {
+                        this.documentIDForLastChangeVectorAcknowledged(result.DocId);
+                        this.lastAcknowledgedDocumentFound(true);
+                    })
+                    .fail(() => {
+                        this.lastAcknowledgedDocumentFound(false);
+                        this.triedToFindDocumentLastAcknowledgedButFailed(true);
+                    })
+                    .always(() => this.spinners.documentIDForLastChangeVectorAcknowledgedLoading(false));
+                break;
+            default:
+                break;
+        }
     }
 }
 
