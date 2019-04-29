@@ -138,7 +138,7 @@ namespace Raven.Client.Documents.Operations.Backups
 
         public double BytesPutsPerSec { get; set; }
 
-        public long UploadTimeInMs => _sw?.ElapsedMilliseconds ?? 0;
+        public long UploadTimeInMs => _sw.ElapsedMilliseconds;
 
         public void ChangeState(UploadState newState)
         {
