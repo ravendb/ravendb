@@ -168,11 +168,13 @@ namespace Raven.Server.Documents.Handlers
                 if (docCollection == null)
                     return 0;
 
+                var tss = _database.DocumentsStorage.TimeSeriesStorage;
+
                 if (_batch.Appends != null)
                 {
                     foreach (var append in _batch.Appends)
                     {
-                        LastChangeVector = _database.DocumentsStorage.TimeSeriesStorage.AppendTimestamp(context,
+                        LastChangeVector = tss.AppendTimestamp(context,
                             _batch.Id,
                             docCollection,
                             append.Name,
@@ -181,6 +183,7 @@ namespace Raven.Server.Documents.Handlers
                             append.Tag,
                             fromReplication: false
                         );
+
                         changes++;
                     }
                 }
@@ -189,7 +192,7 @@ namespace Raven.Server.Documents.Handlers
                 {
                     foreach (var removal in _batch.Removals)
                     {
-                        LastChangeVector = _database.DocumentsStorage.TimeSeriesStorage.RemoveTimestampRange(context,
+                        LastChangeVector = tss.RemoveTimestampRange(context,
                             _batch.Id,
                             docCollection,
                             removal.Name,

@@ -140,12 +140,14 @@ namespace FastTests.Server.Documents
                     session.SaveChanges();
                 }
 
+                const int retries = 1000;
+
                 var offset = 0;
 
                 using (var session = store.OpenSession())
                 {
 
-                    for (int j = 0; j < 1000; j++)
+                    for (int j = 0; j < retries; j++)
                     {
                         session.TimeSeriesFor("users/ayende")
                             .Append("Heartrate", baseline.AddMinutes(offset), "watches/fitbit", new double[] { offset });
@@ -161,7 +163,7 @@ namespace FastTests.Server.Documents
                 using (var session = store.OpenSession())
                 {
 
-                    for (int j = 0; j < 1000; j++)
+                    for (int j = 0; j < retries; j++)
                     {
                         session.TimeSeriesFor("users/ayende")
                             .Append("Heartrate", baseline.AddMinutes(offset), "watches/fitbit", new double[] { offset });
@@ -176,10 +178,10 @@ namespace FastTests.Server.Documents
                     var vals = session.TimeSeriesFor("users/ayende")
                         .Get("Heartrate", DateTime.MinValue, DateTime.MaxValue)
                         .ToList();
-                    Assert.Equal(2_000, vals.Count);
+                    Assert.Equal(2 * retries, vals.Count);
 
                     offset = 0;
-                    for (int i = 0; i < 1000; i++)
+                    for (int i = 0; i < retries; i++)
                     {
                         Assert.Equal(baseline.AddMinutes(offset), vals[i].Timestamp);
                         Assert.Equal(offset, vals[i].Values[0]);
@@ -191,7 +193,7 @@ namespace FastTests.Server.Documents
                         Assert.Equal(offset, vals[i].Values[0]);
 
 
-                        offset += 5;
+                        offset += 4;
                     }
                 }
             }
