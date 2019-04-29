@@ -695,7 +695,9 @@ namespace Raven.Server.ServerWide
             LoggingSource.AuditLog.SetupLogMode(
                 LogMode.Information,
                 Configuration.Security.AuditLogPath.FullPath,
-                Configuration.Security.AuditLogRetention.AsTimeSpan);
+                Configuration.Security.AuditLogRetentionTime.AsTimeSpan,
+                Configuration.Security.AuditLogRetentionSize?.GetValue(SizeUnit.Bytes),
+                Configuration.Security.AuditLogCompress);
 
             var auditLog = LoggingSource.AuditLog.GetLogger("ServerStartup", "Audit");
             auditLog.Operations($"Server started up, listening to {string.Join(", ", Configuration.Core.ServerUrls)} with certificate {_server.Certificate?.Certificate?.Subject} ({_server.Certificate?.Certificate?.Thumbprint}), public url: {Configuration.Core.PublicServerUrl}");
