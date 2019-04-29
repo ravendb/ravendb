@@ -123,9 +123,10 @@ namespace Raven.Client.Documents.Operations.Backups
         public UploadProgress()
         {
             UploadType = UploadType.Regular;
+            _sw = Stopwatch.StartNew();
         }
 
-        private  Stopwatch _sw;
+        private readonly Stopwatch _sw;
 
         public UploadType UploadType { get; set; }
 
@@ -145,7 +146,7 @@ namespace Raven.Client.Documents.Operations.Backups
             switch (newState)
             {
                 case UploadState.PendingUpload:
-                    _sw = Stopwatch.StartNew();
+                    _sw.Restart();
                     break;
                 case UploadState.Done:
                     _sw.Stop();
