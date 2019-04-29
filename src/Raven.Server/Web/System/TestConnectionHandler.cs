@@ -45,12 +45,12 @@ namespace Raven.Server.Web.System
             }
         }
 
-        public static async Task ConnectToClientNodeAsync(RavenServer server, TcpConnectionInfo tcpConnectionInfo, TimeSpan timeout, Logger log, string database, NodeConnectionTestResult result)
+        public static async Task ConnectToClientNodeAsync(RavenServer server, TcpConnectionInfo tcpConnectionInfo, TimeSpan sendTimeout, TimeSpan receiveTimeout, Logger log, string database, NodeConnectionTestResult result)
         {
             TcpClient tcpClient;
             string url;
-            (tcpClient, url) =  await TcpUtils.ConnectSocketAsync(tcpConnectionInfo, timeout, log);
-            var connection = await TcpUtils.WrapStreamWithSslAsync(tcpClient, tcpConnectionInfo, server.Certificate.Certificate, timeout);
+            (tcpClient, url) =  await TcpUtils.ConnectSocketAsync(tcpConnectionInfo, sendTimeout, receiveTimeout, log);
+            var connection = await TcpUtils.WrapStreamWithSslAsync(tcpClient, tcpConnectionInfo, server.Certificate.Certificate, sendTimeout, receiveTimeout);
             using (tcpClient)
             {
                 using (server.ServerStore.ContextPool.AllocateOperationContext(out JsonOperationContext ctx))

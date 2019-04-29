@@ -380,13 +380,13 @@ namespace Tests.Infrastructure
 
             public override async Task<RachisConnection> ConnectToPeer(string url, string tag, X509Certificate2 certificate)
             {
-                TimeSpan time;
+                TimeSpan timeout;
                 using (ContextPoolForReadOnlyOperations.AllocateOperationContext(out TransactionOperationContext ctx))
                 using (ctx.OpenReadTransaction())
                 {
-                    time = _parent.ElectionTimeout * (_parent.GetTopology(ctx).AllNodes.Count - 2);
+                    timeout = _parent.ElectionTimeout * (_parent.GetTopology(ctx).AllNodes.Count - 2);
                 }
-                var tcpClient = await TcpUtils.ConnectAsync(url, time);
+                var tcpClient = await TcpUtils.ConnectAsync(url, timeout);
                 return new RachisConnection
                 {
                     Stream = tcpClient.GetStream(),

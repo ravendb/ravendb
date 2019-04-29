@@ -2455,7 +2455,7 @@ namespace Raven.Server.ServerWide
 
             try
             {
-                await TestConnectionHandler.ConnectToClientNodeAsync(_server, connectionInfo.Result, Engine.TcpConnectionTimeout,
+                await TestConnectionHandler.ConnectToClientNodeAsync(_server, connectionInfo.Result, Configuration.Server.SendTimeout.AsTimeSpan, Configuration.Server.ReceiveTimeout.AsTimeSpan,
                     LoggingSource.Instance.GetLogger("testing-connection", "testing-connection"), database, result);
             }
             catch (Exception e)

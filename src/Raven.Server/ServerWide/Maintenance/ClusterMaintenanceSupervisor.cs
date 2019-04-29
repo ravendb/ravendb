@@ -207,7 +207,7 @@ namespace Raven.Server.ServerWide.Maintenance
                             }
                         }
 
-                        var connection = ConnectToClientNode(tcpConnection, _parent._server.Engine.TcpConnectionTimeout);
+                        var connection = ConnectToClientNode(tcpConnection);
                         var tcpClient = connection.TcpClient;
                         var stream = connection.Stream;
                         using (tcpClient)
@@ -348,19 +348,19 @@ namespace Raven.Server.ServerWide.Maintenance
                 }
             }
 
-            private ClusterMaintenanceConnection ConnectToClientNode(TcpConnectionInfo tcpConnectionInfo, TimeSpan timeout)
+            private ClusterMaintenanceConnection ConnectToClientNode(TcpConnectionInfo tcpConnectionInfo)
             {
-                return AsyncHelpers.RunSync(() => ConnectToClientNodeAsync(tcpConnectionInfo, timeout));
+                return AsyncHelpers.RunSync(() => ConnectToClientNodeAsync(tcpConnectionInfo));
             }
 
-            private async Task<ClusterMaintenanceConnection> ConnectToClientNodeAsync(TcpConnectionInfo tcpConnectionInfo, TimeSpan timeout)
+            private async Task<ClusterMaintenanceConnection> ConnectToClientNodeAsync(TcpConnectionInfo tcpConnectionInfo)
             {
                 TcpConnectionHeaderMessage.SupportedFeatures supportedFeatures;
                 TcpClient tcpClient;
                 string url;
-                (tcpClient, url) = await TcpUtils.ConnectSocketAsync(tcpConnectionInfo, timeout, _log);
+                (tcpClient, url) = await TcpUtils.ConnectSocketAsync(tcpConnectionInfo, _parent._server.Server.Configuration.Server.SendTimeout.AsTimeSpan, _parent._server.Server.Configuration.Server.ReceiveTimeout.AsTimeSpan, _log);
 
-                var connection = await TcpUtils.WrapStreamWithSslAsync(tcpClient, tcpConnectionInfo, _parent._server.Server.Certificate.Certificate, timeout);
+                var connection = await TcpUtils.WrapStreamWithSslAsync(tcpClient, tcpConnectionInfo, _parent._server.Server.Certificate.Certificate, _parent._server.Server.Configuration.Server.SendTimeout.AsTimeSpan, _parent._server.Server.Configuration.Server.ReceiveTimeout.AsTimeSpan);
                 using (_contextPool.AllocateOperationContext(out JsonOperationContext ctx))
                 using (var writer = new BlittableJsonTextWriter(ctx, connection))
                 {

@@ -6,6 +6,18 @@ namespace Raven.Server.Config.Categories
 {
     public class ServerConfiguration : ConfigurationCategory
     {
+        [Description("Receive timeout for all TCP connections")]
+        [DefaultValue(30)]
+        [TimeUnit(TimeUnit.Seconds)]
+        [ConfigurationEntry("Server.Tcp.ReceiveTimeout", ConfigurationEntryScope.ServerWideOrPerDatabase)]
+        public TimeSetting ReceiveTimeout { get; set; }
+
+        [Description("Sending timeout for all TCP connections")]
+        [DefaultValue(30)]
+        [TimeUnit(TimeUnit.Seconds)]
+        [ConfigurationEntry("Server.Tcp.SendTimeout", ConfigurationEntryScope.ServerWideOrPerDatabase)]
+        public TimeSetting SendTimeout { get; set; }
+
         [DefaultValue(30)]
         [TimeUnit(TimeUnit.Seconds)]
         [ConfigurationEntry("Server.MaxTimeForTaskToWaitForDatabaseToLoadInSec", ConfigurationEntryScope.ServerWideOnly)]

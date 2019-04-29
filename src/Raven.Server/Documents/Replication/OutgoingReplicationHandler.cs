@@ -176,14 +176,14 @@ namespace Raven.Server.Documents.Replication
                         $"{record.DatabaseName} is encrypted, and require HTTPS for replication, but had endpoint with url {Destination.Url} to database {Destination.Database}");
             }
 
-            var task = TcpUtils.ConnectSocketAsync(_connectionInfo, _parent._server.Engine.TcpConnectionTimeout, _log);
+            var task = TcpUtils.ConnectSocketAsync(_connectionInfo, _parent._server.Configuration.Server.SendTimeout.AsTimeSpan,_parent._server.Configuration.Server.ReceiveTimeout.AsTimeSpan, _log);
             task.Wait(CancellationToken);
             TcpClient tcpClient;
             string url;
             (tcpClient, url) = task.Result;
             using (Interlocked.Exchange(ref _tcpClient, tcpClient))
             {
-                var wrapSsl = TcpUtils.WrapStreamWithSslAsync(_tcpClient, _connectionInfo, certificate, _parent._server.Engine.TcpConnectionTimeout);
+                var wrapSsl = TcpUtils.WrapStreamWithSslAsync(_tcpClient, _connectionInfo, certificate, _parent._server.Configuration.Server.SendTimeout.AsTimeSpan,_parent._server.Configuration.Server.ReceiveTimeout.AsTimeSpan);
                 wrapSsl.Wait(CancellationToken);
 
                 _stream = wrapSsl.Result;
@@ -1039,7 +1039,7 @@ namespace Raven.Server.Documents.Replication
             if (!_disposed.Raise())
                 return;
 
-            var timeout = _parent._server.Engine.TcpConnectionTimeout;
+            var timeout = _parent._server.Configuration.Server.SendTimeout.AsTimeSpan;
             if (_log.IsInfoEnabled)
                 _log.Info($"Disposing OutgoingReplicationHandler ({FromToString}) [Timeout:{timeout}]");
 

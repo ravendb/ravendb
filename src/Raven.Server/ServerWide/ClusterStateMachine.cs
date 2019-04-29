@@ -2412,7 +2412,7 @@ namespace Raven.Server.ServerWide
                 throw new InvalidOperationException($"Failed to connect to node {url}. Connections from encrypted store must use HTTPS.");
 
             TcpConnectionInfo info;
-            using (var cts = new CancellationTokenSource(_parent.TcpConnectionTimeout))
+            using (var cts = new CancellationTokenSource(_parent.TcpReceiveTimeout))
             {
                 info = await ReplicationUtils.GetTcpInfoAsync(url, null, "Cluster", certificate, cts.Token);
             }
@@ -2422,8 +2422,8 @@ namespace Raven.Server.ServerWide
             Stream stream = null;
             try
             {
-                (tcpClient, choosenUrl) = await TcpUtils.ConnectAsyncWithPriority(info, _parent.TcpConnectionTimeout).ConfigureAwait(false);
-                stream = await TcpUtils.WrapStreamWithSslAsync(tcpClient, info, _parent.ClusterCertificate, _parent.TcpConnectionTimeout);
+                (tcpClient, choosenUrl) = await TcpUtils.ConnectAsyncWithPriority(info, _parent.Configuration.Server.SendTimeout.AsTimeSpan,_parent.Configuration.Server.ReceiveTimeout.AsTimeSpan).ConfigureAwait(false);
+                stream = await TcpUtils.WrapStreamWithSslAsync(tcpClient, info, _parent.ClusterCertificate, _parent.Configuration.Server.SendTimeout.AsTimeSpan,_parent.Configuration.Server.ReceiveTimeout.AsTimeSpan);
 
                 var parameters = new TcpNegotiateParameters
                 {

@@ -936,7 +936,7 @@ namespace Raven.Server.Documents.Replication
 
                 if (node is InternalReplication internalNode)
                 {
-                    using (var cts = new CancellationTokenSource(_server.Engine.TcpConnectionTimeout))
+                    using (var cts = new CancellationTokenSource(_server.Configuration.Server.ReceiveTimeout.AsTimeSpan))
                     {
                         return ReplicationUtils.GetTcpInfo(internalNode.Url, internalNode.Database, "Replication", certificate, cts.Token);
                     }

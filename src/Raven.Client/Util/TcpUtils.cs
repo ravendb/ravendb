@@ -4,6 +4,7 @@ using System.IO;
 using System.Net;
 using System.Net.Security;
 using System.Net.Sockets;
+using System.Runtime.CompilerServices;
 using System.Security.Authentication;
 using System.Security.Cryptography.X509Certificates;
 using System.Threading.Tasks;
@@ -14,17 +15,18 @@ namespace Raven.Client.Util
 {
     internal static class TcpUtils
     {
-        private static void SetTimeouts(TcpClient client, TimeSpan timeout)
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        private static void SetTimeouts(TcpClient client, TimeSpan sendTimeout, TimeSpan receiveTimeout)
         {
-            client.SendTimeout = (int)timeout.TotalMilliseconds;
-            client.ReceiveTimeout = (int)timeout.TotalMilliseconds;
+            client.SendTimeout = (int)sendTimeout.TotalMilliseconds;
+            client.ReceiveTimeout = (int)receiveTimeout.TotalMilliseconds;
         }
 
-        internal static async Task<(TcpClient Client, string Url)> ConnectSocketAsync(TcpConnectionInfo connection, TimeSpan timeout, Logger log)
+        internal static async Task<(TcpClient Client, string Url)> ConnectSocketAsync(TcpConnectionInfo connection, TimeSpan sendTimeout, TimeSpan receiveTimeout, Logger log)
         {
             try
             {
-                return await ConnectAsyncWithPriority(connection, timeout).ConfigureAwait(false);
+                return await ConnectAsyncWithPriority(connection, sendTimeout, receiveTimeout).ConfigureAwait(false);
             }
             catch (AggregateException ae) when (ae.InnerException is SocketException)
             {
@@ -62,12 +64,12 @@ namespace Raven.Client.Util
             }
         }
 
-        public static async Task<TcpClient> ConnectAsync(string url, TimeSpan? timeout = null, bool useIPv6 = false)
+        public static async Task<TcpClient> ConnectAsync(string url, TimeSpan sendTimeout, TimeSpan receiveTimeout, bool useIPv6 = false)
         {
             var uri = new Uri(url);
 
             var isIPv6 = uri.HostNameType == UriHostNameType.IPv6;
-            var tcpClient = NewTcpClient(timeout, isIPv6);
+            var tcpClient = NewTcpClient(sendTimeout, receiveTimeout, isIPv6);
 
             try
             {
@@ -88,7 +90,7 @@ namespace Raven.Client.Util
                 if (useIPv6)
                     throw;
 
-                return await ConnectAsync(url, timeout, true).ConfigureAwait(false);
+                return await ConnectAsync(url, sendTimeout, receiveTimeout, true).ConfigureAwait(false);
             }
             catch
             {
@@ -99,15 +101,15 @@ namespace Raven.Client.Util
             return tcpClient;
         }
 
+        public static Task<TcpClient> ConnectAsync(string url, TimeSpan timeout, bool useIPv6 = false) => ConnectAsync(url, timeout, timeout, useIPv6);
+
         internal static async Task<Stream> WrapStreamWithSslAsync(TcpClient tcpClient, TcpConnectionInfo info, X509Certificate2 storeCertificate, 
-            TimeSpan? timeout)
+            TimeSpan sendTimeout, TimeSpan receiveTimeout)
         {
             var networkStream = tcpClient.GetStream();
-            if (timeout != null)
-            {
-                networkStream.ReadTimeout =  
-                    networkStream.WriteTimeout = (int)timeout.Value.TotalMilliseconds;
-            }
+            networkStream.ReadTimeout = (int)receiveTimeout.TotalMilliseconds;
+            networkStream.WriteTimeout = (int)sendTimeout.TotalMilliseconds;
+
             Stream stream = networkStream;
             if (info.Certificate == null)
                 return stream;
@@ -119,7 +121,7 @@ namespace Raven.Client.Util
             return stream;
         }
 
-        private static TcpClient NewTcpClient(TimeSpan? timeout, bool useIPv6)
+        private static TcpClient NewTcpClient(TimeSpan sendTimeout, TimeSpan receiveTimeout, bool useIPv6)
         {
             // We start with a IPv4 TcpClient and we fallback to use IPv6 TcpClient only if we fail.
             // This is because that dual mode of IPv6 has a timeout of 1 second 
@@ -127,8 +129,13 @@ namespace Raven.Client.Util
             TcpClient tcpClient;
             if (useIPv6)
             {
-                tcpClient = new TcpClient(AddressFamily.InterNetworkV6);
-                tcpClient.Client.DualMode = true;
+                tcpClient = new TcpClient(AddressFamily.InterNetworkV6)
+                {
+                    Client =
+                    {
+                        DualMode = true
+                    }
+                };
             }
             else
             {
@@ -138,14 +145,13 @@ namespace Raven.Client.Util
             tcpClient.NoDelay = true;            
             tcpClient.LingerState = new LingerOption(true, 5);
 
-            if (timeout.HasValue)
-                SetTimeouts(tcpClient, timeout.Value);
+            SetTimeouts(tcpClient, sendTimeout, receiveTimeout);
 
             Debug.Assert(tcpClient.Client != null);
             return tcpClient;
         }
 
-        internal static async Task<(TcpClient Client, string Url)> ConnectAsyncWithPriority(TcpConnectionInfo info, TimeSpan? tcpConnectionTimeout)
+        internal static async Task<(TcpClient Client, string Url)> ConnectAsyncWithPriority(TcpConnectionInfo info, TimeSpan sendTimeout, TimeSpan receiveTimeout)
         {
             TcpClient tcpClient;
 
@@ -155,7 +161,7 @@ namespace Raven.Client.Util
                 {
                     try
                     {
-                        tcpClient = await ConnectAsync(url, tcpConnectionTimeout).ConfigureAwait(false);
+                        tcpClient = await ConnectAsync(url, sendTimeout, receiveTimeout).ConfigureAwait(false);
                         return (tcpClient, url);
                     }
                     catch
@@ -165,7 +171,7 @@ namespace Raven.Client.Util
                 }
             }
 
-            tcpClient = await ConnectAsync(info.Url, tcpConnectionTimeout).ConfigureAwait(false);            
+            tcpClient = await ConnectAsync(info.Url, sendTimeout, receiveTimeout).ConfigureAwait(false);            
 
             return (tcpClient, info.Url);
         }

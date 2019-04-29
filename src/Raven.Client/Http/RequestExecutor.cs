@@ -109,6 +109,19 @@ namespace Raven.Client.Http
 
         internal string LastServerVersion;
 
+        public TimeSpan SendTimeout
+        {
+            //addressing a default timeout for backward compatibility
+            get => _sendTimeout ?? (DefaultTimeout ?? GlobalHttpClientTimeout);
+            set => _sendTimeout = value;
+        }
+
+        public TimeSpan ReceiveTimeout
+        {
+            get => _receiveTimeout ?? (DefaultTimeout ?? GlobalHttpClientTimeout);
+            set => _receiveTimeout = value;
+        }
+
         public TimeSpan? DefaultTimeout
         {
             get => _defaultTimeout;
@@ -1310,6 +1323,8 @@ namespace Raven.Client.Http
         protected Task _firstTopologyUpdate;
         protected string[] _lastKnownUrls;
         private readonly DisposeOnce<ExceptionRetry> _disposeOnceRunner;
+        private TimeSpan? _sendTimeout;
+        private TimeSpan? _receiveTimeout;
         protected bool Disposed => _disposeOnceRunner.Disposed;
 
         public static bool HasServerCertificateCustomValidationCallback => _serverCertificateCustomValidationCallback != null;

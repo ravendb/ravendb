@@ -38,7 +38,7 @@ namespace Raven.Server.Rachis
     {
         private readonly ServerStore _serverStore;
 
-        public RachisConsensus(ServerStore serverStore, int? seed = null) : base( seed)
+        public RachisConsensus(ServerStore serverStore, int? seed = null) : base(seed, serverStore.Configuration)
         {
             _serverStore = serverStore;            
         }
@@ -229,6 +229,8 @@ namespace Raven.Server.Rachis
     
     public abstract class RachisConsensus : IDisposable
     {
+        internal readonly RavenConfiguration Configuration;
+
         internal abstract RachisStateMachine GetStateMachine();
 
         internal abstract RachisVersionValidation Validator { get; }
@@ -321,11 +323,7 @@ namespace Raven.Server.Rachis
             private set => _electionTimeout = value;
         }
 
-        public TimeSpan TcpConnectionTimeout
-        {
-            get => _tcpConnectionTimeout;
-            private set => _tcpConnectionTimeout = value;
-        }
+        public TimeSpan TcpReceiveTimeout { get; private set; }
 
         public TimeoutEvent Timeout { get; private set; }
 
@@ -347,9 +345,10 @@ namespace Raven.Server.Rachis
         private string _lastStateChangeReason;
         public Candidate Candidate { get; private set; }
 
-        protected RachisConsensus(int? seed = null)
+        protected RachisConsensus(int? seed, RavenConfiguration configuration)
         {
-            _rand = seed.HasValue ? new Random(seed.Value) : new Random();            
+            Configuration = configuration;
+            _rand = seed.HasValue ? new Random(seed.Value) : new Random();
         }
 
         public abstract void Notify(Notification notification);
@@ -372,7 +371,7 @@ namespace Raven.Server.Rachis
 
                 OperationTimeout = configuration.Cluster.OperationTimeout.AsTimeSpan;
                 ElectionTimeout = configuration.Cluster.ElectionTimeout.AsTimeSpan;
-                TcpConnectionTimeout = configuration.Cluster.TcpConnectionTimeout.AsTimeSpan;
+                TcpReceiveTimeout = configuration.Server.ReceiveTimeout.AsTimeSpan;
                 MaximalVersion = configuration.Cluster.MaximalAllowedClusterVersion;
 
                 DebuggerAttachedTimeout.LongTimespanIfDebugging(ref _operationTimeout);
@@ -1852,7 +1851,6 @@ namespace Raven.Server.Rachis
         private long _leaderTime;
         private TimeSpan _operationTimeout;
         private TimeSpan _electionTimeout;
-        private TimeSpan _tcpConnectionTimeout;
         private DateTime _lastStateChangeTime;
         private readonly string _clusterIdBase64Id = new string(' ',22);
 
