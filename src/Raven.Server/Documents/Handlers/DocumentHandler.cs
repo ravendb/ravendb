@@ -16,6 +16,7 @@ using Raven.Client.Documents.Changes;
 using Raven.Client.Documents.Commands;
 using Raven.Client.Documents.Commands.Batches;
 using Raven.Client.Documents.Operations;
+using Raven.Client.Documents.Operations.Attachments;
 using Raven.Client.Documents.Operations.Counters;
 using Raven.Client.Exceptions;
 using Raven.Server.Documents.Includes;
@@ -31,6 +32,7 @@ using Sparrow.Json.Parsing;
 using Sparrow.Server;
 using Sparrow.Utils;
 using Constants = Raven.Client.Constants;
+using Voron;
 using DeleteDocumentCommand = Raven.Server.Documents.TransactionCommands.DeleteDocumentCommand;
 using PatchRequest = Raven.Server.Documents.Patch.PatchRequest;
 
@@ -322,7 +324,7 @@ namespace Raven.Server.Documents.Handlers
                 // and the identity generation needs to take into account that the identity 
                 // generation can fail and will leave the reading task hanging if we abort
                 // easier to just do in synchronously
-                var doc = await context.ReadForDiskAsync(RequestBodyStream(), id).ConfigureAwait(false);
+                var doc = await context.ReadForDiskAsync(RequestBodyStream(), id).ConfigureAwait(false);               
 
                 if (id[id.Length - 1] == '|')
                 {
@@ -332,7 +334,7 @@ namespace Raven.Server.Documents.Handlers
 
                 var changeVector = context.GetLazyString(GetStringFromHeaders("If-Match"));
 
-                using (var cmd = new MergedPutCommand(doc, id, changeVector, Database))
+                using (var cmd = new MergedPutCommand(doc, id, changeVector, Database, shouldValidateAttachments:true))
                 {
                     await Database.TxMerger.Enqueue(cmd);
 
@@ -548,7 +550,7 @@ namespace Raven.Server.Documents.Handlers
         private readonly LazyStringValue _expectedChangeVector;
         private readonly BlittableJsonReaderObject _document;
         private readonly DocumentDatabase _database;
-
+        private readonly bool _shouldValidateAttachments;
         public ExceptionDispatchInfo ExceptionDispatchInfo;
         public DocumentsStorage.PutOperationResults PutResult;
 
@@ -557,16 +559,25 @@ namespace Raven.Server.Documents.Handlers
             return prefix + database.DocumentsStorage.GenerateNextEtag().ToString("D19") + "-" + Guid.NewGuid().ToBase64Unpadded();
         }
 
-        public MergedPutCommand(BlittableJsonReaderObject doc, string id, LazyStringValue changeVector, DocumentDatabase database)
+        public MergedPutCommand(BlittableJsonReaderObject doc, string id, LazyStringValue changeVector, DocumentDatabase database, bool shouldValidateAttachments = false)
         {
             _document = doc;
             _id = id;
             _expectedChangeVector = changeVector;
             _database = database;
+            _shouldValidateAttachments = shouldValidateAttachments;
         }
 
         protected override int ExecuteCmd(DocumentsOperationContext context)
         {
+            if(_shouldValidateAttachments)
+            {
+                if (_document.TryGet(Constants.Documents.Metadata.Key, out BlittableJsonReaderObject metadata)
+                    && metadata.TryGet(Constants.Documents.Metadata.Attachments, out BlittableJsonReaderArray attachments))
+                {
+                    ValidateAttachments(attachments, context, _id);
+                }
+            }
             try
             {
                 PutResult = _database.DocumentsStorage.Put(context, _id, _expectedChangeVector, _document);
@@ -591,6 +602,30 @@ namespace Raven.Server.Documents.Handlers
                 ExceptionDispatchInfo = ExceptionDispatchInfo.Capture(e);
             }
             return 1;
+        }
+
+        private void ValidateAttachments(BlittableJsonReaderArray attachments, DocumentsOperationContext context, string id)
+        {
+            if(attachments == null)
+            {
+                throw new InvalidOperationException($"Can not put document (id={id}) with '{Constants.Documents.Metadata.Attachments}': null");
+            }
+
+            foreach (BlittableJsonReaderObject attachment in attachments)
+            {
+                if(attachment.TryGet(nameof(AttachmentName.Hash), out string hash) == false || hash == null)
+                {
+                    throw new InvalidOperationException($"Can not put document (id={id}) because it contains an attachment without an hash property.");
+                }
+                using (Slice.From(context.Allocator, hash, out var hashSlice))
+                {
+                    if(AttachmentsStorage.GetCountOfAttachmentsForHash(context, hashSlice) < 1)
+                    {
+                        throw new InvalidOperationException($"Can not put document (id={id}) because it contains an attachment with hash={hash} but no such attachment is stored.");
+                    }
+                }
+                   
+            }
         }
 
         public void Dispose()

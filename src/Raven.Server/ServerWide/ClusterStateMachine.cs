@@ -249,27 +249,7 @@ namespace Raven.Server.ServerWide
                         }
                         break;
                     case nameof(AddOrUpdateCompareExchangeBatchCommand):
-                        var hasAddCommands = cmd.TryGet(nameof(AddOrUpdateCompareExchangeBatchCommand.Commands), out BlittableJsonReaderArray addCommands);
-                        var hasRemoveCommands = cmd.TryGet(nameof(AddOrUpdateCompareExchangeBatchCommand.RemoveCommands), out BlittableJsonReaderArray removeCommands);
-                        if (hasAddCommands == false && hasRemoveCommands == false)
-                        {
-                            throw new RachisApplyException($"'{nameof(AddOrUpdateCompareExchangeBatchCommand.Commands)}' and '{nameof(AddOrUpdateCompareExchangeBatchCommand.RemoveCommands)}' are missing in '{nameof(AddOrUpdateCompareExchangeBatchCommand)}'.");
-                        }
-                        if (hasAddCommands)
-                        {
-                            foreach (BlittableJsonReaderObject command in addCommands)
-                            {
-                                Apply(context, command, index, leader, serverStore);
-                            }
-                        }
-                        if (hasRemoveCommands)
-                        {
-                            foreach (BlittableJsonReaderObject command in removeCommands)
-                            {
-                                Apply(context, command, index, leader, serverStore);
-                            }
-                        }
-                        SetIndexForBackup(context, cmd, index, type);
+                        ExecuteCompareExchangeBatch(context, cmd, index, type);
                         break;
                     //The reason we have a separate case for removing node from database is because we must 
                     //actually delete the database before we notify about changes to the record otherwise we 
@@ -488,6 +468,65 @@ namespace Raven.Server.ServerWide
                 }
 
                 UpdateValue(index, items, keyLowered, key, databaseRecordJson);
+            }
+        }
+
+        private void ExecuteCompareExchangeBatch(TransactionOperationContext context, BlittableJsonReaderObject cmd, long index, string commandType)
+        {
+            CompareExchangeCommandBase compareExchange = null;
+            Exception exception = null;
+            try
+            {
+                var hasAddCommands = cmd.TryGet(nameof(AddOrUpdateCompareExchangeBatchCommand.Commands), out BlittableJsonReaderArray addCommands);
+                var hasRemoveCommands = cmd.TryGet(nameof(AddOrUpdateCompareExchangeBatchCommand.RemoveCommands), out BlittableJsonReaderArray removeCommands);
+
+                if (hasAddCommands == false && hasRemoveCommands == false)
+                {
+                    throw new RachisApplyException($"'{nameof(AddOrUpdateCompareExchangeBatchCommand.Commands)}' and '{nameof(AddOrUpdateCompareExchangeBatchCommand.RemoveCommands)}' are missing in '{nameof(AddOrUpdateCompareExchangeBatchCommand)}'.");
+                }
+
+                var items = context.Transaction.InnerTransaction.OpenTable(CompareExchangeSchema, CompareExchange);
+
+                if (hasAddCommands)
+                {
+                    foreach (BlittableJsonReaderObject command in addCommands)
+                    {
+                        if (command.TryGet("Type", out string type) == false || type != nameof(AddOrUpdateCompareExchangeCommand))
+                        {
+                            throw new RachisApplyException($"Cannot execute {commandType} command, wrong format");
+                        }
+
+                        compareExchange = (CompareExchangeCommandBase)JsonDeserializationCluster.Commands[type](command);
+                        compareExchange.Execute(context, items, index);
+                        SetIndexForBackup(context, command, index, type);
+                    }
+                }
+
+                if (hasRemoveCommands)
+                {
+                    foreach (BlittableJsonReaderObject command in removeCommands)
+                    {
+                        if (command.TryGet("Type", out string type) == false || type != nameof(RemoveCompareExchangeCommand))
+                        {
+                            throw new RachisApplyException($"Cannot execute {commandType} command, wrong format");
+                        }
+
+                        compareExchange = (CompareExchangeCommandBase)JsonDeserializationCluster.Commands[type](command);
+                        compareExchange.Execute(context, items, index);
+                        SetIndexForBackup(context, command, index, type);
+                    }
+                }
+
+                OnTransactionDispose(context, index);
+            }
+            catch (Exception e)
+            {
+                exception = e;
+                throw;
+            }
+            finally
+            {
+                LogCommand(commandType, index, exception, compareExchange?.AdditionalDebugInformation(exception));
             }
         }
 
@@ -799,6 +838,8 @@ namespace Raven.Server.ServerWide
                 var removed = removedCmd.RemovedNode;
                 var items = context.Transaction.InnerTransaction.OpenTable(ItemsSchema, Items);
 
+                var actions = new List<Action>();
+
                 foreach (var record in ReadAllDatabases(context))
                 {
                     using (Slice.From(context.Allocator, "db/" + record.DatabaseName.ToLowerInvariant(), out Slice lowerKey))
@@ -811,8 +852,8 @@ namespace Raven.Server.ServerWide
                             if (record.DeletionInProgress.Count == 0 && record.Topology.Count == 0 || deleteNow)
                             {
                                 DeleteDatabaseRecord(context, index, items, lowerKey, record.DatabaseName);
-                                NotifyDatabaseAboutChanged(context, record.DatabaseName, index, nameof(RemoveNodeFromCluster),
-                                    DatabasesLandlord.ClusterDatabaseChangeType.RecordChanged);
+                                actions.Add(() => DatabaseChanged?.Invoke(this,
+                                    (record.DatabaseName, index, nameof(RemoveNodeFromCluster), DatabasesLandlord.ClusterDatabaseChangeType.RecordChanged)));
                                 continue;
                             }
                         }
@@ -825,7 +866,6 @@ namespace Raven.Server.ServerWide
                             if (record.Topology.Count == 0)
                             {
                                 DeleteDatabaseRecord(context, index, items, lowerKey, record.DatabaseName);
-                                OnTransactionDispose(context, index);
                                 continue;
                             }
                         }
@@ -835,10 +875,11 @@ namespace Raven.Server.ServerWide
                         UpdateValue(index, items, lowerKey, key, updated);
                     }
 
-                    NotifyDatabaseAboutChanged(context, record.DatabaseName, index, nameof(RemoveNodeFromCluster),
-                        DatabasesLandlord.ClusterDatabaseChangeType.RecordChanged);
+                    actions.Add(() => DatabaseChanged?.Invoke(this,
+                        (record.DatabaseName, index, nameof(RemoveNodeFromCluster), DatabasesLandlord.ClusterDatabaseChangeType.RecordChanged)));
                 }
 
+                ExecuteManyOnDispose(context, index, nameof(RemoveNodeFromCluster), actions);
             }
             catch (Exception e)
             {
@@ -848,6 +889,64 @@ namespace Raven.Server.ServerWide
             finally
             {
                 LogCommand(nameof(RemoveNodeFromClusterCommand), index, exception, removedCmd?.AdditionalDebugInformation(exception));
+            }
+        }
+
+        private void ExecuteManyOnDispose(TransactionOperationContext context, long index, string type, List<Action> actions)
+        {
+            context.Transaction.InnerTransaction.LowLevelTransaction.OnDispose += transaction =>
+            {
+                if (transaction is LowLevelTransaction llt && llt.Committed)
+                {
+                    _rachisLogIndexNotifications.AddTask(index);
+                    var count = actions.Count;
+
+                    if (count == 0)
+                    {
+                        NotifyAndSetCompleted(index);
+                        return;
+                    }
+
+                    var exceptionAggregator =
+                        new ExceptionAggregator(_parent.Log, $"the raft index {index} is committed, but an error occured during executing the {type} command.");
+                    foreach (var action in actions)
+                    {
+                        TaskExecutor.Execute(_ =>
+                        {
+                            exceptionAggregator.Execute(action);
+                            if (Interlocked.Decrement(ref count) == 0)
+                            {
+                                Exception error = null;
+                                try
+                                {
+                                    exceptionAggregator.ThrowIfNeeded();
+                                }
+                                catch (Exception e)
+                                {
+                                    error = e;
+                                }
+                                finally
+                                {
+                                    _rachisLogIndexNotifications.NotifyListenersAbout(index, error);
+                                    _rachisLogIndexNotifications.SetTaskCompleted(index, error);
+                                }
+                            }
+                        }, null);
+                    }
+                }
+            };
+        }
+
+        private void NotifyAndSetCompleted(long index)
+        {
+            try
+            {
+                _rachisLogIndexNotifications.NotifyListenersAbout(index, null);
+                _rachisLogIndexNotifications.SetTaskCompleted(index, null);
+            }
+            catch (OperationCanceledException e)
+            {
+                _rachisLogIndexNotifications.SetTaskCompleted(index, e);
             }
         }
 
@@ -1755,16 +1854,7 @@ namespace Raven.Server.ServerWide
                 if (transaction is LowLevelTransaction llt && llt.Committed)
                     {
                     _rachisLogIndexNotifications.AddTask(index);
-
-                        try
-                        {
-                            _rachisLogIndexNotifications.NotifyListenersAbout(index, null);
-                        _rachisLogIndexNotifications.SetTaskCompleted(index, null);
-                        }
-                    catch (OperationCanceledException e)
-                        {
-                        _rachisLogIndexNotifications.SetTaskCompleted(index, e);
-                        }
+                    NotifyAndSetCompleted(index);
                 }
             };
         }
