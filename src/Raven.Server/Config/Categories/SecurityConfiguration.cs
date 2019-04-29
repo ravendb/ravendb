@@ -5,6 +5,7 @@ using System.Net;
 using Raven.Server.Config.Attributes;
 using Raven.Server.Config.Settings;
 using Raven.Server.Utils;
+using Sparrow;
 
 namespace Raven.Server.Config.Categories
 {
@@ -25,7 +26,19 @@ namespace Raven.Server.Config.Categories
         [TimeUnit(TimeUnit.Hours)]
         [ConfigurationEntry("Security.AuditLog.RetentionTimeInHrs", ConfigurationEntryScope.ServerWideOnly)]
         [ConfigurationEntry("Security.AuditLog.RetentionTimeInHours", ConfigurationEntryScope.ServerWideOnly)]
-        public TimeSetting AuditLogRetention { get; set; }
+        public TimeSetting AuditLogRetentionTime { get; set; }
+
+        [Description("The maximum size of the audit log after which the old files will be deleted")]
+        [DefaultValue(null)]
+        [MinValue(256)]
+        [SizeUnit(SizeUnit.Megabytes)]
+        [ConfigurationEntry("Logs.RetentionSizeInMb", ConfigurationEntryScope.ServerWideOnly)]
+        public Size? AuditLogRetentionSize { get; set; }
+
+        [Description("Will determine whether to compress the audit log files")]
+        [DefaultValue(false)]
+        [ConfigurationEntry("Logs.Compress", ConfigurationEntryScope.ServerWideOnly)]
+        public bool AuditLogCompress { get; set; }
 
         [Description("The path to .pfx certificate file. If specified, RavenDB will use HTTPS/SSL for all network activities. Certificate setting priority order: 1) Path 2) Executable")]
         [DefaultValue(null)]
