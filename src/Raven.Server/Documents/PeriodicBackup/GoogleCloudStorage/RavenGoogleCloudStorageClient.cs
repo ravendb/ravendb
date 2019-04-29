@@ -141,12 +141,12 @@ namespace Raven.Server.Documents.PeriodicBackup.GoogleCloudStorage
             catch (Google.GoogleApiException e)
                 when (e.Error.Code == 403)
             {
-                throw new InvalidOperationException($"Google credentials json does not have access to project {_projectId ?? "N/A"}");
+                throw new InvalidOperationException($"Google credentials json does not have access to project {_projectId ?? "N/A"}", e);
             }
             catch (Google.GoogleApiException e)
                 when (e.Error.Code == 404)
             {
-                throw new InvalidOperationException($"Bucket {_bucketName} not found!");
+                throw new InvalidOperationException($"Bucket {_bucketName} not found!", e);
             }
         }
 
