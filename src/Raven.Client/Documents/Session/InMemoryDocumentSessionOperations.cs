@@ -88,7 +88,7 @@ namespace Raven.Client.Documents.Session
         public async Task<ServerNode> GetCurrentSessionNode()
         {
             (int Index, ServerNode Node) result;
-            switch (_documentStore.Conventions.ReadBalanceBehavior)
+            switch (RequestExecutor.Conventions.ReadBalanceBehavior)
             {
                 case ReadBalanceBehavior.None:
                     result = await _requestExecutor.GetPreferredNode().ConfigureAwait(false);
@@ -100,7 +100,7 @@ namespace Raven.Client.Documents.Session
                     result = await _requestExecutor.GetFastestNode().ConfigureAwait(false);
                     break;
                 default:
-                    throw new ArgumentOutOfRangeException(_documentStore.Conventions.ReadBalanceBehavior.ToString());
+                    throw new ArgumentOutOfRangeException(RequestExecutor.Conventions.ReadBalanceBehavior.ToString());
             }
 
             return result.Node;
@@ -199,7 +199,7 @@ namespace Raven.Client.Documents.Session
         public GenerateEntityIdOnTheClient GenerateEntityIdOnTheClient { get; }
         public EntityToBlittable EntityToBlittable { get; }
 
-        protected internal JsonSerializer JsonSerializer => _jsonSerializer ?? (_jsonSerializer = _documentStore.Conventions.CreateSerializer());
+        protected internal JsonSerializer JsonSerializer => _jsonSerializer ?? (_jsonSerializer = RequestExecutor.Conventions.CreateSerializer());
 
         /// <summary>
         /// Initializes a new instance of the <see cref="InMemoryDocumentSessionOperations"/> class.
@@ -227,7 +227,7 @@ namespace Raven.Client.Documents.Session
 
             _javascriptCompilationOptions = new JavascriptCompilationOptions
             {
-                CustomMetadataProvider = new PropertyNameConventionJSMetadataProvider(_documentStore.Conventions)
+                CustomMetadataProvider = new PropertyNameConventionJSMetadataProvider(RequestExecutor.Conventions)
             };
         }
 
