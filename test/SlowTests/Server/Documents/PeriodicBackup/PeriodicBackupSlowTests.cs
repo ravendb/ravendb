@@ -11,6 +11,8 @@ using Raven.Client;
 using Raven.Client.Documents;
 using Raven.Client.Documents.Operations;
 using Raven.Client.Documents.Operations.Backups;
+using Raven.Client.Documents.Operations.CompareExchange;
+using Raven.Client.Documents.Session;
 using Raven.Client.Documents.Smuggler;
 using Raven.Client.Exceptions;
 using Raven.Client.ServerWide.Operations;
@@ -782,6 +784,90 @@ namespace SlowTests.Server.Documents.PeriodicBackup
                     }
                 }
             }
+        }
+
+        [Fact]
+        public async Task CreateFullBackupWithSeveralCompareExchange()
+        {
+            var backupPath = NewDataPath(suffix: "BackupFolder");
+            using (var store = GetDocumentStore())
+            {
+                var user = new User
+                {
+                    Name = "💩"
+                };
+                await store.Operations.SendAsync(new PutCompareExchangeValueOperation<User>("emojis/poo", user, 0));
+
+                var user2 = new User
+                {
+                    Name = "💩🤡"
+                };
+                await store.Operations.SendAsync(new PutCompareExchangeValueOperation<User>("emojis/pooclown", user2, 0));
+
+                var config = new PeriodicBackupConfiguration
+                {
+                    LocalSettings = new LocalSettings
+                    {
+                        FolderPath = backupPath
+                    },
+                    Name = "full",
+                    FullBackupFrequency = "* */6 * * *",
+                    BackupType = BackupType.Backup
+                };
+
+                var result = await store.Maintenance.SendAsync(new UpdatePeriodicBackupOperation(config));
+                var documentDatabase = (await GetDocumentDatabaseInstanceFor(store));
+                RunBackup(result.TaskId, documentDatabase, true, store);    // FULL BACKUP
+              
+                var backupDirectory = Directory.GetDirectories(backupPath).First();
+                var databaseName = GetDatabaseName() + "restore";
+
+                var files = Directory.GetFiles(backupDirectory)
+                    .Where(BackupUtils.IsBackupFile)
+                    .OrderBackups()
+                    .ToArray();
+
+                var restoreConfig = new RestoreBackupConfiguration()
+                {
+                    BackupLocation = backupDirectory,
+                    DatabaseName = databaseName,
+                    LastFileNameToRestore = files.Last()
+                };
+
+                var restoreOperation = new RestoreBackupOperation(restoreConfig);
+                store.Maintenance.Server.Send(restoreOperation)
+                    .WaitForCompletion(TimeSpan.FromSeconds(30));
+
+                using (var store2 = GetDocumentStore(new Options()
+                {
+                    CreateDatabase = false,
+                    ModifyDatabaseName = s => databaseName
+                }))
+                {
+                    using (var session = store2.OpenAsyncSession(new SessionOptions
+                    {
+                        TransactionMode = TransactionMode.ClusterWide
+                    }))
+                    {
+                        var user1 = (await session.Advanced.ClusterTransaction.GetCompareExchangeValueAsync<User>("emojis/poo"));
+                        var user3 = (await session.Advanced.ClusterTransaction.GetCompareExchangeValueAsync<User>("emojis/pooclown"));
+                        Assert.Equal(user.Name, user1.Value.Name);
+                        Assert.Equal(user2.Name, user3.Value.Name);
+                    }
+                }
+            }
+        }
+        private void RunBackup(long taskId, Raven.Server.Documents.DocumentDatabase documentDatabase, bool isFullBackup, DocumentStore store)
+        {
+            var periodicBackupRunner = documentDatabase.PeriodicBackupRunner;
+            var op = periodicBackupRunner.StartBackupTask(taskId, isFullBackup);
+            var value = WaitForValue(() =>
+            {
+                var status = store.Maintenance.Send(new GetOperationStateOperation(op)).Status;
+                return status;
+            }, OperationStatus.Completed);
+
+            Assert.Equal(OperationStatus.Completed, value);
         }
 
         private static string GetBackupPath(IDocumentStore store, long backTaskId, bool incremental = true)
