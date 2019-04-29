@@ -225,7 +225,7 @@ namespace Sparrow.Logging
                 _compressLoggingThread = new Thread(BackgroundLoggerCompress)
                 {
                     IsBackground = true,
-                    Name = _name + "Compress Thread"
+                    Name = _name + "Log Compression Thread"
                 };
                 _compressLoggingThread.Start();
             }
@@ -247,9 +247,19 @@ namespace Sparrow.Logging
 
         private FileStream GetNewStream(long maxFileSize)
         {
-            var logFiles = Directory.GetFiles(_path, $"{_dateString}.*.log");
+            string[] logFiles;
+            string[] logGzFiles;
+            try
+            {
+                logFiles = Directory.GetFiles(_path, $"{_dateString}.*.log");
+                logGzFiles = Directory.GetFiles(_path, $"{_dateString}.*.log.gz");
+            }
+            catch (Exception)
+            {
+                // Something went wrong we will try again later
+                return null;
+            }
             Array.Sort(logFiles);
-            var logGzFiles = Directory.GetFiles(_path, $"{_dateString}.*.log.gz");
             Array.Sort(logGzFiles);
 
             if (DateTime.Today != _today)
@@ -275,14 +285,14 @@ namespace Sparrow.Logging
                 if (File.Exists(fileName) && new FileInfo(fileName).Length >= maxFileSize)
                     continue;
 
-                KeepLogSize(logFiles, logGzFiles);
+                LimitLogSize(logFiles, logGzFiles);
                 var fileStream = SafeFileStream.Create(fileName, FileMode.Append, FileAccess.Write, FileShare.Read, 32 * 1024, false);
                 fileStream.Write(_headerRow, 0, _headerRow.Length);
                 return fileStream;
             }
         }
 
-        private void KeepLogSize(string[] logFiles, string[] logGzFiles)
+        private void LimitLogSize(string[] logFiles, string[] logGzFiles)
         {
             var logFilesInfo = logFiles.Select(f => new FileInfo(f));
             var logGzFilesInfo = logGzFiles.Select(f => new FileInfo(f));
@@ -291,31 +301,41 @@ namespace Sparrow.Logging
             foreach (var log in logGzFilesInfo.Reverse())
             {
                 if (totalLogSize > RetentionSize)
+                {
                     try
                     {
                         log.Delete();
                     }
-                    catch (Exception e)
+                    catch (Exception)
                     {
-                        //TODO What can we do in this situation??
+                        // Something went wrong we will try again later
+                        return;
                     }
+                }
                 else
+                {
                     return;
+                }
             }
 
             foreach (var log in logFilesInfo.Reverse())
             {
                 if (totalLogSize > RetentionSize)
+                {
                     try
                     {
                         log.Delete();
                     }
-                    catch (Exception e)
+                    catch (Exception)
                     {
-                        //TODO What can we do in this situation??
+                        // Something went wrong we will try again later
+                        return;
                     }
+                }
                 else
+                {
                     return;
+                }
             }
         }
 
@@ -363,9 +383,9 @@ namespace Sparrow.Logging
             {
                 logFiles = Directory.GetFiles(_path, "*.log.gz");
             }
-            catch (IOException)
+            catch (Exception)
             {
-                //Probably because a network error has occurred.
+                // Something went wrong we will try again later
                 return;
             }
 
@@ -397,9 +417,9 @@ namespace Sparrow.Logging
             {
                 logFiles = Directory.GetFiles(_path, "*.log");
             }
-            catch (IOException)
+            catch (Exception)
             {
-                //Probably because a network error has occurred.
+                // Something went wrong we will try again later
                 return;
             }
 
@@ -533,6 +553,14 @@ namespace Sparrow.Logging
                         var maxFileSize = MaxFileSizeInBytes;
                         using (var currentFile = GetNewStream(maxFileSize))
                         {
+                            if (currentFile == null)
+                            {
+                                if (_keepLogging == false)
+                                    return;
+                                _hasEntries.Wait();
+                                continue;
+                            }
+
                             var sizeWritten = 0;
 
                             var foundEntry = true;
@@ -642,73 +670,73 @@ namespace Sparrow.Logging
             var lastZipped = "";
             while (true)
             {
-                string[] logFiles;
                 try
                 {
-                    logFiles = Directory.GetFiles(_path, "*.log");
-                }
-                catch (IOException)
-                {
-                    //Probably because a network error has occurred.
-                    Thread.Sleep(TimeSpan.FromMinutes(1));
-                    continue;
-                }
+                    if (_keepLogging == false)
+                        //To eliminate blocking of shutdown
+                        return;
 
-                if (logFiles.Length <= 1 && _keepLogging == false)
-                    //There is just the current log file
-                    return;
+                    _readyToCompress.Wait(_tokenSource.Token);
+                    _readyToCompress.Reset();
 
-                Array.Sort(logFiles);
-
-                for (var i = 0; i < logFiles.Length - 1; i++)
-                {
+                    string[] logFiles;
                     try
                     {
-                        if (string.Compare(logFiles[i], lastZipped, StringComparison.Ordinal) <= 0)
-                            continue;
+                        logFiles = Directory.GetFiles(_path, "*.log");
+                    }
+                    catch (Exception)
+                    {
+                        // Something went wrong we will try again later
+                        
+                        continue;
+                    }
 
-                        using (var logStream = SafeFileStream.Create(logFiles[i], FileMode.Open, FileAccess.Read))
+                    if (logFiles.Length <= 1)
+                        //There is just the current log file
+                        continue;
+
+                    Array.Sort(logFiles);
+                    var lastZippedIndex = Math.Abs(Array.BinarySearch(logFiles, lastZipped));
+
+                    for (var i = lastZippedIndex; i < logFiles.Length - 1; i++)
+                    {
+                        try
                         {
-                            var newZippedFile = Path.Combine(_path, Path.GetFileNameWithoutExtension(logFiles[i]) + ".log.gz");
-                            //If there is compressed file with the same name (probably due to a failure) it will be overwritten
-                            using (var newFileStream = SafeFileStream.Create(newZippedFile, FileMode.Create, FileAccess.Write))
-                            using (var compressionStream = new GZipStream(newFileStream, CompressionMode.Compress))
+                            using (var logStream = SafeFileStream.Create(logFiles[i], FileMode.Open, FileAccess.Read))
                             {
-                                logStream.CopyTo(compressionStream);
+                                var newZippedFile = Path.Combine(_path, Path.GetFileNameWithoutExtension(logFiles[i]) + ".log.gz");
+                                //If there is compressed file with the same name (probably due to a failure) it will be overwritten
+                                using (var newFileStream = SafeFileStream.Create(newZippedFile, FileMode.Create, FileAccess.Write))
+                                using (var compressionStream = new GZipStream(newFileStream, CompressionMode.Compress))
+                                {
+                                    logStream.CopyTo(compressionStream);
+                                }
                             }
                         }
-                    }
-                    catch (Exception)
-                    {
-                        //Something went wrong we will try later again
-                        break;
-                    }
-                    lastZipped = logFiles[i];
-                    try
-                    {
-                        File.Delete(lastZipped);
-                    }
-                    catch (Exception)
-                    {
-                        // we don't actually care if we can't handle this scenario, we'll just try again later
-                        // maybe something is currently reading the file?
-                    }
-                }
+                        catch (Exception)
+                        {
+                            //Something went wrong we will try later again
+                            break;
+                        }
 
-                CleanupAlreadyCompressedLogFiles(lastZipped);
-                CleanupOldLogFiles();
-                if(_keepLogging == false)
-                    continue;
+                        try
+                        {
+                            File.Delete(logFiles[i]);
+                        }
+                        catch (Exception)
+                        {
+                            // we don't actually care if we can't handle this scenario, we'll just try again later
+                            // maybe something is currently reading the file?
+                        }
+                    }
 
-                try
-                {
-                    _readyToCompress.Wait(_tokenSource.Token);
+                    CleanupAlreadyCompressedLogFiles(lastZipped);
+                    CleanupOldLogFiles();
                 }
-                catch (Exception)
+                catch (OperationCanceledException)
                 {
                     return;
                 }
-                _readyToCompress.Reset();
             }
         }
 
