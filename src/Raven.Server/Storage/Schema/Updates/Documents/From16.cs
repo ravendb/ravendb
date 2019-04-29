@@ -6,6 +6,7 @@ using Raven.Client.Documents.Operations.Counters;
 using Raven.Server.Documents;
 using Raven.Server.ServerWide.Context;
 using Raven.Server.Utils;
+using Sparrow;
 using Sparrow.Binary;
 using Sparrow.Json;
 using Sparrow.Json.Parsing;
@@ -605,6 +606,8 @@ namespace Raven.Server.Storage.Schema.Updates.Documents
                         var maxDbIdIndex = GetMaxDbIdIndex(context, dbIds, kvp.Value);
 
                         toDispose.Add(context.Allocator.Allocate((maxDbIdIndex + 1) * CountersStorage.SizeOfCounterValues, out var newVal));
+
+                        Memory.Set(newVal.Ptr, 0, newVal.Length);
 
                         WriteRawBlob(context, dbIds, kvp.Value, newVal, builder);
                     }
