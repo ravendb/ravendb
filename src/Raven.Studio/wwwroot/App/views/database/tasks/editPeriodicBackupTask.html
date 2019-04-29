@@ -374,10 +374,10 @@
                             <input data-bind="textInput: remoteFolderName" type="text" class="form-control" />
                         </div>
                     </div>
-                    <div class="row flex-row margin-bottom" data-bind="validationElement: GoogleCredentialsJson">
+                    <div class="row flex-row margin-bottom" data-bind="validationElement: googleCredentialsJson">
                         <label class="control-label col-xs-12 col-sm-6 col-lg-4">Google Credentials Json <i class="required"></i></label>
                         <div class="col-xs-12 col-sm-6 col-lg-8">
-                            <textarea rows="9" data-bind="textInput: GoogleCredentialsJson" class="form-control" placeholder=
+                            <textarea rows="9" data-bind="textInput: googleCredentialsJson" class="form-control" placeholder=
                             'e.g.
                             {
                                 "type": "service_account",
@@ -397,7 +397,7 @@
                     <div class="text-right">
                         <button data-bind="click: _.partial($root.testCredentials, $data), disable: isTestingCredentials, css: { 'btn-spinner': isTestingCredentials }" class="btn btn-info">
                             <i class="icon-rocket"></i>
-                            &nbsp;&nbsp;<span>Test credentials</span>
+                            <span>Test credentials</span>
                         </button>
                     </div>
                 </div>
