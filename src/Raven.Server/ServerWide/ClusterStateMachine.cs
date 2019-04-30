@@ -43,6 +43,7 @@ using Raven.Server.ServerWide.Context;
 using Raven.Server.Utils;
 using Sparrow;
 using Sparrow.Binary;
+using Sparrow.Collections;
 using Sparrow.Json;
 using Sparrow.Json.Parsing;
 using Sparrow.Logging;
@@ -244,7 +245,7 @@ namespace Raven.Server.ServerWide
                             throw new RachisApplyException($"'{nameof(PutSubscriptionBatchCommand.Commands)}' is missing in '{nameof(PutSubscriptionBatchCommand)}'.");
                         }
                         foreach (BlittableJsonReaderObject command in subscriptionCommands)
-                        {
+                        {                            
                             Apply(context, command, index, leader, serverStore);
                         }
                         break;
@@ -1442,26 +1443,43 @@ namespace Raven.Server.ServerWide
             _parent.InsertToLeaderLog(context, term, context.ReadObject(djv, "remove"), RachisEntryFlags.StateMachineCommand);
         }
 
+        private readonly ConcurrentSet<long> _scheduledValueChangedNotificationIndexes = new ConcurrentSet<long>();
+
         private void NotifyValueChanged(TransactionOperationContext context, string type, long index)
         {
-            context.Transaction.InnerTransaction.LowLevelTransaction.OnDispose += transaction =>
+            //in case of batches that do multiple changes with the same index, we need to notify about those changes only once
+            if (_scheduledValueChangedNotificationIndexes.TryAdd(index))
             {
-                if (transaction is LowLevelTransaction llt && llt.Committed)
+                context.Transaction.InnerTransaction.LowLevelTransaction.OnDispose += transaction =>
+                {
+                    if (transaction is LowLevelTransaction llt && llt.Committed)
                     {
-                    ExecuteAsyncTask(index, () => ValueChanged?.Invoke(this, (index, type)));
-                        }
-            };
+                        ExecuteAsyncTask(index, () => ValueChanged?.Invoke(this, (index, type)));
+                    }
+
+                    _scheduledValueChangedNotificationIndexes.TryRemove(index);
+                };
+            }
         }
 
-        private void NotifyDatabaseAboutChanged(TransactionOperationContext context, string databaseName, long index, string type, DatabasesLandlord.ClusterDatabaseChangeType change)
+        private readonly ConcurrentSet<long> _scheduledDatabaseChangedNotificationIndexes = new ConcurrentSet<long>();
+
+        private void NotifyDatabaseAboutChanged(TransactionOperationContext context, string databaseName, long index, string type,
+            DatabasesLandlord.ClusterDatabaseChangeType change)
         {
-            context.Transaction.InnerTransaction.LowLevelTransaction.OnDispose += transaction =>
+            //in case of batches that do multiple changes with the same index, we need to notify about those changes only once
+            if (_scheduledDatabaseChangedNotificationIndexes.TryAdd(index))
             {
-                if (transaction is LowLevelTransaction llt && llt.Committed)
+                context.Transaction.InnerTransaction.LowLevelTransaction.OnDispose += transaction =>
                 {
-                    ExecuteAsyncTask(index, () => DatabaseChanged?.Invoke(this, (databaseName, index, type, change)));
-                }
-            };
+                    if (transaction is LowLevelTransaction llt && llt.Committed)
+                    {
+                        ExecuteAsyncTask(index, () => DatabaseChanged?.Invoke(this, (databaseName, index, type, change)));
+                    }
+
+                    _scheduledDatabaseChangedNotificationIndexes.TryRemove(index);
+                };
+            }
         }
 
         private void ExecuteAsyncTask(long index, Action action)
@@ -2736,7 +2754,6 @@ namespace Raven.Server.ServerWide
         public void AddTask(long index)
         {
             Debug.Assert(_tasksDictionary.TryGetValue(index, out _) == false, $"{nameof(_tasksDictionary)} should not contain task with key {index}");
-
             _tasksDictionary.TryAdd(index, new TaskCompletionSource<object>(TaskCreationOptions.RunContinuationsAsynchronously));
         }
     }
