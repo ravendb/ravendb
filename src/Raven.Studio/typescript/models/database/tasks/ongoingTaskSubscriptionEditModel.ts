@@ -60,32 +60,22 @@ class ongoingTaskSubscriptionEditModel extends ongoingTaskEditModel {
             return this.startingPointType() === "Latest Document";
         });
 
-       this.changeVectorForNextBatchStartingPointFormatted = ko.pureComputed(() => {          
-           const vector = this.changeVectorForNextBatchStartingPoint();
-           return changeVectorUtils.formatChangeVector(vector, changeVectorUtils.shouldUseLongFormat([vector]));
-       });
+        this.changeVectorForNextBatchStartingPointFormatted = this.createComputedFormattedChangeVector(this.changeVectorForNextBatchStartingPoint());
 
-       this.changeVectorForNextBatchStartingPointHtml = ko.pureComputed(() => {
-           let vectorText = "";
-           if (this.changeVectorForNextBatchStartingPointFormatted().length) {
-               vectorText += this.changeVectorForNextBatchStartingPointFormatted().map(vectorItem => vectorItem.fullFormat).join('<br/>');
-           }
-
-           return vectorText;
-       });
-
-        this.lastChangeVectorAcknowledgedFormatted = ko.pureComputed(() => {
-            const vector = this.lastChangeVectorAcknowledged();
-            return changeVectorUtils.formatChangeVector(vector, changeVectorUtils.shouldUseLongFormat([vector]));
+        this.changeVectorForNextBatchStartingPointHtml = ko.pureComputed(() => {
+            return this.changeVectorForNextBatchStartingPointFormatted().map(vectorItem => vectorItem.fullFormat).join('<br/>');
         });
 
-        this.lastChangeVectorAcknowledgedHtml = ko.pureComputed(() => {
-            let vectorText = "";
-            if (this.lastChangeVectorAcknowledgedFormatted().length) {
-                vectorText += this.lastChangeVectorAcknowledgedFormatted().map(vectorItem => vectorItem.fullFormat).join('<br/>');
-            }
+        this.lastChangeVectorAcknowledgedFormatted = this.createComputedFormattedChangeVector(this.lastChangeVectorAcknowledged());
 
-            return vectorText;
+        this.lastChangeVectorAcknowledgedHtml = ko.pureComputed(() => {
+            return this.lastChangeVectorAcknowledgedFormatted().map(vectorItem => vectorItem.fullFormat).join('<br/>');
+        });
+    }
+
+    private createComputedFormattedChangeVector(changeVector: string) : KnockoutComputed<changeVectorItem[]> {
+        return  ko.pureComputed<changeVectorItem[]>(() => {
+            return changeVectorUtils.formatChangeVector(changeVector, changeVectorUtils.shouldUseLongFormat([changeVector]))
         });
     }
 

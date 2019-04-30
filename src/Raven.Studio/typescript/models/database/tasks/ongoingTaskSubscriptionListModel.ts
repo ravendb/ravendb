@@ -69,23 +69,23 @@ class ongoingTaskSubscriptionListModel extends ongoingTaskListModel {
 
         const urls = appUrl.forCurrentDatabase();
         this.editUrl = urls.editSubscription(this.taskId, this.taskName());
-
-        this.changeVectorForNextBatchStartingPointFormatted = ko.pureComputed(() => {
-            const vector = this.changeVectorForNextBatchStartingPoint();
-            return changeVectorUtils.formatChangeVector(vector, changeVectorUtils.shouldUseLongFormat([vector]));
-        });
+      
+        this.changeVectorForNextBatchStartingPointFormatted = this.createComputedFormattedChangeVector(this.changeVectorForNextBatchStartingPoint);
+        this.lastChangeVectorAcknowledgedFormatted = this.createComputedFormattedChangeVector(this.lastChangeVectorAcknowledged);
         
-        this.lastChangeVectorAcknowledgedFormatted = ko.pureComputed(() => {
-            const vector = this.lastChangeVectorAcknowledged();
-            return changeVectorUtils.formatChangeVector(vector, changeVectorUtils.shouldUseLongFormat([vector]));
-        });
-
         this.urlForNextBatchStartingPointDocument = ko.pureComputed(() => {
             return appUrl.forEditDoc(this.documentIDForNextBatchStartingPoint(), activeDatabaseTracker.default.database());
         });
 
         this.urlForLastAcknowledgedDocument = ko.pureComputed(() => {
             return appUrl.forEditDoc(this.documentIDForLastChangeVectorAcknowledged(), activeDatabaseTracker.default.database());
+        });
+    }
+
+    private createComputedFormattedChangeVector(changeVectorObservable: KnockoutObservable<string>) : KnockoutComputed<changeVectorItem[]> {
+        return  ko.pureComputed<changeVectorItem[]>(() => {
+            const changeVector = changeVectorObservable();
+            return changeVectorUtils.formatChangeVector(changeVector, changeVectorUtils.shouldUseLongFormat([changeVector]))
         });
     }
 

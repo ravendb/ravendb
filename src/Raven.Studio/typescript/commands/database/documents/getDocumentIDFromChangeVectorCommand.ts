@@ -4,7 +4,7 @@ import endpoints = require("endpoints");
 
 class getDocumentIDFromChangeVectorCommand extends commandBase {
     
-    constructor(private db: database, private changeVector: string, ) {
+    constructor(private db: database, private changeVector: string) {
         super();
     }
 

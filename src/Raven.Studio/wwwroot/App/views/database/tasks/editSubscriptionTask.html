@@ -87,13 +87,13 @@
                                         <span data-bind="visible: !$root.documentForUserDefinedChangeVectorFound()">
                                             <a href="#" data-bind="click: _.partial($root.tryGetDocumentIDFromChangeVector, 'UserDefinedStartingPoint'), visible: !$root.spinners.documentIDForUserDefinedChangeVectorLoading()" 
                                                title="Search for the document that matches this change-vector">
-                                                <small>Show matching document&nbsp;</small><i class="icon-search"></i>
+                                                <small><i class="icon-search"></i> Show matching document</small>
                                             </a>
-                                            <span data-bind="visible: $root.spinners.documentIDForUserDefinedChangeVectorLoading">
-                                                <small>Searching for document&nbsp;&nbsp;&nbsp;</small><i class="btn-spinner"></i>
-                                            </span>
+                                            <small data-bind="visible: $root.spinners.documentIDForUserDefinedChangeVectorLoading" title="Searching for a matching document">
+                                                <i class="btn-spinner"></i>
+                                            </small>
                                             <small data-bind="visible: $root.triedToFindDocumentForUserDefinedChangeVectorButFailed" title="">
-                                                <span>No matching document found&nbsp;</span>
+                                                <span>No matching document found </span>
                                                 <i class="icon-help no-matching-document-found"></i>
                                             </small>
                                         </span>
@@ -131,8 +131,8 @@
                             </div>
                         </div>
                         <div data-bind="if: lastChangeVectorAcknowledged()">
-                            <div class="panel padding" >
-                                <label>Last change-vector acknowledged by the client :</label>
+                            <div class="panel padding">
+                                <label>Last change-vector acknowledged by the client:</label>
                                 <div id="last-change-vector-acknowledged">
                                     <span data-bind="foreach: lastChangeVectorAcknowledgedFormatted">
                                         <span class="badge badge-default" data-bind="text: shortFormat"></span>
@@ -142,13 +142,13 @@
                                     <span data-bind="visible: !$root.lastAcknowledgedDocumentFound()">
                                         <a href="#" data-bind="click: _.partial($root.tryGetDocumentIDFromChangeVector, 'LastAcknowledgedByClient'), visible: !$root.spinners.documentIDForLastChangeVectorAcknowledgedLoading()"
                                            title="Search for the document that matches this change-vector">
-                                             <small>Show matching document&nbsp;</small><i class="icon-search"></i>
+                                            <small><i class="icon-search"></i> Show matching document</small>
                                         </a>
-                                        <span data-bind="visible: $root.spinners.documentIDForLastChangeVectorAcknowledgedLoading">
-                                             <small>Searching for document&nbsp;&nbsp;&nbsp;</small><i class="btn-spinner"></i>
-                                        </span>
+                                        <small data-bind="visible: $root.spinners.documentIDForLastChangeVectorAcknowledgedLoading" title="Searching for a matching document">
+                                             <i class="btn-spinner"></i>
+                                        </small>
                                         <small data-bind="visible: $root.triedToFindDocumentLastAcknowledgedButFailed">
-                                             <span>No matching document found&nbsp;</span>
+                                             <span>No matching document found </span>
                                              <i class="icon-help no-matching-document-found"></i>
                                         </small>
                                     </span>
@@ -162,7 +162,7 @@
                         </div>
                         <div data-bind="if: changeVectorForNextBatchStartingPoint() && changeVectorForNextBatchStartingPoint() !== 'DoNotChange' && !setStartingPoint()">
                             <div class="panel padding">
-                                <label>Next batch starting point is :&nbsp</label>
+                                <label>Next batch starting point is:&nbsp</label>
                                 <small id="next-batch-change-vector-info">
                                     <i class="text-info icon-info"></i>
                                 </small>
@@ -175,13 +175,13 @@
                                     <span data-bind="visible: !$root.nextBatchStartingPointDocumentFound()">
                                         <a href="#" data-bind="click: _.partial($root.tryGetDocumentIDFromChangeVector, 'NextBatchStartingPoint'), visible: !$root.spinners.documentIDForNextBatchStartingPointLoading()" 
                                            title="Search for the document that matches this change-vector">
-                                            <small>Show matching document&nbsp;</small><i class="icon-search"></i>
+                                            <small><i class="icon-search"></i> Show matching document</small>
                                         </a>
-                                        <span data-bind="visible: $root.spinners.documentIDForNextBatchStartingPointLoading">
-                                            <small>Searching for document&nbsp;&nbsp;&nbsp;</small><i class="btn-spinner"></i>
-                                        </span>
+                                        <small data-bind="visible: $root.spinners.documentIDForNextBatchStartingPointLoading" title="Searching for a matching document">
+                                            <i class="btn-spinner"></i>
+                                        </small>
                                         <small data-bind="visible: $root.triedToFindDocumentNextBatchButFailed">
-                                            <span>No matching document found&nbsp;</span>
+                                            <span>No matching document found </span>
                                             <i class="icon-help no-matching-document-found"></i>
                                         </small>
                                     </span>

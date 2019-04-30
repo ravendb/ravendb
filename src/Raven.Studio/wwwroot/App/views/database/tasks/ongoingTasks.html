@@ -344,16 +344,16 @@
                                                         </span>
                                                         <span>
                                                             <small data-bind="visible: !nextBatchStartingPointDocumentFound()">
-                                                                <a href="#" data-bind="click: _.partial(tryGetDocumentIDFromChangeVector, 'NextBatchStartingPoint'), 'NextBatchStartingPoint'), visible: !spinners.documentIDForNextBatchStartingPointLoading()" 
+                                                                <a href="#" data-bind="click: _.partial(tryGetDocumentIDFromChangeVector, 'NextBatchStartingPoint'), visible: !spinners.documentIDForNextBatchStartingPointLoading()" 
                                                                    title="Search for the document that matches this change-vector">
                                                                     <i class="icon-search"></i>
                                                                 </a>
-                                                                <span data-bind="visible: spinners.documentIDForNextBatchStartingPointLoading">
-                                                                    &nbsp;&nbsp;&nbsp;<i class="btn-spinner"></i>
+                                                                <span data-bind="visible: spinners.documentIDForNextBatchStartingPointLoading" title="Searching for a matching document">
+                                                                    &nbsp;<i class="btn-spinner"></i>
                                                                 </span>
                                                                 <span data-bind="visible: triedToFindDocumentNextBatchButFailed">
-                                                                     <span>No matching document found&nbsp;</span>
-                                                                     <i class="icon-help no-matching-document-found" ></i>
+                                                                     <span>No matching document found </span>
+                                                                     <i class="icon-help no-matching-document-found"></i>
                                                                 </span>
                                                             </small>
                                                             <span data-bind="visible: nextBatchStartingPointDocumentFound">
@@ -381,12 +381,12 @@
                                                                    title="Search for the document that matches this change-vector">
                                                                      <i class="icon-search"></i>
                                                                 </a>
-                                                                <span data-bind="visible: spinners.documentIDForLastChangeVectorAcknowledgedLoading">
-                                                                    &nbsp;&nbsp;&nbsp;<i class="btn-spinner"></i>
+                                                                <span data-bind="visible: spinners.documentIDForLastChangeVectorAcknowledgedLoading" title="Searching for a matching document">
+                                                                     &nbsp;<i class="btn-spinner"></i>
                                                                 </span>
                                                                 <span data-bind="visible: triedToFindDocumentLastAcknowledgedButFailed">
-                                                                     <span>No matching document found&nbsp;</span>
-                                                                     <i class="icon-help no-matching-document-found" ></i>
+                                                                     <span>No matching document found </span>
+                                                                     <i class="icon-help no-matching-document-found"></i>
                                                                 </span>
                                                             </small>
                                                             <span data-bind="visible: lastAcknowledgedDocumentFound">
