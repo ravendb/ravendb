@@ -47,7 +47,7 @@ namespace Raven.Server.Smuggler.Migration
                 Parameters.Result.AddInfo("Started processing RavenFS files");
                 Parameters.OnProgress.Invoke(Parameters.Result.Progress);
 
-                var lastRavenFsEtag = await MigrateRavenFs(state?.LastRavenFsEtag ?? LastEtagsInfo.EtagEmpty);
+                var lastRavenFsEtag = await MigrateRavenFs(state?.LastRavenFsEtag ?? LastEtagsInfo.EtagEmpty, Parameters.Result);
                 state = GetLastMigrationState() ?? GenerateLastEtagsInfo();
                 state.LastRavenFsEtag = lastRavenFsEtag;
                 await SaveLastOperationState(state);
@@ -114,10 +114,16 @@ namespace Raven.Server.Smuggler.Migration
             } 
         }
 
-        private async Task<string> MigrateRavenFs(string lastEtag)
+        private async Task<string> MigrateRavenFs(string lastEtag, SmugglerResult parametersResult)
         {
             var destination = new DatabaseDestination(Parameters.Database);
+            var options = new DatabaseSmugglerOptionsServerSide
+            {
+                OperateOnTypes = DatabaseItemType.None,
+                SkipRevisionCreation = true
+            };
 
+            destination.Initialize(options, parametersResult, _buildVersion);
             using (Parameters.Database.ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext transactionOperationContext))
             using (Parameters.Database.DocumentsStorage.ContextPool.AllocateOperationContext(out DocumentsOperationContext context))
             using (var documentActions = destination.Documents())
@@ -129,7 +135,7 @@ namespace Raven.Server.Smuggler.Migration
                     var ravenFsHeadersArray = await GetRavenFsHeadersArray(lastEtag, transactionOperationContext);
                     if (ravenFsHeadersArray.Length == 0)
                     {
-                        var count = Parameters.Result.Documents.Attachments.ReadCount;
+                        var count = Parameters.Result.Documents.ReadCount;
                         if (count > 0)
                         {
                             var message = $"Read {count:#,#;;0} RavenFS file{(count > 1 ? "s" : string.Empty)}.";
@@ -167,10 +173,10 @@ namespace Raven.Server.Smuggler.Migration
                         WriteDocumentWithAttachment(documentActions, context, dataStream, key, metadata);
 
                         Parameters.Result.Documents.ReadCount++;
-                        if (Parameters.Result.Documents.Attachments.ReadCount % 50 == 0 || sp.ElapsedMilliseconds > 3000)
+                        if (Parameters.Result.Documents.ReadCount % 50 == 0 || sp.ElapsedMilliseconds > 3000)
                         {
-                            var message = $"Read {Parameters.Result.Documents.Attachments.ReadCount:#,#;;0} " +
-                                          $"RavenFS file{(Parameters.Result.Documents.Attachments.ReadCount > 1 ? "s" : string.Empty)}.";
+                            var message = $"Read {Parameters.Result.Documents.ReadCount:#,#;;0} " +
+                                          $"RavenFS file{(Parameters.Result.Documents.ReadCount > 1 ? "s" : string.Empty)}.";
                             Parameters.Result.AddInfo(message);
                             Parameters.OnProgress.Invoke(Parameters.Result.Progress);
                             sp.Restart();

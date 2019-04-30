@@ -37,7 +37,7 @@ namespace Raven.Server.Smuggler.Migration
 
             if (Options.OperateOnTypes.HasFlag(DatabaseItemType.LegacyAttachments))
             {
-                await MigrateAttachments(state?.LastAttachmentsEtag ?? LastEtagsInfo.EtagEmpty);
+                await MigrateAttachments(state?.LastAttachmentsEtag ?? LastEtagsInfo.EtagEmpty, Parameters.Result);
                 migratedDocumentsOrAttachments = true;
             }
 
@@ -93,9 +93,16 @@ namespace Raven.Server.Smuggler.Migration
             }
         }
 
-        private async Task MigrateAttachments(string lastEtag)
+        private async Task MigrateAttachments(string lastEtag, SmugglerResult parametersResult)
         {
             var destination = new DatabaseDestination(Parameters.Database);
+            var options = new DatabaseSmugglerOptionsServerSide
+            {
+                OperateOnTypes = DatabaseItemType.None,
+                SkipRevisionCreation = true
+            };
+
+            destination.Initialize(options, parametersResult, default);
 
             using (Parameters.Database.ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext transactionOperationContext))
             using (Parameters.Database.DocumentsStorage.ContextPool.AllocateOperationContext(out DocumentsOperationContext context))
@@ -108,7 +115,7 @@ namespace Raven.Server.Smuggler.Migration
                     var attachmentsArray = await GetAttachmentsList(lastEtag, transactionOperationContext);
                     if (attachmentsArray.Length == 0)
                     {
-                        var count = Parameters.Result.Documents.Attachments.ReadCount;
+                        var count = Parameters.Result.Documents.ReadCount;
                         if (count > 0)
                         {
                             var message = $"Read {count:#,#;;0} legacy attachment{(count > 1 ? "s" : string.Empty)}.";
@@ -143,9 +150,9 @@ namespace Raven.Server.Smuggler.Migration
                         WriteDocumentWithAttachment(documentActions, context, dataStream, key, metadata);
 
                         Parameters.Result.Documents.ReadCount++;
-                        if (Parameters.Result.Documents.Attachments.ReadCount % 50 == 0 || sp.ElapsedMilliseconds > 3000)
+                        if (Parameters.Result.Documents.ReadCount % 50 == 0 || sp.ElapsedMilliseconds > 3000)
                         {
-                            var message = $"Read {Parameters.Result.Documents.Attachments.ReadCount:#,#;;0} legacy attachments.";
+                            var message = $"Read {Parameters.Result.Documents.ReadCount:#,#;;0} legacy attachments.";
                             Parameters.Result.AddInfo(message);
                             Parameters.OnProgress.Invoke(Parameters.Result.Progress);
                             sp.Restart();
