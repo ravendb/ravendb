@@ -34,6 +34,86 @@ namespace FastTests.Server.Documents
         }
 
         [Fact]
+        public void UsingDifferentTags()
+        {
+            using (var store = GetDocumentStore())
+            {
+                var baseline = DateTime.Today;
+
+                using (var session = store.OpenSession())
+                {
+                    session.Store(new { Name = "Oren" }, "users/ayende");
+                    session.TimeSeriesFor("users/ayende")
+                        .Append("Heartrate", baseline.AddMinutes(1), "watches/fitbit", new[] { 59d });
+                    session.TimeSeriesFor("users/ayende")
+                        .Append("Heartrate", baseline.AddMinutes(2), "watches/apple", new[] { 70d });
+                    session.SaveChanges();
+                }
+
+                using (var session = store.OpenSession())
+                {
+                    var vals = session.TimeSeriesFor("users/ayende")
+                        .Get("Heartrate", DateTime.MinValue, DateTime.MaxValue)
+                        .ToList();
+                    Assert.Equal(2, vals.Count);
+                    Assert.Equal(new[] { 59d }, vals[0].Values);
+                    Assert.Equal("watches/fitbit", vals[0].Tag);
+                    Assert.Equal(baseline.AddMinutes(1), vals[0].Timestamp);
+
+                    Assert.Equal(new[] { 70d }, vals[1].Values);
+                    Assert.Equal("watches/apple", vals[1].Tag);
+                    Assert.Equal(baseline.AddMinutes(2), vals[1].Timestamp);
+                }
+            }
+        }
+
+        [Fact]
+        public void UsingDifferentNumberOfValues_SmallToLarge()
+        {
+            using (var store = GetDocumentStore())
+            {
+                var baseline = DateTime.Today;
+
+                using (var session = store.OpenSession())
+                {
+                    session.Store(new { Name = "Oren" }, "users/ayende");
+
+                    session.TimeSeriesFor("users/ayende")
+                        .Append("Heartrate", baseline.AddMinutes(1), "watches/fitbit", new[] { 59d });
+
+                    session.TimeSeriesFor("users/ayende")
+                        .Append("Heartrate", baseline.AddMinutes(2), "watches/apple", new[] { 70d, 120d, 80d });
+
+                    session.TimeSeriesFor("users/ayende")
+                        .Append("Heartrate", baseline.AddMinutes(3), "watches/fitbit", new[] { 69d });
+
+                    session.SaveChanges();
+                }
+
+                using (var session = store.OpenSession())
+                {
+                    var vals = session.TimeSeriesFor("users/ayende")
+                        .Get("Heartrate", DateTime.MinValue, DateTime.MaxValue)
+                        .ToList();
+                    Assert.Equal(3, vals.Count);
+                    Assert.Equal(new[] { 59d }, vals[0].Values);
+                    Assert.Equal("watches/fitbit", vals[0].Tag);
+                    Assert.Equal(baseline.AddMinutes(1), vals[0].Timestamp);
+
+                    Assert.Equal(new[] { 70d, 120d, 80d }, vals[1].Values);
+                    Assert.Equal("watches/apple", vals[1].Tag);
+                    Assert.Equal(baseline.AddMinutes(2), vals[1].Timestamp);
+
+                    Assert.Equal(new[] { 69d }, vals[0].Values);
+                    Assert.Equal("watches/fitbit", vals[0].Tag);
+                    Assert.Equal(baseline.AddMinutes(3), vals[0].Timestamp);
+                }
+            }
+        }
+
+
+
+        [Fact]
         public void CanStoreAndReadMultipleTimestamps()
         {
             using (var store = GetDocumentStore())
