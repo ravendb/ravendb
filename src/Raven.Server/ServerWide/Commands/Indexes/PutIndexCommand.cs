@@ -16,17 +16,23 @@ namespace Raven.Server.ServerWide.Commands.Indexes
             // for deserialization
         }
 
-        public PutIndexCommand(IndexDefinition definition, string databaseName)
+        public PutIndexCommand(IndexDefinition definition, string databaseName, string source, DateTime createdAt)
             : base(databaseName)
         {
             Definition = definition;
+            Source = source;
+            CreatedAt = createdAt;
         }
+
+        public DateTime CreatedAt { get; set; }
+
+        public string Source { get; set; }
 
         public override string UpdateDatabaseRecord(DatabaseRecord record, long etag)
         {
             try
             {
-                record.AddIndex(Definition);
+                record.AddIndex(Definition, Source, CreatedAt);
             }
             catch (Exception e)
             {
@@ -39,6 +45,8 @@ namespace Raven.Server.ServerWide.Commands.Indexes
         public override void FillJson(DynamicJsonValue json)
         {
             json[nameof(Definition)] = TypeConverter.ToBlittableSupportedType(Definition);
+            json[nameof(Source)] = Source;
+            json[nameof(CreatedAt)] = CreatedAt;
         }
     }
 }
