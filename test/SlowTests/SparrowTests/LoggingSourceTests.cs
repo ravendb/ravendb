@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Globalization;
 using System.IO;
 using System.Linq;
 using System.Runtime.CompilerServices;
@@ -92,12 +93,14 @@ namespace SlowTests.SparrowTests
             anotherThread.Start();
             anotherThread.Join();
 
-            foreach (var file in beforeRestartFiles)
+            foreach (var file in beforeRestartFiles.SkipLast(1)) //The last is skipped because it is still written
             {
                 var lastWriteTime = File.GetLastWriteTime(file);
                 Assert.True(
                     restartDateTime > lastWriteTime, 
-                    $"{file} was changed (time:{lastWriteTime}) after the restart (time:{restartDateTime})");
+                    $"{file} was changed (time:" +
+                    $"{lastWriteTime.ToString("yyyy-MM-dd HH:mm:ss.fff", CultureInfo.InvariantCulture)}) after the restart (time:" +
+                    $"{restartDateTime.ToString("yyyy-MM-dd HH:mm:ss.fff", CultureInfo.InvariantCulture)})");
             }
         }
 

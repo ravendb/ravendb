@@ -242,7 +242,7 @@ namespace Sparrow.Logging
             _readyToCompress.Set();
             _tokenSource.Cancel();
             _loggingThread.Join(TimeToWaitForLoggingToEndInMilliseconds);
-            _compressLoggingThread.Join();
+            _compressLoggingThread?.Join();
         }
 
         private FileStream GetNewStream(long maxFileSize)
@@ -309,7 +309,7 @@ namespace Sparrow.Logging
                     catch (Exception)
                     {
                         // Something went wrong we will try again later
-                        return;
+                        continue;
                     }
                 }
                 else
@@ -329,7 +329,7 @@ namespace Sparrow.Logging
                     catch (Exception)
                     {
                         // Something went wrong we will try again later
-                        return;
+                        continue;
                     }
                 }
                 else
@@ -668,12 +668,12 @@ namespace Sparrow.Logging
         private void BackgroundLoggerCompress()
         {
             var lastZipped = "";
+            var logger = GetLogger($"{nameof(LoggingSource)}", $"{nameof(BackgroundLoggerCompress)}");
             while (true)
             {
                 try
                 {
                     if (_keepLogging == false)
-                        //To eliminate blocking of shutdown
                         return;
 
                     _readyToCompress.Wait(_tokenSource.Token);
@@ -687,12 +687,11 @@ namespace Sparrow.Logging
                     catch (Exception)
                     {
                         // Something went wrong we will try again later
-                        
                         continue;
                     }
 
                     if (logFiles.Length <= 1)
-                        //There is just the current log file
+                        //There is only one log file in the middle of writing
                         continue;
 
                     Array.Sort(logFiles);
@@ -736,6 +735,10 @@ namespace Sparrow.Logging
                 catch (OperationCanceledException)
                 {
                     return;
+                }
+                catch (Exception e)
+                {
+                    logger.Operations("Something went wrong while compressing log files", e);
                 }
             }
         }
