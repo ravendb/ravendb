@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using System.Net;
 using System.Threading.Tasks;
+using Microsoft.AspNetCore.Http;
 using Raven.Client;
 using Raven.Client.Documents.Changes;
 using Raven.Client.Documents.Indexes;
@@ -43,12 +44,14 @@ namespace Raven.Server.Documents.Handlers.Admin
                     var indexDefinition = JsonDeserializationServer.IndexDefinition((BlittableJsonReaderObject)indexToAdd);
                     indexDefinition.Name = indexDefinition.Name?.Trim();
 
+                    var source = IsLocalRequest(HttpContext) ? Environment.MachineName : HttpContext.Connection.RemoteIpAddress.ToString();
+
                     if (LoggingSource.AuditLog.IsInfoEnabled)
                     {
                         var clientCert = GetCurrentCertificate();
 
                         var auditLog = LoggingSource.AuditLog.GetLogger(Database.Name, "Audit");
-                        auditLog.Info($"Index {indexDefinition.Name} PUT by {clientCert?.Subject} {clientCert?.Thumbprint} with definition: {indexToAdd}");
+                        auditLog.Info($"Index {indexDefinition.Name} PUT by {clientCert?.Subject} {clientCert?.Thumbprint} with definition: {indexToAdd} from {source} at {DateTime.UtcNow}");
                     }
 
                     if (indexDefinition.Maps == null || indexDefinition.Maps.Count == 0)
@@ -68,7 +71,10 @@ namespace Raven.Server.Documents.Handlers.Admin
                             $"Index name must not start with '{Constants.Documents.Indexing.SideBySideIndexNamePrefix}'. Provided index name: '{indexDefinition.Name}'");
                     }
 
-                    var index = await Database.IndexStore.CreateIndex(indexDefinition);
+                    
+
+                    var index = await Database.IndexStore.CreateIndex(indexDefinition, source);
+
                     createdIndexes.Add(index.Name);
                 }
                 if (TrafficWatchManager.HasRegisteredClients)
@@ -92,6 +98,23 @@ namespace Raven.Server.Documents.Handlers.Admin
                     writer.WriteEndObject();
                 }
             }
+        }
+
+        public static bool IsLocalRequest(HttpContext context)
+        {
+            if (context.Connection.RemoteIpAddress == null && context.Connection.LocalIpAddress == null)
+            {
+                return true;
+            }
+            if (context.Connection.RemoteIpAddress.Equals(context.Connection.LocalIpAddress))
+            {
+                return true;
+            }
+            if (IPAddress.IsLoopback(context.Connection.RemoteIpAddress))
+            {
+                return true;
+            }
+            return false;
         }
 
         [RavenAction("/databases/*/admin/indexes/stop", "POST", AuthorizationStatus.DatabaseAdmin)]

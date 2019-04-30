@@ -1,4 +1,5 @@
-﻿using System.Collections.Generic;
+﻿using System;
+using System.Collections.Generic;
 using Raven.Client.Documents.Indexes;
 using Raven.Client.ServerWide;
 using Raven.Server.Utils;
@@ -12,14 +13,20 @@ namespace Raven.Server.ServerWide.Commands.Indexes
 
         public List<AutoIndexDefinition> Auto = new List<AutoIndexDefinition>();
 
+        public DateTime CreatedAt { get; set; }
+
+        public string Source { get; set; }
+
         public PutIndexesCommand() : base(null)
         {
             // for deserialization
         }
 
-        public PutIndexesCommand(string databaseName)
+        public PutIndexesCommand(string databaseName, string source, DateTime createdAt)
             : base(databaseName)
         {
+            Source = source;
+            CreatedAt = createdAt;
         }
 
         public override string UpdateDatabaseRecord(DatabaseRecord record, long etag)
@@ -27,7 +34,7 @@ namespace Raven.Server.ServerWide.Commands.Indexes
             if (Static != null)
             {
                 foreach (var definition in Static)
-                    record.AddIndex(definition);
+                    record.AddIndex(definition, Source, CreatedAt);
             }
 
             if (Auto != null)
@@ -43,6 +50,8 @@ namespace Raven.Server.ServerWide.Commands.Indexes
         {
             json[nameof(Static)] = TypeConverter.ToBlittableSupportedType(Static);
             json[nameof(Auto)] = TypeConverter.ToBlittableSupportedType(Auto);
+			json[nameof(Source)] = Source;
+            json[nameof(CreatedAt)] = CreatedAt;
         }
     }
 }

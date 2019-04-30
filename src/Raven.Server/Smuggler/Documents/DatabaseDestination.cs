@@ -134,7 +134,7 @@ namespace Raven.Server.Smuggler.Documents
             {
                 if (_batch != null)
                 {
-                    _batch.AddIndex(indexDefinition);
+                    _batch.AddIndex(indexDefinition, _source, DateTime.UtcNow);
                     return;
                 }
 
@@ -145,12 +145,14 @@ namespace Raven.Server.Smuggler.Documents
             {
                 if (_batch != null)
                 {
-                    _batch.AddIndex(indexDefinition);
+                    _batch.AddIndex(indexDefinition, _source, DateTime.UtcNow);
                     return;
                 }
 
-                AsyncHelpers.RunSync(() => _database.IndexStore.CreateIndex(indexDefinition));
+                AsyncHelpers.RunSync(() => _database.IndexStore.CreateIndex(indexDefinition, _source));
             }
+
+            private const string _source = "From smuggler";
 
             public void Dispose()
             {

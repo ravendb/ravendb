@@ -55,6 +55,8 @@ namespace Raven.Client.ServerWide
 
         public Dictionary<string, IndexDefinition> Indexes;
 
+        public Dictionary<string, List<IndexHistoryEntry>> IndexesHistory;
+
         public Dictionary<string, AutoIndexDefinition> AutoIndexes;
 
         public Dictionary<string, string> Settings = new Dictionary<string, string>();
@@ -98,7 +100,7 @@ namespace Raven.Client.ServerWide
             Sorters?.Remove(sorterName);
         }
 
-        public void AddIndex(IndexDefinition definition)
+        public void AddIndex(IndexDefinition definition, string source, DateTime createdAt)
         {
             var lockMode = IndexLockMode.Unlock;
 
@@ -128,6 +130,24 @@ namespace Raven.Client.ServerWide
             }
 
             Indexes[definition.Name] = definition;
+            List<IndexHistoryEntry> history;
+            if (IndexesHistory == null)
+            {
+                IndexesHistory = new Dictionary<string, List<IndexHistoryEntry>>();
+            }
+
+            if (IndexesHistory.TryGetValue(definition.Name, out history) == false)
+            {
+                history = new List<IndexHistoryEntry>();
+                IndexesHistory.Add(definition.Name, history);
+            }
+
+            history.Insert(0,new IndexHistoryEntry{Definition = definition, CreatedAt = createdAt, Source = source });
+
+            if (history.Count > 5)
+            {
+                history.RemoveRange(5, history.Count - 5);
+            }
         }
 
         public void AddIndex(AutoIndexDefinition definition)
@@ -153,6 +173,7 @@ namespace Raven.Client.ServerWide
         {
             Indexes?.Remove(name);
             AutoIndexes?.Remove(name);
+            IndexesHistory?.Remove(name);
         }
 
         public void DeletePeriodicBackupConfiguration(long backupTaskId)
@@ -222,6 +243,13 @@ namespace Raven.Client.ServerWide
 
             return count;
         }
+    }
+
+    public class IndexHistoryEntry
+    {
+        public IndexDefinition Definition { get; set; }
+        public string Source { get; set; }
+        public DateTime CreatedAt { get; set; }
     }
 
     public enum DatabaseStateStatus

@@ -430,14 +430,14 @@ namespace Raven.Server.Documents.Indexes
             return index;
         }
 
-        public async Task<Index> CreateIndex(IndexDefinition definition)
+        public async Task<Index> CreateIndex(IndexDefinition definition, string source = null)
         {
             if (definition == null)
                 throw new ArgumentNullException(nameof(definition));
 
             ValidateStaticIndex(definition);
 
-            var command = new PutIndexCommand(definition, _documentDatabase.Name);
+            var command = new PutIndexCommand(definition, _documentDatabase.Name, source, DateTime.UtcNow);
 
             long index = 0;
             try
@@ -1628,17 +1628,17 @@ namespace Raven.Server.Documents.Indexes
                 _store = store;
             }
 
-            public void AddIndex(IndexDefinitionBase definition)
+            public void AddIndex(IndexDefinitionBase definition, string source, DateTime createdAt)
             {
                 if (_command == null)
-                    _command = new PutIndexesCommand(_store._documentDatabase.Name);
+                    _command = new PutIndexesCommand(_store._documentDatabase.Name, source, createdAt);
 
                 if (definition == null)
                     throw new ArgumentNullException(nameof(definition));
 
                 if (definition is MapIndexDefinition indexDefinition)
                 {
-                    AddIndex(indexDefinition.IndexDefinition);
+                    AddIndex(indexDefinition.IndexDefinition, source, createdAt);
                     return;
                 }
 
@@ -1650,10 +1650,10 @@ namespace Raven.Server.Documents.Indexes
                 _command.Auto.Add(PutAutoIndexCommand.GetAutoIndexDefinition(autoDefinition, indexType));
             }
 
-            public void AddIndex(IndexDefinition definition)
+            public void AddIndex(IndexDefinition definition, string source, DateTime createdAt)
             {
                 if (_command == null)
-                    _command = new PutIndexesCommand(_store._documentDatabase.Name);
+                    _command = new PutIndexesCommand(_store._documentDatabase.Name, source, createdAt);
 
                 _store.ValidateStaticIndex(definition);
 
