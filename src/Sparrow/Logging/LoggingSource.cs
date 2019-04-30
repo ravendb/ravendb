@@ -738,7 +738,8 @@ namespace Sparrow.Logging
                 }
                 catch (Exception e)
                 {
-                    logger.Operations("Something went wrong while compressing log files", e);
+                    if (logger.IsOperationsEnabled)
+                        logger.Operations("Something went wrong while compressing log files", e);
                 }
             }
         }
