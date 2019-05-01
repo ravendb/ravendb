@@ -37,5 +37,10 @@ namespace Raven.Client.Documents.Session
         {
             _asyncSessionTimeSeries.Remove(timeseries, from, to);
         }
+
+        public void Remove(string timeseries, DateTime at)
+        {
+            _asyncSessionTimeSeries.Remove(timeseries, at);
+        }
     }
 }

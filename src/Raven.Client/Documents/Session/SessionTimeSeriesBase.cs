@@ -80,6 +80,11 @@ namespace Raven.Client.Documents.Session
             }
         }
 
+        public void Remove(string timeseries, DateTime at)
+        {
+            Remove(timeseries, at, at);
+        }
+
         public void Remove(string timeseries, DateTime from, DateTime to)
         {
             if (string.IsNullOrWhiteSpace(timeseries))
