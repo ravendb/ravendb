@@ -25,7 +25,7 @@ namespace Raven.Server.Smuggler.Documents.Data
         IKeyValueActions<long> Identities();
         ICompareExchangeActions CompareExchange(JsonOperationContext context);
         ICompareExchangeActions CompareExchangeTombstones(JsonOperationContext context);
-        ICounterActions Counters();
+        ICounterActions Counters(SmugglerResult result);
         ISubscriptionActions Subscriptions();
     }
 

@@ -102,11 +102,10 @@ namespace Raven.Server.Smuggler.Documents
             return new DatabaseCompareExchangeActions(_database, context);
         }
 
-        public ICounterActions Counters()
+        public ICounterActions Counters(SmugglerResult result)
         {
-            return new CounterActions(_database);
+            return new CounterActions(_database, result);
         }
-
         public ISubscriptionActions Subscriptions()
         {
             return new SubscriptionActions(_database);
@@ -1381,10 +1380,13 @@ namespace Raven.Server.Smuggler.Documents
             private int _countersCount;
             private readonly int _maxBatchSize;
 
-            public CounterActions(DocumentDatabase database)
+            private SmugglerResult _result;
+
+            public CounterActions(DocumentDatabase database, SmugglerResult result)
             {
                 _database = database;
-                _cmd = new CountersHandler.SmugglerCounterBatchCommand(_database);
+                _result = result;
+                _cmd = new CountersHandler.SmugglerCounterBatchCommand(_database, _result);
 
                 _maxBatchSize = PlatformDetails.Is32Bits || database.Configuration.Storage.ForceUsing32BitsPager
                     ? 2 * 1024
@@ -1443,9 +1445,12 @@ namespace Raven.Server.Smuggler.Documents
                 if (prevCommand != null)
                 {
                     using (prevCommand)
+                    {
                         AsyncHelpers.RunSync(() => prevCommandTask);
+                    }
                 }
-                _cmd = new CountersHandler.SmugglerCounterBatchCommand(_database);
+
+                _cmd = new CountersHandler.SmugglerCounterBatchCommand(_database, _result);
 
                 _countersCount = 0;
             }
@@ -1455,7 +1460,9 @@ namespace Raven.Server.Smuggler.Documents
                 if (_prevCommand != null)
                 {
                     using (_prevCommand)
+                    {
                         AsyncHelpers.RunSync(() => _prevCommandTask);
+                    }
 
                     _prevCommand = null;
                 }
@@ -1463,7 +1470,9 @@ namespace Raven.Server.Smuggler.Documents
                 if (_countersCount > 0)
                 {
                     using (_cmd)
+                    {
                         AsyncHelpers.RunSync(() => _database.TxMerger.Enqueue(_cmd));
+                    }
                 }
 
                 _cmd = null;

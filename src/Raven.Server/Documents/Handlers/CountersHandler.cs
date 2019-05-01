@@ -11,6 +11,7 @@ using System.Threading.Tasks;
 using Microsoft.Extensions.Primitives;
 using Raven.Client.Documents.Changes;
 using Raven.Client.Documents.Operations.Counters;
+using Raven.Client.Documents.Smuggler;
 using Raven.Client.Exceptions.Documents;
 using Raven.Client.Exceptions.Documents.Counters;
 using Raven.Client.Json.Converters;
@@ -257,13 +258,16 @@ namespace Raven.Server.Documents.Handlers
 
             private readonly List<IDisposable> _toDispose;
 
+            private SmugglerResult _result;
+
             public DocumentsOperationContext Context => _context;
 
             public long ErrorCount;
 
-            public SmugglerCounterBatchCommand(DocumentDatabase database)
+            public SmugglerCounterBatchCommand(DocumentDatabase database, SmugglerResult result)
             {
                 _database = database;
+                _result = result;
                 _counterGroups = new List<CounterGroupDetail>();
 
                 _toDispose = new List<IDisposable>();
@@ -367,7 +371,6 @@ namespace Raven.Server.Documents.Handlers
             {
                 Document doc;
                 string docCollection = null;
-                BlittableJsonReaderObject values;
 
                 try
                 {
@@ -375,8 +378,7 @@ namespace Raven.Server.Documents.Handlers
                 }
                 catch (DocumentDoesNotExistException)
                 {
-                    counterGroupDetail.Values.TryGet(CountersStorage.Values, out values);
-                    ErrorCount += values?.Count ?? 0;
+                    ErrorCount++;
                     return;
                 }
 
@@ -388,7 +390,7 @@ namespace Raven.Server.Documents.Handlers
 
                 context.LastDatabaseChangeVector = ChangeVectorUtils.MergeVectors(counterGroupDetail.ChangeVector, context.LastDatabaseChangeVector ?? DocumentsStorage.GetDatabaseChangeVector(context));
 
-                counterGroupDetail.Values.TryGet(CountersStorage.Values, out values);
+                counterGroupDetail.Values.TryGet(CountersStorage.Values, out BlittableJsonReaderObject values);
                 foreach (var counter in values.GetPropertyNames())
                 {
                     countersToAdd.Add(counter);
@@ -515,6 +517,8 @@ namespace Raven.Server.Documents.Handlers
 
                 _resetContext?.Dispose();
                 _resetContext = null;
+
+                _result.Counters.ErroredCount += ErrorCount;
 
             }
 
