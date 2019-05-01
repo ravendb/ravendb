@@ -112,7 +112,7 @@ namespace Raven.Client.Http
                     if (_nodeSelector == null)
                     {
                         _nodeSelector = new NodeSelector(newTopology);
-                        if (_readBalanceBehavior == ReadBalanceBehavior.FastestNode)
+                        if (Conventions.ReadBalanceBehavior == ReadBalanceBehavior.FastestNode)
                         {
                             _nodeSelector.ScheduleSpeedTest();
                         }
@@ -121,7 +121,7 @@ namespace Raven.Client.Http
                     {
                         DisposeAllFailedNodesTimers();
 
-                        if (_readBalanceBehavior == ReadBalanceBehavior.FastestNode)
+                        if (Conventions.ReadBalanceBehavior == ReadBalanceBehavior.FastestNode)
                         {
                             _nodeSelector.ScheduleSpeedTest();
                         }
