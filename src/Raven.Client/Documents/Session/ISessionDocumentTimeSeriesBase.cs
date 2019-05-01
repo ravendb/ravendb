@@ -21,8 +21,12 @@ namespace Raven.Client.Documents.Session
         /// <summary>
         /// Remove all the values in the timeseries in the range of from .. to.
         /// </summary>
-        /// <param name="counter">the counter name</param>
         void Remove(string timeseries, DateTime from, DateTime to);
+
+        /// <summary>
+        /// Remove the value in the timeseries in the specified timestamp
+        /// </summary>
+        void Remove(string timeseries, DateTime at);
 
     }
 }
