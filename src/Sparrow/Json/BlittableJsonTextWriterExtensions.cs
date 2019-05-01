@@ -29,18 +29,17 @@ namespace Sparrow.Json
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public static void WriteArray(this AbstractBlittableJsonTextWriter writer, string name, double[] items)
+        public static void WriteArray(this AbstractBlittableJsonTextWriter writer, string name, Memory<double> items)
         {
             writer.WritePropertyName(name);
 
             writer.WriteStartArray();
-            var first = true;
-            foreach (var item in items)
+            var span = items.Span;
+            for (int i = 0; i < span.Length; i++)
             {
-                if (first == false)
+                if (i > 0)
                     writer.WriteComma();
-                first = false;
-                writer.WriteDouble(item);
+                writer.WriteDouble(span[i]);
             }
             writer.WriteEndArray();
         }

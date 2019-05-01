@@ -46,6 +46,7 @@ namespace Raven.Server.Documents
         private readonly string _revisions;
         private readonly string _counters;
         private readonly string _counterGroups;
+        private readonly string _timeseries;
 
 
         private bool? _isHiLo;
@@ -68,6 +69,7 @@ namespace Raven.Server.Documents
             _counters = GetName(CollectionTableType.Counters);
 #pragma warning restore 618
             _counterGroups = GetName(CollectionTableType.CounterGroups);
+            _timeseries = GetName(CollectionTableType.TimeSeries);
 
         }
 
@@ -89,6 +91,9 @@ namespace Raven.Server.Documents
                     return _counters;
                 case CollectionTableType.CounterGroups:
                     return _counterGroups;
+                case CollectionTableType.TimeSeries:
+                    return _timeseries;
+
                 default:
                     throw new NotSupportedException($"Collection table type '{type}' is not supported.");
             }
@@ -211,6 +216,7 @@ namespace Raven.Server.Documents
         Revisions,
         [Obsolete("For migration purposes only from versions where Counters were experimental feature (prior to 4.2)")]
         Counters,
-        CounterGroups
+        CounterGroups,
+        TimeSeries
     }
 }
