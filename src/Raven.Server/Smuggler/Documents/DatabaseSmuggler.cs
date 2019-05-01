@@ -6,6 +6,7 @@ using System.Threading;
 using Raven.Client.Documents.Indexes;
 using Raven.Client.Documents.Operations;
 using Raven.Client.Documents.Smuggler;
+using Raven.Client.Documents.Subscriptions;
 using Raven.Client.ServerWide;
 using Raven.Client.Util;
 using Raven.Server.Documents;
@@ -701,7 +702,7 @@ namespace Raven.Server.Smuggler.Documents
         {
             using (var actions = _destination.Counters(result))
             {
-                foreach (var counterGroup in _source.GetCounterValues(actions))
+                foreach (var counterGroup in _source.GetCounterValues(_options.Collections, actions))
                 {
                     _token.ThrowIfCancellationRequested();
                     result.Counters.ReadCount++;

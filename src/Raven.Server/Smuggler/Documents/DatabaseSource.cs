@@ -283,13 +283,28 @@ namespace Raven.Server.Smuggler.Documents
 
             return _database.ServerStore.Cluster.GetCompareExchangeTombstonesByKey(_serverContext, _database.Name);
         }
-
-        public IEnumerable<CounterGroupDetail> GetCounterValues(ICounterActions actions)
+        public IEnumerable<CounterGroupDetail> GetCounterValues(List<string> collectionsToExport, ICounterActions actions)
         {
             Debug.Assert(_context != null);
 
-            return _database.DocumentsStorage.CountersStorage.GetCountersFrom(_context, _startDocumentEtag, 0, int.MaxValue);
-        }
+            if (collectionsToExport?.Count > 0)
+            {
+                foreach (var collection in collectionsToExport)
+                {
+                    foreach (var counter in _database.DocumentsStorage.CountersStorage.GetCountersFrom(_context, collection, _startDocumentEtag, 0, int.MaxValue))
+                    {
+                        yield return counter;
+                    }
+                }
+
+                yield break;
+            }
+
+            foreach (var counter in _database.DocumentsStorage.CountersStorage.GetCountersFrom(_context, _startDocumentEtag, 0, int.MaxValue))
+            {
+                yield return counter;
+            }
+        } 
 
         public IEnumerable<CounterDetail> GetLegacyCounterValues()
         {

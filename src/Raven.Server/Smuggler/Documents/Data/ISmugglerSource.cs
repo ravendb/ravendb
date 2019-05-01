@@ -27,7 +27,7 @@ namespace Raven.Server.Smuggler.Documents.Data
         IEnumerable<IndexDefinitionAndType> GetIndexes();
         IEnumerable<(string Prefix, long Value, long Index)> GetIdentities();
         IEnumerable<(string key, long index, BlittableJsonReaderObject value)> GetCompareExchangeValues();
-        IEnumerable<CounterGroupDetail> GetCounterValues(ICounterActions actions);
+        IEnumerable<CounterGroupDetail> GetCounterValues(List<string> collectionsToExport, ICounterActions actions);
         IEnumerable<CounterDetail> GetLegacyCounterValues();
         IEnumerable<SubscriptionState> GetSubscriptions();
 
