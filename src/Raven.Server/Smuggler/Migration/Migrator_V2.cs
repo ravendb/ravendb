@@ -98,11 +98,11 @@ namespace Raven.Server.Smuggler.Migration
             var destination = new DatabaseDestination(Parameters.Database);
             var options = new DatabaseSmugglerOptionsServerSide
             {
-                OperateOnTypes = DatabaseItemType.None,
+                OperateOnTypes = DatabaseItemType.Attachments,
                 SkipRevisionCreation = true
             };
 
-            destination.Initialize(options, parametersResult, default);
+            destination.Initialize(options, parametersResult, buildVersion: default);
 
             using (Parameters.Database.ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext transactionOperationContext))
             using (Parameters.Database.DocumentsStorage.ContextPool.AllocateOperationContext(out DocumentsOperationContext context))

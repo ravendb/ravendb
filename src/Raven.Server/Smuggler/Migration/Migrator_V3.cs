@@ -119,7 +119,7 @@ namespace Raven.Server.Smuggler.Migration
             var destination = new DatabaseDestination(Parameters.Database);
             var options = new DatabaseSmugglerOptionsServerSide
             {
-                OperateOnTypes = DatabaseItemType.None,
+                OperateOnTypes = DatabaseItemType.Attachments,
                 SkipRevisionCreation = true
             };
 
