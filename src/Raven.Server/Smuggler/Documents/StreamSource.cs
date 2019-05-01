@@ -411,7 +411,7 @@ namespace Raven.Server.Smuggler.Documents
             return InternalGetCompareExchangeTombstones();
         }
 
-        public IEnumerable<CounterGroupDetail> GetCounterValues(ICounterActions actions)
+        public IEnumerable<CounterGroupDetail> GetCounterValues(List<string> collectionsToExport, ICounterActions actions)
         {
             return InternalGetCounterValues(actions);
         }
