@@ -6,7 +6,6 @@ using System.Threading;
 using Raven.Client.Documents.Indexes;
 using Raven.Client.Documents.Operations;
 using Raven.Client.Documents.Smuggler;
-using Raven.Client.Documents.Subscriptions;
 using Raven.Client.ServerWide;
 using Raven.Client.Util;
 using Raven.Server.Documents;
@@ -700,12 +699,12 @@ namespace Raven.Server.Smuggler.Documents
 
         private SmugglerProgressBase.Counts ProcessCounters(SmugglerResult result)
         {
-            using (var actions = _destination.Counters())
+            using (var actions = _destination.Counters(result))
             {
                 foreach (var counterGroup in _source.GetCounterValues(actions))
                 {
                     _token.ThrowIfCancellationRequested();
-                    result.Counters.ReadCount += counterGroup.Values.Count - 1;
+                    result.Counters.ReadCount++;
 
                     if (result.Counters.ReadCount % 1000 == 0)
                         AddInfoToSmugglerResult(result, $"Read {result.Counters.ReadCount:#,#;;0} counters.");
@@ -721,7 +720,7 @@ namespace Raven.Server.Smuggler.Documents
 
         private SmugglerProgressBase.Counts ProcessLegacyCounters(SmugglerResult result)
         {
-            using (var actions = _destination.Counters())
+            using (var actions = _destination.Counters(result))
             {
                 foreach (var counterDetail in _source.GetLegacyCounterValues())
                 {

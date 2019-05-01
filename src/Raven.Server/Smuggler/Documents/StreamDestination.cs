@@ -107,7 +107,7 @@ namespace Raven.Server.Smuggler.Documents
             return new StreamCompareExchangeActions(_writer, nameof(DatabaseItemType.CompareExchangeTombstones));
         }
 
-        public ICounterActions Counters()
+        public ICounterActions Counters(SmugglerResult result)
         {
             return new StreamCounterActions(_writer, _context, nameof(DatabaseItemType.CounterGroups));
         }
