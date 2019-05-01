@@ -25,6 +25,8 @@ namespace Raven.Server.Documents.TimeSeries
         private int _capacity;
         private SegmentHeader* Header => (SegmentHeader*)_buffer;
 
+        public byte* Ptr => _buffer;
+
 
         public DateTime GetLastTimestamp(DateTime baseline)
         {
@@ -92,7 +94,7 @@ namespace Raven.Server.Documents.TimeSeries
             var maximumSize = 
                 sizeof(BitsBufferHeader) +
                 sizeof(int) + // max timestamp
-                sizeof(double) * vals.Length +
+                sizeof(double) * vals.Length + vals.Length /* may use additional 2 bits per value here for the first items */ +
                 tag.Length + 1 + 
                 2 + // previous tag position
                 1  // alignment to current buffer

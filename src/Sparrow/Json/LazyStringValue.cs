@@ -58,10 +58,12 @@ namespace Sparrow.Json
 
     // PERF: Sealed because in CoreCLR 2.0 it will devirtualize virtual calls methods like GetHashCode.
     public sealed unsafe class LazyStringValue : IComparable<string>, IEquatable<string>,
-        IComparable<LazyStringValue>, IEquatable<LazyStringValue>, IDisposable, IComparable
+        IComparable<LazyStringValue>, IEquatable<LazyStringValue>, IDisposable, IComparable, IConvertible
     {
         internal readonly JsonOperationContext _context;
         private string _string;
+
+        private string MaterializeStringValue => ToString();
 
         private byte* _buffer;
         public byte this[int index] => Buffer[index];
@@ -1023,6 +1025,89 @@ namespace Sparrow.Json
             return b < 32 || (b >= 127 && b <= 159);
         }
 
+        public TypeCode GetTypeCode()
+        {
+            return MaterializeStringValue.GetTypeCode();
+        }
 
+        public bool ToBoolean(IFormatProvider provider)
+        {
+            return ((IConvertible)MaterializeStringValue).ToBoolean(provider);
+        }
+
+        public byte ToByte(IFormatProvider provider)
+        {
+            return ((IConvertible)MaterializeStringValue).ToByte(provider);
+        }
+
+        public char ToChar(IFormatProvider provider)
+        {
+            return ((IConvertible)MaterializeStringValue).ToChar(provider);
+        }
+
+        public DateTime ToDateTime(IFormatProvider provider)
+        {
+            return ((IConvertible)MaterializeStringValue).ToDateTime(provider);
+        }
+
+        public decimal ToDecimal(IFormatProvider provider)
+        {
+            return ((IConvertible)MaterializeStringValue).ToDecimal(provider);
+        }
+
+        public double ToDouble(IFormatProvider provider)
+        {
+            return ((IConvertible)MaterializeStringValue).ToDouble(provider);
+        }
+
+        public short ToInt16(IFormatProvider provider)
+        {
+            return ((IConvertible)MaterializeStringValue).ToInt16(provider);
+        }
+
+        public int ToInt32(IFormatProvider provider)
+        {
+            return ((IConvertible)MaterializeStringValue).ToInt32(provider);
+        }
+
+        public long ToInt64(IFormatProvider provider)
+        {
+            return ((IConvertible)MaterializeStringValue).ToInt64(provider);
+        }
+
+        public sbyte ToSByte(IFormatProvider provider)
+        {
+            return ((IConvertible)MaterializeStringValue).ToSByte(provider);
+        }
+
+        public float ToSingle(IFormatProvider provider)
+        {
+            return ((IConvertible)MaterializeStringValue).ToSingle(provider);
+        }
+
+        public string ToString(IFormatProvider provider)
+        {
+            return MaterializeStringValue.ToString(provider);
+        }
+
+        public object ToType(Type conversionType, IFormatProvider provider)
+        {
+            return ((IConvertible)MaterializeStringValue).ToType(conversionType, provider);
+        }
+
+        public ushort ToUInt16(IFormatProvider provider)
+        {
+            return ((IConvertible)MaterializeStringValue).ToUInt16(provider);
+        }
+
+        public uint ToUInt32(IFormatProvider provider)
+        {
+            return ((IConvertible)MaterializeStringValue).ToUInt32(provider);
+        }
+
+        public ulong ToUInt64(IFormatProvider provider)
+        {
+            return ((IConvertible)MaterializeStringValue).ToUInt64(provider);
+        }
     }
 }

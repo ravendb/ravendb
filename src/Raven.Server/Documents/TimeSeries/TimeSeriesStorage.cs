@@ -130,7 +130,7 @@ namespace Raven.Server.Documents.TimeSeries
                 }
             }
 
-            public IEnumerable<(DateTime TimeStamp, double[] Values, LazyStringValue Tag)> Values()
+            public IEnumerable<(DateTime TimeStamp, Memory<double> Values, LazyStringValue Tag)> Values()
             {
                 InitializeSegment(out var baselineMilliseconds, out var readOnlySegment);
 
@@ -157,7 +157,13 @@ namespace Raven.Server.Documents.TimeSeries
 
                         var tag = SetTimestampTag();
 
-                        yield return (cur, _values, tag);
+                        var end = _values.Length ;
+                        while (end >= 0 && double.IsNaN(_values[end - 1]))
+                        {
+                            end--;
+                        }
+
+                        yield return (cur, new Memory<double>(_values, 0, end), tag);
                     }
 
                     if (NextSegment(out baselineMilliseconds, out readOnlySegment) == false)
@@ -220,7 +226,11 @@ namespace Raven.Server.Documents.TimeSeries
                 Debug.Assert(false); // never hit
             }
 
-            
+            ByteString timeSeriesKeyBuffer, buffer;
+            Slice tagSlice, timeSeriesPrefixSlice, timeSeriesKeySlice, collectionSlice;
+            byte* key;
+            int keySize;
+
             long newEtag = _documentsStorage.GenerateNextEtag();
             string databaseChangeVector = context.LastDatabaseChangeVector ?? DocumentsStorage.GetDatabaseChangeVector(context);
             string changeVector = ChangeVectorUtils.TryUpdateChangeVector(_documentDatabase, databaseChangeVector, newEtag).ChangeVector;
@@ -229,16 +239,15 @@ namespace Raven.Server.Documents.TimeSeries
             CollectionName collectionName = _documentsStorage.ExtractCollectionName(context, collection);
             Table table = GetTimeSeriesTable(context.Transaction.InnerTransaction, collectionName);
 
-            using (DocumentIdWorker.GetStringPreserveCase(context, tag, out var tagSlice))
+            using (DocumentIdWorker.GetStringPreserveCase(context, tag, out tagSlice))
             using (DocumentIdWorker.GetSliceFromId(context, documentId, out Slice documentKeyPrefix, SpecialChars.RecordSeparator))
             using (Slice.From(context.Allocator, name, out Slice timeSeriesName))
             using (context.Allocator.Allocate(documentKeyPrefix.Size + timeSeriesName.Size + 1 /* separator */ + sizeof(long) /*  segment start */,
-                out ByteString timeSeriesKeyBuffer))
-            using (CreateTimeSeriesKeyPrefixSlice(context, timeSeriesKeyBuffer, documentKeyPrefix, timeSeriesName, out Slice timeSeriesPrefixSlice))
-            using (CreateTimeSeriesKeySlice(context, timeSeriesKeyBuffer, timeSeriesPrefixSlice, timestamp, out Slice timeSeriesKeySlice))
-            using (Slice.From(context.Allocator, changeVector, out Slice cv))
-            using (DocumentIdWorker.GetStringPreserveCase(context, collectionName.Name, out Slice collectionSlice))
-            using(context.Allocator.Allocate(MaxSegmentSize, out var buffer))
+                out timeSeriesKeyBuffer))
+            using (CreateTimeSeriesKeyPrefixSlice(context, timeSeriesKeyBuffer, documentKeyPrefix, timeSeriesName, out timeSeriesPrefixSlice))
+            using (CreateTimeSeriesKeySlice(context, timeSeriesKeyBuffer, timeSeriesPrefixSlice, timestamp, out timeSeriesKeySlice))
+            using (DocumentIdWorker.GetStringPreserveCase(context, collectionName.Name, out collectionSlice))
+            using(context.Allocator.Allocate(MaxSegmentSize, out buffer))
             {
                 Memory.Set(buffer.Ptr, 0, MaxSegmentSize);
 
@@ -249,26 +258,47 @@ namespace Raven.Server.Documents.TimeSeries
                 {
                     // no matches for this series at all, need to create new segment
 
-                    return AppendNewSegment(buffer.Ptr, tagSlice, timeSeriesKeySlice, cv, collectionSlice, values);
+                    return AppendNewSegment(values);
                 }
 
                 // we found the segment that should contain the new value, now we need to check if we need can append
                 // it to the end or need to split it
 
-                byte* key = tvr.Read((int)TimeSeriesTable.TimeSeriesKey, out int keySize);
+                key = tvr.Read((int)TimeSeriesTable.TimeSeriesKey, out keySize);
                 long baselineMilliseconds = Bits.SwapBytes(
                     *(long*)(key + keySize - sizeof(long))
                 );
 
                 var baseline = new DateTime(baselineMilliseconds * 10_000);
 
-                // TODO: Need to handle different number of values
-
-
                 var deltaInMs = (timestamp.Ticks / 10_000) - baselineMilliseconds;
 
                 var segmentReadOnlyBuffer = tvr.Read((int)TimeSeriesTable.Segment, out int size);
                 var readOnlySegment = new TimeSeriesValuesSegment(segmentReadOnlyBuffer, size);
+
+                if(readOnlySegment.NumberOfValues != values.Length)
+                {
+                    if(readOnlySegment.NumberOfValues > values.Length)
+                    {
+                        using (context.Allocator.Allocate(readOnlySegment.NumberOfValues * sizeof(double), out ByteString fullValuesBuffer))
+                        {
+                            var fullValues = new Span<double>(fullValuesBuffer.Ptr, readOnlySegment.NumberOfValues);
+                            values.CopyTo(fullValues);
+                            for (int i = values.Length; i < fullValues.Length; i++)
+                            {
+                                fullValues[i] = double.NaN;
+                            }
+                            return AppendTimestamp(context, documentId, collection, name, timestamp, fullValues, tag, fromReplication);
+                        }
+                    }
+                    else
+                    {
+                        // need to re-write the segment with the increased size
+                        // have to take into account that the segment will split because of this
+                        return SplitSegment(readOnlySegment, values, baseline, updatedValuesNewSize: values.Length - readOnlySegment.NumberOfValues);
+                    }
+                }
+
                 var canAppend = timestamp > readOnlySegment.GetLastTimestamp(baseline);
                 if (canAppend &&
                     deltaInMs < int.MaxValue) // if the range is too big (over 50 days, using ms precision), we need a new segment
@@ -281,7 +311,7 @@ namespace Raven.Server.Documents.TimeSeries
                     if (newSegment.Append(context.Allocator, (int)deltaInMs, values, tagSlice.AsSpan()))
                     {
 
-                        AppendExistingSegment(key, keySize, cv, buffer.Ptr, newSegment.NumberOfBytes, collectionSlice);
+                        AppendExistingSegment(newSegment);
                         return changeVector;
                     }
                 }
@@ -291,14 +321,13 @@ namespace Raven.Server.Documents.TimeSeries
                     // either the range is too high to fit in a single segment (~50 days) or the 
                     // previous segment is full, we can just create a completely new segment with the 
                     // new value
-                    return AppendNewSegment(buffer.Ptr, tagSlice, timeSeriesKeySlice, cv, collectionSlice, values);
+                    return AppendNewSegment(values);
                 }
 
-                return SplitSegment(segmentReadOnlyBuffer, size, values, buffer, baseline, collectionSlice, tagSlice, timeSeriesKeyBuffer, key, keySize, cv);
+                return SplitSegment(readOnlySegment, values,baseline, updatedValuesNewSize: 0);
             }
 
-            string SplitSegment(byte* segmentReadOnlyBuffer, int size, Span<double> valuesCopy, ByteString buffer, DateTime baseline, 
-                Slice collectionSlice, Slice tagSlice, ByteString timeSeriesKeyBuffer, byte* key, int keySize, Slice cv)
+            string SplitSegment(TimeSeriesValuesSegment segmentToSplit, Span<double> valuesCopy, DateTime baseline, int updatedValuesNewSize)
             {
                 // here we have a complex scenario, we need to add it in the middle of the current segment
                 // to do that, we have to re-create it from scratch.
@@ -306,40 +335,50 @@ namespace Raven.Server.Documents.TimeSeries
                 // the first thing to do here it to copy the segment out, because we may be writing it in multiple
                 // steps, and move the actual values as we do so
 
-                using (context.Allocator.Allocate(size, out var currentSegmentBuffer))
+                using (context.Allocator.Allocate(segmentToSplit.NumberOfBytes, out var currentSegmentBuffer))
                 {
-                    Memory.Copy(currentSegmentBuffer.Ptr, segmentReadOnlyBuffer, size);
-                    var readOnlySegment = new TimeSeriesValuesSegment(currentSegmentBuffer.Ptr, size);
+                    Memory.Copy(currentSegmentBuffer.Ptr, segmentToSplit.Ptr, segmentToSplit.NumberOfBytes);
+                    var readOnlySegment = new TimeSeriesValuesSegment(currentSegmentBuffer.Ptr, segmentToSplit.NumberOfBytes);
 
                     var splitSegment = new TimeSeriesValuesSegment(buffer.Ptr, MaxSegmentSize);
                     splitSegment.Initialize(valuesCopy.Length);
 
                     var enumerator = readOnlySegment.GetEnumerator();
 
-                    var valuesBuffer = stackalloc double[readOnlySegment.NumberOfValues];
+                    var valuesBuffer = stackalloc double[readOnlySegment.NumberOfValues + updatedValuesNewSize];
                     var currentValues = new Span<double>(valuesBuffer, readOnlySegment.NumberOfValues);
+                    var updatedValues = new Span<double>(valuesBuffer, readOnlySegment.NumberOfValues + updatedValuesNewSize);
                     var stateBuffer = stackalloc TimeStampState[readOnlySegment.NumberOfValues];
                     var state = new Span<TimeStampState>(stateBuffer, readOnlySegment.NumberOfValues);
                     var currentTag = new TimeSeriesValuesSegment.TagPointer();
 
-                    var addedCurrent = false;
-                    // TODO: Need to handle different number of values
-                    int offset = 0;
-
-                    while (enumerator.MoveNext(out var currentTimestamp, currentValues, state, ref currentTag))
+                    for (int i = readOnlySegment.NumberOfValues; i < readOnlySegment.NumberOfValues+ updatedValuesNewSize; i++)
                     {
-                        var current = baseline.AddMilliseconds(currentTimestamp);
-                        if (current < timestamp)
-                        {
-                            // no need to check if we added it, since we know it fits
-                            splitSegment.Append(context.Allocator, currentTimestamp, currentValues, currentTag.AsSpan());
-                            continue;
-                        }
+                        updatedValues[i] = double.NaN;
+                    }
 
 
-                        if (addedCurrent == false)
+                    int currentTimestamp, offset = 0;
+                    bool alreadyAdded = false;
+                    while (enumerator.MoveNext(out currentTimestamp, currentValues, state, ref currentTag))
+                    {
+                        if (alreadyAdded == false)
                         {
-                            addedCurrent = true;
+                            var current = baseline.AddMilliseconds(currentTimestamp);
+                            if (current < timestamp)
+                            {
+                                // need to check if the number of values changed
+                                if (splitSegment.Append(context.Allocator, currentTimestamp, updatedValues, currentTag.AsSpan()) == false)
+                                {
+                                    baseline = baseline.AddMilliseconds(currentTimestamp);
+                                    offset += currentTimestamp;
+                                    changeVector = FlushCurrentSegment(ref splitSegment, updatedValues, currentTag.AsSpan(), baseline);
+                                }
+                                continue;
+                            }
+
+                            alreadyAdded = true;
+
 
                             var shouldAdd = true;
 
@@ -352,53 +391,64 @@ namespace Raven.Server.Documents.TimeSeries
 
                             if (shouldAdd)
                             {
-                                var timestampDiff = (int)((timestamp - baseline).Ticks / 10_000);
+                                AddCurrentValue(valuesCopy, updatedValues);
 
-                                if (splitSegment.Append(context.Allocator, timestampDiff, valuesCopy, tagSlice.AsSpan()) == false)
-                                {
-                                    baseline = baseline.AddMilliseconds(currentTimestamp);
-                                    offset += currentTimestamp;
-                                    changeVector = FlushCurrentSegment(cv, buffer.Ptr, ref splitSegment, collectionSlice, timeSeriesKeyBuffer, currentValues, currentTag.AsSpan(), ref key, ref keySize, baseline);
-
-                                }
                                 if (current == timestamp)
                                     continue; // we overwrote the one from the current segment, skip this
                             }
                         }
 
 
-                        if (splitSegment.Append(context.Allocator, currentTimestamp - offset, currentValues, currentTag.AsSpan()) == false)
+                        if (splitSegment.Append(context.Allocator, currentTimestamp - offset, updatedValues, currentTag.AsSpan()) == false)
                         {
                             baseline = baseline.AddMilliseconds(currentTimestamp);
                             offset += currentTimestamp;
-                            changeVector = FlushCurrentSegment(cv, buffer.Ptr, ref splitSegment, collectionSlice, timeSeriesKeyBuffer, currentValues, currentTag.AsSpan(), ref key, ref keySize, baseline);
+                            changeVector = FlushCurrentSegment(ref splitSegment, updatedValues, currentTag.AsSpan(), baseline);
                         }
                     }
 
-                    AppendExistingSegment(key, keySize, cv, buffer.Ptr, splitSegment.NumberOfBytes, collectionSlice);
+                    if(alreadyAdded == false)
+                    {
+                        AddCurrentValue(valuesCopy, updatedValues);
+                    }
+
+                    AppendExistingSegment(splitSegment);
 
                     return changeVector;
 
+
+                    void AddCurrentValue(Span<double> valuesCopy2, Span<double> updatedValues2)
+                    {
+                        var timestampDiff = (int)((timestamp - baseline).Ticks / 10_000);
+
+                        if (splitSegment.Append(context.Allocator, timestampDiff, valuesCopy2, tagSlice.AsSpan()) == false)
+                        {
+                            baseline = baseline.AddMilliseconds(currentTimestamp);
+                            offset += currentTimestamp;
+                            changeVector = FlushCurrentSegment(ref splitSegment, updatedValues2, currentTag.AsSpan(), baseline);
+                        }
+                    }
                 }
             }
 
-            string AppendNewSegment(byte* buffer, Slice tagSlice, Slice timeSeriesKeySlice, Slice cv, Slice collectionSlice, Span<double> valuesCopy)
+            string AppendNewSegment(Span<double> valuesCopy)
             {
                 int deltaFromStart = 0;
 
-                var newSegment = new TimeSeriesValuesSegment(buffer, MaxSegmentSize);
+                var newSegment = new TimeSeriesValuesSegment(buffer.Ptr, MaxSegmentSize);
                 newSegment.Initialize(valuesCopy.Length);
                 var tagSpan = tagSlice.AsSpan();
                 newSegment.Append(context.Allocator, deltaFromStart, valuesCopy, tagSpan);
 
                 EnsureSegmentSize(newSegment.NumberOfBytes);
 
+                using (Slice.From(context.Allocator, changeVector, out Slice cv))
                 using (table.Allocate(out TableValueBuilder tvb))
                 {
                     tvb.Add(timeSeriesKeySlice);
                     tvb.Add(Bits.SwapBytes(newEtag));
                     tvb.Add(cv);
-                    tvb.Add(buffer, newSegment.NumberOfBytes);
+                    tvb.Add(buffer.Ptr, newSegment.NumberOfBytes);
                     tvb.Add(collectionSlice);
                     tvb.Add(context.TransactionMarkerOffset);
 
@@ -408,18 +458,19 @@ namespace Raven.Server.Documents.TimeSeries
                 return changeVector;
             }
 
-            void AppendExistingSegment(byte* key, int keySize, Slice cv, byte* segmentBuffer, int segmentSize, Slice collectionSlice)
+            void AppendExistingSegment(TimeSeriesValuesSegment segment)
             {
-                EnsureSegmentSize(segmentSize);
+                EnsureSegmentSize(segment.NumberOfBytes);
 
                 // the key came from the existing value, have to clone it
                 using (Slice.From(context.Allocator, key, keySize, out var keySlice))
                 using (table.Allocate(out TableValueBuilder tvb))
+                using (Slice.From(context.Allocator, changeVector, out Slice cv))
                 {
                     tvb.Add(keySlice);
                     tvb.Add(Bits.SwapBytes(newEtag));
                     tvb.Add(cv);
-                    tvb.Add(segmentBuffer, segmentSize);
+                    tvb.Add(segment.Ptr, segment.NumberOfBytes);
                     tvb.Add(collectionSlice);
                     tvb.Add(context.TransactionMarkerOffset);
 
@@ -427,10 +478,10 @@ namespace Raven.Server.Documents.TimeSeries
                 }
             }
 
-            string FlushCurrentSegment(Slice cv, byte* buffer, ref TimeSeriesValuesSegment splitSegment, Slice collectionSlice, ByteString timeSeriesKeyBuffer,
-                Span<double> currentValues, Span<byte> currentTag, ref byte* key, ref int keySize, DateTime baseline)
+            string FlushCurrentSegment(ref TimeSeriesValuesSegment splitSegment,
+                Span<double> currentValues, Span<byte> currentTag, DateTime baseline)
             {
-                AppendExistingSegment(key, keySize, cv, buffer, splitSegment.NumberOfBytes, collectionSlice);
+                AppendExistingSegment(splitSegment);
 
                 *(long*)(timeSeriesKeyBuffer.Ptr + timeSeriesKeyBuffer.Length - sizeof(long)) = Bits.SwapBytes(baseline.Ticks / 10_000);
                 key = timeSeriesKeyBuffer.Ptr;
@@ -448,6 +499,7 @@ namespace Raven.Server.Documents.TimeSeries
                 return changeVector;
             }
         }
+
 
         private static void EnsureSegmentSize(int size)
         {
@@ -477,7 +529,7 @@ namespace Raven.Server.Documents.TimeSeries
 
         private Table GetTimeSeriesTable(Transaction tx, CollectionName collection)
         {
-            string tableName = collection.GetTableName(CollectionTableType.CounterGroups);
+            string tableName = collection.GetTableName(CollectionTableType.TimeSeries);
 
             if (tx.IsWriteTransaction && _tableCreated.Contains(collection.Name) == false)
             {
