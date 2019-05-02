@@ -1,4 +1,5 @@
 ﻿using System.Collections.Generic;
+using System.Linq;
 using System.Text;
 using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.CSharp;
@@ -18,6 +19,37 @@ namespace Raven.Server.Documents.Indexes.Static.Roslyn.Rewriters
 
         public override SyntaxNode VisitMethodDeclaration(MethodDeclarationSyntax node)
         {
+            //first change method parameters to dynamic
+            var parameterList = RewriteParametersToDynamicTypes(node);
+
+            //then create new method declaration with the dynamic parameters
+            var methodWithModifiedParameterList = node.WithParameterList(parameterList);
+         
+            //we had a regular method declaration,
+            //so we simply create new method declaration based on its body
+            if (node.Body != null)
+                return methodWithModifiedParameterList;
+
+            //if node.Body == null then we have an arrow function method,
+            //so we need to create new method declaration from scratch.
+            //The following line creates regular method declaration based on the arrow method
+            var methodDeclarationSyntax = 
+                    SyntaxFactory.MethodDeclaration(methodWithModifiedParameterList.AttributeLists,
+                        methodWithModifiedParameterList.Modifiers,
+                        methodWithModifiedParameterList.ReturnType,
+                        methodWithModifiedParameterList.ExplicitInterfaceSpecifier,
+                        methodWithModifiedParameterList.Identifier,
+                        methodWithModifiedParameterList.TypeParameterList,
+                        methodWithModifiedParameterList.ParameterList,
+                        methodWithModifiedParameterList.ConstraintClauses,
+                        SyntaxFactory.Block(SyntaxFactory.ReturnStatement(node.ExpressionBody.Expression)),
+                        null, methodWithModifiedParameterList.SemicolonToken);
+
+            return methodDeclarationSyntax;
+        }
+
+        private static ParameterListSyntax RewriteParametersToDynamicTypes(MethodDeclarationSyntax node)
+        {
             var originalParameters = node.ParameterList.Parameters;
             var sb = new StringBuilder();
             sb.Append('(');
@@ -32,25 +64,19 @@ namespace Raven.Server.Documents.Indexes.Static.Roslyn.Rewriters
                 {
                     sb.Append(", ");
                 }
+
                 if (param.Type.ToString() == DynamicString)
                 {
                     sb.Append(param);
                     continue;
                 }
-                sb.Append($"{DynamicString} d_{param.Identifier.WithoutTrivia()}");
+
+                sb.Append($"{DynamicString} {param.Identifier.WithoutTrivia()}");
             }
+
             sb.Append(')');
-            var modifiedParameterList = node.WithParameterList(SyntaxFactory.ParseParameterList(sb.ToString()));
-            var statements = new List<StatementSyntax>();
-            foreach (var param in originalParameters)
-            {
-                if (param.Type.ToString() == DynamicString)
-                    continue;
-                statements.Add(SyntaxFactory.ParseStatement($"{param.Type} {param.Identifier.WithoutTrivia()} = ({param.Type})d_{param.Identifier.WithoutTrivia()};"));
-            }
-            if (statements.Count == 0)
-                return modifiedParameterList;
-            return modifiedParameterList.WithBody(modifiedParameterList.Body.WithStatements(modifiedParameterList.Body.Statements.InsertRange(0, statements)));
+
+            return SyntaxFactory.ParseParameterList(sb.ToString());
         }
     }
 }
