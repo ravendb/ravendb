@@ -39,7 +39,7 @@ class hugeDocumentsDetails extends abstractPerformanceHintDetails {
                 new textColumn<hugeDocumentsDetailsItemDto>(grid, x => x.Id, "Document ID", "30%", {
                     sortable: "string"
                 }),
-                new textColumn<hugeDocumentsDetailsItemDto>(grid, x => x.Size, "Document size", "20%", {
+                new textColumn<hugeDocumentsDetailsItemDto>(grid, x => generalUtils.formatBytesToSize(x.Size), "Document size", "20%", {
                     sortable: x => x.Size,
                     defaultSortOrder: "desc"
                 }),
