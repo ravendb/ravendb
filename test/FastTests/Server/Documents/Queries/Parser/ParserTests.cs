@@ -66,6 +66,7 @@ select {
     Name:
     Value
 }", QueryType.Select)]
+
         [InlineData(@"FROM INDEX 'Orders/Totals' 
 WHERE Employee = $emp 
 UPDATE {
@@ -142,6 +143,22 @@ UPDATE {
             Assert.IsType<BinaryExpression>(op);
             Assert.Equal(type, ((BinaryExpression)op).Operator);
             Assert.IsType<NegatedExpression>(((BinaryExpression)op).Right);
+        }
+
+        public void CanParseTimeSeriesDeclaration()
+        {
+            var parser = new QueryParser();
+            parser.Init(@"
+declare timeseries test(u) {
+    from u.Heartrate between '2018-01-01' and '2019-01-01'
+    group by 1h
+    select max(), min()
+}
+from Users as u select test(u)
+");
+
+            var query = parser.Parse();
+            Assert.True(query.DeclaredFunctions.ContainsKey("test"));
         }
 
         [InlineData("Name between 'Oren' AND 'Phoebe'", typeof(BetweenExpression))]

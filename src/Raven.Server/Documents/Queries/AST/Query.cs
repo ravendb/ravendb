@@ -1,3 +1,4 @@
+using System;
 using System.Collections.Generic;
 using System.Text;
 using Raven.Client.Exceptions;
@@ -17,7 +18,7 @@ namespace Raven.Server.Documents.Queries.AST
         public List<(QueryExpression Expression, OrderByFieldType FieldType, bool Ascending)> OrderBy;
         public List<(QueryExpression Expression, StringSegment? Alias)> GroupBy;
 
-        public Dictionary<StringSegment, (string FunctionText, Esprima.Ast.Program Program)> DeclaredFunctions;
+        public Dictionary<string, DeclaredFunction> DeclaredFunctions;
 
         public string QueryText;
         public (string FunctionText, Esprima.Ast.Program Program) SelectFunctionBody;
@@ -25,12 +26,12 @@ namespace Raven.Server.Documents.Queries.AST
         public ValueExpression Offset;
         public ValueExpression Limit;
 
-        public bool TryAddFunction(StringSegment name, (string FunctionText, Esprima.Ast.Program Program) func)
+        public bool TryAddFunction(DeclaredFunction func)
         {
             if (DeclaredFunctions == null)
-                DeclaredFunctions = new Dictionary<StringSegment, (string FunctionText, Esprima.Ast.Program Program)>(StringSegmentComparer.OrdinalIgnoreCase);
+                DeclaredFunctions = new Dictionary<string, DeclaredFunction>(StringComparer.OrdinalIgnoreCase);
 
-            return DeclaredFunctions.TryAdd(name, func);
+            return DeclaredFunctions.TryAdd(func.Name, func);
         }
 
         public override string ToString()
@@ -82,6 +83,20 @@ namespace Raven.Server.Documents.Queries.AST
             }
 
             GraphQuery.WithEdgePredicates.Add(alias, expr);
+        }
+    }
+
+    public class DeclaredFunction
+    {
+        public string Name;
+        public string FunctionText;
+        public Esprima.Ast.Program Program;
+        public FunctionType Type;
+
+        public enum FunctionType
+        {
+            JavaScript,
+            TimeSeries
         }
     }
 }

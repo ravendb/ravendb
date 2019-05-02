@@ -598,14 +598,14 @@ namespace Raven.Server.Documents.Queries.Results
 
         private class QueryKey : ScriptRunnerCache.Key
         {
-            private readonly Dictionary<StringSegment, (string FunctionText, Esprima.Ast.Program Program)> _functions;
+            private readonly Dictionary<string, DeclaredFunction> _functions;
 
             private bool Equals(QueryKey other)
             {
                 if (_functions?.Count != other._functions?.Count)
                     return false;
 
-                foreach (var function in _functions ?? Enumerable.Empty<KeyValuePair<StringSegment, (string FunctionText, Esprima.Ast.Program Program)>>())
+                foreach (var function in _functions ?? Enumerable.Empty<KeyValuePair<string, DeclaredFunction>>())
                 {
                     if (other._functions != null && (other._functions.TryGetValue(function.Key, out var otherVal) == false
                                                      || function.Value.FunctionText != otherVal.FunctionText))
@@ -631,7 +631,7 @@ namespace Raven.Server.Documents.Queries.Results
                 unchecked
                 {
                     int hashCode = 0;
-                    foreach (var function in _functions ?? Enumerable.Empty<KeyValuePair<StringSegment, (string FunctionText, Esprima.Ast.Program Program)>>())
+                    foreach (var function in _functions ?? Enumerable.Empty<KeyValuePair<string, DeclaredFunction>>())
                     {
                         hashCode = (hashCode * 397) ^ (function.Value.GetHashCode());
                     }
@@ -639,14 +639,14 @@ namespace Raven.Server.Documents.Queries.Results
                 }
             }
 
-            public QueryKey(Dictionary<StringSegment, (string FunctionText, Esprima.Ast.Program Program)> functions)
+            public QueryKey(Dictionary<string, DeclaredFunction> functions)
             {
                 _functions = functions;
             }
 
             public override void GenerateScript(ScriptRunner runner)
             {
-                foreach (var kvp in _functions ?? Enumerable.Empty<KeyValuePair<StringSegment, (string FunctionText, Esprima.Ast.Program Program)>>())
+                foreach (var kvp in _functions ?? Enumerable.Empty<KeyValuePair<string, DeclaredFunction>>())
                 {
                     runner.AddScript(kvp.Value.FunctionText);
                 }
