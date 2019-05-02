@@ -43,7 +43,7 @@ class hugeDocumentsDetails extends abstractPerformanceHintDetails {
                     sortable: x => x.Size,
                     defaultSortOrder: "desc"
                 }),
-                new textColumn<hugeDocumentsDetailsItemDto>(grid, x => x.Date, "Last access", "50%", {
+                new textColumn<hugeDocumentsDetailsItemDto>(grid, x => generalUtils.formatUtcDateAsLocal(x.Date), "Last access", "50%", {
                     sortable: x => x.Date,
                     defaultSortOrder: "desc"
                 }),
