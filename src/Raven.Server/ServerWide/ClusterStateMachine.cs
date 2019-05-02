@@ -1667,23 +1667,31 @@ namespace Raven.Server.ServerWide
             }
         }
 
+        private readonly (ByteString Entry, int Version)[] _snapshotEntries =
+        {
+            (Items.Content, 40),
+            (CompareExchange.Content, 40),
+            (Identities.Content, 40),
+
+            (TransactionCommands.Content, ClusterCommandsVersionManager.Base41CommandsVersion),
+            (TransactionCommandsCountPerDatabase.Content, ClusterCommandsVersionManager.Base41CommandsVersion),
+
+            (CompareExchangeTombstones.Content, ClusterCommandsVersionManager.Base42CommandsVersion),
+            (CertificatesSlice.Content, ClusterCommandsVersionManager.Base42CommandsVersion)
+        };
+
         public override bool ShouldSnapshot(Slice slice, RootObjectType type)
         {
-            var baseVersion = slice.Content.Match(Items.Content)
-                            || slice.Content.Match(CompareExchange.Content)
-                            || slice.Content.Match(Identities.Content);
+            for (int i = 0; i < _snapshotEntries.Length; i++)
+            {
+                var tuple = _snapshotEntries[i];
+                if (tuple.Entry.Match(slice.Content) == false)
+                    continue;
 
-            if (ClusterCommandsVersionManager.CurrentClusterMinimalVersion >= ClusterCommandsVersionManager.Base41CommandsVersion)
-                return baseVersion
-                       || slice.Content.Match(TransactionCommands.Content)
-                       || slice.Content.Match(TransactionCommandsCountPerDatabase.Content);
+                return ClusterCommandsVersionManager.CurrentClusterMinimalVersion >= tuple.Version;
+            }
 
-            if (ClusterCommandsVersionManager.CurrentClusterMinimalVersion >= ClusterCommandsVersionManager.Base42CommandsVersion)
-                return baseVersion
-                       || slice.Content.Match(CompareExchangeTombstones.Content)
-                       || slice.Content.Match(CertificatesSlice.Content);
-
-            return baseVersion;
+            return false;
         }
 
         public override void Initialize(RachisConsensus parent, TransactionOperationContext context)
