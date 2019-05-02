@@ -20,6 +20,7 @@ using Raven.Server.ServerWide;
 using Raven.Server.ServerWide.Commands;
 using Raven.Server.ServerWide.Context;
 using Raven.Server.ServerWide.Maintenance;
+using Raven.Server.Storage.Schema;
 using Raven.Server.Utils;
 using Raven.Server.Web;
 using Raven.Server.Web.System;
@@ -198,6 +199,7 @@ namespace Raven.Server.Documents.Handlers.Admin
                     json[nameof(NodeInfo.CurrentState)] = ServerStore.CurrentRachisState;
 
                     json[nameof(NodeInfo.HasFixedPort)] = ServerStore.HasFixedPort;
+                    json[nameof(NodeInfo.ServerSchemaVersion)] = SchemaUpgrader.CurrentVersion.ServerVersion;
 
                 }
                 context.Write(writer, json);
@@ -348,6 +350,13 @@ namespace Raven.Server.Documents.Handlers.Admin
                 }
 
                 nodeInfo = infoCmd.Result;
+
+                if (SchemaUpgrader.CurrentVersion.ServerVersion != nodeInfo.ServerSchemaVersion)
+                {
+                    var nodesVersion = nodeInfo.ServerSchemaVersion == 0 ? "Pre 4.2 version" : nodeInfo.ServerSchemaVersion.ToString();
+                    throw new InvalidOperationException($"Can't add node with mismatched storage schema version.{Environment.NewLine}" +
+                                                        $"My version is {SchemaUpgrader.CurrentVersion.ServerVersion}, while node's version is {nodesVersion}");
+                }
 
                 if (ServerStore.IsPassive() && nodeInfo.TopologyId != null)
                 {
