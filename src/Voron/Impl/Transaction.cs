@@ -128,16 +128,16 @@ namespace Voron.Impl
         }
 
         [MethodImpl(MethodImplOptions.NoInlining)]
-        public Table OpenTable(TableSchema schema, string name)
+        public Table OpenTable(TableSchema schema, string name, bool doSchemaValidation = false)
         {
             Slice nameSlice;
             using (Slice.From(Allocator, name, ByteStringType.Immutable, out nameSlice))
             {
-                return OpenTable(schema, nameSlice);
+                return OpenTable(schema, nameSlice, doSchemaValidation);
             }
         }
 
-        public Table OpenTable(TableSchema schema, Slice name)
+        public Table OpenTable(TableSchema schema, Slice name, bool doSchemaValidation = false)
         {
             if (_tables == null)
                 _tables = new Dictionary<Slice, Table>(SliceStructComparer.Instance);
@@ -309,6 +309,74 @@ namespace Voron.Impl
             }
             // already created in ReadTree
             _trees.Remove(name);
+        }
+
+        [MethodImpl(MethodImplOptions.NoInlining)]
+        public Table RenameTable(string fromName, string toName, bool doSchemaValidation = false)
+        {
+            Slice.From(Allocator, fromName, ByteStringType.Immutable, out var fromNameSlice);
+            Slice.From(Allocator, toName, ByteStringType.Immutable, out var toNameSlice);
+            return RenameTable(fromNameSlice, toNameSlice, doSchemaValidation);
+        }
+
+        public Table RenameTable(Slice fromName, Slice toName, bool doSchemaValidation = false)
+        {
+            if (_lowLevelTransaction.Flags == TransactionFlags.ReadWrite == false)
+                throw new ArgumentException("Cannot rename a table with a read only transaction");
+
+            if (SliceComparer.Equals(toName, Constants.RootTreeNameSlice))
+                throw new InvalidOperationException($"Cannot create a table with reserved name: {toName}");
+
+            if (ReadTree(toName, RootObjectType.Table) != null)
+                throw new ArgumentException($"Cannot rename a table with the name of an existing one: {toName}");
+
+            var fromTree = ReadTree(fromName, RootObjectType.Table);
+            if (fromTree == null)
+                throw new ArgumentException($"Table {fromName} does not exists");
+
+            var fromSchemaData = fromTree.DirectRead(TableSchema.SchemasSlice);
+            var fromSchemaDataSize = fromTree.GetDataSize(TableSchema.SchemasSlice);
+            var fromSchema = TableSchema.ReadFrom(Allocator, fromSchemaData, fromSchemaDataSize);
+            var fromTable = OpenTable(fromSchema, fromName);
+
+            // _trees already already created in ReadTree
+            _trees.Remove(fromName);
+            _trees.Remove(toName);
+            _tables.Remove(fromName);
+            _tables.Remove(toName);
+
+            // copy table trees structures
+            using (_lowLevelTransaction.RootObjects.DirectAdd(toName, sizeof(TreeRootHeader), out byte* ptr))
+                fromTree.State.CopyTo((TreeRootHeader*)ptr);
+
+            fromTree.Rename(toName);
+            fromTree.State.IsModified = true;
+
+            var toTable = ReadTree(toName, RootObjectType.Table);
+
+            // copy table trees contents
+            foreach (var item in fromTable.TreesBySliceCache)
+            {
+                var tree = item.Value;
+                if (tree.State.IsModified == false)
+                    continue;
+
+                var treeName = item.Key;
+
+                using (toTable.DirectAdd(treeName, sizeof(TreeRootHeader), out var ptr))
+                {
+                    var header = (TreeRootHeader*)ptr;
+                    tree.State.CopyTo(header);
+                }
+            }
+
+            _lowLevelTransaction.RootObjects.Delete(fromName);
+
+            var toSchemaData = toTable.DirectRead(TableSchema.SchemasSlice);
+            var toSchemaDataSize = toTable.GetDataSize(TableSchema.SchemasSlice);
+            var schema = TableSchema.ReadFrom(Allocator, toSchemaData, toSchemaDataSize);
+
+            return OpenTable(schema, toName, doSchemaValidation);
         }
 
         [MethodImpl(MethodImplOptions.NoInlining)]

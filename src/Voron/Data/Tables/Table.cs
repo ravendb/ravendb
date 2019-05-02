@@ -40,6 +40,8 @@ namespace Voron.Data.Tables
 
         public FixedSizeTree ActiveCandidateSection => _activeCandidateSection ?? (_activeCandidateSection = GetFixedSizeTree(_tableTree, TableSchema.ActiveCandidateSectionSlice, 0, isGlobal: false, isIndexTree: true));
 
+        public Dictionary<Slice, Tree> TreesBySliceCache => _treesBySliceCache;
+
         public ActiveRawDataSmallSection ActiveDataSmallSection
         {
             get
