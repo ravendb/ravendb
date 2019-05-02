@@ -1,7 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.IO;
-using System.Threading;
 using System.Threading.Tasks;
 using FastTests.Server.Replication;
 using Raven.Client.Documents;
@@ -69,11 +68,12 @@ namespace SlowTests.Issues
                     var backupOperation = new GetPeriodicBackupStatusOperation(myBackup.BackupTaskId);
                     var getPeriodicBackupResult = store.Maintenance.Send(backupOperation);
 
-                    SpinWait.SpinUntil(() =>
+                    var value = WaitForValue(() =>
                     {
                         getPeriodicBackupResult = store.Maintenance.Send(backupOperation);
                         return getPeriodicBackupResult.Status?.LastEtag > 0;
-                    }, TimeSpan.FromSeconds(30));
+                    }, true);
+                    Assert.Equal(true, value);
 
                     Assert.NotNull(getPeriodicBackupResult);
                     Assert.Equal(myBackup.NodeTag, getPeriodicBackupResult.Status.NodeTag);
@@ -101,9 +101,7 @@ namespace SlowTests.Issues
         {
             public string BackupPath { get; set; }
             public long BackupTaskId { get; set; }
-
             public Guid Guid { get; set; }
-
             public string NodeTag { get; set; }
         }
     }
