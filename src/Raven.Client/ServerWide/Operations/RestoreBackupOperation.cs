@@ -13,10 +13,12 @@ namespace Raven.Client.ServerWide.Operations
     public class RestoreBackupOperation : IServerOperation<OperationIdResult>
     {
         private readonly RestoreBackupConfiguration _restoreConfiguration;
+        public string NodeTag;
 
         public RestoreBackupOperation(RestoreBackupConfiguration restoreConfiguration)
         {
             _restoreConfiguration = restoreConfiguration;
+            NodeTag = restoreConfiguration.NodeTag;
         }
 
         public RavenCommand<OperationIdResult> GetCommand(DocumentConventions conventions, JsonOperationContext ctx)
@@ -34,6 +36,7 @@ namespace Raven.Client.ServerWide.Operations
             {
                 _conventions = conventions;
                 _restoreConfiguration = restoreConfiguration;
+                SelectedNodeTagForRequest = restoreConfiguration.NodeTag;
             }
 
             public override HttpRequestMessage CreateRequest(JsonOperationContext ctx, ServerNode node, out string url)

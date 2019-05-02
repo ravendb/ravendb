@@ -388,6 +388,11 @@ namespace Raven.Client.Http
 
         public (int CurrentIndex, ServerNode CurrentNode) ChooseNodeForRequest<TResult>(RavenCommand<TResult> cmd, SessionInfo sessionInfo = null)
         {
+            if (string.IsNullOrEmpty(cmd.SelectedNodeTagForRequest) == false)
+            {
+                return _nodeSelector.GetRequestedNode(cmd.SelectedNodeTagForRequest);
+            }
+
             if (cmd.IsReadRequest == false)
             {
                 return _nodeSelector.GetPreferredNode();

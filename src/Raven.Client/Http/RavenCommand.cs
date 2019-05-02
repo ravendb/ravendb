@@ -44,6 +44,7 @@ namespace Raven.Client.Http
         public TimeSpan? Timeout { get; protected set; }
         public bool CanCache { get; protected set; }
         public bool CanCacheAggressively { get; protected set; }
+        public string SelectedNodeTagForRequest { get; protected set; }
 
         protected RavenCommand()
         {

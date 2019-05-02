@@ -60,6 +60,29 @@ namespace Raven.Client.Http
             return true;
         }
 
+        public (int Index, ServerNode Node) GetRequestedNode(string nodeTag)
+        {
+            var state = _state;
+            var stateFailures = state.Failures;
+            var serverNodes = state.Nodes;
+            var len = Math.Min(serverNodes.Count, stateFailures.Length);
+            for (var i = 0; i < len; i++)
+            {
+                if (serverNodes[i].ClusterTag == nodeTag)
+                {
+                    if (stateFailures[i] == 0 && string.IsNullOrEmpty(serverNodes[i].Url) == false)
+                        return (i, serverNodes[i]);
+
+                    throw new RequestedNodeUnavailableException($"Requested node {nodeTag} currently unavailable, please try again later.");
+                }
+            }
+
+            if (state.Nodes.Count == 0)
+                throw new AllTopologyNodesDownException("There are no nodes in the topology.");
+
+            throw new RequestedNodeUnavailableException($"Could not find requested node {nodeTag}.");
+        }
+
         public (int Index, ServerNode Node) GetPreferredNode()
         {
             var state = _state;

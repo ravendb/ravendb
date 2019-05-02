@@ -27,10 +27,11 @@ namespace Raven.Client.ServerWide.Operations
             private readonly DocumentConventions _conventions;
             private readonly long _id;
 
-            public GetServerWideOperationStateCommand(DocumentConventions conventions, long id)
+            public GetServerWideOperationStateCommand(DocumentConventions conventions, long id, string nodeTag = null)
             {
                 _conventions = conventions;
                 _id = id;
+                SelectedNodeTagForRequest = nodeTag;
             }
 
             public override HttpRequestMessage CreateRequest(JsonOperationContext ctx, ServerNode node, out string url)
