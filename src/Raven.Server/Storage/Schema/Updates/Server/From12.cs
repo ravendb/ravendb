@@ -7,7 +7,6 @@ using Sparrow.Json;
 using Sparrow.Json.Parsing;
 using Voron;
 using Voron.Data.Tables;
-using static Raven.Server.Documents.DocumentsStorage;
 using static Raven.Server.ServerWide.Commands.CompareExchangeCommandBase;
 
 namespace Raven.Server.Storage.Schema.Updates.Server
@@ -22,27 +21,6 @@ namespace Raven.Server.Storage.Schema.Updates.Server
             var identities = step.ReadTx.ReadTree(ClusterStateMachine.Identities);
             step.WriteTx.DeleteTree(ClusterStateMachine.Identities);
 
-            var oldCompareExchangeSchema = new TableSchema().
-                DefineKey(new TableSchema.SchemaIndexDef
-                {
-                    StartIndex = (int)ClusterStateMachine.CompareExchangeTable.Key,
-                    Count = 1
-                });
-
-            var newCompareExchangeSchema = new TableSchema()
-                .DefineKey(new TableSchema.SchemaIndexDef
-                {
-                    StartIndex = (int)ClusterStateMachine.CompareExchangeTable.Key,
-                    Count = 1
-                }).DefineIndex(new TableSchema.SchemaIndexDef
-                {
-                    StartIndex = (int)ClusterStateMachine.CompareExchangeTable.PrefixIndex,
-                    Count = 1,
-                    IsGlobal = true,
-                    Name = ClusterStateMachine.CompareExchangeIndex,
-                    Dangerous_IgnoreForDeletesAndMissingValues = true
-                });
-
             using (var items = step.ReadTx.OpenTable(ClusterStateMachine.ItemsSchema, ClusterStateMachine.Items))
             using (Slice.From(step.ReadTx.Allocator, dbKey, out Slice loweredPrefix))
             {
@@ -56,42 +34,6 @@ namespace Raven.Server.Storage.Schema.Updates.Server
 
             foreach (var db in dbs)
             {
-                // update CompareExchange
-                var readTable = step.ReadTx.OpenTable(oldCompareExchangeSchema, ClusterStateMachine.CompareExchange);
-                if (readTable != null)
-                {
-                    var writeTable = step.WriteTx.OpenTable(newCompareExchangeSchema, ClusterStateMachine.CompareExchange);
-                    writeTable.Danger_NoInPlaceUpdates = true;
-                    var compareExchangeOldKey = $"{db.ToLowerInvariant()}/";
-
-                    using (Slice.From(step.ReadTx.Allocator, compareExchangeOldKey, out var keyPrefix))
-                    {
-                        foreach (var item in readTable.SeekByPrimaryKeyPrefix(keyPrefix, Slices.Empty, 0))
-                        {
-                            var index = TableValueToLong((int)ClusterStateMachine.CompareExchangeTable.Index, ref item.Value.Reader);
-
-                            using (GetPrefixIndexSlices(step.ReadTx.Allocator, db, index, out var buffer))
-                            using (Slice.External(step.WriteTx.Allocator, buffer.Ptr, buffer.Length, out var prefixIndexSlice))
-                            using (writeTable.Allocate(out TableValueBuilder write))
-                            using (var ctx = JsonOperationContext.ShortTermSingleUse())
-                            {
-                                using (var bjro = new BlittableJsonReaderObject(
-                                    item.Value.Reader.Read((int)ClusterStateMachine.CompareExchangeTable.Value, out var size1),
-                                    size1, ctx).Clone(ctx)
-                                )
-                                {
-                                    write.Add(item.Key);
-                                    write.Add(index);
-                                    write.Add(bjro.BasePointer, bjro.Size);
-                                    write.Add(prefixIndexSlice);
-
-                                    writeTable.Set(write);
-                                }
-                            }
-                        }
-                    }
-                }
-
                 if (identities != null)
                 {
                     Slice.From(step.WriteTx.Allocator, "Identities", out var identitySlice);

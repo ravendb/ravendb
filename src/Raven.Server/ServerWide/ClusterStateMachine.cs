@@ -119,7 +119,7 @@ namespace Raven.Server.ServerWide
             using (StorageEnvironment.GetStaticContext(out var ctx))
             {
                 Slice.From(ctx, "Items", out Items);
-                Slice.From(ctx, "CmpXchg", out CompareExchange);
+                Slice.From(ctx, "CompareExchange", out CompareExchange);
                 Slice.From(ctx, "CmpXchgTombstones", out CompareExchangeTombstones);
                 Slice.From(ctx, "Identities", out Identities);
                 Slice.From(ctx, "IdentitiesIndex", out IdentitiesIndex);
@@ -164,7 +164,6 @@ namespace Raven.Server.ServerWide
             {
                 StartIndex = (int)CompareExchangeTable.PrefixIndex,
                 Count = 1,
-                IsGlobal = true,
                 Name = CompareExchangeIndex
             });
 
