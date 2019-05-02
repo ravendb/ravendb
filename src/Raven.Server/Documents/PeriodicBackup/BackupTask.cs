@@ -825,14 +825,6 @@ namespace Raven.Server.Documents.PeriodicBackup
 
                 if (_logger.IsOperationsEnabled)
                     _logger.Operations(message, e);
-
-                _database.NotificationCenter.Add(AlertRaised.Create(
-                    _database.Name,
-                    $"Periodic Backup task: '{_periodicBackup.Configuration.Name}'",
-                    message,
-                    AlertType.PeriodicBackup,
-                    NotificationSeverity.Error,
-                    details: new ExceptionDetails(e)));
             }
         }
     }
