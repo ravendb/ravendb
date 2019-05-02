@@ -209,17 +209,8 @@ namespace Voron.Data.Tables
             return RawDataSection.GetRawDataEntrySizeFor(_tx.LowLevelTransaction, id)->AllocatedSize;
         }
 
-        /// <summary>
-        /// This is meant for migration purposes, and will force us to relocate the data instead of trying to
-        /// do in place updates.
-        /// </summary>
-        public bool Danger_NoInPlaceUpdates;
-
         public long Update(long id, TableValueBuilder builder, bool forceUpdate = false)
         {
-            if(Danger_NoInPlaceUpdates)
-                goto DeleteThenInsert;
-            
             AssertWritableTable();
 
             // The ids returned from this function MUST NOT be stored outside of the transaction.
@@ -277,7 +268,7 @@ namespace Voron.Data.Tables
                     return id;
                 }
             }
-DeleteThenInsert:
+
             // can't fit in place, will just delete & insert instead
             Delete(id);
             return Insert(builder);
@@ -433,17 +424,12 @@ DeleteThenInsert:
 
             foreach (var indexDef in _schema.Indexes.Values)
             {
-                if (indexDef.Dangerous_IgnoreForDeletesAndMissingValues)
-                {
-                    if(indexDef.StartIndex + indexDef.Count >= value.Count)
-                        continue;
-                }
                 // For now we wont create secondary indexes on Compact trees.
                 var indexTree = GetTree(indexDef);
                 using (indexDef.GetSlice(_tx.Allocator, ref value, out Slice val))
                 {
                     var fst = GetFixedSizeTree(indexTree, val.Clone(_tx.Allocator), 0, indexDef.IsGlobal);
-                    if (fst.Delete(id).NumberOfEntriesDeleted == 0 && indexDef.Dangerous_IgnoreForDeletesAndMissingValues == false)
+                    if (fst.Delete(id).NumberOfEntriesDeleted == 0)
                     {
                         ThrowInvalidAttemptToRemoveValueFromIndexAndNotFindingIt(id, indexDef.Name);
                     }
@@ -452,15 +438,9 @@ DeleteThenInsert:
 
             foreach (var indexDef in _schema.FixedSizeIndexes.Values)
             {
-                if (indexDef.Dangerous_IgnoreForDeletesAndMissingValues)
-                {
-                    if (indexDef.StartIndex >= value.Count)
-                        continue;
-                }
-
                 var index = GetFixedSizeTree(indexDef);
                 var key = indexDef.GetValue(ref value);
-                if (index.Delete(key).NumberOfEntriesDeleted == 0 && indexDef.Dangerous_IgnoreForDeletesAndMissingValues == false)
+                if (index.Delete(key).NumberOfEntriesDeleted == 0)
                 {
                     ThrowInvalidAttemptToRemoveValueFromIndexAndNotFindingIt(id, indexDef.Name);
                 }
@@ -478,7 +458,6 @@ DeleteThenInsert:
                 fixedSizeTree.ValidateTree_Forced();
             }
         }
-
 
         public long Insert(TableValueBuilder builder)
         {
@@ -674,11 +653,6 @@ DeleteThenInsert:
 
                 foreach (var indexDef in _schema.Indexes.Values)
                 {
-                    if (indexDef.Dangerous_IgnoreForDeletesAndMissingValues)
-                    {
-                        if (indexDef.StartIndex + indexDef.Count >= value.Count)
-                            continue;
-                    }
                     // For now we wont create secondary indexes on Compact trees.
                     using (indexDef.GetSlice(_tx.Allocator, ref value, out Slice val))
                     {
@@ -690,12 +664,6 @@ DeleteThenInsert:
 
                 foreach (var indexDef in _schema.FixedSizeIndexes.Values)
                 {
-                    if (indexDef.Dangerous_IgnoreForDeletesAndMissingValues)
-                    {
-                        if (indexDef.StartIndex >= value.Count)
-                            continue;
-                    }
-
                     var index = GetFixedSizeTree(indexDef);
                     var key = indexDef.GetValue(ref value);
                     if (index.Add(key, idAsSlice) == false)

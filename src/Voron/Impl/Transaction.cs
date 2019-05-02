@@ -329,10 +329,8 @@ namespace Voron.Impl
         [MethodImpl(MethodImplOptions.NoInlining)]
         public void RenameTree(string fromName, string toName)
         {
-            Slice fromNameSlice;
-            Slice toNameSlice;
-            Slice.From(Allocator, fromName, ByteStringType.Immutable, out fromNameSlice);
-            Slice.From(Allocator, toName, ByteStringType.Immutable, out toNameSlice);
+            Slice.From(Allocator, fromName, ByteStringType.Immutable, out Slice fromNameSlice);
+            Slice.From(Allocator, toName, ByteStringType.Immutable, out Slice toNameSlice);
             RenameTree(fromNameSlice, toNameSlice);
         }
 

@@ -29,8 +29,7 @@ namespace Raven.Server.Storage.Schema.Updates.Server
                     StartIndex = (int)ClusterStateMachine.IdentitiesTable.KeyIndex,
                     Count = 1,
                     IsGlobal = true,
-                    Name = ClusterStateMachine.IdentitiesIndex,
-                    Dangerous_IgnoreForDeletesAndMissingValues = true
+                    Name = ClusterStateMachine.IdentitiesIndex
                 });
 
             using (var items = step.ReadTx.OpenTable(ClusterStateMachine.ItemsSchema, ClusterStateMachine.Items))
@@ -53,7 +52,6 @@ namespace Raven.Server.Storage.Schema.Updates.Server
                     using (Slice.From(step.ReadTx.Allocator, dbPrefixLowered, out var keyPrefix))
                     {
                         var writeIdentitiesTable = step.WriteTx.OpenTable(newIdentitiesSchema, ClusterStateMachine.Identities);
-                        writeIdentitiesTable.Danger_NoInPlaceUpdates = true;
                         foreach (var item in readIdentitiesTable.SeekByPrimaryKeyPrefix(keyPrefix, Slices.Empty, 0))
                         {
                             var value = TableValueToLong((int)ClusterStateMachine.IdentitiesTable.Value, ref item.Value.Reader);
