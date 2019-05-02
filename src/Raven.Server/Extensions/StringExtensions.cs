@@ -18,22 +18,7 @@ namespace Raven.Server.Extensions
 
         public static bool IsIdentifier(this StringSegment token)
         {
-            if (token.Length == 0)
-                return false;
-
-            if (token.Length == 1)
-                return char.IsLetter(token[0]) || token[0] == '_';
-            
-            if (!char.IsLetter(token[0]) && token[0] != '_')
-                return false;
-
-            for (int i = 1; i < token.Length; i++)
-            {
-                if (!char.IsLetterOrDigit(token[i]) && token[i] != '_')
-                    return false;
-            }
-
-            return true;
+            return Raven.Client.Extensions.StringExtensions.IsIdentifier(token.Buffer, token.Offset, token.Length);
         }
 
         public static string NormalizeLineEnding(this string script)

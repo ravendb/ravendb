@@ -152,7 +152,7 @@ namespace Raven.Client.Documents.Indexes
                 if (Reduce != null)
                     IndexDefinitionHelper.ValidateReduce(Reduce);
 
-                string querySource = (typeof(TDocument) == typeof(object) || ContainsWhereEntityIs()) ? "docs" : "docs." + conventions.GetCollectionName(typeof(TDocument));
+                string querySource = (typeof(TDocument) == typeof(object) || ContainsWhereEntityIs()) ? "docs" : GetQuerySource(conventions);
                 var indexDefinition = new IndexDefinition
                 {
                     Name = _indexName,
@@ -236,6 +236,16 @@ namespace Raven.Client.Documents.Indexes
             {
                 throw new IndexCompilationException("Failed to create index " + _indexName, e);
             }
+        }
+
+        private static string GetQuerySource(DocumentConventions conventions)
+        {
+            var collectionName = conventions.GetCollectionName(typeof(TDocument));
+
+            if (StringExtensions.IsIdentifier(collectionName))
+                return "docs." + collectionName;
+
+            return "docs[@\"" + collectionName.Replace("\"", "\"\"") + "\"]";
         }
 
         private void ApplyValues<TValue>(IndexDefinition indexDefinition, IDictionary<string, TValue> values, Action<IndexFieldOptions, TValue> action)
