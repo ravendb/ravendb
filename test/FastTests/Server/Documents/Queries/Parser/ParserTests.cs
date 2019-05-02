@@ -145,6 +145,7 @@ UPDATE {
             Assert.IsType<NegatedExpression>(((BinaryExpression)op).Right);
         }
 
+        [Fact]
         public void CanParseTimeSeriesDeclaration()
         {
             var parser = new QueryParser();

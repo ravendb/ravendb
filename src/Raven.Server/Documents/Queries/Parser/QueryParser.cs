@@ -20,6 +20,7 @@ namespace Raven.Server.Documents.Queries.Parser
 
         private int _counter;
         private int _depth;
+        private QueryParser _timeSeriesParser;
         private NextTokenOptions _state = NextTokenOptions.Parenthesis;
 
         private int _statePos;
@@ -102,7 +103,7 @@ namespace Raven.Server.Documents.Queries.Parser
 
                 query.From = fromClause;
 
-                if (Scanner.TryScan("GROUP BY"))
+                if (Scanner.TryScanMultiWordsToken("GROUP", "BY"))
                     query.GroupBy = GroupBy();
 
                 if (Scanner.TryScan("WHERE") && Expression(out query.Where) == false)
@@ -158,7 +159,7 @@ namespace Raven.Server.Documents.Queries.Parser
                 }
             }
 
-            if (Scanner.TryScan("ORDER BY"))
+            if (Scanner.TryScanMultiWordsToken("ORDER", "BY"))
                 query.OrderBy = OrderBy();
 
             if (Scanner.TryScan("LOAD"))
@@ -308,7 +309,7 @@ namespace Raven.Server.Documents.Queries.Parser
                 ThrowParseException("Unable to parse WHERE clause of an 'With Edges' clause");
 
             List<(QueryExpression Expression, OrderByFieldType OrderingType, bool Ascending)> orderBy = null;
-            if (Scanner.TryScan("ORDER BY"))
+            if (Scanner.TryScanMultiWordsToken("ORDER","BY"))
             {
                 orderBy = OrderBy();
             }
@@ -377,7 +378,7 @@ namespace Raven.Server.Documents.Queries.Parser
                     ThrowParseException("Unable to parse WHERE clause in the nod/edge expression.");
                 }
 
-                if (Scanner.TryScan("ORDER BY"))
+                if (Scanner.TryScanMultiWordsToken("ORDER","BY"))
                 {
                     ThrowParseException("ORDER BY clause is not supported in the nod/edge expression.");
                 }
@@ -1264,7 +1265,7 @@ namespace Raven.Server.Documents.Queries.Parser
                     {
                         FunctionText = functionText,
                         Name = name.Value,
-                        Program = program,
+                        JavaScript = program,
                         Type = AST.DeclaredFunction.FunctionType.JavaScript
                     };
                 }
@@ -1277,13 +1278,98 @@ namespace Raven.Server.Documents.Queries.Parser
             }
             else
             {
+                if (_timeSeriesParser == null)
+                    _timeSeriesParser = new QueryParser();
+                _timeSeriesParser.Init(functionText);
+                var ts = _timeSeriesParser.ParseTimeSeries(name.Value);
+
                 return new DeclaredFunction
                 {
                     Type = AST.DeclaredFunction.FunctionType.TimeSeries,
                     Name = name.Value,
-                    FunctionText = functionText
+                    FunctionText = functionText,
+                    TimeSeries = ts
                 };
             }
+        }
+
+        private TimeSeriesFunction ParseTimeSeries(string name)
+        {
+            if(Scanner.TryScan("timeseries") == false)// should never happen
+                ThrowParseException($"Expected to find timeseries token for {name}, but couldn't get it");
+
+            if (Scanner.Identifier() == false) // should never happen
+                ThrowParseException($"Couldn't get the identifier for the timeseries query for {name}");
+
+            StringSegment rootSource = default;
+
+            if (Scanner.TryScan('(')) // we allow to declare without params / empty params
+            {
+                if (Scanner.Identifier())
+                {
+                    rootSource = Scanner.Token;
+                }
+                if (Scanner.TryScan(')') == false)
+                    ThrowParseException($"Failed to find closing parentheses ) for {name}");
+            }
+
+            if (Scanner.TryScan('{') == false)
+                ThrowParseException($"Failed to find opening parentheses {{ for {name}");
+
+
+            if(Scanner.TryScan("from") == false)
+                ThrowParseException($"Unable to parse timeseries query for {name}, missing FROM");
+
+            if (Field(out var source) == false)
+                ThrowParseException($"Unable to parse timeseries query for {name}, missing FROM");
+
+            if(source.Compound.Count > 1 && source.Compound[0] == rootSource) // turn u.Heartrate into just Heartrate
+            {
+                source.Compound.RemoveAt(0);
+            }
+
+            if (Scanner.TryScan("BETWEEN") == false)
+                ThrowParseException($"Expected between expression after from cluase for {name}, but didn't find it");
+
+            var between = ReadBetweenExpression(source);
+            List<(QueryExpression, StringSegment?)> select = null;
+            ValueExpression groupByExpr = null;
+
+            if (Scanner.TryScanMultiWordsToken("GROUP", "BY"))
+            {
+                if (Value(out groupByExpr) == false)
+                    ThrowParseException($"Could not parse GROUP BY argument for {name}");
+
+                if (groupByExpr.Value == ValueTokenType.Long)
+                {
+                    // we need to check 1h, 1d
+                    if (Scanner.Identifier(skipWhitespace: false))
+                    {
+                        groupByExpr.Token = new StringSegment(
+                            groupByExpr.Token.Buffer,
+                            groupByExpr.Token.Offset,
+                            groupByExpr.Token.Length + Scanner.Token.Length);
+                        groupByExpr.Value = ValueTokenType.String;
+                    }
+                }
+
+                if (Scanner.TryScan("SELECT") == false)
+                    ThrowParseException($"Expected select clause for {name}, but didn't find it");
+
+
+                select = SelectClauseExpressions("SELECT", false);
+            }
+
+
+            if (Scanner.TryScan('}') == false)
+                ThrowParseException($"Failed to find opening parentheses }} for {name}");
+
+            return new TimeSeriesFunction
+            {
+                Between = between,
+                GroupBy = groupByExpr,
+                Select = select
+            };
         }
 
         private List<(QueryExpression Expression, StringSegment? Alias)> GroupBy()
@@ -1773,18 +1859,7 @@ namespace Raven.Server.Documents.Queries.Parser
                     type = OperatorType.NotEqual;
                     break;
                 case "BETWEEN":
-                    if (Value(out var fst) == false)
-                        ThrowParseException("parsing Between, expected value (1st)");
-                    if (Scanner.TryScan("AND") == false)
-                        ThrowParseException("parsing Between, expected AND");
-                    if (Value(out var snd) == false)
-                        ThrowParseException("parsing Between, expected value (2nd)");
-
-                    if (fst.Type != snd.Type)
-                        ThrowQueryException(
-                            $"Invalid Between expression, values must have the same type but got {fst.Type} and {snd.Type}");
-
-                    op = new BetweenExpression(field, fst, snd);
+                    op = ReadBetweenExpression(field);
                     return true;
                 case "IN":
                 case "ALL IN":
@@ -1867,6 +1942,24 @@ namespace Raven.Server.Documents.Queries.Parser
 
             op = null;
             return false;
+        }
+
+        private QueryExpression ReadBetweenExpression(FieldExpression field)
+        {
+            QueryExpression op;
+            if (Value(out var fst) == false)
+                ThrowParseException("parsing Between, expected value (1st)");
+            if (Scanner.TryScan("AND") == false)
+                ThrowParseException("parsing Between, expected AND");
+            if (Value(out var snd) == false)
+                ThrowParseException("parsing Between, expected value (2nd)");
+
+            if (fst.Type != snd.Type)
+                ThrowQueryException(
+                    $"Invalid Between expression, values must have the same type but got {fst.Type} and {snd.Type}");
+
+            op = new BetweenExpression(field, fst, snd);
+            return op;
         }
 
         private bool Method(FieldExpression field, out MethodExpression op)

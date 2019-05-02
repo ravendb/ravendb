@@ -375,5 +375,39 @@ namespace Sparrow.Extensions
 
             return dateTime;
         }
+
+        public struct RangeGroup
+        {
+            public int Milliseconds;
+            public int Seconds;
+            public int Minutes;
+            public int Hours;
+            public int Days;
+            public int Weeks;
+            public int Months;
+            public int Quarters;
+            public int Years;
+
+            public long ModInTicks;
+
+            public void Init()
+            {
+                ModInTicks += Milliseconds * TicksPerMillisecond;
+                ModInTicks += Seconds * TicksPerSecond;
+                ModInTicks += Minutes * TicksPerMinute;
+                ModInTicks += Hours * TicksPerHour;
+                ModInTicks += Days * TicksPerDay;
+                ModInTicks += Weeks * TicksPerDay * 7;
+            }
+
+            public DateTime ReduceToRange(DateTime timestamp)
+            {
+                var ticks = timestamp.Ticks;
+
+                ticks -= ticks % ModInTicks;
+                //TODO
+                return timestamp;
+            }
+        }
     }
 }
