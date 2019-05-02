@@ -376,9 +376,10 @@ namespace Raven.Server.Documents.Handlers
                 {
                     LoadDocument();
                 }
-                catch (DocumentDoesNotExistException)
+                catch (DocumentDoesNotExistException e)
                 {
                     ErrorCount++;
+                    _result.AddError(e.Message);
                     return;
                 }
 
