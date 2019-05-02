@@ -127,6 +127,15 @@
     <None Update="SchemaUpgrade\Issues\DocumentsVersion\schema_9\Raven.voron">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </None>
+    <None Update="SchemaUpgrade\Issues\SystemVersion\after_from12.zip">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </None>
+    <None Update="SchemaUpgrade\Issues\SystemVersion\after_from13.zip">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </None>
+    <None Update="SchemaUpgrade\Issues\SystemVersion\after_from14.zip">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </None>
     <None Update="SchemaUpgrade\Issues\SystemVersion\Identities_CompareExchange_RavenData.zip">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </None>
@@ -134,6 +143,9 @@
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </None>
     <None Update="SchemaUpgrade\Issues\SystemVersion\Identities_CompareExchange_RavenData_from13.zip">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </None>
+    <None Update="SchemaUpgrade\Issues\SystemVersion\RavenData_rc1_plus_additions.zip">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </None>
     <None Update="SchemaUpgrade\Issues\VoronCurrentVersion\schema_999\headers.one">
