@@ -160,13 +160,18 @@ namespace SlowTests.Server.Documents.PeriodicBackup
             }
         }
 
-        [Fact]
-        public void AllCompareExchangeAndIdentitiesPreserveAfterSchemaUpgradeFrom13()
+        [Theory]
+        [InlineData("SchemaUpgrade/Issues/SystemVersion/Identities_CompareExchange_RavenData_from13.zip", 1024)]
+        [InlineData("SchemaUpgrade/Issues/SystemVersion/after_from12.zip", 1024)]
+        [InlineData("SchemaUpgrade/Issues/SystemVersion/after_from13.zip", 1024)]
+        [InlineData("SchemaUpgrade/Issues/SystemVersion/after_from14.zip", 1024)]
+        [InlineData("SchemaUpgrade/Issues/SystemVersion/RavenData_rc1_plus_additions.zip", 1026)]
+        public void AllCompareExchangeAndIdentitiesPreserveAfterPreviousSchemaUpgrades(string filePath, int expectedCompareExchange)
         {
-            var folder = NewDataPath(forceCreateDir: true);
+            var folder = NewDataPath(forceCreateDir: true, prefix: Guid.NewGuid().ToString());
             DoNotReuseServer();
 
-            var zipPath = new PathSetting("SchemaUpgrade/Issues/SystemVersion/Identities_CompareExchange_RavenData_from13.zip");
+            var zipPath = new PathSetting(filePath);
             Assert.True(File.Exists(zipPath.FullPath));
 
             ZipFile.ExtractToDirectory(zipPath.FullPath, folder);
@@ -190,10 +195,20 @@ namespace SlowTests.Server.Documents.PeriodicBackup
                     numOfIdentities = server.ServerStore.Cluster.GetNumberOfIdentities(context, dbName2);
                     Assert.Equal(948, numOfIdentities);
 
-                    var numOfCompareExchanges = server.ServerStore.Cluster.GetNumberOfCompareExchange(context, dbName1);
-                    Assert.Equal(1024, numOfCompareExchanges);
-                    numOfCompareExchanges = server.ServerStore.Cluster.GetNumberOfCompareExchange(context, dbName2);
-                    Assert.Equal(1024, numOfCompareExchanges);
+                    numOfIdentities = server.ServerStore.Cluster.GetIdentitiesFromPrefix(context, dbName1, 0, int.MaxValue).Count();
+                    Assert.Equal(928, numOfIdentities);
+                    numOfIdentities = server.ServerStore.Cluster.GetIdentitiesFromPrefix(context, dbName2, 0, int.MaxValue).Count();
+                    Assert.Equal(948, numOfIdentities);
+
+                    var numberOfCompareExchange = server.ServerStore.Cluster.GetNumberOfCompareExchange(context, dbName1);
+                    Assert.Equal(expectedCompareExchange, numberOfCompareExchange);
+                    numberOfCompareExchange = server.ServerStore.Cluster.GetNumberOfCompareExchange(context, dbName2);
+                    Assert.Equal(expectedCompareExchange, numberOfCompareExchange);
+
+                    numberOfCompareExchange = server.ServerStore.Cluster.GetCompareExchangeFromPrefix(context, dbName1, 0, int.MaxValue).Count();
+                    Assert.Equal(expectedCompareExchange, numberOfCompareExchange);
+                    numberOfCompareExchange = server.ServerStore.Cluster.GetCompareExchangeFromPrefix(context, dbName2, 0, int.MaxValue).Count();
+                    Assert.Equal(expectedCompareExchange, numberOfCompareExchange);
                 }
             }
         }
