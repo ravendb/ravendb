@@ -20,6 +20,7 @@ namespace Sparrow.Json
         private AllocatedMemoryData _innerBuffer;
         private int _position;
         private int _lastSize;
+        private int _docNo = -1;
         public int Position => _position;
 
         public int SizeInBytes => _unmanagedWriteBuffer.SizeInBytes;
@@ -43,7 +44,15 @@ namespace Sparrow.Json
             return reader;
         }
 
-
+        internal CachedProperties CachedProperties
+        {
+            get
+            {
+                ThrowIfCachedPropertiesWereReset();
+                return _context.CachedProperties;
+            }
+        }
+        
         public BlittableWriter(JsonOperationContext context, TWriter writer)
         {
             _context = context;
@@ -55,7 +64,7 @@ namespace Sparrow.Json
         {
             _context = context;
             _innerBuffer = _context.GetMemory(32);
-        }        
+        }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public int WriteValue(long value)
@@ -140,6 +149,7 @@ namespace Sparrow.Json
 
         public void Reset()
         {
+            _docNo = -1;
             _unmanagedWriteBuffer.Dispose();
             if (_compressionBuffer != null)
             {
@@ -155,6 +165,7 @@ namespace Sparrow.Json
 
         public void ResetAndRenew()
         {
+            _docNo = -1;
             _unmanagedWriteBuffer.Dispose();
             _unmanagedWriteBuffer = (TWriter)(object)_context.GetStream(_lastSize);
             _position = 0;
@@ -164,7 +175,7 @@ namespace Sparrow.Json
 
         public WriteToken WriteObjectMetadata(FastList<PropertyTag> properties, long firstWrite, int maxPropId)
         {
-            _context.CachedProperties.Sort(properties);
+            CachedProperties.Sort(properties);
 
             var objectMetadataStart = _position;
             var distanceFromFirstProperty = objectMetadataStart - firstWrite;
@@ -262,7 +273,7 @@ namespace Sparrow.Json
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         private int WritePropertyNames(int rootOffset)
         {
-            var cachedProperties = _context.CachedProperties;
+            var cachedProperties = CachedProperties;
             int propertiesDiscovered = cachedProperties.PropertiesDiscovered;
 
             // Write the property names and register their positions
@@ -753,6 +764,18 @@ namespace Sparrow.Json
             }
          
             return _compressionBuffer.Address;
+        }
+
+        internal void ThrowIfCachedPropertiesWereReset()
+        {
+            if (_docNo == -1)
+            {
+                _docNo = _context.CachedProperties.DocNo;
+            }
+            else if (_docNo != _context.CachedProperties.DocNo)
+            {
+                throw new InvalidOperationException($"The {_context.CachedProperties} were reset while building the document");
+            }
         }
 
         public void Dispose()
