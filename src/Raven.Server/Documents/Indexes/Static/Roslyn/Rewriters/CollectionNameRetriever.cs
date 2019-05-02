@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Collections.Generic;
 using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.CSharp;
 using Microsoft.CodeAnalysis.CSharp.Syntax;
@@ -40,7 +41,25 @@ namespace Raven.Server.Documents.Indexes.Static.Roslyn.Rewriters
 
                 var nodeParts = nodeAsString.Split(new[] { "." }, StringSplitOptions.RemoveEmptyEntries);
                 if (nodeParts.Length <= 2)
+                {
+                    if (nodeToCheck.Expression is MemberAccessExpressionSyntax expr && expr.Expression is ElementAccessExpressionSyntax indexer)
+                    {
+                        var list = new List<string>();
+                        foreach (ArgumentSyntax item in indexer.ArgumentList.Arguments)
+                        {
+                            if (item.Expression is LiteralExpressionSyntax les)
+                            {
+                                list.Add(les.Token.ValueText);
+                            }
+                        }
+
+                        CollectionNames = list.ToArray();
+
+                        return node.WithExpression(expr.WithExpression(indexer.Expression));
+                    }
+
                     return node;
+                }
 
                 var collectionName = nodeParts[1];
                 CollectionNames = new[] { collectionName };
@@ -126,29 +145,46 @@ namespace Raven.Server.Documents.Indexes.Static.Roslyn.Rewriters
                 if (CollectionNames != null)
                     return node;
 
-                var docsExpression = node.Expression as MemberAccessExpressionSyntax;
-                if (docsExpression == null)
+                if (node.Expression is MemberAccessExpressionSyntax docsExpression)
                 {
-                    var invocationExpression = node.Expression as InvocationExpressionSyntax;
-                    if (invocationExpression != null)
-                    {
-                        var methodSyntax = MethodSyntax;
-                        var newExpression = (ExpressionSyntax)methodSyntax.VisitInvocationExpression(invocationExpression);
-                        CollectionNames = methodSyntax.CollectionNames;
+                    var docsIdentifier = docsExpression.Expression as IdentifierNameSyntax;
+                    if (string.Equals(docsIdentifier?.Identifier.Text, "docs", StringComparison.OrdinalIgnoreCase) == false)
+                        return node;
 
-                        return node.WithExpression(newExpression);
-                    }
+                    CollectionNames = new[] { docsExpression.Name.Identifier.Text };
 
-                    return node;
+                    return node.WithExpression(docsExpression.Expression);
                 }
 
-                var docsIdentifier = docsExpression.Expression as IdentifierNameSyntax;
-                if (string.Equals(docsIdentifier?.Identifier.Text, "docs", StringComparison.OrdinalIgnoreCase) == false)
-                    return node;
+                if (node.Expression is ElementAccessExpressionSyntax indexer)
+                {
+                    var list = new List<string>();
+                    foreach (ArgumentSyntax item in indexer.ArgumentList.Arguments)
+                    {
+                        if (item.Expression is LiteralExpressionSyntax les)
+                        {
+                            list.Add(les.Token.ValueText);
+                        }
+                    }
 
-                CollectionNames = new[] { docsExpression.Name.Identifier.Text };
+                    CollectionNames = list.ToArray();
 
-                return node.WithExpression(docsExpression.Expression);
+                    return node.WithExpression(indexer.Expression);
+                }
+
+                var invocationExpression = node.Expression as InvocationExpressionSyntax;
+                if (invocationExpression != null)
+                {
+                    var methodSyntax = MethodSyntax;
+                    var newExpression = (ExpressionSyntax)methodSyntax.VisitInvocationExpression(invocationExpression);
+                    CollectionNames = methodSyntax.CollectionNames;
+
+                    return node.WithExpression(newExpression);
+                }
+
+                return node;
+
+
             }
         }
     }
