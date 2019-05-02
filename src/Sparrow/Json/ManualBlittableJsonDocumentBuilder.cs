@@ -16,7 +16,7 @@ namespace Sparrow.Json
         private WriteToken _writeToken;
 
         private static readonly StringSegment UnderscoreSegment = new StringSegment("_");
-
+        
 
         /// <summary>
         /// Allows incrementally building json document
@@ -49,7 +49,7 @@ namespace Sparrow.Json
             };
 
             var fakeFieldName = _context.GetLazyStringForFieldWithCaching(UnderscoreSegment);
-            var prop = _context.CachedProperties.GetProperty(fakeFieldName);
+            var prop = _writer.CachedProperties.GetProperty(fakeFieldName);
             currentState.CurrentProperty = prop;
             currentState.MaxPropertyId = prop.PropertyId;
             currentState.FirstWrite = _writer.Position;
@@ -79,8 +79,7 @@ namespace Sparrow.Json
                 ThrowIllegalStateException(currentState.State, "WritePropertyName");
             }
 
-
-            var newPropertyId = _context.CachedProperties.GetProperty(property);
+            var newPropertyId = _writer.CachedProperties.GetProperty(property);
             currentState.CurrentProperty = newPropertyId;
             currentState.MaxPropertyId = Math.Max(currentState.MaxPropertyId, currentState.CurrentProperty.PropertyId);
             currentState.State = ContinuationState.ReadPropertyValue;
