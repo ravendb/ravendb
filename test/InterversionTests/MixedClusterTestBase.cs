@@ -2,14 +2,18 @@
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Runtime.CompilerServices;
+using System.Security.Cryptography.X509Certificates;
 using System.Threading;
 using System.Threading.Tasks;
 using Raven.Client.Documents;
+using Raven.Client.Http;
 using Raven.Client.ServerWide;
+using Raven.Client.ServerWide.Commands.Cluster;
 using Raven.Client.ServerWide.Operations;
 using Raven.Client.Util;
 using Raven.Server;
 using Raven.Server.Config;
+using Sparrow.Json;
 using Tests.Infrastructure;
 using Xunit;
 
@@ -36,7 +40,7 @@ namespace InterversionTests
         }
 
         protected async Task<(RavenServer Leader, List<ProcessNode> Peers, List<RavenServer> LocalPeers)> CreateMixedCluster(
-            string[] peers, int localPeers = 0, IDictionary<string, string> customSettings = null)
+            string[] peers, int localPeers = 0, IDictionary<string, string> customSettings = null, X509Certificate2 certificate = null)
         {
             var leaderServer = GetNewServer(customSettings);
             leaderServer.ServerStore.EnsureNotPassive(leaderServer.WebUrl);
@@ -56,37 +60,45 @@ namespace InterversionTests
                 }
             };
 
-            var local = new List<RavenServer>();
-            for (int i = 0; i < localPeers; i++)
-            {
-                var peer = GetNewServer(customSettings);
-                await leaderServer.ServerStore.AddNodeToClusterAsync(peer.WebUrl);
-                Assert.True(nodeAdded.WaitOne(TimeSpan.FromSeconds(30)));
-                nodeAdded.Reset();
-                local.Add(peer);
-            }
 
-            var processes = new List<ProcessNode>();
-            foreach (var peer in peers)
+            using (leaderServer.ServerStore.ContextPool.AllocateOperationContext(out JsonOperationContext context))
+            using (var requestExecutor = ClusterRequestExecutor.CreateForSingleNode(leaderServer.WebUrl, certificate))
             {
-                var (url, process) = await GetServerAsync(peer);
-                processes.Add(new ProcessNode
+                var local = new List<RavenServer>();
+
+                for (int i = 0; i < localPeers; i++)
                 {
-                    Version = peer,
-                    Process = process,
-                    Url = url
-                });
-            }
+                    var peer = GetNewServer(customSettings);
+                    var addCommand = new AddClusterNodeCommand(peer.WebUrl);
+                    await requestExecutor.ExecuteAsync(addCommand, context);
+                    Assert.True(nodeAdded.WaitOne(TimeSpan.FromSeconds(30)));
+                    nodeAdded.Reset();
+                    local.Add(peer);
+                }
 
-            foreach (var processNode in processes)
-            {
-                await leaderServer.ServerStore.AddNodeToClusterAsync(processNode.Url);
-                Assert.True(nodeAdded.WaitOne(TimeSpan.FromSeconds(30)));
-                nodeAdded.Reset();
-            }
+                var processes = new List<ProcessNode>();
+                foreach (var peer in peers)
+                {
+                    var (url, process) = await GetServerAsync(peer);
+                    processes.Add(new ProcessNode
+                    {
+                        Version = peer,
+                        Process = process,
+                        Url = url
+                    });
+                }
 
-            Assert.Equal(peers.Length + localPeers + 1, leaderServer.ServerStore.GetClusterTopology().Members.Count);
-            return (leaderServer, processes, local);
+                foreach (var processNode in processes)
+                {
+                    var addCommand = new AddClusterNodeCommand(processNode.Url);
+                    await requestExecutor.ExecuteAsync(addCommand, context);
+                    Assert.True(nodeAdded.WaitOne(TimeSpan.FromSeconds(30)));
+                    nodeAdded.Reset();
+                }
+
+                Assert.Equal(peers.Length + localPeers + 1, leaderServer.ServerStore.GetClusterTopology().Members.Count);
+                return (leaderServer, processes, local);
+            }
         }
 
         protected async Task<(IDisposable Disposable, List<DocumentStore> Stores)> GetStores(RavenServer leader, List<ProcessNode> peers, 
