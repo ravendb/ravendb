@@ -121,7 +121,7 @@ namespace Raven.Server.Documents.Queries
 
         public bool IsCollectionQuery { get; private set; } = true;
 
-        public Dictionary<StringSegment, (string FunctionText, Esprima.Ast.Program Program)> DeclaredFunctions { get; }
+        public Dictionary<string, DeclaredFunction> DeclaredFunctions { get; }
 
         public readonly string CollectionName;
 
@@ -581,8 +581,16 @@ namespace Raven.Server.Documents.Queries
 
             sb.AppendLine(";").AppendLine("}");
 
-            if (Query.TryAddFunction(SelectOutput, (sb.ToString(), Query.SelectFunctionBody.Program)) == false)
+            if (Query.TryAddFunction(new DeclaredFunction
+            {
+                Name = SelectOutput,
+                Type = DeclaredFunction.FunctionType.JavaScript,
+                FunctionText = sb.ToString(),
+                Program = Query.SelectFunctionBody.Program
+            }) == false)
+            {
                 ThrowUseOfReserveFunctionBodyMethodName(parameters);
+            }
 
             SelectFields = new[] { SelectField.CreateMethodCall(SelectOutput, null, args) };
         }

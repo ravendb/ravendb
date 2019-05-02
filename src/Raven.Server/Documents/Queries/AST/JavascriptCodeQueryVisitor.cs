@@ -61,7 +61,7 @@ namespace Raven.Server.Documents.Queries.AST
             throw new NotSupportedException();
         }
 
-        public override void VisitDeclaredFunctions(Dictionary<StringSegment, (string FunctionText, Esprima.Ast.Program Program)> declaredFunctions)
+        public override void VisitDeclaredFunction(StringSegment name, string func, DeclaredFunction.FunctionType type)
         {
             throw new NotSupportedException();
         }
@@ -289,11 +289,6 @@ namespace Raven.Server.Documents.Queries.AST
         }
 
         public override void VisitFromClause(FieldExpression @from, StringSegment? alias, QueryExpression filter, bool index)
-        {
-            throw new NotSupportedException();
-        }
-
-        public override void VisitDeclaredFunction(StringSegment name, string func)
         {
             throw new NotSupportedException();
         }

@@ -69,11 +69,11 @@ namespace Raven.Server.Documents.Queries.Parser
             
             while (Scanner.TryScan("DECLARE"))
             {
-                var (name, func) = DeclaredFunction();
+                var func = DeclaredFunction();
 
-                if (query.TryAddFunction(name, func) == false)
+                if (query.TryAddFunction(func) == false)
                 {
-                    message = $"{name} function was declared multiple times";
+                    message = $"{func.Name} function was declared multiple times";
                     return false;
                 }
             }
@@ -1218,7 +1218,7 @@ namespace Raven.Server.Documents.Queries.Parser
             return includes;
         }
 
-        private (StringSegment Name, (string FunctionText, Esprima.Ast.Program Program)) DeclaredFunction()
+        private DeclaredFunction DeclaredFunction()
         {
             // because of how we are processing them, we don't actually care for
             // parsing the function directly. We have implemented a minimal parser
@@ -1227,8 +1227,13 @@ namespace Raven.Server.Documents.Queries.Parser
 
             var functionStart = Scanner.Position;
 
-            if (Scanner.TryScan("function") == false)
-                ThrowParseException("DECLARE clause found but missing 'function' keyword");
+            bool isFunc = Scanner.TryScan("function");
+
+            if (isFunc == false)
+            {
+                if(Scanner.TryScan("timeseries") == false)
+                    ThrowParseException("DECLARE clause found but missing 'function' keyword");
+            }
 
             if (Scanner.Identifier() == false)
                 ThrowParseException("DECLARE functions require a name and cannot be anonymous");
@@ -1236,30 +1241,48 @@ namespace Raven.Server.Documents.Queries.Parser
             var name = Scanner.Token;
 
             // this reads the signature of the method: (a,b,c), etc.
-            // we are technically allow more complex stuff there that isn't
+            // we are technically allowing more complex stuff there that isn't
             // allowed by JS, but that is fine, since the JS parser will break 
             // when it try it, so we are good with false positives here
 
             if (Scanner.TryScan('(') == false)
-                ThrowParseException("Unable to parse function " + name + " signature");
+                ThrowParseException("Unable to parse  " + name + " signature");
 
             ReadMethodArguments();
 
             if (Scanner.FunctionBody() == false)
-                ThrowParseException("Unable to get function body for " + name);
+                ThrowParseException("Unable to get body for " + name);
 
             var functionText = Scanner.Input.Substring(functionStart, Scanner.Position - functionStart);
-            // validate this function
-            try
+            if (isFunc)
             {
-                var program = ValidateScript(functionText);
-                return (name, (functionText, program));
+                // validate this function
+                try
+                {
+                    var program = ValidateScript(functionText);
+                    return new DeclaredFunction
+                    {
+                        FunctionText = functionText,
+                        Name = name.Value,
+                        Program = program,
+                        Type = AST.DeclaredFunction.FunctionType.JavaScript
+                    };
+                }
+                catch (Exception e)
+                {
+                    var msg = AddLineAndColumnNumberToErrorMessage(e, $"Invalid script inside function {name}");
+                    ThrowInvalidQueryException(msg, e);
+                    return null;
+                }
             }
-            catch (Exception e)
+            else
             {
-                var msg = AddLineAndColumnNumberToErrorMessage(e, $"Invalid script inside function {name}");
-                ThrowInvalidQueryException(msg, e);
-                return (null, (null, null)); // not reachable
+                return new DeclaredFunction
+                {
+                    Type = AST.DeclaredFunction.FunctionType.TimeSeries,
+                    Name = name.Value,
+                    FunctionText = functionText
+                };
             }
         }
 

@@ -162,11 +162,11 @@ namespace Raven.Server.Documents.Queries.AST
             }
         }
 
-        public virtual void VisitDeclaredFunctions(Dictionary<StringSegment, (string FunctionText, Esprima.Ast.Program Program)> declaredFunctions)
+        public virtual void VisitDeclaredFunctions(Dictionary<string, DeclaredFunction> declaredFunctions)
         {
             foreach (var kvp in declaredFunctions)
             {
-                VisitDeclaredFunction(kvp.Key, kvp.Value.FunctionText);
+                VisitDeclaredFunction(kvp.Key, kvp.Value.FunctionText, kvp.Value.Type);
             }
         }
 
@@ -302,7 +302,7 @@ namespace Raven.Server.Documents.Queries.AST
             
         }
 
-        public virtual void VisitDeclaredFunction(StringSegment name, string func)
+        public virtual void VisitDeclaredFunction(StringSegment name, string func, DeclaredFunction.FunctionType type)
         {
             
         }

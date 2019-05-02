@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.IO;
 using Sparrow;
+using Raven.Server.Documents.Queries.AST;
 using Sparrow.Json;
 
 namespace Raven.Server.Documents.Patch
@@ -29,9 +30,9 @@ namespace Raven.Server.Documents.Patch
 
         public readonly PatchRequestType Type;
 
-        private readonly Dictionary<StringSegment, (string FunctionText, Esprima.Ast.Program Program)> _functions;
+        private readonly Dictionary<string, DeclaredFunction> _functions;
 
-        public PatchRequest(string script, PatchRequestType type, Dictionary<StringSegment, (string FunctionText, Esprima.Ast.Program Program)> functions = null)
+        public PatchRequest(string script, PatchRequestType type, Dictionary<string, DeclaredFunction> functions = null)
         {
             Script = script;
             _functions = functions;

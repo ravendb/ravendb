@@ -1,4 +1,5 @@
-﻿using System.Collections.Generic;
+﻿using System;
+using System.Collections.Generic;
 using System.Text;
 using Sparrow;
 
@@ -20,18 +21,18 @@ namespace Raven.Server.Documents.Queries.AST
 
         public List<(QueryExpression Expression, OrderByFieldType FieldType, bool Ascending)> OrderBy;
 
-        public Dictionary<StringSegment, (string FunctionText, Esprima.Ast.Program Program)> DeclaredFunctions;
+        public Dictionary<string, DeclaredFunction> DeclaredFunctions;
 
         public string QueryText;
 
         public (string FunctionText, Esprima.Ast.Program Program) SelectFunctionBody;
 
-        public bool TryAddFunction(StringSegment name, (string FunctionText, Esprima.Ast.Program Program) func)
+        public bool TryAddFunction(DeclaredFunction func)
         {
             if (DeclaredFunctions == null)
-                DeclaredFunctions = new Dictionary<StringSegment, (string FunctionText, Esprima.Ast.Program Program)>(StringSegmentComparer.Ordinal);
+                DeclaredFunctions = new Dictionary<string, DeclaredFunction>(StringComparer.Ordinal);
 
-            return DeclaredFunctions.TryAdd(name, func);
+            return DeclaredFunctions.TryAdd(func.Name, func);
         }
 
         public bool HasAlias(StringSegment alias)

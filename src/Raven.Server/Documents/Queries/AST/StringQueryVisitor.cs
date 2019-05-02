@@ -110,7 +110,7 @@ namespace Raven.Server.Documents.Queries.AST
             }
         }
 
-        public override void VisitDeclaredFunction(StringSegment name, string func)
+        public override void VisitDeclaredFunction(StringSegment name, string func, DeclaredFunction.FunctionType type)
         {
             EnsureLine();
             _sb.Append("DECLARE function ").Append(name.Value).AppendLine(func).AppendLine();
