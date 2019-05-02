@@ -13,7 +13,7 @@ namespace Raven.Client.ServerWide.Commands.Cluster
 
         public override bool IsReadRequest => false;
 
-        public AddClusterNodeCommand(string url, string tag, bool watcher)
+        public AddClusterNodeCommand(string url, string tag = null, bool watcher = false)
         {
             _url = url;
             _tag = tag;

@@ -9,10 +9,12 @@ using FastTests.Server.Replication;
 using Raven.Client.Documents;
 using Raven.Client.Documents.Conventions;
 using Raven.Client.Documents.Operations.Replication;
+using Raven.Client.Documents.Session;
 using Raven.Client.Exceptions;
 using Raven.Client.Exceptions.Cluster;
 using Raven.Client.Http;
 using Raven.Client.ServerWide;
+using Raven.Client.ServerWide.Commands.Cluster;
 using Raven.Client.ServerWide.Operations;
 using Raven.Server.Config;
 using Raven.Server.ServerWide.Commands;
@@ -516,6 +518,51 @@ namespace RachisTests
             }
         }
 
+        [Fact]
+        public async Task CanSnapshotCompareExchangeTombstones()
+        {
+            var leader = await CreateRaftClusterAndGetLeader(1);
+
+
+            using (var store = GetDocumentStore(options:new Options
+            {
+                Server = leader
+            }))
+            {
+                using (var session = store.OpenAsyncSession(new SessionOptions
+                {
+                    TransactionMode = TransactionMode.ClusterWide
+                }))
+                {
+                    session.Advanced.ClusterTransaction.CreateCompareExchangeValue("foo", "bar");
+                    await session.SaveChangesAsync();
+
+                    var result = await session.Advanced.ClusterTransaction.GetCompareExchangeValueAsync<string>("foo");
+                    session.Advanced.ClusterTransaction.DeleteCompareExchangeValue(result);
+                    await session.SaveChangesAsync();
+                }
+
+                var server2 = GetNewServer();
+                var server2Url = server2.ServerStore.GetNodeHttpServerUrl();
+                Servers.Add(server2);
+
+                using (var requestExecutor = ClusterRequestExecutor.CreateForSingleNode(leader.WebUrl, null))
+                using (requestExecutor.ContextPool.AllocateOperationContext(out var ctx))
+                {
+                    await requestExecutor.ExecuteAsync(new AddClusterNodeCommand(server2Url, watcher: true), ctx);
+
+                    var addDatabaseNode = new AddDatabaseNodeOperation(store.Database);
+                    await store.Maintenance.Server.SendAsync(addDatabaseNode);
+                }
+
+                using (server2.ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext ctx))
+                using (ctx.OpenReadTransaction())
+                {
+                    Assert.True(server2.ServerStore.Cluster.HasCompareExchangeTombstones(ctx, store.Database));
+                }
+            }
+        }
+
         private async Task WaitForAssertion(Action action)
         {
             var sp = Stopwatch.StartNew();
@@ -534,29 +581,6 @@ namespace RachisTests
                     await Task.Delay(100);
                 }
             }
-        }
-
-        private class AddClusterNodeCommand : RavenCommand
-        {
-            private readonly string _url;
-
-            public AddClusterNodeCommand(string url)
-            {
-                _url = url;
-            }
-
-            public override HttpRequestMessage CreateRequest(JsonOperationContext ctx, ServerNode node, out string url)
-            {
-                url = $"{node.Url}/admin/cluster/node?url={_url}";
-
-                var request = new HttpRequestMessage
-                {
-                    Method = HttpMethod.Put
-                };
-
-                return request;
-            }
-
         }
     }
 }
