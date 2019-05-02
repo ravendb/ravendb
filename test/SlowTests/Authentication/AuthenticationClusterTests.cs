@@ -580,18 +580,18 @@ exit 0";
                     await session.SaveChangesAsync();
                 }
 
-                // WaitForUserToContinueTheTest(store1, clientCert: adminCertificate1);
+                //WaitForUserToContinueTheTest(store1, clientCert: adminCertificate1);
                 // WaitForUserToContinueTheTest(store2, clientCert: adminCertificate2);
 
                 var replicated = WaitForDocumentToReplicate<User>(store2, "users/2", 10000);
                 Assert.Null(replicated);
 
                 // RavenDB-13010
-                /*Assert.True(WaitForValue(() =>
+                Assert.True(WaitForValue(() =>
                 {
                     var repStats = store1.Maintenance.Send(new GetReplicationPerformanceStatisticsOperation());
                     return repStats.Outgoing.SelectMany(x => x.Performance).Count(x => x.Errors.Count > 0) > 0;
-                }, true));*/
+                }, true));
             }
         }
 

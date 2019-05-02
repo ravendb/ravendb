@@ -1,18 +1,18 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.IO;
-using System.Threading.Tasks;
-using Raven.Server.Routing;
-using Raven.Server.ServerWide.Context;
-using Sparrow.Json;
-using Sparrow.Json.Parsing;
 using System.Linq;
 using System.Net;
 using System.Net.WebSockets;
+using System.Threading.Tasks;
 using Raven.Client.Documents.Commands;
 using Raven.Client.Documents.Replication;
 using Raven.Server.Documents.Replication;
+using Raven.Server.Routing;
+using Raven.Server.ServerWide.Context;
 using Raven.Server.Utils;
+using Sparrow.Json;
+using Sparrow.Json.Parsing;
 
 namespace Raven.Server.Documents.Handlers
 {
@@ -153,7 +153,10 @@ namespace Raven.Server.Documents.Handlers
                 });
                 writer.WriteComma();
 
-                writer.WriteArray(context, nameof(ReplicationPerformance.Outgoing), Database.ReplicationLoader.OutgoingHandlers, (w, c, handler) =>
+                var reporters = Database.ReplicationLoader.OutgoingHandlers.Concat<IReportOutgoingReplicationPerformance>(Database.ReplicationLoader
+                        .OutgoingConnectionsLastFailureToConnect.Values);
+
+                writer.WriteArray(context, nameof(ReplicationPerformance.Outgoing), reporters, (w, c, handler) =>
                 {
                     w.WriteStartObject();
 

@@ -35,7 +35,7 @@ using Sparrow.Server;
 
 namespace Raven.Server.Documents.Replication
 {
-    public class OutgoingReplicationHandler : IDisposable
+    public class OutgoingReplicationHandler : IDisposable, IReportOutgoingReplicationPerformance
     {
         public const string AlertTitle = "Replication";
 
@@ -1085,6 +1085,12 @@ namespace Raven.Server.Documents.Replication
         }
 
         private void OnSuccessfulTwoWaysCommunication() => SuccessfulTwoWaysCommunication?.Invoke(this);
+    }
+
+    public interface IReportOutgoingReplicationPerformance
+    {
+        string DestinationFormatted { get;}
+        OutgoingReplicationPerformanceStats[] GetReplicationPerformance();
     }
 
     internal class UpdateSiblingCurrentEtagDto : TransactionOperationsMerger.IReplayableCommandDto<OutgoingReplicationHandler.UpdateSiblingCurrentEtag>
