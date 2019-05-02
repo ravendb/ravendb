@@ -333,7 +333,7 @@ namespace Raven.Server.Documents.Queries
         {
             foreach (var function in Query.DeclaredFunctions)
             {
-                var body = function.Value.Program.Body;
+                var body = function.Value.JavaScript.Body;
                 HandleDeclaredFunctionBody(body);
                 if (HasIncludeOrLoad)
                     return;
@@ -586,7 +586,7 @@ namespace Raven.Server.Documents.Queries
                 Name = SelectOutput,
                 Type = DeclaredFunction.FunctionType.JavaScript,
                 FunctionText = sb.ToString(),
-                Program = Query.SelectFunctionBody.Program
+                JavaScript = Query.SelectFunctionBody.Program
             }) == false)
             {
                 ThrowUseOfReserveFunctionBodyMethodName(parameters);
@@ -1041,7 +1041,7 @@ namespace Raven.Server.Documents.Queries
                 {
                     if (Query.DeclaredFunctions != null && Query.DeclaredFunctions.TryGetValue(methodName, out var tuple))
                     {
-                        HasLoadOrIncludeInProjection(tuple.Program);
+                        HasLoadOrIncludeInProjection(tuple.JavaScript);
 
                         if (HasFacet)
                             ThrowFacetQueryMustContainsOnlyFacetInSelect(me, parameters);

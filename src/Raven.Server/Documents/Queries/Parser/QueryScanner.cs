@@ -234,6 +234,29 @@ namespace Raven.Server.Documents.Queries.Parser
             return true;
         }
 
+        public bool TryScanMultiWordsToken(string a, string b)
+        {
+            var originPos = _pos;
+            var originCol = Column;
+
+            if (TryPeek(a) == false)
+                return false;
+
+            _pos += a.Length;
+            Column += a.Length;
+
+            if(TryPeek(b) == false)
+            {
+                _pos += originPos;
+                Column += originCol;
+            }
+
+            _pos += b.Length;
+            Column += b.Length;
+
+            return true;
+        }
+
         public bool TryPeekNextToken(Func<char, bool> predicate, StringSegment currentToken, out StringSegment nextToken)
         {
             nextToken = null;
