@@ -30,6 +30,7 @@ namespace Raven.Client.Documents.Operations
         internal long Id => _id;
 
         public OperationStatusFetchMode StatusFetchMode { get; protected set; }
+        public string NodeTag { get; protected set; }
 
         private bool _isProcessing;
 
@@ -161,7 +162,7 @@ namespace Raven.Client.Documents.Operations
                     if (_result.Task.IsCompleted)
                         return;
 
-                    var command = GetOperationStateCommand(_conventions, _id);
+                    var command = GetOperationStateCommand(_conventions, _id, NodeTag);
 
                     await _requestExecutor.ExecuteAsync(command, _context, sessionInfo: null, token: CancellationToken.None).ConfigureAwait(false);
 
@@ -193,9 +194,9 @@ namespace Raven.Client.Documents.Operations
             });
         }
 
-        protected virtual RavenCommand<OperationState> GetOperationStateCommand(DocumentConventions conventions, long id)
+        protected virtual RavenCommand<OperationState> GetOperationStateCommand(DocumentConventions conventions, long id, string nodeTag = null)
         {
-            return new GetOperationStateOperation.GetOperationStateCommand(conventions, id);
+            return new GetOperationStateOperation.GetOperationStateCommand(conventions, id, nodeTag);
         }
 
         public void OnNext(OperationStatusChange change)

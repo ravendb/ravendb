@@ -1,15 +1,16 @@
 ﻿using System;
 using System.Net;
 using System.Threading.Tasks;
+using Raven.Client;
+using Raven.Client.Documents.Changes;
+using Raven.Client.Documents.Operations.Backups;
+using Raven.Client.Exceptions;
+using Raven.Client.ServerWide;
 using Raven.Server.Documents.Indexes;
+using Raven.Server.NotificationCenter.Notifications.Details;
 using Raven.Server.ServerWide;
 using Raven.Server.ServerWide.Context;
 using Raven.Server.Web;
-using Raven.Client;
-using Raven.Client.Documents.Changes;
-using Raven.Client.Exceptions;
-using Raven.Client.ServerWide;
-using Raven.Server.NotificationCenter.Notifications.Details;
 using Raven.Server.Web.System;
 using Sparrow.Json;
 using Sparrow.Json.Parsing;
@@ -85,7 +86,7 @@ namespace Raven.Server.Documents
                 {
                     var json = new DynamicJsonValue
                     {
-                        ["RaftCommandIndex"] = index
+                        [nameof(UpdatePeriodicBackupOperationResult.RaftCommandIndex)] = index,
                     };
                     fillJson?.Invoke(json, configurationJson, index);
                     context.Write(writer, json);

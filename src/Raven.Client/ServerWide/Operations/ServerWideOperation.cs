@@ -6,15 +6,16 @@ namespace Raven.Client.ServerWide.Operations
 {
     public class ServerWideOperation : Operation
     {
-        public ServerWideOperation(RequestExecutor requestExecutor, DocumentConventions conventions, long id)
+        public ServerWideOperation(RequestExecutor requestExecutor, DocumentConventions conventions, long id, string commandSelectedNodeTagForRequest = null)
             : base(requestExecutor, null, conventions, id)
         {
             StatusFetchMode = OperationStatusFetchMode.Polling;
+            NodeTag = commandSelectedNodeTagForRequest;
         }
 
-        protected override RavenCommand<OperationState> GetOperationStateCommand(DocumentConventions conventions, long id)
+        protected override RavenCommand<OperationState> GetOperationStateCommand(DocumentConventions conventions, long id, string nodeTag = null)
         {
-            return new GetServerWideOperationStateOperation.GetServerWideOperationStateCommand(conventions, id);
+            return new GetServerWideOperationStateOperation.GetServerWideOperationStateCommand(conventions, id, nodeTag);
         }
     }
 }
