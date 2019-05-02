@@ -18,6 +18,7 @@ using Raven.Client.Http;
 using Raven.Client.ServerWide;
 using Raven.Client.ServerWide.Commands;
 using Raven.Client.ServerWide.Tcp;
+using Raven.Client.Util;
 using Raven.Server.Documents.TcpHandlers;
 using Raven.Server.Json;
 using Raven.Server.NotificationCenter.Notifications;
@@ -950,13 +951,31 @@ namespace Raven.Server.Documents.Replication
                 // will try to fetch it again later
                 if (_log.IsInfoEnabled)
                     _log.Info($"Failed to fetch tcp connection information for the destination '{node.FromString()}' , the connection will be retried later.", e);
+                var replicationPulse = new LiveReplicationPulsesCollector.ReplicationPulse
+                {
+                    OccurredAt = SystemTime.UtcNow,
+                    Direction = ReplicationPulseDirection.OutgoingGetTcpInfo,
+                    To = node,
+                    IsExternal = external,
+                    ExceptionMessage = e.Message,
+                };
+                OutgoingReplicationConnectionFailed?.Invoke(replicationPulse);
+                var stats = new OutgoingReplicationStatsAggregator(GetNextReplicationStatsId(), null);
+                using (var scope = stats.CreateScope())
+                {
+                    scope.AddError(e);
+                }
 
+                var failureReporter = new OutgoingReplicationFailureToConnectReporter(node, stats);
+                OutgoingConnectionsLastFailureToConnect.AddOrUpdate(node, failureReporter, (_, __) => failureReporter);
                 _reconnectQueue.TryAdd(shutdownInfo);
             }
 
             return null;
         }
 
+        public ConcurrentDictionary<ReplicationNode, OutgoingReplicationFailureToConnectReporter> OutgoingConnectionsLastFailureToConnect =
+            new ConcurrentDictionary<ReplicationNode, OutgoingReplicationFailureToConnectReporter>();
         private TcpConnectionInfo GetPullReplicationTcpInfo(PullReplicationAsSink pullReplicationAsSink, X509Certificate2 certificate, string database)
         {
             var remoteTask = pullReplicationAsSink.HubDefinitionName;
@@ -1155,6 +1174,7 @@ namespace Raven.Server.Documents.Replication
         }
 
         public string TombstoneCleanerIdentifier => "Replication";
+        public event Action<LiveReplicationPulsesCollector.ReplicationPulse> OutgoingReplicationConnectionFailed;
 
         public Dictionary<string, long> GetLastProcessedTombstonesPerCollection()
         {
@@ -1326,6 +1346,24 @@ namespace Raven.Server.Documents.Replication
         public int GetNextReplicationStatsId()
         {
             return Interlocked.Increment(ref _replicationStatsId);
+        }
+    }
+
+    public class OutgoingReplicationFailureToConnectReporter : IReportOutgoingReplicationPerformance
+    {
+        private ReplicationNode _node;
+        private OutgoingReplicationStatsAggregator _stats;
+
+        public OutgoingReplicationFailureToConnectReporter(ReplicationNode node, OutgoingReplicationStatsAggregator stats)
+        {
+            _node = node;
+            _stats = stats;
+        }
+
+        public string DestinationFormatted => $"{_node.Url}/databases/{_node.Database}";
+        public OutgoingReplicationPerformanceStats[] GetReplicationPerformance()
+        {
+            return new[] {_stats.ToReplicationPerformanceStats()};
         }
     }
 }

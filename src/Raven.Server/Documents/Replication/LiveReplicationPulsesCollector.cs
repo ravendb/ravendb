@@ -24,6 +24,7 @@ namespace Raven.Server.Documents.Replication
             _database.ReplicationLoader.IncomingReplicationRemoved += IncomingHandlerRemoved;
             _database.ReplicationLoader.OutgoingReplicationAdded += OutgoingHandlerAdded;
             _database.ReplicationLoader.OutgoingReplicationRemoved += OutgoingHandlerRemoved;
+            _database.ReplicationLoader.OutgoingReplicationConnectionFailed += HandleReplicationPulse;
 
             foreach (var handler in _database.ReplicationLoader.IncomingHandlers)
                 IncomingHandlerAdded(handler);
@@ -63,6 +64,7 @@ namespace Raven.Server.Documents.Replication
             _database.ReplicationLoader.OutgoingReplicationAdded -= OutgoingHandlerAdded;
             _database.ReplicationLoader.IncomingReplicationRemoved -= IncomingHandlerRemoved;
             _database.ReplicationLoader.IncomingReplicationAdded -= IncomingHandlerAdded;
+            _database.ReplicationLoader.OutgoingReplicationConnectionFailed -= HandleReplicationPulse;
         }
 
         public struct ReplicationPulse
@@ -73,6 +75,7 @@ namespace Raven.Server.Documents.Replication
             public bool IsExternal;
             public IncomingConnectionInfo From;
             public string ExceptionMessage;
+
 
             public DynamicJsonValue ToJson()
             {
@@ -100,6 +103,7 @@ namespace Raven.Server.Documents.Replication
         OutgoingHeartbeatError,
         OutgoingHeartbeatAcknowledge,
         OutgoingHeartbeatAcknowledgeError,
+        OutgoingGetTcpInfo,
 
         IncomingInitiate = 201,
         IncomingInitiateError,
