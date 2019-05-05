@@ -107,6 +107,8 @@ namespace Raven.Server.Documents.Indexes
 
         private readonly AsyncManualResetEvent _indexingBatchCompleted = new AsyncManualResetEvent();
 
+        private readonly SemaphoreSlim _indexingInProgress = new SemaphoreSlim(1, 1);
+
         /// <summary>
         /// Cancelled if the database is in shutdown process.
         /// </summary>
@@ -1000,6 +1002,8 @@ namespace Raven.Server.Documents.Indexes
 
                                     try
                                     {
+                                        _indexingInProgress.Wait(_indexingProcessCancellationTokenSource.Token);
+
                                         TimeSpentIndexing.Start();
                                         var lastAllocatedBytes = GC.GetAllocatedBytesForCurrentThread();
 
@@ -1022,6 +1026,8 @@ namespace Raven.Server.Documents.Indexes
                                     }
                                     finally
                                     {
+                                        _indexingInProgress.Release();
+
                                         if (_batchStopped)
                                         {
                                             _batchStopped = false;
@@ -1332,6 +1338,11 @@ namespace Raven.Server.Documents.Indexes
 
         private void ReduceMemoryUsage(StorageEnvironment environment)
         {
+            if (_indexingInProgress.Wait(0) == false)
+                return;
+
+            try
+            {
             var beforeFree = NativeMemory.CurrentThreadStats.TotalAllocated;
             if (_logger.IsInfoEnabled)
                 _logger.Info(
@@ -1348,6 +1359,11 @@ namespace Raven.Server.Documents.Indexes
             var afterFree = NativeMemory.CurrentThreadStats.TotalAllocated;
             if (_logger.IsInfoEnabled)
                 _logger.Info($"After cleanup, using {new Size(afterFree, SizeUnit.Bytes)} by '{Name}'.");
+        }
+            finally
+            {
+                _indexingInProgress.Release();
+            }
         }
 
         internal void ResetErrors()
