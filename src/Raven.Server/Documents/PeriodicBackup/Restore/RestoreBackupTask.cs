@@ -434,6 +434,9 @@ namespace Raven.Server.Documents.PeriodicBackup.Restore
             options.OperateOnTypes |= DatabaseItemType.LegacyDocumentDeletions;
             options.OperateOnTypes |= DatabaseItemType.LegacyAttachments;
             options.OperateOnTypes |= DatabaseItemType.LegacyAttachmentDeletions;
+#pragma warning disable 618
+            options.OperateOnTypes |= DatabaseItemType.Counters;
+#pragma warning restore 618
 
             var oldOperateOnTypes = DatabaseSmuggler.ConfigureOptionsForIncrementalImport(options);
             var destination = new DatabaseDestination(database);

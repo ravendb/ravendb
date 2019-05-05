@@ -65,7 +65,7 @@ namespace SlowTests.Issues
             }
         }
 
-        private static void ExtractFile(string path, string assemblyName)
+        public static void ExtractFile(string path, string assemblyName)
         {
             using (var file = File.Create(path))
             using (var stream = typeof(RavenDB_10404).Assembly.GetManifestResourceStream(assemblyName))

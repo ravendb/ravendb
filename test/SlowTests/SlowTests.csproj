@@ -21,6 +21,10 @@
     <None Remove="Data\RavenDB_13291\collection-with-counter-word-4.1.5-nightly.ravendb-snapshot" />
     <None Remove="Data\RavenDB_13468\counters-snapshot-document.json" />
     <None Remove="Data\RavenDB_13468\counters.test.4.1.6.ravendb-snapshot" />
+    <None Remove="Data\RavenDB_13512\counters.test.4.1.6.ravendb-full-backup" />
+    <None Remove="Data\RavenDB_13512\Incremental\17.ravendb-full-backup" />
+    <None Remove="Data\RavenDB_13512\Incremental\18-01.ravendb-incremental-backup" />
+    <None Remove="Data\RavenDB_13512\Incremental\18.ravendb-incremental-backup" />
   </ItemGroup>
   <ItemGroup>
     <Compile Include="..\..\src\CommonAssemblyInfo.cs" Link="Properties\CommonAssemblyInfo.cs" />
@@ -60,6 +64,10 @@
     <EmbeddedResource Include="Data\RavenDB_13291\collection-with-counter-word-4.1.5-nightly.ravendb-snapshot" />
     <EmbeddedResource Include="Data\RavenDB_13468\counters-snapshot-document.json" />
     <EmbeddedResource Include="Data\RavenDB_13468\counters.test.4.1.6.ravendb-snapshot" />
+    <EmbeddedResource Include="Data\RavenDB_13512\counters.test.4.1.6.ravendb-full-backup" />
+    <EmbeddedResource Include="Data\RavenDB_13512\Incremental\17.ravendb-full-backup" />
+    <EmbeddedResource Include="Data\RavenDB_13512\Incremental\18-01.ravendb-incremental-backup" />
+    <EmbeddedResource Include="Data\RavenDB_13512\Incremental\18.ravendb-incremental-backup" />
     <EmbeddedResource Include="Data\RavenDB_8355\MySorter.cs" />
     <EmbeddedResource Include="Data\RavenDB_8355\MySorterWithDiagnostics.cs" />
     <EmbeddedResource Include="Data\RavenDB_9912\1.ravendbdump" />
