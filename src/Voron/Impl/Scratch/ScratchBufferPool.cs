@@ -459,44 +459,51 @@ namespace Voron.Impl.Scratch
                 return;
             }
 
-            while (_env.CurrentReadTransactionId <= txIdAllowingToReleaseOldScratches)
+            try
             {
-                // we've just flushed and had no more writes after that, let us bump id of next read transactions to ensure
-                // that nobody will attempt to read old scratches so we will be able to release more files
+                while (_env.CurrentReadTransactionId <= txIdAllowingToReleaseOldScratches)
+                {
+                    // we've just flushed and had no more writes after that, let us bump id of next read transactions to ensure
+                    // that nobody will attempt to read old scratches so we will be able to release more files
 
+                    try
+                    {
+                        using (var tx = _env.NewLowLevelTransaction(new TransactionPersistentContext(),
+                            TransactionFlags.ReadWrite, timeout: TimeSpan.FromMilliseconds(500), context: byteStringContext))
+                        {
+                            tx.ModifyPage(0);
+                            tx.Commit();
+                        }
+                    }
+                    catch (TimeoutException)
+                    {
+                        break;
+                    }
+                    catch (DiskFullException)
+                    {
+                        break;
+                    }
+                }
+
+                // we need to ensure that no access to _recycleArea and _scratchBuffers will take place in the same time
+                // and only methods that access this are used within write transaction
                 try
                 {
-                    using (var tx = _env.NewLowLevelTransaction(new TransactionPersistentContext(),
-                        TransactionFlags.ReadWrite, timeout: TimeSpan.FromMilliseconds(500), context: byteStringContext))
+                    using (_env.WriteTransaction(context: byteStringContext))
                     {
-                        tx.ModifyPage(0);
-                        tx.Commit();
+                        RemoveInactiveScratches(_current);
+
+                        RemoveInactiveRecycledScratches();
                     }
                 }
                 catch (TimeoutException)
                 {
-                    break;
-                }
-                catch (DiskFullException)
-                {
-                    break;
+
                 }
             }
-
-            // we need to ensure that no access to _recycleArea and _scratchBuffers will take place in the same time
-            // and only methods that access this are used within write transaction
-            try
+            finally
             {
-                using (_env.WriteTransaction(context: byteStringContext))
-                {
-                    RemoveInactiveScratches(_current);
-
-                    RemoveInactiveRecycledScratches();
-                }
-            }
-            catch (TimeoutException)
-            {
-                
+                byteStringContext.Dispose();
             }
         }
 
