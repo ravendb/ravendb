@@ -40,10 +40,9 @@ class indexes extends viewModelBase {
     indexesSelectionState: KnockoutComputed<checkbox>;
     indexesProgressRefreshThrottle: Function;
     indexProgressInterval: number;
-    indexingProgresses = new Map<string, indexProgress>();  
+    indexingProgresses = new Map<string, indexProgress>();
     requestedIndexingInProgress = false;
     indexesCount: KnockoutComputed<number>;
-    visibleIndexesCount: KnockoutComputed<number>;
     searchCriteriaDescription: KnockoutComputed<string>;
 
     spinners = {
@@ -101,19 +100,26 @@ class indexes extends viewModelBase {
             return _.sum(this.indexGroups().map(x => x.indexes().length));
         });
         
-        this.visibleIndexesCount = ko.pureComputed(() => {
-            return _.sum(this.indexGroups().map(x => x.indexes().filter(i => !i.filteredOut()).length));
-        });
-        
         this.searchCriteriaDescription = ko.pureComputed(() => {
-            const indexesCount = this.visibleIndexesCount();
+            let indexesCount = 0;
+            let totalProcessedPerSecond = 0;
+
+            this.indexGroups().forEach(indexGroup => {
+                var indexesInGroup = indexGroup.indexes().filter(i => !i.filteredOut());
+                indexesCount += indexesInGroup.length;
+
+                totalProcessedPerSecond += _.sum(indexesInGroup
+                    .filter(i => i.progress())
+                    .map(i => i.progress().globalProgress().processedPerSecond()));
+            });
+
             const statusPart = this.indexStatusFilter().length === 6 
                 ? "" 
                 : ` with status <strong>${this.indexStatusFilter().map(x => this.mapIndexStatus(x)).join(", ")}</strong> `;
             const refreshPart = `Auto refresh is <strong>${this.autoRefresh() ? "on" : "off"}</strong>`;
             const namePart = this.searchText() ? `, where name contains <strong>${generalUtils.escapeHtml(this.searchText())}</strong>` : "";
             
-            return `Displaying <strong>${indexesCount}</strong> ${this.pluralize(indexesCount, "index", "indexes", true)} ${statusPart} ${namePart}. ${refreshPart}.`;
+            return `Displaying <strong>${indexesCount}</strong> ${this.pluralize(indexesCount, "index", "indexes", true)} ${statusPart} ${namePart}. ${refreshPart}. Processing Speed: <strong>${Math.floor(totalProcessedPerSecond).toLocaleString()}</strong> docs / sec`;
         });
     }
     
