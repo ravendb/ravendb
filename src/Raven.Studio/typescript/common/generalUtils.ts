@@ -129,7 +129,7 @@ class genUtils {
             const millis = duration.milliseconds();
 
             const atLeastOneSecond = duration.asSeconds() >= 1;
-            timeTokens.push((atLeastOneSecond ? Math.floor(millis) : Math.floor(millis * 100) / 100) + " ms");
+            timeTokens.push((atLeastOneSecond ? Math.floor(millis) : Math.floor(millis * 100) / 100) + " ms ");
         }
         
         if (timeTokens.length > desiredAccuracy) {
@@ -142,7 +142,6 @@ class genUtils {
             } else {
                 timeTokens.push("0 ms");
             }
-            
         }
 
         return timeTokens.join(" ");
