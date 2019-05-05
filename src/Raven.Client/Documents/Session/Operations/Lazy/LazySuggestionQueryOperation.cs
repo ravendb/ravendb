@@ -56,7 +56,6 @@ namespace Raven.Client.Documents.Session.Operations.Lazy
 
         private void HandleResponse(QueryResult queryResult)
         {
-            _invokeAfterQueryExecuted?.Invoke(queryResult);
             Result = _processResults(queryResult, _conventions);
             QueryResult = queryResult;
         }
