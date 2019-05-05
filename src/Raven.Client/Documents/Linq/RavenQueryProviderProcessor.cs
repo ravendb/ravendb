@@ -2376,10 +2376,17 @@ The recommended method is to use full text search (mark the field as Analyzed an
                 return;
 
             var isConditionalExpression = expression.Arguments[1].NodeType == ExpressionType.Conditional;
-            var loadSupport = new JavascriptConversionExtensions.LoadSupport { DoNotTranslate = isConditionalExpression == false };
+
+            // if _declareBuilder != null then we already have an 'output' function
+            // the load-argument might depend on previous statements inside the function body
+            // use js load() method instead of a LoadToken
+            var shouldUseLoadToken = isConditionalExpression == false && 
+                                     _declareBuilder == null;
+
+            var loadSupport = new JavascriptConversionExtensions.LoadSupport { DoNotTranslate = shouldUseLoadToken };
             var js = ToJs(expression.Arguments[1], false, loadSupport);
 
-            if (loadSupport.HasLoad == false || isConditionalExpression)
+            if (loadSupport.HasLoad == false || shouldUseLoadToken == false)
             {
                 AppendLineToOutputFunction(name, js);
             }
