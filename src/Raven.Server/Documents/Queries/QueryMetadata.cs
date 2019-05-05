@@ -333,6 +333,9 @@ namespace Raven.Server.Documents.Queries
         {
             foreach (var function in Query.DeclaredFunctions)
             {
+                if (function.Value.JavaScript == null)
+                    continue;
+
                 var body = function.Value.JavaScript.Body;
                 HandleDeclaredFunctionBody(body);
                 if (HasIncludeOrLoad)
@@ -1210,7 +1213,7 @@ namespace Raven.Server.Documents.Queries
 
         private void HasLoadOrIncludeInProjection(Esprima.Ast.Program ast)
         {
-            if (HasIncludeOrLoad)
+            if (HasIncludeOrLoad || ast == null)
                 return;
 
             var loadVisitor = new EsprimaHasLoadOrIncludeVisitor(this);

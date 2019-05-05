@@ -273,7 +273,7 @@ namespace Raven.Server.Documents.TimeSeries
 
                 while (true)
                 {
-                    var baseline = new DateTime(baselineMilliseconds * 10_000);
+                    var baseline = new DateTime(baselineMilliseconds * 10_000,DateTimeKind.Utc);
 
                     if (readOnlySegment.NumberOfValues > _values.Length)
                     {

@@ -20,6 +20,8 @@ using Raven.Server.Documents.Queries.Timings;
 using Raven.Server.ServerWide.Context;
 using Raven.Server.Utils;
 using Sparrow;
+using System.Globalization;
+using System.Buffers.Text;
 
 namespace Raven.Server.Documents.Queries.Results
 {
@@ -607,6 +609,9 @@ namespace Raven.Server.Documents.Queries.Results
 
                 foreach (var function in _functions ?? Enumerable.Empty<KeyValuePair<string, DeclaredFunction>>())
                 {
+                    if (function.Value.Type != DeclaredFunction.FunctionType.JavaScript)
+                        continue;
+
                     if (other._functions != null && (other._functions.TryGetValue(function.Key, out var otherVal) == false
                                                      || function.Value.FunctionText != otherVal.FunctionText))
                         return false;
@@ -633,6 +638,9 @@ namespace Raven.Server.Documents.Queries.Results
                     int hashCode = 0;
                     foreach (var function in _functions ?? Enumerable.Empty<KeyValuePair<string, DeclaredFunction>>())
                     {
+                        if (function.Value.Type != DeclaredFunction.FunctionType.JavaScript)
+                            continue;
+
                         hashCode = (hashCode * 397) ^ (function.Value.GetHashCode());
                     }
                     return hashCode;
@@ -648,6 +656,9 @@ namespace Raven.Server.Documents.Queries.Results
             {
                 foreach (var kvp in _functions ?? Enumerable.Empty<KeyValuePair<string, DeclaredFunction>>())
                 {
+                    if (kvp.Value.Type != DeclaredFunction.FunctionType.JavaScript)
+                        continue;
+
                     runner.AddScript(kvp.Value.FunctionText);
                 }
             }
@@ -655,6 +666,9 @@ namespace Raven.Server.Documents.Queries.Results
 
         public object InvokeFunction(string methodName, Query query, string documentId, object[] args)
         {
+            if (query.DeclaredFunctions.TryGetValue(methodName, out var func) && func.Type == DeclaredFunction.FunctionType.TimeSeries)
+                return InvokeTimeSeriesFunction(func.TimeSeries, query, documentId, args);
+
             var key = new QueryKey(query.DeclaredFunctions);
             using (_database.Scripts.GetScriptRunner(key, readOnly: true, patchRun: out var run))
             using (var result = run.Run(_context, _context as DocumentsOperationContext, methodName, args))
@@ -666,6 +680,108 @@ namespace Raven.Server.Documents.Queries.Results
 
                 return run.Translate(result, _context, QueryResultModifier.Instance);
             }
+        }
+
+        private BlittableJsonReaderObject InvokeTimeSeriesFunction(TimeSeriesFunction func, Query query, string documentId, object[] args)
+        {
+            var tss = _database.DocumentsStorage.TimeSeriesStorage;
+            var source = ((FieldExpression)func.Between.Source).FieldValue;
+
+            var min = GetDateValue(func.Between.Min);
+            var max = GetDateValue(func.Between.Max);
+            var groupBy = func.GroupBy.GetValue(_query.QueryParameters)?.ToString();
+            if (groupBy == null)
+                throw new ArgumentException("Unable to parse group by value, expected range specification, but got a null");
+
+            var rangeSpec = TimeSeriesFunction.ParseRangeFromString(groupBy);
+
+            var array = new DynamicJsonArray();
+
+            var aggStates = new TimeSeriesAggregation[func.Select.Count];
+            for (int i = 0; i < func.Select.Count; i++)
+            {
+                if (func.Select[i].Item1 is MethodExpression me)
+                {
+                    if (Enum.TryParse(me.Name.Value, ignoreCase: true, out TimeSeriesAggregation.Type type))
+                    {
+                        aggStates[i] = new TimeSeriesAggregation { Aggregation = type };
+                        continue;
+                    }
+                    throw new ArgumentException("Uknown method in timeseries query: " + me);
+                }
+                throw new ArgumentException("Uknown method in timeseries query: " + func.Select[i].Item1);
+            }
+
+            var reader = tss.GetReader(_includeDocumentsCommand.Context, documentId, source, min, max);
+            if (reader.Init())
+            {
+                DateTime start = default, next = default;
+                foreach (var it in reader.Values())
+                {
+                    if (it.TimeStamp > next)
+                    {
+
+                        if(aggStates[0].Count > 0)
+                        {
+                            array.Add(AddTimeSeriesResult(func, aggStates, start, next));
+                        }
+
+                        start = rangeSpec.GetRangeStart(it.TimeStamp);
+                        next = rangeSpec.GetNextRangeStart(start);
+
+                        for (int i = 0; i < aggStates.Length; i++)
+                        {
+                            aggStates[i].Init();
+                        }
+                    }
+
+                    for (int i = 0; i < aggStates.Length; i++)
+                    {
+                        aggStates[i].Step(it.Values.Span);
+                    }
+                }
+
+                if (aggStates[0].Count > 0)
+                {
+                    array.Add(AddTimeSeriesResult(func, aggStates, start, next));
+                }
+            }
+
+            return _context.ReadObject(new DynamicJsonValue
+            {
+                ["Results"] = array
+            }, "timeseries/value", BlittableJsonDocumentBuilder.UsageMode.None);
+        }
+
+        private static DynamicJsonValue AddTimeSeriesResult(TimeSeriesFunction func, TimeSeriesAggregation[] aggStates, DateTime start, DateTime next)
+        {
+            var result = new DynamicJsonValue
+            {
+                ["From"] = start,
+                ["To"] = next,
+                ["Count"] = aggStates[0].Count
+            };
+            for (int i = 0; i < aggStates.Length; i++)
+            {
+                result[func.Select[i].Item2?.ToString() ?? aggStates[i].Aggregation.ToString()] = aggStates[i].GetFinalValue();
+            }
+            return result;
+        }
+
+        private DateTime GetDateValue(ValueExpression ve)
+        {
+            var val = ve.GetValue(_query.QueryParameters);
+            if (val == null)
+                throw new ArgumentException("Unable to parse timeseries from/to values. Got a null instead of a value");
+
+            var s = val.ToString();
+
+            if (DateTime.TryParseExact(s, "o", CultureInfo.InvariantCulture, DateTimeStyles.AssumeUniversal, out var date))
+                return date.ToUniversalTime();
+            if (DateTime.TryParse(s, CultureInfo.InvariantCulture, DateTimeStyles.AssumeUniversal, out date))
+                return date.ToUniversalTime();
+
+            throw new ArgumentException("Unable to parse timeseries from/to values. Got: " + s);
         }
 
         private bool TryGetFieldValueFromDocument(Document document, FieldsToFetch.FieldToFetch field, out object value)
