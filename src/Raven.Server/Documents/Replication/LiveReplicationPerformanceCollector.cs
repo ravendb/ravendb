@@ -181,7 +181,7 @@ namespace Raven.Server.Documents.Replication
 
             var latestStat = stats.Handler.GetLatestReplicationPerformance();
             if (latestStat != null)
-                stats.Performance.Add(latestStat, CancellationToken);
+                stats.Performance.Add(latestStat);
         }
 
         private void IncomingHandlerRemoved(IncomingReplicationHandler handler)
@@ -210,7 +210,7 @@ namespace Raven.Server.Documents.Replication
 
             var latestStat = stats.Handler.GetLatestReplicationPerformance();
             if (latestStat != null)
-                stats.Performance.Add(latestStat, CancellationToken);
+                stats.Performance.Add(latestStat);
         }
 
         private class ReplicationHandlerAndPerformanceStatsList<THandler, TStatsAggregator> : HandlerAndPerformanceStatsList<THandler, TStatsAggregator>

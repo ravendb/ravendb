@@ -121,7 +121,7 @@ namespace Raven.Server.Documents.ETL
 
             var latestStat = processAndPerformanceStats.Handler.GetLatestPerformanceStats();
             if (latestStat != null)
-                processAndPerformanceStats.Performance.Add(latestStat, CancellationToken);
+                processAndPerformanceStats.Performance.Add(latestStat);
         }
 
         protected override List<EtlTaskPerformanceStats> PreparePerformanceStats()
