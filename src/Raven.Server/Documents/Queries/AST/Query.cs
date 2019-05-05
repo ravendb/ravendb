@@ -108,28 +108,81 @@ namespace Raven.Server.Documents.Queries.AST
         public ValueExpression GroupBy;
         public List<(QueryExpression, StringSegment?)> Select;
 
-      
 
-        public RangeGroup ParseFromString(string s)
+        public struct RangeGroup
+        {
+            public long Ticks;
+            public int Months;
+
+            public DateTime GetRangeStart(DateTime timestamp)
+            {
+                if (timestamp.Kind != DateTimeKind.Utc)
+                    throw new ArgumentException("The timestamp must be in UTC");
+
+                var ticks = timestamp.Ticks;
+
+                if(Ticks != 0)
+                {
+                    ticks -= (ticks % Ticks);
+                    return new DateTime(ticks,timestamp.Kind);
+                }
+
+                if(Months != 0)
+                {
+                    var numberOfMonths = (timestamp.Year * 12 + timestamp.Month);
+                    var rounded = numberOfMonths - (numberOfMonths % Months);
+                    var years = rounded / 12;
+                    var remainingMonths = (rounded % 12);
+                    return new DateTime(years, remainingMonths, 1, 0, 0, 0, timestamp.Kind);
+                }
+                return timestamp;
+            }
+
+            public DateTime GetNextRangeStart(DateTime timestamp)
+            {
+                if (timestamp.Kind != DateTimeKind.Utc)
+                    throw new ArgumentException("The timestamp must be in UTC");
+
+                if (Ticks != 0)
+                {
+                    return timestamp.AddTicks(Ticks);
+                }
+
+                if (Months != 0)
+                {
+                    return timestamp.AddMonths(Months);
+                }
+                return timestamp;
+            }
+        }
+
+        public static RangeGroup ParseRangeFromString(string s)
         {
             var range = new RangeGroup();
             var offset = 0;
 
-            while (offset < s.Length)
+            var duration = ParseNumber(s, ref offset);
+            ParseRange(s, ref offset, ref range, duration);
+
+            while (offset < s.Length && char.IsWhiteSpace(s[offset]))
             {
-                var duration = ParseNumber(s, ref offset);
-                ParseRange(s, ref offset, range, duration);
+                offset++;
             }
+            if (offset != s.Length)
+                throw new ArgumentException("After range specification, found additional unknown data: " + s);
 
             return range;
         }
 
-        private void ParseRange(string source, ref int offset, RangeGroup range, int duration)
+        private static void ParseRange(string source, ref int offset, ref RangeGroup range, long duration)
         {
-            while (char.IsWhiteSpace(source[offset]))
+            while (char.IsWhiteSpace(source[offset]) && offset < source.Length)
             {
                 offset++;
             }
+
+            if (offset >= source.Length)
+                throw new ArgumentException("Unable to find range specification in: " + source);
 
             switch (char.ToLower(source[offset++]))
             {
@@ -137,13 +190,13 @@ namespace Raven.Server.Documents.Queries.AST
                     if(TryConsumeMatch(source, ref offset, "seconds") == false)
                         TryConsumeMatch(source, ref offset, "second");
 
-                    range.Seconds += duration;
+                    range.Ticks += duration * 10_000_000;
                     return;
                 case 'm':
                     if (TryConsumeMatch(source, ref offset, "minutes") ||
                         TryConsumeMatch(source, ref offset, "min"))
                     {
-                        range.Minutes += duration;
+                        range.Ticks += duration * 10_000_000 * 60;
                         return;
                     }
 
@@ -151,47 +204,62 @@ namespace Raven.Server.Documents.Queries.AST
                         TryConsumeMatch(source, ref offset, "milli") ||
                         TryConsumeMatch(source, ref offset, "milliseconds"))
                     {
-                        range.Milliseconds += duration;
+                        range.Ticks += duration;
                         return;
                     }
                     if (TryConsumeMatch(source, ref offset, "months") ||
                         TryConsumeMatch(source, ref offset, "month") ||
                         TryConsumeMatch(source, ref offset, "mon"))
                     {
-                        range.Months+= duration;
+                        AssertValidDurationInMonths(duration);
+                        range.Months+= (int)duration;
                         return;
                     }
-                    range.Minutes += duration;
+                    range.Ticks += duration * 10_000_000 * 60;
+                    return;
+                case 'h':
+                    if (TryConsumeMatch(source, ref offset, "hours") == false)
+                        TryConsumeMatch(source, ref offset, "hour");
+
+                    range.Ticks += duration * 10_000_000 * 60 * 60;
                     return;
                 case 'd':
                     if (TryConsumeMatch(source, ref offset, "days") == false)
                         TryConsumeMatch(source, ref offset, "day");
-                    range.Days += duration;
-                    return;
-                case 'w':
-                    if (TryConsumeMatch(source, ref offset, "weeks") == false)
-                        TryConsumeMatch(source, ref offset, "week");
-                    range.Weeks += duration;
+                    range.Ticks += duration * 10_000_000 * 60 * 60 * 24;
                     return;
                 case 'q':
                     if (TryConsumeMatch(source, ref offset, "quarters") == false)
                         TryConsumeMatch(source, ref offset, "quarter");
-                    range.Quarters += duration;
+                    duration *= 3;
+                    AssertValidDurationInMonths(duration);
+                    range.Months += (int)duration;
                     return;
 
                 case 'y':
                     if (TryConsumeMatch(source, ref offset, "years") == false)
                         TryConsumeMatch(source, ref offset, "year");
-                    range.Years += duration;
+                    duration *= 12;
+                    AssertValidDurationInMonths(duration);
+                    range.Months += (int)duration;
                     return;
                 default:
                     throw new ArgumentException("Unable to understand time range: " + source.Substring(offset));
             }
         }
 
-        private bool TryConsumeMatch(string source, ref int offset, string additionalMatch)
+        private static void AssertValidDurationInMonths(long duration)
         {
-            if(new StringSegment(source, offset-1 , source.Length - offset -1).StartsWith(additionalMatch, StringComparison.OrdinalIgnoreCase))
+            if (duration > 120_000)
+                throw new ArgumentException("The specified range results in invalid range, cannoot have: " + duration + " months");
+        }
+
+        private static bool TryConsumeMatch(string source, ref int offset, string additionalMatch)
+        {
+            if (source.Length <= offset)
+                return false;
+
+            if(new StringSegment(source, offset-1 , source.Length - offset +1).StartsWith(additionalMatch, StringComparison.OrdinalIgnoreCase))
             {
                 offset += additionalMatch.Length-1;
                 return true;
@@ -199,13 +267,13 @@ namespace Raven.Server.Documents.Queries.AST
             return false;
         }
 
-        private int ParseNumber(string source, ref int offset)
+        private static long ParseNumber(string source, ref int offset)
         {
             int i;
             for (i= offset; i < source.Length; i++)
             {
-                if (char.IsWhiteSpace(source[i]))
-                    continue;
+                if (char.IsWhiteSpace(source[i]) == false)
+                    break;
             }
 
             for (; i < source.Length; i++)
@@ -216,7 +284,7 @@ namespace Raven.Server.Documents.Queries.AST
 
             fixed(char* s = source)
             {
-                if (int.TryParse(new ReadOnlySpan<char>(s + i, source.Length - i), out var amount) )
+                if (long.TryParse(new ReadOnlySpan<char>(s + offset, i), out var amount) )
                 {
                     offset = i;
                     return amount;
