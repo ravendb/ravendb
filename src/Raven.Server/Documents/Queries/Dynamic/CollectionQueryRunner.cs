@@ -192,8 +192,9 @@ namespace Raven.Server.Documents.Queries.Dynamic
 
         private unsafe void FillCountOfResultsAndIndexEtag(QueryResultServerSide<Document> resultToFill, QueryMetadata query, DocumentsOperationContext context)
         {
+            var bufferSize = 4;
             var collection = query.CollectionName;
-            var buffer = stackalloc long[3];
+            var buffer = stackalloc long[bufferSize];
 
             // If the query has include or load, it's too difficult to check the etags for just the included collections, 
             // it's easier to just show etag for all docs instead.
@@ -203,20 +204,21 @@ namespace Raven.Server.Documents.Queries.Dynamic
                 var numberOfDocuments = Database.DocumentsStorage.GetNumberOfDocuments(context);
                 buffer[0] = DocumentsStorage.ReadLastDocumentEtag(context.Transaction.InnerTransaction);
                 buffer[1] = DocumentsStorage.ReadLastTombstoneEtag(context.Transaction.InnerTransaction);
-                buffer[2] = numberOfDocuments;
+                buffer[2] = DocumentsStorage.ReadLastCountersEtag(context.Transaction.InnerTransaction);
+                buffer[3] = numberOfDocuments;
                 resultToFill.TotalResults = (int)numberOfDocuments;
             }
             else
             {
                 var collectionStats = Database.DocumentsStorage.GetCollection(collection, context);
-
                 buffer[0] = Database.DocumentsStorage.GetLastDocumentEtag(context, collection);
                 buffer[1] = Database.DocumentsStorage.GetLastTombstoneEtag(context, collection);
-                buffer[2] = collectionStats.Count;
+                buffer[2] = Database.DocumentsStorage.CountersStorage.GetLastCounterEtag(context, collection);
+                buffer[3] = collectionStats.Count;
                 resultToFill.TotalResults = (int)collectionStats.Count;
             }
 
-            resultToFill.ResultEtag = (long)Hashing.XXHash64.Calculate((byte*)buffer, sizeof(long) * 3);
+            resultToFill.ResultEtag = (long)Hashing.XXHash64.Calculate((byte*)buffer, sizeof(long) * (uint)bufferSize);
             resultToFill.NodeTag = Database.ServerStore.NodeTag;
         }
 

@@ -1762,5 +1762,24 @@ namespace Raven.Server.Documents
             var fst = context.Transaction.InnerTransaction.FixedTreeFor(fstIndex.Name, sizeof(long));
             return fst.NumberOfEntries;
         }
+
+        public long GetLastCounterEtag(DocumentsOperationContext context, string collection)
+        {
+            var collectionName = _documentsStorage.GetCollection(collection, throwIfDoesNotExist: false);
+            if (collectionName == null)
+                return 0;
+
+            var table = context.Transaction.InnerTransaction.OpenTable(CountersSchema, collectionName.GetTableName(CollectionTableType.CounterGroups));
+
+            // ReSharper disable once UseNullPropagation
+            if (table == null)
+                return 0;
+
+            var result = table.ReadLast(CountersSchema.FixedSizeIndexes[CollectionCountersEtagsSlice]);
+            if (result == null)
+                return 0;
+
+            return TableValueToEtag((int)CountersTable.Etag, ref result.Reader);
+        }
     }
 }
