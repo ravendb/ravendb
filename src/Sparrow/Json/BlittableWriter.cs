@@ -20,7 +20,7 @@ namespace Sparrow.Json
         private AllocatedMemoryData _innerBuffer;
         private int _position;
         private int _lastSize;
-        private int _docNo = -1;
+        private int _documentNumber = -1;
         public int Position => _position;
 
         public int SizeInBytes => _unmanagedWriteBuffer.SizeInBytes;
@@ -149,7 +149,7 @@ namespace Sparrow.Json
 
         public void Reset()
         {
-            _docNo = -1;
+            _documentNumber = -1;
             _unmanagedWriteBuffer.Dispose();
             if (_compressionBuffer != null)
             {
@@ -165,7 +165,7 @@ namespace Sparrow.Json
 
         public void ResetAndRenew()
         {
-            _docNo = -1;
+            _documentNumber = -1;
             _unmanagedWriteBuffer.Dispose();
             _unmanagedWriteBuffer = (TWriter)(object)_context.GetStream(_lastSize);
             _position = 0;
@@ -768,11 +768,11 @@ namespace Sparrow.Json
 
         internal void ThrowIfCachedPropertiesWereReset()
         {
-            if (_docNo == -1)
+            if (_documentNumber == -1)
             {
-                _docNo = _context.CachedProperties.DocNo;
+                _documentNumber = _context.CachedProperties.DocumentNumber;
             }
-            else if (_docNo != _context.CachedProperties.DocNo)
+            else if (_documentNumber != _context.CachedProperties.DocumentNumber)
             {
                 throw new InvalidOperationException($"The {_context.CachedProperties} were reset while building the document");
             }
