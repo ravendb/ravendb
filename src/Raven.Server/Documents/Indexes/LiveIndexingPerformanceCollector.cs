@@ -135,7 +135,7 @@ namespace Raven.Server.Documents.Indexes
             var indexInstance = Database.IndexStore.GetIndex(indexAndPerformanceStats.Handler);
             var latestStat = indexInstance?.GetLatestIndexingStat();
             if (latestStat != null)
-                indexAndPerformanceStats.Performance.Add(latestStat, CancellationToken);
+                indexAndPerformanceStats.Performance.Add(latestStat);
         }
 
         private class IndexAndPerformanceStatsList : HandlerAndPerformanceStatsList<string, IndexingStatsAggregator>
