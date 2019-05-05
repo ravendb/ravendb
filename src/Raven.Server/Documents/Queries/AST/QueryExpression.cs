@@ -281,32 +281,13 @@ namespace Raven.Server.Documents.Queries.AST
             }
         }
 
-        private static object True = true, False = false; // to avoid constant heap allocs
+        internal static object True = true, False = false; // to avoid constant heap allocs
         private static object GetValue(QueryExpression qe, BlittableJsonReaderObject value, BlittableJsonReaderObject queryParameters)
         {
             switch (qe)
             {
                 case ValueExpression ve:
-                    switch (ve.Value)
-                    {
-                        case ValueTokenType.Parameter:
-                            queryParameters.TryGetMember(ve.Token, out var r);
-                            return r;
-                        case ValueTokenType.Long:
-                            return QueryBuilder.ParseInt64WithSeparators(ve.Token.Value);
-                        case ValueTokenType.Double:
-                            return double.Parse(ve.Token.AsSpan(), NumberStyles.AllowThousands | NumberStyles.Float, CultureInfo.InvariantCulture);
-                        case ValueTokenType.String:
-                            return ve.Token;
-                        case ValueTokenType.True:
-                            return True;
-                        case ValueTokenType.False:
-                            return False;
-                        case ValueTokenType.Null:
-                            return null;
-                        default:
-                            throw new InvalidOperationException("Unknown ValueExpression value: " + ve.Value);
-                    }
+                    return ve.GetValue(queryParameters);
                 case FieldExpression fe:
                     BlittableJsonTraverser.Default.TryRead(value, fe.FieldValue, out var result, out var leftPath);
                     return result;
@@ -315,7 +296,7 @@ namespace Raven.Server.Documents.Queries.AST
             }
         }
 
-
+      
 
         private static object GetFieldValue(string value, ValueTokenType type, BlittableJsonReaderObject queryParameters)
         {

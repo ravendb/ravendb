@@ -4,6 +4,7 @@ using System.Collections.Generic;
 using System.Text;
 using Raven.Client.Exceptions;
 using Sparrow;
+using Raven.Server.Utils;
 
 namespace Raven.Server.Documents.Queries.AST
 {
@@ -104,7 +105,7 @@ namespace Raven.Server.Documents.Queries.AST
 
     public unsafe class TimeSeriesFunction
     {
-        public QueryExpression Between;
+        public BetweenExpression Between;
         public ValueExpression GroupBy;
         public List<(QueryExpression, StringSegment?)> Select;
 
@@ -294,4 +295,126 @@ namespace Raven.Server.Documents.Queries.AST
             throw new ArgumentException("Unable to parse: '" + source.Substring(offset) + "' as a number");
         }
     }
+
+
+    public struct TimeSeriesAggregation
+    {
+        public enum Type
+        {
+            Min,
+            Max,
+            Mean,
+            Avg,
+            First,
+            Last,
+            Median,
+            Sum,
+            Count,
+        }
+
+        public Type Aggregation;
+
+        private SortedList<double, Reference<long>> _list;
+
+        private double _val;
+        public long Count;
+
+        public void Init()
+        {
+            Count = 0;
+            _val = 0;
+            _list?.Clear();
+        }
+
+        public void Step(Span<double> values)
+        {
+            var val = values[0];
+             Count++;
+            switch (Aggregation)
+            {
+                case Type.Min:
+                    if (Count == 1)
+                        _val = val;
+                    else
+                        _val = Math.Min(_val, val);
+                    break;
+                case Type.Max:
+                    if (Count == 1)
+                        _val = val;
+                    else
+                        _val = Math.Max(_val, val);
+                    break;
+                case Type.Sum:
+                case Type.Avg:
+                case Type.Mean:
+                    _val += val;
+                    break;
+                case Type.Median:
+                    if (_list == null)
+                        _list = new SortedList<double, Reference<long>>();
+                    if(_list.TryGetValue(val, out var amount))
+                    {
+                        amount.Value++;
+                    }
+                    else
+                    {
+                        _list[val] = new Reference<long> { Value = 1 };
+                    }
+                    break;
+                case Type.First:
+                    if (Count == 1)
+                        _val = val;
+                    break;
+                case Type.Last:
+                    _val = val;
+                    break;
+                case Type.Count:
+                    break;
+                default:
+                    throw new ArgumentOutOfRangeException("Unknown aggregation operation: " + Aggregation);
+            }
+        }
+
+        public double GetFinalValue()
+        {
+            switch (Aggregation)
+            {
+                case Type.Min:
+                case Type.Max:
+                case Type.First:
+                case Type.Last:
+                    return _val;
+                case Type.Median:
+                    var mid = Count / 2;
+                    var even = Count % 2 == 0;
+                    long soFar = 0;
+                    for (int i = 0; i < _list.Count; i++)
+                    {
+                        soFar += _list.Values[i].Value;
+                        if(soFar > mid || even && soFar == mid)
+                        {
+                            if(even)
+                            {
+                                return (_list.Keys[i] + _list.Keys[i+1]) / 2;
+                            }
+                            return _list.Keys[i];
+                        }
+                    }
+                    throw new ArgumentException("This should never be reached");
+
+                case Type.Count:
+                    return Count;
+                case Type.Sum:
+                    return _val;
+                case Type.Mean:
+                case Type.Avg:
+                    if (Count == 0)
+                        return double.NaN;
+                    return _val / Count;
+                default:
+                    throw new ArgumentOutOfRangeException("Unknown aggregation operation: " + Aggregation);
+            }
+        }
+    }
+
 }

@@ -20,6 +20,8 @@ namespace Raven.Server.Documents.Includes
 
         private HashSet<string> _idsToIgnore;
 
+        public DocumentsOperationContext Context => _context;
+
         public IncludeDocumentsCommand(DocumentsStorage storage, DocumentsOperationContext context, string[] includes, bool isProjection)
         {
             _storage = storage;

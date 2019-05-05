@@ -1,4 +1,7 @@
 using Sparrow;
+using System.Globalization;
+using Microsoft.Extensions.Primitives;
+using Sparrow.Json;
 
 namespace Raven.Server.Documents.Queries.AST
 {
@@ -36,5 +39,30 @@ namespace Raven.Server.Documents.Queries.AST
 
             return Token == ve.Token && Value == ve.Value;
         }
+
+        public object GetValue(BlittableJsonReaderObject queryParameters)
+        {
+            switch (Value)
+            {
+                case ValueTokenType.Parameter:
+                    queryParameters.TryGetMember(Token, out var r);
+                    return r;
+                case ValueTokenType.Long:
+                    return QueryBuilder.ParseInt64WithSeparators(Token.Value);
+                case ValueTokenType.Double:
+                    return double.Parse(Token.AsSpan(), NumberStyles.AllowThousands | NumberStyles.Float, CultureInfo.InvariantCulture);
+                case ValueTokenType.String:
+                    return Token;
+                case ValueTokenType.True:
+                    return QueryExpressionExtensions.True;
+                case ValueTokenType.False:
+                    return QueryExpressionExtensions.False;
+                case ValueTokenType.Null:
+                    return null;
+                default:
+                    throw new InvalidOperationException("Unknown ValueExpression value: " + Value);
+            }
+        }
+
     }
 }

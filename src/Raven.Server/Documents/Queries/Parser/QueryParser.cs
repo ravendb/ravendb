@@ -1944,9 +1944,8 @@ namespace Raven.Server.Documents.Queries.Parser
             return false;
         }
 
-        private QueryExpression ReadBetweenExpression(FieldExpression field)
+        private BetweenExpression ReadBetweenExpression(FieldExpression field)
         {
-            QueryExpression op;
             if (Value(out var fst) == false)
                 ThrowParseException("parsing Between, expected value (1st)");
             if (Scanner.TryScan("AND") == false)
@@ -1958,8 +1957,7 @@ namespace Raven.Server.Documents.Queries.Parser
                 ThrowQueryException(
                     $"Invalid Between expression, values must have the same type but got {fst.Type} and {snd.Type}");
 
-            op = new BetweenExpression(field, fst, snd);
-            return op;
+            return new BetweenExpression(field, fst, snd);
         }
 
         private bool Method(FieldExpression field, out MethodExpression op)
