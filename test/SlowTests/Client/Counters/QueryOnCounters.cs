@@ -3366,6 +3366,104 @@ from Users as user select output(user)", query.ToString());
             }
         }
 
+        [Fact]
+        public void CountersShouldBeCachedOnCollection()
+        {
+            using (var store = GetDocumentStore())
+            {
+                using (var session = store.OpenSession())
+                {
+                    session.Store(new Order
+                    {
+                        Company = "companies/1-A"
+                    }, "orders/1-A");
+                    session.CountersFor("orders/1-A").Increment("Downloads", 100);
+                    session.SaveChanges();
+                }
+
+                using (var session = store.OpenSession())
+                {
+                    session.Query<Order>().Include(i => i.IncludeCounter("Downloads")).ToList();
+                    var counterValue = session.CountersFor("orders/1-A").Get("Downloads");
+                    Assert.Equal(100, counterValue);
+
+                    session.CountersFor("orders/1-A").Increment("Downloads", 200);
+                    session.SaveChanges();
+
+                    session.Query<Order>().Include(i => i.IncludeCounters(new[] { "Downloads" })).ToList();
+                    counterValue = session.CountersFor("orders/1-A").Get("Downloads");
+                    Assert.Equal(300, counterValue);
+
+                    session.CountersFor("orders/1-A").Increment("Downloads", 200);
+                    session.SaveChanges();
+
+                    session.Query<Order>().Include(i => i.IncludeAllCounters());
+                    counterValue = session.CountersFor("orders/1-A").Get("Downloads");
+                    Assert.Equal(500, counterValue);
+                }
+
+                using (var session = store.OpenSession())
+                {
+                    session.Load<Order>("orders/1-A", i => i.IncludeCounter("Downloads"));
+                    var counterValue = session.CountersFor("orders/1-A").Get("Downloads");
+                    Assert.Equal(500, counterValue);
+
+                    session.CountersFor("orders/1-A").Increment("Downloads", 200);
+                    session.SaveChanges();
+
+                    session.Load<Order>("orders/1-A", i => i.IncludeCounters(new [] { "Downloads" }));
+                    counterValue = session.CountersFor("orders/1-A").Get("Downloads");
+                    Assert.Equal(700, counterValue);
+                }
+            }
+        }
+
+        [Fact]
+        public void CountersShouldBeCachedOnAllDocsCollection()
+        {
+            using (var store = GetDocumentStore())
+            {
+                using (var session = store.OpenSession())
+                {
+                    session.Store(new Order
+                    {
+                        Company = "companies/1-A"
+                    }, "orders/1-A");
+                    session.CountersFor("orders/1-A").Increment("Downloads", 100);
+                    session.SaveChanges();
+                }
+
+                using (var session = store.OpenSession())
+                {
+                    session.Advanced
+                        .RawQuery<dynamic>("from @all_docs include counters($p0)")
+                        .AddParameter("p0", new[] { "Downloads" })
+                        .ToList();
+
+                    var counterValue = session.CountersFor("orders/1-A").Get("Downloads");
+                    Assert.Equal(100, counterValue);
+
+                    session.CountersFor("orders/1-A").Increment("Downloads", 200);
+                    session.SaveChanges();
+
+                    session.Advanced.RawQuery<dynamic>("from @all_docs include counters()").ToList();
+                    counterValue = session.CountersFor("orders/1-A").Get("Downloads");
+                    Assert.Equal(300, counterValue);
+
+                    session.CountersFor("orders/1-A").Increment("Downloads", 200);
+                    session.SaveChanges();
+
+                    session.Advanced
+                        .RawQuery<dynamic>("from @all_docs include counters($p0)")
+                        .AddParameter("p0", new[] { "Downloads" })
+                        .ToList();
+
+                    counterValue = session.CountersFor("orders/1-A").Get("Downloads");
+                    Assert.Equal(500, counterValue);
+                }
+            }
+        }
+
         private class User
         {
             public string Name { get; set; }
