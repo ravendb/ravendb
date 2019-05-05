@@ -38,7 +38,20 @@ namespace Raven.Client.Documents.Queries.Suggestions
         protected override IndexQuery GetIndexQuery(bool isAsync)
         {
             var inspector = (IRavenQueryInspector)_source;
-            return inspector.GetIndexQuery(isAsync);
+            var provider = (RavenQueryProvider<T>)_source.Provider;
+
+            if (isAsync == false)
+            {
+                var documentQuery = ((RavenQueryInspector<T>)inspector).GetDocumentQuery();
+                provider.AfterQueryExecuted(documentQuery.InvokeAfterQueryExecuted);
+
+                return documentQuery.GetIndexQuery();
+            }
+
+            var asyncDocumentQuery = ((RavenQueryInspector<T>)inspector).GetAsyncDocumentQuery();
+            provider.AfterQueryExecuted(asyncDocumentQuery.InvokeAfterQueryExecuted);
+
+            return asyncDocumentQuery.GetIndexQuery();
         }
 
         protected override void InvokeAfterQueryExecuted(QueryResult result)
