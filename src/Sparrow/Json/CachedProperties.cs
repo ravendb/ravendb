@@ -347,7 +347,7 @@ namespace Sparrow.Json
         }
 
         private bool _hasDuplicates;
-        internal int DocNo { get; private set; }
+        internal int DocumentNumber { get; private set; }
 
         public LazyStringValue GetProperty(int index)
         {
@@ -356,7 +356,7 @@ namespace Sparrow.Json
 
         public void NewDocument()
         {
-            DocNo++;
+            DocumentNumber++;
             PropertiesDiscovered = 0;
         }
     }
