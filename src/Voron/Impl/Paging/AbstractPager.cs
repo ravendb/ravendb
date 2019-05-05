@@ -370,14 +370,43 @@ namespace Voron.Impl.Paging
 
         protected abstract void DisposeInternal();
 
-        public virtual void Dispose()
+        public void Dispose()
         {
             DisposeOnceRunner.Dispose();
+            GC.SuppressFinalize(this);
         }
 
         ~AbstractPager()
         {
-            DisposeOnceRunner.Dispose();
+            // Should not reach here (GC.SuppressFinalize was called from must to be called 'Dispose')
+            try
+            {
+                DisposeOnceRunner.Dispose();
+            }
+            catch (Exception e)
+            {
+                try
+                {
+                    if (Log.IsInfoEnabled)
+                        Log.Info("AbstractPager finalizer was called (leak?), and 'DisposeOnceRunner.Dispose' threw exception", e);
+                }
+                catch
+                {
+                    // ignore
+                }
+            }
+            finally
+            {
+                try
+                {
+                    if (Log.IsInfoEnabled)
+                        Log.Info("AbstractPager finalizer was called although GC.SuppressFinalize should have been called", new InvalidOperationException("Leak in "));
+                }
+                catch
+                {
+                    // ignore
+                }
+            }
         }
 
         protected internal abstract PagerState AllocateMorePages(long newLength);
