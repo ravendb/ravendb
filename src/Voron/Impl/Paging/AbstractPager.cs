@@ -16,11 +16,14 @@ using Voron.Exceptions;
 using Voron.Global;
 using Voron.Platform.Win32;
 using Voron.Util.Settings;
+using Sparrow.Logging;
 
 namespace Voron.Impl.Paging
 {
     public abstract unsafe class AbstractPager : IDisposable, ILowMemoryHandler
     {
+        public readonly Logger Log = LoggingSource.Instance.GetLogger<AbstractPager>("AbstractPager");
+
         private readonly StorageEnvironmentOptions _options;
 
         public static ConcurrentDictionary<string, uint> PhysicalDrivePerMountCache = new ConcurrentDictionary<string, uint>();
