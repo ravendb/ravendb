@@ -82,7 +82,7 @@ namespace Sparrow.Logging
         public LogMode LogMode { get; private set; }
         public TimeSpan RetentionTime { get; private set; }
         public long RetentionSize { get; private set; }
-        public bool Compress => _compressLoggingThread != null;
+        public bool Compressing => _compressLoggingThread != null;
 
         private LogMode _oldLogMode;
 
@@ -95,7 +95,7 @@ namespace Sparrow.Logging
                 if (_listeners.IsEmpty)
                 {
                     _oldLogMode = LogMode;
-                    SetupLogMode(LogMode.Information, _path, RetentionTime, RetentionSize, Compress);
+                    SetupLogMode(LogMode.Information, _path, RetentionTime, RetentionSize, Compressing);
                 }
                 if (_listeners.TryAdd(source, context) == false)
                     throw new InvalidOperationException("Socket was already added?");
@@ -167,7 +167,7 @@ namespace Sparrow.Logging
         {
             lock (this)
             {
-                if (LogMode == logMode && path == _path && retentionTime == RetentionTime && compress == Compress)
+                if (LogMode == logMode && path == _path && retentionTime == RetentionTime && compress == Compressing)
                     return;
                 LogMode = logMode;
                 _path = path;
@@ -245,7 +245,7 @@ namespace Sparrow.Logging
             _compressLoggingThread?.Join();
         }
 
-        private FileStream GetNewStream(long maxFileSize)
+        private bool GetNewStream(long maxFileSize, out FileStream fileStream)
         {
             string[] logFiles;
             string[] logGzFiles;
@@ -257,7 +257,8 @@ namespace Sparrow.Logging
             catch (Exception)
             {
                 // Something went wrong we will try again later
-                return null;
+                fileStream = null;
+                return false;
             }
             Array.Sort(logFiles);
             Array.Sort(logGzFiles);
@@ -286,9 +287,9 @@ namespace Sparrow.Logging
                     continue;
 
                 LimitLogSize(logFiles, logGzFiles);
-                var fileStream = SafeFileStream.Create(fileName, FileMode.Append, FileAccess.Write, FileShare.Read, 32 * 1024, false);
+                fileStream = SafeFileStream.Create(fileName, FileMode.Append, FileAccess.Write, FileShare.Read, 32 * 1024, false);
                 fileStream.Write(_headerRow, 0, _headerRow.Length);
-                return fileStream;
+                return true;
             }
         }
 
@@ -298,10 +299,11 @@ namespace Sparrow.Logging
             var logGzFilesInfo = logGzFiles.Select(f => new FileInfo(f));
             var totalLogSize = logFilesInfo.Sum(i => i.Length) + logGzFilesInfo.Sum(i => i.Length);
 
-            foreach (var log in logGzFilesInfo.Reverse())
+            foreach (var log in logFilesInfo.Reverse())
             {
                 if (totalLogSize > RetentionSize)
                 {
+                    var fileSize = log.Length;
                     try
                     {
                         log.Delete();
@@ -311,6 +313,7 @@ namespace Sparrow.Logging
                         // Something went wrong we will try again later
                         continue;
                     }
+                    totalLogSize -= fileSize;
                 }
                 else
                 {
@@ -318,10 +321,11 @@ namespace Sparrow.Logging
                 }
             }
 
-            foreach (var log in logFilesInfo.Reverse())
+            foreach (var log in logGzFilesInfo.Reverse())
             {
                 if (totalLogSize > RetentionSize)
                 {
+                    var fileSize = log.Length;
                     try
                     {
                         log.Delete();
@@ -331,6 +335,8 @@ namespace Sparrow.Logging
                         // Something went wrong we will try again later
                         continue;
                     }
+
+                    totalLogSize -= fileSize;
                 }
                 else
                 {
@@ -551,16 +557,15 @@ namespace Sparrow.Logging
                     try
                     {
                         var maxFileSize = MaxFileSizeInBytes;
-                        using (var currentFile = GetNewStream(maxFileSize))
+                        if (GetNewStream(maxFileSize, out var currentFile) == false)
                         {
-                            if (currentFile == null)
-                            {
-                                if (_keepLogging == false)
-                                    return;
-                                _hasEntries.Wait();
-                                continue;
-                            }
-
+                            if (_keepLogging == false)
+                                return;
+                            _hasEntries.Wait();
+                            continue;
+                        }
+                        using (currentFile)
+                        {
                             var sizeWritten = 0;
 
                             var foundEntry = true;
@@ -857,7 +862,7 @@ namespace Sparrow.Logging
             {
                 if (_listeners.IsEmpty)
                 {
-                    SetupLogMode(_oldLogMode, _path, RetentionTime, RetentionSize, Compress);
+                    SetupLogMode(_oldLogMode, _path, RetentionTime, RetentionSize, Compressing);
                 }
             }
         }

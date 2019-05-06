@@ -692,6 +692,7 @@ namespace Raven.Server.ServerWide
             // we have to do this manually because LoggingSource will ignore errors
             AssertCanWriteToAuditLogDirectory();
 
+            LoggingSource.AuditLog.MaxFileSizeInBytes = Configuration.Logs.MaxFileSize.GetValue(SizeUnit.Bytes);
             LoggingSource.AuditLog.SetupLogMode(
                 LogMode.Information,
                 Configuration.Security.AuditLogPath.FullPath,
