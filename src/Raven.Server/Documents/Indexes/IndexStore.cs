@@ -437,7 +437,7 @@ namespace Raven.Server.Documents.Indexes
 
             ValidateStaticIndex(definition);
 
-            var command = new PutIndexCommand(definition, _documentDatabase.Name, source, DateTime.UtcNow);
+            var command = new PutIndexCommand(definition, _documentDatabase.Name, source, _documentDatabase.Time.GetUtcNow());
 
             long index = 0;
             try

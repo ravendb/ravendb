@@ -133,7 +133,7 @@ namespace Raven.Server.Smuggler.Documents
             {
                 if (_batch != null)
                 {
-                    _batch.AddIndex(indexDefinition, _source, DateTime.UtcNow);
+                    _batch.AddIndex(indexDefinition, _source, _database.Time.GetUtcNow());
                     return;
                 }
 
@@ -144,14 +144,14 @@ namespace Raven.Server.Smuggler.Documents
             {
                 if (_batch != null)
                 {
-                    _batch.AddIndex(indexDefinition, _source, DateTime.UtcNow);
+                    _batch.AddIndex(indexDefinition, _source, _database.Time.GetUtcNow());
                     return;
                 }
 
                 AsyncHelpers.RunSync(() => _database.IndexStore.CreateIndex(indexDefinition, _source));
             }
 
-            private const string _source = "From smuggler";
+            private const string _source = "Smuggler";
 
             public void Dispose()
             {

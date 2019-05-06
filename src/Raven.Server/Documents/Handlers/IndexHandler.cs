@@ -11,6 +11,7 @@ using Raven.Client.Documents.Indexes;
 using Raven.Client.Exceptions;
 using Raven.Client.Exceptions.Documents.Indexes;
 using Raven.Client.Extensions;
+using Raven.Client.ServerWide;
 using Raven.Server.Documents.Indexes;
 using Raven.Server.Documents.Indexes.Debugging;
 using Raven.Server.Documents.Indexes.Errors;
@@ -99,6 +100,47 @@ namespace Raven.Server.Documents.Handlers
                 });
             }
 
+            return Task.CompletedTask;
+        }
+
+        [RavenAction("/databases/*/indexes/history", "GET", AuthorizationStatus.ValidUser)]
+        public Task GetIndexHistory()
+        {
+            var name = GetQueryStringValueAndAssertIfSingleAndNotEmpty("name");
+            var record = Database.ReadDatabaseRecord();
+            List<IndexHistoryEntry> history;
+            if (record.IndexesHistory.TryGetValue(name, out history) == false || history == null || history.Count  == 0) 
+            {
+                throw new InvalidOperationException("Could not find an history for index: " + name);
+            }
+            using (ContextPool.AllocateOperationContext(out JsonOperationContext context))
+            using (var writer = new BlittableJsonTextWriter(context, ResponseBodyStream()))
+            {
+                writer.WriteStartObject();
+                writer.WritePropertyName("Index");
+                writer.WriteString(name);
+                writer.WriteComma();
+
+                writer.WriteArray(context, "History", history, (w, c, entry) =>
+                {
+                    w.WriteStartObject();
+
+                    w.WritePropertyName(nameof(IndexHistoryEntry.Definition));
+                    w.WriteIndexDefinition(c, entry.Definition);
+                    w.WriteComma();
+
+                    w.WritePropertyName(nameof(IndexHistoryEntry.CreatedAt));
+                    w.WriteDateTime(entry.CreatedAt, isUtc:true);
+                    w.WriteComma();
+
+                    w.WritePropertyName(nameof(IndexHistoryEntry.Source));
+                    w.WriteString(entry.Source);
+                    w.WriteEndObject();
+                   
+                });
+
+                writer.WriteEndObject();
+            }
             return Task.CompletedTask;
         }
 
