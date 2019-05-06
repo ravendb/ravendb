@@ -130,11 +130,12 @@ namespace Raven.Server.Documents.Queries.AST
 
                 if(Months != 0)
                 {
-                    var numberOfMonths = (timestamp.Year * 12 + timestamp.Month);
-                    var rounded = numberOfMonths - (numberOfMonths % Months);
-                    var years = rounded / 12;
-                    var remainingMonths = (rounded % 12);
-                    return new DateTime(years, remainingMonths, 1, 0, 0, 0, timestamp.Kind);
+                    var yearsPortion = Math.Max(1, Months / 12);
+                    var monthsRemaining = Months % 12;
+                    var year = timestamp.Year - (timestamp.Year % yearsPortion);
+                    int month = monthsRemaining == 0 ? 1 : ((timestamp.Month - 1) / monthsRemaining * monthsRemaining) + 1;
+
+                    return new DateTime(year, month, 1, 0, 0, 0, timestamp.Kind);
                 }
                 return timestamp;
             }
@@ -177,6 +178,9 @@ namespace Raven.Server.Documents.Queries.AST
 
         private static void ParseRange(string source, ref int offset, ref RangeGroup range, long duration)
         {
+            if (offset >= source.Length)
+                throw new ArgumentException("Unable to find range specification in: " + source);
+
             while (char.IsWhiteSpace(source[offset]) && offset < source.Length)
             {
                 offset++;
