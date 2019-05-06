@@ -358,12 +358,12 @@ from Orders as o load o.Company as __alias0 select output(o, __alias0)", query.T
                                     Employee = include.FirstName
                                 };
                     RavenTestHelper.AssertEqualRespectingNewLines(
-@"declare function output(o, __alias0, __alias1) {
+@"declare function output(o, __alias0) {
 	var update = __alias0;
-	var include = __alias1;
+	var include = load(o.Employee);
 	return { Company : update.Name, Employee : include.FirstName };
 }
-from Orders as o load o.Company as __alias0, o.Employee as __alias1 select output(o, __alias0, __alias1)"
+from Orders as o load o.Company as __alias0 select output(o, __alias0)"
                 , query.ToString());
 
                     var result = query.ToList();
@@ -533,11 +533,12 @@ from Orders as o select output(o)", query.ToString());
                                     Employees = var.Select(e => e.FirstName).ToList()
                                 };
                     RavenTestHelper.AssertEqualRespectingNewLines(
-@"declare function output(o, _function, _var) {
+@"declare function output(o, _function) {
 	var _super = _function.AccountsReceivable;
+	var _var = load(_function.EmployeesIds);
 	return { Company : _function, Number : _super, Employees : _var.map(function(e){return e.FirstName;}) };
 }
-from Orders as o load o.Company as _function, _function.EmployeesIds as _var[] select output(o, _function, _var)", query.ToString());
+from Orders as o load o.Company as _function select output(o, _function)", query.ToString());
 
                     var result = query.ToList();
 

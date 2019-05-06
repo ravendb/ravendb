@@ -754,11 +754,13 @@ from Users as u select output(u)", query.ToString());
                         };
 
                     RavenTestHelper.AssertEqualRespectingNewLines(
-@"declare function output(u, detail, friend) {
+@"declare function output(u) {
 	var format = function(user){return user.Name+"" ""+user.LastName;};
+	var detail = load(u.DetailId);
+	var friend = load(u.FriendId);
 	return { FullName : format(u), Friend : format(friend), Detail : detail.Number };
 }
-from Users as u where u.Name != $p0 load u.DetailId as detail, u.FriendId as friend select output(u, detail, friend)",
+from Users as u where u.Name != $p0 select output(u)",
                         query.ToString());
 
                     var queryResult = query.ToList();
@@ -801,11 +803,13 @@ from Users as u where u.Name != $p0 load u.DetailId as detail, u.FriendId as fri
                                 };
 
                     RavenTestHelper.AssertEqualRespectingNewLines(
-@"declare function output(u, detail, friend) {
+@"declare function output(u) {
 	var format = function(user){return user.Name+"" ""+user.LastName;};
+	var detail = load(u.DetailId);
+	var friend = load(u.FriendId);
 	return { FullName : format(u), Friend : format(friend), Detail : detail.Number };
 }
-from Users as u where u.Name != $p0 load u.DetailId as detail, u.FriendId as friend select output(u, detail, friend)",
+from Users as u where u.Name != $p0 select output(u)",
                         query.ToString());
 
                     var queryResult = await query.ToListAsync();
@@ -845,11 +849,12 @@ from Users as u where u.Name != $p0 load u.DetailId as detail, u.FriendId as fri
                                 };
 
                     RavenTestHelper.AssertEqualRespectingNewLines(
-@"declare function output(u, detail) {
+@"declare function output(u) {
 	var format = function(user){return user.Name+"" ""+u.LastName;};
+	var detail = load(u.DetailId);
 	return { FullName : format(u), DetailNumber : detail.Number };
 }
-from Users as u load u.DetailId as detail select output(u, detail)", query.ToString());
+from Users as u select output(u)", query.ToString());
 
                     var queryResult = query.ToList();
 
@@ -892,11 +897,12 @@ from Users as u load u.DetailId as detail select output(u, detail)", query.ToStr
                                 };
 
                     RavenTestHelper.AssertEqualRespectingNewLines(
-@"declare function output(u, detail) {
+@"declare function output(u) {
 	var format = function(user){return user.Name+"" ""+u.LastName;};
+	var detail = load(u.DetailId);
 	return { FullName : format(u), DetailNumber : detail.Number };
 }
-from Users as u load u.DetailId as detail select output(u, detail)", query.ToString());
+from Users as u select output(u)", query.ToString());
 
                     var queryResult = await query.ToListAsync();
 
@@ -1127,12 +1133,13 @@ from Users as u load u.DetailId as detail select output(u, detail)", query.ToStr
                                 };
 
                     RavenTestHelper.AssertEqualRespectingNewLines(
-@"declare function output(u, detail) {
+@"declare function output(u) {
 	var last = u.LastName;
 	var format = function(user){return user.Name+"" ""+last;};
+	var detail = load(u.DetailId);
 	return { FullName : format(u), DetailNumber : detail.Number };
 }
-from Users as u where (u.Name = $p0) and (u.IsActive = $p1) order by LastName desc load u.DetailId as detail select output(u, detail)", query.ToString());
+from Users as u where (u.Name = $p0) and (u.IsActive = $p1) order by LastName desc select output(u)", query.ToString());
 
                     var queryResult = query.ToList();
 
@@ -1175,12 +1182,13 @@ from Users as u where (u.Name = $p0) and (u.IsActive = $p1) order by LastName de
                                 };
 
                     RavenTestHelper.AssertEqualRespectingNewLines(
-@"declare function output(u, detail) {
+@"declare function output(u) {
 	var last = u.LastName;
 	var format = function(user){return user.Name+"" ""+last;};
+	var detail = load(u.DetailId);
 	return { FullName : format(u), DetailNumber : detail.Number };
 }
-from Users as u where (u.Name = $p0) and (u.IsActive = $p1) order by LastName desc load u.DetailId as detail select output(u, detail)", query.ToString());
+from Users as u where (u.Name = $p0) and (u.IsActive = $p1) order by LastName desc select output(u)", query.ToString());
 
                     var queryResult = await query.ToListAsync();
 
@@ -1471,12 +1479,12 @@ from Users as u select output(u)", query.ToString());
                                 };
 
                     RavenTestHelper.AssertEqualRespectingNewLines(
-@"declare function output(u, _doc_0, _docs_1) {
+@"declare function output(u, _doc_0) {
 	var friend = _doc_0.Name;
-	var details = _docs_1.map(function(x){return x.Number;});
+	var details = load(u.DetailIds).map(function(x){return x.Number;});
 	return { FullName : u.Name+"" ""+u.LastName, Friend : friend, Details : details };
 }
-from Users as u load u.FriendId as _doc_0, u.DetailIds as _docs_1[] select output(u, _doc_0, _docs_1)", query.ToString());
+from Users as u load u.FriendId as _doc_0 select output(u, _doc_0)", query.ToString());
 
                     var queryResult = query.ToList();
                     Assert.Equal(2, queryResult.Count);
