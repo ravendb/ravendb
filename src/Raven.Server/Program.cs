@@ -82,7 +82,6 @@ namespace Raven.Server
 
             LoggingSource.UseUtcTime = configuration.Logs.UseUtcTime;
             LoggingSource.Instance.MaxFileSizeInBytes = configuration.Logs.MaxFileSize.GetValue(SizeUnit.Bytes);
-            LoggingSource.AuditLog.MaxFileSizeInBytes = configuration.Logs.MaxFileSize.GetValue(SizeUnit.Bytes);
             LoggingSource.Instance.SetupLogMode(
                 configuration.Logs.Mode, 
                 configuration.Logs.Path.FullPath, 
