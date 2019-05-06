@@ -1022,7 +1022,11 @@ namespace Raven.Server.Documents.Revisions
 
         public IEnumerable<(Document previous, Document current)> GetRevisionsFrom(DocumentsOperationContext context, CollectionName collectionName, long etag, int take)
         {
-            var table = EnsureRevisionTableCreated(context.Transaction.InnerTransaction, collectionName);
+            var tableName = collectionName.GetTableName(CollectionTableType.Revisions);
+            var table = context.Transaction.InnerTransaction.OpenTable(RevisionsSchema, tableName);
+            if (table == null)
+                yield break;
+
             var docsSchemaIndex = RevisionsSchema.Indexes[IdAndEtagSlice];
 
             foreach (var tvr in table.SeekForwardFrom(RevisionsSchema.FixedSizeIndexes[CollectionRevisionsEtagsSlice], etag, 0))
