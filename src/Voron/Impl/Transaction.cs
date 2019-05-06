@@ -66,6 +66,9 @@ namespace Voron.Impl
 
             if (_trees.TryGetValue(treeName, out var tree))
             {
+                if (tree == null)
+                    return null;
+
                 if (newPageAllocator == null)
                     return tree;
 
@@ -236,8 +239,7 @@ namespace Voron.Impl
         {
             EnsureTrees();
 
-            Tree value;
-            if (_trees.TryGetValue(name, out value) && value != null)
+            if (_trees.TryGetValue(name, out Tree value) && value != null)
             {
                 throw new InvalidOperationException("Tree already exists: " + name);
             }

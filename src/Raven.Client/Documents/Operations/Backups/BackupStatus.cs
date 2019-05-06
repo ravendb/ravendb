@@ -143,8 +143,15 @@ namespace Raven.Client.Documents.Operations.Backups
         public void ChangeState(UploadState newState)
         {
             UploadState = newState;
-            if (newState == UploadState.Done)
-                _sw.Stop();
+            switch (newState)
+            {
+                case UploadState.PendingUpload:
+                    _sw.Restart();
+                    break;
+                case UploadState.Done:
+                    _sw.Stop();
+                    break;
+            }
         }
 
         public void SetTotal(long totalLength)

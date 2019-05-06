@@ -2,8 +2,10 @@
 using System.Collections.Concurrent;
 using System.Threading;
 using System.Threading.Tasks;
+using FastTests.Client;
 using FastTests.Client.Subscriptions;
 using Raven.Client.Documents.Operations;
+using Raven.Client.Documents.Operations.OngoingTasks;
 using Raven.Client.Documents.Subscriptions;
 using Raven.Client.Exceptions.Documents.Subscriptions;
 using Sparrow.Server;
@@ -314,6 +316,20 @@ namespace SlowTests.Client.Subscriptions
                         Assert.False(takingOverSubscriptionList.TryTake(out thing));
                     }
                 }
+            }
+        }
+
+        [Fact]
+        public void CanDisableSubscription()
+        {
+            using (var store = GetDocumentStore())
+            {
+                string s = store.Subscriptions.Create<Query.Order>();
+                var ongoingTask = (OngoingTaskSubscription)store.Maintenance.Send(new GetOngoingTaskInfoOperation(s, OngoingTaskType.Subscription));
+                Assert.False(ongoingTask.Disabled);
+                store.Maintenance.Send(new ToggleOngoingTaskStateOperation(ongoingTask.TaskId, OngoingTaskType.Subscription, true));
+                ongoingTask = (OngoingTaskSubscription)store.Maintenance.Send(new GetOngoingTaskInfoOperation(s, OngoingTaskType.Subscription));
+                Assert.True(ongoingTask.Disabled);
             }
         }
     }
