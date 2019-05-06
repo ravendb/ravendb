@@ -228,6 +228,8 @@ namespace Raven.Client.Documents.Linq
             _afterQueryExecuted = afterQueryExecutedCallback;
         }
 
+        internal Action<QueryResult> AfterQueryExecutedCallback => _afterQueryExecuted;
+
         public void InvokeAfterQueryExecuted(QueryResult result)
         {
             _afterQueryExecuted?.Invoke(result);
