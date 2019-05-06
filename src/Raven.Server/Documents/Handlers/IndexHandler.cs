@@ -108,11 +108,14 @@ namespace Raven.Server.Documents.Handlers
         {
             var name = GetQueryStringValueAndAssertIfSingleAndNotEmpty("name");
             var record = Database.ReadDatabaseRecord();
-            List<IndexHistoryEntry> history;
-            if (record.IndexesHistory.TryGetValue(name, out history) == false || history == null || history.Count  == 0) 
+            List<IndexHistoryEntry> history = null;
+            if (record?.IndexesHistory.TryGetValue(name, out history) == false) 
             {
-                throw new InvalidOperationException("Could not find an history for index: " + name);
+                HttpContext.Response.StatusCode = (int)HttpStatusCode.NotFound;
+                return Task.CompletedTask;
             }
+
+            
             using (ContextPool.AllocateOperationContext(out JsonOperationContext context))
             using (var writer = new BlittableJsonTextWriter(context, ResponseBodyStream()))
             {
@@ -120,6 +123,14 @@ namespace Raven.Server.Documents.Handlers
                 writer.WritePropertyName("Index");
                 writer.WriteString(name);
                 writer.WriteComma();
+
+                if (history == null || history.Count == 0)
+                {
+                    writer.WriteStartArray();
+                    writer.WriteEndArray();
+                    writer.WriteEndObject();
+                    return Task.CompletedTask;
+                }
 
                 writer.WriteArray(context, "History", history, (w, c, entry) =>
                 {
