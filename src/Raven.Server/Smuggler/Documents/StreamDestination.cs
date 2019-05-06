@@ -845,17 +845,20 @@ namespace Raven.Server.Smuggler.Documents
 
             public void WriteKeyValue(string key, BlittableJsonReaderObject value)
             {
-                if (First == false)
-                    Writer.WriteComma();
-                First = false;
+                using (value)
+                {
+                    if (First == false)
+                        Writer.WriteComma();
+                    First = false;
 
-                Writer.WriteStartObject();
-                Writer.WritePropertyName("Key");
-                Writer.WriteString(key);
-                Writer.WriteComma();
-                Writer.WritePropertyName("Value");
-                Writer.WriteString(value.ToString());
-                Writer.WriteEndObject();
+                    Writer.WriteStartObject();
+                    Writer.WritePropertyName("Key");
+                    Writer.WriteString(key);
+                    Writer.WriteComma();
+                    Writer.WritePropertyName("Value");
+                    Writer.WriteString(value.ToString());
+                    Writer.WriteEndObject();
+                }
             }
 
             public void WriteTombstoneKey(string key)
