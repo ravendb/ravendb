@@ -580,24 +580,27 @@ namespace Raven.Server.Smuggler.Documents
             {
                 CountersStorage.ConvertFromBlobToNumbers(_context, counterDetail);
 
-                if (First == false)
+                using (counterDetail.Values)
+                {
+                    if (First == false)
+                        Writer.WriteComma();
+                    First = false;
+
+                    Writer.WriteStartObject();
+
+                    Writer.WritePropertyName(nameof(CounterItem.DocId));
+                    Writer.WriteString(counterDetail.DocumentId, skipEscaping: true);
                     Writer.WriteComma();
-                First = false;
 
-                Writer.WriteStartObject();
+                    Writer.WritePropertyName(nameof(CounterItem.ChangeVector));
+                    Writer.WriteString(counterDetail.ChangeVector, skipEscaping: true);
+                    Writer.WriteComma();
 
-                Writer.WritePropertyName(nameof(CounterItem.DocId));
-                Writer.WriteString(counterDetail.DocumentId, skipEscaping: true);
-                Writer.WriteComma();
+                    Writer.WritePropertyName(nameof(CounterItem.Batch.Values));
+                    Writer.WriteObject(counterDetail.Values);
 
-                Writer.WritePropertyName(nameof(CounterItem.ChangeVector));
-                Writer.WriteString(counterDetail.ChangeVector, skipEscaping: true);
-                Writer.WriteComma();
-
-                Writer.WritePropertyName(nameof(CounterItem.Batch.Values));
-                Writer.WriteObject(counterDetail.Values);
-
-                Writer.WriteEndObject();
+                    Writer.WriteEndObject();
+                }
             }
 
             public void WriteLegacyCounter(CounterDetail counterDetail)
