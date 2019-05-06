@@ -41,6 +41,7 @@ namespace SlowTests.Issues
                         .Execute();
 
                     Assert.Equal(1, results.Count);
+                    Assert.Equal(0, results["Name"].Values.Count);
                     Assert.NotNull(stats);
                     Assert.Equal(1, counter);
                 }
@@ -479,6 +480,125 @@ namespace SlowTests.Issues
                     Assert.Equal(0, results[0].Value.Suggestions.Count);
                     Assert.NotNull(stats);
                     Assert.Equal(1, counter);
+                }
+            }
+        }
+
+        [Fact]
+        public async Task CanGetValidStatisticsInAggregationQuery()
+        {
+            using (var store = GetDocumentStore())
+            {
+                store.ExecuteIndex(new UsersByName());
+
+                using (var session = store.OpenSession())
+                {
+                    session
+                        .Query<User, UsersByName>()
+                        .Statistics(out QueryStatistics stats)
+                        .Where(x => x.Name == "Doe")
+                        .AggregateBy(x => x.ByField(y => y.Name).SumOn(y => y.Count))
+
+                        .Execute();
+
+                    Assert.NotNull(stats.IndexName);
+                }
+
+                using (var session = store.OpenAsyncSession())
+                {
+                    await session
+                        .Query<User, UsersByName>()
+                        .Statistics(out QueryStatistics stats)
+                        .AggregateBy(x => x.ByField(y => y.Name).SumOn(y => y.Count))
+                        .ExecuteAsync();
+                    Assert.NotNull(stats.IndexName);
+                }
+
+                using (var session = store.OpenSession())
+                {
+                    var query = session
+                        .Advanced
+                        .DocumentQuery<User, UsersByName>();
+
+                    query.Statistics(out var stats);
+
+                    query.AggregateBy(x => x.ByField(y => y.Name).SumOn(y => y.Count)).Execute();
+
+                    Assert.NotNull(stats.IndexName);
+                }
+
+                using (var session = store.OpenAsyncSession())
+                {
+                    var query = session
+                        .Advanced
+                        .AsyncDocumentQuery<User, UsersByName>();
+
+                    query.Statistics(out var stats);
+
+                    await query.AggregateBy(x => x.ByField(y => y.Name).SumOn(y => y.Count)).ExecuteAsync();
+
+                    Assert.NotNull(stats.IndexName);
+
+                }
+            }
+        }
+
+        [Fact]
+        public async Task CanGetValidStatisticsInSuggestionQuery()
+        {
+            using (var store = GetDocumentStore())
+            {
+                store.ExecuteIndex(new UsersByName());
+
+                using (var session = store.OpenSession())
+                {
+                    session
+                        .Query<User, UsersByName>()
+                        .Statistics(out QueryStatistics stats)
+                        .SuggestUsing(x => x.ByField(y => y.Name, "Orin"))
+                        .Execute();
+
+                    Assert.NotNull(stats.IndexName);
+                }
+
+                using (var session = store.OpenAsyncSession())
+                {
+                    await session
+                        .Query<User, UsersByName>()
+                        .Statistics(out QueryStatistics stats)
+                        .SuggestUsing(x => x.ByField(y => y.Name, "Orin"))
+                        .ExecuteAsync();
+
+                    Assert.NotNull(stats.IndexName);
+                }
+
+                using (var session = store.OpenSession())
+                {
+                    var query = session
+                        .Advanced
+                        .DocumentQuery<User, UsersByName>();
+
+                    query.Statistics(out QueryStatistics stats);
+
+                    query.SuggestUsing(x => x.ByField(y => y.Name, "Orin"))
+                        .Execute();
+
+                    Assert.NotNull(stats.IndexName);
+
+                }
+
+                using (var session = store.OpenAsyncSession())
+                {
+                    var query = session
+                        .Advanced
+                        .AsyncDocumentQuery<User, UsersByName>();
+
+                    query.Statistics(out QueryStatistics stats);
+
+                    await query.SuggestUsing(x => x.ByField(y => y.Name, "Orin"))
+                        .ExecuteAsync();
+
+                    Assert.NotNull(stats.IndexName);
                 }
             }
         }

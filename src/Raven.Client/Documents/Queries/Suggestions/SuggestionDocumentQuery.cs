@@ -13,7 +13,7 @@ namespace Raven.Client.Documents.Queries.Suggestions
             _source = source;
         }
 
-        protected override IndexQuery GetIndexQuery(bool isAsync)
+        protected override IndexQuery GetIndexQuery(bool isAsync, bool updateAfterQueryExecuted = true)
         {
             return _source.GetIndexQuery();
         }

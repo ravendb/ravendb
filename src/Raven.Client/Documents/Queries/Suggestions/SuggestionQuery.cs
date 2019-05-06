@@ -35,20 +35,34 @@ namespace Raven.Client.Documents.Queries.Suggestions
             _suggestUsingMethod = suggestUsingMethod;
         }
 
-        protected override IndexQuery GetIndexQuery(bool isAsync)
+        protected override IndexQuery GetIndexQuery(bool isAsync, bool updateAfterQueryExecuted = true)
         {
             var inspector = (IRavenQueryInspector)_source;
+
+            if (updateAfterQueryExecuted == false)
+            {
+                return inspector.GetIndexQuery(isAsync);
+            }
+
             var provider = (RavenQueryProvider<T>)_source.Provider;
+            var providersAfterQueryCallback = provider.AfterQueryExecutedCallback;
 
             if (isAsync == false)
             {
                 var documentQuery = ((RavenQueryInspector<T>)inspector).GetDocumentQuery();
+
+                // add provider's AfterQueryExecuted action to documentQuery.AfterQueryExecuted
+                documentQuery.AfterQueryExecuted(providersAfterQueryCallback);
+
+                // substitute provider.AfterQueryExecuted with documentQuery.InvokeAfterQueryExecuted
                 provider.AfterQueryExecuted(documentQuery.InvokeAfterQueryExecuted);
 
                 return documentQuery.GetIndexQuery();
             }
 
             var asyncDocumentQuery = ((RavenQueryInspector<T>)inspector).GetAsyncDocumentQuery();
+
+            asyncDocumentQuery.AfterQueryExecuted(providersAfterQueryCallback);
             provider.AfterQueryExecuted(asyncDocumentQuery.InvokeAfterQueryExecuted);
 
             return asyncDocumentQuery.GetIndexQuery();
@@ -138,7 +152,7 @@ namespace Raven.Client.Documents.Queries.Suggestions
             return ((AsyncDocumentSession)_session).AddLazyOperation(new LazySuggestionQueryOperation(_session.Conventions, _query, InvokeAfterQueryExecuted, ProcessResults), onEval, token);
         }
 
-        protected abstract IndexQuery GetIndexQuery(bool isAsync);
+        protected abstract IndexQuery GetIndexQuery(bool isAsync, bool updateAfterQueryExecuted = true);
 
         protected abstract void InvokeAfterQueryExecuted(QueryResult result);
 
@@ -151,7 +165,7 @@ namespace Raven.Client.Documents.Queries.Suggestions
 
         public override string ToString()
         {
-            var iq = GetIndexQuery(_session is AsyncDocumentSession);
+            var iq = GetIndexQuery(_session is AsyncDocumentSession, updateAfterQueryExecuted: false);
             return iq.ToString();
         }
     }
