@@ -6,6 +6,7 @@
 [assembly: InternalsVisibleTo("EmbeddedTests")]
 [assembly: InternalsVisibleTo("StressTests")]
 [assembly: InternalsVisibleTo("RachisTests")]
+[assembly: InternalsVisibleTo("InterversionTests")]
 [assembly: InternalsVisibleTo("TypingsGenerator")]
 [assembly: InternalsVisibleTo("Voron.Recovery")]
 [assembly: InternalsVisibleTo("rvn")]
