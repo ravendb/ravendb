@@ -5,7 +5,7 @@ using Sparrow.Json;
 
 namespace Raven.Client.ServerWide.Commands.Cluster
 {
-    public class AddClusterNodeCommand : RavenCommand
+    internal class AddClusterNodeCommand : RavenCommand
     {
         private readonly string _url;
         private readonly string _tag;
