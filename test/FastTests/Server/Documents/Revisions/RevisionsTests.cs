@@ -5,6 +5,7 @@
 //-----------------------------------------------------------------------
 
 using System;
+using System.Collections.Generic;
 using System.Linq;
 using System.Net.Http;
 using System.Threading.Tasks;
@@ -12,6 +13,7 @@ using FastTests.Utils;
 using Raven.Client;
 using Raven.Client.Documents.Conventions;
 using Raven.Client.Documents.Operations;
+using Raven.Client.Documents.Operations.Revisions;
 using Raven.Client.Documents.Session;
 using Raven.Client.Http;
 using Raven.Client.Json;
@@ -65,6 +67,55 @@ namespace FastTests.Server.Documents.Revisions
 
                     Assert.NotNull(await session.Advanced.Revisions.GetAsync<User>(first.Key));
                     Assert.Null(await session.Advanced.Revisions.GetAsync<User>(last.Key));
+                }
+            }
+        }
+
+        [Fact]
+        public async Task ZeroMinimumRevisionsToKeepShouldWork()
+        {
+            using (var store = GetDocumentStore())
+            {
+                var configuration = new RevisionsConfiguration
+                {
+                    Default = new RevisionsCollectionConfiguration
+                    {
+                        Disabled = false,
+                        MinimumRevisionsToKeep = 10
+                    },
+
+                    Collections = new Dictionary<string, RevisionsCollectionConfiguration>
+                    {
+                        ["Users"] = new RevisionsCollectionConfiguration
+                        {
+                            Disabled = false,
+                            MinimumRevisionsToKeep = 0
+                        }
+                    }
+                };
+
+                await store.Maintenance.SendAsync(new ConfigureRevisionsOperation(configuration));
+
+                using (var session = store.OpenAsyncSession())
+                {
+                    await session.StoreAsync(new User(), "foo");
+                    await session.StoreAsync(new Product(), "bar");
+                    await session.SaveChangesAsync();
+                }
+
+                using (var session = store.OpenAsyncSession())
+                {
+                    var user = await session.LoadAsync<User>("foo");
+                    var metadata = session.Advanced.GetMetadataFor(user);
+                    Assert.False(metadata.Keys.Contains(Constants.Documents.Metadata.Flags));
+                    var foo = await session.Advanced.Revisions.GetMetadataForAsync("foo");
+                    Assert.Equal(0 ,foo.Count);
+
+                    var product = await session.LoadAsync<Product>("bar");
+                    metadata = session.Advanced.GetMetadataFor(product);
+                    Assert.Equal((DocumentFlags.HasRevisions).ToString(), metadata[Constants.Documents.Metadata.Flags]);
+                    var bar = await session.Advanced.Revisions.GetMetadataForAsync("bar");
+                    Assert.Equal(1, bar.Count);
                 }
             }
         }
