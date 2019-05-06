@@ -213,6 +213,7 @@ namespace Raven.Server.Documents.Queries.Dynamic
                 buffer[0] = Database.DocumentsStorage.GetLastDocumentEtag(context, collection);
                 buffer[1] = Database.DocumentsStorage.GetLastTombstoneEtag(context, collection);
                 buffer[2] = collectionStats.Count;
+                resultToFill.TotalResults = (int)collectionStats.Count;
             }
 
             resultToFill.ResultEtag = (long)Hashing.XXHash64.Calculate((byte*)buffer, sizeof(long) * 3);

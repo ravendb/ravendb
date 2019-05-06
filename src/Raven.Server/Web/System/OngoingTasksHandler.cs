@@ -1117,6 +1117,7 @@ namespace Raven.Server.Web.System
                             var subscriptionStateInfo = new OngoingTaskSubscription
                             {
                                 TaskName = subscriptionState.SubscriptionName,
+                                TaskId = subscriptionState.SubscriptionId,
                                 Query = subscriptionState.Query,
                                 ChangeVectorForNextBatchStartingPoint = subscriptionState.ChangeVectorForNextBatchStartingPoint,
                                 SubscriptionId = subscriptionState.SubscriptionId,
