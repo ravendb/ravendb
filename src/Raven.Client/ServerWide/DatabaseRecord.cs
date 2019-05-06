@@ -142,7 +142,7 @@ namespace Raven.Client.ServerWide
                 IndexesHistory.Add(definition.Name, history);
             }
 
-            history.Insert(0,new IndexHistoryEntry{Definition = definition, CreatedAt = createdAt, Source = source });
+            history.Insert(0, new IndexHistoryEntry { Definition = definition, CreatedAt = createdAt, Source = source });
 
             if (history.Count > 5)
             {

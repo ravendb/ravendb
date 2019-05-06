@@ -50,7 +50,7 @@ namespace Raven.Server.ServerWide.Commands.Indexes
         {
             json[nameof(Static)] = TypeConverter.ToBlittableSupportedType(Static);
             json[nameof(Auto)] = TypeConverter.ToBlittableSupportedType(Auto);
-			json[nameof(Source)] = Source;
+            json[nameof(Source)] = Source;
             json[nameof(CreatedAt)] = CreatedAt;
         }
     }

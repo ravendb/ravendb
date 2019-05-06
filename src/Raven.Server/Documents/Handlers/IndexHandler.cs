@@ -109,13 +109,13 @@ namespace Raven.Server.Documents.Handlers
             var name = GetQueryStringValueAndAssertIfSingleAndNotEmpty("name");
             var record = Database.ReadDatabaseRecord();
             List<IndexHistoryEntry> history = null;
-            if (record?.IndexesHistory.TryGetValue(name, out history) == false) 
+            if (record?.IndexesHistory.TryGetValue(name, out history) == false)
             {
                 HttpContext.Response.StatusCode = (int)HttpStatusCode.NotFound;
                 return Task.CompletedTask;
             }
 
-            
+
             using (ContextPool.AllocateOperationContext(out JsonOperationContext context))
             using (var writer = new BlittableJsonTextWriter(context, ResponseBodyStream()))
             {
@@ -141,13 +141,13 @@ namespace Raven.Server.Documents.Handlers
                     w.WriteComma();
 
                     w.WritePropertyName(nameof(IndexHistoryEntry.CreatedAt));
-                    w.WriteDateTime(entry.CreatedAt, isUtc:true);
+                    w.WriteDateTime(entry.CreatedAt, isUtc: true);
                     w.WriteComma();
 
                     w.WritePropertyName(nameof(IndexHistoryEntry.Source));
                     w.WriteString(entry.Source);
                     w.WriteEndObject();
-                   
+
                 });
 
                 writer.WriteEndObject();
@@ -358,7 +358,7 @@ namespace Raven.Server.Documents.Handlers
                                                     ex);
                                         }
                                     }
-                                    
+
                                     return new IndexStats
                                     {
                                         Name = x.Name,
@@ -381,7 +381,7 @@ namespace Raven.Server.Documents.Handlers
                             return Task.CompletedTask;
                         }
 
-                        indexStats = new[] {index.GetStats(calculateLag: true, calculateStaleness: true, documentsContext: context)};
+                        indexStats = new[] { index.GetStats(calculateLag: true, calculateStaleness: true, documentsContext: context) };
                     }
                 }
 
@@ -865,7 +865,7 @@ namespace Raven.Server.Documents.Handlers
                         else
                             complementaryIndexes.Add(Constants.Documents.Indexing.SideBySideIndexNamePrefix + indexName);
                     }
-                    
+
                     indexNames.AddRange(complementaryIndexes);
                 }
 
