@@ -720,7 +720,6 @@ namespace Raven.Server.Documents.Queries.Results
                 {
                     if (it.TimeStamp > next)
                     {
-
                         if(aggStates[0].Count > 0)
                         {
                             array.Add(AddTimeSeriesResult(func, aggStates, start, next));
