@@ -389,6 +389,8 @@ namespace Raven.Server.Documents.Queries.AST
                 case Type.Last:
                     return _val;
                 case Type.Median:
+                    if (_list.Count == 1)
+                        return _list.Keys[0];
                     var mid = Count / 2;
                     var even = Count % 2 == 0;
                     long soFar = 0;

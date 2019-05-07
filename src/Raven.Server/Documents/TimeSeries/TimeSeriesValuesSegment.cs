@@ -11,8 +11,6 @@ namespace Raven.Server.Documents.TimeSeries
 {
     public unsafe struct TimeSeriesValuesSegment 
     {
-        public const int BitsForTagLen = 11;
-
         public const int BitsForFirstTimestamp = 31;
         public const int LeadingZerosLengthBits = 5;
         public const int BlockSizeAdjustment = 1;
@@ -60,8 +58,8 @@ namespace Raven.Server.Documents.TimeSeries
             throw new ArgumentOutOfRangeException("Maximum capacity for segment is 2KB, but was: " + _capacity);
         }
 
-        private int DataStart => sizeof(SegmentHeader) + sizeof(StatefulTimeStampValue) * Header->NumberOfValues;
-        
+        private int DataStart => sizeof(SegmentHeader) + sizeof(StatefulTimeStampValue) * Header->NumberOfValues + Header->SizeOfTags + Header->CompressedSize;
+
         public int NumberOfValues => Header->NumberOfValues;
 
         public int NumberOfEntries => Header->NumberOfEntries;
@@ -75,6 +73,7 @@ namespace Raven.Server.Documents.TimeSeries
                 ThrowInvalidCapacityLength();
 
             Header->NumberOfValues = (byte)numberOfValues;
+            Header->SizeOfTags = 1;
         }
 
         public bool Append(ByteStringContext allocator, int deltaFromStart, double val, Span<byte> tag)
@@ -89,26 +88,17 @@ namespace Raven.Server.Documents.TimeSeries
             if (tag.Length > byte.MaxValue)
                 ThrowInvalidTagLength();
 
-            var actualBitsBuffer = GetBitsBuffer();
 
             var maximumSize = 
                 sizeof(BitsBufferHeader) +
                 sizeof(int) + // max timestamp
                 sizeof(double) * vals.Length + vals.Length /* may use additional 2 bits per value here for the first items */ +
-                tag.Length + 1 + 
-                2 + // previous tag position
-                1  // alignment to current buffer
-#if DEBUG
-                + 8 // extra buffer that should never be used
-#endif
+                2 // previous tag position (10 bits)
                 ;
 
             using (allocator.Allocate(maximumSize + sizeof(SegmentHeader), out var tempBuffer))
             {
                 Memory.Set(tempBuffer.Ptr, 0, maximumSize);
-#if DEBUG
-                *(ulong*)(tempBuffer.Ptr + maximumSize - sizeof(ulong)) = 0xdeadbeafdeadbeaf;
-#endif
 
                 var tempHeader = (SegmentHeader*)(tempBuffer.Ptr + maximumSize);
 
@@ -123,131 +113,121 @@ namespace Raven.Server.Documents.TimeSeries
                 {
                     AddValue(ref prevs[i], ref tempBitsBuffer, vals[i]);
                 }
+                bool insertTag = false;
+                if (tag.Length == 0)
+                {
+                    tempBitsBuffer.AddValue(0, 2); // no tag
+                }
+                else
+                {
+                    var prevTagIndex = FindPreviousTag(tag);
+                    if (prevTagIndex >= 0)
+                    {
+                        if (Header->PreviousTagIndex == prevTagIndex)
+                        {
+                            tempBitsBuffer.AddValue(1, 2); // reuse previous buffer
+                        }
+                        else
+                        {
+                            tempBitsBuffer.AddValue(2, 2); // will write the tag index buffer here
+                            tempBitsBuffer.AddValue((ulong)prevTagIndex, 8);
+                        }
+                    }
+                    else
+                    {
+                        // need to write the tag
+                        var numberOfBits = ((BitsBufferHeader*)(_buffer + DataStart))->BitsPosition;
+                        insertTag = true;
 
-                WriteTag(tag, ref tempBitsBuffer, tempHeader, actualBitsBuffer.NumberOfBits);
-
-#if DEBUG
-                Debug.Assert(tempBitsBuffer.NumberOfBits / 8 < maximumSize, "Wrote PAST END OF BUFFER!");
-                Debug.Assert(*(ulong*)(tempBuffer.Ptr + maximumSize - sizeof(ulong)) == 0xdeadbeafdeadbeaf, "Wrote TO END OF BUFFER");
-#endif
+                        tempBitsBuffer.AddValue(2, 2); // will write the tag index buffer here
+                        tempBitsBuffer.AddValue((ulong)(~prevTagIndex), 8);
+                    }
+                }
 
                 tempHeader->PreviousTimeStamp = deltaFromStart;
                 tempHeader->NumberOfEntries++;
+                var actualBitsBuffer = GetBitsBuffer();
 
-                if (actualBitsBuffer.AddBits(tempBitsBuffer) == false)
-                    return false;
+                if (insertTag)
+                {
+                    if (actualBitsBuffer.HasAdditionalBits(tempBitsBuffer.NumberOfBits + (tag.Length + 1) * 8) == false)
+                        return false;
 
-                *Header = *tempHeader;
+                    InsertTag(tag, tempHeader);
+                    *Header = *tempHeader;
+                    actualBitsBuffer = GetBitsBuffer();
+                    var result = actualBitsBuffer.AddBits(tempBitsBuffer);
+                    Debug.Assert(result, "Failed to add bits, but already checked precondition");
+                }
+                else
+                {
+                    if (actualBitsBuffer.AddBits(tempBitsBuffer) == false)
+                    {
+                        return false;
+                    }
+                    *Header = *tempHeader;
+                }
+
+                
 
                 return true;
             }
         }
 
-        private void WriteTag(Span<byte> tag, ref BitsBuffer tempBitsBuffer, SegmentHeader* tempHeader, int baseNumberOfBits)
+        /*
+         * Tags are stored in the following manner
+         * 
+         * [raw bytes tag1], [raw bytes tag 2], etc
+         * [len tag1], [len tag2], [total number of tags] : byte
+         * 
+         */ 
+
+        public int FindPreviousTag(Span<byte> tag)
         {
-            var actualBitsBuffer = GetBitsBuffer();
-            var tagEnum = new TagEnumerator(actualBitsBuffer /* need to read the previous values */, 
-                tempHeader->PreviousTagPosition);
-            if (tagEnum.TryGetPrevious(out var prevTag, out var previousIndex))
+            var offset = Header->SizeOfTags;
+            var tagsPtr = _buffer + sizeof(SegmentHeader) + sizeof(StatefulTimeStampValue) * Header->NumberOfValues;
+            var numberOfTags = *(tagsPtr + offset - 1);
+            if (numberOfTags == 0)
+                return ~0;
+            var tagsLens = tagsPtr + offset - 1 - numberOfTags;
+            var tagBackwardOffset = 0;
+            for (int i = (numberOfTags - 1); i >= 0; i--)
             {
+                tagBackwardOffset += tagsLens[i];
+                var prevTag = new Span<byte>(tagsLens - tagBackwardOffset, tagsLens[i]);
                 if (prevTag.SequenceEqual(tag))
-                {
-                    tempBitsBuffer.AddValue(0, 1); // reuse previous buffer
-                    return;
-                }
-                // go back a maximum of 8 tags, to avoid N**2 operations
-                // after 8 tags, we'll just write the tag again
-                for (int i = 0; i < 8; i++)
-                {
-                    if (tagEnum.TryGetPrevious(out prevTag, out previousIndex) == false)
-                        break;
-                    if (prevTag.SequenceEqual(tag))
-                    {
-                        tempBitsBuffer.AddValue(1, 1);
-                        tempBitsBuffer.AddValue((ulong)previousIndex, BitsForTagLen);
-                        if (previousIndex != 0)
-                        {
-                            // re-arrange the previous pointer for the previous value
-                            // to point to the current one
-                            actualBitsBuffer.SetBits(
-                                (previousIndex + 1 + tag.Length) * 8,
-                                tempHeader->PreviousTagPosition,
-                                BitsForTagLen
-                                );
-                            tempHeader->PreviousTagPosition = (ushort)previousIndex;
-                        }
-                        return;
-                    }
-                }
+                    return i;
             }
-            tempBitsBuffer.AddValue(1, 1);
 
-            int currentBitPosition = baseNumberOfBits + tempBitsBuffer.NumberOfBits + BitsForTagLen;
-            int currentTagPosition = GetByteIndex(currentBitPosition);
-            var bitsToSkip = ToByteAlignment(currentBitPosition);
-
-            tempBitsBuffer.AddValue((ulong)currentTagPosition, BitsForTagLen);
-
-
-            tempBitsBuffer.Header->BitsPosition += (ushort)bitsToSkip;
-
-            tempBitsBuffer.AddValue((ulong)tag.Length, 8);
-            for (int i = 0; i < tag.Length; i++)
-            {
-                tempBitsBuffer.AddValue(tag[i], 8);
-            }
-            tempBitsBuffer.AddValue(tempHeader->PreviousTagPosition, BitsForTagLen);
-            tempHeader->PreviousTagPosition = (ushort)(currentTagPosition);
+            return ~numberOfTags;
         }
 
-        private static int GetByteIndex(int numberOfBits)
+        public void InsertTag(Span<byte> tag, SegmentHeader *tempHeader)
         {
-            var currentTagPosition = numberOfBits;
-            currentTagPosition += ToByteAlignment(currentTagPosition);
-            currentTagPosition /= 8;// the tag position is in _bytes_ - 0 .. 2048
-            return currentTagPosition;
+            var offset = tempHeader->SizeOfTags;
+            var tagsPtr = _buffer + sizeof(SegmentHeader) + sizeof(StatefulTimeStampValue) * tempHeader->NumberOfValues;
+            var numberOfTags = *(tagsPtr + offset - 1);
+
+            if (numberOfTags >= 127)
+                throw new InvalidOperationException("Cannot have more than 127 tags per segment");
+
+            var tagsLens = tagsPtr + offset - 1 - numberOfTags;
+            var copyOfTagLens = stackalloc byte[numberOfTags];
+            Memory.Copy(copyOfTagLens, tagsLens, numberOfTags);
+            var src = tagsLens + tag.Length + 1;
+            Memory.Move(tagsLens, src, _capacity - (int)(src - _buffer));
+            tag.CopyTo(new Span<byte>(tagsLens, tag.Length));
+            Memory.Copy(tagsLens + tag.Length, copyOfTagLens, numberOfTags);
+            tagsLens += tag.Length;
+
+            tagsLens[numberOfTags] = (byte)tag.Length;
+            tagsLens[numberOfTags + 1] = (byte)(numberOfTags + 1);
+            tempHeader->SizeOfTags += (ushort)(tag.Length + 1 + numberOfTags);
         }
 
         private static void ThrowInvalidTagLength()
         {
             throw new ArgumentOutOfRangeException("TimeSeries tag value cannot exceed 256 bytes");
-        }
-
-        private static ushort ToByteAlignment(int bits)
-        {
-            var mod = bits % 8;
-            if (mod == 0)
-                return 0;
-            return (ushort)(8 - mod);
-        }
-
-
-        public ref struct TagEnumerator
-        {
-            BitsBuffer _bitsBuffer;
-            int _previousTagPos;
-
-            public TagEnumerator(BitsBuffer bitsBuffer, int previousTagPos)
-            {
-                _bitsBuffer = bitsBuffer;
-                _previousTagPos = previousTagPos;
-            }
-
-            public bool TryGetPrevious(out Span<byte> tag, out int previousIndex)
-            {
-                if(_previousTagPos == 0)
-                {
-                    tag = default;
-                    previousIndex = default;
-                    return false;
-                }
-                previousIndex = _previousTagPos;
-                var tagLen = _bitsBuffer.Buffer[_previousTagPos++];
-                tag = new Span<byte>(_bitsBuffer.Buffer + _previousTagPos, tagLen);
-                var offset = (_previousTagPos + tag.Length) * 8;
-                _previousTagPos = (int)_bitsBuffer.ReadValue(ref offset, BitsForTagLen);
-                return true;
-            }
         }
 
         [Pure]
@@ -390,27 +370,43 @@ namespace Raven.Server.Documents.TimeSeries
 
                 ReadValues(MemoryMarshal.Cast<double,long>(values), state, ref bitsBuffer);
 
-                var reuseTag = bitsBuffer.ReadValue(ref _bitsPosisition, 1);
-                if (reuseTag != 0)
+                var reuseTag = bitsBuffer.ReadValue(ref _bitsPosisition, 2);
+                switch (reuseTag)
                 {
-                    var tagPos = (int)bitsBuffer.ReadValue(ref _bitsPosisition, BitsForTagLen);
-                    var nextTag = tagPos * 8 == _bitsPosisition + ToByteAlignment(_bitsPosisition);
-                    var tagLen = (int)bitsBuffer.Buffer[tagPos++];
-                    tag = new TagPointer
-                    {
-                        Pointer = bitsBuffer.Buffer + tagPos,
-                        Length = tagLen
-                    };
-                    if (nextTag)
-                    {
-                        tagPos *= 8;
-                        tagPos += tagLen * 8;
-                        tagPos += BitsForTagLen; // skip over previous
-                        _bitsPosisition = tagPos;
-                    }
+                    case 0: // no tag
+                        tag = default;
+                        break;
+                    case 1: //reuse
+                        break;
+                    case 2:
+                        ReadTagValueByIndex(bitsBuffer, ref tag);
+                        break;
+                    default:
+                        throw new InvalidOperationException("Invalid tag reuse value: " + reuseTag);
                 }
 
                 return true;
+            }
+
+            private void ReadTagValueByIndex(BitsBuffer bitsBuffer, ref TagPointer tag)
+            {
+                var tagIndex = (int)bitsBuffer.ReadValue(ref _bitsPosisition, 8);
+                var offset = _parent.Header->SizeOfTags;
+                var tagsPtr = _parent._buffer + sizeof(SegmentHeader) + sizeof(StatefulTimeStampValue) * _parent.Header->NumberOfValues;
+                var numberOfTags = *(tagsPtr + offset - 1);
+                if (tagIndex < 0 || tagIndex >= numberOfTags)
+                    throw new ArgumentOutOfRangeException("Tag index " + tagIndex + " is outside the boundaries for tags for this segment: 0.." + numberOfTags);
+                var tagsLens = tagsPtr + offset - 1 - numberOfTags;
+                var tagBackwardOffset = 0;
+                for (int i = 0; i <= tagIndex; i++)
+                {
+                    tagBackwardOffset += tagsLens[i];
+                }
+                tag = new TagPointer 
+                {
+                    Length = tagsLens[tagIndex],
+                    Pointer = tagsLens - tagBackwardOffset
+                };
             }
 
             private void ReadValues(Span<long> values, Span<TimeStampState> state, ref BitsBuffer bitsBuffer)

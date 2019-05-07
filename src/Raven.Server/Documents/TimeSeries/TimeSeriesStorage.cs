@@ -249,7 +249,7 @@ namespace Raven.Server.Documents.TimeSeries
                 _tag = new LazyStringValue(null, null, 0, context);
             }
 
-            public bool Init()
+            private bool Init()
             {
                 using (DocumentIdWorker.GetSliceFromId(_context, _documentId, out Slice documentKeyPrefix, SpecialChars.RecordSeparator))
                 using (Slice.From(_context.Allocator, _name, out Slice timeSeriesName))
@@ -269,11 +269,14 @@ namespace Raven.Server.Documents.TimeSeries
 
             public IEnumerable<(DateTime TimeStamp, Memory<double> Values, LazyStringValue Tag)> Values()
             {
+                if (Init() == false)
+                    yield break;
+
                 InitializeSegment(out var baselineMilliseconds, out var readOnlySegment);
 
                 while (true)
                 {
-                    var baseline = new DateTime(baselineMilliseconds * 10_000,DateTimeKind.Utc);
+                    var baseline = new DateTime(baselineMilliseconds * 10_000, DateTimeKind.Utc);
 
                     if (readOnlySegment.NumberOfValues > _values.Length)
                     {
@@ -294,7 +297,7 @@ namespace Raven.Server.Documents.TimeSeries
 
                         var tag = SetTimestampTag();
 
-                        var end = _values.Length ;
+                        var end = _values.Length;
                         while (end >= 0 && double.IsNaN(_values[end - 1]))
                         {
                             end--;
