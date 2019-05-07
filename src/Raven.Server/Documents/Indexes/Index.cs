@@ -1277,6 +1277,9 @@ namespace Raven.Server.Documents.Indexes
 
         public void Cleanup()
         {
+            if (_initialized == false)
+                return;
+
             ReduceMemoryUsage(_environment);
         }
 
