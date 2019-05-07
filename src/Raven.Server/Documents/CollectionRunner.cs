@@ -68,7 +68,7 @@ namespace Raven.Server.Documents
             onProgress(progress);
 
             long startEtag = 0;
-            var start = 0;
+            var internalQueryOperationStart = 0;
 
             using (var rateGate = options.MaxOpsPerSecond.HasValue
                     ? new RateGate(options.MaxOpsPerSecond.Value, TimeSpan.FromSeconds(1))
@@ -83,9 +83,9 @@ namespace Raven.Server.Documents
                     ids.Clear();
                     using (context.OpenReadTransaction())
                     {
-                        foreach (var document in GetDocuments(context, collectionName, startEtag, start, OperationBatchSize, isAllDocs))
+                        foreach (var document in GetDocuments(context, collectionName, startEtag, internalQueryOperationStart, OperationBatchSize, isAllDocs))
                         {
-                            start++;
+                            internalQueryOperationStart++;
 
                             cancellationToken.ThrowIfCancellationRequested();
 
@@ -157,7 +157,7 @@ namespace Raven.Server.Documents
                     _operationQuery = ConvertToOperationQuery(_collectionQuery);
 
                 return new CollectionQueryEnumerable(Database, Database.DocumentsStorage, new FieldsToFetch(_operationQuery, null),
-                    collectionName, _operationQuery, null, context, null, new Reference<int>());
+                    collectionName, _operationQuery, null, context, null, new Reference<int>())
                 {
                     InternalQueryOperationStart = start
                 };
