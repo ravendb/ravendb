@@ -32,12 +32,6 @@ namespace Raven.Server.Documents.Handlers
             {
                 var reader = Database.DocumentsStorage.TimeSeriesStorage.GetReader(context, documentId, name, from, to);
 
-                if (reader.Init() == false)
-                {
-                    HttpContext.Response.StatusCode = (int)HttpStatusCode.NotFound;
-                    return Task.CompletedTask;
-                }
-
                 using (var writer = new BlittableJsonTextWriter(context, ResponseBodyStream()))
                 {
                     writer.WriteStartObject();

@@ -12,10 +12,12 @@ namespace Raven.Server.Documents.TimeSeries
         [FieldOffset(8)]
         public ushort NumberOfEntries;
         [FieldOffset(10)]
-        public ushort PreviousTagPosition;
+        public ushort SizeOfTags;
         [FieldOffset(12)]
+        public byte PreviousTagIndex;
+        [FieldOffset(13)]
         public byte NumberOfValues;
-        [FieldOffset(3)]
-        public fixed byte Reserved[3];
+        [FieldOffset(14)]
+        public ushort CompressedSize;
     }
 }

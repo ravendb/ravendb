@@ -713,41 +713,41 @@ namespace Raven.Server.Documents.Queries.Results
             }
 
             var reader = tss.GetReader(_includeDocumentsCommand.Context, documentId, source, min, max);
-            if (reader.Init())
+            DateTime start = default, next = default;
+            long count = 0;
+            foreach (var it in reader.Values())
             {
-                DateTime start = default, next = default;
-                foreach (var it in reader.Values())
+                count++;
+                if (it.TimeStamp > next)
                 {
-                    if (it.TimeStamp > next)
+                    if (aggStates[0].Count > 0)
                     {
-                        if(aggStates[0].Count > 0)
-                        {
-                            array.Add(AddTimeSeriesResult(func, aggStates, start, next));
-                        }
-
-                        start = rangeSpec.GetRangeStart(it.TimeStamp);
-                        next = rangeSpec.GetNextRangeStart(start);
-
-                        for (int i = 0; i < aggStates.Length; i++)
-                        {
-                            aggStates[i].Init();
-                        }
+                        array.Add(AddTimeSeriesResult(func, aggStates, start, next));
                     }
+
+                    start = rangeSpec.GetRangeStart(it.TimeStamp);
+                    next = rangeSpec.GetNextRangeStart(start);
 
                     for (int i = 0; i < aggStates.Length; i++)
                     {
-                        aggStates[i].Step(it.Values.Span);
+                        aggStates[i].Init();
                     }
                 }
 
-                if (aggStates[0].Count > 0)
+                for (int i = 0; i < aggStates.Length; i++)
                 {
-                    array.Add(AddTimeSeriesResult(func, aggStates, start, next));
+                    aggStates[i].Step(it.Values.Span);
                 }
+            }
+
+            if (aggStates[0].Count > 0)
+            {
+                array.Add(AddTimeSeriesResult(func, aggStates, start, next));
             }
 
             return _context.ReadObject(new DynamicJsonValue
             {
+                ["Count"] = count,
                 ["Results"] = array
             }, "timeseries/value", BlittableJsonDocumentBuilder.UsageMode.None);
         }
