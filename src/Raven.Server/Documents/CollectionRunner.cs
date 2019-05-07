@@ -19,6 +19,8 @@ namespace Raven.Server.Documents
 {
     internal class CollectionRunner
     {
+        internal const int OperationBatchSize = 1024;
+
         private readonly IndexQueryServerSide _collectionQuery;
 
         protected readonly DocumentsOperationContext Context;
@@ -48,7 +50,6 @@ namespace Raven.Server.Documents
         protected async Task<IOperationResult> ExecuteOperation(string collectionName, CollectionOperationOptions options, DocumentsOperationContext context,
              Action<DeterminateProgress> onProgress, Func<string, TransactionOperationsMerger.MergedTransactionCommand> action, OperationCancelToken token)
         {
-            const int batchSize = 1024;
             var progress = new DeterminateProgress();
             var cancellationToken = token.Token;
             var isAllDocs = collectionName == Constants.Documents.Collections.AllDocumentsCollection;
@@ -66,12 +67,14 @@ namespace Raven.Server.Documents
             onProgress(progress);
 
             long startEtag = 0;
+            var start = 0;
+
             using (var rateGate = options.MaxOpsPerSecond.HasValue
                     ? new RateGate(options.MaxOpsPerSecond.Value, TimeSpan.FromSeconds(1))
                     : null)
             {
                 var end = false;
-                var ids = new Queue<string>(batchSize);
+                var ids = new Queue<string>(OperationBatchSize);
 
                 while (startEtag <= lastEtag)
                 {
@@ -79,8 +82,10 @@ namespace Raven.Server.Documents
                     ids.Clear();
                     using (context.OpenReadTransaction())
                     {
-                        foreach (var document in GetDocuments(context, collectionName, startEtag, batchSize, isAllDocs))
+                        foreach (var document in GetDocuments(context, collectionName, startEtag, start, OperationBatchSize, isAllDocs))
                         {
+                            start++;
+
                             cancellationToken.ThrowIfCancellationRequested();
 
                             token.Delay();
@@ -107,7 +112,7 @@ namespace Raven.Server.Documents
                     {
                         var command = new ExecuteRateLimitedOperations<string>(ids, action, rateGate, token,
                             maxTransactionSize: 16 * Voron.Global.Constants.Size.Megabyte,
-                            batchSize: batchSize);
+                            batchSize: OperationBatchSize);
 
                         await Database.TxMerger.Enqueue(command);
 
@@ -131,12 +136,15 @@ namespace Raven.Server.Documents
             };
         }
 
-        protected virtual IEnumerable<Document> GetDocuments(DocumentsOperationContext context, string collectionName, long startEtag, int batchSize, bool isAllDocs)
+        protected virtual IEnumerable<Document> GetDocuments(DocumentsOperationContext context, string collectionName, long startEtag, int start, int batchSize, bool isAllDocs)
         {
             if (_collectionQuery != null && _collectionQuery.Metadata.WhereFields.Count > 0)
             {
                 return new CollectionQueryEnumerable(Database, Database.DocumentsStorage, new FieldsToFetch(_collectionQuery, null),
-                    collectionName, _collectionQuery, null, context, null, new Reference<int>());
+                    collectionName, _collectionQuery, null, context, null, new Reference<int>())
+                {
+                    InternalQueryOperationStart = start
+                };
             }
 
             if (isAllDocs)
