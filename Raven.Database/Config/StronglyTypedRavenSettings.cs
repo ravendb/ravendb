@@ -280,6 +280,8 @@ namespace Raven.Database.Config
             Esent.LogBuffers = new IntegerSetting(settings[Constants.Esent.LogBuffers], 8192);
             Esent.MaxCursors = new IntegerSetting(settings[Constants.Esent.MaxCursors], 2048);
             Esent.CircularLog = new BooleanSetting(settings[Constants.Esent.CircularLog], true);
+            Esent.MaxSessions = new NullableIntegerSetting(settings[Constants.Esent.MaxSessions], (int?)null);
+            Esent.CheckpointDepthMax = new NullableIntegerSetting(settings[Constants.Esent.CheckpointDepthMax], (int?)null);
 
             Replication.FetchingFromDiskTimeoutInSeconds = new IntegerSetting(settings["Raven/Replication/FetchingFromDiskTimeout"], 30);
             Replication.ReplicationRequestTimeoutInMilliseconds = new IntegerSetting(settings["Raven/Replication/ReplicationRequestTimeout"], 60 * 1000);
@@ -577,6 +579,10 @@ namespace Raven.Database.Config
             public IntegerSetting MaxCursors { get; set; }
 
             public BooleanSetting CircularLog { get; set; }
+
+            public NullableIntegerSetting MaxSessions { get; set; }
+
+            public NullableIntegerSetting CheckpointDepthMax { get; set; }
         }
 
         public class IndexingConfiguration

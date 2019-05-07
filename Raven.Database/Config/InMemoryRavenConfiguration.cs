@@ -352,6 +352,8 @@ namespace Raven.Database.Config
             Storage.Esent.LogBuffers = ravenSettings.Esent.LogBuffers.Value;
             Storage.Esent.MaxCursors = ravenSettings.Esent.MaxCursors.Value;
             Storage.Esent.CircularLog = ravenSettings.Esent.CircularLog.Value;
+            Storage.Esent.MaxSessions = ravenSettings.Esent.MaxSessions.Value;
+            Storage.Esent.CheckpointDepthMax = ravenSettings.Esent.CheckpointDepthMax.Value;
 
             Storage.PreventSchemaUpdate = ravenSettings.FileSystem.PreventSchemaUpdate.Value;
 
@@ -1486,6 +1488,8 @@ namespace Raven.Database.Config
                 public int LogBuffers { get; set; }
                 public int MaxCursors { get; set; }
                 public bool CircularLog { get; set; }
+                public int? MaxSessions { get; set; }
+                public int? CheckpointDepthMax { get; set; }
             }
 
             public class VoronConfiguration
