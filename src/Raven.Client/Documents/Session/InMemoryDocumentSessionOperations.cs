@@ -1381,7 +1381,6 @@ more responsive application.
             }
 
             RegisterMissingCounters(ids, countersToInclude);
-
         }
 
         internal void RegisterCounters(BlittableJsonReaderObject resultCounters, Dictionary<string, string[]> countersToInclude)
@@ -1399,7 +1398,6 @@ more responsive application.
             }
 
             RegisterMissingCounters(countersToInclude);
-
         }
 
         private void RegisterCountersInternal(BlittableJsonReaderObject resultCounters, Dictionary<string, string[]> countersToInclude, bool fromQueryResult = true, bool gotAll = false)
@@ -1410,32 +1408,66 @@ more responsive application.
                 resultCounters.GetPropertyByIndex(i, ref propertyDetails);
                 if (propertyDetails.Value == null)
                     continue;
+
+                string[] counters = {};
+
                 if (fromQueryResult)
                 {
-                    gotAll = countersToInclude.TryGetValue(propertyDetails.Name, out var counters) &&
+                    gotAll = countersToInclude.TryGetValue(propertyDetails.Name, out counters) &&
                              counters.Length == 0;
                 }
+
                 var bjra = (BlittableJsonReaderArray)propertyDetails.Value;
                 if (bjra.Length == 0 && gotAll == false)
-                    continue;
+                {
+                    if (CountersByDocId.TryGetValue(propertyDetails.Name, out var cache) == false)
+                        continue;
 
-                RegisterCountersForDocument(propertyDetails.Name, gotAll, bjra);
+                    if (counters == null)
+                        continue;
+
+                    foreach (var counter in counters)
+                    {
+                        cache.Values.Remove(counter);
+                    }
+
+                    CountersByDocId[propertyDetails.Name] = cache;
+                    continue;
+                }
+
+                RegisterCountersForDocument(propertyDetails.Name, gotAll, bjra, countersToInclude);
             }
         }
 
-        private void RegisterCountersForDocument(string id, bool gotAll, BlittableJsonReaderArray counters)
+        private void RegisterCountersForDocument(string id, bool gotAll, BlittableJsonReaderArray counters, Dictionary<string, string[]> countersToInclude)
         {
             if (CountersByDocId.TryGetValue(id, out var cache) == false)
             {
                 cache.Values = new Dictionary<string, long?>(StringComparer.OrdinalIgnoreCase);
             }
 
+            var deletedCounters = cache.Values.Count == 0
+                ? new HashSet<string>()
+                : countersToInclude[id].Length == 0 // IncludeAllCounters
+                    ? new HashSet<string>(cache.Values.Keys)
+                    : new HashSet<string>(countersToInclude[id]);
+
             foreach (BlittableJsonReaderObject counterBlittable in counters)
             {
                 if (counterBlittable.TryGet(nameof(CounterDetail.CounterName), out string name) == false ||
                     counterBlittable.TryGet(nameof(CounterDetail.TotalValue), out long value) == false)
                     continue;
+
                 cache.Values[name] = value;
+                deletedCounters.Remove(name);
+            }
+
+            if (deletedCounters.Count > 0)
+            {
+                foreach (var name in deletedCounters)
+                {
+                    cache.Values.Remove(name);
+                }
             }
 
             cache.GotAll = gotAll;
