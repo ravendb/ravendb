@@ -47,9 +47,11 @@ namespace Raven.Server.Documents.Queries
             _totalResults = totalResults;
         }
 
+        public int? InternalQueryOperationStart { get; set; }
+
         public IEnumerator<Document> GetEnumerator()
         {
-            return new Enumerator(_database, _documents, _fieldsToFetch, _collection, _isAllDocsCollection, _query, _queryTimings, _context, _includeDocumentsCommand, _totalResults);
+            return new Enumerator(_database, _documents, _fieldsToFetch, _collection, _isAllDocsCollection, _query, _queryTimings, _context, _includeDocumentsCommand, _totalResults, InternalQueryOperationStart);
         }
 
         IEnumerator IEnumerable.GetEnumerator()
@@ -66,6 +68,7 @@ namespace Raven.Server.Documents.Queries
             private readonly string _collection;
             private readonly bool _isAllDocsCollection;
             private readonly IndexQueryServerSide _query;
+            private readonly int? _queryOperationInternalStart;
 
             private bool _initialized;
 
@@ -80,7 +83,7 @@ namespace Raven.Server.Documents.Queries
             private readonly string _startsWith;
 
             public Enumerator(DocumentDatabase database, DocumentsStorage documents, FieldsToFetch fieldsToFetch, string collection, bool isAllDocsCollection,
-                IndexQueryServerSide query, QueryTimingsScope queryTimings, DocumentsOperationContext context, IncludeDocumentsCommand includeDocumentsCommand, Reference<int> totalResults)
+                IndexQueryServerSide query, QueryTimingsScope queryTimings, DocumentsOperationContext context, IncludeDocumentsCommand includeDocumentsCommand, Reference<int> totalResults, int? queryOperationInternalStart)
             {
                 _documents = documents;
                 _fieldsToFetch = fieldsToFetch;
@@ -90,6 +93,7 @@ namespace Raven.Server.Documents.Queries
                 _context = context;
                 _totalResults = totalResults;
                 _totalResults.Value = 0;
+                _queryOperationInternalStart = queryOperationInternalStart;
 
                 if (_fieldsToFetch.IsDistinct)
                     _alreadySeenProjections = new HashSet<ulong>();
@@ -252,7 +256,7 @@ namespace Raven.Server.Documents.Queries
                 _initialized = true;
 
                 if (_query.Start == 0)
-                    return 0;
+                    return _queryOperationInternalStart ?? 0;
 
                 if (_query.SkipDuplicateChecking)
                     return _query.Start;

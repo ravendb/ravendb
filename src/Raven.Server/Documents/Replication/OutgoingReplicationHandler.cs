@@ -985,29 +985,36 @@ namespace Raven.Server.Documents.Replication
                     break;
             }
 
-            if (_log.IsInfoEnabled)
+            switch (replicationBatchReply.Type)
             {
-                switch (replicationBatchReply.Type)
-                {
-                    case ReplicationMessageReply.ReplyType.Ok:
+                case ReplicationMessageReply.ReplyType.Ok:
+                    if (_log.IsInfoEnabled)
+                    {
                         _log.Info(
                             $"Received reply for replication batch from {Destination.FromString()}. New destination change vector is {LastAcceptedChangeVector}");
-                        break;
-                    case ReplicationMessageReply.ReplyType.Error:
+                    }
+                    break;
+                case ReplicationMessageReply.ReplyType.Error:
+                    if (_log.IsInfoEnabled)
+                    {
                         _log.Info(
                             $"Received reply for replication batch from {Destination.FromString()}. There has been a failure, error string received : {replicationBatchReply.Exception}");
-                        throw new InvalidOperationException(
-                            $"Received failure reply for replication batch. Error string received = {replicationBatchReply.Exception}");
-                    case ReplicationMessageReply.ReplyType.MissingAttachments:
+                    }
+                    throw new InvalidOperationException(
+                        $"Received failure reply for replication batch. Error string received = {replicationBatchReply.Exception}");
+                case ReplicationMessageReply.ReplyType.MissingAttachments:
+                    if (_log.IsInfoEnabled)
+                    {
                         _log.Info(
                             $"Received reply for replication batch from {Destination.FromString()}. Destination is reporting missing attachments.");
-                        break;
-                    default:
-                        throw new ArgumentOutOfRangeException(nameof(replicationBatchReply),
-                            $"Received reply for replication batch with unrecognized type {replicationBatchReply.Type}" +
-                            $"raw: {replicationBatchReplyMessage}");
-                }
+                    }
+                    break;
+                default:
+                    throw new ArgumentOutOfRangeException(nameof(replicationBatchReply),
+                        $"Received reply for replication batch with unrecognized type {replicationBatchReply.Type}" +
+                        $"raw: {replicationBatchReplyMessage}");
             }
+
             return replicationBatchReply;
         }
 
