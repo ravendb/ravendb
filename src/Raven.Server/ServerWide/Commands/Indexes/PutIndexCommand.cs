@@ -1,8 +1,10 @@
 using System;
+using System.Linq;
 using Raven.Client.Documents.Indexes;
 using Raven.Client.ServerWide;
 using Raven.Server.Rachis;
 using Raven.Server.Utils;
+using Sparrow;
 using Sparrow.Json.Parsing;
 
 namespace Raven.Server.ServerWide.Commands.Indexes
@@ -32,6 +34,12 @@ namespace Raven.Server.ServerWide.Commands.Indexes
         {
             try
             {
+                var indexNames = record.Indexes.Select(x => x.Value.Name).ToHashSet(OrdinalIgnoreCaseStringStructComparer.Instance);
+
+                if (indexNames.Add(Definition.Name) == false && record.Indexes.TryGetValue(Definition.Name, out var definition) == false)
+                {
+                    throw new InvalidOperationException($"Can not add index: {Definition.Name} because an index with the same name but different casing already exist");
+                }
                 record.AddIndex(Definition, Source, CreatedAt);
             }
             catch (Exception e)
