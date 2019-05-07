@@ -167,17 +167,7 @@ namespace Raven.Client.Documents.Indexes
                 var spatialOptions = ConvertToStringDictionary(SpatialIndexes);
 
                 if (conventions.PrettifyGeneratedLinqExpressions)
-                {
                     indexDefinition.Reduce = IndexPrettyPrinter.TryFormat(indexDefinition.Reduce);
-                    var maps = indexDefinition.Maps.Select(x => IndexPrettyPrinter.TryFormat(x));
-                    var newMaps = new HashSet<string>();
-                    foreach (var map in maps)
-                    {
-                        newMaps.Add(map);
-                    }
-                    if (newMaps.Count == indexDefinition.Maps.Count)
-                        indexDefinition.Maps = newMaps;
-                }
 
                 foreach (var indexesString in IndexesStrings)
                 {
@@ -214,7 +204,7 @@ namespace Raven.Client.Documents.Indexes
                     spatialOptions.Add(spatialString);
                 }
 
-            
+
 
                 ApplyValues(indexDefinition, indexes, (options, value) => options.Indexing = value);
                 ApplyValues(indexDefinition, stores, (options, value) => options.Storage = value);
@@ -258,7 +248,8 @@ namespace Raven.Client.Documents.Indexes
 
         private bool ContainsWhereEntityIs()
         {
-            if (Map == null) return false;
+            if (Map == null)
+                return false;
             var whereEntityIsVisitor = new WhereEntityIsVisitor();
             whereEntityIsVisitor.Visit(Map.Body);
             return whereEntityIsVisitor.HasWhereEntityIs;
