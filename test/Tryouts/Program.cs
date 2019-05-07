@@ -1,37 +1,20 @@
 using System;
-using System.Collections.Generic;
-using System.Diagnostics;
-using System.IO;
-using System.Linq;
-using System.Runtime.InteropServices;
-using System.Threading;
-using System.Threading.Tasks;
-using FastTests.Server.Basic;
-using Newtonsoft.Json.Linq;
-using Raven.Client.Documents;
-using Raven.Server.Documents;
-using Raven.Server.Documents.Queries.AST;
-using Raven.Server.Documents.Queries.Parser;
-using SlowTests.Cluster;
-using SlowTests.Issues;
-using Sparrow;
-using StressTests.Server.Replication;
-using Xunit.Sdk;
+using SlowTests.Client.Counters;
 
 namespace Tryouts
 {
     public static class Program
     {
-        public static async Task Main(string[] args)
+        public static void Main(string[] args)
         {
-            
-                using (var test = new SlowTests.Authentication.AuthenticationClusterTests())
+            for (int i = 0; i < 123; i++)
+            {
+                Console.WriteLine(i);
+                using (var test = new QueryOnCounters())
                 {
-                    await test.CanReplaceClusterCertWithExtensionPoint();
+                    test.CountersShouldBeCachedOnCollection();
                 }
-
-                
-            
+            }
         }
     }
 }

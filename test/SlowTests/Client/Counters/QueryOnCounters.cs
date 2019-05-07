@@ -3397,7 +3397,7 @@ from Users as user select output(user)", query.ToString());
                     session.CountersFor("orders/1-A").Increment("Downloads", 200);
                     session.SaveChanges();
 
-                    session.Query<Order>().Include(i => i.IncludeAllCounters());
+                    session.Query<Order>().Include(i => i.IncludeCounter("Downloads")).ToList();
                     counterValue = session.CountersFor("orders/1-A").Get("Downloads");
                     Assert.Equal(500, counterValue);
                 }
@@ -3411,7 +3411,7 @@ from Users as user select output(user)", query.ToString());
                     session.CountersFor("orders/1-A").Increment("Downloads", 200);
                     session.SaveChanges();
 
-                    session.Load<Order>("orders/1-A", i => i.IncludeCounters(new [] { "Downloads" }));
+                    session.Load<Order>("orders/1-A", i => i.IncludeCounter("Downloads"));
                     counterValue = session.CountersFor("orders/1-A").Get("Downloads");
                     Assert.Equal(700, counterValue);
                 }
@@ -3462,6 +3462,85 @@ from Users as user select output(user)", query.ToString());
                     Assert.Equal(500, counterValue);
                 }
             }
+        }
+
+        [Theory]
+        [InlineData(IncludedCounter.IncludeCounterDownload)]
+        [InlineData(IncludedCounter.IncludeCounterUpload)]
+        [InlineData(IncludedCounter.IncludeCounters)]
+        [InlineData(IncludedCounter.IncludeAllCounters)]
+        public void CountersCachingShouldHandleDeletion(IncludedCounter query)
+        {
+            using (var store = GetDocumentStore())
+            {
+                using (var session = store.OpenSession())
+                {
+                    session.Store(new Order
+                    {
+                        Company = "companies/1-A"
+                    }, "orders/1-A");
+
+                    session.CountersFor("orders/1-A").Increment("Downloads", 100);
+                    session.CountersFor("orders/1-A").Increment("Uploads", 123);
+                    session.CountersFor("orders/1-A").Increment("Bugs", 0xDEAD);
+                    session.SaveChanges();
+                }
+
+                using (var session = store.OpenSession())
+                {
+                    session.Query<Order>().Include(i => i.IncludeCounter("Downloads")).ToList();
+                    var counterValue = session.CountersFor("orders/1-A").Get("Downloads");
+                    Assert.Equal(100, counterValue);
+
+                    using (var writeSession = store.OpenSession())
+                    {
+                        writeSession.CountersFor("orders/1-A").Increment("Downloads", 200);
+                        writeSession.SaveChanges();
+                    }
+
+                    session.Query<Order>().Include(i => i.IncludeCounter("Downloads")).ToList();
+                    counterValue = session.CountersFor("orders/1-A").Get("Downloads");
+                    Assert.Equal(300, counterValue);
+                    session.SaveChanges();
+
+                    using (var writeSession = store.OpenSession())
+                    {
+                        writeSession.CountersFor("orders/1-A").Delete("Downloads");
+                        writeSession.SaveChanges();
+                    }
+
+                    switch (query)
+                    {
+                        case IncludedCounter.IncludeCounterDownload:
+                            session.Query<Order>().Include(i => i.IncludeCounter("Downloads")).ToList();
+                            break;
+                        case IncludedCounter.IncludeCounterUpload:
+                            session.Query<Order>().Include(i => i.IncludeCounter("Uploads")).ToList();
+                            break;
+                        case IncludedCounter.IncludeCounters:
+                            session.Query<Order>().Include(i => i.IncludeCounters(new[] { "Downloads", "Uploads", "Bugs" })).ToList();
+                            break;
+                        case IncludedCounter.IncludeAllCounters:
+                            session.Query<Order>().Include(i => i.IncludeAllCounters()).ToList();
+                            break;
+                    }
+
+                    counterValue = session.CountersFor("orders/1-A").Get("Downloads");
+
+                    if (query == IncludedCounter.IncludeCounterUpload)
+                        Assert.Equal(300, counterValue);
+                    else
+                        Assert.Null(counterValue);
+                }
+            }
+        }
+
+        public enum IncludedCounter
+        {
+            IncludeCounterDownload,
+            IncludeCounterUpload,
+            IncludeCounters,
+            IncludeAllCounters
         }
 
         private class User
