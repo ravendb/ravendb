@@ -14,14 +14,12 @@ namespace SlowTests.Issues
         [Fact]
         public async Task Can_restore_legacy_counters_from_full_backup()
         {
-
             var backupPath = NewDataPath(forceCreateDir: true);
             var fullBackupPath = Path.Combine(backupPath, "RavenDB_13512.counters.ravendb-full-backup");
             RavenDB_13468.ExtractFile(fullBackupPath, "SlowTests.Data.RavenDB_13512.counters.test.4.1.6.ravendb-full-backup");
 
             using (var store = GetDocumentStore())
             {
-
                 var databaseName = $"restored_database-{Guid.NewGuid()}";
 
                 using (RestoreDatabase(store, new RestoreBackupConfiguration
@@ -65,12 +63,16 @@ namespace SlowTests.Issues
             RavenDB_13468.ExtractFile(incrementalBackupPath2, assemblyPrefix + "18-01.ravendb-incremental-backup");
 
             using (var store = GetDocumentStore())
-            {                
-                await store.Smuggler.ImportIncrementalAsync(new DatabaseSmugglerImportOptions(), backupPath);
+            {
+                var importOptions = new DatabaseSmugglerImportOptions();
+#pragma warning disable 618
+                importOptions.OperateOnTypes |= DatabaseItemType.Counters;
+#pragma warning restore 618
+
+                await store.Smuggler.ImportIncrementalAsync(importOptions, backupPath);
 
                 using (var session = store.OpenAsyncSession())
                 {
-
                     var user1 = await session.LoadAsync<User>("users/1");
                     Assert.NotNull(user1);
 
@@ -93,7 +95,6 @@ namespace SlowTests.Issues
                         Assert.Equal(i * 2, val);
                     }
                 }
-
             }
         }
     }
