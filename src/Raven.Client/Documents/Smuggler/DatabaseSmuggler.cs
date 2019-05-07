@@ -156,9 +156,6 @@ namespace Raven.Client.Documents.Smuggler
         {
             options.OperateOnTypes |= DatabaseItemType.Tombstones;
             options.OperateOnTypes |= DatabaseItemType.CompareExchangeTombstones;
-#pragma warning disable 618
-            options.OperateOnTypes |= DatabaseItemType.Counters;
-#pragma warning restore 618
 
             // we import the indexes and Subscriptions from the last file only,
             var oldOperateOnTypes = options.OperateOnTypes;
