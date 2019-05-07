@@ -179,7 +179,7 @@ namespace Sparrow.Json
             }
         }
 
-        public ulong DebugHash
+        public ulong ObjectHash
         {
             get
             {

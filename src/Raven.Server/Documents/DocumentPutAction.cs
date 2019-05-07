@@ -238,13 +238,13 @@ namespace Raven.Server.Documents
             document.BlittableValidation();
             BlittableJsonReaderObject.AssertNoModifications(document, id, assertChildren: true);
             AssertMetadataWasFiltered(document);
-            documentDebugHash = document.DebugHash;
+            documentDebugHash = document.ObjectHash;
         }
 
         [Conditional("DEBUG")]
         private static void ValidateDocumentHash(string id, BlittableJsonReaderObject document, ulong documentDebugHash)
         {
-            if (document.DebugHash != documentDebugHash)
+            if (document.ObjectHash != documentDebugHash)
             {
                 throw new InvalidDataException("The incoming document " + id + " has changed _during_ the put process, " +
                                                "this is likely because you are trying to save a document that is already stored and was moved");
