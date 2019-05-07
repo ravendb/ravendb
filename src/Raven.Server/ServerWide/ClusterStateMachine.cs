@@ -1446,9 +1446,9 @@ namespace Raven.Server.ServerWide
             context.Transaction.InnerTransaction.LowLevelTransaction.OnDispose += transaction =>
             {
                 if (transaction is LowLevelTransaction llt && llt.Committed)
-                    {
+                {
                     ExecuteAsyncTask(index, () => ValueChanged?.Invoke(this, (index, type)));
-                        }
+                }
             };
         }
 
