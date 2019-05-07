@@ -238,14 +238,7 @@ namespace Raven.Server.ServerWide
                         ClusterStateCleanUp(context, cmd, index);
                         break;
                     case nameof(PutSubscriptionBatchCommand):
-                        if (cmd.TryGet(nameof(PutSubscriptionBatchCommand.Commands), out BlittableJsonReaderArray subscriptionCommands) == false)
-                        {
-                            throw new RachisApplyException($"'{nameof(PutSubscriptionBatchCommand.Commands)}' is missing in '{nameof(PutSubscriptionBatchCommand)}'.");
-                        }
-                        foreach (BlittableJsonReaderObject command in subscriptionCommands)
-                        {
-                            Apply(context, command, index, leader, serverStore);
-                        }
+                        ExecutePutSubscriptionBatch(context, cmd, index, type);
                         break;
                     case nameof(AddOrUpdateCompareExchangeBatchCommand):
                         ExecuteCompareExchangeBatch(context, cmd, index, type);
@@ -434,6 +427,57 @@ namespace Raven.Server.ServerWide
                     Term = leader?.Term,
                     LeaderShipDuration = leader?.LeaderShipDuration,
                 });
+            }
+        }
+
+        private void ExecutePutSubscriptionBatch(TransactionOperationContext context, BlittableJsonReaderObject cmd, long index, string type)
+        {
+            if (cmd.TryGet(nameof(PutSubscriptionBatchCommand.Commands), out BlittableJsonReaderArray subscriptionCommands) == false)
+            {
+                throw new RachisApplyException($"'{nameof(PutSubscriptionBatchCommand.Commands)}' is missing in '{nameof(PutSubscriptionBatchCommand)}'.");
+            }
+
+            UpdateValueForDatabaseCommand updateCommand = null;
+            Exception exception = null;
+            var actionsByDatabase = new Dictionary<string, Action>();
+            var items = context.Transaction.InnerTransaction.OpenTable(ItemsSchema, Items);
+            try
+            {
+                foreach (BlittableJsonReaderObject command in subscriptionCommands)
+                {
+                    if (command.TryGet("Type", out string putSubscriptionType) == false && putSubscriptionType != nameof(PutSubscriptionCommand))
+                    {
+                        throw new RachisApplyException($"Cannot execute {type} command, wrong format");
+                    }
+
+                    updateCommand = (UpdateValueForDatabaseCommand)JsonDeserializationCluster.Commands[nameof(PutSubscriptionCommand)](command);
+
+                    var database = updateCommand.DatabaseName;
+                    if (DatabaseExists(context, database) == false)
+                    {
+                        throw new DatabaseDoesNotExistException(
+                            $"Cannot set typed value of type {type} for database {database}, because it does not exist");
+                    }
+
+                    updateCommand.Execute(context, items, index, record: null, _parent.CurrentState, out _);
+
+                    if (actionsByDatabase.ContainsKey(database) == false)
+                    {
+                        actionsByDatabase[database] = () => 
+                            DatabaseChanged?.Invoke(this, (database, index, nameof(PutSubscriptionCommand), DatabasesLandlord.ClusterDatabaseChangeType.ValueChanged));
+                    }
+                }
+
+                ExecuteManyOnDispose(context, index, type, actionsByDatabase.Values.ToList());
+            }
+            catch (Exception e)
+            {
+                exception = e;
+                throw;
+            }
+            finally
+            {
+                LogCommand(type, index, exception, updateCommand?.AdditionalDebugInformation(exception));
             }
         }
 
@@ -1446,9 +1490,9 @@ namespace Raven.Server.ServerWide
             context.Transaction.InnerTransaction.LowLevelTransaction.OnDispose += transaction =>
             {
                 if (transaction is LowLevelTransaction llt && llt.Committed)
-                    {
+                {
                     ExecuteAsyncTask(index, () => ValueChanged?.Invoke(this, (index, type)));
-                        }
+                }
             };
         }
 
@@ -1468,24 +1512,24 @@ namespace Raven.Server.ServerWide
             // we do this under the write tx lock before we update the last applied index
             _rachisLogIndexNotifications.AddTask(index);
 
-                    TaskExecutor.Execute(_ =>
-                    {
+            TaskExecutor.Execute(_ =>
+            {
                 Exception error = null;
 
-                        try
-                        {
+                try
+                {
                     action();
-                        }
-                        catch (Exception e)
-                        {
+                }
+                catch (Exception e)
+                {
                     error = e;
-                        }
+                }
                 finally
                 {
                     _rachisLogIndexNotifications.NotifyListenersAbout(index, error);
                     _rachisLogIndexNotifications.SetTaskCompleted(index, error);
                 }
-                    }, null);
+            }, null);
         }
 
         private void UpdateDatabase(TransactionOperationContext context, string type, BlittableJsonReaderObject cmd, long index, Leader leader, ServerStore serverStore)
@@ -1851,7 +1895,7 @@ namespace Raven.Server.ServerWide
             context.Transaction.InnerTransaction.LowLevelTransaction.OnDispose += transaction =>
             {
                 if (transaction is LowLevelTransaction llt && llt.Committed)
-                    {
+                {
                     _rachisLogIndexNotifications.AddTask(index);
                     NotifyAndSetCompleted(index);
                 }
@@ -2124,6 +2168,15 @@ namespace Raven.Server.ServerWide
         public DatabaseRecord ReadDatabase(TransactionOperationContext context, string name)
         {
             return ReadDatabase(context, name, out long _);
+        }
+
+        private bool DatabaseExists(TransactionOperationContext context, string name)
+        {
+            var dbKey = "db/" + name.ToLowerInvariant();
+            var items = context.Transaction.InnerTransaction.OpenTable(ItemsSchema, Items);
+
+            using (Slice.From(context.Allocator, dbKey, out var key))
+                return items.VerifyKeyExists(key);
         }
 
         public DatabaseRecord ReadDatabase<T>(TransactionOperationContext<T> context, string name, out long etag)
@@ -2531,7 +2584,7 @@ namespace Raven.Server.ServerWide
         {
             return new ClusterValidator();
         }
-            }
+    }
 
     public class RachisLogIndexNotifications
     {
@@ -2600,13 +2653,13 @@ namespace Raven.Server.ServerWide
             {
                 // the task has already completed
                 // let's check if we had errors in it
-            foreach (var error in _errors)
-            {
-                if (error.Index == index)
-                    error.Exception.Throw();// rethrow
-            }
+                foreach (var error in _errors)
+                {
+                    if (error.Index == index)
+                        error.Exception.Throw();// rethrow
+                }
                 return;
-        }
+            }
 
             var task = tcs.Task;
 
@@ -2703,7 +2756,7 @@ namespace Raven.Server.ServerWide
                 {
                     if (tcs.TrySetResult(null) == false)
                         LogFailureToSetTaskResult();
-    }
+                }
                 else
                 {
                     if (tcs.TrySetException(e) == false)
