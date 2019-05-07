@@ -86,7 +86,7 @@ namespace Raven.Server.Documents.Queries
             if (query.QueryParameters == null || query.QueryParameters.Count == 0)
                 return hash;
 
-            return Hashing.Combine(hash, query.QueryParameters.ObjectHash);
+            return Hashing.Combine(hash, query.QueryParameters.GetHashOfPropertyNames());
         }
 
         public QueryMetadata[] GetQueryCache()
