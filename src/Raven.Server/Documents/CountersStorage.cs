@@ -697,6 +697,9 @@ namespace Raven.Server.Documents
                             table.Set(tvb);
                         }
 
+                        UpdateMetricsForNewCounterGroup(data);
+
+
                         return;
                     }
 
@@ -860,6 +863,17 @@ namespace Raven.Server.Documents
                 entriesToUpdate.Clear();
                 _dictionariesPool.Free(entriesToUpdate);
             }
+        }
+
+        private void UpdateMetricsForNewCounterGroup(BlittableJsonReaderObject data)
+        {
+            _documentDatabase.Metrics.Counters.BytesPutsPerSec.MarkSingleThreaded(data.Size);
+
+            if (data.TryGet(Values, out BlittableJsonReaderObject values) == false)
+                return;
+            
+            _documentDatabase.Metrics.Counters.PutsPerSec.MarkSingleThreaded(values.Count);
+
         }
 
         private bool MergeCounterIfNeeded(
