@@ -162,7 +162,7 @@ namespace Raven.Embedded
 
                     using (var inputStream = process.StandardInput)
                     {
-                        inputStream.Write($"q{Environment.NewLine}y{Environment.NewLine}");
+                        inputStream.WriteLine($"shutdown no-confirmation");
                     }
 
                     if (process.WaitForExit((int)_gracefulShutdownTimeout.TotalMilliseconds))
