@@ -1669,9 +1669,9 @@ namespace Raven.Server.ServerWide
 
         private readonly (ByteString Entry, int Version)[] _snapshotEntries =
         {
-            (Items.Content, 40),
-            (CompareExchange.Content, 40),
-            (Identities.Content, 40),
+            (Items.Content, ClusterCommandsVersionManager.Base40CommandsVersion),
+            (CompareExchange.Content, ClusterCommandsVersionManager.Base40CommandsVersion),
+            (Identities.Content, ClusterCommandsVersionManager.Base40CommandsVersion),
 
             (TransactionCommands.Content, ClusterCommandsVersionManager.Base41CommandsVersion),
             (TransactionCommandsCountPerDatabase.Content, ClusterCommandsVersionManager.Base41CommandsVersion),
