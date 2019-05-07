@@ -8,8 +8,7 @@ namespace Raven.Client.Documents.Session
     {
         protected List<CounterIncludesToken> CounterIncludesTokens;
 
-        protected void IncludeCounters(string alias, 
-            Dictionary<string, (bool All, HashSet<string> Counters)> countersToIncludeByDocId)
+        protected void IncludeCounters(string alias, Dictionary<string, (bool All, HashSet<string> Counters)> countersToIncludeByDocId)
         {
             if (countersToIncludeByDocId?.Count > 0 == false)
                 return;
@@ -25,15 +24,20 @@ namespace Raven.Client.Documents.Session
                     continue;
                 }
 
-
                 if (kvp.Value.Counters?.Count > 0 == false)
                     continue;
 
-                CounterIncludesTokens.Add(CounterIncludesToken.Create(
-                    kvp.Key,
-                    kvp.Value.Counters.Count == 1
-                        ? AddQueryParameter(kvp.Value.Counters.First())
-                        : AddQueryParameter(kvp.Value.Counters)));
+                if (kvp.Value.Counters.Count == 1)
+                {
+                    CounterIncludesTokens.Add(CounterIncludesToken.Create(kvp.Key, kvp.Value.Counters.First()));
+                }
+                else
+                {
+                    foreach (var name in kvp.Value.Counters)
+                    {
+                        CounterIncludesTokens.Add(CounterIncludesToken.Create(kvp.Key, name));
+                    }
+                }
             }
         }
     }

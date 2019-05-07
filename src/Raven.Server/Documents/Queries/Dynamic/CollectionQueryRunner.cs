@@ -220,6 +220,7 @@ namespace Raven.Server.Documents.Queries.Dynamic
 
                 if (query.HasCounters)
                     buffer[3] = Database.DocumentsStorage.CountersStorage.GetLastCounterEtag(context, collection);
+
                 resultToFill.TotalResults = (int)collectionStats.Count;
             }
 

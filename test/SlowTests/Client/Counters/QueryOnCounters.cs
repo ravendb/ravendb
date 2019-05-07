@@ -1420,7 +1420,7 @@ from Users as user select output(user)", query.ToString());
                     var query = session.Query<Order>()
                         .Include(i => i.IncludeCounter("Downloads"));
 
-                    Assert.Equal("from Orders include counters($p0)"
+                    Assert.Equal("from Orders include counters('Downloads')"
                                 , query.ToString());
 
                     var queryResult = query.ToList();
@@ -1484,7 +1484,7 @@ from Users as user select output(user)", query.ToString());
                     var query = session.Query<Order>()
                         .Include(i => i.IncludeCounters(new[] { "Downloads", "Likes" }));
 
-                    Assert.Equal("from Orders include counters($p0)"
+                    Assert.Equal("from Orders include counters('Downloads'),counters('Likes')"
                                 , query.ToString());
 
                     var queryResult = query.ToList();
@@ -1641,7 +1641,7 @@ from Users as user select output(user)", query.ToString());
                             .IncludeDocuments(x => x.Company));
 
                     Assert.Equal("from Orders include " +
-                                 "Company,counters($p0)"
+                                 "Company,counters('Downloads')"
                                 , query.ToString());
 
                     var queryResult = query.ToList();
@@ -1719,7 +1719,7 @@ from Users as user select output(user)", query.ToString());
                             .IncludeDocuments(x => x.Company));
 
                     Assert.Equal("from Orders include " +
-                                 "Company,counters($p0)"
+                                 "Company,counters('Downloads')"
                                 , query.ToString());
 
                     var queryResult = await query.ToListAsync();
@@ -1810,8 +1810,8 @@ from Users as user select output(user)", query.ToString());
 
                             .Where(x => x.ShipTo.Country == "Brazil");
 
-                    Assert.Equal("from Orders where ShipTo.Country = $p1 " +
-                                 "include Company,counters($p0)"
+                    Assert.Equal("from Orders where ShipTo.Country = $p0 " +
+                                 "include Company,counters('Downloads')"
                                 , query.ToString());
 
                     var queryResult = query.ToList();
@@ -1907,8 +1907,8 @@ from Users as user select output(user)", query.ToString());
 
                             .Where(x => x.ShipTo.Country == "Brazil");
 
-                    Assert.Equal("from Orders where ShipTo.Country = $p1 " +
-                                 "include Company,counters($p0)"
+                    Assert.Equal("from Orders where ShipTo.Country = $p0 " +
+                                 "include Company,counters('Downloads')"
                                 , query.ToString());
 
                     var queryResult = await query.ToListAsync();
@@ -2332,7 +2332,7 @@ from Users as user select output(user)", query.ToString());
                         .Include(i => i.IncludeCounter(o => o.Employee, "Downloads"));
 
                     Assert.Equal("from Orders as o " +
-                                 "include counters(o.Employee, $p0)"
+                                 "include counters(o.Employee, 'Downloads')"
                         , query.ToString());
 
                     var results = query.ToList();
@@ -2399,7 +2399,7 @@ from Users as user select output(user)", query.ToString());
                         .Include(i => i.IncludeCounter(o => o.Employee, "Downloads"));
 
                     Assert.Equal("from Orders as o " +
-                                 "include counters(o.Employee, $p0)"
+                                 "include counters(o.Employee, 'Downloads')"
                         , query.ToString());
 
                     var results = await query.ToListAsync();
@@ -2469,7 +2469,7 @@ from Users as user select output(user)", query.ToString());
                         .Include(i => i.IncludeCounters(o => o.Employee, new[] { "Downloads", "Likes" }));
 
                     Assert.Equal("from Orders as o " +
-                                 "include counters(o.Employee, $p0)"
+                                 "include counters(o.Employee, 'Downloads'),counters(o.Employee, 'Likes')"
                         , query.ToString());
 
                     var results = query.ToList();
@@ -2545,7 +2545,7 @@ from Users as user select output(user)", query.ToString());
                             .IncludeCounter(x => x.Employee, "Downloads"));
 
                     Assert.Equal("from Orders as x " +
-                                 "include counters(x, $p0),counters(x.Employee, $p1)"
+                                 "include counters(x, 'Likes'),counters(x.Employee, 'Downloads')"
                         , query.ToString());
 
                     var orders = query.ToList();
@@ -2633,7 +2633,7 @@ from Users as user select output(user)", query.ToString());
                             .IncludeCounter(x => x.Employee, "Downloads"));
 
                     Assert.Equal("from Orders as x " +
-                                 "include counters(x, $p0),counters(x.Employee, $p1)"
+                                 "include counters(x, 'Likes'),counters(x.Employee, 'Downloads')"
                         , query.ToString());
 
                     var orders = await query.ToListAsync();
@@ -2724,8 +2724,8 @@ from Users as user select output(user)", query.ToString());
                             .IncludeCounter(x => x.Employee, "Downloads"))
                         .Where(o => o.OrderedAt.Year < 2000);
 
-                    Assert.Equal("from Orders as x where x.OrderedAt.Year < $p2 " +
-                                 "include counters(x, $p0),counters(x.Employee, $p1)"
+                    Assert.Equal("from Orders as x where x.OrderedAt.Year < $p0 " +
+                                 "include counters(x, 'Likes'),counters(x.Employee, 'Downloads')"
                         , query.ToString());
 
                     var orders = query.ToList();
@@ -2815,7 +2815,7 @@ from Users as user select output(user)", query.ToString());
 
                     Assert.Equal("from Orders as x " +
                                  "select id() as Id, Employee " +
-                                 "include counters(x, $p0),counters(x.Employee, $p1)"
+                                 "include counters(x, 'Likes'),counters(x.Employee, 'Downloads')"
                         , query.ToString());
 
                     var results = query.ToList();
@@ -2911,7 +2911,7 @@ from Users as user select output(user)", query.ToString());
 
                     Assert.Equal("from Orders as x " +
                                  "select id() as Id, Employee " +
-                                 "include counters(x, $p0),counters(x.Employee, $p1)"
+                                 "include counters(x, 'Likes'),counters(x.Employee, 'Downloads')"
                         , query.ToString());
 
                     var results = await query.ToListAsync();
@@ -3015,10 +3015,10 @@ from Users as user select output(user)", query.ToString());
                                 };
 
                     Assert.Equal("from Orders as o " +
-                                 "where o.OrderedAt.Year < $p2 " +
+                                 "where o.OrderedAt.Year < $p0 " +
                                  "select { Id : id(o), OrderedAt : o.OrderedAt, " +
                                     "Employee : o.Employee, Foo : o.Employee+o.Company } " +
-                                 "include Employee,counters(o, $p0),counters(o.Employee, $p1)"
+                                 "include Employee,counters(o, 'Likes'),counters(o.Employee, 'Downloads')"
                         , query.ToString());
 
                     var results = query.ToList();
@@ -3122,10 +3122,10 @@ from Users as user select output(user)", query.ToString());
                                 };
 
                     Assert.Equal("from Orders as o " +
-                                 "where o.OrderedAt.Year < $p2 " +
+                                 "where o.OrderedAt.Year < $p0 " +
                                  "select { Id : id(o), OrderedAt : o.OrderedAt, " +
                                     "Employee : o.Employee, Foo : o.Employee+o.Company } " +
-                                 "include Employee,counters(o, $p0),counters(o.Employee, $p1)"
+                                 "include Employee,counters(o, 'Likes'),counters(o.Employee, 'Downloads')"
                         , query.ToString());
 
                     var results = await query.ToListAsync();
@@ -3320,7 +3320,7 @@ from Users as user select output(user)", query.ToString());
                             .IncludeCounter(x => x.Employee, "Downloads"));
 
                     Assert.Equal("from Orders as x " +
-                                 "include Employee,counters(x, $p0),counters(x.Employee, $p1)"
+                                 "include Employee,counters(x, 'Likes'),counters(x.Employee, 'Downloads')"
                         , query.ToString());
 
                     var orders = query.ToList();
