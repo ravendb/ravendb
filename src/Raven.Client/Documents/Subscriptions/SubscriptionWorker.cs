@@ -196,14 +196,19 @@ namespace Raven.Client.Documents.Subscriptions
                         tcpInfo = await LegacyTryGetTcpInfo(requestExecutor, context, token).ConfigureAwait(false);
                     }
                 }
+                
+                string chosenUrl; 
+                (_tcpClient, chosenUrl) = await TcpUtils.ConnectAsyncWithPriority(tcpInfo, 
+                    requestExecutor.DefaultTimeout.GetValueOrDefault(RequestExecutor.GlobalHttpClientTimeout), 
+                    requestExecutor.DefaultTimeout.GetValueOrDefault(RequestExecutor.GlobalHttpClientTimeout)).ConfigureAwait(false);
 
-                string chosenUrl;
-                (_tcpClient, chosenUrl) = await TcpUtils.ConnectAsyncWithPriority(tcpInfo, requestExecutor.SendTimeout, requestExecutor.ReceiveTimeout).ConfigureAwait(false);
                 _tcpClient.NoDelay = true;
                 _tcpClient.SendBufferSize = _options?.SendBufferSizeInBytes ?? SubscriptionWorkerOptions.DefaultSendBufferSizeInBytes;
                 _tcpClient.ReceiveBufferSize = _options?.ReceiveBufferSizeInBytes ?? SubscriptionWorkerOptions.DefaultReceiveBufferSizeInBytes;
                 _stream = _tcpClient.GetStream();
-                _stream = await TcpUtils.WrapStreamWithSslAsync(_tcpClient, tcpInfo, _store.Certificate, requestExecutor.SendTimeout, requestExecutor.ReceiveTimeout).ConfigureAwait(false);
+                _stream = await TcpUtils.WrapStreamWithSslAsync(_tcpClient, tcpInfo, _store.Certificate, 
+                    requestExecutor.DefaultTimeout.GetValueOrDefault(RequestExecutor.GlobalHttpClientTimeout), 
+                    requestExecutor.DefaultTimeout.GetValueOrDefault(RequestExecutor.GlobalHttpClientTimeout)).ConfigureAwait(false);
 
                 var databaseName = _dbName ?? _store.Database;
 

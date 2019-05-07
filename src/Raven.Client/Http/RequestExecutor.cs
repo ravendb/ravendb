@@ -109,19 +109,6 @@ namespace Raven.Client.Http
 
         internal string LastServerVersion;
 
-        public TimeSpan SendTimeout
-        {
-            //addressing a default timeout for backward compatibility
-            get => _sendTimeout ?? (DefaultTimeout ?? GlobalHttpClientTimeout);
-            set => _sendTimeout = value;
-        }
-
-        public TimeSpan ReceiveTimeout
-        {
-            get => _receiveTimeout ?? (DefaultTimeout ?? GlobalHttpClientTimeout);
-            set => _receiveTimeout = value;
-        }
-
         public TimeSpan? DefaultTimeout
         {
             get => _defaultTimeout;

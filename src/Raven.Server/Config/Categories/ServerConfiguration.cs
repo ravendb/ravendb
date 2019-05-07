@@ -9,13 +9,13 @@ namespace Raven.Server.Config.Categories
         [Description("Receive timeout for all TCP connections")]
         [DefaultValue(30)]
         [TimeUnit(TimeUnit.Seconds)]
-        [ConfigurationEntry("Server.Tcp.ReceiveTimeout", ConfigurationEntryScope.ServerWideOrPerDatabase)]
+        [ConfigurationEntry("Server.Tcp.ReceiveTimeoutInSec", ConfigurationEntryScope.ServerWideOnly)]
         public TimeSetting ReceiveTimeout { get; set; }
 
         [Description("Sending timeout for all TCP connections")]
         [DefaultValue(30)]
         [TimeUnit(TimeUnit.Seconds)]
-        [ConfigurationEntry("Server.Tcp.SendTimeout", ConfigurationEntryScope.ServerWideOrPerDatabase)]
+        [ConfigurationEntry("Server.Tcp.SendTimeoutInSec", ConfigurationEntryScope.ServerWideOnly)]
         public TimeSetting SendTimeout { get; set; }
 
         [DefaultValue(30)]
