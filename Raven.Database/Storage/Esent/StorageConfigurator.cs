@@ -68,6 +68,9 @@ namespace Raven.Database.Storage.Esent
                 AlternateDatabaseRecoveryDirectory = path
             };
 
+            if (Configuration.Storage.Esent.CheckpointDepthMax != null)
+                instanceParameters.CheckpointDepthMax = Configuration.Storage.Esent.CheckpointDepthMax.Value;
+            
             if (Environment.OSVersion.Version >= new Version(5, 2))
             {
                 // JET_paramEnableIndexCleanup is not supported on WindowsXP
