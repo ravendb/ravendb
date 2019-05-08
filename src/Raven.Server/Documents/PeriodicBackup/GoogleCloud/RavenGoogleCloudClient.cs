@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
+using System.Runtime.CompilerServices;
 using System.Threading;
 using System.Threading.Tasks;
 using Google.Api.Gax;
@@ -49,10 +50,9 @@ namespace Raven.Server.Documents.PeriodicBackup.GoogleCloud
             _progress = progress;
         }
 
-        public async Task<Object> UploadObjectAsync(string fileName, Stream stream, Dictionary<string, string> metadata = null)
+        public Task<Object> UploadObjectAsync(string fileName, Stream stream, Dictionary<string, string> metadata = null)
         {
-
-            return await _client.UploadObjectAsync(
+            return _client.UploadObjectAsync(
                 new Object
                 {
                     Bucket = _bucketName,
@@ -85,9 +85,9 @@ namespace Raven.Server.Documents.PeriodicBackup.GoogleCloud
                 }));
         }
 
-        public async Task DownloadObjectAsync(string fileName, Stream stream)
+        public ConfiguredTaskAwaitable DownloadObjectAsync(string fileName, Stream stream)
         {
-            await _client.DownloadObjectAsync(
+          return _client.DownloadObjectAsync(
                 _bucketName,
                 fileName,
                 cancellationToken: CancellationToken,
@@ -95,18 +95,18 @@ namespace Raven.Server.Documents.PeriodicBackup.GoogleCloud
             ).ConfigureAwait(false);
         }
 
-        public async Task<Object> GetObjectAsync(string fileName)
+        public ConfiguredTaskAwaitable<Object> GetObjectAsync(string fileName)
         {
-            return await _client.GetObjectAsync(
+            return _client.GetObjectAsync(
                 _bucketName,
                 fileName,
                 cancellationToken: CancellationToken
             ).ConfigureAwait(false);
         }
 
-        public async Task DeleteObjectAsync(string fileName)
+        public ConfiguredTaskAwaitable DeleteObjectAsync(string fileName)
         {
-            await _client.DeleteObjectAsync(
+           return _client.DeleteObjectAsync(
                 _bucketName,
                 fileName,
                 null,
@@ -123,9 +123,9 @@ namespace Raven.Server.Documents.PeriodicBackup.GoogleCloud
             return _client.ListBuckets(_projectId);
         }
 
-        public async Task<List<Object>> ListObjectsAsync()
+        public  Task<List<Object>> ListObjectsAsync()
         {
-            return await _client.ListObjectsAsync(_bucketName).ToList();
+            return _client.ListObjectsAsync(_bucketName).ToList(CancellationToken);
         }
 
         public async Task TestConnection()
