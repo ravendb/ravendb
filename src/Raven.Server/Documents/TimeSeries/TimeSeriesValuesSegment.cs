@@ -35,14 +35,17 @@ namespace Raven.Server.Documents.TimeSeries
         {
             get
             {
-                var bitsHeader = GetBitsBuffer();
-                var bytes = bitsHeader.NumberOfBits / 8 + (bitsHeader.NumberOfBits % 8 == 0 ? 0 : 1);
-
-                return bytes + sizeof(BitsBufferHeader) + DataStart;
+                return GetNumberOfBytes(Header);
             }
         }
-        
-        
+
+        private int GetNumberOfBytes(SegmentHeader* header)
+        {
+            var bitsHeader = GetBitsBuffer(Header);
+
+            return bitsHeader.NumberOfBytes + GetDataStart(Header);
+        }
+
 
         public TimeSeriesValuesSegment(byte* buffer, int capacity)
         {
@@ -58,7 +61,7 @@ namespace Raven.Server.Documents.TimeSeries
             throw new ArgumentOutOfRangeException("Maximum capacity for segment is 2KB, but was: " + _capacity);
         }
 
-        private int DataStart => sizeof(SegmentHeader) + sizeof(StatefulTimeStampValue) * Header->NumberOfValues + Header->SizeOfTags + Header->CompressedSize;
+        private static int GetDataStart(SegmentHeader* header) => sizeof(SegmentHeader) + sizeof(StatefulTimeStampValue) * header->NumberOfValues + header->SizeOfTags + header->CompressedSize;
 
         public int NumberOfValues => Header->NumberOfValues;
 
@@ -106,7 +109,7 @@ namespace Raven.Server.Documents.TimeSeries
 
                 var tempBitsBuffer = new BitsBuffer(tempBuffer.Ptr, maximumSize);
 
-                var prevs = new Span<StatefulTimeStampValue>(_buffer + sizeof(SegmentHeader), Header->NumberOfValues);
+                var prevs = new Span<StatefulTimeStampValue>(_buffer + sizeof(SegmentHeader), tempHeader->NumberOfValues);
                 AddTimeStamp(deltaFromStart, ref tempBitsBuffer, tempHeader);
 
                 for (int i = 0; i < vals.Length; i++)
@@ -120,7 +123,7 @@ namespace Raven.Server.Documents.TimeSeries
                 }
                 else
                 {
-                    var prevTagIndex = FindPreviousTag(tag);
+                    var prevTagIndex = FindPreviousTag(tag, tempHeader);
                     if (prevTagIndex >= 0)
                     {
                         if (Header->PreviousTagIndex == prevTagIndex)
@@ -131,31 +134,32 @@ namespace Raven.Server.Documents.TimeSeries
                         {
                             tempBitsBuffer.AddValue(2, 2); // will write the tag index buffer here
                             tempBitsBuffer.AddValue((ulong)prevTagIndex, 8);
+                            tempHeader->PreviousTagIndex = (byte)prevTagIndex;
                         }
                     }
                     else
                     {
                         // need to write the tag
-                        var numberOfBits = ((BitsBufferHeader*)(_buffer + DataStart))->BitsPosition;
+                        var numberOfBits = ((BitsBufferHeader*)(_buffer + GetDataStart(tempHeader)))->BitsPosition;
                         insertTag = true;
 
                         tempBitsBuffer.AddValue(2, 2); // will write the tag index buffer here
                         tempBitsBuffer.AddValue((ulong)(~prevTagIndex), 8);
+                        tempHeader->PreviousTagIndex = (byte)(~prevTagIndex);
                     }
                 }
 
                 tempHeader->PreviousTimeStamp = deltaFromStart;
                 tempHeader->NumberOfEntries++;
-                var actualBitsBuffer = GetBitsBuffer();
+                var actualBitsBuffer = GetBitsBuffer(tempHeader);
 
                 if (insertTag)
                 {
                     if (actualBitsBuffer.HasAdditionalBits(tempBitsBuffer.NumberOfBits + (tag.Length + 1) * 8) == false)
                         return false;
 
-                    InsertTag(tag, tempHeader);
-                    *Header = *tempHeader;
-                    actualBitsBuffer = GetBitsBuffer();
+                    InsertTag(tag, tempHeader, actualBitsBuffer.NumberOfBytes);
+                    actualBitsBuffer = GetBitsBuffer(tempHeader);
                     var result = actualBitsBuffer.AddBits(tempBitsBuffer);
                     Debug.Assert(result, "Failed to add bits, but already checked precondition");
                 }
@@ -165,10 +169,10 @@ namespace Raven.Server.Documents.TimeSeries
                     {
                         return false;
                     }
-                    *Header = *tempHeader;
                 }
 
-                
+
+                *Header = *tempHeader;
 
                 return true;
             }
@@ -182,10 +186,10 @@ namespace Raven.Server.Documents.TimeSeries
          * 
          */ 
 
-        public int FindPreviousTag(Span<byte> tag)
+        public int FindPreviousTag(Span<byte> tag, SegmentHeader* tempHeader)
         {
-            var offset = Header->SizeOfTags;
-            var tagsPtr = _buffer + sizeof(SegmentHeader) + sizeof(StatefulTimeStampValue) * Header->NumberOfValues;
+            var offset = tempHeader->SizeOfTags;
+            var tagsPtr = _buffer + sizeof(SegmentHeader) + sizeof(StatefulTimeStampValue) * tempHeader->NumberOfValues;
             var numberOfTags = *(tagsPtr + offset - 1);
             if (numberOfTags == 0)
                 return ~0;
@@ -202,11 +206,11 @@ namespace Raven.Server.Documents.TimeSeries
             return ~numberOfTags;
         }
 
-        public void InsertTag(Span<byte> tag, SegmentHeader *tempHeader)
+        public void InsertTag(Span<byte> tag, SegmentHeader *tempHeader, int numberOfBytes)
         {
             var offset = tempHeader->SizeOfTags;
             var tagsPtr = _buffer + sizeof(SegmentHeader) + sizeof(StatefulTimeStampValue) * tempHeader->NumberOfValues;
-            var numberOfTags = *(tagsPtr + offset - 1);
+            var numberOfTags = tagsPtr[offset - 1];
 
             if (numberOfTags >= 127)
                 throw new InvalidOperationException("Cannot have more than 127 tags per segment");
@@ -214,15 +218,17 @@ namespace Raven.Server.Documents.TimeSeries
             var tagsLens = tagsPtr + offset - 1 - numberOfTags;
             var copyOfTagLens = stackalloc byte[numberOfTags];
             Memory.Copy(copyOfTagLens, tagsLens, numberOfTags);
-            var src = tagsLens + tag.Length + 1;
-            Memory.Move(tagsLens, src, _capacity - (int)(src - _buffer));
+            var newEndOfTagsArray = tagsPtr + offset + tag.Length + 1;
+
+            Debug.Assert((_capacity - (int)(newEndOfTagsArray - _buffer)) > numberOfBytes);
+            Memory.Move(newEndOfTagsArray, tagsPtr + offset, numberOfBytes);
             tag.CopyTo(new Span<byte>(tagsLens, tag.Length));
             Memory.Copy(tagsLens + tag.Length, copyOfTagLens, numberOfTags);
-            tagsLens += tag.Length;
+            tagsLens += tag.Length + numberOfTags;
 
-            tagsLens[numberOfTags] = (byte)tag.Length;
-            tagsLens[numberOfTags + 1] = (byte)(numberOfTags + 1);
-            tempHeader->SizeOfTags += (ushort)(tag.Length + 1 + numberOfTags);
+            *tagsLens++ = (byte)tag.Length;
+            *tagsLens++ = (byte)(numberOfTags + 1);
+            tempHeader->SizeOfTags = (ushort)(tagsLens - tagsPtr);
         }
 
         private static void ThrowInvalidTagLength()
@@ -231,7 +237,11 @@ namespace Raven.Server.Documents.TimeSeries
         }
 
         [Pure]
-        public BitsBuffer GetBitsBuffer() => new BitsBuffer(_buffer + DataStart, _capacity - DataStart - sizeof(BitsBufferHeader));
+        public BitsBuffer GetBitsBuffer(SegmentHeader* header)
+        {
+            int dataStart = GetDataStart(header);
+            return new BitsBuffer(_buffer + dataStart, _capacity - dataStart - sizeof(BitsBufferHeader));
+        }
 
         private static void AddTimeStamp(int deltaFromStart, ref BitsBuffer bitsBuffer, SegmentHeader* tempHeader)
         {
@@ -351,7 +361,7 @@ namespace Raven.Server.Documents.TimeSeries
                 if (values.Length != _parent.Header->NumberOfValues)
                     ThrowInvalidNumberOfValues();
 
-                var bitsBuffer = _parent.GetBitsBuffer();
+                var bitsBuffer = _parent.GetBitsBuffer(_parent.Header);
 
                 if (_bitsPosisition >= bitsBuffer.NumberOfBits)
                 {
@@ -398,7 +408,7 @@ namespace Raven.Server.Documents.TimeSeries
                     throw new ArgumentOutOfRangeException("Tag index " + tagIndex + " is outside the boundaries for tags for this segment: 0.." + numberOfTags);
                 var tagsLens = tagsPtr + offset - 1 - numberOfTags;
                 var tagBackwardOffset = 0;
-                for (int i = 0; i <= tagIndex; i++)
+                for (int i = numberOfTags - 1; i >= tagIndex; i--)
                 {
                     tagBackwardOffset += tagsLens[i];
                 }

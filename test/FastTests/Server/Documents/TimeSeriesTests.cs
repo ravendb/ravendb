@@ -98,6 +98,7 @@ namespace FastTests.Server.Documents
 
                 using (var session = store.OpenSession())
                 {
+
                     var vals = session.TimeSeriesFor("users/ayende")
                         .Get("Heartrate", DateTime.MinValue, DateTime.MaxValue)
                         .ToList();
