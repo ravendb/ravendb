@@ -346,14 +346,14 @@
         </div>
     </div>
     
-    <div class="panel" data-bind="with: googleCloudStorageSettings">
+    <div class="panel" data-bind="with: googleCloudSettings">
         <div class="padding">
             <div class="flex-horizontal">
                 <div class="toggle">
-                    <input id="toggle-GoogleCloudStorage" type="checkbox" data-bind="checked: enabled, enable: $root.isBackupOptionAvailable('GoogleCloudStorage')">
-                    <label for="toggle-GoogleCloudStorage">Google Cloud Storage</label>
+                    <input id="toggle-GoogleCloud" type="checkbox" data-bind="checked: enabled, enable: $root.isBackupOptionAvailable('GoogleCloud')">
+                    <label for="toggle-GoogleCloud">Google Cloud</label>
                 </div>
-                <div class="text-warning js-option-disabled" data-bind="visible: !$root.isBackupOptionAvailable('GoogleCloudStorage')">
+                <div class="text-warning js-option-disabled" data-bind="visible: !$root.isBackupOptionAvailable('GoogleCloud')">
                     <small><i class="icon-info"></i></small>
                 </div>
             </div>

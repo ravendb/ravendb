@@ -186,7 +186,7 @@ namespace Raven.Client.Json.Converters
 
         internal static readonly Func<BlittableJsonReaderObject, AzureSettings> AzureSettings = GenerateJsonDeserializationRoutine<AzureSettings>();
 
-        internal static readonly Func<BlittableJsonReaderObject, GoogleCloudStorageSettings> GoogleCloudStorageSettings = GenerateJsonDeserializationRoutine<GoogleCloudStorageSettings>();
+        internal static readonly Func<BlittableJsonReaderObject, GoogleCloudSettings> GoogleCloudSettings = GenerateJsonDeserializationRoutine<GoogleCloudSettings>();
 
         internal static readonly Func<BlittableJsonReaderObject, FtpSettings> FtpSettings = GenerateJsonDeserializationRoutine<FtpSettings>();
 

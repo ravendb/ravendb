@@ -244,7 +244,7 @@ namespace Raven.Client.Documents.Operations.Backups
             return djv;
         }
     }
-    public class GoogleCloudStorageSettings : BackupSettings
+    public class GoogleCloudSettings : BackupSettings
     {
         /// <summary>
         /// Google cloud storage bucket name must be globally unique
@@ -266,7 +266,7 @@ namespace Raven.Client.Documents.Operations.Backups
             return string.IsNullOrWhiteSpace(BucketName) == false;
         }
 
-        public bool Equals(GoogleCloudStorageSettings other)
+        public bool Equals(GoogleCloudSettings other)
         {
             if (other == null)
                 return false;

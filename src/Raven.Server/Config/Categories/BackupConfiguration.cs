@@ -17,7 +17,7 @@ namespace Raven.Server.Config.Categories
         [ConfigurationEntry("Backup.LocalRootPath", ConfigurationEntryScope.ServerWideOnly)]
         public PathSetting LocalRootPath { get; set; }
         
-        [Description("Semicolon seperated list of allowed backup destinations. If not specified, all destinations are allowed. Possible values: None, Local, Azure, AmazonGlacier, AmazonS3,GoogleCloudStorage, FTP. Example list: \"Local;AmazonGlacier;AmazonS3\".")]
+        [Description("Semicolon seperated list of allowed backup destinations. If not specified, all destinations are allowed. Possible values: None, Local, Azure, AmazonGlacier, AmazonS3,GoogleCloud , FTP. Example list: \"Local;AmazonGlacier;AmazonS3\".")]
         [DefaultValue(null)]
         [ConfigurationEntry("Backup.AllowedDestinations", ConfigurationEntryScope.ServerWideOnly)]
         public string[] AllowedDestinations { get; set; }
@@ -41,7 +41,7 @@ namespace Raven.Server.Config.Categories
 
         private readonly HashSet<string> _allDestinations = new HashSet<string>
         {
-            "None", "Local", "Azure", "AmazonGlacier", "AmazonS3", "FTP", "GoogleCloudStorage"
+            "None", "Local", "Azure", "AmazonGlacier", "AmazonS3", "FTP", "GoogleCloud"
         };
 
         private void ValidateLocalRootPath()

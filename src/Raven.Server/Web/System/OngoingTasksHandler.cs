@@ -32,7 +32,7 @@ using Sparrow.Json.Parsing;
 using Raven.Server.Documents.PeriodicBackup;
 using Raven.Server.Documents.PeriodicBackup.Aws;
 using Raven.Server.Documents.PeriodicBackup.Azure;
-using Raven.Server.Documents.PeriodicBackup.GoogleCloudStorage;
+using Raven.Server.Documents.PeriodicBackup.GoogleCloud;
 using Raven.Server.Documents.Replication;
 using Raven.Server.Web.Studio;
 using Voron.Util.Settings;
@@ -335,12 +335,12 @@ namespace Raven.Server.Web.System
                                 await azureClient.TestConnection();
                             }
                             break;
-                        case PeriodicBackupTestConnectionType.GoogleCloudStorage:
-                            var googleCloudStorageSettings = JsonDeserializationClient.GoogleCloudStorageSettings(connectionInfo);
-                            using (var GoogleCloudStorageClient = new RavenGoogleCloudStorageClient(
-                                googleCloudStorageSettings.GoogleCredentialsJson,googleCloudStorageSettings.BucketName, cancellationToken: ServerStore.ServerShutdown))
+                        case PeriodicBackupTestConnectionType.GoogleCloud:
+                            var googleCloudSettings = JsonDeserializationClient.GoogleCloudSettings(connectionInfo);
+                            using (var GoogleCloudeClient = new RavenGoogleCloudClient(
+                                googleCloudSettings.GoogleCredentialsJson,googleCloudSettings.BucketName, cancellationToken: ServerStore.ServerShutdown))
                             {
-                                await GoogleCloudStorageClient.TestConnection();
+                                await GoogleCloudeClient.TestConnection();
                             }
                             break;
                         case PeriodicBackupTestConnectionType.FTP:

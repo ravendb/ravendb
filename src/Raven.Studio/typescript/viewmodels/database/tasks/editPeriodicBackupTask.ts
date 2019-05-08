@@ -267,7 +267,7 @@ class editPeriodicBackupTask extends viewModelBase {
         if (!this.isValid(this.configuration().azureSettings().validationGroup))
             valid = false;
             
-        if (!this.isValid(this.configuration().googleCloudStorageSettings().validationGroup))
+        if (!this.isValid(this.configuration().googleCloudSettings().validationGroup))
             valid = false;
 
         if (!this.isValid(this.configuration().glacierSettings().validationGroup))

@@ -46,7 +46,7 @@ namespace Raven.Client.Documents.Operations.Backups
 
         public FtpSettings FtpSettings { get; set; }
 
-        public GoogleCloudStorageSettings GoogleCloudStorageSettings { get; set; }
+        public GoogleCloudSettings GoogleCloudSettings { get; set; }
 
         public ulong GetTaskKey()
         {
@@ -93,7 +93,7 @@ namespace Raven.Client.Documents.Operations.Backups
                    CanBackupUsing(S3Settings) ||
                    CanBackupUsing(GlacierSettings) ||
                    CanBackupUsing(AzureSettings) ||
-                   CanBackupUsing(GoogleCloudStorageSettings) ||
+                   CanBackupUsing(GoogleCloudSettings) ||
                    CanBackupUsing(FtpSettings);
         }
 
@@ -102,7 +102,7 @@ namespace Raven.Client.Documents.Operations.Backups
             return CanBackupUsing(S3Settings) ||
                    CanBackupUsing(GlacierSettings) ||
                    CanBackupUsing(AzureSettings) ||
-                   CanBackupUsing(GoogleCloudStorageSettings) ||
+                   CanBackupUsing(GoogleCloudSettings) ||
                    CanBackupUsing(FtpSettings);
         }
 
@@ -125,8 +125,8 @@ namespace Raven.Client.Documents.Operations.Backups
                 backupDestinations.Add("S3");
             if (GlacierSettings != null && GlacierSettings.Disabled == false)
                 backupDestinations.Add("Glacier");
-            if (GoogleCloudStorageSettings != null && GoogleCloudStorageSettings.Disabled == false)
-                backupDestinations.Add("Google Cloud Storage");
+            if (GoogleCloudSettings != null && GoogleCloudSettings.Disabled == false)
+                backupDestinations.Add("Google Cloud");
             if (FtpSettings != null && FtpSettings.Disabled == false)
                 backupDestinations.Add("FTP");
 
@@ -149,7 +149,7 @@ namespace Raven.Client.Documents.Operations.Backups
                 [nameof(S3Settings)] = S3Settings?.ToJson(),
                 [nameof(GlacierSettings)] = GlacierSettings?.ToJson(),
                 [nameof(AzureSettings)] = AzureSettings?.ToJson(),
-                [nameof(GoogleCloudStorageSettings)] = GoogleCloudStorageSettings?.ToJson(),
+                [nameof(GoogleCloudSettings)] = GoogleCloudSettings?.ToJson(),
                 [nameof(FtpSettings)] = FtpSettings?.ToJson()
             };
         }

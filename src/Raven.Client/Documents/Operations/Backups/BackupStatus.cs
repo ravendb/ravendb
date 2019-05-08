@@ -113,7 +113,7 @@ namespace Raven.Client.Documents.Operations.Backups
 
     }
 
-    public class UploadToGoogleCloudStorage : CloudUploadStatus
+    public class UploadToGoogleCloud : CloudUploadStatus
     {
 
     }

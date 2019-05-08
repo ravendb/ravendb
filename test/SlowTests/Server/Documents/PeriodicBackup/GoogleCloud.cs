@@ -5,7 +5,7 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 using FastTests;
-using Raven.Server.Documents.PeriodicBackup.GoogleCloudStorage;
+using Raven.Server.Documents.PeriodicBackup.GoogleCloud;
 using Tests.Infrastructure;
 using Xunit;
 
@@ -13,10 +13,10 @@ namespace SlowTests.Server.Documents.PeriodicBackup
 {
     public class GoogleStorage : NoDisposalNeeded
     {
-        [GoogleCloudStorageFact]
+        [GoogleCloudFact]
         public void list_buckets()
         {
-            using (var client = new RavenGoogleCloudStorageClient(GoogleCloudStorageFact.CredentialsJson,GoogleCloudStorageFact.BucketName))
+            using (var client = new RavenGoogleCloudClient(GoogleCloudFact.CredentialsJson,GoogleCloudFact.BucketName))
             {
                 var buckets =client.ListBuckets();
                 foreach (var b in buckets)
@@ -26,11 +26,11 @@ namespace SlowTests.Server.Documents.PeriodicBackup
             }
         }
         
-        [GoogleCloudStorageFact]
+        [GoogleCloudFact]
         public async Task uploading_objects()
         {
             var fileName = Guid.NewGuid().ToString();
-            using (var client = new RavenGoogleCloudStorageClient(GoogleCloudStorageFact.CredentialsJson,GoogleCloudStorageFact.BucketName))
+            using (var client = new RavenGoogleCloudClient(GoogleCloudFact.CredentialsJson,GoogleCloudFact.BucketName))
             {
                 try
                 {
@@ -47,11 +47,11 @@ namespace SlowTests.Server.Documents.PeriodicBackup
             }
         }
 
-        [GoogleCloudStorageFact]
+        [GoogleCloudFact]
         public async Task download_objects()
         {
             var fileName = Guid.NewGuid().ToString();
-            using (var client = new RavenGoogleCloudStorageClient(GoogleCloudStorageFact.CredentialsJson,GoogleCloudStorageFact.BucketName))
+            using (var client = new RavenGoogleCloudClient(GoogleCloudFact.CredentialsJson,GoogleCloudFact.BucketName))
             {
                 try
                 {
@@ -71,11 +71,26 @@ namespace SlowTests.Server.Documents.PeriodicBackup
             }
         }
 
-        [GoogleCloudStorageFact]
+        [GoogleCloudFact]
+        public async Task delete_objects()
+        {
+            var fileName = Guid.NewGuid().ToString();
+            using (var client = new RavenGoogleCloudClient(GoogleCloudFact.CredentialsJson,GoogleCloudFact.BucketName))
+            {
+                await client.UploadObjectAsync(
+                    fileName,
+                    new MemoryStream(Encoding.UTF8.GetBytes("123"))
+                );
+                 await client.DeleteObjectAsync(fileName);
+                Assert.Empty(await client.ListObjectsAsync());
+            }
+        }
+
+        [GoogleCloudFact]
         public async Task upload_object_with_metadata()
         {
             var fileName = Guid.NewGuid().ToString();
-            using (var client = new RavenGoogleCloudStorageClient(GoogleCloudStorageFact.CredentialsJson,GoogleCloudStorageFact.BucketName))
+            using (var client = new RavenGoogleCloudClient(GoogleCloudFact.CredentialsJson,GoogleCloudFact.BucketName))
             {
                 try
                 {
@@ -99,12 +114,12 @@ namespace SlowTests.Server.Documents.PeriodicBackup
             }
         }
         
-        [GoogleCloudStorageFact]
+        [GoogleCloudFact]
         public async Task list_objects()
         {
             var file1 = "file1.txt";
             var file2 = "folder1/file2.txt";
-            using (var client = new RavenGoogleCloudStorageClient(GoogleCloudStorageFact.CredentialsJson,GoogleCloudStorageFact.BucketName))
+            using (var client = new RavenGoogleCloudClient(GoogleCloudFact.CredentialsJson,GoogleCloudFact.BucketName))
             {
                 try
                 {
@@ -113,7 +128,7 @@ namespace SlowTests.Server.Documents.PeriodicBackup
                     await client.UploadObjectAsync(file1,  new MemoryStream(content));
                     await client.UploadObjectAsync(file2,  new MemoryStream(content));
 
-                    var objects = await client.ListObjectsAsync().ToList();
+                    var objects = await client.ListObjectsAsync();
                     Assert.Contains(objects, o => o.Name == file1);
                     Assert.Contains(objects, o => o.Name == file2);
                 }

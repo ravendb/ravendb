@@ -163,10 +163,10 @@ class smugglerDatabaseDetails extends abstractOperationDetails {
                 this.addToUploadItems("Azure", result, backupStatus);
             }
 
-            if ("GoogleCloudStorageBackup" in status) {
-                const googleCloudStorageBackupStatus = (status as Raven.Client.Documents.Operations.Backups.BackupProgress).GoogleCloudStorageBackup;
-                const backupStatus = googleCloudStorageBackupStatus as Raven.Client.Documents.Operations.Backups.CloudUploadStatus;
-                this.addToUploadItems("Google Cloud Storage", result, backupStatus);
+            if ("GoogleCloudBackup" in status) {
+                const googleCloudBackupStatus = (status as Raven.Client.Documents.Operations.Backups.BackupProgress).GoogleCloudBackup;
+                const backupStatus = googleCloudBackupStatus as Raven.Client.Documents.Operations.Backups.CloudUploadStatus;
+                this.addToUploadItems("Google Cloud", result, backupStatus);
             }
 
             if ("GlacierBackup" in status) {

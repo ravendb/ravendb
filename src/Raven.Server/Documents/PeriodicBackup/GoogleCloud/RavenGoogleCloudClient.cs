@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.IO;
+using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 using Google.Api.Gax;
@@ -12,9 +13,9 @@ using Newtonsoft.Json.Linq;
 using Raven.Client.Documents.Operations.Backups;
 using Object = Google.Apis.Storage.v1.Data.Object;
 
-namespace Raven.Server.Documents.PeriodicBackup.GoogleCloudStorage
+namespace Raven.Server.Documents.PeriodicBackup.GoogleCloud
 {
-    public class RavenGoogleCloudStorageClient : IDisposable
+    public class RavenGoogleCloudClient : IDisposable
     {
         private readonly StorageClient _client;
         private readonly string _projectId;
@@ -24,7 +25,7 @@ namespace Raven.Server.Documents.PeriodicBackup.GoogleCloudStorage
 
         private const string ProjectIdPropertyName = "project_id";
 
-        public RavenGoogleCloudStorageClient(string jsonCredential, string bucketName, CancellationToken? cancellationToken = null, Progress progress = null)
+        public RavenGoogleCloudClient(string jsonCredential, string bucketName, CancellationToken? cancellationToken = null, Progress progress = null)
         {
             try
             {
@@ -35,7 +36,9 @@ namespace Raven.Server.Documents.PeriodicBackup.GoogleCloudStorage
                 throw new ArgumentException("Wrong format for account key.", e);
             }
 
-            if (JObject.Parse(jsonCredential).TryGetValue(ProjectIdPropertyName, StringComparison.InvariantCultureIgnoreCase, out var value))
+            var credentialJsonType = JObject.Parse(jsonCredential);
+
+            if (credentialJsonType.TryGetValue(ProjectIdPropertyName, StringComparison.OrdinalIgnoreCase, out var value))
             {
                 _projectId = value.Value<string>();
             }
@@ -120,9 +123,9 @@ namespace Raven.Server.Documents.PeriodicBackup.GoogleCloudStorage
             return _client.ListBuckets(_projectId);
         }
 
-        public PagedAsyncEnumerable<Objects, Object> ListObjectsAsync()
+        public async Task<List<Object>> ListObjectsAsync()
         {
-            return _client.ListObjectsAsync(_bucketName);
+            return await _client.ListObjectsAsync(_bucketName).ToList();
         }
 
         public async Task TestConnection()
@@ -146,7 +149,7 @@ namespace Raven.Server.Documents.PeriodicBackup.GoogleCloudStorage
             catch (Google.GoogleApiException e)
                 when (e.Error.Code == 404)
             {
-                throw new InvalidOperationException($"Bucket {_bucketName} not found!", e);
+                throw new InvalidOperationException($"Bucket {_bucketName} not found", e);
             }
         }
 
