@@ -11,9 +11,16 @@ namespace Raven.Server.Documents.TimeSeries
 
         public int NumberOfBits => Header->BitsPosition;
 
+        public int NumberOfBytes => NumberOfBits / 8 + (NumberOfBits % 8 == 0 ? 0 : 1) + sizeof(BitsBufferHeader);
+
         public bool HasAdditionalBits(int numberOfBits)
         {
             return HasEnoughBits(Header->BitsPosition, numberOfBits);
+        }
+
+        public ulong ReadValue(int pos, int bits)
+        {
+            return ReadValue(ref pos, bits);
         }
 
         public bool HasEnoughBits(int bitsPosition, int numberOfBits)

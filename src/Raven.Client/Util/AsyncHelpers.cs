@@ -102,7 +102,7 @@ namespace Raven.Client.Util
                     try
                     {
                         result = await task().ConfigureAwait(false);
-                    }
+                    }   
                     catch (Exception e)
                     {
                         synch.InnerException = e;
