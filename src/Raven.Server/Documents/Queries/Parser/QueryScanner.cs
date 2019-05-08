@@ -1,7 +1,7 @@
 ﻿using System;
 using System.Text;
 using Raven.Server.Documents.Queries.AST;
-using Microsoft.Extensions.Primitives;
+using Sparrow;
 
 namespace Raven.Server.Documents.Queries.Parser
 {

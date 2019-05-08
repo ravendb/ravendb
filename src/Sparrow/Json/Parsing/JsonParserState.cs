@@ -1,6 +1,5 @@
 using System;
 using System.Runtime.CompilerServices;
-using Microsoft.Extensions.Primitives;
 using Sparrow.Collections;
 
 namespace Sparrow.Json.Parsing

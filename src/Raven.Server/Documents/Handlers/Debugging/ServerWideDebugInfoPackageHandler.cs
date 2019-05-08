@@ -6,7 +6,6 @@ using System.IO.Compression;
 using System.Linq;
 using System.Security.Cryptography.X509Certificates;
 using System.Threading.Tasks;
-using Microsoft.Extensions.Primitives;
 using Newtonsoft.Json;
 using Raven.Client.Documents.Conventions;
 using Raven.Client.Http;
@@ -339,9 +338,9 @@ namespace Raven.Server.Documents.Handlers.Debugging
 
         private static async Task WriteForDatabase(ZipArchive archive, JsonOperationContext jsonOperationContext, LocalEndpointClient localEndpointClient, string databaseName, string path = null)
         {
-            var endpointParameters = new Dictionary<string, StringValues>
+            var endpointParameters = new Dictionary<string, Microsoft.Extensions.Primitives.StringValues>
             {
-                {"database", new StringValues(databaseName)}
+                {"database", new Microsoft.Extensions.Primitives.StringValues(databaseName)}
             };
 
             foreach (var route in DebugInfoPackageUtils.Routes.Where(x => x.TypeOfRoute == RouteInformation.RouteType.Databases))

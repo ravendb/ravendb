@@ -9,7 +9,6 @@ using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Http.Extensions;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
-using Microsoft.Extensions.Primitives;
 using Raven.Client;
 using Raven.Client.Documents.Changes;
 using Raven.Client.Exceptions;
@@ -364,7 +363,7 @@ namespace Raven.Server
             if (exception is DatabaseNotRelevantException)
             {
                 response.StatusCode = (int)HttpStatusCode.Gone;
-                response.Headers.Add("Cache-Control", new StringValues(new[] { "must-revalidate", "no-cache" }));
+                response.Headers.Add("Cache-Control", new Microsoft.Extensions.Primitives.StringValues(new[] { "must-revalidate", "no-cache" }));
                 return;
             }
 

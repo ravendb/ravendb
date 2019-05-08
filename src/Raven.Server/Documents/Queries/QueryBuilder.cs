@@ -8,7 +8,6 @@ using Lucene.Net.Analysis;
 using Lucene.Net.Index;
 using Lucene.Net.Search;
 using Lucene.Net.Spatial.Queries;
-using Microsoft.Extensions.Primitives;
 using Raven.Client;
 using Raven.Client.Documents.Indexes.Spatial;
 using Raven.Client.Exceptions;
@@ -28,6 +27,7 @@ using Query = Raven.Server.Documents.Queries.AST.Query;
 using Version = Lucene.Net.Util.Version;
 using Raven.Client.Documents.Indexes;
 using Raven.Server.ServerWide.Commands;
+using Sparrow;
 
 namespace Raven.Server.Documents.Queries
 {

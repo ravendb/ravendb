@@ -9,7 +9,6 @@ using System.Collections.Generic;
 using System.Diagnostics;
 using System.Net;
 using System.Threading.Tasks;
-using Microsoft.Extensions.Primitives;
 using Raven.Client;
 using Raven.Client.Documents.Commands;
 using Raven.Client.Documents.Operations.Revisions;
@@ -136,7 +135,7 @@ namespace Raven.Server.Documents.Handlers
             }
         }
 
-        private void GetRevisionByChangeVector(DocumentsOperationContext context, StringValues changeVectors, bool metadataOnly)
+        private void GetRevisionByChangeVector(DocumentsOperationContext context, Microsoft.Extensions.Primitives.StringValues changeVectors, bool metadataOnly)
         {
             var revisionsStorage = Database.DocumentsStorage.RevisionsStorage;
             var sw = Stopwatch.StartNew();

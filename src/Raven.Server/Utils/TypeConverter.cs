@@ -12,7 +12,6 @@ using Jint.Native.Array;
 using Jint.Native.Object;
 using Jint.Runtime.Interop;
 using Lucene.Net.Documents;
-using Microsoft.Extensions.Primitives;
 using Raven.Server.Documents.Indexes;
 using Raven.Server.Documents.Indexes.Persistence.Lucene.Documents;
 using Raven.Server.Documents.Indexes.Static;

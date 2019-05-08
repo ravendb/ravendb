@@ -5,7 +5,6 @@
 // -----------------------------------------------------------------------
 
 using System.Threading.Tasks;
-using Microsoft.Extensions.Primitives;
 using Raven.Client.Exceptions.Documents.Revisions;
 using Raven.Server.Json;
 using Raven.Server.Routing;
@@ -36,7 +35,7 @@ namespace Raven.Server.Documents.Handlers.Admin
 
         internal class DeleteRevisionsCommand : TransactionOperationsMerger.MergedTransactionCommand
         {
-            private readonly StringValues _ids;
+            private readonly Microsoft.Extensions.Primitives.StringValues _ids;
             private readonly DocumentDatabase _database;
 
             public DeleteRevisionsCommand(string[] ids, DocumentDatabase database)

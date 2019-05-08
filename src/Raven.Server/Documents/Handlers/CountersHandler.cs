@@ -8,7 +8,6 @@ using System;
 using System.Collections.Generic;
 using System.Net;
 using System.Threading.Tasks;
-using Microsoft.Extensions.Primitives;
 using Raven.Client.Documents.Changes;
 using Raven.Client.Documents.Operations.Counters;
 using Raven.Client.Documents.Smuggler;
@@ -558,7 +557,7 @@ namespace Raven.Server.Documents.Handlers
             return Task.CompletedTask;
         }
 
-        public static CountersDetail GetInternal(DocumentDatabase database, DocumentsOperationContext context, StringValues counters, string docId, bool full)
+        public static CountersDetail GetInternal(DocumentDatabase database, DocumentsOperationContext context, Microsoft.Extensions.Primitives.StringValues counters, string docId, bool full)
         {
             var result = new CountersDetail();
             var names = counters.Count != 0

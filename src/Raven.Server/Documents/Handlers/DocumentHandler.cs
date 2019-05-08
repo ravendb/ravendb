@@ -11,7 +11,6 @@ using System.IO;
 using System.Net;
 using System.Runtime.ExceptionServices;
 using System.Threading.Tasks;
-using Microsoft.Extensions.Primitives;
 using Raven.Client.Documents.Changes;
 using Raven.Client.Documents.Commands;
 using Raven.Client.Documents.Commands.Batches;
@@ -139,7 +138,7 @@ namespace Raven.Server.Documents.Handlers
                 context.OpenReadTransaction();
 
                 // init here so it can be passed to TW
-                var idsStringValues = new StringValues(ids);
+                var idsStringValues = new Microsoft.Extensions.Primitives.StringValues(ids);
 
                 if (TrafficWatchManager.HasRegisteredClients)
                     AddStringToHttpContext(idsStringValues.ToString(), TrafficWatchChangeType.Documents);
@@ -203,7 +202,7 @@ namespace Raven.Server.Documents.Handlers
             AddPagingPerformanceHint(PagingOperationType.Documents, isStartsWith ? nameof(DocumentsStorage.GetDocumentsStartingWith) : nameof(GetDocumentsAsync), HttpContext.Request.QueryString.Value, numberOfResults, pageSize, sw.ElapsedMilliseconds);
         }
 
-        private async Task GetDocumentsByIdAsync(DocumentsOperationContext context, StringValues ids, bool metadataOnly)
+        private async Task GetDocumentsByIdAsync(DocumentsOperationContext context, Microsoft.Extensions.Primitives.StringValues ids, bool metadataOnly)
         {
             var sw = Stopwatch.StartNew();
 

@@ -1,7 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
 using Microsoft.Extensions.Configuration;
-using Microsoft.Extensions.Primitives;
 
 namespace Raven.Server.Config
 {
@@ -24,7 +23,7 @@ namespace Raven.Server.Config
             throw new NotImplementedException();
         }
 
-        public IChangeToken GetReloadToken()
+        public Microsoft.Extensions.Primitives.IChangeToken GetReloadToken()
         {
             throw new NotImplementedException();
         }
