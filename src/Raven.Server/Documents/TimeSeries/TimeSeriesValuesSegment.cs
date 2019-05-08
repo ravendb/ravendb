@@ -9,7 +9,7 @@ using Sparrow.Server;
 
 namespace Raven.Server.Documents.TimeSeries
 {
-    public unsafe struct TimeSeriesValuesSegment 
+    public unsafe struct TimeSeriesValuesSegment
     {
         public const int BitsForFirstTimestamp = 31;
         public const int LeadingZerosLengthBits = 5;
@@ -30,7 +30,7 @@ namespace Raven.Server.Documents.TimeSeries
         {
             return baseline.AddMilliseconds(Header->PreviousTimeStamp);
         }
-        
+
         public int NumberOfBytes
         {
             get
@@ -77,6 +77,7 @@ namespace Raven.Server.Documents.TimeSeries
 
             Header->NumberOfValues = (byte)numberOfValues;
             Header->SizeOfTags = 1;
+            Header->PreviousTagIndex = byte.MaxValue;// invalid tag value
         }
 
         public bool Append(ByteStringContext allocator, int deltaFromStart, double val, Span<byte> tag)
@@ -92,7 +93,7 @@ namespace Raven.Server.Documents.TimeSeries
                 ThrowInvalidTagLength();
 
 
-            var maximumSize = 
+            var maximumSize =
                 sizeof(BitsBufferHeader) +
                 sizeof(int) + // max timestamp
                 sizeof(double) * vals.Length + vals.Length /* may use additional 2 bits per value here for the first items */ +
@@ -117,36 +118,37 @@ namespace Raven.Server.Documents.TimeSeries
                     AddValue(ref prevs[i], ref tempBitsBuffer, vals[i]);
                 }
                 bool insertTag = false;
-                if (tag.Length == 0)
+                var prevTagIndex = FindPreviousTag(tag, tempHeader);
+                if (prevTagIndex >= 0)
                 {
-                    tempBitsBuffer.AddValue(0, 2); // no tag
-                }
-                else
-                {
-                    var prevTagIndex = FindPreviousTag(tag, tempHeader);
-                    if (prevTagIndex >= 0)
+                    if (Header->PreviousTagIndex == prevTagIndex)
                     {
-                        if (Header->PreviousTagIndex == prevTagIndex)
-                        {
-                            tempBitsBuffer.AddValue(1, 2); // reuse previous buffer
-                        }
-                        else
-                        {
-                            tempBitsBuffer.AddValue(2, 2); // will write the tag index buffer here
-                            tempBitsBuffer.AddValue((ulong)prevTagIndex, 8);
-                            tempHeader->PreviousTagIndex = (byte)prevTagIndex;
-                        }
+                        tempBitsBuffer.AddValue(0, 1); // reuse previous buffer
                     }
                     else
                     {
-                        // need to write the tag
-                        var numberOfBits = ((BitsBufferHeader*)(_buffer + GetDataStart(tempHeader)))->BitsPosition;
-                        insertTag = true;
-
-                        tempBitsBuffer.AddValue(2, 2); // will write the tag index buffer here
-                        tempBitsBuffer.AddValue((ulong)(~prevTagIndex), 8);
-                        tempHeader->PreviousTagIndex = (byte)(~prevTagIndex);
+                        tempBitsBuffer.AddValue(1, 1); // will write the tag index buffer here
+                        if(prevTagIndex == byte.MaxValue)
+                        {
+                            tempBitsBuffer.AddValue(0, 1); // no tags here
+                        }
+                        else
+                        {
+                            tempBitsBuffer.AddValue(1, 1); // new value here
+                            tempBitsBuffer.AddValue((ulong)prevTagIndex, 7);
+                        }
+                        tempHeader->PreviousTagIndex = (byte)prevTagIndex;
                     }
+                }
+                else
+                {
+                    // need to write the tag
+                    var numberOfBits = ((BitsBufferHeader*)(_buffer + GetDataStart(tempHeader)))->BitsPosition;
+                    insertTag = true;
+
+                    tempBitsBuffer.AddValue(2, 2); // will write the tag index buffer here
+                    tempBitsBuffer.AddValue((ulong)(~prevTagIndex), 8);
+                    tempHeader->PreviousTagIndex = (byte)(~prevTagIndex);
                 }
 
                 tempHeader->PreviousTimeStamp = deltaFromStart;
@@ -184,10 +186,12 @@ namespace Raven.Server.Documents.TimeSeries
          * [raw bytes tag1], [raw bytes tag 2], etc
          * [len tag1], [len tag2], [total number of tags] : byte
          * 
-         */ 
+         */
 
         public int FindPreviousTag(Span<byte> tag, SegmentHeader* tempHeader)
         {
+            if (tag.IsEmpty)
+                return byte.MaxValue;
             var offset = tempHeader->SizeOfTags;
             var tagsPtr = _buffer + sizeof(SegmentHeader) + sizeof(StatefulTimeStampValue) * tempHeader->NumberOfValues;
             var numberOfTags = *(tagsPtr + offset - 1);
@@ -206,7 +210,7 @@ namespace Raven.Server.Documents.TimeSeries
             return ~numberOfTags;
         }
 
-        public void InsertTag(Span<byte> tag, SegmentHeader *tempHeader, int numberOfBytes)
+        public void InsertTag(Span<byte> tag, SegmentHeader* tempHeader, int numberOfBytes)
         {
             var offset = tempHeader->SizeOfTags;
             var tagsPtr = _buffer + sizeof(SegmentHeader) + sizeof(StatefulTimeStampValue) * tempHeader->NumberOfValues;
@@ -298,7 +302,7 @@ namespace Raven.Server.Documents.TimeSeries
 
             var leadingZeroes = Bits.LeadingZeroes(xorWithPrevious);
             var trailingZeroes = Bits.TrailingZeroesInBytes(xorWithPrevious);
-      
+
             if (leadingZeroes > MaxLeadingZerosLength)
                 leadingZeroes = MaxLeadingZerosLength;
 
@@ -378,21 +382,17 @@ namespace Raven.Server.Documents.TimeSeries
 
                 timestamp = ReadTimeStamp(bitsBuffer);
 
-                ReadValues(MemoryMarshal.Cast<double,long>(values), state, ref bitsBuffer);
+                ReadValues(MemoryMarshal.Cast<double, long>(values), state, ref bitsBuffer);
 
-                var reuseTag = bitsBuffer.ReadValue(ref _bitsPosisition, 2);
-                switch (reuseTag)
+                var differentTag = bitsBuffer.ReadValue(ref _bitsPosisition, 1);
+                if (differentTag == 1)
                 {
-                    case 0: // no tag
+                    var hasTag = bitsBuffer.ReadValue(ref _bitsPosisition, 1);
+                    if(hasTag == 0)
+                    {
                         tag = default;
-                        break;
-                    case 1: //reuse
-                        break;
-                    case 2:
-                        ReadTagValueByIndex(bitsBuffer, ref tag);
-                        break;
-                    default:
-                        throw new InvalidOperationException("Invalid tag reuse value: " + reuseTag);
+                    }
+                    ReadTagValueByIndex(bitsBuffer, ref tag);
                 }
 
                 return true;
@@ -412,7 +412,7 @@ namespace Raven.Server.Documents.TimeSeries
                 {
                     tagBackwardOffset += tagsLens[i];
                 }
-                tag = new TagPointer 
+                tag = new TagPointer
                 {
                     Length = tagsLens[tagIndex],
                     Pointer = tagsLens - tagBackwardOffset
