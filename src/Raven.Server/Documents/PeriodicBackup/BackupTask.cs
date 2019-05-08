@@ -15,7 +15,7 @@ using Raven.Client.Util;
 using Raven.Server.Config.Settings;
 using Raven.Server.Documents.PeriodicBackup.Aws;
 using Raven.Server.Documents.PeriodicBackup.Azure;
-using Raven.Server.Documents.PeriodicBackup.GoogleCloudStorage;
+using Raven.Server.Documents.PeriodicBackup.GoogleCloud;
 using Raven.Server.Documents.PeriodicBackup.Restore;
 using Raven.Server.NotificationCenter.Notifications;
 using Raven.Server.NotificationCenter.Notifications.Details;
@@ -175,7 +175,7 @@ namespace Raven.Server.Documents.PeriodicBackup
                 {
                     runningBackupStatus.UploadToS3 = _backupResult.S3Backup;
                     runningBackupStatus.UploadToAzure = _backupResult.AzureBackup;
-                    runningBackupStatus.UploadToGoogleCloudStorage = _backupResult.GoogleCloudStorageBackup;
+                    runningBackupStatus.UploadToGoogleCloud = _backupResult.GoogleCloudBackup;
                     runningBackupStatus.UploadToGlacier = _backupResult.GlacierBackup;
                     runningBackupStatus.UploadToFtp = _backupResult.FtpBackup;
 
@@ -327,7 +327,7 @@ namespace Raven.Server.Documents.PeriodicBackup
                 {
                     Skipped = true
                 },
-                GoogleCloudStorageBackup = 
+                GoogleCloudBackup = 
                 {
                     Skipped = true
                 },
@@ -676,13 +676,13 @@ namespace Raven.Server.Documents.PeriodicBackup
                 },
                 _backupResult.AzureBackup, onProgress);
 
-            CreateUploadTaskIfNeeded(_configuration.GoogleCloudStorageSettings, tasks, backupPath, _isFullBackup,
+            CreateUploadTaskIfNeeded(_configuration.GoogleCloudSettings, tasks, backupPath, _isFullBackup,
                 async (settings, stream, progress) =>
                 {
                     var archiveDescription = GetArchiveDescription(_isFullBackup, _configuration.BackupType);
-                    await UploadToGoogleCloudStorage(settings, stream, folderName, fileName, progress, archiveDescription);
+                    await UploadToGoogleCloud(settings, stream, folderName, fileName, progress, archiveDescription);
                 },
-                _backupResult.GoogleCloudStorageBackup, onProgress);
+                _backupResult.GoogleCloudBackup, onProgress);
 
             CreateUploadTaskIfNeeded(_configuration.FtpSettings, tasks, backupPath, _isFullBackup,
                 async (settings, stream, progress) =>
@@ -896,15 +896,15 @@ namespace Raven.Server.Documents.PeriodicBackup
             }
         }
 
-        private async Task UploadToGoogleCloudStorage(
-            GoogleCloudStorageSettings settings,
+        private async Task UploadToGoogleCloud(
+            GoogleCloudSettings settings,
             Stream stream,
             string folderName,
             string fileName,
             Progress progress,
             string archiveDescription)
         {
-            using (var client = new RavenGoogleCloudStorageClient(settings.GoogleCredentialsJson, settings.BucketName, TaskCancelToken.Token, progress))
+            using (var client = new RavenGoogleCloudClient(settings.GoogleCredentialsJson, settings.BucketName, TaskCancelToken.Token, progress))
             {
                 var key = CombinePathAndKey(settings.RemoteFolderName, folderName, fileName);
                 await client.UploadObjectAsync(key, stream, new Dictionary<string, string>

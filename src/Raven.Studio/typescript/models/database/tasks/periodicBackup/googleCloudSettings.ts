@@ -1,13 +1,13 @@
 import backupSettings = require("models/database/tasks/periodicBackup/backupSettings");
 import jsonUtil = require("common/jsonUtil");
 
-class googleCloudStorageSettings extends backupSettings {
+class googleCloudSettings extends backupSettings {
     bucket = ko.observable<string>();
     remoteFolderName = ko.observable<string>();
     googleCredentialsJson = ko.observable<string>();
 
-    constructor(dto: Raven.Client.Documents.Operations.Backups.GoogleCloudStorageSettings) {
-        super(dto, "GoogleCloudStorage");
+    constructor(dto: Raven.Client.Documents.Operations.Backups.GoogleCloudSettings) {
+        super(dto, "GoogleCloud");
 
         this.bucket(dto.BucketName);
         this.remoteFolderName(dto.RemoteFolderName);
@@ -88,16 +88,16 @@ class googleCloudStorageSettings extends backupSettings {
         });
     }
 
-    toDto(): Raven.Client.Documents.Operations.Backups.GoogleCloudStorageSettings {
-        const dto = super.toDto() as Raven.Client.Documents.Operations.Backups.GoogleCloudStorageSettings;
+    toDto(): Raven.Client.Documents.Operations.Backups.GoogleCloudSettings {
+        const dto = super.toDto() as Raven.Client.Documents.Operations.Backups.GoogleCloudSettings;
         dto.BucketName = this.bucket();
         dto.RemoteFolderName = this.remoteFolderName();
         dto.GoogleCredentialsJson = this.googleCredentialsJson();
         return dto;
     }
 
-    static empty(): googleCloudStorageSettings {
-        return new googleCloudStorageSettings({
+    static empty(): googleCloudSettings {
+        return new googleCloudSettings({
             Disabled: true,
             RemoteFolderName: null,
             GoogleCredentialsJson: null,
@@ -106,4 +106,4 @@ class googleCloudStorageSettings extends backupSettings {
     }
 }
 
-export = googleCloudStorageSettings;
+export = googleCloudSettings;
