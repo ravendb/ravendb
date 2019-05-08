@@ -2,7 +2,6 @@
 using System.Diagnostics;
 using System.Net;
 using System.Threading.Tasks;
-using Microsoft.Extensions.Primitives;
 using Raven.Client.Documents.Operations.CompareExchange;
 using Raven.Server.Documents;
 using Raven.Server.NotificationCenter.Notifications.Details;
@@ -75,7 +74,7 @@ namespace Raven.Server.Web.System
             public long Index { get; set; }
         }
         
-        private void GetCompareExchangeValuesByKey(TransactionOperationContext context, StringValues keys)
+        private void GetCompareExchangeValuesByKey(TransactionOperationContext context, Microsoft.Extensions.Primitives.StringValues keys)
         {
             var sw = Stopwatch.StartNew();
 

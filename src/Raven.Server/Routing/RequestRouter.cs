@@ -12,7 +12,6 @@ using System.Threading.Tasks;
 using Microsoft.AspNetCore.Connections.Features;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Http.Features.Authentication;
-using Microsoft.Extensions.Primitives;
 using Raven.Client;
 using Raven.Client.Exceptions;
 using Raven.Client.Exceptions.Routing;
@@ -380,7 +379,7 @@ namespace Raven.Server.Routing
 
         private static void DrainRequest(JsonOperationContext ctx, HttpContext context)
         {
-            if (context.Response.Headers.TryGetValue("Connection", out StringValues value) && value == "close")
+            if (context.Response.Headers.TryGetValue("Connection", out Microsoft.Extensions.Primitives.StringValues value) && value == "close")
                 return; // don't need to drain it, the connection will close 
 
             using (ctx.GetManagedBuffer(out JsonOperationContext.ManagedPinnedBuffer buffer))

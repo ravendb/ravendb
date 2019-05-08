@@ -3,7 +3,6 @@ using System.Collections.Generic;
 using System.Globalization;
 using System.IO;
 using System.IO.Compression;
-using System.Linq;
 using System.Net;
 using System.Net.Http;
 using System.Runtime.CompilerServices;
@@ -14,7 +13,6 @@ using System.Threading.Tasks;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Http.Features.Authentication;
 using Microsoft.AspNetCore.WebUtilities;
-using Microsoft.Extensions.Primitives;
 using Raven.Client;
 using Raven.Client.Exceptions;
 using Raven.Client.Exceptions.Cluster;
@@ -77,7 +75,7 @@ namespace Raven.Server.Web
             if (HttpContext.Request.HasFormContentType == false)
                 return null;
 
-            if (HttpContext.Request.Form.TryGetValue(itemName, out StringValues value) == false)
+            if (HttpContext.Request.Form.TryGetValue(itemName, out Microsoft.Extensions.Primitives.StringValues value) == false)
                 return null;
 
             if (value.Count == 0)
@@ -99,7 +97,7 @@ namespace Raven.Server.Web
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        private Stream GetDecompressedStream(Stream stream, IDictionary<string, StringValues> headers)
+        private Stream GetDecompressedStream(Stream stream, IDictionary<string, Microsoft.Extensions.Primitives.StringValues> headers)
         {
             if (HeadersAllowGzip(headers, Constants.Headers.ContentEncoding) == false)
                 return stream;
@@ -128,9 +126,9 @@ namespace Raven.Server.Web
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        private static bool HeadersAllowGzip(IDictionary<string, StringValues> headers, string encodingsHeader)
+        private static bool HeadersAllowGzip(IDictionary<string, Microsoft.Extensions.Primitives.StringValues> headers, string encodingsHeader)
         {
-            if (headers.TryGetValue(encodingsHeader, out StringValues acceptedContentEncodings) == false)
+            if (headers.TryGetValue(encodingsHeader, out Microsoft.Extensions.Primitives.StringValues acceptedContentEncodings) == false)
                 return false;
 
             // ReSharper disable once LoopCanBeConvertedToQuery
@@ -375,7 +373,7 @@ namespace Raven.Server.Web
             throw new ArgumentException($"Request should have a property name '{name}' which is mandatory.");
         }
 
-        protected StringValues GetStringValuesQueryString(string name, bool required = true)
+        protected Microsoft.Extensions.Primitives.StringValues GetStringValuesQueryString(string name, bool required = true)
         {
             var val = HttpContext.Request.Query[name];
             if (val.Count == 0)
@@ -383,7 +381,7 @@ namespace Raven.Server.Web
                 if (required)
                     ThrowRequiredMember(name);
 
-                return default(StringValues);
+                return default;
             }
 
             return val;

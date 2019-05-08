@@ -3,7 +3,6 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
 using Lucene.Net.Analysis;
-using Microsoft.Extensions.Primitives;
 using Raven.Client.Documents;
 using Raven.Client.Documents.Commands;
 using Raven.Client.Documents.Indexes;
@@ -17,6 +16,7 @@ using Raven.Server.Documents.Indexes.Auto;
 using Raven.Server.Documents.Indexes.Static;
 using Raven.Server.Exceptions;
 using Raven.Tests.Core.Utils.Entities;
+using Sparrow;
 using Xunit;
 
 namespace FastTests.Client.Indexing

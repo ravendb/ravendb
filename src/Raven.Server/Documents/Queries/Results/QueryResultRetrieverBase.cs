@@ -19,7 +19,7 @@ using Raven.Server.Documents.Queries.AST;
 using Raven.Server.Documents.Queries.Timings;
 using Raven.Server.ServerWide.Context;
 using Raven.Server.Utils;
-using Microsoft.Extensions.Primitives;
+using Sparrow;
 
 namespace Raven.Server.Documents.Queries.Results
 {

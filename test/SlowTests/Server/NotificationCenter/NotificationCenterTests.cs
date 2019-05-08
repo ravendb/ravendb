@@ -7,7 +7,6 @@ using System.Threading;
 using System.Threading.Tasks;
 using FastTests;
 using Microsoft.AspNetCore.Http;
-using Microsoft.Extensions.Primitives;
 using Raven.Client;
 using Raven.Client.Documents.Operations;
 using Raven.Client.Util;
@@ -663,9 +662,9 @@ namespace SlowTests.Server.NotificationCenter
                 return _data.GetEnumerator();
             }
 
-            public IEnumerator<KeyValuePair<string, StringValues>> GetEnumerator()
+            public IEnumerator<KeyValuePair<string, Microsoft.Extensions.Primitives.StringValues>> GetEnumerator()
             {
-                return _data.Select(x => KeyValuePair.Create(x.Key, new StringValues(x.Value))).GetEnumerator();
+                return _data.Select(x => KeyValuePair.Create(x.Key, new Microsoft.Extensions.Primitives.StringValues(x.Value))).GetEnumerator();
             }
 
             IEnumerator IEnumerable.GetEnumerator()
@@ -699,10 +698,10 @@ namespace SlowTests.Server.NotificationCenter
                 set => _data[key] = value;
             }
 
-            public bool TryGetValue(string key, out StringValues value)
+            public bool TryGetValue(string key, out Microsoft.Extensions.Primitives.StringValues value)
             {
                 var success = _data.TryGetValue(key, out var val);
-                value = new StringValues(val);
+                value = new Microsoft.Extensions.Primitives.StringValues(val);
                 return success;
             }
 
@@ -735,7 +734,7 @@ namespace SlowTests.Server.NotificationCenter
             public ICollection<string> Keys => _data.Keys;
             public ICollection<string[]> Values => _data.Values;
 
-            public StringValues this[string key] => new StringValues(_data[key]);
+            public Microsoft.Extensions.Primitives.StringValues this[string key] => new Microsoft.Extensions.Primitives.StringValues(_data[key]);
         }
     }
 }

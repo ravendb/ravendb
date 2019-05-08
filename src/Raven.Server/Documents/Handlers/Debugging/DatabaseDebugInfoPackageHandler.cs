@@ -4,7 +4,6 @@ using System.IO;
 using System.IO.Compression;
 using System.Linq;
 using System.Threading.Tasks;
-using Microsoft.Extensions.Primitives;
 using Raven.Server.Routing;
 using Raven.Server.ServerWide;
 using Sparrow.Json;
@@ -27,9 +26,9 @@ namespace Raven.Server.Documents.Handlers.Debugging
                     using (var archive = new ZipArchive(ms, ZipArchiveMode.Create, true))
                     {
                         var localEndpointClient = new LocalEndpointClient(Server);
-                        var endpointParameters = new Dictionary<string, StringValues>
+                        var endpointParameters = new Dictionary<string, Microsoft.Extensions.Primitives.StringValues>
                         {
-                            { "database",new StringValues(Database.Name) }
+                            { "database",new Microsoft.Extensions.Primitives.StringValues(Database.Name) }
                         };
 
                         foreach (var route in DebugInfoPackageUtils.Routes.Where(x => x.TypeOfRoute == RouteInformation.RouteType.Databases))

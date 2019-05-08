@@ -3,7 +3,7 @@ using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Text;
-using Microsoft.Extensions.Primitives;
+using Sparrow;
 
 namespace Raven.Server.Extensions
 {

@@ -11,7 +11,6 @@ using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Http.Features;
 using Microsoft.AspNetCore.Http.Internal;
 using Microsoft.Extensions.ObjectPool;
-using Microsoft.Extensions.Primitives;
 using Raven.Server.Routing;
 using Raven.Server.Web;
 using Sparrow.Exceptions;
@@ -32,7 +31,7 @@ namespace Raven.Server.ServerWide
             _server = server;
         }
 
-        public async Task<HttpResponse> InvokeAsync(RouteInformation route, Dictionary<string, StringValues> parameters = null)
+        public async Task<HttpResponse> InvokeAsync(RouteInformation route, Dictionary<string, Microsoft.Extensions.Primitives.StringValues> parameters = null)
         {
             var requestContext = new RequestHandlerContext
             {
@@ -49,7 +48,7 @@ namespace Raven.Server.ServerWide
             if (parameters != null && parameters.Count > 0)
             {
                 requestContext.HttpContext.Request.Query = new QueryCollection(parameters);
-                if (parameters.TryGetValue("database", out StringValues values))
+                if (parameters.TryGetValue("database", out Microsoft.Extensions.Primitives.StringValues values))
                 {
                     if (values.Count != 1)
                         ThrowInvalidDatabasesParameter(values, "databases");
@@ -69,14 +68,14 @@ namespace Raven.Server.ServerWide
             return requestContext.HttpContext.Response;
         }
 
-        private static void UpdateRouteMatchWithDatabaseName(RequestHandlerContext requestContext, StringValues values)
+        private static void UpdateRouteMatchWithDatabaseName(RequestHandlerContext requestContext, Microsoft.Extensions.Primitives.StringValues values)
         {
             requestContext.RouteMatch.Url = requestContext.RouteMatch.Url.Replace("databases/*", $"databases/{values[0]}");
             requestContext.RouteMatch.CaptureStart = requestContext.RouteMatch.Url.IndexOf(values[0], StringComparison.Ordinal);
             requestContext.RouteMatch.CaptureLength = values[0].Length;
         }
 
-        private static void ThrowInvalidDatabasesParameter(StringValues databaseName, string paramName)
+        private static void ThrowInvalidDatabasesParameter(Microsoft.Extensions.Primitives.StringValues databaseName, string paramName)
         {
             throw new ArgumentException($"Invalid \'{paramName}\' parameter, expected it to have exactly one value, but got {databaseName.Count}. Something is really wrong here.");
         }
@@ -86,7 +85,7 @@ namespace Raven.Server.ServerWide
             throw new HttpRequestException($"A call to endpoint <<{route.Method} {route.Path}>> has failed with status code {statusCode}");
         }
 
-        public async Task<BlittableJsonReaderObject> InvokeAndReadObjectAsync(RouteInformation route, JsonOperationContext context, Dictionary<string, StringValues> parameters = null)
+        public async Task<BlittableJsonReaderObject> InvokeAndReadObjectAsync(RouteInformation route, JsonOperationContext context, Dictionary<string, Microsoft.Extensions.Primitives.StringValues> parameters = null)
         {
             var response = await InvokeAsync(route, parameters);
 
