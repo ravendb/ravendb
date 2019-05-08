@@ -201,6 +201,14 @@ namespace Raven.Server.Documents.Patch
                             result.LastModified = putResult.Value.LastModified;
                         }
 
+                        if (_isTest && result.Status == PatchStatus.NotModified)
+                        {
+                            using (var old = modifiedDocument)
+                            {
+                                result.ModifiedDocument = originalDoc?.Clone(context);
+                            }
+                        }
+
                         return result;
                     }
                 }
