@@ -133,7 +133,8 @@ namespace Raven.Server.Documents
                                 continue;
                             }
                         }
-                        else if (property.Equals(Constants.Documents.Metadata.Collection, StringComparison.OrdinalIgnoreCase) == false)
+                        else if (property.Equals(Constants.Documents.Metadata.Collection, StringComparison.OrdinalIgnoreCase) == false &&
+                                 property.Equals(Constants.Documents.Metadata.Expires, StringComparison.OrdinalIgnoreCase) == false)
                             continue;
                     }
                     else if (property.Equals(Constants.Documents.Metadata.Key, StringComparison.OrdinalIgnoreCase))
