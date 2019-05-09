@@ -41,7 +41,15 @@ namespace FastTests.Voron
 
         protected void RestartDatabase()
         {
-            StopDatabase();
+            var isFileBasedEnv = Options is StorageEnvironmentOptions.DirectoryStorageEnvironmentOptions;
+
+            StopDatabase(shouldDisposeOptions: isFileBasedEnv);
+
+            if (isFileBasedEnv)
+            {
+                Options = StorageEnvironmentOptions.ForPath(DataDir);
+                Configure(Options);
+            }
 
             StartDatabase();
         }
@@ -64,10 +72,11 @@ namespace FastTests.Voron
             GC.KeepAlive(_storageEnvironment.Value); // force creation
         }
 
-        protected void StopDatabase()
+        protected void StopDatabase(bool shouldDisposeOptions = false)
         {
             var ownsPagers = Options.OwnsPagers;
-            Options.OwnsPagers = false;
+
+            Options.OwnsPagers = shouldDisposeOptions;
 
             _storageEnvironment.Value.Dispose();
 
