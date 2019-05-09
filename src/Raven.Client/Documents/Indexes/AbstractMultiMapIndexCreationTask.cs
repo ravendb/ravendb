@@ -84,7 +84,9 @@ namespace Raven.Client.Documents.Indexes
             foreach (var map in _maps.Select(generateMap => generateMap()))
             {
                 string formattedMap = map;
+#pragma warning disable CS0618 // Type or member is obsolete
                 if (Conventions.PrettifyGeneratedLinqExpressions)
+#pragma warning restore CS0618 // Type or member is obsolete
                     formattedMap = IndexPrettyPrinter.TryFormat(formattedMap);
                 indexDefinition.Maps.Add(formattedMap);
             }

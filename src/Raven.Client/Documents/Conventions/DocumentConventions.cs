@@ -148,7 +148,9 @@ namespace Raven.Client.Documents.Conventions
 
             MaxNumberOfRequestsPerSession = 30;
 
+#pragma warning disable CS0618 // Type or member is obsolete
             PrettifyGeneratedLinqExpressions = true;
+#pragma warning restore CS0618 // Type or member is obsolete
 
             JsonContractResolver = new DefaultRavenContractResolver();
             CustomizeJsonSerializer = serializer => { };
@@ -517,6 +519,7 @@ namespace Raven.Client.Documents.Conventions
         /// <summary>
         ///     Attempts to prettify the generated linq expressions for indexes 
         /// </summary>
+        [Obsolete("This feature is currently not implemented and does not have any effect on the generated LINQ expressions")]
         public bool PrettifyGeneratedLinqExpressions
         {
             get => _prettifyGeneratedLinqExpressions;
@@ -888,7 +891,9 @@ namespace Raven.Client.Documents.Conventions
                 if (configuration.Disabled && _originalConfiguration != null) // need to revert to original values
                 {
                     _maxNumberOfRequestsPerSession = _originalConfiguration.MaxNumberOfRequestsPerSession.Value;
+#pragma warning disable CS0618 // Type or member is obsolete
                     _prettifyGeneratedLinqExpressions = _originalConfiguration.PrettifyGeneratedLinqExpressions.Value;
+#pragma warning restore CS0618 // Type or member is obsolete
                     _readBalanceBehavior = _originalConfiguration.ReadBalanceBehavior.Value;
 
                     _originalConfiguration = null;
@@ -900,12 +905,16 @@ namespace Raven.Client.Documents.Conventions
                     {
                         Etag = -1,
                         MaxNumberOfRequestsPerSession = MaxNumberOfRequestsPerSession,
+#pragma warning disable CS0618 // Type or member is obsolete
                         PrettifyGeneratedLinqExpressions = PrettifyGeneratedLinqExpressions,
+#pragma warning restore CS0618 // Type or member is obsolete
                         ReadBalanceBehavior = ReadBalanceBehavior
                     };
 
                 _maxNumberOfRequestsPerSession = configuration.MaxNumberOfRequestsPerSession ?? _originalConfiguration.MaxNumberOfRequestsPerSession.Value;
+#pragma warning disable CS0618 // Type or member is obsolete
                 _prettifyGeneratedLinqExpressions = configuration.PrettifyGeneratedLinqExpressions ?? _originalConfiguration.PrettifyGeneratedLinqExpressions.Value;
+#pragma warning restore CS0618 // Type or member is obsolete
                 _readBalanceBehavior = configuration.ReadBalanceBehavior ?? _originalConfiguration.ReadBalanceBehavior.Value;
             }
         }

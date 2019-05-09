@@ -71,7 +71,9 @@ namespace SlowTests.Tests.Linq
         [Fact]
         public void AssertMapDefinition()
         {
+#pragma warning disable CS0618 // Type or member is obsolete
             var indexDefinition = new Students_ByEmailDomain { Conventions = new DocumentConventions { PrettifyGeneratedLinqExpressions = false } }.CreateIndexDefinition();
+#pragma warning restore CS0618 // Type or member is obsolete
 
             Assert.Equal(@"docs.Students.Select(student => new {
     EmailDomain = DynamicEnumerable.LastOrDefault(student.Email.Split('@', System.StringSplitOptions.None)),
