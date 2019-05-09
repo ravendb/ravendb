@@ -31,7 +31,7 @@ namespace Voron.Impl
         private readonly ByteStringContext _allocator;
         private readonly PageLocator _pageLocator;
         private bool _disposeAllocator;
-        private TestingStuff _forTestingPurposes;
+        internal TestingStuff _forTestingPurposes;
 
         private Tree _root;
         public Tree RootObjects => _root;
@@ -1286,6 +1286,7 @@ namespace Voron.Impl
             internal bool SimulateThrowingOnCommitStage2 = false;
 
             internal Action ActionToCallDuringEnsurePagerStateReference;
+            internal Action ActionToCallJustBeforeWritingToJournal;
 
             public TestingStuff(LowLevelTransaction tx)
             {
@@ -1302,6 +1303,13 @@ namespace Voron.Impl
                 ActionToCallDuringEnsurePagerStateReference = action;
 
                 return new DisposableAction(() => ActionToCallDuringEnsurePagerStateReference = null);
+            }
+
+            internal IDisposable CallJustBeforeWritingToJournal(Action action)
+            {
+                ActionToCallJustBeforeWritingToJournal = action;
+
+                return new DisposableAction(() => ActionToCallJustBeforeWritingToJournal = null);
             }
 
             internal HashSet<PagerState> GetPagerStates()
