@@ -86,15 +86,22 @@ namespace Raven.Tests.Core
 
         public void Dispose()
         {
+            Console.WriteLine("Disposing the DocumentStore");
+
             if (DocumentStore != null)
                 DocumentStore.Dispose();
 
+            Console.WriteLine("Disposed the DocumentStore");
+
             try
             {
+                Console.WriteLine("Killing the process");
                 process?.Kill();
+                Console.WriteLine("Killed the process");
             }
-            catch (Exception)
+            catch (Exception e)
             {
+                Console.WriteLine("Could not kill the process. Exception: " + e);
             }
 
             KillServerRunner();
@@ -102,17 +109,24 @@ namespace Raven.Tests.Core
 
         private static void KillServerRunner()
         {
+            Console.WriteLine("Killing the ServerRunner");
+
             var processes = Process.GetProcessesByName("Raven.Tests.Server.Runner.exe");
             foreach (var p in processes)
             {
                 try
                 {
+                    Console.WriteLine("Killing the server runner process");
                     p.Kill();
+                    Console.WriteLine("Killed the server runner process");
                 }
-                catch (Exception)
+                catch (Exception e)
                 {
+                    Console.WriteLine("Could not kill the server runner process. Exception: " + e);
                 }
             }
+
+            Console.WriteLine("Killed the ServerRunner");
         }
 
         private static string GetServerRunnerPath()
