@@ -205,7 +205,7 @@ namespace Raven.Server.Documents.Patch
                         {
                             using (var old = modifiedDocument)
                             {
-                                result.ModifiedDocument = originalDoc?.Clone(context);
+                                result.ModifiedDocument = originalDoc?.Clone(_externalContext ?? context);
                             }
                         }
 
