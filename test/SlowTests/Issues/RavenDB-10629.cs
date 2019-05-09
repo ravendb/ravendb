@@ -21,7 +21,7 @@ namespace SlowTests.Issues
 
                 using (var session = store.OpenSession())
                 {
-                    var epsilon = TimeSpan.FromSeconds(1);
+                    var epsilon = TimeSpan.FromSeconds(30);
                     var now = DateTime.UtcNow;
 
                     var query = (from a in session.Query<Order>()

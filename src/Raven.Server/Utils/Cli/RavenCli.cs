@@ -271,6 +271,9 @@ namespace Raven.Server.Utils.Cli
 
         private static bool CommandShutdown(List<string> args, RavenCli cli)
         {
+            if (args?.Count == 1 && args[0] != null && args[0].Equals("no-confirmation"))
+                return true;
+
             WriteText("", TextColor, cli);
             WriteText("Are you sure you want to shutdown the server ? [y/N] : ", TextColor, cli, newLine: false);
 
@@ -278,6 +281,7 @@ namespace Raven.Server.Utils.Cli
             WriteText("", TextColor, cli);
 
             return char.ToLower(k).Equals('y');
+
         }
 
         private static bool CommandOpenBrowser(List<string> args, RavenCli cli)
@@ -1135,7 +1139,7 @@ namespace Raven.Server.Utils.Cli
                 new[] {"logout", "Logout (applicable only on piped connection)"},
                 new[] {"openBrowser", "Open the RavenDB Studio using the default browser"},
                 new[] {"restartServer, resetServer", "Restarts the server (shutdown and re-run)"},
-                new[] {"shutdown", "Shutdown the server"},
+                new[] {"shutdown [no-confirmation]", "Shutdown the server"},
                 new[] {"help", "This help screen"},
                 new[] {"generateClientCert <name> <path-to-output-folder> [password]", "Generate a new trusted client certificate with 'ClusterAdmin' security clearance."},
                 new[] {"trustServerCert <name> <path-to-pfx> [password]", "Register a server certificate of another node to be trusted on this server."},
