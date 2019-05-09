@@ -100,7 +100,9 @@ namespace SlowTests.Issues
         {
             return GetDocumentStore(new Options
             {
+#pragma warning disable CS0618 // Type or member is obsolete
                 ModifyDocumentStore = store => store.Conventions.PrettifyGeneratedLinqExpressions = false
+#pragma warning restore CS0618 // Type or member is obsolete
             }, caller);
         }
 
@@ -115,7 +117,9 @@ namespace SlowTests.Issues
 
             public override IndexDefinition CreateIndexDefinition()
             {
+#pragma warning disable CS0618 // Type or member is obsolete
                 if (Conventions == null || Conventions.PrettifyGeneratedLinqExpressions)
+#pragma warning restore CS0618 // Type or member is obsolete
                     TestFailed.Value = true;
 
                 return base.CreateIndexDefinition();
@@ -136,7 +140,9 @@ namespace SlowTests.Issues
 
             public override IndexDefinition CreateIndexDefinition()
             {
+#pragma warning disable CS0618 // Type or member is obsolete
                 if (Conventions == null || Conventions.PrettifyGeneratedLinqExpressions)
+#pragma warning restore CS0618 // Type or member is obsolete
                     TestFailed.Value = true;
 
                 return base.CreateIndexDefinition();

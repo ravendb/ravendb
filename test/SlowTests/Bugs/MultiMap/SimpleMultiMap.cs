@@ -14,7 +14,9 @@ namespace SlowTests.Bugs.MultiMap
         {
             using (var store = GetDocumentStore(new Options
             {
+#pragma warning disable CS0618 // Type or member is obsolete
                 ModifyDocumentStore = s => s.Conventions.PrettifyGeneratedLinqExpressions = false
+#pragma warning restore CS0618 // Type or member is obsolete
             }))
             {
                 new CatsAndDogs().Execute(store);

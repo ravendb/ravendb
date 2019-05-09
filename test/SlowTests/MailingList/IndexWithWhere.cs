@@ -46,7 +46,9 @@ namespace SlowTests.MailingList
             {
                 ModifyDocumentStore = s =>
                 {
+#pragma warning disable CS0618 // Type or member is obsolete
                     s.Conventions.PrettifyGeneratedLinqExpressions = false;
+#pragma warning restore CS0618 // Type or member is obsolete
                 }
             }))
             {
@@ -67,7 +69,9 @@ namespace SlowTests.MailingList
             {
                 ModifyDocumentStore = s =>
                 {
+#pragma warning disable CS0618 // Type or member is obsolete
                     s.Conventions.PrettifyGeneratedLinqExpressions = false;
+#pragma warning restore CS0618 // Type or member is obsolete
                 }
             }))
             {
