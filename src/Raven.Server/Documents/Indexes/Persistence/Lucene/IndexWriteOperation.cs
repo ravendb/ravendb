@@ -95,7 +95,7 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene
         {
             if (_writer != null)
             {
-                using (stats.For(IndexingOperation.Lucene.FlushToDisk))
+                using (stats.For(IndexingOperation.Lucene.Commit))
                 {
                     _writer.Commit(_state); // just make sure changes are flushed to disk
 
