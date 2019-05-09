@@ -107,7 +107,7 @@ namespace Raven.Server.Documents.Indexes
             var indexLock = GetIndexLock(name);
 
             indexLock.Wait(_documentDatabase.DatabaseShutdown);
-            
+
             try
             {
                 var creationOptions = IndexCreationOptions.Create;
@@ -1393,7 +1393,7 @@ namespace Raven.Server.Documents.Indexes
 
                     if (oldIndex != null)
                     {
-                        while (_documentDatabase.DatabaseShutdown.IsCancellationRequested == false)
+                        do
                         {
                             try
                             {
@@ -1405,12 +1405,12 @@ namespace Raven.Server.Documents.Indexes
                             catch (TimeoutException)
                             {
                             }
-                        }
+                        } while (_documentDatabase.DatabaseShutdown.IsCancellationRequested == false);
                     }
 
                     if (newIndex.Configuration.RunInMemory == false)
                     {
-                        while (_documentDatabase.DatabaseShutdown.IsCancellationRequested == false)
+                        do
                         {
                             try
                             {
@@ -1437,7 +1437,7 @@ namespace Raven.Server.Documents.Indexes
                             catch (TimeoutException)
                             {
                             }
-                        }
+                        } while (_documentDatabase.DatabaseShutdown.IsCancellationRequested == false);
                     }
 
                     _documentDatabase.Changes.RaiseNotifications(
