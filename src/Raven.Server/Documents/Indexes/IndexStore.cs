@@ -1439,7 +1439,7 @@ namespace Raven.Server.Documents.Indexes
                         {
                             // stop the indexing to allow renaming the index 
                             // the write tx required to rename it might be hold by indexing thread
-                            ExecuteIndexAction(() => newIndex.Stop());
+                            ExecuteIndexAction(() => newIndex.Stop(disableIndex: true));
                         }
 
                         try
