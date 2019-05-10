@@ -7,7 +7,6 @@ using Raven.Client.Documents.Operations;
 using Raven.Client.Documents.Queries;
 using Raven.Client.Exceptions.Documents.Indexes;
 using Raven.Client.Util.RateLimiting;
-using Raven.Server.Documents.Handlers;
 using Raven.Server.Documents.Indexes;
 using Raven.Server.Documents.Patch;
 using Raven.Server.Documents.TransactionCommands;
@@ -113,6 +112,8 @@ namespace Raven.Server.Documents.Queries
 
                 foreach (var document in results.Results)
                 {
+                    token.Delay();
+
                     resultIds.Enqueue(document.Id.ToString());
                 }
             }
