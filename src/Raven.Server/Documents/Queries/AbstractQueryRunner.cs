@@ -154,6 +154,8 @@ namespace Raven.Server.Documents.Queries
 
                 foreach (var document in results.Results)
                 {
+                    token.Delay();
+
                     resultIds.Enqueue(document.Id.ToString());
                 }
             }

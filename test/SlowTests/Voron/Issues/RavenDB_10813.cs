@@ -1,4 +1,5 @@
-﻿using FastTests.Voron;
+﻿using System.Linq;
+using FastTests.Voron;
 using Sparrow.Server;
 using Voron;
 using Xunit;
@@ -7,11 +8,13 @@ namespace SlowTests.Voron.Issues
 {
     public class RavenDB_10813 : StorageTest
     {
+        private readonly byte[] _masterKey = Sodium.GenerateRandomBuffer((int)Sodium.crypto_aead_xchacha20poly1305_ietf_keybytes());
+
         protected override void Configure(StorageEnvironmentOptions options)
         {
             base.Configure(options);
 
-            options.MasterKey = Sodium.GenerateRandomBuffer((int)Sodium.crypto_aead_xchacha20poly1305_ietf_keybytes());
+            options.MasterKey = _masterKey.ToArray();
         }
 
         [Fact]
