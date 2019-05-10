@@ -1,4 +1,4 @@
-// -----------------------------------------------------------------------
+﻿// -----------------------------------------------------------------------
 //  <copyright file="WriteAheadJournal.cs" company="Hibernating Rhinos LTD">
 //      Copyright (c) Hibernating Rhinos LTD. All rights reserved.
 //  </copyright>
@@ -176,6 +176,7 @@ namespace Voron.Impl.Journal
             var journalFiles = new List<JournalFile>();
             long lastFlushedTxId = logInfo.LastSyncedTransactionId;
             long lastFlushedJournal = logInfo.LastSyncedJournal;
+            long lastProcessedJournal = logInfo.LastSyncedJournal;
 
             // the last sync journal is allowed to be deleted, it might have been fully synced, which is fine
             // we rely on the lastSyncedTxId to verify correctness.
@@ -208,18 +209,30 @@ namespace Voron.Impl.Journal
                         {
                             *txHeader = *lastReadHeaderPtr;
                                 lastFlushedTxId = txHeader->TransactionId;
+
+                                if (journalReader.Next4Kb > 0) // only if journal has some data
+                                {
                                 lastFlushedJournal = journalNumber;
-                        }
+                                }
+                                else
+                                {
+                                    // empty journal file
+
+                                    if (transactionHeaders.Count != 0)
+                                        throw new InvalidOperationException($"Got empty journal file but it has some transaction headers (count: {transactionHeaders.Count})");
+                                }
+                            }
 
                         pager.Dispose(); // need to close it before we open the journal writer
 
-                            var jrnlWriter = _env.Options.CreateJournalWriter(journalNumber,
-                                pager.NumberOfAllocatedPages * Constants.Storage.PageSize);
+                            var jrnlWriter = _env.Options.CreateJournalWriter(journalNumber, pager.TotalAllocationSize);
                             var jrnlFile = new JournalFile(_env, jrnlWriter, journalNumber);
                             jrnlFile.InitFrom(journalReader, transactionHeaders);
                             jrnlFile.AddRef(); // creator reference - write ahead log
 
                             journalFiles.Add(jrnlFile);
+
+                            lastProcessedJournal = journalNumber;
 
                         if (journalReader.RequireHeaderUpdate) //this should prevent further loading of transactions
                         {
@@ -310,7 +323,7 @@ namespace Voron.Impl.Journal
 
             Debug.Assert(lastFlushedTxId >= 0);
             Debug.Assert(lastFlushedJournal >= 0);
-
+            Debug.Assert(lastProcessedJournal >= 0);
 
             if (journalFiles.Count > 0)
             {
@@ -318,7 +331,7 @@ namespace Voron.Impl.Journal
 
                 foreach (var journalFile in journalFiles)
                 {
-                    if (journalFile.Number < lastFlushedJournal)
+                    if (journalFile.Number < lastProcessedJournal)
                     {
                         _journalApplicator.AddJournalToDelete(journalFile);
                         toDelete.Add(journalFile);
@@ -329,16 +342,30 @@ namespace Voron.Impl.Journal
                     }
                 }
 
+                var instanceOfLastFlushedJournal = journalFiles.FirstOrDefault(x => x.Number == lastFlushedJournal);
+
+                if (instanceOfLastFlushedJournal != null)
+                {
+                    // last flushed journal might not exist because it could be already deleted and the only journal we have is empty
+
                 _journalApplicator.SetLastFlushed(new JournalApplicator.LastFlushState(lastFlushedTxId, lastFlushedJournal,
-                    journalFiles.First(x => x.Number == lastFlushedJournal), toDelete));
+                        instanceOfLastFlushedJournal, toDelete));
+            }
+#if DEBUG
+                if (instanceOfLastFlushedJournal == null)
+                {
+                    Debug.Assert(toDelete.Count == 0, $"Last flushed journal (number: {lastFlushedJournal}) doesn't exist so we didn't call {nameof(_journalApplicator.SetLastFlushed)} but" +
+                                                      $" there are still some journals to delete ({string.Join(", ", toDelete.Select(x => x.Number))}. )");
+                }
+#endif
             }
 
-            _journalIndex = lastFlushedJournal;
+            _journalIndex = lastProcessedJournal;
 
-            addToInitLog?.Invoke($"Cleanup Newer Invalid Journal Files (Last Flushed Journal={lastFlushedJournal})");
+            addToInitLog?.Invoke($"Cleanup Newer Invalid Journal Files (Last Flushed Journal={lastProcessedJournal})");
             if (_env.Options.CopyOnWriteMode == false)
             {
-                CleanupNewerInvalidJournalFiles(lastFlushedJournal);
+                CleanupNewerInvalidJournalFiles(lastProcessedJournal);
             }
 
             if (_files.Count > 0)
@@ -369,7 +396,7 @@ namespace Voron.Impl.Journal
 
         private void RecoverCurrentJournalSize(AbstractPager pager)
         {
-            var journalSize = Bits.PowerOf2(pager.NumberOfAllocatedPages * Constants.Storage.PageSize);
+            var journalSize = Bits.NextPowerOf2(pager.TotalAllocationSize);
             if (journalSize >= _env.Options.MaxLogFileSize) // can't set for more than the max log file size
                 return;
 
@@ -1027,9 +1054,7 @@ namespace Voron.Impl.Journal
                     _lastFlushed.Journal.SetLastReadTxHeader(_lastFlushed.TransactionId, ref _transactionHeader);
                     if (_lastFlushed.TransactionId != _transactionHeader.TransactionId)
                     {
-                        VoronUnrecoverableErrorException.Raise(_parent._waj._env,
-                            $"Error syncing the data file. The last sync tx is {_lastFlushed.TransactionId}, but the journal's last tx id is {_transactionHeader.TransactionId}, possible file corruption?"
-                        );
+                        ThrowErrorWhenSyncingDataFile(_lastFlushed, _transactionHeader, _parent._waj._env);
                     }
 
                     _lastFlushed.DoneFlag.Raise();
@@ -1043,6 +1068,28 @@ namespace Voron.Impl.Journal
                 {
                     if (_fsyncLockTaken)
                         _parent._fsyncLock.Release();
+                }
+
+                private static void ThrowErrorWhenSyncingDataFile(LastFlushState lastFlushed, TransactionHeader transactionHeader, StorageEnvironment env)
+                {
+                    var message =
+                        $"Error syncing the data file. The last sync tx is {lastFlushed.TransactionId}, " +
+                        $"but the journal's last tx id is {transactionHeader.TransactionId}, possible file corruption?";
+
+                    var journalTransactionHeaders = lastFlushed.Journal._transactionHeaders;
+                    if (journalTransactionHeaders != null && journalTransactionHeaders.Count > 0)
+                    {
+                        var firstTx = journalTransactionHeaders.First().TransactionId;
+                        var lastTx = journalTransactionHeaders.Last().TransactionId;
+
+                        message += $" Debug details - transaction headers count: {journalTransactionHeaders.Count}, first tx: {firstTx}, last tx: {lastTx}.";
+            }
+                    else
+                    {
+                        message += " Debug details - journal doesn't have transaction headers";
+                    }
+
+                    VoronUnrecoverableErrorException.Raise(env, message);
                 }
             }
 
@@ -1422,6 +1469,8 @@ namespace Voron.Impl.Journal
                     if (_logger.IsInfoEnabled)
                         _logger.Info($"New journal file created {CurrentFile.Number:D19}");
                 }
+
+                    tx._forTestingPurposes?.ActionToCallJustBeforeWritingToJournal?.Invoke();
 
                 sp.Restart();
                 journalEntry.UpdatePageTranslationTableAndUnusedPages = CurrentFile.Write(tx, journalEntry, _lazyTransactionBuffer);
