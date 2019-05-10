@@ -221,8 +221,7 @@ namespace Voron.Impl.Journal
 
                             pager.Dispose(); // need to close it before we open the journal writer
 
-                            var jrnlWriter = _env.Options.CreateJournalWriter(journalNumber,
-                                pager.NumberOfAllocatedPages * Constants.Storage.PageSize);
+                            var jrnlWriter = _env.Options.CreateJournalWriter(journalNumber, pager.TotalAllocationSize);
                             var jrnlFile = new JournalFile(_env, jrnlWriter, journalNumber);
                             jrnlFile.InitFrom(journalReader, transactionHeaders);
                             jrnlFile.AddRef(); // creator reference - write ahead log
@@ -393,7 +392,7 @@ namespace Voron.Impl.Journal
 
         private void RecoverCurrentJournalSize(AbstractPager pager)
         {
-            var journalSize = Bits.NextPowerOf2(pager.NumberOfAllocatedPages * Constants.Storage.PageSize);
+            var journalSize = Bits.NextPowerOf2(pager.TotalAllocationSize);
             if (journalSize >= _env.Options.MaxLogFileSize) // can't set for more than the max log file size
                 return;
 
