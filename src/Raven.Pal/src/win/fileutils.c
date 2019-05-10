@@ -74,11 +74,12 @@ PRIVATE int32_t
 _write_file(void* handle, const void* buffer, int64_t size, int64_t offset, int32_t* detailed_error_code)
 {
     const int32_t WRITE_INCREMENT = 4096;
+    const int32_t NUMBER_OF_BYTES_TO_WRITE = (INT32_MAX / WRITE_INCREMENT) * WRITE_INCREMENT;
 
     assert(size % WRITE_INCREMENT == 0);
     assert((size_t)buffer % WRITE_INCREMENT == 0);
 
-    int32_t rc = _write_file_in_sections(handle, (char*)buffer, size, offset, UINT32_MAX, detailed_error_code);
+    int32_t rc = _write_file_in_sections(handle, (char*)buffer, size, offset, NUMBER_OF_BYTES_TO_WRITE, detailed_error_code);
     if (rc == SUCCESS)
         return SUCCESS;
 
