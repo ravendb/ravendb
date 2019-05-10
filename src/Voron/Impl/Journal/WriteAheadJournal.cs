@@ -396,7 +396,7 @@ namespace Voron.Impl.Journal
 
         private void RecoverCurrentJournalSize(AbstractPager pager)
         {
-            var journalSize = Bits.NextPowerOf2(pager.TotalAllocationSize);
+            var journalSize = Bits.PowerOf2(pager.TotalAllocationSize);
             if (journalSize >= _env.Options.MaxLogFileSize) // can't set for more than the max log file size
                 return;
 
