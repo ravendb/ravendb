@@ -25,7 +25,7 @@ namespace Voron.Impl.Journal
         private IJournalWriter _journalWriter;
         private long _writePosIn4Kb;
 
-        private List<TransactionHeader> _transactionHeaders;
+        internal List<TransactionHeader> _transactionHeaders;
 
         private readonly PageTable _pageTranslationTable = new PageTable();
 
@@ -50,7 +50,6 @@ namespace Voron.Impl.Journal
         {
             return string.Format("Number: {0}", Number);
         }
-
 
         internal long WritePosIn4KbPosition => Interlocked.Read(ref _writePosIn4Kb);
 
