@@ -168,12 +168,12 @@ namespace Raven.Server.Documents.Queries.Results
 
             foreach (var fieldToFetch in fieldsToFetch.Fields.Values)
             {
-                if (TryGetValue(fieldToFetch, doc, luceneDoc, state, out var key, out var fieldVal))
-                {
-                    var immediateResult = AddProjectionToResult(doc, score, fieldsToFetch, result, key, fieldVal);
-                    if (immediateResult != null)
-                        return immediateResult;
-                }
+                TryGetValue(fieldToFetch, doc, luceneDoc, state, out var key, out var fieldVal);
+                
+                var immediateResult = AddProjectionToResult(doc, score, fieldsToFetch, result, key, fieldVal);
+
+                if (immediateResult != null)
+                    return immediateResult;
             }
 
             return ReturnProjection(result, doc, score, context);
