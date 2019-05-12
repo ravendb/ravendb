@@ -73,7 +73,8 @@ namespace Raven.Server.Documents
             AttachmentsSchema.DefineFixedSizeIndex(new TableSchema.FixedSizeSchemaIndexDef
             {
                 StartIndex = (int)AttachmentsTable.Etag,
-                Name = AttachmentsEtagSlice
+                Name = AttachmentsEtagSlice,
+                IsGlobal = true
             });
             AttachmentsSchema.DefineIndex(new TableSchema.SchemaIndexDef
             {

@@ -101,7 +101,7 @@ namespace FastTests
                         name = options.ModifyDatabaseName(name) ?? name;
 
                     var hardDelete = true;
-                    var runInMemory = true;
+                    var runInMemory = options.RunInMemory;
 
                     var pathToUse = options.Path;
                     if (pathToUse == null)
@@ -636,6 +636,7 @@ namespace FastTests
             private Action<DatabaseRecord> _modifyDatabaseRecord;
             private Func<string, string> _modifyDatabaseName;
             private string _path;
+            private bool _runInMemory = true;
 
             public static readonly Options Default = new Options(true);
 
@@ -739,6 +740,15 @@ namespace FastTests
                 {
                     AssertNotFrozen();
                     _createDatabase = value;
+                }
+            }
+            public bool RunInMemory
+            {
+                get => _runInMemory;
+                set
+                {
+                    AssertNotFrozen();
+                    _runInMemory = value;
                 }
             }
 
