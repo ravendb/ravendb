@@ -94,6 +94,15 @@ namespace Raven.Server.Documents
             TombstonesSchema.Create(tx, AttachmentsTombstonesSlice, 16);
 
         }
+        public static long ReadLastEtag(Transaction tx)
+        {
+            var table = tx.OpenTable(AttachmentsSchema, AttachmentsMetadataSlice);
+            var last = table.ReadLast(AttachmentsSchema.FixedSizeIndexes[AttachmentsEtagSlice]);
+            if (last == null)
+                return 0;
+
+            return TableValueToEtag((int)AttachmentsTable.Etag, ref last.Reader);
+        }
 
         public void AssertFixedSizeTrees(Transaction tx)
         {

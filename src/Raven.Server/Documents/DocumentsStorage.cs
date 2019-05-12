@@ -425,7 +425,7 @@ namespace Raven.Server.Documents
 
         public static long ReadLastAttachmentsEtag(Transaction tx)
         {
-            return ReadLastEtagFrom(tx, AttachmentsStorage.AttachmentsEtagSlice);
+            return AttachmentsStorage.ReadLastEtag(tx);
         }
 
         public static long ReadLastCountersEtag(Transaction tx)
