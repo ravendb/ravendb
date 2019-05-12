@@ -57,11 +57,13 @@ namespace Sparrow.Collections
             if (cidx - sidx >= _size)
                 return false; // No space to do anything
 
-            // Assign the value
+            // Getting a reference to the current item
             ref var cl = ref _buffer[_currentIdx & _mask];
 
-            // We then check if another producer is trying to push.
+            // We then check if the item is free to use.
             if (Interlocked.CompareExchange(ref cl.IsReady, 1, 0) != 0)
+                // We will go through and try again
+                // The conditions are when we have a huge contention and traffic and when two producer trying to push at the same time.
                 return false;
 
             // We assign the item
@@ -71,7 +73,6 @@ namespace Sparrow.Collections
             Interlocked.Increment(ref _currentIdx);
 
             return true;
-            // We will go through and try again, the conditions are when we have a huge contention and traffic and when two producer trying to push at the same time.
         }
 
         public bool TryAcquireSingle(out RingItem<T> item)
