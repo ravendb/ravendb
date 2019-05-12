@@ -168,7 +168,9 @@ namespace Raven.Server.Documents.Queries.Results
 
             foreach (var fieldToFetch in fieldsToFetch.Fields.Values)
             {
-                TryGetValue(fieldToFetch, doc, luceneDoc, state, out var key, out var fieldVal);
+                if (TryGetValue(fieldToFetch, doc, luceneDoc, state, out var key, out var fieldVal) == false &&
+                    fieldToFetch.QueryField != null && fieldToFetch.QueryField.HasSourceAlias)  
+                    continue;
                 
                 var immediateResult = AddProjectionToResult(doc, score, fieldsToFetch, result, key, fieldVal);
 
