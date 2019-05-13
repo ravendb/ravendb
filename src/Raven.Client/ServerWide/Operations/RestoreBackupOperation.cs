@@ -36,7 +36,7 @@ namespace Raven.Client.ServerWide.Operations
             {
                 _conventions = conventions;
                 _restoreConfiguration = restoreConfiguration;
-                SelectedNodeTagForRequest = restoreConfiguration.NodeTag;
+                SelectedNodeTag = restoreConfiguration.NodeTag;
             }
 
             public override HttpRequestMessage CreateRequest(JsonOperationContext ctx, ServerNode node, out string url)

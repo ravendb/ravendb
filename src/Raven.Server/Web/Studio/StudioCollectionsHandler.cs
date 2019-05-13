@@ -327,7 +327,7 @@ namespace Raven.Server.Web.Studio
 
             using (var writer = new BlittableJsonTextWriter(context, ResponseBodyStream()))
             {
-                writer.WriteOperationId(context, operationId);
+                writer.WriteOperationIdAndNodeTag(context, operationId, ServerStore.NodeTag);
             }
         }
 

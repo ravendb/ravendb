@@ -388,9 +388,9 @@ namespace Raven.Client.Http
 
         public (int CurrentIndex, ServerNode CurrentNode) ChooseNodeForRequest<TResult>(RavenCommand<TResult> cmd, SessionInfo sessionInfo = null)
         {
-            if (string.IsNullOrEmpty(cmd.SelectedNodeTagForRequest) == false)
+            if (string.IsNullOrEmpty(cmd.SelectedNodeTag) == false)
             {
-                return _nodeSelector.GetRequestedNode(cmd.SelectedNodeTagForRequest);
+                return _nodeSelector.GetRequestedNode(cmd.SelectedNodeTag);
             }
 
             if (cmd.IsReadRequest == false)

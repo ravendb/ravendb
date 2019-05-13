@@ -403,7 +403,7 @@ namespace Raven.Server.Smuggler.Documents.Handlers
 
                 using (var writer = new BlittableJsonTextWriter(context, ResponseBodyStream()))
                 {
-                    writer.WriteOperationId(context, operationId);
+                    writer.WriteOperationIdAndNodeTag(context, operationId, ServerStore.NodeTag);
                 }
             }
         }
@@ -597,7 +597,7 @@ namespace Raven.Server.Smuggler.Documents.Handlers
 
                 using (var writer = new BlittableJsonTextWriter(context, ResponseBodyStream()))
                 {
-                    writer.WriteOperationId(context, operationId);
+                    writer.WriteOperationIdAndNodeTag(context, operationId, ServerStore.NodeTag);
                 }
             }
         }

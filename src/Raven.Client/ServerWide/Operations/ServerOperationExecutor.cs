@@ -68,7 +68,7 @@ namespace Raven.Client.ServerWide.Operations
                 var command = operation.GetCommand(_requestExecutor.Conventions, context);
 
                 await _requestExecutor.ExecuteAsync(command, context, sessionInfo: null, token: token).ConfigureAwait(false);
-                return new ServerWideOperation(_requestExecutor, _requestExecutor.Conventions, command.Result.OperationId, command.SelectedNodeTagForRequest);
+                return new ServerWideOperation(_requestExecutor, _requestExecutor.Conventions, command.Result.OperationId, command.SelectedNodeTag ?? command.Result.OperationNodeTag);
             }
         }
     }

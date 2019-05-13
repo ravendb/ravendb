@@ -12,9 +12,14 @@ namespace Raven.Client.Documents.Operations
     public class OperationIdResult
     {
         /// <summary>
-        /// Id of patch operation.
+        /// Id of operation.
         /// </summary>
         public long OperationId { get; set; }
+
+        /// <summary>
+        /// Node tag of operation.
+        /// </summary>
+        public string OperationNodeTag { get; set; }
 
     }
 }
