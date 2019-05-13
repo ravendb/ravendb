@@ -1194,6 +1194,9 @@ namespace Raven.Server
             var port = 0;
             var status = new TcpListenerStatus();
 
+            if (this.Configuration.Core.SetupMode == SetupMode.Initial)
+                return status;
+
             var tcpServerUrl = Configuration.Core.TcpServerUrls;
             if (tcpServerUrl == null)
             {
