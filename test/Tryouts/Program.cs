@@ -29,10 +29,10 @@ namespace Tryouts
 
     public static class Program
     {
-        public static async Task Main(string[] args)
+        public static void Main(string[] args)
         {
             using (var test = new TimeSeriesTests())
-                test.CanStoreAndReadMultipleTimestamps();
+                test.CanStoreLargeNumberOfValues();
 
             //var store = new DocumentStore
             //{

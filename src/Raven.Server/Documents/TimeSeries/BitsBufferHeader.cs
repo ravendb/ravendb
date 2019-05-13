@@ -2,12 +2,14 @@
 
 namespace Raven.Server.Documents.TimeSeries
 {
-    [StructLayout(LayoutKind.Explicit, Size = 4)]
+    [StructLayout(LayoutKind.Explicit, Size = 8)]
     public unsafe struct BitsBufferHeader
     {
         [FieldOffset(0)]
-        public ushort BitsPosition;
-        [FieldOffset(2)]
-        public fixed byte Reserved[2];
+        public int UncompressedBitsPosition;
+        [FieldOffset(4)]
+        public ushort CompressedSize;
+        [FieldOffset(6)]
+        public ushort UncompressedSize;
     }
 }
