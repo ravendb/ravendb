@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Threading;
+using Sparrow.Logging;
 using Sparrow.Platform;
 using Sparrow.Server.Meters;
 using Sparrow.Server.Platform;
@@ -17,12 +18,16 @@ namespace Voron.Impl.Journal
 {
     public unsafe class JournalWriter : IJournalWriter
     {
+        private const int ERROR_WORKING_SET_QUOTA = 0x5AD;
+
         private readonly SingleUseFlag _disposed = new SingleUseFlag();
         private readonly StorageEnvironmentOptions _options;
 
         private readonly SafeJournalHandle _writeHandle;
+        private readonly Logger _log;
         private SafeJournalHandle _readHandle = new SafeJournalHandle();
         private int _refs;
+        private bool _workingSetQuotaLogged = false;
 
         public int NumberOfAllocated4Kb { get; }
         public bool Disposed => _disposed.IsRaised();
@@ -33,6 +38,7 @@ namespace Voron.Impl.Journal
         {
             _options = options;
             FileName = filename;
+            _log = LoggingSource.Instance.GetLogger<JournalWriter>(options.BasePath.FullPath);
 
             var result = Pal.rvn_open_journal_for_writes(filename.FullPath, mode, size, options.SupportDurabilityFlags, out _writeHandle, out var actualSize, out var error);
             if (result != PalFlags.FailCodes.Success)
@@ -50,6 +56,14 @@ namespace Voron.Impl.Journal
                 var result = Pal.rvn_write_journal(_writeHandle, p, numberOf4Kb * 4L * Constants.Size.Kilobyte, posBy4Kb * 4L * Constants.Size.Kilobyte, out var error);
                 if (result != PalFlags.FailCodes.Success)
                     PalHelper.ThrowLastError(result, error, $"Attempted to write to journal file - Path: {FileName.FullPath} Size: {numberOf4Kb * 4L * Constants.Size.Kilobyte}, numberOf4Kb={numberOf4Kb}");
+
+                if (error == ERROR_WORKING_SET_QUOTA && _log.IsOperationsEnabled && _workingSetQuotaLogged == false)
+                {
+                    _log.Operations(
+                        $"We managed to accomplish journal write although we got {nameof(ERROR_WORKING_SET_QUOTA)} under the covers and wrote data in 4KB chunks");
+
+                    _workingSetQuotaLogged = true;
+                }
 
                 metrics.SetFileSize(NumberOfAllocated4Kb * (4L * Constants.Size.Kilobyte));
             }
