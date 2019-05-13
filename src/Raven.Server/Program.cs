@@ -173,11 +173,14 @@ namespace Raven.Server
                             Console.ForegroundColor = prevColor;
 
                             var tcpServerStatus = server.GetTcpServerStatus();
-                            prevColor = Console.ForegroundColor;
-                            Console.Write("Tcp listening on ");
-                            Console.ForegroundColor = ConsoleColor.Green;
-                            Console.WriteLine($"{string.Join(", ", tcpServerStatus.Listeners.Select(l => l.LocalEndpoint))}");
-                            Console.ForegroundColor = prevColor;
+                            if (tcpServerStatus.Listeners.Count > 0)
+                            {
+                                prevColor = Console.ForegroundColor;
+                                Console.Write("Tcp listening on ");
+                                Console.ForegroundColor = ConsoleColor.Green;
+                                Console.WriteLine($"{string.Join(", ", tcpServerStatus.Listeners.Select(l => l.LocalEndpoint))}");
+                                Console.ForegroundColor = prevColor;
+                            }
 
                             Console.WriteLine("Server started, listening to requests...");
 
