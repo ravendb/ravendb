@@ -887,50 +887,25 @@ namespace Raven.Server.Commercial
                 if (hostnameOrIp.Equals("0.0.0.0"))
                 {
                     localIps.Add(new IPEndPoint(IPAddress.Parse(hostnameOrIp), localNode.Port));
-                    localIps.Add(new IPEndPoint(IPAddress.Parse(hostnameOrIp), localNode.TcpPort));
                     continue;
                 }
 
                 foreach (var ip in await Dns.GetHostAddressesAsync(hostnameOrIp))
                 {
                     localIps.Add(new IPEndPoint(IPAddress.Parse(ip.ToString()), localNode.Port));
-                    localIps.Add(new IPEndPoint(IPAddress.Parse(ip.ToString()), localNode.TcpPort));
                 }
             }
 
             var requestedEndpoints = localIps.ToArray();
             var currentServerEndpoints = serverStore.Server.ListenEndpoints.Addresses.Select(ip => new IPEndPoint(ip, serverStore.Server.ListenEndpoints.Port)).ToList();
 
-            var tcpStatus = serverStore.Server.GetTcpServerStatus();
-            foreach (var listener in tcpStatus.Listeners)
-            {
-                if (IPAddress.TryParse(listener.LocalEndpoint.ToString(), out IPAddress ipAddress))
-                    currentServerEndpoints.Add(new IPEndPoint(ipAddress, tcpStatus.Port));
-            }
-
-            var ipProperties = IPGlobalProperties.GetIPGlobalProperties();
-            IPEndPoint[] activeTcpListeners;
-            try
-            {
-                activeTcpListeners = ipProperties.GetActiveTcpListeners();
-            }
-            catch (Exception)
-            {
-                // If GetActiveTcpListeners is not supported, skip the validation
-                // See https://github.com/dotnet/corefx/issues/30909
-                return;
-            }
-            
             foreach (var requestedEndpoint in requestedEndpoints)
             {
-                if (activeTcpListeners.Contains(requestedEndpoint))
-                {
-                    if (currentServerEndpoints.Contains(requestedEndpoint))
-                        continue; // OK... used by the current server
+                if (currentServerEndpoints.Contains(requestedEndpoint))
+                    continue; // OK... used by the current server
 
-                    throw new InvalidOperationException(
-                        $"The requested endpoint '{requestedEndpoint.Address}:{requestedEndpoint.Port}' is already in use by another process. You may go back in the wizard, change the settings and try again.");
-                }
+                throw new InvalidOperationException(
+                    $"The requested endpoint '{requestedEndpoint.Address}:{requestedEndpoint.Port}' is already in use by another process. You may go back in the wizard, change the settings and try again.");
             }
             
         }
@@ -945,14 +920,12 @@ namespace Raven.Server.Commercial
                 if (hostnameOrIp.Equals("0.0.0.0"))
                 {
                     localIps.Add(new IPEndPoint(IPAddress.Parse(hostnameOrIp), localNode.Port));
-                    localIps.Add(new IPEndPoint(IPAddress.Parse(hostnameOrIp), localNode.TcpPort));
                     continue;
                 }
 
                 foreach (var ip in await Dns.GetHostAddressesAsync(hostnameOrIp))
                 {
                     localIps.Add(new IPEndPoint(IPAddress.Parse(ip.ToString()), localNode.Port));
-                    localIps.Add(new IPEndPoint(IPAddress.Parse(ip.ToString()), localNode.TcpPort));
                 }
             }
 
@@ -962,18 +935,10 @@ namespace Raven.Server.Commercial
 
             try
             {
-                var tcpStatus = serverStore.Server.GetTcpServerStatus();
-                
-                if (serverStore.Server.ListenEndpoints.Port == localNode.Port || tcpStatus.Port == localNode.TcpPort)
+                if (serverStore.Server.ListenEndpoints.Port == localNode.Port)
                 {
                     var currentIps = serverStore.Server.ListenEndpoints.Addresses.ToList();
 
-                    foreach (var listener in tcpStatus.Listeners)
-                    {
-                        if (IPAddress.TryParse(listener.LocalEndpoint.ToString(), out IPAddress ipAddress))
-                            currentIps.Add(ipAddress);
-                    }
-                    
                     if (localIps.Count == 0 && currentIps.Count == 1 &&
                         (Equals(currentIps[0], IPAddress.Any) || Equals(currentIps[0], IPAddress.IPv6Any)))
                         return; // listen to any ip in this 
@@ -1005,14 +970,11 @@ namespace Raven.Server.Commercial
         {
             settingsJsonObject.TryGet(RavenConfiguration.GetKey(x => x.Core.PublicServerUrl), out string publicServerUrl);
             settingsJsonObject.TryGet(RavenConfiguration.GetKey(x => x.Core.ServerUrls), out string serverUrl);
-            settingsJsonObject.TryGet(RavenConfiguration.GetKey(x => x.Core.TcpServerUrls), out string tcpServerUrl);
             settingsJsonObject.TryGet(RavenConfiguration.GetKey(x => x.Core.SetupMode), out SetupMode setupMode);
             settingsJsonObject.TryGet(RavenConfiguration.GetKey(x => x.Core.ExternalIp), out string externalIp);
             
             var serverUrls = serverUrl.Split(";");
             var port = new Uri(serverUrls[0]).Port;
-            var tcpServerUrls = tcpServerUrl.Split(";");
-            var tcpPort = new Uri(tcpServerUrls[0]).Port;
             var hostnamesOrIps = serverUrls.Select(url => new Uri(url).DnsSafeHost).ToArray();
 
             var localIps = new List<IPEndPoint>();
@@ -1022,30 +984,20 @@ namespace Raven.Server.Commercial
                 if (hostnameOrIp.Equals("0.0.0.0"))
                 {
                     localIps.Add(new IPEndPoint(IPAddress.Parse(hostnameOrIp), port));
-                    localIps.Add(new IPEndPoint(IPAddress.Parse(hostnameOrIp), tcpPort));
                     continue;
                 }
 
                 foreach (var ip in await Dns.GetHostAddressesAsync(hostnameOrIp))
                 {
                     localIps.Add(new IPEndPoint(IPAddress.Parse(ip.ToString()), port));
-                    localIps.Add(new IPEndPoint(IPAddress.Parse(ip.ToString()), tcpPort));
                 }
             }
 
             try
             {
-                var tcpStatus = serverStore.Server.GetTcpServerStatus();
-                
-                if (serverStore.Server.ListenEndpoints.Port == port && tcpStatus.Port == tcpPort)
+                if (serverStore.Server.ListenEndpoints.Port == port)
                 {
                     var currentIps = serverStore.Server.ListenEndpoints.Addresses.ToList();
-
-                    foreach (var listener in tcpStatus.Listeners)
-                    {
-                        if (IPAddress.TryParse(listener.LocalEndpoint.ToString(), out IPAddress ipAddress))
-                            currentIps.Add(ipAddress);
-                    }
 
                     if (localIps.Count == 0 && currentIps.Count == 1 &&
                         (Equals(currentIps[0], IPAddress.Any) || Equals(currentIps[0], IPAddress.IPv6Any)))
