@@ -899,7 +899,14 @@ namespace Raven.Server.Commercial
             }
 
             var requestedEndpoints = localIps.ToArray();
-            var currentServerEndpoints = serverStore.Server.ListenEndpoints.Addresses.Select(ip => new IPEndPoint(ip, serverStore.Server.ListenEndpoints.Port)).ToArray();
+            var currentServerEndpoints = serverStore.Server.ListenEndpoints.Addresses.Select(ip => new IPEndPoint(ip, serverStore.Server.ListenEndpoints.Port)).ToList();
+
+            var tcpStatus = serverStore.Server.GetTcpServerStatus();
+            foreach (var listener in tcpStatus.Listeners)
+            {
+                if (IPAddress.TryParse(listener.LocalEndpoint.ToString(), out IPAddress ipAddress))
+                    currentServerEndpoints.Add(new IPEndPoint(ipAddress, tcpStatus.Port));
+            }
 
             var ipProperties = IPGlobalProperties.GetIPGlobalProperties();
             IPEndPoint[] activeTcpListeners;
@@ -957,7 +964,7 @@ namespace Raven.Server.Commercial
             {
                 var tcpStatus = serverStore.Server.GetTcpServerStatus();
                 
-                if (serverStore.Server.ListenEndpoints.Port == localNode.Port && tcpStatus.Port == localNode.TcpPort)
+                if (serverStore.Server.ListenEndpoints.Port == localNode.Port || tcpStatus.Port == localNode.TcpPort)
                 {
                     var currentIps = serverStore.Server.ListenEndpoints.Addresses.ToList();
 
