@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
+using System.Threading;
 using System.Threading.Tasks;
 using FastTests;
 using FastTests.Server.Replication;
@@ -14,7 +15,9 @@ using Raven.Client.Documents.Operations;
 using Raven.Client.Documents.Operations.Attachments;
 using Raven.Client.Documents.Session;
 using Raven.Client.ServerWide;
+using Raven.Server.Config;
 using Raven.Server.Documents;
+using Raven.Server.ServerWide.Context;
 using Raven.Tests.Core.Utils.Entities;
 using Sparrow.Json;
 using Xunit;
@@ -36,7 +39,7 @@ namespace SlowTests.Client.Attachments
             {
                 await SetDatabaseId(store1, dbId1);
                 await SetDatabaseId(store2, dbId2);
-                
+
                 using (var session = store1.OpenSession())
                 {
                     session.Store(new User { Name = "Fitzchak" }, "users/1");
@@ -131,7 +134,7 @@ namespace SlowTests.Client.Attachments
                         using (var attachment = session.Advanced.Attachments.Get("users/1", name))
                         {
                             attachment.Stream.CopyTo(attachmentStream);
-                            
+
                             Assert.Equal(name, attachment.Details.Name);
                             Assert.Equal(i == 0 ? 3 : 5, attachmentStream.Position);
                             if (i == 0)
@@ -319,7 +322,7 @@ namespace SlowTests.Client.Attachments
             {
                 var dbId1 = new Guid("00000000-48c4-421e-9466-000000000000");
                 await SetDatabaseId(store1, dbId1);
-                
+
                 for (int i = 1; i <= 3; i++)
                 {
                     using (var session = store1.OpenSession())
@@ -410,7 +413,7 @@ namespace SlowTests.Client.Attachments
             var id = "marker - " + Guid.NewGuid();
             using (var session = store1.OpenSession())
             {
-                session.Store(new Product {Name = "Marker"}, id);
+                session.Store(new Product { Name = "Marker" }, id);
                 session.SaveChanges();
             }
             Assert.True(WaitForDocument(store2, id));
@@ -420,7 +423,7 @@ namespace SlowTests.Client.Attachments
         {
             using (var session = store1.OpenSession())
             {
-                session.Store(new User {Name = "Marker " + name}, "marker-" + name);
+                session.Store(new User { Name = "Marker " + name }, "marker-" + name);
                 session.SaveChanges();
             }
             Assert.True(WaitForDocument(store2, "marker-" + name));
@@ -493,7 +496,7 @@ namespace SlowTests.Client.Attachments
                     "background-photo.jpg",
                     "fileNAME_#$1^%_בעברית.txt"
                 };
-                
+
                 using (var profileStream = new MemoryStream(new byte[] { 1, 2, 3 }))
                 {
                     var result = store1.Operations.Send(new PutAttachmentOperation("users/1", names[0], profileStream, "image/png"));
@@ -506,7 +509,8 @@ namespace SlowTests.Client.Attachments
                 using (var backgroundStream = new MemoryStream(new byte[] { 10, 20, 30, 40, 50 }))
                 {
                     var result = store1.Operations.Send(new PutAttachmentOperation("users/1", names[1], backgroundStream, "ImGgE/jPeG"));
-                    Assert.Contains("A:7", result.ChangeVector); Assert.Equal(names[1], result.Name);
+                    Assert.Contains("A:7", result.ChangeVector);
+                    Assert.Equal(names[1], result.Name);
                     Assert.Equal("users/1", result.DocumentId);
                     Assert.Equal("ImGgE/jPeG", result.ContentType);
                     Assert.Equal("igkD5aEdkdAsAB/VpYm1uFlfZIP9M2LSUsD6f6RVW9U=", result.Hash);
@@ -707,28 +711,28 @@ namespace SlowTests.Client.Attachments
             {
                 using (var session = store1.OpenAsyncSession())
                 {
-                    await session.StoreAsync(new User {Name = "Fitzchak"}, "users/1");
+                    await session.StoreAsync(new User { Name = "Fitzchak" }, "users/1");
                     await session.SaveChangesAsync();
 
-                    using (var a1 = new MemoryStream(new byte[] {1, 2, 3}))
+                    using (var a1 = new MemoryStream(new byte[] { 1, 2, 3 }))
                     {
                         await store1.Operations.SendAsync(new PutAttachmentOperation("users/1", "a1", a1, "a1/png"));
                     }
 
-                    await session.StoreAsync(new User {Name = "Marker 1"}, "marker 1");
+                    await session.StoreAsync(new User { Name = "Marker 1" }, "marker 1");
                     await session.SaveChangesAsync();
                 }
                 using (var session = store2.OpenAsyncSession())
                 {
-                    await session.StoreAsync(new User {Name = "Fitzchak"}, "users/1");
+                    await session.StoreAsync(new User { Name = "Fitzchak" }, "users/1");
                     await session.SaveChangesAsync();
 
-                    using (var a2 = new MemoryStream(new byte[] {1, 2, 3, 4, 5}))
+                    using (var a2 = new MemoryStream(new byte[] { 1, 2, 3, 4, 5 }))
                     {
                         store2.Operations.Send(new PutAttachmentOperation("users/1", "a2", a2, "a2/jpeg"));
                     }
 
-                    await session.StoreAsync(new User {Name = "Marker 2"}, "marker 2");
+                    await session.StoreAsync(new User { Name = "Marker 2" }, "marker 2");
                     await session.SaveChangesAsync();
                 }
 
@@ -738,8 +742,8 @@ namespace SlowTests.Client.Attachments
                 Assert.True(WaitForDocument(store2, "marker 1"));
                 Assert.True(WaitForDocument(store1, "marker 2"));
 
-                await AssertAttachments(store1, new[] {"a1", "a2"});
-                await AssertAttachments(store2, new[] {"a1", "a2"});
+                await AssertAttachments(store1, new[] { "a1", "a2" });
+                await AssertAttachments(store2, new[] { "a1", "a2" });
             }
         }
 
@@ -839,7 +843,7 @@ namespace SlowTests.Client.Attachments
                     await session.StoreAsync(new User { Name = "Marker 2" }, "marker 2");
                     await session.SaveChangesAsync();
                 }
-                
+
                 await SetupReplicationAsync(store1, store2);
                 await SetupReplicationAsync(store2, store1);
 
@@ -974,20 +978,20 @@ namespace SlowTests.Client.Attachments
 
                 using (var session = store1.OpenAsyncSession())
                 {
-                    await session.StoreAsync(new User {Name = "Fitzchak"}, "users/1");
+                    await session.StoreAsync(new User { Name = "Fitzchak" }, "users/1");
                     await session.SaveChangesAsync();
 
-                    using (var a1 = new MemoryStream(new byte[] {1, 2, 3}))
+                    using (var a1 = new MemoryStream(new byte[] { 1, 2, 3 }))
                     {
                         await store1.Operations.SendAsync(new PutAttachmentOperation("users/1", "a1", a1, "a1/png"));
                     }
                 }
                 using (var session = store2.OpenAsyncSession())
                 {
-                    await session.StoreAsync(new User {Name = "Fitzchak"}, "users/1");
+                    await session.StoreAsync(new User { Name = "Fitzchak" }, "users/1");
                     await session.SaveChangesAsync();
 
-                    using (var a2 = new MemoryStream(new byte[] {1, 2, 3, 4, 5}))
+                    using (var a2 = new MemoryStream(new byte[] { 1, 2, 3, 4, 5 }))
                     {
                         store2.Operations.Send(new PutAttachmentOperation("users/1", "a1", a2, "a1/png"));
                     }
@@ -1047,29 +1051,29 @@ namespace SlowTests.Client.Attachments
 
                 using (var session = store1.OpenAsyncSession())
                 {
-                    await session.StoreAsync(new User {Name = "Fitzchak"}, "users/1");
+                    await session.StoreAsync(new User { Name = "Fitzchak" }, "users/1");
                     await session.SaveChangesAsync();
 
-                    using (var a1 = new MemoryStream(new byte[] {1, 2, 3}))
+                    using (var a1 = new MemoryStream(new byte[] { 1, 2, 3 }))
                     {
                         await store1.Operations.SendAsync(new PutAttachmentOperation("users/1", "a1", a1, "a1/png"));
                     }
 
-                    await session.StoreAsync(new User {Name = "Marker 1"}, "marker 1");
+                    await session.StoreAsync(new User { Name = "Marker 1" }, "marker 1");
                     await session.SaveChangesAsync();
                 }
                 using (var session = store2.OpenAsyncSession())
                 {
-                    await session.StoreAsync(new User {Name = "Fitzchak"}, "users/1");
+                    await session.StoreAsync(new User { Name = "Fitzchak" }, "users/1");
                     await session.SaveChangesAsync();
 
-                    using (var a2 = new MemoryStream(new byte[] {1, 2, 3, 4, 5}))
+                    using (var a2 = new MemoryStream(new byte[] { 1, 2, 3, 4, 5 }))
                     {
                         store2.Operations.Send(new PutAttachmentOperation("users/1", "a1", a2, "a1/png"));
                     }
                     store2.Operations.Send(new DeleteAttachmentOperation("users/1", "a1"));
 
-                    await session.StoreAsync(new User {Name = "Marker 2"}, "marker 2");
+                    await session.StoreAsync(new User { Name = "Marker 2" }, "marker 2");
                     await session.SaveChangesAsync();
                 }
 
@@ -1079,8 +1083,8 @@ namespace SlowTests.Client.Attachments
                 Assert.True(WaitForDocument(store2, "marker 1"));
                 Assert.True(WaitForDocument(store1, "marker 2"));
 
-                await AssertAttachments(store1, new[] {"a1"});
-                await AssertAttachments(store2, new[] {"a1"});
+                await AssertAttachments(store1, new[] { "a1" });
+                await AssertAttachments(store2, new[] { "a1" });
             }
         }
 
@@ -1097,7 +1101,7 @@ namespace SlowTests.Client.Attachments
                 {
                     using (var commands = store1.Commands())
                     {
-                        await commands.PutAsync("users/1", null, new User {Name = "Fitzchak"});
+                        await commands.PutAsync("users/1", null, new User { Name = "Fitzchak" });
                     }
 
                     using (var a1 = new MemoryStream(new byte[] { 1, 2, 3 }))
@@ -1115,13 +1119,13 @@ namespace SlowTests.Client.Attachments
                         await commands.PutAsync("users/1", null, new User { Name = "Fitzchak" });
                     }
 
-                    using (var a2 = new MemoryStream(new byte[] {1, 2, 3, 4, 5}))
+                    using (var a2 = new MemoryStream(new byte[] { 1, 2, 3, 4, 5 }))
                     {
                         await store2.Operations.SendAsync(new PutAttachmentOperation("users/1", "a1", a2, "a1/png"));
                     }
                     await store2.Operations.SendAsync(new DeleteAttachmentOperation("users/1", "a1"));
 
-                    await session.StoreAsync(new User {Name = "Marker 2"}, "marker 2");
+                    await session.StoreAsync(new User { Name = "Marker 2" }, "marker 2");
                     await session.SaveChangesAsync();
                 }
 
@@ -1133,6 +1137,74 @@ namespace SlowTests.Client.Attachments
 
                 await AssertAttachments(store1, new[] { "a1" });
                 await AssertAttachments(store2, new[] { "a1" });
+            }
+        }
+
+        [Fact]
+        public async Task RavenDB_13535()
+        {
+            using (var server = GetNewServer(runInMemory: false, customSettings: new Dictionary<string, string>
+            {
+                [RavenConfiguration.GetKey(x => x.Replication.MaxSizeToSend)] = 1.ToString()
+            }))
+            using (var store1 = GetDocumentStore(new Options { Server = server, RunInMemory = false }))
+            using (var store2 = GetDocumentStore(new Options { Server = server, RunInMemory = false }))
+            using (var store3 = GetDocumentStore(new Options { Server = server, RunInMemory = false }))
+            {
+                using (var session = store1.OpenAsyncSession())
+                using (var a1 = new MemoryStream(new byte[2 * 1024 * 1024]))
+                {
+                    var user = new User();
+                    await session.StoreAsync(user, "foo");
+                    session.Advanced.Attachments.Store(user, "dummy", a1);
+                    await session.SaveChangesAsync();
+                }
+
+                using (var session = store1.OpenAsyncSession())
+                {
+                    var user = await session.LoadAsync<User>("foo");
+                    user.Name = "Karmel";
+                    await session.SaveChangesAsync();
+                }
+
+                var db1 = await server.ServerStore.DatabasesLandlord.TryGetOrCreateResourceStore(store1.Database);
+                var mre = new ManualResetEventSlim(true);
+                db1.ReplicationLoader.DebugWaitAndRunReplicationOnce = mre;
+
+                await SetupReplicationAsync(store1, store2);
+
+                var db2 = await server.ServerStore.DatabasesLandlord.TryGetOrCreateResourceStore(store2.Database);
+
+                var count = WaitForValue(() =>
+                {
+                    using (db2.DocumentsStorage.ContextPool.AllocateOperationContext(out DocumentsOperationContext ctx))
+                    using (ctx.OpenReadTransaction())
+                    {
+                        return db2.DocumentsStorage.AttachmentsStorage.GetNumberOfAttachments(ctx).AttachmentCount;
+                    }
+                }, 1);
+                Assert.Equal(1, count);
+
+                db2.ServerStore.DatabasesLandlord.UnloadDirectly(db2.Name);
+
+                using (var session = store2.OpenAsyncSession())
+                {
+                    await session.StoreAsync(new User(), "bar");
+                    await session.SaveChangesAsync();
+                }
+
+                await SetupReplicationAsync(store2, store3);
+
+                var db3 = await server.ServerStore.DatabasesLandlord.TryGetOrCreateResourceStore(store3.Database);
+                count = WaitForValue(() =>
+                {
+                    using (db3.DocumentsStorage.ContextPool.AllocateOperationContext(out DocumentsOperationContext ctx))
+                    using (ctx.OpenReadTransaction())
+                    {
+                        return db3.DocumentsStorage.AttachmentsStorage.GetNumberOfAttachments(ctx).AttachmentCount;
+                    }
+                }, 1);
+                Assert.Equal(1, count);
             }
         }
     }
