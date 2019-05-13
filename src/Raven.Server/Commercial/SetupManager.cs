@@ -887,27 +887,44 @@ namespace Raven.Server.Commercial
                 if (hostnameOrIp.Equals("0.0.0.0"))
                 {
                     localIps.Add(new IPEndPoint(IPAddress.Parse(hostnameOrIp), localNode.Port));
+                    localIps.Add(new IPEndPoint(IPAddress.Parse(hostnameOrIp), localNode.TcpPort));
                     continue;
                 }
 
                 foreach (var ip in await Dns.GetHostAddressesAsync(hostnameOrIp))
                 {
                     localIps.Add(new IPEndPoint(IPAddress.Parse(ip.ToString()), localNode.Port));
+                    localIps.Add(new IPEndPoint(IPAddress.Parse(ip.ToString()), localNode.TcpPort));
                 }
             }
 
             var requestedEndpoints = localIps.ToArray();
             var currentServerEndpoints = serverStore.Server.ListenEndpoints.Addresses.Select(ip => new IPEndPoint(ip, serverStore.Server.ListenEndpoints.Port)).ToList();
 
+            var ipProperties = IPGlobalProperties.GetIPGlobalProperties();
+            IPEndPoint[] activeTcpListeners;
+            try
+            {
+                activeTcpListeners = ipProperties.GetActiveTcpListeners();
+            }
+            catch (Exception)
+            {
+                // If GetActiveTcpListeners is not supported, skip the validation
+                // See https://github.com/dotnet/corefx/issues/30909
+                return;
+            }
+
             foreach (var requestedEndpoint in requestedEndpoints)
             {
-                if (currentServerEndpoints.Contains(requestedEndpoint))
-                    continue; // OK... used by the current server
+                if (activeTcpListeners.Contains(requestedEndpoint))
+                {
+                    if (currentServerEndpoints.Contains(requestedEndpoint))
+                        continue; // OK... used by the current server
 
-                throw new InvalidOperationException(
-                    $"The requested endpoint '{requestedEndpoint.Address}:{requestedEndpoint.Port}' is already in use by another process. You may go back in the wizard, change the settings and try again.");
+                    throw new InvalidOperationException(
+                        $"The requested endpoint '{requestedEndpoint.Address}:{requestedEndpoint.Port}' is already in use by another process. You may go back in the wizard, change the settings and try again.");
+                }
             }
-            
         }
 
         public static async Task ValidateServerCanRunWithSuppliedSettings(SetupInfo setupInfo, ServerStore serverStore, SetupMode setupMode, CancellationToken token)
