@@ -14,7 +14,9 @@ using Raven.Client.Documents.Operations;
 using Raven.Client.Documents.Operations.Attachments;
 using Raven.Client.Documents.Session;
 using Raven.Client.ServerWide;
+using Raven.Server.Config;
 using Raven.Server.Documents;
+using Raven.Server.ServerWide.Context;
 using Raven.Tests.Core.Utils.Entities;
 using Sparrow.Json;
 using Xunit;
@@ -1133,6 +1135,74 @@ namespace SlowTests.Client.Attachments
 
                 await AssertAttachments(store1, new[] { "a1" });
                 await AssertAttachments(store2, new[] { "a1" });
+            }
+        }
+
+        [Fact]
+        public async Task RavenDB_13535()
+        {
+            using (var server = GetNewServer(runInMemory: false, customSettings: new Dictionary<string, string>
+            {
+                [RavenConfiguration.GetKey(x => x.Replication.MaxSizeToSend)] = 1.ToString()
+            }))
+            using (var store1 = GetDocumentStore(new Options{Server = server, RunInMemory = false}))
+            using (var store2 = GetDocumentStore(new Options{Server = server, RunInMemory = false}))
+            using (var store3 = GetDocumentStore(new Options{Server = server, RunInMemory = false}))
+            {
+                using (var session = store1.OpenAsyncSession())
+                using (var a1 = new MemoryStream(new byte[2 * 1024 * 1024]))
+                {
+                    var user = new User();
+                    await session.StoreAsync(user, "foo");
+                    session.Advanced.Attachments.Store(user, "dummy", a1);
+                    await session.SaveChangesAsync();
+    }
+
+                using (var session = store1.OpenAsyncSession())
+                {
+                    var user = await session.LoadAsync<User>("foo");
+                    user.Name = "Karmel";
+                    await session.SaveChangesAsync();
+}
+
+                var db1 = await server.ServerStore.DatabasesLandlord.TryGetOrCreateResourceStore(store1.Database);
+                var mre = new ManualResetEventSlim(true);
+                db1.ReplicationLoader.DebugWaitAndRunReplicationOnce = mre;
+
+                await SetupReplicationAsync(store1, store2);
+
+                var db2 = await server.ServerStore.DatabasesLandlord.TryGetOrCreateResourceStore(store2.Database);
+
+                var count = WaitForValue(() =>
+                {
+                    using (db2.DocumentsStorage.ContextPool.AllocateOperationContext(out DocumentsOperationContext ctx))
+                    using (ctx.OpenReadTransaction())
+                    {
+                        return db2.DocumentsStorage.AttachmentsStorage.GetNumberOfAttachments(ctx).AttachmentCount;
+                    }
+                }, 1);
+                Assert.Equal(1, count);
+                
+                db2.ServerStore.DatabasesLandlord.UnloadDirectly(db2.Name);
+
+                using (var session = store2.OpenAsyncSession())
+                {
+                    await session.StoreAsync(new User(), "bar");
+                    await session.SaveChangesAsync();
+                }
+
+                await SetupReplicationAsync(store2, store3);
+
+                var db3 = await server.ServerStore.DatabasesLandlord.TryGetOrCreateResourceStore(store3.Database);
+                count = WaitForValue(() =>
+                {
+                    using (db3.DocumentsStorage.ContextPool.AllocateOperationContext(out DocumentsOperationContext ctx))
+                    using (ctx.OpenReadTransaction())
+                    {
+                        return db3.DocumentsStorage.AttachmentsStorage.GetNumberOfAttachments(ctx).AttachmentCount;
+                    }
+                }, 1);
+                Assert.Equal(1, count);
             }
         }
     }

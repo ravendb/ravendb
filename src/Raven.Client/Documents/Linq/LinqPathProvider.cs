@@ -232,24 +232,34 @@ namespace Raven.Client.Documents.Linq
                 throw new ArgumentNullException(nameof(expression));
 
             // Get object
-            object value;
-            if (GetValueFromExpressionWithoutConversion(expression, out value))
+            if (GetValueFromExpressionWithoutConversion(expression, out var value))
             {
-                if (value is IEnumerable)
-                    return value;
-
                 var nonNullableType = Nullable.GetUnderlyingType(type) ?? type;
                 if (value is Enum || nonNullableType.GetTypeInfo().IsEnum)
                 {
-                    if (value == null)
-                        return null;
-                    if (_conventions.SaveEnumsAsIntegers == false)
-                        return Enum.GetName(nonNullableType, value);
-                    return Convert.ToInt32(value);
+                    if (value is IEnumerable valueAsEnumerable)
+                    {
+                        return valueAsEnumerable
+                            .Cast<object>()
+                            .Select(x => ConvertEnum(x, nonNullableType));
+                    }
+
+                    return ConvertEnum(value, nonNullableType);
                 }
+
                 return value;
             }
+
             throw new InvalidOperationException("Can't extract value from expression of type: " + expression.NodeType);
+
+            object ConvertEnum(object val, Type enumType)
+            {
+                if (val == null)
+                    return null;
+                if (_conventions.SaveEnumsAsIntegers == false)
+                    return Enum.GetName(enumType, val);
+                return Convert.ToInt32(val);
+            }
         }
 
 

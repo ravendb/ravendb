@@ -1317,9 +1317,9 @@ namespace Raven.Server.Rachis
             var message =
                 $"FATAL ERROR: got an append entries request with index={firstEntry.Index:#,#;;0} term={firstEntry.Term:#,#;;0} " +
                 $"while my commit index={lastCommitIndex:#,#;;0} with term={lastCommitTerm:#,#;;0}, this means something went wrong badly.";
-            if (Log.IsInfoEnabled)
+            if (Log.IsOperationsEnabled)
             {
-                Log.Info(message);
+                Log.Operations(message);
             }
             RachisInvalidOperationException.Throw(message);
         }
