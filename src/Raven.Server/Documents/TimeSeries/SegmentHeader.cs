@@ -18,6 +18,6 @@ namespace Raven.Server.Documents.TimeSeries
         [FieldOffset(13)]
         public byte NumberOfValues;
         [FieldOffset(14)]
-        public ushort CompressedSize;
+        public fixed byte Reserved[2];
     }
 }

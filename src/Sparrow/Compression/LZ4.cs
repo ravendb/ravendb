@@ -143,6 +143,11 @@ namespace Sparrow.Compression
             return size + (size / 255) + 16;
         }
 
+        public static int MaximumOutputLength(int size)
+        {
+            return checked(size + (size / 255) + 16);
+        }
+
         private static int LZ4_compress_generic<TLimited, TTableType, TDictionaryType, TDictionaryIssue>(LZ4_stream_t_internal* dictPtr, byte* source, byte* dest, int inputSize, int maxOutputSize, int acceleration)
             where TLimited : ILimitedOutputDirective
             where TTableType : ITableTypeDirective

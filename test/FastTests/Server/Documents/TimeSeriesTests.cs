@@ -285,8 +285,6 @@ namespace FastTests.Server.Documents
                     }
                 }
 
-                WaitForUserToContinueTheTest(store);
-
                 using (var session = store.OpenSession())
                 {
                     var vals = session.TimeSeriesFor("users/ayende")
