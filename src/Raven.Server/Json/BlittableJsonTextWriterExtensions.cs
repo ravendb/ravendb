@@ -1596,12 +1596,17 @@ namespace Raven.Server.Json
             }
         }
 
-        public static void WriteOperationId(this BlittableJsonTextWriter writer, JsonOperationContext context, long operationId)
+        public static void WriteOperationIdAndNodeTag(this BlittableJsonTextWriter writer, JsonOperationContext context, long operationId, string nodeTag)
         {
             writer.WriteStartObject();
 
             writer.WritePropertyName("OperationId");
             writer.WriteInteger(operationId);
+
+            writer.WriteComma();
+
+            writer.WritePropertyName("OperationNodeTag");
+            writer.WriteString(nodeTag);
 
             writer.WriteEndObject();
         }

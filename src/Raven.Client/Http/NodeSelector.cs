@@ -60,7 +60,7 @@ namespace Raven.Client.Http
             return true;
         }
 
-        public (int Index, ServerNode Node) GetRequestedNode(string nodeTag)
+        internal (int Index, ServerNode Node) GetRequestedNode(string nodeTag)
         {
             var state = _state;
             var stateFailures = state.Failures;

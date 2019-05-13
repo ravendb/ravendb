@@ -2,10 +2,16 @@
 using System.Collections.Generic;
 using System.IO;
 using System.Threading.Tasks;
+using FastTests;
 using FastTests.Server.Replication;
+using Raven.Client;
 using Raven.Client.Documents;
+using Raven.Client.Documents.Indexes;
+using Raven.Client.Documents.Operations;
 using Raven.Client.Documents.Operations.Backups;
+using Raven.Client.Documents.Operations.Indexes;
 using Raven.Client.Documents.Operations.OngoingTasks;
+using Raven.Client.Documents.Queries;
 using Raven.Client.ServerWide;
 using Raven.Client.ServerWide.Operations;
 using Tests.Infrastructure;
@@ -94,6 +100,63 @@ namespace SlowTests.Issues
                 }
                 var numOfDbs = await store.Maintenance.Server.SendAsync(new GetDatabaseNamesOperation(0, int.MaxValue));
                 Assert.Equal(clusterSize + 1, numOfDbs.Length);
+            }
+        }
+
+        [Fact]
+        public async Task CanPassNodeTagToRestorePatchOperation()
+        {
+            var clusterSize = 3;
+            var databaseName = GetDatabaseName();
+            var leader = await CreateRaftClusterAndGetLeader(clusterSize, false, useSsl: false);
+            var myNodesList = new List<string>();
+
+            using (var store = new DocumentStore
+            {
+                Urls = new[] {leader.WebUrl},
+                Database = databaseName,
+            }.Initialize())
+            {
+                var doc = new DatabaseRecord(databaseName);
+                var databaseResult = await store.Maintenance.Server.SendAsync(new CreateDatabaseOperation(doc, clusterSize));
+                myNodesList.AddRange(databaseResult.Topology.AllNodes);
+
+                store.Maintenance.Send(new PutIndexesOperation(new[] {new IndexDefinition
+                {
+                    Maps = { "from doc in docs.Items select new { doc.Name }" },
+                    Name = "MyIndex"
+                }}));
+
+                using (var commands = store.Commands())
+                {
+                    await commands.PutAsync("items/1", null, new { Name = "testname" }, new Dictionary<string, object>
+                    {
+                        {Constants.Documents.Metadata.Collection, "Items"}
+                    });
+
+                    WaitForIndexing(store);
+
+                    var operation = store.Operations.Send(new PatchByQueryOperation(new IndexQuery
+                    {
+                        Query = "FROM INDEX 'MyIndex' UPDATE { this.NewName = 'NewValue'; } "
+                    }));
+
+                    var opStatus = store.Maintenance.Send(new GetOperationStateOperation(operation.Id));
+                    Assert.NotNull(opStatus);
+
+                    foreach (var node in myNodesList)
+                    {
+                        var op = store.Maintenance.Send(new GetOperationStateOperation(operation.Id, node));
+                        if(node == operation.NodeTag)
+                            Assert.NotNull(op);
+                        else
+                            Assert.Null(op);
+                    }
+
+                    operation.WaitForCompletion(TimeSpan.FromSeconds(15));
+                    dynamic document = await commands.GetAsync("items/1");
+                    Assert.Equal("NewValue", document.NewName.ToString());
+                }
             }
         }
 

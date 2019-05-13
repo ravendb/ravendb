@@ -34,12 +34,13 @@ namespace Raven.Client.Documents.Operations
 
         private bool _isProcessing;
 
-        public Operation(RequestExecutor requestExecutor, Func<IDatabaseChanges> changes, DocumentConventions conventions, long id)
+        public Operation(RequestExecutor requestExecutor, Func<IDatabaseChanges> changes, DocumentConventions conventions, long id, string nodeTag = null)
         {
             _requestExecutor = requestExecutor;
             _changes = changes;
             _conventions = conventions;
             _id = id;
+            NodeTag = nodeTag;
 
             StatusFetchMode = _conventions.OperationStatusFetchMode;
             _isProcessing = true;

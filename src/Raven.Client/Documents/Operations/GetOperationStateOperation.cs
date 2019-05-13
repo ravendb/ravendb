@@ -8,15 +8,22 @@ namespace Raven.Client.Documents.Operations
     public class GetOperationStateOperation : IMaintenanceOperation<OperationState>
     {
         private readonly long _id;
+        private readonly string _nodeTag;
 
         public GetOperationStateOperation(long id)
         {
             _id = id;
         }
 
+        public GetOperationStateOperation(long id, string node)
+        {
+            _id = id;
+            _nodeTag = node;
+        }
+
         public RavenCommand<OperationState> GetCommand(DocumentConventions conventions, JsonOperationContext context)
         {
-            return new GetOperationStateCommand(conventions, _id);
+            return new GetOperationStateCommand(conventions, _id, _nodeTag);
         }
 
         internal class GetOperationStateCommand : RavenCommand<OperationState>
@@ -30,7 +37,7 @@ namespace Raven.Client.Documents.Operations
             {
                 _conventions = conventions;
                 _id = id;
-                SelectedNodeTagForRequest = nodeTag;
+                SelectedNodeTag = nodeTag;
             }
 
             public override HttpRequestMessage CreateRequest(JsonOperationContext ctx, ServerNode node, out string url)
