@@ -238,14 +238,17 @@ namespace Sparrow.Logging
         public void EndLogging()
         {
             _keepLogging.Lower();
+
             _hasEntries.Set();
             _readyToCompress.Set();
-            _tokenSource.Cancel();
+            
             _loggingThread.Join(TimeToWaitForLoggingToEndInMilliseconds);
-            _compressLoggingThread?.Join();
+            _compressLoggingThread?.Join(TimeToWaitForLoggingToEndInMilliseconds);
+
+            _tokenSource.Cancel();
         }
 
-        private bool GetNewStream(long maxFileSize, out FileStream fileStream)
+        private bool TryGetNewStreamAndApplyRetentionPolicies(long maxFileSize, out FileStream fileStream)
         {
             string[] logFiles;
             string[] logGzFiles;
@@ -278,69 +281,70 @@ namespace Sparrow.Logging
 
             UpdateLocalDateTimeOffset();
 
+            string fileName;
             while (true)
             {
                 var nextLogNumber = Interlocked.Increment(ref _logNumber);
-                var fileName = Path.Combine(_path, _dateString) + "." +
-                               nextLogNumber.ToString("000", CultureInfo.InvariantCulture) + ".log";
-                if (File.Exists(fileName) && new FileInfo(fileName).Length >= maxFileSize)
-                    continue;
+                fileName = Path.Combine(_path, _dateString) + "." + nextLogNumber.ToString("000", CultureInfo.InvariantCulture) + ".log";
+                if (File.Exists(fileName) == false || new FileInfo(fileName).Length < maxFileSize)
+                    break;
+            }
 
-                LimitLogSize(logFiles, logGzFiles);
-                fileStream = SafeFileStream.Create(fileName, FileMode.Append, FileAccess.Write, FileShare.Read, 32 * 1024, false);
-                fileStream.Write(_headerRow, 0, _headerRow.Length);
-                return true;
+            if (Compressing == false)
+            {
+                CleanupOldLogFiles(logFiles);
+                LimitLogSize(logFiles);
+            }
+                
+            fileStream = SafeFileStream.Create(fileName, FileMode.Append, FileAccess.Write, FileShare.Read, 32 * 1024, false);
+            fileStream.Write(_headerRow, 0, _headerRow.Length);
+            return true;
+        }
+
+        private void LimitLogSize(string[] logFiles)
+        {
+            var logFilesInfo = logFiles.Select(f => new LogInfo(f));
+            var totalLogSize = logFilesInfo.Sum(i => i.Size);
+
+            long retentionSizeMinusCurrentFile = RetentionSize - MaxFileSizeInBytes;
+            foreach (var log in logFilesInfo)
+            {
+                if (totalLogSize > retentionSizeMinusCurrentFile)
+                {
+                    try
+                    {
+                        File.Delete(log.FullName);
+                    }
+                    catch
+                    {
+                        // Something went wrong we will try again later
+                        continue;
+                    }
+                    totalLogSize -= log.Size;
+                }
+                else
+                {
+                    return;
+                }
             }
         }
 
-        private void LimitLogSize(string[] logFiles, string[] logGzFiles)
+        private class LogInfo
         {
-            var logFilesInfo = logFiles.Select(f => new FileInfo(f));
-            var logGzFilesInfo = logGzFiles.Select(f => new FileInfo(f));
-            var totalLogSize = logFilesInfo.Sum(i => i.Length) + logGzFilesInfo.Sum(i => i.Length);
+            public readonly string FullName;
+            public readonly long Size;
 
-            foreach (var log in logFilesInfo.Reverse())
+            public LogInfo(string fileName)
             {
-                if (totalLogSize > RetentionSize)
+                var fileInfo = new FileInfo(fileName);
+                FullName = fileInfo.FullName;
+                try
                 {
-                    var fileSize = log.Length;
-                    try
-                    {
-                        log.Delete();
-                    }
-                    catch (Exception)
-                    {
-                        // Something went wrong we will try again later
-                        continue;
-                    }
-                    totalLogSize -= fileSize;
+                    Size = fileInfo.Length;
                 }
-                else
+                catch
                 {
-                    return;
-                }
-            }
-
-            foreach (var log in logGzFilesInfo.Reverse())
-            {
-                if (totalLogSize > RetentionSize)
-                {
-                    var fileSize = log.Length;
-                    try
-                    {
-                        log.Delete();
-                    }
-                    catch (Exception)
-                    {
-                        // Something went wrong we will try again later
-                        continue;
-                    }
-
-                    totalLogSize -= fileSize;
-                }
-                else
-                {
-                    return;
+                    //Many things can happen 
                 }
             }
         }
@@ -382,26 +386,13 @@ namespace Sparrow.Logging
             }
         }
 
-        private void CleanupOldLogFiles()
+        private void CleanupOldLogFiles(string[] logFiles)
         {
-            string[] logFiles;
-            try
-            {
-                logFiles = Directory.GetFiles(_path, "*.log.gz");
-            }
-            catch (Exception)
-            {
-                // Something went wrong we will try again later
-                return;
-            }
-
+            var now = DateTime.Now;
             foreach (var logFile in logFiles)
             {
-                var inputSpan = logFile.Substring(0, DateFormatLength);
-                if (DateTime.TryParse(inputSpan, out var logDateTime) == false)
-                    continue;
-
-                if (_today - logDateTime < RetentionTime)
+                var logDateTime = File.GetLastWriteTime(logFile);
+                if (now - logDateTime < RetentionTime)
                     continue;
 
                 try
@@ -416,24 +407,16 @@ namespace Sparrow.Logging
             }
         }
 
-        private void CleanupAlreadyCompressedLogFiles(string lastLogFile)
+        private static void CleanupAlreadyCompressedLogFiles(string[] sortedLogFiles, string[] sortedLogGzFiles)
         {
-            string[] logFiles;
-            try
-            {
-                logFiles = Directory.GetFiles(_path, "*.log");
-            }
-            catch (Exception)
-            {
-                // Something went wrong we will try again later
+            if (!sortedLogGzFiles.Any())
                 return;
-            }
 
-            foreach (var logFile in logFiles)
+            foreach (var logFile in sortedLogFiles)
             {
                 try
                 {
-                    if (string.Compare(logFile, lastLogFile, StringComparison.Ordinal) < 0)
+                    if (Array.BinarySearch(sortedLogGzFiles, logFile, Comparer) > 0)
                     {
                         File.Delete(logFile);
                     }
@@ -443,6 +426,19 @@ namespace Sparrow.Logging
                     // we don't actually care if we can't handle this scenario, we'll just try again later
                     // maybe something is currently reading the file?
                 }
+            }
+        }
+
+        private static readonly IComparer<string> Comparer = new LogComparer();
+        private class LogComparer : IComparer<string>
+        {
+            public int Compare(string x, string y)
+            {
+                string xFileName = Path.GetFileName(x);
+                var xJustFileName = xFileName.Substring(0, xFileName.LastIndexOf(".log", StringComparison.Ordinal));
+                var yFileName = Path.GetFileName(y);
+                var yJustFileName = yFileName.Substring(0, yFileName.LastIndexOf(".log", StringComparison.Ordinal));
+                return string.CompareOrdinal(xJustFileName, yJustFileName);
             }
         }
 
@@ -557,17 +553,18 @@ namespace Sparrow.Logging
                     try
                     {
                         var maxFileSize = MaxFileSizeInBytes;
-                        if (GetNewStream(maxFileSize, out var currentFile) == false)
+                        if (TryGetNewStreamAndApplyRetentionPolicies(maxFileSize, out var currentFile) == false)
                         {
                             if (_keepLogging == false)
                                 return;
-                            _hasEntries.Wait();
+                            _hasEntries.Wait(1000);
                             continue;
                         }
                         using (currentFile)
                         {
-                            var sizeWritten = 0;
+                            _readyToCompress.Set();
 
+                            var sizeWritten = 0;
                             var foundEntry = true;
 
                             while (sizeWritten < maxFileSize)
@@ -631,7 +628,6 @@ namespace Sparrow.Logging
 
                                 _hasEntries.Set(); // we need to start writing logs again from new thread states
                             }
-                            _readyToCompress.Set();
                         }
                     }
                     catch (OutOfMemoryException)
@@ -657,37 +653,45 @@ namespace Sparrow.Logging
                             current = Stopwatch.GetTimestamp();
                         }
                     }
+                    catch (Exception e)
+                    {
+                        var msg = $"FATAL ERROR trying to log!{Environment.NewLine}{e}";
+                        Console.Error.WriteLine(msg);
+                    }
                 }
-            }
-            catch (Exception e)
-            {
-                var msg = $"FATAL ERROR trying to log!{Environment.NewLine}{e}";
-                Console.Error.WriteLine(msg);
             }
             finally
             {
                 _readyToCompress.Set();
+                if(_compressLoggingThread?.Join(1000) == false)
+                    _tokenSource.Cancel();
             }
         }
 
         private void BackgroundLoggerCompress()
         {
-            var lastZipped = "";
             var logger = GetLogger($"{nameof(LoggingSource)}", $"{nameof(BackgroundLoggerCompress)}");
+            var keepCompress = true;
             while (true)
             {
                 try
                 {
-                    if (_keepLogging == false)
+                    if (keepCompress == false)
                         return;
+
+                    if (_keepLogging == false)
+                        //To do last round of compression after stop logging
+                        keepCompress = false;
 
                     _readyToCompress.Wait(_tokenSource.Token);
                     _readyToCompress.Reset();
 
                     string[] logFiles;
+                    string[] logGzFiles;
                     try
                     {
                         logFiles = Directory.GetFiles(_path, "*.log");
+                        logGzFiles = Directory.GetFiles(_path, "*.log.gz");
                     }
                     catch (Exception)
                     {
@@ -700,15 +704,19 @@ namespace Sparrow.Logging
                         continue;
 
                     Array.Sort(logFiles);
-                    var lastZippedIndex = Math.Abs(Array.BinarySearch(logFiles, lastZipped));
+                    Array.Sort(logGzFiles);
 
-                    for (var i = lastZippedIndex; i < logFiles.Length - 1; i++)
+                    for (var i = 0; i < logFiles.Length - 1; i++)
                     {
+                        var logFile = logFiles[i];
+                        if(Array.BinarySearch(logGzFiles, logFile) > 0)
+                            continue;
+
                         try
                         {
-                            using (var logStream = SafeFileStream.Create(logFiles[i], FileMode.Open, FileAccess.Read))
+                            using (var logStream = SafeFileStream.Create(logFile, FileMode.Open, FileAccess.Read))
                             {
-                                var newZippedFile = Path.Combine(_path, Path.GetFileNameWithoutExtension(logFiles[i]) + ".log.gz");
+                                var newZippedFile = Path.Combine(_path, Path.GetFileNameWithoutExtension(logFile) + ".log.gz");
                                 //If there is compressed file with the same name (probably due to a failure) it will be overwritten
                                 using (var newFileStream = SafeFileStream.Create(newZippedFile, FileMode.Create, FileAccess.Write))
                                 using (var compressionStream = new GZipStream(newFileStream, CompressionMode.Compress))
@@ -725,7 +733,7 @@ namespace Sparrow.Logging
 
                         try
                         {
-                            File.Delete(logFiles[i]);
+                            File.Delete(logFile);
                         }
                         catch (Exception)
                         {
@@ -733,9 +741,11 @@ namespace Sparrow.Logging
                             // maybe something is currently reading the file?
                         }
                     }
-
-                    CleanupAlreadyCompressedLogFiles(lastZipped);
-                    CleanupOldLogFiles();
+                    
+                    Array.Sort(logGzFiles);
+                    CleanupAlreadyCompressedLogFiles(logFiles, logGzFiles);
+                    CleanupOldLogFiles(logGzFiles);
+                    LimitLogSize(logGzFiles);
                 }
                 catch (OperationCanceledException)
                 {
