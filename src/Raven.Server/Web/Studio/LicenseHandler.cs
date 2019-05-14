@@ -1,6 +1,7 @@
 ﻿using System.Net;
 using System.Reflection;
 using System.Threading.Tasks;
+using Raven.Client.Documents.Operations.OngoingTasks;
 using Raven.Server.Commercial;
 using Raven.Server.Json;
 using Raven.Server.Routing;
@@ -95,5 +96,16 @@ namespace Raven.Server.Web.Studio
                 context.Write(writer, licenseSupport.ToJson());
             }
         }
-    }
+
+        [RavenAction("/admin/license/renew", "POST", AuthorizationStatus.ClusterAdmin)]
+        public async Task RenewLicense()
+        {
+            using (var context = JsonOperationContext.ShortTermSingleUse())
+            using (var writer = new BlittableJsonTextWriter(context, ResponseBodyStream()))
+            {
+                var renewLicense = await ServerStore.LicenseManager.RenewalLicense();
+                context.Write(writer, renewLicense.ToJson());
+            }
+        }
+}
 }
