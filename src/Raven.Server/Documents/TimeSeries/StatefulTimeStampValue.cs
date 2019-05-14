@@ -1,33 +1,47 @@
-﻿using System.Runtime.InteropServices;
+﻿using System;
+using System.Runtime.InteropServices;
 
 namespace Raven.Server.Documents.TimeSeries
 {
-    [StructLayout(LayoutKind.Explicit, Size = 42)]
+    [StructLayout(LayoutKind.Explicit, Size = 48)]
     public unsafe struct StatefulTimeStampValue
     {
         [FieldOffset(0)]
-        public TimeStampValue First;
+        public double First;
         [FieldOffset(8)]
-        public TimeStampValue Last;
+        public double Last;
+        [FieldOffset(8)]
+        public long PreviousValue; // same as Last
+
         [FieldOffset(16)]
-        public TimeStampValue Max;
+        public double Max;
         [FieldOffset(24)]
-        public TimeStampValue Min;
+        public double Min;
         [FieldOffset(32)]
-        public TimeStampValue Sum;
-        [FieldOffset(8)]
+        public double Sum;
+        [FieldOffset(40)]
+        public int Count;
+        [FieldOffset(44)]
         public byte LeadingZeroes;
-        [FieldOffset(9)]
+        [FieldOffset(45)]
         public byte TrailingZeroes;
+        [FieldOffset(46)]
+        public fixed byte Reserved[2];
     }
 
-    [StructLayout(LayoutKind.Explicit, Size = 8)]
-    public struct TimeStampValue
+    public unsafe struct StatefulTimeStampValueSpan
     {
-        [FieldOffset(0)]
-        public double DoubleValue;
-        [FieldOffset(0)]
-        public long LongValue;
+        private StatefulTimeStampValue* Pointer;
+        private int Length;
+
+
+        public StatefulTimeStampValueSpan(StatefulTimeStampValue* pointer, int length)
+        {
+            Pointer = pointer;
+            Length = length;
+        }
+
+        public Span<StatefulTimeStampValue> Span => new Span<StatefulTimeStampValue>(Pointer, Length);
     }
 
     [StructLayout(LayoutKind.Explicit, Size = 10)]

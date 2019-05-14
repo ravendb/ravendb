@@ -5,6 +5,7 @@ using System.Text;
 using Raven.Client.Exceptions;
 using Sparrow;
 using Raven.Server.Utils;
+using Raven.Server.Documents.TimeSeries;
 
 namespace Raven.Server.Documents.Queries.AST
 {
@@ -311,39 +312,82 @@ namespace Raven.Server.Documents.Queries.AST
             Avg,
             First,
             Last,
-            Median,
             Sum,
             Count,
         }
 
         public Type Aggregation;
 
-        private SortedList<double, Reference<long>> _list;
-
         private double _val;
+        private int _valIndex;
         public long Count;
+
+        public TimeSeriesAggregation(int valIndex, TimeSeriesAggregation.Type type)
+        {
+            _valIndex = valIndex;
+            Aggregation = type;
+            _val = 0;
+            Count = 0;
+        }
 
         public void Init()
         {
             Count = 0;
             _val = 0;
-            _list?.Clear();
+        }
+
+        public void Segment(Span<StatefulTimeStampValue> values)
+        {
+            var val = values[_valIndex];
+            switch (Aggregation)
+            {
+                case Type.Min:
+                    if (Count == 0)
+                        _val = val.Min;
+                    else
+                        _val = Math.Min(_val, val.Min);
+                    break;
+                case Type.Max:
+                    if (Count == 0)
+                        _val = val.Max;
+                    else
+                        _val = Math.Max(_val, val.Max);
+                    break;
+                case Type.Sum:
+                case Type.Avg:
+                case Type.Mean:
+                    _val += val.Sum;
+                    break;
+                case Type.First:
+                    if (Count == 0)
+                        _val = val.First;
+                    break;
+                case Type.Last:
+                    _val = val.Last;
+                    break;
+                case Type.Count:
+                    break;
+                default:
+                    throw new ArgumentOutOfRangeException("Unknown aggregation operation: " + Aggregation);
+            }
+
+            Count += val.Count;
+
         }
 
         public void Step(Span<double> values)
         {
-            var val = values[0];
-             Count++;
+            var val = values[_valIndex];
             switch (Aggregation)
             {
                 case Type.Min:
-                    if (Count == 1)
+                    if (Count == 0)
                         _val = val;
                     else
                         _val = Math.Min(_val, val);
                     break;
                 case Type.Max:
-                    if (Count == 1)
+                    if (Count == 0)
                         _val = val;
                     else
                         _val = Math.Max(_val, val);
@@ -353,20 +397,8 @@ namespace Raven.Server.Documents.Queries.AST
                 case Type.Mean:
                     _val += val;
                     break;
-                case Type.Median:
-                    if (_list == null)
-                        _list = new SortedList<double, Reference<long>>();
-                    if(_list.TryGetValue(val, out var amount))
-                    {
-                        amount.Value++;
-                    }
-                    else
-                    {
-                        _list[val] = new Reference<long> { Value = 1 };
-                    }
-                    break;
                 case Type.First:
-                    if (Count == 1)
+                    if (Count == 0)
                         _val = val;
                     break;
                 case Type.Last:
@@ -377,6 +409,8 @@ namespace Raven.Server.Documents.Queries.AST
                 default:
                     throw new ArgumentOutOfRangeException("Unknown aggregation operation: " + Aggregation);
             }
+
+            Count++;
         }
 
         public double GetFinalValue()
@@ -388,26 +422,6 @@ namespace Raven.Server.Documents.Queries.AST
                 case Type.First:
                 case Type.Last:
                     return _val;
-                case Type.Median:
-                    if (_list.Count == 1)
-                        return _list.Keys[0];
-                    var mid = Count / 2;
-                    var even = Count % 2 == 0;
-                    long soFar = 0;
-                    for (int i = 0; i < _list.Count; i++)
-                    {
-                        soFar += _list.Values[i].Value;
-                        if(soFar > mid || even && soFar == mid)
-                        {
-                            if(even)
-                            {
-                                return (_list.Keys[i] + _list.Keys[i+1]) / 2;
-                            }
-                            return _list.Keys[i];
-                        }
-                    }
-                    throw new ArgumentException("This should never be reached");
-
                 case Type.Count:
                     return Count;
                 case Type.Sum:

@@ -71,7 +71,7 @@ namespace Raven.Server.Documents.Handlers
                                 writer.WriteStartArray();
                                 {
                                     var first = true;
-                                    foreach (var item in reader.Values())
+                                    foreach (var item in reader.AllValues())
                                     {
                                         if (first)
                                         {
