@@ -237,6 +237,7 @@ namespace Raven.Server.Documents.TimeSeries
             private TimeStampState[] _states = Array.Empty<TimeStampState>();
             private TimeSeriesValuesSegment.TagPointer _tagPointer;
             private LazyStringValue _tag;
+            private TimeSeriesValuesSegment _currentSegment;
 
 
 
@@ -269,49 +270,121 @@ namespace Raven.Server.Documents.TimeSeries
                 }
             }
 
-            public IEnumerable<(DateTime TimeStamp, Memory<double> Values, LazyStringValue Tag)> Values()
+            public class SingleResult
+            {
+                public DateTime TimeStamp;
+                public Memory<double> Values;
+                public LazyStringValue Tag;
+            }
+
+            public class SegmentResult
+            {
+                public DateTime Start, End;
+                public StatefulTimeStampValueSpan Summary;
+                private Reader _reader;
+
+                public SegmentResult(Reader reader)
+                {
+                    _reader = reader;
+                }
+
+                public IEnumerable<SingleResult> Values => _reader.YieldSegment(Start);
+
+            }
+
+            public IEnumerable<(IEnumerable<SingleResult> IndividualValues, SegmentResult Segment)> SegmentsOrValues()
             {
                 if (Init() == false)
                     yield break;
 
-                InitializeSegment(out var baselineMilliseconds, out var readOnlySegment);
+                var segmentResult = new SegmentResult(this);
+                InitializeSegment(out var baselineMilliseconds, out _currentSegment);
+
 
                 while (true)
                 {
                     var baseline = new DateTime(baselineMilliseconds * 10_000, DateTimeKind.Utc);
 
-                    if (readOnlySegment.NumberOfValues > _values.Length)
+                    if (_currentSegment.NumberOfValues > _values.Length)
                     {
-                        _values = new double[readOnlySegment.NumberOfValues];
-                        _states = new TimeStampState[readOnlySegment.NumberOfValues];
+                        _values = new double[_currentSegment.NumberOfValues];
+                        _states = new TimeStampState[_currentSegment.NumberOfValues];
                     }
 
-                    using (var enumerator = readOnlySegment.GetEnumerator(_context.Allocator))
+                    segmentResult.End = _currentSegment.GetLastTimestamp(baseline);
+                    segmentResult.Start = baseline;
+
+                    if (segmentResult.Start >= _from && segmentResult.End <= _to)
                     {
-                        while (enumerator.MoveNext(out int ts, _values, _states, ref _tagPointer))
-                        {
-                            var cur = baseline.AddMilliseconds(ts);
-
-                            if (cur > _to)
-                                yield break;
-
-                            if (cur < _from)
-                                continue;
-
-                            var tag = SetTimestampTag();
-
-                            var end = _values.Length;
-                            while (end >= 0 && double.IsNaN(_values[end - 1]))
-                            {
-                                end--;
-                            }
-
-                            yield return (cur, new Memory<double>(_values, 0, end), tag);
-                        }
+                        // we can yield the whole segment in one go
+                        segmentResult.Summary = _currentSegment.SegmentValues;
+                        yield return (null, segmentResult);
                     }
-                    if (NextSegment(out baselineMilliseconds, out readOnlySegment) == false)
+                    else
+                    {
+                        yield return (YieldSegment(baseline), default);
+                    }
+
+                    if (NextSegment(out baselineMilliseconds) == false)
                         yield break;
 
+                }
+            }
+
+            public IEnumerable<SingleResult> AllValues()
+            {
+                if (Init() == false)
+                    yield break;
+
+                InitializeSegment(out var baselineMilliseconds, out _currentSegment);
+
+                while (true)
+                {
+                    var baseline = new DateTime(baselineMilliseconds * 10_000, DateTimeKind.Utc);
+
+                    if (_currentSegment.NumberOfValues > _values.Length)
+                    {
+                        _values = new double[_currentSegment.NumberOfValues];
+                        _states = new TimeStampState[_currentSegment.NumberOfValues];
+                    }
+
+                    foreach (var val in YieldSegment(baseline))
+                        yield return val;
+
+                    if (NextSegment(out baselineMilliseconds) == false)
+                        yield break;
+
+                }
+            }
+
+            private IEnumerable<SingleResult> YieldSegment(DateTime baseline)
+            {
+                var result = new SingleResult();
+                using (var enumerator = _currentSegment.GetEnumerator(_context.Allocator))
+                {
+                    while (enumerator.MoveNext(out int ts, _values, _states, ref _tagPointer))
+                    {
+                        var cur = baseline.AddMilliseconds(ts);
+
+                        if (cur > _to)
+                            yield break;
+
+                        if (cur < _from)
+                            continue;
+
+                        var tag = SetTimestampTag();
+
+                        var end = _values.Length;
+                        while (end >= 0 && double.IsNaN(_values[end - 1]))
+                        {
+                            end--;
+                        }
+                        result.TimeStamp = cur;
+                        result.Tag = tag;
+                        result.Values = new Memory<double>(_values, 0, end);
+
+                        yield return result;
+                    }
                 }
             }
 
@@ -326,7 +399,7 @@ namespace Raven.Server.Documents.TimeSeries
                 return _tag;
             }
 
-            private bool NextSegment(out long baselineMilliseconds, out TimeSeriesValuesSegment readOnlySegment)
+            private bool NextSegment(out long baselineMilliseconds)
             {
                 byte* key = _tvr.Read((int)TimeSeriesTable.TimeSeriesKey, out int keySize);
                 using (Slice.From(_context.Allocator, key, keySize - sizeof(long), out var prefix))
@@ -336,14 +409,14 @@ namespace Raven.Server.Documents.TimeSeries
                     {
                         _tvr = tvh.Reader;
 
-                        InitializeSegment(out baselineMilliseconds, out readOnlySegment);
+                        InitializeSegment(out baselineMilliseconds, out _currentSegment);
 
                         return true;
                     }
                 }
 
                 baselineMilliseconds = default;
-                readOnlySegment = default;
+                _currentSegment = default;
 
                 return false;
             }

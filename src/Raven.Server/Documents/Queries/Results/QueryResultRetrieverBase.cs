@@ -22,6 +22,7 @@ using Raven.Server.Utils;
 using Sparrow;
 using System.Globalization;
 using System.Buffers.Text;
+using static Raven.Server.Documents.TimeSeries.TimeSeriesStorage.Reader;
 
 namespace Raven.Server.Documents.Queries.Results
 {
@@ -704,7 +705,7 @@ namespace Raven.Server.Documents.Queries.Results
                 {
                     if (Enum.TryParse(me.Name.Value, ignoreCase: true, out TimeSeriesAggregation.Type type))
                     {
-                        aggStates[i] = new TimeSeriesAggregation { Aggregation = type };
+                        aggStates[i] = new TimeSeriesAggregation(0, type);
                         continue;
                     }
                     throw new ArgumentException("Uknown method in timeseries query: " + me);
@@ -715,28 +716,34 @@ namespace Raven.Server.Documents.Queries.Results
             var reader = tss.GetReader(_includeDocumentsCommand.Context, documentId, source, min, max);
             DateTime start = default, next = default;
             long count = 0;
-            foreach (var it in reader.Values())
+            foreach (var it in reader.SegmentsOrValues())
             {
-                count++;
-                if (it.TimeStamp > next)
+                if (it.IndividualValues != null)
                 {
-                    if (aggStates[0].Count > 0)
-                    {
-                        array.Add(AddTimeSeriesResult(func, aggStates, start, next));
-                    }
-
-                    start = rangeSpec.GetRangeStart(it.TimeStamp);
-                    next = rangeSpec.GetNextRangeStart(start);
-
-                    for (int i = 0; i < aggStates.Length; i++)
-                    {
-                        aggStates[i].Init();
-                    }
+                    AggregateIndividualItems(it.IndividualValues);
                 }
-
-                for (int i = 0; i < aggStates.Length; i++)
+                else
                 {
-                    aggStates[i].Step(it.Values.Span);
+                    //We might need to close the old aggregation range and start a new one
+                    MaybeMoveToNextRange(it.Segment.Start);
+
+                    // now we need to see if we can consume the whole segment, or 
+                    // if the range it cover needs to be broken up to multiple ranges.
+                    // For example, if the segment covers 3 days, but we have group by 1 hour,
+                    // we still have to deal with the individual values
+                    if (it.Segment.End > next)
+                    {
+                        AggregateIndividualItems(it.Segment.Values);
+                    }
+                    else
+                    {
+                        var span = it.Segment.Summary.Span;
+                        for (int i = 0; i < aggStates.Length; i++)
+                        {
+                            aggStates[i].Segment(span);
+                        }
+                        count += span[0].Count;
+                    }
                 }
             }
 
@@ -750,6 +757,39 @@ namespace Raven.Server.Documents.Queries.Results
                 ["Count"] = count,
                 ["Results"] = array
             }, "timeseries/value", BlittableJsonDocumentBuilder.UsageMode.None);
+
+
+            void AggregateIndividualItems(IEnumerable<SingleResult> items)
+            {
+                foreach (var cur in items)
+                {
+                    MaybeMoveToNextRange(cur.TimeStamp);
+                    count++;
+                    for (int i = 0; i < aggStates.Length; i++)
+                    {
+                        aggStates[i].Step(cur.Values.Span);
+                    }
+                }
+            }
+
+            void MaybeMoveToNextRange(DateTime ts)
+            {
+                if (ts <= next)
+                    return;
+
+                if (aggStates[0].Count > 0)
+                {
+                    array.Add(AddTimeSeriesResult(func, aggStates, start, next));
+                }
+
+                start = rangeSpec.GetRangeStart(ts);
+                next = rangeSpec.GetNextRangeStart(start);
+
+                for (int i = 0; i < aggStates.Length; i++)
+                {
+                    aggStates[i].Init();
+                }
+            }
         }
 
         private static DynamicJsonValue AddTimeSeriesResult(TimeSeriesFunction func, TimeSeriesAggregation[] aggStates, DateTime start, DateTime next)
@@ -762,7 +802,8 @@ namespace Raven.Server.Documents.Queries.Results
             };
             for (int i = 0; i < aggStates.Length; i++)
             {
-                result[func.Select[i].Item2?.ToString() ?? aggStates[i].Aggregation.ToString()] = aggStates[i].GetFinalValue();
+                var name = func.Select[i].Item2?.ToString() ?? aggStates[i].Aggregation.ToString();
+                result[name] = aggStates[i].GetFinalValue();
             }
             return result;
         }

@@ -24,7 +24,11 @@ namespace Raven.Server.Documents.TimeSeries
         private SegmentHeader* Header => (SegmentHeader*)_buffer;
 
         public byte* Ptr => _buffer;
-
+        public StatefulTimeStampValueSpan SegmentValues =>
+            new StatefulTimeStampValueSpan(
+                (StatefulTimeStampValue*)(_buffer + sizeof(SegmentHeader)),
+                Header->NumberOfValues
+            );
 
         public DateTime GetLastTimestamp(DateTime baseline)
         {
@@ -117,7 +121,7 @@ namespace Raven.Server.Documents.TimeSeries
                 {
                     for (int i = 0; i < vals.Length; i++)
                     {
-                        prevs[i].First.DoubleValue = vals[i];
+                        prevs[i].Min = prevs[i].First = vals[i];
                     }
                 }
 
@@ -297,7 +301,16 @@ namespace Raven.Server.Documents.TimeSeries
         private static void AddValue(ref StatefulTimeStampValue prev, ref BitsBuffer bitsBuffer, double dblVal)
         {
             long val = BitConverter.DoubleToInt64Bits(dblVal);
-            ulong xorWithPrevious = (ulong)(prev.Last.LongValue ^ val);
+
+            ulong xorWithPrevious = (ulong)(prev.PreviousValue ^ val);
+
+            prev.PreviousValue = val;
+
+            prev.Count++;
+            prev.Sum += dblVal;
+            prev.Min = Math.Min(prev.Min, dblVal);
+            prev.Max = Math.Max(prev.Max, dblVal);
+
             if (xorWithPrevious == 0)
             {
                 // It's the same value.
@@ -338,10 +351,6 @@ namespace Raven.Server.Documents.TimeSeries
                 prev.LeadingZeroes = (byte)leadingZeroes;
                 prev.TrailingZeroes = (byte)trailingZeroes;
             }
-            prev.Last.DoubleValue = dblVal;
-            prev.Sum.DoubleValue += dblVal;
-            prev.Min.DoubleValue = Math.Min(prev.Min.DoubleValue, dblVal);
-            prev.Max.DoubleValue = Math.Max(prev.Max.DoubleValue, dblVal);
         }
 
         public Enumerator GetEnumerator(ByteStringContext allocator) => new Enumerator(this, allocator);
@@ -526,8 +535,5 @@ namespace Raven.Server.Documents.TimeSeries
         {
             throw new ArgumentOutOfRangeException("TimeSeriesValuesSegment can handle up to 32 values, but had: " + numberOfValues);
         }
-
-
-
     }
 }
