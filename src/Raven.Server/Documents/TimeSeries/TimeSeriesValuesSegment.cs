@@ -113,6 +113,14 @@ namespace Raven.Server.Documents.TimeSeries
                 var prevs = new Span<StatefulTimeStampValue>(_buffer + sizeof(SegmentHeader), tempHeader->NumberOfValues);
                 AddTimeStamp(deltaFromStart, ref tempBitsBuffer, tempHeader);
 
+                if (tempHeader->NumberOfEntries == 0)
+                {
+                    for (int i = 0; i < vals.Length; i++)
+                    {
+                        prevs[i].First.DoubleValue = vals[i];
+                    }
+                }
+
                 for (int i = 0; i < vals.Length; i++)
                 {
                     AddValue(ref prevs[i], ref tempBitsBuffer, vals[i]);
@@ -289,7 +297,7 @@ namespace Raven.Server.Documents.TimeSeries
         private static void AddValue(ref StatefulTimeStampValue prev, ref BitsBuffer bitsBuffer, double dblVal)
         {
             long val = BitConverter.DoubleToInt64Bits(dblVal);
-            ulong xorWithPrevious = (ulong)(prev.LongValue ^ val);
+            ulong xorWithPrevious = (ulong)(prev.Last.LongValue ^ val);
             if (xorWithPrevious == 0)
             {
                 // It's the same value.
@@ -330,7 +338,10 @@ namespace Raven.Server.Documents.TimeSeries
                 prev.LeadingZeroes = (byte)leadingZeroes;
                 prev.TrailingZeroes = (byte)trailingZeroes;
             }
-            prev.DoubleValue = dblVal;
+            prev.Last.DoubleValue = dblVal;
+            prev.Sum.DoubleValue += dblVal;
+            prev.Min.DoubleValue = Math.Min(prev.Min.DoubleValue, dblVal);
+            prev.Max.DoubleValue = Math.Max(prev.Max.DoubleValue, dblVal);
         }
 
         public Enumerator GetEnumerator(ByteStringContext allocator) => new Enumerator(this, allocator);

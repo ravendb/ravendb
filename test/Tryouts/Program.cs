@@ -31,49 +31,49 @@ namespace Tryouts
     {
         public static void Main(string[] args)
         {
-            using (var test = new TimeSeriesTests())
-                test.CanStoreLargeNumberOfValues();
+            //using (var test = new TimeSeriesTests())
+            //    test.CanStoreLargeNumberOfValues();
 
-            //var store = new DocumentStore
-            //{
-            //    Urls = new[] { "http://localhost:8080" },
-            //    Database = "Test"
-            //}.Initialize();
+            var store = new DocumentStore
+            {
+                Urls = new[] { "http://localhost:8080" },
+                Database = "Test"
+            }.Initialize();
 
 
-            //var lines = File.ReadAllLines(@"C:\Users\ayende\source\repos\ConsoleApp20\ConsoleApp20\bin\Debug\netcoreapp2.2\out.csv")
-            //    .Select(line =>
-            //    {
-            //        var parts = line.Split(',');
-            //        if (parts.Length != 2)
-            //            return default;
-            //        if (DateTime.TryParseExact(parts[0], "o", CultureInfo.InvariantCulture, DateTimeStyles.AssumeLocal, out var date) == false)
-            //            return default;
-            //        if (double.TryParse(parts[1], out var d) == false)
-            //            return default;
+            var lines = File.ReadAllLines(@"C:\Users\ayende\source\repos\ConsoleApp20\ConsoleApp20\bin\Debug\netcoreapp2.2\out.csv")
+                .Select(line =>
+                {
+                    var parts = line.Split(',');
+                    if (parts.Length != 2)
+                        return default;
+                    if (DateTime.TryParseExact(parts[0], "o", CultureInfo.InvariantCulture, DateTimeStyles.AssumeLocal, out var date) == false)
+                        return default;
+                    if (double.TryParse(parts[1], out var d) == false)
+                        return default;
 
-            //        return (date, d);
-            //    })
-            //    .Where(x => x.date > DateTime.MinValue)
-            //    .OrderBy(x => x.date)
-            //    .ToList();
-            //var start = DateTime.MinValue;
-            //for (int i = 0; i < lines.Count; i+=250)
-            //{
-            //    FlushBpm(store, lines, i, Math.Min(250, lines.Count - i));
-            //    if ((lines[i].date - start).TotalDays > 30)
-            //    {
-            //        start = lines[i].date;
-            //        Console.WriteLine(start);
-            //    }
-            //}
+                    return (date, d);
+                })
+                .Where(x => x.date > DateTime.MinValue)
+                .OrderBy(x => x.date)
+                .ToList();
+            var start = DateTime.MinValue;
+            for (int i = 0; i < lines.Count; i += 250)
+            {
+                FlushBpm(store, lines, i, Math.Min(250, lines.Count - i));
+                if ((lines[i].date - start).TotalDays > 30)
+                {
+                    start = lines[i].date;
+                    Console.WriteLine(start);
+                }
+            }
         }
 
         private static void FlushBpm(IDocumentStore store, List<(DateTime, double)> list, int offset, int count)
         {
             using (var s = store.OpenSession())
             {
-                var ts = s.TimeSeriesFor("users/ayende");
+                var ts = s.TimeSeriesFor("users/oren");
 
                 for (int i = 0; i < count; i++)
                 {
