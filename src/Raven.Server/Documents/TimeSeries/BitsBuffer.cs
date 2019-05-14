@@ -50,6 +50,10 @@ namespace Raven.Server.Documents.TimeSeries
         {
             // we explicitly don't handle the remaining bits here, we only copy fully usable range
             var bytesCopied = Header->UncompressedBitsPosition / 8;
+            var copyRemainingBits = Header->UncompressedBitsPosition % 8 != 0;
+            var minLengthRequired = Size - sizeof(BitsBufferHeader) - requiredBytes;
+            if (copyRemainingBits)
+                minLengthRequired--; // we need to reserve a byte for remaining bits
 
             var totalUncompressedSize = Header->UncompressedSize + bytesCopied;
             if (totalUncompressedSize >= ushort.MaxValue)
@@ -62,6 +66,14 @@ namespace Raven.Server.Documents.TimeSeries
             {
                 if (Header->CompressedSize > 0)
                 {
+                    double ratio = Header->UncompressedSize / (double)Header->CompressedSize;
+                    if (totalUncompressedSize / ratio > minLengthRequired)
+                        // we project that the compression ratio isn't going to be sufficent.
+                        // let's bail out early instead of doing decompression & compression and 
+                        // only then bailing out. This is an estimate only, we do an actual check
+                        // below
+                        return false; 
+
                     LZ4.Decode64(
                         compressedBufferPtr, Header->CompressedSize,
                         uncompressedBuffer.Ptr, Header->UncompressedSize,
@@ -75,11 +87,10 @@ namespace Raven.Server.Documents.TimeSeries
                     uncompressedBuffer.Ptr, newCompressionBuffer.Ptr,
                     uncompressedBuffer.Length, newCompressionBuffer.Length);
 
-                if (len >= Size - sizeof(BitsBufferHeader) - 1 /*last byte bits*/ - requiredBytes || // doesn't give us enough
+                if (len >= minLengthRequired || // doesn't give us enough
                     len >= ushort.MaxValue) // just to be safe, Size should always be smaller anyway
                     return false;
 
-                var copyRemainingBits = Header->UncompressedBitsPosition % 8 != 0;
 
                 byte lastByte = default;
                 if(copyRemainingBits)
@@ -275,6 +286,7 @@ namespace Raven.Server.Documents.TimeSeries
             bufferHeader->UncompressedBitsPosition = (Header->UncompressedBitsPosition + Header->UncompressedSize * 8);
 
             bitsBuffer = new BitsBuffer(buffer.Ptr, buffer.Length);
+
 
             return scope;
         }
