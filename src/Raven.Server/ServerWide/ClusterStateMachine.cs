@@ -124,6 +124,8 @@ namespace Raven.Server.ServerWide
                 return;
             }
 
+            ValidateGuid(cmd, type);
+            object result = null;
             var sw = Stopwatch.StartNew();
             try
             {
@@ -134,6 +136,7 @@ namespace Raven.Server.ServerWide
                         var errors = ExecuteClusterTransaction(context, cmd, index);
                         if (errors != null)
                         {
+                            result = errors;
                             leader?.SetStateOf(index, errors);
                         }
                         break;
@@ -164,7 +167,7 @@ namespace Raven.Server.ServerWide
                         if (ValidatePropertyExistence(cmd, nameof(IncrementClusterIdentityCommand), nameof(IncrementClusterIdentityCommand.Prefix), out errorMessage) == false)
                             throw new RachisApplyException(errorMessage);
 
-                        SetValueForTypedDatabaseCommand(context, type, cmd, index, leader, out object result);
+                        SetValueForTypedDatabaseCommand(context, type, cmd, index, leader, out result);
                         leader?.SetStateOf(index, result);
                         UpdateDatabaseRecordEtagForBackup(context, type, cmd, index);
                         break;
@@ -271,7 +274,10 @@ namespace Raven.Server.ServerWide
                     case nameof(AddDatabaseCommand):
                         var addedNodes = AddDatabase(context, cmd, index, leader);
                         if (addedNodes != null)
+                        {
+                            result = addedNodes;
                             leader?.SetStateOf(index, addedNodes);
+                        }
                         break;
                     default:
                         var massage = $"The command '{type}' is unknown and cannot be executed on server with version '{ServerVersion.FullVersion}'.{Environment.NewLine}" +
@@ -284,6 +290,7 @@ namespace Raven.Server.ServerWide
                 if (_parent.Log.IsInfoEnabled)
                     _parent.Log.Info($"Failed to execute command of type '{type}' on database '{DatabaseName}'", e);
 
+                _parent.UpdateHistoryLog(context, index, _parent.CurrentTerm, cmd, null, e);
                 NotifyLeaderAboutError(index, leader, e);
             }
             catch (Exception e)
@@ -300,6 +307,8 @@ namespace Raven.Server.ServerWide
             finally
             {
                 var executionTime = sw.Elapsed;
+
+                _parent.UpdateHistoryLog(context, index, _parent.CurrentTerm, cmd, result, null);
                 _rachisLogIndexNotifications.RecordNotification(new RecentLogIndexNotification
                 {
                     Type = type,
@@ -309,6 +318,15 @@ namespace Raven.Server.ServerWide
                     Term = leader?.Term,
                     LeaderShipDuration = leader?.LeaderShipDuration,
                 });
+            }
+        }
+
+        [Conditional("DEBUG")]
+        private static void ValidateGuid(BlittableJsonReaderObject cmd, string type)
+        {
+            if (cmd.TryGet(nameof(CommandBase.Guid), out string guid) == false)
+            {
+                throw new ArgumentNullException($"Guid is not provided in the command {type}.");
             }
         }
 

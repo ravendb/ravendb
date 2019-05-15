@@ -1159,6 +1159,21 @@ namespace Voron.Data.Tables
         }
 
 
+        public TableValueHolder ReadFirst(TableSchema.FixedSizeSchemaIndexDef index)
+        {
+            var fst = GetFixedSizeTree(index);
+
+            using (var it = fst.Iterate())
+            {
+                if (it.Seek(0) == false)
+                    return null;
+
+                var result = new TableValueHolder();
+                GetTableValueReader(it, out result.Reader);
+                return result;
+            }
+        }
+
         public bool SeekOnePrimaryKey(Slice slice, out TableValueReader reader)
         {
             Debug.Assert(slice.Options != SliceOptions.Key, "Should be called with only AfterAllKeys or BeforeAllKeys");

@@ -19,6 +19,7 @@ namespace Raven.Client.Documents.Commands.Batches
         private readonly HashSet<Stream> _uniqueAttachmentStreams;
         private readonly BatchOptions _options;
         private readonly TransactionMode _mode;
+        private readonly string _guid;
 
         public BatchCommand(DocumentConventions conventions, JsonOperationContext context, List<ICommandData> commands, BatchOptions options = null, TransactionMode mode = TransactionMode.SingleNode)
         {
@@ -51,6 +52,9 @@ namespace Raven.Client.Documents.Commands.Batches
                     _attachmentStreams.Add(stream);
                 }
             }
+
+            if (mode == TransactionMode.ClusterWide)
+                _guid = Guid.NewGuid().ToString();
 
             _options = options;
             _mode = mode;
@@ -118,10 +122,16 @@ namespace Raven.Client.Documents.Commands.Batches
 
         private void AppendOptions(StringBuilder sb)
         {
-            if (_options == null)
+            if (_options == null && _mode == TransactionMode.SingleNode)
                 return;
 
-            sb.AppendLine("?");
+            sb.Append("?");
+
+            if (_mode == TransactionMode.ClusterWide)
+                sb.Append($"guid={_guid}");
+
+            if(_options == null)
+                return;
 
             var replicationOptions = _options.ReplicationOptions;
             if (replicationOptions != null)
