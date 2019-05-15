@@ -352,7 +352,7 @@ namespace Raven.Server.Documents.PeriodicBackup
 
             try
             {
-                if (periodicBackup.RunningTask != null)
+                if (periodicBackup.Disposed || periodicBackup.RunningTask != null)
                     return periodicBackup.RunningBackupTaskId ?? -1;
 
                 var backupStatus = periodicBackup.BackupStatus = GetBackupStatus(periodicBackup.Configuration.TaskId, periodicBackup.BackupStatus);

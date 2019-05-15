@@ -30,16 +30,27 @@ namespace Raven.Server.Documents.PeriodicBackup
         public PeriodicBackupStatus BackupStatus { get; set; }
 
         public PeriodicBackupStatus RunningBackupStatus { get; set; }
-        
+
+        public bool Disposed => _disposeOnce.Disposed;
+
         public PeriodicBackup(ConcurrentSet<Task> inactiveRunningPeriodicBackupsTasks)
         {
             _disposeOnce = new DisposeOnce<SingleAttempt>(() =>
             {
-                DisableFutureBackups();
+                UpdateBackupTaskSemaphore.Wait();
 
-                if (RunningTask?.IsCompleted == false)
+                try
                 {
-                    inactiveRunningPeriodicBackupsTasks.Add(RunningTask);
+                    DisableFutureBackups();
+
+                    if (RunningTask?.IsCompleted == false)
+                    {
+                        inactiveRunningPeriodicBackupsTasks.Add(RunningTask);
+                    }
+                }
+                finally
+                {
+                    UpdateBackupTaskSemaphore.Release();
                 }
             });
         }
