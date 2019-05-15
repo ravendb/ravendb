@@ -733,19 +733,26 @@ namespace Raven.Bundles.Replication.Tasks
 				var response = e.Response as HttpWebResponse;
 				if (response != null)
 				{
-					Stream responseStream = response.GetResponseStream();
-					if (responseStream != null)
-					{
-						using (var streamReader = new StreamReader(responseStream))
-						{
-							var error = streamReader.ReadToEnd();
-							log.WarnException("Replication to " + destination + " had failed\r\n" + error, e);
-						}
-					}
-					else
-					{
-						log.WarnException("Replication to " + destination + " had failed", e);
-					}
+                    try
+                    {
+                        Stream responseStream = response.GetResponseStream();
+                        if (responseStream != null)
+                        {
+                            using (var streamReader = new StreamReader(responseStream))
+                            {
+                                var error = streamReader.ReadToEnd();
+                                log.WarnException("Replication to " + destination + " had failed\r\n" + error, e);
+                            }
+                        }
+                        else
+                        {
+                            log.WarnException("Replication to " + destination + " had failed", e);
+                        }
+                    }
+                    catch (Exception readResponseEx)
+                    {
+                        log.WarnException("Failed to read replication request error to " + destination + " destination from the response", readResponseEx);
+                    }
 				}
 				else
 				{
