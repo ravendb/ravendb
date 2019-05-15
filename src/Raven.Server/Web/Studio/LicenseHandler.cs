@@ -107,5 +107,5 @@ namespace Raven.Server.Web.Studio
                 context.Write(writer, renewLicense.ToJson());
             }
         }
-}
+    }
 }
