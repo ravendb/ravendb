@@ -771,25 +771,25 @@ namespace Raven.Server.Documents
                                 if (localCounters.Modifications != null)
                                 {
                                     putCountersData.Modified = true;
-
-                                    if (changeType != CounterChangeTypes.None)
-                                    {
-                                        var counterName = prop.Name;
-                                        var value = InternalGetCounterValue(localCounterValues, documentId, counterName);
-                                        context.Transaction.AddAfterCommitNotification(new CounterChange
-                                        {
-                                            ChangeVector = changeVector,
-                                            DocumentId = documentId,
-                                            Name = counterName,
-                                            Value = value,
-                                            Type = changeType
-                                        });
-
-                                        UpdateMetrics(counterKeySlice, counterName, changeVector, collection);
-                                    }
                                 }
 
                                 entriesToUpdate[counterGroupKey] = putCountersData;
+
+                                if (changeType != CounterChangeTypes.None)
+                                {
+                                    var counterName = prop.Name;
+                                    var value = InternalGetCounterValue(localCounterValues, documentId, counterName);
+                                    context.Transaction.AddAfterCommitNotification(new CounterChange
+                                    {
+                                        ChangeVector = changeVector,
+                                        DocumentId = documentId,
+                                        Name = counterName,
+                                        Value = value,
+                                        Type = changeType
+                                    });
+
+                                    UpdateMetrics(counterKeySlice, counterName, changeVector, collection);
+                                }
                             }
                         }
                     }
