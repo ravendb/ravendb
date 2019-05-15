@@ -70,7 +70,7 @@ namespace SlowTests.Client.Subscriptions
                     ChangeVector = cvBigger,
                     Name = subscriptionState.SubscriptionName,
                     Query = subscriptionState.Query
-                }, subscriptionState.SubscriptionId, false);
+                }, Guid.NewGuid().ToString(), subscriptionState.SubscriptionId, false);
 
                 await index.WaitWithTimeout(_reasonableWaitTime);
 

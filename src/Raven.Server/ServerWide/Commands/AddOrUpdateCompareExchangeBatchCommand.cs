@@ -15,7 +15,7 @@ namespace Raven.Server.ServerWide.Commands
         {
         }
 
-        public AddOrUpdateCompareExchangeBatchCommand(List<AddOrUpdateCompareExchangeCommand> commands, JsonOperationContext contextToWriteResult)
+        public AddOrUpdateCompareExchangeBatchCommand(List<AddOrUpdateCompareExchangeCommand> commands, JsonOperationContext contextToWriteResult, string guid) : base(guid)
         {
             Commands = commands;
             ContextToWriteResult = contextToWriteResult;

@@ -27,9 +27,10 @@ namespace Raven.Server.ServerWide.Commands
             return (database + "/" + key).ToLowerInvariant();
         }
 
-        protected CompareExchangeCommandBase() { }
+        protected CompareExchangeCommandBase()
+        { }
 
-        protected CompareExchangeCommandBase(string database, string key, long index, JsonOperationContext context)
+        protected CompareExchangeCommandBase(string database, string key, long index, JsonOperationContext context, string guid) : base(guid)
         {
             if (string.IsNullOrEmpty(key))
                 throw new ArgumentNullException(nameof(key), "The key argument must have value");
@@ -114,7 +115,7 @@ namespace Raven.Server.ServerWide.Commands
     public class RemoveCompareExchangeCommand : CompareExchangeCommandBase
     {
         public RemoveCompareExchangeCommand() { }
-        public RemoveCompareExchangeCommand(string key, string database, long index, JsonOperationContext contextToReturnResult) : base(key, database, index, contextToReturnResult) { }
+        public RemoveCompareExchangeCommand(string key, string database, long index, JsonOperationContext contextToReturnResult, string guid) : base(key, database, index, contextToReturnResult, guid) { }
 
         public override unsafe (long Index, object Value) Execute(TransactionOperationContext context, Table items, long index)
         {
@@ -148,8 +149,8 @@ namespace Raven.Server.ServerWide.Commands
 
         public AddOrUpdateCompareExchangeCommand() { }
 
-        public AddOrUpdateCompareExchangeCommand(string database, string key, BlittableJsonReaderObject value, long index, JsonOperationContext contextToReturnResult) 
-            : base(database, key, index, contextToReturnResult)
+        public AddOrUpdateCompareExchangeCommand(string database, string key, BlittableJsonReaderObject value, long index, JsonOperationContext contextToReturnResult, string guid) 
+            : base(database, key, index, contextToReturnResult, guid)
         {
             if (key.Length > MaxNumberOfCompareExchangeKeyBytes || Encoding.GetByteCount(key) > MaxNumberOfCompareExchangeKeyBytes)
                 ThrowCompareExchangeKeyTooBig(key);

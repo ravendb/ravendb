@@ -151,7 +151,7 @@ namespace Raven.Server.Documents.Handlers
                 var id = GetLongQueryString("id", required: false);
                 var disabled = GetBoolValueQueryString("disabled", required: false);
                 var mentor = options.MentorNode;
-                var subscriptionId = await Database.SubscriptionStorage.PutSubscription(options, id, disabled, mentor: mentor);
+                var subscriptionId = await Database.SubscriptionStorage.PutSubscription(options, GetStringQueryString("guid", required: false), id, disabled, mentor: mentor);
 
                 var name = options.Name ?? subscriptionId.ToString();
 
@@ -183,7 +183,7 @@ namespace Raven.Server.Documents.Handlers
         {
             var subscriptionName = GetQueryStringValueAndAssertIfSingleAndNotEmpty("taskName");
 
-            await Database.SubscriptionStorage.DeleteSubscription(subscriptionName);
+            await Database.SubscriptionStorage.DeleteSubscription(subscriptionName, GetStringQueryString("guid", required: false));
 
             await NoContent();
         }

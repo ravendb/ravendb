@@ -26,5 +26,13 @@ namespace Raven.Server.ServerWide.Commands
             if (Names.Contains(ServerStore.LicenseStorageKey) || Names.Any(name => name.StartsWith(Constants.Certificates.Prefix)))
                 throw new RachisApplyException("Attempted to use DeleteMultipleValuesCommand to delete certificates or a license, use dedicated commands for this.");
         }
+
+        public DeleteMultipleValuesCommand()
+        {
+        }
+
+        public DeleteMultipleValuesCommand(string guid) : base(guid)
+        {
+        }
     }
 }

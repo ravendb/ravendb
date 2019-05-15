@@ -110,7 +110,7 @@ namespace Raven.Server.Documents.Queries.Dynamic
 
                 var definition = map.CreateAutoIndexDefinition();
 
-                index = await _indexStore.CreateIndex(definition);
+                index = await _indexStore.CreateIndex(definition, Guid.NewGuid().ToString());
 
                 if (query.WaitForNonStaleResultsTimeout.HasValue == false)
                 {
@@ -206,7 +206,7 @@ namespace Raven.Server.Documents.Queries.Dynamic
                     {
                         try
                         {
-                            await _indexStore.DeleteIndex(supersededIndex.Name);
+                            await _indexStore.DeleteIndex(supersededIndex.Name, Guid.NewGuid().ToString());
                         }
                         catch (IndexDoesNotExistException)
                         {

@@ -149,7 +149,7 @@ namespace Raven.Server.Monitoring.Snmp
                             var result = await database.ServerStore.SendToLeaderAsync(new UpdateSnmpDatabaseIndexesMappingCommand(_databaseName, new List<string>
                             {
                                 change.Name
-                            }));
+                            }, Guid.NewGuid().ToString()));
 
                             await database.ServerStore.Cluster.WaitForIndexNotification(result.Index);
 
@@ -192,7 +192,7 @@ namespace Raven.Server.Monitoring.Snmp
                 {
                     context.CloseTransaction();
 
-                    var result = await database.ServerStore.SendToLeaderAsync(new UpdateSnmpDatabaseIndexesMappingCommand(database.Name, missingIndexes));
+                    var result = await database.ServerStore.SendToLeaderAsync(new UpdateSnmpDatabaseIndexesMappingCommand(database.Name, missingIndexes, Guid.NewGuid().ToString()));
                     await database.ServerStore.Cluster.WaitForIndexNotification(result.Index);
 
                     context.OpenReadTransaction();

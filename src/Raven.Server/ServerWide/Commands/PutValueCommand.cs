@@ -30,5 +30,13 @@ namespace Raven.Server.ServerWide.Commands
                 Name.StartsWith(Constants.Certificates.Prefix))
                 throw new InvalidOperationException("Attempted to use PutValueCommand to delete a certificate or license, use dedicated commands for this.");
         }
+
+        protected PutValueCommand(string guid) : base(guid)
+        {
+        }
+
+        protected PutValueCommand()
+        {
+        }
     }
 }

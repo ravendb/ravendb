@@ -405,7 +405,7 @@ namespace Raven.Server.Documents.Indexes
             return index;
         }
 
-        public async Task<Index> CreateIndex(IndexDefinition definition)
+        public async Task<Index> CreateIndex(IndexDefinition definition, string guid = null) // TODO: pass proper guid from all paths
         {
             if (definition == null)
                 throw new ArgumentNullException(nameof(definition));
@@ -434,7 +434,7 @@ namespace Raven.Server.Documents.Indexes
             if (definition.Type == IndexType.MapReduce)
                 MapReduceIndex.ValidateReduceResultsCollectionName(definition, instance, _documentDatabase, NeedToCheckIfCollectionEmpty(definition));
 
-            var command = new PutIndexCommand(definition, _documentDatabase.Name);
+            var command = new PutIndexCommand(definition, _documentDatabase.Name, guid);
 
             try
             {
@@ -489,7 +489,7 @@ namespace Raven.Server.Documents.Indexes
                    creationOptions == IndexCreationOptions.Update;
         }
 
-        public async Task<Index> CreateIndex(IndexDefinitionBase definition)
+        public async Task<Index> CreateIndex(IndexDefinitionBase definition, string guid = null)
         {
             if (definition == null)
                 throw new ArgumentNullException(nameof(definition));
@@ -501,7 +501,7 @@ namespace Raven.Server.Documents.Indexes
 
             try
             {
-                var command = PutAutoIndexCommand.Create((AutoIndexDefinitionBase)definition, _documentDatabase.Name);
+                var command = PutAutoIndexCommand.Create((AutoIndexDefinitionBase)definition, _documentDatabase.Name, guid);
 
                 var (etag, _) = await _serverStore.SendToLeaderAsync(command);
 
@@ -692,7 +692,7 @@ namespace Raven.Server.Documents.Indexes
             return ResetIndexInternal(index);
         }
 
-        public async Task<bool> TryDeleteIndexIfExists(string name)
+        public async Task<bool> TryDeleteIndexIfExists(string name, string guid)
         {
             var index = GetIndex(name);
             if (index == null)
@@ -700,18 +700,18 @@ namespace Raven.Server.Documents.Indexes
 
             if (name.StartsWith(Constants.Documents.Indexing.SideBySideIndexNamePrefix))
             {
-                await HandleSideBySideIndexDelete(name);
+                await HandleSideBySideIndexDelete(name, guid);
                 return true;
             }
 
-            var (etag, _) = await _serverStore.SendToLeaderAsync(new DeleteIndexCommand(index.Name, _documentDatabase.Name));
+            var (etag, _) = await _serverStore.SendToLeaderAsync(new DeleteIndexCommand(index.Name, _documentDatabase.Name, guid));
 
             await _documentDatabase.RachisLogIndexNotifications.WaitForIndexNotification(etag, _serverStore.Engine.OperationTimeout);
 
             return true;
         }
 
-        private async Task HandleSideBySideIndexDelete(string name)
+        private async Task HandleSideBySideIndexDelete(string name, string guid)
         {
             var originalIndexName = name.Remove(0, Constants.Documents.Indexing.SideBySideIndexNamePrefix.Length);
             var originalIndex = GetIndex(originalIndexName);
@@ -719,7 +719,7 @@ namespace Raven.Server.Documents.Indexes
             {
                 // we cannot find the original index 
                 // but we need to remove the side by side one by the original name
-                var (etag, _) = await _serverStore.SendToLeaderAsync(new DeleteIndexCommand(originalIndexName, _documentDatabase.Name));
+                var (etag, _) = await _serverStore.SendToLeaderAsync(new DeleteIndexCommand(originalIndexName, _documentDatabase.Name, guid));
 
                 await _documentDatabase.RachisLogIndexNotifications.WaitForIndexNotification(etag, _serverStore.Engine.OperationTimeout);
 
@@ -733,13 +733,13 @@ namespace Raven.Server.Documents.Indexes
             await CreateIndex(indexDefinition);
         }
 
-        public async Task DeleteIndex(string name)
+        public async Task DeleteIndex(string name, string guid)
         {
             var index = GetIndex(name);
             if (index == null)
                 IndexDoesNotExistException.ThrowFor(name);
 
-            var (newEtag, _) = await _serverStore.SendToLeaderAsync(new DeleteIndexCommand(index.Name, _documentDatabase.Name));
+            var (newEtag, _) = await _serverStore.SendToLeaderAsync(new DeleteIndexCommand(index.Name, _documentDatabase.Name, guid));
 
             await _documentDatabase.RachisLogIndexNotifications.WaitForIndexNotification(newEtag, _serverStore.Engine.OperationTimeout);
         }
@@ -1261,8 +1261,8 @@ namespace Raven.Server.Documents.Indexes
 
                 try
                 {
-                    await CreateIndex(definition);
-                    await TryDeleteIndexIfExists(kvp.Key);
+                    await CreateIndex(definition, Guid.NewGuid().ToString());
+                    await TryDeleteIndexIfExists(kvp.Key, Guid.NewGuid().ToString());
 
                     moreWork = true;
                     break; // extending only one auto-index at a time
@@ -1280,7 +1280,7 @@ namespace Raven.Server.Documents.Indexes
             {
                 try
                 {
-                    await TryDeleteIndexIfExists(indexName);
+                    await TryDeleteIndexIfExists(indexName, Guid.NewGuid().ToString());
                     if (_logger.IsInfoEnabled)
                         _logger.Info($"Deleted index '{indexName}' because it is surpassed.");
                 }
@@ -1495,7 +1495,7 @@ namespace Raven.Server.Documents.Indexes
             }
         }
 
-        public async Task SetLock(string name, IndexLockMode mode)
+        public async Task SetLock(string name, IndexLockMode mode, string guid)
         {
             var index = GetIndex(name);
             if (index == null)
@@ -1507,14 +1507,14 @@ namespace Raven.Server.Documents.Indexes
                 return;
             }
 
-            var command = new SetIndexLockCommand(name, mode, _documentDatabase.Name);
+            var command = new SetIndexLockCommand(name, mode, _documentDatabase.Name, guid);
 
             var (etag, _) = await _serverStore.SendToLeaderAsync(command);
 
             await _documentDatabase.RachisLogIndexNotifications.WaitForIndexNotification(etag, _serverStore.Engine.OperationTimeout);
         }
 
-        public async Task SetPriority(string name, IndexPriority priority)
+        public async Task SetPriority(string name, IndexPriority priority, string guid)
         {
             var index = GetIndex(name);
             if (index == null)
@@ -1527,7 +1527,7 @@ namespace Raven.Server.Documents.Indexes
                 return;
             }
 
-            var command = new SetIndexPriorityCommand(name, priority, _documentDatabase.Name);
+            var command = new SetIndexPriorityCommand(name, priority, _documentDatabase.Name, guid);
 
             var (etag, _) = await _serverStore.SendToLeaderAsync(command);
 

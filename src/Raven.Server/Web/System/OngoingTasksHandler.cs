@@ -295,6 +295,7 @@ namespace Raven.Server.Web.System
         {
             await DatabaseConfigurations(ServerStore.ModifyPeriodicBackup,
                 "update-periodic-backup",
+                GetStringQueryString("guid",required:false),
                 beforeSetupConfiguration: BeforeSetupConfiguration,
                 fillJson: (json, readerObject, index) =>
                 {
@@ -545,7 +546,7 @@ namespace Raven.Server.Web.System
 
             ServerStore.EnsureNotPassive();
 
-            var (index, _) = await ServerStore.RemoveConnectionString(Database.Name, connectionStringName, type);
+            var (index, _) = await ServerStore.RemoveConnectionString(Database.Name, connectionStringName, type, GetStringQueryString("guid", required: false));
             await ServerStore.Cluster.WaitForIndexNotification(index);
             HttpContext.Response.StatusCode = (int)HttpStatusCode.OK;
 
@@ -653,7 +654,7 @@ namespace Raven.Server.Web.System
         [RavenAction("/databases/*/admin/connection-strings", "PUT", AuthorizationStatus.DatabaseAdmin)]
         public async Task PutConnectionString()
         {
-            await DatabaseConfigurations((_, databaseName, connectionString) => ServerStore.PutConnectionString(_, databaseName, connectionString), "put-connection-string");
+            await DatabaseConfigurations((_, databaseName, connectionString, guid) => ServerStore.PutConnectionString(_, databaseName, connectionString, guid), "put-connection-string", GetStringQueryString("guid", required: false));
         }
 
         [RavenAction("/databases/*/admin/etl", "RESET", AuthorizationStatus.Operator)]
@@ -662,7 +663,7 @@ namespace Raven.Server.Web.System
             var configurationName = GetStringQueryString("configurationName"); // etl task name
             var transformationName = GetStringQueryString("transformationName");
 
-            await DatabaseConfigurations((_, databaseName, etlConfiguration) => ServerStore.RemoveEtlProcessState(_, databaseName, configurationName, transformationName), "etl-reset");
+            await DatabaseConfigurations((_, databaseName, etlConfiguration, guid) => ServerStore.RemoveEtlProcessState(_, databaseName, configurationName, transformationName, guid), "etl-reset", GetStringQueryString("guid", required: false));
         }
 
         [RavenAction("/databases/*/admin/etl", "PUT", AuthorizationStatus.Operator)]
@@ -672,21 +673,23 @@ namespace Raven.Server.Web.System
 
             if (id == null)
             {
-                await DatabaseConfigurations((_, databaseName, etlConfiguration) => ServerStore.AddEtl(_, databaseName, etlConfiguration), "etl-add",
-                    beforeSetupConfiguration: AssertCanAddOrUpdateEtl, fillJson: (json, _, index) => json[nameof(EtlConfiguration<ConnectionString>.TaskId)] = index);
+                await DatabaseConfigurations((_, databaseName, etlConfiguration, guid) => ServerStore.AddEtl(_, databaseName, etlConfiguration, guid), "etl-add", 
+                    GetStringQueryString("guid", required: false), beforeSetupConfiguration: AssertCanAddOrUpdateEtl, fillJson: (json, _, index) => json[nameof(EtlConfiguration<ConnectionString>.TaskId)] = index);
 
                 return;
             }
 
             string etlConfigurationName = null;
 
-            await DatabaseConfigurations((_, databaseName, etlConfiguration) =>
+            await DatabaseConfigurations((_, databaseName, etlConfiguration, guid) =>
             {
-                var task = ServerStore.UpdateEtl(_, databaseName, id.Value, etlConfiguration);
+                var task = ServerStore.UpdateEtl(_, databaseName, id.Value, etlConfiguration, guid);
                 etlConfiguration.TryGet(nameof(RavenEtlConfiguration.Name), out etlConfigurationName);
                 return task;
 
-            }, "etl-update", fillJson: (json, _, index) => json[nameof(EtlConfiguration<ConnectionString>.TaskId)] = index);
+            }, "etl-update", 
+                GetStringQueryString("guid", required: false),
+                fillJson: (json, _, index) => json[nameof(EtlConfiguration<ConnectionString>.TaskId)] = index);
 
 
             // Reset scripts if needed
@@ -696,7 +699,7 @@ namespace Raven.Server.Web.System
             {
                 foreach (var script in scriptsToReset)
                 {
-                    await ServerStore.RemoveEtlProcessState(ctx, Database.Name, etlConfigurationName, script);
+                    await ServerStore.RemoveEtlProcessState(ctx, Database.Name, etlConfigurationName, script, Guid.NewGuid().ToString());
                 }
             }
         }
@@ -1055,7 +1058,7 @@ namespace Raven.Server.Web.System
 
             using (ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
             {
-                var (index, _) = await ServerStore.ToggleTaskState(key, taskName, type, disable, Database.Name);
+                var (index, _) = await ServerStore.ToggleTaskState(key, taskName, type, disable, Database.Name, GetStringQueryString("guid", required: false));
                 await Database.RachisLogIndexNotifications.WaitForIndexNotification(index, ServerStore.Engine.OperationTimeout);
 
                 HttpContext.Response.StatusCode = (int)HttpStatusCode.OK;
@@ -1083,7 +1086,8 @@ namespace Raven.Server.Web.System
                 ServerStore.LicenseManager.AssertCanAddExternalReplication();
 
                 ExternalReplication watcher = null;
-                await DatabaseConfigurations((_, databaseName, blittableJson) => ServerStore.UpdateExternalReplication(databaseName, blittableJson, out watcher), "update_external_replication",
+                await DatabaseConfigurations((_, databaseName, blittableJson, guid) => ServerStore.UpdateExternalReplication(databaseName, blittableJson, guid, out watcher), "update_external_replication",
+                    GetStringQueryString("guid",required: false),
                     fillJson: (json, _, index) =>
                     {
                         using (context.OpenReadTransaction())
@@ -1132,7 +1136,7 @@ namespace Raven.Server.Web.System
                 var action = new DeleteOngoingTaskAction(id, type, ServerStore, Database, context);
                 try
                 {
-                    (index, _) = await ServerStore.DeleteOngoingTask(id, taskName, type, Database.Name);
+                    (index, _) = await ServerStore.DeleteOngoingTask(id, taskName, type, Database.Name, GetStringQueryString("guid", required: false));
                     await Database.RachisLogIndexNotifications.WaitForIndexNotification(index, ServerStore.Engine.OperationTimeout);
                 }
                 finally
@@ -1212,7 +1216,7 @@ namespace Raven.Server.Web.System
                 {
                     foreach (var transformation in _deletingEtl.Transformations)
                     {
-                        var (index, _) = await _serverStore.RemoveEtlProcessState(_context, _database.Name, _deletingEtl.Name, transformation);
+                        var (index, _) = await _serverStore.RemoveEtlProcessState(_context, _database.Name, _deletingEtl.Name, transformation, Guid.NewGuid().ToString());
                         await _database.RachisLogIndexNotifications.WaitForIndexNotification(index, _serverStore.Engine.OperationTimeout);
                     }
                 }

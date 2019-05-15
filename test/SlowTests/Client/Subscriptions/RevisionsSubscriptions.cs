@@ -49,7 +49,7 @@ namespace SlowTests.Client.Subscriptions
                     await Server.ServerStore.ModifyDatabaseRevisions(context,
                         store.Database,
                         EntityToBlittable.ConvertCommandToBlittable(configuration,
-                            context));
+                            context), Guid.NewGuid().ToString());
                 }
 
                 for (int i = 0; i < 10; i++)
@@ -129,7 +129,7 @@ namespace SlowTests.Client.Subscriptions
                     await Server.ServerStore.ModifyDatabaseRevisions(context,
                         store.Database,
                         EntityToBlittable.ConvertCommandToBlittable(configuration,
-                            context));
+                            context), Guid.NewGuid().ToString());
                 }
 
                 for (var j = 0; j < 10; j++)
@@ -228,7 +228,7 @@ select { Id: id(d.Current), Age: d.Current.Age }
                     await Server.ServerStore.ModifyDatabaseRevisions(context,
                         store.Database,
                         EntityToBlittable.ConvertCommandToBlittable(configuration,
-                            context));
+                            context), Guid.NewGuid().ToString());
                 }
 
                 for (int i = 0; i < 10; i++)
@@ -318,7 +318,7 @@ select { Id: id(d.Current), Age: d.Current.Age }
                     await Server.ServerStore.ModifyDatabaseRevisions(context,
                         store.Database,
                         EntityToBlittable.ConvertCommandToBlittable(configuration,
-                            context));
+                            context), Guid.NewGuid().ToString());
                 }
 
                 for (int i = 0; i < 10; i++)

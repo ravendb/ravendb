@@ -259,8 +259,8 @@ namespace FastTests.Server.Documents.Indexing.Auto
                 var index = await database.IndexStore.CreateIndex(new AutoMapReduceIndexDefinition("Users", new[] { count, sum }, new[] { location }));
                 Assert.NotNull(index);
 
-                var task1 = database.IndexStore.SetLock(index.Name, IndexLockMode.LockedError);
-                var task2 = database.IndexStore.SetPriority(index.Name, IndexPriority.High);
+                var task1 = database.IndexStore.SetLock(index.Name, IndexLockMode.LockedError, Guid.NewGuid().ToString());
+                var task2 = database.IndexStore.SetPriority(index.Name, IndexPriority.High, Guid.NewGuid().ToString());
                 index.SetState(IndexState.Disabled);
                 var task = Task.WhenAll(task1, task2);
                 

@@ -30,7 +30,7 @@ namespace Tryouts
                 Console.WriteLine(i);
                 using (var test = new ClusterTransactionTests())
                 {
-                    test.CreateUniqueUser().Wait();
+                    test.CanCreateClusterTransactionRequest2().Wait();
                 }
             }
         }

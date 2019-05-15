@@ -622,7 +622,7 @@ namespace Raven.Server.Web.System
                 long index = -1;
                 foreach (var name in parameters.DatabaseNames)
                 {
-                    var (newIndex, _) = await ServerStore.DeleteDatabaseAsync(name, parameters.HardDelete, parameters.FromNodes);
+                    var (newIndex, _) = await ServerStore.DeleteDatabaseAsync(name, parameters.HardDelete, parameters.FromNodes, Guid.NewGuid().ToString());
                     index = newIndex;
                 }
                 await ServerStore.Cluster.WaitForIndexNotification(index);
@@ -809,7 +809,7 @@ namespace Raven.Server.Web.System
 
             using (ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
             {
-                var (index, _) = await ServerStore.PromoteDatabaseNode(name, nodeTag);
+                var (index, _) = await ServerStore.PromoteDatabaseNode(name, nodeTag, GetStringQueryString("guid", required: false));
                 await ServerStore.Cluster.WaitForIndexNotification(index);
 
                 HttpContext.Response.StatusCode = (int)HttpStatusCode.OK;
@@ -907,7 +907,7 @@ namespace Raven.Server.Web.System
                 {
                     var databaseRecord = ServerStore.Cluster.ReadDatabase(context, name, out _);
 
-                    var (index, _) = await ServerStore.ModifyConflictSolverAsync(name, conflictResolver);
+                    var (index, _) = await ServerStore.ModifyConflictSolverAsync(name, conflictResolver, GetStringQueryString("guid", required: false));
                     await ServerStore.Cluster.WaitForIndexNotification(index);
 
                     HttpContext.Response.StatusCode = (int)HttpStatusCode.Created;

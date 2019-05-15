@@ -102,8 +102,8 @@ namespace FastTests.Server.Documents.Indexing.Auto
                 var index2 = await database.IndexStore.CreateIndex(new AutoMapIndexDefinition("Users", new[] { name2 }));
                 Assert.NotNull(index2);
 
-                var task1 = database.IndexStore.SetLock(index2.Name, IndexLockMode.LockedError);
-                var task2 = database.IndexStore.SetPriority(index2.Name, IndexPriority.Low);
+                var task1 = database.IndexStore.SetLock(index2.Name, IndexLockMode.LockedError, Guid.NewGuid().ToString());
+                var task2 = database.IndexStore.SetPriority(index2.Name, IndexPriority.Low, Guid.NewGuid().ToString());
                 index2.SetState(IndexState.Disabled);
                 var task = Task.WhenAll(task1, task2);
 
@@ -174,7 +174,7 @@ namespace FastTests.Server.Documents.Indexing.Auto
 
             Assert.Equal(2, database.IndexStore.GetIndexesForCollection("Users").Count());
 
-            await database.IndexStore.DeleteIndex(index1.Name);
+            await database.IndexStore.DeleteIndex(index1.Name, Guid.NewGuid().ToString());
 
             if (index1.Configuration.RunInMemory == false)
                 Assert.True(SpinWait.SpinUntil(() => Directory.Exists(path1) == false, TimeSpan.FromSeconds(5)));
@@ -183,7 +183,7 @@ namespace FastTests.Server.Documents.Indexing.Auto
 
             Assert.Equal(1, indexes.Count);
 
-            await database.IndexStore.DeleteIndex(index2.Name);
+            await database.IndexStore.DeleteIndex(index2.Name, Guid.NewGuid().ToString());
 
             if (index1.Configuration.RunInMemory == false)
                 Assert.True(SpinWait.SpinUntil(() => Directory.Exists(path2) == false, TimeSpan.FromSeconds(5)));
@@ -955,7 +955,7 @@ namespace FastTests.Server.Documents.Indexing.Auto
             {
                 var index0 = await database.IndexStore.CreateIndex(new AutoMapIndexDefinition("Users", new[] { new AutoIndexField { Name = "Job", Storage = FieldStorage.No } }));
 
-                await database.ServerStore.Engine.PutAsync(new SetIndexStateCommand(index0.Name, IndexState.Idle, database.Name));
+                await database.ServerStore.Engine.PutAsync(new SetIndexStateCommand(index0.Name, IndexState.Idle, database.Name, Guid.NewGuid().ToString()));
 
                 var now = database.Time.GetUtcNow();
                 using (database.ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
@@ -1129,7 +1129,7 @@ namespace FastTests.Server.Documents.Indexing.Auto
                 WaitForIndex(database, index1.Name, index => index.State == IndexState.Normal);
                 WaitForIndex(database, index2.Name, index => index.State == IndexState.Idle);
 
-                await database.ServerStore.Engine.PutAsync(new SetIndexStateCommand(index2.Name, IndexState.Idle, database.Name));
+                await database.ServerStore.Engine.PutAsync(new SetIndexStateCommand(index2.Name, IndexState.Idle, database.Name, Guid.NewGuid().ToString()));
 
                 now = database.Time.GetUtcNow();
                 database.Time.UtcDateTime = () =>
@@ -1189,8 +1189,8 @@ namespace FastTests.Server.Documents.Indexing.Auto
                 WaitForIndex(database, index1.Name, index => index.State == IndexState.Idle);
                 WaitForIndex(database, index2.Name, index => index.State == IndexState.Idle);
 
-                await database.ServerStore.Engine.PutAsync(new SetIndexStateCommand(index1.Name, IndexState.Idle, database.Name));
-                await database.ServerStore.Engine.PutAsync(new SetIndexStateCommand(index2.Name, IndexState.Idle, database.Name));
+                await database.ServerStore.Engine.PutAsync(new SetIndexStateCommand(index1.Name, IndexState.Idle, database.Name, Guid.NewGuid().ToString()));
+                await database.ServerStore.Engine.PutAsync(new SetIndexStateCommand(index2.Name, IndexState.Idle, database.Name, Guid.NewGuid().ToString()));
 
 
                 now = database.Time.GetUtcNow();
@@ -1399,7 +1399,7 @@ namespace FastTests.Server.Documents.Indexing.Auto
                 Assert.Equal(IndexState.Error, index.State);
                 Assert.Equal(indexSafeName, IndexDefinitionBase.GetIndexNameSafeForFileSystem(index.Name));
 
-                await database.IndexStore.DeleteIndex(index.Name);
+                await database.IndexStore.DeleteIndex(index.Name, Guid.NewGuid().ToString());
 
                 for (int i = 0; i < 5; i++)
                 {

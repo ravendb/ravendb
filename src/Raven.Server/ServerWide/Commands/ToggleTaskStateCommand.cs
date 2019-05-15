@@ -12,12 +12,12 @@ namespace Raven.Server.ServerWide.Commands
         public OngoingTaskType TaskType;
         public bool Disable;
 
-        public ToggleTaskStateCommand() : base(null)
+        public ToggleTaskStateCommand()
         {
 
         }
 
-        public ToggleTaskStateCommand(long taskId, OngoingTaskType type, bool disable, string databaseName) : base(databaseName)
+        public ToggleTaskStateCommand(long taskId, OngoingTaskType type, bool disable, string databaseName, string guid) : base(databaseName, guid)
         {
             TaskId = taskId;
             TaskType = type;

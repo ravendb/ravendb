@@ -252,7 +252,7 @@ namespace Raven.Server.Documents.PeriodicBackup.Restore
                 }
                 else
                 {
-                    var deleteResult = await _serverStore.DeleteDatabaseAsync(_restoreConfiguration.DatabaseName, true, new[] { _serverStore.NodeTag });
+                    var deleteResult = await _serverStore.DeleteDatabaseAsync(_restoreConfiguration.DatabaseName, true, new[] { _serverStore.NodeTag }, Guid.NewGuid().ToString());
                     await _serverStore.Cluster.WaitForIndexNotification(deleteResult.Index);
                 }
 

@@ -12,6 +12,8 @@ namespace Raven.Server.ServerWide.Commands
     {
         public string DatabaseName { get; set; }
 
+        protected UpdateValueForDatabaseCommand() { }
+
         public abstract string GetItemId();
 
         public abstract void FillJson(DynamicJsonValue json);
@@ -64,7 +66,7 @@ namespace Raven.Server.ServerWide.Commands
             return null;
         }
 
-        protected UpdateValueForDatabaseCommand(string databaseName)
+        protected UpdateValueForDatabaseCommand(string databaseName, string guid) : base(guid)
         {
             DatabaseName = databaseName;
         }

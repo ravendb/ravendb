@@ -18,12 +18,11 @@ namespace Raven.Server.ServerWide.Commands.Indexes
         public AutoIndexDefinition Definition;
 
         public PutAutoIndexCommand()
-            : base(null)
         {
         }
 
-        public PutAutoIndexCommand(AutoIndexDefinition definition, string databaseName)
-            : base(databaseName)
+        public PutAutoIndexCommand(AutoIndexDefinition definition, string databaseName, string guid)
+            : base(databaseName, guid)
         {
             Definition = definition;
         }
@@ -47,7 +46,7 @@ namespace Raven.Server.ServerWide.Commands.Indexes
             json[nameof(Definition)] = TypeConverter.ToBlittableSupportedType(Definition);
         }
 
-        public static PutAutoIndexCommand Create(AutoIndexDefinitionBase definition, string databaseName)
+        public static PutAutoIndexCommand Create(AutoIndexDefinitionBase definition, string databaseName, string guid)
         {
             var indexType = IndexType.None;
             var map = definition as AutoMapIndexDefinition;
@@ -61,7 +60,7 @@ namespace Raven.Server.ServerWide.Commands.Indexes
             if (indexType == IndexType.None)
                 throw new RachisApplyException($"Invalid definition type: {definition.GetType()}");
 
-            return new PutAutoIndexCommand(GetAutoIndexDefinition(definition, indexType), databaseName);
+            return new PutAutoIndexCommand(GetAutoIndexDefinition(definition, indexType), databaseName, guid);
         }
 
         public static AutoIndexDefinition GetAutoIndexDefinition(AutoIndexDefinitionBase definition, IndexType indexType)

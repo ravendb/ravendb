@@ -16,12 +16,11 @@ namespace Raven.Server.ServerWide.Commands
         public Dictionary<string, long> Identities { get; set; }
 
         public UpdateClusterIdentityCommand()
-            : base(null)
         {
         }
 
-        public UpdateClusterIdentityCommand(string databaseName, Dictionary<string, long> identities, bool force)
-            : base(databaseName)
+        public UpdateClusterIdentityCommand(string databaseName, Dictionary<string, long> identities, bool force, string guid)
+            : base(databaseName, guid)
         {
             Identities = new Dictionary<string, long>(identities);
             Force = force;

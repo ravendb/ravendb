@@ -479,7 +479,7 @@ namespace Raven.Server.Documents.Handlers
                 auditLog.Info($"Index {name} DELETE by {clientCert?.Subject} {clientCert?.Thumbprint}");
             }
 
-            HttpContext.Response.StatusCode = await Database.IndexStore.TryDeleteIndexIfExists(name)
+            HttpContext.Response.StatusCode = await Database.IndexStore.TryDeleteIndexIfExists(name, GetStringQueryString("guid", required: false))
                 ? (int)HttpStatusCode.NoContent
                 : (int)HttpStatusCode.NotFound;
         }
@@ -571,7 +571,7 @@ namespace Raven.Server.Documents.Handlers
 
                 foreach (var name in parameters.IndexNames)
                 {
-                    await Database.IndexStore.SetLock(name, parameters.Mode);
+                    await Database.IndexStore.SetLock(name, parameters.Mode, string.Empty); // TODO: can't use single guid here for multiple commands
                 }
             }
 
@@ -588,7 +588,7 @@ namespace Raven.Server.Documents.Handlers
 
                 foreach (var name in parameters.IndexNames)
                 {
-                    await Database.IndexStore.SetPriority(name, parameters.Priority);
+                    await Database.IndexStore.SetPriority(name, parameters.Priority, string.Empty); // TODO: can't use single guid here for multiple commands
                 }
 
                 NoContentStatus();

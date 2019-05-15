@@ -14,12 +14,11 @@ namespace Raven.Server.ServerWide.Commands
         public List<string> Identities;
 
         public IncrementClusterIdentitiesBatchCommand()
-            : base(null)
         {
             // for deserialization
         }
 
-        public IncrementClusterIdentitiesBatchCommand(string databaseName, List<string> identities) : base(databaseName)
+        public IncrementClusterIdentitiesBatchCommand(string databaseName, List<string> identities, string guid) : base(databaseName, guid)
         {
             Identities = identities;
             DatabaseName = databaseName;

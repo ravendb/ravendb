@@ -7,9 +7,10 @@ namespace Raven.Server.ServerWide.Commands
     {
         public ConflictSolver Solver;
 
-        public ModifyConflictSolverCommand():base(null){}
+        public ModifyConflictSolverCommand()
+        { }
 
-        public ModifyConflictSolverCommand(string databaseName) : base(databaseName){}
+        public ModifyConflictSolverCommand(string databaseName, string guid) : base(databaseName, guid){}
         
         public override string UpdateDatabaseRecord(DatabaseRecord record, long etag)
         {

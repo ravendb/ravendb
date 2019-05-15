@@ -11,6 +11,9 @@ namespace Raven.Server.ServerWide.Commands
         public RemoveNodeFromClusterCommand()
         {
         }
+        public RemoveNodeFromClusterCommand(string guid) : base(guid)
+        {
+        }
 
         public override DynamicJsonValue ToJson(JsonOperationContext context)
         {

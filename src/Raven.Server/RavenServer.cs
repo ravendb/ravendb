@@ -666,11 +666,8 @@ namespace Raven.Server
 
                 await ServerStore.Cluster.WaitForIndexNotification(res.Index);
 
-                await ServerStore.SendToLeaderAsync(new InstallUpdatedServerCertificateCommand
-                {
-                    Certificate = base64CertWithoutPassword, // includes the private key
-                    ReplaceImmediately = replaceImmediately
-                });
+                // TODO: pass guid
+                await ServerStore.SendToLeaderAsync(new InstallUpdatedServerCertificateCommand(base64CertWithoutPassword,replaceImmediately, string.Empty));
             }
             catch (Exception e)
             {

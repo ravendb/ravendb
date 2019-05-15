@@ -111,7 +111,7 @@ namespace Raven.Server.Smuggler.Documents
 
             public void WriteIndex(IndexDefinitionBase indexDefinition, IndexType indexType)
             {
-                AsyncHelpers.RunSync(() => _database.IndexStore.CreateIndex(indexDefinition));
+                AsyncHelpers.RunSync(() => _database.IndexStore.CreateIndex(indexDefinition, Guid.NewGuid().ToString()));
             }
 
             public void WriteIndex(IndexDefinition indexDefinition)
@@ -423,7 +423,7 @@ namespace Raven.Server.Smuggler.Documents
             public void WriteKeyValue(string key, BlittableJsonReaderObject value)
             {
                 const int batchSize = 1024;
-                _compareExchangeCommands.Add(new AddOrUpdateCompareExchangeCommand(_database.Name, key, value, 0, _context));
+                _compareExchangeCommands.Add(new AddOrUpdateCompareExchangeCommand(_database.Name, key, value, 0, _context, Guid.NewGuid().ToString()));
 
                 if (_compareExchangeCommands.Count < batchSize)
                     return;
@@ -441,7 +441,7 @@ namespace Raven.Server.Smuggler.Documents
 
             private void SendCommands(JsonOperationContext context)
             {
-                AsyncHelpers.RunSync(async () => await _database.ServerStore.SendToLeaderAsync(new AddOrUpdateCompareExchangeBatchCommand(_compareExchangeCommands, context)));
+                AsyncHelpers.RunSync(async () => await _database.ServerStore.SendToLeaderAsync(new AddOrUpdateCompareExchangeBatchCommand(_compareExchangeCommands, context, Guid.NewGuid().ToString())));
 
                 _compareExchangeCommands.Clear();
             }
@@ -481,7 +481,7 @@ namespace Raven.Server.Smuggler.Documents
             private void SendIdentities()
             {
                 //fire and forget, do not hold-up smuggler operations waiting for Raft command
-                AsyncHelpers.RunSync(() => _database.ServerStore.SendToLeaderAsync(new UpdateClusterIdentityCommand(_database.Name, _identities, false)));
+                AsyncHelpers.RunSync(() => _database.ServerStore.SendToLeaderAsync(new UpdateClusterIdentityCommand(_database.Name, _identities, false, Guid.NewGuid().ToString())));
 
                 _identities.Clear();
             }
@@ -508,7 +508,7 @@ namespace Raven.Server.Smuggler.Documents
                 {
                     if (_log.IsInfoEnabled)
                         _log.Info("Configuring revisions from smuggler");
-                    tasks.Add(_database.ServerStore.SendToLeaderAsync(new EditRevisionsConfigurationCommand(databaseRecord.Revisions, _database.Name)));
+                    tasks.Add(_database.ServerStore.SendToLeaderAsync(new EditRevisionsConfigurationCommand(databaseRecord.Revisions, _database.Name, Guid.NewGuid().ToString())));
                     progress.RevisionsConfigurationUpdated = true;
                 }
 
@@ -517,7 +517,7 @@ namespace Raven.Server.Smuggler.Documents
                 {
                     if (_log.IsInfoEnabled)
                         _log.Info("Configuring expiration from smuggler");
-                    tasks.Add(_database.ServerStore.SendToLeaderAsync(new EditExpirationCommand(databaseRecord.Expiration, _database.Name)));
+                    tasks.Add(_database.ServerStore.SendToLeaderAsync(new EditExpirationCommand(databaseRecord.Expiration, _database.Name, Guid.NewGuid().ToString())));
                     progress.ExpirationConfigurationUpdated = true;
                 }
 
@@ -528,7 +528,7 @@ namespace Raven.Server.Smuggler.Documents
                         _log.Info("Configuring Raven connection strings configuration from smuggler");
                     foreach (var connectionString in databaseRecord.RavenConnectionStrings)
                     {
-                        tasks.Add(_database.ServerStore.SendToLeaderAsync(new PutRavenConnectionStringCommand(connectionString.Value, _database.Name)));
+                        tasks.Add(_database.ServerStore.SendToLeaderAsync(new PutRavenConnectionStringCommand(connectionString.Value, _database.Name, Guid.NewGuid().ToString())));
                     }
                     progress.RavenConnectionStringsUpdated = true;
                 }
@@ -540,7 +540,7 @@ namespace Raven.Server.Smuggler.Documents
                         _log.Info("Configuring SQL connection strings from smuggler");
                     foreach (var connectionString in databaseRecord.SqlConnectionStrings)
                     {
-                        tasks.Add(_database.ServerStore.SendToLeaderAsync(new PutSqlConnectionStringCommand(connectionString.Value, _database.Name)));
+                        tasks.Add(_database.ServerStore.SendToLeaderAsync(new PutSqlConnectionStringCommand(connectionString.Value, _database.Name, Guid.NewGuid().ToString())));
                     }
                     progress.SqlConnectionStringsUpdated = true;
                 }

@@ -24,9 +24,9 @@ namespace Raven.Server.ServerWide.Commands.Subscriptions
         public string MentorNode;
 
         // for serialization
-        private PutSubscriptionCommand() : base(null) { }
+        private PutSubscriptionCommand() { }
 
-        public PutSubscriptionCommand(string databaseName, string query, string mentor) : base(databaseName)
+        public PutSubscriptionCommand(string databaseName, string query, string mentor, string guid) : base(databaseName, guid)
         {
             Query = query;
             MentorNode = mentor;
