@@ -247,17 +247,45 @@ namespace Raven.Server.Documents.Queries
                             throw new NotSupportedException("Should not happen!");
                         }
                     case OperatorType.And:
-                        return LuceneQueryHelper.And(
-                            ToLuceneQuery(serverContext, documentsContext, query, where.Left, metadata, indexDef, parameters, analyzer, factories, exact),
-                            LucenePrefixOperator.None,
-                            ToLuceneQuery(serverContext, documentsContext, query, where.Right, metadata, indexDef, parameters, analyzer, factories, exact),
-                            LucenePrefixOperator.None);
+                    {
+                        var left = ToLuceneQuery(serverContext, documentsContext, query, @where.Left, metadata, indexDef, parameters, analyzer,
+                            factories, exact);
+                        var right = ToLuceneQuery(serverContext, documentsContext, query, @where.Right, metadata, indexDef, parameters, analyzer,
+                            factories, exact);
+
+                        if (left is RavenBooleanQuery rbq)
+                        {
+                            if (rbq.TryAnd(right) == false)
+                                rbq = new RavenBooleanQuery(left, right, OperatorType.And);
+                        }
+                        else
+                        {
+                            rbq = new RavenBooleanQuery(OperatorType.And);
+                            rbq.And(left, right);
+                        }
+
+                        return rbq;
+                    }
                     case OperatorType.Or:
-                        return LuceneQueryHelper.Or(
-                            ToLuceneQuery(serverContext, documentsContext, query, where.Left, metadata, indexDef, parameters, analyzer, factories, exact),
-                            LucenePrefixOperator.None,
-                            ToLuceneQuery(serverContext, documentsContext, query, where.Right, metadata, indexDef, parameters, analyzer, factories, exact),
-                            LucenePrefixOperator.None);
+                    {
+                        var left = ToLuceneQuery(serverContext, documentsContext, query, @where.Left, metadata, indexDef, parameters, analyzer,
+                            factories, exact);
+                        var right = ToLuceneQuery(serverContext, documentsContext, query, @where.Right, metadata, indexDef, parameters, analyzer,
+                            factories, exact);
+
+                        if (left is RavenBooleanQuery rbq)
+                        {
+                            if (rbq.TryOr(right) == false)
+                                rbq = new RavenBooleanQuery(left, right, OperatorType.Or);
+                        }
+                        else
+                        {
+                            rbq = new RavenBooleanQuery(OperatorType.Or);
+                            rbq.Or(left, right);
+                        }
+
+                        return rbq;
+                    }
                 }
             }
             if (expression is NegatedExpression ne)
