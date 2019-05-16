@@ -751,7 +751,7 @@ namespace Raven.Bundles.Replication.Tasks
                     }
                     catch (Exception readResponseEx)
                     {
-                        log.WarnException("Failed to read replication request error to " + destination + " destination from the response", readResponseEx);
+                        log.WarnException("Failed to read replication request error to " + destination + " destination from the response, error: " + readResponseEx, e);
                     }
 				}
 				else
