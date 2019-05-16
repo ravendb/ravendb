@@ -92,10 +92,9 @@ namespace SlowTests.Issues
                     var restoreConfig = new RestoreBackupConfiguration
                     {
                         DatabaseName = $"restored_DB1_{myBackup.NodeTag}",
-                        BackupLocation = myBackup.BackupPath,
-                        NodeTag = myBackup.NodeTag
+                        BackupLocation = myBackup.BackupPath
                     };
-                    var restoreBackupTask = store.Maintenance.Server.Send(new RestoreBackupOperation(restoreConfig));
+                    var restoreBackupTask = store.Maintenance.Server.Send(new RestoreBackupOperation(restoreConfig, myBackup.NodeTag));
                     restoreBackupTask.WaitForCompletion(TimeSpan.FromSeconds(30));
                 }
                 var numOfDbs = await store.Maintenance.Server.SendAsync(new GetDatabaseNamesOperation(0, int.MaxValue));

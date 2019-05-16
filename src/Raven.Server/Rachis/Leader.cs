@@ -959,7 +959,8 @@ namespace Raven.Server.Rachis
                             newVotes,
                             newPromotables,
                             newNonVotes,
-                            highestNodeId
+                            highestNodeId,
+                            _engine.GetLastEntryIndex(context) + 1
                         );
 
                         var topologyJson = _engine.SetTopology(context, clusterTopology);

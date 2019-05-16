@@ -28,9 +28,9 @@ namespace Raven.Client.Documents.Operations
         private IDisposable _subscription;
 
         internal long Id => _id;
+        internal string NodeTag;
 
         public OperationStatusFetchMode StatusFetchMode { get; protected set; }
-        public string NodeTag { get; protected set; }
 
         private bool _isProcessing;
 

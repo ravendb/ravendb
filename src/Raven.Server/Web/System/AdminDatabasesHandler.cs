@@ -588,6 +588,7 @@ namespace Raven.Server.Web.System
                 }
 
                 ServerStore.EnsureNotPassive();
+                HttpContext.Response.Headers[Constants.Headers.RefreshTopology] = "true";
 
                 using (context.OpenReadTransaction())
                 {
