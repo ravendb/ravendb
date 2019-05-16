@@ -37,17 +37,15 @@ namespace SlowTests.Issues
         public async Task DoesReadBalancerAndMaxNumberOfRequestsClietnConfigurationTakeEffectOnCurrentRequestExecutor()
         {
             var nodesCount = 3;
-            var cluster = await CreateRaftCluster(nodesCount);
             var db = GetDatabaseName();
 
-            GetDocumentStore(new Options
-            {
-                ReplicationFactor = 3
-            });
+            var leader = await CreateRaftClusterAndGetLeader(nodesCount);
+            var result = await CreateDatabaseInCluster(db, nodesCount, leader.WebUrl);
+          
             using (var store = 
                 new DocumentStore
                 {
-                    Urls = new[] { cluster.Leader.WebUrl },
+                    Urls = new[] { leader.WebUrl },
                     Database = db,
                     Conventions = new Raven.Client.Documents.Conventions.DocumentConventions
                     {
@@ -56,16 +54,12 @@ namespace SlowTests.Issues
                     }
                 }.Initialize())
             {
-                var databaseResult = await store.Maintenance.Server.SendAsync(new CreateDatabaseOperation(new DatabaseRecord(db), nodesCount));
-                Assert.Equal(nodesCount, databaseResult.Topology.Members.Count);
-
-
                 SpinWait.SpinUntil(() =>
                 {
-                    using (cluster.Leader.ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext ctx))
+                    using (leader.ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext ctx))
                     using (ctx.OpenReadTransaction())
                     {
-                        var record = cluster.Leader.ServerStore.Cluster.ReadDatabase(ctx, db);
+                        var record = leader.ServerStore.Cluster.ReadDatabase(ctx, db);
                         return record.Topology.Members.Count == nodesCount;
                     }
                 }, TimeSpan.FromSeconds(10));
@@ -111,10 +105,19 @@ namespace SlowTests.Issues
                     new PutServerWideClientConfigurationOperation(
                         new ClientConfiguration { MaxNumberOfRequestsPerSession = 10, PrettifyGeneratedLinqExpressions = false, ReadBalanceBehavior = Raven.Client.Http.ReadBalanceBehavior.None }));
 
-                using (var session = store.OpenAsyncSession())
-                {                    
-                    await session.LoadAsync<User>("users/1"); // we need this to "pull" the new config                    
-                }
+
+                Assert.True(SpinWait.SpinUntil(() =>
+                {
+                    using (var session = store.OpenSession())
+                    {
+                        session.Load<User>("users/1"); // we need this to "pull" the new config                    
+                        return session.Advanced.RequestExecutor.Conventions.MaxNumberOfRequestsPerSession == 10;
+                    }
+
+                }, TimeSpan.FromSeconds(10)));
+
+
+                
 
                 using (var session = store.OpenAsyncSession())
                 {
@@ -154,6 +157,17 @@ namespace SlowTests.Issues
                     });
                     session.SaveChanges();
                 }
+
+
+                Assert.True(SpinWait.SpinUntil(() =>
+                {
+                    using (var session = store.OpenSession())
+                    {
+                        session.Load<User>("users/1"); // we need this to "pull" the new config                    
+                        return session.Advanced.RequestExecutor.Conventions.MaxNumberOfRequestsPerSession == 5;
+                    }
+
+                }, TimeSpan.FromSeconds(10)));
 
                 await Assert.ThrowsAsync<InvalidOperationException>(async () =>
                 {
