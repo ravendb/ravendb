@@ -1153,15 +1153,15 @@ namespace Voron
             set => _numOfConcurrentSyncsPerPhysDrive = value;
         }
 
-        public int TimeToSyncAfterFlashInSec
+        public int TimeToSyncAfterFlushInSec
         {
             get
             {
-                if (_timeToSyncAfterFlashInSec < 1)
-                    _timeToSyncAfterFlashInSec = 30;
-                return _timeToSyncAfterFlashInSec;
+                if (_timeToSyncAfterFlushInSec < 1)
+                    _timeToSyncAfterFlushInSec = 30;
+                return _timeToSyncAfterFlushInSec;
             }
-            set => _timeToSyncAfterFlashInSec = value;
+            set => _timeToSyncAfterFlushInSec = value;
         }
 
         public long PrefetchSegmentSize { get; set; }
@@ -1179,7 +1179,7 @@ namespace Voron
         private readonly SortedList<long, string> _journalsForReuse = new SortedList<long, string>();
 
         private int _numOfConcurrentSyncsPerPhysDrive;
-        private int _timeToSyncAfterFlashInSec;
+        private int _timeToSyncAfterFlushInSec;
         public long CompressTxAboveSizeInBytes;
         private Guid _environmentId;
         private long _maxScratchBufferSize;

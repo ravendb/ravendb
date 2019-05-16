@@ -212,7 +212,7 @@ namespace Voron
 
                     // At the same time, we want to avoid excessive flushes, so we'll limit it to once in a while if we don't
                     // have a lot to flush
-                    if ((DateTime.UtcNow - envToFlush.LastFlushTime).TotalSeconds < StorageEnvironment.TimeToSyncAfterFlashInSec)
+                    if ((DateTime.UtcNow - envToFlush.LastFlushTime).TotalSeconds < StorageEnvironment.TimeToSyncAfterFlushInSec)
                         continue;
                 }
 
