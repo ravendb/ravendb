@@ -17,6 +17,7 @@ namespace Raven.Client.ServerWide.Operations.Configuration
         private class GetServerWideClientConfigurationCommand : RavenCommand<ClientConfiguration>
         {
             public override bool IsReadRequest => false;
+            public override bool IsClusterCommand => false;
 
             public override HttpRequestMessage CreateRequest(JsonOperationContext ctx, ServerNode node, out string url)
             {

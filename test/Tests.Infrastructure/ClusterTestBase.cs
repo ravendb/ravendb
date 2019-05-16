@@ -118,6 +118,7 @@ namespace Tests.Infrastructure
             }
 
             public override bool IsReadRequest => true;
+            public override bool IsClusterCommand => false;
         }
 
         protected async Task<bool> WaitUntilDatabaseHasState(DocumentStore store, TimeSpan timeout, Func<DatabaseRecord, bool> predicate)

@@ -71,6 +71,8 @@ namespace Raven.Client.Documents.Operations.Indexes
                 _parameters = EntityToBlittable.ConvertCommandToBlittable(parameters, context);
             }
 
+            public override bool IsClusterCommand => true;
+
             public override HttpRequestMessage CreateRequest(JsonOperationContext ctx, ServerNode node, out string url)
             {
                 url = $"{node.Url}/databases/{node.Database}/indexes/set-lock";

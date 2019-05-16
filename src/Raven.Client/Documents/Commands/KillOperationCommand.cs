@@ -13,6 +13,8 @@ namespace Raven.Client.Documents.Commands
             _id = id;
         }
 
+        public override bool IsClusterCommand => false;
+
         public override HttpRequestMessage CreateRequest(JsonOperationContext ctx, ServerNode node, out string url)
         {
             url = $"{node.Url}/databases/{node.Database}/operations/kill?id={_id}";

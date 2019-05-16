@@ -36,6 +36,7 @@ namespace Raven.Client.Documents.Operations.CompareExchange
             }
 
             public override bool IsReadRequest => true;
+            public override bool IsClusterCommand => false;
 
             public override HttpRequestMessage CreateRequest(JsonOperationContext ctx, ServerNode node, out string url)
             {

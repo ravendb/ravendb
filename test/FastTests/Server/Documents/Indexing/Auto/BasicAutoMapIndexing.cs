@@ -1422,7 +1422,7 @@ namespace FastTests.Server.Documents.Indexing.Auto
 
                 modifySettings(databaseRecord);
 
-                var (etag, _) = await Server.ServerStore.WriteDatabaseRecordAsync(databaseName, databaseRecord, null);
+                var (etag, _) = await Server.ServerStore.WriteDatabaseRecordAsync(databaseName, databaseRecord, null, Guid.NewGuid().ToString());
                 await Server.ServerStore.Cluster.WaitForIndexNotification(etag);
             }
         }

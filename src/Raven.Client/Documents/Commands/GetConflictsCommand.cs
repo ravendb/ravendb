@@ -9,6 +9,7 @@ namespace Raven.Client.Documents.Commands
     {
         private readonly string _id;
         public override bool IsReadRequest => true;
+        public override bool IsClusterCommand => false;
 
         public GetConflictsCommand(string id)
         {

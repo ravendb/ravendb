@@ -124,6 +124,7 @@ namespace Raven.Client.Documents.Operations.Attachments
             }
 
             public override bool IsReadRequest => true;
+            public override bool IsClusterCommand => false;
         }
     }
 }

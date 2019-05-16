@@ -121,7 +121,7 @@ namespace Raven.Server.Web.System
         public async Task PutCompareExchangeValue()
         {
             var key = GetStringQueryString("key");
-            var guid = GetStringQueryString("guid", required: false);
+            var guid = GetRaftGuidFromHeaders();
 
             // ReSharper disable once PossibleInvalidOperationException
             var index = GetLongQueryString("index", true).Value;
@@ -152,7 +152,7 @@ namespace Raven.Server.Web.System
         public async Task DeleteCompareExchangeValue()
         {
             var key = GetStringQueryString("key");
-            var guid = GetStringQueryString("guid", required: false);
+            var guid = GetRaftGuidFromHeaders();
 
             // ReSharper disable once PossibleInvalidOperationException
             var index = GetLongQueryString("index", true).Value;

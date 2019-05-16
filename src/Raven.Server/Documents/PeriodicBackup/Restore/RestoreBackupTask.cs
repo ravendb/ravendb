@@ -206,7 +206,7 @@ namespace Raven.Server.Documents.PeriodicBackup.Restore
 
                             DisableOngoingTasksIfNeeded(databaseRecord);
 
-                            var (index, _) = await _serverStore.WriteDatabaseRecordAsync(databaseName, databaseRecord, null, restoreSettings.DatabaseValues, isRestore: true);
+                            var (index, _) = await _serverStore.WriteDatabaseRecordAsync(databaseName, databaseRecord, null, Guid.NewGuid().ToString(), restoreSettings.DatabaseValues, isRestore: true);
                             await _serverStore.Cluster.WaitForIndexNotification(index);
 
                             // restore identities & cmpXchg values
@@ -218,7 +218,7 @@ namespace Raven.Server.Documents.PeriodicBackup.Restore
                     databaseRecord = _serverStore.LoadDatabaseRecord(databaseName, out _);
                     databaseRecord.Disabled = false;
 
-                    var (updateIndex, _) = await _serverStore.WriteDatabaseRecordAsync(databaseName, databaseRecord, null);
+                    var (updateIndex, _) = await _serverStore.WriteDatabaseRecordAsync(databaseName, databaseRecord, null, Guid.NewGuid().ToString());
                     await _serverStore.Cluster.WaitForIndexNotification(updateIndex);
 
                     if (databaseRecord.Topology.RelevantFor(_serverStore.NodeTag))

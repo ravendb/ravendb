@@ -93,6 +93,7 @@ namespace FastTests.Server
             }
 
             public override bool IsReadRequest => false;
+            public override bool IsClusterCommand => true;
         }
 
         public class GetDatabaseDocumentTestCommand : RavenCommand<BlittableJsonReaderObject>
@@ -113,6 +114,7 @@ namespace FastTests.Server
             }
 
             public override bool IsReadRequest => true;
+            public override bool IsClusterCommand => false;
         }
     }
 }

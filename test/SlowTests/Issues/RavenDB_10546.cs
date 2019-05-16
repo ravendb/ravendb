@@ -92,6 +92,7 @@ namespace SlowTests.Issues
             private class GetStudioConfigurationCommand : RavenCommand<StudioConfiguration>
             {
                 public override bool IsReadRequest => false;
+                public override bool IsClusterCommand => false;
 
                 public override HttpRequestMessage CreateRequest(JsonOperationContext ctx, ServerNode node, out string url)
                 {
@@ -145,6 +146,8 @@ namespace SlowTests.Issues
                     _configuration = EntityToBlittable.ConvertCommandToBlittable(configuration, context);
                 }
 
+                public override bool IsClusterCommand => true;
+
                 public override HttpRequestMessage CreateRequest(JsonOperationContext ctx, ServerNode node, out string url)
                 {
                     url = $"{node.Url}/databases/{node.Database}/admin/configuration/studio";
@@ -191,6 +194,8 @@ namespace SlowTests.Issues
                     _configuration = EntityToBlittable.ConvertCommandToBlittable(configuration, context);
                 }
 
+                public override bool IsClusterCommand => true;
+
                 public override HttpRequestMessage CreateRequest(JsonOperationContext ctx, ServerNode node, out string url)
                 {
                     url = $"{node.Url}/admin/configuration/studio";
@@ -217,6 +222,7 @@ namespace SlowTests.Issues
             private class GetServerWideStudioConfigurationCommand : RavenCommand<ServerWideStudioConfiguration>
             {
                 public override bool IsReadRequest => false;
+                public override bool IsClusterCommand => false;
 
                 public override HttpRequestMessage CreateRequest(JsonOperationContext ctx, ServerNode node, out string url)
                 {

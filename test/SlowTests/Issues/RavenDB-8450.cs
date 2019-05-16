@@ -61,6 +61,7 @@ namespace SlowTests.Issues
             }
 
             public override bool IsReadRequest { get; } = false;
+            public override bool IsClusterCommand => false;
 
             public override HttpRequestMessage CreateRequest(JsonOperationContext ctx, ServerNode node, out string url)
             {

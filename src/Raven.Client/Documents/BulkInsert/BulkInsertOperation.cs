@@ -85,6 +85,8 @@ namespace Raven.Client.Documents.BulkInsert
         private class BulkInsertCommand : RavenCommand<HttpResponseMessage>
         {
             public override bool IsReadRequest => false;
+            public override bool IsClusterCommand => false;
+
             private readonly StreamExposerContent _stream;
             private readonly long _id;
 

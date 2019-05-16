@@ -39,5 +39,6 @@ namespace Raven.Client.ServerWide.Commands
         }
 
         public override bool IsReadRequest => true;
+        public override bool IsClusterCommand => false;
     }
 }

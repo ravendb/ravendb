@@ -43,6 +43,8 @@ namespace Raven.Client.Documents.Operations.Attachments
                 _changeVector = changeVector;
             }
 
+            public override bool IsClusterCommand => false;
+
             public override HttpRequestMessage CreateRequest(JsonOperationContext ctx, ServerNode node, out string url)
             {
                 url = $"{node.Url}/databases/{node.Database}/attachments?id={Uri.EscapeDataString(_documentId)}&name={Uri.EscapeDataString(_name)}";

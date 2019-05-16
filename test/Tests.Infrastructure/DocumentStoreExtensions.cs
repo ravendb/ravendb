@@ -327,6 +327,7 @@ namespace FastTests
                 }
 
                 public override bool IsReadRequest => true;
+                public override bool IsClusterCommand => false;
 
                 public override HttpRequestMessage CreateRequest(JsonOperationContext ctx, ServerNode node, out string url)
                 {
@@ -370,6 +371,7 @@ namespace FastTests
                 }
 
                 public override bool IsReadRequest => false;
+                public override bool IsClusterCommand => false;
 
                 public override HttpRequestMessage CreateRequest(JsonOperationContext ctx, ServerNode node, out string url)
                 {

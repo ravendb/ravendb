@@ -23,6 +23,8 @@ namespace Raven.Client.Documents.Commands
             _end = end;
         }
 
+        public override bool IsClusterCommand => false;
+
         public override HttpRequestMessage CreateRequest(JsonOperationContext ctx, ServerNode node, out string url)
         {
             url = $"{node.Url}/databases/{node.Database}/hilo/return?tag={_tag}&end={_end}&last={_last}";

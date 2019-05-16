@@ -13,6 +13,7 @@ using Raven.Client.Exceptions;
 using Raven.Client.Exceptions.Cluster;
 using Raven.Client.Http;
 using Raven.Client.ServerWide;
+using Raven.Client.ServerWide.Commands.Cluster;
 using Raven.Client.ServerWide.Operations;
 using Raven.Server.Config;
 using Raven.Server.ServerWide.Commands;
@@ -534,29 +535,6 @@ namespace RachisTests
                     await Task.Delay(100);
                 }
             }
-        }
-
-        private class AddClusterNodeCommand : RavenCommand
-        {
-            private readonly string _url;
-
-            public AddClusterNodeCommand(string url)
-            {
-                _url = url;
-            }
-
-            public override HttpRequestMessage CreateRequest(JsonOperationContext ctx, ServerNode node, out string url)
-            {
-                url = $"{node.Url}/admin/cluster/node?url={_url}";
-
-                var request = new HttpRequestMessage
-                {
-                    Method = HttpMethod.Put
-                };
-
-                return request;
-            }
-
         }
     }
 }

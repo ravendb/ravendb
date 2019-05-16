@@ -188,7 +188,7 @@ namespace Raven.Server.Documents.Handlers
 
         private async Task HandleClusterTransaction(DocumentsOperationContext context, MergedBatchCommand command, ClusterTransactionCommand.ClusterTransactionOptions options)
         {
-            var guid = GetStringQueryString("guid", required: false);
+            var guid = GetRaftGuidFromHeaders();
 
             var record = ServerStore.LoadDatabaseRecord(Database.Name, out _);
             var clusterTransactionCommand = new ClusterTransactionCommand(Database.Name, record.Topology.DatabaseTopologyIdBase64, command.ParsedCommands, options, guid);

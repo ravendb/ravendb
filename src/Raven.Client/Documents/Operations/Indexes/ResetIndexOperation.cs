@@ -30,6 +30,8 @@ namespace Raven.Client.Documents.Operations.Indexes
                 _indexName = indexName ?? throw new ArgumentNullException(nameof(indexName));
             }
 
+            public override bool IsClusterCommand => false;
+
             public override HttpRequestMessage CreateRequest(JsonOperationContext ctx, ServerNode node, out string url)
             {
                 url = $"{node.Url}/databases/{node.Database}/indexes?name={Uri.EscapeDataString(_indexName)}";

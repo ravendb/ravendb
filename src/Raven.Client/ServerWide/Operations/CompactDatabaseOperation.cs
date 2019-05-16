@@ -66,6 +66,7 @@ namespace Raven.Client.ServerWide.Operations
             }
 
             public override bool IsReadRequest => false;
+            public override bool IsClusterCommand => false;
         }
     }
 }

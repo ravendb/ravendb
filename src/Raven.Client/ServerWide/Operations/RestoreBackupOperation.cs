@@ -27,6 +27,7 @@ namespace Raven.Client.ServerWide.Operations
         private class RestoreBackupCommand : RavenCommand<OperationIdResult>
         {
             public override bool IsReadRequest => false;
+            public override bool IsClusterCommand => false;
             private readonly DocumentConventions _conventions;
             private readonly RestoreBackupConfiguration _restoreConfiguration;
 

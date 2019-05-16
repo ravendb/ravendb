@@ -37,6 +37,9 @@ namespace Raven.Client.Http
 
         public TResult Result;
         public abstract bool IsReadRequest { get; }
+        public abstract bool IsClusterCommand { get; }
+
+        public string Guid;
 
         public HttpStatusCode StatusCode;
 

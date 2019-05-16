@@ -68,7 +68,7 @@ namespace Raven.Server.Documents.Handlers.Admin
                             $"Index name must not start with '{Constants.Documents.Indexing.SideBySideIndexNamePrefix}'. Provided index name: '{indexDefinition.Name}'");
                     }
 
-                    var index = await Database.IndexStore.CreateIndex(indexDefinition, GetStringQueryString("guid", required: false));
+                    var index = await Database.IndexStore.CreateIndex(indexDefinition, Guid.NewGuid().ToString());
                     createdIndexes.Add(index.Name);
                 }
                 if (TrafficWatchManager.HasRegisteredClients)

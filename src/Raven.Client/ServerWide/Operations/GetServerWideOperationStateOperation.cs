@@ -23,6 +23,7 @@ namespace Raven.Client.ServerWide.Operations
         internal class GetServerWideOperationStateCommand : RavenCommand<OperationState>
         {
             public override bool IsReadRequest => true;
+            public override bool IsClusterCommand => false;
 
             private readonly DocumentConventions _conventions;
             private readonly long _id;

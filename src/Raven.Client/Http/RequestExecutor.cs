@@ -988,8 +988,19 @@ namespace Raven.Client.Http
 
             request.RequestUri = new Uri(url);
 
-            if (!request.Headers.Contains(Constants.Headers.ClientVersion))
+            if (request.Headers.Contains(Constants.Headers.ClientVersion) == false)
                 request.Headers.Add(Constants.Headers.ClientVersion, ClientVersion);
+
+            if (command.IsClusterCommand)
+            {
+                if (command.Guid == null)
+                {
+                    command.Guid = Guid.NewGuid().ToString();
+                }
+
+                if (request.Headers.Contains(Constants.Headers.RaftCommandGuid) == false)
+                    request.Headers.Add(Constants.Headers.RaftCommandGuid, command.Guid);
+            }
 
             return request;
         }

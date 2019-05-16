@@ -147,6 +147,7 @@ namespace Raven.Client.Documents.Operations.Counters
             }
 
             public override bool IsReadRequest => true;
+            public override bool IsClusterCommand => false;
         }
     }
 }

@@ -37,6 +37,8 @@ namespace Raven.Client.ServerWide.Operations.Logs
                 _parameters = parameters ?? throw new ArgumentNullException(nameof(parameters));
             }
 
+            public override bool IsClusterCommand => false;
+
             public override HttpRequestMessage CreateRequest(JsonOperationContext ctx, ServerNode node, out string url)
             {
                 url = $"{node.Url}/admin/logs/configuration";

@@ -31,6 +31,8 @@ namespace Raven.Client.Documents.Operations.TransactionsRecording
                 _filePath = filePath;
             }
 
+            public override bool IsClusterCommand => false;
+
             public override HttpRequestMessage CreateRequest(JsonOperationContext ctx, ServerNode node, out string url)
             {
                 url = $"{node.Url}/databases/{node.Database}/admin/transactions/start-recording";

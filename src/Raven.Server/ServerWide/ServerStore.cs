@@ -1856,7 +1856,7 @@ namespace Raven.Server.ServerWide
         }
 
         public Task<(long Index, object Result)> WriteDatabaseRecordAsync(
-            string databaseName, DatabaseRecord record, long? index,
+            string databaseName, DatabaseRecord record, long? index, string guid,
             Dictionary<string, BlittableJsonReaderObject> databaseValues = null, bool isRestore = false)
         {
             if (databaseValues == null)
@@ -1873,7 +1873,7 @@ namespace Raven.Server.ServerWide
                 LeadersTicks = _engine.CurrentLeader?.LeaderShipDuration ?? 0
             };
 
-            var addDatabaseCommand = new AddDatabaseCommand(string.Empty) // TODO: pass a proper guid
+            var addDatabaseCommand = new AddDatabaseCommand(guid)
             {
                 Name = databaseName,
                 RaftCommandIndex = index,
@@ -2213,6 +2213,7 @@ namespace Raven.Server.ServerWide
             private readonly BlittableJsonReaderObject _command;
             private bool _reachedLeader;
             public override bool IsReadRequest => false;
+            public override bool IsClusterCommand => true;
             public bool HasReachLeader() => _reachedLeader;
             private readonly string _source;
             private readonly string _commandType;

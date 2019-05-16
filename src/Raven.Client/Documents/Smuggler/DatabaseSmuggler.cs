@@ -261,6 +261,8 @@ namespace Raven.Client.Documents.Smuggler
                 _tcs.TrySetCanceled();
             }
 
+            public override bool IsClusterCommand => false;
+
             public override HttpRequestMessage CreateRequest(JsonOperationContext ctx, ServerNode node, out string url)
             {
                 url = $"{node.Url}/databases/{node.Database}/smuggler/export?operationId={_operationId}";
@@ -295,6 +297,7 @@ namespace Raven.Client.Documents.Smuggler
             private readonly TaskCompletionSource<object> _tcs;
 
             public override bool IsReadRequest => false;
+            public override bool IsClusterCommand => false;
 
             public ImportCommand(DocumentConventions conventions, JsonOperationContext context, DatabaseSmugglerImportOptions options, Stream stream, long operationId, TaskCompletionSource<object> tcs)
             {

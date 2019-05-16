@@ -82,6 +82,7 @@ namespace Raven.Client.Documents.Operations.Indexes
             }
 
             public override bool IsReadRequest => false;
+            public override bool IsClusterCommand => true;
         }
     }
 }

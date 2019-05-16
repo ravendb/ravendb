@@ -322,6 +322,7 @@ namespace FastTests.Server.Replication
         private class GetConnectionFailuresCommand : RavenCommand<Dictionary<string, string[]>>
         {
             public override bool IsReadRequest => true;
+            public override bool IsClusterCommand => false;
 
             public override HttpRequestMessage CreateRequest(JsonOperationContext ctx, ServerNode node, out string url)
             {
@@ -364,6 +365,7 @@ namespace FastTests.Server.Replication
         private class GetReplicationTombstonesCommand : RavenCommand<List<string>>
         {
             public override bool IsReadRequest => true;
+            public override bool IsClusterCommand => false;
 
             public override HttpRequestMessage CreateRequest(JsonOperationContext ctx, ServerNode node, out string url)
             {

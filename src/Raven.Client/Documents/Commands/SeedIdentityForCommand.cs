@@ -19,6 +19,7 @@ namespace Raven.Client.Documents.Commands
         }
 
         public override bool IsReadRequest { get; } = false;
+        public override bool IsClusterCommand => true;
 
         public override HttpRequestMessage CreateRequest(JsonOperationContext ctx, ServerNode node, out string url)
         {

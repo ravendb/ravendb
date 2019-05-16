@@ -99,5 +99,6 @@ namespace Raven.Client.Documents.Commands
         }
 
         public override bool IsReadRequest => true;
+        public override bool IsClusterCommand => false;
     }
 }

@@ -60,7 +60,7 @@ namespace Raven.Server.Documents.Handlers
         [RavenAction("/databases/*/admin/revisions/config", "POST", AuthorizationStatus.DatabaseAdmin)]
         public async Task ConfigRevisions()
         {
-            await DatabaseConfigurations(ServerStore.ModifyDatabaseRevisions, "read-revisions-config", GetStringQueryString("guid", required: false));
+            await DatabaseConfigurations(ServerStore.ModifyDatabaseRevisions, "read-revisions-config", GetRaftGuidFromHeaders());
         }
 
         [RavenAction("/databases/*/revisions", "GET", AuthorizationStatus.ValidUser)]

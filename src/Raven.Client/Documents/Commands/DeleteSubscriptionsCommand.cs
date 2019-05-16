@@ -13,6 +13,8 @@ namespace Raven.Client.Documents.Commands
             _name = name;
         }
 
+        public override bool IsClusterCommand => true;
+
         public override HttpRequestMessage CreateRequest(JsonOperationContext ctx, ServerNode node, out string url)
         {
             url = $"{node.Url}/databases/{node.Database}/subscriptions?taskName={_name}";

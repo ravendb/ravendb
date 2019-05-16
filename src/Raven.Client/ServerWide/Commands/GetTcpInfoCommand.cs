@@ -50,6 +50,7 @@ namespace Raven.Client.ServerWide.Commands
 
         public ServerNode RequestedNode { get; private set; }
 
-        public override bool IsReadRequest => true;   
+        public override bool IsReadRequest => true;
+        public override bool IsClusterCommand => false;
     }
 }

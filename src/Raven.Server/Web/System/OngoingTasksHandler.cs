@@ -546,7 +546,7 @@ namespace Raven.Server.Web.System
 
             ServerStore.EnsureNotPassive();
 
-            var (index, _) = await ServerStore.RemoveConnectionString(Database.Name, connectionStringName, type, GetStringQueryString("guid", required: false));
+            var (index, _) = await ServerStore.RemoveConnectionString(Database.Name, connectionStringName, type, GetRaftGuidFromHeaders());
             await ServerStore.Cluster.WaitForIndexNotification(index);
             HttpContext.Response.StatusCode = (int)HttpStatusCode.OK;
 
@@ -654,7 +654,7 @@ namespace Raven.Server.Web.System
         [RavenAction("/databases/*/admin/connection-strings", "PUT", AuthorizationStatus.DatabaseAdmin)]
         public async Task PutConnectionString()
         {
-            await DatabaseConfigurations((_, databaseName, connectionString, guid) => ServerStore.PutConnectionString(_, databaseName, connectionString, guid), "put-connection-string", GetStringQueryString("guid", required: false));
+            await DatabaseConfigurations((_, databaseName, connectionString, guid) => ServerStore.PutConnectionString(_, databaseName, connectionString, guid), "put-connection-string", GetRaftGuidFromHeaders());
         }
 
         [RavenAction("/databases/*/admin/etl", "RESET", AuthorizationStatus.Operator)]
@@ -663,7 +663,7 @@ namespace Raven.Server.Web.System
             var configurationName = GetStringQueryString("configurationName"); // etl task name
             var transformationName = GetStringQueryString("transformationName");
 
-            await DatabaseConfigurations((_, databaseName, etlConfiguration, guid) => ServerStore.RemoveEtlProcessState(_, databaseName, configurationName, transformationName, guid), "etl-reset", GetStringQueryString("guid", required: false));
+            await DatabaseConfigurations((_, databaseName, etlConfiguration, guid) => ServerStore.RemoveEtlProcessState(_, databaseName, configurationName, transformationName, guid), "etl-reset", GetRaftGuidFromHeaders());
         }
 
         [RavenAction("/databases/*/admin/etl", "PUT", AuthorizationStatus.Operator)]
@@ -674,7 +674,7 @@ namespace Raven.Server.Web.System
             if (id == null)
             {
                 await DatabaseConfigurations((_, databaseName, etlConfiguration, guid) => ServerStore.AddEtl(_, databaseName, etlConfiguration, guid), "etl-add", 
-                    GetStringQueryString("guid", required: false), beforeSetupConfiguration: AssertCanAddOrUpdateEtl, fillJson: (json, _, index) => json[nameof(EtlConfiguration<ConnectionString>.TaskId)] = index);
+                    GetRaftGuidFromHeaders(), beforeSetupConfiguration: AssertCanAddOrUpdateEtl, fillJson: (json, _, index) => json[nameof(EtlConfiguration<ConnectionString>.TaskId)] = index);
 
                 return;
             }
@@ -688,7 +688,7 @@ namespace Raven.Server.Web.System
                 return task;
 
             }, "etl-update", 
-                GetStringQueryString("guid", required: false),
+                GetRaftGuidFromHeaders(),
                 fillJson: (json, _, index) => json[nameof(EtlConfiguration<ConnectionString>.TaskId)] = index);
 
 
@@ -1058,7 +1058,7 @@ namespace Raven.Server.Web.System
 
             using (ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
             {
-                var (index, _) = await ServerStore.ToggleTaskState(key, taskName, type, disable, Database.Name, GetStringQueryString("guid", required: false));
+                var (index, _) = await ServerStore.ToggleTaskState(key, taskName, type, disable, Database.Name, GetRaftGuidFromHeaders());
                 await Database.RachisLogIndexNotifications.WaitForIndexNotification(index, ServerStore.Engine.OperationTimeout);
 
                 HttpContext.Response.StatusCode = (int)HttpStatusCode.OK;
@@ -1136,7 +1136,7 @@ namespace Raven.Server.Web.System
                 var action = new DeleteOngoingTaskAction(id, type, ServerStore, Database, context);
                 try
                 {
-                    (index, _) = await ServerStore.DeleteOngoingTask(id, taskName, type, Database.Name, GetStringQueryString("guid", required: false));
+                    (index, _) = await ServerStore.DeleteOngoingTask(id, taskName, type, Database.Name, GetRaftGuidFromHeaders());
                     await Database.RachisLogIndexNotifications.WaitForIndexNotification(index, ServerStore.Engine.OperationTimeout);
                 }
                 finally

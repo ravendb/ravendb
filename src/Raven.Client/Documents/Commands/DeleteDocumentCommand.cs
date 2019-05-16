@@ -16,6 +16,8 @@ namespace Raven.Client.Documents.Commands
             _changeVector = changeVector;
         }
 
+        public override bool IsClusterCommand => false;
+
         public override HttpRequestMessage CreateRequest(JsonOperationContext ctx, ServerNode node, out string url)
         {
             EnsureIsNotNullOrEmpty(_id, nameof(_id));

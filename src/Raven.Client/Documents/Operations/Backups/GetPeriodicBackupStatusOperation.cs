@@ -23,6 +23,8 @@ namespace Raven.Client.Documents.Operations.Backups
         private class GetPeriodicBackupStatusCommand : RavenCommand<GetPeriodicBackupStatusOperationResult>
         {
             public override bool IsReadRequest => true;
+            public override bool IsClusterCommand => false;
+
             private readonly long _taskId;
 
             public GetPeriodicBackupStatusCommand(long taskId)

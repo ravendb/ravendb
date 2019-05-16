@@ -162,5 +162,6 @@ namespace Raven.Server.Web.System
         }
 
         public override bool IsReadRequest => true;
+        public override bool IsClusterCommand => false;
     }
 }

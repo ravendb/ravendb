@@ -39,6 +39,8 @@ namespace Raven.Client.ServerWide.Operations.Configuration
                 _configuration = EntityToBlittable.ConvertCommandToBlittable(configuration,context);
             }
 
+            public override bool IsClusterCommand => true;
+
             public override HttpRequestMessage CreateRequest(JsonOperationContext ctx, ServerNode node, out string url)
             {
                 url = $"{node.Url}/admin/configuration/client";

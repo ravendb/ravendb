@@ -203,6 +203,7 @@ namespace SlowTests.Issues
             private readonly long _operationId;
 
             public override bool IsReadRequest => false;
+            public override bool IsClusterCommand => false;
 
             public CsvImportCommand(Stream stream, string collection, long operationId)
             {

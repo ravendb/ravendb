@@ -16,6 +16,7 @@ namespace Raven.Client.Documents.Operations.Identities
         private class GetIdentitiesCommand : RavenCommand<Dictionary<string, long>>
         {
             public override bool IsReadRequest => true;
+            public override bool IsClusterCommand => false;
 
             public override HttpRequestMessage CreateRequest(JsonOperationContext ctx, ServerNode node, out string url)
             {

@@ -13,6 +13,7 @@ namespace Raven.Client.ServerWide.Commands.Cluster
         private readonly string _node;
 
         public override bool IsReadRequest => false;
+        public override bool IsClusterCommand => true;
 
         public PromoteClusterNodeCommand(string node)
         {

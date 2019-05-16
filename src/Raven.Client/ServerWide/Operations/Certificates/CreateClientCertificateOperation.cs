@@ -46,6 +46,7 @@ namespace Raven.Client.ServerWide.Operations.Certificates
             }
 
             public override bool IsReadRequest => true;
+            public override bool IsClusterCommand => false;
 
             public override HttpRequestMessage CreateRequest(JsonOperationContext ctx, ServerNode node, out string url)
             {

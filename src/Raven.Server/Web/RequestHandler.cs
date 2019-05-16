@@ -253,6 +253,11 @@ namespace Raven.Server.Web
             return HttpContext.WebSockets.IsWebSocketRequest;
         }
 
+        public string GetRaftGuidFromHeaders()
+        {
+            return GetStringFromHeaders(Constants.Headers.RaftCommandGuid) ?? Guid.NewGuid().ToString();
+        }
+
         protected string GetStringFromHeaders(string name)
         {
             var headers = HttpContext.Request.Headers[name];

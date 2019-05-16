@@ -32,6 +32,7 @@ namespace Raven.Client.Documents.Operations.Expiration
             }
 
             public override bool IsReadRequest => false;
+            public override bool IsClusterCommand => true;
 
             public override HttpRequestMessage CreateRequest(JsonOperationContext ctx, ServerNode node, out string url)
             {

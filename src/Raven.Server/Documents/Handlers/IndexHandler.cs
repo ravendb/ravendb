@@ -479,7 +479,7 @@ namespace Raven.Server.Documents.Handlers
                 auditLog.Info($"Index {name} DELETE by {clientCert?.Subject} {clientCert?.Thumbprint}");
             }
 
-            HttpContext.Response.StatusCode = await Database.IndexStore.TryDeleteIndexIfExists(name, GetStringQueryString("guid", required: false))
+            HttpContext.Response.StatusCode = await Database.IndexStore.TryDeleteIndexIfExists(name, GetRaftGuidFromHeaders())
                 ? (int)HttpStatusCode.NoContent
                 : (int)HttpStatusCode.NotFound;
         }

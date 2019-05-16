@@ -54,6 +54,8 @@ namespace Raven.Client
             public const string TransferEncoding = "Transfer-Encoding";
             public const string ContentEncoding = "Content-Encoding";
             public const string ContentLength = "Content-Length";
+
+            public const string RaftCommandGuid = "Raft-Command-Guid";
         }
 
         public class Platform

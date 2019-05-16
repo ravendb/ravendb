@@ -25,6 +25,7 @@ namespace Raven.Client.Documents.Operations.Backups
         private class StartBackupCommand : RavenCommand<StartBackupOperationResult>
         {
             public override bool IsReadRequest => true;
+            public override bool IsClusterCommand => false;
 
             private readonly bool _isFullBackup;
             private readonly long _taskId;

@@ -26,6 +26,7 @@ namespace Raven.Client.ServerWide.Operations
             private readonly string _database;
 
             public override bool IsReadRequest => false;
+            public override bool IsClusterCommand => false;
 
             public GetDatabaseRecordCommand(DocumentConventions conventions, string database)
             {

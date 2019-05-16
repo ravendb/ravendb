@@ -26,6 +26,8 @@ namespace Raven.Client.ServerWide.Commands
         }
 
         public override bool IsReadRequest => true;
+        public override bool IsClusterCommand => false;
+
         public override HttpRequestMessage CreateRequest(JsonOperationContext ctx, ServerNode node, out string url)
         {
             url = _commandUrl.StartsWith("/") ? 

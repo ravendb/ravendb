@@ -14,6 +14,8 @@ namespace Raven.Client.Documents.Operations.TransactionsRecording
 
         private class StopTransactionsRecordingCommand : RavenCommand
         {
+            public override bool IsClusterCommand => false;
+
             public override HttpRequestMessage CreateRequest(JsonOperationContext ctx, ServerNode node, out string url)
             {
                 url = $"{node.Url}/databases/{node.Database}/admin/transactions/stop-recording";
