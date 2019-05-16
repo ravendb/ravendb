@@ -37,7 +37,8 @@ namespace Raven.Server.Config.Categories
         [DefaultValue(30)]
         [TimeUnit(TimeUnit.Seconds)]
         [ConfigurationEntry("Storage.TimeToSyncAfterFlashInSec", ConfigurationEntryScope.ServerWideOrPerDatabase)]
-        public TimeSetting TimeToSyncAfterFlash { get; set; }
+        [ConfigurationEntry("Storage.TimeToSyncAfterFlushInSec", ConfigurationEntryScope.ServerWideOrPerDatabase)]
+        public TimeSetting TimeToSyncAfterFlush { get; set; }
 
         [Description("Number of concurrent syncs per physical drive")]
         [DefaultValue(3)]
