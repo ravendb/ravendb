@@ -1600,12 +1600,12 @@ namespace Raven.Server.Json
         {
             writer.WriteStartObject();
 
-            writer.WritePropertyName("OperationId");
+            writer.WritePropertyName(nameof(OperationIdResult.OperationId));
             writer.WriteInteger(operationId);
 
             writer.WriteComma();
 
-            writer.WritePropertyName("OperationNodeTag");
+            writer.WritePropertyName(nameof(OperationIdResult.OperationNodeTag));
             writer.WriteString(nodeTag);
 
             writer.WriteEndObject();

@@ -231,7 +231,8 @@ namespace Raven.Server.Documents.Handlers.Admin
                         },
                         new Dictionary<string, string>(),
                         new Dictionary<string, string>(),
-                        tag
+                        tag,
+                        -1L
                     );
                     nodeTag = tag;
                 }
@@ -251,11 +252,12 @@ namespace Raven.Server.Documents.Handlers.Admin
                         null : DynamicJsonValue.Convert(loadLicenseLimits.NodeLicenseDetails);
                     var json = new DynamicJsonValue
                     {
-                        ["Topology"] = topology.ToSortedJson(),
-                        ["Leader"] = ServerStore.LeaderTag,
+                        [nameof(ClusterTopologyResponse.Topology)] = topology.ToSortedJson(),
+                        [nameof(ClusterTopologyResponse.Etag)] = topology.Etag,
+                        [nameof(ClusterTopologyResponse.Leader)] = ServerStore.LeaderTag,
                         ["LeaderShipDuration"] = ServerStore.Engine.CurrentLeader?.LeaderShipDuration,
                         ["CurrentState"] = ServerStore.CurrentRachisState,
-                        ["NodeTag"] = nodeTag,
+                        [nameof(ClusterTopologyResponse.NodeTag)] = nodeTag,
                         ["CurrentTerm"] = ServerStore.Engine.CurrentTerm,
                         ["NodeLicenseDetails"] = nodeLicenseDetails,
                         [nameof(ServerStore.Engine.LastStateChangeReason)] = ServerStore.LastStateChangeReason()

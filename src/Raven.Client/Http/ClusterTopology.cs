@@ -6,13 +6,14 @@ namespace Raven.Client.Http
 {
     public class ClusterTopology
     {
-        public ClusterTopology(string topologyId, Dictionary<string, string> members, Dictionary<string, string> promotables, Dictionary<string, string> watchers, string lastNodeId)
+        public ClusterTopology(string topologyId, Dictionary<string, string> members, Dictionary<string, string> promotables, Dictionary<string, string> watchers, string lastNodeId, long index)
         {
             TopologyId = topologyId;
             Members = members;
             Promotables = promotables;
             Watchers = watchers;
             LastNodeId = lastNodeId;
+            Etag = index;
         }
 
         internal void ReplaceCurrentNodeUrlWithClientRequestedUrl(string currentNodeTag, string clientRequestedUrl)
@@ -90,7 +91,8 @@ namespace Raven.Client.Http
                 [nameof(Members)] = DynamicJsonValue.Convert(new SortedDictionary<string, string>(Members)),
                 [nameof(Promotables)] = DynamicJsonValue.Convert(new SortedDictionary<string, string>(Promotables)),
                 [nameof(Watchers)] = DynamicJsonValue.Convert(new SortedDictionary<string, string>(Watchers)),
-                [nameof(LastNodeId)] = LastNodeId
+                [nameof(LastNodeId)] = LastNodeId,
+                [nameof(Etag)] = Etag
             };
         }
 
@@ -102,7 +104,8 @@ namespace Raven.Client.Http
                 [nameof(Members)] = DynamicJsonValue.Convert(Members),
                 [nameof(Promotables)] = DynamicJsonValue.Convert(Promotables),
                 [nameof(Watchers)] = DynamicJsonValue.Convert(Watchers),
-                [nameof(LastNodeId)] = LastNodeId
+                [nameof(LastNodeId)] = LastNodeId,
+                [nameof(Etag)] = Etag
             };
         }
 
@@ -172,6 +175,7 @@ namespace Raven.Client.Http
 
         public string LastNodeId { get; protected set; }
         public string TopologyId { get; protected set; }
+        public long Etag { get; protected set; }
 
         public Dictionary<string, string> Members { get; protected set; }
         public Dictionary<string, string> Promotables { get; protected set; }

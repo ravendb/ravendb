@@ -15,10 +15,10 @@ namespace Raven.Client.Documents.Operations
             _id = id;
         }
 
-        public GetOperationStateOperation(long id, string node)
+        public GetOperationStateOperation(long id, string nodeTag)
         {
             _id = id;
-            _nodeTag = node;
+            _nodeTag = nodeTag;
         }
 
         public RavenCommand<OperationState> GetCommand(DocumentConventions conventions, JsonOperationContext context)

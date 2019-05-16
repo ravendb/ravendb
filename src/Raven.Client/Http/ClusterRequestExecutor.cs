@@ -106,7 +106,8 @@ namespace Raven.Client.Http
                                 Url = member.Value,
                                 ClusterTag = member.Key
                             }
-                        )
+                        ),
+                        Etag = results.Etag
                     };
 
                     if (_nodeSelector == null)
