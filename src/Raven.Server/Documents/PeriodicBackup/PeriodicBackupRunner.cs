@@ -347,102 +347,101 @@ namespace Raven.Server.Documents.PeriodicBackup
 
         private long CreateBackupTask(PeriodicBackup periodicBackup, bool isFullBackup)
         {
-            if (periodicBackup.UpdateBackupTaskSemaphore.Wait(0) == false)
-                return periodicBackup.RunningBackupTaskId ?? -1;
-
-            try
+            using (periodicBackup.UpdateBackupTask())
             {
-                if (periodicBackup.Disposed || periodicBackup.RunningTask != null)
-                    return periodicBackup.RunningBackupTaskId ?? -1;
-
-                var backupStatus = periodicBackup.BackupStatus = GetBackupStatus(periodicBackup.Configuration.TaskId, periodicBackup.BackupStatus);
-                var backupToLocalFolder = PeriodicBackupConfiguration.CanBackupUsing(periodicBackup.Configuration.LocalSettings);
-
-                // check if we need to do a new full backup
-                if (backupStatus.LastFullBackup == null || // no full backup was previously performed
-                    backupStatus.NodeTag != _serverStore.NodeTag || // last backup was performed by a different node
-                    backupStatus.BackupType != periodicBackup.Configuration.BackupType || // backup type has changed
-                    backupStatus.LastEtag == null || // last document etag wasn't updated
-                    backupToLocalFolder && BackupTask.DirectoryContainsBackupFiles(backupStatus.LocalBackup.BackupDirectory, IsFullBackupOrSnapshot) == false)
-                    // the local folder already includes a full backup or snapshot
+                try
                 {
-                    isFullBackup = true;
-                }
+                    if (periodicBackup.Disposed)
+                        throw new InvalidOperationException("Backup task was already disposed");
 
-                var operationId = _database.Operations.GetNextOperationId();
-                var backupTypeText = GetBackupTypeText(isFullBackup, periodicBackup.Configuration.BackupType);
+                    if (periodicBackup.RunningTask != null)
+                        return periodicBackup.RunningBackupTaskId ?? -1;
 
-                periodicBackup.StartTime = SystemTime.UtcNow;
-                var backupTask = new BackupTask(
-                    _serverStore,
-                    _database,
-                    periodicBackup,
-                    isFullBackup,
-                    backupToLocalFolder,
-                    operationId,
-                    _tempBackupPath,
-                    _logger,
-                    _cancellationToken.Token);
+                    var backupStatus = periodicBackup.BackupStatus = GetBackupStatus(periodicBackup.Configuration.TaskId, periodicBackup.BackupStatus);
+                    var backupToLocalFolder = PeriodicBackupConfiguration.CanBackupUsing(periodicBackup.Configuration.LocalSettings);
 
-                periodicBackup.RunningBackupTaskId = operationId;
-                periodicBackup.CancelToken = backupTask.TaskCancelToken;
-                var backupTaskName = $"{backupTypeText} backup task: '{periodicBackup.Configuration.Name}'";
-
-                var task = _database.Operations.AddOperation(
-                    null,
-                    backupTaskName,
-                    Operations.Operations.OperationType.DatabaseBackup,
-                    taskFactory: onProgress => Task.Run(async () =>
+                    // check if we need to do a new full backup
+                    if (backupStatus.LastFullBackup == null || // no full backup was previously performed
+                        backupStatus.NodeTag != _serverStore.NodeTag || // last backup was performed by a different node
+                        backupStatus.BackupType != periodicBackup.Configuration.BackupType || // backup type has changed
+                        backupStatus.LastEtag == null || // last document etag wasn't updated
+                        backupToLocalFolder && BackupTask.DirectoryContainsBackupFiles(backupStatus.LocalBackup.BackupDirectory, IsFullBackupOrSnapshot) == false)
+                    // the local folder already includes a full backup or snapshot
                     {
-                        try
+                        isFullBackup = true;
+                    }
+
+                    var operationId = _database.Operations.GetNextOperationId();
+                    var backupTypeText = GetBackupTypeText(isFullBackup, periodicBackup.Configuration.BackupType);
+
+                    periodicBackup.StartTime = SystemTime.UtcNow;
+                    var backupTask = new BackupTask(
+                        _serverStore,
+                        _database,
+                        periodicBackup,
+                        isFullBackup,
+                        backupToLocalFolder,
+                        operationId,
+                        _tempBackupPath,
+                        _logger,
+                        _cancellationToken.Token);
+
+                    periodicBackup.RunningBackupTaskId = operationId;
+                    periodicBackup.CancelToken = backupTask.TaskCancelToken;
+                    var backupTaskName = $"{backupTypeText} backup task: '{periodicBackup.Configuration.Name}'";
+
+                    var task = _database.Operations.AddOperation(
+                        null,
+                        backupTaskName,
+                        Operations.Operations.OperationType.DatabaseBackup,
+                        taskFactory: onProgress => Task.Run(async () =>
                         {
-                            using (_database.PreventFromUnloading())
+                            try
                             {
-                                return await backupTask.RunPeriodicBackup(onProgress);
+                                using (_database.PreventFromUnloading())
+                                {
+                                    return await backupTask.RunPeriodicBackup(onProgress);
+                                }
                             }
-                        }
-                        finally
-                        {
-                            periodicBackup.RunningTask = null;
-                            periodicBackup.RunningBackupTaskId = null;
-                            periodicBackup.CancelToken = null;
-                            periodicBackup.RunningBackupStatus = null;
-
-                            if (periodicBackup.HasScheduledBackup() &&
-                                _cancellationToken.IsCancellationRequested == false)
+                            finally
                             {
-                                var newBackupTimer = GetTimer(periodicBackup.Configuration, periodicBackup.BackupStatus);
-                                periodicBackup.UpdateTimer(newBackupTimer, discardIfDisabled: true);
+                                periodicBackup.RunningTask = null;
+                                periodicBackup.RunningBackupTaskId = null;
+                                periodicBackup.CancelToken = null;
+                                periodicBackup.RunningBackupStatus = null;
+
+                                if (periodicBackup.HasScheduledBackup() &&
+                                    _cancellationToken.IsCancellationRequested == false)
+                                {
+                                    var newBackupTimer = GetTimer(periodicBackup.Configuration, periodicBackup.BackupStatus);
+                                    periodicBackup.UpdateTimer(newBackupTimer, discardIfDisabled: true);
+                                }
                             }
-                        }
-                    }, backupTask.TaskCancelToken.Token),
-                    id: operationId,
-                    token: backupTask.TaskCancelToken);
+                        }, backupTask.TaskCancelToken.Token),
+                        id: operationId,
+                        token: backupTask.TaskCancelToken);
 
-                periodicBackup.RunningTask = task;
-                task.ContinueWith(_ => backupTask.TaskCancelToken.Dispose());
+                    periodicBackup.RunningTask = task;
+                    task.ContinueWith(_ => backupTask.TaskCancelToken.Dispose());
 
-                return operationId;
-            }
-            catch (Exception e)
-            {
-                var message = $"Failed to start the backup task: '{periodicBackup.Configuration.Name}'";
-                if (_logger.IsOperationsEnabled)
-                    _logger.Operations(message, e);
+                    return operationId;
+                }
+                catch (Exception e)
+                {
+                    var message = $"Failed to start the backup task: '{periodicBackup.Configuration.Name}'";
+                    if (_logger.IsOperationsEnabled)
+                        _logger.Operations(message, e);
 
-                _database.NotificationCenter.Add(AlertRaised.Create(
-                    _database.Name,
-                    $"Periodic Backup task: '{periodicBackup.Configuration.Name}'",
-                    message,
-                    AlertType.PeriodicBackup,
-                    NotificationSeverity.Error,
-                    details: new ExceptionDetails(e)));
+                    _database.NotificationCenter.Add(AlertRaised.Create(
+                        _database.Name,
+                        $"Periodic Backup task: '{periodicBackup.Configuration.Name}'",
+                        message,
+                        AlertType.PeriodicBackup,
+                        NotificationSeverity.Error,
+                        details: new ExceptionDetails(e)));
 
-                throw;
-            }
-            finally
-            {
-                periodicBackup.UpdateBackupTaskSemaphore.Release();
+                    throw;
+                }
             }
         }
 

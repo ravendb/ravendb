@@ -2,6 +2,7 @@ using System;
 using System.Threading;
 using System.Threading.Tasks;
 using Raven.Client.Documents.Operations.Backups;
+using Raven.Client.Util;
 using Raven.Server.ServerWide;
 using Sparrow.Collections;
 using Sparrow.Threading;
@@ -10,8 +11,7 @@ namespace Raven.Server.Documents.PeriodicBackup
 {
     public class PeriodicBackup : IDisposable
     {
-        private readonly SemaphoreSlim _updateTimerSemaphore = new SemaphoreSlim(1);
-        public readonly SemaphoreSlim UpdateBackupTaskSemaphore = new SemaphoreSlim(1);
+        private readonly SemaphoreSlim _updateBackupTaskSemaphore = new SemaphoreSlim(1);
 
         private readonly DisposeOnce<SingleAttempt> _disposeOnce;
 
@@ -37,60 +37,59 @@ namespace Raven.Server.Documents.PeriodicBackup
         {
             _disposeOnce = new DisposeOnce<SingleAttempt>(() =>
             {
-                UpdateBackupTaskSemaphore.Wait();
-
-                try
+                using (UpdateBackupTask())
                 {
-                    DisableFutureBackups();
+                    CancelFutureTasks();
 
                     if (RunningTask?.IsCompleted == false)
                     {
                         inactiveRunningPeriodicBackupsTasks.Add(RunningTask);
                     }
                 }
-                finally
-                {
-                    UpdateBackupTaskSemaphore.Release();
-                }
             });
+        }
+
+        public IDisposable UpdateBackupTask()
+        {
+            _updateBackupTaskSemaphore.Wait();
+
+            return new DisposableAction(() => _updateBackupTaskSemaphore.Release());
         }
 
         public void DisableFutureBackups()
         {
-            _updateTimerSemaphore.Wait();
+            using (UpdateBackupTask())
+            {
+                CancelFutureTasks();
+            }
+        }
+
+        private void CancelFutureTasks()
+        {
+            BackupTimer?.Dispose();
+            BackupTimer = null;
 
             try
             {
-                BackupTimer?.Dispose();
-                BackupTimer = null;
-
-                try
-                {
-                    CancelToken?.Cancel();
-                }
-                catch {}
+                CancelToken?.Cancel();
             }
-            finally
+            catch
             {
-                _updateTimerSemaphore.Release();
             }
         }
 
         public void UpdateTimer(Timer newBackupTimer, bool discardIfDisabled = false)
         {
-            _updateTimerSemaphore.Wait();
-
-            try
+            using (UpdateBackupTask())
             {
+                if (Disposed)
+                    return;
+
                 if (discardIfDisabled && BackupTimer == null)
                     return;
 
                 BackupTimer?.Dispose();
                 BackupTimer = newBackupTimer;
-            }
-            finally
-            {
-                _updateTimerSemaphore.Release();
             }
         }
 
