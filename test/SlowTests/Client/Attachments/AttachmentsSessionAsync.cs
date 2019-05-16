@@ -21,7 +21,7 @@ namespace SlowTests.Client.Attachments
             {
                 var dbId = new Guid("00000000-48c4-421e-9466-000000000000");
                 await SetDatabaseId(store, dbId);
-            
+
                 var names = new[]
                 {
                     "profile.png",
@@ -30,11 +30,11 @@ namespace SlowTests.Client.Attachments
                 };
 
                 using (var session = store.OpenAsyncSession())
-                using (var profileStream = new MemoryStream(new byte[] {1, 2, 3}))
-                using (var backgroundStream = new MemoryStream(new byte[] {10, 20, 30, 40, 50}))
-                using (var fileStream = new MemoryStream(new byte[] {1, 2, 3, 4, 5}))
+                using (var profileStream = new MemoryStream(new byte[] { 1, 2, 3 }))
+                using (var backgroundStream = new MemoryStream(new byte[] { 10, 20, 30, 40, 50 }))
+                using (var fileStream = new MemoryStream(new byte[] { 1, 2, 3, 4, 5 }))
                 {
-                    var user = new User {Name = "Fitzchak"};
+                    var user = new User { Name = "Fitzchak" };
                     await session.StoreAsync(user, "users/1");
 
                     session.Advanced.Attachments.Store("users/1", names[0], profileStream, "image/png");
@@ -85,7 +85,7 @@ namespace SlowTests.Client.Attachments
                         using (var attachment = await session.Advanced.Attachments.GetAsync(user, name))
                         {
                             attachment.Stream.CopyTo(attachmentStream);
-                            Assert.Contains("A:"+(i+2), attachment.Details.ChangeVector);
+                            Assert.Contains("A:" + (i + 2), attachment.Details.ChangeVector);
                             Assert.Equal(name, attachment.Details.Name);
                             Assert.Equal(i == 0 ? 3 : 5, attachmentStream.Position);
                             if (i == 0)
@@ -134,14 +134,14 @@ namespace SlowTests.Client.Attachments
 
                 using (var session = store.OpenAsyncSession())
                 {
-                    var user = new User {Name = "Fitzchak"};
+                    var user = new User { Name = "Fitzchak" };
                     await session.StoreAsync(user, "users/1");
-                    
-                    using (var profileStream = new MemoryStream(new byte[] {1, 2, 3}))
+
+                    using (var profileStream = new MemoryStream(new byte[] { 1, 2, 3 }))
                         session.Advanced.Attachments.Store(user, names[0], profileStream, "image/png");
-                    using (var backgroundStream = new MemoryStream(new byte[] {10, 20, 30, 40, 50}))
+                    using (var backgroundStream = new MemoryStream(new byte[] { 10, 20, 30, 40, 50 }))
                         session.Advanced.Attachments.Store(user, names[1], backgroundStream, "ImGgE/jPeG");
-                    using (var fileStream = new MemoryStream(new byte[] {1, 2, 3, 4, 5}))
+                    using (var fileStream = new MemoryStream(new byte[] { 1, 2, 3, 4, 5 }))
                         session.Advanced.Attachments.Store(user, names[2], fileStream, null);
 
                     var exception = await Assert.ThrowsAsync<InvalidOperationException>(async () => await session.SaveChangesAsync());
@@ -156,9 +156,9 @@ namespace SlowTests.Client.Attachments
             using (var store = GetDocumentStore())
             {
                 using (var session = store.OpenAsyncSession())
-                using (var stream = new MemoryStream(new byte[] {1, 2, 3}))
+                using (var stream = new MemoryStream(new byte[] { 1, 2, 3 }))
                 {
-                    var user = new User {Name = "Fitzchak"};
+                    var user = new User { Name = "Fitzchak" };
                     await session.StoreAsync(user, "users/1");
 
                     session.Advanced.Attachments.Store(user, "profile", stream, "image/png");
@@ -218,7 +218,7 @@ namespace SlowTests.Client.Attachments
             {
                 using (var session = store.OpenAsyncSession())
                 {
-                    var user = new User {Name = "Fitzchak"};
+                    var user = new User { Name = "Fitzchak" };
                     await session.StoreAsync(user, "users/1");
                     await session.SaveChangesAsync();
                 }
@@ -243,10 +243,10 @@ namespace SlowTests.Client.Attachments
             {
                 var dbId = new Guid("00000000-48c4-421e-9466-000000000000");
                 await SetDatabaseId(store, dbId);
-              
+
                 using (var session = store.OpenAsyncSession())
                 {
-                    var user = new User {Name = "Fitzchak"};
+                    var user = new User { Name = "Fitzchak" };
                     await session.StoreAsync(user, "users/1");
 
                     using (var stream1 = new MemoryStream(Enumerable.Range(1, 3).Select(x => (byte)x).ToArray()))
@@ -338,7 +338,7 @@ namespace SlowTests.Client.Attachments
             {
                 using (var session = store.OpenAsyncSession())
                 {
-                    var user = new User {Name = "Fitzchak"};
+                    var user = new User { Name = "Fitzchak" };
                     await session.StoreAsync(user, "users/1");
 
                     using (var stream = new MemoryStream(Enumerable.Range(1, 3).Select(x => (byte)x).ToArray()))
@@ -371,7 +371,7 @@ namespace SlowTests.Client.Attachments
             {
                 using (var session = store.OpenAsyncSession())
                 {
-                    await session.StoreAsync(new User {Name = "Fitzchak"}, "users/1");
+                    await session.StoreAsync(new User { Name = "Fitzchak" }, "users/1");
 
                     using (var stream = new MemoryStream(Enumerable.Range(1, 3).Select(x => (byte)x).ToArray()))
                     {
@@ -506,6 +506,42 @@ namespace SlowTests.Client.Attachments
                     Assert.False(await session.Advanced.Attachments.ExistsAsync("users/1", "background-photo"));
                     Assert.False(await session.Advanced.Attachments.ExistsAsync("users/2", "profile"));
                 }
+            }
+        }
+
+        [Fact]
+        public async Task VerifyAttachmentsThrowMessages()
+        {
+            using (var store = GetDocumentStore())
+            {
+                using (var asyncSession = store.OpenAsyncSession())
+                using (var session = store.OpenSession())
+                using (var stream = new MemoryStream())
+                {
+                    var user = new User { Name = "Or" };
+
+                    var exception = Assert.Throws<ArgumentException>(() => asyncSession.Advanced.Attachments.GetNames("Or"));
+                    Assert.Contains($"{nameof(asyncSession.Advanced.Attachments.GetNames)} requires a tracked entity object, other types such as documentId are not valid.", exception.Message);
+
+                    exception = Assert.Throws<ArgumentException>(() => asyncSession.Advanced.Attachments.GetNames(user));
+                    Assert.Contains($"is not associated with the session. You need to track the entity in the session.", exception.Message);
+
+                    exception = await Assert.ThrowsAsync<ArgumentException>(async () => await asyncSession.Advanced.Attachments.GetAsync(user, "Or"));
+                    Assert.Contains($"is not associated with the session. Use documentId instead or track the entity in the session.", exception.Message);
+
+                    exception = Assert.Throws<ArgumentException>(() => asyncSession.Advanced.Attachments.Delete(user, "Or"));
+                    Assert.Contains($"is not associated with the session. Use documentId instead or track the entity in the session.", exception.Message);
+
+                    exception = Assert.Throws<ArgumentException>(() => asyncSession.Advanced.Attachments.Store(user, "Or", stream));
+                    Assert.Contains($"is not associated with the session. Use documentId instead or track the entity in the session.", exception.Message);
+
+                    exception = Assert.Throws<ArgumentException>(() => asyncSession.Advanced.Attachments.Copy(user, "Or", user, "Or"));
+                    Assert.Contains($"is not associated with the session. Use documentId instead or track the entity in the session.", exception.Message);
+
+                    exception = Assert.Throws<ArgumentException>(() => session.Advanced.Attachments.Get(user, "Or"));
+                    Assert.Contains($"is not associated with the session. Use documentId instead or track the entity in the session.", exception.Message);
+                }
+
             }
         }
     }
