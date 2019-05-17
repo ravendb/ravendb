@@ -21,11 +21,11 @@ namespace Raven.Server.Documents.Queries
             switch (@operator)
             {
                 case OperatorType.And:
-                    Add(new BooleanClause(left, Occur.MUST));
+                    AddInternal(left, Occur.MUST, OperatorType.And);
                     TryAnd(right);
                     break;
                 case OperatorType.Or:
-                    Add(new BooleanClause(left, Occur.SHOULD));
+                    AddInternal(left, Occur.SHOULD, OperatorType.Or);
                     TryOr(right);
                     break;
                 default:
@@ -38,7 +38,7 @@ namespace Raven.Server.Documents.Queries
         {
             if (_operator == OperatorType.And)
             {
-                Add(right, Occur.MUST);
+                AddInternal(right, Occur.MUST, OperatorType.And);
                 return true;
             }
 
@@ -50,15 +50,15 @@ namespace Raven.Server.Documents.Queries
             if (_operator != OperatorType.And)
                 ThrowInvalidOperator(OperatorType.And);
 
-            Add(left, Occur.MUST);
-            Add(right, Occur.MUST);
+            AddInternal(left, Occur.MUST, OperatorType.And);
+            AddInternal(right, Occur.MUST, OperatorType.And);
         }
 
         public bool TryOr(Query right)
         {
             if (_operator == OperatorType.Or)
             {
-                Add(right, Occur.SHOULD);
+                AddInternal(right, Occur.SHOULD, OperatorType.Or);
                 return true;
             }
 
@@ -70,8 +70,24 @@ namespace Raven.Server.Documents.Queries
             if (_operator != OperatorType.Or)
                 ThrowInvalidOperator(OperatorType.Or);
 
-            Add(left, Occur.SHOULD);
-            Add(right, Occur.SHOULD);
+            AddInternal(left, Occur.SHOULD, OperatorType.Or);
+            AddInternal(right, Occur.SHOULD, OperatorType.Or);
+        }
+
+        private void AddInternal(Query query, Occur occur, OperatorType @operator)
+        {
+            if (query is RavenBooleanQuery booleanQuery)
+            {
+                if (booleanQuery._operator == @operator)
+                {
+                    foreach (var booleanClause in booleanQuery.Clauses)
+                        Add(booleanClause);
+
+                    return;
+                }
+            }
+
+            Add(query, occur);
         }
 
         private void ThrowInvalidOperator(OperatorType @operator)
