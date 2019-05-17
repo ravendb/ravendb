@@ -123,7 +123,7 @@ namespace Raven.Client.Documents.Indexes
 
             try
             {
-                Conventions = conventions ?? Conventions ?? store.Conventions;
+                Conventions = conventions ?? Conventions ?? store.GetRequestExecutor(database ?? store.Database).Conventions;                    
 
                 var indexDefinition = CreateIndexDefinition();
                 indexDefinition.Name = IndexName;

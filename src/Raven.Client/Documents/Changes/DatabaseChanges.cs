@@ -573,43 +573,45 @@ namespace Raven.Client.Documents.Changes
 
                             await UnmanagedJsonParserHelper.ReadObjectAsync(builder, peepingTomStream, parser, buffer).ConfigureAwait(false);
 
-                            var json = builder.CreateReader();
-
-                            try
+                            using (var json = builder.CreateReader())
                             {
-                                if ((json.TryGet(nameof(TopologyChange), out bool supports)) && (supports))
+                                try
                                 {
-                                    GetOrAddConnectionState("Topology", "watch-topology-change", "", "");
-                                    await _requestExecutor.UpdateTopologyAsync(_serverNode, 0, true, debugTag: "watch-topology-change").ConfigureAwait(false);
-                                    continue;
+                                    if (json.TryGet(nameof(TopologyChange), out bool supports) && supports)
+                                    {
+                                        GetOrAddConnectionState("Topology", "watch-topology-change", "", "");
+                                        await _requestExecutor.UpdateTopologyAsync(_serverNode, 0, true, debugTag: "watch-topology-change").ConfigureAwait(false);
+                                        continue;
+                                    }
+
+                                    if (json.TryGet("Type", out string type) == false)
+                                        continue;
+
+                                    switch (type)
+                                    {
+                                        case "Error":
+                                            json.TryGet("Exception", out string exceptionAsString);
+                                            NotifyAboutError(new Exception(exceptionAsString));
+                                            break;
+                                        case "Confirm":
+                                            if (json.TryGet("CommandId", out int commandId) &&
+                                                _confirmations.TryRemove(commandId, out var tcs))
+                                            {
+                                                tcs.TrySetResult(null);
+                                            }
+
+                                            break;
+                                        default:
+                                            json.TryGet("Value", out BlittableJsonReaderObject value);
+                                            NotifySubscribers(type, value, _counters.ValuesSnapshot);
+                                            break;
+                                    }
                                 }
-
-                                if (json.TryGet("Type", out string type) == false)
-                                    continue;
-
-                                switch (type)
+                                catch (Exception e)
                                 {
-                                    case "Error":
-                                        json.TryGet("Exception", out string exceptionAsString);
-                                        NotifyAboutError(new Exception(exceptionAsString));
-                                        break;
-                                    case "Confirm":
-                                        if (json.TryGet("CommandId", out int commandId) &&
-                                            _confirmations.TryRemove(commandId, out var tcs))
-                                        {
-                                            tcs.TrySetResult(null);
-                                        }
-                                        break;
-                                    default:
-                                        json.TryGet("Value", out BlittableJsonReaderObject value);
-                                        NotifySubscribers(type, value, _counters.ValuesSnapshot);
-                                        break;
+                                    NotifyAboutError(e);
+                                    throw new ChangeProcessingException(e);
                                 }
-                            }
-                            catch (Exception e)
-                            {
-                                NotifyAboutError(e);
-                                throw new ChangeProcessingException(e);
                             }
                         }
                     }
