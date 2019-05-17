@@ -1,6 +1,7 @@
 ﻿using System.Linq;
 using FastTests;
 using Newtonsoft.Json;
+using Raven.Client.Documents.Queries;
 using Raven.Client.Json;
 using Raven.Server.Documents.Queries;
 using Raven.Tests.Core.Utils.Entities;
@@ -19,6 +20,79 @@ namespace SlowTests.Issues
                 using (var session = store.OpenSession())
                 {
                     var serializer = store.Conventions.CreateSerializer();
+
+                    using (var context = JsonOperationContext.ShortTermSingleUse())
+                    {
+                        var usersOr = session.Advanced.DocumentQuery<User>()
+                            .WhereEquals(x => x.Name, "John").Boost(2)
+                            .OrElse()
+                            .WhereEquals(x => x.Name, "Bob").Boost(3)
+                            .OrElse()
+                            .WhereEquals(x => x.Name, "George").Boost(4)
+                            .OrElse()
+                            .WhereEquals(x => x.Name, "Georgina").Boost(5)
+                            .OrElse()
+                            .WhereEquals(x => x.Name, "Jane").Boost(6)
+                            .GetIndexQuery();
+
+                        Assert.Equal("Name:john^2.0 Name:bob^3.0 Name:george^4.0 Name:georgina^5.0 Name:jane^6.0", GetLuceneQuery(usersOr, context, serializer));
+
+                        var usersAnd = session.Advanced.DocumentQuery<User>()
+                            .WhereEquals(x => x.Name, "John").Boost(2)
+                            .AndAlso()
+                            .WhereEquals(x => x.Name, "Bob").Boost(3)
+                            .AndAlso()
+                            .WhereEquals(x => x.Name, "George").Boost(4)
+                            .AndAlso()
+                            .WhereEquals(x => x.Name, "Georgina").Boost(5)
+                            .AndAlso()
+                            .WhereEquals(x => x.Name, "Jane").Boost(6)
+                            .GetIndexQuery();
+
+                        Assert.Equal("+Name:john^2.0 +Name:bob^3.0 +Name:george^4.0 +Name:georgina^5.0 +Name:jane^6.0", GetLuceneQuery(usersAnd, context, serializer));
+
+                        var usersAndOrMixed = session.Advanced.DocumentQuery<User>()
+                            .WhereEquals(x => x.Name, "John").Boost(2)
+                            .AndAlso()
+                            .WhereEquals(x => x.Name, "Bob").Boost(3)
+                            .AndAlso()
+                            .WhereEquals(x => x.Name, "George").Boost(4)
+                            .OrElse()
+                            .WhereEquals(x => x.Name, "Georgina").Boost(5)
+                            .OrElse()
+                            .WhereEquals(x => x.Name, "Jane").Boost(6)
+                            .GetIndexQuery();
+
+                        Assert.Equal("(+Name:john^2.0 +Name:bob^3.0 +Name:george^4.0) Name:georgina^5.0 Name:jane^6.0", GetLuceneQuery(usersAndOrMixed, context, serializer));
+
+                        var usersAndOrMixed2 = session.Advanced.DocumentQuery<User>()
+                            .WhereEquals(x => x.Name, "John").Boost(2)
+                            .OrElse()
+                            .WhereEquals(x => x.Name, "Bob").Boost(3)
+                            .OrElse()
+                            .WhereEquals(x => x.Name, "George").Boost(4)
+                            .AndAlso()
+                            .WhereEquals(x => x.Name, "Georgina").Boost(5)
+                            .AndAlso()
+                            .WhereEquals(x => x.Name, "Jane").Boost(6)
+                            .GetIndexQuery();
+
+                        Assert.Equal("Name:john^2.0 Name:bob^3.0 (+Name:george^4.0 +Name:georgina^5.0 +Name:jane^6.0)", GetLuceneQuery(usersAndOrMixed2, context, serializer));
+
+                        var usersAndOrMixed3 = session.Advanced.DocumentQuery<User>()
+                            .WhereEquals(x => x.Name, "John").Boost(2)
+                            .OrElse()
+                            .WhereEquals(x => x.Name, "Bob").Boost(3)
+                            .AndAlso()
+                            .WhereEquals(x => x.Name, "George").Boost(4)
+                            .OrElse()
+                            .WhereEquals(x => x.Name, "Georgina").Boost(5)
+                            .AndAlso()
+                            .WhereEquals(x => x.Name, "Jane").Boost(6)
+                            .GetIndexQuery();
+
+                        Assert.Equal("Name:john^2.0 (+Name:bob^3.0 +Name:george^4.0) (+Name:georgina^5.0 +Name:jane^6.0)", GetLuceneQuery(usersAndOrMixed3, context, serializer));
+                    }
 
                     using (var context = JsonOperationContext.ShortTermSingleUse())
                     {
@@ -59,6 +133,11 @@ namespace SlowTests.Issues
         {
             var indexQuery = RavenTestHelper.GetIndexQuery(query);
 
+            return GetLuceneQuery(indexQuery, context, jsonSerializer);
+        }
+
+        private static string GetLuceneQuery(IndexQuery indexQuery, JsonOperationContext context, JsonSerializer jsonSerializer)
+        {
             using (var writer = new BlittableJsonWriter(context))
             {
                 jsonSerializer.Serialize(writer, indexQuery.QueryParameters);
