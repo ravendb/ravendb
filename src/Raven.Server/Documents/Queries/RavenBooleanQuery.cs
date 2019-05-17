@@ -21,11 +21,11 @@ namespace Raven.Server.Documents.Queries
             switch (@operator)
             {
                 case OperatorType.And:
-                    Add(new BooleanClause(left, Occur.MUST));
+                    AddInternal(left, Occur.MUST, OperatorType.And);
                     TryAnd(right);
                     break;
                 case OperatorType.Or:
-                    Add(new BooleanClause(left, Occur.SHOULD));
+                    AddInternal(left, Occur.SHOULD, OperatorType.Or);
                     TryOr(right);
                     break;
                 default:
