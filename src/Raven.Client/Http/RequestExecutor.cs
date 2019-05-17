@@ -55,9 +55,7 @@ namespace Raven.Client.Http
         private readonly string _databaseName;
 
         private static readonly Logger Logger = LoggingSource.Instance.GetLogger<RequestExecutor>("Client");
-        private DateTime _lastReturnedResponse;
-
-        protected readonly ReadBalanceBehavior _readBalanceBehavior;
+        private DateTime _lastReturnedResponse;                
 
         public readonly JsonContextPool ContextPool;
 
@@ -162,8 +160,7 @@ namespace Raven.Client.Http
                 // shared instance, cannot dispose!
                 //_httpClient.Dispose();
             });
-
-            _readBalanceBehavior = conventions.ReadBalanceBehavior;
+            
             _databaseName = databaseName;
             Certificate = certificate;
 
@@ -320,7 +317,7 @@ namespace Raven.Client.Http
                     {
                         _nodeSelector = new NodeSelector(topology);
 
-                        if (_readBalanceBehavior == ReadBalanceBehavior.FastestNode)
+                        if (Conventions.ReadBalanceBehavior == ReadBalanceBehavior.FastestNode)
                         {
                             _nodeSelector.ScheduleSpeedTest();
                         }
@@ -328,7 +325,7 @@ namespace Raven.Client.Http
                     else if (_nodeSelector.OnUpdateTopology(topology, forceUpdate: forceUpdate))
                     {
                         DisposeAllFailedNodesTimers();
-                        if (_readBalanceBehavior == ReadBalanceBehavior.FastestNode)
+                        if (Conventions.ReadBalanceBehavior == ReadBalanceBehavior.FastestNode)
                         {
                             _nodeSelector.ScheduleSpeedTest();
                         }
@@ -396,7 +393,7 @@ namespace Raven.Client.Http
                 return _nodeSelector.GetPreferredNode();
             }
 
-            switch (_readBalanceBehavior)
+            switch (Conventions.ReadBalanceBehavior)
             {
                 case ReadBalanceBehavior.None:
                     return _nodeSelector.GetPreferredNode();
@@ -919,7 +916,7 @@ namespace Raven.Client.Http
 
         private bool ShouldExecuteOnAll<TResult>(ServerNode chosenNode, RavenCommand<TResult> command)
         {
-            if (_readBalanceBehavior != ReadBalanceBehavior.FastestNode)
+            if (Conventions.ReadBalanceBehavior != ReadBalanceBehavior.FastestNode)
                 return false;
 
             var selector = _nodeSelector;

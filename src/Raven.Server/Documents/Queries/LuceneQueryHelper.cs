@@ -20,24 +20,6 @@ namespace Raven.Server.Documents.Queries
 
         public const string Null = "NULL";
 
-        public static Query And(Query left, LucenePrefixOperator leftPrefix, Query right, LucenePrefixOperator rightPrefix)
-        {
-            return new BooleanQuery
-            {
-                { left, PrefixToOccurrence(leftPrefix, Occur.MUST) },
-                { right, PrefixToOccurrence(rightPrefix, Occur.MUST) }
-            };
-        }
-
-        public static Query Or(Query left, LucenePrefixOperator leftPrefix, Query right, LucenePrefixOperator rightPrefix)
-        {
-            return new BooleanQuery
-            {
-                { left, PrefixToOccurrence(leftPrefix, Occur.SHOULD) },
-                { right, PrefixToOccurrence(rightPrefix, Occur.SHOULD) }
-            };
-        }
-
         public static Query Equal(string fieldName, LuceneTermType termType, string value, bool exact)
         {
             return Term(fieldName, value, termType, exact: exact);
