@@ -44,7 +44,7 @@ namespace Raven.Client.Documents.Changes
         private int _nodeIndex;
         private Uri _url;
 
-        public DatabaseChanges(RequestExecutor requestExecutor, string databaseName, Action onDispose)
+        public DatabaseChanges(RequestExecutor requestExecutor, string databaseName, Action onDispose, string nodeTag)
         {
             _requestExecutor = requestExecutor;
             _conventions = requestExecutor.Conventions;
@@ -57,7 +57,7 @@ namespace Raven.Client.Documents.Changes
             _onDispose = onDispose;
             ConnectionStatusChanged += OnConnectionStatusChanged;
 
-            _task = DoWork();
+            _task = DoWork(nodeTag);
         }
 
         public static ClientWebSocket CreateClientWebSocket(RequestExecutor requestExecutor)
@@ -338,7 +338,11 @@ namespace Raven.Client.Documents.Changes
         private DatabaseConnectionState GetOrAddConnectionState(string name, string watchCommand, string unwatchCommand, string value, string[] values = null)
         {
             bool newValue = false;
-            var counter = _counters.GetOrAdd(name, s =>
+            var counter = _counters.GetOrAdd(new RequestDestination
+            {
+                DatabaseName = name,
+                NodeTag = null
+            }, s =>
             {
                 async Task OnDisconnect()
                 {
@@ -423,11 +427,13 @@ namespace Raven.Client.Documents.Changes
             }
         }
 
-        private async Task DoWork()
+        private async Task DoWork(string nodeTag)
         {
             try
             {
-                (_nodeIndex, _serverNode) = await _requestExecutor.GetPreferredNode().ConfigureAwait(false);
+                (_nodeIndex, _serverNode) = nodeTag == null
+                    ? await _requestExecutor.GetPreferredNode().ConfigureAwait(false)
+                    : await _requestExecutor.GetRequestedNode(nodeTag).ConfigureAwait(false);
             }
             catch (OperationCanceledException e)
             {

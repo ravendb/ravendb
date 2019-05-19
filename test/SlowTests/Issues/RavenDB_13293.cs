@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.IO;
 using System.Threading.Tasks;
@@ -6,12 +7,14 @@ using FastTests;
 using FastTests.Server.Replication;
 using Raven.Client;
 using Raven.Client.Documents;
+using Raven.Client.Documents.Changes;
 using Raven.Client.Documents.Indexes;
 using Raven.Client.Documents.Operations;
 using Raven.Client.Documents.Operations.Backups;
 using Raven.Client.Documents.Operations.Indexes;
 using Raven.Client.Documents.Operations.OngoingTasks;
 using Raven.Client.Documents.Queries;
+using Raven.Client.Exceptions;
 using Raven.Client.ServerWide;
 using Raven.Client.ServerWide.Operations;
 using Tests.Infrastructure;
@@ -21,6 +24,64 @@ namespace SlowTests.Issues
 {
     public class RavenDB_13293 : ReplicationTestBase
     {
+        [Fact]
+        public async Task CanPassNodeTagToChangesApi()
+        {
+            var myNodesList = new List<string>();
+            const int clusterSize = 3;
+            var databaseName = GetDatabaseName();
+            var leader = await CreateRaftClusterAndGetLeader(clusterSize, false, useSsl: false);
+
+            using (var store = new DocumentStore
+            {
+                Urls = new[] { leader.WebUrl },
+                Database = databaseName,
+            }.Initialize())
+            {
+                var doc = new DatabaseRecord(databaseName);
+                var databaseResult = await store.Maintenance.Server.SendAsync(new CreateDatabaseOperation(doc, clusterSize));
+                myNodesList.AddRange(databaseResult.Topology.AllNodes);
+
+                using (var session = store.OpenAsyncSession())
+                {
+                    await session.StoreAsync(new User
+                    {
+                        Name = "EGR"
+                    }, "users/1-A");
+                    await session.SaveChangesAsync();
+                }
+
+                IDatabaseChanges databaseChanges;
+                foreach (var node in myNodesList)
+                {
+                    databaseChanges = store.Changes(store.Database, node);
+                    var dbChanges = await databaseChanges.EnsureConnectedNow();
+                    Assert.True(dbChanges.Connected);
+                    var list = new BlockingCollection<DocumentChange>();
+                    var observableWithTask = dbChanges.ForDocument("users/1-A");
+                    observableWithTask.Subscribe(list.Add);
+                    await observableWithTask.EnsureSubscribedNow();
+
+                    using (var session = store.OpenAsyncSession())
+                    {
+                        var egr = await session.LoadAsync<User>("users/1-A");
+                        egr.Name = $"EGR_{node}";
+                        await session.SaveChangesAsync();
+                    }
+                    DocumentChange documentChange;
+                    Assert.True(list.TryTake(out documentChange, TimeSpan.FromSeconds(15)));
+                }
+                databaseChanges = store.Changes(store.Database, "X");
+                await Assert.ThrowsAsync<RequestedNodeUnavailableException>(async () => await databaseChanges.EnsureConnectedNow());
+
+                databaseChanges = store.Changes(store.Database, "");
+                await Assert.ThrowsAsync<RequestedNodeUnavailableException>(async () => await databaseChanges.EnsureConnectedNow());
+
+                databaseChanges = store.Changes(store.Database, " ");
+                await Assert.ThrowsAsync<RequestedNodeUnavailableException>(async () => await databaseChanges.EnsureConnectedNow());
+            }
+        }
+
         [Fact]
         public async Task CanPassNodeTagToRestoreBackupOperation()
         {
@@ -55,7 +116,6 @@ namespace SlowTests.Issues
                         BackupType = BackupType.Backup,
                         Name = $"Task_{node}_{myGuid}",
                         MentorNode = node
-
                     };
                     var result = await store.Maintenance.SendAsync(new UpdatePeriodicBackupOperation(backupConfig));
                     var res = await store.Maintenance.SendAsync(new GetOngoingTaskInfoOperation(result.TaskId, OngoingTaskType.Backup));
@@ -165,6 +225,11 @@ namespace SlowTests.Issues
             public long BackupTaskId { get; set; }
             public Guid Guid { get; set; }
             public string NodeTag { get; set; }
+        }
+
+        public class User
+        {
+            public string Name { get; set; }
         }
     }
 }

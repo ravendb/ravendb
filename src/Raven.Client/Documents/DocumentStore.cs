@@ -268,21 +268,31 @@ namespace Raven.Client.Documents
         /// <summary>
         /// Subscribe to change notifications from the server
         /// </summary>
-        public override IDatabaseChanges Changes(string database = null)
+        public override IDatabaseChanges Changes(string database = null, string nodeTag = null)
         {
             AssertInitialized();
 
-            return _databaseChanges.GetOrAdd(database ?? Database, CreateDatabaseChanges);
+            return _databaseChanges.GetOrAdd(new RequestDestination
+            {
+                DatabaseName = database ?? Database,
+                NodeTag = nodeTag
+            }, CreateDatabaseChanges);
         }
 
-        protected virtual IDatabaseChanges CreateDatabaseChanges(string database)
+        internal virtual IDatabaseChanges CreateDatabaseChanges(RequestDestination node)
         {
-            return new DatabaseChanges(GetRequestExecutor(database), database, () => _databaseChanges.Remove(database));
+            return new DatabaseChanges(GetRequestExecutor(node.DatabaseName), node.DatabaseName, () => _databaseChanges.Remove(node), node.NodeTag);
         }
 
-        public Exception GetLastDatabaseChangesStateException(string database = null)
+        public Exception GetLastDatabaseChangesStateException(string database = null, string nodeTag = null)
         {
-            if (_databaseChanges.TryGetValue(database ?? Database, out IDatabaseChanges databaseChanges))
+            var node = new RequestDestination
+            {
+                DatabaseName = database ?? Database,
+                NodeTag = nodeTag
+            };
+
+            if (_databaseChanges.TryGetValue(node, out IDatabaseChanges databaseChanges))
             {
                 return ((DatabaseChanges)databaseChanges).GetLastConnectionStateException();
             }
