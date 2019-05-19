@@ -1064,8 +1064,8 @@ more responsive application.
         {
             var changes = new Dictionary<string, DocumentsChanges[]>();
 
-            PrepareForEntitiesDeletion(null, changes);
             GetAllEntitiesChanges(changes);
+            PrepareForEntitiesDeletion(null, changes);
             return changes;
         }
 
