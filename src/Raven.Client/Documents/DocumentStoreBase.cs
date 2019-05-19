@@ -46,7 +46,7 @@ namespace Raven.Client.Documents
         
         public abstract IDisposable AggressivelyCacheFor(TimeSpan cacheDuration, AggressiveCacheMode mode, string database = null);
 
-        public abstract IDatabaseChanges Changes(string database = null);
+        public abstract IDatabaseChanges Changes(string database = null, string nodeTag = null);
 
         public abstract IDisposable DisableAggressiveCaching(string database = null);
 

@@ -7,10 +7,10 @@ using System.Threading;
 
 namespace Raven.Client.Util
 {
-    internal class AtomicDictionary<TVal> : IEnumerable<KeyValuePair<string, TVal>>
+    internal class AtomicDictionary<TVal> : IEnumerable<KeyValuePair<RequestDestination, TVal>>
     {
-        private readonly ConcurrentDictionary<string, object> _locks;
-        private readonly ConcurrentDictionary<string, TVal> _items;
+        private readonly ConcurrentDictionary<RequestDestination, object> _locks;
+        private readonly ConcurrentDictionary<RequestDestination, TVal> _items;
         private readonly EasyReaderWriterLock _globalLocker = new EasyReaderWriterLock();
         private List<TVal> _snapshot;
         private long _snapshotVersion;
@@ -19,14 +19,16 @@ namespace Raven.Client.Util
 
         public AtomicDictionary()
         {
-            _items = new ConcurrentDictionary<string, TVal>();
-            _locks = new ConcurrentDictionary<string, object>();
+            _items = new ConcurrentDictionary<RequestDestination, TVal>();
+            _locks = new ConcurrentDictionary<RequestDestination, object>();
         }
 
-        public AtomicDictionary(IEqualityComparer<string> comparer)
+        public AtomicDictionary(IEqualityComparer<string> strComparer)
         {
-            _items = new ConcurrentDictionary<string, TVal>(comparer);
-            _locks = new ConcurrentDictionary<string, object>(comparer);
+            var comparer = new AtomicDictionaryComparer(strComparer);
+
+            _items = new ConcurrentDictionary<RequestDestination, TVal>(comparer);
+            _locks = new ConcurrentDictionary<RequestDestination, object>(comparer);
         }
 
         /// <summary>
@@ -34,14 +36,16 @@ namespace Raven.Client.Util
         /// </summary>
         public IEnumerable<TVal> Values => _items.Values;
 
-        public TVal GetOrAdd(string key, Func<string, TVal> valueGenerator)
+        public TVal GetOrAdd(RequestDestination key, Func<RequestDestination, TVal> valueGenerator)
         {
             using (_globalLocker.EnterReadLock())
             {
                 var actualGenerator = valueGenerator;
                 if (key == null)
                     actualGenerator = s => valueGenerator(null);
-                key = key ?? NullValue;
+
+                key.DatabaseName = key.DatabaseName ?? NullValue;
+
                 TVal val;
                 if (_items.TryGetValue(key, out val))
                     return val;
@@ -53,7 +57,6 @@ namespace Raven.Client.Util
                 }
             }
         }
-
 
         /// <summary>
         /// This locks the entire dictionary. Use carefully.
@@ -72,7 +75,7 @@ namespace Raven.Client.Util
             }
         }
 
-        public IDisposable WithLockFor(string key)
+        public IDisposable WithLockFor(RequestDestination key)
         {
             using (_globalLocker.EnterReadLock())
             {
@@ -83,11 +86,11 @@ namespace Raven.Client.Util
             }
         }
 
-        public void Set(string key, Func<string, TVal> valueGenerator)
+        public void Set(RequestDestination key, Func<RequestDestination, TVal> valueGenerator)
         {
             using (_globalLocker.EnterReadLock())
             {
-                key = key ?? NullValue;
+                key.DatabaseName = key.DatabaseName ?? NullValue;
                 lock (_locks.GetOrAdd(key, new object()))
                 {
                     var addValue = valueGenerator(key);
@@ -97,11 +100,11 @@ namespace Raven.Client.Util
             }
         }
 
-        public void Remove(string key)
+        public void Remove(RequestDestination key)
         {
             using (_globalLocker.EnterReadLock())
             {
-                key = key ?? NullValue;
+                key.DatabaseName = key.DatabaseName ?? NullValue;
                 object value;
                 if (_locks.TryGetValue(key, out value) == false)
                 {
@@ -118,7 +121,7 @@ namespace Raven.Client.Util
             }
         }
 
-        public IEnumerator<KeyValuePair<string, TVal>> GetEnumerator()
+        public IEnumerator<KeyValuePair<RequestDestination, TVal>> GetEnumerator()
         {
             return _items.GetEnumerator();
         }
@@ -136,12 +139,12 @@ namespace Raven.Client.Util
             Interlocked.Increment(ref _version);
         }
 
-        public bool TryGetValue(string key, out TVal val)
+        public bool TryGetValue(RequestDestination key, out TVal val)
         {
             return _items.TryGetValue(key, out val);
         }
 
-        public bool TryRemove(string key, out TVal val)
+        public bool TryRemove(RequestDestination key, out TVal val)
         {
             using (_globalLocker.EnterReadLock())
             {
@@ -162,5 +165,31 @@ namespace Raven.Client.Util
         {
             return _globalLocker.TryEnterWriteLock(TimeSpan.FromSeconds(3));
         }
+    }
+
+    internal class AtomicDictionaryComparer : IEqualityComparer<RequestDestination>
+    {
+        private readonly IEqualityComparer<string> _stringComparer;
+
+        public AtomicDictionaryComparer(IEqualityComparer<string> strComparer)
+        {
+            _stringComparer = strComparer;
+        }
+
+        public bool Equals(RequestDestination n1, RequestDestination n2)
+        {
+            return _stringComparer.Equals(n1.DatabaseName, n2.DatabaseName) && _stringComparer.Equals(n1.NodeTag, n2.NodeTag);
+        }
+
+        public int GetHashCode(RequestDestination n)
+        {
+           return n.GetHashCode();
+        }
+    }
+
+    internal class RequestDestination
+    {
+        public string DatabaseName { get; set; }
+        public string NodeTag { get; set; }
     }
 }

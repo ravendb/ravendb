@@ -49,7 +49,7 @@ namespace Raven.Client.Documents
         /// <summary>
         /// Subscribe to change notifications from the server
         /// </summary>
-        IDatabaseChanges Changes(string database = null);
+        IDatabaseChanges Changes(string database = null, string nodeTag = null);
 
         /// <summary>
         /// Setup the context for aggressive caching.

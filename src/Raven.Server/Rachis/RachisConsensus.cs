@@ -269,7 +269,6 @@ namespace Raven.Server.Rachis
         private readonly List<IDisposable> _disposables = new List<IDisposable>();
 
         public long CurrentTerm { get; private set; }
-        public long LastTopologyEtag { get; private set; }
         public string Tag => _tag;
         public string ClusterId => _clusterId;
         public string ClusterBase64Id => _clusterIdBase64Id;
@@ -413,10 +412,6 @@ namespace Raven.Server.Rachis
                             topology.Members.Add(_tag, configuration.Core.GetNodeHttpServerUrl(myUrl));
                             SetTopology(this, context, topology);
                         }
-                    }
-                    else if (topology.AllNodes.Count == 0)
-                    {
-                        LastTopologyEtag = topology.Etag;
                     }
 
                     _clusterId = topology.TopologyId;
@@ -950,7 +945,6 @@ namespace Raven.Server.Rachis
                 engine.Url = key;
                 TaskExecutor.CompleteAndReplace(ref engine._topologyChanged);
                 engine.TopologyChanged?.Invoke(engine, clusterTopology);
-                engine.LastTopologyEtag = clusterTopology.Etag;
             };
 
             Transaction.DebugDisposeReaderAfterTransaction(context.Transaction.InnerTransaction, topologyJson);
@@ -1734,7 +1728,7 @@ namespace Raven.Server.Rachis
                     new Dictionary<string, string>(),
                     new Dictionary<string, string>(),
                     lastNode,
-                    -1
+                    GetLastEntryIndex(ctx) + 1
                 );
 
                 SetTopology(this, ctx, topology);
@@ -1764,7 +1758,7 @@ namespace Raven.Server.Rachis
                     new Dictionary<string, string>(),
                     new Dictionary<string, string>(),
                     string.Empty,
-                    -1
+                    GetLastEntryIndex(ctx) + 1
                 );
 
                 if (topologyId != oldTopology.TopologyId)
