@@ -27,17 +27,18 @@ namespace Raven.Server.Documents.Handlers
             ServerStore.LicenseManager.AssertCanAddPullReplicationAsHub();
 
             PullReplicationDefinition pullReplication = null;
-            await DatabaseConfigurations((_, databaseName, blittableJson) =>
+            await DatabaseConfigurations((_, databaseName, blittableJson, guid) =>
                 {
                     pullReplication = JsonDeserializationClient.PullReplicationDefinition(blittableJson);
                     
                     pullReplication.Validate(ServerStore.Server.Certificate?.Certificate != null);
-                    var updatePullReplication = new UpdatePullReplicationAsHubCommand(databaseName)
+                    var updatePullReplication = new UpdatePullReplicationAsHubCommand(databaseName, guid)
                     {
                         Definition = pullReplication
                     };
                     return ServerStore.SendToLeaderAsync(updatePullReplication);
-                }, "update-hub-pull-replication",
+                }, "update-hub-pull-replication", 
+                GetRaftRequestIdFromQuery(),
                 fillJson: (json, _, index) =>
                 {
                     json[nameof(OngoingTask.TaskId)] = pullReplication.TaskId == 0 ? index : pullReplication.TaskId;
@@ -55,7 +56,9 @@ namespace Raven.Server.Documents.Handlers
             using (ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
             {
                 PullReplicationAsSink pullReplication = null;
-                await DatabaseConfigurations((_, databaseName, blittableJson) => ServerStore.UpdatePullReplicationAsSink(databaseName, blittableJson, out pullReplication), "update-sink-pull-replication",
+                await DatabaseConfigurations(
+                    (_, databaseName, blittableJson, guid) => ServerStore.UpdatePullReplicationAsSink(databaseName, blittableJson, guid, out pullReplication),
+                    "update-sink-pull-replication", GetRaftRequestIdFromQuery(),
                     fillJson: (json, _, index) =>
                     {
                         using (context.OpenReadTransaction())

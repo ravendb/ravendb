@@ -550,11 +550,9 @@ namespace Raven.Server.Web.System
                 
                 if (setupInfo.Environment != StudioConfiguration.StudioEnvironment.None)
                 {
-                    var res = await ServerStore.PutValueInClusterAsync(new PutServerWideStudioConfigurationCommand(new ServerWideStudioConfiguration
-                    {
-                        Disabled = false,
-                        Environment = setupInfo.Environment
-                    }));
+                    var res = await ServerStore.PutValueInClusterAsync(
+                        new PutServerWideStudioConfigurationCommand(new ServerWideStudioConfiguration {Disabled = false, Environment = setupInfo.Environment},
+                            string.Empty));
                     await ServerStore.Cluster.WaitForIndexNotification(res.Index);
                 }
                 

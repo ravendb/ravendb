@@ -342,7 +342,7 @@ namespace Raven.Server.Documents
 
         private void NotifyLeaderAboutRemoval(string dbName)
         {
-            var cmd = new RemoveNodeFromDatabaseCommand(dbName)
+            var cmd = new RemoveNodeFromDatabaseCommand(dbName, Guid.NewGuid().ToString())
             {
                 NodeTag = _serverStore.NodeTag
             };

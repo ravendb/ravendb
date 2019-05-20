@@ -57,11 +57,11 @@ namespace Raven.Server.Smuggler.Documents.Processors
             {
                 case IndexType.AutoMap:
                     var autoMapIndexDefinition = (AutoMapIndexDefinition)definition;
-                    AsyncHelpers.RunSync(() => database.IndexStore.CreateIndex(autoMapIndexDefinition));
+                    AsyncHelpers.RunSync(() => database.IndexStore.CreateIndex(autoMapIndexDefinition, Guid.NewGuid().ToString()));
                     break;
                 case IndexType.AutoMapReduce:
                     var autoMapReduceIndexDefinition = (AutoMapReduceIndexDefinition)definition;
-                    AsyncHelpers.RunSync(() => database.IndexStore.CreateIndex(autoMapReduceIndexDefinition));
+                    AsyncHelpers.RunSync(() => database.IndexStore.CreateIndex(autoMapReduceIndexDefinition, Guid.NewGuid().ToString()));
                     break;
                 case IndexType.Map:
                 case IndexType.MapReduce:
@@ -75,7 +75,7 @@ namespace Raven.Server.Smuggler.Documents.Processors
                             indexDefinitionField.Value.Analyzer = null;
                         }
                     }
-                    AsyncHelpers.RunSync(() => database.IndexStore.CreateIndex(indexDefinition));
+                    AsyncHelpers.RunSync(() => database.IndexStore.CreateIndex(indexDefinition, string.Empty));
                     break;
                 default:
                     throw new NotSupportedException(indexType.ToString());

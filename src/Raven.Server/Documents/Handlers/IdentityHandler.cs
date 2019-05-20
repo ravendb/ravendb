@@ -16,7 +16,7 @@ namespace Raven.Server.Documents.Handlers
             if (name[name.Length - 1] != '|')
                 name += '|';
 
-            var (_, _, newIdentityValue) = await Database.ServerStore.GenerateClusterIdentityAsync(name, Database.Name);
+            var (_, _, newIdentityValue) = await Database.ServerStore.GenerateClusterIdentityAsync(name, Database.Name, GetRaftRequestIdFromQuery());
 
             using (ContextPool.AllocateOperationContext(out DocumentsOperationContext context))
             using (var writer = new BlittableJsonTextWriter(context, ResponseBodyStream()))
@@ -42,7 +42,7 @@ namespace Raven.Server.Documents.Handlers
             if (name[name.Length - 1] != '|')
                 name += '|';
 
-            var newIdentityValue = await Database.ServerStore.UpdateClusterIdentityAsync(name, Database.Name, value.Value, forced);
+            var newIdentityValue = await Database.ServerStore.UpdateClusterIdentityAsync(name, Database.Name, value.Value, forced, GetRaftRequestIdFromQuery());
             using (ContextPool.AllocateOperationContext(out DocumentsOperationContext context))
             using (var writer = new BlittableJsonTextWriter(context, ResponseBodyStream()))
             {

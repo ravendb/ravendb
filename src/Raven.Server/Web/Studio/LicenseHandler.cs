@@ -66,7 +66,7 @@ namespace Raven.Server.Web.Studio
                 license = JsonDeserializationServer.License(json);
             }
 
-            await ServerStore.LicenseManager.Activate(license, skipLeaseLicense: false);
+            await ServerStore.LicenseManager.Activate(license, skipLeaseLicense: false, GetRaftRequestIdFromQuery());
 
             NoContentStatus();
         }
@@ -80,7 +80,7 @@ namespace Raven.Server.Web.Studio
                 return;
             }
 
-            await ServerStore.LicenseManager.LeaseLicense(forceUpdate: true);
+            await ServerStore.LicenseManager.LeaseLicense(GetRaftRequestIdFromQuery(), forceUpdate: true);
 
             NoContentStatus();
         }

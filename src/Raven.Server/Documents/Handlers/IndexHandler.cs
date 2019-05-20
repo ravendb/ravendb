@@ -536,7 +536,7 @@ namespace Raven.Server.Documents.Handlers
                 auditLog.Info($"Index {name} DELETE by {clientCert?.Subject} {clientCert?.Thumbprint}");
             }
 
-            HttpContext.Response.StatusCode = await Database.IndexStore.TryDeleteIndexIfExists(name)
+            HttpContext.Response.StatusCode = await Database.IndexStore.TryDeleteIndexIfExists(name, GetRaftRequestIdFromQuery())
                 ? (int)HttpStatusCode.NoContent
                 : (int)HttpStatusCode.NotFound;
         }
@@ -612,6 +612,7 @@ namespace Raven.Server.Documents.Handlers
         [RavenAction("/databases/*/indexes/set-lock", "POST", AuthorizationStatus.ValidUser)]
         public async Task SetLockMode()
         {
+            var guid = GetRaftRequestIdFromQuery();
             using (ContextPool.AllocateOperationContext(out DocumentsOperationContext context))
             {
                 var json = await context.ReadForMemoryAsync(RequestBodyStream(), "index/set-lock");
@@ -628,7 +629,7 @@ namespace Raven.Server.Documents.Handlers
 
                 foreach (var name in parameters.IndexNames)
                 {
-                    await Database.IndexStore.SetLock(name, parameters.Mode);
+                    await Database.IndexStore.SetLock(name, parameters.Mode, $"{guid}/{name}");
                 }
             }
 
@@ -638,6 +639,7 @@ namespace Raven.Server.Documents.Handlers
         [RavenAction("/databases/*/indexes/set-priority", "POST", AuthorizationStatus.ValidUser)]
         public async Task SetPriority()
         {
+            var guid = GetRaftRequestIdFromQuery();
             using (ContextPool.AllocateOperationContext(out DocumentsOperationContext context))
             {
                 var json = await context.ReadForMemoryAsync(RequestBodyStream(), "index/set-priority");
@@ -645,7 +647,7 @@ namespace Raven.Server.Documents.Handlers
 
                 foreach (var name in parameters.IndexNames)
                 {
-                    await Database.IndexStore.SetPriority(name, parameters.Priority);
+                    await Database.IndexStore.SetPriority(name, parameters.Priority, $"{guid}/{name}");
                 }
 
                 NoContentStatus();

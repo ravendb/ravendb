@@ -349,7 +349,7 @@ namespace Raven.Server.Smuggler.Migration
                     }
                 };
 
-                var (index, _) = await _serverStore.WriteDatabaseRecordAsync(databaseName, databaseRecord, null);
+                var (index, _) = await _serverStore.WriteDatabaseRecordAsync(databaseName, databaseRecord, null, Guid.NewGuid().ToString());
                 await _serverStore.Cluster.WaitForIndexNotification(index);
             }
         }

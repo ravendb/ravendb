@@ -120,6 +120,7 @@ namespace Raven.Server.Web.System
         public async Task PutCompareExchangeValue()
         {
             var key = GetStringQueryString("key");
+            var guid = GetRaftRequestIdFromQuery();
 
             // ReSharper disable once PossibleInvalidOperationException
             var index = GetLongQueryString("index", true).Value;
@@ -129,21 +130,19 @@ namespace Raven.Server.Web.System
             using (ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
             {
                 var updateJson = await context.ReadForMemoryAsync(RequestBodyStream(), "read-unique-value");
-                var command = new AddOrUpdateCompareExchangeCommand(Database.Name, key, updateJson, index, context);
+                var command = new AddOrUpdateCompareExchangeCommand(Database.Name, key, updateJson, index, context, guid);
                 using (var writer = new BlittableJsonTextWriter(context, ResponseBodyStream()))
                 {
                     (var raftIndex, var response) = await ServerStore.SendToLeaderAsync(context, command);
                     await ServerStore.Cluster.WaitForIndexNotification(raftIndex);
-                    using (context.OpenReadTransaction())
+
+                    var result = (CompareExchangeCommandBase.CompareExchangeResult)response;
+                    context.Write(writer, new DynamicJsonValue
                     {
-                        var result = (CompareExchangeCommandBase.CompareExchangeResult)response;
-                        context.Write(writer, new DynamicJsonValue
-                        {
-                            [nameof(CompareExchangeResult<object>.Index)] = result.Index,
-                            [nameof(CompareExchangeResult<object>.Value)] = result.Value,
-                            [nameof(CompareExchangeResult<object>.Successful)] = result.Index == raftIndex
-                        });
-                    }
+                        [nameof(CompareExchangeResult<object>.Index)] = result.Index,
+                        [nameof(CompareExchangeResult<object>.Value)] = result.Value,
+                        [nameof(CompareExchangeResult<object>.Successful)] = result.Index == raftIndex
+                    });
                 }
             }
         }
@@ -152,6 +151,7 @@ namespace Raven.Server.Web.System
         public async Task DeleteCompareExchangeValue()
         {
             var key = GetStringQueryString("key");
+            var guid = GetRaftRequestIdFromQuery();
 
             // ReSharper disable once PossibleInvalidOperationException
             var index = GetLongQueryString("index", true).Value;
@@ -160,21 +160,19 @@ namespace Raven.Server.Web.System
 
             using (ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
             {
-                var command = new RemoveCompareExchangeCommand(Database.Name, key, index, context);
+                var command = new RemoveCompareExchangeCommand(Database.Name, key, index, context, guid);
                 using (var writer = new BlittableJsonTextWriter(context, ResponseBodyStream()))
                 {
                     (var raftIndex, var response) = await ServerStore.SendToLeaderAsync(context, command);
                     await ServerStore.Cluster.WaitForIndexNotification(raftIndex);
-                    using (context.OpenReadTransaction())
+
+                    var result = (CompareExchangeCommandBase.CompareExchangeResult)response;
+                    context.Write(writer, new DynamicJsonValue
                     {
-                        var result = (CompareExchangeCommandBase.CompareExchangeResult)response;
-                        context.Write(writer, new DynamicJsonValue
-                        {
-                            [nameof(CompareExchangeResult<object>.Index)] = result.Index,
-                            [nameof(CompareExchangeResult<object>.Value)] = result.Value,
-                            [nameof(CompareExchangeResult<object>.Successful)] = result.Index == raftIndex
-                        });
-                    }
+                        [nameof(CompareExchangeResult<object>.Index)] = result.Index,
+                        [nameof(CompareExchangeResult<object>.Value)] = result.Value,
+                        [nameof(CompareExchangeResult<object>.Successful)] = result.Index == raftIndex
+                    });
                 }
             }
         }

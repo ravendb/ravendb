@@ -128,7 +128,7 @@ namespace Raven.Server.Monitoring.Snmp
                         {
                             context.CloseTransaction();
 
-                            var result = await _server.ServerStore.SendToLeaderAsync(new UpdateSnmpDatabasesMappingCommand(new List<string> { databaseName }));
+                            var result = await _server.ServerStore.SendToLeaderAsync(new UpdateSnmpDatabasesMappingCommand(new List<string> { databaseName }, Guid.NewGuid().ToString()));
                             await _server.ServerStore.Cluster.WaitForIndexNotification(result.Index);
 
                             context.OpenReadTransaction();
@@ -257,7 +257,7 @@ namespace Raven.Server.Monitoring.Snmp
                     {
                         context.CloseTransaction();
 
-                        var result = await _server.ServerStore.SendToLeaderAsync(new UpdateSnmpDatabasesMappingCommand(missingDatabases));
+                        var result = await _server.ServerStore.SendToLeaderAsync(new UpdateSnmpDatabasesMappingCommand(missingDatabases, Guid.NewGuid().ToString()));
                         await _server.ServerStore.Cluster.WaitForIndexNotification(result.Index);
 
                         context.OpenReadTransaction();
