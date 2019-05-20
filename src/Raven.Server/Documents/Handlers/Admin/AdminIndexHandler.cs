@@ -38,7 +38,7 @@ namespace Raven.Server.Documents.Handlers.Admin
                 var input = await context.ReadForMemoryAsync(RequestBodyStream(), "Indexes");
                 if (input.TryGet("Indexes", out BlittableJsonReaderArray indexes) == false)
                     ThrowRequiredPropertyNameInRequest("Indexes");
-
+                var guid = GetRaftRequestIdFromQuery();
                 foreach (var indexToAdd in indexes)
                 {
                     var indexDefinition = JsonDeserializationServer.IndexDefinition((BlittableJsonReaderObject)indexToAdd);
@@ -71,9 +71,7 @@ namespace Raven.Server.Documents.Handlers.Admin
                             $"Index name must not start with '{Constants.Documents.Indexing.SideBySideIndexNamePrefix}'. Provided index name: '{indexDefinition.Name}'");
                     }
 
-                    
-
-                    var index = await Database.IndexStore.CreateIndex(indexDefinition, GetRaftRequestIdFromQuery(), source);
+                    var index = await Database.IndexStore.CreateIndex(indexDefinition, $"{guid}/{indexDefinition.Name}", source);
 
                     createdIndexes.Add(index.Name);
                 }

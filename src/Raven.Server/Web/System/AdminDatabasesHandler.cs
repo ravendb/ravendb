@@ -439,9 +439,8 @@ namespace Raven.Server.Web.System
                 record.Topology.Promotables = reorderedTopology.Promotables;
                 record.Topology.Rehabs = reorderedTopology.Rehabs;
 
-                var reorder = new UpdateTopologyCommand
+                var reorder = new UpdateTopologyCommand(name, GetRaftRequestIdFromQuery())
                 {
-                    DatabaseName = name,
                     Topology = record.Topology
                 };
 

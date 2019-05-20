@@ -29,7 +29,7 @@ namespace Raven.Client.ServerWide.Operations.Certificates
             return new CreateClientCertificateCommand( _name, _permissions, _clearance, _password);
         }
 
-        private class CreateClientCertificateCommand : RavenCommand<CertificateRawData>
+        private class CreateClientCertificateCommand : RavenCommand<CertificateRawData>, IRaftCommand
         {
             private readonly string _name;
             private readonly Dictionary<string, DatabaseAccess> _permissions;
@@ -111,6 +111,8 @@ namespace Raven.Client.ServerWide.Operations.Certificates
                     RawData = ms.ToArray()
                 };
             }
+
+            public string RaftUniqueRequestId => Guid.NewGuid().ToString();
         }
     }
 }

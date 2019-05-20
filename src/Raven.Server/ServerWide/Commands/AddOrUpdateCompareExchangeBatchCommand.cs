@@ -15,13 +15,13 @@ namespace Raven.Server.ServerWide.Commands
         {
         }
 
-        public AddOrUpdateCompareExchangeBatchCommand(List<AddOrUpdateCompareExchangeCommand> addCommands, JsonOperationContext contextToWriteResult)
+        public AddOrUpdateCompareExchangeBatchCommand(List<AddOrUpdateCompareExchangeCommand> addCommands, JsonOperationContext contextToWriteResult, string guid) : base(guid)
         {
             Commands = addCommands;
             ContextToWriteResult = contextToWriteResult;
         }
 
-        public AddOrUpdateCompareExchangeBatchCommand(List<RemoveCompareExchangeCommand> removeCommands, JsonOperationContext contextToWriteResult)
+        public AddOrUpdateCompareExchangeBatchCommand(List<RemoveCompareExchangeCommand> removeCommands, JsonOperationContext contextToWriteResult, string guid) : base(guid)
         {
             RemoveCommands = removeCommands;
             ContextToWriteResult = contextToWriteResult;

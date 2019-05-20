@@ -1274,13 +1274,6 @@ namespace Raven.Server.Rachis
             }
         }
 
-        public class AppendedCommand
-        {
-            public string Guid;
-            public long Index;
-            public string Type;
-            public object Result;
-        }
 
         public static string GetGuidFromCommand(BlittableJsonReaderObject cmd)
         {
