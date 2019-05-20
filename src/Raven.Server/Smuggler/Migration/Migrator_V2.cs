@@ -149,7 +149,7 @@ namespace Raven.Server.Smuggler.Migration
 
                         var contextToUse = documentActions.GetContextForNewDocument();
                         using (var old = metadata)
-                            metadata = metadata.Clone(context);
+                            metadata = metadata.Clone(contextToUse);
 
                         WriteDocumentWithAttachment(documentActions, contextToUse, dataStream, key, metadata);
 
