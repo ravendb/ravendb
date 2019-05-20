@@ -58,7 +58,7 @@ namespace FastTests.Server
             }
         }
 
-        public class PutDatabaseDocumentTestCommand : RavenCommand<BlittableJsonReaderObject>, IDisposable
+        public class PutDatabaseDocumentTestCommand : RavenCommand<BlittableJsonReaderObject>, IRaftCommand, IDisposable
         {
             private readonly BlittableJsonReaderObject databaseDocument;
 
@@ -93,6 +93,7 @@ namespace FastTests.Server
             }
 
             public override bool IsReadRequest => false;
+            public string RaftUniqueRequestId { get; } = Guid.NewGuid().ToString();
         }
 
         public class GetDatabaseDocumentTestCommand : RavenCommand<BlittableJsonReaderObject>
@@ -113,6 +114,7 @@ namespace FastTests.Server
             }
 
             public override bool IsReadRequest => true;
+            
         }
     }
 }

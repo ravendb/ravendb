@@ -21,6 +21,7 @@ using Raven.Server.Documents;
 using Raven.Server.Documents.Replication;
 using Raven.Server.ServerWide.Commands;
 using Raven.Server.ServerWide.Context;
+using Raven.Server.Utils;
 using Raven.Tests.Core.Utils.Entities;
 using Xunit;
 
@@ -75,6 +76,71 @@ namespace SlowTests.Cluster
                     Assert.Equal(user3.Name, user.Name);
                 }
             }
+        }
+
+        [Fact]
+        public async Task CanCreateClusterTransactionRequest2()
+        {
+            DebuggerAttachedTimeout.DisableLongTimespan = true;
+            var leader = await CreateRaftClusterAndGetLeader(2);
+            using (var leaderStore = GetDocumentStore(new Options
+            {
+                Server = leader,
+                ReplicationFactor = 2
+            }))
+            {
+                var count = 0;
+                var tasks = new List<Task>();
+                for (int i = 0; i < 100; i++)
+                {
+                    var t = Task.Run(async () =>
+                    {
+                        /*
+                        for (int j = 0; j < 10; j++)
+                        {
+                            leaderStore.Operations.SendAsync(new PutCompareExchangeValueOperation<User>($"usernames/{Interlocked.Increment(ref count)}", new User(), 0));
+                        }
+*/
+
+                        using (var session = leaderStore.OpenAsyncSession(new SessionOptions
+                        {
+                            TransactionMode = TransactionMode.ClusterWide
+                        }))
+                        {
+                            session.Advanced.ClusterTransaction.CreateCompareExchangeValue($"usernames/{Interlocked.Increment(ref count)}", new User());
+                            await session.SaveChangesAsync();
+                        }
+
+                        await ActionWithLeader((l) =>
+                        {
+                            l.ServerStore.Engine.CurrentLeader?.StepDown();
+                            return Task.CompletedTask;
+                        });
+                    });
+                    tasks.Add(t);
+                }
+
+                var hasExecption = false;
+
+                foreach (var task in tasks)
+                {
+                    try
+                    {
+                        await task;
+                    }
+                    catch (Exception e)
+                    {
+                        hasExecption = true;
+                        Console.WriteLine(task.Exception.InnerExceptions[0].Message);
+                    }
+                }
+
+                if (hasExecption)
+                {
+                    throw new InvalidOperationException();
+                }
+            }
+
         }
 
         [Fact]

@@ -677,25 +677,27 @@ namespace Raven.Server
                 // This is needed for trust in the case where a node replaced its own certificate while another node still runs with the old certificate.
                 // Since both nodes use different certificates, they will only trust each other if the certs are registered in the server store.
                 // When the certificate replacement is finished throughout the cluster, we will delete both these entries.
-                await ServerStore.PutValueInClusterAsync(new PutCertificateCommand(newCertificate.Thumbprint, new CertificateDefinition
-                {
-                    Certificate = Convert.ToBase64String(Certificate.Certificate.Export(X509ContentType.Cert)),
-                    Thumbprint = Certificate.Certificate.Thumbprint,
-                    PublicKeyPinningHash = Certificate.Certificate.GetPublicKeyPinningHash(),
-                    NotAfter = Certificate.Certificate.NotAfter,
-                    Name = "Old Server Certificate - can delete",
-                    SecurityClearance = SecurityClearance.ClusterNode
-                }));
+                await ServerStore.PutValueInClusterAsync(new PutCertificateCommand(newCertificate.Thumbprint,
+                    new CertificateDefinition
+                    {
+                        Certificate = Convert.ToBase64String(Certificate.Certificate.Export(X509ContentType.Cert)),
+                        Thumbprint = Certificate.Certificate.Thumbprint,
+                        PublicKeyPinningHash = Certificate.Certificate.GetPublicKeyPinningHash(),
+                        NotAfter = Certificate.Certificate.NotAfter,
+                        Name = "Old Server Certificate - can delete",
+                        SecurityClearance = SecurityClearance.ClusterNode
+                    }, Guid.NewGuid().ToString()));
 
-                var res = await ServerStore.PutValueInClusterAsync(new PutCertificateCommand(newCertificate.Thumbprint, new CertificateDefinition
-                {
-                    Certificate = Convert.ToBase64String(newCertificate.Export(X509ContentType.Cert)),
-                    Thumbprint = newCertificate.Thumbprint,
-                    PublicKeyPinningHash = newCertificate.GetPublicKeyPinningHash(),
-                    NotAfter = newCertificate.NotAfter,
-                    Name = "Server Certificate",
-                    SecurityClearance = SecurityClearance.ClusterNode
-                }));
+                var res = await ServerStore.PutValueInClusterAsync(new PutCertificateCommand(newCertificate.Thumbprint,
+                    new CertificateDefinition
+                    {
+                        Certificate = Convert.ToBase64String(newCertificate.Export(X509ContentType.Cert)),
+                        Thumbprint = newCertificate.Thumbprint,
+                        PublicKeyPinningHash = newCertificate.GetPublicKeyPinningHash(),
+                        NotAfter = newCertificate.NotAfter,
+                        Name = "Server Certificate",
+                        SecurityClearance = SecurityClearance.ClusterNode
+                    }, Guid.NewGuid().ToString()));
 
                 await ServerStore.Cluster.WaitForIndexNotification(res.Index);
 
@@ -1081,7 +1083,7 @@ namespace Raven.Server
             {
                 try
                 {
-                    await ServerStore.SendToLeaderAsync(new PutCertificateWithSamePinningHashCommand(certificate.Thumbprint, newCertDef))
+                    await ServerStore.SendToLeaderAsync(new PutCertificateWithSamePinningHashCommand(certificate.Thumbprint, newCertDef, Guid.NewGuid().ToString()))
                         .ConfigureAwait(false);
                 }
                 catch (Exception e)

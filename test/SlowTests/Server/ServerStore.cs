@@ -33,7 +33,7 @@ namespace SlowTests.Server
                         Thumbprint = certificate.Thumbprint,
                         PublicKeyPinningHash = certificate.GetPublicKeyPinningHash(),
                         NotAfter = certificate.NotAfter
-                    }));
+                    },string.Empty));
                 }
 
                 using (Server.ServerStore.ContextPool.AllocateOperationContext(out context))
@@ -69,7 +69,7 @@ namespace SlowTests.Server
                             Thumbprint = certificate.Thumbprint,
                             PublicKeyPinningHash = certificate.GetPublicKeyPinningHash(),
                             NotAfter = certificate.NotAfter
-                        }));
+                        }, string.Empty));
                     }
                 }
 
@@ -85,7 +85,7 @@ namespace SlowTests.Server
                             Thumbprint = certificate.Thumbprint,
                             PublicKeyPinningHash = certificate.GetPublicKeyPinningHash(),
                             NotAfter = certificate.NotAfter
-                        }));
+                        }, string.Empty));
                     }
                 }
 
