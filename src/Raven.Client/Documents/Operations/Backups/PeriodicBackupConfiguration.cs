@@ -17,7 +17,7 @@ namespace Raven.Client.Documents.Operations.Backups
 
         public bool Disabled { get; set; }
 
-        public string Name { get; set; }
+        public virtual string Name { get; set; }
 
         public string MentorNode { get; set; }
 

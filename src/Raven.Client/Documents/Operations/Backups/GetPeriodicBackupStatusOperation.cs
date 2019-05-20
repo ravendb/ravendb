@@ -43,6 +43,7 @@ namespace Raven.Client.Documents.Operations.Backups
             {
                 if (response == null)
                     ThrowInvalidResponse();
+
                 Result = JsonDeserializationClient.GetPeriodicBackupStatusOperationResult(response);
             }
         }

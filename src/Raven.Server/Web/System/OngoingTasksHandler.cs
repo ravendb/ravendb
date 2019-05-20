@@ -488,6 +488,11 @@ namespace Raven.Server.Web.System
 
             if (DataDirectoryInfo.CanAccessPath(folderPath, out var error) == false)
                 throw new ArgumentException(error);
+
+            CrontabSchedule VerifyBackupFrequency(string backupFrequency)
+            {
+                return string.IsNullOrWhiteSpace(backupFrequency) ? null : CrontabSchedule.Parse(backupFrequency);
+            }
         }
 
         [RavenAction("/databases/*/admin/backup-data-directory", "GET", AuthorizationStatus.DatabaseAdmin)]
@@ -547,14 +552,6 @@ namespace Raven.Server.Web.System
             public string FolderPath { get; set; }
 
             public string Error { get; set; }
-        }
-
-        private static CrontabSchedule VerifyBackupFrequency(string backupFrequency)
-        {
-            if (string.IsNullOrWhiteSpace(backupFrequency))
-                return null;
-
-            return CrontabSchedule.Parse(backupFrequency);
         }
 
         [RavenAction("/databases/*/admin/backup/database", "POST", AuthorizationStatus.DatabaseAdmin, CorsMode = CorsMode.Cluster)]
