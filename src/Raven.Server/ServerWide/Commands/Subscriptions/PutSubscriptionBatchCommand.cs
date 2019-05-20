@@ -12,7 +12,7 @@ namespace Raven.Server.ServerWide.Commands.Subscriptions
         {
         }
 
-        public PutSubscriptionBatchCommand(List<PutSubscriptionCommand> commands)
+        public PutSubscriptionBatchCommand(List<PutSubscriptionCommand> commands, string guid) : base(guid)
         {
             Commands = commands;
         }

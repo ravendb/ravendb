@@ -495,13 +495,13 @@ namespace Raven.Server.Smuggler.Documents
             {
                 if (_compareExchangeAddOrUpdateCommands.Count > 0)
                 {
-                    AsyncHelpers.RunSync(async () => await _database.ServerStore.SendToLeaderAsync(new AddOrUpdateCompareExchangeBatchCommand(_compareExchangeAddOrUpdateCommands, context)));
+                    AsyncHelpers.RunSync(async () => await _database.ServerStore.SendToLeaderAsync(new AddOrUpdateCompareExchangeBatchCommand(_compareExchangeAddOrUpdateCommands, context, string.Empty)));
                     _compareExchangeAddOrUpdateCommands.Clear();
                 }
 
                 if (_compareExchangeRemoveCommands.Count > 0)
                 {
-                    AsyncHelpers.RunSync(async () => await _database.ServerStore.SendToLeaderAsync(new AddOrUpdateCompareExchangeBatchCommand(_compareExchangeRemoveCommands, context)));
+                    AsyncHelpers.RunSync(async () => await _database.ServerStore.SendToLeaderAsync(new AddOrUpdateCompareExchangeBatchCommand(_compareExchangeRemoveCommands, context, string.Empty)));
                     _compareExchangeRemoveCommands.Clear();
                 }
             }
@@ -1530,7 +1530,7 @@ namespace Raven.Server.Smuggler.Documents
             private void SendCommands()
             {
                 AsyncHelpers.RunSync(() =>
-                    _database.ServerStore.SendToLeaderAsync(new PutSubscriptionBatchCommand(_subscriptionCommands)));
+                    _database.ServerStore.SendToLeaderAsync(new PutSubscriptionBatchCommand(_subscriptionCommands, string.Empty)));
 
                 _subscriptionCommands.Clear();
             }

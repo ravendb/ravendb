@@ -418,7 +418,7 @@ namespace Raven.Server.ServerWide.Maintenance
                 if (maxEtag == 0)
                     maxEtag = long.MaxValue;
 
-                var result = await _server.SendToLeaderAsync(new CleanCompareExchangeTombstonesCommand(dbName, maxEtag, amountToDelete));
+                var result = await _server.SendToLeaderAsync(new CleanCompareExchangeTombstonesCommand(dbName, maxEtag, amountToDelete, Guid.NewGuid().ToString()));
                 await _server.Cluster.WaitForIndexNotification(result.Index);
                 hasMore = (bool)result.Result;
             }
