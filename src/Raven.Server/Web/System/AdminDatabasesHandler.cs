@@ -14,6 +14,7 @@ using System.Net;
 using System.Threading;
 using System.Threading.Tasks;
 using Microsoft.AspNetCore.Http.Features.Authentication;
+using NCrontab.Advanced;
 using Raven.Client.Documents.Conventions;
 using Raven.Client.Documents.Indexes;
 using Raven.Client.Documents.Operations;
@@ -1099,6 +1100,62 @@ namespace Raven.Server.Web.System
             var database = await ServerStore.DatabasesLandlord.TryGetOrCreateResourceStore(databaseName);
 
             return new Size(database.GetSizeOnDisk().Data.SizeInBytes, SizeUnit.Bytes);
+        }
+
+        [RavenAction("/admin/configuration/server-wide/backup", "PUT", AuthorizationStatus.ClusterAdmin)]
+        public async Task PutServerWideBackupConfigurationCommand()
+        {
+            using (ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
+            {
+                var configuration = await context.ReadForMemoryAsync(RequestBodyStream(), "server-wide-backup-configuration");
+                var configurationJson = JsonDeserializationCluster.ServerWideBackupConfiguration(configuration);
+
+                if (VerifyBackupFrequency(configurationJson.FullBackupFrequency) == null &&
+                    VerifyBackupFrequency(configurationJson.IncrementalBackupFrequency) == null)
+                {
+                    throw new ArgumentException("Couldn't parse the cron expressions for both full and incremental backups. " +
+                                                $"full backup cron expression: {configurationJson.FullBackupFrequency}, " +
+                                                $"incremental backup cron expression: {configurationJson.IncrementalBackupFrequency}");
+                }
+
+                var localSettings = configurationJson.LocalSettings;
+                if (localSettings != null && localSettings.Disabled == false)
+                {
+                    if (DataDirectoryInfo.CanAccessPath(localSettings.FolderPath, out var error) == false)
+                        throw new ArgumentException(error);
+                }
+
+                var (newIndex, _) = await ServerStore.PutServerWideBackupConfigurationAsync(configurationJson);
+                await ServerStore.WaitForCommitIndexChange(RachisConsensus.CommitIndexModification.GreaterOrEqual, newIndex);
+
+                NoContentStatus();
+            }
+
+            CrontabSchedule VerifyBackupFrequency(string backupFrequency)
+            {
+                return string.IsNullOrWhiteSpace(backupFrequency) ? null : CrontabSchedule.Parse(backupFrequency);
+            }
+        }
+
+        [RavenAction("/admin/configuration/server-wide/backup", "GET", AuthorizationStatus.ClusterAdmin)]
+        public Task GetServerWideBackupConfigurationCommand()
+        {
+            using (ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
+            using (context.OpenReadTransaction())
+            using (var writer = new BlittableJsonTextWriter(context, ResponseBodyStream()))
+            {
+                var blittable = ServerStore.Cluster.Read(context, ClusterStateMachine.BackupTemplateConfigurationName);
+                if (blittable == null)
+                {
+                    HttpContext.Response.StatusCode = (int)HttpStatusCode.NotFound;
+                }
+                else
+                {
+                    context.Write(writer, blittable);
+                }
+
+                return Task.CompletedTask;
+            }
         }
 
         [RavenAction("/admin/migrate", "POST", AuthorizationStatus.ClusterAdmin)]

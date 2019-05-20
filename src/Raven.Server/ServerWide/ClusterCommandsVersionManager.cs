@@ -103,7 +103,8 @@ namespace Raven.Server.ServerWide
             [nameof(UpdatePullReplicationAsHubCommand)] = Base42CommandsVersion,
             [nameof(CleanCompareExchangeTombstonesCommand)] = Base42CommandsVersion,
             [nameof(PutSubscriptionBatchCommand)] = Base42CommandsVersion,
-            [nameof(EditDatabaseClientConfigurationCommand)] = Base42CommandsVersion
+            [nameof(EditDatabaseClientConfigurationCommand)] = Base42CommandsVersion,
+            [nameof(PutServerWideBackupConfigurationCommand)] = 42_001
         };
 
         public static bool CanPutCommand(string command)
