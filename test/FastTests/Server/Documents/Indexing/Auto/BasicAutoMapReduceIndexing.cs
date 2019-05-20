@@ -246,7 +246,7 @@ namespace FastTests.Server.Documents.Indexing.Auto
                     GroupByArrayBehavior = GroupByArrayBehavior.ByContent
                 };
 
-                Assert.NotNull(await database.IndexStore.CreateIndex(new AutoMapReduceIndexDefinition("Users", new[] { count }, new[] { location })));
+                Assert.NotNull(await database.IndexStore.CreateIndex(new AutoMapReduceIndexDefinition("Users", new[] { count }, new[] { location }), Guid.NewGuid().ToString()));
 
                 var sum = new AutoIndexField
                 {
@@ -255,11 +255,11 @@ namespace FastTests.Server.Documents.Indexing.Auto
                     Aggregation = AggregationOperation.Sum
                 };
 
-                var index = await database.IndexStore.CreateIndex(new AutoMapReduceIndexDefinition("Users", new[] { count, sum }, new[] { location }));
+                var index = await database.IndexStore.CreateIndex(new AutoMapReduceIndexDefinition("Users", new[] { count, sum }, new[] { location }), Guid.NewGuid().ToString());
                 Assert.NotNull(index);
 
-                var task1 = database.IndexStore.SetLock(index.Name, IndexLockMode.LockedError);
-                var task2 = database.IndexStore.SetPriority(index.Name, IndexPriority.High);
+                var task1 = database.IndexStore.SetLock(index.Name, IndexLockMode.LockedError, Guid.NewGuid().ToString());
+                var task2 = database.IndexStore.SetPriority(index.Name, IndexPriority.High, Guid.NewGuid().ToString());
                 index.SetState(IndexState.Disabled);
                 var task = Task.WhenAll(task1, task2);
                 

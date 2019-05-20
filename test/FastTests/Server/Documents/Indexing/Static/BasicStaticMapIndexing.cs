@@ -1,4 +1,5 @@
-﻿using System.Collections.Generic;
+﻿using System;
+using System.Collections.Generic;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
@@ -105,7 +106,7 @@ namespace FastTests.Server.Documents.Indexing.Static
                     }
                 };
 
-                var index = await database.IndexStore.CreateIndex(indexDefinition);
+                var index = await database.IndexStore.CreateIndex(indexDefinition, Guid.NewGuid().ToString());
                 Assert.NotNull(index);
 
                 Assert.Equal(33, (int)index.Configuration.MapTimeout.AsTimeSpan.TotalSeconds);
@@ -135,7 +136,7 @@ namespace FastTests.Server.Documents.Indexing.Static
                     }
                 };
 
-                var index1 = await database.IndexStore.CreateIndex(indexDefinition1);
+                var index1 = await database.IndexStore.CreateIndex(indexDefinition1, Guid.NewGuid().ToString());
                 Assert.NotNull(index1);
 
                 indexDefinition2 = new IndexDefinition
@@ -144,7 +145,7 @@ namespace FastTests.Server.Documents.Indexing.Static
                     Maps = { "from user in docs.Users select new { CustomAge = user.Age }" }
                 };
 
-                var index2 = await database.IndexStore.CreateIndex(indexDefinition2);
+                var index2 = await database.IndexStore.CreateIndex(indexDefinition2, Guid.NewGuid().ToString());
                 Assert.NotNull(index2);
 
                 Server.ServerStore.DatabasesLandlord.UnloadDirectly(dbName);

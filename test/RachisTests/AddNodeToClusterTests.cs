@@ -355,7 +355,7 @@ namespace RachisTests
                 Database = db
             }.Initialize())
             {
-                await cluster.Leader.ServerStore.SendToLeaderAsync(new AddDatabaseCommand
+                await cluster.Leader.ServerStore.SendToLeaderAsync(new AddDatabaseCommand(Guid.NewGuid().ToString())
                 {
                     Record = new DatabaseRecord(db)
                     {
@@ -400,7 +400,7 @@ namespace RachisTests
                 Database = db
             }.Initialize())
             {
-                await cluster.Leader.ServerStore.SendToLeaderAsync(new AddDatabaseCommand
+                await cluster.Leader.ServerStore.SendToLeaderAsync(new AddDatabaseCommand(Guid.NewGuid().ToString())
                 {
                     Record = new DatabaseRecord(db)
                     {
@@ -445,7 +445,7 @@ namespace RachisTests
                 Database = db
             }.Initialize())
             {
-                await cluster.Leader.ServerStore.SendToLeaderAsync(new AddDatabaseCommand
+                await cluster.Leader.ServerStore.SendToLeaderAsync(new AddDatabaseCommand(Guid.NewGuid().ToString())
                 {
                     Record = new DatabaseRecord(db)
                     {

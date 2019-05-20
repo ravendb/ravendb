@@ -16,7 +16,8 @@ namespace FastTests.Issues
             nameof(RavenCommand<object>.Result),
             nameof(RavenCommand<object>.FailedNodes),
             nameof(RavenCommand<object>.StatusCode),
-            nameof(RavenCommand<object>.CancellationToken)
+            nameof(RavenCommand<object>.CancellationToken),
+            nameof(IRaftCommand.RaftUniqueRequestId)
         };
 
         [Fact]

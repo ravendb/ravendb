@@ -1,4 +1,5 @@
-﻿using System.Linq;
+﻿using System;
+using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 using Raven.Client;
@@ -124,7 +125,7 @@ namespace FastTests.Server.Documents.Indexing.Static
                     Reduce = "from result in results group result by result.Location into g select new { Location = g.Key, Count = g.Sum(x => x.Count) }",
                 };
 
-                var index = await database.IndexStore.CreateIndex(defOne);
+                var index = await database.IndexStore.CreateIndex(defOne, Guid.NewGuid().ToString());
 
                 defTwo = new IndexDefinition()
                 {
@@ -147,7 +148,7 @@ select new
                     LockMode = IndexLockMode.LockedError
                 };
 
-                await database.IndexStore.CreateIndex(defTwo);
+                await database.IndexStore.CreateIndex(defTwo, Guid.NewGuid().ToString());
 
                 using (var context = DocumentsOperationContext.ShortTermSingleUse(database))
                 {

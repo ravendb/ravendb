@@ -1,4 +1,5 @@
-﻿using System.Threading.Tasks;
+﻿using System;
+using System.Threading.Tasks;
 using FastTests;
 using Raven.Client.Documents.Indexes;
 using Raven.Server.Documents.Indexes;
@@ -23,7 +24,7 @@ namespace SlowTests.Issues
                     },
                 });
                 
-                var index = await database.IndexStore.CreateIndex(definition);
+                var index = await database.IndexStore.CreateIndex(definition, Guid.NewGuid().ToString());
 
                 index.SetState(IndexState.Error); // will also stop the indexing thread
 
@@ -47,7 +48,7 @@ namespace SlowTests.Issues
                     },
                 });
                 
-                var index = await database.IndexStore.CreateIndex(definition);
+                var index = await database.IndexStore.CreateIndex(definition, Guid.NewGuid().ToString());
 
                 index.Disable();
                 index.Enable();

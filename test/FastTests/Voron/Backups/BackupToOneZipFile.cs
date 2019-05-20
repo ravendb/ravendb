@@ -1,4 +1,5 @@
-﻿using System.IO;
+﻿using System;
+using System.IO;
 using System.Linq;
 using System.Threading.Tasks;
 using FastTests.Utils;
@@ -32,20 +33,20 @@ namespace FastTests.Voron.Backups
                 await database.SubscriptionStorage.PutSubscription(new SubscriptionCreationOptions
                 {
                     Query = "from Users",
-                });
+                }, Guid.NewGuid().ToString());
 
                 await database.IndexStore.CreateIndex(new IndexDefinition()
                 {
                     Name = "Users_ByName",
                     Maps = { "from user in docs.Users select new { user.Name }" },
                     Type = IndexType.Map
-                });
+                }, Guid.NewGuid().ToString());
                 await database.IndexStore.CreateIndex(new IndexDefinition()
                 {
                     Name = "Users_ByName2",
                     Maps = { "from user in docs.Users select new { user.Name }" },
                     Type = IndexType.Map
-                });
+                }, Guid.NewGuid().ToString());
 
                 using (var tx = context.OpenWriteTransaction())
                 {

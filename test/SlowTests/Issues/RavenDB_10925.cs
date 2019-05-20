@@ -1,4 +1,5 @@
-﻿using System.Linq;
+﻿using System;
+using System.Linq;
 using System.Threading.Tasks;
 using FastTests;
 using Raven.Client.Documents.Indexes;
@@ -23,14 +24,14 @@ namespace SlowTests.Issues
                     new[]
                     {
                         AutoIndexField.Create("Name", new AutoIndexDefinition.AutoIndexFieldOptions())
-                    }));
+                    }), Guid.NewGuid().ToString());
 
                 var i1 = await database.IndexStore.CreateIndex(new AutoMapIndexDefinition(
                     "Companies",
                     new[]
                     {
                         AutoIndexField.Create("Name", new AutoIndexDefinition.AutoIndexFieldOptions())
-                    }));
+                    }), Guid.NewGuid().ToString());
 
                 var i2 = await database.IndexStore.CreateIndex(new AutoMapIndexDefinition(
                     "Companies",
@@ -38,7 +39,7 @@ namespace SlowTests.Issues
                     {
                         AutoIndexField.Create("Name", new AutoIndexDefinition.AutoIndexFieldOptions()),
                         AutoIndexField.Create("City", new AutoIndexDefinition.AutoIndexFieldOptions()),
-                    }));
+                    }), Guid.NewGuid().ToString());
 
                 database.IndexStore.RunIdleOperations();
 
@@ -60,7 +61,7 @@ namespace SlowTests.Issues
                             Indexing = AutoFieldIndexing.Search
                         }),
                         AutoIndexField.Create("City", new AutoIndexDefinition.AutoIndexFieldOptions()),
-                    }));
+                    }), Guid.NewGuid().ToString());
 
                 database.IndexStore.RunIdleOperations();
 
@@ -82,7 +83,7 @@ namespace SlowTests.Issues
                             Indexing = AutoFieldIndexing.Highlighting | AutoFieldIndexing.Search
                         }),
                         AutoIndexField.Create("City", new AutoIndexDefinition.AutoIndexFieldOptions()),
-                    }));
+                    }), Guid.NewGuid().ToString());
 
                 database.IndexStore.RunIdleOperations();
 
@@ -104,7 +105,7 @@ namespace SlowTests.Issues
                             Indexing = AutoFieldIndexing.Exact
                         }),
                         AutoIndexField.Create("City", new AutoIndexDefinition.AutoIndexFieldOptions()),
-                    }));
+                    }), Guid.NewGuid().ToString());
 
                 database.IndexStore.RunIdleOperations(); // it will merge the i5
                 database.IndexStore.RunIdleOperations(); // need to run twice since we are extending one index at a time
@@ -147,7 +148,7 @@ namespace SlowTests.Issues
                         {
                             GroupByArrayBehavior = GroupByArrayBehavior.ByIndividualValues
                         })
-                    }));
+                    }), Guid.NewGuid().ToString());
 
                 var i1 = await database.IndexStore.CreateIndex(new AutoMapReduceIndexDefinition(
                     "Companies",
@@ -161,7 +162,7 @@ namespace SlowTests.Issues
                         {
                             GroupByArrayBehavior = GroupByArrayBehavior.ByIndividualValues
                         })
-                    }));
+                    }), Guid.NewGuid().ToString());
 
                 var i2 = await database.IndexStore.CreateIndex(new AutoMapReduceIndexDefinition(
                     "Companies",
@@ -176,7 +177,7 @@ namespace SlowTests.Issues
                         {
                             GroupByArrayBehavior = GroupByArrayBehavior.ByIndividualValues
                         })
-                    }));
+                    }), Guid.NewGuid().ToString());
 
                 var i3 = await database.IndexStore.CreateIndex(new AutoMapReduceIndexDefinition(
                     "Companies",
@@ -195,7 +196,7 @@ namespace SlowTests.Issues
                         {
                             GroupByArrayBehavior = GroupByArrayBehavior.ByContent
                         })
-                    }));
+                    }), Guid.NewGuid().ToString());
 
                 Assert.Equal("Auto/Companies/ByCityAndCountAndExact(State)ReducedByArray(Name)", i3.Name);
 
@@ -228,7 +229,7 @@ namespace SlowTests.Issues
                         {
                             GroupByArrayBehavior = GroupByArrayBehavior.ByContent
                         })
-                    }));
+                    }), Guid.NewGuid().ToString());
 
                 database.IndexStore.RunIdleOperations(); // i4 should be merged
                 database.IndexStore.RunIdleOperations(); // need to run twice since we are extending one index at a time
