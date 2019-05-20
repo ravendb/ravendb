@@ -210,7 +210,7 @@ namespace Raven.Server.Documents.Handlers.Admin
             return Task.CompletedTask;
         }
 
-        [RavenAction("/cluster/topology", "GET", AuthorizationStatus.ValidUser)]
+        [RavenAction("/cluster/topology", "GET", AuthorizationStatus.ValidUser, IsDebugInformationEndpoint = true)]
         public Task GetClusterTopology()
         {
             using (ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
@@ -239,7 +239,7 @@ namespace Raven.Server.Documents.Handlers.Admin
                 else
                 {
                     var isClientIndependent = GetBoolValueQueryString("clientIndependent", false) ?? false;
-                    if (isClientIndependent == false)
+                    if (isClientIndependent == false && HttpContext.Items.TryGetValue(nameof(LocalEndpointClient.DebugPackage), out var _) == false)
                         topology.ReplaceCurrentNodeUrlWithClientRequestedNodeUrlIfNecessary(ServerStore, HttpContext);
                 }
 

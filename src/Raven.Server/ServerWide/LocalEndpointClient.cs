@@ -26,6 +26,7 @@ namespace Raven.Server.ServerWide
     public class LocalEndpointClient
     {
         private readonly RavenServer _server;
+        public const string DebugPackage = "DebugPackage";
 
         public LocalEndpointClient(RavenServer server)
         {
@@ -56,6 +57,11 @@ namespace Raven.Server.ServerWide
                     UpdateRouteMatchWithDatabaseName(requestContext, values);
                 }
             }
+
+            requestContext.HttpContext.Items = new Dictionary<object, object>
+            {
+                [nameof(LocalEndpointClient.DebugPackage)] = true
+            };
 
             var (endpointHandler, databaseLoadingWaitTask) = route.TryGetHandler(requestContext);
             var handler = endpointHandler ?? await databaseLoadingWaitTask;
