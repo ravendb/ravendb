@@ -13,9 +13,9 @@ namespace Raven.Server.ServerWide.Commands.Subscriptions
         public bool HasHighlyAvailableTasks;
         public DateTime LastClientConnectionTime;
 
-        private UpdateSubscriptionClientConnectionTime():base(null){}
+        private UpdateSubscriptionClientConnectionTime() {}
 
-        public UpdateSubscriptionClientConnectionTime(string databaseName) : base(databaseName)
+        public UpdateSubscriptionClientConnectionTime(string databaseName, string uniqueRequestId) : base(databaseName, uniqueRequestId)
         {
         }
 

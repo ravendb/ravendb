@@ -14,12 +14,11 @@ namespace Raven.Server.ServerWide.Commands
         public string[] FromNodes;
         public bool UpdateReplicationFactor = true;
 
-        public DeleteDatabaseCommand() : base(null)
+        public DeleteDatabaseCommand()
         {
-            ErrorOnDatabaseDoesNotExists = true;
         }
 
-        public DeleteDatabaseCommand(string databaseName) : base(databaseName)
+        public DeleteDatabaseCommand(string databaseName, string uniqueRequestId) : base(databaseName, uniqueRequestId)
         {
             ErrorOnDatabaseDoesNotExists = true;
         }

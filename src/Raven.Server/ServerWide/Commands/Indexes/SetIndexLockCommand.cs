@@ -11,13 +11,13 @@ namespace Raven.Server.ServerWide.Commands.Indexes
 
         public IndexLockMode LockMode;
 
-        public SetIndexLockCommand() : base(null)
+        public SetIndexLockCommand()
         {
             // for deserialization
         }
 
-        public SetIndexLockCommand(string name, IndexLockMode mode, string databaseName)
-            : base(databaseName)
+        public SetIndexLockCommand(string name, IndexLockMode mode, string databaseName, string uniqueRequestId)
+            : base(databaseName, uniqueRequestId)
         {
             IndexName = name;
             LockMode = mode;

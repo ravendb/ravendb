@@ -11,7 +11,7 @@ namespace Raven.Server.ServerWide.Commands
             // for deserialization
         }
 
-        public PutServerWideStudioConfigurationCommand(ServerWideStudioConfiguration value)
+        public PutServerWideStudioConfigurationCommand(ServerWideStudioConfiguration value, string uniqueRequestId) : base(uniqueRequestId)
         {
             Name = Constants.Configuration.StudioId;
             Value = value;

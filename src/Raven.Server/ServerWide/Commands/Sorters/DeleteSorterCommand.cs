@@ -7,13 +7,13 @@ namespace Raven.Server.ServerWide.Commands.Sorters
     {
         public string SorterName;
 
-        public DeleteSorterCommand() : base(null)
+        public DeleteSorterCommand()
         {
             // for deserialization
         }
 
-        public DeleteSorterCommand(string name, string databaseName)
-            : base(databaseName)
+        public DeleteSorterCommand(string name, string databaseName, string uniqueRequestId)
+            : base(databaseName, uniqueRequestId)
         {
             SorterName = name;
         }

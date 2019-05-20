@@ -12,12 +12,12 @@ namespace Raven.Server.ServerWide.Commands.ETL
     {
         public T Configuration { get; protected set; }
 
-        protected AddEtlCommand() : base(null)
+        protected AddEtlCommand()
         {
             // for deserialization
         }
 
-        protected AddEtlCommand(T configuration, string databaseName) : base(databaseName)
+        protected AddEtlCommand(T configuration, string databaseName, string uniqueRequestId) : base(databaseName, uniqueRequestId)
         {
             Configuration = configuration;
         }
@@ -52,7 +52,7 @@ namespace Raven.Server.ServerWide.Commands.ETL
             // for deserialization
         }
 
-        public AddRavenEtlCommand(RavenEtlConfiguration configuration, string databaseName) : base(configuration, databaseName)
+        public AddRavenEtlCommand(RavenEtlConfiguration configuration, string databaseName, string uniqueRequestId) : base(configuration, databaseName, uniqueRequestId)
         {
 
         }
@@ -71,7 +71,7 @@ namespace Raven.Server.ServerWide.Commands.ETL
             // for deserialization
         }
 
-        public AddSqlEtlCommand(SqlEtlConfiguration configuration, string databaseName) : base(configuration, databaseName)
+        public AddSqlEtlCommand(SqlEtlConfiguration configuration, string databaseName, string uniqueRequestId) : base(configuration, databaseName, uniqueRequestId)
         {
 
         }

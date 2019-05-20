@@ -9,12 +9,12 @@ namespace Raven.Server.ServerWide.Commands
     {
         public ExternalReplicationState ExternalReplicationState { get; set; }
 
-        private UpdateExternalReplicationStateCommand() : base(null)
+        private UpdateExternalReplicationStateCommand()
         {
             // for deserialization
         }
 
-        public UpdateExternalReplicationStateCommand(string databaseName) : base(databaseName)
+        public UpdateExternalReplicationStateCommand(string databaseName, string uniqueRequestId) : base(databaseName, uniqueRequestId)
         {
         }
 

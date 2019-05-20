@@ -11,12 +11,12 @@ namespace Raven.Server.ServerWide.Commands
         public long TaskId;
         public OngoingTaskType TaskType;
 
-        public DeleteOngoingTaskCommand() : base(null)
+        public DeleteOngoingTaskCommand()
         {
 
         }
 
-        public DeleteOngoingTaskCommand(long taskId, OngoingTaskType taskType, string databaseName) : base(databaseName)
+        public DeleteOngoingTaskCommand(long taskId, OngoingTaskType taskType, string databaseName, string uniqueRequestId) : base(databaseName, uniqueRequestId)
         {
             TaskId = taskId;
             TaskType = taskType;

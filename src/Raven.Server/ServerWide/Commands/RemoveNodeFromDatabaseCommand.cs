@@ -7,11 +7,11 @@ namespace Raven.Server.ServerWide.Commands
     {
         public string NodeTag;
 
-        public RemoveNodeFromDatabaseCommand() : base(null)
+        public RemoveNodeFromDatabaseCommand()
         {
         }
 
-        public RemoveNodeFromDatabaseCommand(string databaseName) : base(databaseName)
+        public RemoveNodeFromDatabaseCommand(string databaseName, string uniqueRequestId) : base(databaseName, uniqueRequestId)
         {
         }
 

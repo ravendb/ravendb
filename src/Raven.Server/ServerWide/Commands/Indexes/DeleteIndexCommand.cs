@@ -7,13 +7,13 @@ namespace Raven.Server.ServerWide.Commands.Indexes
     {
         public string IndexName { get; set; }
 
-        public DeleteIndexCommand() : base(null)
+        public DeleteIndexCommand()
         {
             // for deserialization
         }
 
-        public DeleteIndexCommand(string name, string databaseName)
-            : base(databaseName)
+        public DeleteIndexCommand(string name, string databaseName, string uniqueRequestId)
+            : base(databaseName, uniqueRequestId)
         {
             IndexName = name;
         }

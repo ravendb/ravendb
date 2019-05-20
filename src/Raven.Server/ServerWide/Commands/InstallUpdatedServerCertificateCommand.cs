@@ -1,4 +1,5 @@
-﻿using Raven.Server.ServerWide.Context;
+﻿using System;
+using Raven.Server.ServerWide.Context;
 using Sparrow.Json;
 using Sparrow.Json.Parsing;
 
@@ -14,7 +15,7 @@ namespace Raven.Server.ServerWide.Commands
             // for deserialization
         }
 
-        public InstallUpdatedServerCertificateCommand(string certificate, bool replaceImmediately)
+        public InstallUpdatedServerCertificateCommand(string certificate, bool replaceImmediately, string uniqueRequestId) : base(uniqueRequestId)
         {
             Certificate = certificate;
             ReplaceImmediately = replaceImmediately;
@@ -43,7 +44,7 @@ namespace Raven.Server.ServerWide.Commands
             // for deserialization
         }
 
-        public ConfirmReceiptServerCertificateCommand(string thumbprint)
+        public ConfirmReceiptServerCertificateCommand(string thumbprint) : base(string.Empty)
         {
             Thumbprint = thumbprint;
         }
@@ -68,6 +69,10 @@ namespace Raven.Server.ServerWide.Commands
         {
             AssertClusterAdmin(isClusterAdmin);
         }
+
+        public RecheckStatusOfServerCertificateCommand() : base(string.Empty)
+        {
+        }
     }
 
     public class ConfirmServerCertificateReplacedCommand : CommandBase
@@ -80,7 +85,7 @@ namespace Raven.Server.ServerWide.Commands
             // for deserialization
         }
 
-        public ConfirmServerCertificateReplacedCommand(string thumbprint, string oldThumbprint)
+        public ConfirmServerCertificateReplacedCommand(string thumbprint, string oldThumbprint) : base(string.Empty)
         {
             Thumbprint = thumbprint;
             OldThumbprint = oldThumbprint;
@@ -105,6 +110,10 @@ namespace Raven.Server.ServerWide.Commands
         public override void VerifyCanExecuteCommand(ServerStore store, TransactionOperationContext context, bool isClusterAdmin)
         {
             AssertClusterAdmin(isClusterAdmin);
+        }
+
+        public RecheckStatusOfServerCertificateReplacementCommand() : base(null)
+        {
         }
     }
 }

@@ -9,13 +9,13 @@ namespace Raven.Server.ServerWide.Commands.PeriodicBackup
     {
         public PeriodicBackupConfiguration Configuration;
 
-        public UpdatePeriodicBackupCommand() : base(null)
+        public UpdatePeriodicBackupCommand()
         {
             // for deserialization
         }
 
-        public UpdatePeriodicBackupCommand(PeriodicBackupConfiguration configuration, string databaseName) 
-            : base(databaseName)
+        public UpdatePeriodicBackupCommand(PeriodicBackupConfiguration configuration, string databaseName, string uniqueRequestId) 
+            : base(databaseName, uniqueRequestId)
         {
             Configuration = configuration;
         }
