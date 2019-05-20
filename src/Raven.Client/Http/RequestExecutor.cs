@@ -1030,11 +1030,21 @@ namespace Raven.Client.Http
         {
             var request = command.CreateRequest(ctx, node, out url);
 
-            request.RequestUri = new Uri(url);
+            var builder = new UriBuilder(url);
 
-            if (!request.Headers.Contains(Constants.Headers.ClientVersion))
+            if (command is IRaftCommand raftCommand)
+            {
+                Debug.Assert(raftCommand.RaftUniqueRequestId != null, $"Forget to create an id for {command.GetType()}?");
+
+                var raftRequestString = "raft-request-id=" + raftCommand.RaftUniqueRequestId;
+                builder.Query = builder.Query?.Length > 1 ? $"{builder.Query.Substring(1)}&{raftRequestString}" : raftRequestString;
+            }
+
+            request.RequestUri = builder.Uri;
+
+            if (request.Headers.Contains(Constants.Headers.ClientVersion) == false)
                 request.Headers.Add(Constants.Headers.ClientVersion, ClientVersion);
-
+            
             return request;
         }
 

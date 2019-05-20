@@ -472,7 +472,6 @@ namespace Raven.Server.Rachis
                 maxIndexOnQuorum = _engine.Apply(context, maxIndexOnQuorum, this, Stopwatch.StartNew());
 
                 context.Transaction.Commit();
-
                 _lastCommit = maxIndexOnQuorum;
             }
 
@@ -689,6 +688,7 @@ namespace Raven.Server.Rachis
                 using (context.OpenWriteTransaction())
                 {
                     var cmdsCount = 0;
+                    _engine.GetLastCommitIndex(context, out var lastCommitted, out _);
                     while (cmdsCount++ < 128 && _commandsQueue.TryDequeue(out var cmd))
                     {
                         if (cmd.Consumed.Raise() == false)
@@ -710,19 +710,41 @@ namespace Raven.Server.Rachis
                         var djv = cmd.Command.ToJson(context);
                         var cmdJson = context.ReadObject(djv, "raft/command");
 
-                        var index = _engine.InsertToLeaderLog(context, Term, cmdJson, RachisEntryFlags.StateMachineCommand);
+                        if (_engine.HasHistoryLog(context, cmdJson, out var index, out var result, out var exception))
+                        {
+                            // if this command is already committed, we can skip it and notify the caller about it
+                            if (lastCommitted >= index) 
+                            {
+                                if (exception != null)
+                                {
+                                    cmd.Tcs.TrySetException(new Exception(exception));
+                                }
+                                else
+                                {
+                                    result = GetConvertResult(cmd.Command)?.Apply(result) ?? cmd.Command.FromRemote(result);
+                                    cmd.Tcs.TrySetResult(Task.FromResult<(long, object)>((index, result)));
+                                }
+                                list.Remove(cmd.Tcs);
+                                continue;
+                            }
+                        }
+                        else
+                        {
+                            index = _engine.InsertToLeaderLog(context, Term, cmdJson, RachisEntryFlags.StateMachineCommand);
+                        }
 
                         var tcs = new TaskCompletionSource<(long, object)>(TaskCreationOptions.RunContinuationsAsynchronously);
                         tasks.Add(tcs.Task);
                         var state = new
-                            CommandState // we need to add entry inside write tx lock to avoid
-                                         // a situation when command will be applied (and state set)
-                                         // before it is added to the entries list
+                            CommandState 
+                            // we need to add entry inside write tx lock to avoid
+                            // a situation when command will be applied (and state set)
+                            // before it is added to the entries list
                             {
                                 CommandIndex = index,
                                 TaskCompletionSource = tcs,
-                                ConvertResult = GetConvertResult(cmd.Command)
-                        };
+                                ConvertResult = GetConvertResult(cmd.Command),
+                            };
                         _entries[index] = state;
                     }
                     context.Transaction.Commit();
@@ -812,9 +834,10 @@ namespace Raven.Server.Rachis
                     {
                         _newEntriesArrived.TrySetCanceled();
                         var lastStateChangeReason = _engine.LastStateChangeReason;
-                        TimeoutException te = null;
+                        NotLeadingException te = null;
                         if (string.IsNullOrEmpty(lastStateChangeReason) == false)
-                            te = new TimeoutException(lastStateChangeReason);
+                            te = new NotLeadingException(lastStateChangeReason);
+
                         foreach (var entry in _entries)
                         {
                             if (te == null)

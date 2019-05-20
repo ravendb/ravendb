@@ -250,6 +250,27 @@ namespace Raven.Server.Web
             return HttpContext.WebSockets.IsWebSocketRequest;
         }
 
+        protected string GetRaftRequestIdFromQuery()
+        {
+            var guid = GetStringQueryString("raft-request-id", required: false);
+
+            if (RequestRouter.TryGetClientVersion(HttpContext, out var clientVersion))
+            {
+                if (clientVersion.Build <= 42_008) // TODO: what should be the behaviour with the nightly version 
+                {
+                    guid = guid ?? string.Empty;
+                }
+            }
+
+#if DEBUG
+            return guid;
+#endif
+
+#pragma warning disable 0162
+            return guid ?? Guid.NewGuid().ToString();
+#pragma warning restore 0162
+        }
+
         protected string GetStringFromHeaders(string name)
         {
             var headers = HttpContext.Request.Headers[name];

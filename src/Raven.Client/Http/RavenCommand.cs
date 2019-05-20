@@ -29,6 +29,11 @@ namespace Raven.Client.Http
         Automatic
     }
 
+    public interface IRaftCommand
+    {
+        string RaftUniqueRequestId { get; }
+    }
+
     public abstract class RavenCommand<TResult>
     {
         public CancellationToken CancellationToken = CancellationToken.None;

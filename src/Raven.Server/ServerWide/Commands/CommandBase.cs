@@ -13,11 +13,24 @@ namespace Raven.Server.ServerWide.Commands
         {
             return new DynamicJsonValue
             {
-                ["Type"] = GetType().Name
+                ["Type"] = GetType().Name,
+                [nameof(UniqueRequestId)] = UniqueRequestId
             };
         }
 
         public long? RaftCommandIndex;
+
+        // Unique id which is provided by the client in order to avoid re-applying the command if it sent to different nodes or on retry.
+        // if string.Empty passed, it will be treated as don't care,
+        // if (null) value is passed, it will be treated as a bug. (will throw an exception only in Debug builds to support old clients)
+        public string UniqueRequestId;
+
+        protected CommandBase() { }
+
+        protected CommandBase(string uniqueRequestId)
+        {
+            UniqueRequestId = uniqueRequestId;
+        }
 
         public static CommandBase CreateFrom(BlittableJsonReaderObject json)
         {

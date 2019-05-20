@@ -8,6 +8,7 @@ using System.Security.Cryptography.X509Certificates;
 using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
+using Raven.Client.Documents.Session;
 using Raven.Client.Exceptions;
 using Raven.Client.Extensions;
 using Raven.Server.ServerWide.Context;
@@ -30,6 +31,7 @@ using Raven.Server.ServerWide.Commands;
 using Sparrow.Server;
 using Sparrow.Server.Utils;
 using System.Linq;
+using Sparrow;
 
 namespace Raven.Server.Rachis
 {
@@ -282,9 +284,29 @@ namespace Raven.Server.Rachis
         private static readonly Slice TopologySlice;
         private static readonly Slice TagSlice;
         private static readonly Slice SnapshotRequestSlice;
-
+        internal static readonly Slice LogHistorySlice;
+        private static readonly Slice LogHistoryIndexSlice;
         internal static readonly Slice EntriesSlice;
         internal static readonly TableSchema LogsTable;
+        internal static readonly TableSchema LogHistoryTable;
+        private const int LogHistoryMaxEntries = 2048;
+        internal enum LogHistoryColumn
+        {
+            Guid, // string
+            Index, // long
+            Term, // long
+            Type, // string
+            State, // byte -> 1 - appended, 2 - committed
+            Result, // blittable
+            Exception // string
+        }
+
+        internal enum HistoryStatus : byte
+        {
+            None,
+            Appended,
+            Committed
+        }
 
         static RachisConsensus()
         {
@@ -298,6 +320,8 @@ namespace Raven.Server.Rachis
                 Slice.From(ctx, "Topology", out TopologySlice);
                 Slice.From(ctx, "LastTruncated", out LastTruncatedSlice);
                 Slice.From(ctx, "Entries", out EntriesSlice);
+                Slice.From(ctx, "LogHistory", out LogHistorySlice);
+                Slice.From(ctx, "LogHistoryIndex", out LogHistoryIndexSlice);
                 Slice.From(ctx, "SnapshotRequest", out SnapshotRequestSlice);
             }
             /*
@@ -313,6 +337,146 @@ namespace Raven.Server.Rachis
             {
                 StartIndex = 0
             });
+
+            LogHistoryTable = new TableSchema();
+            LogHistoryTable.DefineKey(new TableSchema.SchemaIndexDef
+            {
+                StartIndex = (int)LogHistoryColumn.Guid,
+            });
+
+            LogHistoryTable.DefineFixedSizeIndex(new TableSchema.FixedSizeSchemaIndexDef
+            {
+                Name = LogHistoryIndexSlice,
+                StartIndex = (int)LogHistoryColumn.Index
+            });
+        }
+
+        public unsafe void InsertHistoryLog(TransactionOperationContext context, long index, long term, BlittableJsonReaderObject cmd)
+        {
+            var guid = GetGuidFromCommand(cmd);
+            if (guid == null) // shouldn't happened in new cluster version!
+                return;
+
+            if (guid == string.Empty)
+                return;
+
+            var table = context.Transaction.InnerTransaction.OpenTable(LogHistoryTable, LogHistorySlice);
+            var type = GetTypeFromCommand(cmd);
+
+            using (Slice.From(context.Allocator, guid, out var guidSlice))
+            using (Slice.From(context.Allocator, type, out var typeSlice))
+            using (table.Allocate(out TableValueBuilder tvb))
+            {
+                tvb.Add(guidSlice);
+                tvb.Add(Bits.SwapBytes(index));
+                tvb.Add(term);
+                tvb.Add(typeSlice);
+                tvb.Add((byte)HistoryStatus.Appended);
+                tvb.Add(Slices.Empty); // result
+                tvb.Add(Slices.Empty); // exception
+                table.Insert(tvb);
+            }
+
+            if (table.NumberOfEntries > LogHistoryMaxEntries)
+            {
+                var reader = table.ReadFirst(LogHistoryTable.FixedSizeIndexes[LogHistoryIndexSlice]);
+                table.Delete(reader.Reader.Id);
+            }
+        }
+
+        public unsafe void UpdateHistoryLog(TransactionOperationContext context, long index, long term, BlittableJsonReaderObject cmd, object result, Exception exception)
+        {
+            var guid = GetGuidFromCommand(cmd);
+            if (guid == null) // shouldn't happened in new cluster version!
+                return;
+            if (guid == string.Empty)
+                return;
+
+            var table = context.Transaction.InnerTransaction.OpenTable(LogHistoryTable, LogHistorySlice);
+
+            var type = GetTypeFromCommand(cmd);
+
+            using (Slice.From(context.Allocator, guid, out var guidSlice))
+            {
+                if (table.VerifyKeyExists(guidSlice) == false)
+                    return; //was probably removed
+            }
+
+            if (TypeConverter.IsSupportedType(result) == false)
+            {
+                throw new RachisApplyException("We don't support type " + result.GetType().FullName + ".");
+            }
+
+            using (Slice.From(context.Allocator, guid, out var guidSlice))
+            using (Slice.From(context.Allocator, type, out var typeSlice))
+            using (table.Allocate(out TableValueBuilder tvb))
+            {
+                tvb.Add(guidSlice);
+                tvb.Add(Bits.SwapBytes(index));
+                tvb.Add(term);
+                tvb.Add(typeSlice);
+                tvb.Add((byte)HistoryStatus.Committed);
+                if (result == null)
+                {
+                    tvb.Add(Slices.Empty);
+                }
+                else
+                {
+                    var blittableResult = context.ReadObject(new DynamicJsonValue {["Result"] = result}, "set-history-result");
+                    tvb.Add(blittableResult.BasePointer, blittableResult.Size);
+                }
+
+                if (exception == null)
+                {
+                    tvb.Add(Slices.Empty);
+                }
+                else
+                {
+                    var lazyException = context.GetLazyString(exception.ToString());
+                    tvb.Add(lazyException.Buffer, lazyException.Size);
+                }
+
+                table.Set(tvb);
+            }
+        }
+
+        public unsafe bool HasHistoryLog(TransactionOperationContext context, BlittableJsonReaderObject cmd, out long index, out object result, out string exception)
+        {
+            result = null;
+            exception = null;
+            index = 0;
+
+            var guid = GetGuidFromCommand(cmd);
+            if (guid == null) // shouldn't happened in new cluster version!
+                return false;
+
+            if (guid == string.Empty)
+                return false;
+
+            var table = context.Transaction.InnerTransaction.OpenTable(LogHistoryTable, LogHistorySlice);
+            using (Slice.From(context.Allocator, guid, out var guidSlice))
+            {
+                if (table.ReadByKey(guidSlice, out var reader) == false)
+                    return false;
+
+                index = Bits.SwapBytes(*(long*)reader.Read((int)LogHistoryColumn.Index, out _));
+                var resultPtr = reader.Read((int)LogHistoryColumn.Result, out int size);
+                if (size > 0)
+                {
+                    var blittalbeResultHolder = new BlittableJsonReaderObject(resultPtr, size, context);
+                    if (blittalbeResultHolder.TryGet("Result", out result) == false) // this blittable will be clone to the outer context
+                    {
+                        throw new InvalidOperationException("Invalid result format!"); // shouldn't happened!
+                    }
+                }
+                var exceptionPtr = reader.Read((int)LogHistoryColumn.Exception, out size);
+                if (size > 0)
+                {
+                    exception = Encodings.Utf8.GetString(exceptionPtr, size);
+                }
+
+                return true;
+            }
         }
 
         public TimeSpan ElectionTimeout
@@ -393,6 +557,7 @@ namespace Raven.Server.Rachis
 
                     Log = LoggingSource.Instance.GetLogger<RachisConsensus>(_tag);
                     LogsTable.Create(tx.InnerTransaction, EntriesSlice, 16);
+                    LogHistoryTable.Create(tx.InnerTransaction, LogHistorySlice, 16);
 
                     var read = state.Read(CurrentTermSlice);
                     if (read == null || read.Reader.Length != sizeof(long))
@@ -1109,13 +1274,39 @@ namespace Raven.Server.Rachis
             }
         }
 
+        public class AppendedCommand
+        {
+            public string Guid;
+            public long Index;
+            public string Type;
+            public object Result;
+        }
+
+        public static string GetGuidFromCommand(BlittableJsonReaderObject cmd)
+        {
+            if (cmd.TryGet(nameof(CommandBase.UniqueRequestId), out string guid))
+                return guid;
+
+            return null;
+        }
+
+        public static string GetTypeFromCommand(BlittableJsonReaderObject cmd)
+        {
+            if (cmd.TryGet("Type", out string type) == false)
+            {
+                throw new RachisApplyException("Cannot execute command, wrong format");
+            }
+
+            return type;
+        }
+
         public unsafe long InsertToLeaderLog(TransactionOperationContext context, long term, BlittableJsonReaderObject cmd,
             RachisEntryFlags flags)
         {
             Debug.Assert(context.Transaction != null);
             
             ValidateTerm(term);
-            
+
             var table = context.Transaction.InnerTransaction.OpenTable(LogsTable, EntriesSlice);
 
             long lastIndex;
@@ -1138,6 +1329,9 @@ namespace Raven.Server.Rachis
                 tvb.Add((int)flags);
                 table.Insert(tvb);
             }
+
+            InsertHistoryLog(context, lastIndex, term, cmd);
+
             return lastIndex;
         }
 
@@ -1307,6 +1501,8 @@ namespace Raven.Server.Rachis
                     {
                         nested.Dispose();
                     }
+
+                    InsertHistoryLog(context, entry.Index, entry.Term, entry.Entry);
                 }
             }
 
