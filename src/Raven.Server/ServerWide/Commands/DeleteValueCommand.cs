@@ -23,5 +23,11 @@ namespace Raven.Server.ServerWide.Commands
             if (Name == ServerStore.LicenseStorageKey)
                 throw new RachisApplyException($"Attempted to use {nameof(DeleteValueCommand)} to delete a license, use dedicated command for this.");
         }
+
+        public DeleteValueCommand() { }
+
+        public DeleteValueCommand(string uniqueRequestId) : base(uniqueRequestId)
+        {
+        }
     }
 }

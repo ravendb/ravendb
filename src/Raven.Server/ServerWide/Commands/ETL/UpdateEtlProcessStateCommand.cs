@@ -22,13 +22,13 @@ namespace Raven.Server.ServerWide.Commands.ETL
 
         public bool HasHighlyAvailableTasks;
 
-        private UpdateEtlProcessStateCommand() : base(null)
+        private UpdateEtlProcessStateCommand()
         {
             // for deserialization
         }
 
         public UpdateEtlProcessStateCommand(string databaseName, string configurationName, string transformationName, long lastProcessedEtag, string changeVector,
-            string nodeTag, bool hasHighlyAvailableTasks) : base(databaseName)
+            string nodeTag, bool hasHighlyAvailableTasks, string uniqueRequestId) : base(databaseName, uniqueRequestId)
         {
             ConfigurationName = configurationName;
             TransformationName = transformationName;

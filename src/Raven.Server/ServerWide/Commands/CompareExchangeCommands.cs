@@ -33,7 +33,7 @@ namespace Raven.Server.ServerWide.Commands
 
         protected CompareExchangeCommandBase() { }
 
-        protected CompareExchangeCommandBase(string database, string key, long index, JsonOperationContext context, bool fromBackup)
+        protected CompareExchangeCommandBase(string database, string key, long index, JsonOperationContext context, string uniqueRequestId, bool fromBackup) : base(uniqueRequestId)
         {
             if (string.IsNullOrEmpty(key))
                 throw new ArgumentNullException(nameof(key), "The key argument must have value");
@@ -173,8 +173,8 @@ namespace Raven.Server.ServerWide.Commands
     {
         public RemoveCompareExchangeCommand() { }
 
-        public RemoveCompareExchangeCommand(string database, string key, long index, JsonOperationContext contextToReturnResult, bool fromBackup = false) : base(database, key,
-            index, contextToReturnResult, fromBackup)
+        public RemoveCompareExchangeCommand(string database, string key, long index, JsonOperationContext contextToReturnResult, string uniqueRequestId, bool fromBackup = false) : base(database, key,
+            index, contextToReturnResult, uniqueRequestId, fromBackup)
         {
         }
 
@@ -234,8 +234,8 @@ namespace Raven.Server.ServerWide.Commands
 
         public AddOrUpdateCompareExchangeCommand() { }
 
-        public AddOrUpdateCompareExchangeCommand(string database, string key, BlittableJsonReaderObject value, long index, JsonOperationContext contextToReturnResult, bool fromBackup = false)
-            : base(database, key, index, contextToReturnResult, fromBackup)
+        public AddOrUpdateCompareExchangeCommand(string database, string key, BlittableJsonReaderObject value, long index, JsonOperationContext contextToReturnResult, string uniqueRequestId, bool fromBackup = false)
+            : base(database, key, index, contextToReturnResult, uniqueRequestId, fromBackup)
         {
             if (key.Length > MaxNumberOfCompareExchangeKeyBytes || Encoding.GetByteCount(key) > MaxNumberOfCompareExchangeKeyBytes)
                 ThrowCompareExchangeKeyTooBig(key);

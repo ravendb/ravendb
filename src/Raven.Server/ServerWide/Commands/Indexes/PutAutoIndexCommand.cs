@@ -18,12 +18,11 @@ namespace Raven.Server.ServerWide.Commands.Indexes
         public AutoIndexDefinition Definition;
 
         public PutAutoIndexCommand()
-            : base(null)
         {
         }
 
-        public PutAutoIndexCommand(AutoIndexDefinition definition, string databaseName)
-            : base(databaseName)
+        public PutAutoIndexCommand(AutoIndexDefinition definition, string databaseName, string uniqueRequestId)
+            : base(databaseName, uniqueRequestId)
         {
             Definition = definition;
         }
@@ -47,11 +46,11 @@ namespace Raven.Server.ServerWide.Commands.Indexes
             json[nameof(Definition)] = TypeConverter.ToBlittableSupportedType(Definition);
         }
 
-        public static PutAutoIndexCommand Create(AutoIndexDefinitionBase definition, string databaseName)
+        public static PutAutoIndexCommand Create(AutoIndexDefinitionBase definition, string databaseName, string guid)
         {
             var indexType = GetAutoIndexType(definition);
 
-            return new PutAutoIndexCommand(GetAutoIndexDefinition(definition, indexType), databaseName);
+            return new PutAutoIndexCommand(GetAutoIndexDefinition(definition, indexType), databaseName, guid);
         }
 
         public static IndexType GetAutoIndexType(AutoIndexDefinitionBase definition)

@@ -16,12 +16,12 @@ namespace Raven.Server.ServerWide.Commands.ETL
 
         public EtlType EtlType { get; protected set; }
 
-        protected UpdateEtlCommand() : base(null)
+        protected UpdateEtlCommand()
         {
             // for deserialization
         }
 
-        protected UpdateEtlCommand(long taskId, T configuration, EtlType type, string databaseName) : base(databaseName)
+        protected UpdateEtlCommand(long taskId, T configuration, EtlType type, string databaseName, string uniqueRequestId) : base(databaseName, uniqueRequestId)
         {
             TaskId = taskId;
             Configuration = configuration;
@@ -43,15 +43,15 @@ namespace Raven.Server.ServerWide.Commands.ETL
             // for deserialization
         }
 
-        public UpdateRavenEtlCommand(long taskId, RavenEtlConfiguration configuration, string databaseName) : base(taskId, configuration, EtlType.Raven, databaseName)
+        public UpdateRavenEtlCommand(long taskId, RavenEtlConfiguration configuration, string databaseName, string uniqueRequestId) : base(taskId, configuration, EtlType.Raven, databaseName, uniqueRequestId)
         {
 
         }
 
         public override string UpdateDatabaseRecord(DatabaseRecord record, long etag)
         {
-            new DeleteOngoingTaskCommand(TaskId, OngoingTaskType.RavenEtl, DatabaseName).UpdateDatabaseRecord(record, etag);
-            new AddRavenEtlCommand(Configuration, DatabaseName).UpdateDatabaseRecord(record, etag);
+            new DeleteOngoingTaskCommand(TaskId, OngoingTaskType.RavenEtl, DatabaseName, null).UpdateDatabaseRecord(record, etag);
+            new AddRavenEtlCommand(Configuration, DatabaseName, null).UpdateDatabaseRecord(record, etag);
 
             return null;
         }
@@ -64,15 +64,15 @@ namespace Raven.Server.ServerWide.Commands.ETL
             // for deserialization
         }
 
-        public UpdateSqlEtlCommand(long taskId, SqlEtlConfiguration configuration, string databaseName) : base(taskId, configuration, EtlType.Sql, databaseName)
+        public UpdateSqlEtlCommand(long taskId, SqlEtlConfiguration configuration, string databaseName, string uniqueRequestId) : base(taskId, configuration, EtlType.Sql, databaseName, uniqueRequestId)
         {
 
         }
 
         public override string UpdateDatabaseRecord(DatabaseRecord record, long etag)
         {
-            new DeleteOngoingTaskCommand(TaskId, OngoingTaskType.SqlEtl, DatabaseName).UpdateDatabaseRecord(record, etag);
-            new AddSqlEtlCommand(Configuration, DatabaseName).UpdateDatabaseRecord(record, etag);
+            new DeleteOngoingTaskCommand(TaskId, OngoingTaskType.SqlEtl, DatabaseName, null).UpdateDatabaseRecord(record, etag);
+            new AddSqlEtlCommand(Configuration, DatabaseName, null).UpdateDatabaseRecord(record, etag);
 
             return null;
         }

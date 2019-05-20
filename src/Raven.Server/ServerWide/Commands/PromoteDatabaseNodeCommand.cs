@@ -7,12 +7,12 @@ namespace Raven.Server.ServerWide.Commands
     {
         public string NodeTag;
 
-        public PromoteDatabaseNodeCommand() : base(null)
+        public PromoteDatabaseNodeCommand()
         {
 
         }
 
-        public PromoteDatabaseNodeCommand(string databaseName) : base(databaseName)
+        public PromoteDatabaseNodeCommand(string databaseName, string uniqueRequestId) : base(databaseName, uniqueRequestId)
         {
 
         }

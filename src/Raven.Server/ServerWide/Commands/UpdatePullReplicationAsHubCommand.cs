@@ -8,9 +8,9 @@ namespace Raven.Server.ServerWide.Commands
     {
         public PullReplicationDefinition Definition;
 
-        public UpdatePullReplicationAsHubCommand():base(null) { }
+        public UpdatePullReplicationAsHubCommand() { }
 
-        public UpdatePullReplicationAsHubCommand(string databaseName) : base(databaseName)
+        public UpdatePullReplicationAsHubCommand(string databaseName, string uniqueRequestId) : base(databaseName, uniqueRequestId)
         {
         }
 

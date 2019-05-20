@@ -13,11 +13,11 @@ namespace Raven.Server.ServerWide.Commands
             databaseRecord.Expiration = Configuration;
         }
 
-        public EditExpirationCommand() : base(null)
+        public EditExpirationCommand()
         {
         }
 
-        public EditExpirationCommand(ExpirationConfiguration configuration, string databaseName) : base(databaseName)
+        public EditExpirationCommand(ExpirationConfiguration configuration, string databaseName, string uniqueRequestId) : base(databaseName, uniqueRequestId)
         {
             Configuration = configuration;
         }

@@ -10,13 +10,13 @@ namespace Raven.Server.ServerWide.Commands.Indexes
 
         public IndexPriority Priority;
 
-        public SetIndexPriorityCommand() : base(null)
+        public SetIndexPriorityCommand()
         {
             // for deserialization
         }
 
-        public SetIndexPriorityCommand(string name, IndexPriority priority, string databaseName)
-            : base(databaseName)
+        public SetIndexPriorityCommand(string name, IndexPriority priority, string databaseName, string uniqueRequestId)
+            : base(databaseName, uniqueRequestId)
         {
             IndexName = name;
             Priority = priority;

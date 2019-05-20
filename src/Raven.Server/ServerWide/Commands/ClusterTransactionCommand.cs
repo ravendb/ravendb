@@ -101,10 +101,10 @@ namespace Raven.Server.ServerWide.Commands
         public ClusterTransactionCommand() { }
 
         public ClusterTransactionCommand(string databaseName, string recordId, ArraySegment<BatchRequestParser.CommandData> commandParsedCommands,
-            ClusterTransactionOptions options)
+            ClusterTransactionOptions options, string uniqueRequestId) : base(uniqueRequestId)
         {
             DatabaseName = databaseName;
-            DatabaseRecordId = recordId ?? Guid.NewGuid().ToBase64Unpadded();
+            DatabaseRecordId = recordId ?? System.Guid.NewGuid().ToBase64Unpadded();
             Options = options;
 
             foreach (var commandData in commandParsedCommands)
@@ -151,7 +151,7 @@ namespace Raven.Server.ServerWide.Commands
                 switch (clusterCommand.Type)
                 {
                     case CommandType.CompareExchangePUT:
-                        var put = new AddOrUpdateCompareExchangeCommand(DatabaseName, clusterCommand.Id, clusterCommand.Document, clusterCommand.Index, context);
+                        var put = new AddOrUpdateCompareExchangeCommand(DatabaseName, clusterCommand.Id, clusterCommand.Document, clusterCommand.Index, context, null);
                         if (put.Validate(context, items, clusterCommand.Index, out current) == false)
                         {
                             errors.Add(
@@ -161,7 +161,7 @@ namespace Raven.Server.ServerWide.Commands
                         toExecute.Add(put);
                         break;
                     case CommandType.CompareExchangeDELETE:
-                        var delete = new RemoveCompareExchangeCommand(DatabaseName, clusterCommand.Id, clusterCommand.Index, context);
+                        var delete = new RemoveCompareExchangeCommand(DatabaseName, clusterCommand.Id, clusterCommand.Index, context, null);
                         if (delete.Validate(context, items, clusterCommand.Index, out current) == false)
                         {
                             errors.Add($"Concurrency check failed for deleting the key '{clusterCommand.Id}'. Requested index: {clusterCommand.Index}, actual index: {current}");
@@ -392,6 +392,11 @@ namespace Raven.Server.ServerWide.Commands
                 return rc;
             }
             return base.FromRemote(remoteResult);
+        }
+
+        public override string AdditionalDebugInformation(Exception exception)
+        {
+            return $"guid: {UniqueRequestId} {string.Join(", ", ClusterCommands.Select(c => c.Id))}";
         }
 
         public override DynamicJsonValue ToJson(JsonOperationContext context)

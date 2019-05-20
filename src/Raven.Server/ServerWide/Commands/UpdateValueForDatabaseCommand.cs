@@ -76,7 +76,9 @@ namespace Raven.Server.ServerWide.Commands
             }
         }
 
-        protected UpdateValueForDatabaseCommand(string databaseName)
+        protected UpdateValueForDatabaseCommand() { }
+
+        protected UpdateValueForDatabaseCommand(string databaseName, string uniqueRequestId) : base(uniqueRequestId)
         {
             DatabaseName = databaseName;
         }
