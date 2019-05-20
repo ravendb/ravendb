@@ -26,7 +26,7 @@ namespace Raven.Client.Documents.Operations.Sorters
             return new PutSortersCommand(conventions, context, _sortersToAdd);
         }
 
-        private class PutSortersCommand : RavenCommand
+        private class PutSortersCommand : RavenCommand, IRaftCommand
         {
             private readonly BlittableJsonReaderObject[] _sortersToAdd;
 
@@ -72,6 +72,7 @@ namespace Raven.Client.Documents.Operations.Sorters
             }
 
             public override bool IsReadRequest => false;
+            public string RaftUniqueRequestId { get; } = Guid.NewGuid().ToString();
         }
     }
 }

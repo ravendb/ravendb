@@ -4,7 +4,7 @@ using Sparrow.Json;
 
 namespace Raven.Client.Documents.Commands
 {
-    public class DropSubscriptionConnectionCommand:RavenCommand
+    public class DropSubscriptionConnectionCommand : RavenCommand
     {
         private readonly string _name;
 
@@ -12,6 +12,9 @@ namespace Raven.Client.Documents.Commands
         {
             _name = name;
         }
+
+        
+
         public override HttpRequestMessage CreateRequest(JsonOperationContext ctx, ServerNode node, out string url)
         {
             url = $"{node.Url}/databases/{node.Database}/subscriptions/drop?name={_name}";

@@ -1,4 +1,5 @@
-﻿using System.Net.Http;
+﻿using System;
+using System.Net.Http;
 using Raven.Client.Documents.Conventions;
 using Raven.Client.Documents.Operations.OngoingTasks;
 using Raven.Client.Http;
@@ -23,7 +24,7 @@ namespace Raven.Client.Documents.Operations.Replication
             return new UpdateExternalReplication(_newWatcher);
         }
 
-        private class UpdateExternalReplication : RavenCommand<ModifyOngoingTaskResult>
+        private class UpdateExternalReplication : RavenCommand<ModifyOngoingTaskResult>, IRaftCommand
         {
             private readonly ExternalReplication _newWatcher;
 
@@ -62,6 +63,7 @@ namespace Raven.Client.Documents.Operations.Replication
             }
 
             public override bool IsReadRequest => false;
+            public string RaftUniqueRequestId { get; } = Guid.NewGuid().ToString();
         }
     }
 

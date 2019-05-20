@@ -30,7 +30,7 @@ namespace Raven.Client.ServerWide.Operations.Certificates
             return new ReplaceClusterCertificateCommand(_certBytes, _replaceImmediately);
         }
 
-        private class ReplaceClusterCertificateCommand : RavenCommand
+        private class ReplaceClusterCertificateCommand : RavenCommand, IRaftCommand
         {
             private readonly byte[] _certBytes;
             private readonly bool _replaceImmediately;
@@ -64,6 +64,7 @@ namespace Raven.Client.ServerWide.Operations.Certificates
 
                 return request;
             }
+            public string RaftUniqueRequestId { get; } = Guid.NewGuid().ToString();
         }
     }
 }

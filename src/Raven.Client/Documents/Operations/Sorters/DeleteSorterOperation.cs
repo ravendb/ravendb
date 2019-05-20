@@ -21,7 +21,7 @@ namespace Raven.Client.Documents.Operations.Sorters
             return new DeleteSorterCommand(_sorterName);
         }
 
-        private class DeleteSorterCommand : RavenCommand
+        private class DeleteSorterCommand : RavenCommand, IRaftCommand
         {
             private readonly string _sorterName;
 
@@ -39,6 +39,8 @@ namespace Raven.Client.Documents.Operations.Sorters
                     Method = HttpMethods.Delete
                 };
             }
+
+            public string RaftUniqueRequestId { get; } = Guid.NewGuid().ToString();
         }
     }
 }

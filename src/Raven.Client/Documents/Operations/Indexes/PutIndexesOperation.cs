@@ -27,7 +27,7 @@ namespace Raven.Client.Documents.Operations.Indexes
             return new PutIndexesCommand(conventions, context, _indexToAdd);
         }
 
-        private class PutIndexesCommand : RavenCommand<PutIndexResult[]>
+        private class PutIndexesCommand : RavenCommand<PutIndexResult[]>, IRaftCommand
         {
             private readonly BlittableJsonReaderObject[] _indexToAdd;
             private bool _allJavaScriptIndexes;
@@ -82,6 +82,7 @@ namespace Raven.Client.Documents.Operations.Indexes
             }
 
             public override bool IsReadRequest => false;
+            public string RaftUniqueRequestId { get; } = Guid.NewGuid().ToString();
         }
     }
 }

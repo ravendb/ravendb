@@ -1,4 +1,5 @@
-﻿using System.Net.Http;
+﻿using System;
+using System.Net.Http;
 using Raven.Client.Documents.Conventions;
 using Raven.Client.Documents.Session;
 using Raven.Client.Documents.Subscriptions;
@@ -9,7 +10,7 @@ using Sparrow.Json;
 
 namespace Raven.Client.Documents.Commands
 {
-    public class CreateSubscriptionCommand : RavenCommand<CreateSubscriptionResult>
+    public class CreateSubscriptionCommand : RavenCommand<CreateSubscriptionResult>, IRaftCommand
     {
         private readonly DocumentConventions _conventions;
         private readonly SubscriptionCreationOptions _options;
@@ -45,5 +46,6 @@ namespace Raven.Client.Documents.Commands
         }
 
         public override bool IsReadRequest => false;
+        public string RaftUniqueRequestId { get; } = Guid.NewGuid().ToString();
     }
 }

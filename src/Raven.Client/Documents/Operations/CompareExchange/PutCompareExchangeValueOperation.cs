@@ -30,7 +30,7 @@ namespace Raven.Client.Documents.Operations.CompareExchange
             return new PutCompareExchangeValueCommand(_key, _value, _index, conventions);
         }
 
-        private class PutCompareExchangeValueCommand : RavenCommand<CompareExchangeResult<T>>
+        private class PutCompareExchangeValueCommand : RavenCommand<CompareExchangeResult<T>>, IRaftCommand
         {
             private readonly string _key;
             private readonly T _value;
@@ -76,6 +76,8 @@ namespace Raven.Client.Documents.Operations.CompareExchange
             {
                 Result = CompareExchangeResult<T>.ParseFromBlittable(response, _conventions);
             }
+
+            public string RaftUniqueRequestId { get; } = Guid.NewGuid().ToString();
         }
     }
 }

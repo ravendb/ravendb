@@ -22,7 +22,7 @@ namespace Raven.Client.Documents.Operations.Configuration
             return new PutClientConfigurationCommand(conventions, context, _configuration);
         }
 
-        private class PutClientConfigurationCommand : RavenCommand
+        private class PutClientConfigurationCommand : RavenCommand, IRaftCommand
         {
             private readonly BlittableJsonReaderObject _configuration;
 
@@ -51,6 +51,8 @@ namespace Raven.Client.Documents.Operations.Configuration
                     })
                 };
             }
+
+            public string RaftUniqueRequestId { get; } = Guid.NewGuid().ToString();
         }
     }
 }

@@ -1,10 +1,11 @@
-﻿using System.Net.Http;
+﻿using System;
+using System.Net.Http;
 using Raven.Client.Http;
 using Sparrow.Json;
 
 namespace Raven.Client.Documents.Commands
 {
-    public class DeleteSubscriptionCommand : RavenCommand
+    public class DeleteSubscriptionCommand : RavenCommand, IRaftCommand
     {
         private readonly string _name;
 
@@ -23,5 +24,7 @@ namespace Raven.Client.Documents.Commands
             };
             return request;
         }
+
+        public string RaftUniqueRequestId { get; } = Guid.NewGuid().ToString();
     }
 }

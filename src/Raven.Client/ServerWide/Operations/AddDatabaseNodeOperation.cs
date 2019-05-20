@@ -24,7 +24,7 @@ namespace Raven.Client.ServerWide.Operations
             return new AddDatabaseNodeCommand(_databaseName, _node);
         }
 
-        private class AddDatabaseNodeCommand : RavenCommand<DatabasePutResult>
+        private class AddDatabaseNodeCommand : RavenCommand<DatabasePutResult>, IRaftCommand
         {
             private readonly string _databaseName;
             private readonly string _node;
@@ -63,6 +63,7 @@ namespace Raven.Client.ServerWide.Operations
             }
 
             public override bool IsReadRequest => false;
+            public string RaftUniqueRequestId { get; } = Guid.NewGuid().ToString();
         }
     }
 }

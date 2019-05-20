@@ -1,4 +1,5 @@
-﻿using System.Net.Http;
+﻿using System;
+using System.Net.Http;
 using Raven.Client.Documents.Conventions;
 using Raven.Client.Http;
 using Raven.Client.Json.Converters;
@@ -22,7 +23,7 @@ namespace Raven.Client.Documents.Operations.OngoingTasks
             return new DeleteOngoingTaskCommand(_taskId, _taskType);
         }
 
-        private class DeleteOngoingTaskCommand : RavenCommand<ModifyOngoingTaskResult>
+        private class DeleteOngoingTaskCommand : RavenCommand<ModifyOngoingTaskResult>, IRaftCommand
         {
             private readonly long _taskId;
             private readonly OngoingTaskType _taskType;
@@ -54,6 +55,7 @@ namespace Raven.Client.Documents.Operations.OngoingTasks
             }
 
             public override bool IsReadRequest => false;
+            public string RaftUniqueRequestId { get; } = Guid.NewGuid().ToString();
         }
     }
 }

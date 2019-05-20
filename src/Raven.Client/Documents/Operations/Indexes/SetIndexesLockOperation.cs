@@ -55,7 +55,7 @@ namespace Raven.Client.Documents.Operations.Indexes
             return new SetIndexLockCommand(conventions, context, _parameters);
         }
 
-        private class SetIndexLockCommand : RavenCommand
+        private class SetIndexLockCommand : RavenCommand, IRaftCommand
         {
             private readonly BlittableJsonReaderObject _parameters;
 
@@ -84,6 +84,8 @@ namespace Raven.Client.Documents.Operations.Indexes
                     })
                 };
             }
+
+            public string RaftUniqueRequestId { get; } = Guid.NewGuid().ToString();
         }
 
         public class Parameters

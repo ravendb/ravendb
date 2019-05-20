@@ -5,7 +5,7 @@ using Sparrow.Json;
 
 namespace Raven.Client.Documents.Commands
 {
-    public class SeedIdentityForCommand : RavenCommand<long>
+    public class SeedIdentityForCommand : RavenCommand<long>, IRaftCommand
     {
         private readonly string _id;
         private readonly long _value;
@@ -47,5 +47,7 @@ namespace Raven.Client.Documents.Commands
 
             Result = result;
         }
+
+        public string RaftUniqueRequestId { get; } = Guid.NewGuid().ToString();
     }
 }
