@@ -8,7 +8,7 @@ using Raven.Client.ServerWide.Operations;
 using Raven.Client.ServerWide.Operations.Configuration;
 using Xunit;
 
-namespace SlowTests.Backup
+namespace SlowTests.Server.Documents.PeriodicBackup
 {
     public class ServerWideBackup : RavenTestBase
     {
