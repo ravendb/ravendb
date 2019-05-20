@@ -146,7 +146,11 @@ namespace Raven.Server.Smuggler.Migration
                             continue;
                         }
 
-                        WriteDocumentWithAttachment(documentActions, context, dataStream, key, metadata);
+                        var contextToUse = documentActions.GetContextForNewDocument();
+                        using (var old = metadata)
+                            metadata = metadata.Clone(contextToUse);
+
+                        WriteDocumentWithAttachment(documentActions, contextToUse, dataStream, key, metadata);
 
                         Parameters.Result.Documents.ReadCount++;
                         if (Parameters.Result.Documents.ReadCount % 50 == 0 || sp.ElapsedMilliseconds > 3000)

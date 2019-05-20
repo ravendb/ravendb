@@ -110,7 +110,7 @@ namespace Raven.Server.Smuggler.Migration
                     Parameters.Result.Documents.Processed = true;
 
                 DatabaseSmuggler.EnsureProcessed(Parameters.Result);
-            } 
+            }
         }
 
         private async Task<string> MigrateRavenFs(string lastEtag, SmugglerResult parametersResult)
@@ -158,7 +158,6 @@ namespace Raven.Server.Smuggler.Migration
                             throw new InvalidDataException("Metadata doesn't exist");
 
                         var key = fullPath.TrimStart('/');
-                        metadata = GetCleanMetadata(metadata, context);
 
                         var dataStream = await GetRavenFsStream(key);
                         if (dataStream == null)
@@ -169,7 +168,9 @@ namespace Raven.Server.Smuggler.Migration
                             continue;
                         }
 
-                        WriteDocumentWithAttachment(documentActions, context, dataStream, key, metadata);
+                        var contextToUse = documentActions.GetContextForNewDocument();
+                        metadata = GetCleanMetadata(metadata, contextToUse);
+                        WriteDocumentWithAttachment(documentActions, contextToUse, dataStream, key, metadata);
 
                         Parameters.Result.Documents.ReadCount++;
                         if (Parameters.Result.Documents.ReadCount % 50 == 0 || sp.ElapsedMilliseconds > 3000)
@@ -199,7 +200,7 @@ namespace Raven.Server.Smuggler.Migration
                 var responseMessage = await Parameters.HttpClient.SendAsync(request, HttpCompletionOption.ResponseHeadersRead, Parameters.CancelToken.Token);
                 return responseMessage;
             });
-            
+
             if (response.StatusCode == HttpStatusCode.NotFound)
             {
                 // the file was deleted
@@ -219,6 +220,9 @@ namespace Raven.Server.Smuggler.Migration
 
         private BlittableJsonReaderObject GetCleanMetadata(BlittableJsonReaderObject metadata, DocumentsOperationContext context)
         {
+            using (var old = metadata)
+                metadata = metadata.Clone(context);
+
             metadata.Modifications = new DynamicJsonValue(metadata);
             metadata.Modifications.Remove("Origin");
             metadata.Modifications.Remove("Raven-Synchronization-Version");
@@ -231,7 +235,9 @@ namespace Raven.Server.Smuggler.Migration
             metadata.Modifications.Remove("Raven-Last-Modified");
             metadata.Modifications.Remove("Content-MD5");
             metadata.Modifications.Remove("ETag");
-            return context.ReadObject(metadata, Options.MigrationStateKey);
+
+            using (var old = metadata)
+                return context.ReadObject(metadata, Options.MigrationStateKey);
         }
 
         private async Task<BlittableJsonReaderArray> GetRavenFsHeadersArray(string lastEtag, TransactionOperationContext context)

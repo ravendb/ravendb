@@ -170,6 +170,9 @@ namespace Raven.TestDriver
 
         protected void WaitForUserToContinueTheTest(IDocumentStore store)
         {
+            if (Debugger.IsAttached == false)
+                return;
+
             var databaseNameEncoded = Uri.EscapeDataString(store.Database);
             var documentsPage = store.Urls[0] + "/studio/index.html#databases/documents?&database=" + databaseNameEncoded + "&withStop=true";
 
