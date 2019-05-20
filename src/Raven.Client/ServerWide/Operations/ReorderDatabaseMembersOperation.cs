@@ -37,7 +37,7 @@ namespace Raven.Client.ServerWide.Operations
             return new ReorderDatabaseMembersCommand(_database, order);
         }
 
-        private class ReorderDatabaseMembersCommand : RavenCommand
+        private class ReorderDatabaseMembersCommand : RavenCommand, IRaftCommand
         {
             private readonly string _databaseName;
             private readonly BlittableJsonReaderObject _orderBlittable;
@@ -68,6 +68,7 @@ namespace Raven.Client.ServerWide.Operations
             }
 
             public override bool IsReadRequest => false;
+            public string RaftUniqueRequestId { get; } = Guid.NewGuid().ToString();
         }
 
     }

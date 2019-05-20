@@ -5,7 +5,7 @@ using Sparrow.Json;
 
 namespace Raven.Client.Documents.Commands
 {
-    public class NextIdentityForCommand : RavenCommand<long>
+    public class NextIdentityForCommand : RavenCommand<long>, IRaftCommand
     {
         private readonly string _id;
 
@@ -40,5 +40,7 @@ namespace Raven.Client.Documents.Commands
 
             Result = results;
         }
+
+        public string RaftUniqueRequestId { get; } = Guid.NewGuid().ToString();
     }
 }

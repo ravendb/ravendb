@@ -1,4 +1,5 @@
-﻿using System.Net.Http;
+﻿using System;
+using System.Net.Http;
 using Raven.Client.Documents.Conventions;
 using Raven.Client.Http;
 using Raven.Client.Util;
@@ -22,7 +23,7 @@ namespace Raven.Client.Documents.Operations.ETL
             return new ResetEtlCommand(_configurationName, _transformationName);
         }
 
-        private class ResetEtlCommand : RavenCommand
+        private class ResetEtlCommand : RavenCommand, IRaftCommand
         {
             private readonly string _configurationName;
             private readonly string _transformationName;
@@ -47,6 +48,8 @@ namespace Raven.Client.Documents.Operations.ETL
 
                 return request;
             }
+
+            public string RaftUniqueRequestId { get; } = Guid.NewGuid().ToString();
         }
     }
 }

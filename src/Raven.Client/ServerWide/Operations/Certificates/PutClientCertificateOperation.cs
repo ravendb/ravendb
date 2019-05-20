@@ -29,7 +29,7 @@ namespace Raven.Client.ServerWide.Operations.Certificates
             return new PutClientCertificateCommand(_name, _certificate, _permissions, _clearance);
         }
 
-        private class PutClientCertificateCommand : RavenCommand
+        private class PutClientCertificateCommand : RavenCommand, IRaftCommand
         {
             private readonly X509Certificate2 _certificate;
             private readonly Dictionary<string, DatabaseAccess> _permissions;
@@ -88,6 +88,8 @@ namespace Raven.Client.ServerWide.Operations.Certificates
 
                 return request;
             }
+
+            public string RaftUniqueRequestId { get; } = Guid.NewGuid().ToString();
         }
     }
 }

@@ -23,7 +23,7 @@ namespace Raven.Client.ServerWide.Operations.Configuration
             return new PutServerWideClientConfigurationCommand(conventions, context, _configuration);
         }
 
-        private class PutServerWideClientConfigurationCommand : RavenCommand
+        private class PutServerWideClientConfigurationCommand : RavenCommand, IRaftCommand
         {
             private readonly BlittableJsonReaderObject _configuration;
 
@@ -39,6 +39,7 @@ namespace Raven.Client.ServerWide.Operations.Configuration
                 _configuration = EntityToBlittable.ConvertCommandToBlittable(configuration,context);
             }
 
+
             public override HttpRequestMessage CreateRequest(JsonOperationContext ctx, ServerNode node, out string url)
             {
                 url = $"{node.Url}/admin/configuration/client";
@@ -52,6 +53,8 @@ namespace Raven.Client.ServerWide.Operations.Configuration
                     })
                 };
             }
+
+            public string RaftUniqueRequestId { get; } = Guid.NewGuid().ToString();
         }
     }
 }

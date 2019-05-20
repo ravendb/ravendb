@@ -45,7 +45,7 @@ namespace Raven.Client.ServerWide.Operations
             return new DeleteDatabaseCommand(conventions, context, _parameters);
         }
 
-        private class DeleteDatabaseCommand : RavenCommand<DeleteDatabaseResult>
+        private class DeleteDatabaseCommand : RavenCommand<DeleteDatabaseResult>, IRaftCommand
         {
             private readonly BlittableJsonReaderObject _parameters;
 
@@ -83,6 +83,7 @@ namespace Raven.Client.ServerWide.Operations
             }
 
             public override bool IsReadRequest => false;
+            public string RaftUniqueRequestId { get; } = Guid.NewGuid().ToString();
         }
 
         public class Parameters

@@ -36,7 +36,7 @@ namespace Raven.Client.Documents.Operations.Replication
             return new UpdatePullReplicationDefinitionCommand( _pullReplicationDefinition);
         }
 
-        private class UpdatePullReplicationDefinitionCommand : RavenCommand<ModifyOngoingTaskResult>
+        private class UpdatePullReplicationDefinitionCommand : RavenCommand<ModifyOngoingTaskResult>, IRaftCommand
         {
             private readonly FeatureTaskDefinition _pullReplicationDefinition;
 
@@ -70,6 +70,7 @@ namespace Raven.Client.Documents.Operations.Replication
             }
 
             public override bool IsReadRequest => false;
+            public string RaftUniqueRequestId { get; } = Guid.NewGuid().ToString();
         }
     }
 }

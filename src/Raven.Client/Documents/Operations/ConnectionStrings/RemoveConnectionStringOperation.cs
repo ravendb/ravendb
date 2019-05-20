@@ -1,4 +1,5 @@
-﻿using System.Net.Http;
+﻿using System;
+using System.Net.Http;
 using Raven.Client.Documents.Conventions;
 using Raven.Client.Http;
 using Raven.Client.Json.Converters;
@@ -20,7 +21,7 @@ namespace Raven.Client.Documents.Operations.ConnectionStrings
             return new RemoveConnectionStringCommand(_connectionString);
         }
 
-        private class RemoveConnectionStringCommand : RavenCommand<RemoveConnectionStringResult>
+        private class RemoveConnectionStringCommand : RavenCommand<RemoveConnectionStringResult>, IRaftCommand
         {
             private readonly T _connectionString;
 
@@ -50,6 +51,8 @@ namespace Raven.Client.Documents.Operations.ConnectionStrings
 
                 Result = JsonDeserializationClient.RemoveConnectionStringResult(response);
             }
+
+            public string RaftUniqueRequestId { get; } = Guid.NewGuid().ToString();
         }
     }
 

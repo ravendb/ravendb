@@ -36,7 +36,7 @@ namespace Raven.Client.Documents.Operations.OngoingTasks
             return new ToggleTaskStateCommand(_taskId, _taskName, _type, _disable);
         }
 
-        private class ToggleTaskStateCommand : RavenCommand<ModifyOngoingTaskResult>
+        private class ToggleTaskStateCommand : RavenCommand<ModifyOngoingTaskResult>, IRaftCommand
         {
             private readonly long _taskId;
             private readonly string _taskName;
@@ -73,6 +73,7 @@ namespace Raven.Client.Documents.Operations.OngoingTasks
             }
 
             public override bool IsReadRequest => false;
+            public string RaftUniqueRequestId { get; } = Guid.NewGuid().ToString();
         }
     }
 }

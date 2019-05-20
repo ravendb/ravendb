@@ -21,7 +21,7 @@ namespace Raven.Client.Documents.Operations.Indexes
             return new DeleteIndexCommand(_indexName);
         }
 
-        private class DeleteIndexCommand : RavenCommand
+        private class DeleteIndexCommand : RavenCommand, IRaftCommand
         {
             private readonly string _indexName;
 
@@ -39,6 +39,8 @@ namespace Raven.Client.Documents.Operations.Indexes
                     Method = HttpMethods.Delete
                 };
             }
+
+            public string RaftUniqueRequestId { get; } = Guid.NewGuid().ToString();
         }
     }
 }

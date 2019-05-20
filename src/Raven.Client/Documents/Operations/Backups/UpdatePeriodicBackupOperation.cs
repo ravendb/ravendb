@@ -1,4 +1,5 @@
-﻿using System.Net.Http;
+﻿using System;
+using System.Net.Http;
 using Raven.Client.Documents.Conventions;
 using Raven.Client.Documents.Session;
 using Raven.Client.Http;
@@ -22,7 +23,7 @@ namespace Raven.Client.Documents.Operations.Backups
             return new UpdatePeriodicBackupCommand(conventions, _configuration);
         }
 
-        private class UpdatePeriodicBackupCommand : RavenCommand<UpdatePeriodicBackupOperationResult>
+        private class UpdatePeriodicBackupCommand : RavenCommand<UpdatePeriodicBackupOperationResult>, IRaftCommand
         {
             private readonly DocumentConventions _conventions;
             private readonly PeriodicBackupConfiguration _configuration;
@@ -59,6 +60,8 @@ namespace Raven.Client.Documents.Operations.Backups
 
                 Result = JsonDeserializationClient.ConfigurePeriodicBackupOperationResult(response);
             }
+
+            public string RaftUniqueRequestId { get; } = Guid.NewGuid().ToString();
         }
     }
 }

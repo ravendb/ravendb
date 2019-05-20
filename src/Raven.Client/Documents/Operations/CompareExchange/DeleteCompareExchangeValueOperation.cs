@@ -23,7 +23,7 @@ namespace Raven.Client.Documents.Operations.CompareExchange
             return new DeleteCompareExchangeValueCommand(_key, _index, conventions);
         }
 
-        private class DeleteCompareExchangeValueCommand : RavenCommand<CompareExchangeResult<T>>
+        private class DeleteCompareExchangeValueCommand : RavenCommand<CompareExchangeResult<T>>, IRaftCommand
         {
             private readonly string _key;
             private readonly long _index;
@@ -55,6 +55,8 @@ namespace Raven.Client.Documents.Operations.CompareExchange
             {
                 Result = CompareExchangeResult<T>.ParseFromBlittable(response, _conventions);
             }
+
+            public string RaftUniqueRequestId { get; } = Guid.NewGuid().ToString();
         }
 
     }

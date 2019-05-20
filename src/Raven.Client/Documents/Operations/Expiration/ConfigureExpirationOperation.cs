@@ -1,4 +1,5 @@
-﻿using System.Net.Http;
+﻿using System;
+using System.Net.Http;
 using Raven.Client.Documents.Conventions;
 using Raven.Client.Documents.Session;
 using Raven.Client.Http;
@@ -22,7 +23,7 @@ namespace Raven.Client.Documents.Operations.Expiration
             return new ConfigureExpirationCommand(_configuration);
         }
 
-        private class ConfigureExpirationCommand : RavenCommand<ConfigureExpirationOperationResult>
+        private class ConfigureExpirationCommand : RavenCommand<ConfigureExpirationOperationResult>, IRaftCommand
         {
             private readonly ExpirationConfiguration _configuration;
 
@@ -32,7 +33,6 @@ namespace Raven.Client.Documents.Operations.Expiration
             }
 
             public override bool IsReadRequest => false;
-
             public override HttpRequestMessage CreateRequest(JsonOperationContext ctx, ServerNode node, out string url)
             {
                 url = $"{node.Url}/databases/{node.Database}/admin/expiration/config";
@@ -57,6 +57,8 @@ namespace Raven.Client.Documents.Operations.Expiration
 
                 Result = JsonDeserializationClient.ConfigureExpirationOperationResult(response);
             }
+
+            public string RaftUniqueRequestId { get; } = Guid.NewGuid().ToString();
         }
     }
 }

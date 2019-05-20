@@ -41,7 +41,7 @@ namespace Raven.Client.Documents.Operations.Indexes
             return new SetIndexPriorityCommand(conventions, context, _parameters);
         }
 
-        private class SetIndexPriorityCommand : RavenCommand
+        private class SetIndexPriorityCommand : RavenCommand, IRaftCommand
         {
             private readonly BlittableJsonReaderObject _parameters;
 
@@ -70,6 +70,8 @@ namespace Raven.Client.Documents.Operations.Indexes
                     })
                 };
             }
+
+            public string RaftUniqueRequestId { get; } = Guid.NewGuid().ToString();
         }
 
         public class Parameters
