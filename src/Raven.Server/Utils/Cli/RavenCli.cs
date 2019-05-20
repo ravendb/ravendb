@@ -671,7 +671,7 @@ namespace Raven.Server.Utils.Cli
                     }
                     else
                     {
-                        var putResult = cli._server.ServerStore.PutValueInClusterAsync(new PutCertificateCommand(certDef.Thumbprint, certDef)).Result;
+                        var putResult = cli._server.ServerStore.PutValueInClusterAsync(new PutCertificateCommand(certDef.Thumbprint, certDef, Guid.NewGuid().ToString())).Result;
                         cli._server.ServerStore.Cluster.WaitForIndexNotification(putResult.Index).Wait();
                     }
                 }
@@ -747,7 +747,7 @@ namespace Raven.Server.Utils.Cli
 
                 try
                 {
-                    AdminCertificatesHandler.PutCertificateCollectionInCluster(certDef, certBytes, password, cli._server.ServerStore, ctx).Wait();
+                    AdminCertificatesHandler.PutCertificateCollectionInCluster(certDef, certBytes, password, cli._server.ServerStore, ctx, Guid.NewGuid().ToString()).Wait();
                 }
                 catch (Exception e)
                 {
@@ -785,7 +785,7 @@ namespace Raven.Server.Utils.Cli
             byte[] outputBytes;
             try
             {
-                outputBytes = AdminCertificatesHandler.GenerateCertificateInternal(certDef, cli._server.ServerStore).Result;
+                outputBytes = AdminCertificatesHandler.GenerateCertificateInternal(certDef, cli._server.ServerStore, Guid.NewGuid().ToString()).Result;
             }
             catch (Exception e)
             {

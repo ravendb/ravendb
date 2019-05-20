@@ -311,6 +311,7 @@ namespace Raven.Server.Documents.Handlers.Admin
             var nodeUrl = GetQueryStringValueAndAssertIfSingleAndNotEmpty("url");
             var tag = GetStringQueryString("tag", false);
             var watcher = GetBoolValueQueryString("watcher", false);
+            var guid = GetRaftRequestIdFromQuery();
             var assignedCores = GetIntValueQueryString("assignedCores", false);
             if (assignedCores <= 0)
                 throw new ArgumentException("Assigned cores must be greater than 0!");
@@ -481,7 +482,8 @@ namespace Raven.Server.Documents.Handlers.Admin
                                     SecurityClearance = SecurityClearance.ClusterNode
                                 };
 
-                                var res = await ServerStore.PutValueInClusterAsync(new PutCertificateCommand(certificate.Thumbprint, certificateDefinition));
+                                var res = await ServerStore.PutValueInClusterAsync(new PutCertificateCommand(certificate.Thumbprint, certificateDefinition,
+                                    $"{guid}/put-new-certificate"));
                                 await ServerStore.Cluster.WaitForIndexNotification(res.Index);
                             }
                         }
@@ -514,7 +516,7 @@ namespace Raven.Server.Documents.Handlers.Admin
                                     modifiedServerCert.Name += ", " + value;
                             }
 
-                            var res = await ServerStore.PutValueInClusterAsync(new PutCertificateCommand(certificate.Thumbprint, modifiedServerCert));
+                            var res = await ServerStore.PutValueInClusterAsync(new PutCertificateCommand(certificate.Thumbprint, modifiedServerCert, $"{guid}/put-modified-certificate"));
                             await ServerStore.Cluster.WaitForIndexNotification(res.Index);
                         }
 
@@ -575,7 +577,7 @@ namespace Raven.Server.Documents.Handlers.Admin
 
             if (ServerStore.IsLeader())
             {
-                await ServerStore.LicenseManager.ChangeLicenseLimits(nodeTag, newAssignedCores.Value);
+                await ServerStore.LicenseManager.ChangeLicenseLimits(nodeTag, newAssignedCores.Value, GetRaftRequestIdFromQuery());
 
                 NoContentStatus();
                 return;

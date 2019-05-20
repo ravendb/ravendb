@@ -22,7 +22,7 @@ namespace Raven.Server.Web.System
 
                 var studioConfiguration = JsonDeserializationServer.ServerWideStudioConfiguration(studioConfigurationJson);
 
-                var res = await ServerStore.PutValueInClusterAsync(new PutServerWideStudioConfigurationCommand(studioConfiguration));
+                var res = await ServerStore.PutValueInClusterAsync(new PutServerWideStudioConfigurationCommand(studioConfiguration, GetRaftRequestIdFromQuery()));
                 await ServerStore.Cluster.WaitForIndexNotification(res.Index);
 
                 NoContentStatus();
@@ -65,7 +65,7 @@ namespace Raven.Server.Web.System
                 var clientConfigurationJson = ctx.ReadForDisk(RequestBodyStream(), Constants.Configuration.ClientId);
 
                 var clientConfiguration = JsonDeserializationServer.ClientConfiguration(clientConfigurationJson);
-                var res = await ServerStore.PutValueInClusterAsync(new PutClientConfigurationCommand(clientConfiguration));
+                var res = await ServerStore.PutValueInClusterAsync(new PutClientConfigurationCommand(clientConfiguration, GetRaftRequestIdFromQuery()));
                 await ServerStore.Cluster.WaitForIndexNotification(res.Index);
 
                 NoContentStatus();

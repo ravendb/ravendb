@@ -73,7 +73,7 @@ namespace Raven.Server.Documents.Handlers.Admin
 
                     
 
-                    var index = await Database.IndexStore.CreateIndex(indexDefinition, source);
+                    var index = await Database.IndexStore.CreateIndex(indexDefinition, GetRaftRequestIdFromQuery(), source);
 
                     createdIndexes.Add(index.Name);
                 }

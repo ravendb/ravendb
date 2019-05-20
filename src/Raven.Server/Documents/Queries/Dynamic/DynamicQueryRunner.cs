@@ -142,7 +142,7 @@ namespace Raven.Server.Documents.Queries.Dynamic
                     throw new IndexDoesNotExistException("Could not find index for a given query.");
 
                 var definition = map.CreateAutoIndexDefinition();
-                index = await _indexStore.CreateIndex(definition);
+                index = await _indexStore.CreateIndex(definition, Guid.NewGuid().ToString());
                 hasCreatedAutoIndex = true;
 
                 if (query.WaitForNonStaleResultsTimeout.HasValue == false)
@@ -150,7 +150,7 @@ namespace Raven.Server.Documents.Queries.Dynamic
                     query.WaitForNonStaleResultsTimeout = customStalenessWaitTimeout ?? TimeSpan.FromSeconds(15);
                 }
 
-                var t = CleanupSupersededAutoIndexes(index, map, token)
+                var t = CleanupSupersededAutoIndexes(index, map, Guid.NewGuid().ToString(), token)
                     .ContinueWith(task =>
                     {
                         if (task.Exception != null)
@@ -174,7 +174,7 @@ namespace Raven.Server.Documents.Queries.Dynamic
             return (index, hasCreatedAutoIndex);
         }
 
-        private async Task CleanupSupersededAutoIndexes(Index index, DynamicQueryMapping map, CancellationToken token)
+        private async Task CleanupSupersededAutoIndexes(Index index, DynamicQueryMapping map, string guid, CancellationToken token)
         {
             if (map.SupersededIndexes == null || map.SupersededIndexes.Count == 0)
                 return;
@@ -236,7 +236,7 @@ namespace Raven.Server.Documents.Queries.Dynamic
                     {
                         try
                         {
-                            await _indexStore.DeleteIndex(supersededIndex.Name);
+                            await _indexStore.DeleteIndex(supersededIndex.Name, $"{guid}/{supersededIndex.Name}");
                         }
                         catch (IndexDoesNotExistException)
                         {

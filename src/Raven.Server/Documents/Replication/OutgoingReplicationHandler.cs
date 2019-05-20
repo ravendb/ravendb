@@ -564,7 +564,7 @@ namespace Raven.Server.Documents.Replication
 
         private void UpdateExternalReplicationInfo(long taskId)
         {
-            var command = new UpdateExternalReplicationStateCommand(_database.Name)
+            var command = new UpdateExternalReplicationStateCommand(_database.Name, Guid.NewGuid().ToString())
             {
                 ExternalReplicationState = new ExternalReplicationState
                 {

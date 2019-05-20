@@ -948,7 +948,7 @@ namespace Raven.Server.Documents.PeriodicBackup
 
             try
             {
-                var command = new UpdatePeriodicBackupStatusCommand(_database.Name)
+                var command = new UpdatePeriodicBackupStatusCommand(_database.Name, Guid.NewGuid().ToString())
                 {
                     PeriodicBackupStatus = status
                 };

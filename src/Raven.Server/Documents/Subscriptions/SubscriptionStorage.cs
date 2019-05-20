@@ -52,9 +52,9 @@ namespace Raven.Server.Documents.Subscriptions
 
         }
 
-        public async Task<long> PutSubscription(SubscriptionCreationOptions options, long? subscriptionId = null, bool? disabled = false, string mentor = null)
+        public async Task<long> PutSubscription(SubscriptionCreationOptions options, string guid, long? subscriptionId = null, bool? disabled = false, string mentor = null)
         {
-            var command = new PutSubscriptionCommand(_db.Name, options.Query, mentor)
+            var command = new PutSubscriptionCommand(_db.Name, options.Query, mentor, guid)
             {
                 InitialChangeVector = options.ChangeVector,
                 SubscriptionName = options.Name,
@@ -81,7 +81,7 @@ namespace Raven.Server.Documents.Subscriptions
 
         public async Task AcknowledgeBatchProcessed(long id, string name, string changeVector, string previousChangeVector)
         {
-            var command = new AcknowledgeSubscriptionBatchCommand(_db.Name)
+            var command = new AcknowledgeSubscriptionBatchCommand(_db.Name, Guid.NewGuid().ToString())
             {
                 ChangeVector = changeVector,
                 NodeTag = _serverStore.NodeTag,
@@ -99,7 +99,7 @@ namespace Raven.Server.Documents.Subscriptions
 
         public async Task UpdateClientConnectionTime(long id, string name, string mentorNode = null)
         {
-            var command = new UpdateSubscriptionClientConnectionTime(_db.Name)
+            var command = new UpdateSubscriptionClientConnectionTime(_db.Name, Guid.NewGuid().ToString())
             {
                 NodeTag = _serverStore.NodeTag,
                 HasHighlyAvailableTasks = _serverStore.LicenseManager.HasHighlyAvailableTasks(),
@@ -151,9 +151,9 @@ namespace Raven.Server.Documents.Subscriptions
             }
         }
 
-        public async Task DeleteSubscription(string name)
+        public async Task DeleteSubscription(string name, string guid)
         {
-            var command = new DeleteSubscriptionCommand(_db.Name, name);
+            var command = new DeleteSubscriptionCommand(_db.Name, name, guid);
 
             var (etag, _) = await _serverStore.SendToLeaderAsync(command);
 

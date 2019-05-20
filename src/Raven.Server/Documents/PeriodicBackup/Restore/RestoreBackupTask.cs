@@ -180,7 +180,8 @@ namespace Raven.Server.Documents.PeriodicBackup.Restore
                         // we are currently restoring, shouldn't try to access it
                         databaseRecord.DatabaseState = DatabaseStateStatus.RestoreInProgress;
 
-                        var (index, _) = await _serverStore.WriteDatabaseRecordAsync(databaseName, databaseRecord, null, restoreSettings.DatabaseValues, isRestore: true);
+                        // TODO: does string.Empty make sense here?
+                        var (index, _) = await _serverStore.WriteDatabaseRecordAsync(databaseName, databaseRecord, null, string.Empty, restoreSettings.DatabaseValues, isRestore: true);
                         await _serverStore.Cluster.WaitForIndexNotification(index);
 
                         DisableOngoingTasksIfNeeded(databaseRecord);
@@ -228,7 +229,7 @@ namespace Raven.Server.Documents.PeriodicBackup.Restore
 
                     // after the db for restore is done, we can safely set the db state to normal and write the DatabaseRecord
                     databaseRecord.DatabaseState = DatabaseStateStatus.Normal;
-                    var (updateIndex, _) = await _serverStore.WriteDatabaseRecordAsync(databaseName, databaseRecord, null, isRestore: true);
+                    var (updateIndex, _) = await _serverStore.WriteDatabaseRecordAsync(databaseName, databaseRecord, null, string.Empty, isRestore: true);
                     await _serverStore.Cluster.WaitForIndexNotification(updateIndex);
 
                     if (databaseRecord.Topology.RelevantFor(_serverStore.NodeTag))
@@ -267,7 +268,7 @@ namespace Raven.Server.Documents.PeriodicBackup.Restore
                     databaseRecord.Disabled = false;
                     databaseRecord.DatabaseState = DatabaseStateStatus.Normal;
 
-                    var deleteResult = await _serverStore.DeleteDatabaseAsync(_restoreConfiguration.DatabaseName, true, new[] { _serverStore.NodeTag });
+                    var deleteResult = await _serverStore.DeleteDatabaseAsync(_restoreConfiguration.DatabaseName, true, new[] { _serverStore.NodeTag }, string.Empty);
                     await _serverStore.Cluster.WaitForIndexNotification(deleteResult.Index);
                 }
 

@@ -1260,7 +1260,7 @@ namespace Raven.Server.Commercial
                 await DeleteAllExistingCertificates(serverStore);
 
                 if (setupMode == SetupMode.LetsEncrypt && license != null)
-                    await serverStore.LicenseManager.Activate(license, skipLeaseLicense: false);
+                    await serverStore.LicenseManager.Activate(license, skipLeaseLicense: false, string.Empty);
 
                 foreach (var url in otherNodesUrls)
                 {
@@ -1296,7 +1296,7 @@ namespace Raven.Server.Commercial
             {
                 if (continueSetupInfo.NodeTag.Equals(firstNodeTag))
                 {
-                    var res = await serverStore.PutValueInClusterAsync(new PutCertificateCommand(clientCert.Thumbprint, certDef));
+                    var res = await serverStore.PutValueInClusterAsync(new PutCertificateCommand(clientCert.Thumbprint, certDef, string.Empty));
                     await serverStore.Cluster.WaitForIndexNotification(res.Index);
                 }
                 else
@@ -1435,7 +1435,7 @@ namespace Raven.Server.Commercial
                             await DeleteAllExistingCertificates(serverStore);
 
                             if (setupMode == SetupMode.LetsEncrypt)
-                                await serverStore.LicenseManager.Activate(setupInfo.License, skipLeaseLicense: false);
+                                await serverStore.LicenseManager.Activate(setupInfo.License, skipLeaseLicense: false, string.Empty);
 
                             serverStore.Server.Certificate =
                                 SecretProtection.ValidateCertificateAndCreateCertificateHolder("Setup", serverCert, serverCertBytes, setupInfo.Password, serverStore);
@@ -1556,7 +1556,7 @@ namespace Raven.Server.Commercial
                             {
                                 Disabled = false,
                                 Environment = setupInfo.Environment
-                            }));
+                            }, string.Empty));
                             await serverStore.Cluster.WaitForIndexNotification(res.Index);
                         }
 
@@ -2089,7 +2089,7 @@ namespace Raven.Server.Commercial
                 NotAfter = selfSignedCertificate.NotAfter
             };
 
-            var res = await serverStore.PutValueInClusterAsync(new PutCertificateCommand(selfSignedCertificate.Thumbprint, newCertDef));
+            var res = await serverStore.PutValueInClusterAsync(new PutCertificateCommand(selfSignedCertificate.Thumbprint, newCertDef, string.Empty));
             await serverStore.Cluster.WaitForIndexNotification(res.Index);
 
             return certBytes;
