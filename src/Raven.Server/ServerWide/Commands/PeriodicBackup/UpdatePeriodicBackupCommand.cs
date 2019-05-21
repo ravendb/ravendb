@@ -1,5 +1,7 @@
-﻿using Raven.Client.Documents.Operations.Backups;
+﻿using System;
+using Raven.Client.Documents.Operations.Backups;
 using Raven.Client.ServerWide;
+using Raven.Client.ServerWide.Operations.Configuration;
 using Raven.Server.Utils;
 using Sparrow.Json.Parsing;
 
@@ -36,6 +38,10 @@ namespace Raven.Server.ServerWide.Commands.PeriodicBackup
             if (string.IsNullOrEmpty(Configuration.Name))
             {
                 Configuration.Name = record.EnsureUniqueTaskName(Configuration.GetDefaultTaskName());
+            }
+            else if (Configuration.Name.Equals(ServerWideBackupConfiguration.ConfigurationName, StringComparison.OrdinalIgnoreCase))
+            {
+                throw new InvalidOperationException($"Can't update task name '{Configuration.Name}', because it is a server wide backup task");
             }
 
             EnsureTaskNameIsNotUsed(record, Configuration.Name);

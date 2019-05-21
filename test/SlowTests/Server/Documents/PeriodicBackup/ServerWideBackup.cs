@@ -3,6 +3,7 @@ using System.Linq;
 using System.Threading.Tasks;
 using FastTests;
 using Raven.Client.Documents.Operations.Backups;
+using Raven.Client.Exceptions;
 using Raven.Client.ServerWide;
 using Raven.Client.ServerWide.Operations;
 using Raven.Client.ServerWide.Operations.Configuration;
@@ -72,6 +73,41 @@ namespace SlowTests.Server.Documents.PeriodicBackup
                 ValidateBackupConfiguration(serverWideConfiguration, record1.PeriodicBackups.First(), store.Database);
                 record2 = await store.Maintenance.Server.SendAsync(new GetDatabaseRecordOperation(newDbName));
                 ValidateBackupConfiguration(serverWideConfiguration, record2.PeriodicBackups.First(), newDbName);
+            }
+        }
+
+        [Fact]
+        public async Task UpdateOfServerWideBackupThroughUpdatePeriodicBackupFails()
+        {
+            using (var store = GetDocumentStore())
+            {
+                var putConfiguration = new ServerWideBackupConfiguration
+                {
+                    Disabled = true,
+                    FullBackupFrequency = "0 2 * * 0",
+                    IncrementalBackupFrequency = "0 2 * * 1"
+                };
+
+                await store.Maintenance.Server.SendAsync(new PutServerWideBackupConfigurationOperation(putConfiguration));
+
+                var databaseRecord = await store.Maintenance.Server.SendAsync(new GetDatabaseRecordOperation(store.Database));
+                var currentBackupConfiguration = databaseRecord.PeriodicBackups.First();
+                var backupConfiguration = new PeriodicBackupConfiguration
+                {
+                    Disabled = true,
+                    TaskId = currentBackupConfiguration.TaskId,
+                    FullBackupFrequency = "0 2 * * 0",
+                    IncrementalBackupFrequency = "0 2 * * 1"
+                };
+
+                var e = await Assert.ThrowsAsync<RavenException>(() => store.Maintenance.SendAsync(new UpdatePeriodicBackupOperation(backupConfiguration)));
+                var expectedError = $"Can't update task id: {currentBackupConfiguration.TaskId}, name: 'Server Wide Backup Configuration', because it is a server wide backup task";
+                Assert.Contains(expectedError, e.Message);
+
+                backupConfiguration.TaskId = 0;
+                backupConfiguration.Name = currentBackupConfiguration.Name;
+                e = await Assert.ThrowsAsync<RavenException>(() => store.Maintenance.SendAsync(new UpdatePeriodicBackupOperation(backupConfiguration)));
+                Assert.Contains("Can't update task name 'Server Wide Backup Configuration', because it is a server wide backup task", e.Message);
             }
         }
 
