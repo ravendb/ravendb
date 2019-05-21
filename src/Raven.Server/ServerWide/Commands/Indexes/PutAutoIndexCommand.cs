@@ -46,11 +46,11 @@ namespace Raven.Server.ServerWide.Commands.Indexes
             json[nameof(Definition)] = TypeConverter.ToBlittableSupportedType(Definition);
         }
 
-        public static PutAutoIndexCommand Create(AutoIndexDefinitionBase definition, string databaseName, string guid)
+        public static PutAutoIndexCommand Create(AutoIndexDefinitionBase definition, string databaseName, string raftRequestId)
         {
             var indexType = GetAutoIndexType(definition);
 
-            return new PutAutoIndexCommand(GetAutoIndexDefinition(definition, indexType), databaseName, guid);
+            return new PutAutoIndexCommand(GetAutoIndexDefinition(definition, indexType), databaseName, raftRequestId);
         }
 
         public static IndexType GetAutoIndexType(AutoIndexDefinitionBase definition)

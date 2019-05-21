@@ -1363,9 +1363,9 @@ namespace Raven.Server.ServerWide
             tree.Delete(name);
         }
 
-        public Task<(long Index, object Result)> DeleteDatabaseAsync(string db, bool hardDelete, string[] fromNodes, string guid)
+        public Task<(long Index, object Result)> DeleteDatabaseAsync(string db, bool hardDelete, string[] fromNodes, string raftRequestId)
         {
-            var deleteCommand = new DeleteDatabaseCommand(db, guid)
+            var deleteCommand = new DeleteDatabaseCommand(db, raftRequestId)
             {
                 HardDelete = hardDelete,
                 FromNodes = fromNodes
@@ -1373,7 +1373,7 @@ namespace Raven.Server.ServerWide
             return SendToLeaderAsync(deleteCommand);
         }
 
-        public Task<(long Index, object Result)> UpdateExternalReplication(string dbName, BlittableJsonReaderObject blittableJson, string guid, out ExternalReplication watcher)
+        public Task<(long Index, object Result)> UpdateExternalReplication(string dbName, BlittableJsonReaderObject blittableJson, string raftRequestId, out ExternalReplication watcher)
         {
             if (blittableJson.TryGet(nameof(UpdateExternalReplicationCommand.Watcher), out BlittableJsonReaderObject watcherBlittable) == false)
             {
@@ -1381,14 +1381,14 @@ namespace Raven.Server.ServerWide
             }
 
             watcher = JsonDeserializationClient.ExternalReplication(watcherBlittable);
-            var addWatcherCommand = new UpdateExternalReplicationCommand(dbName, guid)
+            var addWatcherCommand = new UpdateExternalReplicationCommand(dbName, raftRequestId)
             {
                 Watcher = watcher
             };
             return SendToLeaderAsync(addWatcherCommand);
         }
 
-        public Task<(long Index, object Result)> UpdatePullReplicationAsSink(string dbName, BlittableJsonReaderObject blittableJson, string guid, out PullReplicationAsSink pullReplicationAsSink)
+        public Task<(long Index, object Result)> UpdatePullReplicationAsSink(string dbName, BlittableJsonReaderObject blittableJson, string raftRequestId, out PullReplicationAsSink pullReplicationAsSink)
         {
             if (blittableJson.TryGet(nameof(UpdatePullReplicationAsSinkCommand.PullReplicationAsSink), out BlittableJsonReaderObject pullReplicationBlittable) == false)
             {
@@ -1396,24 +1396,24 @@ namespace Raven.Server.ServerWide
             }
 
             pullReplicationAsSink = JsonDeserializationClient.PullReplicationAsSink(pullReplicationBlittable);
-            var replicationAsSinkCommand = new UpdatePullReplicationAsSinkCommand(dbName, guid)
+            var replicationAsSinkCommand = new UpdatePullReplicationAsSinkCommand(dbName, raftRequestId)
             {
                 PullReplicationAsSink = pullReplicationAsSink
             };
             return SendToLeaderAsync(replicationAsSinkCommand);
         }
 
-        public Task<(long Index, object Result)> DeleteOngoingTask(long taskId, string taskName, OngoingTaskType taskType, string dbName, string guid)
+        public Task<(long Index, object Result)> DeleteOngoingTask(long taskId, string taskName, OngoingTaskType taskType, string dbName, string raftRequestId)
         {
             var deleteTaskCommand =
                 taskType == OngoingTaskType.Subscription ?
-                    (CommandBase)new DeleteSubscriptionCommand(dbName, taskName, guid) :
-                    new DeleteOngoingTaskCommand(taskId, taskType, dbName, guid);
+                    (CommandBase)new DeleteSubscriptionCommand(dbName, taskName, raftRequestId) :
+                    new DeleteOngoingTaskCommand(taskId, taskType, dbName, raftRequestId);
 
             return SendToLeaderAsync(deleteTaskCommand);
         }
 
-        public Task<(long Index, object Result)> ToggleTaskState(long taskId, string taskName, OngoingTaskType type, bool disable, string dbName, string guid)
+        public Task<(long Index, object Result)> ToggleTaskState(long taskId, string taskName, OngoingTaskType type, bool disable, string dbName, string raftRequestId)
         {
             CommandBase disableEnableCommand;
             switch (type)
@@ -1429,27 +1429,27 @@ namespace Raven.Server.ServerWide
                             taskName = databaseTask.Result.SubscriptionStorage.GetSubscriptionNameById(ctx, taskId);
                         }
                     }
-                    disableEnableCommand = new ToggleSubscriptionStateCommand(taskName, disable, dbName, guid);
+                    disableEnableCommand = new ToggleSubscriptionStateCommand(taskName, disable, dbName, raftRequestId);
                     break;
                 default:
-                    disableEnableCommand = new ToggleTaskStateCommand(taskId, type, disable, dbName, guid);
+                    disableEnableCommand = new ToggleTaskStateCommand(taskId, type, disable, dbName, raftRequestId);
                     break;
             }
             return SendToLeaderAsync(disableEnableCommand);
         }
 
-        public Task<(long Index, object Result)> PromoteDatabaseNode(string dbName, string nodeTag, string guid)
+        public Task<(long Index, object Result)> PromoteDatabaseNode(string dbName, string nodeTag, string raftRequestId)
         {
-            var promoteDatabaseNodeCommand = new PromoteDatabaseNodeCommand(dbName, guid)
+            var promoteDatabaseNodeCommand = new PromoteDatabaseNodeCommand(dbName, raftRequestId)
             {
                 NodeTag = nodeTag
             };
             return SendToLeaderAsync(promoteDatabaseNodeCommand);
         }
 
-        public Task<(long Index, object Result)> ModifyConflictSolverAsync(string dbName, ConflictSolver solver, string guid)
+        public Task<(long Index, object Result)> ModifyConflictSolverAsync(string dbName, ConflictSolver solver, string raftRequestId)
         {
-            var conflictResolverCommand = new ModifyConflictSolverCommand(dbName, guid)
+            var conflictResolverCommand = new ModifyConflictSolverCommand(dbName, raftRequestId)
             {
                 Solver = solver
             };
@@ -1470,7 +1470,7 @@ namespace Raven.Server.ServerWide
             return SendToLeaderAsync(deleteValueCommand);
         }
 
-        public Task<(long Index, object Result)> ModifyDatabaseExpiration(TransactionOperationContext context, string databaseName, BlittableJsonReaderObject configurationJson, string guid)
+        public Task<(long Index, object Result)> ModifyDatabaseExpiration(TransactionOperationContext context, string databaseName, BlittableJsonReaderObject configurationJson, string raftRequestId)
         {
             var expiration = JsonDeserializationCluster.ExpirationConfiguration(configurationJson);
             if (expiration.DeleteFrequencyInSec <= 0)
@@ -1478,18 +1478,18 @@ namespace Raven.Server.ServerWide
                 throw new InvalidOperationException(
                     $"Expiration delete frequency for database '{databaseName}' must be greater than 0.");
             }
-            var editExpiration = new EditExpirationCommand(expiration, databaseName, guid);
+            var editExpiration = new EditExpirationCommand(expiration, databaseName, raftRequestId);
             return SendToLeaderAsync(editExpiration);
         }
 
-        public async Task<(long, object)> ModifyPeriodicBackup(TransactionOperationContext context, string name, BlittableJsonReaderObject configurationJson, string guid)
+        public async Task<(long, object)> ModifyPeriodicBackup(TransactionOperationContext context, string name, BlittableJsonReaderObject configurationJson, string raftRequestId)
         {
-            var modifyPeriodicBackup = new UpdatePeriodicBackupCommand(JsonDeserializationCluster.PeriodicBackupConfiguration(configurationJson), name, guid);
+            var modifyPeriodicBackup = new UpdatePeriodicBackupCommand(JsonDeserializationCluster.PeriodicBackupConfiguration(configurationJson), name, raftRequestId);
             return await SendToLeaderAsync(modifyPeriodicBackup);
         }
 
         public async Task<(long, object)> AddEtl(TransactionOperationContext context,
-            string databaseName, BlittableJsonReaderObject etlConfiguration, string guid)
+            string databaseName, BlittableJsonReaderObject etlConfiguration, string raftRequestId)
         {
             UpdateDatabaseCommand command;
             var databaseRecord = LoadDatabaseRecord(databaseName, out _);
@@ -1504,7 +1504,7 @@ namespace Raven.Server.ServerWide
 
                     ThrowInvalidConfigurationIfNecessary(rvnEtlErr);
 
-                    command = new AddRavenEtlCommand(rvnEtl, databaseName, guid);
+                    command = new AddRavenEtlCommand(rvnEtl, databaseName, raftRequestId);
                     break;
                 case EtlType.Sql:
                     var sqlEtl = JsonDeserializationCluster.SqlEtlConfiguration(etlConfiguration);
@@ -1514,7 +1514,7 @@ namespace Raven.Server.ServerWide
 
                     ThrowInvalidConfigurationIfNecessary(sqlEtlErr);
 
-                    command = new AddSqlEtlCommand(sqlEtl, databaseName, guid);
+                    command = new AddSqlEtlCommand(sqlEtl, databaseName, raftRequestId);
                     break;
                 default:
                     throw new NotSupportedException($"Unknown ETL configuration type. Configuration: {etlConfiguration}");
@@ -1546,17 +1546,17 @@ namespace Raven.Server.ServerWide
             }
         }
 
-        public async Task<(long, object)> UpdateEtl(TransactionOperationContext context, string databaseName, long id, BlittableJsonReaderObject etlConfiguration, string guid)
+        public async Task<(long, object)> UpdateEtl(TransactionOperationContext context, string databaseName, long id, BlittableJsonReaderObject etlConfiguration, string raftRequestId)
         {
             UpdateDatabaseCommand command;
 
             switch (EtlConfiguration<ConnectionString>.GetEtlType(etlConfiguration))
             {
                 case EtlType.Raven:
-                    command = new UpdateRavenEtlCommand(id, JsonDeserializationCluster.RavenEtlConfiguration(etlConfiguration), databaseName, guid);
+                    command = new UpdateRavenEtlCommand(id, JsonDeserializationCluster.RavenEtlConfiguration(etlConfiguration), databaseName, raftRequestId);
                     break;
                 case EtlType.Sql:
-                    command = new UpdateSqlEtlCommand(id, JsonDeserializationCluster.SqlEtlConfiguration(etlConfiguration), databaseName, guid);
+                    command = new UpdateSqlEtlCommand(id, JsonDeserializationCluster.SqlEtlConfiguration(etlConfiguration), databaseName, raftRequestId);
                     break;
                 default:
                     throw new NotSupportedException($"Unknown ETL configuration type. Configuration: {etlConfiguration}");
@@ -1565,20 +1565,20 @@ namespace Raven.Server.ServerWide
             return await SendToLeaderAsync(command);
         }
 
-        public Task<(long, object)> RemoveEtlProcessState(TransactionOperationContext context, string databaseName, string configurationName, string transformationName, string guid)
+        public Task<(long, object)> RemoveEtlProcessState(TransactionOperationContext context, string databaseName, string configurationName, string transformationName, string raftRequestId)
         {
-            var command = new RemoveEtlProcessStateCommand(databaseName, configurationName, transformationName, guid);
+            var command = new RemoveEtlProcessStateCommand(databaseName, configurationName, transformationName, raftRequestId);
 
             return SendToLeaderAsync(command);
         }
 
-        public Task<(long, object)> ModifyDatabaseRevisions(JsonOperationContext context, string name, BlittableJsonReaderObject configurationJson, string guid)
+        public Task<(long, object)> ModifyDatabaseRevisions(JsonOperationContext context, string name, BlittableJsonReaderObject configurationJson, string raftRequestId)
         {
-            var editRevisions = new EditRevisionsConfigurationCommand(JsonDeserializationCluster.RevisionsConfiguration(configurationJson), name, guid);
+            var editRevisions = new EditRevisionsConfigurationCommand(JsonDeserializationCluster.RevisionsConfiguration(configurationJson), name, raftRequestId);
             return SendToLeaderAsync(editRevisions);
         }
 
-        public async Task<(long, object)> PutConnectionString(TransactionOperationContext context, string databaseName, BlittableJsonReaderObject connectionString, string guid)
+        public async Task<(long, object)> PutConnectionString(TransactionOperationContext context, string databaseName, BlittableJsonReaderObject connectionString, string raftRequestId)
         {
             if (connectionString.TryGet(nameof(ConnectionString.Type), out string type) == false)
                 throw new InvalidOperationException($"Connection string must have {nameof(ConnectionString.Type)} field");
@@ -1591,10 +1591,10 @@ namespace Raven.Server.ServerWide
             switch (connectionStringType)
             {
                 case ConnectionStringType.Raven:
-                    command = new PutRavenConnectionStringCommand(JsonDeserializationCluster.RavenConnectionString(connectionString), databaseName, guid);
+                    command = new PutRavenConnectionStringCommand(JsonDeserializationCluster.RavenConnectionString(connectionString), databaseName, raftRequestId);
                     break;
                 case ConnectionStringType.Sql:
-                    command = new PutSqlConnectionStringCommand(JsonDeserializationCluster.SqlConnectionString(connectionString), databaseName, guid);
+                    command = new PutSqlConnectionStringCommand(JsonDeserializationCluster.SqlConnectionString(connectionString), databaseName, raftRequestId);
                     break;
                 default:
                     throw new NotSupportedException($"Unknown connection string type: {connectionStringType}");
@@ -1603,7 +1603,7 @@ namespace Raven.Server.ServerWide
             return await SendToLeaderAsync(command);
         }
 
-        public async Task<(long, object)> RemoveConnectionString(string databaseName, string connectionStringName, string type, string guid)
+        public async Task<(long, object)> RemoveConnectionString(string databaseName, string connectionStringName, string type, string raftRequestId)
         {
             if (Enum.TryParse<ConnectionStringType>(type, true, out var connectionStringType) == false)
                 throw new NotSupportedException($"Unknown connection string type: {connectionStringType}");
@@ -1633,7 +1633,7 @@ namespace Raven.Server.ServerWide
                         }
                     }
 
-                    command = new RemoveRavenConnectionStringCommand(connectionStringName, databaseName, guid);
+                    command = new RemoveRavenConnectionStringCommand(connectionStringName, databaseName, raftRequestId);
                     break;
 
                 case ConnectionStringType.Sql:
@@ -1647,7 +1647,7 @@ namespace Raven.Server.ServerWide
                         }
                     }
 
-                    command = new RemoveSqlConnectionStringCommand(connectionStringName, databaseName, guid);
+                    command = new RemoveSqlConnectionStringCommand(connectionStringName, databaseName, raftRequestId);
                     break;
 
                 default:
@@ -1911,7 +1911,7 @@ namespace Raven.Server.ServerWide
         }
 
         public Task<(long Index, object Result)> WriteDatabaseRecordAsync(
-            string databaseName, DatabaseRecord record, long? index, string guid,
+            string databaseName, DatabaseRecord record, long? index, string raftRequestId,
             Dictionary<string, BlittableJsonReaderObject> databaseValues = null, bool isRestore = false)
         {
             if (databaseValues == null)
@@ -1928,7 +1928,7 @@ namespace Raven.Server.ServerWide
                 LeadersTicks = _engine.CurrentLeader?.LeaderShipDuration ?? 0
             };
 
-            var addDatabaseCommand = new AddDatabaseCommand(guid)
+            var addDatabaseCommand = new AddDatabaseCommand(raftRequestId)
             {
                 Name = databaseName,
                 RaftCommandIndex = index,
@@ -2007,9 +2007,9 @@ namespace Raven.Server.ServerWide
             return _engine.GetClusterErrorsFromLeader();
         }
 
-        public async Task<(long ClusterEtag, string ClusterId, long newIdentityValue)> GenerateClusterIdentityAsync(string id, string databaseName, string guid)
+        public async Task<(long ClusterEtag, string ClusterId, long newIdentityValue)> GenerateClusterIdentityAsync(string id, string databaseName, string raftRequestId)
         {
-            var (etag, result) = await SendToLeaderAsync(new IncrementClusterIdentityCommand(databaseName, id.ToLower(), guid));
+            var (etag, result) = await SendToLeaderAsync(new IncrementClusterIdentityCommand(databaseName, id.ToLower(), raftRequestId));
 
             if (result == null)
             {
@@ -2020,14 +2020,14 @@ namespace Raven.Server.ServerWide
             return (etag, id.Substring(0, id.Length - 1) + '/' + result, (long)result);
         }
 
-        public async Task<long> UpdateClusterIdentityAsync(string id, string databaseName, long newIdentity, bool force, string guid)
+        public async Task<long> UpdateClusterIdentityAsync(string id, string databaseName, long newIdentity, bool force, string raftRequestId)
         {
             var identities = new Dictionary<string, long>
             {
                 [id] = newIdentity
             };
 
-            var (_, result) = await SendToLeaderAsync(new UpdateClusterIdentityCommand(databaseName, identities, force, guid));
+            var (_, result) = await SendToLeaderAsync(new UpdateClusterIdentityCommand(databaseName, identities, force, raftRequestId));
 
             if (result == null)
             {
@@ -2053,9 +2053,9 @@ namespace Raven.Server.ServerWide
             return newIdentityValue;
         }
 
-        public async Task<List<long>> GenerateClusterIdentitiesBatchAsync(string databaseName, List<string> ids, string guid)
+        public async Task<List<long>> GenerateClusterIdentitiesBatchAsync(string databaseName, List<string> ids, string raftRequestId)
         {
-            var (_, identityInfoResult) = await SendToLeaderAsync(new IncrementClusterIdentitiesBatchCommand(databaseName, ids, guid));
+            var (_, identityInfoResult) = await SendToLeaderAsync(new IncrementClusterIdentitiesBatchCommand(databaseName, ids, raftRequestId));
 
             var identityInfo = identityInfoResult as List<long> ?? throw new InvalidOperationException(
                     $"Expected to get result from raft command that should generate a cluster-wide batch identity, but didn't. Leader is {LeaderTag}, Current node tag is {NodeTag}.");
@@ -2089,9 +2089,9 @@ namespace Raven.Server.ServerWide
             }
         }
 
-        public async Task PutLicenseAsync(License license, string guid)
+        public async Task PutLicenseAsync(License license, string raftRequestId)
         {
-            var command = new PutLicenseCommand(LicenseStorageKey, license, guid);
+            var command = new PutLicenseCommand(LicenseStorageKey, license, raftRequestId);
 
             var result = await SendToLeaderAsync(command);
 
@@ -2101,21 +2101,21 @@ namespace Raven.Server.ServerWide
             await WaitForCommitIndexChange(RachisConsensus.CommitIndexModification.GreaterOrEqual, result.Index);
         }
 
-        public void PutLicenseLimits(LicenseLimits licenseLimits, string guid)
+        public void PutLicenseLimits(LicenseLimits licenseLimits, string raftRequestId)
         {
             if (IsLeader() == false)
                 throw new InvalidOperationException("Only the leader can set the license limits!");
 
-            var command = new PutLicenseLimitsCommand(LicenseLimitsStorageKey, licenseLimits, guid);
+            var command = new PutLicenseLimitsCommand(LicenseLimitsStorageKey, licenseLimits, raftRequestId);
             _engine.PutAsync(command).IgnoreUnobservedExceptions();
         }
 
-        public async Task PutLicenseLimitsAsync(LicenseLimits licenseLimits, string guid)
+        public async Task PutLicenseLimitsAsync(LicenseLimits licenseLimits, string raftRequestId)
         {
             if (IsLeader() == false)
                 throw new InvalidOperationException("Only the leader can set the license limits!");
 
-            var command = new PutLicenseLimitsCommand(LicenseLimitsStorageKey, licenseLimits, guid);
+            var command = new PutLicenseLimitsCommand(LicenseLimitsStorageKey, licenseLimits, raftRequestId);
 
             var result = await SendToLeaderAsync(command);
 

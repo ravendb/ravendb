@@ -430,14 +430,14 @@ namespace Raven.Server.Documents.Indexes
             return index;
         }
 
-        public async Task<Index> CreateIndex(IndexDefinition definition, string guid, string source = null)
+        public async Task<Index> CreateIndex(IndexDefinition definition, string raftRequestId, string source = null)
         {
             if (definition == null)
                 throw new ArgumentNullException(nameof(definition));
 
             ValidateStaticIndex(definition);
 
-            var command = new PutIndexCommand(definition, _documentDatabase.Name, source, _documentDatabase.Time.GetUtcNow(), guid);
+            var command = new PutIndexCommand(definition, _documentDatabase.Name, source, _documentDatabase.Time.GetUtcNow(), raftRequestId);
 
             long index = 0;
             try
@@ -510,17 +510,17 @@ namespace Raven.Server.Documents.Indexes
             return new IndexBatchScope(this);
         }
 
-        public async Task<Index> CreateIndex(IndexDefinitionBase definition, string guid)
+        public async Task<Index> CreateIndex(IndexDefinitionBase definition, string raftRequestId)
         {
             if (definition == null)
                 throw new ArgumentNullException(nameof(definition));
 
             if (definition is MapIndexDefinition)
-                return await CreateIndex(((MapIndexDefinition)definition).IndexDefinition, guid);
+                return await CreateIndex(((MapIndexDefinition)definition).IndexDefinition, raftRequestId);
 
             ValidateAutoIndex(definition);
 
-            var command = PutAutoIndexCommand.Create((AutoIndexDefinitionBase)definition, _documentDatabase.Name, guid);
+            var command = PutAutoIndexCommand.Create((AutoIndexDefinitionBase)definition, _documentDatabase.Name, raftRequestId);
 
             long index = 0;
             try
@@ -756,7 +756,7 @@ namespace Raven.Server.Documents.Indexes
             return ResetIndexInternal(index);
         }
 
-        public async Task<bool> TryDeleteIndexIfExists(string name, string guid)
+        public async Task<bool> TryDeleteIndexIfExists(string name, string raftRequestId)
         {
             var index = GetIndex(name);
             if (index == null)
@@ -764,18 +764,18 @@ namespace Raven.Server.Documents.Indexes
 
             if (name.StartsWith(Constants.Documents.Indexing.SideBySideIndexNamePrefix))
             {
-                await HandleSideBySideIndexDelete(name, guid);
+                await HandleSideBySideIndexDelete(name, raftRequestId);
                 return true;
             }
 
-            var (etag, _) = await _serverStore.SendToLeaderAsync(new DeleteIndexCommand(index.Name, _documentDatabase.Name, guid));
+            var (etag, _) = await _serverStore.SendToLeaderAsync(new DeleteIndexCommand(index.Name, _documentDatabase.Name, raftRequestId));
 
             await _documentDatabase.RachisLogIndexNotifications.WaitForIndexNotification(etag, _serverStore.Engine.OperationTimeout);
 
             return true;
         }
 
-        private async Task HandleSideBySideIndexDelete(string name, string guid)
+        private async Task HandleSideBySideIndexDelete(string name, string raftRequestId)
         {
             var originalIndexName = name.Remove(0, Constants.Documents.Indexing.SideBySideIndexNamePrefix.Length);
             var originalIndex = GetIndex(originalIndexName);
@@ -783,7 +783,7 @@ namespace Raven.Server.Documents.Indexes
             {
                 // we cannot find the original index 
                 // but we need to remove the side by side one by the original name
-                var (etag, _) = await _serverStore.SendToLeaderAsync(new DeleteIndexCommand(originalIndexName, _documentDatabase.Name, guid));
+                var (etag, _) = await _serverStore.SendToLeaderAsync(new DeleteIndexCommand(originalIndexName, _documentDatabase.Name, raftRequestId));
 
                 await _documentDatabase.RachisLogIndexNotifications.WaitForIndexNotification(etag, _serverStore.Engine.OperationTimeout);
 
@@ -794,16 +794,16 @@ namespace Raven.Server.Documents.Indexes
 
             var indexDefinition = originalIndex.GetIndexDefinition();
             indexDefinition.Name = originalIndexName;
-            await CreateIndex(indexDefinition, guid);
+            await CreateIndex(indexDefinition, raftRequestId);
         }
 
-        public async Task DeleteIndex(string name, string guid)
+        public async Task DeleteIndex(string name, string raftRequestId)
         {
             var index = GetIndex(name);
             if (index == null)
                 IndexDoesNotExistException.ThrowFor(name);
 
-            var (newEtag, _) = await _serverStore.SendToLeaderAsync(new DeleteIndexCommand(index.Name, _documentDatabase.Name,guid));
+            var (newEtag, _) = await _serverStore.SendToLeaderAsync(new DeleteIndexCommand(index.Name, _documentDatabase.Name,raftRequestId));
 
             await _documentDatabase.RachisLogIndexNotifications.WaitForIndexNotification(newEtag, _serverStore.Engine.OperationTimeout);
         }
@@ -1256,7 +1256,7 @@ namespace Raven.Server.Documents.Indexes
             await DeleteOrMergeSurpassedAutoIndexes(databaseRecordEtag, Guid.NewGuid().ToString());
         }
 
-        private async Task DeleteOrMergeSurpassedAutoIndexes(long databaseRecordEtag, string guid)
+        private async Task DeleteOrMergeSurpassedAutoIndexes(long databaseRecordEtag, string raftRequestId)
         {
             if (_lastSurpassedAutoIndexesDatabaseRecordEtag >= databaseRecordEtag)
                 return;
@@ -1325,8 +1325,8 @@ namespace Raven.Server.Documents.Indexes
 
                 try
                 {
-                    await CreateIndex(definition, $"{guid}/{definition.Name}");
-                    await TryDeleteIndexIfExists(kvp.Key,$"{guid}/{kvp.Key}");
+                    await CreateIndex(definition, $"{raftRequestId}/{definition.Name}");
+                    await TryDeleteIndexIfExists(kvp.Key,$"{raftRequestId}/{kvp.Key}");
 
                     moreWork = true;
                     break; // extending only one auto-index at a time
@@ -1344,7 +1344,7 @@ namespace Raven.Server.Documents.Indexes
             {
                 try
                 {
-                    await TryDeleteIndexIfExists(indexName, $"{guid}/{indexName}");
+                    await TryDeleteIndexIfExists(indexName, $"{raftRequestId}/{indexName}");
                     if (_logger.IsInfoEnabled)
                         _logger.Info($"Deleted index '{indexName}' because it is surpassed.");
                 }
@@ -1559,7 +1559,7 @@ namespace Raven.Server.Documents.Indexes
             }
         }
 
-        public async Task SetLock(string name, IndexLockMode mode, string guid)
+        public async Task SetLock(string name, IndexLockMode mode, string raftRequestId)
         {
             var index = GetIndex(name);
             if (index == null)
@@ -1571,14 +1571,14 @@ namespace Raven.Server.Documents.Indexes
                 return;
             }
 
-            var command = new SetIndexLockCommand(name, mode, _documentDatabase.Name, guid);
+            var command = new SetIndexLockCommand(name, mode, _documentDatabase.Name, raftRequestId);
 
             var (etag, _) = await _serverStore.SendToLeaderAsync(command);
 
             await _documentDatabase.RachisLogIndexNotifications.WaitForIndexNotification(etag, _serverStore.Engine.OperationTimeout);
         }
 
-        public async Task SetPriority(string name, IndexPriority priority, string guid)
+        public async Task SetPriority(string name, IndexPriority priority, string raftRequestId)
         {
             var index = GetIndex(name);
             if (index == null)
@@ -1591,7 +1591,7 @@ namespace Raven.Server.Documents.Indexes
                 return;
             }
 
-            var command = new SetIndexPriorityCommand(name, priority, _documentDatabase.Name, guid);
+            var command = new SetIndexPriorityCommand(name, priority, _documentDatabase.Name, raftRequestId);
 
             var (etag, _) = await _serverStore.SendToLeaderAsync(command);
 
@@ -1628,17 +1628,17 @@ namespace Raven.Server.Documents.Indexes
                 _store = store;
             }
 
-            public void AddIndex(IndexDefinitionBase definition, string source, DateTime createdAt, string guid)
+            public void AddIndex(IndexDefinitionBase definition, string source, DateTime createdAt, string raftRequestId)
             {
                 if (_command == null)
-                    _command = new PutIndexesCommand(_store._documentDatabase.Name, source, createdAt, guid);
+                    _command = new PutIndexesCommand(_store._documentDatabase.Name, source, createdAt, raftRequestId);
 
                 if (definition == null)
                     throw new ArgumentNullException(nameof(definition));
 
                 if (definition is MapIndexDefinition indexDefinition)
                 {
-                    AddIndex(indexDefinition.IndexDefinition, source, createdAt, guid);
+                    AddIndex(indexDefinition.IndexDefinition, source, createdAt, raftRequestId);
                     return;
                 }
 
@@ -1650,10 +1650,10 @@ namespace Raven.Server.Documents.Indexes
                 _command.Auto.Add(PutAutoIndexCommand.GetAutoIndexDefinition(autoDefinition, indexType));
             }
 
-            public void AddIndex(IndexDefinition definition, string source, DateTime createdAt, string guid)
+            public void AddIndex(IndexDefinition definition, string source, DateTime createdAt, string raftRequestId)
             {
                 if (_command == null)
-                    _command = new PutIndexesCommand(_store._documentDatabase.Name, source, createdAt, guid);
+                    _command = new PutIndexesCommand(_store._documentDatabase.Name, source, createdAt, raftRequestId);
 
                 _store.ValidateStaticIndex(definition);
 

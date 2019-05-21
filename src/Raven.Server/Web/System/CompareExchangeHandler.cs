@@ -120,7 +120,7 @@ namespace Raven.Server.Web.System
         public async Task PutCompareExchangeValue()
         {
             var key = GetStringQueryString("key");
-            var guid = GetRaftRequestIdFromQuery();
+            var raftRequestId = GetRaftRequestIdFromQuery();
 
             // ReSharper disable once PossibleInvalidOperationException
             var index = GetLongQueryString("index", true).Value;
@@ -130,7 +130,7 @@ namespace Raven.Server.Web.System
             using (ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
             {
                 var updateJson = await context.ReadForMemoryAsync(RequestBodyStream(), "read-unique-value");
-                var command = new AddOrUpdateCompareExchangeCommand(Database.Name, key, updateJson, index, context, guid);
+                var command = new AddOrUpdateCompareExchangeCommand(Database.Name, key, updateJson, index, context, raftRequestId);
                 using (var writer = new BlittableJsonTextWriter(context, ResponseBodyStream()))
                 {
                     (var raftIndex, var response) = await ServerStore.SendToLeaderAsync(context, command);
@@ -151,7 +151,7 @@ namespace Raven.Server.Web.System
         public async Task DeleteCompareExchangeValue()
         {
             var key = GetStringQueryString("key");
-            var guid = GetRaftRequestIdFromQuery();
+            var raftRequestId = GetRaftRequestIdFromQuery();
 
             // ReSharper disable once PossibleInvalidOperationException
             var index = GetLongQueryString("index", true).Value;
@@ -160,7 +160,7 @@ namespace Raven.Server.Web.System
 
             using (ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
             {
-                var command = new RemoveCompareExchangeCommand(Database.Name, key, index, context, guid);
+                var command = new RemoveCompareExchangeCommand(Database.Name, key, index, context, raftRequestId);
                 using (var writer = new BlittableJsonTextWriter(context, ResponseBodyStream()))
                 {
                     (var raftIndex, var response) = await ServerStore.SendToLeaderAsync(context, command);

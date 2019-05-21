@@ -52,9 +52,9 @@ namespace Raven.Server.Documents.Subscriptions
 
         }
 
-        public async Task<long> PutSubscription(SubscriptionCreationOptions options, string guid, long? subscriptionId = null, bool? disabled = false, string mentor = null)
+        public async Task<long> PutSubscription(SubscriptionCreationOptions options, string raftRequestId, long? subscriptionId = null, bool? disabled = false, string mentor = null)
         {
-            var command = new PutSubscriptionCommand(_db.Name, options.Query, mentor, guid)
+            var command = new PutSubscriptionCommand(_db.Name, options.Query, mentor, raftRequestId)
             {
                 InitialChangeVector = options.ChangeVector,
                 SubscriptionName = options.Name,
@@ -151,9 +151,9 @@ namespace Raven.Server.Documents.Subscriptions
             }
         }
 
-        public async Task DeleteSubscription(string name, string guid)
+        public async Task DeleteSubscription(string name, string raftRequestId)
         {
-            var command = new DeleteSubscriptionCommand(_db.Name, name, guid);
+            var command = new DeleteSubscriptionCommand(_db.Name, name, raftRequestId);
 
             var (etag, _) = await _serverStore.SendToLeaderAsync(command);
 

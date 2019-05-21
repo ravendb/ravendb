@@ -8,7 +8,6 @@ using System.Security.Cryptography.X509Certificates;
 using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
-using Raven.Client.Documents.Session;
 using Raven.Client.Exceptions;
 using Raven.Client.Extensions;
 using Raven.Server.ServerWide.Context;
@@ -31,6 +30,7 @@ using Raven.Server.ServerWide.Commands;
 using Sparrow.Server;
 using Sparrow.Server.Utils;
 using System.Linq;
+using System.Reflection;
 using Sparrow;
 
 namespace Raven.Server.Rachis
@@ -286,22 +286,26 @@ namespace Raven.Server.Rachis
         private static readonly Slice SnapshotRequestSlice;
         internal static readonly Slice LogHistorySlice;
         private static readonly Slice LogHistoryIndexSlice;
+        private static readonly Slice LogHistoryDateTimeSlice;
         internal static readonly Slice EntriesSlice;
         internal static readonly TableSchema LogsTable;
-        internal static readonly TableSchema LogHistoryTable;
-        private const int LogHistoryMaxEntries = 2048;
-        internal enum LogHistoryColumn
+        private static readonly TableSchema LogHistoryTable;
+        private int _logHistoryMaxEntries;
+
+        private enum LogHistoryColumn
         {
             Guid, // string
             Index, // long
+            Ticks, // long
             Term, // long
             Type, // string
             State, // byte -> 1 - appended, 2 - committed
             Result, // blittable
-            Exception // string
+            ExceptionType, // string
+            ExceptionMessage // string
         }
 
-        internal enum HistoryStatus : byte
+        private enum HistoryStatus : byte
         {
             None,
             Appended,
@@ -322,6 +326,7 @@ namespace Raven.Server.Rachis
                 Slice.From(ctx, "Entries", out EntriesSlice);
                 Slice.From(ctx, "LogHistory", out LogHistorySlice);
                 Slice.From(ctx, "LogHistoryIndex", out LogHistoryIndexSlice);
+                Slice.From(ctx, "LogHistoryDateTime", out LogHistoryDateTimeSlice);
                 Slice.From(ctx, "SnapshotRequest", out SnapshotRequestSlice);
             }
             /*
@@ -349,9 +354,15 @@ namespace Raven.Server.Rachis
                 Name = LogHistoryIndexSlice,
                 StartIndex = (int)LogHistoryColumn.Index
             });
+
+            LogHistoryTable.DefineFixedSizeIndex(new TableSchema.FixedSizeSchemaIndexDef
+            {
+                Name = LogHistoryDateTimeSlice,
+                StartIndex = (int)LogHistoryColumn.Ticks
+            });
         }
 
-        public unsafe void InsertHistoryLog(TransactionOperationContext context, long index, long term, BlittableJsonReaderObject cmd)
+        private void InsertHistoryLog(TransactionOperationContext context, long index, long term, BlittableJsonReaderObject cmd)
         {
             var guid = GetGuidFromCommand(cmd);
             if (guid == null) // shouldn't happened in new cluster version!
@@ -369,15 +380,17 @@ namespace Raven.Server.Rachis
             {
                 tvb.Add(guidSlice);
                 tvb.Add(Bits.SwapBytes(index));
+                tvb.Add(Bits.SwapBytes(DateTime.UtcNow.Ticks));
                 tvb.Add(term);
                 tvb.Add(typeSlice);
                 tvb.Add((byte)HistoryStatus.Appended);
                 tvb.Add(Slices.Empty); // result
-                tvb.Add(Slices.Empty); // exception
+                tvb.Add(Slices.Empty); // exception type
+                tvb.Add(Slices.Empty); // exception message
                 table.Insert(tvb);
             }
 
-            if (table.NumberOfEntries > LogHistoryMaxEntries)
+            if (table.NumberOfEntries > _logHistoryMaxEntries)
             {
                 var reader = table.ReadFirst(LogHistoryTable.FixedSizeIndexes[LogHistoryIndexSlice]);
                 table.Delete(reader.Reader.Id);
@@ -413,6 +426,7 @@ namespace Raven.Server.Rachis
             {
                 tvb.Add(guidSlice);
                 tvb.Add(Bits.SwapBytes(index));
+                tvb.Add(Bits.SwapBytes(DateTime.UtcNow.Ticks));
                 tvb.Add(term);
                 tvb.Add(typeSlice);
                 tvb.Add((byte)HistoryStatus.Committed);
@@ -429,18 +443,71 @@ namespace Raven.Server.Rachis
                 if (exception == null)
                 {
                     tvb.Add(Slices.Empty);
+                    tvb.Add(Slices.Empty);
                 }
                 else
                 {
-                    var lazyException = context.GetLazyString(exception.ToString());
-                    tvb.Add(lazyException.Buffer, lazyException.Size);
+                    var exceptionType = context.GetLazyString(exception.GetType().AssemblyQualifiedName);
+                    var exceptionMsg = context.GetLazyString(exception.ToString());
+                    tvb.Add(exceptionType.Buffer, exceptionType.Size);
+                    tvb.Add(exceptionMsg.Buffer, exceptionMsg.Size);
                 }
 
                 table.Set(tvb);
             }
         }
 
-        public unsafe bool HasHistoryLog(TransactionOperationContext context, BlittableJsonReaderObject cmd, out long index, out object result, out string exception)
+        public IEnumerable<DynamicJsonValue> GetHistoryLogs(TransactionOperationContext context)
+        {
+            var table = context.Transaction.InnerTransaction.OpenTable(LogHistoryTable, LogHistorySlice);
+            foreach (var entryHolder in table.SeekForwardFrom(LogHistoryTable.FixedSizeIndexes[LogHistoryDateTimeSlice], 0, 0))
+            {
+                yield return ReadHistoryLog(context, entryHolder);
+            }
+        }
+
+        private unsafe DynamicJsonValue ReadHistoryLog(TransactionOperationContext context, Table.TableValueHolder entryHolder)
+        {
+            var djv = new DynamicJsonValue();
+
+            var ticks = Bits.SwapBytes(*(long*)entryHolder.Reader.Read((int)(LogHistoryColumn.Ticks), out _));
+            djv["Date"] = new DateTime(ticks);
+
+            var guidPtr = entryHolder.Reader.Read((int)(LogHistoryColumn.Guid), out var size);
+            djv[LogHistoryColumn.Guid.ToString()] = Encoding.UTF8.GetString(guidPtr, size);
+
+            var index = Bits.SwapBytes(*(long*)entryHolder.Reader.Read((int)(LogHistoryColumn.Index), out _));
+            djv[LogHistoryColumn.Index.ToString()] = index;
+
+            djv[LogHistoryColumn.Term.ToString()] = *(long*)entryHolder.Reader.Read((int)(LogHistoryColumn.Term), out _);
+
+            var typeString = entryHolder.Reader.Read((int)(LogHistoryColumn.Type), out size);
+            djv[LogHistoryColumn.Type.ToString()] = Encoding.UTF8.GetString(typeString, size);
+
+            djv[LogHistoryColumn.State.ToString()] = (*(HistoryStatus*)entryHolder.Reader.Read((int)(LogHistoryColumn.State), out _)).ToString();
+
+            var resultPtr = entryHolder.Reader.Read((int)(LogHistoryColumn.Result), out size);
+            if (size > 0)
+            {
+                var blittableResult = new BlittableJsonReaderObject(resultPtr, size, context);
+                djv[LogHistoryColumn.Result.ToString()] = blittableResult.ToString();
+                blittableResult.Dispose();
+            }
+            else
+            {
+                djv[LogHistoryColumn.Result.ToString()] = null;
+            }
+
+            var exTypePtr = entryHolder.Reader.Read((int)(LogHistoryColumn.ExceptionType), out size);
+            djv[LogHistoryColumn.ExceptionType.ToString()] = size > 0 ? Encoding.UTF8.GetString(exTypePtr, size) : null;
+
+            var exMsg = entryHolder.Reader.Read((int)(LogHistoryColumn.ExceptionMessage), out size);
+            djv[LogHistoryColumn.ExceptionMessage.ToString()] = size > 0 ? Encoding.UTF8.GetString(exMsg, size) : null;
+
+            return djv;
+        }
+
+        public unsafe bool HasHistoryLog(TransactionOperationContext context, BlittableJsonReaderObject cmd, out long index, out object result, out Exception exception)
         {
             result = null;
             exception = null;
@@ -463,16 +530,33 @@ namespace Raven.Server.Rachis
                 var resultPtr = reader.Read((int)LogHistoryColumn.Result, out int size);
                 if (size > 0)
                 {
-                    var blittalbeResultHolder = new BlittableJsonReaderObject(resultPtr, size, context);
-                    if (blittalbeResultHolder.TryGet("Result", out result) == false) // this blittable will be clone to the outer context
+                    var blittableResultHolder = new BlittableJsonReaderObject(resultPtr, size, context);
+                    if (blittableResultHolder.TryGet("Result", out result) == false) // this blittable will be clone to the outer context
                     {
                         throw new InvalidOperationException("Invalid result format!"); // shouldn't happened!
                     }
                 }
-                var exceptionPtr = reader.Read((int)LogHistoryColumn.Exception, out size);
+                var exceptionTypePtr = reader.Read((int)LogHistoryColumn.ExceptionType, out size);
                 if (size > 0)
                 {
-                    exception = Encodings.Utf8.GetString(exceptionPtr, size);
+                    var exceptionMsgPtr = reader.Read((int)LogHistoryColumn.ExceptionType, out size);
+                    var exceptionMsg = Encodings.Utf8.GetString(exceptionMsgPtr, size);
+
+                    try
+                    {
+                        var exceptionType = Type.GetType(Encodings.Utf8.GetString(exceptionTypePtr, size));
+                        exception = (Exception)Activator.CreateInstance(exceptionType, exceptionMsg);
+                    }
+                    catch (Exception e)
+                    {
+                        if (Log.IsInfoEnabled)
+                        {
+                            Log.Info($"failed to generate the exception dynamically for guid {guid}", e);
+                        }
+
+                        exception = new Exception($"failed to generate the exception dynamically, but the original exception message is:" +
+                                                  $"{Environment.NewLine}{exceptionMsg}");
+                    }
                 }
 
                 return true;
@@ -538,6 +622,7 @@ namespace Raven.Server.Rachis
                 ElectionTimeout = configuration.Cluster.ElectionTimeout.AsTimeSpan;
                 TcpConnectionTimeout = configuration.Cluster.TcpConnectionTimeout.AsTimeSpan;
                 MaximalVersion = configuration.Cluster.MaximalAllowedClusterVersion;
+                _logHistoryMaxEntries = configuration.Cluster.LogHistoryMaxEntries;
 
                 DebuggerAttachedTimeout.LongTimespanIfDebugging(ref _operationTimeout);
                 DebuggerAttachedTimeout.LongTimespanIfDebugging(ref _electionTimeout);

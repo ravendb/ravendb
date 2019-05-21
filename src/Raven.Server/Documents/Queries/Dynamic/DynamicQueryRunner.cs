@@ -174,7 +174,7 @@ namespace Raven.Server.Documents.Queries.Dynamic
             return (index, hasCreatedAutoIndex);
         }
 
-        private async Task CleanupSupersededAutoIndexes(Index index, DynamicQueryMapping map, string guid, CancellationToken token)
+        private async Task CleanupSupersededAutoIndexes(Index index, DynamicQueryMapping map, string raftRequestId, CancellationToken token)
         {
             if (map.SupersededIndexes == null || map.SupersededIndexes.Count == 0)
                 return;
@@ -236,7 +236,7 @@ namespace Raven.Server.Documents.Queries.Dynamic
                     {
                         try
                         {
-                            await _indexStore.DeleteIndex(supersededIndex.Name, $"{guid}/{supersededIndex.Name}");
+                            await _indexStore.DeleteIndex(supersededIndex.Name, $"{raftRequestId}/{supersededIndex.Name}");
                         }
                         catch (IndexDoesNotExistException)
                         {
