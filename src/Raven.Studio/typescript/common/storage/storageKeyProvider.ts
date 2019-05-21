@@ -2,7 +2,7 @@
 
 class storageKeyProvider {
 
-    static commonPrefix = "ravedb-4.2-";
+    static commonPrefix = "ravedb-5.0-";
 
     static storageKeyFor(value: string) {
         return storageKeyProvider.commonPrefix + value;

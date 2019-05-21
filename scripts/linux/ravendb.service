@@ -1,5 +1,5 @@
 [Unit]
-Description=RavenDB v4.2
+Description=RavenDB v5.0
 After=network.target
 
 [Service]

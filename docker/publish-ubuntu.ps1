@@ -42,9 +42,9 @@ function RemoveImages($imageTags) {
 }
 function GetImageTags($repo, $version) {
         return @(
-            "$($repo):latest",
-            "$($repo):ubuntu-latest",
-            "$($repo):4.2-ubuntu-latest",
+            #"$($repo):latest",
+            #"$($repo):ubuntu-latest",
+            "$($repo):5.0-ubuntu-latest",
             "$($repo):$($version)-ubuntu.18.04-x64"
         )
 }

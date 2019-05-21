@@ -846,13 +846,13 @@ namespace Raven.Server
             {
                 if (string.IsNullOrEmpty(Configuration.Security.CertificateExec) == false)
                 {
-                    throw new InvalidOperationException($"Invalid certificate configuration. The configuration property '{RavenConfiguration.GetKey(x => x.Security.CertificateExec)}' has been deprecated since RavenDB 4.2, please use '{RavenConfiguration.GetKey(x => x.Security.CertificateLoadExec)}' along with '{RavenConfiguration.GetKey(x => x.Security.CertificateRenewExec)}' and '{RavenConfiguration.GetKey(x => x.Security.CertificateChangeExec)}'. For more information, refer to the online documentation at https://ravendb.net/l/4554RZ/4.2.");
+                    throw new InvalidOperationException($"Invalid certificate configuration. The configuration property '{RavenConfiguration.GetKey(x => x.Security.CertificateExec)}' has been deprecated since RavenDB 4.2, please use '{RavenConfiguration.GetKey(x => x.Security.CertificateLoadExec)}' along with '{RavenConfiguration.GetKey(x => x.Security.CertificateRenewExec)}' and '{RavenConfiguration.GetKey(x => x.Security.CertificateChangeExec)}'. For more information, refer to the online documentation at https://ravendb.net/l/4554RZ/5.0.");
                 }
 
                 if (string.IsNullOrEmpty(Configuration.Security.CertificateLoadExec) == false &&
                     (string.IsNullOrEmpty(Configuration.Security.CertificateRenewExec) || string.IsNullOrEmpty(Configuration.Security.CertificateChangeExec)))
                 {
-                    throw new InvalidOperationException($"Invalid certificate configuration. When using the configuration property '{RavenConfiguration.GetKey(x => x.Security.CertificateLoadExec)}', it must be accompanied by '{RavenConfiguration.GetKey(x => x.Security.CertificateRenewExec)}' and '{RavenConfiguration.GetKey(x => x.Security.CertificateChangeExec)}'. For more information, refer to the online documentation at https://ravendb.net/l/4554RZ/4.2.");
+                    throw new InvalidOperationException($"Invalid certificate configuration. When using the configuration property '{RavenConfiguration.GetKey(x => x.Security.CertificateLoadExec)}', it must be accompanied by '{RavenConfiguration.GetKey(x => x.Security.CertificateRenewExec)}' and '{RavenConfiguration.GetKey(x => x.Security.CertificateChangeExec)}'. For more information, refer to the online documentation at https://ravendb.net/l/4554RZ/5.0.");
                 }
 
                 if (string.IsNullOrEmpty(Configuration.Security.CertificatePath) == false)
@@ -1259,7 +1259,7 @@ namespace Raven.Server
                         $"1) Change the ServerUrl.Tcp property in setting.json file.{Environment.NewLine}" +
                         $"2) Run the server from the command line with --ServerUrl.Tcp option.{Environment.NewLine}" +
                         $"3) Add RAVEN_ServerUrl_Tcp to the Environment Variables.{Environment.NewLine}" +
-                        "For more information go to https://ravendb.net/l/EJS81M/4.2";
+                        "For more information go to https://ravendb.net/l/EJS81M/5.0";
 
                         errors.Add(new IOException(msg, ex));
                         if (Logger.IsOperationsEnabled)

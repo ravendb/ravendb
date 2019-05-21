@@ -127,7 +127,7 @@ function install_ravendb_systemd {
 
     read -r -d '' RAVENDB_SYSTEMD_SERVICE_CONF << END
 [Unit]
-Description=RavenDB v4.2
+Description=RavenDB v5.0
 After=network.target
 
 [Service]
