@@ -250,7 +250,7 @@ namespace Raven.Server.Commercial
             return _serverStore.GetClusterTopology().AllNodes.Count;
         }
 
-        public async Task ChangeLicenseLimits(string nodeTag, int newAssignedCores, string guid)
+        public async Task ChangeLicenseLimits(string nodeTag, int newAssignedCores, string raftRequestId)
         {
             if (_serverStore.IsLeader() == false)
                 throw new InvalidOperationException("Only the leader is allowed to change the license limits");
@@ -340,7 +340,7 @@ namespace Raven.Server.Commercial
                     };
                 }
 
-                await _serverStore.PutLicenseLimitsAsync(licenseLimits, guid);
+                await _serverStore.PutLicenseLimitsAsync(licenseLimits, raftRequestId);
             }
             finally
             {
@@ -429,7 +429,7 @@ namespace Raven.Server.Commercial
             }
         }
 
-        public async Task Activate(License license, bool skipLeaseLicense, string guid, bool ensureNotPassive = true, bool forceActivate = false)
+        public async Task Activate(License license, bool skipLeaseLicense, string raftRequestId, bool ensureNotPassive = true, bool forceActivate = false)
         {
             var newLicenseStatus = GetLicenseStatus(license);
             if (newLicenseStatus.Expiration.HasValue == false)
@@ -438,7 +438,7 @@ namespace Raven.Server.Commercial
             if (forceActivate == false)
             {
                 if (await ContinueActivatingLicense(
-                        license, skipLeaseLicense, guid, 
+                        license, skipLeaseLicense, raftRequestId, 
                         ensureNotPassive, 
                         newLicenseStatus).ConfigureAwait(false) == false)
                     return;
@@ -451,7 +451,7 @@ namespace Raven.Server.Commercial
 
                 try
                 {
-                    await _serverStore.PutLicenseAsync(license, guid).ConfigureAwait(false);
+                    await _serverStore.PutLicenseAsync(license, raftRequestId).ConfigureAwait(false);
 
                     SetLicense(license.Id, newLicenseStatus.Attributes);
                 }
@@ -492,7 +492,7 @@ namespace Raven.Server.Commercial
             };
         }
 
-        private async Task<bool> ContinueActivatingLicense(License license, bool skipLeaseLicense, string guid, bool ensureNotPassive, LicenseStatus newLicenseStatus)
+        private async Task<bool> ContinueActivatingLicense(License license, bool skipLeaseLicense, string raftRequestId, bool ensureNotPassive, LicenseStatus newLicenseStatus)
         {
             if (newLicenseStatus.Expired)
             {
@@ -509,7 +509,7 @@ namespace Raven.Server.Commercial
                     license = await GetUpdatedLicenseInternal(license);
                     if (license != null)
                     {
-                        await Activate(license, skipLeaseLicense: true, guid, ensureNotPassive: ensureNotPassive);
+                        await Activate(license, skipLeaseLicense: true, raftRequestId, ensureNotPassive: ensureNotPassive);
                         return false;
                     }
                 }
@@ -704,7 +704,7 @@ namespace Raven.Server.Commercial
             }
         }
 
-        public async Task LeaseLicense(string guid, bool forceUpdate = false)
+        public async Task LeaseLicense(string raftRequestId, bool forceUpdate = false)
         {
             if (forceUpdate == false && _serverStore.IsLeader() == false)
                 return;
@@ -723,7 +723,7 @@ namespace Raven.Server.Commercial
                     return;
 
                 // we'll activate the license from the license server
-                await Activate(updatedLicense, skipLeaseLicense: true, guid, forceActivate: true);
+                await Activate(updatedLicense, skipLeaseLicense: true, raftRequestId, forceActivate: true);
 
                 var alert = AlertRaised.Create(
                     null,

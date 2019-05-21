@@ -612,7 +612,7 @@ namespace Raven.Server.Documents.Handlers
         [RavenAction("/databases/*/indexes/set-lock", "POST", AuthorizationStatus.ValidUser)]
         public async Task SetLockMode()
         {
-            var guid = GetRaftRequestIdFromQuery();
+            var raftRequestId = GetRaftRequestIdFromQuery();
             using (ContextPool.AllocateOperationContext(out DocumentsOperationContext context))
             {
                 var json = await context.ReadForMemoryAsync(RequestBodyStream(), "index/set-lock");
@@ -627,9 +627,10 @@ namespace Raven.Server.Documents.Handlers
                     throw new InvalidOperationException("'Indexes list contains Auto-Indexes. Lock Mode' is not set for Auto-Indexes.");
                 }
 
-                foreach (var name in parameters.IndexNames)
+                for (var index = 0; index < parameters.IndexNames.Length; index++)
                 {
-                    await Database.IndexStore.SetLock(name, parameters.Mode, $"{guid}/{name}");
+                    var name = parameters.IndexNames[index];
+                    await Database.IndexStore.SetLock(name, parameters.Mode, $"{raftRequestId}/{index}");
                 }
             }
 
@@ -639,15 +640,16 @@ namespace Raven.Server.Documents.Handlers
         [RavenAction("/databases/*/indexes/set-priority", "POST", AuthorizationStatus.ValidUser)]
         public async Task SetPriority()
         {
-            var guid = GetRaftRequestIdFromQuery();
+            var raftRequestId = GetRaftRequestIdFromQuery();
             using (ContextPool.AllocateOperationContext(out DocumentsOperationContext context))
             {
                 var json = await context.ReadForMemoryAsync(RequestBodyStream(), "index/set-priority");
                 var parameters = JsonDeserializationServer.Parameters.SetIndexPriorityParameters(json);
 
-                foreach (var name in parameters.IndexNames)
+                for (var index = 0; index < parameters.IndexNames.Length; index++)
                 {
-                    await Database.IndexStore.SetPriority(name, parameters.Priority, $"{guid}/{name}");
+                    var name = parameters.IndexNames[index];
+                    await Database.IndexStore.SetPriority(name, parameters.Priority, $"{raftRequestId}/{index}");
                 }
 
                 NoContentStatus();

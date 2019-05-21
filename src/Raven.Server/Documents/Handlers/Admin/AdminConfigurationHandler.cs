@@ -52,7 +52,7 @@ namespace Raven.Server.Documents.Handlers.Admin
             HttpContext.Response.StatusCode = (int)HttpStatusCode.Created;
         }
 
-        private async Task UpdateDatabaseRecord(TransactionOperationContext context, Action<DatabaseRecord> action, string guid)
+        private async Task UpdateDatabaseRecord(TransactionOperationContext context, Action<DatabaseRecord> action, string raftRequestId)
         {
             if (context == null)
                 throw new ArgumentNullException(nameof(context));
@@ -65,7 +65,7 @@ namespace Raven.Server.Documents.Handlers.Admin
 
                 action(record);
 
-                var result = await ServerStore.WriteDatabaseRecordAsync(Database.Name, record, index, guid);
+                var result = await ServerStore.WriteDatabaseRecordAsync(Database.Name, record, index, raftRequestId);
                 await Database.RachisLogIndexNotifications.WaitForIndexNotification(result.Index, ServerStore.Engine.OperationTimeout);
             }
         }

@@ -401,6 +401,8 @@ namespace Raven.Server.ServerWide
                                       "Updating this node version to match the rest should resolve this issue.";
                         throw new UnknownClusterCommand(massage);
                 }
+
+                _parent.UpdateHistoryLog(context, index, _parent.CurrentTerm, cmd, result, null);
             }
             catch (Exception e) when (ExpectedException(e))
             {
@@ -424,8 +426,6 @@ namespace Raven.Server.ServerWide
             finally
             {
                 var executionTime = sw.Elapsed;
-
-                _parent.UpdateHistoryLog(context, index, _parent.CurrentTerm, cmd, result, null);
                 _rachisLogIndexNotifications.RecordNotification(new RecentLogIndexNotification
                 {
                     Type = type,

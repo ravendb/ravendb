@@ -180,8 +180,7 @@ namespace Raven.Server.Documents.PeriodicBackup.Restore
                         // we are currently restoring, shouldn't try to access it
                         databaseRecord.DatabaseState = DatabaseStateStatus.RestoreInProgress;
 
-                        // TODO: does string.Empty make sense here?
-                        var (index, _) = await _serverStore.WriteDatabaseRecordAsync(databaseName, databaseRecord, null, string.Empty, restoreSettings.DatabaseValues, isRestore: true);
+                        var (index, _) = await _serverStore.WriteDatabaseRecordAsync(databaseName, databaseRecord, null, Guid.NewGuid().ToString(), restoreSettings.DatabaseValues, isRestore: true);
                         await _serverStore.Cluster.WaitForIndexNotification(index);
 
                         DisableOngoingTasksIfNeeded(databaseRecord);

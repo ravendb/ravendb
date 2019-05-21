@@ -113,7 +113,7 @@ namespace Raven.Server.Web.System
             var name = GetQueryStringValueAndAssertIfSingleAndNotEmpty("name").Trim();
             var node = GetStringQueryString("node", false);
             var mentor = GetStringQueryString("mentor", false);
-            var guid = GetRaftRequestIdFromQuery();
+            var raftRequestId = GetRaftRequestIdFromQuery();
 
             string errorMessage;
             if (ResourceNameValidator.IsValidResourceName(name, ServerStore.Configuration.Core.DataDirectory.FullPath, out errorMessage) == false)
@@ -184,7 +184,7 @@ namespace Raven.Server.Web.System
                 }
 
                 databaseRecord.Topology.ReplicationFactor++;
-                var (newIndex, _) = await ServerStore.WriteDatabaseRecordAsync(name, databaseRecord, index, guid);
+                var (newIndex, _) = await ServerStore.WriteDatabaseRecordAsync(name, databaseRecord, index, raftRequestId);
 
                 await WaitForExecutionOnSpecificNode(context, clusterTopology, node, newIndex);
 
@@ -215,7 +215,7 @@ namespace Raven.Server.Web.System
             if (ResourceNameValidator.IsValidResourceName(name, ServerStore.Configuration.Core.DataDirectory.FullPath, out string errorMessage) == false)
                 throw new BadRequestException(errorMessage);
 
-            var guid = GetRaftRequestIdFromQuery();
+            var raftRequestId = GetRaftRequestIdFromQuery();
 
             if (LoggingSource.AuditLog.IsInfoEnabled)
             {
@@ -269,7 +269,7 @@ namespace Raven.Server.Web.System
                 }
 
 
-                var (newIndex, topology, nodeUrlsAddedTo) = await CreateDatabase(name, databaseRecord, context, replicationFactor, index, guid);
+                var (newIndex, topology, nodeUrlsAddedTo) = await CreateDatabase(name, databaseRecord, context, replicationFactor, index, raftRequestId);
 
                 HttpContext.Response.StatusCode = (int)HttpStatusCode.Created;
 
@@ -356,7 +356,7 @@ namespace Raven.Server.Web.System
 
         }
 
-        private async Task<(long, DatabaseTopology, List<string>)> CreateDatabase(string name, DatabaseRecord databaseRecord, TransactionOperationContext context, int replicationFactor, long? index, string guid)
+        private async Task<(long, DatabaseTopology, List<string>)> CreateDatabase(string name, DatabaseRecord databaseRecord, TransactionOperationContext context, int replicationFactor, long? index, string raftRequestId)
         {
             var existingDatabaseRecord = ServerStore.Cluster.ReadDatabase(context, name, out long _);
 
@@ -399,7 +399,7 @@ namespace Raven.Server.Web.System
             }
 
 
-            var (newIndex, result) = await ServerStore.WriteDatabaseRecordAsync(name, databaseRecord, index, guid);
+            var (newIndex, result) = await ServerStore.WriteDatabaseRecordAsync(name, databaseRecord, index, raftRequestId);
             await ServerStore.WaitForCommitIndexChange(RachisConsensus.CommitIndexModification.GreaterOrEqual, newIndex);
 
             var members = (List<string>)result;
@@ -767,7 +767,7 @@ namespace Raven.Server.Web.System
         {
             var name = GetQueryStringValueAndAssertIfSingleAndNotEmpty("name");
             var enable = GetBoolValueQueryString("enable") ?? true;
-            var guid = GetRaftRequestIdFromQuery();
+            var raftRequestId = GetRaftRequestIdFromQuery();
 
             using (ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
             {
@@ -787,7 +787,7 @@ namespace Raven.Server.Web.System
 
                 databaseRecord.Topology.DynamicNodesDistribution = enable;
 
-                var (commandResultIndex, _) = await ServerStore.WriteDatabaseRecordAsync(name, databaseRecord, index, guid);
+                var (commandResultIndex, _) = await ServerStore.WriteDatabaseRecordAsync(name, databaseRecord, index, raftRequestId);
                 await ServerStore.Cluster.WaitForIndexNotification(commandResultIndex);
 
                 NoContentStatus();

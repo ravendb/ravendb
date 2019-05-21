@@ -717,7 +717,7 @@ namespace Raven.Server.Rachis
                             {
                                 if (exception != null)
                                 {
-                                    cmd.Tcs.TrySetException(new Exception(exception));
+                                    cmd.Tcs.TrySetException(exception);
                                 }
                                 else
                                 {

@@ -45,11 +45,11 @@ namespace Raven.Server.Documents
 
         protected delegate void RefAction(string databaseName, ref BlittableJsonReaderObject configuration, JsonOperationContext context);
 
-        protected delegate Task<(long, object)> SetupFunc(TransactionOperationContext context, string databaseName, BlittableJsonReaderObject json, string guid);
+        protected delegate Task<(long, object)> SetupFunc(TransactionOperationContext context, string databaseName, BlittableJsonReaderObject json, string raftRequestId);
 
         protected async Task DatabaseConfigurations(SetupFunc setupConfigurationFunc,
            string debug,
-           string guid,
+           string raftRequestId,
            RefAction beforeSetupConfiguration = null,
            Action<DynamicJsonValue, BlittableJsonReaderObject, long> fillJson = null,
            HttpStatusCode statusCode = HttpStatusCode.OK)
@@ -67,7 +67,7 @@ namespace Raven.Server.Documents
                 var configurationJson = await context.ReadForMemoryAsync(RequestBodyStream(), debug);
                 beforeSetupConfiguration?.Invoke(Database.Name, ref configurationJson, context);
 
-                var (index, _) = await setupConfigurationFunc(context, Database.Name, configurationJson, guid);
+                var (index, _) = await setupConfigurationFunc(context, Database.Name, configurationJson, raftRequestId);
                 DatabaseRecord dbRecord;
                 using (context.OpenReadTransaction())
                 {

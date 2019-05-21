@@ -82,7 +82,7 @@ namespace Raven.Server.Web.Authentication
             }
         }
 
-        public static async Task<byte[]> GenerateCertificateInternal(CertificateDefinition certificate, ServerStore serverStore, string guid)
+        public static async Task<byte[]> GenerateCertificateInternal(CertificateDefinition certificate, ServerStore serverStore, string raftRequestId)
         {
             ValidateCertificateDefinition(certificate, serverStore);
 
@@ -114,7 +114,7 @@ namespace Raven.Server.Web.Authentication
                 NotAfter = selfSignedCertificate.NotAfter
             };
 
-            var res = await serverStore.PutValueInClusterAsync(new PutCertificateCommand(selfSignedCertificate.Thumbprint, newCertDef, guid));
+            var res = await serverStore.PutValueInClusterAsync(new PutCertificateCommand(selfSignedCertificate.Thumbprint, newCertDef, raftRequestId));
             await serverStore.Cluster.WaitForIndexNotification(res.Index);
 
             var ms = new MemoryStream();
@@ -262,7 +262,7 @@ namespace Raven.Server.Web.Authentication
             }
         }
 
-        public static async Task PutCertificateCollectionInCluster(CertificateDefinition certDef, byte[] certBytes, string password, ServerStore serverStore, TransactionOperationContext ctx, string guid)
+        public static async Task PutCertificateCollectionInCluster(CertificateDefinition certDef, byte[] certBytes, string password, ServerStore serverStore, TransactionOperationContext ctx, string raftRequestId)
         {
             var collection = new X509Certificate2Collection();
 
@@ -343,7 +343,7 @@ namespace Raven.Server.Web.Authentication
                 }
                 else
                 {
-                    var putResult = await serverStore.PutValueInClusterAsync(new PutCertificateCommand(certKey, currentCertDef, $"{guid}/{certKey}"));
+                    var putResult = await serverStore.PutValueInClusterAsync(new PutCertificateCommand(certKey, currentCertDef, $"{raftRequestId}/{certKey}"));
                     await serverStore.Cluster.WaitForIndexNotification(putResult.Index);
                 }
 
@@ -1109,7 +1109,7 @@ namespace Raven.Server.Web.Authentication
             if (ServerStore.CurrentRachisState == RachisState.Passive)
                 throw new AuthorizationException("RavenDB is in passive state. Cannot apply certificates to the cluster.");
 
-            var guid = GetRaftRequestIdFromQuery();
+            var raftRequestId = GetRaftRequestIdFromQuery();
 
             using (ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext ctx))
             {
@@ -1129,7 +1129,7 @@ namespace Raven.Server.Web.Authentication
                             if (certificateDefinition.Thumbprint == ServerStore.Server.Certificate.Certificate.Thumbprint)
                                 continue;
 
-                            ServerStore.PutValueInClusterAsync(new PutCertificateCommand(localStateKey, certificateDefinition, $"{guid}/{localStateKey}"))
+                            ServerStore.PutValueInClusterAsync(new PutCertificateCommand(localStateKey, certificateDefinition, $"{raftRequestId}/{localStateKey}"))
                                 .Wait(ServerStore.ServerShutdown);
                         }
                     }
