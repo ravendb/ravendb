@@ -49,7 +49,14 @@ namespace Raven.Client.Documents
         /// <summary>
         /// Subscribe to change notifications from the server
         /// </summary>
-        IDatabaseChanges Changes(string database = null, string nodeTag = null);
+        IDatabaseChanges Changes(string database = null);
+
+        /// <summary>
+        /// Subscribe to change notifications from the selected server
+        /// </summary>
+        /// <param name="database">The database to subscribe, if null or empty, the default database will be used</param>
+        /// <param name="nodeTag">The node tag of selected server</param>
+        IDatabaseChanges Changes(string database, string nodeTag);
 
         /// <summary>
         /// Setup the context for aggressive caching.
