@@ -62,6 +62,8 @@ namespace Raven.Client.Documents.Operations.Backups
 
         public string AwsSecretKey { get; set; }
 
+        public string AwsSessionToken { get; set; }
+
         /// <summary>
         /// Amazon Web Services (AWS) region.
         /// </summary>
@@ -74,6 +76,7 @@ namespace Raven.Client.Documents.Operations.Backups
             djv[nameof(AwsAccessKey)] = AwsAccessKey;
             djv[nameof(AwsSecretKey)] = AwsSecretKey;
             djv[nameof(AwsRegionName)] = AwsRegionName;
+            djv[nameof(AwsSessionToken)] = AwsSessionToken;
 
             return djv;
         }
