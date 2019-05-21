@@ -2,6 +2,7 @@
 using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.IO;
+using System.Linq;
 using System.Net.WebSockets;
 using System.Threading;
 using System.Threading.Tasks;
@@ -37,7 +38,7 @@ namespace Raven.Client.Documents.Changes
 
         private readonly ConcurrentDictionary<int, TaskCompletionSource<object>> _confirmations = new ConcurrentDictionary<int, TaskCompletionSource<object>>();
 
-        private readonly AtomicDictionary<DatabaseConnectionState> _counters = new AtomicDictionary<DatabaseConnectionState>(StringComparer.OrdinalIgnoreCase);
+        private readonly ConcurrentDictionary<DatabaseChangesOptions, DatabaseConnectionState> _counters = new ConcurrentDictionary<DatabaseChangesOptions, DatabaseConnectionState>(DatabaseChangesOptionsComparer.OrdinalIgnoreCase);
         private int _immediateConnection;
 
         private ServerNode _serverNode;
@@ -338,7 +339,7 @@ namespace Raven.Client.Documents.Changes
         private DatabaseConnectionState GetOrAddConnectionState(string name, string watchCommand, string unwatchCommand, string value, string[] values = null)
         {
             bool newValue = false;
-            var counter = _counters.GetOrAdd(new RequestDestination
+            var counter = _counters.GetOrAdd(new DatabaseChangesOptions
             {
                 DatabaseName = name,
                 NodeTag = null
@@ -677,7 +678,7 @@ namespace Raven.Client.Documents.Changes
 
             OnError?.Invoke(e);
 
-            foreach (var state in _counters.ValuesSnapshot)
+            foreach (var state in _counters.Values)
             {
                 state.Error(e);
             }

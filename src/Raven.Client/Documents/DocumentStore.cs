@@ -26,7 +26,7 @@ namespace Raven.Client.Documents
     /// </summary>
     public class DocumentStore : DocumentStoreBase
     {
-        private readonly AtomicDictionary<IDatabaseChanges> _databaseChanges = new AtomicDictionary<IDatabaseChanges>(StringComparer.OrdinalIgnoreCase);
+        private readonly ConcurrentDictionary<DatabaseChangesOptions, IDatabaseChanges> _databaseChanges = new ConcurrentDictionary<DatabaseChangesOptions, IDatabaseChanges>(DatabaseChangesOptionsComparer.OrdinalIgnoreCase);
 
         private readonly ConcurrentDictionary<string, Lazy<EvictItemsFromCacheBasedOnChanges>> _aggressiveCacheChanges = new ConcurrentDictionary<string, Lazy<EvictItemsFromCacheBasedOnChanges>>();
 
@@ -268,25 +268,31 @@ namespace Raven.Client.Documents
         /// <summary>
         /// Subscribe to change notifications from the server
         /// </summary>
-        public override IDatabaseChanges Changes(string database = null, string nodeTag = null)
+        public override IDatabaseChanges Changes(string database = null)
+        {
+            return Changes(database, null);
+        }
+
+        /// <inheritdoc />
+        public override IDatabaseChanges Changes(string database, string nodeTag)
         {
             AssertInitialized();
 
-            return _databaseChanges.GetOrAdd(new RequestDestination
+            return _databaseChanges.GetOrAdd(new DatabaseChangesOptions
             {
-                DatabaseName = database ?? Database,
+                DatabaseName = string.IsNullOrEmpty(database) ? Database : database,
                 NodeTag = nodeTag
             }, CreateDatabaseChanges);
         }
 
-        internal virtual IDatabaseChanges CreateDatabaseChanges(RequestDestination node)
+        internal virtual IDatabaseChanges CreateDatabaseChanges(DatabaseChangesOptions node)
         {
-            return new DatabaseChanges(GetRequestExecutor(node.DatabaseName), node.DatabaseName, () => _databaseChanges.Remove(node), node.NodeTag);
+            return new DatabaseChanges(GetRequestExecutor(node.DatabaseName), node.DatabaseName, () => _databaseChanges.TryRemove(node, out var _), node.NodeTag);
         }
 
         public Exception GetLastDatabaseChangesStateException(string database = null, string nodeTag = null)
         {
-            var node = new RequestDestination
+            var node = new DatabaseChangesOptions
             {
                 DatabaseName = database ?? Database,
                 NodeTag = nodeTag

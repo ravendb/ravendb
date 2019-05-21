@@ -41,13 +41,13 @@ namespace Raven.Client.Documents
         /// <summary>
         /// Subscribe to change notifications from the server
         /// </summary>
+        public abstract IDatabaseChanges Changes(string database = null);
+
+        /// <inheritdoc />
+        public abstract IDatabaseChanges Changes(string database, string nodeTag);
 
         public abstract IDisposable AggressivelyCacheFor(TimeSpan cacheDuration, string database = null);
-        
         public abstract IDisposable AggressivelyCacheFor(TimeSpan cacheDuration, AggressiveCacheMode mode, string database = null);
-
-        public abstract IDatabaseChanges Changes(string database = null, string nodeTag = null);
-
         public abstract IDisposable DisableAggressiveCaching(string database = null);
 
         public abstract string Identifier { get; set; }
