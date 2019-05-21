@@ -280,7 +280,7 @@ namespace Raven.Client.Documents
 
             return _databaseChanges.GetOrAdd(new DatabaseChangesOptions
             {
-                DatabaseName = string.IsNullOrEmpty(database) ? Database : database,
+                DatabaseName = database ?? Database,
                 NodeTag = nodeTag
             }, CreateDatabaseChanges);
         }

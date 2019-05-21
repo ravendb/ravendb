@@ -610,7 +610,7 @@ namespace Raven.Client.Documents.Changes
                                             break;
                                         default:
                                             json.TryGet("Value", out BlittableJsonReaderObject value);
-                                            NotifySubscribers(type, value, _counters.ValuesSnapshot);
+                                            NotifySubscribers(type, value, _counters.ForceEnumerateInThreadSafeManner().Select(x => x.Value).ToList());
                                             break;
                                     }
                                 }
@@ -678,9 +678,9 @@ namespace Raven.Client.Documents.Changes
 
             OnError?.Invoke(e);
 
-            foreach (var state in _counters.Values)
+            foreach (var state in _counters.ForceEnumerateInThreadSafeManner())
             {
-                state.Error(e);
+                state.Value.Error(e);
             }
         }
     }

@@ -3,7 +3,7 @@ using System.Collections.Generic;
 
 namespace Raven.Client.Util
 {
-    public class DatabaseChangesOptions
+    internal class DatabaseChangesOptions
     {
         public string DatabaseName { get; set; }
         public string NodeTag { get; set; }
