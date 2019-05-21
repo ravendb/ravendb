@@ -12,6 +12,7 @@ using Raven.Client.Documents.Operations.Replication;
 using Raven.Client.Documents.Operations.Revisions;
 using Raven.Client.Documents.Queries.Sorting;
 using Raven.Client.Exceptions.Documents.Indexes;
+using Raven.Client.ServerWide.Operations.Configuration;
 
 namespace Raven.Client.ServerWide
 {
@@ -184,6 +185,10 @@ namespace Raven.Client.ServerWide
             {
                 if (periodicBackup.TaskId == backupTaskId)
                 {
+                    if (periodicBackup.Name.Equals(ServerWideBackupConfiguration.ConfigurationName, StringComparison.OrdinalIgnoreCase))
+                        throw new InvalidOperationException($"Can't update task id: {periodicBackup.TaskId}, name: '{periodicBackup.Name}', " +
+                                                            $"because it is a server wide backup task.");
+
                     PeriodicBackups.Remove(periodicBackup);
                     break;
                 }
@@ -194,6 +199,9 @@ namespace Raven.Client.ServerWide
         {
             if (string.IsNullOrEmpty(taskName))
                 throw new ArgumentException("Can't validate task's name because the provided task name is null or empty.");
+
+            if (taskName.Equals(ServerWideBackupConfiguration.ConfigurationName, StringComparison.OrdinalIgnoreCase))
+                throw new InvalidOperationException($"Can't use task name '{taskName}', because it is a reserved backup task name");
 
             if (ExternalReplications.Any(x => x.Name.Equals(taskName, StringComparison.OrdinalIgnoreCase)))
                 throw new InvalidOperationException($"Can't use task name '{taskName}', there is already an External Replications task with that name");
