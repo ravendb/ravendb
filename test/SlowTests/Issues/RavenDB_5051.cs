@@ -5,6 +5,7 @@ using Raven.Client.Documents.Operations;
 using Raven.Client.Http;
 using Raven.Client.Json;
 using Sparrow.Json;
+using Sparrow.Platform;
 using Xunit;
 
 namespace SlowTests.Issues
@@ -25,7 +26,11 @@ namespace SlowTests.Issues
 
                 //\r\n line terminators are expected regardless of the OS type.
                 //The underlying SyntaxFactory and Formatter classes and will produce \r\n.
-                Assert.Equal("from c in docs.Companies\r\nselect new\r\n{\r\n    Name = c.Name\r\n}", result.Expression);
+                var expected = PlatformDetails.RunningOnPosix
+                    ? "from c in docs.Companies\r\nselect new\r\n{\n    Name = c.Name\r\n}"
+                    : "from c in docs.Companies\r\nselect new\r\n{\r\n    Name = c.Name\r\n}";
+
+                Assert.Equal(expected, result.Expression);
             }
         }
 
