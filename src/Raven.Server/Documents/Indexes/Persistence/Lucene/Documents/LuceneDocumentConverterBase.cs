@@ -4,9 +4,11 @@ using System.Collections.Generic;
 using System.Globalization;
 using System.IO;
 using System.Runtime.CompilerServices;
+using System.Threading;
 using Lucene.Net.Documents;
 using Raven.Client;
 using Raven.Client.Documents.Indexes;
+using Raven.Client.Util;
 using Raven.Server.Documents.Indexes.Persistence.Lucene.Documents.Fields;
 using Raven.Server.Documents.Indexes.Static;
 using Raven.Server.Json;
@@ -50,6 +52,8 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene.Documents
             }
         }
 
+        private readonly SemaphoreSlim _locker = new SemaphoreSlim(1, 1);
+
         internal const string IsArrayFieldSuffix = "_IsArray";
 
         internal const string ConvertToJsonSuffix = "_ConvertToJson";
@@ -76,12 +80,64 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene.Documents
 
         private byte[] _reduceValueBuffer;
         protected IndexField _allFields;
+        private bool _cleanup;
 
-        public void Clean()
+        public IDisposable Lock()
+        {
+            _locker.Wait();
+
+            return new DisposableAction(() =>
+            {
+                _locker.Release();
+            });
+        }
+
+        public bool TryCleanup()
+        {
+            if (_locker.Wait(0) == false)
+                return false;
+
+            try
+            {
+                CleanInternal();
+                return true;
+            }
+            finally
+            {
+                _locker.Release();
+            }
+        }
+
+        public void MarkForCleanup()
+        {
+            _cleanup = true;
+        }
+
+        public void MaybeCleanup()
+        {
+            if (_cleanup == false)
+                return;
+
+            _cleanup = false;
+            CleanInternal();
+        }
+
+        private void CleanInternal()
         {
             if (_fieldsCache.Count > 256)
             {
+                foreach (var value in _fieldsCache.Values)
+                    value?.Dispose();
+
                 _fieldsCache.Clear();
+            }
+
+            if (_numericFieldsCache.Count > 256)
+            {
+                foreach (var value in _numericFieldsCache.Values)
+                    value?.Dispose();
+
+                _numericFieldsCache.Clear();
             }
         }
 
@@ -93,7 +149,7 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene.Documents
             _fields = dictionary;
 
             if (_fields.TryGetValue(Constants.Documents.Indexing.Fields.AllFields, out _allFields) == false)
-                _allFields = new IndexField(); 
+                _allFields = new IndexField();
 
             _reduceOutput = reduceOutput;
 

@@ -159,7 +159,13 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene
 
         public void Clean()
         {
-            _converter?.Clean();
+            var converter = _converter;
+            if (converter != null)
+            {
+                if (converter.TryCleanup() == false)
+                    converter.MarkForCleanup();
+            }
+            
             _indexSearcherHolder.Cleanup(_index._indexStorage.Environment().PossibleOldestReadTransaction(null));
         }
 

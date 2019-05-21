@@ -29,6 +29,7 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene
         private readonly RavenPerFieldAnalyzerWrapper _analyzer;
         private readonly Lock _locker;
         private readonly IDisposable _releaseWriteTransaction;
+        private readonly IDisposable _releaseConverter;
 
         private IndexingStatsScope _statsInstance;
         protected readonly IndexWriteOperationStats Stats = new IndexWriteOperationStats();
@@ -53,6 +54,7 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene
 
             try
             {
+                _releaseConverter = _converter.Lock();
                 _releaseWriteTransaction = directory.SetTransaction(writeTransaction, out _state);
                 _writer = persistence.EnsureIndexWriter(_state);
 
@@ -75,6 +77,8 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene
         {
             try
             {
+                _converter.MaybeCleanup();
+
                 _directory.ResetAllocations();
                 if (_hasSuggestions)
                 {
@@ -86,6 +90,7 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene
             }
             finally
             {
+                _releaseConverter?.Dispose();
                 _locker?.Release();
                 _analyzer?.Dispose();
             }
