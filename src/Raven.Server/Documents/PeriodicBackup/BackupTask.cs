@@ -23,7 +23,6 @@ using Raven.Server.NotificationCenter.Notifications.Details;
 using Raven.Server.Rachis;
 using Raven.Server.Routing;
 using Raven.Server.ServerWide;
-using Raven.Server.ServerWide.Commands;
 using Raven.Server.ServerWide.Commands.PeriodicBackup;
 using Raven.Server.ServerWide.Context;
 using Raven.Server.Smuggler.Documents;
@@ -31,7 +30,6 @@ using Raven.Server.Smuggler.Documents.Data;
 using Raven.Server.Utils;
 using Raven.Server.Utils.Metrics;
 using Sparrow;
-using Sparrow.Json;
 using Sparrow.Logging;
 using DatabaseSmuggler = Raven.Server.Smuggler.Documents.DatabaseSmuggler;
 
@@ -825,8 +823,7 @@ namespace Raven.Server.Documents.PeriodicBackup
             Progress progress,
             string archiveDescription)
         {
-            using (var client = new RavenAwsS3Client(settings.AwsAccessKey, settings.AwsSecretKey,
-                settings.AwsRegionName, settings.BucketName, progress, TaskCancelToken.Token))
+            using (var client = new RavenAwsS3Client(settings, progress, TaskCancelToken.Token))
             {
                 var key = CombinePathAndKey(settings.RemoteFolderName, folderName, fileName);
                 await client.PutObject(key, stream, new Dictionary<string, string>
@@ -848,8 +845,7 @@ namespace Raven.Server.Documents.PeriodicBackup
             string fileName,
             Progress progress)
         {
-            using (var client = new RavenAwsGlacierClient(settings.AwsAccessKey, settings.AwsSecretKey,
-                settings.AwsRegionName, settings.VaultName, progress, TaskCancelToken.Token))
+            using (var client = new RavenAwsGlacierClient(settings, progress, TaskCancelToken.Token))
             {
                 var key = CombinePathAndKey(_database.Name, folderName, fileName);
                 var archiveId = await client.UploadArchive(stream, key);
