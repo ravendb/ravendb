@@ -1203,9 +1203,67 @@ namespace Raven.Server.ServerWide
                                                            " but was expecting " + addDatabaseCommand.RaftCommandIndex);
                     }
 
+                    VerifyUnchangedTasks();
                     UpdateValue(index, items, valueNameLowered, valueName, databaseRecordAsJson);
                     SetDatabaseValues(addDatabaseCommand.DatabaseValues, addDatabaseCommand.Name, context, index, items);
                     return addDatabaseCommand.Record.Topology.Members;
+
+                    void VerifyUnchangedTasks()
+                    {
+                        var dbId = Constants.Documents.Prefix + addDatabaseCommand.Name;
+                        using (var dbDoc = Read(context, dbId, out _))
+                        {
+                            var tasksList = new List<string>
+                            {
+                                nameof(DatabaseRecord.PeriodicBackups),
+                                nameof(DatabaseRecord.ExternalReplications),
+                                nameof(DatabaseRecord.SinkPullReplications),
+                                nameof(DatabaseRecord.HubPullReplications),
+                                nameof(DatabaseRecord.RavenEtls),
+                                nameof(DatabaseRecord.SqlEtls)
+                            };
+
+                            if (dbDoc == null)
+                            {
+                                foreach (var task in tasksList)
+                                {
+                                    if (databaseRecordAsJson.TryGet(task, out BlittableJsonReaderArray dbRecordVal) && dbRecordVal.Length > 0)
+                                    {
+                                        throw new RachisInvalidOperationException(
+                                            $"Failed to create a new Database {addDatabaseCommand.Name}. Updating tasks configurations via DatabaseRecord is not supported, please use dedicated operation to update {task} configuration.");
+                                    }
+                                }
+                            }
+                            else
+                            {
+                                // compare tasks configurations of both db records
+                                foreach (var task in tasksList)
+                                {
+                                    var hasChanges = false;
+
+                                    if (dbDoc.TryGet(task, out BlittableJsonReaderArray oldDbRecordVal))
+                                    {
+                                        if (databaseRecordAsJson.TryGet(task, out BlittableJsonReaderArray newDbRecordVal) == false && oldDbRecordVal.Length > 0)
+                                        {
+                                            hasChanges = true;
+                                        }
+                                        else if (oldDbRecordVal.Equals(newDbRecordVal) == false)
+                                        {
+                                            hasChanges = true;
+                                        }
+                                    }
+                                    else if (databaseRecordAsJson.TryGet(task, out BlittableJsonReaderArray newDbRecordObject) && newDbRecordObject.Length > 0)
+                                    {
+                                        hasChanges = true;
+                                    }
+
+                                    if (hasChanges)
+                                        throw new RachisInvalidOperationException(
+                                            $"Cannot update {task} configuration with DatabaseRecord. Please use dedicated operation to update {task} configuration.");
+                                }
+                            }
+                        }
+                    }
                 }
             }
             catch (Exception e)
