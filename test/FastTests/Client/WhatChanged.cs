@@ -1,4 +1,5 @@
-﻿using Raven.Client.Documents.Session;
+﻿using System.Linq;
+using Raven.Client.Documents.Session;
 using Raven.Tests.Core.Utils.Entities;
 using Xunit;
 
@@ -281,6 +282,41 @@ namespace FastTests.Client
                 }
             }
         }
+
+        [Fact]
+        public void WhatChanged_Delete_After_Change_Value()
+        {
+            //RavenDB-13501
+            using (var store = GetDocumentStore())
+            {
+                using (var session = store.OpenSession())
+                {
+                    const string id = "ABC";
+                    var o = new TestObject();
+                    o.Id = id;
+                    o.A = "A";
+                    o.B = "A";
+                    session.Store(o);
+                    session.SaveChanges();
+                    Assert.True(!session.Advanced.HasChanges);
+
+                    o = session.Load<TestObject>(id);
+                    o.A = "B"; 
+                    o.B = "C"; 
+                    session.Delete(o); 
+
+                    var whatChanged = session.Advanced.WhatChanged();
+
+                    Assert.True(whatChanged.Count == 1 
+                                && whatChanged.Values.First()[0].Change == DocumentsChanges.ChangeType.DocumentDeleted);
+
+                    session.SaveChanges();
+
+                    o = session.Load<TestObject>(id);
+                    Assert.True(o == null);
+                }
+            }
+        }
     }
 
     public class BasicName
@@ -297,6 +333,13 @@ namespace FastTests.Client
     public class BasicAge
     {
         public int Age { set; get; }
+    }
+
+    class TestObject
+    {
+        public string Id { get; set; }
+        public string A { get; set; }
+        public string B { get; set; }
     }
 
     public class Int
