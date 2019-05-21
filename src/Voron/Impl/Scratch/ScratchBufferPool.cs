@@ -159,7 +159,7 @@ namespace Voron.Impl.Scratch
 
                 current = current.Previous;
             }
-            
+
             _currentScratchNumber++;
             AbstractPager scratchPager;
             if (requestedSize != null)
@@ -251,12 +251,12 @@ namespace Voron.Impl.Scratch
             scratch.File.Free(page, txId);
             if (scratch.File.AllocatedPagesCount != 0)
                 return;
-            
+
             while (_recycleArea.First != null)
             {
                 var recycledScratch = _recycleArea.First.Value;
 
-                if (IsLowMemory() == false && 
+                if (IsLowMemory() == false &&
                     DateTime.UtcNow - recycledScratch.RecycledAt <= TimeSpan.FromMinutes(1))
                     break;
 
@@ -531,7 +531,7 @@ namespace Voron.Impl.Scratch
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public void EnsureMapped(LowLevelTransaction tx,int scratchNumber, long positionInScratchBuffer, int numberOfPages)
+        public void EnsureMapped(LowLevelTransaction tx, int scratchNumber, long positionInScratchBuffer, int numberOfPages)
         {
             var item = GetScratchBufferFile(scratchNumber);
 
