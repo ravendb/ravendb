@@ -1211,7 +1211,7 @@ namespace Raven.Server.Documents.Indexes
                                     storageEnvironment.CleanupNativeMemory();
                                 }
 
-                                if (_allocationCleanupNeeded > AllocationCleanupRequestsLimit) 
+                                if (_allocationCleanupNeeded > AllocationCleanupRequestsLimit)
                                     forceMemoryCleanup = true;
                             }
 
@@ -1233,7 +1233,7 @@ namespace Raven.Server.Documents.Indexes
                             if (forceMemoryCleanup || _mre.Wait(timeToWaitForMemoryCleanup, _indexingProcessCancellationTokenSource.Token) == false)
                             {
                                 Interlocked.Exchange(ref _allocationCleanupNeeded, 0);
-                                
+
                                 // allocation cleanup has been requested multiple times or
                                 // there is no work to be done, and hasn't been for a while,
                                 // so this is a good time to release resources we won't need 
@@ -1343,23 +1343,23 @@ namespace Raven.Server.Documents.Indexes
 
             try
             {
-            var beforeFree = NativeMemory.CurrentThreadStats.TotalAllocated;
-            if (_logger.IsInfoEnabled)
-                _logger.Info(
-                    $"{new Size(beforeFree, SizeUnit.Bytes)} is used by '{Name}', reducing memory utilization.");
+                var beforeFree = NativeMemory.CurrentThreadStats.TotalAllocated;
+                if (_logger.IsInfoEnabled)
+                    _logger.Info(
+                        $"{new Size(beforeFree, SizeUnit.Bytes)} is used by '{Name}', reducing memory utilization.");
 
-            DocumentDatabase.DocumentsStorage.ContextPool.Clean();
-            _contextPool.Clean();
-            ByteStringMemoryCache.CleanForCurrentThread();
-            IndexPersistence.Clean();
-            environment?.CleanupMemory();
+                DocumentDatabase.DocumentsStorage.ContextPool.Clean();
+                _contextPool.Clean();
+                ByteStringMemoryCache.CleanForCurrentThread();
+                IndexPersistence.Clean();
+                environment?.CleanupMemory();
 
-            _currentMaximumAllowedMemory = DefaultMaximumMemoryAllocation;
+                _currentMaximumAllowedMemory = DefaultMaximumMemoryAllocation;
 
-            var afterFree = NativeMemory.CurrentThreadStats.TotalAllocated;
-            if (_logger.IsInfoEnabled)
-                _logger.Info($"After cleanup, using {new Size(afterFree, SizeUnit.Bytes)} by '{Name}'.");
-        }
+                var afterFree = NativeMemory.CurrentThreadStats.TotalAllocated;
+                if (_logger.IsInfoEnabled)
+                    _logger.Info($"After cleanup, using {new Size(afterFree, SizeUnit.Bytes)} by '{Name}'.");
+            }
             finally
             {
                 _indexingInProgress.Release();
