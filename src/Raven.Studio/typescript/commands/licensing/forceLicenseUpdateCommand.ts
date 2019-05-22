@@ -1,7 +1,7 @@
 import commandBase = require("commands/commandBase");
 import endpoints = require("endpoints");
 
-class forceLicenseUpdate extends commandBase {
+class forceLicenseUpdateCommand extends commandBase {
 
     execute(): JQueryPromise<boolean> {
         const url = endpoints.global.license.adminLicenseForceUpdate;
@@ -17,4 +17,4 @@ class forceLicenseUpdate extends commandBase {
     }
 }
 
-export = forceLicenseUpdate;
+export = forceLicenseUpdateCommand;

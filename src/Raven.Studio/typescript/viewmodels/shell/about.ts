@@ -3,6 +3,7 @@ import shell = require("viewmodels/shell");
 import license = require("models/auth/licenseModel");
 import registration = require("viewmodels/shell/registration");
 import forceLicenseUpdateCommand = require("commands/licensing/forceLicenseUpdateCommand");
+import renewLicenseCommand = require("commands/licensing/renewLicenseCommand");
 import buildInfo = require("models/resources/buildInfo");
 import generalUtils = require("common/generalUtils");
 import accessManager = require("common/shell/accessManager");
@@ -23,9 +24,8 @@ class about extends viewModelBase {
     developerLicense = license.developerLicense;
 
     static latestVersion = ko.observable<Raven.Server.ServerWide.BackgroundTasks.LatestVersionCheck.VersionInfo>();
+    currentServerVersion = ko.pureComputed(() => this.serverVersion() ? this.serverVersion().FullVersion : "");   
     
-    currentServerVersion = ko.pureComputed(() => this.serverVersion() ? this.serverVersion().FullVersion : "");
-
     isNewVersionAvailable = ko.pureComputed(() => {
         const latestVersionInfo = about.latestVersion();
         if (!latestVersionInfo) {
@@ -80,6 +80,7 @@ class about extends viewModelBase {
 
     spinners = {
         forceLicenseUpdate: ko.observable<boolean>(false),
+        renewLicense: ko.observable<boolean>(false),
         latestVersionUpdates: ko.observable<boolean>(false)
     };
 
@@ -152,6 +153,17 @@ class about extends viewModelBase {
         return licenseStatus.Type !== "None" && licenseStatus.Type !== "Invalid";
     });
     
+    canRenewLicense = ko.pureComputed(() => {
+        return this.accessManager.canRenewLicense &&
+               (this.licenseType() === 'Developer' ||  this.licenseType() === 'Community');
+    });
+
+    canForceUpdate = ko.pureComputed(() => {
+        return this.accessManager.canForceUpdate  &&
+               this.licenseType() !== 'Developer' &&
+               this.licenseType() !== 'Community';
+    });
+    
     licenseAttribute(name: keyof Raven.Server.Commercial.LicenseStatus) {
         return ko.pureComputed(() => {
            const licenseStatus = license.licenseStatus();
@@ -211,6 +223,10 @@ class about extends viewModelBase {
                     })
                     .always(() => this.spinners.forceLicenseUpdate(false));
             });
+    }
+
+    renewLicense() {
+        registration.showRegistrationDialog(license.licenseStatus(), false, true, true);
     }
 
     openFeedbackForm() {

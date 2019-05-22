@@ -31,6 +31,7 @@ class accessManager {
     aboutView = {
         canReplaceLicense: this.clusterAdminOrClusterNode, 
         canForceUpdate: this.clusterAdminOrClusterNode,
+        canRenewLicense: this.clusterAdminOrClusterNode,
         canUpgrade: this.clusterAdminOrClusterNode
     };
     

@@ -1,18 +1,22 @@
-﻿using Sparrow.Json.Parsing;
+﻿using System;
+using Sparrow.Json.Parsing;
 
 namespace Raven.Server.Commercial
 {
     public class LicenseRenewalResult
     {
-        public string Message { get; set; }
+        public string SentToEmail  { get; set; }
 
+        public DateTime? NewExpirationDate { get; set; }
+        
         public string Error { get; set; }
 
         public DynamicJsonValue ToJson()
         {
             return new DynamicJsonValue
             {
-                [nameof(Message)] = Message,
+                [nameof(SentToEmail)] = SentToEmail,
+                [nameof(NewExpirationDate)] = NewExpirationDate,
                 [nameof(Error)] = Error
             };
         }

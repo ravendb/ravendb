@@ -269,6 +269,7 @@ namespace TypingsGenerator
             scripter.AddType(typeof(LicenseStatus));
             scripter.AddType(typeof(LicenseLimitWarning));
             scripter.AddType(typeof(LicenseSupportInfo));
+            scripter.AddType(typeof(LicenseRenewalResult));
 
             // feedback form
             scripter.AddType(typeof(FeedbackForm));
