@@ -3,6 +3,7 @@ using System.Linq;
 using System.Threading.Tasks;
 using FastTests;
 using Raven.Client.Documents.Operations.Backups;
+using Raven.Client.Documents.Operations.OngoingTasks;
 using Raven.Client.Exceptions;
 using Raven.Client.ServerWide;
 using Raven.Client.ServerWide.Operations;
@@ -92,6 +93,7 @@ namespace SlowTests.Server.Documents.PeriodicBackup
 
                 var databaseRecord = await store.Maintenance.Server.SendAsync(new GetDatabaseRecordOperation(store.Database));
                 var currentBackupConfiguration = databaseRecord.PeriodicBackups.First();
+                var serverWideBackupTaskId = currentBackupConfiguration.TaskId;
                 var backupConfiguration = new PeriodicBackupConfiguration
                 {
                     Disabled = true,
@@ -108,6 +110,10 @@ namespace SlowTests.Server.Documents.PeriodicBackup
                 backupConfiguration.Name = currentBackupConfiguration.Name;
                 e = await Assert.ThrowsAsync<RavenException>(() => store.Maintenance.SendAsync(new UpdatePeriodicBackupOperation(backupConfiguration)));
                 Assert.Contains("Can't update task name 'Server Wide Backup Configuration', because it is a server wide backup task", e.Message);
+
+                e = await Assert.ThrowsAsync<RavenException>(() => store.Maintenance.SendAsync(new DeleteOngoingTaskOperation(serverWideBackupTaskId, OngoingTaskType.Backup)));
+                expectedError = $"Can't update task id: {serverWideBackupTaskId}, name: 'Server Wide Backup Configuration', because it is a server wide backup task";
+                Assert.Contains(expectedError, e.Message);
             }
         }
 
