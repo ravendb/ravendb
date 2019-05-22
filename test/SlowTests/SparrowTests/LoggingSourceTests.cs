@@ -24,32 +24,70 @@ namespace SlowTests.SparrowTests
             const int fileSize = Constants.Size.Kilobyte;
 
             var name = GetTestName();
-
             var path = NewDataPath(forceCreateDir: true);
+            path = Path.Combine(path, Guid.NewGuid().ToString());
+            Directory.CreateDirectory(path);
+            var retentionTime = TimeSpan.FromDays(3);
+
+            var retentionDate = DateTime.Now.Date - retentionTime;
+            var toCheckLogFiles = new List<(string, bool)>();
+            for (var date = retentionDate - TimeSpan.FromDays(1); date <= retentionDate + TimeSpan.FromDays(1); date += TimeSpan.FromDays(1))
+            {
+                var fileName = Path.Combine(path, LoggingSource.LogInfo.GetFileName(date) + ".001.log");
+                toCheckLogFiles.Add((fileName, date >= retentionDate));
+                var file = File.Create(fileName);
+                file.Dispose();
+            }
+
+            var retentionSize = long.MaxValue;
             var loggingSource = new LoggingSource(
                 LogMode.Information,
                 path,
                 "LoggingSource" + name,
-                TimeSpan.FromSeconds(30),
-                long.MaxValue,
+                retentionTime,
+                retentionSize,
                 compressing);
-
             loggingSource.MaxFileSizeInBytes = fileSize;
+            //This is just to make sure the MaxFileSizeInBytes is get action for the first file
+            loggingSource.SetupLogMode(LogMode.Operations, path, retentionTime, retentionSize, compressing);
+
             var logger = new Logger(loggingSource, "Source" + name, "Logger" + name);
 
-            for (int j = 0; j < 50; j++)
+            for (var j = 0; j < 50; j++)
             {
                 for (var i = 0; i < 5; i++)
                 {
                     await logger.OperationsAsync("Some message");
                 }
-                await Task.Delay(TimeSpan.FromSeconds(1));
+                Thread.Sleep(10);
             }
 
             loggingSource.EndLogging();
 
             var afterEndFiles = Directory.GetFiles(path);
             AssertNoFileMissing(afterEndFiles);
+
+            foreach (var (fileName, shouldExist) in toCheckLogFiles)
+            {
+                var compressedFileName = fileName + ".gz";
+                if (shouldExist)
+                {
+                    Assert.True(afterEndFiles.Contains(fileName) || afterEndFiles.Contains(compressedFileName),
+                        $"The log file \"{Path.GetFileNameWithoutExtension(fileName)}\" and all log files from and after {retentionDate} " +
+                        $"should be deleted due to time retention");
+                }
+                else
+                {
+                    Assert.False(afterEndFiles.Contains(fileName),
+                        $"The file \"{fileName}\" and all log files from before {retentionDate} should be deleted due to time retention");
+                    if (afterEndFiles.Contains(compressedFileName))
+                    {
+
+                    }
+                    Assert.False(afterEndFiles.Contains(compressedFileName),
+                        $"The file \"{compressedFileName}\" and all log files from before {retentionDate} should be deleted due to time retention");
+                }
+            }
         }
 
         [Theory]
@@ -63,20 +101,27 @@ namespace SlowTests.SparrowTests
             var name = GetTestName();
 
             var path = NewDataPath(forceCreateDir: true);
+            var retentionTime = TimeSpan.MaxValue;
             var loggingSource = new LoggingSource(
                 LogMode.Information,
                 path,
                 "LoggingSource" + name,
-                TimeSpan.MaxValue,
+                retentionTime,
                 retentionSize,
                 compressing);
-
             loggingSource.MaxFileSizeInBytes = fileSize;
+            //This is just to make sure the MaxFileSizeInBytes is get action for the first file
+            loggingSource.SetupLogMode(LogMode.Operations, path, retentionTime, retentionSize, compressing);
+
             var logger = new Logger(loggingSource, "Source" + name, "Logger" + name);
 
-            for (var i = 0; i < 500; i++)
+            for (var i = 0; i < 100; i++)
             {
-                await logger.OperationsAsync("Some message");
+                for (var j = 0; j < 5; j++)
+                {
+                    await logger.OperationsAsync("Some message");
+                }
+                Thread.Sleep(10);
             }
 
             loggingSource.EndLogging();
@@ -96,15 +141,19 @@ namespace SlowTests.SparrowTests
             var name = GetTestName();
 
             var path = NewDataPath(forceCreateDir: true);
+            var retentionTime = TimeSpan.MaxValue;
+            var retentionSize = long.MaxValue;
             var loggingSource = new LoggingSource(
                 LogMode.Information,
                 path,
                 "LoggingSource" + name,
-                TimeSpan.MaxValue,
-                long.MaxValue,
+                retentionTime,
+                retentionSize,
                 compressing);
-
             loggingSource.MaxFileSizeInBytes = 1024;
+            //This is just to make sure the MaxFileSizeInBytes is get action for the first file
+            loggingSource.SetupLogMode(LogMode.Operations, path, retentionTime, retentionSize, compressing);
+
             var logger = new Logger(loggingSource, "Source" + name, "Logger" + name);
 
             for (var i = 0; i < 1000; i++)
@@ -131,24 +180,29 @@ namespace SlowTests.SparrowTests
             var name = GetTestName();
 
             var path = NewDataPath(forceCreateDir: true);
+            var retentionTime = TimeSpan.MaxValue;
+            var retentionSize = long.MaxValue;
+
             var firstLoggingSource = new LoggingSource(
                 LogMode.Information,
                 path,
                 "FirstLoggingSource" + name,
-                TimeSpan.MaxValue,
-                long.MaxValue,
+                retentionTime,
+                retentionSize,
                 compressing);
+            firstLoggingSource.MaxFileSizeInBytes = 1024;
+            //This is just to make sure the MaxFileSizeInBytes is get action for the first file
+            firstLoggingSource.SetupLogMode(LogMode.Operations, path, retentionTime, retentionSize, compressing);
 
             try
             {
-                firstLoggingSource.MaxFileSizeInBytes = 1024;
                 var logger = new Logger(firstLoggingSource, "Source" + name, "Logger" + name);
 
                 for (var i = 0; i < 100; i++)
                 {
                     var task = logger.OperationsAsync("Some message");
                     await Task.WhenAny(task, Task.Delay(taskTimeout));
-                    if(task.IsCompleted == false)
+                    if (task.IsCompleted == false)
                         throw new TimeoutException($"The log task took more then one second");
                 }
             }
@@ -170,8 +224,8 @@ namespace SlowTests.SparrowTests
                     LogMode.Information,
                     path,
                     "SecondLoggingSource" + name,
-                    TimeSpan.MaxValue,
-                    long.MaxValue);
+                    retentionTime,
+                    retentionSize);
 
                 try
                 {
@@ -186,7 +240,7 @@ namespace SlowTests.SparrowTests
                             throw new TimeoutException($"The log task took more then one second");
                     }
                 }
-                catch(Exception e)
+                catch (Exception e)
                 {
                     anotherThreadException = e;
                 }
@@ -204,7 +258,7 @@ namespace SlowTests.SparrowTests
             {
                 var lastWriteTime = File.GetLastWriteTime(file);
                 Assert.True(
-                    restartDateTime > lastWriteTime, 
+                    restartDateTime > lastWriteTime,
                     $"{file} was changed (time:" +
                     $"{lastWriteTime.ToString("yyyy-MM-dd HH:mm:ss.fff", CultureInfo.InvariantCulture)}) after the restart (time:" +
                     $"{restartDateTime.ToString("yyyy-MM-dd HH:mm:ss.fff", CultureInfo.InvariantCulture)})");
@@ -219,14 +273,20 @@ namespace SlowTests.SparrowTests
 
             var exceptions = new List<Exception>();
 
-            var list = GetLogMetadata(beforeEndFiles, exceptions);
+            var list = GetLogMetadataOrderedByDateThenByNumber(beforeEndFiles, exceptions);
 
             for (var i = 1; i < list.Length; i++)
             {
                 var previous = list[i - 1];
                 var current = list[i];
-                if (previous.Date == current.Date && previous.No + 1 != current.No)
-                    exceptions.Add(new Exception($"Log between {previous} nad {current} is missing"));
+                if (previous.Date == current.Date && previous.Number + 1 != current.Number)
+                {
+                    if (previous.Number == current.Number && Path.GetExtension(current.FileName) == ".gz")
+                        continue;
+
+                    exceptions.Add(new Exception($"Log between {previous} and {current} is missing"));
+                }
+
             }
 
             if (exceptions.Any())
@@ -235,7 +295,7 @@ namespace SlowTests.SparrowTests
             }
         }
 
-        private LogMetaData[] GetLogMetadata(string[] beforeEndFiles, List<Exception> exceptions)
+        private LogMetaData[] GetLogMetadataOrderedByDateThenByNumber(string[] beforeEndFiles, List<Exception> exceptions)
         {
             var list = beforeEndFiles.Select(f =>
                 {
@@ -255,18 +315,18 @@ namespace SlowTests.SparrowTests
                         return null;
                     }
 
-                    
+
 
                     return new LogMetaData
                     {
                         FileName = f,
                         Date = logDateTime,
-                        No = num
+                        Number = num
                     };
                 })
                 .Where(f => f != null)
                 .OrderBy(f => f.Date)
-                .ThenBy(f => f.No)
+                .ThenBy(f => f.Number)
                 .ToArray();
 
             return list;
@@ -276,7 +336,7 @@ namespace SlowTests.SparrowTests
         {
             public string FileName { set; get; }
             public DateTime Date { set; get; }
-            public int No { set; get; }
+            public int Number { set; get; }
         }
     }
 }
