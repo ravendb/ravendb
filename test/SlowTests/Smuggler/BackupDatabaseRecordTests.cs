@@ -65,65 +65,6 @@ namespace SlowTests.Smuggler
                                 }
                             }
                         };
-                        record.ExternalReplications = new List<ExternalReplication>
-                        {
-                            new ExternalReplication("tempDatabase", "ExternalReplication")
-                            {
-                                TaskId = 1,
-                                Name = "External",
-                                MentorNode = "B",
-                                DelayReplicationFor = new TimeSpan(4),
-                                Url = "http://127.0.0.1/",
-                                Disabled = false
-                            }
-                        };
-                        record.SinkPullReplications = new List<PullReplicationAsSink>
-                        {
-                            new PullReplicationAsSink()
-                            {
-                                Database = "sinkDatabase",
-                                CertificatePassword = "CertificatePassword",
-                                CertificateWithPrivateKey = "CertificateWithPrivateKey",
-                                TaskId = 2,
-                                Name = "Sink",
-                                MentorNode = "A",
-                                HubDefinitionName = "hub"
-                            }
-                        };
-                        record.HubPullReplications = new List<PullReplicationDefinition>
-                        {
-                            new PullReplicationDefinition()
-                            {
-                                TaskId = 3,
-                                Name = "hub",
-                                MentorNode = "A",
-                                DelayReplicationFor = new TimeSpan(3),
-                            }
-                        };
-                        record.RavenEtls = new List<RavenEtlConfiguration>
-                        {
-                            new RavenEtlConfiguration()
-                            {
-                                AllowEtlOnNonEncryptedChannel = true,
-                                ConnectionStringName = "ConnectionName",
-                                MentorNode = "A",
-                                Name = "Etl",
-                                TaskId = 4,
-                                TestMode = true
-                            }
-                        };
-                        record.SqlEtls = new List<SqlEtlConfiguration>
-                        {
-                            new SqlEtlConfiguration()
-                            {
-                                AllowEtlOnNonEncryptedChannel = true,
-                                ConnectionStringName = "connection",
-                                ForceQueryRecompile = false,
-                                Name = "sql",
-                                ParameterizeDeletes = false,
-                                TaskId = 5
-                            }
-                        };
                     }
 
                 }))
@@ -145,7 +86,71 @@ namespace SlowTests.Smuggler
                             FolderPath = "FolderPath"
                         }
                     };
+                    store1.Maintenance.Send(new UpdateExternalReplicationOperation(new ExternalReplication("tempDatabase", "ExternalReplication")
+                    {
+                        TaskId = 1,
+                        Name = "External",
+                        DelayReplicationFor = new TimeSpan(4),
+                        Url = "http://127.0.0.1/",
+                        Disabled = false
+                    }));
+                    store1.Maintenance.Send(new UpdatePullReplicationAsSinkOperation(new PullReplicationAsSink()
+                    {
+                        Database = "sinkDatabase",
+                        CertificatePassword = "CertificatePassword",
+                        CertificateWithPrivateKey = "CertificateWithPrivateKey",
+                        TaskId = 2,
+                        Name = "Sink",
+                        HubDefinitionName = "hub"
 
+                    }));
+                    store1.Maintenance.Send(new PutPullReplicationAsHubOperation(new PullReplicationDefinition()
+                    {
+                        TaskId = 3,
+                        Name = "hub",
+                        MentorNode = "A",
+                        DelayReplicationFor = new TimeSpan(3),
+                    }));
+
+                    store1.Maintenance.Send(new PutConnectionStringOperation<RavenConnectionString>(new RavenConnectionString
+                    {
+                        Name = "ConnectionName",
+                        TopologyDiscoveryUrls = new[] { "http://127.0.0.1:8080" },
+                        Database = "Northwind",
+                    }));
+
+                    var sqlConnectionString = new SqlConnectionString
+                    {
+                        Name = "connection",
+                        ConnectionString = @"Data Source=localhost\sqlexpress;Integrated Security=SSPI;Connection Timeout=3" + $";Initial Catalog=SqlReplication-{store1.Database};",
+                        FactoryName = "System.Data.SqlClient"
+                    };
+
+                    store1.Maintenance.Send(new PutConnectionStringOperation<SqlConnectionString>(sqlConnectionString));
+                    store1.Maintenance.Send(new AddEtlOperation<RavenConnectionString>(new RavenEtlConfiguration()
+                    {
+                        AllowEtlOnNonEncryptedChannel = true,
+                        ConnectionStringName = "ConnectionName",
+                        MentorNode = "A",
+                        Name = "Etl",
+                        TaskId = 4,
+                        TestMode = true
+                    }));
+
+                    store1.Maintenance.Send(new AddEtlOperation<SqlConnectionString>(new SqlEtlConfiguration()
+                    {
+                        AllowEtlOnNonEncryptedChannel = true,
+                        ForceQueryRecompile = false,
+                        ConnectionStringName = "connection",
+                        SqlTables =
+                            {
+                                new SqlEtlTable {TableName = "Orders", DocumentIdColumn = "Id", InsertOnlyMode = false},
+                                new SqlEtlTable {TableName = "OrderLines", DocumentIdColumn = "OrderId", InsertOnlyMode = false},
+                            },
+                        Name = "sql",
+                        ParameterizeDeletes = false,
+                        MentorNode = "A"
+                    }));
                     await store1.Maintenance.SendAsync(new UpdatePeriodicBackupOperation(config));
 
                     var operation = await store1.Smuggler.ExportAsync(new DatabaseSmugglerExportOptions(), file);
@@ -253,65 +258,6 @@ namespace SlowTests.Smuggler
                                 }
                             }
                         };
-                        record.ExternalReplications = new List<ExternalReplication>
-                        {
-                            new ExternalReplication("tempDatabase", "ExternalReplication")
-                            {
-                                TaskId = 1,
-                                Name = "External",
-                                MentorNode = "B",
-                                DelayReplicationFor = new TimeSpan(4),
-                                Url = "http://127.0.0.1/",
-                                Disabled = false
-                            }
-                        };
-                        record.SinkPullReplications = new List<PullReplicationAsSink>
-                        {
-                            new PullReplicationAsSink()
-                            {
-                                Database = "sinkDatabase",
-                                CertificatePassword = "CertificatePassword",
-                                CertificateWithPrivateKey = "CertificateWithPrivateKey",
-                                TaskId = 2,
-                                Name = "Sink",
-                                MentorNode = "A",
-                                HubDefinitionName = "hub"
-                            }
-                        };
-                        record.HubPullReplications = new List<PullReplicationDefinition>
-                        {
-                            new PullReplicationDefinition()
-                            {
-                                TaskId = 3,
-                                Name = "hub",
-                                MentorNode = "A",
-                                DelayReplicationFor = new TimeSpan(3),
-                            }
-                        };
-                        record.RavenEtls = new List<RavenEtlConfiguration>
-                        {
-                            new RavenEtlConfiguration()
-                            {
-                                AllowEtlOnNonEncryptedChannel = true,
-                                ConnectionStringName = "ConnectionName",
-                                MentorNode = "A",
-                                Name = "Etl",
-                                TaskId = 4,
-                                TestMode = true
-                            }
-                        };
-                        record.SqlEtls = new List<SqlEtlConfiguration>
-                        {
-                            new SqlEtlConfiguration()
-                            {
-                                AllowEtlOnNonEncryptedChannel = true,
-                                ConnectionStringName = "connection",
-                                ForceQueryRecompile = false,
-                                Name = "sql",
-                                ParameterizeDeletes = false,
-                                TaskId = 5
-                            }
-                        };
                     }
 
                 }))
@@ -320,6 +266,71 @@ namespace SlowTests.Smuggler
                     ModifyDatabaseName = s => $"{s}_2"
                 }))
                 {
+                    store1.Maintenance.Send(new UpdateExternalReplicationOperation(new ExternalReplication("tempDatabase", "ExternalReplication")
+                    {
+                        TaskId = 1,
+                        Name = "External",
+                        DelayReplicationFor = new TimeSpan(4),
+                        Url = "http://127.0.0.1/",
+                        Disabled = false
+                    }));
+                    store1.Maintenance.Send(new UpdatePullReplicationAsSinkOperation(new PullReplicationAsSink()
+                    {
+                        Database = "sinkDatabase",
+                        CertificatePassword = "CertificatePassword",
+                        CertificateWithPrivateKey = "CertificateWithPrivateKey",
+                        TaskId = 2,
+                        Name = "Sink",
+                        HubDefinitionName = "hub"
+
+                    }));
+                    store1.Maintenance.Send(new PutPullReplicationAsHubOperation(new PullReplicationDefinition()
+                    {
+                        TaskId = 3,
+                        Name = "hub",
+                        MentorNode = "A",
+                        DelayReplicationFor = new TimeSpan(3),
+                    }));
+
+                    store1.Maintenance.Send(new PutConnectionStringOperation<RavenConnectionString>(new RavenConnectionString
+                    {
+                        Name = "ConnectionName",
+                        TopologyDiscoveryUrls = new[] { "http://127.0.0.1:8080" },
+                        Database = "Northwind",
+                    }));
+
+                    var sqlConnectionString = new SqlConnectionString
+                    {
+                        Name = "connection",
+                        ConnectionString = @"Data Source=localhost\sqlexpress;Integrated Security=SSPI;Connection Timeout=3" + $";Initial Catalog=SqlReplication-{store1.Database};",
+                        FactoryName = "System.Data.SqlClient"
+                    };
+
+                    store1.Maintenance.Send(new PutConnectionStringOperation<SqlConnectionString>(sqlConnectionString));
+                    store1.Maintenance.Send(new AddEtlOperation<RavenConnectionString>(new RavenEtlConfiguration()
+                    {
+                        AllowEtlOnNonEncryptedChannel = true,
+                        ConnectionStringName = "ConnectionName",
+                        MentorNode = "A",
+                        Name = "Etl",
+                        TaskId = 4,
+                        TestMode = true
+                    }));
+
+                    store1.Maintenance.Send(new AddEtlOperation<SqlConnectionString>(new SqlEtlConfiguration()
+                    {
+                        AllowEtlOnNonEncryptedChannel = true,
+                        ForceQueryRecompile = false,
+                        ConnectionStringName = "connection",
+                        SqlTables =
+                            {
+                                new SqlEtlTable {TableName = "Orders", DocumentIdColumn = "Id", InsertOnlyMode = false},
+                                new SqlEtlTable {TableName = "OrderLines", DocumentIdColumn = "OrderId", InsertOnlyMode = false},
+                            },
+                        Name = "sql",
+                        ParameterizeDeletes = false,
+                        MentorNode = "A"
+                    }));
                     var migrate = new Migrator(new DatabasesMigrationConfiguration
                     {
                         ServerUrl = Server.WebUrl,
@@ -1014,67 +1025,75 @@ namespace SlowTests.Smuggler
                                 }
                             }
                         };
-                        record.ExternalReplications = new List<ExternalReplication>
-                        {
-                            new ExternalReplication("tempDatabase", "ExternalReplication")
-                            {
-                                TaskId = 1,
-                                Name = "External",
-                                DelayReplicationFor = new TimeSpan(4),
-                                Url = "http://127.0.0.1/",
-                                Disabled = false
-                            }
-                        };
-                        record.SinkPullReplications = new List<PullReplicationAsSink>
-                        {
-                            new PullReplicationAsSink()
-                            {
-                                Database = "sinkDatabase",
-                                CertificatePassword = "CertificatePassword",
-                                CertificateWithPrivateKey = "CertificateWithPrivateKey",
-                                TaskId = 2,
-                                Name = "Sink",
-                                HubDefinitionName = "hub"
-
-                            }
-                        };
-                        record.HubPullReplications = new List<PullReplicationDefinition>
-                        {
-                            new PullReplicationDefinition()
-                            {
-                                TaskId = 3,
-                                Name = "hub",
-                                MentorNode = "A",
-                                DelayReplicationFor = new TimeSpan(3),
-                            }
-                        };
-                        record.RavenEtls = new List<RavenEtlConfiguration>
-                        {
-                            new RavenEtlConfiguration()
-                            {
-                                AllowEtlOnNonEncryptedChannel = true,
-                                ConnectionStringName = "ConnectionName",
-                                MentorNode = "A",
-                                Name = "Etl",
-                                TaskId = 4,
-                                TestMode = true
-                            }
-                        };
-                        record.SqlEtls = new List<SqlEtlConfiguration>
-                        {
-                            new SqlEtlConfiguration()
-                            {
-                                AllowEtlOnNonEncryptedChannel = true,
-                                ForceQueryRecompile = false,
-                                ConnectionStringName = "connection",
-                                Name = "sql",
-                                ParameterizeDeletes = false,
-                                MentorNode = "A"
-                            }
-                        };
                     }
                 }))
                 {
+                    store.Maintenance.Send(new UpdateExternalReplicationOperation(new ExternalReplication("tempDatabase", "ExternalReplication")
+                    {
+                        TaskId = 1,
+                        Name = "External",
+                        DelayReplicationFor = new TimeSpan(4),
+                        Url = "http://127.0.0.1/",
+                        Disabled = false
+                    }));
+                    store.Maintenance.Send(new UpdatePullReplicationAsSinkOperation(new PullReplicationAsSink()
+                    {
+                        Database = "sinkDatabase",
+                        CertificatePassword = "CertificatePassword",
+                        CertificateWithPrivateKey = "CertificateWithPrivateKey",
+                        TaskId = 2,
+                        Name = "Sink",
+                        HubDefinitionName = "hub"
+
+                    }));
+                    store.Maintenance.Send(new PutPullReplicationAsHubOperation(new PullReplicationDefinition()
+                    {
+                        TaskId = 3,
+                        Name = "hub",
+                        MentorNode = "A",
+                        DelayReplicationFor = new TimeSpan(3),
+                    }));
+
+                    store.Maintenance.Send(new PutConnectionStringOperation<RavenConnectionString>(new RavenConnectionString
+                    {
+                        Name = "ConnectionName",
+                        TopologyDiscoveryUrls = new[] { "http://127.0.0.1:8080" },
+                        Database = "Northwind",
+                    }));
+
+                    var sqlConnectionString = new SqlConnectionString
+                    {
+                        Name = "connection",
+                        ConnectionString = @"Data Source=localhost\sqlexpress;Integrated Security=SSPI;Connection Timeout=3" + $";Initial Catalog=SqlReplication-{store.Database};",
+                        FactoryName = "System.Data.SqlClient"
+                    };
+
+                    store.Maintenance.Send(new PutConnectionStringOperation<SqlConnectionString>(sqlConnectionString));
+                    store.Maintenance.Send(new AddEtlOperation<RavenConnectionString>(new RavenEtlConfiguration()
+                    {
+                        AllowEtlOnNonEncryptedChannel = true,
+                        ConnectionStringName = "ConnectionName",
+                        MentorNode = "A",
+                        Name = "Etl",
+                        TaskId = 4,
+                        TestMode = true
+                    }));
+
+                    store.Maintenance.Send(new AddEtlOperation<SqlConnectionString>(new SqlEtlConfiguration()
+                    {
+                        AllowEtlOnNonEncryptedChannel = true,
+                        ForceQueryRecompile = false,
+                        ConnectionStringName = "connection",
+                        SqlTables =
+                            {
+                                new SqlEtlTable {TableName = "Orders", DocumentIdColumn = "Id", InsertOnlyMode = false},
+                                new SqlEtlTable {TableName = "OrderLines", DocumentIdColumn = "OrderId", InsertOnlyMode = false},
+                            },
+                        Name = "sql",
+                        ParameterizeDeletes = false,
+                        MentorNode = "A"
+                    }));
+
                     using (var session = store.OpenAsyncSession())
                     {
                         await session.StoreAsync(new User
