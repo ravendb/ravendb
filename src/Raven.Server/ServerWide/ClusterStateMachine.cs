@@ -1210,6 +1210,9 @@ namespace Raven.Server.ServerWide
 
                     void VerifyUnchangedTasks()
                     {
+                        if (addDatabaseCommand.IsRestore)
+                            return;
+
                         var dbId = Constants.Documents.Prefix + addDatabaseCommand.Name;
                         using (var dbDoc = Read(context, dbId, out _))
                         {

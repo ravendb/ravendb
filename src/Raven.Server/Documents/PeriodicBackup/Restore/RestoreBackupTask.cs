@@ -228,7 +228,7 @@ namespace Raven.Server.Documents.PeriodicBackup.Restore
 
                     // after the db for restore is done, we can safely set the db state to normal and write the DatabaseRecord
                     databaseRecord.DatabaseState = DatabaseStateStatus.Normal;
-                    var (updateIndex, _) = await _serverStore.WriteDatabaseRecordAsync(databaseName, databaseRecord, null);
+                    var (updateIndex, _) = await _serverStore.WriteDatabaseRecordAsync(databaseName, databaseRecord, null, isRestore: true);
                     await _serverStore.Cluster.WaitForIndexNotification(updateIndex);
 
                     if (databaseRecord.Topology.RelevantFor(_serverStore.NodeTag))
