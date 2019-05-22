@@ -1233,7 +1233,7 @@ namespace Raven.Server.ServerWide
                                     if (databaseRecordAsJson.TryGet(task, out BlittableJsonReaderArray dbRecordVal) && dbRecordVal.Length > 0)
                                     {
                                         throw new RachisInvalidOperationException(
-                                            $"Failed to create a new Database {addDatabaseCommand.Name}. Updating tasks configurations via DatabaseRecord is not supported, please use dedicated operation to update {task} configuration.");
+                                            $"Failed to create a new Database {addDatabaseCommand.Name}. Updating tasks configurations via DatabaseRecord is not supported, please use a dedicated operation to update the {task} configuration.");
                                     }
                                 }
                             }
@@ -1262,7 +1262,7 @@ namespace Raven.Server.ServerWide
 
                                     if (hasChanges)
                                         throw new RachisInvalidOperationException(
-                                            $"Cannot update {task} configuration with DatabaseRecord. Please use dedicated operation to update {task} configuration.");
+                                            $"Cannot update {task} configuration with DatabaseRecord. Please use a dedicated operation to update the {task} configuration.");
                                 }
                             }
                         }
