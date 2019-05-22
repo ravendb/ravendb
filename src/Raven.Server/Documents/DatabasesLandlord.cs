@@ -7,6 +7,7 @@ using System.Threading;
 using System.Threading.Tasks;
 using Raven.Client.Exceptions.Database;
 using Raven.Client.Extensions;
+using Raven.Client.Http;
 using Raven.Client.ServerWide;
 using Raven.Client.Util;
 using Raven.Server.Config;
@@ -342,7 +343,7 @@ namespace Raven.Server.Documents
 
         private void NotifyLeaderAboutRemoval(string dbName)
         {
-            var cmd = new RemoveNodeFromDatabaseCommand(dbName, Guid.NewGuid().ToString())
+            var cmd = new RemoveNodeFromDatabaseCommand(dbName, RaftIdGenerator.NewId)
             {
                 NodeTag = _serverStore.NodeTag
             };

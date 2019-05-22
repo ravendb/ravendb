@@ -379,7 +379,7 @@ namespace Raven.Server.Commercial
                 if (licenseLimits == null)
                     return;
 
-                _serverStore.PutLicenseLimits(licenseLimits, string.Empty);
+                _serverStore.PutLicenseLimits(licenseLimits, RaftIdGenerator.DontCareId);
             }
             catch (Exception e)
             {
@@ -570,7 +570,7 @@ namespace Raven.Server.Commercial
 
             try
             {
-                AsyncHelpers.RunSync(() => Activate(license, skipLeaseLicense: false, Guid.NewGuid().ToString(), ensureNotPassive: false));
+                AsyncHelpers.RunSync(() => Activate(license, skipLeaseLicense: false, RaftIdGenerator.NewId, ensureNotPassive: false));
             }
             catch (Exception e)
             {
@@ -691,7 +691,7 @@ namespace Raven.Server.Commercial
         {
             try
             {
-                await LeaseLicense(Guid.NewGuid().ToString());
+                await LeaseLicense(RaftIdGenerator.NewId);
 
                 await CalculateLicenseLimits(forceFetchingNodeInfo: true, waitToUpdate: true);
 

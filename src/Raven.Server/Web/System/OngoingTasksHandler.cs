@@ -828,12 +828,14 @@ namespace Raven.Server.Web.System
 
             // Reset scripts if needed
             var scriptsToReset = HttpContext.Request.Query["reset"];
+            var raftRequestId = GetRaftRequestIdFromQuery();
+
             using (ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext ctx))
             using (ctx.OpenReadTransaction())
             {
                 foreach (var script in scriptsToReset)
                 {
-                    await ServerStore.RemoveEtlProcessState(ctx, Database.Name, etlConfigurationName, script, Guid.NewGuid().ToString());
+                    await ServerStore.RemoveEtlProcessState(ctx, Database.Name, etlConfigurationName, script, $"{raftRequestId}/{script}");
                 }
             }
         }
@@ -1332,14 +1334,16 @@ namespace Raven.Server.Web.System
                 long index;
 
                 var action = new DeleteOngoingTaskAction(id, type, ServerStore, Database, context);
+                var raftRequestId = GetRaftRequestIdFromQuery();
+
                 try
                 {
-                    (index, _) = await ServerStore.DeleteOngoingTask(id, taskName, type, Database.Name, GetRaftRequestIdFromQuery());
+                    (index, _) = await ServerStore.DeleteOngoingTask(id, taskName, type, Database.Name, $"{raftRequestId}/delete-ongoing-task");
                     await Database.RachisLogIndexNotifications.WaitForIndexNotification(index, ServerStore.Engine.OperationTimeout);
                 }
                 finally
                 {
-                    await action.Complete();
+                    await action.Complete($"{raftRequestId}/complete");
                 }
 
                 HttpContext.Response.StatusCode = (int)HttpStatusCode.OK;
@@ -1408,13 +1412,14 @@ namespace Raven.Server.Web.System
                 }
             }
 
-            public async Task Complete()
+            public async Task Complete(string raftRequestId)
             {
                 if (_deletingEtl.Name != null)
                 {
                     foreach (var transformation in _deletingEtl.Transformations)
                     {
-                        var (index, _) = await _serverStore.RemoveEtlProcessState(_context, _database.Name, _deletingEtl.Name, transformation, Guid.NewGuid().ToString());
+                        var (index, _) = await _serverStore.RemoveEtlProcessState(_context, _database.Name, _deletingEtl.Name, transformation,
+                            $"{raftRequestId}/{transformation}");
                         await _database.RachisLogIndexNotifications.WaitForIndexNotification(index, _serverStore.Engine.OperationTimeout);
                     }
                 }

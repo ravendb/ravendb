@@ -10,6 +10,7 @@ using Raven.Client.Documents.Indexes;
 using Raven.Client.Documents.Operations;
 using Raven.Client.Documents.Operations.Backups;
 using Raven.Client.Documents.Smuggler;
+using Raven.Client.Http;
 using Raven.Client.ServerWide;
 using Raven.Client.ServerWide.Operations;
 using Raven.Server.Config;
@@ -180,7 +181,7 @@ namespace Raven.Server.Documents.PeriodicBackup.Restore
                         // we are currently restoring, shouldn't try to access it
                         databaseRecord.DatabaseState = DatabaseStateStatus.RestoreInProgress;
 
-                        var (index, _) = await _serverStore.WriteDatabaseRecordAsync(databaseName, databaseRecord, null, Guid.NewGuid().ToString(), restoreSettings.DatabaseValues, isRestore: true);
+                        var (index, _) = await _serverStore.WriteDatabaseRecordAsync(databaseName, databaseRecord, null, RaftIdGenerator.NewId, restoreSettings.DatabaseValues, isRestore: true);
                         await _serverStore.Cluster.WaitForIndexNotification(index);
 
                         DisableOngoingTasksIfNeeded(databaseRecord);
@@ -228,7 +229,7 @@ namespace Raven.Server.Documents.PeriodicBackup.Restore
 
                     // after the db for restore is done, we can safely set the db state to normal and write the DatabaseRecord
                     databaseRecord.DatabaseState = DatabaseStateStatus.Normal;
-                    var (updateIndex, _) = await _serverStore.WriteDatabaseRecordAsync(databaseName, databaseRecord, null, string.Empty, isRestore: true);
+                    var (updateIndex, _) = await _serverStore.WriteDatabaseRecordAsync(databaseName, databaseRecord, null, RaftIdGenerator.DontCareId, isRestore: true);
                     await _serverStore.Cluster.WaitForIndexNotification(updateIndex);
 
                     if (databaseRecord.Topology.RelevantFor(_serverStore.NodeTag))
@@ -267,7 +268,7 @@ namespace Raven.Server.Documents.PeriodicBackup.Restore
                     databaseRecord.Disabled = false;
                     databaseRecord.DatabaseState = DatabaseStateStatus.Normal;
 
-                    var deleteResult = await _serverStore.DeleteDatabaseAsync(_restoreConfiguration.DatabaseName, true, new[] { _serverStore.NodeTag }, string.Empty);
+                    var deleteResult = await _serverStore.DeleteDatabaseAsync(_restoreConfiguration.DatabaseName, true, new[] { _serverStore.NodeTag }, RaftIdGenerator.DontCareId);
                     await _serverStore.Cluster.WaitForIndexNotification(deleteResult.Index);
                 }
 

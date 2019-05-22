@@ -911,7 +911,7 @@ namespace Raven.Server.Web.Authentication
 
                 try
                 {
-                    var success = Server.RefreshClusterCertificate(true);
+                    var success = Server.RefreshClusterCertificate(true, GetRaftRequestIdFromQuery());
                     using (ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
                     using (var writer = new BlittableJsonTextWriter(context, ResponseBodyStream()))
                     {
@@ -949,7 +949,7 @@ namespace Raven.Server.Web.Authentication
 
                 try
                 {
-                    Server.RefreshClusterCertificate(replaceImmediately);
+                    Server.RefreshClusterCertificate(replaceImmediately, GetRaftRequestIdFromQuery());
                 }
                 catch (Exception e)
                 {
@@ -1013,7 +1013,7 @@ namespace Raven.Server.Web.Authentication
 
                         var timeoutTask = TimeoutManager.WaitFor(TimeSpan.FromSeconds(60), ServerStore.ServerShutdown);
 
-                        var replicationTask = Server.StartCertificateReplicationAsync(certBytes, replaceImmediately);
+                        var replicationTask = Server.StartCertificateReplicationAsync(certBytes, replaceImmediately, GetRaftRequestIdFromQuery());
 
                         await Task.WhenAny(replicationTask, timeoutTask);
                         if (replicationTask.IsCompleted == false)

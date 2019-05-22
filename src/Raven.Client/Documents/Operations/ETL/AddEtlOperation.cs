@@ -62,7 +62,7 @@ namespace Raven.Client.Documents.Operations.ETL
                 Result = JsonDeserializationClient.AddEtlOperationResult(response);
             }
 
-            public string RaftUniqueRequestId { get; } = Guid.NewGuid().ToString();
+            public string RaftUniqueRequestId { get; } = RaftIdGenerator.NewId;
         }
     }
 

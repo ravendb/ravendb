@@ -1961,7 +1961,7 @@ namespace Raven.Server.ServerWide
                         using (var localCertificate = Cluster.GetLocalStateByThumbprint(ctx, localCertKey))
                         {
                             var certificateDefinition = JsonDeserializationServer.CertificateDefinition(localCertificate);
-                            PutValueInClusterAsync(new PutCertificateCommand(localCertKey, certificateDefinition, Guid.NewGuid().ToString())).Wait(ServerShutdown);
+                            PutValueInClusterAsync(new PutCertificateCommand(localCertKey, certificateDefinition, RaftIdGenerator.NewId)).Wait(ServerShutdown);
                         }
                     }
                 }
@@ -2305,7 +2305,7 @@ namespace Raven.Server.ServerWide
                 Result = JsonDeserializationCluster.PutRaftCommandResult(response);
             }
 
-            public string RaftUniqueRequestId { get; } = Guid.NewGuid().ToString();
+            public string RaftUniqueRequestId { get; } = RaftIdGenerator.NewId;
         }
 
         public class PutRaftCommandResult

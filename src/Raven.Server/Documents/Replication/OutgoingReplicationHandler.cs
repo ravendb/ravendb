@@ -30,6 +30,7 @@ using Raven.Server.Utils;
 using Sparrow.Threading;
 using Sparrow.Utils;
 using Raven.Client.Exceptions.Security;
+using Raven.Client.Http;
 using Raven.Server.Documents.TcpHandlers;
 using Sparrow.Server;
 
@@ -564,7 +565,7 @@ namespace Raven.Server.Documents.Replication
 
         private void UpdateExternalReplicationInfo(long taskId)
         {
-            var command = new UpdateExternalReplicationStateCommand(_database.Name, Guid.NewGuid().ToString())
+            var command = new UpdateExternalReplicationStateCommand(_database.Name, RaftIdGenerator.NewId)
             {
                 ExternalReplicationState = new ExternalReplicationState
                 {

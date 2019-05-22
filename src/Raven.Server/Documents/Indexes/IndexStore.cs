@@ -13,6 +13,7 @@ using Raven.Client.Documents.Changes;
 using Raven.Client.Documents.Indexes;
 using Raven.Client.Exceptions.Documents.Compilation;
 using Raven.Client.Exceptions.Documents.Indexes;
+using Raven.Client.Http;
 using Raven.Client.ServerWide;
 using Raven.Client.Util;
 using Raven.Server.Config.Settings;
@@ -1253,7 +1254,7 @@ namespace Raven.Server.Documents.Indexes
 
         private async Task RunIdleOperationsAsync(long databaseRecordEtag)
         {
-            await DeleteOrMergeSurpassedAutoIndexes(databaseRecordEtag, Guid.NewGuid().ToString());
+            await DeleteOrMergeSurpassedAutoIndexes(databaseRecordEtag, RaftIdGenerator.NewId);
         }
 
         private async Task DeleteOrMergeSurpassedAutoIndexes(long databaseRecordEtag, string raftRequestId)

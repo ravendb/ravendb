@@ -27,6 +27,7 @@ namespace Raven.Server.ServerWide.Commands
         {
             var djv = base.ToJson(context);
             djv[nameof(DatabaseName)] = DatabaseName;
+            djv[nameof(ErrorOnDatabaseDoesNotExists)] = ErrorOnDatabaseDoesNotExists;
 
             FillJson(djv);
 

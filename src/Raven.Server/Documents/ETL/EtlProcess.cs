@@ -13,6 +13,7 @@ using Raven.Client.Documents.Operations.ETL;
 using Raven.Client.Documents.Operations.ETL.SQL;
 using Raven.Client.Documents.Operations.OngoingTasks;
 using Raven.Client.Exceptions.Documents.Patching;
+using Raven.Client.Http;
 using Raven.Client.Json.Converters;
 using Raven.Client.Util;
 using Raven.Server.Documents.ETL.Metrics;
@@ -672,7 +673,7 @@ namespace Raven.Server.Documents.ETL
                     {
                         var command = new UpdateEtlProcessStateCommand(Database.Name, Configuration.Name, Transformation.Name, Statistics.LastProcessedEtag,
                             ChangeVectorUtils.MergeVectors(Statistics.LastChangeVector, state.ChangeVector), _serverStore.NodeTag,
-                            _serverStore.LicenseManager.HasHighlyAvailableTasks(), Guid.NewGuid().ToString());
+                            _serverStore.LicenseManager.HasHighlyAvailableTasks(), RaftIdGenerator.NewId);
 
                         var sendToLeaderTask = _serverStore.SendToLeaderAsync(command);
                         sendToLeaderTask.Wait(CancellationToken);

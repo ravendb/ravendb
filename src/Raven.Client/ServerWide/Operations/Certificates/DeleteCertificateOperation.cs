@@ -39,7 +39,7 @@ namespace Raven.Client.ServerWide.Operations.Certificates
                 };
             }
 
-            public string RaftUniqueRequestId { get; } = Guid.NewGuid().ToString();
+            public string RaftUniqueRequestId { get; } = RaftIdGenerator.NewId;
         }
     }
 }

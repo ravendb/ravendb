@@ -10,6 +10,7 @@ using Lextm.SharpSnmpLib.Messaging;
 using Lextm.SharpSnmpLib.Pipeline;
 using Lextm.SharpSnmpLib.Security;
 using Raven.Client;
+using Raven.Client.Http;
 using Raven.Client.Util;
 using Raven.Server.Monitoring.Snmp.Objects.Cluster;
 using Raven.Server.Monitoring.Snmp.Objects.Database;
@@ -128,7 +129,7 @@ namespace Raven.Server.Monitoring.Snmp
                         {
                             context.CloseTransaction();
 
-                            var result = await _server.ServerStore.SendToLeaderAsync(new UpdateSnmpDatabasesMappingCommand(new List<string> { databaseName }, Guid.NewGuid().ToString()));
+                            var result = await _server.ServerStore.SendToLeaderAsync(new UpdateSnmpDatabasesMappingCommand(new List<string> { databaseName }, RaftIdGenerator.NewId));
                             await _server.ServerStore.Cluster.WaitForIndexNotification(result.Index);
 
                             context.OpenReadTransaction();
@@ -257,7 +258,7 @@ namespace Raven.Server.Monitoring.Snmp
                     {
                         context.CloseTransaction();
 
-                        var result = await _server.ServerStore.SendToLeaderAsync(new UpdateSnmpDatabasesMappingCommand(missingDatabases, Guid.NewGuid().ToString()));
+                        var result = await _server.ServerStore.SendToLeaderAsync(new UpdateSnmpDatabasesMappingCommand(missingDatabases, RaftIdGenerator.NewId));
                         await _server.ServerStore.Cluster.WaitForIndexNotification(result.Index);
 
                         context.OpenReadTransaction();
