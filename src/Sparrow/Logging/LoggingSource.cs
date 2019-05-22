@@ -20,9 +20,6 @@ namespace Sparrow.Logging
 {
     public sealed class LoggingSource
     {
-        private const string DateFormat = "yyyy-MM-dd";
-        private static readonly int DateFormatLength = DateFormat.Length;
-
         [ThreadStatic]
         private static string _currentThreadId;
 
@@ -241,7 +238,7 @@ namespace Sparrow.Logging
 
             _hasEntries.Set();
             _readyToCompress.Set();
-            
+
             _loggingThread.Join(TimeToWaitForLoggingToEndInMilliseconds);
             _compressLoggingThread?.Join(TimeToWaitForLoggingToEndInMilliseconds);
 
@@ -254,8 +251,8 @@ namespace Sparrow.Logging
             string[] logGzFiles;
             try
             {
-                logFiles = Directory.GetFiles(_path, $"{_dateString}.*.log");
-                logGzFiles = Directory.GetFiles(_path, $"{_dateString}.*.log.gz");
+                logFiles = Directory.GetFiles(_path, "*.log");
+                logGzFiles = Directory.GetFiles(_path, "*.log.gz");
             }
             catch (Exception)
             {
@@ -268,15 +265,9 @@ namespace Sparrow.Logging
 
             if (DateTime.Today != _today)
             {
-                lock (this)
-                {
-                    if (DateTime.Today != _today)
-                    {
-                        _today = DateTime.Today;
-                        _dateString = DateTime.Today.ToString(DateFormat, CultureInfo.InvariantCulture);
-                        _logNumber = Math.Max(NextLogNumberForExtension(logFiles, "log"), NextLogNumberForExtension(logGzFiles, "log.gz"));
-                    }
-                }
+                _today = DateTime.Today;
+                _dateString = LogInfo.GetFileName(DateTime.Today);
+                _logNumber = Math.Max(NextLogNumberForExtension(logFiles, "log"), NextLogNumberForExtension(logGzFiles, "log.gz"));
             }
 
             UpdateLocalDateTimeOffset();
@@ -295,7 +286,7 @@ namespace Sparrow.Logging
                 CleanupOldLogFiles(logFiles);
                 LimitLogSize(logFiles);
             }
-                
+
             fileStream = SafeFileStream.Create(fileName, FileMode.Append, FileAccess.Write, FileShare.Read, 32 * 1024, false);
             fileStream.Write(_headerRow, 0, _headerRow.Length);
             return true;
@@ -329,8 +320,11 @@ namespace Sparrow.Logging
             }
         }
 
-        private class LogInfo
+        internal class LogInfo
         {
+            private const string DateFormat = "yyyy-MM-dd";
+            private static readonly int DateFormatLength = DateFormat.Length;
+
             public readonly string FullName;
             public readonly long Size;
 
@@ -346,6 +340,20 @@ namespace Sparrow.Logging
                 {
                     //Many things can happen 
                 }
+            }
+
+            public static bool TryGetDate(string fileName, out DateTime dateTime)
+            {
+                var logPosition = fileName.LastIndexOf(".log", StringComparison.Ordinal);
+                var start = fileName.LastIndexOf(".", logPosition - 1, StringComparison.Ordinal) - DateFormatLength;
+
+                var date = fileName.Substring(start, DateFormatLength);
+                return DateTime.TryParse(date, out dateTime);
+            }
+
+            public static string GetFileName(DateTime dateTime)
+            {
+                return dateTime.ToString(LogInfo.DateFormat, CultureInfo.InvariantCulture);
             }
         }
 
@@ -388,11 +396,14 @@ namespace Sparrow.Logging
 
         private void CleanupOldLogFiles(string[] logFiles)
         {
-            var now = DateTime.Now;
+            if (RetentionTime == TimeSpan.MaxValue)
+                return;
+
+            var retentionDate = DateTime.Now.Date - RetentionTime;
             foreach (var logFile in logFiles)
             {
-                var logDateTime = File.GetLastWriteTime(logFile);
-                if (now - logDateTime < RetentionTime)
+                if (LogInfo.TryGetDate(logFile, out var logDateTime) == false
+                    || logDateTime >= retentionDate)
                     continue;
 
                 try
@@ -728,7 +739,7 @@ namespace Sparrow.Logging
                         catch (Exception)
                         {
                             //Something went wrong we will try later again
-                            break;
+                            continue;
                         }
 
                         try
@@ -741,7 +752,7 @@ namespace Sparrow.Logging
                             // maybe something is currently reading the file?
                         }
                     }
-                    
+
                     Array.Sort(logGzFiles);
                     CleanupAlreadyCompressedLogFiles(logFiles, logGzFiles);
                     CleanupOldLogFiles(logGzFiles);
