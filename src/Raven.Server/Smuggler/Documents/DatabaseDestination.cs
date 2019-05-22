@@ -13,6 +13,7 @@ using Raven.Client.Documents.Operations.Counters;
 using Raven.Client.Documents.Operations.OngoingTasks;
 using Raven.Client.Documents.Smuggler;
 using Raven.Client.Documents.Subscriptions;
+using Raven.Client.Http;
 using Raven.Client.ServerWide;
 using Raven.Client.Util;
 using Raven.Server.Documents;
@@ -133,22 +134,22 @@ namespace Raven.Server.Smuggler.Documents
             {
                 if (_batch != null)
                 {
-                    _batch.AddIndex(indexDefinition, _source, _database.Time.GetUtcNow(), string.Empty);
+                    _batch.AddIndex(indexDefinition, _source, _database.Time.GetUtcNow(), RaftIdGenerator.DontCareId);
                     return;
                 }
 
-                AsyncHelpers.RunSync(() => _database.IndexStore.CreateIndex(indexDefinition, string.Empty));
+                AsyncHelpers.RunSync(() => _database.IndexStore.CreateIndex(indexDefinition, RaftIdGenerator.DontCareId));
             }
 
             public void WriteIndex(IndexDefinition indexDefinition)
             {
                 if (_batch != null)
                 {
-                    _batch.AddIndex(indexDefinition, _source, _database.Time.GetUtcNow(), string.Empty);
+                    _batch.AddIndex(indexDefinition, _source, _database.Time.GetUtcNow(), RaftIdGenerator.DontCareId);
                     return;
                 }
 
-                AsyncHelpers.RunSync(() => _database.IndexStore.CreateIndex(indexDefinition, string.Empty, _source));
+                AsyncHelpers.RunSync(() => _database.IndexStore.CreateIndex(indexDefinition, RaftIdGenerator.DontCareId, _source));
             }
 
             private const string _source = "Smuggler";
@@ -463,7 +464,7 @@ namespace Raven.Server.Smuggler.Documents
             public void WriteKeyValue(string key, BlittableJsonReaderObject value)
             {
                 const int batchSize = 1024;
-                _compareExchangeAddOrUpdateCommands.Add(new AddOrUpdateCompareExchangeCommand(_database.Name, key, value, 0, _context, string.Empty, fromBackup: true));
+                _compareExchangeAddOrUpdateCommands.Add(new AddOrUpdateCompareExchangeCommand(_database.Name, key, value, 0, _context, RaftIdGenerator.DontCareId, fromBackup: true));
 
                 if (_compareExchangeAddOrUpdateCommands.Count < batchSize)
                     return;
@@ -475,7 +476,7 @@ namespace Raven.Server.Smuggler.Documents
             {
                 const int batchSize = 1024;
                 var index = _database.ServerStore.LastRaftCommitIndex;
-                _compareExchangeRemoveCommands.Add(new RemoveCompareExchangeCommand(_database.Name, key, index, _context, string.Empty, fromBackup: true));
+                _compareExchangeRemoveCommands.Add(new RemoveCompareExchangeCommand(_database.Name, key, index, _context, RaftIdGenerator.DontCareId, fromBackup: true));
 
                 if (_compareExchangeRemoveCommands.Count < batchSize)
                     return;
@@ -495,13 +496,13 @@ namespace Raven.Server.Smuggler.Documents
             {
                 if (_compareExchangeAddOrUpdateCommands.Count > 0)
                 {
-                    AsyncHelpers.RunSync(async () => await _database.ServerStore.SendToLeaderAsync(new AddOrUpdateCompareExchangeBatchCommand(_compareExchangeAddOrUpdateCommands, context, string.Empty)));
+                    AsyncHelpers.RunSync(async () => await _database.ServerStore.SendToLeaderAsync(new AddOrUpdateCompareExchangeBatchCommand(_compareExchangeAddOrUpdateCommands, context, RaftIdGenerator.DontCareId)));
                     _compareExchangeAddOrUpdateCommands.Clear();
                 }
 
                 if (_compareExchangeRemoveCommands.Count > 0)
                 {
-                    AsyncHelpers.RunSync(async () => await _database.ServerStore.SendToLeaderAsync(new AddOrUpdateCompareExchangeBatchCommand(_compareExchangeRemoveCommands, context, string.Empty)));
+                    AsyncHelpers.RunSync(async () => await _database.ServerStore.SendToLeaderAsync(new AddOrUpdateCompareExchangeBatchCommand(_compareExchangeRemoveCommands, context, RaftIdGenerator.DontCareId)));
                     _compareExchangeRemoveCommands.Clear();
                 }
             }
@@ -541,7 +542,7 @@ namespace Raven.Server.Smuggler.Documents
             private void SendIdentities()
             {
                 //fire and forget, do not hold-up smuggler operations waiting for Raft command
-                AsyncHelpers.RunSync(() => _database.ServerStore.SendToLeaderAsync(new UpdateClusterIdentityCommand(_database.Name, _identities, false, Guid.NewGuid().ToString())));
+                AsyncHelpers.RunSync(() => _database.ServerStore.SendToLeaderAsync(new UpdateClusterIdentityCommand(_database.Name, _identities, false, RaftIdGenerator.NewId)));
 
                 _identities.Clear();
             }
@@ -578,7 +579,7 @@ namespace Raven.Server.Smuggler.Documents
 
                     if (_log.IsInfoEnabled)
                         _log.Info("Configuring conflict solver config from smuggler");
-                    tasks.Add(_database.ServerStore.SendToLeaderAsync(new ModifyConflictSolverCommand(_database.Name, string.Empty)
+                    tasks.Add(_database.ServerStore.SendToLeaderAsync(new ModifyConflictSolverCommand(_database.Name, RaftIdGenerator.DontCareId)
                     {
                         Solver = databaseRecord.ConflictSolverConfig
                     }));
@@ -595,13 +596,13 @@ namespace Raven.Server.Smuggler.Documents
                         {
                             if (x.Name.Equals(backupConfig.Name, StringComparison.OrdinalIgnoreCase))
                             {
-                                tasks.Add(_database.ServerStore.SendToLeaderAsync(new DeleteOngoingTaskCommand(x.TaskId, OngoingTaskType.Backup, _database.Name, string.Empty)));
+                                tasks.Add(_database.ServerStore.SendToLeaderAsync(new DeleteOngoingTaskCommand(x.TaskId, OngoingTaskType.Backup, _database.Name, RaftIdGenerator.DontCareId)));
                             }
                         });
 
                         backupConfig.TaskId = 0;
                         backupConfig.Disabled = true;
-                        tasks.Add(_database.ServerStore.SendToLeaderAsync(new UpdatePeriodicBackupCommand(backupConfig, _database.Name, string.Empty)));
+                        tasks.Add(_database.ServerStore.SendToLeaderAsync(new UpdatePeriodicBackupCommand(backupConfig, _database.Name, RaftIdGenerator.DontCareId)));
                     }
                     progress.PeriodicBackupsUpdated = true;
                 }
@@ -616,12 +617,12 @@ namespace Raven.Server.Smuggler.Documents
                         {
                             if (x.Name.Equals(pullReplication.Name, StringComparison.OrdinalIgnoreCase))
                             {
-                                tasks.Add(_database.ServerStore.SendToLeaderAsync(new DeleteOngoingTaskCommand(x.TaskId, OngoingTaskType.PullReplicationAsSink, _database.Name, string.Empty)));
+                                tasks.Add(_database.ServerStore.SendToLeaderAsync(new DeleteOngoingTaskCommand(x.TaskId, OngoingTaskType.PullReplicationAsSink, _database.Name, RaftIdGenerator.DontCareId)));
                             }
                         });
                         pullReplication.TaskId = 0;
                         pullReplication.Disabled = true;
-                        tasks.Add(_database.ServerStore.SendToLeaderAsync(new UpdatePullReplicationAsSinkCommand(_database.Name, string.Empty)
+                        tasks.Add(_database.ServerStore.SendToLeaderAsync(new UpdatePullReplicationAsSinkCommand(_database.Name, RaftIdGenerator.DontCareId)
                         {
                             PullReplicationAsSink = pullReplication
                         }));
@@ -639,12 +640,12 @@ namespace Raven.Server.Smuggler.Documents
                         {
                             if (x.Name.Equals(pullReplication.Name, StringComparison.OrdinalIgnoreCase))
                             {
-                                tasks.Add(_database.ServerStore.SendToLeaderAsync(new DeleteOngoingTaskCommand(x.TaskId, OngoingTaskType.PullReplicationAsHub, _database.Name, string.Empty)));
+                                tasks.Add(_database.ServerStore.SendToLeaderAsync(new DeleteOngoingTaskCommand(x.TaskId, OngoingTaskType.PullReplicationAsHub, _database.Name, RaftIdGenerator.DontCareId)));
                             }
                         });
                         pullReplication.TaskId = 0;
                         pullReplication.Disabled = true;
-                        tasks.Add(_database.ServerStore.SendToLeaderAsync(new UpdatePullReplicationAsHubCommand(_database.Name, string.Empty)
+                        tasks.Add(_database.ServerStore.SendToLeaderAsync(new UpdatePullReplicationAsHubCommand(_database.Name, RaftIdGenerator.DontCareId)
                             {
                                 Definition = pullReplication
                             }
@@ -658,7 +659,7 @@ namespace Raven.Server.Smuggler.Documents
                     if (_log.IsInfoEnabled)
                         _log.Info("Configuring sorters configuration from smuggler");
 
-                    tasks.Add(_database.ServerStore.SendToLeaderAsync(new PutSortersCommand(_database.Name, string.Empty)
+                    tasks.Add(_database.ServerStore.SendToLeaderAsync(new PutSortersCommand(_database.Name, RaftIdGenerator.DontCareId)
                     {
                         Sorters = databaseRecord.Sorters.Values.ToList()
                     }));
@@ -676,12 +677,12 @@ namespace Raven.Server.Smuggler.Documents
                         {
                             if (x.Name.Equals(replication.Name, StringComparison.OrdinalIgnoreCase))
                             {
-                                tasks.Add(_database.ServerStore.SendToLeaderAsync(new DeleteOngoingTaskCommand(x.TaskId, OngoingTaskType.Replication, _database.Name, string.Empty)));
+                                tasks.Add(_database.ServerStore.SendToLeaderAsync(new DeleteOngoingTaskCommand(x.TaskId, OngoingTaskType.Replication, _database.Name, RaftIdGenerator.DontCareId)));
                             }
                         });
                         replication.TaskId = 0;
                         replication.Disabled = true;
-                        tasks.Add(_database.ServerStore.SendToLeaderAsync(new UpdateExternalReplicationCommand(_database.Name, string.Empty)
+                        tasks.Add(_database.ServerStore.SendToLeaderAsync(new UpdateExternalReplicationCommand(_database.Name, RaftIdGenerator.DontCareId)
                         {
                             Watcher = replication
                         }));
@@ -699,12 +700,12 @@ namespace Raven.Server.Smuggler.Documents
                         {
                             if (x.Name.Equals(etl.Name, StringComparison.OrdinalIgnoreCase))
                             {
-                                tasks.Add(_database.ServerStore.SendToLeaderAsync(new DeleteOngoingTaskCommand(x.TaskId, OngoingTaskType.RavenEtl, _database.Name, string.Empty)));
+                                tasks.Add(_database.ServerStore.SendToLeaderAsync(new DeleteOngoingTaskCommand(x.TaskId, OngoingTaskType.RavenEtl, _database.Name, RaftIdGenerator.DontCareId)));
                             }
                         });
                         etl.TaskId = 0;
                         etl.Disabled = true;
-                        tasks.Add(_database.ServerStore.SendToLeaderAsync(new AddRavenEtlCommand(etl, _database.Name, string.Empty)));
+                        tasks.Add(_database.ServerStore.SendToLeaderAsync(new AddRavenEtlCommand(etl, _database.Name, RaftIdGenerator.DontCareId)));
                     }
                     progress.RavenEtlsUpdated = true;
                 }
@@ -719,12 +720,12 @@ namespace Raven.Server.Smuggler.Documents
                         {
                             if (x.Name.Equals(etl.Name, StringComparison.OrdinalIgnoreCase))
                             {
-                                tasks.Add(_database.ServerStore.SendToLeaderAsync(new DeleteOngoingTaskCommand(x.TaskId, OngoingTaskType.SqlEtl, _database.Name, string.Empty)));
+                                tasks.Add(_database.ServerStore.SendToLeaderAsync(new DeleteOngoingTaskCommand(x.TaskId, OngoingTaskType.SqlEtl, _database.Name, RaftIdGenerator.DontCareId)));
                             }
                         });
                         etl.TaskId = 0;
                         etl.Disabled = true;
-                        tasks.Add(_database.ServerStore.SendToLeaderAsync(new AddSqlEtlCommand(etl, _database.Name, string.Empty)));
+                        tasks.Add(_database.ServerStore.SendToLeaderAsync(new AddSqlEtlCommand(etl, _database.Name, RaftIdGenerator.DontCareId)));
                     }
                     progress.SqlEtlsUpdated = true;
                 }
@@ -743,7 +744,7 @@ namespace Raven.Server.Smuggler.Documents
                     }
                     if (_log.IsInfoEnabled)
                         _log.Info("Configuring revisions from smuggler");
-                    tasks.Add(_database.ServerStore.SendToLeaderAsync(new EditRevisionsConfigurationCommand(databaseRecord.Revisions, _database.Name, string.Empty)));
+                    tasks.Add(_database.ServerStore.SendToLeaderAsync(new EditRevisionsConfigurationCommand(databaseRecord.Revisions, _database.Name, RaftIdGenerator.DontCareId)));
                     progress.RevisionsConfigurationUpdated = true;
                 }
 
@@ -751,7 +752,7 @@ namespace Raven.Server.Smuggler.Documents
                 {
                     if (_log.IsInfoEnabled)
                         _log.Info("Configuring expiration from smuggler");
-                    tasks.Add(_database.ServerStore.SendToLeaderAsync(new EditExpirationCommand(databaseRecord.Expiration, _database.Name, string.Empty)));
+                    tasks.Add(_database.ServerStore.SendToLeaderAsync(new EditExpirationCommand(databaseRecord.Expiration, _database.Name, RaftIdGenerator.DontCareId)));
                     progress.ExpirationConfigurationUpdated = true;
                 }
 
@@ -761,7 +762,7 @@ namespace Raven.Server.Smuggler.Documents
                         _log.Info("Configuring Raven connection strings configuration from smuggler");
                     foreach (var connectionString in databaseRecord.RavenConnectionStrings)
                     {
-                        tasks.Add(_database.ServerStore.SendToLeaderAsync(new PutRavenConnectionStringCommand(connectionString.Value, _database.Name, string.Empty)));
+                        tasks.Add(_database.ServerStore.SendToLeaderAsync(new PutRavenConnectionStringCommand(connectionString.Value, _database.Name, RaftIdGenerator.DontCareId)));
                     }
                     progress.RavenConnectionStringsUpdated = true;
                 }
@@ -772,7 +773,7 @@ namespace Raven.Server.Smuggler.Documents
                         _log.Info("Configuring SQL connection strings from smuggler");
                     foreach (var connectionString in databaseRecord.SqlConnectionStrings)
                     {
-                        tasks.Add(_database.ServerStore.SendToLeaderAsync(new PutSqlConnectionStringCommand(connectionString.Value, _database.Name, string.Empty)));
+                        tasks.Add(_database.ServerStore.SendToLeaderAsync(new PutSqlConnectionStringCommand(connectionString.Value, _database.Name, RaftIdGenerator.DontCareId)));
                     }
                     progress.SqlConnectionStringsUpdated = true;
                 }
@@ -782,7 +783,7 @@ namespace Raven.Server.Smuggler.Documents
                     if (_log.IsInfoEnabled)
                         _log.Info("Configuring client configuration from smuggler");
 
-                    tasks.Add(_database.ServerStore.SendToLeaderAsync(new EditDatabaseClientConfigurationCommand(databaseRecord.Client, _database.Name, string.Empty)));
+                    tasks.Add(_database.ServerStore.SendToLeaderAsync(new EditDatabaseClientConfigurationCommand(databaseRecord.Client, _database.Name, RaftIdGenerator.DontCareId)));
                     progress.ClientConfigurationUpdated = true;
                 }
 
@@ -1514,7 +1515,7 @@ namespace Raven.Server.Smuggler.Documents
             {
                 const int batchSize = 1024;
 
-                _subscriptionCommands.Add(new PutSubscriptionCommand(_database.Name, subscriptionState.Query, string.Empty, null)
+                _subscriptionCommands.Add(new PutSubscriptionCommand(_database.Name, subscriptionState.Query, null, RaftIdGenerator.DontCareId)
                 {
                     SubscriptionName = subscriptionState.SubscriptionName,
                     //After restore/export , subscription will start from the start
@@ -1530,7 +1531,7 @@ namespace Raven.Server.Smuggler.Documents
             private void SendCommands()
             {
                 AsyncHelpers.RunSync(() =>
-                    _database.ServerStore.SendToLeaderAsync(new PutSubscriptionBatchCommand(_subscriptionCommands, string.Empty)));
+                    _database.ServerStore.SendToLeaderAsync(new PutSubscriptionBatchCommand(_subscriptionCommands, RaftIdGenerator.DontCareId)));
 
                 _subscriptionCommands.Clear();
             }

@@ -231,7 +231,7 @@ namespace Raven.Server.ServerWide.Maintenance
                             {
                                 AddToDecisionLog(database, updateReason);
 
-                                var cmd = new UpdateTopologyCommand(database, Guid.NewGuid().ToString())
+                                var cmd = new UpdateTopologyCommand(database, RaftIdGenerator.NewId)
                                 {
                                     Topology = databaseTopology,
                                     RaftCommandIndex = etag
@@ -299,7 +299,7 @@ namespace Raven.Server.ServerWide.Maintenance
 
                 if (cleanUpState != null)
                 {
-                    var cmd = new CleanUpClusterStateCommand(Guid.NewGuid().ToString())
+                    var cmd = new CleanUpClusterStateCommand(RaftIdGenerator.NewId)
                     {
                         ClusterTransactionsCleanup = cleanUpState
                     };
@@ -380,7 +380,7 @@ namespace Raven.Server.ServerWide.Maintenance
 
                 if (state == IndexState.Idle && difference >= timeToWaitBeforeDeletingAutoIndexMarkedAsIdle.AsTimeSpan)
                 {
-                    await _engine.PutAsync(new DeleteIndexCommand(kvp.Key, databaseState.Name, Guid.NewGuid().ToString()));
+                    await _engine.PutAsync(new DeleteIndexCommand(kvp.Key, databaseState.Name, RaftIdGenerator.NewId));
 
                     AddToDecisionLog(databaseState.Name, $"Deleting idle auto-index '{kvp.Key}' because last query time value is '{difference}' and threshold is set to '{timeToWaitBeforeDeletingAutoIndexMarkedAsIdle.AsTimeSpan}'.");
 
@@ -389,7 +389,7 @@ namespace Raven.Server.ServerWide.Maintenance
 
                 if (state == IndexState.Normal && difference >= timeToWaitBeforeMarkingAutoIndexAsIdle.AsTimeSpan)
                 {
-                    await _engine.PutAsync(new SetIndexStateCommand(kvp.Key, IndexState.Idle, databaseState.Name, Guid.NewGuid().ToString()));
+                    await _engine.PutAsync(new SetIndexStateCommand(kvp.Key, IndexState.Idle, databaseState.Name, RaftIdGenerator.NewId));
 
                     AddToDecisionLog(databaseState.Name, $"Marking auto-index '{kvp.Key}' as idle because last query time value is '{difference}' and threshold is set to '{timeToWaitBeforeMarkingAutoIndexAsIdle.AsTimeSpan}'.");
 
@@ -418,7 +418,7 @@ namespace Raven.Server.ServerWide.Maintenance
                 if (maxEtag == 0)
                     maxEtag = long.MaxValue;
 
-                var result = await _server.SendToLeaderAsync(new CleanCompareExchangeTombstonesCommand(dbName, maxEtag, amountToDelete, Guid.NewGuid().ToString()));
+                var result = await _server.SendToLeaderAsync(new CleanCompareExchangeTombstonesCommand(dbName, maxEtag, amountToDelete, RaftIdGenerator.NewId));
                 await _server.Cluster.WaitForIndexNotification(result.Index);
                 hasMore = (bool)result.Result;
             }
@@ -673,7 +673,7 @@ namespace Raven.Server.ServerWide.Maintenance
                     databaseTopology.Promotables.Add(node);
                     databaseTopology.DemotionReasons[node] = $"Just replaced the promotable node {promotable}";
                     databaseTopology.PromotablesStatus[node] = DatabasePromotionStatus.WaitingForFirstPromotion;
-                    var deletionCmd = new DeleteDatabaseCommand(dbName, Guid.NewGuid().ToString())
+                    var deletionCmd = new DeleteDatabaseCommand(dbName, RaftIdGenerator.NewId)
                     {
                         ErrorOnDatabaseDoesNotExists = false,
                         FromNodes = new[] { promotable },
@@ -987,7 +987,7 @@ namespace Raven.Server.ServerWide.Maintenance
             LogMessage($"We reached the replication factor on database '{dbName}', so we try to remove redundant nodes from {string.Join(", ", nodesToDelete)}.",
                 info: false);
 
-            var deletionCmd = new DeleteDatabaseCommand(dbName, Guid.NewGuid().ToString())
+            var deletionCmd = new DeleteDatabaseCommand(dbName, RaftIdGenerator.NewId)
             {
                 ErrorOnDatabaseDoesNotExists = false,
                 FromNodes = nodesToDelete.ToArray(),

@@ -368,7 +368,7 @@ namespace Raven.Server.Rachis
             if (guid == null) // shouldn't happened in new cluster version!
                 return;
 
-            if (guid == string.Empty)
+            if (guid == RaftIdGenerator.DontCareId)
                 return;
 
             var table = context.Transaction.InnerTransaction.OpenTable(LogHistoryTable, LogHistorySlice);
@@ -402,7 +402,7 @@ namespace Raven.Server.Rachis
             var guid = GetGuidFromCommand(cmd);
             if (guid == null) // shouldn't happened in new cluster version!
                 return;
-            if (guid == string.Empty)
+            if (guid == RaftIdGenerator.DontCareId)
                 return;
 
             var table = context.Transaction.InnerTransaction.OpenTable(LogHistoryTable, LogHistorySlice);
@@ -474,35 +474,35 @@ namespace Raven.Server.Rachis
             djv["Date"] = new DateTime(ticks);
 
             var guidPtr = entryHolder.Reader.Read((int)(LogHistoryColumn.Guid), out var size);
-            djv[LogHistoryColumn.Guid.ToString()] = Encoding.UTF8.GetString(guidPtr, size);
+            djv[nameof(LogHistoryColumn.Guid)] = Encoding.UTF8.GetString(guidPtr, size);
 
             var index = Bits.SwapBytes(*(long*)entryHolder.Reader.Read((int)(LogHistoryColumn.Index), out _));
-            djv[LogHistoryColumn.Index.ToString()] = index;
+            djv[nameof(LogHistoryColumn.Index)] = index;
 
-            djv[LogHistoryColumn.Term.ToString()] = *(long*)entryHolder.Reader.Read((int)(LogHistoryColumn.Term), out _);
+            djv[nameof(LogHistoryColumn.Term)] = *(long*)entryHolder.Reader.Read((int)(LogHistoryColumn.Term), out _);
 
             var typeString = entryHolder.Reader.Read((int)(LogHistoryColumn.Type), out size);
-            djv[LogHistoryColumn.Type.ToString()] = Encoding.UTF8.GetString(typeString, size);
+            djv[nameof(LogHistoryColumn.Type)] = Encoding.UTF8.GetString(typeString, size);
 
-            djv[LogHistoryColumn.State.ToString()] = (*(HistoryStatus*)entryHolder.Reader.Read((int)(LogHistoryColumn.State), out _)).ToString();
+            djv[nameof(LogHistoryColumn.State)] = (*(HistoryStatus*)entryHolder.Reader.Read((int)(LogHistoryColumn.State), out _)).ToString();
 
             var resultPtr = entryHolder.Reader.Read((int)(LogHistoryColumn.Result), out size);
             if (size > 0)
             {
                 var blittableResult = new BlittableJsonReaderObject(resultPtr, size, context);
-                djv[LogHistoryColumn.Result.ToString()] = blittableResult.ToString();
+                djv[nameof(LogHistoryColumn.Result)] = blittableResult.ToString();
                 blittableResult.Dispose();
             }
             else
             {
-                djv[LogHistoryColumn.Result.ToString()] = null;
+                djv[nameof(LogHistoryColumn.Result)] = null;
             }
 
             var exTypePtr = entryHolder.Reader.Read((int)(LogHistoryColumn.ExceptionType), out size);
-            djv[LogHistoryColumn.ExceptionType.ToString()] = size > 0 ? Encoding.UTF8.GetString(exTypePtr, size) : null;
+            djv[nameof(LogHistoryColumn.ExceptionType)] = size > 0 ? Encoding.UTF8.GetString(exTypePtr, size) : null;
 
             var exMsg = entryHolder.Reader.Read((int)(LogHistoryColumn.ExceptionMessage), out size);
-            djv[LogHistoryColumn.ExceptionMessage.ToString()] = size > 0 ? Encoding.UTF8.GetString(exMsg, size) : null;
+            djv[nameof(LogHistoryColumn.ExceptionMessage)] = size > 0 ? Encoding.UTF8.GetString(exMsg, size) : null;
 
             return djv;
         }
@@ -517,7 +517,7 @@ namespace Raven.Server.Rachis
             if (guid == null) // shouldn't happened in new cluster version!
                 return false;
 
-            if (guid == string.Empty)
+            if (guid == RaftIdGenerator.DontCareId)
                 return false;
 
             var table = context.Transaction.InnerTransaction.OpenTable(LogHistoryTable, LogHistorySlice);

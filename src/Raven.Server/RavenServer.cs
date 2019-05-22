@@ -409,10 +409,10 @@ namespace Raven.Server
 
         public void RefreshClusterCertificateTimerCallback(object state)
         {
-            RefreshClusterCertificate(state);
+            RefreshClusterCertificate(state, RaftIdGenerator.NewId);
         }
 
-        public bool RefreshClusterCertificate(object state)
+        public bool RefreshClusterCertificate(object state, string raftRequestId)
         {
             // If the setup mode is anything but SetupMode.LetsEncrypt, we'll
             // check if the certificate changed and if so we'll update it immediately
@@ -439,7 +439,7 @@ namespace Raven.Server
                 return false;
             }
 
-            var refreshCertificate = new Task(async () => { await DoActualCertificateRefresh(currentCertificate, forceRenew: forceRenew); });
+            var refreshCertificate = new Task(async () => { await DoActualCertificateRefresh(currentCertificate, raftRequestId, forceRenew: forceRenew); });
             if (Interlocked.CompareExchange(ref _currentRefreshTask, currentRefreshTask, refreshCertificate) != currentRefreshTask)
                 return false;
 
@@ -448,7 +448,7 @@ namespace Raven.Server
             return true;
         }
 
-        private async Task DoActualCertificateRefresh(CertificateHolder currentCertificate, bool forceRenew = false)
+        private async Task DoActualCertificateRefresh(CertificateHolder currentCertificate, string raftRequestId, bool forceRenew = false)
         {
             try
             {
@@ -502,7 +502,7 @@ namespace Raven.Server
                     newCertBytes = RefreshViaExecutable();
                 }
 
-                await StartCertificateReplicationAsync(newCertBytes, false);
+                await StartCertificateReplicationAsync(newCertBytes, false, raftRequestId);
             }
             catch (Exception e)
             {
@@ -645,7 +645,7 @@ namespace Raven.Server
             return (false, firstPossibleSaturday);
         }
 
-        public async Task StartCertificateReplicationAsync(byte[] certBytes, bool replaceImmediately)
+        public async Task StartCertificateReplicationAsync(byte[] certBytes, bool replaceImmediately, string raftRequestId)
         {
             // We assume that at this point, the password was already stripped out of the certificate.
 
@@ -686,7 +686,7 @@ namespace Raven.Server
                         NotAfter = Certificate.Certificate.NotAfter,
                         Name = "Old Server Certificate - can delete",
                         SecurityClearance = SecurityClearance.ClusterNode
-                    }, Guid.NewGuid().ToString()));
+                    }, $"{raftRequestId}/put-old-certificate"));
 
                 var res = await ServerStore.PutValueInClusterAsync(new PutCertificateCommand(newCertificate.Thumbprint,
                     new CertificateDefinition
@@ -697,12 +697,12 @@ namespace Raven.Server
                         NotAfter = newCertificate.NotAfter,
                         Name = "Server Certificate",
                         SecurityClearance = SecurityClearance.ClusterNode
-                    }, Guid.NewGuid().ToString()));
+                    }, $"{raftRequestId}/put-new-certificate"));
 
                 await ServerStore.Cluster.WaitForIndexNotification(res.Index);
 
                 await ServerStore.SendToLeaderAsync(new InstallUpdatedServerCertificateCommand(Convert.ToBase64String(certBytes), replaceImmediately,
-                    Guid.NewGuid().ToString()));
+                    $"{raftRequestId}/install-new-certificate"));
             }
             catch (Exception e)
             {
@@ -1080,7 +1080,7 @@ namespace Raven.Server
             {
                 try
                 {
-                    await ServerStore.SendToLeaderAsync(new PutCertificateWithSamePinningHashCommand(certificate.Thumbprint, newCertDef, Guid.NewGuid().ToString()))
+                    await ServerStore.SendToLeaderAsync(new PutCertificateWithSamePinningHashCommand(certificate.Thumbprint, newCertDef, RaftIdGenerator.NewId))
                         .ConfigureAwait(false);
                 }
                 catch (Exception e)

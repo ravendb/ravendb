@@ -1742,29 +1742,43 @@ namespace Raven.Server.ServerWide
             }
         }
 
-        private readonly (ByteString Entry, int Version)[] _snapshotEntries =
+        private enum SnapshotEntryType
         {
-            (Items.Content, ClusterCommandsVersionManager.Base40CommandsVersion),
-            (CompareExchange.Content, ClusterCommandsVersionManager.Base40CommandsVersion),
-            (Identities.Content, ClusterCommandsVersionManager.Base40CommandsVersion),
+            Command,
+            Core
+        }
 
-            (TransactionCommands.Content, ClusterCommandsVersionManager.Base41CommandsVersion),
-            (TransactionCommandsCountPerDatabase.Content, ClusterCommandsVersionManager.Base41CommandsVersion),
+        private readonly (ByteString Name, int Version, SnapshotEntryType Type)[] _snapshotEntries =
+        {
+            (Items.Content, ClusterCommandsVersionManager.Base40CommandsVersion, SnapshotEntryType.Command),
+            (CompareExchange.Content, ClusterCommandsVersionManager.Base40CommandsVersion,SnapshotEntryType.Command),
+            (Identities.Content, ClusterCommandsVersionManager.Base40CommandsVersion,SnapshotEntryType.Command),
 
-            (CompareExchangeTombstones.Content, ClusterCommandsVersionManager.Base42CommandsVersion),
-            (CertificatesSlice.Content, ClusterCommandsVersionManager.Base42CommandsVersion),
-            (RachisConsensus.LogHistorySlice.Content, 42_001)
+            (TransactionCommands.Content, ClusterCommandsVersionManager.Base41CommandsVersion,SnapshotEntryType.Command),
+            (TransactionCommandsCountPerDatabase.Content, ClusterCommandsVersionManager.Base41CommandsVersion,SnapshotEntryType.Command),
+
+            (CompareExchangeTombstones.Content, ClusterCommandsVersionManager.Base42CommandsVersion,SnapshotEntryType.Command),
+            (CertificatesSlice.Content, ClusterCommandsVersionManager.Base42CommandsVersion,SnapshotEntryType.Command),
+            (RachisConsensus.LogHistorySlice.Content, 42_000,SnapshotEntryType.Core)
         };
 
         public override bool ShouldSnapshot(Slice slice, RootObjectType type)
         {
             for (int i = 0; i < _snapshotEntries.Length; i++)
             {
-                var tuple = _snapshotEntries[i];
-                if (tuple.Entry.Match(slice.Content) == false)
+                var entry = _snapshotEntries[i];
+                if (entry.Name.Match(slice.Content) == false)
                     continue;
 
-                return ClusterCommandsVersionManager.CurrentClusterMinimalVersion >= tuple.Version;
+                switch (entry.Type)
+                {
+                    case SnapshotEntryType.Command:
+                        return ClusterCommandsVersionManager.CurrentClusterMinimalVersion >= entry.Version;
+                    case SnapshotEntryType.Core:
+                        return ClusterCommandsVersionManager.ClusterEngineVersion >= entry.Version;
+                    default:
+                        throw new ArgumentOutOfRangeException($"Unknown type '{entry.Type}'");
+                }
             }
 
             return false;

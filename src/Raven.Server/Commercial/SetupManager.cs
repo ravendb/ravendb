@@ -27,6 +27,7 @@ using Org.BouncyCastle.Security;
 using Raven.Client;
 using Raven.Client.Documents.Operations;
 using Raven.Client.Exceptions;
+using Raven.Client.Http;
 using Raven.Client.ServerWide;
 using Raven.Client.ServerWide.Operations.Certificates;
 using Raven.Client.ServerWide.Operations.Configuration;
@@ -1260,7 +1261,7 @@ namespace Raven.Server.Commercial
                 await DeleteAllExistingCertificates(serverStore);
 
                 if (setupMode == SetupMode.LetsEncrypt && license != null)
-                    await serverStore.LicenseManager.Activate(license, skipLeaseLicense: false, string.Empty);
+                    await serverStore.LicenseManager.Activate(license, skipLeaseLicense: false, RaftIdGenerator.DontCareId);
 
                 foreach (var url in otherNodesUrls)
                 {
@@ -1296,7 +1297,7 @@ namespace Raven.Server.Commercial
             {
                 if (continueSetupInfo.NodeTag.Equals(firstNodeTag))
                 {
-                    var res = await serverStore.PutValueInClusterAsync(new PutCertificateCommand(clientCert.Thumbprint, certDef, string.Empty));
+                    var res = await serverStore.PutValueInClusterAsync(new PutCertificateCommand(clientCert.Thumbprint, certDef, RaftIdGenerator.DontCareId));
                     await serverStore.Cluster.WaitForIndexNotification(res.Index);
                 }
                 else
@@ -1435,7 +1436,7 @@ namespace Raven.Server.Commercial
                             await DeleteAllExistingCertificates(serverStore);
 
                             if (setupMode == SetupMode.LetsEncrypt)
-                                await serverStore.LicenseManager.Activate(setupInfo.License, skipLeaseLicense: false, string.Empty);
+                                await serverStore.LicenseManager.Activate(setupInfo.License, skipLeaseLicense: false, RaftIdGenerator.DontCareId);
 
                             serverStore.Server.Certificate =
                                 SecretProtection.ValidateCertificateAndCreateCertificateHolder("Setup", serverCert, serverCertBytes, setupInfo.Password, serverStore);
@@ -1556,7 +1557,7 @@ namespace Raven.Server.Commercial
                             {
                                 Disabled = false,
                                 Environment = setupInfo.Environment
-                            }, string.Empty));
+                            }, RaftIdGenerator.DontCareId));
                             await serverStore.Cluster.WaitForIndexNotification(res.Index);
                         }
 
@@ -2089,7 +2090,7 @@ namespace Raven.Server.Commercial
                 NotAfter = selfSignedCertificate.NotAfter
             };
 
-            var res = await serverStore.PutValueInClusterAsync(new PutCertificateCommand(selfSignedCertificate.Thumbprint, newCertDef, string.Empty));
+            var res = await serverStore.PutValueInClusterAsync(new PutCertificateCommand(selfSignedCertificate.Thumbprint, newCertDef, RaftIdGenerator.DontCareId));
             await serverStore.Cluster.WaitForIndexNotification(res.Index);
 
             return certBytes;

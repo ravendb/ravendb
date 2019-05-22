@@ -256,9 +256,9 @@ namespace Raven.Server.Web
 
             if (RequestRouter.TryGetClientVersion(HttpContext, out var clientVersion))
             {
-                if (clientVersion.Build <= 42_008) // TODO: what should be the behaviour with the nightly version 
+                if (clientVersion.Build <= 42_009) // TODO: what should be the behaviour with the nightly version 
                 {
-                    guid = guid ?? string.Empty;
+                    guid = guid ?? RaftIdGenerator.DontCareId;
                 }
             }
 
@@ -267,7 +267,7 @@ namespace Raven.Server.Web
 #endif
 
 #pragma warning disable 0162
-            return guid ?? Guid.NewGuid().ToString();
+            return guid ?? RaftIdGenerator.NewId;
 #pragma warning restore 0162
         }
 

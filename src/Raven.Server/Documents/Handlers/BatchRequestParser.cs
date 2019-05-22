@@ -12,6 +12,7 @@ using Raven.Client.Documents.Commands.Batches;
 using Raven.Client.Documents.Session;
 using Raven.Client.Documents.Operations.Counters;
 using Raven.Client.Extensions;
+using Raven.Client.Http;
 using Raven.Server.Documents.Patch;
 using Raven.Server.ServerWide;
 using Sparrow;
@@ -240,7 +241,7 @@ namespace Raven.Server.Documents.Handlers
         private static async Task GetIdentitiesValues(JsonOperationContext ctx, DocumentDatabase database, ServerStore serverStore,
             List<string> identities, List<int> positionInListToCommandIndex, CommandData[] cmds)
         {
-            var newIds = await serverStore.GenerateClusterIdentitiesBatchAsync(database.Name, identities, Guid.NewGuid().ToString());
+            var newIds = await serverStore.GenerateClusterIdentitiesBatchAsync(database.Name, identities, RaftIdGenerator.NewId);
             Debug.Assert(newIds.Count == identities.Count);
 
             var emptyChangeVector = ctx.GetLazyString("");

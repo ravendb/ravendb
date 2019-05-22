@@ -12,6 +12,7 @@ using System.Threading.Tasks;
 using Jint;
 using Raven.Client;
 using Raven.Client.Documents;
+using Raven.Client.Http;
 using Raven.Client.ServerWide;
 using Raven.Client.ServerWide.Operations;
 using Raven.Client.ServerWide.Operations.Certificates;
@@ -671,7 +672,7 @@ namespace Raven.Server.Utils.Cli
                     }
                     else
                     {
-                        var putResult = cli._server.ServerStore.PutValueInClusterAsync(new PutCertificateCommand(certDef.Thumbprint, certDef, Guid.NewGuid().ToString())).Result;
+                        var putResult = cli._server.ServerStore.PutValueInClusterAsync(new PutCertificateCommand(certDef.Thumbprint, certDef, RaftIdGenerator.NewId)).Result;
                         cli._server.ServerStore.Cluster.WaitForIndexNotification(putResult.Index).Wait();
                     }
                 }
@@ -747,7 +748,7 @@ namespace Raven.Server.Utils.Cli
 
                 try
                 {
-                    AdminCertificatesHandler.PutCertificateCollectionInCluster(certDef, certBytes, password, cli._server.ServerStore, ctx, Guid.NewGuid().ToString()).Wait();
+                    AdminCertificatesHandler.PutCertificateCollectionInCluster(certDef, certBytes, password, cli._server.ServerStore, ctx, RaftIdGenerator.NewId).Wait();
                 }
                 catch (Exception e)
                 {
@@ -785,7 +786,7 @@ namespace Raven.Server.Utils.Cli
             byte[] outputBytes;
             try
             {
-                outputBytes = AdminCertificatesHandler.GenerateCertificateInternal(certDef, cli._server.ServerStore, Guid.NewGuid().ToString()).Result;
+                outputBytes = AdminCertificatesHandler.GenerateCertificateInternal(certDef, cli._server.ServerStore, RaftIdGenerator.NewId).Result;
             }
             catch (Exception e)
             {
@@ -891,7 +892,7 @@ namespace Raven.Server.Utils.Cli
             {
                 var timeoutTask = TimeoutManager.WaitFor(TimeSpan.FromSeconds(60), cli._server.ServerStore.ServerShutdown);
 
-                var replicationTask = cli._server.ServerStore.Server.StartCertificateReplicationAsync(certBytes, replaceImmediately);
+                var replicationTask = cli._server.ServerStore.Server.StartCertificateReplicationAsync(certBytes, replaceImmediately, RaftIdGenerator.NewId);
 
                 Task.WhenAny(replicationTask, timeoutTask).Wait();
                 if (replicationTask.IsCompleted == false)
@@ -922,7 +923,7 @@ namespace Raven.Server.Utils.Cli
 
             try
             {
-                cli._server.RefreshClusterCertificate(replaceImmediately);
+                cli._server.RefreshClusterCertificate(replaceImmediately, RaftIdGenerator.NewId);
             }
             catch (Exception e)
             {

@@ -95,7 +95,7 @@ namespace Raven.Client.ServerWide.Operations
             }
 
             public override bool IsReadRequest => false;
-            public string RaftUniqueRequestId { get; } = Guid.NewGuid().ToString();
+            public string RaftUniqueRequestId { get; } = RaftIdGenerator.NewId;
         }
 
         public class Parameters

@@ -29,6 +29,6 @@ namespace Raven.Client.ServerWide.Commands.Cluster
             return request;
         }
 
-        public string RaftUniqueRequestId { get; } = Guid.NewGuid().ToString();
+        public string RaftUniqueRequestId { get; } = RaftIdGenerator.NewId;
     }
 }

@@ -22,6 +22,8 @@ namespace Raven.Server.ServerWide
 
         public const int Base42CommandsVersion = 42_000;
 
+        public const int ClusterEngineVersion = 42_000;
+
         public static readonly int MyCommandsVersion;
 
         public static int CurrentClusterMinimalVersion => _currentClusterMinimalVersion;

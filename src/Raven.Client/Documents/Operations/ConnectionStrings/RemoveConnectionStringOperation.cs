@@ -52,7 +52,7 @@ namespace Raven.Client.Documents.Operations.ConnectionStrings
                 Result = JsonDeserializationClient.RemoveConnectionStringResult(response);
             }
 
-            public string RaftUniqueRequestId { get; } = Guid.NewGuid().ToString();
+            public string RaftUniqueRequestId { get; } = RaftIdGenerator.NewId;
         }
     }
 

@@ -1,4 +1,5 @@
 ﻿using System;
+using Raven.Client.Http;
 using Raven.Server.ServerWide.Context;
 using Sparrow.Json;
 using Sparrow.Json.Parsing;
@@ -44,7 +45,7 @@ namespace Raven.Server.ServerWide.Commands
             // for deserialization
         }
 
-        public ConfirmReceiptServerCertificateCommand(string thumbprint) : base(string.Empty)
+        public ConfirmReceiptServerCertificateCommand(string thumbprint) : base(RaftIdGenerator.DontCareId)
         {
             Thumbprint = thumbprint;
         }
@@ -70,7 +71,7 @@ namespace Raven.Server.ServerWide.Commands
             AssertClusterAdmin(isClusterAdmin);
         }
 
-        public RecheckStatusOfServerCertificateCommand() : base(string.Empty)
+        public RecheckStatusOfServerCertificateCommand() : base(RaftIdGenerator.DontCareId)
         {
         }
     }
@@ -85,7 +86,7 @@ namespace Raven.Server.ServerWide.Commands
             // for deserialization
         }
 
-        public ConfirmServerCertificateReplacedCommand(string thumbprint, string oldThumbprint) : base(string.Empty)
+        public ConfirmServerCertificateReplacedCommand(string thumbprint, string oldThumbprint) : base(RaftIdGenerator.DontCareId)
         {
             Thumbprint = thumbprint;
             OldThumbprint = oldThumbprint;

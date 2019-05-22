@@ -63,7 +63,7 @@ namespace Raven.Client.Documents.Operations.Replication
             }
 
             public override bool IsReadRequest => false;
-            public string RaftUniqueRequestId { get; } = Guid.NewGuid().ToString();
+            public string RaftUniqueRequestId { get; } = RaftIdGenerator.NewId;
         }
     }
 }

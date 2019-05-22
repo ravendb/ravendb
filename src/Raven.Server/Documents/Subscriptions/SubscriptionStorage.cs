@@ -11,6 +11,7 @@ using Sparrow.Logging;
 using Raven.Server.ServerWide.Commands.Subscriptions;
 using System.Threading.Tasks;
 using Raven.Client.Exceptions.Documents.Subscriptions;
+using Raven.Client.Http;
 using Raven.Client.Json.Converters;
 using Raven.Client.ServerWide;
 using Raven.Server.Rachis;
@@ -81,7 +82,7 @@ namespace Raven.Server.Documents.Subscriptions
 
         public async Task AcknowledgeBatchProcessed(long id, string name, string changeVector, string previousChangeVector)
         {
-            var command = new AcknowledgeSubscriptionBatchCommand(_db.Name, Guid.NewGuid().ToString())
+            var command = new AcknowledgeSubscriptionBatchCommand(_db.Name, RaftIdGenerator.NewId)
             {
                 ChangeVector = changeVector,
                 NodeTag = _serverStore.NodeTag,
@@ -99,7 +100,7 @@ namespace Raven.Server.Documents.Subscriptions
 
         public async Task UpdateClientConnectionTime(long id, string name, string mentorNode = null)
         {
-            var command = new UpdateSubscriptionClientConnectionTime(_db.Name, Guid.NewGuid().ToString())
+            var command = new UpdateSubscriptionClientConnectionTime(_db.Name, RaftIdGenerator.NewId)
             {
                 NodeTag = _serverStore.NodeTag,
                 HasHighlyAvailableTasks = _serverStore.LicenseManager.HasHighlyAvailableTasks(),
