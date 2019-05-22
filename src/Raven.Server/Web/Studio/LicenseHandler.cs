@@ -103,7 +103,7 @@ namespace Raven.Server.Web.Studio
             using (var context = JsonOperationContext.ShortTermSingleUse())
             using (var writer = new BlittableJsonTextWriter(context, ResponseBodyStream()))
             {
-                var renewLicense = await ServerStore.LicenseManager.RenewalLicense();
+                var renewLicense = await ServerStore.LicenseManager.RenewLicense();
                 context.Write(writer, renewLicense.ToJson());
             }
         }

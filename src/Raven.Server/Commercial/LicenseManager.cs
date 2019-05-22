@@ -703,18 +703,21 @@ namespace Raven.Server.Commercial
             }
         }
 
-        public async Task<LicenseRenewalResult> RenewalLicense()
+        public async Task<LicenseRenewalResult> RenewLicense()
         {
             var license = _serverStore.LoadLicense();
 
             if (license == null)
                 throw new InvalidOperationException("License not found");
 
-            var response = await ApiHttpClient.Instance.PostAsync("/api/v2/license/RenewFreeLicense",
+            var response = await ApiHttpClient.Instance.PostAsync("/api/v2/license/renew",
                     new StringContent(JsonConvert.SerializeObject(license), Encoding.UTF8, "application/json"))
                 .ConfigureAwait(false);
 
             var responseString = await response.Content.ReadAsStringAsync().ConfigureAwait(false);
+            if (response.IsSuccessStatusCode == false)
+                throw new InvalidOperationException($"Failed to renew license, error: {responseString}");
+            
             return JsonConvert.DeserializeObject<LicenseRenewalResult>(responseString);
         }
 
