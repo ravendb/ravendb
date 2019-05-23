@@ -10,6 +10,7 @@ using Raven.Client.Json;
 using Raven.Client.Json.Converters;
 using Raven.Client.ServerWide.Operations;
 using Raven.Client.ServerWide.Operations.Configuration;
+using Raven.Client.Util;
 using Sparrow.Json;
 using Xunit;
 
