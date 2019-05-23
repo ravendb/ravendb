@@ -16,6 +16,7 @@ using Raven.Client.Http;
 using Raven.Client.ServerWide;
 using Raven.Client.ServerWide.Operations;
 using Raven.Client.ServerWide.Operations.Certificates;
+using Raven.Client.Util;
 using Raven.Server.Config.Categories;
 using Raven.Server.Documents;
 using Raven.Server.Documents.Patch;

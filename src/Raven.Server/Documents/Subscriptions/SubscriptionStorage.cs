@@ -14,6 +14,7 @@ using Raven.Client.Exceptions.Documents.Subscriptions;
 using Raven.Client.Http;
 using Raven.Client.Json.Converters;
 using Raven.Client.ServerWide;
+using Raven.Client.Util;
 using Raven.Server.Rachis;
 using Raven.Server.Utils;
 

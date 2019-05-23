@@ -5,6 +5,7 @@ using Raven.Client.Documents.Operations.OngoingTasks;
 using Raven.Client.Http;
 using Raven.Client.Json;
 using Raven.Client.Json.Converters;
+using Raven.Client.Util;
 using Sparrow.Json;
 using Sparrow.Json.Parsing;
 

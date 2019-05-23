@@ -6,6 +6,7 @@ using System.Threading.Tasks;
 using Lextm.SharpSnmpLib.Pipeline;
 using Raven.Client.Documents.Changes;
 using Raven.Client.Http;
+using Raven.Client.Util;
 using Raven.Server.Documents;
 using Raven.Server.Monitoring.Snmp.Objects.Database;
 using Raven.Server.ServerWide;

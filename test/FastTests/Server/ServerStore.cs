@@ -4,6 +4,7 @@ using Raven.Client.Documents.Conventions;
 using Raven.Client.Exceptions;
 using Raven.Client.Http;
 using Raven.Client.Json;
+using Raven.Client.Util;
 using Raven.Server.ServerWide.Context;
 using Sparrow.Json;
 using Xunit;

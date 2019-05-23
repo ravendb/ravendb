@@ -13,6 +13,7 @@ using Raven.Client.Documents.Session;
 using Raven.Client.Documents.Operations.Counters;
 using Raven.Client.Extensions;
 using Raven.Client.Http;
+using Raven.Client.Util;
 using Raven.Server.Documents.Patch;
 using Raven.Server.ServerWide;
 using Sparrow;

@@ -1,5 +1,6 @@
 ﻿using System;
 using Raven.Client.Http;
+using Raven.Client.Util;
 using Raven.Server.ServerWide.Context;
 using Sparrow.Json;
 using Sparrow.Json.Parsing;
