@@ -208,6 +208,15 @@ namespace Raven.Server.Rachis
             }
         }
 
+        private class HistoryLogEntry
+        {
+            public string Guid;
+            public long Index;
+            public long Term;
+            public string Type;
+            public HistoryStatus Status;
+        }
+
         public unsafe void CancelHistoryEntriesFrom(TransactionOperationContext context, long from, long term, string msg)
         {
             var reversedIndex = Bits.SwapBytes(from);
@@ -216,6 +225,7 @@ namespace Raven.Server.Rachis
             using (Slice.External(context.Transaction.InnerTransaction.Allocator, (byte*)&reversedIndex, sizeof(long), out Slice key))
             {
                 var results = table.SeekForwardFrom(LogHistoryTable.Indexes[LogHistoryIndexSlice], key, 0);
+                var toCancel = new List<HistoryLogEntry>();
                 foreach (var seekResult in results)
                 {
                     var entryHolder = seekResult.Result;
@@ -224,12 +234,24 @@ namespace Raven.Server.Rachis
                     if (entryTerm == term)
                         continue;
 
-                    var guid = ReadGuid(entryHolder);
-                    var type = ReadType(entryHolder);
-                    var index = ReadIndex(entryHolder);
-                    var status = ReadState(entryHolder);
+                    var entry = new HistoryLogEntry
+                    {
+                        Guid = ReadGuid(entryHolder),
+                        Type = ReadType(entryHolder),
+                        Index = ReadIndex(entryHolder),
+                        Status = ReadState(entryHolder),
+                        Term = entryTerm
+                    };
 
-                    UpdateInternal(context, guid, type, index, term, status, null, new OperationCanceledException(msg));
+                    if (entry.Status != HistoryStatus.Appended)
+                        throw new InvalidOperationException($"Can't cancel the entry with index {entry.Index} and term {entry.Term}, it is already committed.");
+
+                    toCancel.Add(entry);
+                }
+
+                foreach (var entry in toCancel)
+                {
+                    UpdateInternal(context, entry.Guid, entry.Type, entry.Index, entry.Term, entry.Status, null, new OperationCanceledException(msg));
                 }
             }
         }

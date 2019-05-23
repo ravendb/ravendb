@@ -49,7 +49,7 @@ namespace Raven.Server.ServerWide.Commands
             FromBackup = fromBackup;
         }
 
-        public abstract (long Index, object Value) Execute(TransactionOperationContext context, Table items, long index);
+        public abstract CompareExchangeResult Execute(TransactionOperationContext context, Table items, long index);
 
         public static unsafe void GetKeyAndPrefixIndexSlices(
             ByteStringContext allocator, string db, string key, long index,
@@ -148,23 +148,31 @@ namespace Raven.Server.ServerWide.Commands
 
         public static object ConvertResult(JsonOperationContext ctx, object result)
         {
-            if (result is ValueTuple<long, object> tuple)
+            if (result is CompareExchangeResult tuple)
             {
-                if (tuple.Item2 is BlittableJsonReaderObject value)
+                if (tuple.Value is BlittableJsonReaderObject value)
                 {
                     return new CompareExchangeResult
                     {
-                        Index = tuple.Item1,
+                        Index = tuple.Index,
                         Value = ctx.ReadObject(value, "cmpXchg result clone")
                     };
                 }
 
-                return new CompareExchangeResult
-                {
-                    Index = tuple.Item1,
-                    Value = tuple.Item2
-                };
+                return tuple;
             }
+
+            if (result is BlittableJsonReaderObject blittable)
+            {
+                var converted = JsonDeserializationCluster.CompareExchangeResult(blittable);
+                if (converted.Value is BlittableJsonReaderObject val)
+                {
+                    converted.Value = ctx.ReadObject(val, "cmpXchg result clone");
+                }
+
+                return converted;
+            }
+
             throw new RachisApplyException("Unable to convert result type: " + result?.GetType()?.FullName + ", " + result);
         }
     }
@@ -178,7 +186,7 @@ namespace Raven.Server.ServerWide.Commands
         {
         }
 
-        public override unsafe (long Index, object Value) Execute(TransactionOperationContext context, Table items, long index)
+        public override unsafe CompareExchangeResult Execute(TransactionOperationContext context, Table items, long index)
         {
             using (Slice.From(context.Allocator, ActualKey, out Slice keySlice))
             {
@@ -187,7 +195,11 @@ namespace Raven.Server.ServerWide.Commands
                     if (FromBackup)
                     {
                         items.Delete(reader.Id);
-                        return (index, null);
+                        return new CompareExchangeResult
+                        {
+                            Index = index,
+                            Value = null
+                        };
                     }
                     var itemIndex = *(long*)reader.Read((int)ClusterStateMachine.CompareExchangeTable.Index, out var _);
                     var storeValue = reader.Read((int)ClusterStateMachine.CompareExchangeTable.Value, out var size);
@@ -198,12 +210,24 @@ namespace Raven.Server.ServerWide.Commands
                         result = result.Clone(context);
                         items.Delete(reader.Id);
                         WriteCompareExchangeTombstone(context, index);
-                        return (index, result);
+                        return new CompareExchangeResult
+                        {
+                            Index = index,
+                            Value = result
+                        };
                     }
-                    return (itemIndex, result);
+                    return new CompareExchangeResult
+                    {
+                        Index = itemIndex,
+                        Value = result
+                    };
                 }
             }
-            return (index, null);
+            return new CompareExchangeResult
+            {
+                Index = index,
+                Value = null
+            };
         }
 
         private unsafe void WriteCompareExchangeTombstone(TransactionOperationContext context, long index)
@@ -243,7 +267,7 @@ namespace Raven.Server.ServerWide.Commands
             Value = value;
         }
 
-        public override unsafe (long Index, object Value) Execute(TransactionOperationContext context, Table items, long index)
+        public override unsafe CompareExchangeResult Execute(TransactionOperationContext context, Table items, long index)
         {
             // We have to clone the Value because we might have gotten this command from another node
             // and it was serialized. In that case, it is an _internal_ object, not a full document,
@@ -272,7 +296,11 @@ namespace Raven.Server.ServerWide.Commands
                     else
                     {
                         // concurrency violation, so we return the current value
-                        return (itemIndex, new BlittableJsonReaderObject(reader.Read((int)ClusterStateMachine.CompareExchangeTable.Value, out var size), size, context));
+                        return new CompareExchangeResult
+                        {
+                            Index = itemIndex,
+                            Value = new BlittableJsonReaderObject(reader.Read((int)ClusterStateMachine.CompareExchangeTable.Value, out var size), size, context)
+                        };
                     }
                 }
                 else
@@ -280,7 +308,11 @@ namespace Raven.Server.ServerWide.Commands
                     items.Set(tvb);
                 }
             }
-            return (index, Value);
+            return new CompareExchangeResult
+            {
+                Index = index,
+                Value = Value
+            };
         }
 
         public override DynamicJsonValue ToJson(JsonOperationContext context)

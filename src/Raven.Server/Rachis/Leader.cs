@@ -721,7 +721,11 @@ namespace Raven.Server.Rachis
                                 }
                                 else
                                 {
-                                    result = GetConvertResult(cmd.Command)?.Apply(result) ?? cmd.Command.FromRemote(result);
+                                    if (result != null)
+                                    {
+                                        result = GetConvertResult(cmd.Command)?.Apply(result) ?? cmd.Command.FromRemote(result);
+                                    }
+
                                     cmd.Tcs.TrySetResult(Task.FromResult<(long, object)>((index, result)));
                                 }
                                 list.Remove(cmd.Tcs);
