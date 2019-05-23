@@ -19,6 +19,11 @@ namespace SlowTests.Server.Documents.PeriodicBackup
 {
     public class ServerWideBackup : RavenTestBase
     {
+        public ServerWideBackup()
+        {
+            DoNotReuseServer();
+        }
+
         [Fact]
         public async Task CanStoreServerWideBackup()
         {
