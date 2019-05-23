@@ -1,4 +1,6 @@
-﻿using System.IO;
+﻿using System;
+using System.Diagnostics;
+using System.IO;
 using System.Net.Http;
 using System.Text;
 using FastTests;
@@ -41,6 +43,21 @@ namespace SlowTests.Issues
                 }));
 
                 Assert.DoesNotContain(shouldNotContain, result);
+            }
+        }
+
+        [Fact]
+        public void SubscriptionWithNoResultsShouldNotLoopWhenTesting()
+        {
+            using (var store = GetDocumentStore())
+            {
+                var sw = Stopwatch.StartNew();
+                store.Operations.Send(new SubscriptionTryoutOperation(new SubscriptionTryout
+                {
+                    Query = "from PersonWithAddresses where Name != 'John' AND Age > 20"
+                }));
+
+                Assert.True(sw.Elapsed < TimeSpan.FromSeconds(10)); // default timeout is set to 15
             }
         }
 

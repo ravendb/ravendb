@@ -98,9 +98,6 @@ namespace Raven.Server.Documents.Handlers
                         using (context.OpenReadTransaction())
                         {
                             var first = true;
-
-                            sp.Start();
-
                             var lastEtag = startEtag;
                             foreach (var itemDetails in fetcher.GetDataToSend(context, includeCmd, startEtag))
                             {
@@ -137,13 +134,14 @@ namespace Raven.Server.Documents.Handlers
                                 }
 
                                 if (sp.Elapsed >= timeLimit)
-                                {                                    
                                     break;
-                                }
 
                                 lastEtag = itemDetails.Doc.Etag;
                             }
-                            
+
+                            if (startEtag == lastEtag)
+                                break;
+
                             startEtag = lastEtag;
                         }
                     }
