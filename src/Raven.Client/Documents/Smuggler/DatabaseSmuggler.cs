@@ -1,4 +1,5 @@
 using System;
+using System.Globalization;
 using System.IO;
 using System.Linq;
 using System.Net;
@@ -11,6 +12,7 @@ using Raven.Client.Documents.Operations;
 using Raven.Client.Documents.Session;
 using Raven.Client.Http;
 using Raven.Client.Json;
+using Raven.Client.Util;
 using Sparrow.Json;
 using Sparrow.Logging;
 
@@ -49,8 +51,15 @@ namespace Raven.Client.Documents.Smuggler
         {
             return ExportAsync(options, async stream =>
             {
-                using (var file = File.OpenWrite(toFile))
-                    await stream.CopyToAsync(file, 8192, token).ConfigureAwait(false);
+                var directoryName = Path.GetDirectoryName(toFile);
+                if (Directory.Exists(directoryName) == false)
+                    Directory.CreateDirectory(directoryName);
+
+                if (Directory.Exists(toFile))
+                    toFile = Path.Combine(directoryName, $"Dump of {_databaseName} {SystemTime.UtcNow.ToString("yyyy-MM-dd HH-mm-ss", CultureInfo.InvariantCulture)}");
+
+                using (var fileStream = File.OpenWrite(toFile))
+                    await stream.CopyToAsync(fileStream, 8192, token).ConfigureAwait(false);
             }, token);
         }
 
