@@ -82,7 +82,7 @@ namespace Raven.Client.Documents.Operations.Indexes
             }
 
             public override bool IsReadRequest => false;
-            public string RaftUniqueRequestId { get; } = RaftIdGenerator.NewId;
+            public string RaftUniqueRequestId { get; } = RaftIdGenerator.NewId();
         }
     }
 }

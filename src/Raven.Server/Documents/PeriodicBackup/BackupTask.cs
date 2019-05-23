@@ -949,7 +949,7 @@ namespace Raven.Server.Documents.PeriodicBackup
 
             try
             {
-                var command = new UpdatePeriodicBackupStatusCommand(_database.Name, RaftIdGenerator.NewId)
+                var command = new UpdatePeriodicBackupStatusCommand(_database.Name, RaftIdGenerator.NewId())
                 {
                     PeriodicBackupStatus = status
                 };

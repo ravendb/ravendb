@@ -151,7 +151,7 @@ namespace Raven.Server.Monitoring.Snmp
                             var result = await database.ServerStore.SendToLeaderAsync(new UpdateSnmpDatabaseIndexesMappingCommand(_databaseName, new List<string>
                             {
                                 change.Name
-                            }, RaftIdGenerator.NewId));
+                            }, RaftIdGenerator.NewId()));
 
                             await database.ServerStore.Cluster.WaitForIndexNotification(result.Index);
 
@@ -194,7 +194,7 @@ namespace Raven.Server.Monitoring.Snmp
                 {
                     context.CloseTransaction();
 
-                    var result = await database.ServerStore.SendToLeaderAsync(new UpdateSnmpDatabaseIndexesMappingCommand(database.Name, missingIndexes, RaftIdGenerator.NewId));
+                    var result = await database.ServerStore.SendToLeaderAsync(new UpdateSnmpDatabaseIndexesMappingCommand(database.Name, missingIndexes, RaftIdGenerator.NewId()));
                     await database.ServerStore.Cluster.WaitForIndexNotification(result.Index);
 
                     context.OpenReadTransaction();

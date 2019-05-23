@@ -343,7 +343,7 @@ namespace Raven.Server.Documents
 
         private void NotifyLeaderAboutRemoval(string dbName)
         {
-            var cmd = new RemoveNodeFromDatabaseCommand(dbName, RaftIdGenerator.NewId)
+            var cmd = new RemoveNodeFromDatabaseCommand(dbName, RaftIdGenerator.NewId())
             {
                 NodeTag = _serverStore.NodeTag
             };

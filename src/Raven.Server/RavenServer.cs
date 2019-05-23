@@ -409,7 +409,7 @@ namespace Raven.Server
 
         public void RefreshClusterCertificateTimerCallback(object state)
         {
-            RefreshClusterCertificate(state, RaftIdGenerator.NewId);
+            RefreshClusterCertificate(state, RaftIdGenerator.NewId());
         }
 
         public bool RefreshClusterCertificate(object state, string raftRequestId)
@@ -1080,7 +1080,7 @@ namespace Raven.Server
             {
                 try
                 {
-                    await ServerStore.SendToLeaderAsync(new PutCertificateWithSamePinningHashCommand(certificate.Thumbprint, newCertDef, RaftIdGenerator.NewId))
+                    await ServerStore.SendToLeaderAsync(new PutCertificateWithSamePinningHashCommand(certificate.Thumbprint, newCertDef, RaftIdGenerator.NewId()))
                         .ConfigureAwait(false);
                 }
                 catch (Exception e)

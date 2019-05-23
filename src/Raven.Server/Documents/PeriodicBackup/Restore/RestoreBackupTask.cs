@@ -181,7 +181,7 @@ namespace Raven.Server.Documents.PeriodicBackup.Restore
                         // we are currently restoring, shouldn't try to access it
                         databaseRecord.DatabaseState = DatabaseStateStatus.RestoreInProgress;
 
-                        var (index, _) = await _serverStore.WriteDatabaseRecordAsync(databaseName, databaseRecord, null, RaftIdGenerator.NewId, restoreSettings.DatabaseValues, isRestore: true);
+                        var (index, _) = await _serverStore.WriteDatabaseRecordAsync(databaseName, databaseRecord, null, RaftIdGenerator.NewId(), restoreSettings.DatabaseValues, isRestore: true);
                         await _serverStore.Cluster.WaitForIndexNotification(index);
 
                         DisableOngoingTasksIfNeeded(databaseRecord);

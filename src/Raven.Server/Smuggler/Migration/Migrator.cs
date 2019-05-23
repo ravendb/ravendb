@@ -349,7 +349,7 @@ namespace Raven.Server.Smuggler.Migration
                     }
                 };
 
-                var (index, _) = await _serverStore.WriteDatabaseRecordAsync(databaseName, databaseRecord, null, RaftIdGenerator.NewId);
+                var (index, _) = await _serverStore.WriteDatabaseRecordAsync(databaseName, databaseRecord, null, RaftIdGenerator.NewId());
                 await _serverStore.Cluster.WaitForIndexNotification(index);
             }
         }

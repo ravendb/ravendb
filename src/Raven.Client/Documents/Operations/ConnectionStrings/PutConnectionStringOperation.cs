@@ -61,7 +61,7 @@ namespace Raven.Client.Documents.Operations.ConnectionStrings
                 Result = JsonDeserializationClient.PutConnectionStringResult(response);
             }
 
-            public string RaftUniqueRequestId { get; } = RaftIdGenerator.NewId;
+            public string RaftUniqueRequestId { get; } = RaftIdGenerator.NewId();
         }
     }
 

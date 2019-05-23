@@ -267,7 +267,7 @@ namespace Raven.Server.Web
 #endif
 
 #pragma warning disable 0162
-            return guid ?? RaftIdGenerator.NewId;
+            return guid ?? RaftIdGenerator.NewId();
 #pragma warning restore 0162
         }
 
