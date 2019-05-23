@@ -18,6 +18,7 @@ using Raven.Server.Documents.PeriodicBackup.Aws;
 using Raven.Server.Documents.PeriodicBackup.Azure;
 using Raven.Server.Documents.PeriodicBackup.GoogleCloud;
 using Raven.Server.Documents.PeriodicBackup.Restore;
+using Raven.Server.Json;
 using Raven.Server.NotificationCenter.Notifications;
 using Raven.Server.NotificationCenter.Notifications.Details;
 using Raven.Server.Rachis;
@@ -30,6 +31,7 @@ using Raven.Server.Smuggler.Documents.Data;
 using Raven.Server.Utils;
 using Raven.Server.Utils.Metrics;
 using Sparrow;
+using Sparrow.Json;
 using Sparrow.Logging;
 using DatabaseSmuggler = Raven.Server.Smuggler.Documents.DatabaseSmuggler;
 
@@ -154,6 +156,9 @@ namespace Raven.Server.Documents.PeriodicBackup
                     }
                 }
 
+                // update the local configuration before starting the local backup
+                _configuration.LocalSettings = await GetBackupConfigurationFromScript(_configuration.LocalSettings, x => JsonDeserializationServer.LocalSettings(x));
+
                 GenerateFolderNameAndBackupDirectory(now, out var folderName, out var backupDirectory);
                 var startDocumentEtag = _isFullBackup == false ? _previousBackupStatus.LastEtag : null;
                 var startRaftIndex = _isFullBackup == false ? _previousBackupStatus.LastRaftIndex.LastEtag : null;
@@ -168,6 +173,7 @@ namespace Raven.Server.Documents.PeriodicBackup
 
                 try
                 {
+                    await UpdateRemoteConfigurationFromScript();
                     await UploadToServer(backupFilePath, folderName, fileName, onProgress);
                 }
                 finally
@@ -261,6 +267,99 @@ namespace Raven.Server.Documents.PeriodicBackup
 
                     // save the backup status
                     await WriteStatus(runningBackupStatus, onProgress);
+                }
+            }
+        }
+
+        private async Task UpdateRemoteConfigurationFromScript()
+        {
+            _configuration.S3Settings = await GetBackupConfigurationFromScript(_configuration.S3Settings, x => JsonDeserializationServer.S3Settings(x));
+            _configuration.AzureSettings = await GetBackupConfigurationFromScript(_configuration.AzureSettings, x => JsonDeserializationServer.AzureSettings(x));
+            _configuration.GlacierSettings = await GetBackupConfigurationFromScript(_configuration.GlacierSettings, x => JsonDeserializationServer.GlacierSettings(x));
+            _configuration.FtpSettings = await GetBackupConfigurationFromScript(_configuration.FtpSettings, x => JsonDeserializationServer.FtpSettings(x));
+        }
+
+        private async Task<T> GetBackupConfigurationFromScript<T>(T originalBackupSettings, Func<BlittableJsonReaderObject, T> resultConvertFunc)
+                where T : BackupSettings
+        {
+            if (originalBackupSettings == null)
+                return null;
+
+            if (originalBackupSettings.GetBackupConfigurationScript == null || originalBackupSettings.Disabled)
+                return originalBackupSettings;
+
+            if (string.IsNullOrEmpty(originalBackupSettings.GetBackupConfigurationScript.Command))
+                return originalBackupSettings;
+
+            var command = originalBackupSettings.GetBackupConfigurationScript.Command;
+            var arguments = originalBackupSettings.GetBackupConfigurationScript.Arguments;
+
+            var startInfo = new ProcessStartInfo
+            {
+                FileName = command,
+                Arguments = arguments,
+                UseShellExecute = false,
+                RedirectStandardOutput = true,
+                RedirectStandardError = true,
+                CreateNoWindow = true
+            };
+
+            Process process;
+
+            try
+            {
+                process = Process.Start(startInfo);
+            }
+            catch (Exception e)
+            {
+                throw new InvalidOperationException($"Unable to get backup configuration by executing {command} {arguments}. Failed to start process.", e);
+            }
+
+            using (var ms = new MemoryStream())
+            {
+                var readErrors = process.StandardError.ReadToEndAsync();
+                var readStdOut = process.StandardOutput.BaseStream.CopyToAsync(ms);
+                const int waitTimeInMs = 10_000;
+
+                string GetStdError()
+                {
+                    try
+                    {
+                        return readErrors.Result;
+                    }
+                    catch
+                    {
+                        return "Unable to get stdout";
+                    }
+                }
+
+                try
+                {
+                    readStdOut.Wait(waitTimeInMs);
+                    readErrors.Wait(waitTimeInMs);
+                }
+                catch (Exception e)
+                {
+                    throw new InvalidOperationException($"Unable to get backup configuration by executing {command} {arguments}, waited for {waitTimeInMs}ms but the process didn't exit. Stderr: {GetStdError()}", e);
+                }
+
+                if (process.WaitForExit(waitTimeInMs) == false)
+                {
+                    process.Kill();
+
+                    throw new InvalidOperationException($"Unable to get backup configuration by executing {command} {arguments}, waited for {waitTimeInMs}ms but the process didn't exit. Stderr: {GetStdError()}");
+                }
+
+                if (process.ExitCode != 0)
+                {
+                    throw new InvalidOperationException($"Unable to get backup configuration by executing {command} {arguments}, the exit code was {process.ExitCode}. Stderr: {GetStdError()}");
+                }
+
+                using (_serverStore.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
+                {
+                    ms.Position = 0;
+                    var configuration = await context.ReadForMemoryAsync(ms, "backup-configuration-from-script");
+                    return resultConvertFunc(configuration);
                 }
             }
         }
