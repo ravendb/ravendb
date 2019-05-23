@@ -56,11 +56,15 @@ namespace SlowTests.Server.Documents.PeriodicBackup
 
                 // the configuration is applied to existing databases
                 var record1 = await store.Maintenance.Server.SendAsync(new GetDatabaseRecordOperation(store.Database));
-                ValidateBackupConfiguration(serverWideConfiguration, record1.PeriodicBackups.First(), store.Database);
+                var backups1 = record1.PeriodicBackups;
+                Assert.Equal(1, backups1.Count);
+                ValidateBackupConfiguration(serverWideConfiguration, backups1.First(), store.Database);
 
                 // the configuration is applied to new databases
                 var newDbName = store.Database + "-testDatabase";
                 await store.Maintenance.Server.SendAsync(new CreateDatabaseOperation(new DatabaseRecord(newDbName)));
+                var backups2 = record1.PeriodicBackups;
+                Assert.Equal(1, backups2.Count);
                 var record2 = await store.Maintenance.Server.SendAsync(new GetDatabaseRecordOperation(newDbName));
                 ValidateBackupConfiguration(serverWideConfiguration, record2.PeriodicBackups.First(), newDbName);
 
@@ -193,6 +197,42 @@ namespace SlowTests.Server.Documents.PeriodicBackup
                     return status?.LastEtag;
                 }, 1);
                 Assert.Equal(1, value);
+            }
+        }
+
+        [Fact]
+        public async Task CanDeleteServerWideBackup()
+        {
+            using (var store = GetDocumentStore())
+            {
+                var putConfiguration = new ServerWideBackupConfiguration
+                {
+                    Disabled = true,
+                    FullBackupFrequency = "0 2 * * 0",
+                    IncrementalBackupFrequency = "0 2 * * 1"
+                };
+
+                await store.Maintenance.Server.SendAsync(new PutServerWideBackupConfigurationOperation(putConfiguration));
+
+                var record1 = await store.Maintenance.Server.SendAsync(new GetDatabaseRecordOperation(store.Database));
+                Assert.Equal(1, record1.PeriodicBackups.Count);
+
+                // the configuration is applied to new databases
+                var newDbName = store.Database + "-testDatabase";
+                await store.Maintenance.Server.SendAsync(new CreateDatabaseOperation(new DatabaseRecord(newDbName)));
+                var record2 = await store.Maintenance.Server.SendAsync(new GetDatabaseRecordOperation(newDbName));
+                Assert.Equal(1, record2.PeriodicBackups.Count);
+
+                await store.Maintenance.Server.SendAsync(new DeleteServerWideBackupConfigurationOperation());
+                var serverWideBackupConfiguration = await store.Maintenance.Server.SendAsync(new GetServerWideBackupConfigurationOperation());
+                Assert.Null(serverWideBackupConfiguration);
+
+                // verify that the server wide backup was deleted from all databases
+                record1 = await store.Maintenance.Server.SendAsync(new GetDatabaseRecordOperation(store.Database));
+                Assert.Equal(0, record1.PeriodicBackups.Count);
+
+                record2 = await store.Maintenance.Server.SendAsync(new GetDatabaseRecordOperation(newDbName));
+                Assert.Equal(0, record2.PeriodicBackups.Count);
             }
         }
 

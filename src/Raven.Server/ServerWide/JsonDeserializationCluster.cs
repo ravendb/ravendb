@@ -134,6 +134,7 @@ namespace Raven.Server.ServerWide
             [nameof(PutLicenseCommand)] = GenerateJsonDeserializationRoutine<PutLicenseCommand>(),
             [nameof(PutLicenseLimitsCommand)] = GenerateJsonDeserializationRoutine<PutLicenseLimitsCommand>(),
             [nameof(PutServerWideBackupConfigurationCommand)] = GenerateJsonDeserializationRoutine<PutServerWideBackupConfigurationCommand>(),
+            [nameof(DeleteServerWideBackupConfigurationCommand)] = GenerateJsonDeserializationRoutine<DeleteServerWideBackupConfigurationCommand>(),
             [nameof(DeleteCertificateFromClusterCommand)] = GenerateJsonDeserializationRoutine<DeleteCertificateFromClusterCommand>(),
             [nameof(DeleteCertificateCollectionFromClusterCommand)] = GenerateJsonDeserializationRoutine<DeleteCertificateCollectionFromClusterCommand>(),
             [nameof(PutCertificateCommand)] = GenerateJsonDeserializationRoutine<PutCertificateCommand>(),

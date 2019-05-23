@@ -1146,6 +1146,18 @@ namespace Raven.Server.Web.System
             }
         }
 
+        [RavenAction("/admin/configuration/server-wide/backup", "DELETE", AuthorizationStatus.ClusterAdmin)]
+        public async Task DeleteServerWideBackupConfigurationCommand()
+        {
+            using (ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
+            {
+                var (newIndex, _) = await ServerStore.DeleteServerWideBackupConfigurationAsync();
+                await ServerStore.WaitForCommitIndexChange(RachisConsensus.CommitIndexModification.GreaterOrEqual, newIndex);
+
+                NoContentStatus();
+            }
+        }
+
         [RavenAction("/admin/configuration/server-wide/backup", "GET", AuthorizationStatus.ClusterAdmin)]
         public Task GetServerWideBackupConfigurationCommand()
         {

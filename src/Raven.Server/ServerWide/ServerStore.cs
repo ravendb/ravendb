@@ -1489,6 +1489,13 @@ namespace Raven.Server.ServerWide
             return SendToLeaderAsync(command);
         }
 
+        public Task<(long Index, object Result)> DeleteServerWideBackupConfigurationAsync()
+        {
+            var command = new DeleteServerWideBackupConfigurationCommand();
+
+            return SendToLeaderAsync(command);
+        }
+
         public async Task<(long, object)> ModifyPeriodicBackup(TransactionOperationContext context, string name, BlittableJsonReaderObject configurationJson, string raftRequestId)
         {
             var modifyPeriodicBackup = new UpdatePeriodicBackupCommand(JsonDeserializationCluster.PeriodicBackupConfiguration(configurationJson), name, raftRequestId);
