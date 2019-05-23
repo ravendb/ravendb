@@ -41,6 +41,6 @@ namespace Raven.Client.Documents.Commands
             Result = results;
         }
 
-        public string RaftUniqueRequestId { get; } = RaftIdGenerator.NewId;
+        public string RaftUniqueRequestId { get; } = RaftIdGenerator.NewId();
     }
 }

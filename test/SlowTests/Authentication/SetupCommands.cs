@@ -79,7 +79,7 @@ namespace SlowTests.Authentication
                 Result = JsonDeserializationClient.ForceRenewResult(response);
             }
 
-            public string RaftUniqueRequestId { get; } = RaftIdGenerator.NewId;
+            public string RaftUniqueRequestId { get; } = RaftIdGenerator.NewId();
         }
 
         private class SetupLetsEncryptCommand : RavenCommand<byte[]>, IRaftCommand
@@ -119,7 +119,7 @@ namespace SlowTests.Authentication
                 Result = ms.ToArray();
             }
 
-            public string RaftUniqueRequestId { get; } = RaftIdGenerator.NewId;
+            public string RaftUniqueRequestId { get; } = RaftIdGenerator.NewId();
         }
     }
 }

@@ -570,7 +570,7 @@ namespace Raven.Server.Commercial
 
             try
             {
-                AsyncHelpers.RunSync(() => Activate(license, skipLeaseLicense: false, RaftIdGenerator.NewId, ensureNotPassive: false));
+                AsyncHelpers.RunSync(() => Activate(license, skipLeaseLicense: false, RaftIdGenerator.NewId(), ensureNotPassive: false));
             }
             catch (Exception e)
             {
@@ -691,7 +691,7 @@ namespace Raven.Server.Commercial
         {
             try
             {
-                await LeaseLicense(RaftIdGenerator.NewId);
+                await LeaseLicense(RaftIdGenerator.NewId());
 
                 await CalculateLicenseLimits(forceFetchingNodeInfo: true, waitToUpdate: true);
 

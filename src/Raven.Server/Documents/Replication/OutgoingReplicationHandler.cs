@@ -565,7 +565,7 @@ namespace Raven.Server.Documents.Replication
 
         private void UpdateExternalReplicationInfo(long taskId)
         {
-            var command = new UpdateExternalReplicationStateCommand(_database.Name, RaftIdGenerator.NewId)
+            var command = new UpdateExternalReplicationStateCommand(_database.Name, RaftIdGenerator.NewId())
             {
                 ExternalReplicationState = new ExternalReplicationState
                 {

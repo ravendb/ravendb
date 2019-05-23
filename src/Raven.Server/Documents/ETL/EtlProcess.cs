@@ -673,7 +673,7 @@ namespace Raven.Server.Documents.ETL
                     {
                         var command = new UpdateEtlProcessStateCommand(Database.Name, Configuration.Name, Transformation.Name, Statistics.LastProcessedEtag,
                             ChangeVectorUtils.MergeVectors(Statistics.LastChangeVector, state.ChangeVector), _serverStore.NodeTag,
-                            _serverStore.LicenseManager.HasHighlyAvailableTasks(), RaftIdGenerator.NewId);
+                            _serverStore.LicenseManager.HasHighlyAvailableTasks(), RaftIdGenerator.NewId());
 
                         var sendToLeaderTask = _serverStore.SendToLeaderAsync(command);
                         sendToLeaderTask.Wait(CancellationToken);

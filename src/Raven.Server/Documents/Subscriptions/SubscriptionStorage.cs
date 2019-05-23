@@ -82,7 +82,7 @@ namespace Raven.Server.Documents.Subscriptions
 
         public async Task AcknowledgeBatchProcessed(long id, string name, string changeVector, string previousChangeVector)
         {
-            var command = new AcknowledgeSubscriptionBatchCommand(_db.Name, RaftIdGenerator.NewId)
+            var command = new AcknowledgeSubscriptionBatchCommand(_db.Name, RaftIdGenerator.NewId())
             {
                 ChangeVector = changeVector,
                 NodeTag = _serverStore.NodeTag,
@@ -100,7 +100,7 @@ namespace Raven.Server.Documents.Subscriptions
 
         public async Task UpdateClientConnectionTime(long id, string name, string mentorNode = null)
         {
-            var command = new UpdateSubscriptionClientConnectionTime(_db.Name, RaftIdGenerator.NewId)
+            var command = new UpdateSubscriptionClientConnectionTime(_db.Name, RaftIdGenerator.NewId())
             {
                 NodeTag = _serverStore.NodeTag,
                 HasHighlyAvailableTasks = _serverStore.LicenseManager.HasHighlyAvailableTasks(),

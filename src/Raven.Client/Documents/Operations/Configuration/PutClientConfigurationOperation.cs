@@ -52,7 +52,7 @@ namespace Raven.Client.Documents.Operations.Configuration
                 };
             }
 
-            public string RaftUniqueRequestId { get; } = RaftIdGenerator.NewId;
+            public string RaftUniqueRequestId { get; } = RaftIdGenerator.NewId();
         }
     }
 }

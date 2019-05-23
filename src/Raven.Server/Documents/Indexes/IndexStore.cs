@@ -1254,7 +1254,7 @@ namespace Raven.Server.Documents.Indexes
 
         private async Task RunIdleOperationsAsync(long databaseRecordEtag)
         {
-            await DeleteOrMergeSurpassedAutoIndexes(databaseRecordEtag, RaftIdGenerator.NewId);
+            await DeleteOrMergeSurpassedAutoIndexes(databaseRecordEtag, RaftIdGenerator.NewId());
         }
 
         private async Task DeleteOrMergeSurpassedAutoIndexes(long databaseRecordEtag, string raftRequestId)

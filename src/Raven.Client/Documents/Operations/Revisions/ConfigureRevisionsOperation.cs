@@ -59,7 +59,7 @@ namespace Raven.Client.Documents.Operations.Revisions
                 Result = JsonDeserializationClient.ConfigureRevisionsOperationResult(response);
             }
 
-            public string RaftUniqueRequestId { get; } = RaftIdGenerator.NewId;
+            public string RaftUniqueRequestId { get; } = RaftIdGenerator.NewId();
         }
     }
 

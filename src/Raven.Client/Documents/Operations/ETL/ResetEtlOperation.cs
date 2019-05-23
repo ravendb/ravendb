@@ -49,7 +49,7 @@ namespace Raven.Client.Documents.Operations.ETL
                 return request;
             }
 
-            public string RaftUniqueRequestId { get; } = RaftIdGenerator.NewId;
+            public string RaftUniqueRequestId { get; } = RaftIdGenerator.NewId();
         }
     }
 }

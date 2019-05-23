@@ -85,7 +85,7 @@ namespace Raven.Client.Documents.Operations.Indexes
                 };
             }
 
-            public string RaftUniqueRequestId { get; } = RaftIdGenerator.NewId;
+            public string RaftUniqueRequestId { get; } = RaftIdGenerator.NewId();
         }
 
         public class Parameters

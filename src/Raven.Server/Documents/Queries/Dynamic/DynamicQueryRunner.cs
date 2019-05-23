@@ -143,7 +143,7 @@ namespace Raven.Server.Documents.Queries.Dynamic
                     throw new IndexDoesNotExistException("Could not find index for a given query.");
 
                 var definition = map.CreateAutoIndexDefinition();
-                index = await _indexStore.CreateIndex(definition, RaftIdGenerator.NewId);
+                index = await _indexStore.CreateIndex(definition, RaftIdGenerator.NewId());
                 hasCreatedAutoIndex = true;
 
                 if (query.WaitForNonStaleResultsTimeout.HasValue == false)
@@ -151,7 +151,7 @@ namespace Raven.Server.Documents.Queries.Dynamic
                     query.WaitForNonStaleResultsTimeout = customStalenessWaitTimeout ?? TimeSpan.FromSeconds(15);
                 }
 
-                var t = CleanupSupersededAutoIndexes(index, map, RaftIdGenerator.NewId, token)
+                var t = CleanupSupersededAutoIndexes(index, map, RaftIdGenerator.NewId(), token)
                     .ContinueWith(task =>
                     {
                         if (task.Exception != null)

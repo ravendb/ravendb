@@ -56,7 +56,7 @@ namespace Raven.Client.Documents.Operations.CompareExchange
                 Result = CompareExchangeResult<T>.ParseFromBlittable(response, _conventions);
             }
 
-            public string RaftUniqueRequestId { get; } = RaftIdGenerator.NewId;
+            public string RaftUniqueRequestId { get; } = RaftIdGenerator.NewId();
         }
 
     }

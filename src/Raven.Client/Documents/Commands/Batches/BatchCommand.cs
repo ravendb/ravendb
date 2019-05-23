@@ -160,6 +160,6 @@ namespace Raven.Client.Documents.Commands.Batches
                 command?.Dispose();
         }
 
-        public string RaftUniqueRequestId { get; } = RaftIdGenerator.NewId;
+        public string RaftUniqueRequestId { get; } = RaftIdGenerator.NewId();
     }
 }

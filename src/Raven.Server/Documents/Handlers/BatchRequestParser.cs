@@ -241,7 +241,7 @@ namespace Raven.Server.Documents.Handlers
         private static async Task GetIdentitiesValues(JsonOperationContext ctx, DocumentDatabase database, ServerStore serverStore,
             List<string> identities, List<int> positionInListToCommandIndex, CommandData[] cmds)
         {
-            var newIds = await serverStore.GenerateClusterIdentitiesBatchAsync(database.Name, identities, RaftIdGenerator.NewId);
+            var newIds = await serverStore.GenerateClusterIdentitiesBatchAsync(database.Name, identities, RaftIdGenerator.NewId());
             Debug.Assert(newIds.Count == identities.Count);
 
             var emptyChangeVector = ctx.GetLazyString("");
