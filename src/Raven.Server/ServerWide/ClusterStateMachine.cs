@@ -369,14 +369,14 @@ namespace Raven.Server.ServerWide
                         UpdateValue<List<string>>(context, type, cmd, index, leader);
                         break;
                     case nameof(PutLicenseCommand):
-                        PutValue<License>(context, type, cmd, index, leader);
+                        PutValue<License>(context, type, cmd, index);
                         break;
                     case nameof(PutLicenseLimitsCommand):
-                        PutValue<LicenseLimits>(context, type, cmd, index, leader);
+                        PutValue<LicenseLimits>(context, type, cmd, index);
                         break;
                     case nameof(PutServerWideBackupConfigurationCommand):
-                        PutValue<ServerWideBackupConfiguration>(context, type, cmd, index, leader);
-                        UpdateDatabasesWithNewServerWideBackupConfiguration(context, cmd, index);
+                        PutValue<ServerWideBackupConfiguration>(context, type, cmd, index, skipNotifyValueChanged: true);
+                        UpdateDatabasesWithNewServerWideBackupConfiguration(context, type, cmd, index);
                         break;
                     case nameof(PutCertificateWithSamePinningHashCommand):
                         PutCertificate(context, type, cmd, index, serverStore);
@@ -392,10 +392,10 @@ namespace Raven.Server.ServerWide
                             DeleteLocalState(context, key);
                         break;
                     case nameof(PutClientConfigurationCommand):
-                        PutValue<ClientConfiguration>(context, type, cmd, index, leader);
+                        PutValue<ClientConfiguration>(context, type, cmd, index);
                         break;
                     case nameof(PutServerWideStudioConfigurationCommand):
-                        PutValue<ServerWideStudioConfiguration>(context, type, cmd, index, leader);
+                        PutValue<ServerWideStudioConfiguration>(context, type, cmd, index);
                         break;
                     case nameof(AddDatabaseCommand):
                         var addedNodes = AddDatabase(context, cmd, index, leader);
@@ -975,6 +975,7 @@ namespace Raven.Server.ServerWide
 
                     var exceptionAggregator =
                         new ExceptionAggregator(_parent.Log, $"the raft index {index} is committed, but an error occured during executing the {type} command.");
+
                     foreach (var action in actions)
                     {
                         TaskExecutor.Execute(_ =>
@@ -1511,7 +1512,7 @@ namespace Raven.Server.ServerWide
             }
         }
 
-        private T PutValue<T>(TransactionOperationContext context, string type, BlittableJsonReaderObject cmd, long index, Leader leader)
+        private T PutValue<T>(TransactionOperationContext context, string type, BlittableJsonReaderObject cmd, long index, bool skipNotifyValueChanged = false)
         {
             Exception exception = null;
             PutValueCommand<T> command = null;
@@ -1538,7 +1539,9 @@ namespace Raven.Server.ServerWide
             finally
             {
                 LogCommand(type, index, exception, command.AdditionalDebugInformation(exception));
-                NotifyValueChanged(context, type, index);
+
+                if (skipNotifyValueChanged == false)
+                    NotifyValueChanged(context, type, index);
             }
         }
 
@@ -2666,10 +2669,10 @@ namespace Raven.Server.ServerWide
             }
         }
 
-        private void UpdateDatabasesWithNewServerWideBackupConfiguration(TransactionOperationContext context, BlittableJsonReaderObject cmd, long index)
+        private void UpdateDatabasesWithNewServerWideBackupConfiguration(TransactionOperationContext context, string type, BlittableJsonReaderObject cmd, long index)
         {
             if (cmd.TryGet(nameof(PutServerWideBackupConfigurationCommand.Value), out BlittableJsonReaderObject configBlittable) == false)
-                return;
+                throw new RachisInvalidOperationException($"Couldn't find the Value for command type: {type}");
 
             var items = context.Transaction.InnerTransaction.OpenTable(ItemsSchema, Items);
 
@@ -2722,6 +2725,11 @@ namespace Raven.Server.ServerWide
                 }
             }
 
+            var actions = new List<Action>
+            {
+                () => ValueChanged?.Invoke(this, (index, type))
+            };
+
             foreach (var update in toUpdate)
             {
                 using (Slice.From(context.Allocator, update.Key, out var valueName))
@@ -2730,9 +2738,12 @@ namespace Raven.Server.ServerWide
                     UpdateValue(index, items, valueNameLowered, valueName, update.DatabaseRecord);
                 }
 
-                NotifyDatabaseAboutChanged(context, update.DatabaseName, index, nameof(AddDatabaseCommand),
-                    DatabasesLandlord.ClusterDatabaseChangeType.RecordChanged);
+                actions.Add(() => 
+                    DatabaseChanged?.Invoke(this, (update.DatabaseName, index, 
+                        nameof(PutServerWideBackupConfigurationCommand), DatabasesLandlord.ClusterDatabaseChangeType.RecordChanged)));
             }
+
+            ExecuteManyOnDispose(context, index, type, actions);
         }
 
         public const string SnapshotInstalled = "SnapshotInstalled";
