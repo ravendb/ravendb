@@ -460,6 +460,8 @@ namespace Raven.Server.Web.System
                 return;
 
             localSettings.TryGet(nameof(LocalSettings.FolderPath), out string folderPath);
+            if (folderPath == null)
+                return;
 
             var pathResult = GetActualFullPath(folderPath);
             if (pathResult.Error != null)

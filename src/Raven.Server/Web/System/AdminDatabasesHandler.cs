@@ -1119,10 +1119,19 @@ namespace Raven.Server.Web.System
                 }
 
                 var localSettings = configurationJson.LocalSettings;
-                if (localSettings != null && localSettings.Disabled == false)
+                if (localSettings != null)
                 {
-                    if (DataDirectoryInfo.CanAccessPath(localSettings.FolderPath, out var error) == false)
-                        throw new ArgumentException(error);
+                    if (localSettings.HasSettings() == false)
+                    {
+                        throw new ArgumentException(
+                            $"{nameof(localSettings.FolderPath)} and {nameof(localSettings.GetBackupConfigurationScript)} cannot be both null or empty");
+                    }
+
+                    if (localSettings.Disabled == false && string.IsNullOrEmpty(localSettings.FolderPath) == false)
+                    {
+                        if (DataDirectoryInfo.CanAccessPath(localSettings.FolderPath, out var error) == false)
+                            throw new ArgumentException(error);
+                    }
                 }
 
                 var (newIndex, _) = await ServerStore.PutServerWideBackupConfigurationAsync(configurationJson);
