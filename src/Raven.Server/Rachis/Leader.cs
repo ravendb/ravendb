@@ -710,7 +710,7 @@ namespace Raven.Server.Rachis
                         var djv = cmd.Command.ToJson(context);
                         var cmdJson = context.ReadObject(djv, "raft/command");
 
-                        if (_engine.HasHistoryLog(context, cmdJson, out var index, out var result, out var exception))
+                        if (_engine.LogHistory.HasHistoryLog(context, cmdJson, out var index, out var result, out var exception))
                         {
                             // if this command is already committed, we can skip it and notify the caller about it
                             if (lastCommitted >= index) 
