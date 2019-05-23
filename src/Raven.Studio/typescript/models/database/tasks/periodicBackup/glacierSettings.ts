@@ -60,7 +60,9 @@ class glacierSettings extends amazonSettings {
             AwsAccessKey: null,
             AwsRegionName: null,
             AwsSecretKey: null,
-            VaultName: null
+            AwsSessionToken: null,
+            VaultName: null,
+            GetBackupConfigurationScript: null
         }, allowedRegions);
     }
 }

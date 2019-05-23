@@ -48,7 +48,8 @@ class localSettings extends backupSettings {
     static empty(): localSettings {
         return new localSettings({
             Disabled: true,
-            FolderPath: null
+            FolderPath: null,
+            GetBackupConfigurationScript: null
         });
     }
 }
