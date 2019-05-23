@@ -268,7 +268,8 @@ namespace Raven.Server.ServerWide
                         DeleteMultipleValues(context, type, cmd, index, leader);
                         break;
                     case nameof(CleanCompareExchangeTombstonesCommand):
-                        ClearCompareExchangeTombstones(context, type, cmd, index, out bool hasMore);
+                        ClearCompareExchangeTombstones(context, type, cmd, index, out var hasMore);
+                        result = hasMore;
                         leader?.SetStateOf(index, hasMore);
                         break;
                     case nameof(IncrementClusterIdentityCommand):
@@ -338,8 +339,8 @@ namespace Raven.Server.ServerWide
                         break;
                     case nameof(AddOrUpdateCompareExchangeCommand):
                     case nameof(RemoveCompareExchangeCommand):
-                        ExecuteCompareExchange(context, type, cmd, index, out var removeItem);
-                        leader?.SetStateOf(index, removeItem);
+                        ExecuteCompareExchange(context, type, cmd, index, out result);
+                        leader?.SetStateOf(index, result);
                         SetIndexForBackup(context, cmd, index, type);
                         break;
                     case nameof(InstallUpdatedServerCertificateCommand):

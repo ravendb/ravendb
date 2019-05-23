@@ -1262,7 +1262,7 @@ namespace Raven.Server.Rachis
                 //While we do support the case where we get the same entries, we expect them to have the same index/term up to the commit index.
                 if (firstEntry.Index < lastCommitIndex)
                 {
-                    ThrowFatalError(firstEntry, lastCommitIndex, lastCommitTerm);
+                    ThrowFatalError(firstEntry, GetTermFor(context, firstEntry.Index), lastCommitIndex, lastCommitTerm);
                 }
                 var prevIndex = lastEntryIndex;
 
@@ -1327,11 +1327,12 @@ namespace Raven.Server.Rachis
             return (lastTopology, lastTopologyIndex);
         }
 
-        private void ThrowFatalError(RachisEntry firstEntry, long lastCommitIndex, long lastCommitTerm)
+        private void ThrowFatalError(RachisEntry firstEntry, long? myTermForTheIndex, long lastCommitIndex, long lastCommitTerm)
         {
             var message =
                 $"FATAL ERROR: got an append entries request with index={firstEntry.Index:#,#;;0} term={firstEntry.Term:#,#;;0} " +
-                $"while my commit index={lastCommitIndex:#,#;;0} with term={lastCommitTerm:#,#;;0}, this means something went wrong badly.";
+                $"while my term for this index is {myTermForTheIndex:#,#;;0}. " +
+                $"(last commit index={lastCommitIndex:#,#;;0} with term={lastCommitTerm:#,#;;0}), this means something went wrong badly.";
             if (Log.IsOperationsEnabled)
             {
                 Log.Operations(message);
