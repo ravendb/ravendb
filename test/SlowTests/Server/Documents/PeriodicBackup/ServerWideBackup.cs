@@ -148,7 +148,7 @@ namespace SlowTests.Server.Documents.PeriodicBackup
                 if (PlatformDetails.RunningOnPosix)
                 {
                     command = "bash";
-                    script = $"#!/bin/bash\r\necho {localSettingsString}";
+                    script = $"#!/bin/bash\r\necho '{localSettingsString}'";
                     File.WriteAllText(scriptPath, script);
                     Process.Start("chmod", $"700 {scriptPath}");
                 }
