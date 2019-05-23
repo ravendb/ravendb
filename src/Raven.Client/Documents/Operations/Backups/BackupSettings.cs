@@ -6,7 +6,13 @@ namespace Raven.Client.Documents.Operations.Backups
     {
         public bool Disabled { get; set; }
 
-        public abstract bool HasSettings();
+        public GetBackupConfigurationScript GetBackupConfigurationScript { get; set; }
+
+        public virtual bool HasSettings()
+        {
+            return GetBackupConfigurationScript != null && 
+                   string.IsNullOrWhiteSpace(GetBackupConfigurationScript.Command) == false;
+        }
 
         public virtual bool WasEnabled(BackupSettings other)
         {
@@ -17,7 +23,24 @@ namespace Raven.Client.Documents.Operations.Backups
         {
             return new DynamicJsonValue
             {
-                [nameof(Disabled)] = Disabled
+                [nameof(Disabled)] = Disabled,
+                [nameof(GetBackupConfigurationScript)] = GetBackupConfigurationScript?.ToJson()
+            };
+        }
+    }
+
+    public class GetBackupConfigurationScript
+    {
+        public string Command { get; set; }
+
+        public string Arguments { get; set; }
+
+        public DynamicJsonValue ToJson()
+        {
+            return new DynamicJsonValue
+            {
+                [nameof(Command)] = Command,
+                [nameof(Arguments)] = Arguments
             };
         }
     }
@@ -32,6 +55,9 @@ namespace Raven.Client.Documents.Operations.Backups
 
         public override bool HasSettings()
         {
+            if (base.HasSettings())
+                return true;
+
             return string.IsNullOrWhiteSpace(FolderPath) == false;
         }
 
@@ -96,6 +122,9 @@ namespace Raven.Client.Documents.Operations.Backups
 
         public override bool HasSettings()
         {
+            if (base.HasSettings())
+                return true;
+
             return string.IsNullOrWhiteSpace(BucketName) == false;
         }
 
@@ -139,6 +168,9 @@ namespace Raven.Client.Documents.Operations.Backups
 
         public override bool HasSettings()
         {
+            if (base.HasSettings())
+                return true;
+
             return string.IsNullOrWhiteSpace(VaultName) == false;
         }
 
@@ -187,6 +219,9 @@ namespace Raven.Client.Documents.Operations.Backups
 
         public override bool HasSettings()
         {
+            if (base.HasSettings())
+                return true;
+
             return string.IsNullOrWhiteSpace(StorageContainer) == false;
         }
 
@@ -230,6 +265,9 @@ namespace Raven.Client.Documents.Operations.Backups
 
         public override bool HasSettings()
         {
+            if (base.HasSettings())
+                return true;
+
             return Port != 0 && string.IsNullOrWhiteSpace(Url) == false;
         }
 

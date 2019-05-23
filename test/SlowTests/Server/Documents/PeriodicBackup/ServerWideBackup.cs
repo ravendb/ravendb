@@ -1,13 +1,18 @@
-﻿using System.IO;
+﻿using System;
+using System.Diagnostics;
+using System.IO;
 using System.Linq;
 using System.Threading.Tasks;
 using FastTests;
+using Newtonsoft.Json;
+using Orders;
 using Raven.Client.Documents.Operations.Backups;
 using Raven.Client.Documents.Operations.OngoingTasks;
 using Raven.Client.Exceptions;
 using Raven.Client.ServerWide;
 using Raven.Client.ServerWide.Operations;
 using Raven.Client.ServerWide.Operations.Configuration;
+using Sparrow.Platform;
 using Xunit;
 
 namespace SlowTests.Server.Documents.PeriodicBackup
@@ -114,6 +119,80 @@ namespace SlowTests.Server.Documents.PeriodicBackup
                 e = await Assert.ThrowsAsync<RavenException>(() => store.Maintenance.SendAsync(new DeleteOngoingTaskOperation(serverWideBackupTaskId, OngoingTaskType.Backup)));
                 expectedError = $"Can't update task id: {serverWideBackupTaskId}, name: 'Server Wide Backup Configuration', because it is a server wide backup task";
                 Assert.Contains(expectedError, e.Message);
+            }
+        }
+
+        [Fact]
+        public async Task CanGetConfigurationFromBackupScript()
+        {
+            var backupPath = NewDataPath(suffix: "BackupFolder");
+
+            using (var store = GetDocumentStore())
+            {
+                var scriptPath = Path.Combine(Path.GetTempPath(), Path.ChangeExtension(Guid.NewGuid().ToString(), ".ps1"));
+                var localSetting = new LocalSettings
+                {
+                    Disabled = false,
+                    FolderPath = backupPath,
+                };
+
+                var localSettingsString = JsonConvert.SerializeObject(localSetting);
+
+                string command;
+                string script;
+
+                if (PlatformDetails.RunningOnPosix)
+                {
+                    command = "bash";
+                    script = $"#!/bin/bash\r\necho {localSettingsString}";
+                    File.WriteAllText(scriptPath, script);
+                    Process.Start("chmod", $"700 {scriptPath}");
+                }
+                else
+                {
+                    command = "powershell";
+                    script = $"echo '{localSettingsString}'";
+                    File.WriteAllText(scriptPath, script);
+                }
+
+                var putConfiguration = new ServerWideBackupConfiguration
+                {
+                    Disabled = false,
+                    FullBackupFrequency = "0 2 * * 0",
+                    IncrementalBackupFrequency = "0 2 * * 1",
+                    LocalSettings = new LocalSettings
+                    {
+                        GetBackupConfigurationScript = new GetBackupConfigurationScript
+                        {
+                            Command = command,
+                            Arguments = scriptPath
+                        }
+                    }
+                };
+
+                await store.Maintenance.Server.SendAsync(new PutServerWideBackupConfigurationOperation(putConfiguration));
+                var record = await store.Maintenance.Server.SendAsync(new GetDatabaseRecordOperation(store.Database));
+                var backupTask = record.PeriodicBackups.First();
+                Assert.Null(backupTask.LocalSettings.FolderPath);
+                Assert.NotNull(backupTask.LocalSettings.GetBackupConfigurationScript);
+                Assert.NotNull(backupTask.LocalSettings.GetBackupConfigurationScript.Command);
+                Assert.NotNull(backupTask.LocalSettings.GetBackupConfigurationScript.Arguments);
+
+                var backupTaskId = backupTask.TaskId;
+                using (var session = store.OpenAsyncSession())
+                {
+                    await session.StoreAsync(new Company { Name = "Hibernating Rhinos" }, "companies/1");
+                    await session.SaveChangesAsync();
+                }
+
+                await store.Maintenance.SendAsync(new StartBackupOperation(true, backupTaskId));
+                var operation = new GetPeriodicBackupStatusOperation(backupTaskId);
+                var value = WaitForValue(() =>
+                {
+                    var status = store.Maintenance.Send(operation).Status;
+                    return status?.LastEtag;
+                }, 1);
+                Assert.Equal(1, value);
             }
         }
 
