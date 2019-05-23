@@ -123,7 +123,7 @@ namespace SlowTests.Server.Documents.PeriodicBackup
         }
 
         [Fact]
-        public async Task CanGetConfigurationFromBackupScript()
+        public async Task CanCreateBackupUsingConfigurationFromBackupScript()
         {
             var backupPath = NewDataPath(suffix: "BackupFolder");
 
