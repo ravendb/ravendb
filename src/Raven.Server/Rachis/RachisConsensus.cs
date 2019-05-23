@@ -31,11 +31,11 @@ using Sparrow.Server;
 using Sparrow.Server.Utils;
 using System.Linq;
 using System.Reflection;
-using Raven.Client.Util;
-using Sparrow;
 
 namespace Raven.Server.Rachis
 {
+
+
     public class RachisConsensus<TStateMachine> : RachisConsensus
         where TStateMachine : RachisStateMachine, new()
     {
@@ -229,7 +229,7 @@ namespace Raven.Server.Rachis
             };
         }
     }
-    
+
     public abstract class RachisConsensus : IDisposable
     {
         internal abstract RachisStateMachine GetStateMachine();
@@ -285,34 +285,10 @@ namespace Raven.Server.Rachis
         private static readonly Slice TopologySlice;
         private static readonly Slice TagSlice;
         private static readonly Slice SnapshotRequestSlice;
-        internal static readonly Slice LogHistorySlice;
-        private static readonly Slice LogHistoryIndexSlice;
-        private static readonly Slice LogHistoryDateTimeSlice;
         internal static readonly Slice EntriesSlice;
+
         internal static readonly TableSchema LogsTable;
-        private static readonly TableSchema LogHistoryTable;
-        private int _logHistoryMaxEntries;
-
-        private enum LogHistoryColumn
-        {
-            Guid, // string
-            Index, // long
-            Ticks, // long
-            Term, // long
-            Type, // string
-            State, // byte -> 1 - appended, 2 - committed
-            Result, // blittable
-            ExceptionType, // string
-            ExceptionMessage // string
-        }
-
-        private enum HistoryStatus : byte
-        {
-            None,
-            Appended,
-            Committed
-        }
-
+        public readonly RachisLogHistory LogHistory;
         static RachisConsensus()
         {
             using (StorageEnvironment.GetStaticContext(out var ctx))
@@ -325,9 +301,6 @@ namespace Raven.Server.Rachis
                 Slice.From(ctx, "Topology", out TopologySlice);
                 Slice.From(ctx, "LastTruncated", out LastTruncatedSlice);
                 Slice.From(ctx, "Entries", out EntriesSlice);
-                Slice.From(ctx, "LogHistory", out LogHistorySlice);
-                Slice.From(ctx, "LogHistoryIndex", out LogHistoryIndexSlice);
-                Slice.From(ctx, "LogHistoryDateTime", out LogHistoryDateTimeSlice);
                 Slice.From(ctx, "SnapshotRequest", out SnapshotRequestSlice);
             }
             /*
@@ -343,225 +316,6 @@ namespace Raven.Server.Rachis
             {
                 StartIndex = 0
             });
-
-            LogHistoryTable = new TableSchema();
-            LogHistoryTable.DefineKey(new TableSchema.SchemaIndexDef
-            {
-                StartIndex = (int)LogHistoryColumn.Guid,
-            });
-
-            LogHistoryTable.DefineFixedSizeIndex(new TableSchema.FixedSizeSchemaIndexDef
-            {
-                Name = LogHistoryIndexSlice,
-                StartIndex = (int)LogHistoryColumn.Index
-            });
-
-            LogHistoryTable.DefineFixedSizeIndex(new TableSchema.FixedSizeSchemaIndexDef
-            {
-                Name = LogHistoryDateTimeSlice,
-                StartIndex = (int)LogHistoryColumn.Ticks
-            });
-        }
-
-        private void InsertHistoryLog(TransactionOperationContext context, long index, long term, BlittableJsonReaderObject cmd)
-        {
-            var guid = GetGuidFromCommand(cmd);
-            if (guid == null) // shouldn't happened in new cluster version!
-                return;
-
-            if (guid == RaftIdGenerator.DontCareId)
-                return;
-
-            var table = context.Transaction.InnerTransaction.OpenTable(LogHistoryTable, LogHistorySlice);
-            var type = GetTypeFromCommand(cmd);
-
-            using (Slice.From(context.Allocator, guid, out var guidSlice))
-            using (Slice.From(context.Allocator, type, out var typeSlice))
-            using (table.Allocate(out TableValueBuilder tvb))
-            {
-                tvb.Add(guidSlice);
-                tvb.Add(Bits.SwapBytes(index));
-                tvb.Add(Bits.SwapBytes(DateTime.UtcNow.Ticks));
-                tvb.Add(term);
-                tvb.Add(typeSlice);
-                tvb.Add((byte)HistoryStatus.Appended);
-                tvb.Add(Slices.Empty); // result
-                tvb.Add(Slices.Empty); // exception type
-                tvb.Add(Slices.Empty); // exception message
-                table.Insert(tvb);
-            }
-
-            if (table.NumberOfEntries > _logHistoryMaxEntries)
-            {
-                var reader = table.ReadFirst(LogHistoryTable.FixedSizeIndexes[LogHistoryIndexSlice]);
-                table.Delete(reader.Reader.Id);
-            }
-        }
-
-        public unsafe void UpdateHistoryLog(TransactionOperationContext context, long index, long term, BlittableJsonReaderObject cmd, object result, Exception exception)
-        {
-            var guid = GetGuidFromCommand(cmd);
-            if (guid == null) // shouldn't happened in new cluster version!
-                return;
-            if (guid == RaftIdGenerator.DontCareId)
-                return;
-
-            var table = context.Transaction.InnerTransaction.OpenTable(LogHistoryTable, LogHistorySlice);
-
-            var type = GetTypeFromCommand(cmd);
-
-            using (Slice.From(context.Allocator, guid, out var guidSlice))
-            {
-                if (table.VerifyKeyExists(guidSlice) == false)
-                    return; //was probably removed
-            }
-
-            if (TypeConverter.IsSupportedType(result) == false)
-            {
-                throw new RachisApplyException("We don't support type " + result.GetType().FullName + ".");
-            }
-
-            using (Slice.From(context.Allocator, guid, out var guidSlice))
-            using (Slice.From(context.Allocator, type, out var typeSlice))
-            using (table.Allocate(out TableValueBuilder tvb))
-            {
-                tvb.Add(guidSlice);
-                tvb.Add(Bits.SwapBytes(index));
-                tvb.Add(Bits.SwapBytes(DateTime.UtcNow.Ticks));
-                tvb.Add(term);
-                tvb.Add(typeSlice);
-                tvb.Add((byte)HistoryStatus.Committed);
-                if (result == null)
-                {
-                    tvb.Add(Slices.Empty);
-                }
-                else
-                {
-                    var blittableResult = context.ReadObject(new DynamicJsonValue {["Result"] = result}, "set-history-result");
-                    tvb.Add(blittableResult.BasePointer, blittableResult.Size);
-                }
-
-                if (exception == null)
-                {
-                    tvb.Add(Slices.Empty);
-                    tvb.Add(Slices.Empty);
-                }
-                else
-                {
-                    var exceptionType = context.GetLazyString(exception.GetType().AssemblyQualifiedName);
-                    var exceptionMsg = context.GetLazyString(exception.ToString());
-                    tvb.Add(exceptionType.Buffer, exceptionType.Size);
-                    tvb.Add(exceptionMsg.Buffer, exceptionMsg.Size);
-                }
-
-                table.Set(tvb);
-            }
-        }
-
-        public IEnumerable<DynamicJsonValue> GetHistoryLogs(TransactionOperationContext context)
-        {
-            var table = context.Transaction.InnerTransaction.OpenTable(LogHistoryTable, LogHistorySlice);
-            foreach (var entryHolder in table.SeekForwardFrom(LogHistoryTable.FixedSizeIndexes[LogHistoryDateTimeSlice], 0, 0))
-            {
-                yield return ReadHistoryLog(context, entryHolder);
-            }
-        }
-
-        private unsafe DynamicJsonValue ReadHistoryLog(TransactionOperationContext context, Table.TableValueHolder entryHolder)
-        {
-            var djv = new DynamicJsonValue();
-
-            var ticks = Bits.SwapBytes(*(long*)entryHolder.Reader.Read((int)(LogHistoryColumn.Ticks), out _));
-            djv["Date"] = new DateTime(ticks);
-
-            var guidPtr = entryHolder.Reader.Read((int)(LogHistoryColumn.Guid), out var size);
-            djv[nameof(LogHistoryColumn.Guid)] = Encoding.UTF8.GetString(guidPtr, size);
-
-            var index = Bits.SwapBytes(*(long*)entryHolder.Reader.Read((int)(LogHistoryColumn.Index), out _));
-            djv[nameof(LogHistoryColumn.Index)] = index;
-
-            djv[nameof(LogHistoryColumn.Term)] = *(long*)entryHolder.Reader.Read((int)(LogHistoryColumn.Term), out _);
-
-            var typeString = entryHolder.Reader.Read((int)(LogHistoryColumn.Type), out size);
-            djv[nameof(LogHistoryColumn.Type)] = Encoding.UTF8.GetString(typeString, size);
-
-            djv[nameof(LogHistoryColumn.State)] = (*(HistoryStatus*)entryHolder.Reader.Read((int)(LogHistoryColumn.State), out _)).ToString();
-
-            var resultPtr = entryHolder.Reader.Read((int)(LogHistoryColumn.Result), out size);
-            if (size > 0)
-            {
-                var blittableResult = new BlittableJsonReaderObject(resultPtr, size, context);
-                djv[nameof(LogHistoryColumn.Result)] = blittableResult.ToString();
-                blittableResult.Dispose();
-            }
-            else
-            {
-                djv[nameof(LogHistoryColumn.Result)] = null;
-            }
-
-            var exTypePtr = entryHolder.Reader.Read((int)(LogHistoryColumn.ExceptionType), out size);
-            djv[nameof(LogHistoryColumn.ExceptionType)] = size > 0 ? Encoding.UTF8.GetString(exTypePtr, size) : null;
-
-            var exMsg = entryHolder.Reader.Read((int)(LogHistoryColumn.ExceptionMessage), out size);
-            djv[nameof(LogHistoryColumn.ExceptionMessage)] = size > 0 ? Encoding.UTF8.GetString(exMsg, size) : null;
-
-            return djv;
-        }
-
-        public unsafe bool HasHistoryLog(TransactionOperationContext context, BlittableJsonReaderObject cmd, out long index, out object result, out Exception exception)
-        {
-            result = null;
-            exception = null;
-            index = 0;
-
-            var guid = GetGuidFromCommand(cmd);
-            if (guid == null) // shouldn't happened in new cluster version!
-                return false;
-
-            if (guid == RaftIdGenerator.DontCareId)
-                return false;
-
-            var table = context.Transaction.InnerTransaction.OpenTable(LogHistoryTable, LogHistorySlice);
-            using (Slice.From(context.Allocator, guid, out var guidSlice))
-            {
-                if (table.ReadByKey(guidSlice, out var reader) == false)
-                    return false;
-
-                index = Bits.SwapBytes(*(long*)reader.Read((int)LogHistoryColumn.Index, out _));
-                var resultPtr = reader.Read((int)LogHistoryColumn.Result, out int size);
-                if (size > 0)
-                {
-                    var blittableResultHolder = new BlittableJsonReaderObject(resultPtr, size, context);
-                    if (blittableResultHolder.TryGet("Result", out result) == false) // this blittable will be clone to the outer context
-                    {
-                        throw new InvalidOperationException("Invalid result format!"); // shouldn't happened!
-                    }
-                }
-                var exceptionTypePtr = reader.Read((int)LogHistoryColumn.ExceptionType, out size);
-                if (size > 0)
-                {
-                    var exceptionMsgPtr = reader.Read((int)LogHistoryColumn.ExceptionType, out size);
-                    var exceptionMsg = Encodings.Utf8.GetString(exceptionMsgPtr, size);
-
-                    try
-                    {
-                        var exceptionType = Type.GetType(Encodings.Utf8.GetString(exceptionTypePtr, size));
-                        exception = (Exception)Activator.CreateInstance(exceptionType, exceptionMsg);
-                    }
-                    catch (Exception e)
-                    {
-                        if (Log.IsInfoEnabled)
-                        {
-                            Log.Info($"failed to generate the exception dynamically for guid {guid}", e);
-                        }
-
-                        exception = new Exception($"failed to generate the exception dynamically, but the original exception message is:" +
-                                                  $"{Environment.NewLine}{exceptionMsg}");
-                    }
-                }
-
-                return true;
-            }
         }
 
         public TimeSpan ElectionTimeout
@@ -598,7 +352,8 @@ namespace Raven.Server.Rachis
 
         protected RachisConsensus(int? seed = null)
         {
-            _rand = seed.HasValue ? new Random(seed.Value) : new Random();            
+            _rand = seed.HasValue ? new Random(seed.Value) : new Random();
+            LogHistory = new RachisLogHistory();
         }
 
         public abstract void Notify(Notification notification);
@@ -623,7 +378,6 @@ namespace Raven.Server.Rachis
                 ElectionTimeout = configuration.Cluster.ElectionTimeout.AsTimeSpan;
                 TcpConnectionTimeout = configuration.Cluster.TcpConnectionTimeout.AsTimeSpan;
                 MaximalVersion = configuration.Cluster.MaximalAllowedClusterVersion;
-                _logHistoryMaxEntries = configuration.Cluster.LogHistoryMaxEntries;
 
                 DebuggerAttachedTimeout.LongTimespanIfDebugging(ref _operationTimeout);
                 DebuggerAttachedTimeout.LongTimespanIfDebugging(ref _electionTimeout);
@@ -643,7 +397,6 @@ namespace Raven.Server.Rachis
 
                     Log = LoggingSource.Instance.GetLogger<RachisConsensus>(_tag);
                     LogsTable.Create(tx.InnerTransaction, EntriesSlice, 16);
-                    LogHistoryTable.Create(tx.InnerTransaction, LogHistorySlice, 16);
 
                     var read = state.Read(CurrentTermSlice);
                     if (read == null || read.Reader.Length != sizeof(long))
@@ -669,6 +422,8 @@ namespace Raven.Server.Rachis
                     SetClusterBase(_clusterId);
 
                     InitializeState(context);
+
+                    LogHistory.Initialize(tx, configuration, Log);
 
                     tx.Commit();
                 }
@@ -1360,25 +1115,6 @@ namespace Raven.Server.Rachis
             }
         }
 
-
-        public static string GetGuidFromCommand(BlittableJsonReaderObject cmd)
-        {
-            if (cmd.TryGet(nameof(CommandBase.UniqueRequestId), out string guid))
-                return guid;
-
-            return null;
-        }
-
-        public static string GetTypeFromCommand(BlittableJsonReaderObject cmd)
-        {
-            if (cmd.TryGet("Type", out string type) == false)
-            {
-                throw new RachisApplyException("Cannot execute command, wrong format");
-            }
-
-            return type;
-        }
-
         public unsafe long InsertToLeaderLog(TransactionOperationContext context, long term, BlittableJsonReaderObject cmd,
             RachisEntryFlags flags)
         {
@@ -1409,7 +1145,7 @@ namespace Raven.Server.Rachis
                 table.Insert(tvb);
             }
 
-            InsertHistoryLog(context, lastIndex, term, cmd);
+            LogHistory.InsertHistoryLog(context, lastIndex, term, cmd);
 
             return lastIndex;
         }
@@ -1559,6 +1295,8 @@ namespace Raven.Server.Rachis
                             // now we'll find the next item to delete, and do so until we run out of items 
                             // to write
                         } while (table.ReadByKey(key, out reader));
+
+                        LogHistory.CancelHistoryEntriesFrom(context, entry.Index, term, "We have found a divergence in the log, and we now need to cancel from this location forward.");
                     }
 
                     var nested = context.ReadObject(entry.Entry, "entry");
@@ -1581,7 +1319,7 @@ namespace Raven.Server.Rachis
                         nested.Dispose();
                     }
 
-                    InsertHistoryLog(context, entry.Index, entry.Term, entry.Entry);
+                    LogHistory.InsertHistoryLog(context, entry.Index, entry.Term, entry.Entry);
                 }
             }
 

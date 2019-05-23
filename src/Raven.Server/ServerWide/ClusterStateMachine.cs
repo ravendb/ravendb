@@ -18,6 +18,7 @@ using Raven.Client.Documents.Session;
 using Raven.Client.Exceptions.Database;
 using Raven.Client.Exceptions.Documents.Subscriptions;
 using Raven.Client.Exceptions.Security;
+using Raven.Client.Http;
 using Raven.Client.ServerWide;
 using Raven.Client.ServerWide.Commands;
 using Raven.Client.ServerWide.Operations.Certificates;
@@ -402,14 +403,14 @@ namespace Raven.Server.ServerWide
                         throw new UnknownClusterCommand(massage);
                 }
 
-                _parent.UpdateHistoryLog(context, index, _parent.CurrentTerm, cmd, result, null);
+                _parent.LogHistory.UpdateHistoryLog(context, index, _parent.CurrentTerm, cmd, result, null);
             }
             catch (Exception e) when (ExpectedException(e))
             {
                 if (_parent.Log.IsInfoEnabled)
                     _parent.Log.Info($"Failed to execute command of type '{type}' on database '{DatabaseName}'", e);
 
-                _parent.UpdateHistoryLog(context, index, _parent.CurrentTerm, cmd, null, e);
+                _parent.LogHistory.UpdateHistoryLog(context, index, _parent.CurrentTerm, cmd, null, e);
                 NotifyLeaderAboutError(index, leader, e);
             }
             catch (Exception e)
@@ -1552,7 +1553,7 @@ namespace Raven.Server.ServerWide
 
         public override void EnsureNodeRemovalOnDeletion(TransactionOperationContext context, long term, string nodeTag)
         {
-            var djv = new RemoveNodeFromClusterCommand
+            var djv = new RemoveNodeFromClusterCommand(RaftIdGenerator.NewId())
             {
                 RemovedNode = nodeTag
             }.ToJson(context);
@@ -1759,7 +1760,7 @@ namespace Raven.Server.ServerWide
 
             (CompareExchangeTombstones.Content, ClusterCommandsVersionManager.Base42CommandsVersion,SnapshotEntryType.Command),
             (CertificatesSlice.Content, ClusterCommandsVersionManager.Base42CommandsVersion,SnapshotEntryType.Command),
-            (RachisConsensus.LogHistorySlice.Content, 42_000,SnapshotEntryType.Core)
+            (RachisLogHistory.LogHistorySlice.Content, 42_000,SnapshotEntryType.Core)
         };
 
         public override bool ShouldSnapshot(Slice slice, RootObjectType type)
