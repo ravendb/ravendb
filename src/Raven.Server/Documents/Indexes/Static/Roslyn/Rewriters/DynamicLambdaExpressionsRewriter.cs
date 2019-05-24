@@ -75,6 +75,7 @@ namespace Raven.Server.Documents.Indexes.Static.Roslyn.Rewriters
             {
                 case "Select":
                 case "ToDictionary":
+                case "ToLookup":
                 case "GroupBy":
                 case "OrderBy":
                 case "OrderByDescending":
@@ -99,12 +100,14 @@ namespace Raven.Server.Documents.Indexes.Static.Roslyn.Rewriters
                 case "Single":
                 case "Where":
                 case "Count":
+                case "LongCount":
                 case "SingleOrDefault":
                     return Visit(ModifyLambdaForBools(node));
                 case "Zip":
                     return Visit(ModifyLambdaForZip(node));
                 case "Aggregate":
                 case "Join":
+                case "GroupJoin":
                     return Visit(ModifyLambdaForAggregate(node));
                 case "TakeWhile":
                 case "SkipWhile":
